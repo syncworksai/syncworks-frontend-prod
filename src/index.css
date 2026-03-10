@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: #020617;
+}
+
+/* =========================================================
+   SyncWorks: Global Neon Outline Glow (BORDER ONLY)
+   - Adds an outline glow like Upgrade cards
+   - Does NOT change card backgrounds
+   - Applies globally via .sw-autoglow wrapper
+   ========================================================= */
+
+/* 1) Auto-glow common card patterns used across the app:
+   - rounded-3xl + border + border-slate-800
+   - rounded-[28px] + border + border-slate-800
+   - rounded-2xl + border + border-slate-800 (optional but common)
+*/
+.sw-autoglow .rounded-3xl.border.border-slate-800,
+.sw-autoglow .rounded-\[28px\].border.border-slate-800,
+.sw-autoglow .rounded-2xl.border.border-slate-800 {
+  position: relative;
+}
+
+/* The neon outline itself (masked so center stays untouched) */
+.sw-autoglow .rounded-3xl.border.border-slate-800::before,
+.sw-autoglow .rounded-\[28px\].border.border-slate-800::before,
+.sw-autoglow .rounded-2xl.border.border-slate-800::before {
+  content: "";
+  position: absolute;
+  inset: -1px;                 /* outline thickness */
+  border-radius: inherit;
+  padding: 1px;                /* outline thickness */
+  background: linear-gradient(
+    90deg,
+    rgba(34, 211, 238, 0.62),   /* cyan */
+    rgba(99, 102, 241, 0.52),   /* indigo */
+    rgba(217, 70, 239, 0.62)    /* fuchsia */
+  );
+
+  /* Mask out the center so ONLY the border shows */
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+
+  pointer-events: none;
+  opacity: 0.92;
+
+  /* glow */
+  filter:
+    drop-shadow(0 0 14px rgba(34, 211, 238, 0.20))
+    drop-shadow(0 0 18px rgba(217, 70, 239, 0.16));
+}
+
+/* Hover bump (subtle, still pro) */
+.sw-autoglow .rounded-3xl.border.border-slate-800:hover::before,
+.sw-autoglow .rounded-\[28px\].border.border-slate-800:hover::before,
+.sw-autoglow .rounded-2xl.border.border-slate-800:hover::before {
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 18px rgba(34, 211, 238, 0.26))
+    drop-shadow(0 0 22px rgba(217, 70, 239, 0.20));
+}
+
+/* 2) Optional: a manual class if you ever want to force glow on something
+   (you can add className="sw-glow" to any element)
+*/
+.sw-glow {
+  position: relative;
+  border-radius: inherit;
+}
+
+.sw-glow::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(34, 211, 238, 0.62),
+    rgba(99, 102, 241, 0.52),
+    rgba(217, 70, 239, 0.62)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.95;
+  filter:
+    drop-shadow(0 0 14px rgba(34, 211, 238, 0.20))
+    drop-shadow(0 0 18px rgba(217, 70, 239, 0.16));
+}
+
+.sw-glow:hover::before {
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 18px rgba(34, 211, 238, 0.26))
+    drop-shadow(0 0 22px rgba(217, 70, 239, 0.20));
+}

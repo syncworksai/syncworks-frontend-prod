@@ -1,0 +1,428 @@
+// src/pages/UserProfile.jsx
+import React, { useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import api from "../api/client";
+import { useAuth } from "../auth/AuthContext";
+import ModeBar from "../components/ModeBar";
+
+function centsToDollars(cents) {
+  const n = Number(cents || 0);
+  return `$${(n / 100).toFixed(2)}`;
+}
+
+function Info({ label, value, mono = false }) {
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-950/40 px-4 py-3">
+      <div className="text-xs text-slate-500">{label}</div>
+      <div className={"text-sm font-semibold " + (mono ? "font-mono" : "")}>{value}</div>
+    </div>
+  );
+}
+
+function Card({ title, subtitle, right, children }) {
+  return (
+    <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 shadow-[0_0_60px_rgba(0,0,0,0.25)]">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <div className="font-extrabold text-slate-100">{title}</div>
+          {subtitle ? <div className="text-xs text-slate-400 mt-1">{subtitle}</div> : null}
+        </div>
+        {right ? <div className="shrink-0">{right}</div> : null}
+      </div>
+      <div className="mt-4">{children}</div>
+    </div>
+  );
+}
+
+function cx(...parts) {
+  return parts.filter(Boolean).join(" ");
+}
+
+function ChangePasswordCard({ onOk, onErr }) {
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    current_password: "",
+    new_password: "",
+    confirm_password: "",
+  });
+
+  const disabled =
+    saving ||
+    !form.current_password ||
+    !form.new_password ||
+    form.new_password.length < 8 ||
+    form.new_password !== form.confirm_password;
+
+  async function submit() {
+    if (form.new_password !== form.confirm_password) return onErr("New passwords do not match.");
+    if (String(form.new_password || "").length < 8) return onErr("Password must be at least 8 characters.");
+
+    setSaving(true);
+    try {
+      // Best-effort endpoint tries (since we don't have the confirmed backend route)
+      const payloads = [
+        { current_password: form.current_password, new_password: form.new_password },
+        { old_password: form.current_password, new_password: form.new_password },
+        { currentPassword: form.current_password, newPassword: form.new_password },
+      ];
+
+      const tries = [
+        (p) => api.post("/auth/change-password/", p),
+        (p) => api.post("/auth/password/change/", p),
+        (p) => api.post("/auth/password/change-password/", p),
+        (p) => api.post("/auth/password/", p),
+        (p) => api.patch("/auth/me/", p), // last resort if backend accepts it (most won't)
+      ];
+
+      let lastErr = null;
+      for (const p of payloads) {
+        for (const fn of tries) {
+          try {
+            await fn(p);
+            setForm({ current_password: "", new_password: "", confirm_password: "" });
+            onOk("Password updated ✅");
+            setSaving(false);
+            return;
+          } catch (e) {
+            lastErr = e;
+          }
+        }
+      }
+
+      const detail =
+        lastErr?.response?.data?.detail ||
+        lastErr?.response?.data?.error ||
+        lastErr?.message ||
+        "Password update failed.";
+      onErr(detail);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card
+      title="Security"
+      subtitle="Change your password"
+      right={
+        <button
+          type="button"
+          onClick={submit}
+          disabled={disabled}
+          className={cx(
+            "rounded-2xl px-4 py-2 text-sm font-semibold border transition",
+            disabled
+              ? "bg-slate-900/40 border-slate-800 text-slate-500 cursor-not-allowed"
+              : "bg-cyan-500/12 border-cyan-500/35 hover:bg-cyan-500/18 text-cyan-200"
+          )}
+        >
+          {saving ? "Saving..." : "Update Password"}
+        </button>
+      }
+    >
+      <div className="grid md:grid-cols-2 gap-3">
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4 md:col-span-2">
+          <div className="text-xs text-slate-400 mb-2">Current password</div>
+          <input
+            type="password"
+            value={form.current_password}
+            onChange={(e) => setForm((p) => ({ ...p, current_password: e.target.value }))}
+            className="w-full h-11 rounded-2xl border border-slate-800 bg-slate-950/60 px-3 text-sm outline-none focus:border-cyan-500/40"
+            placeholder="Current password"
+          />
+        </div>
+
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+          <div className="text-xs text-slate-400 mb-2">New password</div>
+          <input
+            type="password"
+            value={form.new_password}
+            onChange={(e) => setForm((p) => ({ ...p, new_password: e.target.value }))}
+            className="w-full h-11 rounded-2xl border border-slate-800 bg-slate-950/60 px-3 text-sm outline-none focus:border-cyan-500/40"
+            placeholder="At least 8 characters"
+          />
+          <div className="text-[11px] text-slate-500 mt-2">Tip: use a passphrase (3–4 words) for strength.</div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+          <div className="text-xs text-slate-400 mb-2">Confirm new password</div>
+          <input
+            type="password"
+            value={form.confirm_password}
+            onChange={(e) => setForm((p) => ({ ...p, confirm_password: e.target.value }))}
+            className="w-full h-11 rounded-2xl border border-slate-800 bg-slate-950/60 px-3 text-sm outline-none focus:border-cyan-500/40"
+            placeholder="Repeat new password"
+          />
+          {form.confirm_password && form.new_password !== form.confirm_password ? (
+            <div className="text-[11px] text-rose-200 mt-2">Passwords do not match.</div>
+          ) : null}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+export default function UserProfile() {
+  const nav = useNavigate();
+  const loc = useLocation();
+  const { user, mode, activeBusinessId } = useAuth();
+
+  const [err, setErr] = useState("");
+  const [msg, setMsg] = useState("");
+
+  const [billingStatus, setBillingStatus] = useState(null);
+  const [billingPreview, setBillingPreview] = useState(null);
+
+  const [loading, setLoading] = useState(false);
+  const [loadingCard, setLoadingCard] = useState(false);
+
+  const businessSelected = useMemo(() => {
+    const n = parseInt(String(activeBusinessId || ""), 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [activeBusinessId]);
+
+  function toastError(s) {
+    setMsg("");
+    setErr(s || "Something went wrong.");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function toastSuccess(s) {
+    setErr("");
+    setMsg(s || "Done.");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  const isBillingScopedMode = useMemo(() => {
+    return ["SBO", "EMPLOYEE", "PM", "PLATFORM"].includes(mode);
+  }, [mode]);
+
+  async function loadBilling() {
+    if (!businessSelected || !isBillingScopedMode) {
+      setBillingStatus(null);
+      setBillingPreview(null);
+      return;
+    }
+
+    setLoading(true);
+    setErr("");
+    try {
+      const [s, p] = await Promise.all([api.get("/billing/status/"), api.get("/billing/monthly/preview/")]);
+      setBillingStatus(s.data || null);
+      setBillingPreview(p.data || null);
+    } catch (e) {
+      const detail = e?.response?.data?.detail || "Failed to load billing info.";
+      toastError(detail);
+      setBillingStatus(null);
+      setBillingPreview(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function setupOrUpdateCard() {
+    if (!businessSelected) return toastError("Select a business first.");
+    setLoadingCard(true);
+    setErr("");
+    setMsg("");
+    try {
+      const res = await api.post("/billing/setup-card/");
+      if (res.data?.url) {
+        window.location.href = res.data.url;
+        return;
+      }
+      if (res.data?.detail) {
+        toastSuccess(res.data.detail);
+        await loadBilling();
+        return;
+      }
+      toastError("No Stripe URL returned.");
+    } catch (e) {
+      toastError(e?.response?.data?.detail || "Failed to start card setup.");
+    } finally {
+      setLoadingCard(false);
+    }
+  }
+
+  useEffect(() => {
+    const qs = new URLSearchParams(window.location.search);
+    const setup = qs.get("setup");
+    if (setup === "success") toastSuccess("Card saved ✅ (Stripe)");
+    if (setup === "cancel") toastSuccess("Card setup canceled.");
+    loadBilling();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    loadBilling();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessSelected, isBillingScopedMode]);
+
+  const billingExempt = !!billingStatus?.billing_exempt;
+  const setupComplete = !!billingStatus?.stripe_setup_complete;
+
+  const periodLabel = useMemo(() => {
+    const s = billingPreview?.period_start;
+    const e = billingPreview?.period_end;
+    if (!s || !e) return "—";
+    return `${s} → ${e}`;
+  }, [billingPreview]);
+
+  const lockedLabel = useMemo(() => {
+    if (!billingStatus) return "—";
+    if (billingExempt) return "Exempt ✅";
+    if (billingStatus.is_locked) return "Locked 🔒";
+    if (setupComplete) return "Active ✅";
+    return "Needs card ⚠️";
+  }, [billingStatus, billingExempt, setupComplete]);
+
+  const returnTo = useMemo(() => {
+    const qs = new URLSearchParams(loc.search);
+    return qs.get("return") || "/";
+  }, [loc.search]);
+
+  return (
+    <div className="min-h-screen bg-[#020617] text-slate-100">
+      <ModeBar title="SyncWorks" subtitle="Profile" />
+
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <div className="text-xl font-extrabold tracking-tight">Profile</div>
+            <div className="text-xs text-slate-400">Security + billing snapshot. For module settings, use Settings Hub.</div>
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => nav("/settings")}
+              className="rounded-2xl px-4 py-2 bg-cyan-500/12 border border-cyan-500/35 hover:bg-cyan-500/18 text-sm text-cyan-200 font-semibold"
+            >
+              Open Settings Hub
+            </button>
+
+            <button
+              type="button"
+              onClick={loadBilling}
+              className="rounded-2xl px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-sm"
+            >
+              {loading ? "Refreshing..." : "Refresh"}
+            </button>
+
+            <Link to={returnTo} className="rounded-2xl px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-sm">
+              Back
+            </Link>
+          </div>
+        </div>
+
+        {msg ? (
+          <div className="text-sm text-emerald-200 bg-emerald-900/10 border border-emerald-800 rounded-2xl p-3 flex items-start gap-2">
+            <span className="mt-[2px]">✅</span>
+            <div>{msg}</div>
+          </div>
+        ) : null}
+
+        {err ? (
+          <div className="text-sm text-red-200 bg-red-900/10 border border-red-800 rounded-2xl p-3 flex items-start gap-2">
+            <span className="mt-[2px]">⚠️</span>
+            <div className="break-words whitespace-pre-wrap">{err}</div>
+          </div>
+        ) : null}
+
+        <Card
+          title="Account"
+          subtitle="Identity + role"
+          right={
+            <div className="text-[11px] px-3 py-1 rounded-full bg-slate-950 border border-slate-800 text-slate-200">
+              {user?.role || "—"}
+            </div>
+          }
+        >
+          <div className="grid sm:grid-cols-2 gap-3">
+            <Info label="Email" value={user?.email || user?.username || "—"} mono />
+            <Info label="Current Mode" value={mode || "—"} />
+          </div>
+        </Card>
+
+        <ChangePasswordCard onOk={toastSuccess} onErr={toastError} />
+
+        <Card
+          title="Billing Snapshot"
+          subtitle="Monthly preview + account status"
+          right={
+            businessSelected ? (
+              <div className="text-[11px] px-3 py-1 rounded-full bg-slate-950 border border-slate-800 text-slate-200">
+                Business #{businessSelected}
+              </div>
+            ) : (
+              <div className="text-[11px] px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-100">
+                No business selected
+              </div>
+            )
+          }
+        >
+          {!isBillingScopedMode ? (
+            <div className="text-sm text-slate-400">
+              Billing is not shown in this mode. Switch to SBO/PM/Employee/Platform to see business billing.
+            </div>
+          ) : !businessSelected ? (
+            <div className="text-sm text-slate-400">
+              Select a business (top bar) to see billing preview and status.
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={() => nav("/upgrade")}
+                  className="rounded-2xl px-4 py-2 bg-indigo-500/20 border border-indigo-500/40 hover:bg-indigo-500/30 text-sm"
+                >
+                  Go to Upgrade
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                <Info label="State" value={lockedLabel} />
+                <Info label="Period" value={periodLabel} mono />
+                <Info label="Seats" value={`${billingPreview?.seat_count ?? "—"} (included ${billingPreview?.included_seats ?? "—"})`} />
+                <Info label="Extra seats" value={String(billingPreview?.extra_seats ?? "—")} />
+              </div>
+
+              <div className="mt-4 grid sm:grid-cols-2 gap-3">
+                <Info label="SBO subscription" value={centsToDollars(billingPreview?.sbo_subscription_cents)} />
+                <Info label="PM subscription" value={centsToDollars(billingPreview?.pm_subscription_cents)} />
+                <Info label="Seat charges" value={centsToDollars(billingPreview?.seats_cents)} />
+                <Info label="Platform fee" value={centsToDollars(billingPreview?.platform_fee_cents)} />
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4 flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <div className="text-xs text-slate-400">Total due (preview)</div>
+                  <div className="text-2xl font-extrabold">{centsToDollars(billingPreview?.total_due_cents)}</div>
+                  {billingExempt ? <div className="text-xs text-emerald-200 mt-1">Billing exempt ✅</div> : null}
+                </div>
+
+                {!billingExempt ? (
+                  <button
+                    type="button"
+                    onClick={setupOrUpdateCard}
+                    disabled={loadingCard}
+                    className="rounded-2xl px-5 py-3 bg-cyan-500/20 border border-cyan-500/40 hover:bg-cyan-500/30 text-sm disabled:opacity-60"
+                  >
+                    {loadingCard ? "Opening Stripe..." : setupComplete ? "Update Card" : "Add Card on File"}
+                  </button>
+                ) : (
+                  <div className="text-xs text-slate-500">Card not required while exempt.</div>
+                )}
+              </div>
+
+              <div className="mt-4 grid sm:grid-cols-2 gap-3 text-sm">
+                <Info label="Next due date" value={billingStatus?.next_due_date || "—"} mono />
+                <Info label="Grace until" value={billingStatus?.grace_until || "—"} mono />
+              </div>
+            </>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
