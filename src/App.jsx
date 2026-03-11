@@ -1,4 +1,3 @@
-// src/App.jsx
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -78,7 +77,9 @@ function EmployeeHome() {
     <ProtectedRoute>
       <div className="min-h-screen bg-[#020617] text-slate-100 p-6">
         <h1 className="text-xl font-semibold">Employee Dashboard</h1>
-        <p className="text-slate-400 mt-2">Your access is based on permissions set by your Property Manager.</p>
+        <p className="text-slate-400 mt-2">
+          Your access is based on permissions set by your Property Manager.
+        </p>
 
         <div className="mt-6 flex gap-3 flex-wrap">
           <a
@@ -163,6 +164,16 @@ export default function App() {
         {/* ✅ Unified Settings Hub (global, authed) */}
         <Route
           path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsHub />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ✅ Back-compat alias so Stripe / old links never 404 */}
+        <Route
+          path="/sbo/settings"
           element={
             <ProtectedRoute>
               <SettingsHub />
