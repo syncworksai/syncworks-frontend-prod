@@ -1,4 +1,3 @@
-// src/pages/SboDashboard.jsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/client";
@@ -136,9 +135,6 @@ function Modal({ open, onClose, title, subtitle, children }) {
   );
 }
 
-/**
- * Small top-right Stripe button:
- */
 function StripeMiniButton({ stripeOk, stripeHasAccount, onClick, busy }) {
   const connectedCls = "bg-emerald-500/15 border-emerald-500/40 text-emerald-200";
   const warnCls = "bg-amber-500/15 border-amber-500/40 text-amber-200";
@@ -205,6 +201,7 @@ function fmtMoneyCents(cents, currency = "USD") {
     return `$${n.toFixed(2)}`;
   }
 }
+
 function fmtShortDate(d) {
   if (!d) return "—";
   const dt = new Date(d);
@@ -214,7 +211,13 @@ function fmtShortDate(d) {
 
 export default function SboDashboard() {
   const navigate = useNavigate();
-  const { activeBusinessId } = useAuth();
+  const {
+    activeBusinessId,
+    myBusinesses,
+    reloadBusinesses,
+    setActiveBusinessId,
+    isGod,
+  } = useAuth();
 
   const [tab, setTab] = useState("overview");
 
@@ -235,15 +238,15 @@ export default function SboDashboard() {
     revenueMtd: "—",
   });
 
-  // ✅ lock UX
   const locked = !!billing?.is_locked;
   const lockReason = billing?.lock_reason || "LOCKED";
   const [lockModalOpen, setLockModalOpen] = useState(false);
 
-  // ✅ cash fee invoices (read-only)
   const [invoiceBusy, setInvoiceBusy] = useState(false);
   const [invoiceErr, setInvoiceErr] = useState("");
   const [cashInvoices, setCashInvoices] = useState([]);
+
+  const [creatingBusiness, setCreatingBusiness] = useState(false);
 
   const stripeOk = useMemo(() => {
     const s = stripeConnect || {};
@@ -257,7 +260,24 @@ export default function SboDashboard() {
 
   const bizId = useMemo(() => String(activeBusinessId || "").trim(), [activeBusinessId]);
 
+  const businessOptions = useMemo(() => {
+    const list = Array.isArray(myBusinesses) ? myBusinesses : [];
+    return list
+      .map((b) => ({
+        businessId: String(b?.business_id || b?.id || b?.business?.id || ""),
+        name: b?.business_name || b?.name || b?.business?.name || "",
+      }))
+      .filter((x) => x.businessId);
+  }, [myBusinesses]);
+
+  const hasBusiness = !!bizId;
+
   const loadBilling = useCallback(async () => {
+    if (!bizId) {
+      setBilling(null);
+      return;
+    }
+
     setErr("");
     setLoading(true);
     try {
@@ -269,18 +289,28 @@ export default function SboDashboard() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [bizId]);
 
   const loadStripeConnectStatus = useCallback(async () => {
+    if (!bizId) {
+      setStripeConnect(null);
+      return;
+    }
+
     try {
       const res = await api.get("/connect/express/status/");
       setStripeConnect(res.data || null);
     } catch {
       setStripeConnect(null);
     }
-  }, []);
+  }, [bizId]);
 
   const loadCashFeeInvoices = useCallback(async () => {
+    if (!bizId) {
+      setCashInvoices([]);
+      return;
+    }
+
     setInvoiceErr("");
     setInvoiceBusy(true);
     try {
@@ -299,7 +329,6 @@ export default function SboDashboard() {
   const submitUnlockRequest = useCallback(async (message) => {
     setInvoiceErr("");
     try {
-      // backend likely expects {} or {message}; send message safely
       await api.post("/billing/unlock-request/", message ? { message } : {});
       return true;
     } catch (e) {
@@ -329,6 +358,16 @@ export default function SboDashboard() {
   }, []);
 
   const loadKpis = useCallback(async () => {
+    if (!bizId) {
+      setKpis({
+        openTickets: "—",
+        marketplaceOpen: "—",
+        scheduled7d: "—",
+        revenueMtd: "—",
+      });
+      return;
+    }
+
     try {
       const mine = await api.get("/tickets/");
       const list = Array.isArray(mine.data) ? mine.data : mine.data?.results || [];
@@ -339,7 +378,6 @@ export default function SboDashboard() {
         ["ACCEPTED", "SCHEDULED", "EN_ROUTE", "ON_SITE", "IN_PROGRESS"].includes(upper(t?.status))
       );
 
-      // Marketplace is blocked while locked — don't call it (prevents 423 spam)
       let marketplaceOpen = "—";
       if (!locked) {
         try {
@@ -362,9 +400,14 @@ export default function SboDashboard() {
     } catch {
       // ignore KPI errors
     }
-  }, [locked]);
+  }, [bizId, locked]);
 
   const loadZipMetrics = useCallback(async () => {
+    if (!bizId) {
+      setZipMetrics(null);
+      return;
+    }
+
     setZipBusy(true);
     try {
       const res = await api.get("/tickets/metrics/zip/");
@@ -374,7 +417,7 @@ export default function SboDashboard() {
     } finally {
       setZipBusy(false);
     }
-  }, []);
+  }, [bizId]);
 
   async function startStripeConnect() {
     setErr("");
@@ -390,6 +433,40 @@ export default function SboDashboard() {
       setErr(e?.response?.data?.detail || "Failed to start Stripe Connect onboarding");
     } finally {
       setConnecting(false);
+    }
+  }
+
+  async function quickCreateBusiness() {
+    if (!isGod && businessOptions.length > 0) return;
+
+    const name = window.prompt("Business name:");
+    if (!name || !name.trim()) return;
+
+    setCreatingBusiness(true);
+    setErr("");
+
+    try {
+      const res = await api.post("/me/businesses/create/", {
+        name: name.trim(),
+        accepts_marketplace_tickets: true,
+        service_radius_miles: 25,
+      });
+
+      const newId =
+        res?.data?.business_id ||
+        res?.data?.id ||
+        res?.data?.business?.id ||
+        "";
+
+      await reloadBusinesses();
+
+      if (newId) {
+        setActiveBusinessId(String(newId));
+      }
+    } catch (e) {
+      setErr(e?.response?.data?.detail || "Failed to create business.");
+    } finally {
+      setCreatingBusiness(false);
     }
   }
 
@@ -443,26 +520,26 @@ export default function SboDashboard() {
   }, [zipMetrics]);
 
   useEffect(() => {
+    if (!bizId) return;
     loadBilling();
     loadKpis();
     loadStripeConnectStatus();
     loadZipMetrics();
-  }, [loadBilling, loadKpis, loadStripeConnectStatus, loadZipMetrics]);
+  }, [bizId, loadBilling, loadKpis, loadStripeConnectStatus, loadZipMetrics]);
 
   useEffect(() => {
     function onBizChanged() {
+      if (!bizId) return;
       loadBilling();
       loadKpis();
       loadStripeConnectStatus();
       loadZipMetrics();
-      // keep invoices fresh when business changes if modal is open
       if (lockModalOpen) loadCashFeeInvoices();
     }
     window.addEventListener("sw:activeBusinessChanged", onBizChanged);
     return () => window.removeEventListener("sw:activeBusinessChanged", onBizChanged);
-  }, [loadBilling, loadKpis, loadStripeConnectStatus, loadZipMetrics, lockModalOpen, loadCashFeeInvoices]);
+  }, [bizId, loadBilling, loadKpis, loadStripeConnectStatus, loadZipMetrics, lockModalOpen, loadCashFeeInvoices]);
 
-  // If API emits a global lock event (from api client interceptor), open the modal immediately
   useEffect(() => {
     function onLocked() {
       setLockModalOpen(true);
@@ -471,19 +548,19 @@ export default function SboDashboard() {
     return () => window.removeEventListener("sw:billingLocked", onLocked);
   }, []);
 
-  // Auto-open modal when newly locked (first render / business change)
   useEffect(() => {
     if (locked) setLockModalOpen(true);
   }, [locked]);
 
   function go(id) {
+    if (!hasBusiness) return;
+
     if (id === "overview") {
       setTab("overview");
       return;
     }
     if (id === "tickets") return navigate("/tickets?view=my");
 
-    // Marketplace routes to tickets board currently — block it when locked
     if (id === "marketplace") {
       if (locked) {
         setLockModalOpen(true);
@@ -495,10 +572,11 @@ export default function SboDashboard() {
     if (id === "team") return navigate("/team/invites");
     if (id === "schedule") return navigate("/calendar");
     if (id === "inbox") return navigate("/inbox");
-    if (id === "settings") return navigate("/upgrade");
+    if (id === "settings") return navigate("/settings?return=%2Fsbo");
   }
 
   async function refreshAll() {
+    if (!bizId) return;
     await Promise.allSettled([loadBilling(), loadKpis(), loadStripeConnectStatus(), loadZipMetrics()]);
     if (lockModalOpen) loadCashFeeInvoices();
   }
@@ -508,6 +586,93 @@ export default function SboDashboard() {
     await loadCashFeeInvoices();
   }
 
+  if (!hasBusiness) {
+    return (
+      <div className="min-h-screen bg-[#020617] text-slate-100">
+        <ModeBar
+          title="CEO / SBO Dashboard"
+          subtitle="Select a business to continue"
+          rightActions={
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={quickCreateBusiness}
+                disabled={creatingBusiness}
+                className="text-xs rounded-2xl px-3 py-2 bg-indigo-500/20 border border-indigo-500/40 hover:bg-indigo-500/30"
+              >
+                {creatingBusiness ? "Creating..." : "+ Create business"}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/settings?return=%2Fsbo")}
+                className="text-xs rounded-2xl px-3 py-2 bg-slate-950/60 border border-slate-800 hover:bg-slate-900/40"
+              >
+                Settings
+              </button>
+            </div>
+          }
+        />
+
+        <main className="max-w-6xl mx-auto px-4 py-8 space-y-5">
+          {err ? (
+            <div className="text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-2xl p-3">{err}</div>
+          ) : null}
+
+          <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-6">
+            <div className="text-xl font-extrabold text-slate-100">No active business selected</div>
+            <div className="mt-2 text-sm text-slate-400 max-w-2xl">
+              SBO pages are business-scoped. Select a business from the top bar, or create one now.
+              God Mode does not hard crash here anymore — it falls back safely.
+            </div>
+
+            {businessOptions.length > 0 ? (
+              <div className="mt-5">
+                <div className="text-xs text-slate-500 mb-2">Your businesses</div>
+                <div className="flex gap-2 flex-wrap">
+                  {businessOptions.map((b) => (
+                    <button
+                      key={b.businessId}
+                      type="button"
+                      onClick={() => setActiveBusinessId(b.businessId)}
+                      className="rounded-2xl px-4 py-2 text-sm border border-cyan-500/35 bg-cyan-500/12 hover:bg-cyan-500/18 text-cyan-200"
+                    >
+                      {b.name || `Business #${b.businessId}`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-5 flex gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={quickCreateBusiness}
+                disabled={creatingBusiness}
+                className="rounded-2xl px-4 py-2 text-sm font-semibold border border-indigo-500/35 bg-indigo-500/12 hover:bg-indigo-500/18 text-indigo-200"
+              >
+                {creatingBusiness ? "Creating..." : "Create business"}
+              </button>
+
+              <Link
+                to="/settings?return=%2Fsbo"
+                className="rounded-2xl px-4 py-2 text-sm border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40"
+              >
+                Open Settings
+              </Link>
+
+              <Link
+                to="/customer"
+                className="rounded-2xl px-4 py-2 text-sm border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40"
+              >
+                Back to Customer
+              </Link>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">
       <ModeBar
@@ -515,25 +680,27 @@ export default function SboDashboard() {
         subtitle="Tickets • Marketplace • Team • Schedule • Inbox"
         rightActions={
           <div className="flex items-center gap-2 flex-wrap">
-            <Link
-              to="/upgrade"
+            <button
+              type="button"
+              onClick={quickCreateBusiness}
+              disabled={creatingBusiness}
               className="text-xs rounded-2xl px-3 py-2 bg-indigo-500/20 border border-indigo-500/40 hover:bg-indigo-500/30"
               title="Create another business"
             >
-              + Create business
-            </Link>
+              {creatingBusiness ? "Creating..." : "+ Create business"}
+            </button>
 
             <Link
-              to="/sales?create=1"
+              to="/sales/dashboard"
               className="text-xs rounded-2xl px-3 py-2 bg-cyan-500/15 border border-cyan-500/30 hover:bg-cyan-500/20 text-cyan-200"
-              title="Create a Sales Pipeline (Sales OS)"
+              title="Open Sales OS"
             >
-              + Create Sales Pipeline
+              Sales OS
             </Link>
 
             <button
               type="button"
-              onClick={() => navigate("/upgrade")}
+              onClick={() => navigate("/settings?return=%2Fsbo")}
               className="text-xs rounded-2xl px-3 py-2 bg-slate-950/60 border border-slate-800 hover:bg-slate-900/40"
               title="Business settings"
             >
@@ -550,7 +717,6 @@ export default function SboDashboard() {
           <div className="text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-2xl p-3">{err}</div>
         ) : null}
 
-        {/* Tabs */}
         <div className="flex gap-2 flex-wrap items-center">
           {TABS.map((t) => {
             const isMarketplace = t.id === "marketplace";
@@ -579,7 +745,6 @@ export default function SboDashboard() {
           </button>
         </div>
 
-        {/* Compact lock banner */}
         {locked ? (
           <div className="rounded-3xl border border-rose-500/35 bg-rose-500/10 p-4">
             <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -611,10 +776,8 @@ export default function SboDashboard() {
           </div>
         ) : null}
 
-        {/* OVERVIEW */}
         {tab === "overview" ? (
           <div className="space-y-4">
-            {/* CEO Hub */}
             <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div>
@@ -678,7 +841,6 @@ export default function SboDashboard() {
               </div>
             </div>
 
-            {/* KPI row */}
             <div className="grid md:grid-cols-4 gap-3">
               <MiniKpi label="Open Tickets" value={kpis.openTickets} tone="cyan" />
               <MiniKpi label="Marketplace Queue" value={kpis.marketplaceOpen} tone="fuchsia" />
@@ -686,7 +848,6 @@ export default function SboDashboard() {
               <MiniKpi label="Revenue (MTD)" value={kpis.revenueMtd} tone="emerald" />
             </div>
 
-            {/* BIG Stripe card only when not ready */}
             {!stripeOk ? (
               <Card
                 title="Stripe Connect (Get Paid)"
@@ -747,7 +908,6 @@ export default function SboDashboard() {
               </Card>
             ) : null}
 
-            {/* Rest */}
             <div className="grid xl:grid-cols-3 gap-4">
               <Card title="CEO Sticky Notes" subtitle="Quick notepad. Check it off and it disappears.">
                 <TodoList scope="sbo" title="CEO Sticky Notes" subtitle="Text • Priority • Due date" />
@@ -797,7 +957,6 @@ export default function SboDashboard() {
         ) : null}
       </main>
 
-      {/* ✅ Lock Modal (Fix Billing) */}
       <Modal
         open={lockModalOpen && locked}
         onClose={() => setLockModalOpen(false)}
@@ -821,7 +980,6 @@ export default function SboDashboard() {
             <button
               type="button"
               onClick={async () => {
-                // Minimal request payload for production
                 const ok = await submitUnlockRequest(`Request unlock for business ${bizId || "—"}. I have updated billing/payment method.`);
                 if (ok) {
                   setInvoiceErr("");
@@ -852,7 +1010,6 @@ export default function SboDashboard() {
             </Link>
           </div>
 
-          {/* Invoices list */}
           <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div>

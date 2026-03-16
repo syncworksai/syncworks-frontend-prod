@@ -1,14 +1,11 @@
-// src/components/BusinessCards/BusinessCardsPanel.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
+import Button from "../ui/Button";
 
 import AddBusinessCardModal from "./AddBusinessCardModal";
 import BarcodeScannerModal from "./BarcodeScannerModal";
-
-function cx(...parts) {
-  return parts.filter(Boolean).join(" ");
-}
+import StarRating from "./StarRating";
 
 function safeList(data) {
   if (!data) return [];
@@ -17,30 +14,57 @@ function safeList(data) {
   return [];
 }
 
-function IconBtn({ title, tone = "slate", disabled, onClick, children }) {
-  const tones = {
-    slate: "bg-slate-950/70 border-slate-800 hover:bg-slate-900/60 text-slate-200",
-    cyan: "bg-cyan-500/18 border-cyan-500/35 hover:bg-cyan-500/24 text-cyan-100",
-    indigo: "bg-indigo-500/18 border-indigo-500/35 hover:bg-indigo-500/24 text-indigo-100",
-    emerald: "bg-emerald-500/14 border-emerald-500/28 hover:bg-emerald-500/18 text-emerald-100",
-    rose: "bg-rose-500/14 border-rose-500/28 hover:bg-rose-500/18 text-rose-100",
-  };
+function normalizeWebsite(v) {
+  const s = String(v || "").trim();
+  if (!s) return "";
+  if (s.startsWith("http://") || s.startsWith("https://")) return s;
+  return `https://${s}`;
+}
 
-  return (
-    <button
-      type="button"
-      title={title}
-      disabled={!!disabled}
-      onClick={onClick}
-      className={cx(
-        "inline-flex items-center justify-center h-9 w-9 rounded-2xl border transition select-none",
-        tones[tone] || tones.slate,
-        disabled ? "opacity-50 cursor-not-allowed" : ""
-      )}
-    >
-      <span className="text-[14px] leading-none">{children}</span>
-    </button>
-  );
+function normalizeExternalUrl(v) {
+  const s = String(v || "").trim();
+  if (!s) return "";
+  if (s.startsWith("http://") || s.startsWith("https://")) return s;
+  return `https://${s}`;
+}
+
+function safeText(v) {
+  return String(v || "").trim();
+}
+
+function groupLabelFromBusiness(biz) {
+  const serviceTags = Array.isArray(biz?.services_offered)
+    ? biz.services_offered
+        .map((x) => `${x?.name || ""} ${x?.key || ""} ${x?.path || ""}`)
+        .join(" ")
+        .toLowerCase()
+    : "";
+
+  const headline = safeText(biz?.headline).toLowerCase();
+  const services = safeText(biz?.services_text).toLowerCase();
+  const blob = `${headline} ${services} ${serviceTags}`;
+
+  if (blob.includes("plumb")) return "Plumbing";
+  if (blob.includes("hvac") || blob.includes("air") || blob.includes("cooling") || blob.includes("heating")) return "HVAC";
+  if (blob.includes("electric")) return "Electrical";
+  if (blob.includes("auto") || blob.includes("detail") || blob.includes("roadside")) return "Auto";
+  if (blob.includes("pet") || blob.includes("dog") || blob.includes("groom")) return "Pets";
+  if (blob.includes("clean")) return "Cleaning";
+  if (blob.includes("lawn") || blob.includes("landscap")) return "Lawn";
+  if (blob.includes("roof")) return "Roofing";
+  if (blob.includes("handyman") || blob.includes("repair")) return "Repair";
+  if (
+    blob.includes("tax") ||
+    blob.includes("bookkeeping") ||
+    blob.includes("notary") ||
+    blob.includes("insurance") ||
+    blob.includes("marketing")
+  ) {
+    return "Business";
+  }
+  if (blob.includes("ride") || blob.includes("transport")) return "Transportation";
+
+  return "All Services";
 }
 
 function writeNewRequestPrefill(payload) {
@@ -51,111 +75,125 @@ function writeNewRequestPrefill(payload) {
   }
 }
 
-// Rolodex-ish stacked cards (overlap + slight rotation + depth)
-function BusinessCard({ fav, index, onRemove, onSchedule }) {
-  const biz = fav?.business || {};
-  const name = biz?.name || "Business";
-  const nickname = fav?.nickname || "";
-  const zip = biz?.base_zip || "";
-  const radius = biz?.service_radius_miles ?? "";
-  const accepts = !!biz?.accepts_marketplace_tickets;
+function getPresenceMeta(modeRaw) {
+  const mode = String(modeRaw || "").trim().toLowerCase();
 
-  const logoUrl = biz?.logo_url || biz?.logoUrl || biz?.logo || null;
+  if (mode === "online") {
+    return {
+      label: "ONLINE BUSINESS",
+      className:
+        "border-cyan-500/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_30px_rgba(34,211,238,0.18)]",
+    };
+  }
 
-  const tilt = useMemo(() => {
-    const t = ((index % 6) - 3) * 0.6; // -1.8..+1.8
-    return t;
-  }, [index]);
+  if (mode === "in_person") {
+    return {
+      label: "IN PERSON",
+      className:
+        "border-fuchsia-500/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-[0_0_30px_rgba(217,70,239,0.16)]",
+    };
+  }
 
-  const lift = useMemo(() => {
-    const y = Math.min(index, 6) * 6;
-    return y;
-  }, [index]);
+  if (mode === "on_site") {
+    return {
+      label: "ON-SITE SERVICE",
+      className:
+        "border-emerald-500/40 bg-emerald-500/15 text-emerald-200 shadow-[0_0_30px_rgba(16,185,129,0.16)]",
+    };
+  }
+
+  if (mode === "hybrid") {
+    return {
+      label: "ONLINE + ON-SITE",
+      className:
+        "border-amber-500/40 bg-amber-500/15 text-amber-200 shadow-[0_0_30px_rgba(245,158,11,0.16)]",
+    };
+  }
+
+  return {
+    label: "BUSINESS TYPE",
+    className: "border-slate-700 bg-slate-900/70 text-slate-300",
+  };
+}
+
+function isRemoteBusiness(biz) {
+  return (
+    !!biz?.is_online_only ||
+    String(biz?.business_presence_mode || "").trim().toLowerCase() === "online" ||
+    biz?.effective_service_radius_miles == null
+  );
+}
+
+function getRadiusLabel(biz) {
+  if (isRemoteBusiness(biz)) return "Remote";
+  const n = biz?.effective_service_radius_miles ?? biz?.service_radius_miles;
+  return n != null && n !== "" ? `${n} mi` : "—";
+}
+
+function getSocialLinks(biz) {
+  return [
+    { key: "facebook", label: "Facebook", short: "f", url: normalizeExternalUrl(biz?.facebook_url) },
+    { key: "instagram", label: "Instagram", short: "ig", url: normalizeExternalUrl(biz?.instagram_url) },
+    { key: "linkedin", label: "LinkedIn", short: "in", url: normalizeExternalUrl(biz?.linkedin_url) },
+    { key: "google", label: "Google", short: "g", url: normalizeExternalUrl(biz?.google_business_url) },
+    { key: "youtube", label: "YouTube", short: "yt", url: normalizeExternalUrl(biz?.youtube_url) },
+    { key: "tiktok", label: "TikTok", short: "tt", url: normalizeExternalUrl(biz?.tiktok_url) },
+  ].filter((x) => x.url);
+}
+
+function SocialLinkPill({ href, label, short }) {
+  if (!href) return null;
 
   return (
-    <div
-      className="relative shrink-0"
-      style={{
-        width: 420,
-        maxWidth: "80vw",
-        transform: `translateY(${lift}px) rotate(${tilt}deg)`,
-      }}
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      title={label}
+      className="inline-flex items-center justify-center min-w-[42px] h-10 px-3 rounded-2xl border border-slate-800 bg-slate-950/80 hover:bg-slate-900 text-slate-100 transition text-xs font-extrabold uppercase tracking-wide"
     >
-      <div className="rounded-[28px] border border-slate-800 bg-slate-950/55 backdrop-blur shadow-[0_0_60px_rgba(0,0,0,0.45)] overflow-hidden">
-        <div className="h-[3px] bg-gradient-to-r from-cyan-400/80 via-indigo-400/70 to-fuchsia-400/70" />
+      {short}
+    </a>
+  );
+}
 
-        <div className="p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-xs uppercase tracking-wider text-slate-500">Business Card</div>
-              <div className="text-lg font-extrabold text-slate-100 truncate mt-1">{name}</div>
+function PresenceBadge({ mode }) {
+  const meta = getPresenceMeta(mode);
+  return (
+    <div
+      className={`inline-flex items-center rounded-full border px-3 py-2 text-[11px] font-extrabold tracking-[0.18em] uppercase ${meta.className}`}
+    >
+      {meta.label}
+    </div>
+  );
+}
 
-              {nickname ? (
-                <div className="text-xs text-cyan-200/90 mt-1">
-                  Nickname: <span className="font-semibold">{nickname}</span>
-                </div>
-              ) : null}
+function TrustMiniPill({ active, label }) {
+  return (
+    <span
+      className={
+        "text-[11px] px-3 py-1.5 rounded-full border font-semibold " +
+        (active
+          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
+          : "bg-slate-950/60 border-slate-800 text-slate-400")
+      }
+    >
+      {label}
+    </span>
+  );
+}
 
-              <div className="text-sm text-slate-300 mt-3 leading-relaxed">
-                <span className="text-slate-400">What they do:</span> Service provider (profile text coming next)
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                {zip ? (
-                  <span className="text-[11px] px-3 py-1.5 rounded-full border border-slate-800 bg-slate-950/70 text-slate-200">
-                    ZIP {zip}
-                  </span>
-                ) : null}
-                {radius !== "" ? (
-                  <span className="text-[11px] px-3 py-1.5 rounded-full border border-slate-800 bg-slate-950/70 text-slate-200">
-                    Radius {radius} mi
-                  </span>
-                ) : null}
-                <span
-                  className={cx(
-                    "text-[11px] px-3 py-1.5 rounded-full border font-semibold",
-                    accepts
-                      ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-200"
-                      : "bg-rose-500/10 border-rose-500/25 text-rose-200"
-                  )}
-                >
-                  {accepts ? "Accepting jobs" : "Not accepting jobs"}
-                </span>
-              </div>
-            </div>
-
-            <div className="shrink-0 w-[124px] h-[124px] rounded-2xl border border-slate-800 bg-slate-950/60 overflow-hidden relative">
-              {logoUrl ? (
-                <img src={logoUrl} alt={name} className="h-full w-full object-cover" />
-              ) : (
-                <div className="h-full w-full flex items-center justify-center text-slate-500 text-xs">Photo</div>
-              )}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-indigo-500/10 to-fuchsia-500/10" />
-            </div>
-          </div>
-
-          <div className="mt-5 flex items-center justify-between gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={onSchedule}
-              className="inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 bg-cyan-500/18 border border-cyan-500/35 hover:bg-cyan-500/24 text-cyan-100 shadow-[0_0_30px_rgba(34,211,238,0.10)]"
-              title="Start a new request with this business (prefill)"
-            >
-              ↻ Schedule again
-            </button>
-
-            <div className="flex items-center gap-2">
-              <IconBtn title="Remove from favorites" tone="rose" onClick={onRemove}>
-                🗑️
-              </IconBtn>
-            </div>
-          </div>
-
-          <div className="mt-3 text-[11px] text-slate-500">
-            Favorite ID: <span className="font-mono text-slate-300">{fav?.id}</span>
-          </div>
+function PanelCard({ title, subtitle, right, children }) {
+  return (
+    <div className="rounded-3xl border border-slate-800 bg-slate-950/45 backdrop-blur p-6 shadow-[0_0_60px_rgba(0,0,0,0.35)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-lg font-extrabold text-slate-100 truncate">{title}</div>
+          {subtitle ? <div className="text-sm text-slate-400 mt-1">{subtitle}</div> : null}
         </div>
+        {right ? <div className="shrink-0">{right}</div> : null}
       </div>
+      <div className="mt-4">{children}</div>
     </div>
   );
 }
@@ -163,184 +201,421 @@ function BusinessCard({ fav, index, onRemove, onSchedule }) {
 export default function BusinessCardsPanel() {
   const navigate = useNavigate();
 
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [ok, setOk] = useState("");
+  const [favorites, setFavorites] = useState([]);
 
-  const [openAdd, setOpenAdd] = useState(false);
-  const [openScan, setOpenScan] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
 
-  async function load() {
+  const [search, setSearch] = useState("");
+  const [activeGroup, setActiveGroup] = useState("All");
+
+  const favoritesByBizId = useMemo(() => {
+    const m = new Map();
+    (favorites || []).forEach((f) => {
+      const bid = f?.business?.id;
+      if (bid != null) m.set(String(bid), f);
+    });
+    return m;
+  }, [favorites]);
+
+  async function loadFavorites() {
     setErr("");
     setLoading(true);
     try {
       const r = await api.get("/me/favorites/businesses/");
-      setItems(safeList(r.data));
+      setFavorites(safeList(r.data));
     } catch (e) {
+      setFavorites([]);
       setErr(e?.response?.data?.detail || e?.message || "Failed to load business cards");
-      setItems([]);
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    load();
+    loadFavorites();
   }, []);
 
-  async function removeFavorite(favId) {
-    const id = Number(favId);
-    if (!Number.isFinite(id)) return;
+  const groups = useMemo(() => {
+    const set = new Set(["All"]);
+    favorites.forEach((fav) => {
+      set.add(groupLabelFromBusiness(fav?.business || {}));
+    });
+    return Array.from(set);
+  }, [favorites]);
 
+  const filteredFavorites = useMemo(() => {
+    const q = search.trim().toLowerCase();
+
+    return favorites.filter((fav) => {
+      const biz = fav?.business || {};
+      const group = groupLabelFromBusiness(biz);
+      const socials = getSocialLinks(biz);
+
+      if (activeGroup !== "All" && group !== activeGroup) return false;
+      if (!q) return true;
+
+      const blob = [
+        fav?.nickname,
+        biz?.name,
+        biz?.headline,
+        biz?.services_text,
+        biz?.phone,
+        biz?.business_email,
+        biz?.city,
+        biz?.state,
+        biz?.display_location,
+        biz?.website,
+        biz?.base_zip,
+        biz?.business_card_code,
+        biz?.business_presence_mode,
+        biz?.is_online_only ? "remote" : "",
+        biz?.is_online_only ? "online" : "",
+        getPresenceMeta(biz?.business_presence_mode).label,
+        group,
+        ...socials.flatMap((x) => [x.label, x.url]),
+        ...(Array.isArray(biz?.services_offered)
+          ? biz.services_offered.flatMap((x) => [x?.name, x?.key, x?.path])
+          : []),
+      ]
+        .map((x) => String(x || "").toLowerCase())
+        .join(" ");
+
+      return blob.includes(q);
+    });
+  }, [favorites, activeGroup, search]);
+
+  async function resolveAndAddByCode(codeRaw) {
+    const code = String(codeRaw || "").trim();
+    if (!code) {
+      throw new Error("Enter a business card code first.");
+    }
+
+    setBusy(true);
     setErr("");
-
-    // optimistic remove
-    const prev = items;
-    setItems((x) => x.filter((f) => Number(f?.id) !== id));
+    setOk("");
 
     try {
-      // ✅ delete by FAVORITE row id (not business id)
-      await api.delete(`/me/favorites/businesses/${id}/`);
-      await load();
+      const res = await api.get("/me/business-cards/resolve/", { params: { code } });
+      const biz = res?.data?.business || null;
+      const bizId = biz?.id;
+
+      if (!bizId) {
+        throw new Error("Could not resolve that code. Ask the business to verify their SW- code.");
+      }
+
+      if (favoritesByBizId.has(String(bizId))) {
+        throw new Error("That business is already saved in your Business Cards.");
+      }
+
+      await api.post("/me/favorites/businesses/", { business_id: Number(bizId) });
+
+      setAddOpen(false);
+      setScanOpen(false);
+      setOk("Business card added.");
+      await loadFavorites();
     } catch (e) {
-      setErr(e?.response?.data?.detail || e?.message || "Remove failed");
-      setItems(prev);
+      const msg =
+        e?.response?.data?.detail ||
+        e?.response?.data?.code?.[0] ||
+        e?.response?.data?.non_field_errors?.[0] ||
+        e?.message ||
+        "Failed to add business card";
+      setErr(msg);
+      throw e;
+    } finally {
+      setBusy(false);
     }
   }
 
-  function scheduleAgain(fav) {
+  async function removeFavorite(fav) {
+    const id = Number(fav?.id);
+    if (!Number.isFinite(id)) return;
+
+    const yes = window.confirm(`Remove ${fav?.business?.name || "this business card"}?`);
+    if (!yes) return;
+
+    setBusy(true);
+    setErr("");
+    setOk("");
+
+    try {
+      await api.delete(`/me/favorites/businesses/${id}/`);
+      setOk("Business card removed.");
+      await loadFavorites();
+    } catch (e) {
+      setErr(e?.response?.data?.detail || e?.message || "Failed to remove business card");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function bookAgain(fav) {
     const biz = fav?.business || {};
+    const businessId = biz?.id;
+    if (!businessId) return;
 
     const payload = {
       source: "favorite_business",
       favorite_id: fav?.id,
-      business_id: biz?.id,
+      business_id: businessId,
       business_name: biz?.name || "",
       base_zip: biz?.base_zip || "",
-      radius_miles: biz?.service_radius_miles ?? null,
+      radius_miles: isRemoteBusiness(biz) ? null : biz?.effective_service_radius_miles ?? biz?.service_radius_miles ?? null,
+      is_online_only: !!biz?.is_online_only,
+      business_presence_mode: biz?.business_presence_mode || "",
     };
 
     writeNewRequestPrefill(payload);
 
     const q = new URLSearchParams();
-    if (biz?.id) q.set("business_id", String(biz.id));
+    q.set("business_id", String(businessId));
     if (fav?.id) q.set("favorite_id", String(fav.id));
 
     navigate(`/customer/new-request?${q.toString()}`);
   }
 
-  // ✅ Customer adds card by code (manual OR scanned)
-  async function addByCode(codeRaw) {
-    const code = String(codeRaw || "").trim();
-    if (!code) throw new Error("Missing code");
-
-    setErr("");
-
-    // 1) Resolve code -> business
-    const res = await api.get("/me/business-cards/resolve/", { params: { code } });
-    const business = res.data?.business;
-    if (!business?.id) throw new Error("Invalid code");
-
-    // 2) Add favorite
-    await api.post("/me/favorites/businesses/", { business_id: business.id });
-
-    // 3) Refresh list
-    await load();
+  function viewCard(fav) {
+    if (!fav?.id) return;
+    navigate(`/customer/business-cards/${fav.id}`);
   }
-
-  async function addByDetectedCode(raw) {
-    try {
-      await addByCode(raw);
-    } catch (e) {
-      setErr(e?.response?.data?.detail || e?.message || "Could not add card from scan.");
-    }
-  }
-
-  const count = items?.length || 0;
 
   return (
-    <div className="rounded-3xl border border-slate-800 bg-slate-950/45 backdrop-blur p-6 shadow-[0_0_60px_rgba(0,0,0,0.35)]">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-lg font-extrabold">Business Cards</div>
-          <div className="text-sm text-slate-400 mt-1">
-            Customers only: scan a business QR or type the SW-code to save them here.
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          <button
-            type="button"
-            onClick={() => setOpenScan(true)}
-            className="inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 bg-slate-950/60 border border-slate-800 hover:bg-slate-900/40 text-slate-200"
-            title="Scan a business QR"
-          >
-            📷 Scan
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setOpenAdd(true)}
-            className="inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 bg-cyan-500/18 border border-cyan-500/35 hover:bg-cyan-500/24 text-cyan-100 shadow-[0_0_30px_rgba(34,211,238,0.10)]"
-            title="Type/paste a business SW-code"
-          >
-            ＋ Add by code
-          </button>
-
-          <span className="text-[11px] px-3 py-1.5 rounded-full border font-semibold bg-indigo-500/10 border-indigo-500/30 text-indigo-200">
-            {count} saved
-          </span>
-
-          <IconBtn title="Refresh" tone="slate" onClick={load}>
-            🔄
-          </IconBtn>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       {err ? (
-        <div className="mt-4 text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-2xl p-3">{err}</div>
-      ) : null}
-
-      {loading ? <div className="mt-4 text-sm text-slate-400">Loading…</div> : null}
-
-      {!loading && count === 0 ? (
-        <div className="mt-5 rounded-3xl border border-slate-800 bg-slate-950/55 p-5">
-          <div className="font-semibold">No Business Cards yet</div>
-          <div className="text-sm text-slate-400 mt-2">
-            Tap <b>Add by code</b> to paste a business SW-code, or <b>Scan</b> a business QR.
-          </div>
+        <div className="rounded-2xl border border-red-900/50 bg-red-950/30 text-red-200 p-3 text-sm">
+          {err}
         </div>
       ) : null}
 
-      {count ? (
-        <div className="mt-5">
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-x-0 -top-8 h-16 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-fuchsia-500/10 blur-2xl" />
+      {ok ? (
+        <div className="rounded-2xl border border-emerald-900/50 bg-emerald-950/30 text-emerald-200 p-3 text-sm">
+          {ok}
+        </div>
+      ) : null}
 
-            <div className="flex gap-4 overflow-x-auto pb-6 pt-2 pr-2">
-              {items.map((fav, i) => (
-                <BusinessCard
-                  key={fav?.id || i}
-                  fav={fav}
-                  index={i}
-                  onRemove={() => removeFavorite(fav?.id)}
-                  onSchedule={() => scheduleAgain(fav)}
-                />
+      <PanelCard
+        title="Business Cards"
+        subtitle="Save providers you trust — scan their QR or type their SW- code."
+        right={
+          <div className="flex gap-2 flex-wrap justify-end">
+            <Button tone="cyan" onClick={() => setScanOpen(true)} disabled={loading || busy}>
+              Scan QR
+            </Button>
+            <Button tone="indigo" onClick={() => setAddOpen(true)} disabled={loading || busy}>
+              Add by Code
+            </Button>
+            <Button tone="slate" onClick={loadFavorites} disabled={loading || busy}>
+              {loading ? "Loading…" : "Refresh"}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/35 p-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div className="text-sm font-semibold text-slate-100">Find a Saved Card</div>
+                <div className="text-xs text-slate-400 mt-1">
+                  Search by business name, service, city, code, phone, email, website, or social link.
+                </div>
+              </div>
+              <div className="text-xs text-slate-500">{filteredFavorites.length} shown</div>
+            </div>
+
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search business cards..."
+              className="mt-4 w-full rounded-2xl bg-slate-950 border border-slate-800 px-3 py-3 text-sm text-slate-100 outline-none focus:border-cyan-500/40"
+            />
+
+            <div className="mt-4 flex gap-2 flex-wrap">
+              {groups.map((group) => (
+                <button
+                  key={group}
+                  type="button"
+                  onClick={() => setActiveGroup(group)}
+                  className={
+                    "text-xs rounded-full px-3 py-2 border transition " +
+                    (activeGroup === group
+                      ? "bg-cyan-500/15 border-cyan-500/30 text-cyan-200"
+                      : "bg-slate-950 border-slate-800 hover:bg-slate-900 text-slate-200")
+                  }
+                >
+                  {group}
+                </button>
               ))}
             </div>
-
-            <div className="text-[11px] text-slate-500 mt-2">
-              Next: business profile fields (photo + “what they do”) so these cards feel like real provider cards.
-            </div>
           </div>
+
+          {loading ? (
+            <div className="text-sm text-slate-400">Loading…</div>
+          ) : filteredFavorites.length === 0 ? (
+            <div className="text-sm text-slate-400">
+              No business cards yet. Tap <b>Scan QR</b> or <b>Add by Code</b>.
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-3">
+              {filteredFavorites.map((fav) => {
+                const biz = fav?.business || {};
+                const bid = biz?.id;
+                const name = biz?.name || "Business";
+                const code = biz?.business_card_code || "—";
+                const website = normalizeWebsite(biz?.website || "");
+                const location = biz?.display_location || [biz?.city, biz?.state].filter(Boolean).join(", ");
+                const socials = getSocialLinks(biz);
+
+                return (
+                  <div
+                    key={fav?.id ?? `${bid}-${name}`}
+                    className="group rounded-3xl border border-slate-800 bg-slate-950/55 p-5 shadow-[0_0_40px_rgba(0,0,0,0.20)] hover:shadow-[0_0_40px_rgba(34,211,238,0.07)] transition"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Saved Provider</div>
+                        <div className="font-extrabold text-slate-100 truncate mt-1">{name}</div>
+
+                        {fav?.nickname ? (
+                          <div className="mt-1 text-xs text-slate-500 truncate">
+                            Saved as: <span className="text-slate-300">{fav.nickname}</span>
+                          </div>
+                        ) : null}
+
+                        <div className="mt-3">
+                          <PresenceBadge mode={biz?.business_presence_mode} />
+                        </div>
+
+                        <div className="mt-2 text-xs text-slate-400">
+                          ID: <span className="text-slate-200">{bid ?? "—"}</span>
+                        </div>
+
+                        <div className="mt-1 text-xs text-slate-500">
+                          Card: <span className="font-mono text-slate-300">{code}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 shrink-0">
+                        <div className="h-14 w-14 rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
+                          {biz?.logo_url ? (
+                            <img
+                              src={biz.logo_url}
+                              alt={name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-[10px] text-slate-500">No Logo</span>
+                          )}
+                        </div>
+
+                        <StarRating value={biz?.rating ?? 0} />
+                      </div>
+                    </div>
+
+                    {biz?.headline ? (
+                      <div className="mt-4 text-sm text-cyan-200">{biz.headline}</div>
+                    ) : null}
+
+                    {socials.length ? (
+                      <div className="mt-4">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500 mb-2">
+                          Socials
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                          {socials.map((item) => (
+                            <SocialLinkPill
+                              key={item.key}
+                              href={item.url}
+                              label={item.label}
+                              short={item.short}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="mt-4 flex gap-2 flex-wrap">
+                      <TrustMiniPill active={!!biz?.is_licensed} label="Licensed" />
+                      <TrustMiniPill active={!!biz?.is_insured} label="Insured" />
+                      <TrustMiniPill active={!!biz?.background_checked} label="Checked" />
+                    </div>
+
+                    {biz?.services_text ? (
+                      <div className="mt-4 text-sm text-slate-300 line-clamp-3">{biz.services_text}</div>
+                    ) : null}
+
+                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-3">
+                        <div className="text-[11px] uppercase tracking-wide text-slate-500">Location</div>
+                        <div className="mt-1 text-slate-200">{location || "—"}</div>
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-3">
+                        <div className="text-[11px] uppercase tracking-wide text-slate-500">Radius</div>
+                        <div className="mt-1 text-slate-200">{getRadiusLabel(biz)}</div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-1 text-sm text-slate-300">
+                      <div>
+                        <span className="text-slate-500">Phone:</span> {biz?.phone || "—"}
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Email:</span> {biz?.business_email || "—"}
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Website:</span>{" "}
+                        {website ? (
+                          <a
+                            href={website}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-cyan-300 underline break-all"
+                          >
+                            {website}
+                          </a>
+                        ) : (
+                          "—"
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-5 flex gap-2 flex-wrap">
+                      <Button tone="cyan" onClick={() => bookAgain(fav)} disabled={!bid || busy}>
+                        Book Again
+                      </Button>
+
+                      <Button tone="slate" onClick={() => viewCard(fav)} disabled={!fav?.id || busy}>
+                        View Card
+                      </Button>
+
+                      <Button tone="rose" onClick={() => removeFavorite(fav)} disabled={busy}>
+                        Delete Card
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      ) : null}
+      </PanelCard>
 
-      {/* ✅ Add by code */}
-      <AddBusinessCardModal open={openAdd} onClose={() => setOpenAdd(false)} onSubmit={addByCode} />
+      <AddBusinessCardModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onSubmit={(code) => resolveAndAddByCode(code)}
+      />
 
-      {/* ✅ Scan QR */}
-      <BarcodeScannerModal open={openScan} onClose={() => setOpenScan(false)} onDetected={addByDetectedCode} />
+      <BarcodeScannerModal
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onDetected={(raw) => resolveAndAddByCode(raw)}
+      />
     </div>
   );
 }

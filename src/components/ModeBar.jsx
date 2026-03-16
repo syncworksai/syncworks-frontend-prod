@@ -1,4 +1,3 @@
-// src/components/ModeBar.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
@@ -16,6 +15,27 @@ function Pill({ children, className = "" }) {
 
 function SectionLabel({ children }) {
   return <div className="hidden lg:block text-[10px] uppercase tracking-widest text-slate-500 mb-1">{children}</div>;
+}
+
+function ModuleBadge({ children, tone = "cyan" }) {
+  const tones = {
+    cyan: "border-cyan-500/35 bg-cyan-500/12 text-cyan-200 shadow-[0_0_20px_rgba(34,211,238,0.14)]",
+    indigo: "border-indigo-500/35 bg-indigo-500/12 text-indigo-200 shadow-[0_0_20px_rgba(99,102,241,0.14)]",
+    fuchsia: "border-fuchsia-500/35 bg-fuchsia-500/12 text-fuchsia-200 shadow-[0_0_20px_rgba(217,70,239,0.14)]",
+    emerald: "border-emerald-500/35 bg-emerald-500/12 text-emerald-200 shadow-[0_0_20px_rgba(52,211,153,0.14)]",
+    slate: "border-slate-700 bg-slate-900/60 text-slate-200",
+  };
+
+  return (
+    <span
+      className={cx(
+        "inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-extrabold tracking-[0.18em] uppercase whitespace-nowrap",
+        tones[tone] || tones.cyan
+      )}
+    >
+      {children}
+    </span>
+  );
 }
 
 function GearIcon({ className = "" }) {
@@ -231,7 +251,7 @@ function toNiceName({ first, last, fallback = "" }) {
 export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActions = null }) {
   const nav = useNavigate();
   const loc = useLocation();
-  const { mode, setMode, availableModes, isGod, myBusinesses, logout, user } = useAuth();
+  const { mode, setMode, availableModes, isGod, myBusinesses, logout, user, moduleAccess } = useAuth();
 
   const [investorLinked, setInvestorLinked] = useState(false);
   const [tenantLinked, setTenantLinked] = useState(false);
@@ -245,9 +265,9 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
     style.id = id;
     style.textContent = `
       @keyframes swWaveDrift {
-        0%   { transform: translate3d(-8%, 0, 0) scale(1);    opacity: .55; }
+        0%   { transform: translate3d(-8%, 0, 0) scale(1); opacity: .55; }
         50%  { transform: translate3d( 8%, 0, 0) scale(1.02); opacity: .72; }
-        100% { transform: translate3d(-8%, 0, 0) scale(1);    opacity: .55; }
+        100% { transform: translate3d(-8%, 0, 0) scale(1); opacity: .55; }
       }
       @keyframes swShineSweep {
         0%   { transform: translateX(-120%); opacity: 0; }
@@ -334,9 +354,8 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
   const canEmployee = !!availableModes?.EMPLOYEE || isGod;
   const canPm = !!availableModes?.PM || isGod;
   const canAdmin = !!availableModes?.PLATFORM && isGod;
-  const canSales = isGod || salesLinked;
+  const canSales = isGod || !!moduleAccess?.sales || salesLinked;
 
-  // ✅ FIX: always preserve the full current path + query as the return value
   function goSettings() {
     const from = `${loc.pathname || "/"}${loc.search || ""}`;
     nav(`/settings?return=${encodeURIComponent(from)}`);
@@ -351,7 +370,10 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
   }
 
   function goMode(nextMode, to, locked) {
-    if (locked) return nav("/upgrade");
+    if (locked) {
+      const from = `${loc.pathname || "/"}${loc.search || ""}`;
+      return nav(`/upgrade?return=${encodeURIComponent(from)}`);
+    }
     setMode(nextMode);
     nav(to);
   }
@@ -383,6 +405,16 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
     return "SyncWorks";
   }, [mode]);
 
+  const roleBadgeTone = useMemo(() => {
+    if (mode === "CUSTOMER") return "cyan";
+    if (mode === "SBO") return "indigo";
+    if (mode === "EMPLOYEE") return "cyan";
+    if (mode === "PM") return "fuchsia";
+    if (mode === "SALES") return "emerald";
+    if (mode === "PLATFORM") return "slate";
+    return "cyan";
+  }, [mode]);
+
   const customerName = useMemo(() => {
     const u = user || {};
     return toNiceName({
@@ -395,41 +427,31 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
   const businessName = safeStr(activeBiz?.name);
   const businessOwner = safeStr(activeBiz?.owner_name || activeBiz?.ownerName);
   const businessPhone = safeStr(activeBiz?.phone || activeBiz?.phone_number || activeBiz?.phoneNumber);
-  const businessEmail = safeStr(activeBiz?.business_email || activeBiz?.email || activeBiz?.contact_email);
-  const businessWebsite = safeStr(activeBiz?.website || activeBiz?.website_url || activeBiz?.url);
 
   const identityLeft = useMemo(() => {
     if (mode === "CUSTOMER") {
-      return {
-        title: customerName || "Customer",
-        sub: safeStr(user?.email) ? safeStr(user?.email) : "",
-      };
+      return customerName || "Customer";
     }
 
     if (["SBO", "EMPLOYEE", "PM", "PLATFORM"].includes(mode)) {
-      const t = businessName || "Select a Business";
-      const bits = [
-        businessOwner ? `Owner: ${businessOwner}` : "",
-        businessPhone ? `Phone: ${businessPhone}` : "",
-        businessEmail ? `Email: ${businessEmail}` : "",
-        businessWebsite ? `Web: ${businessWebsite}` : "",
-      ].filter(Boolean);
-
-      return {
-        title: t,
-        sub: bits.join(" • "),
-      };
+      return businessName || "Select a Business";
     }
 
     if (mode === "SALES") {
-      return {
-        title: "Sales OS",
-        sub: "Prospects • Pipeline • Leaderboard",
-      };
+      return "Sales OS";
     }
 
-    return { title: "SyncWorks", sub: "" };
-  }, [mode, customerName, user?.email, businessName, businessOwner, businessPhone, businessEmail, businessWebsite]);
+    return "SyncWorks";
+  }, [mode, customerName, businessName]);
+
+  const identitySub = useMemo(() => {
+    if (["SBO", "EMPLOYEE", "PM", "PLATFORM"].includes(mode)) {
+      return [businessOwner ? `Owner: ${businessOwner}` : "", businessPhone ? `Phone: ${businessPhone}` : ""]
+        .filter(Boolean)
+        .join(" • ");
+    }
+    return "";
+  }, [mode, businessOwner, businessPhone]);
 
   function goSupport() {
     nav("/support");
@@ -452,6 +474,19 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
               "radial-gradient(900px 180px at 90% 45%, rgba(217,70,239,0.12), rgba(0,0,0,0) 60%)",
           }}
         />
+
+        <div
+          className="absolute inset-0 flex items-center justify-center"
+          style={{ opacity: 0.09 }}
+        >
+          <img
+            src="/brands/syncworks new logo.jpg"
+            alt="SyncWorks background"
+            className="w-[820px] max-w-none object-contain blur-[2px] select-none"
+            draggable={false}
+          />
+        </div>
+
         <div
           className="absolute -inset-y-10 -inset-x-40 blur-xl"
           style={{
@@ -459,141 +494,145 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
             background: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.09) 45%, rgba(255,255,255,0) 100%)",
           }}
         />
-        <div className="absolute inset-0 bg-slate-950/65" />
+
+        <div className="absolute inset-0 bg-slate-950/72" />
       </div>
 
-      <div className="relative max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <div className="text-base font-extrabold tracking-wide truncate text-slate-100">{title}</div>
-            <Pill className="border-slate-800 text-slate-300 bg-slate-900/40">v7.1</Pill>
-            <Pill className="border-slate-800 text-slate-300 bg-slate-900/25">{roleLabel}</Pill>
+      <div className="relative max-w-6xl mx-auto px-4 py-3">
+        <div className="flex items-start lg:items-center gap-3">
+          <div className="min-w-0 flex items-center gap-3">
+            <img
+               src="/brands/syncworks new logo.jpg"
+               alt="SyncWorks"
+               className="h-14 w-14 md:h-16 md:w-16 rounded-2xl object-cover border border-cyan-500/20 bg-slate-950/70 shrink-0 shadow-[0_0_40px_rgba(99,102,241,0.18)]"
+            />
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="text-base font-extrabold tracking-wide text-slate-100">SyncWorks</div>
+                <Pill className="border-slate-800 text-slate-300 bg-slate-900/40">v7.1</Pill>
+                <ModuleBadge tone={roleBadgeTone}>{roleLabel}</ModuleBadge>
+              </div>
+
+              <div className="mt-1 text-sm text-slate-200 truncate">{identityLeft}</div>
+              {identitySub ? <div className="mt-0.5 text-[11px] text-slate-400 truncate">{identitySub}</div> : null}
+            </div>
           </div>
 
-          {subtitle ? <div className="text-xs text-slate-400 mt-0.5 truncate">{subtitle}</div> : null}
+          <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
+            {showBiz ? <BusinessPicker className="hidden md:flex" /> : null}
 
-          <div className="mt-1 text-[11px] text-slate-400 truncate">
-            <span className="text-slate-200 font-semibold">{identityLeft.title}</span>
-            {identityLeft.sub ? <span className="text-slate-500"> • </span> : null}
-            {identityLeft.sub ? <span className="text-slate-400">{identityLeft.sub}</span> : null}
-          </div>
-        </div>
-
-        <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
-          {showBiz ? <BusinessPicker className="hidden md:flex" /> : null}
-
-          <div className="hidden lg:flex items-end gap-4">
-            <div>
-              <SectionLabel>Customer / SBO</SectionLabel>
-              <div className="flex items-center gap-2">
-                <ModeButton label="Customer" accent="cyan" active={mode === "CUSTOMER"} locked={!canCustomer} onClick={() => goMode("CUSTOMER", "/customer", !canCustomer)} />
-                <ModeButton label="SBO" accent="indigo" active={mode === "SBO"} locked={!canSbo} onClick={() => goMode("SBO", "/sbo", !canSbo)} />
-              </div>
-            </div>
-
-            <div>
-              <SectionLabel>Work Roles</SectionLabel>
-              <div className="flex items-center gap-2">
-                <ModeButton label="Employee" accent="cyan" active={mode === "EMPLOYEE"} locked={!canEmployee} onClick={() => goMode("EMPLOYEE", "/employee", !canEmployee)} />
-                <ModeButton label="Property Mgr" accent="fuchsia" active={mode === "PM"} locked={!canPm} onClick={() => goMode("PM", "/pm", !canPm)} />
-                {!hideSalesButton ? (
-                  <ModeButton
-                    label="Sales OS"
-                    accent="emerald"
-                    active={mode === "SALES"}
-                    locked={!canSales}
-                    title={canSales ? "Open Sales OS" : "Upgrade to unlock Sales OS"}
-                    onClick={() => goMode("SALES", "/sales/board", !canSales)}
-                  />
-                ) : null}
-              </div>
-            </div>
-
-            {showPortals ? (
+            <div className="hidden lg:flex items-end gap-4">
               <div>
-                <SectionLabel>Portals</SectionLabel>
+                <SectionLabel>Customer / SBO</SectionLabel>
                 <div className="flex items-center gap-2">
-                  <ModeButton
-                    label="Investor"
-                    accent="slate"
-                    active={false}
-                    locked={!investorLinked}
-                    title={investorLinked ? "Open Investor Portal" : "Investor not linked — click to claim"}
-                    onClick={() => nav(investorLinked ? "/investor" : "/portal/claim?portal=investor")}
-                  />
-                  <ModeButton
-                    label="Tenant"
-                    accent="slate"
-                    active={false}
-                    locked={!tenantLinked}
-                    title={tenantLinked ? "Open Tenant Portal" : "Tenant not linked — click to claim"}
-                    onClick={() => nav(tenantLinked ? "/tenant" : "/portal/claim?portal=tenant")}
-                  />
+                  <ModeButton label="Customer" accent="cyan" active={mode === "CUSTOMER"} locked={!canCustomer} onClick={() => goMode("CUSTOMER", "/customer", !canCustomer)} />
+                  <ModeButton label="SBO" accent="indigo" active={mode === "SBO"} locked={!canSbo} onClick={() => goMode("SBO", "/sbo", !canSbo)} />
                 </div>
               </div>
-            ) : null}
 
-            {canAdmin ? (
               <div>
-                <SectionLabel>Admin</SectionLabel>
+                <SectionLabel>Work Roles</SectionLabel>
                 <div className="flex items-center gap-2">
-                  <ModeButton label="Admin" accent="cyan" active={mode === "PLATFORM"} locked={false} onClick={() => goMode("PLATFORM", "/platform", false)} />
+                  <ModeButton label="Employee" accent="cyan" active={mode === "EMPLOYEE"} locked={!canEmployee} onClick={() => goMode("EMPLOYEE", "/employee", !canEmployee)} />
+                  <ModeButton label="Property Mgr" accent="fuchsia" active={mode === "PM"} locked={!canPm} onClick={() => goMode("PM", "/pm", !canPm)} />
+                  {!hideSalesButton ? (
+                    <ModeButton
+                      label="Sales OS"
+                      accent="emerald"
+                      active={mode === "SALES"}
+                      locked={!canSales}
+                      title={canSales ? "Open Sales OS" : "Upgrade to unlock Sales OS"}
+                      onClick={() => goMode("SALES", "/sales/dashboard", !canSales)}
+                    />
+                  ) : null}
                 </div>
               </div>
-            ) : null}
+
+              {showPortals ? (
+                <div>
+                  <SectionLabel>Portals</SectionLabel>
+                  <div className="flex items-center gap-2">
+                    <ModeButton
+                      label="Investor"
+                      accent="slate"
+                      active={false}
+                      locked={!investorLinked}
+                      title={investorLinked ? "Open Investor Portal" : "Investor not linked — click to claim"}
+                      onClick={() => nav(investorLinked ? "/investor" : "/portal/claim?portal=investor")}
+                    />
+                    <ModeButton
+                      label="Tenant"
+                      accent="slate"
+                      active={false}
+                      locked={!tenantLinked}
+                      title={tenantLinked ? "Open Tenant Portal" : "Tenant not linked — click to claim"}
+                      onClick={() => nav(tenantLinked ? "/tenant" : "/portal/claim?portal=tenant")}
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              {canAdmin ? (
+                <div>
+                  <SectionLabel>Admin</SectionLabel>
+                  <div className="flex items-center gap-2">
+                    <ModeButton label="Admin" accent="cyan" active={mode === "PLATFORM"} locked={false} onClick={() => goMode("PLATFORM", "/platform", false)} />
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="lg:hidden flex items-center gap-2">
+              <ModeButton label="Customer" accent="cyan" active={mode === "CUSTOMER"} locked={!canCustomer} onClick={() => goMode("CUSTOMER", "/customer", !canCustomer)} />
+              <ModeButton label="SBO" accent="indigo" active={mode === "SBO"} locked={!canSbo} onClick={() => goMode("SBO", "/sbo", !canSbo)} />
+              <ModeButton label="Employee" accent="cyan" active={mode === "EMPLOYEE"} locked={!canEmployee} onClick={() => goMode("EMPLOYEE", "/employee", !canEmployee)} />
+              <ModeButton label="PM" accent="fuchsia" active={mode === "PM"} locked={!canPm} onClick={() => goMode("PM", "/pm", !canPm)} />
+              {!hideSalesButton ? (
+                <ModeButton label="Sales" accent="emerald" active={mode === "SALES"} locked={!canSales} onClick={() => goMode("SALES", "/sales/dashboard", !canSales)} />
+              ) : null}
+              {canAdmin ? <ModeButton label="Admin" accent="cyan" active={mode === "PLATFORM"} locked={false} onClick={() => goMode("PLATFORM", "/platform", false)} /> : null}
+            </div>
+
+            <RightActions rightActions={rightActions} />
+
+            <IconButton title="Newsfeed (ads + updates)" onClick={goFeed} tone="fuchsia">
+              <FeedIcon className="h-5 w-5" />
+            </IconButton>
+
+            <IconButton title="Support (Contact SyncWorks)" onClick={goSupport} tone="cyan">
+              <SupportIcon className="h-5 w-5" />
+            </IconButton>
+
+            <NotificationsBell />
+
+            <button
+              type="button"
+              onClick={onLogout}
+              title="Logout"
+              className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
+            >
+              <LogoutIcon className="h-5 w-5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={goProfile}
+              title="Profile"
+              className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
+            >
+              <ProfileIcon className="h-5 w-5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={goSettings}
+              title="Settings"
+              className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
+            >
+              <GearIcon className="h-5 w-5" />
+            </button>
           </div>
-
-          <div className="lg:hidden flex items-center gap-2">
-            <ModeButton label="Customer" accent="cyan" active={mode === "CUSTOMER"} locked={!canCustomer} onClick={() => goMode("CUSTOMER", "/customer", !canCustomer)} />
-            <ModeButton label="SBO" accent="indigo" active={mode === "SBO"} locked={!canSbo} onClick={() => goMode("SBO", "/sbo", !canSbo)} />
-            <ModeButton label="Employee" accent="cyan" active={mode === "EMPLOYEE"} locked={!canEmployee} onClick={() => goMode("EMPLOYEE", "/employee", !canEmployee)} />
-            <ModeButton label="PM" accent="fuchsia" active={mode === "PM"} locked={!canPm} onClick={() => goMode("PM", "/pm", !canPm)} />
-
-            {!hideSalesButton ? (
-              <ModeButton label="Sales" accent="emerald" active={mode === "SALES"} locked={!canSales} onClick={() => goMode("SALES", "/sales/board", !canSales)} />
-            ) : null}
-
-            {canAdmin ? <ModeButton label="Admin" accent="cyan" active={mode === "PLATFORM"} locked={false} onClick={() => goMode("PLATFORM", "/platform", false)} /> : null}
-          </div>
-
-          <RightActions rightActions={rightActions} />
-
-          <IconButton title="Newsfeed (ads + updates)" onClick={goFeed} tone="fuchsia">
-            <FeedIcon className="h-5 w-5" />
-          </IconButton>
-
-          <IconButton title="Support (Contact SyncWorks)" onClick={goSupport} tone="cyan">
-            <SupportIcon className="h-5 w-5" />
-          </IconButton>
-
-          <NotificationsBell />
-
-          <button
-            type="button"
-            onClick={onLogout}
-            title="Logout"
-            className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
-          >
-            <LogoutIcon className="h-5 w-5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={goProfile}
-            title="Profile"
-            className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
-          >
-            <ProfileIcon className="h-5 w-5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={goSettings}
-            title="Settings"
-            className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
-          >
-            <GearIcon className="h-5 w-5" />
-          </button>
         </div>
       </div>
 

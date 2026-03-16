@@ -1,4 +1,3 @@
-// src/pages/SettingsHub.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import ModeBar from "../components/ModeBar";
@@ -266,6 +265,107 @@ function parseMoney(x) {
   return String(n);
 }
 
+function normalizeExternalUrl(v) {
+  const s = String(v || "").trim();
+  if (!s) return "";
+  if (s.startsWith("http://") || s.startsWith("https://")) return s;
+  return `https://${s}`;
+}
+
+function normalizeWebsite(v) {
+  const s = String(v || "").trim();
+  if (!s) return "";
+  if (s.startsWith("http://") || s.startsWith("https://")) return s;
+  return `https://${s}`;
+}
+
+function getPresenceMeta(modeRaw) {
+  const mode = String(modeRaw || "").trim().toLowerCase();
+
+  if (mode === "online") {
+    return {
+      label: "ONLINE BUSINESS",
+      className:
+        "border-cyan-500/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_30px_rgba(34,211,238,0.18)]",
+    };
+  }
+
+  if (mode === "in_person") {
+    return {
+      label: "IN PERSON",
+      className:
+        "border-fuchsia-500/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-[0_0_30px_rgba(217,70,239,0.16)]",
+    };
+  }
+
+  if (mode === "on_site") {
+    return {
+      label: "ON-SITE SERVICE",
+      className:
+        "border-emerald-500/40 bg-emerald-500/15 text-emerald-200 shadow-[0_0_30px_rgba(16,185,129,0.16)]",
+    };
+  }
+
+  if (mode === "hybrid") {
+    return {
+      label: "ONLINE + ON-SITE",
+      className:
+        "border-amber-500/40 bg-amber-500/15 text-amber-200 shadow-[0_0_30px_rgba(245,158,11,0.16)]",
+    };
+  }
+
+  return {
+    label: "BUSINESS TYPE",
+    className: "border-slate-700 bg-slate-900/70 text-slate-300",
+  };
+}
+
+function PresenceBadge({ mode }) {
+  const meta = getPresenceMeta(mode);
+  return (
+    <div
+      className={`inline-flex items-center rounded-full border px-4 py-2 text-[11px] font-extrabold tracking-[0.18em] uppercase ${meta.className}`}
+    >
+      {meta.label}
+    </div>
+  );
+}
+
+function getSocialLinks(biz) {
+  return [
+    { key: "facebook", label: "Facebook", short: "f", url: normalizeExternalUrl(biz?.facebook_url) },
+    { key: "instagram", label: "Instagram", short: "ig", url: normalizeExternalUrl(biz?.instagram_url) },
+    { key: "linkedin", label: "LinkedIn", short: "in", url: normalizeExternalUrl(biz?.linkedin_url) },
+    { key: "google", label: "Google", short: "g", url: normalizeExternalUrl(biz?.google_business_url) },
+    { key: "youtube", label: "YouTube", short: "yt", url: normalizeExternalUrl(biz?.youtube_url) },
+    { key: "tiktok", label: "TikTok", short: "tt", url: normalizeExternalUrl(biz?.tiktok_url) },
+  ].filter((x) => x.url);
+}
+
+function SocialLinkPill({ href, label, short }) {
+  if (!href) return null;
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      title={label}
+      className="inline-flex items-center justify-center min-w-[42px] h-10 px-3 rounded-2xl border border-slate-800 bg-slate-950/80 hover:bg-slate-900 text-slate-100 transition text-xs font-extrabold uppercase tracking-wide"
+    >
+      {short}
+    </a>
+  );
+}
+
+const PRESENCE_OPTIONS = [
+  { value: "", label: "Select business type…" },
+  { value: "online", label: "Online Business" },
+  { value: "in_person", label: "In Person" },
+  { value: "on_site", label: "On-Site Service" },
+  { value: "hybrid", label: "Online + On-Site" },
+];
+
 export default function SettingsHub() {
   const nav = useNavigate();
   const loc = useLocation();
@@ -278,7 +378,6 @@ export default function SettingsHub() {
   const [bizSaving, setBizSaving] = useState(false);
   const [biz, setBiz] = useState(null);
 
-  // Person module state (customer/tenant/investor)
   const [person, setPerson] = useState({
     name: "",
     address: "",
@@ -288,7 +387,6 @@ export default function SettingsHub() {
     allowSmsFromSbos: true,
   });
 
-  // Compliance / “Yes-No” per business (local now)
   const [compliance, setCompliance] = useState({
     is_licensed: false,
     is_insured: false,
@@ -297,11 +395,9 @@ export default function SettingsHub() {
     emergency_service: false,
   });
 
-  // Logo upload (local preview + optional PATCH)
   const fileRef = useRef(null);
   const [logoPreview, setLogoPreview] = useState("");
 
-  // Services picker modal state
   const [servicesOpen, setServicesOpen] = useState(false);
   const [catLoading, setCatLoading] = useState(false);
   const [roots, setRoots] = useState([]);
@@ -315,8 +411,7 @@ export default function SettingsHub() {
   const [servicesPick, setServicesPick] = useState([]);
   const [selectedLeafObjects, setSelectedLeafObjects] = useState({});
 
-  // UI tab inside SettingsHub (not app route mode)
-  const [tab, setTab] = useState("ACCOUNT"); // ACCOUNT | CUSTOMER | SBO | SALES | PM | TENANT | INVESTOR | EMPLOYEE
+  const [tab, setTab] = useState("ACCOUNT");
 
   const businessSelected = useMemo(() => {
     const n = parseInt(String(activeBusinessId || ""), 10);
@@ -332,7 +427,7 @@ export default function SettingsHub() {
     return {
       CUSTOMER: true,
       SBO: hasMemberships,
-      SALES: true, // ModeBar/route can hard-gate actual module usage; tab is okay
+      SALES: true,
       PM: hasMemberships,
       TENANT: true,
       INVESTOR: true,
@@ -345,6 +440,7 @@ export default function SettingsHub() {
     setMsg(s || "Saved.");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+
   function toastErr(s) {
     setMsg("");
     setErr(s || "Something went wrong.");
@@ -374,7 +470,6 @@ export default function SettingsHub() {
     return "Unknown";
   }, [biz]);
 
-  // Seed person from auth user (local-only until backend endpoint exists)
   useEffect(() => {
     const u = user || {};
     const fullName = `${String(u.first_name || "").trim()} ${String(u.last_name || "").trim()}`
@@ -391,7 +486,6 @@ export default function SettingsHub() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email]);
 
-  // Load business + local biz extras
   async function loadBusiness() {
     if (!businessSelected) {
       setBiz(null);
@@ -416,7 +510,6 @@ export default function SettingsHub() {
       })();
       setLogoPreview(remoteLogo || localLogo || "");
 
-      // load local compliance snapshot
       try {
         const raw = localStorage.getItem(bizKey(businessSelected, "compliance"));
         const obj = raw ? JSON.parse(raw) : null;
@@ -435,7 +528,6 @@ export default function SettingsHub() {
         // ignore
       }
 
-      // load local services snapshot
       try {
         const rawIds = localStorage.getItem(bizKey(businessSelected, "service_ids"));
         const rawMap = localStorage.getItem(bizKey(businessSelected, "service_map"));
@@ -471,10 +563,8 @@ export default function SettingsHub() {
   async function saveComplianceBestEffort(next) {
     if (!businessSelected) return;
 
-    // store local always
     persistComplianceLocal(next);
 
-    // best-effort PATCH (field names may not exist yet)
     const payloads = [{ ...next }, { compliance: next }, { business_compliance: next }];
 
     for (const p of payloads) {
@@ -511,11 +601,8 @@ export default function SettingsHub() {
       // ignore
     }
 
-    // NOTE: true backend upload should be multipart to /businesses/:id/ with "logo" field.
-    // This MVP keeps local preview working even if backend isn't wired yet.
     if (businessSelected) {
       try {
-        // Try a real multipart upload first (if backend supports it)
         const fd = new FormData();
         fd.append("logo", file);
         const res = await api.patch(`/businesses/${businessSelected}/`, fd, {
@@ -525,7 +612,7 @@ export default function SettingsHub() {
         toastOk("Logo uploaded ✅");
         return;
       } catch {
-        // Fallback: keep local-only
+        // fallback below
       }
       toastOk("Logo updated ✅ (local preview). Wire multipart upload endpoint next.");
     }
@@ -562,7 +649,6 @@ export default function SettingsHub() {
     persistServicesLocal();
 
     const ids = Array.isArray(servicesPick) ? servicesPick : [];
-    // ✅ Your backend expects "services_offered" (PK list) on BusinessSerializer
     const payloads = [{ services_offered: ids }];
 
     for (const p of payloads) {
@@ -698,30 +784,35 @@ export default function SettingsHub() {
     setMsg("");
 
     const gross = parseMoney(biz?.expected_gross_monthly ?? biz?.monthly_gross_estimate ?? "");
+
     const basePayload = {
-      // Business block
       name: biz?.name || "",
       business_email: biz?.business_email || "",
       phone: biz?.phone || "",
-      website: biz?.website || "",
+      website: normalizeWebsite(biz?.website || ""),
       owner_name: biz?.owner_name || "",
 
-      // Address block (backend currently only has address + base_zip)
       address: biz?.address || "",
+      city: biz?.city || "",
+      state: String(biz?.state || "").toUpperCase(),
       base_zip: biz?.base_zip || "",
       service_radius_miles: Number(biz?.service_radius_miles ?? 25),
 
-      // Marketplace/business-card copy
       headline: biz?.headline || "",
       services_text: biz?.services_text || "",
       accepts_marketplace_tickets: !!biz?.accepts_marketplace_tickets,
 
-      // ✅ Real field for marketplace matching
       services_offered: Array.isArray(servicesPick) ? servicesPick : [],
+
+      business_presence_mode: biz?.business_presence_mode || "",
+      facebook_url: normalizeExternalUrl(biz?.facebook_url || ""),
+      instagram_url: normalizeExternalUrl(biz?.instagram_url || ""),
+      linkedin_url: normalizeExternalUrl(biz?.linkedin_url || ""),
+      google_business_url: normalizeExternalUrl(biz?.google_business_url || ""),
+      youtube_url: normalizeExternalUrl(biz?.youtube_url || ""),
+      tiktok_url: normalizeExternalUrl(biz?.tiktok_url || ""),
     };
 
-    // Gross monthly is NOT in your Business model right now; keep local-only until you add the field.
-    // We'll still attempt best-effort in case you added it elsewhere.
     const tryPayloads = [];
     if (gross !== "") {
       tryPayloads.push({ ...basePayload, expected_gross_monthly: Number(gross) });
@@ -746,13 +837,16 @@ export default function SettingsHub() {
       }
       throw lastErr;
     } catch (e) {
-      toastErr(e?.response?.data?.detail || "Failed to save business settings.");
+      toastErr(
+        e?.response?.data?.detail ||
+          JSON.stringify(e?.response?.data || {}) ||
+          "Failed to save business settings."
+      );
     } finally {
       setBizSaving(false);
     }
   }
 
-  // Tabs + routing rules you requested
   const tabs = useMemo(
     () => [
       { key: "ACCOUNT", label: "Account", icon: "👤" },
@@ -794,6 +888,8 @@ export default function SettingsHub() {
     [servicesPick]
   );
 
+  const socialLinks = useMemo(() => getSocialLinks(biz || {}), [biz]);
+
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">
       <ModeBar title="SyncWorks" subtitle="Settings" />
@@ -826,7 +922,6 @@ export default function SettingsHub() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-3">
           <div className="flex gap-2 flex-wrap">
             {tabs.map((t) => {
@@ -869,7 +964,6 @@ export default function SettingsHub() {
           </div>
         ) : null}
 
-        {/* ACCOUNT TAB */}
         {tab === "ACCOUNT" ? (
           <>
             <Card
@@ -951,7 +1045,6 @@ export default function SettingsHub() {
           </>
         ) : null}
 
-        {/* CUSTOMER TAB */}
         {tab === "CUSTOMER" ? (
           <Card
             title="Customer Settings"
@@ -1018,11 +1111,10 @@ export default function SettingsHub() {
           </Card>
         ) : null}
 
-        {/* SBO TAB */}
         {tab === "SBO" ? (
           <Card
             title="SBO Settings"
-            subtitle="Business profile, marketplace eligibility, and matching rules"
+            subtitle="Business profile, social links, business card display, marketplace eligibility, and matching rules."
             right={
               <button
                 type="button"
@@ -1056,7 +1148,6 @@ export default function SettingsHub() {
               <div className="text-sm text-slate-400">Loading business…</div>
             ) : (
               <>
-                {/* Business Info */}
                 <div className="grid md:grid-cols-2 gap-3">
                   <Field label="Business name">
                     <Input
@@ -1137,9 +1228,69 @@ export default function SettingsHub() {
                       placeholder="https://yourbusiness.com"
                     />
                   </Field>
+
+                  <Field label="Owner / Contact name">
+                    <Input
+                      value={biz?.owner_name || ""}
+                      onChange={(v) => setBiz((b) => ({ ...(b || {}), owner_name: v }))}
+                      placeholder="Jacob Lord"
+                    />
+                  </Field>
                 </div>
 
-                {/* Address Block */}
+                <div className="mt-3">
+                  <div className="text-xs text-slate-400 mb-2 px-1">Social Media</div>
+                  <div className="grid md:grid-cols-2 gap-3">
+                    <Field label="Facebook URL">
+                      <Input
+                        value={biz?.facebook_url || ""}
+                        onChange={(v) => setBiz((b) => ({ ...(b || {}), facebook_url: v }))}
+                        placeholder="https://facebook.com/yourbusiness"
+                      />
+                    </Field>
+
+                    <Field label="Instagram URL">
+                      <Input
+                        value={biz?.instagram_url || ""}
+                        onChange={(v) => setBiz((b) => ({ ...(b || {}), instagram_url: v }))}
+                        placeholder="https://instagram.com/yourbusiness"
+                      />
+                    </Field>
+
+                    <Field label="LinkedIn URL">
+                      <Input
+                        value={biz?.linkedin_url || ""}
+                        onChange={(v) => setBiz((b) => ({ ...(b || {}), linkedin_url: v }))}
+                        placeholder="https://linkedin.com/company/yourbusiness"
+                      />
+                    </Field>
+
+                    <Field label="Google Business URL">
+                      <Input
+                        value={biz?.google_business_url || ""}
+                        onChange={(v) => setBiz((b) => ({ ...(b || {}), google_business_url: v }))}
+                        placeholder="https://g.page/yourbusiness"
+                      />
+                    </Field>
+
+                    <Field label="YouTube URL">
+                      <Input
+                        value={biz?.youtube_url || ""}
+                        onChange={(v) => setBiz((b) => ({ ...(b || {}), youtube_url: v }))}
+                        placeholder="https://youtube.com/@yourbusiness"
+                      />
+                    </Field>
+
+                    <Field label="TikTok URL">
+                      <Input
+                        value={biz?.tiktok_url || ""}
+                        onChange={(v) => setBiz((b) => ({ ...(b || {}), tiktok_url: v }))}
+                        placeholder="https://tiktok.com/@yourbusiness"
+                      />
+                    </Field>
+                  </div>
+                </div>
+
                 <div className="mt-3">
                   <div className="text-xs text-slate-400 mb-2 px-1">Address</div>
                   <div className="grid md:grid-cols-2 gap-3">
@@ -1150,6 +1301,7 @@ export default function SettingsHub() {
                         placeholder="123 Main St"
                       />
                     </Field>
+
                     <Field label="Base ZIP">
                       <Input
                         value={biz?.base_zip || ""}
@@ -1158,10 +1310,57 @@ export default function SettingsHub() {
                         mono
                       />
                     </Field>
+
+                    <Field label="City">
+                      <Input
+                        value={biz?.city || ""}
+                        onChange={(v) => setBiz((b) => ({ ...(b || {}), city: v }))}
+                        placeholder="Montgomery"
+                      />
+                    </Field>
+
+                    <Field label="State">
+                      <Input
+                        value={biz?.state || ""}
+                        onChange={(v) => setBiz((b) => ({ ...(b || {}), state: String(v || "").toUpperCase() }))}
+                        placeholder="AL"
+                        mono
+                      />
+                    </Field>
                   </div>
                 </div>
 
-                {/* Marketplace Block */}
+                <div className="mt-3">
+                  <div className="text-xs text-slate-400 mb-2 px-1">Business Type / Visibility</div>
+                  <div className="grid md:grid-cols-2 gap-3">
+                    <Field label="Business presence mode" hint='Shows boldly on the customer-facing business card.'>
+                      <select
+                        value={biz?.business_presence_mode || ""}
+                        onChange={(e) =>
+                          setBiz((b) => ({ ...(b || {}), business_presence_mode: e.target.value }))
+                        }
+                        className="w-full h-11 rounded-2xl border border-slate-800 bg-slate-950/60 px-3 text-sm outline-none transition hover:bg-slate-900/40 focus:border-cyan-500/40"
+                      >
+                        {PRESENCE_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value} className="bg-slate-950 text-slate-100">
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+
+                    <Field label="Presence badge preview">
+                      <div className="min-h-[44px] flex items-center">
+                        {biz?.business_presence_mode ? (
+                          <PresenceBadge mode={biz?.business_presence_mode} />
+                        ) : (
+                          <div className="text-sm text-slate-500">Choose a business type above.</div>
+                        )}
+                      </div>
+                    </Field>
+                  </div>
+                </div>
+
                 <div className="mt-3">
                   <div className="text-xs text-slate-400 mb-2 px-1">Marketplace</div>
                   <div className="grid md:grid-cols-2 gap-3">
@@ -1242,7 +1441,6 @@ export default function SettingsHub() {
                   </div>
                 </div>
 
-                {/* Compliance Block */}
                 <div className="mt-3">
                   <div className="text-xs text-slate-400 mb-2 px-1">Compliance (Yes/No)</div>
                   <div className="grid md:grid-cols-2 gap-3">
@@ -1302,12 +1500,110 @@ export default function SettingsHub() {
                     These save locally now; when backend fields exist, we’ll persist them on the Business model.
                   </div>
                 </div>
+
+                <div className="mt-4">
+                  <Card
+                    title="Customer Business Card Preview"
+                    subtitle="This is what customers should understand at a glance."
+                  >
+                    <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-xs uppercase tracking-wider text-slate-500">Business Card</div>
+                          <div className="text-lg font-extrabold text-slate-100 truncate mt-1">
+                            {biz?.name || "Business Name"}
+                          </div>
+
+                          {biz?.business_presence_mode ? (
+                            <div className="mt-3">
+                              <PresenceBadge mode={biz?.business_presence_mode} />
+                            </div>
+                          ) : null}
+
+                          {biz?.headline ? (
+                            <div className="text-sm text-cyan-200/90 mt-3">{biz.headline}</div>
+                          ) : null}
+
+                          {socialLinks.length ? (
+                            <div className="mt-3">
+                              <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500 mb-2">
+                                Socials
+                              </div>
+                              <div className="flex gap-2 flex-wrap">
+                                {socialLinks.map((item) => (
+                                  <SocialLinkPill
+                                    key={item.key}
+                                    href={item.url}
+                                    label={item.label}
+                                    short={item.short}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+
+                          {biz?.services_text ? (
+                            <div className="text-sm text-slate-300 mt-3 leading-relaxed">{biz.services_text}</div>
+                          ) : (
+                            <div className="text-sm text-slate-500 mt-3">
+                              Add a short service summary so customers know what you offer.
+                            </div>
+                          )}
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {biz?.city || biz?.state ? (
+                              <span className="text-[11px] px-3 py-1.5 rounded-full border border-slate-800 bg-slate-950/70 text-slate-200">
+                                {biz?.city || "City"}
+                                {biz?.city && biz?.state ? ", " : ""}
+                                {biz?.state || ""}
+                              </span>
+                            ) : null}
+
+                            {biz?.base_zip ? (
+                              <span className="text-[11px] px-3 py-1.5 rounded-full border border-slate-800 bg-slate-950/70 text-slate-200">
+                                ZIP {biz.base_zip}
+                              </span>
+                            ) : null}
+
+                            {biz?.service_radius_miles ? (
+                              <span className="text-[11px] px-3 py-1.5 rounded-full border border-slate-800 bg-slate-950/70 text-slate-200">
+                                Radius {biz.service_radius_miles} mi
+                              </span>
+                            ) : null}
+                          </div>
+
+                          {biz?.website ? (
+                            <div className="mt-3">
+                              <a
+                                href={normalizeWebsite(biz.website)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-sm text-cyan-300 hover:text-cyan-200 underline break-all"
+                              >
+                                {normalizeWebsite(biz.website)}
+                              </a>
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <div className="shrink-0 w-[110px] h-[110px] rounded-2xl border border-slate-800 bg-slate-950/60 overflow-hidden">
+                          {logoPreview ? (
+                            <img src={logoPreview} alt="Business logo" className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="h-full w-full flex items-center justify-center text-slate-500 text-xs">
+                              Logo
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
               </>
             )}
           </Card>
         ) : null}
 
-        {/* SALES TAB */}
         {tab === "SALES" ? (
           <Card
             title="Sales OS Settings"
@@ -1329,7 +1625,6 @@ export default function SettingsHub() {
           </Card>
         ) : null}
 
-        {/* PM TAB */}
         {tab === "PM" ? (
           <Card
             title="Property Management Settings"
@@ -1350,7 +1645,6 @@ export default function SettingsHub() {
           </Card>
         ) : null}
 
-        {/* TENANT / INVESTOR / EMPLOYEE TAB */}
         {tab === "TENANT" || tab === "INVESTOR" || tab === "EMPLOYEE" ? (
           <Card
             title={`${tab === "TENANT" ? "Tenant" : tab === "INVESTOR" ? "Investor" : "Employee"} Access`}
@@ -1376,7 +1670,6 @@ export default function SettingsHub() {
         </div>
       </div>
 
-      {/* Services picker pop-out */}
       <Modal
         open={servicesOpen}
         onClose={() => setServicesOpen(false)}

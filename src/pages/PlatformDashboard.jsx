@@ -1,4 +1,3 @@
-// src/pages/PlatformDashboard.jsx
 import React, { useState } from "react";
 import ModeBar from "../components/ModeBar";
 
@@ -10,6 +9,7 @@ import BillingManager from "../components/platform/BillingManager";
 import BroadcastsManager from "../components/platform/BroadcastsManager";
 import NewsReelManager from "../components/platform/NewsReelManager";
 import SupportRequestsManager from "../components/platform/SupportRequestsManager";
+import AdsOrdersManager from "../components/platform/AdsOrdersManager";
 
 const TABS = [
   { id: "overview", label: "Overview" },
@@ -17,6 +17,7 @@ const TABS = [
   { id: "businesses", label: "Businesses" },
   { id: "billing", label: "Billing" },
   { id: "requests", label: "Requests" },
+  { id: "ads", label: "Ads Orders" },
   { id: "news", label: "News Reel" },
   { id: "broadcasts", label: "Broadcasts" },
 ];
@@ -34,7 +35,7 @@ export default function PlatformDashboard() {
 
       <ModeBar
         title="SyncWorks Admin"
-        subtitle="Platform console — performance, billing locks, broadcasts, and support triage."
+        subtitle="Platform console — performance, billing locks, ads, broadcasts, and support triage."
       />
 
       <main className="relative max-w-7xl mx-auto px-4 py-6 space-y-5">
@@ -45,6 +46,7 @@ export default function PlatformDashboard() {
         {tab === "businesses" ? <BusinessesManager /> : null}
         {tab === "billing" ? <BillingManager /> : null}
         {tab === "requests" ? <SupportRequestsManager embedded /> : null}
+        {tab === "ads" ? <AdsOrdersManager /> : null}
         {tab === "news" ? <NewsReelManager /> : null}
         {tab === "broadcasts" ? <BroadcastsManager /> : null}
       </main>

@@ -9,6 +9,7 @@ import MessagePanel from "../components/tickets/MessagePanel";
 import AttachmentPanel from "../components/tickets/AttachmentPanel";
 import QuotePanel from "../components/tickets/QuotePanel";
 import InvoicePanel from "../components/tickets/InvoicePanel";
+import CustomerInvoicePanel from "../components/tickets/CustomerInvoicePanel";
 
 const STATUS_LABELS = {
   NEW: "New",
@@ -309,6 +310,155 @@ function getCustomerContact(ticket) {
   return { email, phone };
 }
 
+function assignedBusinessCard(ticket) {
+  const t = ticket || {};
+  return t.assigned_business_card || null;
+}
+
+function assignedBusinessName(ticket) {
+  const t = ticket || {};
+  const card = assignedBusinessCard(t);
+  const candidates = [
+    t.assigned_business_name,
+    card?.name,
+    t.business_name,
+    t.business?.name,
+    t.assigned_business?.name,
+  ]
+    .map((x) => (typeof x === "string" ? x.trim() : ""))
+    .filter(Boolean);
+  return candidates[0] || "";
+}
+
+function normalizeWebsite(v) {
+  const s = String(v || "").trim();
+  if (!s) return "";
+  if (s.startsWith("http://") || s.startsWith("https://")) return s;
+  return `https://${s}`;
+}
+
+function safePhoneHref(v) {
+  const raw = String(v || "").trim();
+  if (!raw) return "";
+  const digits = raw.replace(/[^\d+]/g, "");
+  return digits ? `tel:${digits}` : "";
+}
+
+function safeMailHref(v) {
+  const raw = String(v || "").trim();
+  if (!raw) return "";
+  return `mailto:${raw}`;
+}
+
+function writeNewRequestPrefill(payload) {
+  try {
+    localStorage.setItem("sw:new_request_prefill", JSON.stringify(payload || {}));
+  } catch {
+    // ignore
+  }
+}
+
+function AssignedBusinessCardPanel({ ticket, onBookAgain }) {
+  const card = assignedBusinessCard(ticket);
+  const name = assignedBusinessName(ticket);
+  const logoUrl = card?.logo_url || "";
+  const headline = card?.headline || "";
+  const servicesText = card?.services_text || "";
+  const phone = card?.phone || "";
+  const email = card?.business_email || "";
+  const website = normalizeWebsite(card?.website || "");
+  const location = card?.display_location || [card?.city, card?.state].filter(Boolean).join(", ");
+  const phoneHref = safePhoneHref(phone);
+  const emailHref = safeMailHref(email);
+
+  return (
+    <div className="rounded-3xl border border-slate-800 bg-slate-950/30 p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-lg font-extrabold">Assigned Provider</div>
+          <div className="text-xs text-slate-400 mt-1">
+            This is the business currently attached to your ticket.
+          </div>
+        </div>
+
+        {name ? <SmallPill tone="emerald">Assigned</SmallPill> : <SmallPill tone="amber">Pending</SmallPill>}
+      </div>
+
+      {name ? (
+        <>
+          <div className="mt-4 flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-xl font-bold break-words">{name}</div>
+              {headline ? <div className="mt-2 text-sm text-cyan-200">{headline}</div> : null}
+            </div>
+
+            <div className="h-20 w-20 rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center shrink-0">
+              {logoUrl ? (
+                <img src={logoUrl} alt={name} className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-[10px] text-slate-500">No Logo</span>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 grid md:grid-cols-2 gap-2">
+            <Row k="Phone" v={phone || "—"} />
+            <Row k="Email" v={email || "—"} />
+            <Row k="Location" v={location || "—"} />
+            <Row k="Website" v={website || "—"} />
+          </div>
+
+          {servicesText ? (
+            <div className="mt-3 rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
+              <div className="text-[11px] text-slate-400">Service Description</div>
+              <div className="text-sm text-slate-200 mt-1 whitespace-pre-wrap">{servicesText}</div>
+            </div>
+          ) : null}
+
+          <div className="mt-4 flex gap-2 flex-wrap">
+            {phoneHref ? (
+              <a
+                href={phoneHref}
+                className="inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 border transition bg-slate-950 border-slate-800 hover:bg-slate-900 text-slate-200"
+              >
+                Call
+              </a>
+            ) : null}
+
+            {emailHref ? (
+              <a
+                href={emailHref}
+                className="inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 border transition bg-slate-950 border-slate-800 hover:bg-slate-900 text-slate-200"
+              >
+                Email
+              </a>
+            ) : null}
+
+            {website ? (
+              <a
+                href={website}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 border transition bg-slate-950 border-slate-800 hover:bg-slate-900 text-slate-200"
+              >
+                Website
+              </a>
+            ) : null}
+
+            <Btn tone="cyan" onClick={onBookAgain}>
+              Book Again
+            </Btn>
+          </div>
+        </>
+      ) : (
+        <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/30 p-4 text-sm text-slate-400">
+          No provider is assigned yet. Once a business accepts or is assigned, their trust card will show here.
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function TicketDetail() {
   const { id } = useParams();
   const loc = useLocation();
@@ -333,7 +483,6 @@ export default function TicketDetail() {
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Quick Note UI (SBO only)
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
@@ -351,7 +500,6 @@ export default function TicketDetail() {
       const t = await api.get(`/tickets/${id}/`);
       setTicket(t.data);
 
-      // mark viewed (SBO-like marketplace inbox behavior)
       if (isSboLike && t.data?.is_marketplace === true) {
         try {
           await api.post(`/tickets/${id}/mark_viewed/`);
@@ -376,7 +524,6 @@ export default function TicketDetail() {
     return () => window.removeEventListener("sw:activeBusinessChanged", onBizChanged);
   }, [loadTicket]);
 
-  // Keyboard nav (desktop)
   useEffect(() => {
     function onKey(e) {
       if (noteOpen) return;
@@ -389,9 +536,7 @@ export default function TicketDetail() {
 
   const status = ticket?.status || "NEW";
   const isMarketplace = !!ticket?.is_marketplace;
-
-  // “Assigned” means a provider/business has been attached
-  const assigned = !!(ticket?.assigned_business || ticket?.assigned_business_id || ticket?.business || ticket?.business_id);
+  const assigned = !!assignedBusinessName(ticket);
 
   const completedAt = ticket?.completed_at || null;
   const invoicedAt = ticket?.invoiced_at || null;
@@ -436,9 +581,31 @@ export default function TicketDetail() {
     }
   }
 
-  // Slides are ROLE-AWARE
+  function bookAgainWithAssignedBusiness() {
+    const card = assignedBusinessCard(ticket);
+    const businessId =
+      card?.id ||
+      ticket?.assigned_business_id ||
+      ticket?.assigned_business?.id ||
+      ticket?.business_id ||
+      ticket?.business?.id;
+
+    if (!businessId) return;
+
+    writeNewRequestPrefill({
+      source: "assigned_business_ticket",
+      business_id: businessId,
+      business_name: assignedBusinessName(ticket) || "",
+      base_zip: card?.base_zip || ticket?.service_zip || "",
+      radius_miles: card?.service_radius_miles ?? null,
+    });
+
+    const qs = new URLSearchParams();
+    qs.set("business_id", String(businessId));
+    nav(`/customer/new-request?${qs.toString()}`);
+  }
+
   const slides = useMemo(() => {
-    // CUSTOMER: Ticket Home Page only
     if (isCustomer) {
       return [
         { id: "home", title: "Ticket Home", short: "Home", icon: <Icon name="slides" className="w-5 h-5" /> },
@@ -448,7 +615,6 @@ export default function TicketDetail() {
       ];
     }
 
-    // SBO/provider: full workflow
     return [
       { id: "overview", title: "Overview", short: "Overview", icon: <Icon name="slides" className="w-5 h-5" /> },
       { id: "messages", title: "Messages", short: "Chat", icon: <Icon name="chat" className="w-5 h-5" /> },
@@ -518,7 +684,6 @@ export default function TicketDetail() {
               }}
             />
             <div className="leading-tight">
-              {/* Header: just the number + customer name (no "Ticket Number") */}
               <div className="text-base font-semibold">{`#${id} • ${customerName}`}</div>
               <div className="text-xs text-slate-400">{`Status: ${statusLabel(status)}`}</div>
 
@@ -542,7 +707,6 @@ export default function TicketDetail() {
               ← Back
             </Link>
 
-            {/* Quick Note only for SBO-like */}
             {isSboLike && !isCustomer ? (
               <Btn
                 tone="slate"
@@ -561,7 +725,6 @@ export default function TicketDetail() {
         }
       />
 
-      {/* Quick Note modal (SBO-only) */}
       {noteOpen ? (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
           <div
@@ -618,7 +781,6 @@ export default function TicketDetail() {
       <main className="max-w-7xl mx-auto px-4 py-5 space-y-4">
         {err ? <div className="text-sm text-red-200 bg-red-900/10 border border-red-800 rounded-2xl p-3">{err}</div> : null}
 
-        {/* Slide header */}
         <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="min-w-0">
@@ -645,17 +807,14 @@ export default function TicketDetail() {
           </div>
         </div>
 
-        {/* Slide body */}
         <div
           className="rounded-3xl border border-slate-800 bg-slate-950/40 overflow-hidden"
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
           <div className="p-4 sm:p-6">
-            {/* CUSTOMER HOME */}
             {activeSlide === "home" ? (
               <div className="space-y-4">
-                {/* Top Summary */}
                 <div className="grid lg:grid-cols-12 gap-4">
                   <div className="lg:col-span-5 space-y-4">
                     <div className="rounded-3xl border border-slate-800 bg-slate-950/30 p-5">
@@ -679,13 +838,12 @@ export default function TicketDetail() {
                           {assigned
                             ? "A provider is assigned. Use Messages for updates and pay the invoice when it’s ready."
                             : ticket?.is_marketplace
-                              ? "Your request is in the Marketplace. A provider will accept it soon."
-                              : "Your request is being routed to a provider directly."}
+                            ? "Your request is in the Marketplace. A provider will accept it soon."
+                            : "Your request is being routed to a provider directly."}
                         </div>
                       </div>
                     </div>
 
-                    {/* Invoice preview (customer cares about pay) */}
                     <div className="rounded-3xl border border-slate-800 bg-slate-950/30 p-5">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="font-extrabold text-lg">Invoice</div>
@@ -704,8 +862,9 @@ export default function TicketDetail() {
                     </div>
                   </div>
 
-                  {/* Messages on Home Page */}
                   <div className="lg:col-span-7 space-y-4">
+                    <AssignedBusinessCardPanel ticket={ticket} onBookAgain={bookAgainWithAssignedBusiness} />
+
                     <div className="rounded-3xl border border-slate-800 bg-slate-950/30 p-5">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div>
@@ -727,8 +886,7 @@ export default function TicketDetail() {
                       </div>
                     </div>
 
-                    {/* Optional: contact info shown only to customer (their own) */}
-                    {(customerEmail || customerPhone) ? (
+                    {customerEmail || customerPhone ? (
                       <div className="rounded-3xl border border-slate-800 bg-slate-950/30 p-5">
                         <div className="font-extrabold text-lg">Your Contact</div>
                         <div className="mt-3 grid grid-cols-2 gap-2">
@@ -745,7 +903,6 @@ export default function TicketDetail() {
               </div>
             ) : null}
 
-            {/* SBO OVERVIEW */}
             {activeSlide === "overview" ? (
               <div className="space-y-4">
                 <div className="grid lg:grid-cols-12 gap-4">
@@ -773,14 +930,13 @@ export default function TicketDetail() {
                       ) : null}
                     </div>
 
-                    {/* SBO needs customer info if present */}
                     <div className="rounded-3xl border border-slate-800 bg-slate-950/30 p-5">
                       <div className="font-extrabold text-lg">Customer</div>
                       <div className="mt-3 grid grid-cols-2 gap-2">
                         <Row k="Name" v={customerName || "—"} />
                         <Row k="Phone" v={customerPhone || "—"} />
                         <Row k="Email" v={customerEmail || "—"} />
-                        <Row k="Text Consent" v={"(shown in ticket notes if captured)"} />
+                        <Row k="Text Consent" v="(shown in ticket notes if captured)" />
                       </div>
                       <div className="text-[11px] text-slate-500 mt-3">
                         If you don’t see phone/email here, the backend ticket serializer isn’t returning it yet — we can add it.
@@ -789,6 +945,8 @@ export default function TicketDetail() {
                   </div>
 
                   <div className="lg:col-span-7 space-y-4">
+                    <AssignedBusinessCardPanel ticket={ticket} onBookAgain={bookAgainWithAssignedBusiness} />
+
                     <div className="rounded-3xl border border-slate-800 bg-slate-950/30 p-5">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="font-extrabold text-lg">Quick Actions</div>
@@ -818,7 +976,6 @@ export default function TicketDetail() {
               </div>
             ) : null}
 
-            {/* MESSAGES */}
             {activeSlide === "messages" ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -831,7 +988,6 @@ export default function TicketDetail() {
               </div>
             ) : null}
 
-            {/* WORK (SBO-only) */}
             {activeSlide === "work" ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -875,7 +1031,6 @@ export default function TicketDetail() {
               </div>
             ) : null}
 
-            {/* QUOTE (SBO-only create / Customer can view/approve if you want later) */}
             {activeSlide === "quote" ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -889,21 +1044,33 @@ export default function TicketDetail() {
               </div>
             ) : null}
 
-            {/* INVOICE */}
             {activeSlide === "invoice" ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div>
                     <div className="text-lg font-extrabold">Invoice</div>
-                    <div className="text-xs text-slate-400 mt-1">{isCustomer ? "Pay when ready." : "Create invoice when done."}</div>
+                    <div className="text-xs text-slate-400 mt-1">
+                      {isCustomer ? "Review and pay your invoice." : "Build it fast, then mark it ready for payment."}
+                    </div>
                   </div>
                 </div>
 
-                <InvoicePanel ticketId={ticketId} canCreate={isSboLike} onAfterChange={loadTicket} />
+                {isCustomer ? (
+                  <CustomerInvoicePanel
+                    ticketId={ticketId}
+                    invoice={ticket?.latest_invoice || null}
+                    onAfterPay={loadTicket}
+                  />
+                ) : (
+                  <InvoicePanel
+                    ticketId={ticketId}
+                    ticket={ticket}
+                    onAfterChange={loadTicket}
+                  />
+                )}
               </div>
             ) : null}
 
-            {/* FILES */}
             {activeSlide === "files" ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -918,7 +1085,6 @@ export default function TicketDetail() {
             ) : null}
           </div>
 
-          {/* mobile prev/next */}
           <div className="border-t border-slate-800 bg-slate-950/50 p-3 flex items-center justify-between sm:hidden">
             <button
               type="button"

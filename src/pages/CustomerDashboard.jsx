@@ -1,4 +1,3 @@
-// src/pages/CustomerDashboard.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
@@ -10,16 +9,14 @@ import CustomerWeeklyCalendar from "../components/CustomerWeeklyCalendar";
 import TodoList from "../components/TodoList";
 import InboxPanel from "../components/Inbox/InboxPanel";
 import CustomerTickets from "../components/CustomerTickets";
-import BusinessCardsPanel from "../components/BusinessCards/BusinessCardsPanel";
-import ErrorBoundary from "../components/ErrorBoundary";
 
 const TABS = [
   { id: "overview", label: "Overview" },
-  { id: "business_cards", label: "Business Cards" },
   { id: "orders", label: "All Orders" },
   { id: "calendar", label: "Calendar" },
   { id: "todo", label: "Quick To-Do" },
   { id: "inbox", label: "Inbox" },
+  { id: "deals", label: "Deals" },
   { id: "finance", label: "Finance" },
   { id: "fitness", label: "Fitness" },
 ];
@@ -63,6 +60,7 @@ function IconBtn({ title, tone = "slate", disabled, onClick, children }) {
     indigo: "bg-indigo-500/18 border-indigo-500/35 hover:bg-indigo-500/24 text-indigo-100",
     emerald: "bg-emerald-500/14 border-emerald-500/28 hover:bg-emerald-500/18 text-emerald-100",
     rose: "bg-rose-500/14 border-rose-500/28 hover:bg-rose-500/18 text-rose-100",
+    fuchsia: "bg-fuchsia-500/14 border-fuchsia-500/28 hover:bg-fuchsia-500/18 text-fuchsia-100",
   };
 
   return (
@@ -108,8 +106,151 @@ function writeArchivedSet(user, set) {
   }
 }
 
+function readLocalFeed() {
+  try {
+    const raw = localStorage.getItem("sw_feed_items");
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalFeed(items) {
+  try {
+    localStorage.setItem("sw_feed_items", JSON.stringify(Array.isArray(items) ? items : []));
+  } catch {
+    // ignore
+  }
+}
+
+function seedFeedIfNeeded() {
+  const existing = readLocalFeed();
+  if (existing.length) return existing;
+
+  const demo = [
+    {
+      id: "feed-1",
+      type: "AD",
+      sponsored: true,
+      title: "Quantum Edge FX",
+      business_name: "Quantum Edge FX",
+      headline: "Trading tools, insights, and education built for serious traders.",
+      body: "Get structure, clarity, and execution support with premium trading resources.",
+      cta: "Learn More",
+      cta_href: "/newsfeed",
+      city: "Remote",
+      state: "",
+      image_url: "",
+    },
+    {
+      id: "feed-2",
+      type: "FEATURED_BUSINESS",
+      sponsored: true,
+      title: "Featured Local Service",
+      business_name: "SyncWorks Demo Plumbing",
+      headline: "Fast plumbing service with clean scheduling and trusted routing.",
+      body: "Book directly through SyncWorks and save your favorite providers to Business Cards.",
+      cta: "Book Now",
+      cta_href: "/customer/new-request",
+      city: "Montgomery",
+      state: "AL",
+      image_url: "",
+    },
+    {
+      id: "feed-3",
+      type: "LOCAL_PROMO",
+      sponsored: true,
+      title: "Featured Provider",
+      business_name: "Montgomery Auto Detail",
+      headline: "On-site detailing with fast booking and premium finish packages.",
+      body: "Mobile service available this week. Save the provider card and book in minutes.",
+      cta: "View Card",
+      cta_href: "/customer/business-cards",
+      city: "Montgomery",
+      state: "AL",
+      image_url: "",
+    },
+  ];
+
+  writeLocalFeed(demo);
+  return demo;
+}
+
+function PromoPill({ children, tone = "slate" }) {
+  const cls =
+    tone === "fuchsia"
+      ? "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-200"
+      : tone === "emerald"
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+      : tone === "cyan"
+      ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-200"
+      : "border-slate-800 bg-slate-950/60 text-slate-200";
+
+  return <span className={`text-[11px] px-3 py-1.5 rounded-full border font-semibold ${cls}`}>{children}</span>;
+}
+
+function FeaturedDealsRail({ items, onOpenFeedItem, onViewFeed }) {
+  return (
+    <Card
+      title="Featured Local Deals"
+      right={
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onViewFeed}
+            className="inline-flex items-center justify-center h-9 text-xs rounded-2xl px-4 bg-fuchsia-500/14 border border-fuchsia-500/28 hover:bg-fuchsia-500/18 text-fuchsia-100"
+          >
+            Open Newsfeed
+          </button>
+        </div>
+      }
+    >
+      <div className="text-sm text-slate-400">
+        Sponsored businesses, featured offers, and local promos customers can act on quickly.
+      </div>
+
+      <div className="mt-4 flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory">
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="min-w-[310px] max-w-[310px] snap-start rounded-3xl border border-fuchsia-500/20 bg-slate-950/45 p-4 shadow-[0_0_30px_rgba(217,70,239,0.08)]"
+          >
+            <div className="flex items-center gap-2 flex-wrap">
+              <PromoPill tone="fuchsia">{item.type || "AD"}</PromoPill>
+              <PromoPill tone="emerald">Sponsored</PromoPill>
+              {(item.city || item.state) && (
+                <PromoPill tone="cyan">
+                  {item.city || ""}
+                  {item.city && item.state ? ", " : ""}
+                  {item.state || ""}
+                </PromoPill>
+              )}
+            </div>
+
+            <div className="mt-3 text-lg font-extrabold text-slate-100">
+              {item.business_name || item.title || "Featured"}
+            </div>
+
+            {item.headline ? <div className="mt-2 text-sm text-cyan-200">{item.headline}</div> : null}
+            {item.body ? <div className="mt-3 text-sm text-slate-300">{item.body}</div> : null}
+
+            <button
+              type="button"
+              onClick={() => onOpenFeedItem(item)}
+              className="mt-4 w-full h-10 rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/12 hover:bg-fuchsia-500/18 text-fuchsia-100 text-sm font-semibold"
+            >
+              {item.cta || "Open"}
+            </button>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 // --------------------------------------------------
-// ✅ CUSTOMER-FRIENDLY TITLE MAPPING (FRONTEND FIX)
+// ✅ CUSTOMER-FRIENDLY TITLE MAPPING
 // --------------------------------------------------
 const LIFE_CATEGORY_LABELS = {
   home_property: "Home & Property",
@@ -293,7 +434,33 @@ function resolveCustomerFriendlyTitle(ticket) {
   return "Service Request";
 }
 
-// Try to display “who accepted it” without breaking if field names differ
+function resolveServiceStyle(ticket) {
+  const t = ticket || {};
+
+  const candidates = [t.category_name, t.category_path, t.category_key, t.taxonomy_label, t.display_title]
+    .map((x) => (typeof x === "string" ? x.trim() : ""))
+    .filter(Boolean);
+
+  const first = candidates.find(Boolean);
+  return first || "Service";
+}
+
+function resolveBusinessName(ticket) {
+  const t = ticket || {};
+
+  const candidates = [
+    t.assigned_business_name,
+    t.assigned_business_card?.name,
+    t.business_name,
+    t.business?.name,
+    t.assigned_business?.name,
+  ]
+    .map((x) => (typeof x === "string" ? x.trim() : ""))
+    .filter(Boolean);
+
+  return candidates[0] || "";
+}
+
 function getAcceptedBy(ticket) {
   const t = ticket || {};
   const candidates = [
@@ -309,6 +476,8 @@ function getAcceptedBy(ticket) {
     t.assigned_to?.email,
     t.accepted_by?.email,
     t.business?.name,
+    t.assigned_business_name,
+    t.assigned_business_card?.name,
   ];
   const found = candidates.find((x) => typeof x === "string" && x.trim());
   return found ? found.trim() : "";
@@ -348,7 +517,7 @@ function ComingSoonPanel({ icon, title, desc, onUpgrade, bullets = [] }) {
         </button>
         <button
           type="button"
-          onClick={() => alert("We’ll wire Stripe upgrade links next.")}
+          onClick={() => alert("We’ll wire this module next.")}
           className="inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 bg-slate-950/60 border border-slate-800 hover:bg-slate-900/40 text-slate-200"
         >
           See pricing
@@ -358,6 +527,31 @@ function ComingSoonPanel({ icon, title, desc, onUpgrade, bullets = [] }) {
       <div className="mt-3 text-[11px] text-slate-500">
         Settings are always in the top bar gear — no duplicate settings buttons.
       </div>
+    </div>
+  );
+}
+
+function DealsPanel({ feedItems, onOpenFeedItem, onOpenNewsfeed }) {
+  return (
+    <div className="space-y-4">
+      <FeaturedDealsRail items={feedItems} onOpenFeedItem={onOpenFeedItem} onViewFeed={onOpenNewsfeed} />
+
+      <Card
+        title="Deals Categories"
+        right={
+          <span className="text-[11px] px-3 py-1.5 rounded-full border font-semibold bg-indigo-500/10 border-indigo-500/30 text-indigo-200">
+            MVP
+          </span>
+        }
+      >
+        <div className="text-sm text-slate-400">
+          This is where promoted services, internal ads, and featured local offers will live.
+        </div>
+
+        <div className="mt-4 text-[11px] text-slate-500">
+          Next step: add ZIP/category targeting so customers only see relevant promos.
+        </div>
+      </Card>
     </div>
   );
 }
@@ -375,12 +569,18 @@ export default function CustomerDashboard() {
   const [archivedIds, setArchivedIds] = useState(() => readArchivedSet(user));
   const [ticketActionErr, setTicketActionErr] = useState("");
 
+  const [feedItems, setFeedItems] = useState([]);
+
   const displayName = user?.first_name || user?.username || user?.email || "User";
 
   useEffect(() => {
     setArchivedIds(readArchivedSet(user));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, user?.email]);
+
+  useEffect(() => {
+    setFeedItems(seedFeedIfNeeded());
+  }, []);
 
   async function loadTickets() {
     setTicketsErr("");
@@ -431,6 +631,19 @@ export default function CustomerDashboard() {
     }
   }
 
+  function openFeedItem(item) {
+    const href = String(item?.cta_href || "").trim();
+
+    if (href.startsWith("/")) {
+      navigate(href);
+      return;
+    }
+
+    if (href.startsWith("http://") || href.startsWith("https://")) {
+      window.open(href, "_blank", "noreferrer");
+    }
+  }
+
   const visibleTickets = useMemo(() => {
     const list = Array.isArray(tickets) ? tickets : [];
     return list.filter((t) => !archivedIds.has(Number(t?.id)));
@@ -440,9 +653,12 @@ export default function CustomerDashboard() {
 
   const archivedCount = useMemo(() => archivedIds.size, [archivedIds]);
 
+  const featuredFeedItems = useMemo(() => {
+    return (feedItems || []).filter((x) => !!x?.sponsored).slice(0, 6);
+  }, [feedItems]);
+
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 relative overflow-hidden">
-      {/* Background */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-[#020617]" />
         <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-indigo-500/10 to-fuchsia-500/10" />
@@ -455,7 +671,6 @@ export default function CustomerDashboard() {
       <main className="relative max-w-6xl mx-auto px-4 py-6 space-y-6">
         <NewsReel />
 
-        {/* Tabs */}
         <div className="flex gap-2 flex-wrap items-center">
           {TABS.map((t) => (
             <button
@@ -482,17 +697,8 @@ export default function CustomerDashboard() {
           </button>
         </div>
 
-        {/* Business Cards */}
-        {tab === "business_cards" ? (
-          <ErrorBoundary>
-            <BusinessCardsPanel />
-          </ErrorBoundary>
-        ) : null}
-
-        {/* Overview */}
         {tab === "overview" ? (
           <>
-            {/* Silicon Valley Hero */}
             <section className="rounded-3xl border border-slate-800/80 bg-slate-950/30 backdrop-blur-xl p-6 shadow-[0_0_80px_rgba(0,0,0,0.40)] relative overflow-hidden">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 relative">
                 <div className="flex items-center gap-4 min-w-0">
@@ -533,7 +739,7 @@ export default function CustomerDashboard() {
 
                   <button
                     type="button"
-                    onClick={() => setTab("business_cards")}
+                    onClick={() => navigate("/customer/business-cards")}
                     className="inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 bg-indigo-500/18 border border-indigo-500/35 hover:bg-indigo-500/24 text-indigo-100"
                   >
                     Business Cards
@@ -542,7 +748,12 @@ export default function CustomerDashboard() {
               </div>
             </section>
 
-            {/* ✅ MOVED: This Week (full-width under Welcome box) */}
+            <FeaturedDealsRail
+              items={featuredFeedItems}
+              onOpenFeedItem={openFeedItem}
+              onViewFeed={() => navigate("/newsfeed")}
+            />
+
             <Card
               title="This Week"
               right={
@@ -557,7 +768,6 @@ export default function CustomerDashboard() {
               </div>
             </Card>
 
-            {/* Main grid below */}
             <div className="grid lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2 space-y-4">
                 <Card
@@ -615,7 +825,9 @@ export default function CustomerDashboard() {
                       const canCancel = !["COMPLETED", "PAID", "CANCELLED", "CLOSED"].includes(st);
 
                       const serviceTitle = resolveCustomerFriendlyTitle(t);
+                      const serviceStyle = resolveServiceStyle(t);
                       const acceptedBy = getAcceptedBy(t);
+                      const businessName = resolveBusinessName(t);
 
                       return (
                         <div
@@ -631,21 +843,34 @@ export default function CustomerDashboard() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <div className="font-extrabold truncate">{serviceTitle}</div>
+
                               <div className="text-xs text-slate-400 mt-1">
-                                Request #{t.id}
+                                Ticket #{t.id}
+                                <span className="mx-2 text-slate-600">•</span>
+                                {businessName ? (
+                                  <>
+                                    Business <span className="text-slate-200">{businessName}</span>
+                                  </>
+                                ) : (
+                                  <>Business <span className="text-slate-500">Not assigned yet</span></>
+                                )}
+                              </div>
+
+                              <div className="text-xs text-slate-500 mt-1">
+                                Service Style: <span className="text-slate-300">{serviceStyle || "Service"}</span>
+                              </div>
+
+                              <div className="text-xs text-slate-400 mt-1">
                                 {acceptedBy ? (
                                   <>
-                                    <span className="mx-2 text-slate-600">•</span>
                                     Accepted by <span className="text-slate-200">{acceptedBy}</span>
                                   </>
                                 ) : (
-                                  <>
-                                    <span className="mx-2 text-slate-600">•</span>
-                                    Not accepted yet
-                                  </>
+                                  <>Not accepted yet</>
                                 )}
                               </div>
                             </div>
+
                             <span className={statusPill(t.status)}>{String(t.status || "NEW")}</span>
                           </div>
 
@@ -768,16 +993,31 @@ export default function CustomerDashboard() {
                         </span>
                       </div>
                     </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setTab("deals")}
+                      className="w-full text-left rounded-3xl border border-slate-800/80 bg-slate-950/40 hover:bg-slate-900/35 p-4 transition"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold">🔥 Deals</div>
+                          <div className="text-xs text-slate-400 mt-1">Promoted services, offers, and niche ads.</div>
+                        </div>
+                        <span className="text-[10px] px-2 py-1 rounded-full border font-semibold bg-indigo-500/10 border-indigo-500/30 text-indigo-200">
+                          MVP
+                        </span>
+                      </div>
+                    </button>
                   </div>
 
-                  <div className="mt-3 text-[11px] text-slate-500">Tap an app → we’ll send you to Upgrade for now.</div>
+                  <div className="mt-3 text-[11px] text-slate-500">Tap an app → we’ll open the current module or placeholder.</div>
                 </Card>
               </div>
             </div>
           </>
         ) : null}
 
-        {/* Orders */}
         {tab === "orders" ? (
           <Card
             title="All Orders"
@@ -805,7 +1045,6 @@ export default function CustomerDashboard() {
           </Card>
         ) : null}
 
-        {/* Calendar */}
         {tab === "calendar" ? (
           <Card
             title="Calendar"
@@ -822,7 +1061,6 @@ export default function CustomerDashboard() {
           </Card>
         ) : null}
 
-        {/* Todo */}
         {tab === "todo" ? (
           <div className="space-y-4">
             <TodoList
@@ -835,10 +1073,16 @@ export default function CustomerDashboard() {
           </div>
         ) : null}
 
-        {/* Inbox */}
         {tab === "inbox" ? <InboxPanel title="Inbox" subtitle="Ticket updates, messages, broadcasts, and reminders." /> : null}
 
-        {/* Finance */}
+        {tab === "deals" ? (
+          <DealsPanel
+            feedItems={featuredFeedItems}
+            onOpenFeedItem={openFeedItem}
+            onOpenNewsfeed={() => navigate("/newsfeed")}
+          />
+        ) : null}
+
         {tab === "finance" ? (
           <ComingSoonPanel
             icon="💳"
@@ -853,7 +1097,6 @@ export default function CustomerDashboard() {
           />
         ) : null}
 
-        {/* Fitness */}
         {tab === "fitness" ? (
           <ComingSoonPanel
             icon="🏋️"

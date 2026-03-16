@@ -1,4 +1,3 @@
-// src/pages/Register.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
@@ -30,7 +29,7 @@ function Feature({ title, desc }) {
   return (
     <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-4">
       <div className="text-sm font-semibold text-slate-100">{title}</div>
-      <div className="text-sm text-slate-400 mt-1 leading-relaxed">{desc}</div>
+      <div className="mt-1 text-sm leading-relaxed text-slate-400">{desc}</div>
     </div>
   );
 }
@@ -39,12 +38,12 @@ function Step({ n, title, desc }) {
   return (
     <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-5">
       <div className="flex items-center gap-3">
-        <div className="h-8 w-8 rounded-2xl border border-slate-800 bg-slate-950/70 flex items-center justify-center text-sm font-extrabold text-slate-200">
+        <div className="flex h-8 w-8 items-center justify-center rounded-2xl border border-slate-800 bg-slate-950/70 text-sm font-extrabold text-slate-200">
           {n}
         </div>
         <div className="text-sm font-semibold text-slate-100">{title}</div>
       </div>
-      <div className="mt-2 text-sm text-slate-300 leading-relaxed">{desc}</div>
+      <div className="mt-2 text-sm leading-relaxed text-slate-300">{desc}</div>
     </div>
   );
 }
@@ -65,17 +64,17 @@ function Modal({ open, onClose, title, subtitle, children }) {
     <div className="fixed inset-0 z-[100]">
       <div className="absolute inset-0 bg-black/70" onClick={onClose} />
       <div className="absolute inset-0 flex items-center justify-center p-4">
-        <div className="w-full max-w-xl rounded-3xl border border-slate-800 bg-slate-950/90 backdrop-blur p-6 shadow-[0_0_90px_rgba(0,0,0,0.55)] relative overflow-hidden">
-          <div className="pointer-events-none absolute -inset-20 blur-3xl bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-fuchsia-500/10" />
+        <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-slate-800 bg-slate-950/90 p-6 shadow-[0_0_90px_rgba(0,0,0,0.55)] backdrop-blur">
+          <div className="pointer-events-none absolute -inset-20 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-fuchsia-500/10 blur-3xl" />
           <div className="relative">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-lg font-extrabold text-slate-100">{title}</div>
-                {subtitle ? <div className="text-xs text-slate-400 mt-1">{subtitle}</div> : null}
+                {subtitle ? <div className="mt-1 text-xs text-slate-400">{subtitle}</div> : null}
               </div>
               <button
                 onClick={onClose}
-                className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40 text-slate-200"
+                className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/60 text-slate-200 hover:bg-slate-900/40"
                 title="Close"
               >
                 ✕
@@ -107,17 +106,157 @@ function PriceCard({ title, price, sub, bullets, tone = "slate" }) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-sm font-semibold text-slate-100">{title}</div>
-          <div className="text-xs text-slate-400 mt-1">{sub}</div>
+          <div className="mt-1 text-xs text-slate-400">{sub}</div>
         </div>
-        <span className={cx("rounded-2xl px-3 py-2 text-xs font-semibold border", ring)}>{price}</span>
+        <span className={cx("rounded-2xl border px-3 py-2 text-xs font-semibold", ring)}>{price}</span>
       </div>
       <div className="mt-4 space-y-2">
         {bullets.map((b) => (
-          <div key={b} className="text-sm text-slate-300 flex gap-2">
+          <div key={b} className="flex gap-2 text-sm text-slate-300">
             <span className="text-cyan-300">•</span>
             <span>{b}</span>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function RegisterCard({
+  err,
+  loading,
+  email,
+  setEmail,
+  username,
+  setUsername,
+  first_name,
+  setFirstName,
+  last_name,
+  setLastName,
+  password,
+  setPassword,
+  onSubmit,
+  setPricingOpen,
+  setClaimOpen,
+}) {
+  return (
+    <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-5 shadow-[0_0_90px_rgba(0,0,0,0.45)] backdrop-blur">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-lg font-extrabold">Create account</div>
+          <div className="mt-1 text-xs text-slate-400">Start free as a customer — upgrade later.</div>
+        </div>
+        <Pill tone="cyan">v7.1</Pill>
+      </div>
+
+      {err ? (
+        <div className="mt-4 rounded-2xl border border-red-800 bg-red-900/20 p-3 text-sm text-red-300">
+          {err}
+        </div>
+      ) : null}
+
+      <form onSubmit={onSubmit} className="mt-4 space-y-3">
+        <div>
+          <label className="text-[11px] text-slate-400">Email</label>
+          <input
+            className="mt-1 w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-2.5 outline-none focus:border-cyan-500/50"
+            placeholder="you@company.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+
+        <div>
+          <label className="text-[11px] text-slate-400">Username (optional)</label>
+          <input
+            className="mt-1 w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-2.5 outline-none focus:border-cyan-500/50"
+            placeholder="optional"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[11px] text-slate-400">First name</label>
+            <input
+              className="mt-1 w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-2.5 outline-none focus:border-cyan-500/50"
+              value={first_name}
+              onChange={(e) => setFirstName(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-[11px] text-slate-400">Last name</label>
+            <input
+              className="mt-1 w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-2.5 outline-none focus:border-cyan-500/50"
+              value={last_name}
+              onChange={(e) => setLastName(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-[11px] text-slate-400">Password</label>
+          <input
+            className="mt-1 w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-2.5 outline-none focus:border-cyan-500/50"
+            placeholder="••••••••"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+
+        <button
+          disabled={loading}
+          className={cx(
+            "w-full rounded-2xl border py-2.5 text-sm font-semibold transition",
+            loading
+              ? "border-slate-800 bg-slate-950/60 text-slate-200 opacity-60"
+              : "border-fuchsia-500/35 bg-fuchsia-500/10 text-fuchsia-200 hover:bg-fuchsia-500/15"
+          )}
+          type="submit"
+        >
+          {loading ? "Creating..." : "Create Account"}
+        </button>
+      </form>
+
+      <div className="mt-3 text-sm text-slate-400">
+        Already have an account?{" "}
+        <Link className="text-cyan-300 hover:text-cyan-200" to="/login">
+          Sign in
+        </Link>
+      </div>
+
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <button
+          type="button"
+          onClick={() => setPricingOpen(true)}
+          className="rounded-2xl border border-cyan-500/35 bg-cyan-500/15 px-3 py-2 text-center text-sm font-semibold text-cyan-200 hover:bg-cyan-500/20"
+        >
+          Plans
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setClaimOpen(true)}
+          className="rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2 text-center text-sm hover:bg-slate-900/40"
+          title="Tenant/Investor invite code"
+        >
+          Code
+        </button>
+
+        <Link
+          to="/login"
+          className="rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2 text-center text-sm hover:bg-slate-900/40"
+        >
+          Back
+        </Link>
+      </div>
+
+      <div className="mt-4 text-[11px] text-slate-500">
+        Tenant/Investor portals are invite-based. Use your code to connect.
       </div>
     </div>
   );
@@ -137,8 +276,6 @@ export default function Register() {
   const [err, setErr] = useState("");
 
   const [pricingOpen, setPricingOpen] = useState(false);
-
-  // ✅ NEW: claim modal
   const [claimOpen, setClaimOpen] = useState(false);
 
   useEffect(() => {
@@ -195,14 +332,12 @@ export default function Register() {
   }
 
   function goClaim(kind) {
-    // kind: "tenant" | "investor"
     setClaimOpen(false);
     nav(`/portal/claim?portal=${kind}`);
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 relative overflow-hidden">
-      {/* Background video */}
+    <div className="relative min-h-screen overflow-hidden bg-[#020617] text-slate-100">
       <div className="absolute inset-0">
         <video
           src={videoSrc}
@@ -225,7 +360,7 @@ export default function Register() {
           }}
         />
         <div
-          className="absolute -inset-y-10 -inset-x-40 blur-xl"
+          className="absolute -inset-x-40 -inset-y-10 blur-xl"
           style={{
             animation: "swSweep 14s ease-in-out infinite",
             background:
@@ -234,11 +369,10 @@ export default function Register() {
         />
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 py-10">
-        <div className="grid lg:grid-cols-12 gap-6 items-start">
-          {/* LEFT: How it works */}
-          <div className="lg:col-span-7 space-y-5">
-            <div className="flex items-center gap-2 flex-wrap">
+      <div className="relative mx-auto max-w-7xl px-4 py-6 sm:py-8 lg:py-10">
+        <div className="grid items-start gap-6 lg:grid-cols-12">
+          <div className="space-y-5 lg:col-span-7">
+            <div className="flex flex-wrap items-center gap-2">
               <Pill tone="cyan">One login</Pill>
               <Pill tone="indigo">Different tabs</Pill>
               <Pill tone="fuchsia">Customer → Business → PM</Pill>
@@ -246,32 +380,31 @@ export default function Register() {
             </div>
 
             <div>
-              <div className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
+              <div className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl md:text-5xl">
                 <span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-fuchsia-400 bg-clip-text text-transparent">
                   How SyncWorks works
                 </span>
-                <div className="text-slate-100 mt-2">
+                <div className="mt-2 text-slate-100">
                   Register once — then use the same account for everything.
                 </div>
               </div>
 
-              <div className="mt-4 text-slate-200/90 text-lg leading-relaxed max-w-2xl">
+              <div className="mt-4 max-w-2xl text-base leading-relaxed text-slate-200/90 sm:text-lg">
                 SyncWorks is built to be your <b>forever login</b>. Start free as a customer, then upgrade when you need
                 business tools or property management — no new accounts.
               </div>
 
-              <div className="mt-4 flex gap-2 flex-wrap">
+              <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   onClick={() => setPricingOpen(true)}
-                  className="rounded-2xl px-4 py-2 text-sm font-semibold border border-fuchsia-500/35 bg-fuchsia-500/10 hover:bg-fuchsia-500/15 text-fuchsia-200"
+                  className="rounded-2xl border border-fuchsia-500/35 bg-fuchsia-500/10 px-4 py-2 text-sm font-semibold text-fuchsia-200 hover:bg-fuchsia-500/15"
                 >
                   View Plans
                 </button>
 
-                {/* ✅ NEW: Enter your code (small) */}
                 <button
                   onClick={() => setClaimOpen(true)}
-                  className="rounded-2xl px-4 py-2 text-sm border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40"
+                  className="rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-2 text-sm hover:bg-slate-900/40"
                   title="Tenant/Investor invite code"
                 >
                   Enter your code
@@ -279,15 +412,14 @@ export default function Register() {
 
                 <Link
                   to="/login"
-                  className="rounded-2xl px-4 py-2 text-sm border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40"
+                  className="rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-2 text-sm hover:bg-slate-900/40"
                 >
                   Back to Sign In
                 </Link>
               </div>
             </div>
 
-            {/* Steps */}
-            <div className="grid md:grid-cols-2 gap-3">
+            <div className="grid gap-3 md:grid-cols-2">
               <Step
                 n="1"
                 title="Register as a customer"
@@ -310,8 +442,7 @@ export default function Register() {
               />
             </div>
 
-            {/* Role cards */}
-            <div className="grid md:grid-cols-2 gap-3 max-w-2xl">
+            <div className="grid max-w-2xl gap-3 md:grid-cols-2">
               <Feature
                 title="Customers (Free)"
                 desc="Submit a request, track updates, schedule, pay electronically, and keep all receipts + messages in one timeline."
@@ -330,134 +461,30 @@ export default function Register() {
               />
             </div>
 
-            <div className="text-[12px] text-slate-400 max-w-2xl">
+            <div className="max-w-2xl text-[12px] text-slate-400">
               If you’re not a tenant/investor invited by a PM, just create an account normally.
             </div>
           </div>
 
-          <div className="lg:col-span-5" />
-        </div>
-
-        {/* Register fixed top-right */}
-        <div className="fixed top-6 right-6 z-50 w-[440px] max-w-[calc(100vw-3rem)]">
-          <div className="rounded-3xl border border-slate-800 bg-slate-950/55 backdrop-blur p-5 shadow-[0_0_90px_rgba(0,0,0,0.45)]">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-lg font-extrabold">Create account</div>
-                <div className="text-xs text-slate-400 mt-1">Start free as a customer — upgrade later.</div>
-              </div>
-              <Pill tone="cyan">v7.1</Pill>
-            </div>
-
-            {err ? (
-              <div className="mt-4 text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-2xl p-3">
-                {err}
-              </div>
-            ) : null}
-
-            <form onSubmit={onSubmit} className="mt-4 space-y-3">
-              <div>
-                <label className="text-[11px] text-slate-400">Email</label>
-                <input
-                  className="mt-1 w-full rounded-2xl bg-slate-950 border border-slate-800 px-4 py-2.5 outline-none focus:border-cyan-500/50"
-                  placeholder="you@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-slate-400">Username (optional)</label>
-                <input
-                  className="mt-1 w-full rounded-2xl bg-slate-950 border border-slate-800 px-4 py-2.5 outline-none focus:border-cyan-500/50"
-                  placeholder="optional"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[11px] text-slate-400">First name</label>
-                  <input
-                    className="mt-1 w-full rounded-2xl bg-slate-950 border border-slate-800 px-4 py-2.5 outline-none focus:border-cyan-500/50"
-                    value={first_name}
-                    onChange={(e) => setFirstName(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-slate-400">Last name</label>
-                  <input
-                    className="mt-1 w-full rounded-2xl bg-slate-950 border border-slate-800 px-4 py-2.5 outline-none focus:border-cyan-500/50"
-                    value={last_name}
-                    onChange={(e) => setLastName(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[11px] text-slate-400">Password</label>
-                <input
-                  className="mt-1 w-full rounded-2xl bg-slate-950 border border-slate-800 px-4 py-2.5 outline-none focus:border-cyan-500/50"
-                  placeholder="••••••••"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-
-              <button
-                disabled={loading}
-                className={cx(
-                  "w-full rounded-2xl py-2.5 font-semibold text-sm border transition",
-                  loading
-                    ? "opacity-60 border-slate-800 bg-slate-950/60 text-slate-200"
-                    : "border-fuchsia-500/35 bg-fuchsia-500/10 hover:bg-fuchsia-500/15 text-fuchsia-200"
-                )}
-                type="submit"
-              >
-                {loading ? "Creating..." : "Create Account"}
-              </button>
-            </form>
-
-            <div className="mt-3 text-sm text-slate-400">
-              Already have an account?{" "}
-              <Link className="text-cyan-300 hover:text-cyan-200" to="/login">
-                Sign in
-              </Link>
-            </div>
-
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setPricingOpen(true)}
-                className="rounded-2xl px-3 py-2 text-sm border border-cyan-500/35 bg-cyan-500/15 hover:bg-cyan-500/20 text-center text-cyan-200 font-semibold"
-              >
-                Plans
-              </button>
-
-              {/* ✅ NEW: Enter your code (small) */}
-              <button
-                type="button"
-                onClick={() => setClaimOpen(true)}
-                className="rounded-2xl px-3 py-2 text-sm border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40 text-center"
-                title="Tenant/Investor invite code"
-              >
-                Code
-              </button>
-
-              <Link
-                to="/login"
-                className="rounded-2xl px-3 py-2 text-sm border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40 text-center"
-              >
-                Back
-              </Link>
-            </div>
-
-            <div className="mt-4 text-[11px] text-slate-500">
-              Tenant/Investor portals are invite-based. Use your code to connect.
+          <div className="lg:col-span-5">
+            <div className="mx-auto mt-2 w-full max-w-xl lg:sticky lg:top-6 lg:max-w-none">
+              <RegisterCard
+                err={err}
+                loading={loading}
+                email={email}
+                setEmail={setEmail}
+                username={username}
+                setUsername={setUsername}
+                first_name={first_name}
+                setFirstName={setFirstName}
+                last_name={last_name}
+                setLastName={setLastName}
+                password={password}
+                setPassword={setPassword}
+                onSubmit={onSubmit}
+                setPricingOpen={setPricingOpen}
+                setClaimOpen={setClaimOpen}
+              />
             </div>
           </div>
         </div>
@@ -467,14 +494,13 @@ export default function Register() {
         </div>
       </div>
 
-      {/* Pricing Modal */}
       <Modal
         open={pricingOpen}
         onClose={() => setPricingOpen(false)}
         title="SyncWorks Pricing"
         subtitle="Customers are free. Upgrade when you’re ready."
       >
-        <div className="grid md:grid-cols-2 gap-3">
+        <div className="grid gap-3 md:grid-cols-2">
           <PriceCard
             tone="cyan"
             title="Customers"
@@ -513,13 +539,13 @@ export default function Register() {
           />
           <div className="rounded-3xl border border-slate-800 bg-slate-950/50 p-5">
             <div className="text-sm font-semibold text-slate-100">Portals</div>
-            <div className="mt-2 text-sm text-slate-300 leading-relaxed space-y-2">
+            <div className="mt-2 space-y-2 text-sm leading-relaxed text-slate-300">
               <div>• Tenants and investors connect using a code provided by the Property Manager.</div>
               <div>• Click “Enter your code” and choose your portal type.</div>
               <div className="mt-3">
                 <button
                   onClick={() => setPricingOpen(false)}
-                  className="rounded-2xl px-4 py-2 text-sm border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40"
+                  className="rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-2 text-sm hover:bg-slate-900/40"
                 >
                   Close
                 </button>
@@ -529,17 +555,16 @@ export default function Register() {
         </div>
       </Modal>
 
-      {/* ✅ Claim Modal */}
       <Modal
         open={claimOpen}
         onClose={() => setClaimOpen(false)}
         title="Enter your invite code"
         subtitle="Choose what type of portal you were invited to."
       >
-        <div className="grid sm:grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <button
             onClick={() => goClaim("tenant")}
-            className="rounded-3xl border border-cyan-500/35 bg-cyan-500/10 hover:bg-cyan-500/15 p-5 text-left"
+            className="rounded-3xl border border-cyan-500/35 bg-cyan-500/10 p-5 text-left hover:bg-cyan-500/15"
           >
             <div className="text-sm font-semibold text-cyan-200">Tenant</div>
             <div className="mt-1 text-sm text-slate-300">
@@ -550,7 +575,7 @@ export default function Register() {
 
           <button
             onClick={() => goClaim("investor")}
-            className="rounded-3xl border border-fuchsia-500/35 bg-fuchsia-500/10 hover:bg-fuchsia-500/15 p-5 text-left"
+            className="rounded-3xl border border-fuchsia-500/35 bg-fuchsia-500/10 p-5 text-left hover:bg-fuchsia-500/15"
           >
             <div className="text-sm font-semibold text-fuchsia-200">Investor</div>
             <div className="mt-1 text-sm text-slate-300">

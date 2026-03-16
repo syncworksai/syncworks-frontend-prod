@@ -14,6 +14,8 @@ import CustomerFinance from "./pages/CustomerFinance";
 import CustomerHealth from "./pages/CustomerHealth";
 import CustomerTickets from "./pages/CustomerTickets";
 import CustomerFavorites from "./pages/CustomerFavorites";
+import CustomerBusinessCards from "./pages/CustomerBusinessCards";
+import CustomerBusinessCardDetail from "./pages/CustomerBusinessCardDetail";
 
 import SboDashboard from "./pages/SboDashboard";
 import SboZipLeaderboard from "./pages/SboZipLeaderboard";
@@ -125,7 +127,7 @@ export default function App() {
         {/* ✅ Invite entry */}
         <Route path="/employee/invite" element={<EmployeeInvite />} />
 
-        {/* ✅ Platform Console (Admin) */}
+        {/* ✅ Platform Console */}
         <Route
           path="/platform"
           element={
@@ -143,7 +145,7 @@ export default function App() {
           }
         />
 
-        {/* ✅ Support + Newsfeed (global, authed) */}
+        {/* ✅ Global authed pages */}
         <Route
           path="/support"
           element={
@@ -160,8 +162,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* ✅ Unified Settings Hub (global, authed) */}
         <Route
           path="/settings"
           element={
@@ -171,7 +171,7 @@ export default function App() {
           }
         />
 
-        {/* ✅ Back-compat alias so Stripe / old links never 404 */}
+        {/* ✅ Back-compat settings routes */}
         <Route
           path="/sbo/settings"
           element={
@@ -180,8 +180,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* ✅ PM Settings (legacy) */}
         <Route
           path="/pm/settings"
           element={
@@ -191,7 +189,7 @@ export default function App() {
           }
         />
 
-        {/* ✅ Cash Fee invoices */}
+        {/* ✅ Billing */}
         <Route
           path="/billing/cash-fee-invoices"
           element={
@@ -268,8 +266,6 @@ export default function App() {
             </SalesWrap>
           }
         />
-
-        {/* Optional legacy */}
         <Route
           path="/sales/home"
           element={
@@ -293,6 +289,22 @@ export default function App() {
           element={
             <ProtectedRoute>
               <CustomerFavorites />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer/business-cards"
+          element={
+            <ProtectedRoute>
+              <CustomerBusinessCards />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer/business-cards/:favoriteId"
+          element={
+            <ProtectedRoute>
+              <CustomerBusinessCardDetail />
             </ProtectedRoute>
           }
         />
@@ -505,6 +517,7 @@ export default function App() {
           }
         />
 
+        {/* ✅ Team */}
         <Route
           path="/team/invites"
           element={

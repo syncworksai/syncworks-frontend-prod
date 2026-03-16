@@ -38,16 +38,61 @@ function Btn({ tone = "slate", className = "", ...props }) {
   };
   return (
     <button
-      className={cx("h-9 px-3 rounded-xl border text-xs font-semibold transition whitespace-nowrap", tones[tone] || tones.slate, className)}
+      className={cx(
+        "h-9 px-3 rounded-xl border text-xs font-semibold transition whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed",
+        tones[tone] || tones.slate,
+        className
+      )}
       {...props}
     />
   );
 }
 
-export default function InvoicePanel({ ticketId, ticket }) {
+function asMoney(v) {
+  const n = Number(v || 0);
+  if (!Number.isFinite(n)) return "0.00";
+  return n.toFixed(2);
+}
+
+function safeLineItems(items) {
+  return Array.isArray(items) ? items : [];
+}
+
+function buildCustomerFacingNotes(draft, totals) {
+  const lines = [];
+  const items = safeLineItems(draft?.items);
+
+  if (items.length) {
+    lines.push("Invoice Items:");
+    items.forEach((it, idx) => {
+      const qty = Number(it?.qty || 0);
+      const unit = Number(it?.unit_price || 0);
+      const markup = Number(it?.markup_pct || 0);
+      const desc = String(it?.description || "").trim() || `Line Item ${idx + 1}`;
+      const part = String(it?.part_no || "").trim();
+
+      let line = `- ${desc}`;
+      if (part) line += ` (Part: ${part})`;
+      line += ` | Qty: ${qty} | Unit: $${asMoney(unit)}`;
+      if (markup > 0) line += ` | Upcharge: ${markup}%`;
+      lines.push(line);
+    });
+  }
+
+  lines.push("");
+  lines.push(`Subtotal: $${asMoney(totals?.subtotal)}`);
+  lines.push(`Tax: $${asMoney(totals?.tax)}`);
+  lines.push(`Fee: $${asMoney(totals?.fee)}`);
+  lines.push(`Total: $${asMoney(totals?.total)}`);
+
+  return lines.join("\n").trim();
+}
+
+export default function InvoicePanel({ ticketId, ticket, onAfterChange }) {
   const [draft, setDraft] = useState(null);
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState("");
+  const [ok, setOk] = useState("");
 
   useEffect(() => {
     const d = initDraft({ ticketId, kind: "invoice", ticket });
@@ -80,65 +125,76 @@ export default function InvoicePanel({ ticketId, ticket }) {
     update({ items: next.length ? next : [defaultLineItem()] });
   }
 
-  function markReady() {
-    const next = { ...(draft || {}), status: "READY_TO_SEND" };
+  function reloadSaved() {
+    const saved = getDraft(ticketId, "invoice");
+    if (saved) setDraft(saved);
+  }
+
+  async function ensureBackendInvoice() {
+    const existingId = Number(draft?.backend_invoice_id || 0);
+    if (existingId > 0) {
+      return existingId;
+    }
+
+    const title =
+      String(draft?.invoice_number || "").trim() ||
+      `Invoice for Ticket #${ticketId}`;
+
+    const notes = buildCustomerFacingNotes(draft, totals);
+
+    const payload = {
+      title,
+      notes,
+      subtotal: asMoney(totals.subtotal),
+      tax: asMoney(totals.tax),
+      total: asMoney(totals.total),
+      payment_method: "CARD",
+    };
+
+    const res = await api.post(`/tickets/${ticketId}/create_invoice/`, payload);
+    const backendInvoice = res?.data || null;
+    const backendInvoiceId = Number(backendInvoice?.id || 0);
+
+    if (!backendInvoiceId) {
+      throw new Error("Invoice was not created.");
+    }
+
+    const next = {
+      ...(draft || {}),
+      backend_invoice_id: backendInvoiceId,
+      backend_invoice_status: backendInvoice?.status || "DRAFT",
+    };
     setDraft(next);
     saveDraft(ticketId, "invoice", next);
 
-    upsertQueueItem("invoice", {
-      ticket_id: Number(ticketId),
-      invoice_number: next.invoice_number,
-      customer_name: next.customer_name || "",
-      customer_phone: next.customer_phone || "",
-      status: next.status,
-      updated_at: new Date().toISOString(),
-      total: totals.total,
-    });
+    return backendInvoiceId;
   }
 
-  async function trySendInvoice() {
-    // UI-only: best effort. If backend has a send endpoint, use it.
-    // If not, we still keep queue as "READY_TO_SEND".
+  async function markReadyForPayment() {
     setErr("");
+    setOk("");
     setSending(true);
-    try {
-      // Example attempt: you can replace later with your real endpoint.
-      // Try common patterns safely:
-      // 1) POST /invoices/  (create)
-      // 2) POST /tickets/:id/invoice/ (create)
-      // 3) POST /invoices/:id/send/ (send)
-      //
-      // For now, we’ll do a minimal create attempt with try/catch.
 
-      const payload = {
-        ticket: Number(ticketId),
-        invoice_number: draft.invoice_number,
-        customer_name: draft.customer_name,
-        customer_phone: draft.customer_phone,
-        customer_text_ok: !!draft.customer_text_ok,
-        items: draft.items,
-        tax_pct: draft.tax_pct,
-        app_fee: draft.app_fee,
-        totals,
-        notes_internal: draft.notes_internal,
+    try {
+      const invoiceId = await ensureBackendInvoice();
+
+      await api.post(`/tickets/${ticketId}/send_invoice/`, {
+        invoice_id: invoiceId,
+      });
+
+      const next = {
+        ...(draft || {}),
+        status: "READY_FOR_PAYMENT",
+        backend_invoice_id: invoiceId,
+        backend_invoice_status: "SENT",
       };
 
-      try {
-        await api.post("/invoices/", payload);
-      } catch {
-        try {
-          await api.post(`/tickets/${ticketId}/invoice/`, payload);
-        } catch {
-          // backend may not support yet — treat as queued
-        }
-      }
-
-      const next = { ...(draft || {}), status: "SENT" };
       setDraft(next);
       saveDraft(ticketId, "invoice", next);
 
       upsertQueueItem("invoice", {
         ticket_id: Number(ticketId),
+        invoice_id: invoiceId,
         invoice_number: next.invoice_number,
         customer_name: next.customer_name || "",
         customer_phone: next.customer_phone || "",
@@ -146,9 +202,11 @@ export default function InvoicePanel({ ticketId, ticket }) {
         updated_at: new Date().toISOString(),
         total: totals.total,
       });
+
+      setOk("Invoice is now ready for payment and visible to the customer.");
+      await onAfterChange?.();
     } catch (e) {
-      setErr(e?.response?.data?.detail || "Send failed (backend may not support yet). Saved as Ready to Send.");
-      markReady();
+      setErr(e?.response?.data?.detail || e?.message || "Failed to mark invoice ready for payment.");
     } finally {
       setSending(false);
     }
@@ -162,28 +220,42 @@ export default function InvoicePanel({ ticketId, ticket }) {
         <div>
           <div className="font-semibold text-slate-100">Invoice Workspace</div>
           <div className="text-xs text-slate-400 mt-1">
-            SBO-only. Fast line items. Auto invoice number. Mark Ready → shows in SBO invoice queue.
+            SBO-only. Build fast, then mark it ready so the customer can see and pay it.
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {draft?.backend_invoice_id ? (
+            <span className="text-[11px] px-2 py-1 rounded-full border border-slate-700 bg-slate-900/40 text-slate-200 font-semibold">
+              Invoice #{draft.backend_invoice_id}
+            </span>
+          ) : null}
+
           <span
             className={cx(
               "text-[11px] px-2 py-1 rounded-full border font-semibold",
-              draft.status === "SENT"
+              draft.status === "READY_FOR_PAYMENT"
                 ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-                : draft.status === "READY_TO_SEND"
-                ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
+                : draft.status === "SENT"
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
                 : "border-slate-700 bg-slate-900/40 text-slate-200"
             )}
           >
-            {draft.status}
+            {draft.status || "DRAFT"}
           </span>
         </div>
       </div>
 
       {err ? (
-        <div className="mt-3 text-sm text-rose-200 bg-rose-900/10 border border-rose-800 rounded-xl p-3">{err}</div>
+        <div className="mt-3 text-sm text-rose-200 bg-rose-900/10 border border-rose-800 rounded-xl p-3">
+          {err}
+        </div>
+      ) : null}
+
+      {ok ? (
+        <div className="mt-3 text-sm text-emerald-200 bg-emerald-900/10 border border-emerald-800 rounded-xl p-3">
+          {ok}
+        </div>
       ) : null}
 
       <div className="mt-4 grid md:grid-cols-3 gap-3">
@@ -225,11 +297,12 @@ export default function InvoicePanel({ ticketId, ticket }) {
         </Field>
       </div>
 
-      {/* Line items */}
       <div className="mt-4">
         <div className="flex items-center justify-between gap-2">
           <div className="text-sm font-semibold text-slate-100">Line Items</div>
-          <Btn tone="cyan" onClick={addItem} type="button">+ Add</Btn>
+          <Btn tone="cyan" onClick={addItem} type="button">
+            + Add
+          </Btn>
         </div>
 
         <div className="mt-3 space-y-2">
@@ -294,16 +367,20 @@ export default function InvoicePanel({ ticketId, ticket }) {
 
               <div className="mt-2 flex items-center justify-between">
                 <div className="text-xs text-slate-500">
-                  Line Total: <span className="text-slate-200 font-semibold"><Money n={computeTotals({ items: [it] }).total} /></span>
+                  Line Total:{" "}
+                  <span className="text-slate-200 font-semibold">
+                    <Money n={computeTotals({ items: [it] }).total} />
+                  </span>
                 </div>
-                <Btn tone="rose" onClick={() => removeItem(it.id)} type="button">Remove</Btn>
+                <Btn tone="rose" onClick={() => removeItem(it.id)} type="button">
+                  Remove
+                </Btn>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Totals + fees */}
       <div className="mt-4 grid md:grid-cols-3 gap-3">
         <Field label="Tax %">
           <input
@@ -355,26 +432,22 @@ export default function InvoicePanel({ ticketId, ticket }) {
             className="w-full min-h-[90px] bg-slate-950 border border-slate-800 rounded-2xl px-3 py-2 text-sm"
             value={draft.notes_internal || ""}
             onChange={(e) => update({ notes_internal: e.target.value })}
-            placeholder="Receipts, vendor notes, internal details (NOT visible to customer)."
+            placeholder="Receipts, vendor notes, internal details (kept local / not sent to customer)."
           />
         </Field>
       </div>
 
       <div className="mt-4 flex items-center gap-2 flex-wrap">
-        <Btn tone="slate" onClick={() => setDraft(getDraft(ticketId, "invoice"))} type="button">
+        <Btn tone="slate" onClick={reloadSaved} type="button">
           Reload Saved
         </Btn>
 
-        <Btn tone="emerald" onClick={markReady} type="button">
-          Mark Ready to Send
-        </Btn>
-
-        <Btn tone="cyan" onClick={trySendInvoice} disabled={sending} type="button">
-          {sending ? "Sending…" : "Send (Best Effort)"}
+        <Btn tone="emerald" onClick={markReadyForPayment} disabled={sending} type="button">
+          {sending ? "Processing…" : "Mark Ready for Payment"}
         </Btn>
 
         <div className="ml-auto text-xs text-slate-500">
-          Customer never sees this draft until you intentionally send/share.
+          This sends the invoice into the real customer pay flow.
         </div>
       </div>
     </div>

@@ -1,4 +1,3 @@
-// src/pages/Login.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
@@ -30,7 +29,7 @@ function Card({ title, subtitle, children }) {
   return (
     <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-5">
       <div className="text-sm font-semibold text-slate-100">{title}</div>
-      {subtitle ? <div className="text-xs text-slate-400 mt-1">{subtitle}</div> : null}
+      {subtitle ? <div className="mt-1 text-xs text-slate-400">{subtitle}</div> : null}
       <div className="mt-3">{children}</div>
     </div>
   );
@@ -38,9 +37,101 @@ function Card({ title, subtitle, children }) {
 
 function Bullet({ children }) {
   return (
-    <div className="text-sm text-slate-300 flex gap-2 leading-relaxed">
+    <div className="flex gap-2 text-sm leading-relaxed text-slate-300">
       <span className="text-cyan-300">•</span>
       <span>{children}</span>
+    </div>
+  );
+}
+
+function LoginCard({
+  emailOrUser,
+  setEmailOrUser,
+  password,
+  setPassword,
+  err,
+  loading,
+  onSubmit,
+}) {
+  return (
+    <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-5 shadow-[0_0_90px_rgba(0,0,0,0.45)] backdrop-blur">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-lg font-extrabold">Sign in</div>
+          <div className="mt-1 text-xs text-slate-400">Welcome back — let’s run ops.</div>
+        </div>
+        <Pill tone="fuchsia">Secure</Pill>
+      </div>
+
+      <form className="mt-4 space-y-3" onSubmit={onSubmit}>
+        <div>
+          <label className="text-[11px] text-slate-400">Email or Username</label>
+          <input
+            className="mt-1 w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-2.5 outline-none focus:border-cyan-500/50"
+            value={emailOrUser}
+            onChange={(e) => setEmailOrUser(e.target.value)}
+            autoComplete="username"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="text-[11px] text-slate-400">Password</label>
+          <input
+            type="password"
+            className="mt-1 w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-2.5 outline-none focus:border-cyan-500/50"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+          />
+        </div>
+
+        {err ? (
+          <div className="rounded-2xl border border-red-800 bg-red-900/20 p-3 text-sm text-red-300">
+            {err}
+          </div>
+        ) : null}
+
+        <button
+          disabled={loading}
+          className={cx(
+            "w-full rounded-2xl border py-2.5 text-sm font-semibold transition",
+            loading
+              ? "border-slate-800 bg-slate-950/60 text-slate-200 opacity-60"
+              : "border-cyan-500/35 bg-cyan-500/15 text-cyan-200 hover:bg-cyan-500/20"
+          )}
+          type="submit"
+        >
+          {loading ? "Signing in..." : "Sign In"}
+        </button>
+      </form>
+
+      <div className="mt-3 text-sm text-slate-400">
+        New here?{" "}
+        <Link className="text-cyan-300 hover:text-cyan-200" to="/register">
+          Create an account
+        </Link>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <Link
+          to="/register"
+          className="rounded-2xl border border-fuchsia-500/35 bg-fuchsia-500/10 px-3 py-2 text-center text-sm font-semibold text-fuchsia-200 hover:bg-fuchsia-500/15"
+        >
+          Register
+        </Link>
+        <Link
+          to="/register"
+          className="rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2 text-center text-sm hover:bg-slate-900/40"
+        >
+          How it works
+        </Link>
+      </div>
+
+      <div className="mt-4 text-[11px] text-slate-500">
+        Tenant/Investor portals are invite-based. If you received a code, follow the invite/claim flow.
+      </div>
     </div>
   );
 }
@@ -106,8 +197,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 relative overflow-hidden">
-      {/* Background video */}
+    <div className="relative min-h-screen overflow-hidden bg-[#020617] text-slate-100">
       <div className="absolute inset-0">
         <video
           src={videoSrc}
@@ -130,7 +220,7 @@ export default function Login() {
           }}
         />
         <div
-          className="absolute -inset-y-10 -inset-x-40 blur-xl"
+          className="absolute -inset-x-40 -inset-y-10 blur-xl"
           style={{
             animation: "swSweep 14s ease-in-out infinite",
             background:
@@ -139,11 +229,10 @@ export default function Login() {
         />
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 py-10">
-        <div className="grid lg:grid-cols-12 gap-6 items-start">
-          {/* LEFT: Sales pitch */}
-          <div className="lg:col-span-7 space-y-5">
-            <div className="flex items-center gap-2 flex-wrap">
+      <div className="relative mx-auto max-w-7xl px-4 py-6 sm:py-8 lg:py-10">
+        <div className="grid items-start gap-6 lg:grid-cols-12">
+          <div className="space-y-5 lg:col-span-7">
+            <div className="flex flex-wrap items-center gap-2">
               <Pill tone="cyan">DoorDash for services</Pill>
               <Pill tone="indigo">One system</Pill>
               <Pill tone="fuchsia">One login</Pill>
@@ -151,42 +240,42 @@ export default function Login() {
             </div>
 
             <div>
-              <div className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
+              <div className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl md:text-5xl">
                 <span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-fuchsia-400 bg-clip-text text-transparent">
                   SyncWorks
                 </span>
-                <div className="text-slate-100 mt-2">
+                <div className="mt-2 text-slate-100">
                   Requests → scheduling → payments — all connected.
                 </div>
               </div>
 
-              <div className="mt-4 text-slate-200/90 text-lg leading-relaxed max-w-2xl">
+              <div className="mt-4 max-w-2xl text-base leading-relaxed text-slate-200/90 sm:text-lg">
                 Customers request help. Businesses run operations. Property managers run portfolios.
                 <b> Everyone stays in one system.</b>
               </div>
 
-              <div className="mt-4 flex gap-2 flex-wrap">
+              <div className="mt-4 flex flex-wrap gap-2">
                 <Link
                   to="/register"
-                  className="rounded-2xl px-4 py-2 text-sm font-semibold border border-fuchsia-500/35 bg-fuchsia-500/10 hover:bg-fuchsia-500/15 text-fuchsia-200"
+                  className="rounded-2xl border border-fuchsia-500/35 bg-fuchsia-500/10 px-4 py-2 text-sm font-semibold text-fuchsia-200 hover:bg-fuchsia-500/15"
                 >
                   Create Account
                 </Link>
                 <Link
                   to="/register"
-                  className="rounded-2xl px-4 py-2 text-sm border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40"
+                  className="rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-2 text-sm hover:bg-slate-900/40"
                 >
                   How it works
                 </Link>
                 <Link
                   to="/tenant/accept"
-                  className="rounded-2xl px-4 py-2 text-sm border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40"
+                  className="rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-2 text-sm hover:bg-slate-900/40"
                 >
                   Tenant Invite
                 </Link>
                 <Link
                   to="/investor/accept"
-                  className="rounded-2xl px-4 py-2 text-sm border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40"
+                  className="rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-2 text-sm hover:bg-slate-900/40"
                 >
                   Investor Claim
                 </Link>
@@ -203,7 +292,7 @@ export default function Login() {
               </div>
             </Card>
 
-            <div className="grid md:grid-cols-2 gap-3">
+            <div className="grid gap-3 md:grid-cols-2">
               <Card title="Marketplace layer" subtitle="How work gets found.">
                 <div className="space-y-2">
                   <Bullet>Customer submits a request.</Bullet>
@@ -222,113 +311,42 @@ export default function Login() {
             </div>
 
             <Card title="Who it’s for" subtitle="Same platform — different roles.">
-              <div className="grid sm:grid-cols-2 gap-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
                   <div className="text-sm font-semibold">Customers</div>
-                  <div className="text-sm text-slate-400 mt-1">Request help, track updates, schedule, pay, save receipts.</div>
+                  <div className="mt-1 text-sm text-slate-400">Request help, track updates, schedule, pay, save receipts.</div>
                 </div>
                 <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
                   <div className="text-sm font-semibold">Small Businesses</div>
-                  <div className="text-sm text-slate-400 mt-1">Tickets, dispatch, schedule, invoices, payments, team ops.</div>
+                  <div className="mt-1 text-sm text-slate-400">Tickets, dispatch, schedule, invoices, payments, team ops.</div>
                 </div>
                 <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
                   <div className="text-sm font-semibold">Property Managers</div>
-                  <div className="text-sm text-slate-400 mt-1">Portfolio ops, workflows, vendors, tenants, accountability.</div>
+                  <div className="mt-1 text-sm text-slate-400">Portfolio ops, workflows, vendors, tenants, accountability.</div>
                 </div>
                 <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
                   <div className="text-sm font-semibold">Tenant + Investor</div>
-                  <div className="text-sm text-slate-400 mt-1">Invite-code portals — clean access, no shared logins.</div>
+                  <div className="mt-1 text-sm text-slate-400">Invite-code portals — clean access, no shared logins.</div>
                 </div>
               </div>
             </Card>
 
-            <div className="text-[12px] text-slate-400 max-w-2xl">
+            <div className="max-w-2xl text-[12px] text-slate-400">
               Built from experience — not theory. Simple. Connected. Affordable.
             </div>
           </div>
 
-          <div className="lg:col-span-5" />
-        </div>
-
-        {/* Login fixed top-right */}
-        <div className="fixed top-6 right-6 z-50 w-[420px] max-w-[calc(100vw-3rem)]">
-          <div className="rounded-3xl border border-slate-800 bg-slate-950/55 backdrop-blur p-5 shadow-[0_0_90px_rgba(0,0,0,0.45)]">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-lg font-extrabold">Sign in</div>
-                <div className="text-xs text-slate-400 mt-1">Welcome back — let’s run ops.</div>
-              </div>
-              <Pill tone="fuchsia">Secure</Pill>
-            </div>
-
-            <form className="mt-4 space-y-3" onSubmit={onSubmit}>
-              <div>
-                <label className="text-[11px] text-slate-400">Email or Username</label>
-                <input
-                  className="mt-1 w-full rounded-2xl bg-slate-950 border border-slate-800 px-4 py-2.5 outline-none focus:border-cyan-500/50"
-                  value={emailOrUser}
-                  onChange={(e) => setEmailOrUser(e.target.value)}
-                  autoComplete="username"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-slate-400">Password</label>
-                <input
-                  type="password"
-                  className="mt-1 w-full rounded-2xl bg-slate-950 border border-slate-800 px-4 py-2.5 outline-none focus:border-cyan-500/50"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  required
-                />
-              </div>
-
-              {err ? (
-                <div className="text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-2xl p-3">
-                  {err}
-                </div>
-              ) : null}
-
-              <button
-                disabled={loading}
-                className={cx(
-                  "w-full rounded-2xl py-2.5 font-semibold text-sm border transition",
-                  loading
-                    ? "opacity-60 border-slate-800 bg-slate-950/60 text-slate-200"
-                    : "border-cyan-500/35 bg-cyan-500/15 hover:bg-cyan-500/20 text-cyan-200"
-                )}
-                type="submit"
-              >
-                {loading ? "Signing in..." : "Sign In"}
-              </button>
-            </form>
-
-            <div className="mt-3 text-sm text-slate-400">
-              New here?{" "}
-              <Link className="text-cyan-300 hover:text-cyan-200" to="/register">
-                Create an account
-              </Link>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <Link
-                to="/register"
-                className="rounded-2xl px-3 py-2 text-sm border border-fuchsia-500/35 bg-fuchsia-500/10 hover:bg-fuchsia-500/15 text-center text-fuchsia-200 font-semibold"
-              >
-                Register
-              </Link>
-              <Link
-                to="/register"
-                className="rounded-2xl px-3 py-2 text-sm border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40 text-center"
-              >
-                How it works
-              </Link>
-            </div>
-
-            <div className="mt-4 text-[11px] text-slate-500">
-              Tenant/Investor portals are invite-based. If you received a code, follow the invite/claim flow.
+          <div className="lg:col-span-5">
+            <div className="mx-auto mt-2 w-full max-w-xl lg:sticky lg:top-6 lg:max-w-none">
+              <LoginCard
+                emailOrUser={emailOrUser}
+                setEmailOrUser={setEmailOrUser}
+                password={password}
+                setPassword={setPassword}
+                err={err}
+                loading={loading}
+                onSubmit={onSubmit}
+              />
             </div>
           </div>
         </div>

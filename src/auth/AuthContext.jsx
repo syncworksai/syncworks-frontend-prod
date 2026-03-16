@@ -1,4 +1,3 @@
-// src/auth/AuthContext.jsx
 import React, {
   createContext,
   useContext,
@@ -60,6 +59,80 @@ function normalizeEmail(x) {
   return String(x || "").toLowerCase().trim();
 }
 
+function parseModuleAccess(data, fallback = {}) {
+  const out = {
+    checked: true,
+    sbo: false,
+    pm: false,
+    sales: false,
+    finance: false,
+    fitness: false,
+    ...fallback,
+  };
+
+  const pushIfString = (set, v) => {
+    if (typeof v === "string" && v.trim()) set.add(v.trim().toUpperCase());
+  };
+
+  const active = new Set();
+
+  const arraysToCheck = [
+    data?.modules,
+    data?.active_modules,
+    data?.products,
+    data?.active_products,
+    data?.entitled_modules,
+  ];
+
+  arraysToCheck.forEach((arr) => {
+    if (Array.isArray(arr)) {
+      arr.forEach((x) => {
+        if (typeof x === "string") {
+          pushIfString(active, x);
+        } else if (x && typeof x === "object") {
+          pushIfString(active, x.code);
+          pushIfString(active, x.key);
+          pushIfString(active, x.name);
+          if (x.module) pushIfString(active, x.module);
+          if (x.slug) pushIfString(active, x.slug);
+        }
+      });
+    }
+  });
+
+  const objsToCheck = [
+    data?.module_status,
+    data?.module_statuses,
+    data?.entitlements,
+  ];
+
+  objsToCheck.forEach((obj) => {
+    if (obj && typeof obj === "object" && !Array.isArray(obj)) {
+      Object.entries(obj).forEach(([k, v]) => {
+        const key = String(k || "").trim().toUpperCase();
+        const truthy =
+          v === true ||
+          String(v || "").toLowerCase() === "active" ||
+          String(v || "").toLowerCase() === "trialing" ||
+          (typeof v === "object" &&
+            (v?.active === true ||
+              String(v?.status || "").toLowerCase() === "active" ||
+              String(v?.status || "").toLowerCase() === "trialing"));
+
+        if (truthy) active.add(key);
+      });
+    }
+  });
+
+  out.sbo = active.has("SBO");
+  out.pm = active.has("PM") || active.has("PROPERTYMANAGEMENT") || active.has("PROPERTY_MANAGEMENT");
+  out.sales = active.has("SALESOS") || active.has("SALES_OS") || active.has("SALES");
+  out.finance = active.has("FINANCE");
+  out.fitness = active.has("FITNESS");
+
+  return out;
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
@@ -86,6 +159,15 @@ export function AuthProvider({ children }) {
   const [mode, setModeState] = useState(() => getStoredMode());
   const [entitlementsRefreshedAt, setEntitlementsRefreshedAt] = useState(null);
 
+  const [moduleAccess, setModuleAccess] = useState({
+    checked: false,
+    sbo: false,
+    pm: false,
+    sales: false,
+    finance: false,
+    fitness: false,
+  });
+
   // ✅ Only Jacob can ever be God Mode
   const isGod = useMemo(() => {
     const email = normalizeEmail(user?.email);
@@ -108,7 +190,6 @@ export function AuthProvider({ children }) {
 
   const hasEntitlement = useCallback(
     (key) => {
-      // ✅ God bypass for dev/admin access
       if (isGod) return true;
       if (key === "finance") return !!entitlements?.finance_access;
       if (key === "health") return !!entitlements?.health_access;
@@ -129,6 +210,14 @@ export function AuthProvider({ children }) {
     setCustomerSettings(null);
     setMyBusinesses([]);
     setEntitlementsRefreshedAt(null);
+    setModuleAccess({
+      checked: false,
+      sbo: false,
+      pm: false,
+      sales: false,
+      finance: false,
+      fitness: false,
+    });
   }, []);
 
   const enforcePlatformLock = useCallback(
@@ -164,12 +253,49 @@ export function AuthProvider({ children }) {
           setActiveBusinessIdState(String(first));
         }
       }
+
       return list;
     } catch {
       setMyBusinesses([]);
       return [];
     }
   }, []);
+
+  const loadModuleAccess = useCallback(
+    async (businesses = []) => {
+      if (isGod) {
+        setModuleAccess({
+          checked: true,
+          sbo: true,
+          pm: true,
+          sales: true,
+          finance: true,
+          fitness: true,
+        });
+        return;
+      }
+
+      try {
+        const res = await api.get("/billing/subscription/status/");
+        const parsed = parseModuleAccess(res?.data, {
+          sbo: Array.isArray(businesses) && businesses.length > 0,
+          pm: false,
+          sales: false,
+        });
+        setModuleAccess(parsed);
+      } catch {
+        setModuleAccess({
+          checked: true,
+          sbo: Array.isArray(businesses) && businesses.length > 0,
+          pm: false,
+          sales: false,
+          finance: false,
+          fitness: false,
+        });
+      }
+    },
+    [isGod]
+  );
 
   const loadMe = useCallback(
     async ({ silent = false } = {}) => {
@@ -193,10 +319,23 @@ export function AuthProvider({ children }) {
 
         if (!silent) setEntitlementsRefreshedAt(new Date().toISOString());
 
-        await loadMyBusinesses();
+        const list = await loadMyBusinesses();
 
-        // ✅ If user is not Jacob, never allow PLATFORM mode to persist
         enforcePlatformLock(normalized.user?.email);
+
+        const godByEmail = GOD_EMAIL_ALLOWLIST.has(normalizeEmail(normalized.user?.email));
+        if (godByEmail) {
+          setModuleAccess({
+            checked: true,
+            sbo: true,
+            pm: true,
+            sales: true,
+            finance: true,
+            fitness: true,
+          });
+        } else {
+          await loadModuleAccess(list);
+        }
       } catch {
         clearToken();
         resetAuthedState();
@@ -204,7 +343,7 @@ export function AuthProvider({ children }) {
         setBooting(false);
       }
     },
-    [enforcePlatformLock, loadMyBusinesses, resetAuthedState]
+    [enforcePlatformLock, loadMyBusinesses, loadModuleAccess, resetAuthedState]
   );
 
   useEffect(() => {
@@ -261,8 +400,10 @@ export function AuthProvider({ children }) {
   }, []);
 
   const reloadBusinesses = useCallback(async () => {
-    return await loadMyBusinesses();
-  }, [loadMyBusinesses]);
+    const list = await loadMyBusinesses();
+    await loadModuleAccess(list);
+    return list;
+  }, [loadMyBusinesses, loadModuleAccess]);
 
   const refreshEntitlements = useCallback(async () => {
     try {
@@ -278,8 +419,21 @@ export function AuthProvider({ children }) {
       setCustomerSettings(normalized.customer_settings);
       setEntitlementsRefreshedAt(new Date().toISOString());
 
-      // ✅ Re-assert: non-Jacob can never remain in PLATFORM mode
       enforcePlatformLock(normalized.user?.email);
+
+      const godByEmail = GOD_EMAIL_ALLOWLIST.has(normalizeEmail(normalized.user?.email));
+      if (godByEmail) {
+        setModuleAccess({
+          checked: true,
+          sbo: true,
+          pm: true,
+          sales: true,
+          finance: true,
+          fitness: true,
+        });
+      } else {
+        await loadModuleAccess(myBusinesses);
+      }
 
       return normalized.entitlements;
     } catch (e) {
@@ -289,19 +443,19 @@ export function AuthProvider({ children }) {
       }
       throw e;
     }
-  }, [enforcePlatformLock, resetAuthedState]);
+  }, [enforcePlatformLock, loadModuleAccess, myBusinesses, resetAuthedState]);
 
   const availableModes = useMemo(() => {
     const hasMemberships = (myBusinesses || []).length > 0;
     return {
       CUSTOMER: true,
-      SBO: hasMemberships || isGod,
+      SBO: hasMemberships || moduleAccess?.sbo || isGod,
       EMPLOYEE: hasMemberships || isGod,
-      PM: hasMemberships || isGod,
-      PLATFORM: isGod, // ✅ only Jacob
-      SALES: true, // gated in ModeBar by pipelines/me
+      PM: hasMemberships || moduleAccess?.pm || isGod,
+      PLATFORM: isGod,
+      SALES: !!moduleAccess?.sales || isGod,
     };
-  }, [myBusinesses, isGod]);
+  }, [myBusinesses, moduleAccess, isGod]);
 
   const value = useMemo(
     () => ({
@@ -326,6 +480,8 @@ export function AuthProvider({ children }) {
       myBusinesses,
       reloadBusinesses,
 
+      moduleAccess,
+
       isGod,
       mode,
       setMode,
@@ -348,6 +504,7 @@ export function AuthProvider({ children }) {
       updateActiveBusinessId,
       myBusinesses,
       reloadBusinesses,
+      moduleAccess,
       isGod,
       mode,
       setMode,
