@@ -1,4 +1,3 @@
-// src/pages/UserProfile.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import api from "../api/client";
@@ -59,7 +58,6 @@ function ChangePasswordCard({ onOk, onErr }) {
 
     setSaving(true);
     try {
-      // Best-effort endpoint tries (since we don't have the confirmed backend route)
       const payloads = [
         { current_password: form.current_password, new_password: form.new_password },
         { old_password: form.current_password, new_password: form.new_password },
@@ -71,7 +69,7 @@ function ChangePasswordCard({ onOk, onErr }) {
         (p) => api.post("/auth/password/change/", p),
         (p) => api.post("/auth/password/change-password/", p),
         (p) => api.post("/auth/password/", p),
-        (p) => api.patch("/auth/me/", p), // last resort if backend accepts it (most won't)
+        (p) => api.patch("/auth/me/", p),
       ];
 
       let lastErr = null;
@@ -157,6 +155,131 @@ function ChangePasswordCard({ onOk, onErr }) {
             <div className="text-[11px] text-rose-200 mt-2">Passwords do not match.</div>
           ) : null}
         </div>
+      </div>
+    </Card>
+  );
+}
+
+function PrivateAccessCodeCard({ businessSelected, onOk, onErr }) {
+  const nav = useNavigate();
+  const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState("");
+
+  async function applyCode() {
+    const cleaned = String(code || "").trim().toUpperCase();
+
+    if (!cleaned) {
+      setStatus("Please enter your access code.");
+      return;
+    }
+
+    if (!businessSelected) {
+      setStatus("Select or create your business first, then apply your access code.");
+      return;
+    }
+
+    setLoading(true);
+    setStatus("");
+
+    try {
+      const res = await api.post(
+        "/auth/upgrade-to-sbo-promo/",
+        {
+          code: cleaned,
+          business_id: businessSelected,
+        },
+        {
+          headers: {
+            "X-Business-Id": String(businessSelected),
+          },
+        }
+      );
+
+      setStatus(res?.data?.detail || "Access code applied successfully.");
+      onOk(res?.data?.detail || "Access code applied successfully.");
+    } catch (e) {
+      const detail =
+        e?.response?.data?.detail ||
+        e?.response?.data?.error ||
+        "Unable to apply access code.";
+      setStatus(detail);
+      onErr(detail);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Card
+      title="Private Access Code"
+      subtitle="Use a private beta or business access code if one was given to you."
+      right={
+        <button
+          type="button"
+          onClick={applyCode}
+          disabled={loading}
+          className={cx(
+            "rounded-2xl px-4 py-2 text-sm font-semibold border transition",
+            loading
+              ? "bg-slate-900/40 border-slate-800 text-slate-500 cursor-not-allowed"
+              : "bg-emerald-500/12 border-emerald-500/35 hover:bg-emerald-500/18 text-emerald-200"
+          )}
+        >
+          {loading ? "Applying..." : "Apply Code"}
+        </button>
+      }
+    >
+      <div className="space-y-3">
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+          <div className="text-xs text-slate-400 mb-2">Access code</div>
+          <input
+            type="text"
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            className="w-full h-11 rounded-2xl border border-slate-800 bg-slate-950/60 px-3 text-sm outline-none focus:border-cyan-500/40"
+            placeholder="Enter private access code"
+          />
+          <div className="text-[11px] text-slate-500 mt-2">
+            This code is private and is only valid if it was given to you directly.
+          </div>
+        </div>
+
+        {!businessSelected ? (
+          <div className="rounded-2xl border border-amber-800 bg-amber-900/10 p-4 text-sm text-amber-200">
+            Select or create your business first before applying an access code.
+            <div className="mt-3 flex gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => nav("/sbo")}
+                className="rounded-2xl px-4 py-2 text-sm font-semibold border border-indigo-500/35 bg-indigo-500/12 hover:bg-indigo-500/18 text-indigo-200"
+              >
+                Go to Business Setup
+              </button>
+              <button
+                type="button"
+                onClick={() => nav("/upgrade")}
+                className="rounded-2xl px-4 py-2 text-sm font-semibold border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40 text-slate-200"
+              >
+                Open Upgrade
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {status ? (
+          <div
+            className={cx(
+              "rounded-2xl p-3 text-sm border",
+              String(status).toLowerCase().includes("applied") || String(status).includes("✅")
+                ? "text-emerald-200 bg-emerald-900/10 border-emerald-800"
+                : "text-red-200 bg-red-900/10 border-red-800"
+            )}
+          >
+            {String(status).toLowerCase().includes("applied") || String(status).includes("✅") ? "✅ " : "⚠️ "}
+            {status}
+          </div>
+        ) : null}
       </div>
     </Card>
   );
@@ -344,6 +467,12 @@ export default function UserProfile() {
           </div>
         </Card>
 
+        <PrivateAccessCodeCard
+          businessSelected={businessSelected}
+          onOk={toastSuccess}
+          onErr={toastError}
+        />
+
         <ChangePasswordCard onOk={toastSuccess} onErr={toastError} />
 
         <Card
@@ -368,13 +497,20 @@ export default function UserProfile() {
           ) : !businessSelected ? (
             <div className="text-sm text-slate-400">
               Select a business (top bar) to see billing preview and status.
-              <div className="mt-3">
+              <div className="mt-3 flex gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={() => nav("/upgrade")}
                   className="rounded-2xl px-4 py-2 bg-indigo-500/20 border border-indigo-500/40 hover:bg-indigo-500/30 text-sm"
                 >
                   Go to Upgrade
+                </button>
+                <button
+                  type="button"
+                  onClick={() => nav("/sbo")}
+                  className="rounded-2xl px-4 py-2 bg-cyan-500/12 border border-cyan-500/35 hover:bg-cyan-500/18 text-sm text-cyan-200"
+                >
+                  Go to Business Setup
                 </button>
               </div>
             </div>

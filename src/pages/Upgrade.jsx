@@ -1,4 +1,3 @@
-// src/pages/Upgrade.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ModeBar from "../components/ModeBar";
@@ -248,12 +247,12 @@ export default function Upgrade() {
     const code = String(promoCode || "").trim().toUpperCase();
 
     if (!code) {
-      setPromoStatus("Please enter a promo code.");
+      setPromoStatus("Please enter your access code.");
       return;
     }
 
     if (!activeBusinessId) {
-      setPromoStatus("Create or select your business first, then apply your promo code.");
+      setPromoStatus("Create or select your business first, then apply your access code.");
       return;
     }
 
@@ -277,12 +276,12 @@ export default function Upgrade() {
 
       setPromoApplied(true);
       setPromoCode(code);
-      setPromoStatus(res?.data?.detail || "Promo applied.");
+      setPromoStatus(res?.data?.detail || "Access code applied.");
     } catch (e) {
       const msg =
         e?.response?.data?.detail ||
         e?.response?.data?.error ||
-        "Invalid promo code or missing business selection.";
+        "Unable to apply access code.";
       setPromoApplied(false);
       setPromoStatus(String(msg));
     } finally {
@@ -351,7 +350,7 @@ export default function Upgrade() {
 
             {!activeBusinessId ? (
               <div className="mt-3 text-sm text-amber-200 bg-amber-900/10 border border-amber-800 rounded-2xl p-3">
-                Select or create your business first before applying an SBO promo code.
+                Create or select your business first before applying a private access code.
               </div>
             ) : null}
 
@@ -362,13 +361,21 @@ export default function Upgrade() {
             ) : null}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
               onClick={() => setPricingOpen(true)}
               className="rounded-2xl px-4 py-2 text-sm font-semibold border border-fuchsia-500/35 bg-fuchsia-500/10 hover:bg-fuchsia-500/15 text-fuchsia-200"
             >
               View pricing
+            </button>
+
+            <button
+              type="button"
+              onClick={() => nav("/profile")}
+              className="rounded-2xl px-4 py-2 text-sm font-semibold border border-cyan-500/35 bg-cyan-500/10 hover:bg-cyan-500/15 text-cyan-200"
+            >
+              Open Profile
             </button>
 
             <button
@@ -385,26 +392,26 @@ export default function Upgrade() {
         <div className="mt-6 rounded-3xl border border-slate-800 bg-slate-950/45 p-5">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <div className="text-sm font-semibold text-slate-100">Have a promo code?</div>
+              <div className="text-sm font-semibold text-slate-100">Private access code</div>
               <div className="text-xs text-slate-400 mt-1">
-                Enter your access code to unlock special pricing or lifetime offers for SBO.
+                If you were given a private beta/business code, you can apply it here or in your profile.
               </div>
             </div>
-            <Pill tone="emerald">Beta Access</Pill>
+            <Pill tone="emerald">Private</Pill>
           </div>
 
           <div className="mt-4 flex gap-2 flex-wrap">
             <input
               value={promoCode}
               onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-              placeholder="Enter code (ex: SWFF26)"
+              placeholder="Enter access code"
               className="flex-1 min-w-[220px] rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-2 text-sm outline-none focus:border-cyan-500/40"
             />
 
             <button
               type="button"
               onClick={applyPromoCode}
-              disabled={promoLoading || !activeBusinessId}
+              disabled={promoLoading}
               className="rounded-2xl px-4 py-2 text-sm font-semibold border border-emerald-500/35 bg-emerald-500/12 hover:bg-emerald-500/18 text-emerald-200 disabled:opacity-60"
             >
               {promoLoading ? "Applying..." : "Apply Code"}
@@ -413,7 +420,7 @@ export default function Upgrade() {
 
           {promoApplied ? (
             <div className="mt-3 text-sm text-emerald-300 bg-emerald-900/10 border border-emerald-800 rounded-2xl p-3">
-              ✅ {promoStatus || "Promo applied — SBO subscription has been waived."}
+              ✅ {promoStatus || "Access code applied successfully."}
             </div>
           ) : null}
 
@@ -422,14 +429,33 @@ export default function Upgrade() {
               ⚠️ {promoStatus}
             </div>
           ) : null}
+
+          {!activeBusinessId ? (
+            <div className="mt-3 flex gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => nav("/sbo")}
+                className="rounded-2xl px-4 py-2 text-sm font-semibold border border-indigo-500/35 bg-indigo-500/12 hover:bg-indigo-500/18 text-indigo-200"
+              >
+                Go to Business Setup
+              </button>
+              <button
+                type="button"
+                onClick={() => nav("/profile")}
+                className="rounded-2xl px-4 py-2 text-sm font-semibold border border-slate-700 bg-slate-950/60 hover:bg-slate-900/40 text-slate-200"
+              >
+                Apply From Profile
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-6 grid lg:grid-cols-2 gap-4">
           <Card
             tone="indigo"
             title="Start a Business (SBO)"
-            badge={promoApplied ? "Promo Active" : "Business Owner"}
-            price={promoApplied ? "$0 with promo" : "$19.99 / month"}
+            badge={promoApplied ? "Access Active" : "Business Owner"}
+            price={promoApplied ? "$0 with access code" : "$19.99 / month"}
             subtitle="Run a service business with tickets, scheduling, payments, team management, and automation."
             bullets={[
               "Marketplace routing and customer requests",
