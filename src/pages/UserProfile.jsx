@@ -70,6 +70,48 @@ function InputField({
   );
 }
 
+function ModalShell({ open, onClose, title, subtitle, children }) {
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e) {
+      if (e.key === "Escape") onClose?.();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[120]">
+      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+      <div className="absolute inset-0 flex items-center justify-center p-4">
+        <div className="w-full max-w-xl rounded-3xl border border-slate-800 bg-slate-950/95 backdrop-blur p-6 shadow-[0_0_90px_rgba(0,0,0,0.55)] relative overflow-hidden">
+          <div className="pointer-events-none absolute -inset-20 blur-3xl bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-fuchsia-500/10" />
+          <div className="relative">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-lg font-extrabold text-slate-100">{title}</div>
+                {subtitle ? <div className="text-xs text-slate-400 mt-1">{subtitle}</div> : null}
+              </div>
+              <button
+                onClick={onClose}
+                className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40 text-slate-200"
+                title="Close"
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-5">{children}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ChangePasswordCard({ onOk, onErr }) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -193,9 +235,136 @@ function ChangePasswordCard({ onOk, onErr }) {
   );
 }
 
-function PrivateAccessCodeCard({ user, onOk, onErr }) {
-  const nav = useNavigate();
-  const { reload, setMode } = useAuth();
+function CreateBusinessModal({ open, onClose, onCreated, onErr, onOk }) {
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    business_email: "",
+    phone: "",
+    base_zip: "",
+  });
+
+  useEffect(() => {
+    if (!open) {
+      setForm({
+        name: "",
+        business_email: "",
+        phone: "",
+        base_zip: "",
+      });
+      setSaving(false);
+    }
+  }, [open]);
+
+  async function submit() {
+    const name = String(form.name || "").trim();
+    if (!name) {
+      onErr?.("Business name is required.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await api.post(
+        "/me/businesses/create/",
+        {
+          name,
+          business_email: String(form.business_email || "").trim(),
+          phone: String(form.phone || "").trim(),
+          base_zip: String(form.base_zip || "").trim(),
+        },
+        {
+          headers: {
+            "X-Business-Id": "",
+          },
+        }
+      );
+
+      onOk?.("Business created ✅ Finish the rest in SBO Settings.");
+      onCreated?.(res?.data || {});
+      onClose?.();
+    } catch (e) {
+      onErr?.(
+        e?.response?.data?.detail ||
+          e?.response?.data?.error ||
+          "Failed to create business."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      title="Create Business"
+      subtitle="Start with the basics. You can finish the rest later in SBO Settings."
+    >
+      <div className="space-y-3">
+        <InputField
+          label="Business name"
+          value={form.name}
+          onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+          placeholder="Your business name"
+          autoComplete="organization"
+        />
+
+        <div className="grid md:grid-cols-2 gap-3">
+          <InputField
+            label="Business email"
+            type="email"
+            value={form.business_email}
+            onChange={(e) => setForm((p) => ({ ...p, business_email: e.target.value }))}
+            placeholder="business@email.com"
+            autoComplete="email"
+          />
+          <InputField
+            label="Phone"
+            value={form.phone}
+            onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+            placeholder="Business phone"
+            autoComplete="tel"
+          />
+        </div>
+
+        <InputField
+          label="ZIP code"
+          value={form.base_zip}
+          onChange={(e) => setForm((p) => ({ ...p, base_zip: e.target.value }))}
+          placeholder="ZIP code"
+          autoComplete="postal-code"
+        />
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-2xl px-4 py-2 text-sm border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={submit}
+            disabled={saving}
+            className={cx(
+              "rounded-2xl px-4 py-2 text-sm font-semibold border",
+              saving
+                ? "bg-slate-900/40 border-slate-800 text-slate-500 cursor-not-allowed"
+                : "border-cyan-500/35 bg-cyan-500/12 hover:bg-cyan-500/18 text-cyan-200"
+            )}
+          >
+            {saving ? "Creating..." : "Create Business"}
+          </button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+function PrivateAccessCodeCard({ user, onOk, onErr, onUnlocked }) {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
@@ -227,19 +396,18 @@ function PrivateAccessCodeCard({ user, onOk, onErr }) {
         }
       );
 
-      await reload?.();
-      setMode?.("SBO");
-      setUnlocked(true);
       const detail = res?.data?.detail || "Access unlocked. You can now create your business.";
+      setUnlocked(true);
       setStatus(detail);
-      onOk(detail);
+      onUnlocked?.();
+      onOk?.(detail);
     } catch (e) {
       const detail =
         e?.response?.data?.detail ||
         e?.response?.data?.error ||
         "Unable to apply access code.";
       setStatus(detail);
-      onErr(detail);
+      onErr?.(detail);
     } finally {
       setLoading(false);
     }
@@ -297,23 +465,7 @@ function PrivateAccessCodeCard({ user, onOk, onErr }) {
           <div className="rounded-2xl border border-cyan-800 bg-cyan-900/10 p-4">
             <div className="text-sm font-semibold text-cyan-100">Business setup unlocked</div>
             <div className="text-xs text-cyan-200/80 mt-1">
-              Your account now has SBO access. Continue to create your business.
-            </div>
-            <div className="mt-3 flex gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={() => nav("/upgrade/sbo?promo=success")}
-                className="rounded-2xl px-4 py-2 text-sm font-semibold border border-cyan-500/35 bg-cyan-500/12 hover:bg-cyan-500/18 text-cyan-200"
-              >
-                Create Business
-              </button>
-              <button
-                type="button"
-                onClick={() => nav("/upgrade")}
-                className="rounded-2xl px-4 py-2 text-sm font-semibold border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40 text-slate-200"
-              >
-                Open Upgrade Hub
-              </button>
+              Your account now has SBO access. Create your business below, then finish the rest in SBO Settings.
             </div>
           </div>
         ) : null}
@@ -325,7 +477,15 @@ function PrivateAccessCodeCard({ user, onOk, onErr }) {
 export default function UserProfile() {
   const nav = useNavigate();
   const loc = useLocation();
-  const { user, mode, activeBusinessId } = useAuth();
+  const {
+    user,
+    mode,
+    activeBusinessId,
+    setActiveBusinessId,
+    reloadBusinesses,
+    reload,
+    setMode,
+  } = useAuth();
 
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
@@ -335,6 +495,13 @@ export default function UserProfile() {
 
   const [loading, setLoading] = useState(false);
   const [loadingCard, setLoadingCard] = useState(false);
+
+  const [promoUnlocked, setPromoUnlocked] = useState(user?.role === "SBO");
+  const [showCreateBusinessModal, setShowCreateBusinessModal] = useState(false);
+
+  useEffect(() => {
+    setPromoUnlocked(user?.role === "SBO");
+  }, [user?.role]);
 
   const businessSelected = useMemo(() => {
     const n = parseInt(String(activeBusinessId || ""), 10);
@@ -367,7 +534,10 @@ export default function UserProfile() {
     setLoading(true);
     setErr("");
     try {
-      const [s, p] = await Promise.all([api.get("/billing/status/"), api.get("/billing/monthly/preview/")]);
+      const [s, p] = await Promise.all([
+        api.get("/billing/status/"),
+        api.get("/billing/monthly/preview/"),
+      ]);
       setBillingStatus(s.data || null);
       setBillingPreview(p.data || null);
     } catch (e) {
@@ -402,6 +572,43 @@ export default function UserProfile() {
     } finally {
       setLoadingCard(false);
     }
+  }
+
+  async function handleUnlocked() {
+    try {
+      await reload?.();
+      await reloadBusinesses?.();
+      setMode?.("SBO");
+      setPromoUnlocked(true);
+    } catch {
+      setPromoUnlocked(true);
+    }
+  }
+
+  async function handleBusinessCreated(payload) {
+    const bizId =
+      payload?.business_id ||
+      payload?.business?.id ||
+      payload?.id ||
+      "";
+
+    if (!bizId) {
+      toastError("Business created but no business ID was returned.");
+      return;
+    }
+
+    setActiveBusinessId?.(bizId);
+
+    try {
+      await reload?.();
+      await reloadBusinesses?.();
+    } catch {
+      // ignore
+    }
+
+    setMode?.("SBO");
+    toastSuccess("Business created ✅ Finish the rest in SBO Settings.");
+    nav("/sbo");
   }
 
   useEffect(() => {
@@ -449,7 +656,9 @@ export default function UserProfile() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <div className="text-xl font-extrabold tracking-tight">Profile</div>
-            <div className="text-xs text-slate-400">Security + billing snapshot. For module settings, use Settings Hub.</div>
+            <div className="text-xs text-slate-400">
+              Security + billing snapshot. For module settings, use Settings Hub.
+            </div>
           </div>
 
           <div className="flex gap-2 flex-wrap">
@@ -469,7 +678,10 @@ export default function UserProfile() {
               {loading ? "Refreshing..." : "Refresh"}
             </button>
 
-            <Link to={returnTo} className="rounded-2xl px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-sm">
+            <Link
+              to={returnTo}
+              className="rounded-2xl px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-sm"
+            >
               Back
             </Link>
           </div>
@@ -504,7 +716,33 @@ export default function UserProfile() {
           </div>
         </Card>
 
-        <PrivateAccessCodeCard user={user} onOk={toastSuccess} onErr={toastError} />
+        <PrivateAccessCodeCard
+          user={user}
+          onOk={toastSuccess}
+          onErr={toastError}
+          onUnlocked={handleUnlocked}
+        />
+
+        {promoUnlocked ? (
+          <Card
+            title="Create Business"
+            subtitle="Start with the basics now. You can finish the rest in SBO Settings after creation."
+            right={
+              <button
+                type="button"
+                onClick={() => setShowCreateBusinessModal(true)}
+                className="rounded-2xl px-4 py-2 text-sm font-semibold border border-cyan-500/35 bg-cyan-500/12 hover:bg-cyan-500/18 text-cyan-200"
+              >
+                Create Business
+              </button>
+            }
+          >
+            <div className="text-sm text-slate-300 leading-relaxed">
+              Your SBO access is unlocked. Create your business here, then go to SBO Settings to complete branding,
+              services, city/state, hours, social links, and the rest of your setup.
+            </div>
+          </Card>
+        ) : null}
 
         <ChangePasswordCard onOk={toastSuccess} onErr={toastError} />
 
@@ -552,7 +790,10 @@ export default function UserProfile() {
               <div className="grid sm:grid-cols-2 gap-3 text-sm">
                 <Info label="State" value={lockedLabel} />
                 <Info label="Period" value={periodLabel} mono />
-                <Info label="Seats" value={`${billingPreview?.seat_count ?? "—"} (included ${billingPreview?.included_seats ?? "—"})`} />
+                <Info
+                  label="Seats"
+                  value={`${billingPreview?.seat_count ?? "—"} (included ${billingPreview?.included_seats ?? "—"})`}
+                />
                 <Info label="Extra seats" value={String(billingPreview?.extra_seats ?? "—")} />
               </div>
 
@@ -592,6 +833,14 @@ export default function UserProfile() {
           )}
         </Card>
       </div>
+
+      <CreateBusinessModal
+        open={showCreateBusinessModal}
+        onClose={() => setShowCreateBusinessModal(false)}
+        onCreated={handleBusinessCreated}
+        onErr={toastError}
+        onOk={toastSuccess}
+      />
     </div>
   );
 }

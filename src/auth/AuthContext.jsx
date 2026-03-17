@@ -17,7 +17,6 @@ const AuthContext = createContext(null);
 
 const MODE_KEY = "sw_mode"; // CUSTOMER | SBO | EMPLOYEE | PM | PLATFORM | SALES
 
-// ✅ HARD-WIRED GOD MODE EMAIL ALLOWLIST (ONLY JACOB)
 const GOD_EMAIL_ALLOWLIST = new Set(["jacoblord7@outlook.com"]);
 
 function getStoredMode() {
@@ -168,7 +167,6 @@ export function AuthProvider({ children }) {
     fitness: false,
   });
 
-  // ✅ Only Jacob can ever be God Mode
   const isGod = useMemo(() => {
     const email = normalizeEmail(user?.email);
     return GOD_EMAIL_ALLOWLIST.has(email);
