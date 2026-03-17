@@ -443,7 +443,7 @@ export default function Upgrade() {
             <input
               value={promoCode}
               onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-              placeholder="Enter code (ex: SWFF26)"
+              placeholder="Enter code"
               className="flex-1 min-w-[220px] rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-2 text-sm outline-none focus:border-cyan-500/40"
             />
 
