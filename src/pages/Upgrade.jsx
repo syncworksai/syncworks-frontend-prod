@@ -62,8 +62,6 @@ function Card({
       ? "shadow-[0_0_38px_rgba(52,211,153,0.10)]"
       : "shadow-[0_0_34px_rgba(148,163,184,0.06)]";
 
-  const pricePillTone = tone;
-
   return (
     <div className={cx("rounded-3xl border bg-slate-950/45 p-5 relative overflow-hidden", ring, glow)}>
       <div
@@ -91,7 +89,7 @@ function Card({
             </div>
             <div className="text-xs text-slate-400 mt-1 leading-relaxed">{subtitle}</div>
           </div>
-          <Pill tone={pricePillTone}>{price}</Pill>
+          <Pill tone={tone}>{price}</Pill>
         </div>
 
         <div className="mt-4 space-y-2">
@@ -184,25 +182,10 @@ function firstSetupPathFromModules(modulesCsv) {
   return "/customer";
 }
 
-function coerceInt(val) {
-  const n = Number(val);
-  return Number.isFinite(n) && n > 0 ? n : null;
-}
-
-function readJsonStorage(key) {
-  try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
 export default function Upgrade() {
   const nav = useNavigate();
   const loc = useLocation();
-  const auth = useAuth();
-  const { mode } = auth || {};
+  const { mode, activeBusinessId, isGod } = useAuth();
 
   const [pricingOpen, setPricingOpen] = useState(false);
   const [busyKey, setBusyKey] = useState("");
@@ -212,40 +195,11 @@ export default function Upgrade() {
   const [promoStatus, setPromoStatus] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoApplied, setPromoApplied] = useState(false);
-  const [promoBusinessId, setPromoBusinessId] = useState(null);
 
   const search = useMemo(() => new URLSearchParams(loc.search || ""), [loc.search]);
   const subState = search.get("sub") || "";
   const modulesFromQuery = search.get("modules") || "";
   const nextFromQuery = search.get("next") || "";
-
-  const activeBusinessId = useMemo(() => {
-    const candidates = [
-      auth?.activeBusinessId,
-      auth?.businessId,
-      auth?.currentBusinessId,
-      auth?.selectedBusinessId,
-      auth?.me?.active_business_id,
-      auth?.me?.business_id,
-      auth?.user?.active_business_id,
-      auth?.user?.business_id,
-      search.get("business_id"),
-      window.localStorage.getItem("active_business_id"),
-      window.localStorage.getItem("business_id"),
-      window.localStorage.getItem("selectedBusinessId"),
-      window.localStorage.getItem("sw_active_business_id"),
-      readJsonStorage("sw_auth")?.active_business_id,
-      readJsonStorage("sw_auth")?.business_id,
-      readJsonStorage("auth")?.active_business_id,
-      readJsonStorage("auth")?.business_id,
-    ];
-
-    for (const val of candidates) {
-      const id = coerceInt(val);
-      if (id) return id;
-    }
-    return null;
-  }, [auth, search]);
 
   useEffect(() => {
     if (subState !== "success") return;
@@ -292,6 +246,7 @@ export default function Upgrade() {
 
   async function applyPromoCode() {
     const code = String(promoCode || "").trim().toUpperCase();
+
     if (!code) {
       setPromoStatus("Please enter a promo code.");
       return;
@@ -321,9 +276,8 @@ export default function Upgrade() {
       );
 
       setPromoApplied(true);
-      setPromoBusinessId(activeBusinessId);
       setPromoCode(code);
-      setPromoStatus(res?.data?.detail || "success");
+      setPromoStatus(res?.data?.detail || "Promo applied.");
     } catch (e) {
       const msg =
         e?.response?.data?.detail ||
@@ -344,9 +298,8 @@ export default function Upgrade() {
       const normalized = Array.isArray(modules) ? modules.map((m) => String(m).toUpperCase()) : [];
 
       if (normalized.length === 1 && normalized[0] === "SBO" && promoApplied) {
-        const bid = promoBusinessId || activeBusinessId;
         const qs = new URLSearchParams();
-        if (bid) qs.set("business_id", String(bid));
+        if (activeBusinessId) qs.set("business_id", String(activeBusinessId));
         qs.set("promo", "success");
         nav(`/upgrade/sbo?${qs.toString()}`);
         return;
@@ -384,6 +337,7 @@ export default function Upgrade() {
               <Pill tone="cyan">One login</Pill>
               <Pill tone="indigo">Customer-first</Pill>
               <Pill tone="emerald">Modular billing</Pill>
+              {isGod ? <Pill tone="fuchsia">God Mode</Pill> : null}
             </div>
 
             <div className="mt-2 text-sm text-slate-300 max-w-3xl leading-relaxed">
@@ -443,7 +397,7 @@ export default function Upgrade() {
             <input
               value={promoCode}
               onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-              placeholder="Enter code"
+              placeholder="Enter code (ex: SWFF26)"
               className="flex-1 min-w-[220px] rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-2 text-sm outline-none focus:border-cyan-500/40"
             />
 
