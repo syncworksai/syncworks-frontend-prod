@@ -37,6 +37,39 @@ function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
+function InputField({
+  label,
+  type = "text",
+  value,
+  onChange,
+  placeholder = "",
+  autoComplete,
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+      <div className="text-xs text-slate-400 mb-2">{label}</div>
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        autoComplete={autoComplete}
+        placeholder={placeholder}
+        className={cx(
+          "w-full h-11 rounded-2xl border border-slate-800 bg-slate-950/80 px-3 text-sm text-slate-100",
+          "placeholder:text-slate-500 outline-none focus:border-cyan-500/40 focus:bg-slate-950/90",
+          "shadow-[inset_0_0_0_1000px_rgba(2,6,23,0.95)]"
+        )}
+        style={{
+          WebkitTextFillColor: "#e2e8f0",
+          caretColor: "#e2e8f0",
+          boxShadow: "inset 0 0 0 1000px rgba(2,6,23,0.95)",
+          transition: "background-color 99999s ease-in-out 0s",
+        }}
+      />
+    </div>
+  );
+}
+
 function ChangePasswordCard({ onOk, onErr }) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -119,37 +152,37 @@ function ChangePasswordCard({ onOk, onErr }) {
       }
     >
       <div className="grid md:grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4 md:col-span-2">
-          <div className="text-xs text-slate-400 mb-2">Current password</div>
-          <input
+        <div className="md:col-span-2">
+          <InputField
+            label="Current password"
             type="password"
             value={form.current_password}
             onChange={(e) => setForm((p) => ({ ...p, current_password: e.target.value }))}
-            className="w-full h-11 rounded-2xl border border-slate-800 bg-slate-950/60 px-3 text-sm outline-none focus:border-cyan-500/40"
             placeholder="Current password"
+            autoComplete="current-password"
           />
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-          <div className="text-xs text-slate-400 mb-2">New password</div>
-          <input
+        <div>
+          <InputField
+            label="New password"
             type="password"
             value={form.new_password}
             onChange={(e) => setForm((p) => ({ ...p, new_password: e.target.value }))}
-            className="w-full h-11 rounded-2xl border border-slate-800 bg-slate-950/60 px-3 text-sm outline-none focus:border-cyan-500/40"
             placeholder="At least 8 characters"
+            autoComplete="new-password"
           />
           <div className="text-[11px] text-slate-500 mt-2">Tip: use a passphrase (3–4 words) for strength.</div>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-          <div className="text-xs text-slate-400 mb-2">Confirm new password</div>
-          <input
+        <div>
+          <InputField
+            label="Confirm new password"
             type="password"
             value={form.confirm_password}
             onChange={(e) => setForm((p) => ({ ...p, confirm_password: e.target.value }))}
-            className="w-full h-11 rounded-2xl border border-slate-800 bg-slate-950/60 px-3 text-sm outline-none focus:border-cyan-500/40"
             placeholder="Repeat new password"
+            autoComplete="new-password"
           />
           {form.confirm_password && form.new_password !== form.confirm_password ? (
             <div className="text-[11px] text-rose-200 mt-2">Passwords do not match.</div>
@@ -224,18 +257,17 @@ function PrivateAccessCodeCard({ user, onOk, onErr }) {
       }
     >
       <div className="space-y-3">
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-          <div className="text-xs text-slate-400 mb-2">Access code</div>
-          <input
-            type="text"
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            className="w-full h-11 rounded-2xl border border-slate-800 bg-slate-950/60 px-3 text-sm outline-none focus:border-cyan-500/40"
-            placeholder="Enter private access code"
-          />
-          <div className="text-[11px] text-slate-500 mt-2">
-            This code is private and only valid if it was given to you directly.
-          </div>
+        <InputField
+          label="Access code"
+          type="text"
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          placeholder="Enter private access code"
+          autoComplete="off"
+        />
+
+        <div className="text-[11px] text-slate-500">
+          This code is private and only valid if it was given to you directly.
         </div>
 
         {status ? (
