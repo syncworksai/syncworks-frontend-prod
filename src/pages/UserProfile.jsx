@@ -160,11 +160,17 @@ function ChangePasswordCard({ onOk, onErr }) {
   );
 }
 
-function PrivateAccessCodeCard({ businessSelected, onOk, onErr }) {
+function PrivateAccessCodeCard({ user, onOk, onErr }) {
   const nav = useNavigate();
+  const { reload, setMode } = useAuth();
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
+  const [unlocked, setUnlocked] = useState(user?.role === "SBO");
+
+  useEffect(() => {
+    setUnlocked(user?.role === "SBO");
+  }, [user?.role]);
 
   async function applyCode() {
     const cleaned = String(code || "").trim().toUpperCase();
@@ -174,30 +180,17 @@ function PrivateAccessCodeCard({ businessSelected, onOk, onErr }) {
       return;
     }
 
-    if (!businessSelected) {
-      setStatus("Select or create your business first, then apply your access code.");
-      return;
-    }
-
     setLoading(true);
     setStatus("");
 
     try {
-      const res = await api.post(
-        "/auth/upgrade-to-sbo-promo/",
-        {
-          code: cleaned,
-          business_id: businessSelected,
-        },
-        {
-          headers: {
-            "X-Business-Id": String(businessSelected),
-          },
-        }
-      );
-
-      setStatus(res?.data?.detail || "Access code applied successfully.");
-      onOk(res?.data?.detail || "Access code applied successfully.");
+      const res = await api.post("/auth/upgrade-to-sbo-promo/", { code: cleaned });
+      await reload?.();
+      setMode?.("SBO");
+      setUnlocked(true);
+      const detail = res?.data?.detail || "Access unlocked. You can now create your business.";
+      setStatus(detail);
+      onOk(detail);
     } catch (e) {
       const detail =
         e?.response?.data?.detail ||
@@ -213,7 +206,7 @@ function PrivateAccessCodeCard({ businessSelected, onOk, onErr }) {
   return (
     <Card
       title="Private Access Code"
-      subtitle="Use a private beta or business access code if one was given to you."
+      subtitle="Enter your private access code to unlock business setup."
       right={
         <button
           type="button"
@@ -241,43 +234,46 @@ function PrivateAccessCodeCard({ businessSelected, onOk, onErr }) {
             placeholder="Enter private access code"
           />
           <div className="text-[11px] text-slate-500 mt-2">
-            This code is private and is only valid if it was given to you directly.
+            This code is private and only valid if it was given to you directly.
           </div>
         </div>
 
-        {!businessSelected ? (
-          <div className="rounded-2xl border border-amber-800 bg-amber-900/10 p-4 text-sm text-amber-200">
-            Select or create your business first before applying an access code.
+        {status ? (
+          <div
+            className={cx(
+              "rounded-2xl p-3 text-sm border",
+              unlocked
+                ? "text-emerald-200 bg-emerald-900/10 border-emerald-800"
+                : "text-red-200 bg-red-900/10 border-red-800"
+            )}
+          >
+            {unlocked ? "✅ " : "⚠️ "}
+            {status}
+          </div>
+        ) : null}
+
+        {unlocked ? (
+          <div className="rounded-2xl border border-cyan-800 bg-cyan-900/10 p-4">
+            <div className="text-sm font-semibold text-cyan-100">Business setup unlocked</div>
+            <div className="text-xs text-cyan-200/80 mt-1">
+              Your account now has SBO access. Continue to create your business.
+            </div>
             <div className="mt-3 flex gap-2 flex-wrap">
               <button
                 type="button"
-                onClick={() => nav("/sbo")}
-                className="rounded-2xl px-4 py-2 text-sm font-semibold border border-indigo-500/35 bg-indigo-500/12 hover:bg-indigo-500/18 text-indigo-200"
+                onClick={() => nav("/upgrade/sbo?promo=success")}
+                className="rounded-2xl px-4 py-2 text-sm font-semibold border border-cyan-500/35 bg-cyan-500/12 hover:bg-cyan-500/18 text-cyan-200"
               >
-                Go to Business Setup
+                Create Business
               </button>
               <button
                 type="button"
                 onClick={() => nav("/upgrade")}
                 className="rounded-2xl px-4 py-2 text-sm font-semibold border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40 text-slate-200"
               >
-                Open Upgrade
+                Open Upgrade Hub
               </button>
             </div>
-          </div>
-        ) : null}
-
-        {status ? (
-          <div
-            className={cx(
-              "rounded-2xl p-3 text-sm border",
-              String(status).toLowerCase().includes("applied") || String(status).includes("✅")
-                ? "text-emerald-200 bg-emerald-900/10 border-emerald-800"
-                : "text-red-200 bg-red-900/10 border-red-800"
-            )}
-          >
-            {String(status).toLowerCase().includes("applied") || String(status).includes("✅") ? "✅ " : "⚠️ "}
-            {status}
           </div>
         ) : null}
       </div>
@@ -467,11 +463,7 @@ export default function UserProfile() {
           </div>
         </Card>
 
-        <PrivateAccessCodeCard
-          businessSelected={businessSelected}
-          onOk={toastSuccess}
-          onErr={toastError}
-        />
+        <PrivateAccessCodeCard user={user} onOk={toastSuccess} onErr={toastError} />
 
         <ChangePasswordCard onOk={toastSuccess} onErr={toastError} />
 
@@ -507,7 +499,7 @@ export default function UserProfile() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => nav("/sbo")}
+                  onClick={() => nav("/upgrade/sbo")}
                   className="rounded-2xl px-4 py-2 bg-cyan-500/12 border border-cyan-500/35 hover:bg-cyan-500/18 text-sm text-cyan-200"
                 >
                   Go to Business Setup
