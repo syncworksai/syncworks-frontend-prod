@@ -28,7 +28,18 @@ function Pill({ children, tone = "slate" }) {
   );
 }
 
-function Card({ tone = "slate", title, price, subtitle, bullets, ctaLabel, onClick, badge, disabled, busy }) {
+function Card({
+  tone = "slate",
+  title,
+  price,
+  subtitle,
+  bullets,
+  ctaLabel,
+  onClick,
+  badge,
+  disabled,
+  busy,
+}) {
   const ring =
     tone === "fuchsia"
       ? "border-fuchsia-500/30"
@@ -173,19 +184,68 @@ function firstSetupPathFromModules(modulesCsv) {
   return "/customer";
 }
 
+function coerceInt(val) {
+  const n = Number(val);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function readJsonStorage(key) {
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function Upgrade() {
   const nav = useNavigate();
   const loc = useLocation();
-  const { mode } = useAuth();
+  const auth = useAuth();
+  const { mode } = auth || {};
 
   const [pricingOpen, setPricingOpen] = useState(false);
   const [busyKey, setBusyKey] = useState("");
   const [err, setErr] = useState("");
 
+  const [promoCode, setPromoCode] = useState("");
+  const [promoStatus, setPromoStatus] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoApplied, setPromoApplied] = useState(false);
+  const [promoBusinessId, setPromoBusinessId] = useState(null);
+
   const search = useMemo(() => new URLSearchParams(loc.search || ""), [loc.search]);
   const subState = search.get("sub") || "";
   const modulesFromQuery = search.get("modules") || "";
   const nextFromQuery = search.get("next") || "";
+
+  const activeBusinessId = useMemo(() => {
+    const candidates = [
+      auth?.activeBusinessId,
+      auth?.businessId,
+      auth?.currentBusinessId,
+      auth?.selectedBusinessId,
+      auth?.me?.active_business_id,
+      auth?.me?.business_id,
+      auth?.user?.active_business_id,
+      auth?.user?.business_id,
+      search.get("business_id"),
+      window.localStorage.getItem("active_business_id"),
+      window.localStorage.getItem("business_id"),
+      window.localStorage.getItem("selectedBusinessId"),
+      window.localStorage.getItem("sw_active_business_id"),
+      readJsonStorage("sw_auth")?.active_business_id,
+      readJsonStorage("sw_auth")?.business_id,
+      readJsonStorage("auth")?.active_business_id,
+      readJsonStorage("auth")?.business_id,
+    ];
+
+    for (const val of candidates) {
+      const id = coerceInt(val);
+      if (id) return id;
+    }
+    return null;
+  }, [auth, search]);
 
   useEffect(() => {
     if (subState !== "success") return;
@@ -230,11 +290,68 @@ export default function Upgrade() {
     }
   }
 
+  async function applyPromoCode() {
+    const code = String(promoCode || "").trim().toUpperCase();
+    if (!code) {
+      setPromoStatus("Please enter a promo code.");
+      return;
+    }
+
+    if (!activeBusinessId) {
+      setPromoStatus("Create or select your business first, then apply your promo code.");
+      return;
+    }
+
+    setPromoLoading(true);
+    setPromoStatus("");
+    setErr("");
+
+    try {
+      const res = await api.post(
+        "/auth/upgrade-to-sbo-promo/",
+        {
+          code,
+          business_id: activeBusinessId,
+        },
+        {
+          headers: {
+            "X-Business-Id": String(activeBusinessId),
+          },
+        }
+      );
+
+      setPromoApplied(true);
+      setPromoBusinessId(activeBusinessId);
+      setPromoCode(code);
+      setPromoStatus(res?.data?.detail || "success");
+    } catch (e) {
+      const msg =
+        e?.response?.data?.detail ||
+        e?.response?.data?.error ||
+        "Invalid promo code or missing business selection.";
+      setPromoApplied(false);
+      setPromoStatus(String(msg));
+    } finally {
+      setPromoLoading(false);
+    }
+  }
+
   async function startModuleUpgrade(modules, busyLabel) {
     setErr("");
     setBusyKey(busyLabel);
 
     try {
+      const normalized = Array.isArray(modules) ? modules.map((m) => String(m).toUpperCase()) : [];
+
+      if (normalized.length === 1 && normalized[0] === "SBO" && promoApplied) {
+        const bid = promoBusinessId || activeBusinessId;
+        const qs = new URLSearchParams();
+        if (bid) qs.set("business_id", String(bid));
+        qs.set("promo", "success");
+        nav(`/upgrade/sbo?${qs.toString()}`);
+        return;
+      }
+
       const res = await api.post("/billing/subscription/subscribe/", { modules });
 
       const url = String(res?.data?.url || "").trim();
@@ -278,6 +395,12 @@ export default function Upgrade() {
               {billingNote}
             </div>
 
+            {!activeBusinessId ? (
+              <div className="mt-3 text-sm text-amber-200 bg-amber-900/10 border border-amber-800 rounded-2xl p-3">
+                Select or create your business first before applying an SBO promo code.
+              </div>
+            ) : null}
+
             {err ? (
               <div className="mt-3 text-sm text-red-200 bg-red-900/10 border border-red-800 rounded-2xl p-3">
                 ⚠️ {err}
@@ -305,12 +428,54 @@ export default function Upgrade() {
           </div>
         </div>
 
+        <div className="mt-6 rounded-3xl border border-slate-800 bg-slate-950/45 p-5">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <div className="text-sm font-semibold text-slate-100">Have a promo code?</div>
+              <div className="text-xs text-slate-400 mt-1">
+                Enter your access code to unlock special pricing or lifetime offers for SBO.
+              </div>
+            </div>
+            <Pill tone="emerald">Beta Access</Pill>
+          </div>
+
+          <div className="mt-4 flex gap-2 flex-wrap">
+            <input
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+              placeholder="Enter code (ex: SWFF26)"
+              className="flex-1 min-w-[220px] rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-2 text-sm outline-none focus:border-cyan-500/40"
+            />
+
+            <button
+              type="button"
+              onClick={applyPromoCode}
+              disabled={promoLoading || !activeBusinessId}
+              className="rounded-2xl px-4 py-2 text-sm font-semibold border border-emerald-500/35 bg-emerald-500/12 hover:bg-emerald-500/18 text-emerald-200 disabled:opacity-60"
+            >
+              {promoLoading ? "Applying..." : "Apply Code"}
+            </button>
+          </div>
+
+          {promoApplied ? (
+            <div className="mt-3 text-sm text-emerald-300 bg-emerald-900/10 border border-emerald-800 rounded-2xl p-3">
+              ✅ {promoStatus || "Promo applied — SBO subscription has been waived."}
+            </div>
+          ) : null}
+
+          {!promoApplied && promoStatus ? (
+            <div className="mt-3 text-sm text-red-200 bg-red-900/10 border border-red-800 rounded-2xl p-3">
+              ⚠️ {promoStatus}
+            </div>
+          ) : null}
+        </div>
+
         <div className="mt-6 grid lg:grid-cols-2 gap-4">
           <Card
             tone="indigo"
             title="Start a Business (SBO)"
-            badge="Business Owner"
-            price="$19.99 / month"
+            badge={promoApplied ? "Promo Active" : "Business Owner"}
+            price={promoApplied ? "$0 with promo" : "$19.99 / month"}
             subtitle="Run a service business with tickets, scheduling, payments, team management, and automation."
             bullets={[
               "Marketplace routing and customer requests",
@@ -318,7 +483,7 @@ export default function Upgrade() {
               "Business settings, branding, and service areas",
               "Built for streamlined daily operations",
             ]}
-            ctaLabel="Upgrade SBO →"
+            ctaLabel={promoApplied ? "Continue SBO Setup →" : "Upgrade SBO →"}
             onClick={() => startModuleUpgrade(["SBO"], "SBO")}
             disabled={!!busyKey && busyKey !== "SBO"}
             busy={busyKey === "SBO"}
@@ -407,7 +572,12 @@ export default function Upgrade() {
         </div>
       </div>
 
-      <Modal open={pricingOpen} onClose={() => setPricingOpen(false)} title="Pricing" subtitle="Customer-first upgrades with modular billing.">
+      <Modal
+        open={pricingOpen}
+        onClose={() => setPricingOpen(false)}
+        title="Pricing"
+        subtitle="Customer-first upgrades with modular billing."
+      >
         <div className="space-y-3">
           <div className="rounded-3xl border border-slate-800 bg-slate-950/50 p-4">
             <div className="flex items-center justify-between gap-3">
