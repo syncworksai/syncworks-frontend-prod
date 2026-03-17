@@ -217,7 +217,16 @@ function PrivateAccessCodeCard({ user, onOk, onErr }) {
     setStatus("");
 
     try {
-      const res = await api.post("/auth/upgrade-to-sbo-promo/", { code: cleaned });
+      const res = await api.post(
+        "/auth/upgrade-to-sbo-promo/",
+        { code: cleaned },
+        {
+          headers: {
+            "X-Business-Id": "",
+          },
+        }
+      );
+
       await reload?.();
       setMode?.("SBO");
       setUnlocked(true);

@@ -1,4 +1,3 @@
-// src/api/client.js
 import axios from "axios";
 
 const baseURL =
@@ -85,12 +84,28 @@ function isPlatformRequest(config) {
   return false;
 }
 
-// ✅ NEW: Me-scoped endpoints should never send X-Business-Id
+// ✅ Me-scoped endpoints should never send X-Business-Id
 function isMeScopedRequest(config) {
   const url = String(config?.url || "");
   if (url.startsWith("/me/")) return true;
   if (url === "/me") return true;
   if (url.includes("/api/v1/me/")) return true;
+  return false;
+}
+
+// ✅ Auth endpoints that must stay user-scoped only
+function isUserScopedAuthRequest(config) {
+  const url = String(config?.url || "");
+  if (url.startsWith("/auth/upgrade-to-sbo-promo")) return true;
+  if (url.startsWith("/auth/register")) return true;
+  if (url.startsWith("/auth/login")) return true;
+  if (url.startsWith("/auth/logout")) return true;
+  if (url.startsWith("/auth/me")) return true;
+  if (url.includes("/api/v1/auth/upgrade-to-sbo-promo/")) return true;
+  if (url.includes("/api/v1/auth/register/")) return true;
+  if (url.includes("/api/v1/auth/login/")) return true;
+  if (url.includes("/api/v1/auth/logout/")) return true;
+  if (url.includes("/api/v1/auth/me/")) return true;
   return false;
 }
 
@@ -105,14 +120,11 @@ function ensureTrailingSlash(urlRaw) {
   const url = String(urlRaw || "");
   if (!url) return url;
 
-  // Only normalize relative API paths (the ones we pass to axios like "/billing/status/")
   if (!url.startsWith("/")) return url;
   if (isAbsoluteUrl(url)) return url;
 
-  // If it already ends with "/", keep it
   if (url.endsWith("/")) return url;
 
-  // If it contains a "?" add slash before querystring
   const qIndex = url.indexOf("?");
   if (qIndex >= 0) {
     const path = url.slice(0, qIndex);
@@ -121,7 +133,6 @@ function ensureTrailingSlash(urlRaw) {
     return path + "/" + qs;
   }
 
-  // Avoid touching file-like paths (rare, but safe)
   const lastSeg = url.split("/").filter(Boolean).pop() || "";
   if (lastSeg.includes(".")) return url;
 
@@ -143,17 +154,24 @@ api.interceptors.request.use(
   (config) => {
     config.headers = config.headers || {};
 
-    // ✅ Canonical trailing slash (prevents 301 redirect auth-header drop)
     if (config?.url) {
       config.url = ensureTrailingSlash(config.url);
     }
 
-    // Auth
     const token = getToken();
     if (token) config.headers.Authorization = `Token ${token}`;
 
-    // ✅ Never send X-Business-Id for Sales OS OR God Mode OR /me/*
-    if (!isSalesRequest(config) && !isPlatformRequest(config) && !isMeScopedRequest(config)) {
+    // ✅ Never send X-Business-Id for:
+    // - Sales OS
+    // - God Mode / platform
+    // - /me/* routes
+    // - user-scoped auth routes like SBO promo unlock
+    if (
+      !isSalesRequest(config) &&
+      !isPlatformRequest(config) &&
+      !isMeScopedRequest(config) &&
+      !isUserScopedAuthRequest(config)
+    ) {
       const bizId = resolveBusinessId();
       if (bizId) {
         config.headers["X-Business-Id"] = String(bizId).trim();
@@ -163,7 +181,6 @@ api.interceptors.request.use(
       delete config.headers["X-Business-Id"];
     }
 
-    // Content-Type handling
     if (typeof FormData !== "undefined" && config.data instanceof FormData) {
       delete config.headers["Content-Type"];
     } else if (
@@ -188,7 +205,6 @@ api.interceptors.response.use(
   (err) => {
     const status = err?.response?.status;
 
-    // 401 => log out locally
     if (status === 401) {
       clearToken();
       clearActiveBusinessId();
@@ -199,7 +215,6 @@ api.interceptors.response.use(
       }
     }
 
-    // 423 => billing locked (emit a lightweight global event for UI to react)
     if (status === 423) {
       try {
         const lock_reason =
