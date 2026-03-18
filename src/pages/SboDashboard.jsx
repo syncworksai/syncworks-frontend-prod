@@ -22,9 +22,9 @@ function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
-function Card({ title, subtitle, right, children }) {
+function Card({ title, subtitle, right, children, className = "" }) {
   return (
-    <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
+    <div className={cx("rounded-3xl border border-slate-800 bg-slate-950/40 p-5", className)}>
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <div className="font-semibold text-slate-100">{title}</div>
@@ -37,7 +37,7 @@ function Card({ title, subtitle, right, children }) {
   );
 }
 
-function MiniKpi({ label, value, tone = "slate" }) {
+function MiniKpi({ label, value, tone = "slate", sublabel = "" }) {
   const toneCls =
     tone === "cyan"
       ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-100"
@@ -55,6 +55,7 @@ function MiniKpi({ label, value, tone = "slate" }) {
     <div className={cx("rounded-2xl border p-4", toneCls)}>
       <div className="text-[11px] text-slate-300/80">{label}</div>
       <div className="mt-1 text-lg font-extrabold tracking-tight">{value}</div>
+      {sublabel ? <div className="mt-1 text-[11px] text-slate-300/70">{sublabel}</div> : null}
     </div>
   );
 }
@@ -89,12 +90,14 @@ function Pill({ tone = "slate", children }) {
       ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
       : tone === "cyan"
       ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-200"
+      : tone === "fuchsia"
+      ? "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-200"
       : "border-slate-800 bg-slate-950/50 text-slate-200";
 
   return <span className={cx("inline-flex items-center rounded-full border px-2 py-1 text-[11px]", cls)}>{children}</span>;
 }
 
-function Modal({ open, onClose, title, subtitle, children }) {
+function Modal({ open, onClose, title, subtitle, children, maxWidth = "max-w-3xl" }) {
   useEffect(() => {
     if (!open) return;
     function onKey(e) {
@@ -110,7 +113,12 @@ function Modal({ open, onClose, title, subtitle, children }) {
     <div className="fixed inset-0 z-[130]">
       <div className="absolute inset-0 bg-black/70" onClick={onClose} />
       <div className="absolute inset-0 flex items-center justify-center p-4">
-        <div className="w-full max-w-3xl rounded-3xl border border-slate-800 bg-slate-950/92 backdrop-blur p-6 shadow-[0_0_90px_rgba(0,0,0,0.55)] relative overflow-hidden">
+        <div
+          className={cx(
+            "w-full rounded-3xl border border-slate-800 bg-slate-950/92 backdrop-blur p-6 shadow-[0_0_90px_rgba(0,0,0,0.55)] relative overflow-hidden",
+            maxWidth
+          )}
+        >
           <div className="pointer-events-none absolute -inset-20 blur-3xl bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-fuchsia-500/10" />
           <div className="relative">
             <div className="flex items-start justify-between gap-3">
@@ -209,6 +217,40 @@ function fmtShortDate(d) {
   return dt.toLocaleDateString();
 }
 
+function countTodoSummary(scope, activeBusinessId) {
+  try {
+    const biz = activeBusinessId || "no_biz";
+    const raw = localStorage.getItem(`sw_planner_drag_v1_${scope}_${biz}`);
+    const parsed = raw ? JSON.parse(raw) : [];
+    const items = Array.isArray(parsed) ? parsed : [];
+    const active = items.filter((x) => !x?.archived);
+    const done = active.filter((x) => x?.status === "DONE").length;
+    const open = active.filter((x) => x?.status !== "DONE").length;
+    const overdue = active.filter((x) => {
+      if (!x?.due_date || x?.status === "DONE") return false;
+      const today = new Date();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+      const todayKey = `${today.getFullYear()}-${mm}-${dd}`;
+      return String(x.due_date) < todayKey;
+    }).length;
+
+    return {
+      total: active.length,
+      open,
+      done,
+      overdue,
+    };
+  } catch {
+    return {
+      total: 0,
+      open: 0,
+      done: 0,
+      overdue: 0,
+    };
+  }
+}
+
 export default function SboDashboard() {
   const navigate = useNavigate();
   const {
@@ -236,6 +278,8 @@ export default function SboDashboard() {
     marketplaceOpen: "—",
     scheduled7d: "—",
     revenueMtd: "—",
+    completed30d: "—",
+    customers30d: "—",
   });
 
   const locked = !!billing?.is_locked;
@@ -247,6 +291,8 @@ export default function SboDashboard() {
   const [cashInvoices, setCashInvoices] = useState([]);
 
   const [creatingBusiness, setCreatingBusiness] = useState(false);
+  const [tasksModalOpen, setTasksModalOpen] = useState(false);
+  const [todoRefreshTick, setTodoRefreshTick] = useState(0);
 
   const stripeOk = useMemo(() => {
     const s = stripeConnect || {};
@@ -270,7 +316,32 @@ export default function SboDashboard() {
       .filter((x) => x.businessId);
   }, [myBusinesses]);
 
+  const activeBusinessName = useMemo(() => {
+    const found = businessOptions.find((b) => String(b.businessId) === String(bizId));
+    return found?.name || `Business #${bizId || "—"}`;
+  }, [businessOptions, bizId]);
+
   const hasBusiness = !!bizId;
+
+  const plannerSummary = useMemo(() => {
+    return countTodoSummary("sbo", activeBusinessId);
+  }, [activeBusinessId, todoRefreshTick]);
+
+  const businessHealth = useMemo(() => {
+    const stripeLabel = stripeOk ? "Ready" : stripeHasAccount ? "Needs info" : "Not connected";
+    const billingLabel = locked ? "Locked" : "Active";
+
+    return {
+      stripeLabel,
+      billingLabel,
+      checklistDone: [
+        stripeOk,
+        !locked,
+        Number(kpis.openTickets) >= 0,
+      ].filter(Boolean).length,
+      checklistTotal: 3,
+    };
+  }, [stripeOk, stripeHasAccount, locked, kpis.openTickets]);
 
   const loadBilling = useCallback(async () => {
     if (!bizId) {
@@ -364,6 +435,8 @@ export default function SboDashboard() {
         marketplaceOpen: "—",
         scheduled7d: "—",
         revenueMtd: "—",
+        completed30d: "—",
+        customers30d: "—",
       });
       return;
     }
@@ -376,6 +449,16 @@ export default function SboDashboard() {
       const open = list.filter((t) => !["COMPLETED", "PAID", "CLOSED", "CANCELLED"].includes(upper(t?.status)));
       const active = list.filter((t) =>
         ["ACCEPTED", "SCHEDULED", "EN_ROUTE", "ON_SITE", "IN_PROGRESS"].includes(upper(t?.status))
+      );
+      const completed = list.filter((t) =>
+        ["COMPLETED", "PAID", "CLOSED"].includes(upper(t?.status))
+      );
+
+      const customerIds = new Set(
+        list
+          .map((t) => t?.customer || t?.customer_id || t?.customer_user_id)
+          .filter(Boolean)
+          .map((x) => String(x))
       );
 
       let marketplaceOpen = "—";
@@ -396,9 +479,13 @@ export default function SboDashboard() {
         marketplaceOpen: String(marketplaceOpen),
         scheduled7d: String(active.length),
         revenueMtd: "—",
+        completed30d: String(completed.length),
+        customers30d: String(customerIds.size),
       });
     } catch {
-      // ignore KPI errors
+      setKpis((prev) => ({
+        ...prev,
+      }));
     }
   }, [bizId, locked]);
 
@@ -534,6 +621,7 @@ export default function SboDashboard() {
       loadKpis();
       loadStripeConnectStatus();
       loadZipMetrics();
+      setTodoRefreshTick((x) => x + 1);
       if (lockModalOpen) loadCashFeeInvoices();
     }
     window.addEventListener("sw:activeBusinessChanged", onBizChanged);
@@ -578,6 +666,7 @@ export default function SboDashboard() {
   async function refreshAll() {
     if (!bizId) return;
     await Promise.allSettled([loadBilling(), loadKpis(), loadStripeConnectStatus(), loadZipMetrics()]);
+    setTodoRefreshTick((x) => x + 1);
     if (lockModalOpen) loadCashFeeInvoices();
   }
 
@@ -786,7 +875,7 @@ export default function SboDashboard() {
                     Marketplace queue is driven by ZIP + service categories. Favorites can route directly to a chosen SBO.
                   </div>
                   <div className="text-[11px] text-slate-500 mt-2">
-                    Active business: <span className="font-mono text-slate-200">{activeBusinessId || "auto"}</span>
+                    Active business: <span className="font-mono text-slate-200">{activeBusinessName}</span>
                   </div>
                 </div>
 
@@ -841,11 +930,13 @@ export default function SboDashboard() {
               </div>
             </div>
 
-            <div className="grid md:grid-cols-4 gap-3">
+            <div className="grid md:grid-cols-2 xl:grid-cols-6 gap-3">
               <MiniKpi label="Open Tickets" value={kpis.openTickets} tone="cyan" />
               <MiniKpi label="Marketplace Queue" value={kpis.marketplaceOpen} tone="fuchsia" />
-              <MiniKpi label="Scheduled (7d)" value={kpis.scheduled7d} tone="amber" />
-              <MiniKpi label="Revenue (MTD)" value={kpis.revenueMtd} tone="emerald" />
+              <MiniKpi label="Scheduled / Active" value={kpis.scheduled7d} tone="amber" />
+              <MiniKpi label="Completed Jobs" value={kpis.completed30d} tone="emerald" sublabel="Current list snapshot" />
+              <MiniKpi label="Customers" value={kpis.customers30d} tone="slate" sublabel="Unique customer records seen" />
+              <MiniKpi label="Revenue (MTD)" value={kpis.revenueMtd} tone="emerald" sublabel="Wire API when ready" />
             </div>
 
             {!stripeOk ? (
@@ -909,10 +1000,128 @@ export default function SboDashboard() {
             ) : null}
 
             <div className="grid xl:grid-cols-3 gap-4">
-              <Card title="CEO Sticky Notes" subtitle="Quick notepad. Check it off and it disappears.">
-                <TodoList scope="sbo" title="CEO Sticky Notes" subtitle="Text • Priority • Due date" />
+              <Card
+                title="Business Snapshot"
+                subtitle="Simple KPI and setup view for the active business."
+                right={<Pill tone={locked ? "rose" : "emerald"}>{locked ? "Billing Locked" : "Billing Active"}</Pill>}
+              >
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
+                    <div className="text-[11px] text-slate-400">Business</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-100 truncate">{activeBusinessName}</div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
+                    <div className="text-[11px] text-slate-400">Stripe</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-100">{businessHealth.stripeLabel}</div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
+                    <div className="text-[11px] text-slate-400">Setup Progress</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-100">
+                      {businessHealth.checklistDone}/{businessHealth.checklistTotal}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
+                    <div className="text-[11px] text-slate-400">ZIP Rank</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-100">
+                      {zipRank.rank && zipRank.total ? `#${zipRank.rank}/${zipRank.total}` : "—"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => navigate("/settings?return=%2Fsbo")}
+                    className="text-xs rounded-2xl px-3 py-2 bg-slate-950/60 border border-slate-800 hover:bg-slate-900/40"
+                  >
+                    Open Settings
+                  </button>
+                  <button
+                    onClick={() => setTasksModalOpen(true)}
+                    className="text-xs rounded-2xl px-3 py-2 bg-fuchsia-500/15 border border-fuchsia-500/35 hover:bg-fuchsia-500/20 text-fuchsia-200"
+                  >
+                    Open Planner
+                  </button>
+                </div>
               </Card>
 
+              <Card
+                title="Planner & Tasks"
+                subtitle="Keep dashboard clean. Open the full planner in a modal when needed."
+                right={
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTodoRefreshTick((x) => x + 1);
+                      setTasksModalOpen(true);
+                    }}
+                    className="text-xs rounded-2xl px-3 py-2 bg-cyan-500/15 border border-cyan-500/30 hover:bg-cyan-500/20 text-cyan-200"
+                  >
+                    Open Planner
+                  </button>
+                }
+              >
+                <div className="grid grid-cols-3 gap-3">
+                  <MiniKpi label="Open" value={plannerSummary.open} tone="cyan" />
+                  <MiniKpi label="Done" value={plannerSummary.done} tone="emerald" />
+                  <MiniKpi label="Overdue" value={plannerSummary.overdue} tone={plannerSummary.overdue > 0 ? "rose" : "slate"} />
+                </div>
+
+                <div className="mt-4 space-y-2 text-sm text-slate-300">
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/45 p-3">
+                    Keep your dashboard light and fast. Use the planner modal for full task management.
+                  </div>
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/45 p-3">
+                    Works per business, so each SBO business keeps its own task list.
+                  </div>
+                </div>
+              </Card>
+
+              <Card
+                title="Quick Actions"
+                subtitle="Common next steps for daily use."
+                right={<Pill tone="cyan">SBO</Pill>}
+              >
+                <div className="grid gap-2">
+                  <button
+                    onClick={() => navigate("/tickets?view=my")}
+                    className="rounded-2xl px-4 py-3 text-left text-sm border border-slate-800 bg-slate-950/55 hover:bg-slate-900/50"
+                  >
+                    Open My Tickets
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/team/invites")}
+                    className="rounded-2xl px-4 py-3 text-left text-sm border border-slate-800 bg-slate-950/55 hover:bg-slate-900/50"
+                  >
+                    Invite Team / Manage Access
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/calendar")}
+                    className="rounded-2xl px-4 py-3 text-left text-sm border border-slate-800 bg-slate-950/55 hover:bg-slate-900/50"
+                  >
+                    Open Schedule
+                  </button>
+
+                  <button
+                    onClick={() => (stripeOk ? loadStripeConnectStatus() : startStripeConnect())}
+                    className={cx(
+                      "rounded-2xl px-4 py-3 text-left text-sm border",
+                      stripeOk
+                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                        : "border-cyan-500/30 bg-cyan-500/10 text-cyan-200"
+                    )}
+                  >
+                    {stripeOk ? "Refresh Stripe Status" : "Finish Stripe Setup"}
+                  </button>
+                </div>
+              </Card>
+            </div>
+
+            <div className="grid xl:grid-cols-3 gap-4">
               <div className="xl:col-span-2 space-y-4">
                 <Card
                   title="Schedule"
@@ -952,10 +1161,45 @@ export default function SboDashboard() {
                   <NotificationsPanel title="Inbox" subtitle="Latest activity." />
                 </Card>
               </div>
+
+              <Card
+                title="Operations Notes"
+                subtitle="Use this area for KPI wiring, social entry point, or onboarding prompts next."
+                className="h-fit"
+              >
+                <div className="space-y-3 text-sm text-slate-300">
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/45 p-3">
+                    Next upgrade: wire true revenue MTD and platform fee KPIs into this right rail.
+                  </div>
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/45 p-3">
+                    Good spot for Content Studio entry card once social automation module is added.
+                  </div>
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/45 p-3">
+                    Good spot for onboarding prompts like add service areas, connect Stripe, and finish business profile.
+                  </div>
+                </div>
+              </Card>
             </div>
           </div>
         ) : null}
       </main>
+
+      <Modal
+        open={tasksModalOpen}
+        onClose={() => {
+          setTasksModalOpen(false);
+          setTodoRefreshTick((x) => x + 1);
+        }}
+        title="Business Planner"
+        subtitle="Generic, business-scoped planner in a modal so the main dashboard stays clean."
+        maxWidth="max-w-7xl"
+      >
+        <TodoList
+          scope="sbo"
+          title="Business Planner"
+          subtitle="Track daily tasks, this week priorities, monthly items, and longer-term goals."
+        />
+      </Modal>
 
       <Modal
         open={lockModalOpen && locked}

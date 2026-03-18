@@ -21,7 +21,7 @@ function ymd(d) {
 function startOfWeek(date = new Date()) {
   const d = new Date(date);
   const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day; // Monday start
+  const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   d.setHours(0, 0, 0, 0);
   return d;
@@ -32,15 +32,6 @@ function endOfWeek(date = new Date()) {
   d.setDate(d.getDate() + 6);
   d.setHours(23, 59, 59, 999);
   return d;
-}
-
-function monthKey(date = new Date()) {
-  const d = new Date(date);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function yearKey(date = new Date()) {
-  return String(new Date(date).getFullYear());
 }
 
 function sameDay(dateStr, compare = new Date()) {
@@ -55,12 +46,11 @@ function inCurrentWeek(dateStr, compare = new Date()) {
 
 function inCurrentMonth(dateStr, compare = new Date()) {
   if (!dateStr) return false;
-  return dateStr.slice(0, 7) === monthKey(compare);
-}
-
-function inCurrentYear(dateStr, compare = new Date()) {
-  if (!dateStr) return false;
-  return dateStr.slice(0, 4) === yearKey(compare);
+  const now = new Date(compare);
+  return (
+    dateStr.slice(0, 4) === String(now.getFullYear()) &&
+    dateStr.slice(5, 7) === String(now.getMonth() + 1).padStart(2, "0")
+  );
 }
 
 function isOverdue(dateStr, status) {
@@ -103,22 +93,22 @@ const SECTION_META = {
   TODAY: {
     label: "Today",
     tone: "border-cyan-500/35 bg-cyan-500/10 text-cyan-200",
-    helper: "Calls, follow-ups, urgent tasks, today-only items.",
+    helper: "Urgent work and day-of execution.",
   },
   WEEK: {
     label: "This Week",
     tone: "border-indigo-500/35 bg-indigo-500/10 text-indigo-200",
-    helper: "Bigger action items and important short-term progress.",
+    helper: "Important work that should move soon.",
   },
   MONTH: {
     label: "This Month",
     tone: "border-fuchsia-500/35 bg-fuchsia-500/10 text-fuchsia-200",
-    helper: "Projects, planning, monthly admin, billing, KPI reviews.",
+    helper: "Planning, admin, billing, projects.",
   },
   GOALS: {
     label: "Goals",
     tone: "border-emerald-500/35 bg-emerald-500/10 text-emerald-200",
-    helper: "Long-term targets, milestones, yearly objectives.",
+    helper: "Long-term milestones and targets.",
   },
 };
 
@@ -136,6 +126,31 @@ function cadenceTone(c) {
   if (c === "MONTHLY") return "border-fuchsia-500/35 bg-fuchsia-500/10 text-fuchsia-200";
   if (c === "YEARLY") return "border-emerald-500/35 bg-emerald-500/10 text-emerald-200";
   return "border-slate-700 bg-slate-950/40 text-slate-200";
+}
+
+function inferSection(item) {
+  if (item.cadence === "GOAL") return "GOALS";
+  if (item.section && SECTION_META[item.section]) return item.section;
+  if (sameDay(item.due_date)) return "TODAY";
+  if (inCurrentWeek(item.due_date)) return "WEEK";
+  if (inCurrentMonth(item.due_date)) return "MONTH";
+  if (item.cadence === "DAILY") return "TODAY";
+  if (item.cadence === "WEEKLY") return "WEEK";
+  if (item.cadence === "MONTHLY") return "MONTH";
+  if (item.cadence === "YEARLY") return "GOALS";
+  return "MONTH";
+}
+
+function normalizeCadenceFromSection(section) {
+  if (section === "TODAY") return "DAILY";
+  if (section === "WEEK") return "WEEKLY";
+  if (section === "MONTH") return "MONTHLY";
+  if (section === "GOALS") return "GOAL";
+  return "MONTHLY";
+}
+
+function SmallPill({ className = "", children }) {
+  return <span className={cx("rounded-full border px-2 py-1 text-[10px]", className)}>{children}</span>;
 }
 
 function StatCard({ label, value, tone = "slate" }) {
@@ -165,27 +180,6 @@ function EmptyState({ title, subtitle }) {
       <div className="mt-1 text-sm text-slate-400">{subtitle}</div>
     </div>
   );
-}
-
-function inferSection(item) {
-  if (item.cadence === "GOAL") return "GOALS";
-  if (item.section && SECTION_META[item.section]) return item.section;
-  if (sameDay(item.due_date)) return "TODAY";
-  if (inCurrentWeek(item.due_date)) return "WEEK";
-  if (inCurrentMonth(item.due_date)) return "MONTH";
-  if (item.cadence === "DAILY") return "TODAY";
-  if (item.cadence === "WEEKLY") return "WEEK";
-  if (item.cadence === "MONTHLY") return "MONTH";
-  if (item.cadence === "YEARLY") return "GOALS";
-  return "MONTH";
-}
-
-function normalizeCadenceFromSection(section) {
-  if (section === "TODAY") return "DAILY";
-  if (section === "WEEK") return "WEEKLY";
-  if (section === "MONTH") return "MONTHLY";
-  if (section === "GOALS") return "GOAL";
-  return "MONTHLY";
 }
 
 function TaskCard({
@@ -244,28 +238,27 @@ function TaskCard({
             />
 
             <div className="mt-2 flex flex-wrap gap-2">
-              <span className={cx("rounded-full border px-2 py-1 text-[10px]", cadenceTone(item.cadence))}>
+              <SmallPill className={cadenceTone(item.cadence)}>
                 {CADENCES.find((c) => c.key === item.cadence)?.label || "Task"}
-              </span>
+              </SmallPill>
 
-              <span className={cx("rounded-full border px-2 py-1 text-[10px]", priorityTone(item.priority))}>
+              <SmallPill className={priorityTone(item.priority)}>
                 {PRIORITIES.find((p) => p.key === item.priority)?.label || "Low"}
-              </span>
+              </SmallPill>
 
-              <span className={cx("rounded-full border px-2 py-1 text-[10px]", statusTone(item.status))}>
+              <SmallPill className={statusTone(item.status)}>
                 {STATUSES.find((s) => s.key === item.status)?.label || "To Do"}
-              </span>
+              </SmallPill>
 
-              <span
-                className={cx(
-                  "rounded-full border px-2 py-1 text-[10px]",
+              <SmallPill
+                className={
                   overdue
                     ? "border-rose-500/35 bg-rose-500/10 text-rose-200"
                     : "border-slate-800 bg-slate-950/40 text-slate-300"
-                )}
+                }
               >
                 {item.due_date ? `Due ${prettyDate(item.due_date)}` : "No due date"}
-              </span>
+              </SmallPill>
             </div>
           </div>
 
@@ -391,6 +384,7 @@ function PlannerColumn({
   sectionKey,
   items,
   dragOverSection,
+  onDragEnterSection,
   onDropSection,
   onDropOnItem,
   onPatch,
@@ -405,6 +399,7 @@ function PlannerColumn({
   return (
     <div
       onDragOver={(e) => e.preventDefault()}
+      onDragEnter={() => onDragEnterSection(sectionKey)}
       onDrop={(e) => onDropSection(e, sectionKey)}
       className={cx(
         "rounded-3xl border p-4 transition",
@@ -451,16 +446,86 @@ function PlannerColumn({
   );
 }
 
+function CompactTaskRow({ item, onToggleDone, onQuickStart }) {
+  const overdue = isOverdue(item.due_date, item.status);
+  const isDone = item.status === "DONE";
+
+  return (
+    <div
+      className={cx(
+        "flex items-start gap-3 rounded-2xl border p-3",
+        overdue ? "border-rose-500/30 bg-rose-500/5" : "border-slate-800 bg-slate-950/45"
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => onToggleDone(item.id)}
+        className={cx(
+          "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-sm font-bold",
+          isDone
+            ? "border-emerald-500/35 bg-emerald-500/10 text-emerald-200"
+            : "border-slate-700 bg-slate-950/60 text-slate-300 hover:bg-slate-900/60"
+        )}
+      >
+        {isDone ? "✓" : "○"}
+      </button>
+
+      <div className="min-w-0 flex-1">
+        <div className={cx("text-sm font-semibold", isDone ? "text-slate-500 line-through" : "text-slate-100")}>
+          {item.title || "Untitled task"}
+        </div>
+
+        <div className="mt-2 flex flex-wrap gap-2">
+          <SmallPill className={priorityTone(item.priority)}>
+            {PRIORITIES.find((p) => p.key === item.priority)?.label || "Low"}
+          </SmallPill>
+
+          <SmallPill className={statusTone(item.status)}>
+            {STATUSES.find((s) => s.key === item.status)?.label || "To Do"}
+          </SmallPill>
+
+          <SmallPill className={cadenceTone(item.cadence)}>
+            {CADENCES.find((c) => c.key === item.cadence)?.label || "Task"}
+          </SmallPill>
+
+          <SmallPill
+            className={
+              overdue
+                ? "border-rose-500/35 bg-rose-500/10 text-rose-200"
+                : "border-slate-800 bg-slate-950/40 text-slate-300"
+            }
+          >
+            {item.due_date ? prettyDate(item.due_date) : "No date"}
+          </SmallPill>
+        </div>
+
+        {item.notes ? <div className="mt-2 line-clamp-2 text-xs text-slate-400">{item.notes}</div> : null}
+      </div>
+
+      {!isDone ? (
+        <button
+          type="button"
+          onClick={() => onQuickStart(item.id)}
+          className="rounded-xl border border-cyan-500/35 bg-cyan-500/10 px-2.5 py-2 text-xs text-cyan-200 hover:bg-cyan-500/15"
+        >
+          Start
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export default function TodoList({
   scope = "sbo",
   title = "Planner",
-  subtitle = "Daily, weekly, monthly, yearly tasks and goals — now with drag-and-drop planning.",
+  subtitle = "Daily, weekly, monthly, yearly tasks and goals.",
+  compact = false,
 }) {
   const { activeBusinessId } = useAuth();
 
   const storageKey = useMemo(() => {
     const biz = activeBusinessId || "no_biz";
-    return `sw_planner_drag_v1_${scope}_${biz}`;
+    return `sw_planner_drag_v2_${scope}_${biz}`;
   }, [scope, activeBusinessId]);
 
   const [items, setItems] = useState([]);
@@ -500,7 +565,7 @@ export default function TodoList({
     try {
       localStorage.setItem(storageKey, JSON.stringify(items));
     } catch {
-      // ignore localStorage issues
+      // ignore storage issues
     }
   }, [items, storageKey]);
 
@@ -547,6 +612,7 @@ export default function TodoList({
     setItems((prev) =>
       prev.map((it) => {
         if (it.id !== id) return it;
+
         const next = { ...it, ...patch, updated_at: new Date().toISOString() };
 
         if (patch.status === "DONE" && !it.completed_at) next.completed_at = new Date().toISOString();
@@ -554,6 +620,13 @@ export default function TodoList({
 
         if (patch.section && !patch.cadence) {
           next.cadence = normalizeCadenceFromSection(patch.section);
+        }
+
+        if (patch.cadence && !patch.section) {
+          if (patch.cadence === "DAILY") next.section = "TODAY";
+          else if (patch.cadence === "WEEKLY") next.section = "WEEK";
+          else if (patch.cadence === "MONTHLY") next.section = "MONTH";
+          else if (patch.cadence === "GOAL" || patch.cadence === "YEARLY") next.section = "GOALS";
         }
 
         return next;
@@ -625,20 +698,15 @@ export default function TodoList({
 
       if (!beforeId) {
         const insertIndex = next.findLastIndex?.((x) => x.section === sectionKey && !x.archived);
-        if (insertIndex >= 0) {
-          next.splice(insertIndex + 1, 0, moving);
-        } else {
-          next.push(moving);
-        }
+        if (insertIndex >= 0) next.splice(insertIndex + 1, 0, moving);
+        else next.push(moving);
         return next;
       }
 
       const beforeIndex = next.findIndex((x) => x.id === beforeId);
-      if (beforeIndex === -1) {
-        next.push(moving);
-      } else {
-        next.splice(beforeIndex, 0, moving);
-      }
+      if (beforeIndex === -1) next.push(moving);
+      else next.splice(beforeIndex, 0, moving);
+
       return next;
     });
   }
@@ -670,9 +738,11 @@ export default function TodoList({
 
   const visibleItems = useMemo(() => {
     const q = search.trim().toLowerCase();
+
     return activeItems.filter((x) => {
       if (!showCompleted && x.status === "DONE") return false;
       if (!q) return true;
+
       return (
         (x.title || "").toLowerCase().includes(q) ||
         (x.notes || "").toLowerCase().includes(q) ||
@@ -723,8 +793,153 @@ export default function TodoList({
     const done = activeItems.filter((x) => x.status === "DONE").length;
     const inProgress = activeItems.filter((x) => x.status === "IN_PROGRESS").length;
     const overdue = activeItems.filter((x) => isOverdue(x.due_date, x.status)).length;
-    return { total, done, inProgress, overdue };
+    const today = activeItems.filter((x) => (x.section || inferSection(x)) === "TODAY").length;
+    const week = activeItems.filter((x) => (x.section || inferSection(x)) === "WEEK").length;
+    return { total, done, inProgress, overdue, today, week };
   }, [activeItems]);
+
+  if (compact) {
+    const todayItems = sectioned.TODAY.slice(0, 3);
+    const weekItems = sectioned.WEEK.slice(0, 3);
+    const hasAny = todayItems.length > 0 || weekItems.length > 0;
+
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard label="Active" value={stats.total} />
+          <StatCard label="Today" value={stats.today} tone="cyan" />
+          <StatCard label="This Week" value={stats.week} tone="fuchsia" />
+          <StatCard label="Overdue" value={stats.overdue} tone="amber" />
+        </div>
+
+        <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4">
+          <div className="text-sm font-semibold text-slate-100">Quick add</div>
+          <div className="mt-1 text-xs text-slate-400">
+            Keep this simple on the dashboard. Full planning opens in the modal.
+          </div>
+
+          <div className="mt-3 grid gap-2 md:grid-cols-[1fr_140px_140px_auto]">
+            <input
+              value={draft.title}
+              onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
+              placeholder="Add a task or reminder..."
+              className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-sm outline-none focus:border-cyan-500/50"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  addItem();
+                }
+              }}
+            />
+
+            <select
+              value={draft.section}
+              onChange={(e) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  section: e.target.value,
+                  cadence: normalizeCadenceFromSection(e.target.value),
+                }))
+              }
+              className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-sm"
+            >
+              <option value="TODAY">Today</option>
+              <option value="WEEK">This Week</option>
+              <option value="MONTH">This Month</option>
+              <option value="GOALS">Goals</option>
+            </select>
+
+            <select
+              value={draft.priority}
+              onChange={(e) => setDraft((prev) => ({ ...prev, priority: e.target.value }))}
+              className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-sm"
+            >
+              {PRIORITIES.map((p) => (
+                <option key={p.key} value={p.key}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={addItem}
+              className="rounded-2xl border border-cyan-500/40 bg-cyan-500/15 px-4 py-2.5 text-sm font-semibold text-cyan-200 hover:bg-cyan-500/20"
+            >
+              + Add
+            </button>
+          </div>
+        </div>
+
+        {!hasAny ? (
+          <EmptyState
+            title="No tasks yet"
+            subtitle="Add a quick task above, then open the full planner for deeper organization."
+          />
+        ) : (
+          <div className="grid gap-4 xl:grid-cols-2">
+            <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <div className="text-sm font-semibold text-slate-100">Today</div>
+                  <div className="text-xs text-slate-400">Day-of priorities and urgent tasks.</div>
+                </div>
+                <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[11px] text-cyan-200">
+                  {sectioned.TODAY.length}
+                </span>
+              </div>
+
+              <div className="mt-3 space-y-3">
+                {todayItems.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/30 p-4 text-sm text-slate-500">
+                    Nothing scheduled for today.
+                  </div>
+                ) : (
+                  todayItems.map((item) => (
+                    <CompactTaskRow
+                      key={item.id}
+                      item={item}
+                      onToggleDone={toggleDone}
+                      onQuickStart={(id) => patchItem(id, { status: "IN_PROGRESS" })}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <div className="text-sm font-semibold text-slate-100">This Week</div>
+                  <div className="text-xs text-slate-400">Short-term work that needs movement.</div>
+                </div>
+                <span className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2 py-1 text-[11px] text-indigo-200">
+                  {sectioned.WEEK.length}
+                </span>
+              </div>
+
+              <div className="mt-3 space-y-3">
+                {weekItems.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/30 p-4 text-sm text-slate-500">
+                    No weekly priorities yet.
+                  </div>
+                ) : (
+                  weekItems.map((item) => (
+                    <CompactTaskRow
+                      key={item.id}
+                      item={item}
+                      onToggleDone={toggleDone}
+                      onQuickStart={(id) => patchItem(id, { status: "IN_PROGRESS" })}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4 sm:p-5">
@@ -737,7 +952,7 @@ export default function TodoList({
               Drag + drop
             </span>
             <span className="rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 px-2 py-1 text-[11px] text-fuchsia-200">
-              One-page planner
+              Full planner
             </span>
             <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[11px] text-emerald-200">
               Business scoped
@@ -754,12 +969,11 @@ export default function TodoList({
       </div>
 
       <div className="mt-5 grid gap-4 xl:grid-cols-12">
-        {/* Left controls */}
         <div className="space-y-4 xl:col-span-4">
           <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-4">
             <div className="text-sm font-semibold text-slate-100">Quick add</div>
             <div className="mt-1 text-xs text-slate-400">
-              Add a task, project item, recurring item, or long-term goal.
+              Add a task, recurring item, or long-term goal.
             </div>
 
             <div className="mt-4 space-y-3">
@@ -922,27 +1136,8 @@ export default function TodoList({
               </div>
             </div>
           </div>
-
-          <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-4">
-            <div className="text-sm font-semibold text-slate-100">How to use it</div>
-            <div className="mt-3 space-y-2 text-sm text-slate-300">
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
-                <span className="font-semibold text-slate-100">Today:</span> urgent items, callbacks, day-of execution.
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
-                <span className="font-semibold text-slate-100">This Week:</span> active work that should move soon.
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
-                <span className="font-semibold text-slate-100">This Month:</span> planning, admin, monthly actions.
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
-                <span className="font-semibold text-slate-100">Goals:</span> bigger outcomes, milestones, yearly direction.
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* Drag-drop planner */}
         <div className="space-y-4 xl:col-span-8">
           {visibleItems.length === 0 ? (
             <EmptyState
@@ -956,16 +1151,14 @@ export default function TodoList({
               sectionKey="TODAY"
               items={sectioned.TODAY}
               dragOverSection={dragOverSection}
+              onDragEnterSection={setDragOverSection}
               onDropSection={handleDropSection}
               onDropOnItem={handleDropOnItem}
               onPatch={patchItem}
               onToggleDone={toggleDone}
               onRemove={remove}
               onArchive={archiveItem}
-              onDragStart={(e, id) => {
-                setDragOverSection("TODAY");
-                onDragStart(e, id);
-              }}
+              onDragStart={onDragStart}
               onDragEnd={onDragEnd}
             />
 
@@ -973,16 +1166,14 @@ export default function TodoList({
               sectionKey="WEEK"
               items={sectioned.WEEK}
               dragOverSection={dragOverSection}
+              onDragEnterSection={setDragOverSection}
               onDropSection={handleDropSection}
               onDropOnItem={handleDropOnItem}
               onPatch={patchItem}
               onToggleDone={toggleDone}
               onRemove={remove}
               onArchive={archiveItem}
-              onDragStart={(e, id) => {
-                setDragOverSection("WEEK");
-                onDragStart(e, id);
-              }}
+              onDragStart={onDragStart}
               onDragEnd={onDragEnd}
             />
 
@@ -990,16 +1181,14 @@ export default function TodoList({
               sectionKey="MONTH"
               items={sectioned.MONTH}
               dragOverSection={dragOverSection}
+              onDragEnterSection={setDragOverSection}
               onDropSection={handleDropSection}
               onDropOnItem={handleDropOnItem}
               onPatch={patchItem}
               onToggleDone={toggleDone}
               onRemove={remove}
               onArchive={archiveItem}
-              onDragStart={(e, id) => {
-                setDragOverSection("MONTH");
-                onDragStart(e, id);
-              }}
+              onDragStart={onDragStart}
               onDragEnd={onDragEnd}
             />
 
@@ -1007,16 +1196,14 @@ export default function TodoList({
               sectionKey="GOALS"
               items={sectioned.GOALS}
               dragOverSection={dragOverSection}
+              onDragEnterSection={setDragOverSection}
               onDropSection={handleDropSection}
               onDropOnItem={handleDropOnItem}
               onPatch={patchItem}
               onToggleDone={toggleDone}
               onRemove={remove}
               onArchive={archiveItem}
-              onDragStart={(e, id) => {
-                setDragOverSection("GOALS");
-                onDragStart(e, id);
-              }}
+              onDragStart={onDragStart}
               onDragEnd={onDragEnd}
             />
           </div>
