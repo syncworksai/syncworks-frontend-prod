@@ -112,6 +112,33 @@ function ModalShell({ open, onClose, title, subtitle, children }) {
   );
 }
 
+function ModulePill({ label, unlocked, tone = "cyan" }) {
+  const onClass =
+    tone === "emerald"
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+      : tone === "fuchsia"
+      ? "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-200"
+      : tone === "indigo"
+      ? "border-indigo-500/30 bg-indigo-500/10 text-indigo-200"
+      : "border-cyan-500/30 bg-cyan-500/10 text-cyan-200";
+
+  const offClass = "border-slate-800 bg-slate-950/60 text-slate-400";
+
+  return (
+    <div
+      className={cx(
+        "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold",
+        unlocked ? onClass : offClass
+      )}
+    >
+      <span>{label}</span>
+      <span className="text-[10px] uppercase tracking-wider">
+        {unlocked ? "Unlocked" : "Locked"}
+      </span>
+    </div>
+  );
+}
+
 function ChangePasswordCard({ onOk, onErr }) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -214,7 +241,7 @@ function ChangePasswordCard({ onOk, onErr }) {
             placeholder="At least 8 characters"
             autoComplete="new-password"
           />
-          <div className="text-[11px] text-slate-500 mt-2">Tip: use a passphrase (3–4 words) for strength.</div>
+          <div className="text-[11px] text-slate-500 mt-2">Tip: use a passphrase for strength.</div>
         </div>
 
         <div>
@@ -230,6 +257,102 @@ function ChangePasswordCard({ onOk, onErr }) {
             <div className="text-[11px] text-rose-200 mt-2">Passwords do not match.</div>
           ) : null}
         </div>
+      </div>
+    </Card>
+  );
+}
+
+function AccessCodeCard({ onOk, onErr, onUnlocked }) {
+  const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [localStatus, setLocalStatus] = useState("");
+
+  async function applyCode() {
+    const cleaned = String(code || "").trim().toUpperCase();
+    if (!cleaned) {
+      setLocalStatus("Please enter your access code.");
+      return;
+    }
+
+    setLoading(true);
+    setLocalStatus("");
+
+    try {
+      const res = await api.post(
+        "/auth/upgrade-to-sbo-promo/",
+        { code: cleaned },
+        {
+          headers: {
+            "X-Business-Id": "",
+          },
+        }
+      );
+
+      const detail = res?.data?.detail || "Access unlocked ✅";
+      setCode("");
+      setLocalStatus(detail);
+      onUnlocked?.();
+      onOk?.(detail);
+    } catch (e) {
+      const detail =
+        e?.response?.data?.detail ||
+        e?.response?.data?.error ||
+        "Unable to apply access code.";
+      setLocalStatus(detail);
+      onErr?.(detail);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Card
+      title="Private Access Code"
+      subtitle="Enter your code to unlock additional account access. The code itself is never shown in the app."
+      right={
+        <button
+          type="button"
+          onClick={applyCode}
+          disabled={loading}
+          className={cx(
+            "rounded-2xl px-4 py-2 text-sm font-semibold border transition",
+            loading
+              ? "bg-slate-900/40 border-slate-800 text-slate-500 cursor-not-allowed"
+              : "bg-emerald-500/12 border-emerald-500/35 hover:bg-emerald-500/18 text-emerald-200"
+          )}
+        >
+          {loading ? "Applying..." : "Apply Code"}
+        </button>
+      }
+    >
+      <div className="space-y-3">
+        <InputField
+          label="Access code"
+          type="password"
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          placeholder="Enter code"
+          autoComplete="off"
+        />
+
+        <div className="text-[11px] text-slate-500">
+          The code will not be displayed, stored in visible form, or echoed back in the UI.
+        </div>
+
+        {localStatus ? (
+          <div
+            className={cx(
+              "rounded-2xl p-3 text-sm border",
+              localStatus.toLowerCase().includes("unlock") ||
+                localStatus.toLowerCase().includes("success") ||
+                localStatus.toLowerCase().includes("applied")
+                ? "text-emerald-200 bg-emerald-900/10 border-emerald-800"
+                : "text-red-200 bg-red-900/10 border-red-800"
+            )}
+          >
+            {localStatus}
+          </div>
+        ) : null}
       </div>
     </Card>
   );
@@ -364,116 +487,6 @@ function CreateBusinessModal({ open, onClose, onCreated, onErr, onOk }) {
   );
 }
 
-function PrivateAccessCodeCard({ user, onOk, onErr, onUnlocked }) {
-  const [code, setCode] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState("");
-  const [unlocked, setUnlocked] = useState(user?.role === "SBO");
-
-  useEffect(() => {
-    setUnlocked(user?.role === "SBO");
-  }, [user?.role]);
-
-  async function applyCode() {
-    const cleaned = String(code || "").trim().toUpperCase();
-
-    if (!cleaned) {
-      setStatus("Please enter your access code.");
-      return;
-    }
-
-    setLoading(true);
-    setStatus("");
-
-    try {
-      const res = await api.post(
-        "/auth/upgrade-to-sbo-promo/",
-        { code: cleaned },
-        {
-          headers: {
-            "X-Business-Id": "",
-          },
-        }
-      );
-
-      const detail = res?.data?.detail || "Access unlocked. You can now create your business.";
-      setUnlocked(true);
-      setStatus(detail);
-      onUnlocked?.();
-      onOk?.(detail);
-    } catch (e) {
-      const detail =
-        e?.response?.data?.detail ||
-        e?.response?.data?.error ||
-        "Unable to apply access code.";
-      setStatus(detail);
-      onErr?.(detail);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <Card
-      title="Private Access Code"
-      subtitle="Enter your private access code to unlock business setup."
-      right={
-        <button
-          type="button"
-          onClick={applyCode}
-          disabled={loading}
-          className={cx(
-            "rounded-2xl px-4 py-2 text-sm font-semibold border transition",
-            loading
-              ? "bg-slate-900/40 border-slate-800 text-slate-500 cursor-not-allowed"
-              : "bg-emerald-500/12 border-emerald-500/35 hover:bg-emerald-500/18 text-emerald-200"
-          )}
-        >
-          {loading ? "Applying..." : "Apply Code"}
-        </button>
-      }
-    >
-      <div className="space-y-3">
-        <InputField
-          label="Access code"
-          type="text"
-          value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-          placeholder="Enter private access code"
-          autoComplete="off"
-        />
-
-        <div className="text-[11px] text-slate-500">
-          This code is private and only valid if it was given to you directly.
-        </div>
-
-        {status ? (
-          <div
-            className={cx(
-              "rounded-2xl p-3 text-sm border",
-              unlocked
-                ? "text-emerald-200 bg-emerald-900/10 border-emerald-800"
-                : "text-red-200 bg-red-900/10 border-red-800"
-            )}
-          >
-            {unlocked ? "✅ " : "⚠️ "}
-            {status}
-          </div>
-        ) : null}
-
-        {unlocked ? (
-          <div className="rounded-2xl border border-cyan-800 bg-cyan-900/10 p-4">
-            <div className="text-sm font-semibold text-cyan-100">Business setup unlocked</div>
-            <div className="text-xs text-cyan-200/80 mt-1">
-              Your account now has SBO access. Create your business below, then finish the rest in SBO Settings.
-            </div>
-          </div>
-        ) : null}
-      </div>
-    </Card>
-  );
-}
-
 export default function UserProfile() {
   const nav = useNavigate();
   const loc = useLocation();
@@ -485,6 +498,9 @@ export default function UserProfile() {
     reloadBusinesses,
     reload,
     setMode,
+    moduleAccess,
+    myBusinesses,
+    isGod,
   } = useAuth();
 
   const [err, setErr] = useState("");
@@ -496,17 +512,24 @@ export default function UserProfile() {
   const [loading, setLoading] = useState(false);
   const [loadingCard, setLoadingCard] = useState(false);
 
-  const [promoUnlocked, setPromoUnlocked] = useState(user?.role === "SBO");
   const [showCreateBusinessModal, setShowCreateBusinessModal] = useState(false);
-
-  useEffect(() => {
-    setPromoUnlocked(user?.role === "SBO");
-  }, [user?.role]);
 
   const businessSelected = useMemo(() => {
     const n = parseInt(String(activeBusinessId || ""), 10);
     return Number.isFinite(n) && n > 0 ? n : null;
   }, [activeBusinessId]);
+
+  const hasBusinesses = useMemo(
+    () => (Array.isArray(myBusinesses) ? myBusinesses.length > 0 : false),
+    [myBusinesses]
+  );
+
+  const canUseSbo = !!moduleAccess?.sbo || hasBusinesses || isGod || user?.role === "SBO";
+  const canUsePm = !!moduleAccess?.pm || isGod;
+  const canUseSales = !!moduleAccess?.sales || isGod;
+  const canUseEmployee = hasBusinesses || isGod;
+  const canUseTenant = true;
+  const canUseInvestor = true;
 
   function toastError(s) {
     setMsg("");
@@ -578,10 +601,8 @@ export default function UserProfile() {
     try {
       await reload?.();
       await reloadBusinesses?.();
-      setMode?.("SBO");
-      setPromoUnlocked(true);
     } catch {
-      setPromoUnlocked(true);
+      // ignore
     }
   }
 
@@ -608,7 +629,7 @@ export default function UserProfile() {
 
     setMode?.("SBO");
     toastSuccess("Business created ✅ Finish the rest in SBO Settings.");
-    nav("/sbo");
+    nav("/sbo/settings");
   }
 
   useEffect(() => {
@@ -650,14 +671,14 @@ export default function UserProfile() {
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">
-      <ModeBar title="SyncWorks" subtitle="Profile" />
+      <ModeBar title="SyncWorks" subtitle="User Profile" />
 
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <div className="text-xl font-extrabold tracking-tight">Profile</div>
+            <div className="text-xl font-extrabold tracking-tight">User Profile</div>
             <div className="text-xs text-slate-400">
-              Security + billing snapshot. For module settings, use Settings Hub.
+              Account access, security, and billing snapshot.
             </div>
           </div>
 
@@ -702,31 +723,45 @@ export default function UserProfile() {
         ) : null}
 
         <Card
-          title="Account"
-          subtitle="Identity + role"
+          title="Access Snapshot"
+          subtitle="What this account is signed up for and what is unlocked."
           right={
             <div className="text-[11px] px-3 py-1 rounded-full bg-slate-950 border border-slate-800 text-slate-200">
-              {user?.role || "—"}
+              {isGod ? "God Mode" : user?.role || "User"}
             </div>
           }
         >
           <div className="grid sm:grid-cols-2 gap-3">
-            <Info label="Email" value={user?.email || user?.username || "—"} mono />
+            <Info label="Login Email" value={user?.email || user?.username || "—"} mono />
             <Info label="Current Mode" value={mode || "—"} />
+            <Info label="Primary Role" value={user?.role || "—"} />
+            <Info label="Businesses Linked" value={String(Array.isArray(myBusinesses) ? myBusinesses.length : 0)} />
+          </div>
+
+          <div className="mt-4">
+            <div className="text-xs text-slate-400 mb-3">Unlocked Modules</div>
+            <div className="flex flex-wrap gap-2">
+              <ModulePill label="Customer" unlocked={true} tone="cyan" />
+              <ModulePill label="SBO" unlocked={canUseSbo} tone="indigo" />
+              <ModulePill label="PM" unlocked={canUsePm} tone="fuchsia" />
+              <ModulePill label="Sales OS" unlocked={canUseSales} tone="emerald" />
+              <ModulePill label="Employee" unlocked={canUseEmployee} tone="cyan" />
+              <ModulePill label="Tenant" unlocked={canUseTenant} tone="cyan" />
+              <ModulePill label="Investor" unlocked={canUseInvestor} tone="indigo" />
+            </div>
           </div>
         </Card>
 
-        <PrivateAccessCodeCard
-          user={user}
+        <AccessCodeCard
           onOk={toastSuccess}
           onErr={toastError}
           onUnlocked={handleUnlocked}
         />
 
-        {promoUnlocked ? (
+        {canUseSbo ? (
           <Card
             title="Create Business"
-            subtitle="Start with the basics now. You can finish the rest in SBO Settings after creation."
+            subtitle="Create a business directly if this account already has SBO access."
             right={
               <button
                 type="button"
@@ -738,17 +773,35 @@ export default function UserProfile() {
             }
           >
             <div className="text-sm text-slate-300 leading-relaxed">
-              Your SBO access is unlocked. Create your business here, then go to SBO Settings to complete branding,
-              services, city/state, hours, social links, and the rest of your setup.
+              Start with the basics here, then finish branding, services, city/state, business type,
+              and marketplace routing inside SBO Settings.
             </div>
           </Card>
-        ) : null}
+        ) : (
+          <Card
+            title="Business Access"
+            subtitle="This account does not currently have SBO access unlocked."
+            right={
+              <button
+                type="button"
+                onClick={() => nav("/upgrade")}
+                className="rounded-2xl px-4 py-2 text-sm font-semibold border border-indigo-500/35 bg-indigo-500/12 hover:bg-indigo-500/18 text-indigo-200"
+              >
+                Upgrade
+              </button>
+            }
+          >
+            <div className="text-sm text-slate-300">
+              SBO features stay locked until this account has business access enabled.
+            </div>
+          </Card>
+        )}
 
         <ChangePasswordCard onOk={toastSuccess} onErr={toastError} />
 
         <Card
           title="Billing Snapshot"
-          subtitle="Monthly preview + account status"
+          subtitle="Business billing preview and current status. Account-side billing can also live here later."
           right={
             businessSelected ? (
               <div className="text-[11px] px-3 py-1 rounded-full bg-slate-950 border border-slate-800 text-slate-200">
@@ -767,23 +820,7 @@ export default function UserProfile() {
             </div>
           ) : !businessSelected ? (
             <div className="text-sm text-slate-400">
-              Select a business (top bar) to see billing preview and status.
-              <div className="mt-3 flex gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => nav("/upgrade")}
-                  className="rounded-2xl px-4 py-2 bg-indigo-500/20 border border-indigo-500/40 hover:bg-indigo-500/30 text-sm"
-                >
-                  Go to Upgrade
-                </button>
-                <button
-                  type="button"
-                  onClick={() => nav("/upgrade/sbo")}
-                  className="rounded-2xl px-4 py-2 bg-cyan-500/12 border border-cyan-500/35 hover:bg-cyan-500/18 text-sm text-cyan-200"
-                >
-                  Go to Business Setup
-                </button>
-              </div>
+              Select a business from the top bar to see billing preview and status.
             </div>
           ) : (
             <>
