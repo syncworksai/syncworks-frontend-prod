@@ -32,10 +32,43 @@ function safeText(v) {
   return String(v || "").trim();
 }
 
+function getBusinessLogoUrl(biz) {
+  const raw =
+    biz?.logo_url ||
+    biz?.logo ||
+    biz?.logo_image ||
+    biz?.logo_file ||
+    "";
+
+  const base = String(raw || "").trim();
+  if (!base) return "";
+
+  const stamp =
+    biz?.logo_updated_at ||
+    biz?.updated_at ||
+    biz?.modified ||
+    biz?.updated ||
+    "";
+
+  if (!stamp) return base;
+
+  return `${base}${base.includes("?") ? "&" : "?"}v=${encodeURIComponent(String(stamp))}`;
+}
+
+function getFlag(biz, key) {
+  if (typeof biz?.[key] === "boolean") return !!biz[key];
+  if (typeof biz?.compliance?.[key] === "boolean") return !!biz.compliance[key];
+  return false;
+}
+
 function groupLabelFromBusiness(biz) {
   const serviceTags = Array.isArray(biz?.services_offered)
     ? biz.services_offered
-        .map((x) => `${x?.name || ""} ${x?.key || ""} ${x?.path || ""}`)
+        .map((x) =>
+          typeof x === "number"
+            ? `service-${x}`
+            : `${x?.name || ""} ${x?.key || ""} ${x?.path || ""}`
+        )
         .join(" ")
         .toLowerCase()
     : "";
@@ -47,7 +80,7 @@ function groupLabelFromBusiness(biz) {
   if (blob.includes("plumb")) return "Plumbing";
   if (blob.includes("hvac") || blob.includes("air") || blob.includes("cooling") || blob.includes("heating")) return "HVAC";
   if (blob.includes("electric")) return "Electrical";
-  if (blob.includes("auto") || blob.includes("detail") || blob.includes("roadside")) return "Auto";
+  if (blob.includes("detail") || blob.includes("towing") || blob.includes("mechanic") || blob.includes("roadside")) return "Auto";
   if (blob.includes("pet") || blob.includes("dog") || blob.includes("groom")) return "Pets";
   if (blob.includes("clean")) return "Cleaning";
   if (blob.includes("lawn") || blob.includes("landscap")) return "Lawn";
@@ -120,7 +153,7 @@ function isRemoteBusiness(biz) {
   return (
     !!biz?.is_online_only ||
     String(biz?.business_presence_mode || "").trim().toLowerCase() === "online" ||
-    biz?.effective_service_radius_miles == null
+    (biz?.effective_service_radius_miles == null && biz?.service_radius_miles == null)
   );
 }
 
@@ -279,7 +312,9 @@ export default function BusinessCardsPanel() {
         group,
         ...socials.flatMap((x) => [x.label, x.url]),
         ...(Array.isArray(biz?.services_offered)
-          ? biz.services_offered.flatMap((x) => [x?.name, x?.key, x?.path])
+          ? biz.services_offered.flatMap((x) =>
+              typeof x === "number" ? [String(x)] : [x?.name, x?.key, x?.path]
+            )
           : []),
       ]
         .map((x) => String(x || "").toLowerCase())
@@ -365,7 +400,9 @@ export default function BusinessCardsPanel() {
       business_id: businessId,
       business_name: biz?.name || "",
       base_zip: biz?.base_zip || "",
-      radius_miles: isRemoteBusiness(biz) ? null : biz?.effective_service_radius_miles ?? biz?.service_radius_miles ?? null,
+      radius_miles: isRemoteBusiness(biz)
+        ? null
+        : biz?.effective_service_radius_miles ?? biz?.service_radius_miles ?? null,
       is_online_only: !!biz?.is_online_only,
       business_presence_mode: biz?.business_presence_mode || "",
     };
@@ -469,6 +506,7 @@ export default function BusinessCardsPanel() {
                 const website = normalizeWebsite(biz?.website || "");
                 const location = biz?.display_location || [biz?.city, biz?.state].filter(Boolean).join(", ");
                 const socials = getSocialLinks(biz);
+                const logoUrl = getBusinessLogoUrl(biz);
 
                 return (
                   <div
@@ -501,9 +539,9 @@ export default function BusinessCardsPanel() {
 
                       <div className="flex items-start gap-3 shrink-0">
                         <div className="h-14 w-14 rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
-                          {biz?.logo_url ? (
+                          {logoUrl ? (
                             <img
-                              src={biz.logo_url}
+                              src={logoUrl}
                               alt={name}
                               className="h-full w-full object-cover"
                             />
@@ -539,9 +577,9 @@ export default function BusinessCardsPanel() {
                     ) : null}
 
                     <div className="mt-4 flex gap-2 flex-wrap">
-                      <TrustMiniPill active={!!biz?.is_licensed} label="Licensed" />
-                      <TrustMiniPill active={!!biz?.is_insured} label="Insured" />
-                      <TrustMiniPill active={!!biz?.background_checked} label="Checked" />
+                      <TrustMiniPill active={getFlag(biz, "is_licensed")} label="Licensed" />
+                      <TrustMiniPill active={getFlag(biz, "is_insured")} label="Insured" />
+                      <TrustMiniPill active={getFlag(biz, "background_checked")} label="Checked" />
                     </div>
 
                     {biz?.services_text ? (

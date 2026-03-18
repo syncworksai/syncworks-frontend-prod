@@ -1,6 +1,5 @@
-// src/pages/Connect.jsx
-import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import React, { useMemo } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import ModeBar from "../components/ModeBar";
 
 function cx(...parts) {
@@ -83,18 +82,23 @@ function Card({ tone, title, subtitle, bullets, onClick, cta = "Continue →" })
 
 export default function Connect() {
   const nav = useNavigate();
+  const loc = useLocation();
 
-  // If later you add employee claim endpoint, you can route to /connect/employee (and add form there).
-  // For now we reuse your existing portal claim page for tenant/investor.
+  const returnTo = useMemo(() => {
+    const qs = new URLSearchParams(loc.search || "");
+    const raw = (qs.get("return") || "").trim();
+    return raw && raw.startsWith("/") ? raw : "/settings";
+  }, [loc.search]);
+
   const note = useMemo(
     () =>
-      "Invite codes are how SyncWorks securely links you to an organization without creating a new account. Employee, Tenant, and Investor access is assigned by the invite.",
+      "Invite codes securely link your existing SyncWorks account to a business, property, or portal without creating a second account.",
     []
   );
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">
-      <ModeBar title="SyncWorks" subtitle="Connect by Code — employee / tenant / investor." />
+      <ModeBar title="SyncWorks" subtitle="Connect by Code" />
 
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -111,10 +115,10 @@ export default function Connect() {
 
           <div className="flex items-center gap-2">
             <Link
-              to="/upgrade"
+              to={returnTo}
               className="rounded-2xl px-4 py-2 text-sm border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40"
             >
-              Back to Upgrade Hub
+              Back
             </Link>
           </div>
         </div>
@@ -123,45 +127,45 @@ export default function Connect() {
           <Card
             tone="emerald"
             title="Employee"
-            subtitle="Join a business team (dispatch, technician, agent, assistant, etc.)."
+            subtitle="Join a team for dispatch, field work, admin, office support, or other internal roles."
             bullets={[
-              "You’ll receive an invite code from the business owner/manager",
-              "Link your account to their business securely",
-              "Unlock Employee dashboard + assigned work",
+              "Get your employee code from the business owner or manager",
+              "Links your account to their business securely",
+              "Unlocks employee-specific access and future permissions",
             ]}
-            cta="Enter employee code →"
-            onClick={() => nav("/join?type=employee")}
+            cta="Open employee setup →"
+            onClick={() => nav(`/employee/settings?return=${encodeURIComponent(returnTo)}`)}
           />
 
           <Card
             tone="cyan"
             title="Tenant"
-            subtitle="Claim tenant portal access for your unit/property."
+            subtitle="Claim tenant portal access for your unit or property."
             bullets={[
-              "Get your tenant claim code from the Property Manager",
-              "Unlock tenant portal: requests, messages, receipts",
-              "Access is scoped to your lease/unit",
+              "Use your tenant code from the Property Manager",
+              "Unlock rent, requests, notices, and documents",
+              "Access stays scoped to your lease or unit",
             ]}
-            cta="Enter tenant code →"
-            onClick={() => nav("/portal/claim?portal=tenant")}
+            cta="Open tenant setup →"
+            onClick={() => nav(`/tenant/settings?return=${encodeURIComponent(returnTo)}`)}
           />
 
           <Card
             tone="fuchsia"
             title="Investor"
-            subtitle="Claim investor portal access for your portfolio."
+            subtitle="Claim investor portal access for your portfolio and updates."
             bullets={[
-              "Get your investor claim code from the Property Manager",
-              "Unlock investor portal: snapshot, updates, documents",
-              "Access is scoped to your investor relationship",
+              "Use your investor code from the Property Manager",
+              "Unlock portfolio visibility and future statements",
+              "Access stays scoped to your investor relationship",
             ]}
-            cta="Enter investor code →"
-            onClick={() => nav("/portal/claim?portal=investor")}
+            cta="Open investor setup →"
+            onClick={() => nav(`/investor/settings?return=${encodeURIComponent(returnTo)}`)}
           />
         </div>
 
         <div className="mt-8 rounded-3xl border border-slate-800 bg-slate-950/45 p-5 text-sm text-slate-300">
-          If you don’t have a code, you can still use SyncWorks as a customer for free and upgrade later.
+          If you do not have a code yet, you can still use SyncWorks as a customer and connect later.
         </div>
       </div>
     </div>

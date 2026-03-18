@@ -225,6 +225,30 @@ function SocialLinkPill({ href, label, short }) {
   );
 }
 
+function getBusinessLogoUrl(biz, fallback = "") {
+  const raw =
+    biz?.logo_url ||
+    biz?.logo ||
+    biz?.logo_image ||
+    biz?.logo_file ||
+    fallback ||
+    "";
+
+  const base = String(raw || "").trim();
+  if (!base) return "";
+
+  const stamp =
+    biz?.logo_updated_at ||
+    biz?.updated_at ||
+    biz?.modified ||
+    biz?.updated ||
+    "";
+
+  if (!stamp) return base;
+
+  return `${base}${base.includes("?") ? "&" : "?"}v=${encodeURIComponent(String(stamp))}`;
+}
+
 const PRESENCE_OPTIONS = [
   { value: "", label: "Select business type…" },
   { value: "online", label: "Online Business" },
@@ -247,10 +271,12 @@ export default function SboSettings() {
   const businesses = useMemo(() => normalizeBusinesses(myBusinesses), [myBusinesses]);
   const activeId = activeBusinessId ? Number(activeBusinessId) : null;
 
-  const activeBiz = useMemo(() => {
+  const fallbackActiveBiz = useMemo(() => {
     if (!activeId) return null;
     return (businesses || []).find((b) => Number(b.id) === Number(activeId)) || null;
   }, [businesses, activeId]);
+
+  const [activeBiz, setActiveBiz] = useState(null);
 
   const [name, setName] = useState("");
   const [businessEmail, setBusinessEmail] = useState("");
@@ -278,6 +304,10 @@ export default function SboSettings() {
   const [businessCardCode, setBusinessCardCode] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
 
+  const [isLicensed, setIsLicensed] = useState(false);
+  const [isInsured, setIsInsured] = useState(false);
+  const [backgroundChecked, setBackgroundChecked] = useState(false);
+
   const [roots, setRoots] = useState([]);
   const [browseParent, setBrowseParent] = useState(null);
   const [children, setChildren] = useState([]);
@@ -285,12 +315,23 @@ export default function SboSettings() {
   const [searchResults, setSearchResults] = useState([]);
   const [serviceLabels, setServiceLabels] = useState({});
 
+  async function fetchBusinessDetail(businessId) {
+    if (!businessId) return null;
+    const res = await api.get(`/businesses/${businessId}/`);
+    return res?.data || null;
+  }
+
   async function refreshBusinesses() {
     setErr("");
     setOk("");
     setLoading(true);
     try {
       await reloadBusinesses?.();
+
+      if (activeId) {
+        const detail = await fetchBusinessDetail(activeId);
+        setActiveBiz(detail);
+      }
     } catch (e) {
       setErr(e?.response?.data?.detail || "Failed to refresh businesses.");
     } finally {
@@ -390,6 +431,52 @@ export default function SboSettings() {
     }
   }
 
+  function hydrateFromBusiness(biz) {
+    if (!biz) return;
+
+    setName(biz.name || "");
+    setBusinessEmail(biz.business_email || "");
+    setOwnerName(biz.owner_name || "");
+    setPhone(biz.phone || "");
+    setWebsite(biz.website || "");
+    setHeadline(biz.headline || "");
+    setServicesText(biz.services_text || "");
+    setAddress(biz.address || "");
+    setCity(biz.city || "");
+    setState(biz.state || "");
+    setBaseZip(biz.base_zip || "");
+    setRadius(String(biz.service_radius_miles ?? biz.effective_service_radius_miles ?? 25));
+    setAcceptsMarketplace(!!biz.accepts_marketplace_tickets);
+    setBusinessCardCode(biz.business_card_code || "");
+    setLogoUrl(getBusinessLogoUrl(biz));
+
+    setBusinessPresenceMode(biz.business_presence_mode || "");
+    setFacebookUrl(biz.facebook_url || "");
+    setInstagramUrl(biz.instagram_url || "");
+    setLinkedinUrl(biz.linkedin_url || "");
+    setGoogleBusinessUrl(biz.google_business_url || "");
+    setYoutubeUrl(biz.youtube_url || "");
+    setTiktokUrl(biz.tiktok_url || "");
+
+    setIsLicensed(!!(biz.is_licensed || biz.compliance?.is_licensed));
+    setIsInsured(!!(biz.is_insured || biz.compliance?.is_insured));
+    setBackgroundChecked(!!(biz.background_checked || biz.compliance?.background_checked));
+
+    const svc = Array.isArray(biz.services_offered)
+      ? biz.services_offered
+      : Array.isArray(biz.services_offered?.results)
+      ? biz.services_offered.results
+      : [];
+
+    const ids = svc
+      .map((x) => (typeof x === "number" ? x : x?.id))
+      .filter(Boolean)
+      .map((x) => Number(x));
+
+    setServicesOffered(ids);
+    loadLabels(ids);
+  }
+
   useEffect(() => {
     refreshBusinesses();
     fetchRoots();
@@ -397,43 +484,36 @@ export default function SboSettings() {
   }, []);
 
   useEffect(() => {
+    let alive = true;
+
+    async function loadActive() {
+      if (!activeId) {
+        setActiveBiz(null);
+        return;
+      }
+
+      try {
+        const detail = await fetchBusinessDetail(activeId);
+        if (!alive) return;
+        setActiveBiz(detail || fallbackActiveBiz || null);
+      } catch {
+        if (!alive) return;
+        setActiveBiz(fallbackActiveBiz || null);
+      }
+    }
+
+    loadActive();
+
+    return () => {
+      alive = false;
+    };
+  }, [activeId, fallbackActiveBiz]);
+
+  useEffect(() => {
     if (!activeBiz) return;
-
-    setName(activeBiz.name || "");
-    setBusinessEmail(activeBiz.business_email || "");
-    setOwnerName(activeBiz.owner_name || "");
-    setPhone(activeBiz.phone || "");
-    setWebsite(activeBiz.website || "");
-    setHeadline(activeBiz.headline || "");
-    setServicesText(activeBiz.services_text || "");
-    setAddress(activeBiz.address || "");
-    setCity(activeBiz.city || "");
-    setState(activeBiz.state || "");
-    setBaseZip(activeBiz.base_zip || "");
-    setRadius(String(activeBiz.service_radius_miles ?? 25));
-    setAcceptsMarketplace(!!activeBiz.accepts_marketplace_tickets);
-    setBusinessCardCode(activeBiz.business_card_code || "");
-    setLogoUrl(activeBiz.logo_url || "");
-
-    setBusinessPresenceMode(activeBiz.business_presence_mode || "");
-    setFacebookUrl(activeBiz.facebook_url || "");
-    setInstagramUrl(activeBiz.instagram_url || "");
-    setLinkedinUrl(activeBiz.linkedin_url || "");
-    setGoogleBusinessUrl(activeBiz.google_business_url || "");
-    setYoutubeUrl(activeBiz.youtube_url || "");
-    setTiktokUrl(activeBiz.tiktok_url || "");
-
-    const svc = Array.isArray(activeBiz.services_offered)
-      ? activeBiz.services_offered
-      : Array.isArray(activeBiz.services_offered?.results)
-      ? activeBiz.services_offered.results
-      : [];
-
-    const ids = svc.map((x) => (typeof x === "number" ? x : x?.id)).filter(Boolean);
-    setServicesOffered(ids);
-    loadLabels(ids);
+    hydrateFromBusiness(activeBiz);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeBiz?.id]);
+  }, [activeBiz?.id, activeBiz?.updated_at, activeBiz?.logo_updated_at]);
 
   useEffect(() => {
     let alive = true;
@@ -560,13 +640,19 @@ export default function SboSettings() {
       google_business_url: normalizeExternalUrl(googleBusinessUrl),
       youtube_url: normalizeExternalUrl(youtubeUrl),
       tiktok_url: normalizeExternalUrl(tiktokUrl),
+
+      is_licensed: !!isLicensed,
+      is_insured: !!isInsured,
+      background_checked: !!backgroundChecked,
     };
 
     setSaving(true);
     try {
       await api.patch(`/businesses/${activeBiz.id}/`, payload);
+      const detail = await fetchBusinessDetail(activeBiz.id);
+      setActiveBiz(detail || { ...(activeBiz || {}), ...payload });
       setOk("Business settings saved.");
-      await refreshBusinesses();
+      await reloadBusinesses?.();
     } catch (e) {
       setErr(
         e?.response?.data?.detail ||
@@ -596,8 +682,12 @@ export default function SboSettings() {
       await api.patch(`/businesses/${activeBiz.id}/`, fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+
+      const detail = await fetchBusinessDetail(activeBiz.id);
+      setActiveBiz(detail || activeBiz);
+      setLogoUrl(getBusinessLogoUrl(detail || activeBiz, logoUrl));
       setOk("Logo uploaded.");
-      await refreshBusinesses();
+      await reloadBusinesses?.();
     } catch (e) {
       setErr(
         e?.response?.data?.detail ||
@@ -640,7 +730,7 @@ export default function SboSettings() {
     <div className="space-y-4">
       <Card
         title="SBO Business Settings"
-        subtitle="These settings belong to the business profile, not the customer/user account. This powers your business card, marketplace routing, and customer-facing provider details."
+        subtitle="These settings belong to the business profile. They power your business card, marketplace routing, and customer-facing provider details."
         right={
           <div className="flex items-center gap-2 flex-wrap">
             <BusinessPicker />
@@ -680,7 +770,7 @@ export default function SboSettings() {
           <div className="grid lg:grid-cols-2 gap-4 mt-4">
             <Card
               title="Business Profile"
-              subtitle="Business identity, contact info, logo, and business card details."
+              subtitle="Business identity, contact info, logo, trust profile, and business card details."
             >
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
@@ -708,7 +798,7 @@ export default function SboSettings() {
                       onChange={(e) => onPickLogoFile(e.target.files?.[0])}
                     />
                     <div className="text-[11px] text-slate-500">
-                      This logo is used for the digital business card customers will save.
+                      This logo is used for the digital business card customers save.
                     </div>
                   </div>
                 </div>
@@ -726,7 +816,7 @@ export default function SboSettings() {
                   onChange={setBusinessEmail}
                   placeholder="office@yourbusiness.com"
                   type="email"
-                  hint="This is the business email, separate from the customer/user account."
+                  hint="This is the business email, separate from the user account."
                 />
 
                 <div className="grid sm:grid-cols-2 gap-3">
@@ -749,7 +839,7 @@ export default function SboSettings() {
                   value={website}
                   onChange={setWebsite}
                   placeholder="yourbusiness.com"
-                  hint="Customers will be able to click this from the business card."
+                  hint="Customers can click this from the business card."
                 />
 
                 <div className="grid sm:grid-cols-2 gap-3">
@@ -881,6 +971,31 @@ export default function SboSettings() {
                   </div>
                 </div>
 
+                <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
+                  <div className="font-semibold text-slate-100">Trust Signals</div>
+                  <div className="text-xs text-slate-400 mt-1">
+                    These should show up correctly on customer-facing business cards.
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    <Toggle
+                      label={isLicensed ? "Licensed" : "Not Licensed"}
+                      checked={isLicensed}
+                      onChange={setIsLicensed}
+                    />
+                    <Toggle
+                      label={isInsured ? "Insured" : "Not Insured"}
+                      checked={isInsured}
+                      onChange={setIsInsured}
+                    />
+                    <Toggle
+                      label={backgroundChecked ? "Background Checked" : "Not Background Checked"}
+                      checked={backgroundChecked}
+                      onChange={setBackgroundChecked}
+                    />
+                  </div>
+                </div>
+
                 <div className="pt-2 flex gap-2">
                   <button
                     onClick={save}
@@ -956,7 +1071,7 @@ export default function SboSettings() {
 
               <Card
                 title="Marketplace Service Tags"
-                subtitle="These tags are vital. They control which customer requests hit this business in the marketplace."
+                subtitle="These tags control which customer requests hit this business in the marketplace."
                 right={
                   <button
                     onClick={clearServices}
@@ -972,7 +1087,7 @@ export default function SboSettings() {
                       <div>
                         <div className="font-semibold text-slate-100">Selected Services</div>
                         <div className="text-xs text-slate-400 mt-1">
-                          These are the real routing tags used for customer ticket matching.
+                          These are the actual routing tags used for customer ticket matching.
                         </div>
                       </div>
                       <div className="text-xs text-slate-400">{servicesOffered.length} selected</div>
@@ -1037,7 +1152,9 @@ export default function SboSettings() {
 
                     <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
                       <div className="font-semibold">Browse Categories</div>
-                      <div className="text-xs text-slate-400 mt-1">Pick a group, then choose the right service.</div>
+                      <div className="text-xs text-slate-400 mt-1">
+                        Pick a group, then drill down until you choose the right leaf service.
+                      </div>
 
                       <div className="mt-3">
                         <div className="text-xs text-slate-400 mb-2">Groups</div>
@@ -1064,7 +1181,7 @@ export default function SboSettings() {
                       </div>
 
                       <div className="mt-4">
-                        <div className="text-xs text-slate-400">Services</div>
+                        <div className="text-xs text-slate-400">Children</div>
                         <div className="mt-2 max-h-[280px] overflow-auto space-y-2 pr-1">
                           {children.map((c) => (
                             <button
@@ -1126,7 +1243,7 @@ export default function SboSettings() {
 
               <Card
                 title="Customer Business Card Preview"
-                subtitle="This is the business-side preview of what customers should understand at a glance."
+                subtitle="This is what customers should understand at a glance."
               >
                 <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-5">
                   <div className="flex items-start justify-between gap-3">
@@ -1163,6 +1280,39 @@ export default function SboSettings() {
                           </div>
                         </div>
                       ) : null}
+
+                      <div className="mt-4 flex gap-2 flex-wrap">
+                        <span
+                          className={
+                            "text-[11px] px-3 py-1.5 rounded-full border font-semibold " +
+                            (isLicensed
+                              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
+                              : "bg-slate-950/60 border-slate-800 text-slate-400")
+                          }
+                        >
+                          Licensed
+                        </span>
+                        <span
+                          className={
+                            "text-[11px] px-3 py-1.5 rounded-full border font-semibold " +
+                            (isInsured
+                              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
+                              : "bg-slate-950/60 border-slate-800 text-slate-400")
+                          }
+                        >
+                          Insured
+                        </span>
+                        <span
+                          className={
+                            "text-[11px] px-3 py-1.5 rounded-full border font-semibold " +
+                            (backgroundChecked
+                              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
+                              : "bg-slate-950/60 border-slate-800 text-slate-400")
+                          }
+                        >
+                          Checked
+                        </span>
+                      </div>
 
                       {servicesText ? (
                         <div className="text-sm text-slate-300 mt-3 leading-relaxed">{servicesText}</div>

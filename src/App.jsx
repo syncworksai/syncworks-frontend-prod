@@ -19,6 +19,7 @@ import CustomerBusinessCardDetail from "./pages/CustomerBusinessCardDetail";
 
 import SboDashboard from "./pages/SboDashboard";
 import SboZipLeaderboard from "./pages/SboZipLeaderboard";
+import SboSettings from "./pages/SboSettings";
 
 import PlatformDashboard from "./pages/PlatformDashboard";
 import PlatformSupportRequests from "./pages/platform/PlatformSupportRequests";
@@ -33,24 +34,21 @@ import TicketDetail from "./pages/TicketDetail";
 import CalendarPage from "./pages/CalendarPage";
 import InboxPage from "./pages/InboxPage";
 
-// ✅ Property Manager
 import PropertyManagerDashboard from "./pages/PropertyManagerDashboard";
 import PropertyManagerCalendar from "./pages/PropertyManagerCalendar";
 import PMEmployees from "./pages/PMEmployees";
 import PMPropertyDetail from "./pages/PMPropertyDetail";
 
-// ✅ Employee
 import EmployeeInvite from "./pages/EmployeeInvite";
 
-// ✅ Tenant
 import TenantDashboard from "./pages/TenantDashboard";
 import TenantAcceptInvite from "./pages/TenantAcceptInvite";
+import TenantSettings from "./pages/TenantSettings";
 
-// ✅ Investor
 import InvestorDashboard from "./pages/InvestorDashboard";
 import InvestorAcceptInvite from "./pages/InvestorAcceptInvite";
+import InvestorSettings from "./pages/InvestorSettings";
 
-// ✅ SALES OS
 import SalesOsDashboard from "./pages/SalesOsDashboard";
 import SalesOsPipelineBoard from "./pages/SalesOsPipelineBoard";
 import SalesOsSeatManagement from "./pages/SalesOsSeatManagement";
@@ -60,18 +58,14 @@ import SalesOsSettings from "./pages/SalesOsSettings";
 import SalesOsStagesManager from "./pages/SalesOsStagesManager";
 import SalesOsProspectDetail from "./pages/SalesOsProspectDetail";
 
-// Optional legacy home
 import SalesOSHome from "./pages/SalesOSHome";
 
-// ✅ Support + Newsfeed + PM Settings
 import Support from "./pages/Support";
 import Newsfeed from "./pages/Newsfeed";
 import PmSettings from "./pages/PmSettings";
+import EmployeeSettings from "./pages/EmployeeSettings";
 
-// ✅ NEW: Cash Fee Invoices (read-only while locked)
 import CashFeeInvoices from "./pages/CashFeeInvoices";
-
-// ✅ Unified Settings Hub
 import SettingsHub from "./pages/SettingsHub";
 
 function EmployeeHome() {
@@ -80,7 +74,7 @@ function EmployeeHome() {
       <div className="min-h-screen bg-[#020617] text-slate-100 p-6">
         <h1 className="text-xl font-semibold">Employee Dashboard</h1>
         <p className="text-slate-400 mt-2">
-          Your access is based on permissions set by your Property Manager.
+          Your access is based on permissions set by your manager.
         </p>
 
         <div className="mt-6 flex gap-3 flex-wrap">
@@ -88,19 +82,19 @@ function EmployeeHome() {
             href="/customer"
             className="inline-flex items-center justify-center h-10 px-4 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-200 hover:bg-slate-900/40"
           >
-            Go to Customer (optional)
+            Go to Customer
+          </a>
+          <a
+            href="/employee/settings"
+            className="inline-flex items-center justify-center h-10 px-4 rounded-xl border border-cyan-500/35 bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/15"
+          >
+            Employee Settings
           </a>
           <a
             href="/connect"
             className="inline-flex items-center justify-center h-10 px-4 rounded-xl border border-emerald-500/35 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/15"
           >
             Connect with Code
-          </a>
-          <a
-            href="/upgrade"
-            className="inline-flex items-center justify-center h-10 px-4 rounded-xl border border-fuchsia-500/35 bg-fuchsia-500/10 text-fuchsia-200 hover:bg-fuchsia-500/15"
-          >
-            Upgrade Hub
           </a>
         </div>
       </div>
@@ -120,14 +114,11 @@ export default function App() {
   return (
     <div className="sw-autoglow">
       <Routes>
-        {/* ✅ Public */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* ✅ Invite entry */}
         <Route path="/employee/invite" element={<EmployeeInvite />} />
 
-        {/* ✅ Platform Console */}
         <Route
           path="/platform"
           element={
@@ -145,7 +136,6 @@ export default function App() {
           }
         />
 
-        {/* ✅ Global authed pages */}
         <Route
           path="/support"
           element={
@@ -171,12 +161,11 @@ export default function App() {
           }
         />
 
-        {/* ✅ Back-compat settings routes */}
         <Route
           path="/sbo/settings"
           element={
             <ProtectedRoute>
-              <SettingsHub />
+              <SboSettings />
             </ProtectedRoute>
           }
         />
@@ -188,8 +177,31 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/tenant/settings"
+          element={
+            <ProtectedRoute>
+              <TenantSettings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/investor/settings"
+          element={
+            <ProtectedRoute>
+              <InvestorSettings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/employee/settings"
+          element={
+            <ProtectedRoute>
+              <EmployeeSettings />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* ✅ Billing */}
         <Route
           path="/billing/cash-fee-invoices"
           element={
@@ -199,7 +211,6 @@ export default function App() {
           }
         />
 
-        {/* ✅ SALES OS */}
         <Route path="/sales" element={<Navigate to="/sales/dashboard" replace />} />
 
         <Route
@@ -275,7 +286,6 @@ export default function App() {
           }
         />
 
-        {/* ✅ CUSTOMER */}
         <Route
           path="/customer"
           element={
@@ -349,7 +359,6 @@ export default function App() {
           }
         />
 
-        {/* ✅ SBO */}
         <Route
           path="/sbo"
           element={
@@ -368,10 +377,8 @@ export default function App() {
         />
         <Route path="/dashboard" element={<Navigate to="/sbo" replace />} />
 
-        {/* ✅ Employee */}
         <Route path="/employee" element={<EmployeeHome />} />
 
-        {/* ✅ PM */}
         <Route
           path="/pm"
           element={
@@ -405,7 +412,6 @@ export default function App() {
           }
         />
 
-        {/* ✅ Tenant */}
         <Route
           path="/tenant"
           element={
@@ -423,7 +429,6 @@ export default function App() {
           }
         />
 
-        {/* ✅ Investor */}
         <Route
           path="/investor"
           element={
@@ -441,7 +446,6 @@ export default function App() {
           }
         />
 
-        {/* ✅ Tickets */}
         <Route
           path="/tickets"
           element={
@@ -467,7 +471,6 @@ export default function App() {
           }
         />
 
-        {/* ✅ Calendar */}
         <Route
           path="/calendar"
           element={
@@ -476,8 +479,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* ✅ Inbox */}
         <Route
           path="/inbox"
           element={
@@ -486,8 +487,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* ✅ Profile */}
         <Route
           path="/profile"
           element={
@@ -496,8 +495,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* ✅ Upgrade */}
         <Route
           path="/upgrade"
           element={
@@ -506,8 +503,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* ✅ Connect */}
         <Route
           path="/connect"
           element={
@@ -516,8 +511,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* ✅ Team */}
         <Route
           path="/team/invites"
           element={
@@ -527,7 +520,6 @@ export default function App() {
           }
         />
 
-        {/* ✅ Default */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
