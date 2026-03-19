@@ -540,11 +540,15 @@ export default function SboSettings() {
       return;
     }
 
+    const parts = q.split(/\s+/).filter(Boolean);
+
     const list = (allCategories || []).filter((c) => {
       const blob = [c?.name, c?.key, c?.path, c?.category_path]
         .map((x) => String(x || "").toLowerCase())
         .join(" ");
-      return blob.includes(q);
+
+      if (blob.includes(q)) return true;
+      return parts.every((part) => blob.includes(part));
     });
 
     const leafMatches = list.filter((x) => isLeaf(x));
@@ -631,6 +635,11 @@ export default function SboSettings() {
       loadLabels(next);
       return next;
     });
+  }
+
+  function clearServices() {
+    setServicesOffered([]);
+    setServiceLabels({});
   }
 
   async function save() {
