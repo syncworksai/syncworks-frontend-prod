@@ -10,11 +10,11 @@ function cx(...parts) {
 
 function Card({ title, subtitle, right, children }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-5">
+    <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-5 shadow-[0_0_30px_rgba(0,0,0,0.18)]">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <div className="font-semibold text-slate-100">{title}</div>
-          {subtitle ? <div className="text-xs text-slate-400 mt-1">{subtitle}</div> : null}
+          {subtitle ? <div className="text-xs text-slate-300 mt-1 leading-relaxed">{subtitle}</div> : null}
         </div>
         {right ? <div className="shrink-0">{right}</div> : null}
       </div>
@@ -26,15 +26,15 @@ function Card({ title, subtitle, right, children }) {
 function Input({ label, value, onChange, placeholder = "", type = "text", hint = "" }) {
   return (
     <label className="block">
-      <div className="text-xs text-slate-300">{label}</div>
+      <div className="text-xs text-slate-200 font-medium">{label}</div>
       <input
         type={type}
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+        className="mt-1 w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500/40"
       />
-      {hint ? <div className="text-[11px] text-slate-500 mt-1">{hint}</div> : null}
+      {hint ? <div className="text-[11px] text-slate-400 mt-1 leading-relaxed">{hint}</div> : null}
     </label>
   );
 }
@@ -42,32 +42,32 @@ function Input({ label, value, onChange, placeholder = "", type = "text", hint =
 function Textarea({ label, value, onChange, placeholder = "", hint = "" }) {
   return (
     <label className="block">
-      <div className="text-xs text-slate-300">{label}</div>
+      <div className="text-xs text-slate-200 font-medium">{label}</div>
       <textarea
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         rows={4}
-        className="mt-1 w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+        className="mt-1 w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500/40"
       />
-      {hint ? <div className="text-[11px] text-slate-500 mt-1">{hint}</div> : null}
+      {hint ? <div className="text-[11px] text-slate-400 mt-1 leading-relaxed">{hint}</div> : null}
     </label>
   );
 }
 
 function Toggle({ label, checked, onChange, hint = "" }) {
   return (
-    <div className="flex items-start justify-between gap-3">
+    <div className="flex items-start justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/45 p-3">
       <div>
-        <div className="text-sm text-slate-200 font-semibold">{label}</div>
-        {hint ? <div className="text-[11px] text-slate-500 mt-1">{hint}</div> : null}
+        <div className="text-sm text-slate-100 font-semibold">{label}</div>
+        {hint ? <div className="text-[11px] text-slate-400 mt-1 leading-relaxed">{hint}</div> : null}
       </div>
       <button
         type="button"
         onClick={() => onChange(!checked)}
         className={
-          "w-14 h-8 rounded-full border transition relative " +
-          (checked ? "bg-cyan-500/20 border-cyan-500/40" : "bg-slate-950 border-slate-800")
+          "w-14 h-8 rounded-full border transition relative shrink-0 " +
+          (checked ? "bg-cyan-500/20 border-cyan-500/40" : "bg-slate-950 border-slate-700")
         }
         title={checked ? "On" : "Off"}
       >
@@ -85,11 +85,11 @@ function Toggle({ label, checked, onChange, hint = "" }) {
 function Select({ label, value, onChange, options = [], hint = "" }) {
   return (
     <label className="block">
-      <div className="text-xs text-slate-300">{label}</div>
+      <div className="text-xs text-slate-200 font-medium">{label}</div>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+        className="mt-1 w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500/40"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value} className="bg-slate-950 text-slate-100">
@@ -97,9 +97,13 @@ function Select({ label, value, onChange, options = [], hint = "" }) {
           </option>
         ))}
       </select>
-      {hint ? <div className="text-[11px] text-slate-500 mt-1">{hint}</div> : null}
+      {hint ? <div className="text-[11px] text-slate-400 mt-1 leading-relaxed">{hint}</div> : null}
     </label>
   );
+}
+
+function SmallText({ children }) {
+  return <div className="text-[11px] text-slate-400 leading-relaxed">{children}</div>;
 }
 
 function safeList(data) {
@@ -136,7 +140,7 @@ function normalizeExternalUrl(v) {
 }
 
 function looksLeaf(category) {
-  return !!(category?.is_leaf || category?.leaf);
+  return !!(category?.is_leaf || category?.leaf || category?.parent_id);
 }
 
 function getPresenceMeta(modeRaw) {
@@ -218,7 +222,7 @@ function SocialLinkPill({ href, label, short }) {
       target="_blank"
       rel="noreferrer"
       title={label}
-      className="inline-flex items-center justify-center min-w-[42px] h-10 px-3 rounded-2xl border border-slate-800 bg-slate-950/80 hover:bg-slate-900 text-slate-100 transition text-xs font-extrabold uppercase tracking-wide"
+      className="inline-flex items-center justify-center min-w-[42px] h-10 px-3 rounded-2xl border border-slate-700 bg-slate-950/80 hover:bg-slate-900 text-slate-100 transition text-xs font-extrabold uppercase tracking-wide"
     >
       {short}
     </a>
@@ -242,9 +246,7 @@ function getBusinessLogoUrl(biz, fallback = "") {
     biz?.updated_at ||
     biz?.modified ||
     biz?.updated ||
-    "";
-
-  if (!stamp) return base;
+    Date.now();
 
   return `${base}${base.includes("?") ? "&" : "?"}v=${encodeURIComponent(String(stamp))}`;
 }
@@ -259,7 +261,6 @@ const PRESENCE_OPTIONS = [
 
 export default function SboSettings() {
   const { activeBusinessId, myBusinesses, reloadBusinesses } = useAuth();
-
   const fileRef = useRef(null);
 
   const [loading, setLoading] = useState(false);
@@ -307,9 +308,13 @@ export default function SboSettings() {
   const [isLicensed, setIsLicensed] = useState(false);
   const [isInsured, setIsInsured] = useState(false);
   const [backgroundChecked, setBackgroundChecked] = useState(false);
+  const [isBonded, setIsBonded] = useState(false);
+  const [emergencyService, setEmergencyService] = useState(false);
 
+  const [allCategories, setAllCategories] = useState([]);
   const [roots, setRoots] = useState([]);
-  const [browseParent, setBrowseParent] = useState(null);
+  const [rootPick, setRootPick] = useState(null);
+  const [groupPick, setGroupPick] = useState(null);
   const [children, setChildren] = useState([]);
   const [searchQ, setSearchQ] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -319,24 +324,6 @@ export default function SboSettings() {
     if (!businessId) return null;
     const res = await api.get(`/businesses/${businessId}/`);
     return res?.data || null;
-  }
-
-  async function refreshBusinesses() {
-    setErr("");
-    setOk("");
-    setLoading(true);
-    try {
-      await reloadBusinesses?.();
-
-      if (activeId) {
-        const detail = await fetchBusinessDetail(activeId);
-        setActiveBiz(detail);
-      }
-    } catch (e) {
-      setErr(e?.response?.data?.detail || "Failed to refresh businesses.");
-    } finally {
-      setLoading(false);
-    }
   }
 
   async function fetchAllServiceCategories() {
@@ -355,80 +342,60 @@ export default function SboSettings() {
     return all;
   }
 
-  async function fetchRoots() {
-    try {
-      const all = await fetchAllServiceCategories();
-      const rootList = all.filter((x) => !x?.parent_id);
-      setRoots(rootList);
-    } catch {
-      setRoots([]);
-    }
+  function hydrateTaxonomy(cats) {
+    const list = Array.isArray(cats) ? cats : [];
+    setAllCategories(list);
+    setRoots(list.filter((x) => !x?.parent_id));
   }
 
-  async function fetchChildren(parentId) {
-    if (!parentId) {
-      setChildren([]);
-      return;
-    }
-
-    try {
-      const r = await api.get("/service-categories/", {
-        params: { parent: parentId, page_size: 200 },
-      });
-      setChildren(safeList(r.data));
-      return;
-    } catch {
-      // fallback below
-    }
-
-    try {
-      const r = await api.get(`/service-categories/${parentId}/children/`);
-      setChildren(safeList(r.data));
-    } catch {
-      setChildren([]);
-    }
+  function getChildren(parentId, source = allCategories) {
+    const pid = Number(parentId);
+    return (Array.isArray(source) ? source : []).filter((x) => Number(x?.parent_id) === pid);
   }
 
-  async function loadLabels(ids) {
+  function findById(id, source = allCategories) {
+    return (Array.isArray(source) ? source : []).find((x) => Number(x?.id) === Number(id)) || null;
+  }
+
+  function buildPath(cat, source = allCategories) {
+    if (!cat) return "";
+    const map = new Map((Array.isArray(source) ? source : []).map((x) => [Number(x.id), x]));
+    const chain = [];
+    let cur = cat;
+    let guard = 0;
+
+    while (cur && guard < 20) {
+      chain.unshift(cur.name);
+      cur = cur.parent_id ? map.get(Number(cur.parent_id)) : null;
+      guard += 1;
+    }
+
+    return chain.join(" → ");
+  }
+
+  async function loadLabels(ids, source = allCategories) {
     const clean = (ids || []).map((x) => Number(x)).filter(Boolean);
     if (!clean.length) {
       setServiceLabels({});
       return;
     }
 
-    try {
-      const all = await fetchAllServiceCategories();
-      const byId = new Map(all.map((c) => [Number(c.id), c]));
+    const list = Array.isArray(source) && source.length ? source : await fetchAllServiceCategories();
+    const next = {};
 
-      function buildPath(cat) {
-        const chain = [];
-        let cur = cat;
-        let guard = 0;
-
-        while (cur && guard < 20) {
-          chain.unshift(cur.name);
-          cur = cur.parent_id ? byId.get(Number(cur.parent_id)) : null;
-          guard += 1;
-        }
-
-        return chain.join(" → ");
+    clean.forEach((id) => {
+      const cat = findById(id, list);
+      if (cat) {
+        next[id] = {
+          id,
+          name: cat.name,
+          path: buildPath(cat, list),
+          key: cat.key,
+        };
       }
+    });
 
-      const next = {};
-      for (const id of clean) {
-        const c = byId.get(Number(id));
-        if (c) {
-          next[id] = {
-            name: c.name,
-            path: buildPath(c),
-          };
-        }
-      }
-
-      setServiceLabels(next);
-    } catch {
-      setServiceLabels({});
-    }
+    setServiceLabels(next);
   }
 
   function hydrateFromBusiness(biz) {
@@ -458,9 +425,11 @@ export default function SboSettings() {
     setYoutubeUrl(biz.youtube_url || "");
     setTiktokUrl(biz.tiktok_url || "");
 
-    setIsLicensed(!!(biz.is_licensed || biz.compliance?.is_licensed));
-    setIsInsured(!!(biz.is_insured || biz.compliance?.is_insured));
-    setBackgroundChecked(!!(biz.background_checked || biz.compliance?.background_checked));
+    setIsLicensed(!!biz.is_licensed);
+    setIsInsured(!!biz.is_insured);
+    setBackgroundChecked(!!biz.background_checked);
+    setIsBonded(!!biz.is_bonded);
+    setEmergencyService(!!biz.emergency_service);
 
     const svc = Array.isArray(biz.services_offered)
       ? biz.services_offered
@@ -477,9 +446,28 @@ export default function SboSettings() {
     loadLabels(ids);
   }
 
+  async function refreshBusinesses() {
+    setErr("");
+    setOk("");
+    setLoading(true);
+    try {
+      const cats = await fetchAllServiceCategories();
+      hydrateTaxonomy(cats);
+      await reloadBusinesses?.();
+
+      if (activeId) {
+        const detail = await fetchBusinessDetail(activeId);
+        setActiveBiz(detail);
+      }
+    } catch (e) {
+      setErr(e?.response?.data?.detail || "Failed to refresh businesses.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
     refreshBusinesses();
-    fetchRoots();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -516,51 +504,31 @@ export default function SboSettings() {
   }, [activeBiz?.id, activeBiz?.updated_at, activeBiz?.logo_updated_at]);
 
   useEffect(() => {
-    let alive = true;
-
-    async function go() {
-      const q = (searchQ || "").trim();
-      if (!q) {
-        setSearchResults([]);
-        return;
-      }
-
-      try {
-        const r = await api.get("/service-categories/search/", {
-          params: { q },
-        });
-        const list = safeList(r.data);
-        const leaves = list.filter((x) => looksLeaf(x));
-        if (!alive) return;
-        setSearchResults(leaves.length ? leaves : list);
-        return;
-      } catch {
-        // fallback below
-      }
-
-      try {
-        const all = await fetchAllServiceCategories();
-        const ql = q.toLowerCase();
-        const list = all.filter((c) => {
-          const blob = [c?.name, c?.key, c?.path, c?.category_path]
-            .map((x) => String(x || "").toLowerCase())
-            .join(" | ");
-          return blob.includes(ql);
-        });
-        const leaves = list.filter((x) => looksLeaf(x));
-        if (!alive) return;
-        setSearchResults(leaves.length ? leaves : list);
-      } catch {
-        if (alive) setSearchResults([]);
-      }
+    const q = String(searchQ || "").trim().toLowerCase();
+    if (!q) {
+      setSearchResults([]);
+      return;
     }
 
-    go();
+    const list = (allCategories || []).filter((c) => {
+      const blob = [
+        c?.name,
+        c?.key,
+        c?.path,
+        c?.category_path,
+      ]
+        .map((x) => String(x || "").toLowerCase())
+        .join(" ");
+      return blob.includes(q);
+    });
 
-    return () => {
-      alive = false;
-    };
-  }, [searchQ]);
+    const leaves = list.filter((x) => {
+      const kids = getChildren(x.id, allCategories);
+      return kids.length === 0 || !kids.length;
+    });
+
+    setSearchResults(leaves.length ? leaves : list);
+  }, [searchQ, allCategories]);
 
   const activeBusinessMissing = useMemo(() => {
     const hasAny = Array.isArray(myBusinesses) && myBusinesses.length > 0;
@@ -568,10 +536,7 @@ export default function SboSettings() {
   }, [myBusinesses, activeId]);
 
   const customerFacingWebsite = useMemo(() => normalizeWebsite(website), [website]);
-
-  const qrValue = useMemo(() => {
-    return businessCardCode ? businessCardCode : "";
-  }, [businessCardCode]);
+  const qrValue = useMemo(() => (businessCardCode ? businessCardCode : ""), [businessCardCode]);
 
   const mailtoHref = useMemo(() => {
     if (!businessCardCode) return "";
@@ -603,6 +568,58 @@ export default function SboSettings() {
     [facebookUrl, googleBusinessUrl, instagramUrl, linkedinUrl, tiktokUrl, youtubeUrl]
   );
 
+  const selectedServiceObjects = useMemo(() => {
+    return servicesOffered.map((id) => serviceLabels[id]).filter(Boolean);
+  }, [servicesOffered, serviceLabels]);
+
+  const rootGroups = useMemo(() => {
+    if (!rootPick?.id) return [];
+    return getChildren(rootPick.id);
+  }, [rootPick, allCategories]);
+
+  useEffect(() => {
+    if (!groupPick?.id) {
+      setChildren([]);
+      return;
+    }
+    setChildren(getChildren(groupPick.id));
+  }, [groupPick, allCategories]);
+
+  function chooseRoot(root) {
+    setRootPick(root);
+    setGroupPick(null);
+    setChildren([]);
+  }
+
+  function chooseGroup(group) {
+    setGroupPick(group);
+  }
+
+  function toggleService(id) {
+    const nid = Number(id);
+    if (!nid) return;
+
+    const cat = findById(nid);
+    const childList = getChildren(nid);
+    const isLeaf = childList.length === 0;
+
+    if (!isLeaf) return;
+
+    setServicesOffered((prev) => {
+      const set = new Set(prev || []);
+      if (set.has(nid)) set.delete(nid);
+      else set.add(nid);
+      const next = Array.from(set);
+      loadLabels(next);
+      return next;
+    });
+  }
+
+  function clearServices() {
+    setServicesOffered([]);
+    setServiceLabels({});
+  }
+
   async function save() {
     setErr("");
     setOk("");
@@ -612,38 +629,39 @@ export default function SboSettings() {
       return;
     }
 
-    const emailTrim = (businessEmail || "").trim();
+    const emailTrim = String(businessEmail || "").trim();
     if (!emailTrim) {
       setErr("Business Email is required.");
       return;
     }
 
     const payload = {
-      name: (name || "").trim(),
+      name: String(name || "").trim(),
       business_email: emailTrim,
-      owner_name: (ownerName || "").trim(),
-      phone: (phone || "").trim(),
+      owner_name: String(ownerName || "").trim(),
+      phone: String(phone || "").trim(),
       website: normalizeWebsite(website),
-      headline: (headline || "").trim(),
-      services_text: (servicesText || "").trim(),
-      address: (address || "").trim(),
-      city: (city || "").trim(),
-      state: (state || "").trim().toUpperCase(),
-      base_zip: (baseZip || "").trim(),
+      headline: String(headline || "").trim(),
+      services_text: String(servicesText || "").trim(),
+      address: String(address || "").trim(),
+      city: String(city || "").trim(),
+      state: String(state || "").trim().toUpperCase(),
+      base_zip: String(baseZip || "").trim(),
       service_radius_miles: Number(radius) || 25,
       accepts_marketplace_tickets: !!acceptsMarketplace,
-      services_offered: servicesOffered,
-      business_presence_mode: (businessPresenceMode || "").trim(),
+      services_offered: servicesOffered.map((x) => Number(x)).filter(Boolean),
+      business_presence_mode: String(businessPresenceMode || "").trim(),
       facebook_url: normalizeExternalUrl(facebookUrl),
       instagram_url: normalizeExternalUrl(instagramUrl),
       linkedin_url: normalizeExternalUrl(linkedinUrl),
       google_business_url: normalizeExternalUrl(googleBusinessUrl),
       youtube_url: normalizeExternalUrl(youtubeUrl),
       tiktok_url: normalizeExternalUrl(tiktokUrl),
-
       is_licensed: !!isLicensed,
       is_insured: !!isInsured,
       background_checked: !!backgroundChecked,
+      is_bonded: !!isBonded,
+      emergency_service: !!emergencyService,
     };
 
     setSaving(true);
@@ -651,6 +669,7 @@ export default function SboSettings() {
       await api.patch(`/businesses/${activeBiz.id}/`, payload);
       const detail = await fetchBusinessDetail(activeBiz.id);
       setActiveBiz(detail || { ...(activeBiz || {}), ...payload });
+      await loadLabels(payload.services_offered);
       setOk("Business settings saved.");
       await reloadBusinesses?.();
     } catch (e) {
@@ -658,6 +677,36 @@ export default function SboSettings() {
         e?.response?.data?.detail ||
           JSON.stringify(e?.response?.data || {}) ||
           "Save failed."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveServicesOnly() {
+    setErr("");
+    setOk("");
+
+    if (!activeBiz?.id) {
+      setErr("Select a business first.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await api.patch(`/businesses/${activeBiz.id}/`, {
+        services_offered: servicesOffered.map((x) => Number(x)).filter(Boolean),
+      });
+      const detail = await fetchBusinessDetail(activeBiz.id);
+      setActiveBiz(detail || activeBiz);
+      await loadLabels(servicesOffered);
+      setOk("Marketplace services saved.");
+      await reloadBusinesses?.();
+    } catch (e) {
+      setErr(
+        e?.response?.data?.detail ||
+          JSON.stringify(e?.response?.data || {}) ||
+          "Service save failed."
       );
     } finally {
       setSaving(false);
@@ -697,25 +746,6 @@ export default function SboSettings() {
     }
   }
 
-  function toggleService(id) {
-    const nid = Number(id);
-    if (!nid) return;
-
-    setServicesOffered((prev) => {
-      const set = new Set(prev || []);
-      if (set.has(nid)) set.delete(nid);
-      else set.add(nid);
-      const next = Array.from(set);
-      loadLabels(next);
-      return next;
-    });
-  }
-
-  function clearServices() {
-    setServicesOffered([]);
-    setServiceLabels({});
-  }
-
   async function copyCode() {
     try {
       await navigator.clipboard.writeText(String(businessCardCode || ""));
@@ -736,7 +766,7 @@ export default function SboSettings() {
             <BusinessPicker />
             <button
               onClick={refreshBusinesses}
-              className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900"
+              className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-700 hover:bg-slate-900 text-slate-100"
               disabled={loading}
             >
               {loading ? "Refreshing…" : "Refresh"}
@@ -745,13 +775,13 @@ export default function SboSettings() {
         }
       >
         {activeBusinessMissing ? (
-          <div className="text-sm text-amber-200 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
+          <div className="text-sm text-amber-100 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
             Pick your active business from the selector above.
           </div>
         ) : null}
 
         {err ? (
-          <div className="mt-3 text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-xl p-3">
+          <div className="mt-3 text-sm text-red-200 bg-red-900/20 border border-red-800 rounded-xl p-3">
             {err}
           </div>
         ) : null}
@@ -763,7 +793,7 @@ export default function SboSettings() {
         ) : null}
 
         {!activeBiz ? (
-          <div className="text-sm text-slate-400 mt-3">No active business selected yet.</div>
+          <div className="text-sm text-slate-300 mt-3">No active business selected yet.</div>
         ) : null}
 
         {activeBiz ? (
@@ -774,11 +804,18 @@ export default function SboSettings() {
             >
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <div className="h-24 w-24 rounded-2xl overflow-hidden border border-slate-800 bg-slate-950/60 flex items-center justify-center">
+                  <div className="h-24 w-24 rounded-2xl overflow-hidden border border-slate-700 bg-slate-950/60 flex items-center justify-center">
                     {logoUrl ? (
-                      <img src={logoUrl} alt="Business logo" className="h-full w-full object-cover" />
+                      <img
+                        src={logoUrl}
+                        alt="Business logo"
+                        className="h-full w-full object-cover"
+                        onError={() => {
+                          setErr("Logo uploaded, but the image file is not being served correctly in production.");
+                        }}
+                      />
                     ) : (
-                      <div className="text-xs text-slate-500">No Logo</div>
+                      <div className="text-xs text-slate-400 text-center px-2">No Logo</div>
                     )}
                   </div>
 
@@ -797,9 +834,9 @@ export default function SboSettings() {
                       className="hidden"
                       onChange={(e) => onPickLogoFile(e.target.files?.[0])}
                     />
-                    <div className="text-[11px] text-slate-500">
+                    <SmallText>
                       This logo is used for the digital business card customers save.
-                    </div>
+                    </SmallText>
                   </div>
                 </div>
 
@@ -896,8 +933,8 @@ export default function SboSettings() {
                 />
 
                 {businessPresenceMode ? (
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
-                    <div className="text-xs text-slate-400 mb-3">Customer-facing badge preview</div>
+                  <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+                    <div className="text-xs text-slate-300 mb-3">Customer-facing badge preview</div>
                     <PresenceBadge mode={businessPresenceMode} />
                   </div>
                 ) : null}
@@ -959,7 +996,7 @@ export default function SboSettings() {
                   />
 
                   <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-3">
-                    <div className="text-xs text-slate-300">Marketplace Availability</div>
+                    <div className="text-xs text-slate-200 font-medium">Marketplace Availability</div>
                     <div className="mt-3">
                       <Toggle
                         label={acceptsMarketplace ? "Accepting Marketplace Jobs" : "Marketplace Off"}
@@ -973,25 +1010,23 @@ export default function SboSettings() {
 
                 <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
                   <div className="font-semibold text-slate-100">Trust Signals</div>
-                  <div className="text-xs text-slate-400 mt-1">
+                  <div className="text-xs text-slate-300 mt-1">
                     These should show up correctly on customer-facing business cards.
                   </div>
 
                   <div className="mt-4 space-y-3">
-                    <Toggle
-                      label={isLicensed ? "Licensed" : "Not Licensed"}
-                      checked={isLicensed}
-                      onChange={setIsLicensed}
-                    />
-                    <Toggle
-                      label={isInsured ? "Insured" : "Not Insured"}
-                      checked={isInsured}
-                      onChange={setIsInsured}
-                    />
+                    <Toggle label={isLicensed ? "Licensed" : "Not Licensed"} checked={isLicensed} onChange={setIsLicensed} />
+                    <Toggle label={isInsured ? "Insured" : "Not Insured"} checked={isInsured} onChange={setIsInsured} />
                     <Toggle
                       label={backgroundChecked ? "Background Checked" : "Not Background Checked"}
                       checked={backgroundChecked}
                       onChange={setBackgroundChecked}
+                    />
+                    <Toggle label={isBonded ? "Bonded" : "Not Bonded"} checked={isBonded} onChange={setIsBonded} />
+                    <Toggle
+                      label={emergencyService ? "Emergency Service Enabled" : "Emergency Service Off"}
+                      checked={emergencyService}
+                      onChange={setEmergencyService}
                     />
                   </div>
                 </div>
@@ -1022,7 +1057,7 @@ export default function SboSettings() {
                     <button
                       type="button"
                       onClick={copyCode}
-                      className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900"
+                      className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-700 hover:bg-slate-900 text-slate-100"
                       disabled={!businessCardCode}
                     >
                       {copied ? "Copied ✅" : "Copy Code"}
@@ -1046,23 +1081,23 @@ export default function SboSettings() {
                 }
               >
                 <div className="grid md:grid-cols-[160px_1fr] gap-4 items-start">
-                  <div className="rounded-2xl border border-slate-800 bg-white p-3 w-fit">
+                  <div className="rounded-2xl border border-slate-700 bg-white p-3 w-fit">
                     {qrValue ? <QRCodeSVG value={qrValue} size={128} /> : null}
                   </div>
 
                   <div className="space-y-3">
                     <div>
-                      <div className="text-xs text-slate-400">Business Card Code</div>
+                      <div className="text-xs text-slate-300">Business Card Code</div>
                       <div className="mt-1 text-lg font-extrabold text-cyan-200 font-mono">
                         {businessCardCode || "—"}
                       </div>
                     </div>
 
-                    <div className="text-sm text-slate-300">
+                    <div className="text-sm text-slate-200">
                       Share this with customers so they can save your business card in SyncWorks.
                     </div>
 
-                    <div className="text-[11px] text-slate-500">
+                    <div className="text-[11px] text-slate-400">
                       Warm email uses your business code and opens the user’s email app.
                     </div>
                   </div>
@@ -1075,159 +1110,218 @@ export default function SboSettings() {
                 right={
                   <button
                     onClick={clearServices}
-                    className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900"
+                    className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-700 hover:bg-slate-900 text-slate-100"
                   >
                     Clear
                   </button>
                 }
               >
                 <div className="space-y-4">
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                  <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <div className="font-semibold text-slate-100">Selected Services</div>
-                        <div className="text-xs text-slate-400 mt-1">
+                        <div className="text-xs text-slate-300 mt-1">
                           These are the actual routing tags used for customer ticket matching.
                         </div>
                       </div>
-                      <div className="text-xs text-slate-400">{servicesOffered.length} selected</div>
+                      <div className="text-xs text-slate-300">{servicesOffered.length} selected</div>
                     </div>
 
-                    {servicesOffered.length === 0 ? (
-                      <div className="mt-3 text-sm text-slate-400">No services selected yet.</div>
+                    {selectedServiceObjects.length === 0 ? (
+                      <div className="mt-3 text-sm text-slate-300">No services selected yet.</div>
                     ) : (
                       <div className="mt-3 flex flex-wrap gap-2">
-                        {servicesOffered.map((id) => (
+                        {selectedServiceObjects.map((obj) => (
                           <button
-                            key={id}
+                            key={obj.id}
                             type="button"
-                            onClick={() => toggleService(id)}
+                            onClick={() => toggleService(obj.id)}
                             className="text-xs rounded-full px-3 py-2 border border-cyan-500/20 bg-cyan-500/10 hover:bg-cyan-500/15 text-cyan-100"
                             title="Click to remove"
                           >
-                            {serviceLabels[id]?.path || serviceLabels[id]?.name || `Service #${id}`} ✕
+                            {obj.path || obj.name} ✕
                           </button>
                         ))}
                       </div>
                     )}
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                      <div className="font-semibold">Search Services</div>
-                      <div className="text-xs text-slate-400 mt-1">Find the right service tags quickly.</div>
+                  <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
+                    <div className="font-semibold text-slate-100">Search Services</div>
+                    <div className="text-xs text-slate-300 mt-1">
+                      Search for the exact service task. Matching should use leaf tasks, not only broad groups.
+                    </div>
 
-                      <input
-                        value={searchQ}
-                        onChange={(e) => setSearchQ(e.target.value)}
-                        placeholder="plumbing, HVAC, electrical..."
-                        className="mt-3 w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm text-slate-100"
-                      />
+                    <input
+                      value={searchQ}
+                      onChange={(e) => setSearchQ(e.target.value)}
+                      placeholder="plumbing, AC not cooling, brake replacement..."
+                      className="mt-3 w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500"
+                    />
 
-                      <div className="mt-3 max-h-[280px] overflow-auto space-y-2 pr-1">
-                        {searchResults.map((c) => (
+                    <div className="mt-3 max-h-[260px] overflow-auto space-y-2 pr-1">
+                      {searchResults.slice(0, 40).map((c) => {
+                        const id = Number(c.id);
+                        const kids = getChildren(id);
+                        const leaf = kids.length === 0;
+                        const checked = servicesOffered.includes(id);
+
+                        return (
                           <button
                             key={c.id}
                             type="button"
-                            onClick={() => toggleService(c.id)}
+                            onClick={() => {
+                              if (leaf) toggleService(id);
+                            }}
                             className={
                               "w-full text-left rounded-xl border p-3 transition " +
-                              (servicesOffered.includes(Number(c.id))
+                              (checked
                                 ? "bg-cyan-500/10 border-cyan-500/20"
                                 : "bg-slate-950 border-slate-800 hover:bg-slate-900")
                             }
                           >
-                            <div className="font-semibold text-sm text-slate-100">{c.name}</div>
-                            <div className="text-[11px] text-slate-500 mt-1">
-                              {c.path || c.category_path || c.key || ""}
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <div className="font-semibold text-sm text-slate-100">
+                                  {leaf ? "✅ " : "📁 "}
+                                  {c.name}
+                                </div>
+                                <div className="text-[11px] text-slate-300 mt-1">
+                                  {buildPath(c)}
+                                </div>
+                              </div>
+                              <div className="text-[10px] text-slate-400">
+                                {leaf ? (checked ? "Selected" : "Leaf") : "Group"}
+                              </div>
                             </div>
                           </button>
-                        ))}
+                        );
+                      })}
 
-                        {searchQ && searchResults.length === 0 ? (
-                          <div className="text-sm text-slate-400">No results.</div>
-                        ) : null}
+                      {searchQ && searchResults.length === 0 ? (
+                        <div className="text-sm text-slate-300">No results.</div>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
+                      <div className="font-semibold text-slate-100">1) Pick Industry</div>
+                      <div className="text-xs text-slate-300 mt-1">
+                        Start with the top-level service industry.
                       </div>
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {roots.map((r) => (
+                          <button
+                            key={r.id}
+                            type="button"
+                            onClick={() => chooseRoot(r)}
+                            className={
+                              "text-xs rounded-full px-3 py-2 border transition " +
+                              (Number(rootPick?.id) === Number(r.id)
+                                ? "bg-cyan-500/15 border-cyan-500/30 text-cyan-200"
+                                : "bg-slate-950 border-slate-800 hover:bg-slate-900 text-slate-100")
+                            }
+                          >
+                            {r.name}
+                          </button>
+                        ))}
+                      </div>
+
+                      {rootPick ? (
+                        <div className="mt-4">
+                          <div className="text-xs text-slate-200 font-medium">2) Pick Group</div>
+                          <div className="text-[11px] text-slate-400 mt-1">
+                            In <span className="text-slate-200">{rootPick.name}</span>
+                          </div>
+
+                          <div className="mt-2 max-h-[240px] overflow-auto space-y-2 pr-1">
+                            {rootGroups.map((g) => (
+                              <button
+                                key={g.id}
+                                type="button"
+                                onClick={() => chooseGroup(g)}
+                                className={
+                                  "w-full text-left rounded-xl border p-3 transition " +
+                                  (Number(groupPick?.id) === Number(g.id)
+                                    ? "bg-indigo-500/12 border-indigo-500/30 text-indigo-100"
+                                    : "bg-slate-950 border-slate-800 hover:bg-slate-900 text-slate-100")
+                                }
+                              >
+                                <div className="font-semibold text-sm">{g.name}</div>
+                                <div className="text-[11px] text-slate-300 mt-1">{g.key}</div>
+                              </button>
+                            ))}
+
+                            {rootGroups.length === 0 ? (
+                              <div className="text-sm text-slate-300">No groups found.</div>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
 
-                    <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                      <div className="font-semibold">Browse Categories</div>
-                      <div className="text-xs text-slate-400 mt-1">
-                        Pick a group, then drill down until you choose the right leaf service.
+                    <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
+                      <div className="font-semibold text-slate-100">3) Pick Leaf Service</div>
+                      <div className="text-xs text-slate-300 mt-1">
+                        Choose the exact atomic task customers request.
                       </div>
 
-                      <div className="mt-3">
-                        <div className="text-xs text-slate-400 mb-2">Groups</div>
-                        <div className="flex flex-wrap gap-2">
-                          {roots.map((r) => (
-                            <button
-                              key={r.id}
-                              type="button"
-                              onClick={() => {
-                                setBrowseParent(r.id);
-                                fetchChildren(r.id);
-                              }}
-                              className={
-                                "text-xs rounded-full px-3 py-2 border transition " +
-                                (Number(browseParent) === Number(r.id)
-                                  ? "bg-cyan-500/15 border-cyan-500/30 text-cyan-200"
-                                  : "bg-slate-950 border-slate-800 hover:bg-slate-900 text-slate-200")
-                              }
-                            >
-                              {r.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                      <div className="mt-3 max-h-[360px] overflow-auto space-y-2 pr-1">
+                        {children.map((c) => {
+                          const id = Number(c.id);
+                          const kids = getChildren(id);
+                          const leaf = kids.length === 0;
+                          const checked = servicesOffered.includes(id);
 
-                      <div className="mt-4">
-                        <div className="text-xs text-slate-400">Children</div>
-                        <div className="mt-2 max-h-[280px] overflow-auto space-y-2 pr-1">
-                          {children.map((c) => (
+                          return (
                             <button
                               key={c.id}
                               type="button"
                               onClick={() => {
-                                if (looksLeaf(c)) {
-                                  toggleService(c.id);
-                                } else {
-                                  setBrowseParent(c.id);
-                                  fetchChildren(c.id);
-                                }
+                                if (leaf) toggleService(id);
+                                else chooseGroup(c);
                               }}
                               className={
                                 "w-full text-left rounded-xl border p-3 transition " +
-                                (servicesOffered.includes(Number(c.id))
+                                (checked
                                   ? "bg-cyan-500/10 border-cyan-500/20"
                                   : "bg-slate-950 border-slate-800 hover:bg-slate-900")
                               }
                             >
                               <div className="flex items-start justify-between gap-2">
-                                <div className="font-semibold text-sm text-slate-100">{c.name}</div>
-                                <div className="text-[11px] text-slate-500">
-                                  {looksLeaf(c) ? "SERVICE" : "GROUP"}
+                                <div>
+                                  <div className="font-semibold text-sm text-slate-100">
+                                    {leaf ? "✅ " : "📁 "}
+                                    {c.name}
+                                  </div>
+                                  <div className="text-[11px] text-slate-300 mt-1">
+                                    {buildPath(c)}
+                                  </div>
+                                </div>
+                                <div className="text-[10px] text-slate-400">
+                                  {leaf ? (checked ? "Selected" : "Tap") : "Drill"}
                                 </div>
                               </div>
-                              <div className="text-[11px] text-slate-500 mt-1">
-                                {c.path || c.category_path || c.key || ""}
-                              </div>
                             </button>
-                          ))}
+                          );
+                        })}
 
-                          {!browseParent ? (
-                            <div className="text-sm text-slate-400">Pick a group above.</div>
-                          ) : null}
+                        {!groupPick ? (
+                          <div className="text-sm text-slate-300">Pick a group on the left first.</div>
+                        ) : null}
 
-                          {browseParent && children.length === 0 ? (
-                            <div className="text-sm text-slate-400">No children.</div>
-                          ) : null}
-                        </div>
+                        {groupPick && children.length === 0 ? (
+                          <div className="text-sm text-slate-300">No leaf services found.</div>
+                        ) : null}
                       </div>
                     </div>
                   </div>
 
                   <button
-                    onClick={save}
+                    onClick={saveServicesOnly}
                     disabled={saving}
                     className={
                       "w-full rounded-xl px-4 py-3 text-sm font-semibold border transition " +
@@ -1248,7 +1342,7 @@ export default function SboSettings() {
                 <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-xs uppercase tracking-wider text-slate-500">Business Card</div>
+                      <div className="text-xs uppercase tracking-wider text-slate-400">Business Card</div>
                       <div className="text-lg font-extrabold text-slate-100 truncate mt-1">
                         {name || "Business Name"}
                       </div>
@@ -1265,7 +1359,7 @@ export default function SboSettings() {
 
                       {socialLinks.length ? (
                         <div className="mt-3">
-                          <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500 mb-2">
+                          <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-2">
                             Socials
                           </div>
                           <div className="flex gap-2 flex-wrap">
@@ -1287,7 +1381,7 @@ export default function SboSettings() {
                             "text-[11px] px-3 py-1.5 rounded-full border font-semibold " +
                             (isLicensed
                               ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
-                              : "bg-slate-950/60 border-slate-800 text-slate-400")
+                              : "bg-slate-950/60 border-slate-700 text-slate-400")
                           }
                         >
                           Licensed
@@ -1297,7 +1391,7 @@ export default function SboSettings() {
                             "text-[11px] px-3 py-1.5 rounded-full border font-semibold " +
                             (isInsured
                               ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
-                              : "bg-slate-950/60 border-slate-800 text-slate-400")
+                              : "bg-slate-950/60 border-slate-700 text-slate-400")
                           }
                         >
                           Insured
@@ -1307,7 +1401,7 @@ export default function SboSettings() {
                             "text-[11px] px-3 py-1.5 rounded-full border font-semibold " +
                             (backgroundChecked
                               ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
-                              : "bg-slate-950/60 border-slate-800 text-slate-400")
+                              : "bg-slate-950/60 border-slate-700 text-slate-400")
                           }
                         >
                           Checked
@@ -1315,16 +1409,16 @@ export default function SboSettings() {
                       </div>
 
                       {servicesText ? (
-                        <div className="text-sm text-slate-300 mt-3 leading-relaxed">{servicesText}</div>
+                        <div className="text-sm text-slate-200 mt-3 leading-relaxed">{servicesText}</div>
                       ) : (
-                        <div className="text-sm text-slate-500 mt-3">
+                        <div className="text-sm text-slate-400 mt-3">
                           Add a short service summary so customers know what you offer.
                         </div>
                       )}
 
                       <div className="mt-3 flex flex-wrap gap-2">
                         {city || state ? (
-                          <span className="text-[11px] px-3 py-1.5 rounded-full border border-slate-800 bg-slate-950/70 text-slate-200">
+                          <span className="text-[11px] px-3 py-1.5 rounded-full border border-slate-700 bg-slate-950/70 text-slate-200">
                             {city || "City"}
                             {city && state ? ", " : ""}
                             {state || ""}
@@ -1332,17 +1426,36 @@ export default function SboSettings() {
                         ) : null}
 
                         {baseZip ? (
-                          <span className="text-[11px] px-3 py-1.5 rounded-full border border-slate-800 bg-slate-950/70 text-slate-200">
+                          <span className="text-[11px] px-3 py-1.5 rounded-full border border-slate-700 bg-slate-950/70 text-slate-200">
                             ZIP {baseZip}
                           </span>
                         ) : null}
 
                         {radius ? (
-                          <span className="text-[11px] px-3 py-1.5 rounded-full border border-slate-800 bg-slate-950/70 text-slate-200">
+                          <span className="text-[11px] px-3 py-1.5 rounded-full border border-slate-700 bg-slate-950/70 text-slate-200">
                             Radius {radius} mi
                           </span>
                         ) : null}
                       </div>
+
+                      {selectedServiceObjects.length ? (
+                        <div className="mt-3">
+                          <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-2">
+                            Routed For
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedServiceObjects.slice(0, 6).map((obj) => (
+                              <span
+                                key={obj.id}
+                                className="text-[11px] px-3 py-1.5 rounded-full border border-cyan-500/20 bg-cyan-500/10 text-cyan-100"
+                                title={obj.path}
+                              >
+                                {obj.name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
 
                       {customerFacingWebsite ? (
                         <div className="mt-3">
@@ -1358,11 +1471,11 @@ export default function SboSettings() {
                       ) : null}
                     </div>
 
-                    <div className="shrink-0 w-[110px] h-[110px] rounded-2xl border border-slate-800 bg-slate-950/60 overflow-hidden">
+                    <div className="shrink-0 w-[110px] h-[110px] rounded-2xl border border-slate-700 bg-slate-950/60 overflow-hidden">
                       {logoUrl ? (
                         <img src={logoUrl} alt="Business logo" className="h-full w-full object-cover" />
                       ) : (
-                        <div className="h-full w-full flex items-center justify-center text-slate-500 text-xs">
+                        <div className="h-full w-full flex items-center justify-center text-slate-400 text-xs">
                           Logo
                         </div>
                       )}
