@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
@@ -139,10 +140,6 @@ function normalizeExternalUrl(v) {
   return `https://${s}`;
 }
 
-function looksLeaf(category) {
-  return !!(category?.is_leaf || category?.leaf || category?.parent_id);
-}
-
 function getPresenceMeta(modeRaw) {
   const mode = String(modeRaw || "").trim().toLowerCase();
 
@@ -260,6 +257,8 @@ const PRESENCE_OPTIONS = [
 ];
 
 export default function SboSettings() {
+  const nav = useNavigate();
+  const loc = useLocation();
   const { activeBusinessId, myBusinesses, reloadBusinesses } = useAuth();
   const fileRef = useRef(null);
 
@@ -271,6 +270,12 @@ export default function SboSettings() {
 
   const businesses = useMemo(() => normalizeBusinesses(myBusinesses), [myBusinesses]);
   const activeId = activeBusinessId ? Number(activeBusinessId) : null;
+
+  const returnTo = useMemo(() => {
+    const qs = new URLSearchParams(loc.search || "");
+    const r = (qs.get("return") || "").trim();
+    return r && r.startsWith("/") ? r : "/settings";
+  }, [loc.search]);
 
   const fallbackActiveBiz = useMemo(() => {
     if (!activeId) return null;
@@ -312,6 +317,9 @@ export default function SboSettings() {
   const [emergencyService, setEmergencyService] = useState(false);
 
   const [allCategories, setAllCategories] = useState([]);
+  const [taxonomyLoading, setTaxonomyLoading] = useState(false);
+  const [taxonomyError, setTaxonomyError] = useState("");
+
   const [roots, setRoots] = useState([]);
   const [rootPick, setRootPick] = useState(null);
   const [groupPick, setGroupPick] = useState(null);
@@ -337,6 +345,8 @@ export default function SboSettings() {
       all = [...all, ...list];
       keepGoing = !!r?.data?.next;
       page += 1;
+
+      if (page > 50) break;
     }
 
     return all;
@@ -355,6 +365,11 @@ export default function SboSettings() {
 
   function findById(id, source = allCategories) {
     return (Array.isArray(source) ? source : []).find((x) => Number(x?.id) === Number(id)) || null;
+  }
+
+  function isLeaf(cat, source = allCategories) {
+    if (!cat?.id) return false;
+    return getChildren(cat.id, source).length === 0;
   }
 
   function buildPath(cat, source = allCategories) {
@@ -446,13 +461,28 @@ export default function SboSettings() {
     loadLabels(ids);
   }
 
+  async function loadTaxonomyOnly() {
+    setTaxonomyLoading(true);
+    setTaxonomyError("");
+    try {
+      const cats = await fetchAllServiceCategories();
+      hydrateTaxonomy(cats);
+      if (!cats.length) {
+        setTaxonomyError("No service categories were returned from /service-categories/.");
+      }
+    } catch (e) {
+      setTaxonomyError(e?.response?.data?.detail || "Failed to load service taxonomy.");
+    } finally {
+      setTaxonomyLoading(false);
+    }
+  }
+
   async function refreshBusinesses() {
     setErr("");
     setOk("");
     setLoading(true);
     try {
-      const cats = await fetchAllServiceCategories();
-      hydrateTaxonomy(cats);
+      await loadTaxonomyOnly();
       await reloadBusinesses?.();
 
       if (activeId) {
@@ -511,23 +541,14 @@ export default function SboSettings() {
     }
 
     const list = (allCategories || []).filter((c) => {
-      const blob = [
-        c?.name,
-        c?.key,
-        c?.path,
-        c?.category_path,
-      ]
+      const blob = [c?.name, c?.key, c?.path, c?.category_path]
         .map((x) => String(x || "").toLowerCase())
         .join(" ");
       return blob.includes(q);
     });
 
-    const leaves = list.filter((x) => {
-      const kids = getChildren(x.id, allCategories);
-      return kids.length === 0 || !kids.length;
-    });
-
-    setSearchResults(leaves.length ? leaves : list);
+    const leafMatches = list.filter((x) => isLeaf(x));
+    setSearchResults(leafMatches.length ? leafMatches : list);
   }, [searchQ, allCategories]);
 
   const activeBusinessMissing = useMemo(() => {
@@ -600,10 +621,7 @@ export default function SboSettings() {
     if (!nid) return;
 
     const cat = findById(nid);
-    const childList = getChildren(nid);
-    const isLeaf = childList.length === 0;
-
-    if (!isLeaf) return;
+    if (!cat || !isLeaf(cat)) return;
 
     setServicesOffered((prev) => {
       const set = new Set(prev || []);
@@ -613,11 +631,6 @@ export default function SboSettings() {
       loadLabels(next);
       return next;
     });
-  }
-
-  function clearServices() {
-    setServicesOffered([]);
-    setServiceLabels({});
   }
 
   async function save() {
@@ -763,7 +776,16 @@ export default function SboSettings() {
         subtitle="These settings belong to the business profile. They power your business card, marketplace routing, and customer-facing provider details."
         right={
           <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => nav(returnTo)}
+              className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-700 hover:bg-slate-900 text-slate-100"
+            >
+              Back
+            </button>
+
             <BusinessPicker />
+
             <button
               onClick={refreshBusinesses}
               className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-700 hover:bg-slate-900 text-slate-100"
@@ -840,13 +862,7 @@ export default function SboSettings() {
                   </div>
                 </div>
 
-                <Input
-                  label="Business Name"
-                  value={name}
-                  onChange={setName}
-                  placeholder="e.g. Jacob's Plumbing Co."
-                />
-
+                <Input label="Business Name" value={name} onChange={setName} placeholder="e.g. Jacob's Plumbing Co." />
                 <Input
                   label="Business Email"
                   value={businessEmail}
@@ -857,18 +873,8 @@ export default function SboSettings() {
                 />
 
                 <div className="grid sm:grid-cols-2 gap-3">
-                  <Input
-                    label="Owner / Contact Name"
-                    value={ownerName}
-                    onChange={setOwnerName}
-                    placeholder="Jacob Lord"
-                  />
-                  <Input
-                    label="Phone"
-                    value={phone}
-                    onChange={setPhone}
-                    placeholder="555-123-4567"
-                  />
+                  <Input label="Owner / Contact Name" value={ownerName} onChange={setOwnerName} placeholder="Jacob Lord" />
+                  <Input label="Phone" value={phone} onChange={setPhone} placeholder="555-123-4567" />
                 </div>
 
                 <Input
@@ -880,48 +886,18 @@ export default function SboSettings() {
                 />
 
                 <div className="grid sm:grid-cols-2 gap-3">
-                  <Input
-                    label="Facebook URL"
-                    value={facebookUrl}
-                    onChange={setFacebookUrl}
-                    placeholder="https://facebook.com/yourbusiness"
-                  />
-                  <Input
-                    label="Instagram URL"
-                    value={instagramUrl}
-                    onChange={setInstagramUrl}
-                    placeholder="https://instagram.com/yourbusiness"
-                  />
+                  <Input label="Facebook URL" value={facebookUrl} onChange={setFacebookUrl} placeholder="https://facebook.com/yourbusiness" />
+                  <Input label="Instagram URL" value={instagramUrl} onChange={setInstagramUrl} placeholder="https://instagram.com/yourbusiness" />
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-3">
-                  <Input
-                    label="LinkedIn URL"
-                    value={linkedinUrl}
-                    onChange={setLinkedinUrl}
-                    placeholder="https://linkedin.com/company/yourbusiness"
-                  />
-                  <Input
-                    label="Google Business URL"
-                    value={googleBusinessUrl}
-                    onChange={setGoogleBusinessUrl}
-                    placeholder="https://g.page/yourbusiness"
-                  />
+                  <Input label="LinkedIn URL" value={linkedinUrl} onChange={setLinkedinUrl} placeholder="https://linkedin.com/company/yourbusiness" />
+                  <Input label="Google Business URL" value={googleBusinessUrl} onChange={setGoogleBusinessUrl} placeholder="https://g.page/yourbusiness" />
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-3">
-                  <Input
-                    label="YouTube URL"
-                    value={youtubeUrl}
-                    onChange={setYoutubeUrl}
-                    placeholder="https://youtube.com/@yourbusiness"
-                  />
-                  <Input
-                    label="TikTok URL"
-                    value={tiktokUrl}
-                    onChange={setTiktokUrl}
-                    placeholder="https://tiktok.com/@yourbusiness"
-                  />
+                  <Input label="YouTube URL" value={youtubeUrl} onChange={setYoutubeUrl} placeholder="https://youtube.com/@yourbusiness" />
+                  <Input label="TikTok URL" value={tiktokUrl} onChange={setTiktokUrl} placeholder="https://tiktok.com/@yourbusiness" />
                 </div>
 
                 <Select
@@ -955,34 +931,12 @@ export default function SboSettings() {
                   hint="Customer-facing description. Marketplace matching still uses the actual service tags below."
                 />
 
-                <Input
-                  label="Street Address"
-                  value={address}
-                  onChange={setAddress}
-                  placeholder="123 Main St"
-                />
+                <Input label="Street Address" value={address} onChange={setAddress} placeholder="123 Main St" />
 
                 <div className="grid sm:grid-cols-3 gap-3">
-                  <Input
-                    label="City"
-                    value={city}
-                    onChange={setCity}
-                    placeholder="Montgomery"
-                  />
-                  <Input
-                    label="State"
-                    value={state}
-                    onChange={setState}
-                    placeholder="AL"
-                    hint="Use 2-letter state code if possible."
-                  />
-                  <Input
-                    label="Base ZIP"
-                    value={baseZip}
-                    onChange={setBaseZip}
-                    placeholder="36117"
-                    hint="Routing center point."
-                  />
+                  <Input label="City" value={city} onChange={setCity} placeholder="Montgomery" />
+                  <Input label="State" value={state} onChange={setState} placeholder="AL" hint="Use 2-letter state code if possible." />
+                  <Input label="Base ZIP" value={baseZip} onChange={setBaseZip} placeholder="36117" hint="Routing center point." />
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-3">
@@ -1010,9 +964,7 @@ export default function SboSettings() {
 
                 <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
                   <div className="font-semibold text-slate-100">Trust Signals</div>
-                  <div className="text-xs text-slate-300 mt-1">
-                    These should show up correctly on customer-facing business cards.
-                  </div>
+                  <div className="text-xs text-slate-300 mt-1">These should show up correctly on customer-facing business cards.</div>
 
                   <div className="mt-4 space-y-3">
                     <Toggle label={isLicensed ? "Licensed" : "Not Licensed"} checked={isLicensed} onChange={setIsLicensed} />
@@ -1088,18 +1040,11 @@ export default function SboSettings() {
                   <div className="space-y-3">
                     <div>
                       <div className="text-xs text-slate-300">Business Card Code</div>
-                      <div className="mt-1 text-lg font-extrabold text-cyan-200 font-mono">
-                        {businessCardCode || "—"}
-                      </div>
+                      <div className="mt-1 text-lg font-extrabold text-cyan-200 font-mono">{businessCardCode || "—"}</div>
                     </div>
 
-                    <div className="text-sm text-slate-200">
-                      Share this with customers so they can save your business card in SyncWorks.
-                    </div>
-
-                    <div className="text-[11px] text-slate-400">
-                      Warm email uses your business code and opens the user’s email app.
-                    </div>
+                    <div className="text-sm text-slate-200">Share this with customers so they can save your business card in SyncWorks.</div>
+                    <div className="text-[11px] text-slate-400">Warm email uses your business code and opens the user’s email app.</div>
                   </div>
                 </div>
               </Card>
@@ -1108,22 +1053,34 @@ export default function SboSettings() {
                 title="Marketplace Service Tags"
                 subtitle="These tags control which customer requests hit this business in the marketplace."
                 right={
-                  <button
-                    onClick={clearServices}
-                    className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-700 hover:bg-slate-900 text-slate-100"
-                  >
-                    Clear
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={clearServices}
+                      className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-700 hover:bg-slate-900 text-slate-100"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      onClick={loadTaxonomyOnly}
+                      className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-700 hover:bg-slate-900 text-slate-100"
+                    >
+                      Reload Tags
+                    </button>
+                  </div>
                 }
               >
                 <div className="space-y-4">
+                  {taxonomyError ? (
+                    <div className="text-sm text-amber-100 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
+                      {taxonomyError}
+                    </div>
+                  ) : null}
+
                   <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <div className="font-semibold text-slate-100">Selected Services</div>
-                        <div className="text-xs text-slate-300 mt-1">
-                          These are the actual routing tags used for customer ticket matching.
-                        </div>
+                        <div className="text-xs text-slate-300 mt-1">These are the actual routing tags used for customer ticket matching.</div>
                       </div>
                       <div className="text-xs text-slate-300">{servicesOffered.length} selected</div>
                     </div>
@@ -1149,9 +1106,7 @@ export default function SboSettings() {
 
                   <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
                     <div className="font-semibold text-slate-100">Search Services</div>
-                    <div className="text-xs text-slate-300 mt-1">
-                      Search for the exact service task. Matching should use leaf tasks, not only broad groups.
-                    </div>
+                    <div className="text-xs text-slate-300 mt-1">Search for the exact service task. Matching should use leaf tasks, not only broad groups.</div>
 
                     <input
                       value={searchQ}
@@ -1163,8 +1118,7 @@ export default function SboSettings() {
                     <div className="mt-3 max-h-[260px] overflow-auto space-y-2 pr-1">
                       {searchResults.slice(0, 40).map((c) => {
                         const id = Number(c.id);
-                        const kids = getChildren(id);
-                        const leaf = kids.length === 0;
+                        const leaf = isLeaf(c);
                         const checked = servicesOffered.includes(id);
 
                         return (
@@ -1187,13 +1141,9 @@ export default function SboSettings() {
                                   {leaf ? "✅ " : "📁 "}
                                   {c.name}
                                 </div>
-                                <div className="text-[11px] text-slate-300 mt-1">
-                                  {buildPath(c)}
-                                </div>
+                                <div className="text-[11px] text-slate-300 mt-1">{buildPath(c)}</div>
                               </div>
-                              <div className="text-[10px] text-slate-400">
-                                {leaf ? (checked ? "Selected" : "Leaf") : "Group"}
-                              </div>
+                              <div className="text-[10px] text-slate-400">{leaf ? (checked ? "Selected" : "Leaf") : "Group"}</div>
                             </div>
                           </button>
                         );
@@ -1208,9 +1158,9 @@ export default function SboSettings() {
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
                       <div className="font-semibold text-slate-100">1) Pick Industry</div>
-                      <div className="text-xs text-slate-300 mt-1">
-                        Start with the top-level service industry.
-                      </div>
+                      <div className="text-xs text-slate-300 mt-1">Start with the top-level service industry.</div>
+
+                      {taxonomyLoading ? <div className="mt-3 text-sm text-slate-300">Loading industries…</div> : null}
 
                       <div className="mt-3 flex flex-wrap gap-2">
                         {roots.map((r) => (
@@ -1229,6 +1179,10 @@ export default function SboSettings() {
                           </button>
                         ))}
                       </div>
+
+                      {!taxonomyLoading && roots.length === 0 ? (
+                        <div className="mt-3 text-sm text-slate-300">No industries loaded.</div>
+                      ) : null}
 
                       {rootPick ? (
                         <div className="mt-4">
@@ -1255,9 +1209,7 @@ export default function SboSettings() {
                               </button>
                             ))}
 
-                            {rootGroups.length === 0 ? (
-                              <div className="text-sm text-slate-300">No groups found.</div>
-                            ) : null}
+                            {rootGroups.length === 0 ? <div className="text-sm text-slate-300">No groups found.</div> : null}
                           </div>
                         </div>
                       ) : null}
@@ -1265,15 +1217,12 @@ export default function SboSettings() {
 
                     <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
                       <div className="font-semibold text-slate-100">3) Pick Leaf Service</div>
-                      <div className="text-xs text-slate-300 mt-1">
-                        Choose the exact atomic task customers request.
-                      </div>
+                      <div className="text-xs text-slate-300 mt-1">Choose the exact atomic task customers request.</div>
 
                       <div className="mt-3 max-h-[360px] overflow-auto space-y-2 pr-1">
                         {children.map((c) => {
                           const id = Number(c.id);
-                          const kids = getChildren(id);
-                          const leaf = kids.length === 0;
+                          const leaf = isLeaf(c);
                           const checked = servicesOffered.includes(id);
 
                           return (
@@ -1282,7 +1231,6 @@ export default function SboSettings() {
                               type="button"
                               onClick={() => {
                                 if (leaf) toggleService(id);
-                                else chooseGroup(c);
                               }}
                               className={
                                 "w-full text-left rounded-xl border p-3 transition " +
@@ -1297,25 +1245,16 @@ export default function SboSettings() {
                                     {leaf ? "✅ " : "📁 "}
                                     {c.name}
                                   </div>
-                                  <div className="text-[11px] text-slate-300 mt-1">
-                                    {buildPath(c)}
-                                  </div>
+                                  <div className="text-[11px] text-slate-300 mt-1">{buildPath(c)}</div>
                                 </div>
-                                <div className="text-[10px] text-slate-400">
-                                  {leaf ? (checked ? "Selected" : "Tap") : "Drill"}
-                                </div>
+                                <div className="text-[10px] text-slate-400">{leaf ? (checked ? "Selected" : "Tap") : "Group"}</div>
                               </div>
                             </button>
                           );
                         })}
 
-                        {!groupPick ? (
-                          <div className="text-sm text-slate-300">Pick a group on the left first.</div>
-                        ) : null}
-
-                        {groupPick && children.length === 0 ? (
-                          <div className="text-sm text-slate-300">No leaf services found.</div>
-                        ) : null}
+                        {!groupPick ? <div className="text-sm text-slate-300">Pick a group on the left first.</div> : null}
+                        {groupPick && children.length === 0 ? <div className="text-sm text-slate-300">No leaf services found.</div> : null}
                       </div>
                     </div>
                   </div>
@@ -1335,17 +1274,12 @@ export default function SboSettings() {
                 </div>
               </Card>
 
-              <Card
-                title="Customer Business Card Preview"
-                subtitle="This is what customers should understand at a glance."
-              >
+              <Card title="Customer Business Card Preview" subtitle="This is what customers should understand at a glance.">
                 <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-xs uppercase tracking-wider text-slate-400">Business Card</div>
-                      <div className="text-lg font-extrabold text-slate-100 truncate mt-1">
-                        {name || "Business Name"}
-                      </div>
+                      <div className="text-lg font-extrabold text-slate-100 truncate mt-1">{name || "Business Name"}</div>
 
                       {businessPresenceMode ? (
                         <div className="mt-3">
@@ -1353,23 +1287,14 @@ export default function SboSettings() {
                         </div>
                       ) : null}
 
-                      {headline ? (
-                        <div className="text-sm text-cyan-200/90 mt-3">{headline}</div>
-                      ) : null}
+                      {headline ? <div className="text-sm text-cyan-200/90 mt-3">{headline}</div> : null}
 
                       {socialLinks.length ? (
                         <div className="mt-3">
-                          <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-2">
-                            Socials
-                          </div>
+                          <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-2">Socials</div>
                           <div className="flex gap-2 flex-wrap">
                             {socialLinks.map((item) => (
-                              <SocialLinkPill
-                                key={item.key}
-                                href={item.url}
-                                label={item.label}
-                                short={item.short}
-                              />
+                              <SocialLinkPill key={item.key} href={item.url} label={item.label} short={item.short} />
                             ))}
                           </div>
                         </div>
@@ -1411,9 +1336,7 @@ export default function SboSettings() {
                       {servicesText ? (
                         <div className="text-sm text-slate-200 mt-3 leading-relaxed">{servicesText}</div>
                       ) : (
-                        <div className="text-sm text-slate-400 mt-3">
-                          Add a short service summary so customers know what you offer.
-                        </div>
+                        <div className="text-sm text-slate-400 mt-3">Add a short service summary so customers know what you offer.</div>
                       )}
 
                       <div className="mt-3 flex flex-wrap gap-2">
@@ -1440,9 +1363,7 @@ export default function SboSettings() {
 
                       {selectedServiceObjects.length ? (
                         <div className="mt-3">
-                          <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-2">
-                            Routed For
-                          </div>
+                          <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-2">Routed For</div>
                           <div className="flex flex-wrap gap-2">
                             {selectedServiceObjects.slice(0, 6).map((obj) => (
                               <span
@@ -1475,9 +1396,7 @@ export default function SboSettings() {
                       {logoUrl ? (
                         <img src={logoUrl} alt="Business logo" className="h-full w-full object-cover" />
                       ) : (
-                        <div className="h-full w-full flex items-center justify-center text-slate-400 text-xs">
-                          Logo
-                        </div>
+                        <div className="h-full w-full flex items-center justify-center text-slate-400 text-xs">Logo</div>
                       )}
                     </div>
                   </div>
