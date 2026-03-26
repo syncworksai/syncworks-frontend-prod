@@ -54,6 +54,12 @@ function asMoney(v) {
   return n.toFixed(2);
 }
 
+function toDecimal(v) {
+  const n = Number(v || 0);
+  if (!Number.isFinite(n)) return 0;
+  return Number(n.toFixed(2));
+}
+
 function safeLineItems(items) {
   return Array.isArray(items) ? items : [];
 }
@@ -88,6 +94,16 @@ function buildCustomerFacingNotes(draft, totals) {
   return lines.join("\n").trim();
 }
 
+function getUiStatus(draft) {
+  const s = String(draft?.status || draft?.backend_invoice_status || "DRAFT").toUpperCase();
+
+  if (s === "READY_FOR_PAYMENT") return "READY_FOR_PAYMENT";
+  if (s === "SENT") return "READY_FOR_PAYMENT";
+  if (s === "PAID") return "PAID";
+  if (s === "VOID") return "VOID";
+  return "DRAFT";
+}
+
 export default function InvoicePanel({ ticketId, ticket, onAfterChange }) {
   const [draft, setDraft] = useState(null);
   const [sending, setSending] = useState(false);
@@ -101,6 +117,7 @@ export default function InvoicePanel({ ticketId, ticket, onAfterChange }) {
   }, [ticketId]);
 
   const totals = useMemo(() => computeTotals(draft || {}), [draft]);
+  const uiStatus = useMemo(() => getUiStatus(draft), [draft]);
 
   function update(patch) {
     const next = { ...(draft || {}), ...patch };
@@ -145,9 +162,9 @@ export default function InvoicePanel({ ticketId, ticket, onAfterChange }) {
     const payload = {
       title,
       notes,
-      subtotal: asMoney(totals.subtotal),
-      tax: asMoney(totals.tax),
-      total: asMoney(totals.total),
+      subtotal: toDecimal(totals.subtotal),
+      tax: toDecimal(totals.tax),
+      total: toDecimal(totals.total),
       payment_method: "CARD",
     };
 
@@ -164,6 +181,7 @@ export default function InvoicePanel({ ticketId, ticket, onAfterChange }) {
       backend_invoice_id: backendInvoiceId,
       backend_invoice_status: backendInvoice?.status || "DRAFT",
     };
+
     setDraft(next);
     saveDraft(ticketId, "invoice", next);
 
@@ -234,14 +252,16 @@ export default function InvoicePanel({ ticketId, ticket, onAfterChange }) {
           <span
             className={cx(
               "text-[11px] px-2 py-1 rounded-full border font-semibold",
-              draft.status === "READY_FOR_PAYMENT"
+              uiStatus === "PAID"
                 ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-                : draft.status === "SENT"
-                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                : uiStatus === "READY_FOR_PAYMENT"
+                ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-200"
+                : uiStatus === "VOID"
+                ? "border-rose-500/30 bg-rose-500/10 text-rose-200"
                 : "border-slate-700 bg-slate-900/40 text-slate-200"
             )}
           >
-            {draft.status || "DRAFT"}
+            {uiStatus}
           </span>
         </div>
       </div>
@@ -442,8 +462,19 @@ export default function InvoicePanel({ ticketId, ticket, onAfterChange }) {
           Reload Saved
         </Btn>
 
-        <Btn tone="emerald" onClick={markReadyForPayment} disabled={sending} type="button">
-          {sending ? "Processing…" : "Mark Ready for Payment"}
+        <Btn
+          tone="emerald"
+          onClick={markReadyForPayment}
+          disabled={sending || uiStatus === "READY_FOR_PAYMENT" || uiStatus === "PAID"}
+          type="button"
+        >
+          {sending
+            ? "Processing…"
+            : uiStatus === "PAID"
+            ? "Already Paid"
+            : uiStatus === "READY_FOR_PAYMENT"
+            ? "Ready for Payment"
+            : "Mark Ready for Payment"}
         </Btn>
 
         <div className="ml-auto text-xs text-slate-500">
