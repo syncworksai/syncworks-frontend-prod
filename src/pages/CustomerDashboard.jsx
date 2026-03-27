@@ -10,7 +10,7 @@ import TodoList from "../components/TodoList";
 import InboxPanel from "../components/Inbox/InboxPanel";
 import CustomerTickets from "../components/CustomerTickets";
 
-const TABS = [
+const BASE_TABS = [
   { id: "overview", label: "Overview" },
   { id: "orders", label: "All Orders" },
   { id: "calendar", label: "Calendar" },
@@ -53,6 +53,17 @@ function statusPill(status) {
   return base + "bg-cyan-500/10 border-cyan-500/30 text-cyan-200";
 }
 
+function invoicePill(status) {
+  const s = String(status || "").toUpperCase();
+  const base = "text-[10px] px-2.5 py-1 rounded-full border font-semibold tracking-wide ";
+  if (s === "PAID") return base + "bg-emerald-500/10 border-emerald-500/30 text-emerald-200";
+  if (s === "VOID") return base + "bg-slate-500/10 border-slate-500/30 text-slate-300";
+  if (s === "SENT" || s === "READY_FOR_PAYMENT" || s === "OPEN") {
+    return base + "bg-amber-500/10 border-amber-500/30 text-amber-200";
+  }
+  return base + "bg-cyan-500/10 border-cyan-500/30 text-cyan-200";
+}
+
 function IconBtn({ title, tone = "slate", disabled, onClick, children }) {
   const tones = {
     slate: "bg-slate-950/70 border-slate-800 hover:bg-slate-900/60 text-slate-200",
@@ -61,6 +72,7 @@ function IconBtn({ title, tone = "slate", disabled, onClick, children }) {
     emerald: "bg-emerald-500/14 border-emerald-500/28 hover:bg-emerald-500/18 text-emerald-100",
     rose: "bg-rose-500/14 border-rose-500/28 hover:bg-rose-500/18 text-rose-100",
     fuchsia: "bg-fuchsia-500/14 border-fuchsia-500/28 hover:bg-fuchsia-500/18 text-fuchsia-100",
+    amber: "bg-amber-500/14 border-amber-500/28 hover:bg-amber-500/18 text-amber-100",
   };
 
   return (
@@ -185,6 +197,8 @@ function PromoPill({ children, tone = "slate" }) {
       ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
       : tone === "cyan"
       ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-200"
+      : tone === "amber"
+      ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
       : "border-slate-800 bg-slate-950/60 text-slate-200";
 
   return <span className={`text-[11px] px-3 py-1.5 rounded-full border font-semibold ${cls}`}>{children}</span>;
@@ -249,9 +263,6 @@ function FeaturedDealsRail({ items, onOpenFeedItem, onViewFeed }) {
   );
 }
 
-// --------------------------------------------------
-// ✅ CUSTOMER-FRIENDLY TITLE MAPPING
-// --------------------------------------------------
 const LIFE_CATEGORY_LABELS = {
   home_property: "Home & Property",
   rides_transport: "Rides & Transportation",
@@ -436,7 +447,6 @@ function resolveCustomerFriendlyTitle(ticket) {
 
 function resolveServiceStyle(ticket) {
   const t = ticket || {};
-
   const candidates = [t.category_name, t.category_path, t.category_key, t.taxonomy_label, t.display_title]
     .map((x) => (typeof x === "string" ? x.trim() : ""))
     .filter(Boolean);
@@ -447,7 +457,6 @@ function resolveServiceStyle(ticket) {
 
 function resolveBusinessName(ticket) {
   const t = ticket || {};
-
   const candidates = [
     t.assigned_business_name,
     t.assigned_business_card?.name,
@@ -556,6 +565,119 @@ function DealsPanel({ feedItems, onOpenFeedItem, onOpenNewsfeed }) {
   );
 }
 
+function toMoney(n) {
+  const v = Number(n || 0);
+  return `$${v.toFixed(2)}`;
+}
+
+function invoiceAmount(invoice) {
+  if (!invoice) return 0;
+  if (invoice.total != null && invoice.total !== "") return Number(invoice.total || 0);
+  if (invoice.amount != null && invoice.amount !== "") return Number(invoice.amount || 0);
+  if (invoice.amount_cents != null && invoice.amount_cents !== "") return Number(invoice.amount_cents || 0) / 100;
+  return 0;
+}
+
+function isInvoiceDue(invoice) {
+  if (!invoice) return false;
+  const status = String(invoice.status || "").toUpperCase();
+  return !["PAID", "VOID"].includes(status);
+}
+
+function orderTabLabel(unpaidCount) {
+  return unpaidCount > 0 ? `All Orders (${unpaidCount})` : "All Orders";
+}
+
+function PaymentsDueCard({ invoices, totalDue, onPayNow, onOpenOrder, onViewOrders }) {
+  return (
+    <Card
+      title="Payments Due"
+      right={
+        invoices.length ? (
+          <PromoPill tone="amber">{invoices.length} due</PromoPill>
+        ) : (
+          <PromoPill>No balance</PromoPill>
+        )
+      }
+    >
+      {invoices.length ? (
+        <>
+          <div className="rounded-3xl border border-amber-500/20 bg-amber-500/8 p-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-amber-200/80">Total Due</div>
+            <div className="mt-2 text-3xl font-extrabold text-amber-100">{toMoney(totalDue)}</div>
+            <div className="mt-2 text-sm text-slate-300">
+              You have {invoices.length} invoice{invoices.length === 1 ? "" : "s"} ready for payment.
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {invoices.slice(0, 3).map((item) => {
+              const ticket = item.ticket;
+              const invoice = item.invoice;
+              const serviceTitle = resolveCustomerFriendlyTitle(ticket);
+              const amount = invoiceAmount(invoice);
+
+              return (
+                <div
+                  key={`due-${ticket.id}-${invoice.id || "latest"}`}
+                  className="rounded-3xl border border-slate-800/80 bg-slate-950/40 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-extrabold text-slate-100 truncate">{serviceTitle}</div>
+                      <div className="text-xs text-slate-400 mt-1">Ticket #{ticket.id}</div>
+                    </div>
+                    <span className={invoicePill(invoice?.status)}>{String(invoice?.status || "OPEN")}</span>
+                  </div>
+
+                  <div className="mt-3 flex items-end justify-between gap-3">
+                    <div>
+                      <div className="text-[11px] text-slate-500">Amount Due</div>
+                      <div className="text-xl font-extrabold text-cyan-100">{toMoney(amount)}</div>
+                    </div>
+
+                    <div className="flex gap-2 flex-wrap justify-end">
+                      <button
+                        type="button"
+                        onClick={() => onOpenOrder(ticket.id)}
+                        className="inline-flex items-center justify-center h-9 text-xs rounded-2xl px-4 bg-slate-950/55 border border-slate-800/80 hover:bg-slate-900/40 text-slate-200"
+                      >
+                        Open Order
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onPayNow(ticket.id)}
+                        className="inline-flex items-center justify-center h-9 text-xs rounded-2xl px-4 bg-amber-500/18 border border-amber-500/35 hover:bg-amber-500/24 text-amber-100"
+                      >
+                        Pay Now
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={onViewOrders}
+            className="mt-4 w-full inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 bg-cyan-500/18 border border-cyan-500/35 hover:bg-cyan-500/24 text-cyan-100"
+          >
+            View All Orders
+          </button>
+        </>
+      ) : (
+        <div className="rounded-3xl border border-slate-800/80 bg-slate-950/30 p-4">
+          <div className="text-sm text-slate-200 font-semibold">No invoices due right now.</div>
+          <div className="text-xs text-slate-500 mt-2">
+            When a business marks an invoice ready for payment, it will show here.
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export default function CustomerDashboard() {
   const { user, activeBusinessId } = useAuth();
   const navigate = useNavigate();
@@ -657,6 +779,34 @@ export default function CustomerDashboard() {
     return (feedItems || []).filter((x) => !!x?.sponsored).slice(0, 6);
   }, [feedItems]);
 
+  const dueInvoiceItems = useMemo(() => {
+    return (visibleTickets || [])
+      .map((ticket) => ({
+        ticket,
+        invoice: ticket?.latest_invoice || null,
+      }))
+      .filter((x) => isInvoiceDue(x.invoice))
+      .sort((a, b) => {
+        const ad = a?.invoice?.due_date ? new Date(a.invoice.due_date).getTime() : Number.MAX_SAFE_INTEGER;
+        const bd = b?.invoice?.due_date ? new Date(b.invoice.due_date).getTime() : Number.MAX_SAFE_INTEGER;
+        return ad - bd;
+      });
+  }, [visibleTickets]);
+
+  const unpaidInvoiceCount = useMemo(() => dueInvoiceItems.length, [dueInvoiceItems]);
+
+  const totalDue = useMemo(() => {
+    return dueInvoiceItems.reduce((sum, item) => sum + invoiceAmount(item.invoice), 0);
+  }, [dueInvoiceItems]);
+
+  const tabs = useMemo(() => {
+    return BASE_TABS.map((t) =>
+      t.id === "orders"
+        ? { ...t, label: orderTabLabel(unpaidInvoiceCount) }
+        : t
+    );
+  }, [unpaidInvoiceCount]);
+
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0">
@@ -672,7 +822,7 @@ export default function CustomerDashboard() {
         <NewsReel />
 
         <div className="flex gap-2 flex-wrap items-center">
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <button
               key={t.id}
               type="button"
@@ -951,6 +1101,14 @@ export default function CustomerDashboard() {
               </div>
 
               <div className="space-y-4">
+                <PaymentsDueCard
+                  invoices={dueInvoiceItems}
+                  totalDue={totalDue}
+                  onPayNow={(ticketId) => navigate(`/tickets/${ticketId}`)}
+                  onOpenOrder={(ticketId) => navigate(`/tickets/${ticketId}`)}
+                  onViewOrders={() => setTab("orders")}
+                />
+
                 <Card title="Inbox Snapshot">
                   <div className="text-[11px] text-slate-500 -mt-1 mb-3">Ticket updates, reminders, broadcasts, and messages.</div>
                   <div className="rounded-3xl border border-slate-800/80 bg-slate-950/30 p-3">
@@ -1040,7 +1198,15 @@ export default function CustomerDashboard() {
               </div>
             }
           >
-            <div className="text-sm text-slate-400 mb-4">Every request you’ve created — searchable + clickable.</div>
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+              <div className="text-sm text-slate-400">Every request you’ve created — searchable + clickable.</div>
+              {unpaidInvoiceCount > 0 ? (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <PromoPill tone="amber">{unpaidInvoiceCount} invoice{unpaidInvoiceCount === 1 ? "" : "s"} due</PromoPill>
+                  <PromoPill tone="cyan">Total {toMoney(totalDue)}</PromoPill>
+                </div>
+              ) : null}
+            </div>
             <CustomerTickets embedded />
           </Card>
         ) : null}
