@@ -67,7 +67,8 @@ export default function CustomerInvoicePanel({ ticketId, invoice, onAfterPay }) 
   const tax = useMemo(() => Number(inv?.tax || 0), [inv]);
   const total = useMemo(() => Number(inv?.total || 0), [inv]);
 
-  const canPay = !!inv?.id && String(inv?.status || "").toUpperCase() !== "PAID" && String(inv?.status || "").toUpperCase() !== "VOID";
+  const status = String(inv?.status || "").toUpperCase();
+  const canPay = !!inv?.id && status !== "PAID" && status !== "VOID";
 
   async function startCheckout() {
     if (!inv?.id) return;
@@ -77,13 +78,25 @@ export default function CustomerInvoicePanel({ ticketId, invoice, onAfterPay }) 
 
     try {
       const res = await api.post(`/billing/invoices/${inv.id}/checkout/`);
-      const url = res?.data?.url || "";
+      const data = res?.data || {};
+      const url = data?.checkout_url || data?.url || "";
+
+      console.log("Invoice checkout response:", data);
+
       if (!url) {
-        throw new Error("Checkout URL was not returned.");
+        throw new Error(
+          data?.detail ||
+            "Checkout URL was not returned. Expected `checkout_url` or `url` in the response."
+        );
       }
-      window.location.href = url;
+
+      window.location.assign(url);
     } catch (e) {
-      setErr(e?.response?.data?.detail || e?.message || "Could not start payment checkout.");
+      setErr(
+        e?.response?.data?.detail ||
+          e?.message ||
+          "Could not start payment checkout."
+      );
       setBusy(false);
     }
   }
@@ -110,7 +123,7 @@ export default function CustomerInvoicePanel({ ticketId, invoice, onAfterPay }) 
         </div>
 
         <span className={cx("text-[11px] px-2 py-1 rounded-full border font-semibold", statusTone(inv?.status))}>
-          {String(inv?.status || "OPEN").toUpperCase()}
+          {status || "OPEN"}
         </span>
       </div>
 
