@@ -1,31 +1,18 @@
-// src/components/tickets/InvoicePanel.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../../api/client";
-import {
-  computeTotals,
-  defaultLineItem,
-  initDraft,
-  saveDraft,
-  getDraft,
-  upsertQueueItem,
-} from "./useLocalTemplates";
 
-function cx(...p) {
-  return p.filter(Boolean).join(" ");
+function cx(...parts) {
+  return parts.filter(Boolean).join(" ");
 }
 
-function Money({ n }) {
+function money(n) {
   const v = Number(n || 0);
-  return <span>${v.toFixed(2)}</span>;
+  return `$${v.toFixed(2)}`;
 }
 
-function Field({ label, children }) {
-  return (
-    <div>
-      <div className="text-[11px] text-slate-500 mb-1">{label}</div>
-      {children}
-    </div>
-  );
+function safeNum(v, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
 }
 
 function Btn({ tone = "slate", className = "", ...props }) {
@@ -35,11 +22,13 @@ function Btn({ tone = "slate", className = "", ...props }) {
     emerald: "bg-emerald-500/15 border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-200",
     rose: "bg-rose-500/15 border-rose-500/30 hover:bg-rose-500/20 text-rose-200",
     amber: "bg-amber-500/15 border-amber-500/30 hover:bg-amber-500/20 text-amber-200",
+    fuchsia: "bg-fuchsia-500/15 border-fuchsia-500/30 hover:bg-fuchsia-500/20 text-fuchsia-200",
   };
+
   return (
     <button
       className={cx(
-        "h-9 px-3 rounded-xl border text-xs font-semibold transition whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed",
+        "h-10 px-4 rounded-2xl border text-xs font-semibold transition whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed",
         tones[tone] || tones.slate,
         className
       )}
@@ -48,437 +37,798 @@ function Btn({ tone = "slate", className = "", ...props }) {
   );
 }
 
-function asMoney(v) {
-  const n = Number(v || 0);
-  if (!Number.isFinite(n)) return "0.00";
-  return n.toFixed(2);
+function StatCard({ label, value, sub = "", tone = "slate" }) {
+  const tones = {
+    slate: "border-slate-800 bg-slate-950/30 text-slate-100",
+    cyan: "border-cyan-500/20 bg-cyan-500/10 text-cyan-100",
+    emerald: "border-emerald-500/20 bg-emerald-500/10 text-emerald-100",
+    amber: "border-amber-500/20 bg-amber-500/10 text-amber-100",
+    fuchsia: "border-fuchsia-500/20 bg-fuchsia-500/10 text-fuchsia-100",
+  };
+
+  return (
+    <div className={cx("rounded-3xl border p-4", tones[tone] || tones.slate)}>
+      <div className="text-[11px] text-slate-400">{label}</div>
+      <div className="mt-1 text-2xl font-extrabold tracking-tight">{value}</div>
+      {sub ? <div className="mt-1 text-[11px] text-slate-400">{sub}</div> : null}
+    </div>
+  );
 }
 
-function toDecimal(v) {
-  const n = Number(v || 0);
-  if (!Number.isFinite(n)) return 0;
-  return Number(n.toFixed(2));
+function Field({ label, children, hint = "" }) {
+  return (
+    <div>
+      <div className="text-[11px] text-slate-500 mb-1">{label}</div>
+      {children}
+      {hint ? <div className="mt-1 text-[11px] text-slate-600">{hint}</div> : null}
+    </div>
+  );
 }
 
-function safeLineItems(items) {
-  return Array.isArray(items) ? items : [];
+function SummaryRow({ label, value, strong = false, tone = "default" }) {
+  const valueCls =
+    tone === "cyan"
+      ? "text-cyan-100"
+      : tone === "fuchsia"
+      ? "text-fuchsia-200"
+      : tone === "emerald"
+      ? "text-emerald-200"
+      : "text-slate-100";
+
+  return (
+    <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/30 px-3 py-3">
+      <span className="text-sm text-slate-300">{label}</span>
+      <span className={cx(strong ? "text-base font-extrabold" : "text-sm font-semibold", valueCls)}>
+        {value}
+      </span>
+    </div>
+  );
 }
 
-function buildCustomerFacingNotes(draft, totals) {
-  const lines = [];
-  const items = safeLineItems(draft?.items);
+function statusTone(status) {
+  const s = String(status || "").toUpperCase();
+  if (s === "PAID") return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
+  if (s === "VOID" || s === "CANCELLED") return "border-rose-500/30 bg-rose-500/10 text-rose-200";
+  if (s === "SENT" || s === "READY_FOR_PAYMENT" || s === "READY") {
+    return "border-cyan-500/30 bg-cyan-500/10 text-cyan-200";
+  }
+  if (s === "DRAFT") return "border-amber-500/30 bg-amber-500/10 text-amber-200";
+  return "border-slate-700 bg-slate-900/40 text-slate-200";
+}
 
-  if (items.length) {
-    lines.push("Invoice Items:");
-    items.forEach((it, idx) => {
-      const qty = Number(it?.qty || 0);
-      const unit = Number(it?.unit_price || 0);
-      const markup = Number(it?.markup_pct || 0);
-      const desc = String(it?.description || "").trim() || `Line Item ${idx + 1}`;
-      const part = String(it?.part_no || "").trim();
+function normalizeInvoice(data) {
+  const inv = data?.invoice || data?.latest_invoice || data?.invoice_detail || null;
+  if (!inv) return null;
 
-      let line = `- ${desc}`;
-      if (part) line += ` (Part: ${part})`;
-      line += ` | Qty: ${qty} | Unit: $${asMoney(unit)}`;
-      if (markup > 0) line += ` | Upcharge: ${markup}%`;
-      lines.push(line);
-    });
+  return {
+    id: inv?.id || null,
+    title: inv?.title || "Invoice",
+    notes: inv?.notes || "",
+    status: inv?.status || "DRAFT",
+    subtotal: safeNum(inv?.subtotal),
+    tax: safeNum(inv?.tax),
+    total: safeNum(inv?.total),
+    dueDate: inv?.due_date || "",
+    paymentMethod: inv?.payment_method || "CARD",
+    amountPaid: safeNum(inv?.amount_paid),
+    paidAt: inv?.paid_at || null,
+    createdAt: inv?.created_at || null,
+    platformFeeRateBps: safeNum(inv?.platform_fee_rate_bps, 100),
+    platformFee:
+      inv?.platform_fee != null
+        ? safeNum(inv?.platform_fee)
+        : null,
+    raw: inv,
+  };
+}
+
+function normalizeLineItems(data) {
+  const raw =
+    data?.line_items ||
+    data?.items ||
+    data?.invoice_lines ||
+    data?.results ||
+    [];
+
+  const list = Array.isArray(raw) ? raw : [];
+  return list.map((line, idx) => {
+    const quantity = safeNum(line?.quantity ?? line?.qty, 1);
+    const unitPrice = safeNum(
+      line?.unit_price ??
+        line?.price ??
+        line?.sale_price ??
+        line?.amount_each ??
+        line?.unit_amount,
+      0
+    );
+    const unitCost = safeNum(
+      line?.unit_cost ?? line?.cost ?? line?.base_cost ?? line?.internal_cost,
+      0
+    );
+    const total = safeNum(
+      line?.line_total ??
+        line?.total ??
+        line?.amount ??
+        quantity * unitPrice,
+      quantity * unitPrice
+    );
+    const costTotal = safeNum(
+      line?.line_cost ??
+        line?.cost_total ??
+        quantity * unitCost,
+      quantity * unitCost
+    );
+
+    return {
+      id: line?.id ?? `${idx}-${line?.catalog_item_id || "line"}`,
+      catalogItemId:
+        line?.catalog_item_id ??
+        line?.catalog_item ??
+        line?.service_catalog_item_id ??
+        line?.service_id ??
+        null,
+      name:
+        line?.name ||
+        line?.title ||
+        line?.description ||
+        line?.catalog_item_name ||
+        line?.service_name ||
+        `Line #${idx + 1}`,
+      description: line?.description || "",
+      quantity,
+      unitPrice,
+      unitCost,
+      total,
+      costTotal,
+      profit: total - costTotal,
+      raw: line,
+    };
+  });
+}
+
+function normalizeCatalogItems(data) {
+  const raw =
+    data?.catalog_items ||
+    data?.catalog ||
+    data?.service_catalog ||
+    data?.services ||
+    data?.items_catalog ||
+    [];
+
+  const list = Array.isArray(raw) ? raw : raw?.results || [];
+  return list
+    .map((it) => {
+      const id = it?.id ?? it?.catalog_item_id ?? it?.service_id ?? it?.pk;
+      if (!id) return null;
+
+      const salePrice =
+        it?.price ??
+        it?.unit_price ??
+        it?.retail_price ??
+        it?.sell_price ??
+        it?.amount ??
+        0;
+
+      const cost =
+        it?.cost ??
+        it?.unit_cost ??
+        it?.internal_cost ??
+        it?.base_cost ??
+        0;
+
+      return {
+        id,
+        name:
+          it?.name ||
+          it?.title ||
+          it?.service_name ||
+          it?.label ||
+          `Catalog Item #${id}`,
+        description: it?.description || "",
+        price: safeNum(salePrice),
+        cost: safeNum(cost),
+        raw: it,
+      };
+    })
+    .filter(Boolean);
+}
+
+async function tryCatalogFetch() {
+  const paths = [
+    "/catalog-items/",
+    "/catalog/items/",
+    "/service-catalog/items/",
+    "/services/catalog/",
+    "/catalog/",
+  ];
+
+  for (const path of paths) {
+    try {
+      const res = await api.get(path);
+      const list = Array.isArray(res?.data) ? res.data : res?.data?.results || [];
+      if (Array.isArray(list) && list.length) {
+        return normalizeCatalogItems({ catalog_items: list });
+      }
+    } catch {
+      // try next
+    }
   }
 
-  lines.push("");
-  lines.push(`Subtotal: $${asMoney(totals?.subtotal)}`);
-  lines.push(`Tax: $${asMoney(totals?.tax)}`);
-  lines.push(`Fee: $${asMoney(totals?.fee)}`);
-  lines.push(`Total: $${asMoney(totals?.total)}`);
-
-  return lines.join("\n").trim();
+  return [];
 }
 
-function getUiStatus(draft) {
-  const s = String(draft?.status || draft?.backend_invoice_status || "DRAFT").toUpperCase();
+async function tryAddCatalogItem(ticketId, catalogItemId) {
+  const payloads = [
+    { catalog_item_id: catalogItemId },
+    { catalog_item: catalogItemId },
+    { service_catalog_item_id: catalogItemId },
+    { item_id: catalogItemId },
+    { id: catalogItemId },
+  ];
 
-  if (s === "READY_FOR_PAYMENT") return "READY_FOR_PAYMENT";
-  if (s === "SENT") return "READY_FOR_PAYMENT";
-  if (s === "PAID") return "PAID";
-  if (s === "VOID") return "VOID";
-  return "DRAFT";
+  let lastErr = null;
+
+  for (const body of payloads) {
+    try {
+      return await api.post(`/tickets/${ticketId}/add-catalog-item/`, body);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+
+  throw lastErr || new Error("Add item failed");
+}
+
+async function tryRemoveLine(ticketId, lineId) {
+  const payloads = [
+    { line_item_id: lineId },
+    { invoice_line_id: lineId },
+    { line_id: lineId },
+    { id: lineId },
+  ];
+
+  let lastErr = null;
+
+  for (const body of payloads) {
+    try {
+      return await api.post(`/tickets/${ticketId}/remove-catalog-line/`, body);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+
+  throw lastErr || new Error("Remove line failed");
+}
+
+async function trySaveInvoiceMeta(invoiceId, patch) {
+  if (!invoiceId) return false;
+
+  const attempts = [
+    () => api.patch(`/billing/invoices/${invoiceId}/`, patch),
+    () => api.patch(`/invoices/${invoiceId}/`, patch),
+    () => api.patch(`/invoice/${invoiceId}/`, patch),
+  ];
+
+  for (const run of attempts) {
+    try {
+      await run();
+      return true;
+    } catch {
+      // try next
+    }
+  }
+
+  return false;
 }
 
 export default function InvoicePanel({ ticketId, ticket, onAfterChange }) {
-  const [draft, setDraft] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [working, setWorking] = useState(false);
   const [sending, setSending] = useState(false);
+  const [metaSaving, setMetaSaving] = useState(false);
+
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
 
-  useEffect(() => {
-    const d = initDraft({ ticketId, kind: "invoice", ticket });
-    setDraft(d);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ticketId]);
+  const [invoice, setInvoice] = useState(null);
+  const [lineItems, setLineItems] = useState([]);
+  const [catalogItems, setCatalogItems] = useState([]);
 
-  const totals = useMemo(() => computeTotals(draft || {}), [draft]);
-  const uiStatus = useMemo(() => getUiStatus(draft), [draft]);
+  const [selectedCatalogId, setSelectedCatalogId] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("CARD");
 
-  function update(patch) {
-    const next = { ...(draft || {}), ...patch };
-    setDraft(next);
-    saveDraft(ticketId, "invoice", next);
-  }
+  const load = useCallback(async ({ silent = false } = {}) => {
+    if (!ticketId) return;
 
-  function updateItem(id, patch) {
-    const items = Array.isArray(draft?.items) ? draft.items : [];
-    const next = items.map((x) => (x.id === id ? { ...x, ...patch } : x));
-    update({ items: next });
-  }
-
-  function addItem() {
-    const items = Array.isArray(draft?.items) ? draft.items : [];
-    update({ items: [...items, defaultLineItem()] });
-  }
-
-  function removeItem(id) {
-    const items = Array.isArray(draft?.items) ? draft.items : [];
-    const next = items.filter((x) => x.id !== id);
-    update({ items: next.length ? next : [defaultLineItem()] });
-  }
-
-  function reloadSaved() {
-    const saved = getDraft(ticketId, "invoice");
-    if (saved) setDraft(saved);
-  }
-
-  async function ensureBackendInvoice() {
-    const existingId = Number(draft?.backend_invoice_id || 0);
-    if (existingId > 0) {
-      return existingId;
-    }
-
-    const title =
-      String(draft?.invoice_number || "").trim() ||
-      `Invoice for Ticket #${ticketId}`;
-
-    const notes = buildCustomerFacingNotes(draft, totals);
-
-    const payload = {
-      title,
-      notes,
-      subtotal: toDecimal(totals.subtotal),
-      tax: toDecimal(totals.tax),
-      total: toDecimal(totals.total),
-      payment_method: "CARD",
-    };
-
-    const res = await api.post(`/tickets/${ticketId}/create_invoice/`, payload);
-    const backendInvoice = res?.data || null;
-    const backendInvoiceId = Number(backendInvoice?.id || 0);
-
-    if (!backendInvoiceId) {
-      throw new Error("Invoice was not created.");
-    }
-
-    const next = {
-      ...(draft || {}),
-      backend_invoice_id: backendInvoiceId,
-      backend_invoice_status: backendInvoice?.status || "DRAFT",
-    };
-
-    setDraft(next);
-    saveDraft(ticketId, "invoice", next);
-
-    return backendInvoiceId;
-  }
-
-  async function markReadyForPayment() {
+    if (!silent) setLoading(true);
     setErr("");
     setOk("");
-    setSending(true);
 
     try {
-      const invoiceId = await ensureBackendInvoice();
+      const res = await api.get(`/tickets/${ticketId}/invoice-lines/`);
+      const nextInvoice = normalizeInvoice(res.data);
+      const nextLines = normalizeLineItems(res.data);
+      const nextCatalog = normalizeCatalogItems(res.data);
 
-      await api.post(`/tickets/${ticketId}/send_invoice/`, {
-        invoice_id: invoiceId,
-      });
+      setInvoice(nextInvoice);
+      setLineItems(nextLines);
+      setDueDate(nextInvoice?.dueDate || "");
+      setPaymentMethod(nextInvoice?.paymentMethod || "CARD");
 
-      const next = {
-        ...(draft || {}),
-        status: "READY_FOR_PAYMENT",
-        backend_invoice_id: invoiceId,
-        backend_invoice_status: "SENT",
-      };
+      if (nextCatalog.length) {
+        setCatalogItems(nextCatalog);
+        setSelectedCatalogId((prev) => prev || String(nextCatalog[0]?.id || ""));
+      } else {
+        const fallbackCatalog = await tryCatalogFetch();
+        setCatalogItems(fallbackCatalog);
+        setSelectedCatalogId((prev) => prev || String(fallbackCatalog[0]?.id || ""));
+      }
+    } catch (e) {
+      setInvoice(null);
+      setLineItems([]);
+      setCatalogItems([]);
+      setErr(e?.response?.data?.detail || "Failed to load invoice builder.");
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, [ticketId]);
 
-      setDraft(next);
-      saveDraft(ticketId, "invoice", next);
+  useEffect(() => {
+    load();
+  }, [load]);
 
-      upsertQueueItem("invoice", {
-        ticket_id: Number(ticketId),
-        invoice_id: invoiceId,
-        invoice_number: next.invoice_number,
-        customer_name: next.customer_name || "",
-        customer_phone: next.customer_phone || "",
-        status: next.status,
-        updated_at: new Date().toISOString(),
-        total: totals.total,
-      });
+  const metrics = useMemo(() => {
+    const subtotal = lineItems.reduce((sum, line) => sum + safeNum(line.total), 0);
+    const cost = lineItems.reduce((sum, line) => sum + safeNum(line.costTotal), 0);
+    const profit = subtotal - cost;
+    const marginPct = subtotal > 0 ? (profit / subtotal) * 100 : 0;
 
-      setOk("Invoice is now ready for payment and visible to the customer.");
+    const invoiceSubtotal = invoice?.subtotal ?? subtotal;
+    const invoiceTax = invoice?.tax ?? 0;
+    const invoiceTotal = invoice?.total ?? subtotal + invoiceTax;
+
+    const feeRate = safeNum(invoice?.platformFeeRateBps, 100) / 10000;
+    const platformFee =
+      invoice?.platformFee != null
+        ? safeNum(invoice.platformFee)
+        : Number((invoiceTotal * feeRate).toFixed(2));
+
+    return {
+      subtotal,
+      cost,
+      profit,
+      marginPct,
+      invoiceSubtotal: safeNum(invoiceSubtotal),
+      invoiceTax: safeNum(invoiceTax),
+      invoiceTotal: safeNum(invoiceTotal),
+      platformFee,
+    };
+  }, [invoice, lineItems]);
+
+  const selectedCatalogItem = useMemo(() => {
+    return catalogItems.find((item) => String(item.id) === String(selectedCatalogId)) || null;
+  }, [catalogItems, selectedCatalogId]);
+
+  const ticketCategory =
+    ticket?.category_name ||
+    ticket?.category_path ||
+    "Service Ticket";
+
+  async function addSelectedCatalogItem() {
+    if (!selectedCatalogId || working) return;
+
+    setWorking(true);
+    setErr("");
+    setOk("");
+
+    try {
+      await tryAddCatalogItem(ticketId, selectedCatalogId);
+      setOk("Catalog item added.");
+      await load({ silent: true });
       await onAfterChange?.();
     } catch (e) {
-      setErr(e?.response?.data?.detail || e?.message || "Failed to mark invoice ready for payment.");
+      setErr(e?.response?.data?.detail || "Could not add catalog item.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function incrementLine(line) {
+    if (!line?.catalogItemId || working) return;
+
+    setWorking(true);
+    setErr("");
+    setOk("");
+
+    try {
+      await tryAddCatalogItem(ticketId, line.catalogItemId);
+      setOk("Quantity updated.");
+      await load({ silent: true });
+      await onAfterChange?.();
+    } catch (e) {
+      setErr(e?.response?.data?.detail || "Could not increase quantity.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function decrementLine(line) {
+    if (!line?.id || working) return;
+
+    setWorking(true);
+    setErr("");
+    setOk("");
+
+    try {
+      await tryRemoveLine(ticketId, line.id);
+      setOk("Quantity updated.");
+      await load({ silent: true });
+      await onAfterChange?.();
+    } catch (e) {
+      setErr(e?.response?.data?.detail || "Could not decrease quantity.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function removeLineFully(line) {
+    if (!line?.id || working) return;
+
+    setWorking(true);
+    setErr("");
+    setOk("");
+
+    try {
+      const qty = Math.max(1, safeNum(line.quantity, 1));
+      for (let i = 0; i < qty; i += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        await tryRemoveLine(ticketId, line.id);
+      }
+      setOk("Line removed.");
+      await load({ silent: true });
+      await onAfterChange?.();
+    } catch (e) {
+      setErr(e?.response?.data?.detail || "Could not remove line.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function saveMeta() {
+    if (!invoice?.id || metaSaving) return;
+
+    setMetaSaving(true);
+    setErr("");
+    setOk("");
+
+    try {
+      const payload = {
+        due_date: dueDate || null,
+        payment_method: paymentMethod || "CARD",
+      };
+
+      const saved = await trySaveInvoiceMeta(invoice.id, payload);
+      if (!saved) {
+        setErr("Invoice loaded, but due date/payment method save endpoint was not found.");
+        return;
+      }
+
+      setOk("Invoice details saved.");
+      await load({ silent: true });
+      await onAfterChange?.();
+    } finally {
+      setMetaSaving(false);
+    }
+  }
+
+  async function sendInvoice() {
+    if (!invoice?.id || sending) return;
+
+    setSending(true);
+    setErr("");
+    setOk("");
+
+    try {
+      await api.post(`/tickets/${ticketId}/send_invoice/`, {
+        invoice_id: invoice.id,
+      });
+      setOk("Invoice is now ready for payment.");
+      await load({ silent: true });
+      await onAfterChange?.();
+    } catch (e) {
+      setErr(e?.response?.data?.detail || "Could not send invoice.");
     } finally {
       setSending(false);
     }
   }
 
-  if (!draft) return null;
-
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="font-semibold text-slate-100">Invoice Workspace</div>
-          <div className="text-xs text-slate-400 mt-1">
-            SBO-only. Build fast, then mark it ready so the customer can see and pay it.
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          {draft?.backend_invoice_id ? (
-            <span className="text-[11px] px-2 py-1 rounded-full border border-slate-700 bg-slate-900/40 text-slate-200 font-semibold">
-              Invoice #{draft.backend_invoice_id}
-            </span>
-          ) : null}
-
-          <span
-            className={cx(
-              "text-[11px] px-2 py-1 rounded-full border font-semibold",
-              uiStatus === "PAID"
-                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-                : uiStatus === "READY_FOR_PAYMENT"
-                ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-200"
-                : uiStatus === "VOID"
-                ? "border-rose-500/30 bg-rose-500/10 text-rose-200"
-                : "border-slate-700 bg-slate-900/40 text-slate-200"
-            )}
-          >
-            {uiStatus}
-          </span>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       {err ? (
-        <div className="mt-3 text-sm text-rose-200 bg-rose-900/10 border border-rose-800 rounded-xl p-3">
+        <div className="rounded-3xl border border-rose-800 bg-rose-900/10 p-4 text-sm text-rose-200">
           {err}
         </div>
       ) : null}
 
       {ok ? (
-        <div className="mt-3 text-sm text-emerald-200 bg-emerald-900/10 border border-emerald-800 rounded-xl p-3">
+        <div className="rounded-3xl border border-emerald-500/25 bg-emerald-500/10 p-4 text-sm text-emerald-200">
           {ok}
         </div>
       ) : null}
 
-      <div className="mt-4 grid md:grid-cols-3 gap-3">
-        <Field label="Invoice #">
-          <input
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm font-mono"
-            value={draft.invoice_number || ""}
-            onChange={(e) => update({ invoice_number: e.target.value })}
-            placeholder="INV-..."
-          />
-        </Field>
-
-        <Field label="Customer Name">
-          <input
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm"
-            value={draft.customer_name || ""}
-            onChange={(e) => update({ customer_name: e.target.value })}
-            placeholder="Customer name"
-          />
-        </Field>
-
-        <Field label="Phone + Text OK">
-          <div className="flex gap-2">
-            <input
-              className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm"
-              value={draft.customer_phone || ""}
-              onChange={(e) => update({ customer_phone: e.target.value })}
-              placeholder="(555) 555-5555"
-            />
-            <label className="px-3 rounded-xl border border-slate-800 bg-slate-950 flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={!!draft.customer_text_ok}
-                onChange={(e) => update({ customer_text_ok: e.target.checked })}
-              />
-              <span className="text-slate-200">Text OK</span>
-            </label>
+      <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="min-w-0">
+            <div className="text-lg font-extrabold text-slate-100">Invoice Builder</div>
+            <div className="text-xs text-slate-400 mt-1">
+              Live invoice workspace for {ticketCategory}. Add catalog items, adjust quantity, and push payment-ready invoices fast.
+            </div>
           </div>
-        </Field>
-      </div>
 
-      <div className="mt-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className="text-sm font-semibold text-slate-100">Line Items</div>
-          <Btn tone="cyan" onClick={addItem} type="button">
-            + Add
-          </Btn>
+          <div className="flex items-center gap-2 flex-wrap">
+            {invoice?.status ? (
+              <span className={cx("text-[11px] px-2 py-1 rounded-full border font-semibold", statusTone(invoice.status))}>
+                {String(invoice.status).toUpperCase()}
+              </span>
+            ) : null}
+
+            <Btn tone="slate" onClick={() => load()} disabled={loading || working || sending || metaSaving}>
+              {loading ? "Refreshing…" : "Refresh"}
+            </Btn>
+
+            <Btn
+              tone="cyan"
+              onClick={sendInvoice}
+              disabled={!invoice?.id || sending || loading || working}
+            >
+              {sending ? "Sending…" : "Mark Ready for Payment"}
+            </Btn>
+          </div>
         </div>
 
-        <div className="mt-3 space-y-2">
-          {(draft.items || []).map((it) => (
-            <div key={it.id} className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
-              <div className="grid md:grid-cols-12 gap-2">
-                <div className="md:col-span-3">
-                  <div className="text-[11px] text-slate-500 mb-1">Part #</div>
-                  <input
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm"
-                    value={it.part_no || ""}
-                    onChange={(e) => updateItem(it.id, { part_no: e.target.value })}
-                    placeholder="1234"
-                  />
-                </div>
+        <div className="mt-4 grid md:grid-cols-2 xl:grid-cols-4 gap-3">
+          <StatCard label="Subtotal" value={money(metrics.subtotal)} tone="cyan" />
+          <StatCard label="Cost" value={money(metrics.cost)} tone="amber" />
+          <StatCard label="Profit" value={money(metrics.profit)} tone="emerald" />
+          <StatCard
+            label="Margin"
+            value={`${metrics.marginPct.toFixed(1)}%`}
+            tone="fuchsia"
+            sub={metrics.subtotal > 0 ? "Based on current live lines" : "No line items yet"}
+          />
+        </div>
+      </div>
 
-                <div className="md:col-span-5">
-                  <div className="text-[11px] text-slate-500 mb-1">Description</div>
-                  <input
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm"
-                    value={it.description || ""}
-                    onChange={(e) => updateItem(it.id, { description: e.target.value })}
-                    placeholder="Labor / part description"
-                  />
-                </div>
-
-                <div className="md:col-span-1">
-                  <div className="text-[11px] text-slate-500 mb-1">Qty</div>
-                  <input
-                    type="number"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm"
-                    value={Number(it.qty || 0)}
-                    onChange={(e) => updateItem(it.id, { qty: Number(e.target.value || 0) })}
-                    min="0"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <div className="text-[11px] text-slate-500 mb-1">Unit $</div>
-                  <input
-                    type="number"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm"
-                    value={Number(it.unit_price || 0)}
-                    onChange={(e) => updateItem(it.id, { unit_price: Number(e.target.value || 0) })}
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
-
-                <div className="md:col-span-1">
-                  <div className="text-[11px] text-slate-500 mb-1">Up%</div>
-                  <input
-                    type="number"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm"
-                    value={Number(it.markup_pct || 0)}
-                    onChange={(e) => updateItem(it.id, { markup_pct: Number(e.target.value || 0) })}
-                    min="0"
-                    step="1"
-                  />
+      <div className="grid xl:grid-cols-12 gap-4">
+        <div className="xl:col-span-8 space-y-4">
+          <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <div className="text-base font-extrabold text-slate-100">Add From Service Catalog</div>
+                <div className="text-xs text-slate-400 mt-1">
+                  Add services and materials directly into the invoice.
                 </div>
               </div>
 
-              <div className="mt-2 flex items-center justify-between">
-                <div className="text-xs text-slate-500">
-                  Line Total:{" "}
-                  <span className="text-slate-200 font-semibold">
-                    <Money n={computeTotals({ items: [it] }).total} />
-                  </span>
-                </div>
-                <Btn tone="rose" onClick={() => removeItem(it.id)} type="button">
-                  Remove
-                </Btn>
+              <div className="text-[11px] text-slate-500">
+                {catalogItems.length ? `${catalogItems.length} catalog items` : "No catalog returned"}
               </div>
             </div>
-          ))}
+
+            <div className="mt-4 grid md:grid-cols-[1fr_auto] gap-3">
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-3">
+                <select
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm"
+                  value={selectedCatalogId}
+                  onChange={(e) => setSelectedCatalogId(e.target.value)}
+                  disabled={!catalogItems.length || working}
+                >
+                  {catalogItems.length ? (
+                    catalogItems.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} • {money(item.price)}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">No catalog items found</option>
+                  )}
+                </select>
+
+                {selectedCatalogItem ? (
+                  <div className="mt-3 rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-slate-100">
+                          {selectedCatalogItem.name}
+                        </div>
+                        {selectedCatalogItem.description ? (
+                          <div className="mt-1 text-xs text-slate-400">
+                            {selectedCatalogItem.description}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="text-right">
+                        <div className="text-xs text-slate-400">Sale</div>
+                        <div className="text-sm font-bold text-cyan-200">{money(selectedCatalogItem.price)}</div>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              <Btn
+                tone="cyan"
+                onClick={addSelectedCatalogItem}
+                disabled={!selectedCatalogId || !catalogItems.length || working}
+                className="h-[56px] px-6"
+              >
+                {working ? "Adding…" : "Add Item"}
+              </Btn>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <div className="text-base font-extrabold text-slate-100">Live Line Items</div>
+                <div className="text-xs text-slate-400 mt-1">
+                  Fast quantity controls for operators in the field.
+                </div>
+              </div>
+
+              <div className="text-[11px] text-slate-500">
+                {lineItems.length} {lineItems.length === 1 ? "line" : "lines"}
+              </div>
+            </div>
+
+            <div className="mt-4 overflow-x-auto">
+              <table className="min-w-[920px] w-full text-left">
+                <thead>
+                  <tr className="text-[11px] text-slate-400 border-b border-slate-800">
+                    <th className="py-3 pr-3">Item</th>
+                    <th className="py-3 pr-3">Qty</th>
+                    <th className="py-3 pr-3">Unit Price</th>
+                    <th className="py-3 pr-3">Unit Cost</th>
+                    <th className="py-3 pr-3">Line Total</th>
+                    <th className="py-3 pr-3">Profit</th>
+                    <th className="py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {!loading && lineItems.length === 0 ? (
+                    <tr>
+                      <td className="py-8 text-sm text-slate-500" colSpan={7}>
+                        No invoice lines yet. Add a catalog item to start building the invoice.
+                      </td>
+                    </tr>
+                  ) : null}
+
+                  {lineItems.map((line) => {
+                    const qtyCanIncrement = !!line.catalogItemId;
+
+                    return (
+                      <tr key={line.id} className="border-b border-slate-800/60 hover:bg-slate-900/25 transition">
+                        <td className="py-3 pr-3">
+                          <div className="text-sm font-semibold text-slate-100">{line.name}</div>
+                          {line.description ? (
+                            <div className="text-[11px] text-slate-500 mt-1 max-w-[360px]">
+                              {line.description}
+                            </div>
+                          ) : null}
+                        </td>
+
+                        <td className="py-3 pr-3">
+                          <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-1">
+                            <button
+                              type="button"
+                              onClick={() => decrementLine(line)}
+                              disabled={working}
+                              className="h-8 w-8 rounded-xl border border-slate-800 bg-slate-950 hover:bg-slate-900 text-slate-200 disabled:opacity-50"
+                              title="Decrease quantity"
+                            >
+                              −
+                            </button>
+
+                            <span className="min-w-[28px] text-center text-sm font-semibold text-slate-100">
+                              {line.quantity}
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() => incrementLine(line)}
+                              disabled={working || !qtyCanIncrement}
+                              className="h-8 w-8 rounded-xl border border-slate-800 bg-slate-950 hover:bg-slate-900 text-slate-200 disabled:opacity-50"
+                              title={qtyCanIncrement ? "Increase quantity" : "Catalog item id missing on this line"}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </td>
+
+                        <td className="py-3 pr-3 text-sm text-slate-200">{money(line.unitPrice)}</td>
+                        <td className="py-3 pr-3 text-sm text-slate-400">{money(line.unitCost)}</td>
+                        <td className="py-3 pr-3 text-sm font-semibold text-slate-100">{money(line.total)}</td>
+                        <td className="py-3 pr-3 text-sm font-semibold text-emerald-200">{money(line.profit)}</td>
+
+                        <td className="py-3 text-right">
+                          <Btn
+                            tone="rose"
+                            onClick={() => removeLineFully(line)}
+                            disabled={working}
+                            className="h-9 px-3"
+                          >
+                            Remove
+                          </Btn>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div className="mt-4 grid md:grid-cols-3 gap-3">
-        <Field label="Tax %">
-          <input
-            type="number"
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm"
-            value={Number(draft.tax_pct || 0)}
-            onChange={(e) => update({ tax_pct: Number(e.target.value || 0) })}
-            min="0"
-            step="0.25"
-          />
-        </Field>
+        <div className="xl:col-span-4 space-y-4">
+          <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
+            <div className="text-base font-extrabold text-slate-100">Invoice Summary</div>
+            <div className="text-xs text-slate-400 mt-1">
+              Customer-facing payment summary.
+            </div>
 
-        <Field label="App Fee / Upcharge">
-          <div className="flex gap-2">
-            <select
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm"
-              value={draft.app_fee?.mode || "none"}
-              onChange={(e) => update({ app_fee: { ...(draft.app_fee || {}), mode: e.target.value } })}
-            >
-              <option value="none">None</option>
-              <option value="pct">%</option>
-              <option value="fixed">$</option>
-            </select>
-            <input
-              type="number"
-              className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm"
-              value={Number(draft.app_fee?.value || 0)}
-              onChange={(e) => update({ app_fee: { ...(draft.app_fee || {}), value: Number(e.target.value || 0) } })}
-              min="0"
-              step="0.01"
-            />
+            <div className="mt-4 space-y-2">
+              <SummaryRow label="Subtotal" value={money(metrics.invoiceSubtotal)} />
+              <SummaryRow label="Tax" value={money(metrics.invoiceTax)} />
+              <SummaryRow label="Platform Fee" value={money(metrics.platformFee)} tone="fuchsia" />
+              <SummaryRow label="Total" value={money(metrics.invoiceTotal)} strong tone="cyan" />
+            </div>
+
+            <div className="mt-4 grid gap-3">
+              <Field label="Due Date">
+                <input
+                  type="date"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
+              </Field>
+
+              <Field label="Payment Method">
+                <select
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm"
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                >
+                  <option value="CARD">CARD</option>
+                  <option value="CASH">CASH</option>
+                </select>
+              </Field>
+
+              <Btn
+                tone="emerald"
+                onClick={saveMeta}
+                disabled={!invoice?.id || metaSaving}
+              >
+                {metaSaving ? "Saving…" : "Save Details"}
+              </Btn>
+            </div>
           </div>
-        </Field>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
-          <div className="text-[11px] text-slate-500">Total</div>
-          <div className="text-lg font-extrabold text-slate-100 mt-1">
-            <Money n={totals.total} />
+          <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
+            <div className="text-base font-extrabold text-slate-100">Invoice Meta</div>
+
+            <div className="mt-4 space-y-2">
+              <SummaryRow label="Invoice ID" value={invoice?.id || "—"} />
+              <SummaryRow label="Status" value={invoice?.status || "DRAFT"} />
+              <SummaryRow label="Ticket" value={ticketId || "—"} />
+              <SummaryRow label="Payment Method" value={paymentMethod || "CARD"} />
+              <SummaryRow label="Due Date" value={dueDate || "—"} />
+              <SummaryRow label="Amount Paid" value={money(invoice?.amountPaid || 0)} />
+            </div>
           </div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            Sub <Money n={totals.subtotal} /> • Tax <Money n={totals.tax} /> • Fee <Money n={totals.fee} />
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4">
-        <Field label="Internal Notes (SBO only)">
-          <textarea
-            className="w-full min-h-[90px] bg-slate-950 border border-slate-800 rounded-2xl px-3 py-2 text-sm"
-            value={draft.notes_internal || ""}
-            onChange={(e) => update({ notes_internal: e.target.value })}
-            placeholder="Receipts, vendor notes, internal details (kept local / not sent to customer)."
-          />
-        </Field>
-      </div>
-
-      <div className="mt-4 flex items-center gap-2 flex-wrap">
-        <Btn tone="slate" onClick={reloadSaved} type="button">
-          Reload Saved
-        </Btn>
-
-        <Btn
-          tone="emerald"
-          onClick={markReadyForPayment}
-          disabled={sending || uiStatus === "READY_FOR_PAYMENT" || uiStatus === "PAID"}
-          type="button"
-        >
-          {sending
-            ? "Processing…"
-            : uiStatus === "PAID"
-            ? "Already Paid"
-            : uiStatus === "READY_FOR_PAYMENT"
-            ? "Ready for Payment"
-            : "Mark Ready for Payment"}
-        </Btn>
-
-        <div className="ml-auto text-xs text-slate-500">
-          This sends the invoice into the real customer pay flow.
         </div>
       </div>
     </div>

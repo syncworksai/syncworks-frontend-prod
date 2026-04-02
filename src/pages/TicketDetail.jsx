@@ -1,4 +1,3 @@
-// src/pages/TicketDetail.jsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import api from "../api/client";
@@ -89,6 +88,23 @@ function Row({ k, v }) {
     <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
       <div className="text-[11px] text-slate-400">{k}</div>
       <div className="text-sm font-semibold mt-1 break-words">{v || "—"}</div>
+    </div>
+  );
+}
+
+function GlowStat({ label, value, tone = "slate" }) {
+  const tones = {
+    slate: "border-slate-800 bg-slate-950/40 text-slate-100",
+    cyan: "border-cyan-500/20 bg-cyan-500/10 text-cyan-100",
+    emerald: "border-emerald-500/20 bg-emerald-500/10 text-emerald-100",
+    amber: "border-amber-500/20 bg-amber-500/10 text-amber-100",
+    fuchsia: "border-fuchsia-500/20 bg-fuchsia-500/10 text-fuchsia-100",
+  };
+
+  return (
+    <div className={cx("rounded-3xl border p-4", tones[tone] || tones.slate)}>
+      <div className="text-[11px] text-slate-400">{label}</div>
+      <div className="mt-1 text-lg font-extrabold tracking-tight">{value}</div>
     </div>
   );
 }
@@ -284,6 +300,68 @@ function AssignedBusinessCardPanel({ ticket, onBookAgain }) {
   );
 }
 
+function ProviderWorkflowCard({
+  isCustomer,
+  isMarketplace,
+  assigned,
+  loading,
+  onAccept,
+  onDecline,
+  onStart,
+  onComplete,
+  onCancel,
+  onOpenQuote,
+  onOpenInvoice,
+}) {
+  if (isCustomer) return null;
+
+  return (
+    <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <div className="text-lg font-extrabold">Provider Workflow</div>
+          <div className="text-xs text-slate-400 mt-1">
+            This belongs in Overview so the operator can move the job without hunting through tabs.
+          </div>
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          <Btn tone="fuchsia" onClick={onOpenQuote}>
+            Open Quote
+          </Btn>
+          <Btn tone="cyan" onClick={onOpenInvoice}>
+            Open Invoice
+          </Btn>
+        </div>
+      </div>
+
+      <div className="mt-4 flex gap-2 flex-wrap">
+        <Btn tone="cyan" onClick={onAccept} disabled={loading}>
+          Accept
+        </Btn>
+
+        {isMarketplace && !assigned ? (
+          <Btn tone="rose" onClick={onDecline} disabled={loading}>
+            Decline
+          </Btn>
+        ) : null}
+
+        <Btn tone="cyan" onClick={onStart} disabled={loading}>
+          Start
+        </Btn>
+
+        <Btn tone="emerald" onClick={onComplete} disabled={loading}>
+          Complete
+        </Btn>
+
+        <Btn tone="rose" onClick={onCancel} disabled={loading}>
+          Cancel
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
 function IconOverview() {
   return (
     <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none">
@@ -312,7 +390,12 @@ function IconWork() {
     <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none">
       <path d="M14 7l3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       <path d="M3 21l7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M15 3a4 4 0 00-3 6.7L5.7 16A2 2 0 105 17l6.3-6.3A4 4 0 0015 3z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path
+        d="M15 3a4 4 0 00-3 6.7L5.7 16A2 2 0 105 17l6.3-6.3A4 4 0 0015 3z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -383,18 +466,18 @@ export default function TicketDetail() {
     if (isCustomer) {
       return [
         { key: "overview", label: "Overview", icon: <IconOverview /> },
+        { key: "invoice", label: "Invoice Builder", icon: <IconInvoice /> },
         { key: "messages", label: "Messages", icon: <IconChat /> },
-        { key: "invoice", label: "Invoice", icon: <IconInvoice /> },
         { key: "files", label: "Files", icon: <IconFiles /> },
       ];
     }
 
     return [
       { key: "overview", label: "Overview", icon: <IconOverview /> },
-      { key: "messages", label: "Messages", icon: <IconChat /> },
-      { key: "work", label: "Work", icon: <IconWork /> },
+      { key: "invoice", label: "Invoice Builder", icon: <IconInvoice /> },
       { key: "quote", label: "Quote", icon: <IconQuote /> },
-      { key: "invoice", label: "Invoice", icon: <IconInvoice /> },
+      { key: "messages", label: "Messages", icon: <IconChat /> },
+      { key: "work", label: "Work Notes", icon: <IconWork /> },
       { key: "files", label: "Files", icon: <IconFiles /> },
     ];
   }, [isCustomer]);
@@ -447,7 +530,7 @@ export default function TicketDetail() {
     try {
       await api.post(`/tickets/${id}/${actionName}/`);
       await loadTicket();
-      if (actionName === "accept" || actionName === "start" || actionName === "complete") {
+      if (actionName === "start") {
         setActiveTab("work");
       }
     } catch (e) {
@@ -514,6 +597,16 @@ export default function TicketDetail() {
   const { email: customerEmail, phone: customerPhone } = getCustomerContact(ticket);
   const isMarketplace = !!ticket?.is_marketplace;
   const assigned = !!assignedName;
+
+  const overviewStats = useMemo(() => {
+    return {
+      status: statusLabel(ticket?.status),
+      created: fmtPretty(ticket?.created_at),
+      updated: fmtPretty(ticket?.updated_at),
+      source: isMarketplace ? "Marketplace" : "Direct",
+      assigned: assigned ? "Yes" : "No",
+    };
+  }, [ticket, isMarketplace, assigned]);
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 pb-10">
@@ -612,18 +705,37 @@ export default function TicketDetail() {
           </div>
         ) : null}
 
-        <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
-          <div className="grid xl:grid-cols-12 gap-4">
-            <div className="xl:col-span-8">
-              <div className="text-xl font-extrabold">Ticket Workspace</div>
-              <div className="text-sm text-slate-400 mt-1">
-                Easier navigation for chat, work, invoice, and files — without changing backend routing.
-              </div>
-            </div>
+        <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 overflow-hidden relative">
+          <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.10),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.10),transparent_28%)]" />
+          <div className="relative">
+            <div className="grid xl:grid-cols-12 gap-4 items-start">
+              <div className="xl:col-span-7">
+                <div className="text-xl font-extrabold">Ticket Workspace</div>
+                <div className="text-sm text-slate-400 mt-1 max-w-2xl">
+                  Fast operating system view for job communication, quote pulling, invoice building, and execution.
+                </div>
 
-            <div className="xl:col-span-4 grid grid-cols-2 gap-2">
-              <Row k="Created" v={fmtPretty(ticket?.created_at)} />
-              <Row k="Updated" v={fmtPretty(ticket?.updated_at)} />
+                <div className="mt-4 flex gap-2 flex-wrap">
+                  {!isCustomer ? (
+                    <Btn tone="fuchsia" onClick={() => setActiveTab("quote")}>
+                      Open Quote
+                    </Btn>
+                  ) : null}
+                  <Btn tone="cyan" onClick={() => setActiveTab("invoice")}>
+                    Open Invoice Builder
+                  </Btn>
+                  <Btn tone="slate" onClick={() => setActiveTab("messages")}>
+                    Open Messages
+                  </Btn>
+                </div>
+              </div>
+
+              <div className="xl:col-span-5 grid grid-cols-2 gap-3">
+                <GlowStat label="Status" value={overviewStats.status} tone="cyan" />
+                <GlowStat label="Source" value={overviewStats.source} tone="fuchsia" />
+                <GlowStat label="Assigned" value={overviewStats.assigned} tone="emerald" />
+                <GlowStat label="Updated" value={overviewStats.updated} tone="amber" />
+              </div>
             </div>
           </div>
         </div>
@@ -640,20 +752,42 @@ export default function TicketDetail() {
               <div className="space-y-4">
                 <AssignedBusinessCardPanel ticket={ticket} onBookAgain={bookAgainWithAssignedBusiness} />
 
+                <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-3">
+                  <GlowStat label="Created" value={overviewStats.created} tone="slate" />
+                  <GlowStat label="Updated" value={overviewStats.updated} tone="slate" />
+                  <GlowStat label="Customer" value={customerName} tone="cyan" />
+                  <GlowStat label="Ticket ID" value={`#${ticketId || "—"}`} tone="fuchsia" />
+                </div>
+
+                <ProviderWorkflowCard
+                  isCustomer={isCustomer}
+                  isMarketplace={isMarketplace}
+                  assigned={assigned}
+                  loading={loading}
+                  onAccept={() => providerAction("accept")}
+                  onDecline={declineMarketplace}
+                  onStart={() => providerAction("start")}
+                  onComplete={() => providerAction("complete")}
+                  onCancel={() => providerAction("cancel")}
+                  onOpenQuote={() => setActiveTab("quote")}
+                  onOpenInvoice={() => setActiveTab("invoice")}
+                />
+
                 <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div>
                       <div className="text-lg font-extrabold">Quick Access</div>
                       <div className="text-xs text-slate-400 mt-1">
-                        Jump into the part of the ticket you need right now.
+                        Jump into the exact workflow you need right now.
                       </div>
                     </div>
 
                     <div className="flex gap-2 flex-wrap">
-                      <Btn tone="cyan" onClick={() => setActiveTab("messages")}>Open Messages</Btn>
-                      {!isCustomer ? <Btn tone="fuchsia" onClick={() => setActiveTab("quote")}>Open Quote</Btn> : null}
-                      <Btn tone="emerald" onClick={() => setActiveTab("invoice")}>Open Invoice</Btn>
-                      <Btn tone="slate" onClick={() => setActiveTab("files")}>Open Files</Btn>
+                      {!isCustomer ? <Btn tone="fuchsia" onClick={() => setActiveTab("quote")}>Quote</Btn> : null}
+                      <Btn tone="cyan" onClick={() => setActiveTab("invoice")}>Invoice Builder</Btn>
+                      <Btn tone="slate" onClick={() => setActiveTab("messages")}>Messages</Btn>
+                      {!isCustomer ? <Btn tone="emerald" onClick={() => setActiveTab("work")}>Work Notes</Btn> : null}
+                      <Btn tone="slate" onClick={() => setActiveTab("files")}>Files</Btn>
                     </div>
                   </div>
 
@@ -674,72 +808,6 @@ export default function TicketDetail() {
               </div>
             ) : null}
 
-            {activeTab === "messages" ? (
-              <MessagePanel ticketId={ticketId} />
-            ) : null}
-
-            {activeTab === "work" ? (
-              <div className="space-y-4">
-                <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div>
-                      <div className="text-lg font-extrabold">Provider Workflow</div>
-                      <div className="text-xs text-slate-400 mt-1">
-                        Move the ticket through the job lifecycle.
-                      </div>
-                    </div>
-
-                    <Btn tone="fuchsia" onClick={() => setActiveTab("quote")}>
-                      Build Quote
-                    </Btn>
-                  </div>
-
-                  <div className="mt-4 flex gap-2 flex-wrap">
-                    <Btn tone="cyan" onClick={() => providerAction("accept")} disabled={loading}>
-                      Accept
-                    </Btn>
-
-                    {isMarketplace && !assigned ? (
-                      <Btn tone="rose" onClick={declineMarketplace} disabled={loading}>
-                        Decline
-                      </Btn>
-                    ) : null}
-
-                    <Btn tone="cyan" onClick={() => providerAction("start")} disabled={loading}>
-                      Start
-                    </Btn>
-
-                    <Btn tone="emerald" onClick={() => providerAction("complete")} disabled={loading}>
-                      Complete
-                    </Btn>
-
-                    <Btn tone="rose" onClick={() => providerAction("cancel")} disabled={loading}>
-                      Cancel
-                    </Btn>
-                  </div>
-                </div>
-
-                <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
-                  <div className="text-lg font-extrabold">Work Notes</div>
-                  <div className="text-sm text-slate-400 mt-1">
-                    Keep updates, arrival notes, and customer communication in Messages.
-                  </div>
-                  <div className="mt-4">
-                    <MessagePanel
-                      ticketId={ticketId}
-                      compact
-                      title="Work Chat"
-                      subtitle="Fast updates while the job is active."
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
-            {activeTab === "quote" ? (
-              <QuotePanel ticketId={ticketId} ticket={ticket} onAfterChange={loadTicket} />
-            ) : null}
-
             {activeTab === "invoice" ? (
               isCustomer ? (
                 <CustomerInvoicePanel
@@ -754,6 +822,47 @@ export default function TicketDetail() {
                   onAfterChange={loadTicket}
                 />
               )
+            ) : null}
+
+            {activeTab === "quote" ? (
+              <QuotePanel ticketId={ticketId} ticket={ticket} onAfterChange={loadTicket} />
+            ) : null}
+
+            {activeTab === "messages" ? (
+              <MessagePanel ticketId={ticketId} />
+            ) : null}
+
+            {activeTab === "work" ? (
+              <div className="space-y-4">
+                <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <div className="text-lg font-extrabold">Work Notes</div>
+                      <div className="text-xs text-slate-400 mt-1">
+                        This tab is now for active-job notes and execution chat only.
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 flex-wrap">
+                      <Btn tone="fuchsia" onClick={() => setActiveTab("quote")}>
+                        Open Quote
+                      </Btn>
+                      <Btn tone="cyan" onClick={() => setActiveTab("invoice")}>
+                        Open Invoice
+                      </Btn>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <MessagePanel
+                      ticketId={ticketId}
+                      compact
+                      title="Work Chat"
+                      subtitle="Arrival notes, on-site updates, completion notes, and active-job communication."
+                    />
+                  </div>
+                </div>
+              </div>
             ) : null}
 
             {activeTab === "files" ? (
