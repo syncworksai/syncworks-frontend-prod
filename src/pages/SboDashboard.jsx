@@ -691,13 +691,6 @@ export default function SboDashboard() {
               >
                 {creatingBusiness ? "Creating..." : "+ Create business"}
               </button>
-              <button
-                type="button"
-                onClick={() => navigate("/settings?return=%2Fsbo")}
-                className="text-xs rounded-2xl px-3 py-2 bg-slate-950/60 border border-slate-800 hover:bg-slate-900/40"
-              >
-                Settings
-              </button>
             </div>
           }
         />
@@ -743,13 +736,6 @@ export default function SboDashboard() {
               </button>
 
               <Link
-                to="/settings?return=%2Fsbo"
-                className="rounded-2xl px-4 py-2 text-sm border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40"
-              >
-                Open Settings
-              </Link>
-
-              <Link
                 to="/customer"
                 className="rounded-2xl px-4 py-2 text-sm border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40"
               >
@@ -786,15 +772,6 @@ export default function SboDashboard() {
             >
               Sales OS
             </Link>
-
-            <button
-              type="button"
-              onClick={() => navigate("/settings?return=%2Fsbo")}
-              className="text-xs rounded-2xl px-3 py-2 bg-slate-950/60 border border-slate-800 hover:bg-slate-900/40"
-              title="Business settings"
-            >
-              Settings
-            </button>
           </div>
         }
       />
@@ -1032,12 +1009,6 @@ export default function SboDashboard() {
                 </div>
 
                 <div className="mt-4 flex gap-2 flex-wrap">
-                  <button
-                    onClick={() => navigate("/settings?return=%2Fsbo")}
-                    className="text-xs rounded-2xl px-3 py-2 bg-slate-950/60 border border-slate-800 hover:bg-slate-900/40"
-                  >
-                    Open Settings
-                  </button>
                   <button
                     onClick={() => setTasksModalOpen(true)}
                     className="text-xs rounded-2xl px-3 py-2 bg-fuchsia-500/15 border border-fuchsia-500/35 hover:bg-fuchsia-500/20 text-fuchsia-200"

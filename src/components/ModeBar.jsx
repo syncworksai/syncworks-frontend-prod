@@ -429,18 +429,9 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
   const businessPhone = safeStr(activeBiz?.phone || activeBiz?.phone_number || activeBiz?.phoneNumber);
 
   const identityLeft = useMemo(() => {
-    if (mode === "CUSTOMER") {
-      return customerName || "Customer";
-    }
-
-    if (["SBO", "EMPLOYEE", "PM", "PLATFORM"].includes(mode)) {
-      return businessName || "Select a Business";
-    }
-
-    if (mode === "SALES") {
-      return "Sales OS";
-    }
-
+    if (mode === "CUSTOMER") return customerName || "Customer";
+    if (["SBO", "EMPLOYEE", "PM", "PLATFORM"].includes(mode)) return businessName || "Select a Business";
+    if (mode === "SALES") return "Sales OS";
     return "SyncWorks";
   }, [mode, customerName, businessName]);
 
@@ -498,13 +489,13 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
         <div className="absolute inset-0 bg-slate-950/72" />
       </div>
 
-      <div className="relative max-w-6xl mx-auto px-4 py-3">
+      <div className="relative max-w-7xl mx-auto px-4 py-3">
         <div className="flex items-start lg:items-center gap-3">
           <div className="min-w-0 flex items-center gap-3">
             <img
-               src="/brands/syncworks new logo.jpg"
-               alt="SyncWorks"
-               className="h-14 w-14 md:h-16 md:w-16 rounded-2xl object-cover border border-cyan-500/20 bg-slate-950/70 shrink-0 shadow-[0_0_40px_rgba(99,102,241,0.18)]"
+              src="/brands/syncworks new logo.jpg"
+              alt="SyncWorks"
+              className="h-14 w-14 md:h-16 md:w-16 rounded-2xl object-cover border border-cyan-500/20 bg-slate-950/70 shrink-0 shadow-[0_0_40px_rgba(99,102,241,0.18)]"
             />
 
             <div className="min-w-0">
@@ -520,9 +511,9 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
           </div>
 
           <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
-            {showBiz ? <BusinessPicker className="hidden md:flex" /> : null}
+            {showBiz ? <BusinessPicker className="hidden md:block" /> : null}
 
-            <div className="hidden lg:flex items-end gap-4">
+            <div className="hidden xl:flex items-end gap-4">
               <div>
                 <SectionLabel>Customer / SBO</SectionLabel>
                 <div className="flex items-center gap-2">
@@ -583,7 +574,7 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
               ) : null}
             </div>
 
-            <div className="lg:hidden flex items-center gap-2">
+            <div className="xl:hidden flex items-center gap-2">
               <ModeButton label="Customer" accent="cyan" active={mode === "CUSTOMER"} locked={!canCustomer} onClick={() => goMode("CUSTOMER", "/customer", !canCustomer)} />
               <ModeButton label="SBO" accent="indigo" active={mode === "SBO"} locked={!canSbo} onClick={() => goMode("SBO", "/sbo", !canSbo)} />
               <ModeButton label="Employee" accent="cyan" active={mode === "EMPLOYEE"} locked={!canEmployee} onClick={() => goMode("EMPLOYEE", "/employee", !canEmployee)} />
@@ -643,7 +634,7 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
       ) : null}
 
       {showPortals ? (
-        <div className="relative lg:hidden px-4 pb-3 flex gap-2">
+        <div className="relative xl:hidden px-4 pb-3 flex gap-2">
           <ModeButton label="Investor" accent="slate" active={false} locked={!investorLinked} onClick={() => nav(investorLinked ? "/investor" : "/portal/claim?portal=investor")} />
           <ModeButton label="Tenant" accent="slate" active={false} locked={!tenantLinked} onClick={() => nav(tenantLinked ? "/tenant" : "/portal/claim?portal=tenant")} />
         </div>
