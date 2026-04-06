@@ -362,6 +362,63 @@ function ProviderWorkflowCard({
   );
 }
 
+function CustomerOverviewCard({ ticket, ticketId, onOpenMessages, onOpenFiles }) {
+  const invoice = ticket?.latest_invoice || ticket?.invoice || null;
+  const pdfUrl =
+    invoice?.pdf_url ||
+    invoice?.invoice_pdf_url ||
+    invoice?.public_pdf_url ||
+    invoice?.download_url ||
+    "";
+
+  return (
+    <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <div className="text-lg font-extrabold">Customer Overview</div>
+          <div className="text-xs text-slate-400 mt-1">
+            Messages, files, and invoice PDF access live here for customers.
+          </div>
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          <Btn tone="slate" onClick={onOpenMessages}>
+            Open Messages
+          </Btn>
+          <Btn tone="slate" onClick={onOpenFiles}>
+            Open Files
+          </Btn>
+          {pdfUrl ? (
+            <a
+              href={pdfUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 border transition whitespace-nowrap gap-2 bg-cyan-500/20 border-cyan-500/40 hover:bg-cyan-500/30 text-cyan-200"
+            >
+              Open Invoice PDF
+            </a>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="mt-4 grid md:grid-cols-2 gap-3">
+        <Row k="Ticket #" v={ticketId || "—"} />
+        <Row k="Status" v={statusLabel(ticket?.status)} />
+        <Row k="Category" v={ticket?.category_name || ticket?.category_path || "—"} />
+        <Row k="Marketplace" v={ticket?.is_marketplace ? "Yes" : "No"} />
+        <Row k="Service Address" v={ticket?.service_address || "—"} />
+        <Row k="ZIP" v={ticket?.service_zip || "—"} />
+      </div>
+
+      {!pdfUrl ? (
+        <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/30 p-4 text-sm text-slate-400">
+          No invoice PDF is available yet.
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function IconOverview() {
   return (
     <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none">
@@ -466,7 +523,6 @@ export default function TicketDetail() {
     if (isCustomer) {
       return [
         { key: "overview", label: "Overview", icon: <IconOverview /> },
-        { key: "invoice", label: "Invoice Builder", icon: <IconInvoice /> },
         { key: "messages", label: "Messages", icon: <IconChat /> },
         { key: "files", label: "Files", icon: <IconFiles /> },
       ];
@@ -712,7 +768,9 @@ export default function TicketDetail() {
               <div className="xl:col-span-7">
                 <div className="text-xl font-extrabold">Ticket Workspace</div>
                 <div className="text-sm text-slate-400 mt-1 max-w-2xl">
-                  Fast operating system view for job communication, quote pulling, invoice building, and execution.
+                  {isCustomer
+                    ? "Customer view for ticket updates, messages, files, and invoice PDF access."
+                    : "Fast operating system view for job communication, quote pulling, invoice building, and execution."}
                 </div>
 
                 <div className="mt-4 flex gap-2 flex-wrap">
@@ -721,12 +779,22 @@ export default function TicketDetail() {
                       Open Quote
                     </Btn>
                   ) : null}
-                  <Btn tone="cyan" onClick={() => setActiveTab("invoice")}>
-                    Open Invoice Builder
-                  </Btn>
+
+                  {!isCustomer ? (
+                    <Btn tone="cyan" onClick={() => setActiveTab("invoice")}>
+                      Open Invoice Builder
+                    </Btn>
+                  ) : null}
+
                   <Btn tone="slate" onClick={() => setActiveTab("messages")}>
                     Open Messages
                   </Btn>
+
+                  {isCustomer ? (
+                    <Btn tone="slate" onClick={() => setActiveTab("files")}>
+                      Open Files
+                    </Btn>
+                  ) : null}
                 </div>
               </div>
 
@@ -750,54 +818,65 @@ export default function TicketDetail() {
           <section className="xl:col-span-8 space-y-4">
             {activeTab === "overview" ? (
               <div className="space-y-4">
-                <AssignedBusinessCardPanel ticket={ticket} onBookAgain={bookAgainWithAssignedBusiness} />
+                {isCustomer ? (
+                  <CustomerOverviewCard
+                    ticket={ticket}
+                    ticketId={ticketId}
+                    onOpenMessages={() => setActiveTab("messages")}
+                    onOpenFiles={() => setActiveTab("files")}
+                  />
+                ) : (
+                  <>
+                    <AssignedBusinessCardPanel ticket={ticket} onBookAgain={bookAgainWithAssignedBusiness} />
 
-                <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-3">
-                  <GlowStat label="Created" value={overviewStats.created} tone="slate" />
-                  <GlowStat label="Updated" value={overviewStats.updated} tone="slate" />
-                  <GlowStat label="Customer" value={customerName} tone="cyan" />
-                  <GlowStat label="Ticket ID" value={`#${ticketId || "—"}`} tone="fuchsia" />
-                </div>
+                    <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-3">
+                      <GlowStat label="Created" value={overviewStats.created} tone="slate" />
+                      <GlowStat label="Updated" value={overviewStats.updated} tone="slate" />
+                      <GlowStat label="Customer" value={customerName} tone="cyan" />
+                      <GlowStat label="Ticket ID" value={`#${ticketId || "—"}`} tone="fuchsia" />
+                    </div>
 
-                <ProviderWorkflowCard
-                  isCustomer={isCustomer}
-                  isMarketplace={isMarketplace}
-                  assigned={assigned}
-                  loading={loading}
-                  onAccept={() => providerAction("accept")}
-                  onDecline={declineMarketplace}
-                  onStart={() => providerAction("start")}
-                  onComplete={() => providerAction("complete")}
-                  onCancel={() => providerAction("cancel")}
-                  onOpenQuote={() => setActiveTab("quote")}
-                  onOpenInvoice={() => setActiveTab("invoice")}
-                />
+                    <ProviderWorkflowCard
+                      isCustomer={isCustomer}
+                      isMarketplace={isMarketplace}
+                      assigned={assigned}
+                      loading={loading}
+                      onAccept={() => providerAction("accept")}
+                      onDecline={declineMarketplace}
+                      onStart={() => providerAction("start")}
+                      onComplete={() => providerAction("complete")}
+                      onCancel={() => providerAction("cancel")}
+                      onOpenQuote={() => setActiveTab("quote")}
+                      onOpenInvoice={() => setActiveTab("invoice")}
+                    />
 
-                <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div>
-                      <div className="text-lg font-extrabold">Quick Access</div>
-                      <div className="text-xs text-slate-400 mt-1">
-                        Jump into the exact workflow you need right now.
+                    <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div>
+                          <div className="text-lg font-extrabold">Quick Access</div>
+                          <div className="text-xs text-slate-400 mt-1">
+                            Jump into the exact workflow you need right now.
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 flex-wrap">
+                          <Btn tone="fuchsia" onClick={() => setActiveTab("quote")}>Quote</Btn>
+                          <Btn tone="cyan" onClick={() => setActiveTab("invoice")}>Invoice Builder</Btn>
+                          <Btn tone="slate" onClick={() => setActiveTab("messages")}>Messages</Btn>
+                          <Btn tone="emerald" onClick={() => setActiveTab("work")}>Work Notes</Btn>
+                          <Btn tone="slate" onClick={() => setActiveTab("files")}>Files</Btn>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex gap-2 flex-wrap">
-                      {!isCustomer ? <Btn tone="fuchsia" onClick={() => setActiveTab("quote")}>Quote</Btn> : null}
-                      <Btn tone="cyan" onClick={() => setActiveTab("invoice")}>Invoice Builder</Btn>
-                      <Btn tone="slate" onClick={() => setActiveTab("messages")}>Messages</Btn>
-                      {!isCustomer ? <Btn tone="emerald" onClick={() => setActiveTab("work")}>Work Notes</Btn> : null}
-                      <Btn tone="slate" onClick={() => setActiveTab("files")}>Files</Btn>
+                      {(customerEmail || customerPhone) ? (
+                        <div className="mt-4 grid md:grid-cols-2 gap-2">
+                          <Row k="Customer Email" v={customerEmail || "—"} />
+                          <Row k="Customer Phone" v={customerPhone || "—"} />
+                        </div>
+                      ) : null}
                     </div>
-                  </div>
-
-                  {!isCustomer && (customerEmail || customerPhone) ? (
-                    <div className="mt-4 grid md:grid-cols-2 gap-2">
-                      <Row k="Customer Email" v={customerEmail || "—"} />
-                      <Row k="Customer Phone" v={customerPhone || "—"} />
-                    </div>
-                  ) : null}
-                </div>
+                  </>
+                )}
 
                 <MessagePanel
                   ticketId={ticketId}
@@ -808,23 +887,15 @@ export default function TicketDetail() {
               </div>
             ) : null}
 
-            {activeTab === "invoice" ? (
-              isCustomer ? (
-                <CustomerInvoicePanel
-                  ticketId={ticketId}
-                  invoice={ticket?.latest_invoice || null}
-                  onAfterPay={loadTicket}
-                />
-              ) : (
-                <InvoicePanel
-                  ticketId={ticketId}
-                  ticket={ticket}
-                  onAfterChange={loadTicket}
-                />
-              )
+            {activeTab === "invoice" && !isCustomer ? (
+              <InvoicePanel
+                ticketId={ticketId}
+                ticket={ticket}
+                onAfterChange={loadTicket}
+              />
             ) : null}
 
-            {activeTab === "quote" ? (
+            {activeTab === "quote" && !isCustomer ? (
               <QuotePanel ticketId={ticketId} ticket={ticket} onAfterChange={loadTicket} />
             ) : null}
 
@@ -832,7 +903,7 @@ export default function TicketDetail() {
               <MessagePanel ticketId={ticketId} />
             ) : null}
 
-            {activeTab === "work" ? (
+            {activeTab === "work" && !isCustomer ? (
               <div className="space-y-4">
                 <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
                   <div className="flex items-center justify-between gap-3 flex-wrap">

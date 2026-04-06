@@ -251,6 +251,46 @@ function countTodoSummary(scope, activeBusinessId) {
   }
 }
 
+function ActionCard({ title, desc, buttonLabel, onClick, tone = "slate", disabled = false }) {
+  const toneCls =
+    tone === "cyan"
+      ? "border-cyan-500/25 bg-cyan-500/10"
+      : tone === "fuchsia"
+      ? "border-fuchsia-500/25 bg-fuchsia-500/10"
+      : tone === "emerald"
+      ? "border-emerald-500/25 bg-emerald-500/10"
+      : tone === "amber"
+      ? "border-amber-500/25 bg-amber-500/10"
+      : "border-slate-800 bg-slate-950/45";
+
+  return (
+    <div className={cx("rounded-2xl border p-4", toneCls, disabled ? "opacity-60" : "")}>
+      <div className="text-sm font-semibold text-slate-100">{title}</div>
+      <div className="mt-1 text-xs text-slate-400">{desc}</div>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onClick}
+        className={cx(
+          "mt-4 rounded-2xl px-4 py-2 text-xs border transition",
+          tone === "cyan"
+            ? "border-cyan-500/35 bg-cyan-500/15 hover:bg-cyan-500/20 text-cyan-200"
+            : tone === "fuchsia"
+            ? "border-fuchsia-500/35 bg-fuchsia-500/15 hover:bg-fuchsia-500/20 text-fuchsia-200"
+            : tone === "emerald"
+            ? "border-emerald-500/35 bg-emerald-500/15 hover:bg-emerald-500/20 text-emerald-200"
+            : tone === "amber"
+            ? "border-amber-500/35 bg-amber-500/15 hover:bg-amber-500/20 text-amber-200"
+            : "border-slate-800 bg-slate-950/60 hover:bg-slate-900/40 text-slate-200",
+          disabled ? "cursor-not-allowed" : ""
+        )}
+      >
+        {buttonLabel}
+      </button>
+    </div>
+  );
+}
+
 export default function SboDashboard() {
   const navigate = useNavigate();
   const {
@@ -483,9 +523,7 @@ export default function SboDashboard() {
         customers30d: String(customerIds.size),
       });
     } catch {
-      setKpis((prev) => ({
-        ...prev,
-      }));
+      setKpis((prev) => ({ ...prev }));
     }
   }, [bizId, locked]);
 
@@ -1064,6 +1102,13 @@ export default function SboDashboard() {
                   </button>
 
                   <button
+                    onClick={() => navigate("/tickets?view=marketplace")}
+                    className="rounded-2xl px-4 py-3 text-left text-sm border border-fuchsia-500/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/15 text-fuchsia-200"
+                  >
+                    Open Marketplace Queue
+                  </button>
+
+                  <button
                     onClick={() => navigate("/team/invites")}
                     className="rounded-2xl px-4 py-3 text-left text-sm border border-slate-800 bg-slate-950/55 hover:bg-slate-900/50"
                   >
@@ -1134,20 +1179,52 @@ export default function SboDashboard() {
               </div>
 
               <Card
-                title="Operations Notes"
-                subtitle="Use this area for KPI wiring, social entry point, or onboarding prompts next."
+                title="Operations Center"
+                subtitle="Real next steps for marketplace growth, catalog, onboarding, and payouts."
                 className="h-fit"
               >
-                <div className="space-y-3 text-sm text-slate-300">
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950/45 p-3">
-                    Next upgrade: wire true revenue MTD and platform fee KPIs into this right rail.
-                  </div>
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950/45 p-3">
-                    Good spot for Content Studio entry card once social automation module is added.
-                  </div>
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950/45 p-3">
-                    Good spot for onboarding prompts like add service areas, connect Stripe, and finish business profile.
-                  </div>
+                <div className="space-y-3">
+                  <ActionCard
+                    title="Service Catalog"
+                    desc="Add and manage invoice-ready services so your invoice builder can pull real catalog items."
+                    buttonLabel="Open Business Settings"
+                    tone="cyan"
+                    onClick={() => navigate("/settings?return=%2Fsbo")}
+                  />
+
+                  <ActionCard
+                    title="Service Areas & Categories"
+                    desc="Finish ZIP radius and service/category targeting so marketplace tickets route correctly."
+                    buttonLabel="Configure Routing"
+                    tone="fuchsia"
+                    onClick={() => navigate("/settings?return=%2Fsbo")}
+                  />
+
+                  <ActionCard
+                    title="Stripe Connect"
+                    desc="Connect payouts so accepted marketplace work can actually get paid out to this business."
+                    buttonLabel={stripeOk ? "Refresh Stripe Status" : "Connect Stripe"}
+                    tone={stripeOk ? "emerald" : "amber"}
+                    onClick={() => (stripeOk ? loadStripeConnectStatus() : startStripeConnect())}
+                  />
+
+                  <ActionCard
+                    title="Marketplace Queue"
+                    desc="Open the live queue where this SBO can accept or decline incoming marketplace tickets."
+                    buttonLabel="Open Marketplace"
+                    tone="emerald"
+                    disabled={locked}
+                    onClick={() => navigate("/tickets?view=marketplace")}
+                  />
+
+                  <ActionCard
+                    title="Content Studio"
+                    desc="Future slot for social automation and content generation once that module is wired."
+                    buttonLabel="Coming Soon"
+                    tone="slate"
+                    disabled
+                    onClick={() => {}}
+                  />
                 </div>
               </Card>
             </div>
@@ -1296,7 +1373,7 @@ export default function SboDashboard() {
             </div>
 
             <div className="mt-3 text-xs text-slate-500">
-              Marketplace is ZIP + service-category routed (and can later support “favorite vendor direct routing”).
+              Marketplace is ZIP + service-category routed and should work even when a customer has no prior business connection.
             </div>
           </div>
         </div>
