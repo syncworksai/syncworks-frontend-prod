@@ -28,7 +28,7 @@ export default function CategoryPicker({ categories = [], value, onChange, label
       <div className="flex items-end justify-between gap-2 flex-wrap">
         <div>
           <div className="text-xs text-slate-400 mb-1">{label}</div>
-          <div className="text-[11px] text-slate-500">Search + pick a slide (faster than dropdown).</div>
+          <div className="text-[11px] text-slate-500">Search + pick a category (faster than dropdown).</div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
