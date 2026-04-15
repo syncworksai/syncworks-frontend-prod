@@ -8,7 +8,6 @@ import MessagePanel from "../components/tickets/MessagePanel";
 import AttachmentPanel from "../components/tickets/AttachmentPanel";
 import QuotePanel from "../components/tickets/QuotePanel";
 import InvoicePanel from "../components/tickets/InvoicePanel";
-import CustomerInvoicePanel from "../components/tickets/CustomerInvoicePanel";
 import TicketWorkspaceNav from "../components/tickets/TicketWorkspaceNav";
 import TicketSummaryRail from "../components/tickets/TicketSummaryRail";
 
@@ -22,8 +21,12 @@ function safeInternalReturn(raw) {
   return null;
 }
 
+function upperStatus(status) {
+  return String(status || "").toUpperCase();
+}
+
 function statusTone(status) {
-  const s = String(status || "").toUpperCase();
+  const s = upperStatus(status);
   if (s === "PAID" || s === "COMPLETED") return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
   if (s === "CANCELLED") return "border-rose-500/30 bg-rose-500/10 text-rose-200";
   if (s === "IN_PROGRESS" || s === "EN_ROUTE" || s === "ON_SITE") return "border-cyan-500/30 bg-cyan-500/10 text-cyan-200";
@@ -39,15 +42,20 @@ const STATUS_LABELS = {
   EN_ROUTE: "En Route",
   ON_SITE: "On Site",
   IN_PROGRESS: "In Progress",
+  NEEDS_QUOTE: "Needs Quote",
+  QUOTED: "Quoted",
+  QUOTE_REJECTED: "Quote Rejected",
+  APPROVED: "Approved",
   AWAITING_APPROVAL: "Awaiting Approval",
   COMPLETED: "Completed",
   INVOICED: "Invoiced",
   PAID: "Paid",
   CANCELLED: "Cancelled",
+  CLOSED: "Closed",
 };
 
 function statusLabel(s) {
-  return STATUS_LABELS[String(s || "").toUpperCase()] || s || "—";
+  return STATUS_LABELS[upperStatus(s)] || s || "—";
 }
 
 function fmtPretty(iso) {
@@ -302,6 +310,7 @@ function AssignedBusinessCardPanel({ ticket, onBookAgain }) {
 
 function ProviderWorkflowCard({
   isCustomer,
+  status,
   isMarketplace,
   assigned,
   loading,
@@ -315,48 +324,71 @@ function ProviderWorkflowCard({
 }) {
   if (isCustomer) return null;
 
+  const s = upperStatus(status);
+  const showMarketplaceActions = isMarketplace && !assigned && s === "NEW";
+  const showAccept = !showMarketplaceActions && ["NEW", "ASSIGNED"].includes(s);
+  const showStart = !isMarketplace && s === "ACCEPTED";
+  const showComplete = !isMarketplace && ["IN_PROGRESS", "ON_SITE", "EN_ROUTE"].includes(s);
+  const showCancel = !isMarketplace && !["PAID", "COMPLETED", "CANCELLED", "CLOSED"].includes(s);
+  const showQuoteInvoiceTools = !showMarketplaceActions;
+
   return (
     <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <div className="text-lg font-extrabold">Provider Workflow</div>
           <div className="text-xs text-slate-400 mt-1">
-            This belongs in Overview so the operator can move the job without hunting through tabs.
+            Marketplace tickets get Accept or Deny first. Assigned jobs unlock the full workflow.
           </div>
         </div>
 
-        <div className="flex gap-2 flex-wrap">
-          <Btn tone="fuchsia" onClick={onOpenQuote}>
-            Open Quote
-          </Btn>
-          <Btn tone="cyan" onClick={onOpenInvoice}>
-            Open Invoice
-          </Btn>
-        </div>
+        {showQuoteInvoiceTools ? (
+          <div className="flex gap-2 flex-wrap">
+            <Btn tone="fuchsia" onClick={onOpenQuote}>
+              Open Quote
+            </Btn>
+            <Btn tone="cyan" onClick={onOpenInvoice}>
+              Open Invoice
+            </Btn>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-4 flex gap-2 flex-wrap">
-        <Btn tone="cyan" onClick={onAccept} disabled={loading}>
-          Accept
-        </Btn>
+        {showMarketplaceActions ? (
+          <>
+            <Btn tone="cyan" onClick={onAccept} disabled={loading}>
+              Accept
+            </Btn>
+            <Btn tone="rose" onClick={onDecline} disabled={loading}>
+              Deny
+            </Btn>
+          </>
+        ) : null}
 
-        {isMarketplace && !assigned ? (
-          <Btn tone="rose" onClick={onDecline} disabled={loading}>
-            Decline
+        {showAccept ? (
+          <Btn tone="cyan" onClick={onAccept} disabled={loading}>
+            Accept
           </Btn>
         ) : null}
 
-        <Btn tone="cyan" onClick={onStart} disabled={loading}>
-          Start
-        </Btn>
+        {showStart ? (
+          <Btn tone="cyan" onClick={onStart} disabled={loading}>
+            Start
+          </Btn>
+        ) : null}
 
-        <Btn tone="emerald" onClick={onComplete} disabled={loading}>
-          Complete
-        </Btn>
+        {showComplete ? (
+          <Btn tone="emerald" onClick={onComplete} disabled={loading}>
+            Complete
+          </Btn>
+        ) : null}
 
-        <Btn tone="rose" onClick={onCancel} disabled={loading}>
-          Cancel
-        </Btn>
+        {showCancel ? (
+          <Btn tone="rose" onClick={onCancel} disabled={loading}>
+            Cancel
+          </Btn>
+        ) : null}
       </div>
     </div>
   );
@@ -506,7 +538,7 @@ export default function TicketDetail() {
   const backHref = useMemo(() => {
     if (returnTo) return returnTo;
     if (isCustomer) return "/customer?tab=orders";
-    return "/tickets";
+    return "/tickets?view=new";
   }, [returnTo, isCustomer]);
 
   const ticketId = useMemo(() => Number(id), [id]);
@@ -598,7 +630,7 @@ export default function TicketDetail() {
     setErr("");
     try {
       await api.post(`/tickets/${id}/decline_marketplace/`);
-      await loadTicket();
+      nav("/tickets?view=marketplace");
     } catch (e) {
       setErr(e?.response?.data?.detail || "Decline failed");
     }
@@ -653,6 +685,7 @@ export default function TicketDetail() {
   const { email: customerEmail, phone: customerPhone } = getCustomerContact(ticket);
   const isMarketplace = !!ticket?.is_marketplace;
   const assigned = !!assignedName;
+  const status = upperStatus(ticket?.status);
 
   const overviewStats = useMemo(() => {
     return {
@@ -774,13 +807,13 @@ export default function TicketDetail() {
                 </div>
 
                 <div className="mt-4 flex gap-2 flex-wrap">
-                  {!isCustomer ? (
+                  {!isCustomer && !isMarketplace ? (
                     <Btn tone="fuchsia" onClick={() => setActiveTab("quote")}>
                       Open Quote
                     </Btn>
                   ) : null}
 
-                  {!isCustomer ? (
+                  {!isCustomer && !isMarketplace ? (
                     <Btn tone="cyan" onClick={() => setActiveTab("invoice")}>
                       Open Invoice Builder
                     </Btn>
@@ -838,6 +871,7 @@ export default function TicketDetail() {
 
                     <ProviderWorkflowCard
                       isCustomer={isCustomer}
+                      status={status}
                       isMarketplace={isMarketplace}
                       assigned={assigned}
                       loading={loading}
@@ -850,31 +884,33 @@ export default function TicketDetail() {
                       onOpenInvoice={() => setActiveTab("invoice")}
                     />
 
-                    <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
-                      <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <div>
-                          <div className="text-lg font-extrabold">Quick Access</div>
-                          <div className="text-xs text-slate-400 mt-1">
-                            Jump into the exact workflow you need right now.
+                    {!isMarketplace ? (
+                      <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                          <div>
+                            <div className="text-lg font-extrabold">Quick Access</div>
+                            <div className="text-xs text-slate-400 mt-1">
+                              Jump into the exact workflow you need right now.
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 flex-wrap">
+                            <Btn tone="fuchsia" onClick={() => setActiveTab("quote")}>Quote</Btn>
+                            <Btn tone="cyan" onClick={() => setActiveTab("invoice")}>Invoice Builder</Btn>
+                            <Btn tone="slate" onClick={() => setActiveTab("messages")}>Messages</Btn>
+                            <Btn tone="emerald" onClick={() => setActiveTab("work")}>Work Notes</Btn>
+                            <Btn tone="slate" onClick={() => setActiveTab("files")}>Files</Btn>
                           </div>
                         </div>
 
-                        <div className="flex gap-2 flex-wrap">
-                          <Btn tone="fuchsia" onClick={() => setActiveTab("quote")}>Quote</Btn>
-                          <Btn tone="cyan" onClick={() => setActiveTab("invoice")}>Invoice Builder</Btn>
-                          <Btn tone="slate" onClick={() => setActiveTab("messages")}>Messages</Btn>
-                          <Btn tone="emerald" onClick={() => setActiveTab("work")}>Work Notes</Btn>
-                          <Btn tone="slate" onClick={() => setActiveTab("files")}>Files</Btn>
-                        </div>
+                        {(customerEmail || customerPhone) ? (
+                          <div className="mt-4 grid md:grid-cols-2 gap-2">
+                            <Row k="Customer Email" v={customerEmail || "—"} />
+                            <Row k="Customer Phone" v={customerPhone || "—"} />
+                          </div>
+                        ) : null}
                       </div>
-
-                      {(customerEmail || customerPhone) ? (
-                        <div className="mt-4 grid md:grid-cols-2 gap-2">
-                          <Row k="Customer Email" v={customerEmail || "—"} />
-                          <Row k="Customer Phone" v={customerPhone || "—"} />
-                        </div>
-                      ) : null}
-                    </div>
+                    ) : null}
                   </>
                 )}
 
@@ -887,7 +923,7 @@ export default function TicketDetail() {
               </div>
             ) : null}
 
-            {activeTab === "invoice" && !isCustomer ? (
+            {activeTab === "invoice" && !isCustomer && !isMarketplace ? (
               <InvoicePanel
                 ticketId={ticketId}
                 ticket={ticket}
@@ -895,15 +931,13 @@ export default function TicketDetail() {
               />
             ) : null}
 
-            {activeTab === "quote" && !isCustomer ? (
+            {activeTab === "quote" && !isCustomer && !isMarketplace ? (
               <QuotePanel ticketId={ticketId} ticket={ticket} onAfterChange={loadTicket} />
             ) : null}
 
-            {activeTab === "messages" ? (
-              <MessagePanel ticketId={ticketId} />
-            ) : null}
+            {activeTab === "messages" ? <MessagePanel ticketId={ticketId} /> : null}
 
-            {activeTab === "work" && !isCustomer ? (
+            {activeTab === "work" && !isCustomer && !isMarketplace ? (
               <div className="space-y-4">
                 <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
                   <div className="flex items-center justify-between gap-3 flex-wrap">
