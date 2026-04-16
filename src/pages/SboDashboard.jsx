@@ -291,6 +291,29 @@ function ActionCard({ title, desc, buttonLabel, onClick, tone = "slate", disable
   );
 }
 
+function SetupStep({ n, title, body, tone = "slate" }) {
+  const cls =
+    tone === "cyan"
+      ? "border-cyan-500/25 bg-cyan-500/10"
+      : tone === "fuchsia"
+      ? "border-fuchsia-500/25 bg-fuchsia-500/10"
+      : tone === "emerald"
+      ? "border-emerald-500/25 bg-emerald-500/10"
+      : "border-slate-800 bg-slate-950/45";
+
+  return (
+    <div className={cx("rounded-2xl border p-4", cls)}>
+      <div className="flex items-center gap-3">
+        <div className="h-8 w-8 rounded-full border border-slate-700 bg-slate-950/70 flex items-center justify-center text-xs font-extrabold text-slate-100">
+          {n}
+        </div>
+        <div className="text-sm font-semibold text-slate-100">{title}</div>
+      </div>
+      <div className="mt-2 text-xs text-slate-300 leading-relaxed">{body}</div>
+    </div>
+  );
+}
+
 export default function SboDashboard() {
   const navigate = useNavigate();
   const {
@@ -333,6 +356,7 @@ export default function SboDashboard() {
   const [creatingBusiness, setCreatingBusiness] = useState(false);
   const [tasksModalOpen, setTasksModalOpen] = useState(false);
   const [todoRefreshTick, setTodoRefreshTick] = useState(0);
+  const [setupModalOpen, setSetupModalOpen] = useState(false);
 
   const stripeOk = useMemo(() => {
     const s = stripeConnect || {};
@@ -352,9 +376,14 @@ export default function SboDashboard() {
       .map((b) => ({
         businessId: String(b?.business_id || b?.id || b?.business?.id || ""),
         name: b?.business_name || b?.name || b?.business?.name || "",
+        business: b?.business || b || null,
       }))
       .filter((x) => x.businessId);
   }, [myBusinesses]);
+
+  const activeBusiness = useMemo(() => {
+    return businessOptions.find((b) => String(b.businessId) === String(bizId))?.business || null;
+  }, [businessOptions, bizId]);
 
   const activeBusinessName = useMemo(() => {
     const found = businessOptions.find((b) => String(b.businessId) === String(bizId));
@@ -382,6 +411,50 @@ export default function SboDashboard() {
       checklistTotal: 3,
     };
   }, [stripeOk, stripeHasAccount, locked, kpis.openTickets]);
+
+  const setupStatus = useMemo(() => {
+    const business = activeBusiness || {};
+    const baseZip = String(business?.base_zip || "").trim();
+    const radius = Number(
+      business?.service_radius_miles ??
+      business?.effective_service_radius_miles ??
+      0
+    );
+    const servicesOffered = Array.isArray(business?.services_offered) ? business.services_offered : [];
+    const acceptsMarketplace = !!business?.accepts_marketplace_tickets;
+    const presence = String(business?.business_presence_mode || "").trim();
+    const logo = business?.logo_url || business?.logo || "";
+    const hasProfileCopy = !!String(business?.headline || business?.services_text || "").trim();
+
+    const zipReady = !!baseZip;
+    const radiusReady = presence === "online" ? true : radius > 0;
+    const servicesReady = servicesOffered.length > 0;
+    const marketplaceReady = acceptsMarketplace && servicesReady && zipReady && radiusReady;
+    const profileReady = !!logo && hasProfileCopy;
+
+    const checklist = [
+      zipReady,
+      radiusReady,
+      servicesReady,
+      acceptsMarketplace,
+      stripeOk,
+    ];
+
+    return {
+      zipReady,
+      radiusReady,
+      servicesReady,
+      acceptsMarketplace,
+      marketplaceReady,
+      profileReady,
+      servicesCount: servicesOffered.length,
+      baseZip,
+      radius,
+      presence,
+      score: checklist.filter(Boolean).length,
+      total: checklist.length,
+    };
+  }, [activeBusiness, stripeOk]);
 
   const loadBilling = useCallback(async () => {
     if (!bizId) {
@@ -505,7 +578,7 @@ export default function SboDashboard() {
       if (!locked) {
         try {
           const mp = await api.get("/tickets/marketplace/");
-          const mpl = Array.isArray(mp.data) ? mp.data : mp.data?.results || [];
+          const mpl = Array.isArray(mp.data) ? mp.data : mp.data?.results || mp.data?.value || [];
           marketplaceOpen = String(mpl.length);
         } catch {
           marketplaceOpen = "—";
@@ -685,7 +758,7 @@ export default function SboDashboard() {
       setTab("overview");
       return;
     }
-    if (id === "tickets") return navigate("/tickets?view=my");
+    if (id === "tickets") return navigate("/tickets?view=new");
 
     if (id === "marketplace") {
       if (locked) {
@@ -840,6 +913,14 @@ export default function SboDashboard() {
           })}
 
           <button
+            onClick={() => setSetupModalOpen(true)}
+            className="text-xs rounded-2xl px-3 py-2 bg-fuchsia-500/15 border border-fuchsia-500/35 hover:bg-fuchsia-500/20 text-fuchsia-200"
+            type="button"
+          >
+            Marketplace Setup Help
+          </button>
+
+          <button
             onClick={refreshAll}
             className="ml-auto text-xs rounded-2xl px-3 py-2 bg-slate-950/60 border border-slate-800 hover:bg-slate-900/40"
             disabled={loading}
@@ -896,7 +977,7 @@ export default function SboDashboard() {
 
                 <div className="flex gap-2 flex-wrap items-center">
                   <button
-                    onClick={() => navigate("/tickets?view=my")}
+                    onClick={() => navigate("/tickets?view=new")}
                     className="text-xs rounded-2xl px-3 py-2 bg-cyan-500/15 border border-cyan-500/30 hover:bg-cyan-500/20 text-cyan-200"
                   >
                     Tickets
@@ -954,67 +1035,75 @@ export default function SboDashboard() {
               <MiniKpi label="Revenue (MTD)" value={kpis.revenueMtd} tone="emerald" sublabel="Wire API when ready" />
             </div>
 
-            {!stripeOk ? (
+            <div className="grid xl:grid-cols-3 gap-4">
               <Card
-                title="Stripe Connect (Get Paid)"
-                subtitle="Customers pay by card — they do NOT need Stripe. You must connect Stripe so SyncWorks can route payouts to your bank."
+                title="Marketplace Setup"
+                subtitle="Make sure this business is actually eligible to receive marketplace jobs."
                 right={
-                  <button
-                    onClick={loadStripeConnectStatus}
-                    className="text-xs rounded-2xl px-3 py-2 bg-slate-950/60 border border-slate-800 hover:bg-slate-900/40"
-                    type="button"
-                    title="Refresh Stripe status"
-                  >
-                    Refresh
-                  </button>
+                  <div className="flex gap-2 flex-wrap">
+                    <Pill tone={setupStatus.marketplaceReady ? "emerald" : "amber"}>
+                      {setupStatus.marketplaceReady ? "Ready for Marketplace" : "Needs Setup"}
+                    </Pill>
+                    <button
+                      type="button"
+                      onClick={() => setSetupModalOpen(true)}
+                      className="text-xs rounded-2xl px-3 py-2 bg-slate-950/60 border border-slate-800 hover:bg-slate-900/40 text-slate-200"
+                    >
+                      How it Works
+                    </button>
+                  </div>
                 }
               >
-                <div className="grid sm:grid-cols-3 gap-3 text-sm">
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-                    <div className="text-xs text-slate-400">Connected account</div>
-                    <div className="mt-1 font-semibold">{stripeConnect?.stripe_connect_account_id ? "Yes ✅" : "No ❌"}</div>
-                    <div className="text-[11px] text-slate-500 mt-1 truncate">{stripeConnect?.stripe_connect_account_id || "—"}</div>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-                    <div className="text-xs text-slate-400">Charges enabled</div>
-                    <div className="mt-1 font-semibold">{stripeConnect?.charges_enabled ? "Yes ✅" : "No"}</div>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-                    <div className="text-xs text-slate-400">Payouts enabled</div>
-                    <div className="mt-1 font-semibold">{stripeConnect?.payouts_enabled ? "Yes ✅" : "No"}</div>
-                  </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <MiniKpi
+                    label="Setup Progress"
+                    value={`${setupStatus.score}/${setupStatus.total}`}
+                    tone={setupStatus.marketplaceReady ? "emerald" : "fuchsia"}
+                    sublabel="ZIP • radius • tags • marketplace • payouts"
+                  />
+                  <MiniKpi
+                    label="Service Tags"
+                    value={setupStatus.servicesCount}
+                    tone={setupStatus.servicesReady ? "emerald" : "amber"}
+                    sublabel={setupStatus.servicesReady ? "Routing active" : "Add categories"}
+                  />
+                  <MiniKpi
+                    label="Base ZIP"
+                    value={setupStatus.baseZip || "—"}
+                    tone={setupStatus.zipReady ? "emerald" : "amber"}
+                  />
+                  <MiniKpi
+                    label="Radius"
+                    value={setupStatus.presence === "online" ? "Remote" : `${setupStatus.radius || 0} mi`}
+                    tone={setupStatus.radiusReady ? "emerald" : "amber"}
+                  />
                 </div>
 
-                <div className="mt-4 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">
-                  <div className="font-semibold">Action required</div>
-                  <div className="text-[12px] text-cyan-100/90 mt-1">
-                    Click the button below to connect Stripe and finish onboarding. Once complete, payouts go to your bank automatically.
-                  </div>
-                </div>
-
-                <div className="mt-4 flex gap-2 flex-wrap items-center">
+                <div className="mt-4 grid gap-2">
                   <button
-                    onClick={startStripeConnect}
-                    disabled={connecting}
-                    className={
-                      "rounded-2xl px-5 py-3 text-sm font-semibold border transition " +
-                      (connecting
-                        ? "bg-slate-900/40 border-slate-800 text-slate-500 cursor-not-allowed"
-                        : "bg-cyan-500/20 border-cyan-500/40 hover:bg-cyan-500/30 text-cyan-200 shadow-[0_0_30px_rgba(34,211,238,0.15)]")
-                    }
                     type="button"
+                    onClick={() => navigate("/sbo/settings?return=%2Fsbo")}
+                    className="rounded-2xl px-4 py-3 text-left text-sm border border-fuchsia-500/35 bg-fuchsia-500/12 hover:bg-fuchsia-500/18 text-fuchsia-200"
                   >
-                    {connecting ? "Opening Stripe…" : "Connect Stripe Now →"}
+                    Open Services + Marketplace Setup
                   </button>
 
-                  <div className="text-xs text-slate-500">Needed so invoice payments can be routed to your business automatically.</div>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/sbo/settings?return=%2Fsbo")}
+                    className="rounded-2xl px-4 py-3 text-left text-sm border border-cyan-500/35 bg-cyan-500/12 hover:bg-cyan-500/18 text-cyan-200"
+                  >
+                    Add Services, ZIP, and Radius
+                  </button>
                 </div>
-              </Card>
-            ) : null}
 
-            <div className="grid xl:grid-cols-3 gap-4">
+                {!setupStatus.servicesReady ? (
+                  <div className="mt-4 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-amber-100">
+                    No service tags selected yet. That usually means tickets will flash, then disappear from Marketplace because the business is not matched.
+                  </div>
+                ) : null}
+              </Card>
+
               <Card
                 title="Business Snapshot"
                 subtitle="Simple KPI and setup view for the active business."
@@ -1087,55 +1176,67 @@ export default function SboDashboard() {
                   </div>
                 </div>
               </Card>
+            </div>
 
+            {!stripeOk ? (
               <Card
-                title="Quick Actions"
-                subtitle="Common next steps for daily use."
-                right={<Pill tone="cyan">SBO</Pill>}
+                title="Stripe Connect (Get Paid)"
+                subtitle="Customers pay by card — they do NOT need Stripe. You must connect Stripe so SyncWorks can route payouts to your bank."
+                right={
+                  <button
+                    onClick={loadStripeConnectStatus}
+                    className="text-xs rounded-2xl px-3 py-2 bg-slate-950/60 border border-slate-800 hover:bg-slate-900/40"
+                    type="button"
+                    title="Refresh Stripe status"
+                  >
+                    Refresh
+                  </button>
+                }
               >
-                <div className="grid gap-2">
+                <div className="grid sm:grid-cols-3 gap-3 text-sm">
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+                    <div className="text-xs text-slate-400">Connected account</div>
+                    <div className="mt-1 font-semibold">{stripeConnect?.stripe_connect_account_id ? "Yes ✅" : "No ❌"}</div>
+                    <div className="text-[11px] text-slate-500 mt-1 truncate">{stripeConnect?.stripe_connect_account_id || "—"}</div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+                    <div className="text-xs text-slate-400">Charges enabled</div>
+                    <div className="mt-1 font-semibold">{stripeConnect?.charges_enabled ? "Yes ✅" : "No"}</div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+                    <div className="text-xs text-slate-400">Payouts enabled</div>
+                    <div className="mt-1 font-semibold">{stripeConnect?.payouts_enabled ? "Yes ✅" : "No"}</div>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">
+                  <div className="font-semibold">Action required</div>
+                  <div className="text-[12px] text-cyan-100/90 mt-1">
+                    Click the button below to connect Stripe and finish onboarding. Once complete, payouts go to your bank automatically.
+                  </div>
+                </div>
+
+                <div className="mt-4 flex gap-2 flex-wrap items-center">
                   <button
-                    onClick={() => navigate("/tickets?view=my")}
-                    className="rounded-2xl px-4 py-3 text-left text-sm border border-slate-800 bg-slate-950/55 hover:bg-slate-900/50"
+                    onClick={startStripeConnect}
+                    disabled={connecting}
+                    className={
+                      "rounded-2xl px-5 py-3 text-sm font-semibold border transition " +
+                      (connecting
+                        ? "bg-slate-900/40 border-slate-800 text-slate-500 cursor-not-allowed"
+                        : "bg-cyan-500/20 border-cyan-500/40 hover:bg-cyan-500/30 text-cyan-200 shadow-[0_0_30px_rgba(34,211,238,0.15)]")
+                    }
+                    type="button"
                   >
-                    Open My Tickets
+                    {connecting ? "Opening Stripe…" : "Connect Stripe Now →"}
                   </button>
 
-                  <button
-                    onClick={() => navigate("/tickets?view=marketplace")}
-                    className="rounded-2xl px-4 py-3 text-left text-sm border border-fuchsia-500/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/15 text-fuchsia-200"
-                  >
-                    Open Marketplace Queue
-                  </button>
-
-                  <button
-                    onClick={() => navigate("/team/invites")}
-                    className="rounded-2xl px-4 py-3 text-left text-sm border border-slate-800 bg-slate-950/55 hover:bg-slate-900/50"
-                  >
-                    Invite Team / Manage Access
-                  </button>
-
-                  <button
-                    onClick={() => navigate("/calendar")}
-                    className="rounded-2xl px-4 py-3 text-left text-sm border border-slate-800 bg-slate-950/55 hover:bg-slate-900/50"
-                  >
-                    Open Schedule
-                  </button>
-
-                  <button
-                    onClick={() => (stripeOk ? loadStripeConnectStatus() : startStripeConnect())}
-                    className={cx(
-                      "rounded-2xl px-4 py-3 text-left text-sm border",
-                      stripeOk
-                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-                        : "border-cyan-500/30 bg-cyan-500/10 text-cyan-200"
-                    )}
-                  >
-                    {stripeOk ? "Refresh Stripe Status" : "Finish Stripe Setup"}
-                  </button>
+                  <div className="text-xs text-slate-500">Needed so invoice payments can be routed to your business automatically.</div>
                 </div>
               </Card>
-            </div>
+            ) : null}
 
             <div className="grid xl:grid-cols-3 gap-4">
               <div className="xl:col-span-2 space-y-4">
@@ -1151,7 +1252,7 @@ export default function SboDashboard() {
                         Calendar
                       </button>
                       <button
-                        onClick={() => navigate("/tickets?view=my")}
+                        onClick={() => navigate("/tickets?view=new")}
                         className="text-xs rounded-2xl px-3 py-2 bg-fuchsia-500/15 border border-fuchsia-500/35 hover:bg-fuchsia-500/20 text-fuchsia-200"
                       >
                         My Tickets
@@ -1185,19 +1286,27 @@ export default function SboDashboard() {
               >
                 <div className="space-y-3">
                   <ActionCard
+                    title="Marketplace Setup"
+                    desc="Add service categories, ZIP, radius, and marketplace availability so tickets route into the correct queue."
+                    buttonLabel="Open Setup"
+                    tone="fuchsia"
+                    onClick={() => navigate("/sbo/settings?return=%2Fsbo")}
+                  />
+
+                  <ActionCard
+                    title="Setup Instructions"
+                    desc="Open the quick guide for how SyncWorks matches jobs by ZIP, radius, category, and business type."
+                    buttonLabel="Open Guide"
+                    tone="cyan"
+                    onClick={() => setSetupModalOpen(true)}
+                  />
+
+                  <ActionCard
                     title="Service Catalog"
                     desc="Add and manage invoice-ready services so your invoice builder can pull real catalog items."
                     buttonLabel="Open Business Settings"
                     tone="cyan"
-                    onClick={() => navigate("/settings?return=%2Fsbo")}
-                  />
-
-                  <ActionCard
-                    title="Service Areas & Categories"
-                    desc="Finish ZIP radius and service/category targeting so marketplace tickets route correctly."
-                    buttonLabel="Configure Routing"
-                    tone="fuchsia"
-                    onClick={() => navigate("/settings?return=%2Fsbo")}
+                    onClick={() => navigate("/sbo/settings?return=%2Fsbo")}
                   />
 
                   <ActionCard
@@ -1231,6 +1340,135 @@ export default function SboDashboard() {
           </div>
         ) : null}
       </main>
+
+      <Modal
+        open={setupModalOpen}
+        onClose={() => setSetupModalOpen(false)}
+        title="Marketplace Setup Guide"
+        subtitle="How to make tickets land in the right place for this business."
+        maxWidth="max-w-5xl"
+      >
+        <div className="grid lg:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <SetupStep
+              n="1"
+              title="Choose your service categories"
+              body="Go to SBO Settings and add the exact services you want to receive. Broad families help you get started, but the real routing is based on leaf-level categories."
+              tone="fuchsia"
+            />
+            <SetupStep
+              n="2"
+              title="Set your ZIP and service radius"
+              body="Marketplace matching starts with your base ZIP and service radius. If ZIP or radius is missing, jobs may not route to you at all."
+              tone="cyan"
+            />
+            <SetupStep
+              n="3"
+              title="Turn marketplace on"
+              body="Your business must allow marketplace tickets. If marketplace availability is off, matching can be perfect and you still will not see jobs."
+              tone="emerald"
+            />
+            <SetupStep
+              n="4"
+              title="Connect Stripe"
+              body="You can browse setup without Stripe, but to get paid cleanly for accepted work, your payout connection should be completed."
+              tone="amber"
+            />
+            <SetupStep
+              n="5"
+              title="Use the right business context"
+              body="SyncWorks routes by the currently active business. If you switch businesses, marketplace results can change instantly because categories and ZIP data are different."
+              tone="slate"
+            />
+          </div>
+
+          <div className="space-y-4">
+            <Card
+              title="Current Business Readiness"
+              subtitle="Quick snapshot for the active business."
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <MiniKpi label="Business" value={activeBusinessName} tone="slate" />
+                <MiniKpi
+                  label="Marketplace"
+                  value={setupStatus.marketplaceReady ? "Ready" : "Needs Setup"}
+                  tone={setupStatus.marketplaceReady ? "emerald" : "amber"}
+                />
+                <MiniKpi
+                  label="Service Tags"
+                  value={setupStatus.servicesCount}
+                  tone={setupStatus.servicesReady ? "emerald" : "amber"}
+                />
+                <MiniKpi
+                  label="Base ZIP"
+                  value={setupStatus.baseZip || "—"}
+                  tone={setupStatus.zipReady ? "emerald" : "amber"}
+                />
+              </div>
+
+              <div className="mt-4 space-y-2 text-xs">
+                <div className={cx("rounded-2xl border p-3", setupStatus.servicesReady ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-100" : "border-amber-500/25 bg-amber-500/10 text-amber-100")}>
+                  {setupStatus.servicesReady
+                    ? "Service categories are set."
+                    : "Add service categories in SBO Settings so marketplace jobs match this business."}
+                </div>
+
+                <div className={cx("rounded-2xl border p-3", setupStatus.zipReady ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-100" : "border-amber-500/25 bg-amber-500/10 text-amber-100")}>
+                  {setupStatus.zipReady
+                    ? "Base ZIP is configured."
+                    : "Set a base ZIP so local marketplace jobs can route correctly."}
+                </div>
+
+                <div className={cx("rounded-2xl border p-3", setupStatus.acceptsMarketplace ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-100" : "border-amber-500/25 bg-amber-500/10 text-amber-100")}>
+                  {setupStatus.acceptsMarketplace
+                    ? "Marketplace availability is on."
+                    : "Turn marketplace on in SBO Settings or no jobs will appear."}
+                </div>
+              </div>
+
+              <div className="mt-4 flex gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSetupModalOpen(false);
+                    navigate("/sbo/settings?return=%2Fsbo");
+                  }}
+                  className="rounded-2xl px-4 py-2 text-sm font-semibold border border-fuchsia-500/35 bg-fuchsia-500/12 hover:bg-fuchsia-500/18 text-fuchsia-200"
+                >
+                  Open SBO Settings
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSetupModalOpen(false);
+                    if (!locked) navigate("/tickets?view=marketplace");
+                  }}
+                  disabled={locked}
+                  className={cx(
+                    "rounded-2xl px-4 py-2 text-sm border",
+                    locked
+                      ? "border-slate-800 bg-slate-950/60 text-slate-500 cursor-not-allowed"
+                      : "border-cyan-500/35 bg-cyan-500/12 hover:bg-cyan-500/18 text-cyan-200"
+                  )}
+                >
+                  Open Marketplace
+                </button>
+              </div>
+            </Card>
+
+            <Card
+              title="Why tickets can disappear"
+              subtitle="This is the big one for troubleshooting."
+            >
+              <div className="text-sm text-slate-300 leading-relaxed">
+                If tickets appear for a second and then disappear, that usually means the real marketplace response came back for the active business and found no valid match.
+                The most common reasons are missing service tags, wrong ZIP/radius, or using a different active business than the one you expected.
+              </div>
+            </Card>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={tasksModalOpen}
