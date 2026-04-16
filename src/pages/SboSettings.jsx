@@ -134,6 +134,7 @@ export default function SboSettings() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [logoSaving, setLogoSaving] = useState(false);
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -163,6 +164,9 @@ export default function SboSettings() {
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [googleBusinessUrl, setGoogleBusinessUrl] = useState("");
 
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
+
   const localSetup = useMemo(() => {
     try {
       return JSON.parse(localStorage.getItem(setupStorageKey(activeBusinessId)) || "{}");
@@ -180,6 +184,25 @@ export default function SboSettings() {
     const r = (qs.get("return") || "").trim();
     return r && r.startsWith("/") ? r : "/sbo";
   }, [location.search]);
+
+  const currentLogoUrl = useMemo(() => {
+    if (logoPreviewUrl) return logoPreviewUrl;
+    return (
+      business?.logo_url ||
+      business?.logo ||
+      business?.image_url ||
+      business?.avatar_url ||
+      ""
+    );
+  }, [business, logoPreviewUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (logoPreviewUrl && logoPreviewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(logoPreviewUrl);
+      }
+    };
+  }, [logoPreviewUrl]);
 
   async function loadAll() {
     if (!activeBusinessId) {
@@ -253,12 +276,18 @@ export default function SboSettings() {
     setSaving(true);
     setErr("");
     setOk("");
+
     try {
       await api.patch(`/businesses/${activeBusinessId}/`, payload);
       const refreshed = await api.get(`/businesses/${activeBusinessId}/`);
       setBusiness(refreshed?.data || null);
       setOk("Saved.");
-      await reloadBusinesses?.();
+
+      Promise.resolve(reloadBusinesses?.()).catch(() => {
+        // keep wizard/profile save non-blocking
+      });
+
+      return refreshed?.data || null;
     } catch (e) {
       setErr(e?.response?.data?.detail || JSON.stringify(e?.response?.data || {}) || "Save failed.");
       throw e;
@@ -288,6 +317,52 @@ export default function SboSettings() {
       linkedin_url: linkedinUrl,
       google_business_url: googleBusinessUrl,
     });
+  }
+
+  function handleLogoFileChange(file) {
+    setLogoFile(file || null);
+
+    if (logoPreviewUrl && logoPreviewUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(logoPreviewUrl);
+    }
+
+    if (file) {
+      const blobUrl = URL.createObjectURL(file);
+      setLogoPreviewUrl(blobUrl);
+    } else {
+      setLogoPreviewUrl("");
+    }
+  }
+
+  async function uploadLogo() {
+    if (!activeBusinessId || !logoFile) return;
+
+    setLogoSaving(true);
+    setErr("");
+    setOk("");
+
+    try {
+      const fd = new FormData();
+      fd.append("logo", logoFile);
+
+      await api.patch(`/businesses/${activeBusinessId}/`, fd);
+
+      const refreshed = await api.get(`/businesses/${activeBusinessId}/`);
+      setBusiness(refreshed?.data || null);
+      setOk("Logo uploaded.");
+      setLogoFile(null);
+
+      Promise.resolve(reloadBusinesses?.()).catch(() => {
+        // keep upload non-blocking
+      });
+    } catch (e) {
+      setErr(
+        e?.response?.data?.detail ||
+          "Logo upload failed. The backend may use a different field name than 'logo'."
+      );
+    } finally {
+      setLogoSaving(false);
+    }
   }
 
   const importReady = !!localSetup?.oldDataStatus && localSetup.oldDataStatus !== "NONE";
@@ -420,33 +495,73 @@ export default function SboSettings() {
         ) : null}
 
         {section === "profile" ? (
-          <Card
-            title="Business Profile"
-            subtitle="Edit the core business information customers and marketplace routing use."
-            right={
-              <Button tone="cyan" onClick={saveProfile} disabled={saving}>
-                {saving ? "Saving…" : "Save Profile"}
-              </Button>
-            }
-          >
-            <div className="grid md:grid-cols-2 gap-3">
-              <Input label="Business Name" value={name} onChange={setName} placeholder="Acme Plumbing" />
-              <Input label="Business Email" value={businessEmail} onChange={setBusinessEmail} placeholder="office@acme.com" />
-              <Input label="Owner / Contact Name" value={ownerName} onChange={setOwnerName} placeholder="Jacob Lord" />
-              <Input label="Phone" value={phone} onChange={setPhone} placeholder="334-555-1212" />
-              <Input label="Website" value={website} onChange={setWebsite} placeholder="https://acme.com" />
-              <Input label="Headline" value={headline} onChange={setHeadline} placeholder="Fast, reliable service" />
-            </div>
+          <div className="grid xl:grid-cols-[1fr_360px] gap-5">
+            <Card
+              title="Business Profile"
+              subtitle="Edit the core business information customers and marketplace routing use."
+              right={
+                <Button tone="cyan" onClick={saveProfile} disabled={saving}>
+                  {saving ? "Saving…" : "Save Profile"}
+                </Button>
+              }
+            >
+              <div className="grid md:grid-cols-2 gap-3">
+                <Input label="Business Name" value={name} onChange={setName} placeholder="Acme Plumbing" />
+                <Input label="Business Email" value={businessEmail} onChange={setBusinessEmail} placeholder="office@acme.com" />
+                <Input label="Owner / Contact Name" value={ownerName} onChange={setOwnerName} placeholder="Jacob Lord" />
+                <Input label="Phone" value={phone} onChange={setPhone} placeholder="334-555-1212" />
+                <Input label="Website" value={website} onChange={setWebsite} placeholder="https://acme.com" />
+                <Input label="Headline" value={headline} onChange={setHeadline} placeholder="Fast, reliable service" />
+              </div>
 
-            <div className="mt-3">
-              <Textarea
-                label="Services Summary"
-                value={servicesText}
-                onChange={setServicesText}
-                placeholder="Repairs, installs, diagnostics, recurring service..."
-              />
-            </div>
-          </Card>
+              <div className="mt-3">
+                <Textarea
+                  label="Services Summary"
+                  value={servicesText}
+                  onChange={setServicesText}
+                  placeholder="Repairs, installs, diagnostics, recurring service..."
+                />
+              </div>
+            </Card>
+
+            <Card
+              title="Business Logo"
+              subtitle="Upload a logo for your business card and branded presence."
+              right={
+                <Button tone="indigo" onClick={uploadLogo} disabled={!logoFile || logoSaving}>
+                  {logoSaving ? "Uploading…" : "Upload Logo"}
+                </Button>
+              }
+            >
+              <div className="space-y-4">
+                <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-4 flex items-center justify-center min-h-[220px]">
+                  {currentLogoUrl ? (
+                    <img
+                      src={currentLogoUrl}
+                      alt="Business logo preview"
+                      className="max-h-40 max-w-full object-contain rounded-2xl"
+                    />
+                  ) : (
+                    <div className="text-sm text-slate-500">No logo uploaded yet.</div>
+                  )}
+                </div>
+
+                <label className="block">
+                  <div className="text-xs text-slate-300 mb-1">Choose Logo File</div>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    onChange={(e) => handleLogoFileChange(e.target.files?.[0] || null)}
+                    className="block w-full rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-sm text-slate-100 file:mr-3 file:rounded-xl file:border-0 file:bg-cyan-500/15 file:px-3 file:py-2 file:text-cyan-200"
+                  />
+                </label>
+
+                <div className="text-[11px] text-slate-500">
+                  Best result: square PNG with transparent background. This tries the backend field name <span className="text-slate-300">logo</span>.
+                </div>
+              </div>
+            </Card>
+          </div>
         ) : null}
 
         {section === "marketplace" ? (
