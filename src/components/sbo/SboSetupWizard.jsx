@@ -226,6 +226,7 @@ export default function SboSetupWizard({
 
     setLocalErr("");
     setSoftWarn("");
+    setSaving(false);
     setStep(0);
   }, [open, business, businessId]);
 
@@ -256,28 +257,25 @@ export default function SboSetupWizard({
     });
   }
 
-  async function saveSafeBusinessFields(payload) {
-    if (!onSaveBusiness) return true;
+  async function backgroundSaveBusiness(payload) {
+    if (!onSaveBusiness) return;
+
     setSaving(true);
     try {
       await onSaveBusiness(payload);
-      return true;
     } catch (e) {
       const msg =
         e?.response?.data?.detail ||
         (typeof e?.response?.data === "string" ? e.response.data : "") ||
-        "Some fields could not be saved to the backend yet. You can still continue setup.";
+        "Some fields could not be saved to the backend yet. Your setup still continued locally.";
       setSoftWarn(msg);
-      return false;
     } finally {
       setSaving(false);
     }
   }
 
-  async function saveStepIfNeeded() {
-    setLocalErr("");
-
-    if (step === 0) {
+  function saveStepLocally(currentStep) {
+    if (currentStep === 0) {
       persistLocal({
         name: String(name || "").trim(),
         headline: String(headline || "").trim(),
@@ -285,18 +283,10 @@ export default function SboSetupWizard({
         phone: String(phone || "").trim(),
         website: String(website || "").trim(),
       });
-
-      await saveSafeBusinessFields({
-        name: String(name || "").trim(),
-        headline: String(headline || "").trim(),
-        services_text: String(servicesText || "").trim(),
-        phone: String(phone || "").trim(),
-        website: String(website || "").trim(),
-      });
       return;
     }
 
-    if (step === 1) {
+    if (currentStep === 1) {
       persistLocal({
         businessPresenceMode: String(businessPresenceMode || "").trim(),
         address: String(address || "").trim(),
@@ -306,27 +296,17 @@ export default function SboSetupWizard({
         radius: String(radius || "0"),
         acceptsMarketplace: !!acceptsMarketplace,
       });
-
-      await saveSafeBusinessFields({
-        address: String(address || "").trim(),
-        city: String(city || "").trim(),
-        state: String(state || "").trim().toUpperCase(),
-        base_zip: String(baseZip || "").trim(),
-        service_radius_miles: Number(radius || 0),
-        business_presence_mode: String(businessPresenceMode || "").trim(),
-        accepts_marketplace_tickets: !!acceptsMarketplace,
-      });
       return;
     }
 
-    if (step === 2) {
+    if (currentStep === 2) {
       persistLocal({
         selectedServices,
       });
       return;
     }
 
-    if (step === 3) {
+    if (currentStep === 3) {
       persistLocal({
         baselineRevenue,
         targetRevenue,
@@ -334,23 +314,59 @@ export default function SboSetupWizard({
         mainGoal,
         oldDataStatus,
       });
-      return;
     }
   }
 
-  async function handleNext() {
-    try {
-      await saveStepIfNeeded();
+  function buildBusinessPayloadForStep(currentStep) {
+    if (currentStep === 0) {
+      return {
+        name: String(name || "").trim(),
+        headline: String(headline || "").trim(),
+        services_text: String(servicesText || "").trim(),
+        phone: String(phone || "").trim(),
+        website: String(website || "").trim(),
+      };
+    }
 
-      if (step < 4) {
-        setStep((s) => s + 1);
-        return;
-      }
+    if (currentStep === 1) {
+      return {
+        address: String(address || "").trim(),
+        city: String(city || "").trim(),
+        state: String(state || "").trim().toUpperCase(),
+        base_zip: String(baseZip || "").trim(),
+        service_radius_miles: Number(radius || 0),
+        business_presence_mode: String(businessPresenceMode || "").trim(),
+        accepts_marketplace_tickets: !!acceptsMarketplace,
+      };
+    }
 
-      onDone?.();
-      onClose?.();
-    } catch (e) {
-      setLocalErr("Something went wrong, but your local setup data should still be preserved.");
+    return null;
+  }
+
+  function handleNext() {
+    setLocalErr("");
+    const currentStep = step;
+
+    saveStepLocally(currentStep);
+
+    if (currentStep < 4) {
+      setStep(currentStep + 1);
+    } else {
+      setSaving(true);
+      Promise.resolve(onDone?.())
+        .catch(() => {
+          setSoftWarn("Setup finished, but the final refresh did not complete.");
+        })
+        .finally(() => {
+          setSaving(false);
+          onClose?.();
+        });
+      return;
+    }
+
+    const payload = buildBusinessPayloadForStep(currentStep);
+    if (payload) {
+      backgroundSaveBusiness(payload);
     }
   }
 
@@ -640,16 +656,16 @@ export default function SboSetupWizard({
             </div>
 
             <div className="mt-5 flex items-center justify-between gap-3">
-              <Button tone="slate" onClick={handleBack} disabled={step === 0 || saving}>
+              <Button tone="slate" onClick={handleBack} disabled={step === 0}>
                 Back
               </Button>
 
               <div className="flex items-center gap-2">
-                <Button tone="slate" onClick={onClose} disabled={saving}>
+                <Button tone="slate" onClick={onClose}>
                   Cancel
                 </Button>
-                <Button tone="cyan" onClick={handleNext} disabled={saving}>
-                  {saving ? "Saving…" : step === 4 ? "Finish Setup" : "Next"}
+                <Button tone="cyan" onClick={handleNext}>
+                  {saving ? "Saving in background…" : step === 4 ? "Finish Setup" : "Next"}
                 </Button>
               </div>
             </div>
