@@ -20,6 +20,7 @@ import CustomerBusinessCardDetail from "./pages/CustomerBusinessCardDetail";
 import SboDashboard from "./pages/SboDashboard";
 import SboZipLeaderboard from "./pages/SboZipLeaderboard";
 import SboSettings from "./pages/SboSettings";
+import SboCatalog from "./pages/SboCatalog";
 
 import PlatformDashboard from "./pages/PlatformDashboard";
 import PlatformSupportRequests from "./pages/platform/PlatformSupportRequests";
@@ -166,6 +167,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <SboSettings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sbo/catalog"
+          element={
+            <ProtectedRoute>
+              <SboCatalog />
             </ProtectedRoute>
           }
         />

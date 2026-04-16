@@ -1090,10 +1090,10 @@ export default function SboDashboard() {
 
                   <button
                     type="button"
-                    onClick={() => navigate("/sbo/settings?return=%2Fsbo")}
+                    onClick={() => navigate("/sbo/catalog")}
                     className="rounded-2xl px-4 py-3 text-left text-sm border border-cyan-500/35 bg-cyan-500/12 hover:bg-cyan-500/18 text-cyan-200"
                   >
-                    Add Services, ZIP, and Radius
+                    Open Service Catalog
                   </button>
                 </div>
 
@@ -1303,10 +1303,10 @@ export default function SboDashboard() {
 
                   <ActionCard
                     title="Service Catalog"
-                    desc="Add and manage invoice-ready services so your invoice builder can pull real catalog items."
-                    buttonLabel="Open Business Settings"
+                    desc="Create and manage invoice-ready services, products, and fees that your invoice builder can pull directly."
+                    buttonLabel="Open Catalog"
                     tone="cyan"
-                    onClick={() => navigate("/sbo/settings?return=%2Fsbo")}
+                    onClick={() => navigate("/sbo/catalog")}
                   />
 
                   <ActionCard
@@ -1337,6 +1337,61 @@ export default function SboDashboard() {
                 </div>
               </Card>
             </div>
+
+            <Card
+              title="Quick Actions"
+              subtitle="Common next steps for daily use."
+              right={<Pill tone="cyan">SBO</Pill>}
+            >
+              <div className="grid gap-2">
+                <button
+                  onClick={() => navigate("/tickets?view=new")}
+                  className="rounded-2xl px-4 py-3 text-left text-sm border border-slate-800 bg-slate-950/55 hover:bg-slate-900/50"
+                >
+                  Open My Tickets
+                </button>
+
+                <button
+                  onClick={() => navigate("/tickets?view=marketplace")}
+                  className="rounded-2xl px-4 py-3 text-left text-sm border border-fuchsia-500/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/15 text-fuchsia-200"
+                >
+                  Open Marketplace Queue
+                </button>
+
+                <button
+                  onClick={() => navigate("/sbo/catalog")}
+                  className="rounded-2xl px-4 py-3 text-left text-sm border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/15 text-cyan-200"
+                >
+                  Open Service Catalog
+                </button>
+
+                <button
+                  onClick={() => navigate("/team/invites")}
+                  className="rounded-2xl px-4 py-3 text-left text-sm border border-slate-800 bg-slate-950/55 hover:bg-slate-900/50"
+                >
+                  Invite Team / Manage Access
+                </button>
+
+                <button
+                  onClick={() => navigate("/calendar")}
+                  className="rounded-2xl px-4 py-3 text-left text-sm border border-slate-800 bg-slate-950/55 hover:bg-slate-900/50"
+                >
+                  Open Schedule
+                </button>
+
+                <button
+                  onClick={() => (stripeOk ? loadStripeConnectStatus() : startStripeConnect())}
+                  className={cx(
+                    "rounded-2xl px-4 py-3 text-left text-sm border",
+                    stripeOk
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                      : "border-cyan-500/30 bg-cyan-500/10 text-cyan-200"
+                  )}
+                >
+                  {stripeOk ? "Refresh Stripe Status" : "Finish Stripe Setup"}
+                </button>
+              </div>
+            </Card>
           </div>
         ) : null}
       </main>
@@ -1436,6 +1491,17 @@ export default function SboDashboard() {
                   className="rounded-2xl px-4 py-2 text-sm font-semibold border border-fuchsia-500/35 bg-fuchsia-500/12 hover:bg-fuchsia-500/18 text-fuchsia-200"
                 >
                   Open SBO Settings
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSetupModalOpen(false);
+                    navigate("/sbo/catalog");
+                  }}
+                  className="rounded-2xl px-4 py-2 text-sm font-semibold border border-cyan-500/35 bg-cyan-500/12 hover:bg-cyan-500/18 text-cyan-200"
+                >
+                  Open Service Catalog
                 </button>
 
                 <button
