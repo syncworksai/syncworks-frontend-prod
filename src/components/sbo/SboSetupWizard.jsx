@@ -105,48 +105,27 @@ function getLeafCategories(categories) {
   return list.filter((x) => !parentIds.has(Number(x.id)));
 }
 
-function getParentMap(categories = []) {
-  const byId = new Map();
-  (categories || []).forEach((c) => byId.set(Number(c.id), c));
-  return byId;
-}
-
-function getGroupName(cat, byId) {
-  if (!cat) return "";
-  const parent = cat.parent_id ? byId.get(Number(cat.parent_id)) : null;
-  return parent?.name || "";
-}
-
 function buildQuickSuggestions(categories = []) {
   const leafs = getLeafCategories(categories);
-  const byId = getParentMap(categories);
 
-  const preferredGroups = [
-    "Plumbing",
-    "Electrical",
-    "HVAC",
-    "Handyman",
-    "Residential Cleaning",
-    "Landscaping",
-    "Pet Grooming",
-    "Computer Repair",
-    "Marketing",
+  const preferredNames = [
+    "Fix leaking pipe",
+    "AC not cooling",
+    "Lawn mowing",
+    "Standard house clean",
+    "Dog grooming",
+    "Computer repair",
+    "Website update",
     "Bookkeeping",
-    "Personal Training",
-    "Photography",
+    "Personal tax help",
+    "Wedding photography",
   ];
 
-  const picks = [];
-
-  for (const group of preferredGroups) {
-    const found = leafs.find((x) => getGroupName(x, byId) === group);
-    if (found) picks.push(found);
-  }
-
-  return uniqNums(picks.map((x) => x.id))
-    .map((id) => leafs.find((x) => Number(x.id) === Number(id)))
+  return preferredNames
+    .map((name) => leafs.find((x) => String(x?.name || "").toLowerCase() === name.toLowerCase()))
     .filter(Boolean)
-    .slice(0, 8);
+    .map((x) => Number(x.id))
+    .slice(0, 10);
 }
 
 export default function SboSetupWizard({
@@ -371,7 +350,7 @@ export default function SboSetupWizard({
     saveStepLocally(currentStep);
 
     if (currentStep === 2 && selectedServices.length === 0) {
-      setSoftWarn("You can finish setup without services, but marketplace matching works much better if you choose at least a few.");
+      setSoftWarn("You can finish setup without services, but marketplace matching works much better if you choose a few.");
     }
 
     if (currentStep < 4) {
@@ -398,16 +377,6 @@ export default function SboSetupWizard({
   function handleBack() {
     if (step <= 0) return;
     setStep((s) => s - 1);
-  }
-
-  function toggleQuickSuggestion(id) {
-    const nid = Number(id);
-    setSelectedServices((prev) => {
-      const set = new Set(prev.map(Number));
-      if (set.has(nid)) set.delete(nid);
-      else set.add(nid);
-      return Array.from(set);
-    });
   }
 
   const steps = [
@@ -534,60 +503,23 @@ export default function SboSetupWizard({
 
               {step === 2 ? (
                 <StepCard
-                  title="Service Categories"
-                  subtitle="Search first, pick the closest services, and keep it simple. The backend taxonomy stays rich, but this step should feel fast."
+                  title="Services"
+                  subtitle="Keep it easy. Type what the business does and pick the closest matches."
                 >
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-                    <div className="text-sm font-semibold text-slate-100">Suggested starters</div>
-                    <div className="text-xs text-slate-400 mt-1">
-                      Quick picks based on common SyncWorks services. You can still search for anything below.
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {quickSuggestions.map((item) => {
-                        const active = selectedServices.includes(Number(item.id));
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => toggleQuickSuggestion(item.id)}
-                            className={cx(
-                              "text-[11px] px-3 py-1.5 rounded-full border transition",
-                              active
-                                ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-100"
-                                : "border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-900"
-                            )}
-                          >
-                            {item.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <CategoryPicker
-                      categories={leafCategories}
-                      value={selectedServices}
-                      onChange={(vals) => setSelectedServices(uniqNums(vals))}
-                      label="Services offered"
-                      multi
-                      maxVisible={18}
-                    />
-                  </div>
+                  <CategoryPicker
+                    categories={leafCategories}
+                    value={selectedServices}
+                    onChange={(vals) => setSelectedServices(uniqNums(vals))}
+                    label="Services offered"
+                    multi
+                    quickPicks={quickSuggestions}
+                    placeholder="Type your business type or service… (plumbing, dog grooming, bookkeeping, website...)"
+                  />
 
                   <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-                    <div className="text-sm font-semibold text-slate-100">How this should be used</div>
-                    <div className="mt-2 grid md:grid-cols-3 gap-3 text-sm text-slate-300">
-                      <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
-                        Pick the services you actually want matched for.
-                      </div>
-                      <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
-                        You do not need every variation. Choose the closest useful service.
-                      </div>
-                      <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
-                        Search terms like “plumbing”, “coach”, “dog grooming”, or “website” work best.
-                      </div>
+                    <div className="text-sm font-semibold text-slate-100">Simple rule</div>
+                    <div className="text-xs text-slate-400 mt-2">
+                      Do not try to pick everything. Choose the few services you most want matched for.
                     </div>
                   </div>
                 </StepCard>
