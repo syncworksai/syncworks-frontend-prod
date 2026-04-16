@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Button from "../ui/Button";
 
 function cx(...parts) {
@@ -171,9 +171,9 @@ export default function SboSetupWizard({
     return list.filter((c) => norm(`${c.name} ${c.key} ${c.path}`).includes(q)).slice(0, 40);
   }, [search, leafCategories, categories]);
 
-  useEffect(() => {
-    if (!open) return;
+  const initKeyRef = useRef("");
 
+  function hydrateFromPropsAndLocal() {
     setName(business?.name || "");
     setHeadline(business?.headline || "");
     setServicesText(business?.services_text || "");
@@ -228,7 +228,22 @@ export default function SboSetupWizard({
     setSoftWarn("");
     setSaving(false);
     setStep(0);
-  }, [open, business, businessId]);
+  }
+
+  useEffect(() => {
+    if (!open) {
+      initKeyRef.current = "";
+      return;
+    }
+
+    const initKey = `${businessId || "no_biz"}::open`;
+    if (initKeyRef.current === initKey) return;
+
+    initKeyRef.current = initKey;
+    hydrateFromPropsAndLocal();
+    // intentionally not depending on business object changes while open
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, businessId]);
 
   if (!open) return null;
 
