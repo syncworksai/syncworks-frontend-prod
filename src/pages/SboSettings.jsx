@@ -140,6 +140,14 @@ function normalizeExternalUrl(v) {
   return `https://${s}`;
 }
 
+function norm(s) {
+  return String(s || "").toLowerCase().trim();
+}
+
+function uniqNums(list) {
+  return Array.from(new Set((list || []).map((x) => Number(x)).filter(Boolean)));
+}
+
 function getPresenceMeta(modeRaw) {
   const mode = String(modeRaw || "").trim().toLowerCase();
 
@@ -248,6 +256,93 @@ function getBusinessLogoUrl(biz, fallback = "") {
   return `${base}${base.includes("?") ? "&" : "?"}v=${encodeURIComponent(String(stamp))}`;
 }
 
+function Modal({ open, onClose, title, subtitle, children, right = null }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute inset-0 bg-slate-950/70 backdrop-blur-[1px]"
+      />
+      <div className="relative w-full max-w-4xl rounded-3xl border border-slate-800 bg-[#020617] shadow-[0_0_80px_rgba(0,0,0,0.6)] p-5">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <div className="text-lg font-extrabold text-slate-100">{title}</div>
+            {subtitle ? <div className="text-xs text-slate-400 mt-1">{subtitle}</div> : null}
+          </div>
+          <div className="flex items-center gap-2">
+            {right}
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl px-3 py-2 text-xs border border-slate-700 bg-slate-950 hover:bg-slate-900 text-slate-200"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+        <div className="mt-4">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function ServiceAreaVisual({ baseZip, radius, businessPresenceMode }) {
+  const mode = String(businessPresenceMode || "").trim();
+  const radiusNum = Number(radius) || 25;
+  const clamped = Math.min(Math.max(radiusNum, 5), 500);
+  const size = Math.max(84, Math.min(240, 60 + clamped * 0.35));
+
+  return (
+    <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-5 overflow-hidden relative min-h-[280px]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.12),transparent_25%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.12),transparent_28%)]" />
+      <div className="relative h-full">
+        <div className="text-sm font-semibold text-slate-100">Service Area Preview</div>
+        <div className="text-[11px] text-slate-400 mt-1">
+          Quick visual so setup feels obvious. ZIP + radius still power actual routing.
+        </div>
+
+        <div className="mt-6 flex items-center justify-center min-h-[180px]">
+          {mode === "online" ? (
+            <div className="rounded-full border border-cyan-500/35 bg-cyan-500/10 px-6 py-5 text-cyan-200 text-sm font-bold tracking-wide">
+              Online / Remote Service Area
+            </div>
+          ) : (
+            <div className="relative flex items-center justify-center" style={{ width: 260, height: 180 }}>
+              <div
+                className="absolute rounded-full border border-cyan-500/35 bg-cyan-500/10 shadow-[0_0_40px_rgba(34,211,238,0.10)]"
+                style={{ width: size, height: size }}
+              />
+              <div className="absolute h-4 w-4 rounded-full bg-fuchsia-400 shadow-[0_0_18px_rgba(217,70,239,0.35)]" />
+              <div className="absolute top-[calc(50%+18px)] text-[11px] text-slate-200 font-semibold">
+                {baseZip || "ZIP"}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="grid sm:grid-cols-3 gap-2 mt-2">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
+            <div className="text-[11px] text-slate-400">Base ZIP</div>
+            <div className="text-sm font-semibold text-slate-100 mt-1">{baseZip || "—"}</div>
+          </div>
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
+            <div className="text-[11px] text-slate-400">Radius</div>
+            <div className="text-sm font-semibold text-slate-100 mt-1">{radiusNum} mi</div>
+          </div>
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
+            <div className="text-[11px] text-slate-400">Mode</div>
+            <div className="text-sm font-semibold text-slate-100 mt-1">
+              {mode ? mode.replaceAll("_", " ") : "Not set"}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const PRESENCE_OPTIONS = [
   { value: "", label: "Select business type…" },
   { value: "online", label: "Online Business" },
@@ -255,6 +350,201 @@ const PRESENCE_OPTIONS = [
   { value: "on_site", label: "On-Site Service" },
   { value: "hybrid", label: "Online + On-Site" },
 ];
+
+const RADIUS_PRESETS = [10, 25, 50, 100, 250, 500];
+
+const FAMILY_KEYWORDS = [
+  {
+    key: "plumbing",
+    label: "Plumbing",
+    words: ["plumb", "pipe", "drain", "leak", "water heater", "toilet", "faucet", "sewer"],
+  },
+  {
+    key: "electrical",
+    label: "Electrical",
+    words: ["electric", "wiring", "panel", "breaker", "outlet", "lighting", "generator"],
+  },
+  {
+    key: "hvac",
+    label: "HVAC",
+    words: ["hvac", "ac", "a/c", "air conditioning", "furnace", "heating", "thermostat", "duct"],
+  },
+  {
+    key: "photography",
+    label: "Photography",
+    words: ["photography", "photographer", "wedding", "portrait", "sports photo", "event photo", "camera"],
+  },
+  {
+    key: "computer-repair",
+    label: "Computer Repair",
+    words: ["computer", "pc", "laptop", "repair", "desktop", "virus", "screen repair", "hardware"],
+  },
+  {
+    key: "web-design",
+    label: "Web Design",
+    words: ["website", "web", "seo", "ecommerce", "shopify", "wordpress", "design", "developer"],
+  },
+  {
+    key: "general-contracting",
+    label: "General Contracting",
+    words: ["contractor", "renovation", "remodel", "construction", "framing", "drywall"],
+  },
+  {
+    key: "lawn-care",
+    label: "Lawn Care",
+    words: ["lawn", "mowing", "landscaping", "mulch", "yard", "grass", "tree trimming"],
+  },
+  {
+    key: "pressure-washing",
+    label: "Pressure Washing",
+    words: ["pressure washing", "soft wash", "power wash", "driveway cleaning"],
+  },
+  {
+    key: "auto-detailing",
+    label: "Auto Detailing",
+    words: ["auto detail", "detailing", "car wash", "paint correction", "ceramic coating"],
+  },
+  {
+    key: "coaching",
+    label: "Coaching / Consulting",
+    words: ["coaching", "consulting", "mentor", "strategy", "training", "education", "course"],
+  },
+];
+
+function scoreKeywordHit(text, word) {
+  const t = norm(text);
+  const w = norm(word);
+  if (!t || !w) return 0;
+  if (t.includes(w)) return 1;
+  return 0;
+}
+
+function familyScore(family, textBlob) {
+  return (family?.words || []).reduce((sum, word) => sum + scoreKeywordHit(textBlob, word), 0);
+}
+
+function flattenDescendantLeaves(rootId, categories) {
+  const list = Array.isArray(categories) ? categories : [];
+  const childrenByParent = new Map();
+
+  list.forEach((cat) => {
+    const pid = Number(cat?.parent_id || 0);
+    if (!childrenByParent.has(pid)) childrenByParent.set(pid, []);
+    childrenByParent.get(pid).push(cat);
+  });
+
+  const leaves = [];
+  const stack = [Number(rootId)];
+
+  while (stack.length) {
+    const current = stack.pop();
+    const kids = childrenByParent.get(Number(current)) || [];
+    if (!kids.length) continue;
+
+    kids.forEach((kid) => {
+      const grandKids = childrenByParent.get(Number(kid.id)) || [];
+      if (grandKids.length) stack.push(Number(kid.id));
+      else leaves.push(kid);
+    });
+  }
+
+  return leaves;
+}
+
+function buildPathFor(cat, categories) {
+  if (!cat) return "";
+  const byId = new Map((categories || []).map((x) => [Number(x.id), x]));
+  const out = [];
+  let cur = cat;
+  let guard = 0;
+  while (cur && guard < 20) {
+    out.unshift(cur.name);
+    cur = cur.parent_id ? byId.get(Number(cur.parent_id)) : null;
+    guard += 1;
+  }
+  return out.join(" → ");
+}
+
+function guessFamiliesFromBusiness({ name, headline, servicesText, businessPresenceMode }) {
+  const blob = norm([name, headline, servicesText, businessPresenceMode].filter(Boolean).join(" "));
+  return FAMILY_KEYWORDS
+    .map((family) => ({ ...family, score: familyScore(family, blob) }))
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score);
+}
+
+function leafScoreForBusiness(cat, categories, textBlob, matchedFamilies) {
+  const path = buildPathFor(cat, categories);
+  const hay = norm([cat?.name, cat?.key, path].join(" "));
+  let score = 0;
+
+  const tokens = textBlob
+    .split(/\s+/)
+    .map((x) => x.trim())
+    .filter((x) => x.length >= 3);
+
+  tokens.forEach((token) => {
+    if (hay.includes(token)) score += token.length > 5 ? 4 : 2;
+  });
+
+  matchedFamilies.forEach((family) => {
+    const hit = family.words.some((word) => hay.includes(norm(word)));
+    if (hit) score += 8 + family.score;
+  });
+
+  if (hay.includes("wedding")) score += 2;
+  if (hay.includes("sports")) score += 2;
+  if (hay.includes("repair")) score += 2;
+  if (hay.includes("install")) score += 1;
+
+  return score;
+}
+
+function inferSuggestedLeafIds({ categories, name, headline, servicesText, businessPresenceMode, currentIds }) {
+  const list = Array.isArray(categories) ? categories : [];
+  const current = new Set((currentIds || []).map((x) => Number(x)));
+  const textBlob = norm([name, headline, servicesText, businessPresenceMode].filter(Boolean).join(" "));
+  const matchedFamilies = guessFamiliesFromBusiness({ name, headline, servicesText, businessPresenceMode });
+
+  const leaves = list.filter((cat) => {
+    const id = Number(cat?.id);
+    if (!id || current.has(id)) return false;
+    return !list.some((other) => Number(other?.parent_id) === id);
+  });
+
+  const scored = leaves
+    .map((cat) => ({
+      cat,
+      score: leafScoreForBusiness(cat, list, textBlob, matchedFamilies),
+    }))
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 18);
+
+  return scored.map((x) => Number(x.cat.id));
+}
+
+function buildFamilyCards(categories) {
+  const list = Array.isArray(categories) ? categories : [];
+  const roots = list.filter((x) => !x?.parent_id);
+
+  return FAMILY_KEYWORDS.map((family) => {
+    const rootMatch =
+      roots.find((root) => {
+        const hay = norm([root?.name, root?.key].join(" "));
+        return hay.includes(norm(family.label)) || family.words.some((w) => hay.includes(norm(w)));
+      }) || null;
+
+    const leafPool = rootMatch ? flattenDescendantLeaves(rootMatch.id, list) : [];
+
+    return {
+      ...family,
+      root: rootMatch,
+      leafPool,
+      preview: leafPool.slice(0, 4),
+    };
+  }).filter((x) => x.root || x.leafPool.length);
+}
 
 export default function SboSettings() {
   const nav = useNavigate();
@@ -328,6 +618,8 @@ export default function SboSettings() {
   const [searchResults, setSearchResults] = useState([]);
   const [serviceLabels, setServiceLabels] = useState({});
 
+  const [serviceAreaOpen, setServiceAreaOpen] = useState(false);
+
   async function fetchBusinessDetail(businessId) {
     if (!businessId) return null;
     const res = await api.get(`/businesses/${businessId}/`);
@@ -345,7 +637,6 @@ export default function SboSettings() {
       all = [...all, ...list];
       keepGoing = !!r?.data?.next;
       page += 1;
-
       if (page > 50) break;
     }
 
@@ -373,19 +664,7 @@ export default function SboSettings() {
   }
 
   function buildPath(cat, source = allCategories) {
-    if (!cat) return "";
-    const map = new Map((Array.isArray(source) ? source : []).map((x) => [Number(x.id), x]));
-    const chain = [];
-    let cur = cat;
-    let guard = 0;
-
-    while (cur && guard < 20) {
-      chain.unshift(cur.name);
-      cur = cur.parent_id ? map.get(Number(cur.parent_id)) : null;
-      guard += 1;
-    }
-
-    return chain.join(" → ");
+    return buildPathFor(cat, source);
   }
 
   async function loadLabels(ids, source = allCategories) {
@@ -543,7 +822,7 @@ export default function SboSettings() {
     const parts = q.split(/\s+/).filter(Boolean);
 
     const list = (allCategories || []).filter((c) => {
-      const blob = [c?.name, c?.key, c?.path, c?.category_path]
+      const blob = [c?.name, c?.key, buildPath(c)]
         .map((x) => String(x || "").toLowerCase())
         .join(" ");
 
@@ -610,6 +889,32 @@ export default function SboSettings() {
     setChildren(getChildren(groupPick.id));
   }, [groupPick, allCategories]);
 
+  const familyCards = useMemo(() => buildFamilyCards(allCategories), [allCategories]);
+
+  const inferredFamilies = useMemo(() => {
+    return guessFamiliesFromBusiness({
+      name,
+      headline,
+      servicesText,
+      businessPresenceMode,
+    });
+  }, [name, headline, servicesText, businessPresenceMode]);
+
+  const smartSuggestedIds = useMemo(() => {
+    return inferSuggestedLeafIds({
+      categories: allCategories,
+      name,
+      headline,
+      servicesText,
+      businessPresenceMode,
+      currentIds: servicesOffered,
+    });
+  }, [allCategories, name, headline, servicesText, businessPresenceMode, servicesOffered]);
+
+  const smartSuggestedObjects = useMemo(() => {
+    return smartSuggestedIds.map((id) => findById(id)).filter(Boolean);
+  }, [smartSuggestedIds, allCategories]);
+
   function chooseRoot(root) {
     setRootPick(root);
     setGroupPick(null);
@@ -620,6 +925,12 @@ export default function SboSettings() {
     setGroupPick(group);
   }
 
+  function setServices(next) {
+    const clean = uniqNums(next);
+    setServicesOffered(clean);
+    loadLabels(clean);
+  }
+
   function toggleService(id) {
     const nid = Number(id);
     if (!nid) return;
@@ -627,19 +938,30 @@ export default function SboSettings() {
     const cat = findById(nid);
     if (!cat || !isLeaf(cat)) return;
 
-    setServicesOffered((prev) => {
+    setServices((prev) => {
       const set = new Set(prev || []);
       if (set.has(nid)) set.delete(nid);
       else set.add(nid);
-      const next = Array.from(set);
-      loadLabels(next);
-      return next;
+      return Array.from(set);
     });
   }
 
   function clearServices() {
-    setServicesOffered([]);
+    setServices([]);
     setServiceLabels({});
+  }
+
+  function applySmartSuggestions() {
+    setServices([...servicesOffered, ...smartSuggestedIds]);
+    setOk("Suggested categories added.");
+  }
+
+  function addFamilyLeafPool(family) {
+    const leafPool = Array.isArray(family?.leafPool) ? family.leafPool : [];
+    if (!leafPool.length) return;
+    const top = leafPool.slice(0, 12).map((x) => Number(x.id));
+    setServices([...servicesOffered, ...top]);
+    setOk(`${family.label} categories added.`);
   }
 
   async function save() {
@@ -780,6 +1102,96 @@ export default function SboSettings() {
 
   return (
     <div className="space-y-4">
+      <Modal
+        open={serviceAreaOpen}
+        onClose={() => setServiceAreaOpen(false)}
+        title="Service Area Setup"
+        subtitle="Set your base ZIP, radius, and business type in a cleaner flow."
+        right={
+          <button
+            type="button"
+            onClick={() => setServiceAreaOpen(false)}
+            className="rounded-xl px-3 py-2 text-xs border border-cyan-500/35 bg-cyan-500/12 hover:bg-cyan-500/18 text-cyan-200"
+          >
+            Done
+          </button>
+        }
+      >
+        <div className="grid lg:grid-cols-2 gap-4">
+          <div className="space-y-4">
+            <Select
+              label="Business Type / Presence"
+              value={businessPresenceMode}
+              onChange={setBusinessPresenceMode}
+              options={PRESENCE_OPTIONS}
+              hint="Online businesses can still use service tags, but radius is mostly for local / on-site matching."
+            />
+
+            <Input
+              label="Street Address"
+              value={address}
+              onChange={setAddress}
+              placeholder="123 Main St"
+              hint="Optional base location for your business profile."
+            />
+
+            <div className="grid sm:grid-cols-3 gap-3">
+              <Input label="City" value={city} onChange={setCity} placeholder="Montgomery" />
+              <Input label="State" value={state} onChange={setState} placeholder="AL" />
+              <Input label="Base ZIP" value={baseZip} onChange={setBaseZip} placeholder="36117" />
+            </div>
+
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
+              <div className="text-xs text-slate-200 font-medium">Radius Presets</div>
+              <div className="mt-3 flex gap-2 flex-wrap">
+                {RADIUS_PRESETS.map((preset) => {
+                  const active = Number(radius || 0) === preset;
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setRadius(String(preset))}
+                      className={cx(
+                        "rounded-full px-3 py-2 text-xs border transition",
+                        active
+                          ? "bg-cyan-500/15 border-cyan-500/30 text-cyan-200"
+                          : "bg-slate-950 border-slate-800 hover:bg-slate-900 text-slate-100"
+                      )}
+                    >
+                      {preset} mi
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-4">
+                <Input
+                  label="Custom Radius"
+                  value={radius}
+                  onChange={setRadius}
+                  placeholder="25"
+                  type="number"
+                  hint="Use any radius from 1 to 500."
+                />
+              </div>
+            </div>
+
+            <Toggle
+              label={acceptsMarketplace ? "Accepting Marketplace Jobs" : "Marketplace Off"}
+              checked={acceptsMarketplace}
+              onChange={setAcceptsMarketplace}
+              hint="If off, this business will not receive marketplace jobs even if ZIP, radius, and services match."
+            />
+          </div>
+
+          <ServiceAreaVisual
+            baseZip={baseZip}
+            radius={radius}
+            businessPresenceMode={businessPresenceMode}
+          />
+        </div>
+      </Modal>
+
       <Card
         title="SBO Business Settings"
         subtitle="These settings belong to the business profile. They power your business card, marketplace routing, and customer-facing provider details."
@@ -909,20 +1321,37 @@ export default function SboSettings() {
                   <Input label="TikTok URL" value={tiktokUrl} onChange={setTiktokUrl} placeholder="https://tiktok.com/@yourbusiness" />
                 </div>
 
-                <Select
-                  label="Business Type / Presence"
-                  value={businessPresenceMode}
-                  onChange={setBusinessPresenceMode}
-                  options={PRESENCE_OPTIONS}
-                  hint="This shows up boldly on the customer-facing business card."
-                />
-
-                {businessPresenceMode ? (
-                  <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
-                    <div className="text-xs text-slate-300 mb-3">Customer-facing badge preview</div>
-                    <PresenceBadge mode={businessPresenceMode} />
+                <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <div className="text-xs text-slate-200 font-medium">Service Area + Presence</div>
+                      <div className="text-[11px] text-slate-400 mt-1">
+                        Easier setup for ZIP, radius, and how your business serves customers.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setServiceAreaOpen(true)}
+                      className="rounded-xl px-4 py-2 text-sm font-semibold border border-cyan-500/35 bg-cyan-500/12 hover:bg-cyan-500/18 text-cyan-200"
+                    >
+                      Open Service Area Setup
+                    </button>
                   </div>
-                ) : null}
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {businessPresenceMode ? <PresenceBadge mode={businessPresenceMode} /> : null}
+                    {baseZip ? (
+                      <span className="text-[11px] px-3 py-1.5 rounded-full border border-slate-700 bg-slate-950/70 text-slate-200">
+                        ZIP {baseZip}
+                      </span>
+                    ) : null}
+                    {radius ? (
+                      <span className="text-[11px] px-3 py-1.5 rounded-full border border-slate-700 bg-slate-950/70 text-slate-200">
+                        Radius {radius} mi
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
 
                 <Input
                   label="Headline"
@@ -937,39 +1366,8 @@ export default function SboSettings() {
                   value={servicesText}
                   onChange={setServicesText}
                   placeholder="Repairs, installs, diagnostics, maintenance, after-hours support..."
-                  hint="Customer-facing description. Marketplace matching still uses the actual service tags below."
+                  hint="This also helps drive smart category suggestions below."
                 />
-
-                <Input label="Street Address" value={address} onChange={setAddress} placeholder="123 Main St" />
-
-                <div className="grid sm:grid-cols-3 gap-3">
-                  <Input label="City" value={city} onChange={setCity} placeholder="Montgomery" />
-                  <Input label="State" value={state} onChange={setState} placeholder="AL" hint="Use 2-letter state code if possible." />
-                  <Input label="Base ZIP" value={baseZip} onChange={setBaseZip} placeholder="36117" hint="Routing center point." />
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <Input
-                    label="Service Radius (miles)"
-                    value={radius}
-                    onChange={setRadius}
-                    placeholder="25"
-                    type="number"
-                    hint="Use 25, 50, 100, or any custom miles."
-                  />
-
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-3">
-                    <div className="text-xs text-slate-200 font-medium">Marketplace Availability</div>
-                    <div className="mt-3">
-                      <Toggle
-                        label={acceptsMarketplace ? "Accepting Marketplace Jobs" : "Marketplace Off"}
-                        checked={acceptsMarketplace}
-                        onChange={setAcceptsMarketplace}
-                        hint="If off, this business will not receive marketplace jobs even if tags and ZIP are correct."
-                      />
-                    </div>
-                  </div>
-                </div>
 
                 <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
                   <div className="font-semibold text-slate-100">Trust Signals</div>
@@ -1086,6 +1484,136 @@ export default function SboSettings() {
                   ) : null}
 
                   <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div>
+                        <div className="font-semibold text-slate-100">Broad Service Families</div>
+                        <div className="text-xs text-slate-300 mt-1">
+                          Fast setup for new businesses. Pick a broad lane, then refine specialties below.
+                        </div>
+                      </div>
+
+                      {inferredFamilies.length ? (
+                        <div className="text-[11px] text-cyan-300">
+                          Suggested from your profile: {inferredFamilies.map((x) => x.label).join(", ")}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="mt-4 grid md:grid-cols-2 gap-3">
+                      {familyCards.map((family) => {
+                        const familyHasSelected = family.leafPool.some((leaf) =>
+                          servicesOffered.includes(Number(leaf.id))
+                        );
+
+                        return (
+                          <div
+                            key={family.key}
+                            className={cx(
+                              "rounded-2xl border p-4",
+                              familyHasSelected
+                                ? "border-cyan-500/25 bg-cyan-500/8"
+                                : "border-slate-800 bg-slate-950/40"
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="text-sm font-semibold text-slate-100">{family.label}</div>
+                                <div className="text-[11px] text-slate-400 mt-1">
+                                  {family.root?.name || "Suggested family"} • {family.leafPool.length} possible specialties
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => addFamilyLeafPool(family)}
+                                className="rounded-xl px-3 py-2 text-xs border border-cyan-500/35 bg-cyan-500/12 hover:bg-cyan-500/18 text-cyan-200"
+                              >
+                                Add Family
+                              </button>
+                            </div>
+
+                            {family.preview.length ? (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {family.preview.map((leaf) => (
+                                  <button
+                                    key={leaf.id}
+                                    type="button"
+                                    onClick={() => toggleService(leaf.id)}
+                                    className={cx(
+                                      "text-[11px] rounded-full px-3 py-1.5 border transition",
+                                      servicesOffered.includes(Number(leaf.id))
+                                        ? "border-cyan-500/25 bg-cyan-500/10 text-cyan-100"
+                                        : "border-slate-700 bg-slate-950/70 text-slate-200 hover:bg-slate-900"
+                                    )}
+                                  >
+                                    {leaf.name}
+                                  </button>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div>
+                        <div className="font-semibold text-slate-100">Smart Suggestions</div>
+                        <div className="text-xs text-slate-300 mt-1">
+                          Based on your business name, headline, services summary, and business type.
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={applySmartSuggestions}
+                          disabled={!smartSuggestedIds.length}
+                          className={cx(
+                            "rounded-xl px-3 py-2 text-xs border",
+                            smartSuggestedIds.length
+                              ? "border-fuchsia-500/35 bg-fuchsia-500/12 hover:bg-fuchsia-500/18 text-fuchsia-200"
+                              : "border-slate-800 bg-slate-950 text-slate-500 cursor-not-allowed"
+                          )}
+                        >
+                          Add All Suggestions
+                        </button>
+                      </div>
+                    </div>
+
+                    {smartSuggestedObjects.length ? (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {smartSuggestedObjects.map((obj) => {
+                          const checked = servicesOffered.includes(Number(obj.id));
+                          return (
+                            <button
+                              key={obj.id}
+                              type="button"
+                              onClick={() => toggleService(obj.id)}
+                              className={cx(
+                                "text-xs rounded-full px-3 py-2 border transition",
+                                checked
+                                  ? "border-cyan-500/25 bg-cyan-500/10 text-cyan-100"
+                                  : "border-fuchsia-500/25 bg-fuchsia-500/10 text-fuchsia-100 hover:bg-fuchsia-500/14"
+                              )}
+                              title={buildPath(obj)}
+                            >
+                              {checked ? "✓ " : "+ "}
+                              {obj.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="mt-3 text-sm text-slate-400">
+                        Add a better business name, headline, or services summary and suggestions will get smarter.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <div className="font-semibold text-slate-100">Selected Services</div>
@@ -1120,7 +1648,7 @@ export default function SboSettings() {
                     <input
                       value={searchQ}
                       onChange={(e) => setSearchQ(e.target.value)}
-                      placeholder="plumbing, AC not cooling, brake replacement..."
+                      placeholder="plumbing, wedding photography, AC not cooling, laptop repair..."
                       className="mt-3 w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500"
                     />
 
