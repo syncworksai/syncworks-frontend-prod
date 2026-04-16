@@ -87,6 +87,25 @@ function Toggle({ label, checked, onChange, hint = "" }) {
   );
 }
 
+function Select({ label, value, onChange, options = [] }) {
+  return (
+    <label className="block">
+      <div className="text-xs text-slate-300 mb-1">{label}</div>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-cyan-500/40"
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value} className="bg-slate-950 text-slate-100">
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function SectionPill({ active, children, onClick }) {
   return (
     <button
@@ -104,10 +123,14 @@ function SectionPill({ active, children, onClick }) {
   );
 }
 
+function setupStorageKey(businessId) {
+  return `sw_setup_baseline_v1_${businessId || "no_biz"}`;
+}
+
 export default function SboSettings() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { activeBusinessId, myBusinesses, reloadBusinesses } = useAuth();
+  const { activeBusinessId, reloadBusinesses } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -139,6 +162,18 @@ export default function SboSettings() {
   const [instagramUrl, setInstagramUrl] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [googleBusinessUrl, setGoogleBusinessUrl] = useState("");
+
+  const localSetup = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem(setupStorageKey(activeBusinessId)) || "{}");
+    } catch {
+      return {};
+    }
+  }, [activeBusinessId, ok, wizardOpen]);
+
+  const selectedServicesCount = Array.isArray(localSetup?.selectedServices)
+    ? localSetup.selectedServices.length
+    : 0;
 
   const returnTo = useMemo(() => {
     const qs = new URLSearchParams(location.search || "");
@@ -207,6 +242,12 @@ export default function SboSettings() {
     }
   }, [location.search]);
 
+  useEffect(() => {
+    if (location.hash === "#export") {
+      setSection("data");
+    }
+  }, [location.hash]);
+
   async function saveBusiness(payload) {
     if (!activeBusinessId) return;
     setSaving(true);
@@ -249,6 +290,10 @@ export default function SboSettings() {
     });
   }
 
+  const importReady = !!localSetup?.oldDataStatus && localSetup.oldDataStatus !== "NONE";
+  const baselineReady = !!localSetup?.baselineRevenue;
+  const goalReady = !!localSetup?.targetRevenue;
+
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">
       <ModeBar
@@ -280,6 +325,12 @@ export default function SboSettings() {
           </div>
         ) : null}
 
+        {loading ? (
+          <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 text-sm text-slate-400">
+            Loading settings…
+          </div>
+        ) : null}
+
         <div className="flex gap-2 flex-wrap">
           <SectionPill active={section === "setup"} onClick={() => setSection("setup")}>
             Setup
@@ -301,28 +352,63 @@ export default function SboSettings() {
         {section === "setup" ? (
           <Card
             title="Guided Setup"
-            subtitle="Best for new SBOs. Walk through business basics, services, area, and revenue goals."
-            right={<Button tone="cyan" onClick={() => setWizardOpen(true)}>Launch Wizard</Button>}
+            subtitle="Best for new SBOs. Walk through business basics, service area, services, and revenue goals."
+            right={
+              <Button tone="cyan" onClick={() => setWizardOpen(true)}>
+                Launch Wizard
+              </Button>
+            }
           >
             <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-3">
               <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
                 <div className="text-xs text-slate-400">Business</div>
                 <div className="mt-1 text-sm font-semibold text-slate-100">{business?.name || "—"}</div>
               </div>
+
               <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
                 <div className="text-xs text-slate-400">ZIP</div>
                 <div className="mt-1 text-sm font-semibold text-slate-100">{business?.base_zip || "—"}</div>
               </div>
+
               <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
                 <div className="text-xs text-slate-400">Radius</div>
                 <div className="mt-1 text-sm font-semibold text-slate-100">
                   {business?.service_radius_miles ?? business?.effective_service_radius_miles ?? "—"}
                 </div>
               </div>
+
               <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
                 <div className="text-xs text-slate-400">Marketplace</div>
                 <div className="mt-1 text-sm font-semibold text-slate-100">
                   {business?.accepts_marketplace_tickets ? "On" : "Off"}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 grid md:grid-cols-2 xl:grid-cols-4 gap-3">
+              <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+                <div className="text-xs text-slate-400">Selected Services</div>
+                <div className="mt-1 text-sm font-semibold text-cyan-100">{selectedServicesCount}</div>
+              </div>
+
+              <div className="rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/5 p-4">
+                <div className="text-xs text-slate-400">Baseline Revenue</div>
+                <div className="mt-1 text-sm font-semibold text-fuchsia-100">
+                  {baselineReady ? `$${Number(localSetup.baselineRevenue || 0).toLocaleString()}` : "Not set"}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                <div className="text-xs text-slate-400">Revenue Goal</div>
+                <div className="mt-1 text-sm font-semibold text-emerald-100">
+                  {goalReady ? `$${Number(localSetup.targetRevenue || 0).toLocaleString()}` : "Not set"}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4">
+                <div className="text-xs text-slate-400">Import Preference</div>
+                <div className="mt-1 text-sm font-semibold text-indigo-100">
+                  {importReady ? "Ready later" : "Not chosen"}
                 </div>
               </div>
             </div>
@@ -337,7 +423,11 @@ export default function SboSettings() {
           <Card
             title="Business Profile"
             subtitle="Edit the core business information customers and marketplace routing use."
-            right={<Button tone="cyan" onClick={saveProfile} disabled={saving}>{saving ? "Saving…" : "Save Profile"}</Button>}
+            right={
+              <Button tone="cyan" onClick={saveProfile} disabled={saving}>
+                {saving ? "Saving…" : "Save Profile"}
+              </Button>
+            }
           >
             <div className="grid md:grid-cols-2 gap-3">
               <Input label="Business Name" value={name} onChange={setName} placeholder="Acme Plumbing" />
@@ -363,7 +453,11 @@ export default function SboSettings() {
           <Card
             title="Marketplace"
             subtitle="Routing and discovery controls for new jobs."
-            right={<Button tone="cyan" onClick={saveProfile} disabled={saving}>{saving ? "Saving…" : "Save Marketplace"}</Button>}
+            right={
+              <Button tone="cyan" onClick={saveProfile} disabled={saving}>
+                {saving ? "Saving…" : "Save Marketplace"}
+              </Button>
+            }
           >
             <div className="grid md:grid-cols-2 gap-3">
               <Input label="Street Address" value={address} onChange={setAddress} placeholder="123 Main St" />
@@ -371,11 +465,18 @@ export default function SboSettings() {
               <Input label="State" value={state} onChange={setState} placeholder="AL" />
               <Input label="Base ZIP" value={baseZip} onChange={setBaseZip} placeholder="36117" />
               <Input label="Radius (miles)" value={radius} onChange={setRadius} type="number" placeholder="25" />
-              <Input
+
+              <Select
                 label="Business Type"
                 value={businessPresenceMode}
                 onChange={setBusinessPresenceMode}
-                placeholder="online / on_site / hybrid / in_person"
+                options={[
+                  { value: "", label: "Select business type…" },
+                  { value: "online", label: "Online / Remote" },
+                  { value: "in_person", label: "In Person" },
+                  { value: "on_site", label: "On-Site Service" },
+                  { value: "hybrid", label: "Hybrid" },
+                ]}
               />
             </div>
 
@@ -400,7 +501,11 @@ export default function SboSettings() {
           <Card
             title="Social Links"
             subtitle="These support the business card and future social automation flows."
-            right={<Button tone="cyan" onClick={saveProfile} disabled={saving}>{saving ? "Saving…" : "Save Socials"}</Button>}
+            right={
+              <Button tone="cyan" onClick={saveProfile} disabled={saving}>
+                {saving ? "Saving…" : "Save Socials"}
+              </Button>
+            }
           >
             <div className="grid md:grid-cols-2 gap-3">
               <Input label="Facebook URL" value={facebookUrl} onChange={setFacebookUrl} placeholder="https://facebook.com/yourbusiness" />
@@ -414,25 +519,29 @@ export default function SboSettings() {
         {section === "data" ? (
           <Card
             title="Import / Export"
-            subtitle="We’re preparing the entry points now so onboarding and portability are obvious."
+            subtitle="Visible entry points now, workflow pages next."
           >
             <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-3">
               <button
                 type="button"
-                onClick={() => navigate("/sbo/import")}
+                onClick={() => setWizardOpen(true)}
                 className="rounded-2xl border border-cyan-500/25 bg-cyan-500/10 p-4 text-left hover:bg-cyan-500/15"
               >
                 <div className="text-sm font-semibold text-cyan-100">Import Old Tickets</div>
-                <div className="text-xs text-slate-300 mt-2">Bring in exported ticket history later.</div>
+                <div className="text-xs text-slate-300 mt-2">
+                  Use the guided setup flow to capture import preference until the full import page is live.
+                </div>
               </button>
 
               <button
                 type="button"
-                onClick={() => navigate("/sbo/export")}
+                onClick={() => setSection("setup")}
                 className="rounded-2xl border border-indigo-500/25 bg-indigo-500/10 p-4 text-left hover:bg-indigo-500/15"
               >
                 <div className="text-sm font-semibold text-indigo-100">Export Data</div>
-                <div className="text-xs text-slate-300 mt-2">Customers, invoices, and future tax exports.</div>
+                <div className="text-xs text-slate-300 mt-2">
+                  Export architecture is planned here first so it stays visible in the product.
+                </div>
               </button>
 
               <button
@@ -441,7 +550,9 @@ export default function SboSettings() {
                 className="rounded-2xl border border-fuchsia-500/25 bg-fuchsia-500/10 p-4 text-left hover:bg-fuchsia-500/15"
               >
                 <div className="text-sm font-semibold text-fuchsia-100">Build Catalog</div>
-                <div className="text-xs text-slate-300 mt-2">Get invoice-ready services into the system.</div>
+                <div className="text-xs text-slate-300 mt-2">
+                  Get invoice-ready services into the system.
+                </div>
               </button>
 
               <button
@@ -450,7 +561,9 @@ export default function SboSettings() {
                 className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-4 text-left hover:bg-emerald-500/15"
               >
                 <div className="text-sm font-semibold text-emerald-100">Invite Employees</div>
-                <div className="text-xs text-slate-300 mt-2">Start role-based access for techs, office, accounting.</div>
+                <div className="text-xs text-slate-300 mt-2">
+                  Start role-based access for techs, office, accounting.
+                </div>
               </button>
             </div>
           </Card>
