@@ -1,12 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Button from "../ui/Button";
+import CategoryPicker from "../CategoryPicker";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
-}
-
-function norm(s) {
-  return String(s || "").toLowerCase().trim();
 }
 
 function uniqNums(list) {
@@ -98,28 +95,58 @@ function StepCard({ title, subtitle, children }) {
   );
 }
 
+function storageKey(businessId) {
+  return `sw_setup_baseline_v1_${businessId || "no_biz"}`;
+}
+
 function getLeafCategories(categories) {
   const list = Array.isArray(categories) ? categories : [];
   const parentIds = new Set(list.map((x) => Number(x?.parent_id)).filter(Boolean));
   return list.filter((x) => !parentIds.has(Number(x.id)));
 }
 
-function buildPath(cat, all) {
-  if (!cat) return "";
-  const byId = new Map((all || []).map((x) => [Number(x.id), x]));
-  const parts = [];
-  let cur = cat;
-  let guard = 0;
-  while (cur && guard < 20) {
-    parts.unshift(cur.name);
-    cur = cur.parent_id ? byId.get(Number(cur.parent_id)) : null;
-    guard += 1;
-  }
-  return parts.join(" → ");
+function getParentMap(categories = []) {
+  const byId = new Map();
+  (categories || []).forEach((c) => byId.set(Number(c.id), c));
+  return byId;
 }
 
-function storageKey(businessId) {
-  return `sw_setup_baseline_v1_${businessId || "no_biz"}`;
+function getGroupName(cat, byId) {
+  if (!cat) return "";
+  const parent = cat.parent_id ? byId.get(Number(cat.parent_id)) : null;
+  return parent?.name || "";
+}
+
+function buildQuickSuggestions(categories = []) {
+  const leafs = getLeafCategories(categories);
+  const byId = getParentMap(categories);
+
+  const preferredGroups = [
+    "Plumbing",
+    "Electrical",
+    "HVAC",
+    "Handyman",
+    "Residential Cleaning",
+    "Landscaping",
+    "Pet Grooming",
+    "Computer Repair",
+    "Marketing",
+    "Bookkeeping",
+    "Personal Training",
+    "Photography",
+  ];
+
+  const picks = [];
+
+  for (const group of preferredGroups) {
+    const found = leafs.find((x) => getGroupName(x, byId) === group);
+    if (found) picks.push(found);
+  }
+
+  return uniqNums(picks.map((x) => x.id))
+    .map((id) => leafs.find((x) => Number(x.id) === Number(id)))
+    .filter(Boolean)
+    .slice(0, 8);
 }
 
 export default function SboSetupWizard({
@@ -150,7 +177,6 @@ export default function SboSetupWizard({
   const [radius, setRadius] = useState("25");
   const [acceptsMarketplace, setAcceptsMarketplace] = useState(true);
 
-  const [search, setSearch] = useState("");
   const [selectedServices, setSelectedServices] = useState([]);
 
   const [baselineRevenue, setBaselineRevenue] = useState("");
@@ -159,19 +185,10 @@ export default function SboSetupWizard({
   const [mainGoal, setMainGoal] = useState("");
   const [oldDataStatus, setOldDataStatus] = useState("LATER");
 
-  const leafCategories = useMemo(() => getLeafCategories(categories), [categories]);
-
-  const filteredServices = useMemo(() => {
-    const q = norm(search);
-    const list = leafCategories.map((c) => ({
-      ...c,
-      path: buildPath(c, categories),
-    }));
-    if (!q) return list.slice(0, 30);
-    return list.filter((c) => norm(`${c.name} ${c.key} ${c.path}`).includes(q)).slice(0, 40);
-  }, [search, leafCategories, categories]);
-
   const initKeyRef = useRef("");
+
+  const leafCategories = useMemo(() => getLeafCategories(categories), [categories]);
+  const quickSuggestions = useMemo(() => buildQuickSuggestions(categories), [categories]);
 
   function hydrateFromPropsAndLocal() {
     setName(business?.name || "");
@@ -241,7 +258,6 @@ export default function SboSetupWizard({
 
     initKeyRef.current = initKey;
     hydrateFromPropsAndLocal();
-    // intentionally not depending on business object changes while open
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, businessId]);
 
@@ -260,16 +276,6 @@ export default function SboSetupWizard({
     } catch {
       localStorage.setItem(storageKey(businessId), JSON.stringify(partial));
     }
-  }
-
-  function toggleService(id) {
-    const nid = Number(id);
-    setSelectedServices((prev) => {
-      const s = new Set(prev);
-      if (s.has(nid)) s.delete(nid);
-      else s.add(nid);
-      return Array.from(s);
-    });
   }
 
   async function backgroundSaveBusiness(payload) {
@@ -364,6 +370,10 @@ export default function SboSetupWizard({
 
     saveStepLocally(currentStep);
 
+    if (currentStep === 2 && selectedServices.length === 0) {
+      setSoftWarn("You can finish setup without services, but marketplace matching works much better if you choose at least a few.");
+    }
+
     if (currentStep < 4) {
       setStep(currentStep + 1);
     } else {
@@ -388,6 +398,16 @@ export default function SboSetupWizard({
   function handleBack() {
     if (step <= 0) return;
     setStep((s) => s - 1);
+  }
+
+  function toggleQuickSuggestion(id) {
+    const nid = Number(id);
+    setSelectedServices((prev) => {
+      const set = new Set(prev.map(Number));
+      if (set.has(nid)) set.delete(nid);
+      else set.add(nid);
+      return Array.from(set);
+    });
   }
 
   const steps = [
@@ -515,69 +535,58 @@ export default function SboSetupWizard({
               {step === 2 ? (
                 <StepCard
                   title="Service Categories"
-                  subtitle="Choose the exact services this business should be matched for. Saved locally for now so setup never blocks."
+                  subtitle="Search first, pick the closest services, and keep it simple. The backend taxonomy stays rich, but this step should feel fast."
                 >
-                  <Input
-                    label="Search Services"
-                    value={search}
-                    onChange={setSearch}
-                    placeholder="plumbing, laptop repair, wedding photography..."
-                  />
-
-                  <div className="mt-4 grid lg:grid-cols-[1fr_320px] gap-4">
-                    <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3 max-h-[420px] overflow-auto space-y-2">
-                      {filteredServices.length ? (
-                        filteredServices.map((item) => {
-                          const active = selectedServices.includes(Number(item.id));
-                          return (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() => toggleService(item.id)}
-                              className={cx(
-                                "w-full text-left rounded-2xl border p-3 transition",
-                                active
-                                  ? "border-cyan-500/25 bg-cyan-500/10"
-                                  : "border-slate-800 bg-slate-950/70 hover:bg-slate-900/50"
-                              )}
-                            >
-                              <div className="text-sm font-semibold text-slate-100">
-                                {active ? "✓ " : ""}{item.name}
-                              </div>
-                              <div className="text-[11px] text-slate-400 mt-1">{item.path}</div>
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <div className="text-sm text-slate-400">No matching services.</div>
-                      )}
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+                    <div className="text-sm font-semibold text-slate-100">Suggested starters</div>
+                    <div className="text-xs text-slate-400 mt-1">
+                      Quick picks based on common SyncWorks services. You can still search for anything below.
                     </div>
 
-                    <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
-                      <div className="text-sm font-semibold text-slate-100">Selected Services</div>
-                      <div className="text-xs text-slate-400 mt-1">
-                        {selectedServices.length} selected
-                      </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {quickSuggestions.map((item) => {
+                        const active = selectedServices.includes(Number(item.id));
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => toggleQuickSuggestion(item.id)}
+                            className={cx(
+                              "text-[11px] px-3 py-1.5 rounded-full border transition",
+                              active
+                                ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-100"
+                                : "border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-900"
+                            )}
+                          >
+                            {item.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {selectedServices.length ? (
-                          selectedServices.map((id) => {
-                            const found = leafCategories.find((x) => Number(x.id) === Number(id));
-                            if (!found) return null;
-                            return (
-                              <button
-                                key={id}
-                                type="button"
-                                onClick={() => toggleService(id)}
-                                className="text-[11px] px-3 py-1.5 rounded-full border border-cyan-500/25 bg-cyan-500/10 text-cyan-100"
-                              >
-                                {found.name} ✕
-                              </button>
-                            );
-                          })
-                        ) : (
-                          <div className="text-sm text-slate-400">No services selected yet.</div>
-                        )}
+                  <div className="mt-4">
+                    <CategoryPicker
+                      categories={leafCategories}
+                      value={selectedServices}
+                      onChange={(vals) => setSelectedServices(uniqNums(vals))}
+                      label="Services offered"
+                      multi
+                      maxVisible={18}
+                    />
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+                    <div className="text-sm font-semibold text-slate-100">How this should be used</div>
+                    <div className="mt-2 grid md:grid-cols-3 gap-3 text-sm text-slate-300">
+                      <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
+                        Pick the services you actually want matched for.
+                      </div>
+                      <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
+                        You do not need every variation. Choose the closest useful service.
+                      </div>
+                      <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-3">
+                        Search terms like “plumbing”, “coach”, “dog grooming”, or “website” work best.
                       </div>
                     </div>
                   </div>
@@ -613,7 +622,7 @@ export default function SboSetupWizard({
                       label="Client Base"
                       value={clientBase}
                       onChange={setClientBase}
-                      placeholder="Mostly homeowners in Montgomery, some property managers, a few repeat business clients..."
+                      placeholder="Mostly homeowners, some repeat business clients, a few property managers..."
                     />
                     <Textarea
                       label="Main Goal"
@@ -656,13 +665,12 @@ export default function SboSetupWizard({
                     </div>
 
                     <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
-                      <div className="text-sm font-semibold text-slate-100">What is stored locally for now</div>
+                      <div className="text-sm font-semibold text-slate-100">Setup snapshot</div>
                       <div className="mt-3 space-y-2 text-sm text-slate-300">
-                        <div>• Baseline revenue</div>
-                        <div>• Revenue goal</div>
-                        <div>• Client base notes</div>
-                        <div>• Main goal</div>
-                        <div>• Old data import preference</div>
+                        <div>• {selectedServices.length} services selected</div>
+                        <div>• Baseline revenue {baselineRevenue ? `$${baselineRevenue}` : "not set"}</div>
+                        <div>• Revenue goal {targetRevenue ? `$${targetRevenue}` : "not set"}</div>
+                        <div>• Import preference: {oldDataStatus}</div>
                       </div>
                     </div>
                   </div>
