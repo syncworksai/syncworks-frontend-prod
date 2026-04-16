@@ -253,8 +253,6 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
   const loc = useLocation();
   const { mode, setMode, availableModes, isGod, myBusinesses, logout, user, moduleAccess } = useAuth();
 
-  const [investorLinked, setInvestorLinked] = useState(false);
-  const [tenantLinked, setTenantLinked] = useState(false);
   const [salesLinked, setSalesLinked] = useState(false);
 
   useEffect(() => {
@@ -283,51 +281,27 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
     document.head.appendChild(style);
   }, []);
 
+  const pathname = String(loc.pathname || "").toLowerCase();
+
   const hideSalesButton = useMemo(() => {
-    const p = String(loc.pathname || "").toLowerCase();
-    if (p.startsWith("/tenant")) return true;
-    if (p.startsWith("/investor")) return true;
-    if (p.startsWith("/employee")) return true;
+    if (pathname.startsWith("/tenant")) return true;
+    if (pathname.startsWith("/investor")) return true;
+    if (pathname.startsWith("/employee")) return true;
     if (mode === "EMPLOYEE") return true;
     return false;
-  }, [loc.pathname, mode]);
+  }, [pathname, mode]);
 
   const showBiz = useMemo(() => {
     const hasBiz = Array.isArray(myBusinesses) && myBusinesses.length > 0;
     return hasBiz && ["SBO", "EMPLOYEE", "PM", "PLATFORM"].includes(mode);
   }, [myBusinesses, mode]);
 
-  const showPortals = useMemo(() => mode === "PM" || isGod, [mode, isGod]);
+  const showPortals = useMemo(() => {
+    return mode === "PM" || isGod || pathname.startsWith("/tenant") || pathname.startsWith("/investor");
+  }, [mode, isGod, pathname]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function checkPortals() {
-      if (!showPortals) return;
-
-      setInvestorLinked(false);
-      setTenantLinked(false);
-
-      try {
-        await api.get("/investor/dashboard/");
-        if (!cancelled) setInvestorLinked(true);
-      } catch {
-        if (!cancelled) setInvestorLinked(false);
-      }
-
-      try {
-        await api.get("/tenant/summary/");
-        if (!cancelled) setTenantLinked(true);
-      } catch {
-        if (!cancelled) setTenantLinked(false);
-      }
-    }
-
-    checkPortals();
-    return () => {
-      cancelled = true;
-    };
-  }, [showPortals]);
+  const investorActive = pathname.startsWith("/investor");
+  const tenantActive = pathname.startsWith("/tenant");
 
   useEffect(() => {
     let cancelled = false;
@@ -452,6 +426,14 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
     nav("/newsfeed");
   }
 
+  function openInvestorPortal() {
+    nav("/investor");
+  }
+
+  function openTenantPortal() {
+    nav("/tenant");
+  }
+
   return (
     <div className="sticky top-0 z-50 border-b border-slate-800 bg-slate-950/80 backdrop-blur relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0">
@@ -507,6 +489,8 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
 
               <div className="mt-1 text-sm text-slate-200 truncate">{identityLeft}</div>
               {identitySub ? <div className="mt-0.5 text-[11px] text-slate-400 truncate">{identitySub}</div> : null}
+              {title && title !== "SyncWorks" ? <div className="mt-1 text-[11px] text-cyan-200 truncate">{title}</div> : null}
+              {subtitle ? <div className="mt-0.5 text-[11px] text-slate-500 truncate">{subtitle}</div> : null}
             </div>
           </div>
 
@@ -547,18 +531,18 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
                     <ModeButton
                       label="Investor"
                       accent="slate"
-                      active={false}
-                      locked={!investorLinked}
-                      title={investorLinked ? "Open Investor Portal" : "Investor not linked — click to claim"}
-                      onClick={() => nav(investorLinked ? "/investor" : "/portal/claim?portal=investor")}
+                      active={investorActive}
+                      locked={false}
+                      title="Open Investor Portal"
+                      onClick={openInvestorPortal}
                     />
                     <ModeButton
                       label="Tenant"
                       accent="slate"
-                      active={false}
-                      locked={!tenantLinked}
-                      title={tenantLinked ? "Open Tenant Portal" : "Tenant not linked — click to claim"}
-                      onClick={() => nav(tenantLinked ? "/tenant" : "/portal/claim?portal=tenant")}
+                      active={tenantActive}
+                      locked={false}
+                      title="Open Tenant Portal"
+                      onClick={openTenantPortal}
                     />
                   </div>
                 </div>
@@ -635,8 +619,8 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
 
       {showPortals ? (
         <div className="relative xl:hidden px-4 pb-3 flex gap-2">
-          <ModeButton label="Investor" accent="slate" active={false} locked={!investorLinked} onClick={() => nav(investorLinked ? "/investor" : "/portal/claim?portal=investor")} />
-          <ModeButton label="Tenant" accent="slate" active={false} locked={!tenantLinked} onClick={() => nav(tenantLinked ? "/tenant" : "/portal/claim?portal=tenant")} />
+          <ModeButton label="Investor" accent="slate" active={investorActive} locked={false} onClick={openInvestorPortal} />
+          <ModeButton label="Tenant" accent="slate" active={tenantActive} locked={false} onClick={openTenantPortal} />
         </div>
       ) : null}
     </div>

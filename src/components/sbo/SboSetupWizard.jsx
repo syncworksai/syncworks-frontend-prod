@@ -5,14 +5,6 @@ function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
-function safeList(data) {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data.results)) return data.results;
-  if (Array.isArray(data.value)) return data.value;
-  return [];
-}
-
 function norm(s) {
   return String(s || "").toLowerCase().trim();
 }
@@ -142,6 +134,7 @@ export default function SboSetupWizard({
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [localErr, setLocalErr] = useState("");
+  const [softWarn, setSoftWarn] = useState("");
 
   const [name, setName] = useState("");
   const [headline, setHeadline] = useState("");
@@ -205,6 +198,24 @@ export default function SboSetupWizard({
       setClientBase(String(saved?.clientBase || ""));
       setMainGoal(String(saved?.mainGoal || ""));
       setOldDataStatus(String(saved?.oldDataStatus || "LATER"));
+
+      if (Array.isArray(saved?.selectedServices) && saved.selectedServices.length) {
+        setSelectedServices(uniqNums(saved.selectedServices));
+      }
+
+      if (!business?.name && saved?.name) setName(String(saved.name || ""));
+      if (!business?.headline && saved?.headline) setHeadline(String(saved.headline || ""));
+      if (!business?.services_text && saved?.servicesText) setServicesText(String(saved.servicesText || ""));
+      if (!business?.phone && saved?.phone) setPhone(String(saved.phone || ""));
+      if (!business?.website && saved?.website) setWebsite(String(saved.website || ""));
+
+      if (!business?.business_presence_mode && saved?.businessPresenceMode) setBusinessPresenceMode(String(saved.businessPresenceMode || ""));
+      if (!business?.address && saved?.address) setAddress(String(saved.address || ""));
+      if (!business?.city && saved?.city) setCity(String(saved.city || ""));
+      if (!business?.state && saved?.state) setState(String(saved.state || ""));
+      if (!business?.base_zip && saved?.baseZip) setBaseZip(String(saved.baseZip || ""));
+      if (!business?.service_radius_miles && saved?.radius) setRadius(String(saved.radius || "25"));
+      if (typeof saved?.acceptsMarketplace === "boolean") setAcceptsMarketplace(!!saved.acceptsMarketplace);
     } catch {
       setBaselineRevenue("");
       setTargetRevenue("");
@@ -214,10 +225,26 @@ export default function SboSetupWizard({
     }
 
     setLocalErr("");
+    setSoftWarn("");
     setStep(0);
   }, [open, business, businessId]);
 
   if (!open) return null;
+
+  function persistLocal(partial = {}) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey(businessId)) || "{}");
+      localStorage.setItem(
+        storageKey(businessId),
+        JSON.stringify({
+          ...saved,
+          ...partial,
+        })
+      );
+    } catch {
+      localStorage.setItem(storageKey(businessId), JSON.stringify(partial));
+    }
+  }
 
   function toggleService(id) {
     const nid = Number(id);
@@ -230,26 +257,35 @@ export default function SboSetupWizard({
   }
 
   async function saveSafeBusinessFields(payload) {
-    if (!onSaveBusiness) return;
+    if (!onSaveBusiness) return true;
     setSaving(true);
-    setLocalErr("");
     try {
       await onSaveBusiness(payload);
+      return true;
     } catch (e) {
       const msg =
         e?.response?.data?.detail ||
         (typeof e?.response?.data === "string" ? e.response.data : "") ||
-        "Save failed. One or more fields may not exist on the backend yet.";
-      setLocalErr(msg);
-      throw e;
+        "Some fields could not be saved to the backend yet. You can still continue setup.";
+      setSoftWarn(msg);
+      return false;
     } finally {
       setSaving(false);
     }
   }
 
   async function saveStepIfNeeded() {
-    // Step 0: only safest, most common profile fields
+    setLocalErr("");
+
     if (step === 0) {
+      persistLocal({
+        name: String(name || "").trim(),
+        headline: String(headline || "").trim(),
+        servicesText: String(servicesText || "").trim(),
+        phone: String(phone || "").trim(),
+        website: String(website || "").trim(),
+      });
+
       await saveSafeBusinessFields({
         name: String(name || "").trim(),
         headline: String(headline || "").trim(),
@@ -260,8 +296,17 @@ export default function SboSetupWizard({
       return;
     }
 
-    // Step 1: only common marketplace/address fields
     if (step === 1) {
+      persistLocal({
+        businessPresenceMode: String(businessPresenceMode || "").trim(),
+        address: String(address || "").trim(),
+        city: String(city || "").trim(),
+        state: String(state || "").trim().toUpperCase(),
+        baseZip: String(baseZip || "").trim(),
+        radius: String(radius || "0"),
+        acceptsMarketplace: !!acceptsMarketplace,
+      });
+
       await saveSafeBusinessFields({
         address: String(address || "").trim(),
         city: String(city || "").trim(),
@@ -274,34 +319,22 @@ export default function SboSetupWizard({
       return;
     }
 
-    // Step 2: DO NOT save services here unless backend is confirmed to support it
-    // Store locally for now so wizard never blocks
     if (step === 2) {
-      const saved = JSON.parse(localStorage.getItem(storageKey(businessId)) || "{}");
-      localStorage.setItem(
-        storageKey(businessId),
-        JSON.stringify({
-          ...saved,
-          selectedServices,
-        })
-      );
+      persistLocal({
+        selectedServices,
+      });
       return;
     }
 
-    // Step 3: local baseline/goals
     if (step === 3) {
-      const saved = JSON.parse(localStorage.getItem(storageKey(businessId)) || "{}");
-      localStorage.setItem(
-        storageKey(businessId),
-        JSON.stringify({
-          ...saved,
-          baselineRevenue,
-          targetRevenue,
-          clientBase,
-          mainGoal,
-          oldDataStatus,
-        })
-      );
+      persistLocal({
+        baselineRevenue,
+        targetRevenue,
+        clientBase,
+        mainGoal,
+        oldDataStatus,
+      });
+      return;
     }
   }
 
@@ -316,8 +349,8 @@ export default function SboSetupWizard({
 
       onDone?.();
       onClose?.();
-    } catch {
-      // localErr already set
+    } catch (e) {
+      setLocalErr("Something went wrong, but your local setup data should still be preserved.");
     }
   }
 
@@ -374,6 +407,12 @@ export default function SboSetupWizard({
             {localErr ? (
               <div className="mt-4 text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-2xl p-3">
                 {localErr}
+              </div>
+            ) : null}
+
+            {softWarn ? (
+              <div className="mt-4 text-sm text-amber-200 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3">
+                {softWarn}
               </div>
             ) : null}
 

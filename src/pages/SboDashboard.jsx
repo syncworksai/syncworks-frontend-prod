@@ -162,6 +162,14 @@ export default function SboDashboard() {
     };
   }, [activeBusiness, billingStatus]);
 
+  function openSettingsSection(section, extra = "") {
+    const qs = new URLSearchParams();
+    qs.set("return", "/sbo");
+    if (section) qs.set("section", section);
+    const suffix = extra ? `&${extra}` : "";
+    navigate(`/sbo/settings?${qs.toString()}${suffix}`);
+  }
+
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">
       <ModeBar
@@ -229,9 +237,9 @@ export default function SboDashboard() {
 
         <SboUtilityCards
           onOpenSocial={() => window.open("https://buy.stripe.com/28E9AT4aefLp4uJ0Kn2Nq0i", "_blank", "noopener,noreferrer")}
-          onOpenImport={() => navigate("/sbo/settings?return=%2Fsbo&setup=1")}
-          onOpenExport={() => navigate("/sbo/settings?return=%2Fsbo#export")}
-          onOpenEmployeeInvite={() => navigate("/employee/invite")}
+          onOpenImport={() => openSettingsSection("data", "intent=import")}
+          onOpenExport={() => openSettingsSection("data", "intent=export")}
+          onOpenEmployeeInvite={() => navigate("/team/invites")}
           keeperUrl="https://www.keepertax.com/invite?referrer=Jacob898531"
           socialPaymentUrl="https://buy.stripe.com/28E9AT4aefLp4uJ0Kn2Nq0i"
         />

@@ -49,11 +49,11 @@ export default function SboUtilityCards({
 
       <UtilityCard
         title="Import Data"
-        subtitle="Bring in old tickets, customers, invoices, or exported records from prior tools."
+        subtitle="Bring in old tickets, customers, invoices, or exported records from prior tools. This routes to the safe setup/data workspace instead of a dead page."
       >
         <div className="flex gap-2 flex-wrap">
           <Button tone="cyan" onClick={onOpenImport}>
-            Import Old Data
+            Import Workspace
           </Button>
           <Button tone="slate" onClick={onOpenEmployeeInvite}>
             Invite Employee
@@ -63,11 +63,11 @@ export default function SboUtilityCards({
 
       <UtilityCard
         title="Export Data"
-        subtitle="Back up your business data and prepare for future QuickBooks/tax exports."
+        subtitle="Back up your business data and open the export-ready data workspace without breaking navigation."
       >
         <div className="flex gap-2 flex-wrap">
           <Button tone="indigo" onClick={onOpenExport}>
-            Export Data
+            Export Workspace
           </Button>
         </div>
       </UtilityCard>

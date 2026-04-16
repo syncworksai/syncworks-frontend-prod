@@ -84,6 +84,22 @@ function isPlatformRequest(config) {
   return false;
 }
 
+function isTenantRequest(config) {
+  const url = String(config?.url || "");
+  if (url.startsWith("/tenant/")) return true;
+  if (url === "/tenant") return true;
+  if (url.includes("/api/v1/tenant/")) return true;
+  return false;
+}
+
+function isInvestorRequest(config) {
+  const url = String(config?.url || "");
+  if (url.startsWith("/investor/")) return true;
+  if (url === "/investor") return true;
+  if (url.includes("/api/v1/investor/")) return true;
+  return false;
+}
+
 // ✅ Me-scoped endpoints should never send X-Business-Id
 function isMeScopedRequest(config) {
   const url = String(config?.url || "");
@@ -163,12 +179,15 @@ api.interceptors.request.use(
 
     // ✅ Never send X-Business-Id for:
     // - Sales OS
-    // - God Mode / platform
+    // - Platform
     // - /me/* routes
-    // - user-scoped auth routes like SBO promo unlock
+    // - auth user-scoped routes
+    // - tenant / investor portal endpoints
     if (
       !isSalesRequest(config) &&
       !isPlatformRequest(config) &&
+      !isTenantRequest(config) &&
+      !isInvestorRequest(config) &&
       !isMeScopedRequest(config) &&
       !isUserScopedAuthRequest(config)
     ) {
