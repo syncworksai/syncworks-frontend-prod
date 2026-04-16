@@ -140,13 +140,14 @@ export default function SboSetupWizard({
   onDone,
 }) {
   const [step, setStep] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [localErr, setLocalErr] = useState("");
 
   const [name, setName] = useState("");
-  const [businessEmail, setBusinessEmail] = useState("");
-  const [ownerName, setOwnerName] = useState("");
-  const [phone, setPhone] = useState("");
   const [headline, setHeadline] = useState("");
   const [servicesText, setServicesText] = useState("");
+  const [phone, setPhone] = useState("");
+  const [website, setWebsite] = useState("");
 
   const [businessPresenceMode, setBusinessPresenceMode] = useState("");
   const [address, setAddress] = useState("");
@@ -174,20 +175,17 @@ export default function SboSetupWizard({
       path: buildPath(c, categories),
     }));
     if (!q) return list.slice(0, 30);
-    return list
-      .filter((c) => norm(`${c.name} ${c.key} ${c.path}`).includes(q))
-      .slice(0, 40);
+    return list.filter((c) => norm(`${c.name} ${c.key} ${c.path}`).includes(q)).slice(0, 40);
   }, [search, leafCategories, categories]);
 
   useEffect(() => {
     if (!open) return;
 
     setName(business?.name || "");
-    setBusinessEmail(business?.business_email || "");
-    setOwnerName(business?.owner_name || "");
-    setPhone(business?.phone || "");
     setHeadline(business?.headline || "");
     setServicesText(business?.services_text || "");
+    setPhone(business?.phone || "");
+    setWebsite(business?.website || "");
 
     setBusinessPresenceMode(business?.business_presence_mode || "");
     setAddress(business?.address || "");
@@ -197,9 +195,7 @@ export default function SboSetupWizard({
     setRadius(String(business?.service_radius_miles ?? business?.effective_service_radius_miles ?? 25));
     setAcceptsMarketplace(!!business?.accepts_marketplace_tickets);
 
-    const svc = Array.isArray(business?.services_offered)
-      ? business.services_offered
-      : [];
+    const svc = Array.isArray(business?.services_offered) ? business.services_offered : [];
     setSelectedServices(uniqNums(svc.map((x) => (typeof x === "number" ? x : x?.id))));
 
     try {
@@ -217,6 +213,7 @@ export default function SboSetupWizard({
       setOldDataStatus("LATER");
     }
 
+    setLocalErr("");
     setStep(0);
   }, [open, business, businessId]);
 
@@ -232,59 +229,96 @@ export default function SboSetupWizard({
     });
   }
 
-  async function saveStepBusinessFields(extra = {}) {
-    const payload = {
-      name: String(name || "").trim(),
-      business_email: String(businessEmail || "").trim(),
-      owner_name: String(ownerName || "").trim(),
-      phone: String(phone || "").trim(),
-      headline: String(headline || "").trim(),
-      services_text: String(servicesText || "").trim(),
-      business_presence_mode: String(businessPresenceMode || "").trim(),
-      address: String(address || "").trim(),
-      city: String(city || "").trim(),
-      state: String(state || "").trim().toUpperCase(),
-      base_zip: String(baseZip || "").trim(),
-      service_radius_miles: Number(radius || 0),
-      accepts_marketplace_tickets: !!acceptsMarketplace,
-      services_offered: uniqNums(selectedServices),
-      ...extra,
-    };
-
-    await onSaveBusiness?.(payload);
+  async function saveSafeBusinessFields(payload) {
+    if (!onSaveBusiness) return;
+    setSaving(true);
+    setLocalErr("");
+    try {
+      await onSaveBusiness(payload);
+    } catch (e) {
+      const msg =
+        e?.response?.data?.detail ||
+        (typeof e?.response?.data === "string" ? e.response.data : "") ||
+        "Save failed. One or more fields may not exist on the backend yet.";
+      setLocalErr(msg);
+      throw e;
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function saveLocalBaseline() {
-    localStorage.setItem(
-      storageKey(businessId),
-      JSON.stringify({
-        baselineRevenue,
-        targetRevenue,
-        clientBase,
-        mainGoal,
-        oldDataStatus,
-      })
-    );
-  }
-
-  async function handleNext() {
-    if (step === 0 || step === 1 || step === 2) {
-      await saveStepBusinessFields();
-    }
-
-    if (step === 3) {
-      saveLocalBaseline();
-    }
-
-    if (step < 4) {
-      setStep((s) => s + 1);
+  async function saveStepIfNeeded() {
+    // Step 0: only safest, most common profile fields
+    if (step === 0) {
+      await saveSafeBusinessFields({
+        name: String(name || "").trim(),
+        headline: String(headline || "").trim(),
+        services_text: String(servicesText || "").trim(),
+        phone: String(phone || "").trim(),
+        website: String(website || "").trim(),
+      });
       return;
     }
 
-    await saveStepBusinessFields();
-    saveLocalBaseline();
-    onDone?.();
-    onClose?.();
+    // Step 1: only common marketplace/address fields
+    if (step === 1) {
+      await saveSafeBusinessFields({
+        address: String(address || "").trim(),
+        city: String(city || "").trim(),
+        state: String(state || "").trim().toUpperCase(),
+        base_zip: String(baseZip || "").trim(),
+        service_radius_miles: Number(radius || 0),
+        business_presence_mode: String(businessPresenceMode || "").trim(),
+        accepts_marketplace_tickets: !!acceptsMarketplace,
+      });
+      return;
+    }
+
+    // Step 2: DO NOT save services here unless backend is confirmed to support it
+    // Store locally for now so wizard never blocks
+    if (step === 2) {
+      const saved = JSON.parse(localStorage.getItem(storageKey(businessId)) || "{}");
+      localStorage.setItem(
+        storageKey(businessId),
+        JSON.stringify({
+          ...saved,
+          selectedServices,
+        })
+      );
+      return;
+    }
+
+    // Step 3: local baseline/goals
+    if (step === 3) {
+      const saved = JSON.parse(localStorage.getItem(storageKey(businessId)) || "{}");
+      localStorage.setItem(
+        storageKey(businessId),
+        JSON.stringify({
+          ...saved,
+          baselineRevenue,
+          targetRevenue,
+          clientBase,
+          mainGoal,
+          oldDataStatus,
+        })
+      );
+    }
+  }
+
+  async function handleNext() {
+    try {
+      await saveStepIfNeeded();
+
+      if (step < 4) {
+        setStep((s) => s + 1);
+        return;
+      }
+
+      onDone?.();
+      onClose?.();
+    } catch {
+      // localErr already set
+    }
   }
 
   function handleBack() {
@@ -337,6 +371,12 @@ export default function SboSetupWizard({
               ))}
             </div>
 
+            {localErr ? (
+              <div className="mt-4 text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-2xl p-3">
+                {localErr}
+              </div>
+            ) : null}
+
             <div className="mt-5">
               {step === 0 ? (
                 <StepCard
@@ -345,18 +385,17 @@ export default function SboSetupWizard({
                 >
                   <div className="grid md:grid-cols-2 gap-3">
                     <Input label="Business Name" value={name} onChange={setName} placeholder="Acme Plumbing" />
-                    <Input label="Business Email" value={businessEmail} onChange={setBusinessEmail} placeholder="office@acme.com" />
-                    <Input label="Owner / Contact Name" value={ownerName} onChange={setOwnerName} placeholder="Jacob Lord" />
                     <Input label="Phone" value={phone} onChange={setPhone} placeholder="334-555-1212" />
-                  </div>
-
-                  <div className="mt-3 grid gap-3">
+                    <Input label="Website" value={website} onChange={setWebsite} placeholder="https://acme.com" />
                     <Input
                       label="Headline"
                       value={headline}
                       onChange={setHeadline}
                       placeholder="Fast plumbing service for homes and small businesses"
                     />
+                  </div>
+
+                  <div className="mt-3">
                     <Textarea
                       label="Services Summary"
                       value={servicesText}
@@ -406,7 +445,7 @@ export default function SboSetupWizard({
               {step === 2 ? (
                 <StepCard
                   title="Service Categories"
-                  subtitle="Choose the exact services this business should be matched for."
+                  subtitle="Choose the exact services this business should be matched for. Saved locally for now so setup never blocks."
                 >
                   <Input
                     label="Search Services"
@@ -478,7 +517,7 @@ export default function SboSetupWizard({
               {step === 3 ? (
                 <StepCard
                   title="Revenue + Goals"
-                  subtitle="This helps track business growth later. Stored locally for now until backend baseline fields are wired."
+                  subtitle="Stored locally for now until backend baseline fields are wired."
                 >
                   <div className="grid md:grid-cols-2 gap-3">
                     <Input
@@ -542,7 +581,7 @@ export default function SboSetupWizard({
                         <div>• Business basics</div>
                         <div>• Service area</div>
                         <div>• Marketplace status</div>
-                        <div>• Service categories</div>
+                        <div>• Service categories saved locally</div>
                       </div>
                     </div>
 
@@ -557,31 +596,21 @@ export default function SboSetupWizard({
                       </div>
                     </div>
                   </div>
-
-                  <div className="mt-4 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4 text-sm text-cyan-100">
-                    Next best moves after finish:
-                    <div className="mt-2 space-y-1 text-cyan-100/90">
-                      <div>• connect Stripe</div>
-                      <div>• build catalog pricing</div>
-                      <div>• invite employees</div>
-                      <div>• import old tickets later if needed</div>
-                    </div>
-                  </div>
                 </StepCard>
               ) : null}
             </div>
 
             <div className="mt-5 flex items-center justify-between gap-3">
-              <Button tone="slate" onClick={handleBack} disabled={step === 0}>
+              <Button tone="slate" onClick={handleBack} disabled={step === 0 || saving}>
                 Back
               </Button>
 
               <div className="flex items-center gap-2">
-                <Button tone="slate" onClick={onClose}>
+                <Button tone="slate" onClick={onClose} disabled={saving}>
                   Cancel
                 </Button>
-                <Button tone="cyan" onClick={handleNext}>
-                  {step === 4 ? "Finish Setup" : "Next"}
+                <Button tone="cyan" onClick={handleNext} disabled={saving}>
+                  {saving ? "Saving…" : step === 4 ? "Finish Setup" : "Next"}
                 </Button>
               </div>
             </div>
