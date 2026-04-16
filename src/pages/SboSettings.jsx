@@ -1,110 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { QRCodeSVG } from "qrcode.react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import ModeBar from "../components/ModeBar";
+import Button from "../components/ui/Button";
 import BusinessPicker from "../components/BusinessPicker";
+import SboSetupWizard from "../components/sbo/SboSetupWizard";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
-}
-
-function Card({ title, subtitle, right, children }) {
-  return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-5 shadow-[0_0_30px_rgba(0,0,0,0.18)]">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div className="min-w-0">
-          <div className="font-semibold text-slate-100">{title}</div>
-          {subtitle ? <div className="text-xs text-slate-300 mt-1 leading-relaxed">{subtitle}</div> : null}
-        </div>
-        {right ? <div className="shrink-0">{right}</div> : null}
-      </div>
-      <div className="mt-4">{children}</div>
-    </div>
-  );
-}
-
-function Input({ label, value, onChange, placeholder = "", type = "text", hint = "" }) {
-  return (
-    <label className="block">
-      <div className="text-xs text-slate-200 font-medium">{label}</div>
-      <input
-        type={type}
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500/40"
-      />
-      {hint ? <div className="text-[11px] text-slate-400 mt-1 leading-relaxed">{hint}</div> : null}
-    </label>
-  );
-}
-
-function Textarea({ label, value, onChange, placeholder = "", hint = "" }) {
-  return (
-    <label className="block">
-      <div className="text-xs text-slate-200 font-medium">{label}</div>
-      <textarea
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        rows={4}
-        className="mt-1 w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500/40"
-      />
-      {hint ? <div className="text-[11px] text-slate-400 mt-1 leading-relaxed">{hint}</div> : null}
-    </label>
-  );
-}
-
-function Toggle({ label, checked, onChange, hint = "" }) {
-  return (
-    <div className="flex items-start justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/45 p-3">
-      <div>
-        <div className="text-sm text-slate-100 font-semibold">{label}</div>
-        {hint ? <div className="text-[11px] text-slate-400 mt-1 leading-relaxed">{hint}</div> : null}
-      </div>
-      <button
-        type="button"
-        onClick={() => onChange(!checked)}
-        className={
-          "w-14 h-8 rounded-full border transition relative shrink-0 " +
-          (checked ? "bg-cyan-500/20 border-cyan-500/40" : "bg-slate-950 border-slate-700")
-        }
-        title={checked ? "On" : "Off"}
-      >
-        <span
-          className={
-            "absolute top-1 left-1 w-6 h-6 rounded-full transition " +
-            (checked ? "translate-x-6 bg-cyan-200" : "translate-x-0 bg-slate-300")
-          }
-        />
-      </button>
-    </div>
-  );
-}
-
-function Select({ label, value, onChange, options = [], hint = "" }) {
-  return (
-    <label className="block">
-      <div className="text-xs text-slate-200 font-medium">{label}</div>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500/40"
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value} className="bg-slate-950 text-slate-100">
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      {hint ? <div className="text-[11px] text-slate-400 mt-1 leading-relaxed">{hint}</div> : null}
-    </label>
-  );
-}
-
-function SmallText({ children }) {
-  return <div className="text-[11px] text-slate-400 leading-relaxed">{children}</div>;
 }
 
 function safeList(data) {
@@ -115,464 +19,105 @@ function safeList(data) {
   return [];
 }
 
-function normalizeBusinesses(myBusinesses) {
-  const arr = Array.isArray(myBusinesses) ? myBusinesses : [];
-  return arr
-    .map((x) => {
-      if (!x) return null;
-      if (x.business && typeof x.business === "object") return x.business;
-      return x;
-    })
-    .filter(Boolean);
-}
-
-function normalizeWebsite(v) {
-  const s = String(v || "").trim();
-  if (!s) return "";
-  if (s.startsWith("http://") || s.startsWith("https://")) return s;
-  return `https://${s}`;
-}
-
-function normalizeExternalUrl(v) {
-  const s = String(v || "").trim();
-  if (!s) return "";
-  if (s.startsWith("http://") || s.startsWith("https://")) return s;
-  return `https://${s}`;
-}
-
-function norm(s) {
-  return String(s || "").toLowerCase().trim();
-}
-
-function uniqNums(list) {
-  return Array.from(new Set((list || []).map((x) => Number(x)).filter(Boolean)));
-}
-
-function getPresenceMeta(modeRaw) {
-  const mode = String(modeRaw || "").trim().toLowerCase();
-
-  if (mode === "online") {
-    return {
-      label: "ONLINE BUSINESS",
-      className:
-        "border-cyan-500/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_30px_rgba(34,211,238,0.18)]",
-    };
-  }
-
-  if (mode === "in_person") {
-    return {
-      label: "IN PERSON",
-      className:
-        "border-fuchsia-500/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-[0_0_30px_rgba(217,70,239,0.16)]",
-    };
-  }
-
-  if (mode === "on_site") {
-    return {
-      label: "ON-SITE SERVICE",
-      className:
-        "border-emerald-500/40 bg-emerald-500/15 text-emerald-200 shadow-[0_0_30px_rgba(16,185,129,0.16)]",
-    };
-  }
-
-  if (mode === "hybrid") {
-    return {
-      label: "ONLINE + ON-SITE",
-      className:
-        "border-amber-500/40 bg-amber-500/15 text-amber-200 shadow-[0_0_30px_rgba(245,158,11,0.16)]",
-    };
-  }
-
-  return {
-    label: "BUSINESS TYPE",
-    className: "border-slate-700 bg-slate-900/70 text-slate-300",
-  };
-}
-
-function PresenceBadge({ mode }) {
-  const meta = getPresenceMeta(mode);
+function Card({ title, subtitle, right, children }) {
   return (
-    <div
-      className={`inline-flex items-center rounded-full border px-4 py-2 text-[11px] font-extrabold tracking-[0.18em] uppercase ${meta.className}`}
-    >
-      {meta.label}
+    <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <div className="font-semibold text-slate-100">{title}</div>
+          {subtitle ? <div className="text-xs text-slate-400 mt-1">{subtitle}</div> : null}
+        </div>
+        {right}
+      </div>
+      <div className="mt-4">{children}</div>
     </div>
   );
 }
 
-function getSocialLinks({
-  facebookUrl,
-  instagramUrl,
-  linkedinUrl,
-  googleBusinessUrl,
-  youtubeUrl,
-  tiktokUrl,
-}) {
-  return [
-    { key: "facebook", label: "Facebook", short: "f", url: normalizeExternalUrl(facebookUrl) },
-    { key: "instagram", label: "Instagram", short: "ig", url: normalizeExternalUrl(instagramUrl) },
-    { key: "linkedin", label: "LinkedIn", short: "in", url: normalizeExternalUrl(linkedinUrl) },
-    { key: "google", label: "Google", short: "g", url: normalizeExternalUrl(googleBusinessUrl) },
-    { key: "youtube", label: "YouTube", short: "yt", url: normalizeExternalUrl(youtubeUrl) },
-    { key: "tiktok", label: "TikTok", short: "tt", url: normalizeExternalUrl(tiktokUrl) },
-  ].filter((x) => x.url);
-}
-
-function SocialLinkPill({ href, label, short }) {
-  if (!href) return null;
-
+function Input({ label, value, onChange, placeholder = "", type = "text" }) {
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      title={label}
-      className="inline-flex items-center justify-center min-w-[42px] h-10 px-3 rounded-2xl border border-slate-700 bg-slate-950/80 hover:bg-slate-900 text-slate-100 transition text-xs font-extrabold uppercase tracking-wide"
-    >
-      {short}
-    </a>
-  );
-}
-
-function getBusinessLogoUrl(biz, fallback = "") {
-  const raw =
-    biz?.logo_url ||
-    biz?.logo ||
-    biz?.logo_image ||
-    biz?.logo_file ||
-    fallback ||
-    "";
-
-  const base = String(raw || "").trim();
-  if (!base) return "";
-
-  const stamp =
-    biz?.logo_updated_at ||
-    biz?.updated_at ||
-    biz?.modified ||
-    biz?.updated ||
-    Date.now();
-
-  return `${base}${base.includes("?") ? "&" : "?"}v=${encodeURIComponent(String(stamp))}`;
-}
-
-function Modal({ open, onClose, title, subtitle, children, right = null }) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute inset-0 bg-slate-950/70 backdrop-blur-[1px]"
+    <label className="block">
+      <div className="text-xs text-slate-300 mb-1">{label}</div>
+      <input
+        value={value}
+        type={type}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-cyan-500/40"
       />
-      <div className="relative w-full max-w-4xl rounded-3xl border border-slate-800 bg-[#020617] shadow-[0_0_80px_rgba(0,0,0,0.6)] p-5">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <div className="text-lg font-extrabold text-slate-100">{title}</div>
-            {subtitle ? <div className="text-xs text-slate-400 mt-1">{subtitle}</div> : null}
-          </div>
-          <div className="flex items-center gap-2">
-            {right}
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl px-3 py-2 text-xs border border-slate-700 bg-slate-950 hover:bg-slate-900 text-slate-200"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-        <div className="mt-4">{children}</div>
-      </div>
-    </div>
+    </label>
   );
 }
 
-function ServiceAreaVisual({ baseZip, radius, businessPresenceMode }) {
-  const mode = String(businessPresenceMode || "").trim();
-  const radiusNum = Number(radius) || 25;
-  const clamped = Math.min(Math.max(radiusNum, 5), 500);
-  const size = Math.max(84, Math.min(240, 60 + clamped * 0.35));
-
+function Textarea({ label, value, onChange, placeholder = "" }) {
   return (
-    <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-5 overflow-hidden relative min-h-[280px]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.12),transparent_25%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.12),transparent_28%)]" />
-      <div className="relative h-full">
-        <div className="text-sm font-semibold text-slate-100">Service Area Preview</div>
-        <div className="text-[11px] text-slate-400 mt-1">
-          Quick visual so setup feels obvious. ZIP + radius still power actual routing.
-        </div>
-
-        <div className="mt-6 flex items-center justify-center min-h-[180px]">
-          {mode === "online" ? (
-            <div className="rounded-full border border-cyan-500/35 bg-cyan-500/10 px-6 py-5 text-cyan-200 text-sm font-bold tracking-wide">
-              Online / Remote Service Area
-            </div>
-          ) : (
-            <div className="relative flex items-center justify-center" style={{ width: 260, height: 180 }}>
-              <div
-                className="absolute rounded-full border border-cyan-500/35 bg-cyan-500/10 shadow-[0_0_40px_rgba(34,211,238,0.10)]"
-                style={{ width: size, height: size }}
-              />
-              <div className="absolute h-4 w-4 rounded-full bg-fuchsia-400 shadow-[0_0_18px_rgba(217,70,239,0.35)]" />
-              <div className="absolute top-[calc(50%+18px)] text-[11px] text-slate-200 font-semibold">
-                {baseZip || "ZIP"}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="grid sm:grid-cols-3 gap-2 mt-2">
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
-            <div className="text-[11px] text-slate-400">Base ZIP</div>
-            <div className="text-sm font-semibold text-slate-100 mt-1">{baseZip || "—"}</div>
-          </div>
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
-            <div className="text-[11px] text-slate-400">Radius</div>
-            <div className="text-sm font-semibold text-slate-100 mt-1">{radiusNum} mi</div>
-          </div>
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
-            <div className="text-[11px] text-slate-400">Mode</div>
-            <div className="text-sm font-semibold text-slate-100 mt-1">
-              {mode ? mode.replaceAll("_", " ") : "Not set"}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <label className="block">
+      <div className="text-xs text-slate-300 mb-1">{label}</div>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={4}
+        className="w-full rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-cyan-500/40"
+      />
+    </label>
   );
 }
 
-const PRESENCE_OPTIONS = [
-  { value: "", label: "Select business type…" },
-  { value: "online", label: "Online Business" },
-  { value: "in_person", label: "In Person" },
-  { value: "on_site", label: "On-Site Service" },
-  { value: "hybrid", label: "Online + On-Site" },
-];
-
-const RADIUS_PRESETS = [10, 25, 50, 100, 250, 500];
-
-const FAMILY_KEYWORDS = [
-  {
-    key: "plumbing",
-    label: "Plumbing",
-    words: ["plumb", "pipe", "drain", "leak", "water heater", "toilet", "faucet", "sewer"],
-  },
-  {
-    key: "electrical",
-    label: "Electrical",
-    words: ["electric", "wiring", "panel", "breaker", "outlet", "lighting", "generator"],
-  },
-  {
-    key: "hvac",
-    label: "HVAC",
-    words: ["hvac", "ac", "a/c", "air conditioning", "furnace", "heating", "thermostat", "duct"],
-  },
-  {
-    key: "photography",
-    label: "Photography",
-    words: ["photography", "photographer", "wedding", "portrait", "sports photo", "event photo", "camera"],
-  },
-  {
-    key: "computer-repair",
-    label: "Computer Repair",
-    words: ["computer", "pc", "laptop", "repair", "desktop", "virus", "screen repair", "hardware"],
-  },
-  {
-    key: "web-design",
-    label: "Web Design",
-    words: ["website", "web", "seo", "ecommerce", "shopify", "wordpress", "design", "developer"],
-  },
-  {
-    key: "general-contracting",
-    label: "General Contracting",
-    words: ["contractor", "renovation", "remodel", "construction", "framing", "drywall"],
-  },
-  {
-    key: "lawn-care",
-    label: "Lawn Care",
-    words: ["lawn", "mowing", "landscaping", "mulch", "yard", "grass", "tree trimming"],
-  },
-  {
-    key: "pressure-washing",
-    label: "Pressure Washing",
-    words: ["pressure washing", "soft wash", "power wash", "driveway cleaning"],
-  },
-  {
-    key: "auto-detailing",
-    label: "Auto Detailing",
-    words: ["auto detail", "detailing", "car wash", "paint correction", "ceramic coating"],
-  },
-  {
-    key: "coaching",
-    label: "Coaching / Consulting",
-    words: ["coaching", "consulting", "mentor", "strategy", "training", "education", "course"],
-  },
-];
-
-function scoreKeywordHit(text, word) {
-  const t = norm(text);
-  const w = norm(word);
-  if (!t || !w) return 0;
-  if (t.includes(w)) return 1;
-  return 0;
+function Toggle({ label, checked, onChange, hint = "" }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className={cx(
+        "w-full rounded-2xl border px-4 py-3 text-left transition",
+        checked
+          ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-100"
+          : "border-slate-800 bg-slate-950/60 text-slate-100 hover:bg-slate-900/40"
+      )}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold">{label}</div>
+          {hint ? <div className="text-[11px] text-slate-400 mt-1">{hint}</div> : null}
+        </div>
+        <div className="text-[11px]">{checked ? "ON" : "OFF"}</div>
+      </div>
+    </button>
+  );
 }
 
-function familyScore(family, textBlob) {
-  return (family?.words || []).reduce((sum, word) => sum + scoreKeywordHit(textBlob, word), 0);
-}
-
-function flattenDescendantLeaves(rootId, categories) {
-  const list = Array.isArray(categories) ? categories : [];
-  const childrenByParent = new Map();
-
-  list.forEach((cat) => {
-    const pid = Number(cat?.parent_id || 0);
-    if (!childrenByParent.has(pid)) childrenByParent.set(pid, []);
-    childrenByParent.get(pid).push(cat);
-  });
-
-  const leaves = [];
-  const stack = [Number(rootId)];
-
-  while (stack.length) {
-    const current = stack.pop();
-    const kids = childrenByParent.get(Number(current)) || [];
-    if (!kids.length) continue;
-
-    kids.forEach((kid) => {
-      const grandKids = childrenByParent.get(Number(kid.id)) || [];
-      if (grandKids.length) stack.push(Number(kid.id));
-      else leaves.push(kid);
-    });
-  }
-
-  return leaves;
-}
-
-function buildPathFor(cat, categories) {
-  if (!cat) return "";
-  const byId = new Map((categories || []).map((x) => [Number(x.id), x]));
-  const out = [];
-  let cur = cat;
-  let guard = 0;
-  while (cur && guard < 20) {
-    out.unshift(cur.name);
-    cur = cur.parent_id ? byId.get(Number(cur.parent_id)) : null;
-    guard += 1;
-  }
-  return out.join(" → ");
-}
-
-function guessFamiliesFromBusiness({ name, headline, servicesText, businessPresenceMode }) {
-  const blob = norm([name, headline, servicesText, businessPresenceMode].filter(Boolean).join(" "));
-  return FAMILY_KEYWORDS
-    .map((family) => ({ ...family, score: familyScore(family, blob) }))
-    .filter((x) => x.score > 0)
-    .sort((a, b) => b.score - a.score);
-}
-
-function leafScoreForBusiness(cat, categories, textBlob, matchedFamilies) {
-  const path = buildPathFor(cat, categories);
-  const hay = norm([cat?.name, cat?.key, path].join(" "));
-  let score = 0;
-
-  const tokens = textBlob
-    .split(/\s+/)
-    .map((x) => x.trim())
-    .filter((x) => x.length >= 3);
-
-  tokens.forEach((token) => {
-    if (hay.includes(token)) score += token.length > 5 ? 4 : 2;
-  });
-
-  matchedFamilies.forEach((family) => {
-    const hit = family.words.some((word) => hay.includes(norm(word)));
-    if (hit) score += 8 + family.score;
-  });
-
-  if (hay.includes("wedding")) score += 2;
-  if (hay.includes("sports")) score += 2;
-  if (hay.includes("repair")) score += 2;
-  if (hay.includes("install")) score += 1;
-
-  return score;
-}
-
-function inferSuggestedLeafIds({ categories, name, headline, servicesText, businessPresenceMode, currentIds }) {
-  const list = Array.isArray(categories) ? categories : [];
-  const current = new Set((currentIds || []).map((x) => Number(x)));
-  const textBlob = norm([name, headline, servicesText, businessPresenceMode].filter(Boolean).join(" "));
-  const matchedFamilies = guessFamiliesFromBusiness({ name, headline, servicesText, businessPresenceMode });
-
-  const leaves = list.filter((cat) => {
-    const id = Number(cat?.id);
-    if (!id || current.has(id)) return false;
-    return !list.some((other) => Number(other?.parent_id) === id);
-  });
-
-  const scored = leaves
-    .map((cat) => ({
-      cat,
-      score: leafScoreForBusiness(cat, list, textBlob, matchedFamilies),
-    }))
-    .filter((x) => x.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 18);
-
-  return scored.map((x) => Number(x.cat.id));
-}
-
-function buildFamilyCards(categories) {
-  const list = Array.isArray(categories) ? categories : [];
-  const roots = list.filter((x) => !x?.parent_id);
-
-  return FAMILY_KEYWORDS.map((family) => {
-    const rootMatch =
-      roots.find((root) => {
-        const hay = norm([root?.name, root?.key].join(" "));
-        return hay.includes(norm(family.label)) || family.words.some((w) => hay.includes(norm(w)));
-      }) || null;
-
-    const leafPool = rootMatch ? flattenDescendantLeaves(rootMatch.id, list) : [];
-
-    return {
-      ...family,
-      root: rootMatch,
-      leafPool,
-      preview: leafPool.slice(0, 4),
-    };
-  }).filter((x) => x.root || x.leafPool.length);
+function SectionPill({ active, children, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx(
+        "text-xs rounded-2xl px-3 py-2 border transition",
+        active
+          ? "bg-cyan-500/15 border-cyan-500/35 text-cyan-200"
+          : "bg-slate-950/60 border border-slate-800 hover:bg-slate-900/40 text-slate-200"
+      )}
+    >
+      {children}
+    </button>
+  );
 }
 
 export default function SboSettings() {
-  const nav = useNavigate();
-  const loc = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { activeBusinessId, myBusinesses, reloadBusinesses } = useAuth();
-  const fileRef = useRef(null);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [section, setSection] = useState("profile");
 
-  const businesses = useMemo(() => normalizeBusinesses(myBusinesses), [myBusinesses]);
-  const activeId = activeBusinessId ? Number(activeBusinessId) : null;
-
-  const returnTo = useMemo(() => {
-    const qs = new URLSearchParams(loc.search || "");
-    const r = (qs.get("return") || "").trim();
-    return r && r.startsWith("/") ? r : "/settings";
-  }, [loc.search]);
-
-  const fallbackActiveBiz = useMemo(() => {
-    if (!activeId) return null;
-    return (businesses || []).find((b) => Number(b.id) === Number(activeId)) || null;
-  }, [businesses, activeId]);
-
-  const [activeBiz, setActiveBiz] = useState(null);
+  const [business, setBusiness] = useState(null);
+  const [categories, setCategories] = useState([]);
 
   const [name, setName] = useState("");
   const [businessEmail, setBusinessEmail] = useState("");
@@ -581,1368 +126,348 @@ export default function SboSettings() {
   const [website, setWebsite] = useState("");
   const [headline, setHeadline] = useState("");
   const [servicesText, setServicesText] = useState("");
+
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [baseZip, setBaseZip] = useState("");
   const [radius, setRadius] = useState("25");
+  const [businessPresenceMode, setBusinessPresenceMode] = useState("");
   const [acceptsMarketplace, setAcceptsMarketplace] = useState(true);
 
-  const [businessPresenceMode, setBusinessPresenceMode] = useState("");
   const [facebookUrl, setFacebookUrl] = useState("");
   const [instagramUrl, setInstagramUrl] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [googleBusinessUrl, setGoogleBusinessUrl] = useState("");
-  const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [tiktokUrl, setTiktokUrl] = useState("");
 
-  const [servicesOffered, setServicesOffered] = useState([]);
-  const [businessCardCode, setBusinessCardCode] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
+  const returnTo = useMemo(() => {
+    const qs = new URLSearchParams(location.search || "");
+    const r = (qs.get("return") || "").trim();
+    return r && r.startsWith("/") ? r : "/sbo";
+  }, [location.search]);
 
-  const [isLicensed, setIsLicensed] = useState(false);
-  const [isInsured, setIsInsured] = useState(false);
-  const [backgroundChecked, setBackgroundChecked] = useState(false);
-  const [isBonded, setIsBonded] = useState(false);
-  const [emergencyService, setEmergencyService] = useState(false);
-
-  const [allCategories, setAllCategories] = useState([]);
-  const [taxonomyLoading, setTaxonomyLoading] = useState(false);
-  const [taxonomyError, setTaxonomyError] = useState("");
-
-  const [roots, setRoots] = useState([]);
-  const [rootPick, setRootPick] = useState(null);
-  const [groupPick, setGroupPick] = useState(null);
-  const [children, setChildren] = useState([]);
-  const [searchQ, setSearchQ] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [serviceLabels, setServiceLabels] = useState({});
-
-  const [serviceAreaOpen, setServiceAreaOpen] = useState(false);
-
-  async function fetchBusinessDetail(businessId) {
-    if (!businessId) return null;
-    const res = await api.get(`/businesses/${businessId}/`);
-    return res?.data || null;
-  }
-
-  async function fetchAllServiceCategories() {
-    let page = 1;
-    let all = [];
-    let keepGoing = true;
-
-    while (keepGoing) {
-      const r = await api.get("/service-categories/", { params: { page, page_size: 200 } });
-      const list = safeList(r.data);
-      all = [...all, ...list];
-      keepGoing = !!r?.data?.next;
-      page += 1;
-      if (page > 50) break;
-    }
-
-    return all;
-  }
-
-  function hydrateTaxonomy(cats) {
-    const list = Array.isArray(cats) ? cats : [];
-    setAllCategories(list);
-    setRoots(list.filter((x) => !x?.parent_id));
-  }
-
-  function getChildren(parentId, source = allCategories) {
-    const pid = Number(parentId);
-    return (Array.isArray(source) ? source : []).filter((x) => Number(x?.parent_id) === pid);
-  }
-
-  function findById(id, source = allCategories) {
-    return (Array.isArray(source) ? source : []).find((x) => Number(x?.id) === Number(id)) || null;
-  }
-
-  function isLeaf(cat, source = allCategories) {
-    if (!cat?.id) return false;
-    return getChildren(cat.id, source).length === 0;
-  }
-
-  function buildPath(cat, source = allCategories) {
-    return buildPathFor(cat, source);
-  }
-
-  async function loadLabels(ids, source = allCategories) {
-    const clean = (ids || []).map((x) => Number(x)).filter(Boolean);
-    if (!clean.length) {
-      setServiceLabels({});
+  async function loadAll() {
+    if (!activeBusinessId) {
+      setLoading(false);
       return;
     }
 
-    const list = Array.isArray(source) && source.length ? source : await fetchAllServiceCategories();
-    const next = {};
-
-    clean.forEach((id) => {
-      const cat = findById(id, list);
-      if (cat) {
-        next[id] = {
-          id,
-          name: cat.name,
-          path: buildPath(cat, list),
-          key: cat.key,
-        };
-      }
-    });
-
-    setServiceLabels(next);
-  }
-
-  function hydrateFromBusiness(biz) {
-    if (!biz) return;
-
-    setName(biz.name || "");
-    setBusinessEmail(biz.business_email || "");
-    setOwnerName(biz.owner_name || "");
-    setPhone(biz.phone || "");
-    setWebsite(biz.website || "");
-    setHeadline(biz.headline || "");
-    setServicesText(biz.services_text || "");
-    setAddress(biz.address || "");
-    setCity(biz.city || "");
-    setState(biz.state || "");
-    setBaseZip(biz.base_zip || "");
-    setRadius(String(biz.service_radius_miles ?? biz.effective_service_radius_miles ?? 25));
-    setAcceptsMarketplace(!!biz.accepts_marketplace_tickets);
-    setBusinessCardCode(biz.business_card_code || "");
-    setLogoUrl(getBusinessLogoUrl(biz));
-
-    setBusinessPresenceMode(biz.business_presence_mode || "");
-    setFacebookUrl(biz.facebook_url || "");
-    setInstagramUrl(biz.instagram_url || "");
-    setLinkedinUrl(biz.linkedin_url || "");
-    setGoogleBusinessUrl(biz.google_business_url || "");
-    setYoutubeUrl(biz.youtube_url || "");
-    setTiktokUrl(biz.tiktok_url || "");
-
-    setIsLicensed(!!biz.is_licensed);
-    setIsInsured(!!biz.is_insured);
-    setBackgroundChecked(!!biz.background_checked);
-    setIsBonded(!!biz.is_bonded);
-    setEmergencyService(!!biz.emergency_service);
-
-    const svc = Array.isArray(biz.services_offered)
-      ? biz.services_offered
-      : Array.isArray(biz.services_offered?.results)
-      ? biz.services_offered.results
-      : [];
-
-    const ids = svc
-      .map((x) => (typeof x === "number" ? x : x?.id))
-      .filter(Boolean)
-      .map((x) => Number(x));
-
-    setServicesOffered(ids);
-    loadLabels(ids);
-  }
-
-  async function loadTaxonomyOnly() {
-    setTaxonomyLoading(true);
-    setTaxonomyError("");
-    try {
-      const cats = await fetchAllServiceCategories();
-      hydrateTaxonomy(cats);
-      if (!cats.length) {
-        setTaxonomyError("No service categories were returned from /service-categories/.");
-      }
-    } catch (e) {
-      setTaxonomyError(e?.response?.data?.detail || "Failed to load service taxonomy.");
-    } finally {
-      setTaxonomyLoading(false);
-    }
-  }
-
-  async function refreshBusinesses() {
-    setErr("");
-    setOk("");
     setLoading(true);
-    try {
-      await loadTaxonomyOnly();
-      await reloadBusinesses?.();
+    setErr("");
 
-      if (activeId) {
-        const detail = await fetchBusinessDetail(activeId);
-        setActiveBiz(detail);
-      }
+    try {
+      const [bizRes, catRes] = await Promise.all([
+        api.get(`/businesses/${activeBusinessId}/`),
+        api.get("/service-categories/", { params: { page_size: 300 } }),
+      ]);
+
+      const biz = bizRes?.data || null;
+      const cats = safeList(catRes?.data);
+
+      setBusiness(biz);
+      setCategories(cats);
+
+      setName(biz?.name || "");
+      setBusinessEmail(biz?.business_email || "");
+      setOwnerName(biz?.owner_name || "");
+      setPhone(biz?.phone || "");
+      setWebsite(biz?.website || "");
+      setHeadline(biz?.headline || "");
+      setServicesText(biz?.services_text || "");
+
+      setAddress(biz?.address || "");
+      setCity(biz?.city || "");
+      setState(biz?.state || "");
+      setBaseZip(biz?.base_zip || "");
+      setRadius(String(biz?.service_radius_miles ?? biz?.effective_service_radius_miles ?? 25));
+      setBusinessPresenceMode(biz?.business_presence_mode || "");
+      setAcceptsMarketplace(!!biz?.accepts_marketplace_tickets);
+
+      setFacebookUrl(biz?.facebook_url || "");
+      setInstagramUrl(biz?.instagram_url || "");
+      setLinkedinUrl(biz?.linkedin_url || "");
+      setGoogleBusinessUrl(biz?.google_business_url || "");
     } catch (e) {
-      setErr(e?.response?.data?.detail || "Failed to refresh businesses.");
+      setErr(e?.response?.data?.detail || "Failed to load settings.");
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    refreshBusinesses();
+    loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [activeBusinessId]);
 
   useEffect(() => {
-    let alive = true;
-
-    async function loadActive() {
-      if (!activeId) {
-        setActiveBiz(null);
-        return;
-      }
-
-      try {
-        const detail = await fetchBusinessDetail(activeId);
-        if (!alive) return;
-        setActiveBiz(detail || fallbackActiveBiz || null);
-      } catch {
-        if (!alive) return;
-        setActiveBiz(fallbackActiveBiz || null);
-      }
+    const qs = new URLSearchParams(location.search || "");
+    if (qs.get("setup") === "1") {
+      setWizardOpen(true);
+      setSection("setup");
     }
+  }, [location.search]);
 
-    loadActive();
-
-    return () => {
-      alive = false;
-    };
-  }, [activeId, fallbackActiveBiz]);
-
-  useEffect(() => {
-    if (!activeBiz) return;
-    hydrateFromBusiness(activeBiz);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeBiz?.id, activeBiz?.updated_at, activeBiz?.logo_updated_at]);
-
-  useEffect(() => {
-    const q = String(searchQ || "").trim().toLowerCase();
-    if (!q) {
-      setSearchResults([]);
-      return;
-    }
-
-    const parts = q.split(/\s+/).filter(Boolean);
-
-    const list = (allCategories || []).filter((c) => {
-      const blob = [c?.name, c?.key, buildPath(c)]
-        .map((x) => String(x || "").toLowerCase())
-        .join(" ");
-
-      if (blob.includes(q)) return true;
-      return parts.every((part) => blob.includes(part));
-    });
-
-    const leafMatches = list.filter((x) => isLeaf(x));
-    setSearchResults(leafMatches.length ? leafMatches : list);
-  }, [searchQ, allCategories]);
-
-  const activeBusinessMissing = useMemo(() => {
-    const hasAny = Array.isArray(myBusinesses) && myBusinesses.length > 0;
-    return hasAny && !activeId;
-  }, [myBusinesses, activeId]);
-
-  const customerFacingWebsite = useMemo(() => normalizeWebsite(website), [website]);
-  const qrValue = useMemo(() => (businessCardCode ? businessCardCode : ""), [businessCardCode]);
-
-  const mailtoHref = useMemo(() => {
-    if (!businessCardCode) return "";
-    const subject = encodeURIComponent("Save our SyncWorks Business Card");
-    const body = encodeURIComponent(
-      [
-        "Hi,",
-        "",
-        `You can save our business card in SyncWorks using this code: ${businessCardCode}`,
-        "",
-        "Open SyncWorks → Business Cards → Add by Code",
-        "",
-        "Thanks!",
-      ].join("\n")
-    );
-    return `mailto:?subject=${subject}&body=${body}`;
-  }, [businessCardCode]);
-
-  const socialLinks = useMemo(
-    () =>
-      getSocialLinks({
-        facebookUrl,
-        instagramUrl,
-        linkedinUrl,
-        googleBusinessUrl,
-        youtubeUrl,
-        tiktokUrl,
-      }),
-    [facebookUrl, googleBusinessUrl, instagramUrl, linkedinUrl, tiktokUrl, youtubeUrl]
-  );
-
-  const selectedServiceObjects = useMemo(() => {
-    return servicesOffered.map((id) => serviceLabels[id]).filter(Boolean);
-  }, [servicesOffered, serviceLabels]);
-
-  const rootGroups = useMemo(() => {
-    if (!rootPick?.id) return [];
-    return getChildren(rootPick.id);
-  }, [rootPick, allCategories]);
-
-  useEffect(() => {
-    if (!groupPick?.id) {
-      setChildren([]);
-      return;
-    }
-    setChildren(getChildren(groupPick.id));
-  }, [groupPick, allCategories]);
-
-  const familyCards = useMemo(() => buildFamilyCards(allCategories), [allCategories]);
-
-  const inferredFamilies = useMemo(() => {
-    return guessFamiliesFromBusiness({
-      name,
-      headline,
-      servicesText,
-      businessPresenceMode,
-    });
-  }, [name, headline, servicesText, businessPresenceMode]);
-
-  const smartSuggestedIds = useMemo(() => {
-    return inferSuggestedLeafIds({
-      categories: allCategories,
-      name,
-      headline,
-      servicesText,
-      businessPresenceMode,
-      currentIds: servicesOffered,
-    });
-  }, [allCategories, name, headline, servicesText, businessPresenceMode, servicesOffered]);
-
-  const smartSuggestedObjects = useMemo(() => {
-    return smartSuggestedIds.map((id) => findById(id)).filter(Boolean);
-  }, [smartSuggestedIds, allCategories]);
-
-  function chooseRoot(root) {
-    setRootPick(root);
-    setGroupPick(null);
-    setChildren([]);
-  }
-
-  function chooseGroup(group) {
-    setGroupPick(group);
-  }
-
-  function setServices(next) {
-    const clean = uniqNums(next);
-    setServicesOffered(clean);
-    loadLabels(clean);
-  }
-
-  function toggleService(id) {
-    const nid = Number(id);
-    if (!nid) return;
-
-    const cat = findById(nid);
-    if (!cat || !isLeaf(cat)) return;
-
-    setServices((prev) => {
-      const set = new Set(prev || []);
-      if (set.has(nid)) set.delete(nid);
-      else set.add(nid);
-      return Array.from(set);
-    });
-  }
-
-  function clearServices() {
-    setServices([]);
-    setServiceLabels({});
-  }
-
-  function applySmartSuggestions() {
-    setServices([...servicesOffered, ...smartSuggestedIds]);
-    setOk("Suggested categories added.");
-  }
-
-  function addFamilyLeafPool(family) {
-    const leafPool = Array.isArray(family?.leafPool) ? family.leafPool : [];
-    if (!leafPool.length) return;
-    const top = leafPool.slice(0, 12).map((x) => Number(x.id));
-    setServices([...servicesOffered, ...top]);
-    setOk(`${family.label} categories added.`);
-  }
-
-  async function save() {
+  async function saveBusiness(payload) {
+    if (!activeBusinessId) return;
+    setSaving(true);
     setErr("");
     setOk("");
-
-    if (!activeBiz?.id) {
-      setErr("Select a business first.");
-      return;
+    try {
+      await api.patch(`/businesses/${activeBusinessId}/`, payload);
+      const refreshed = await api.get(`/businesses/${activeBusinessId}/`);
+      setBusiness(refreshed?.data || null);
+      setOk("Saved.");
+      await reloadBusinesses?.();
+    } catch (e) {
+      setErr(e?.response?.data?.detail || JSON.stringify(e?.response?.data || {}) || "Save failed.");
+      throw e;
+    } finally {
+      setSaving(false);
     }
+  }
 
-    const emailTrim = String(businessEmail || "").trim();
-    if (!emailTrim) {
-      setErr("Business Email is required.");
-      return;
-    }
-
-    const payload = {
-      name: String(name || "").trim(),
-      business_email: emailTrim,
-      owner_name: String(ownerName || "").trim(),
-      phone: String(phone || "").trim(),
-      website: normalizeWebsite(website),
-      headline: String(headline || "").trim(),
-      services_text: String(servicesText || "").trim(),
-      address: String(address || "").trim(),
-      city: String(city || "").trim(),
-      state: String(state || "").trim().toUpperCase(),
-      base_zip: String(baseZip || "").trim(),
-      service_radius_miles: Number(radius) || 25,
+  async function saveProfile() {
+    await saveBusiness({
+      name,
+      business_email: businessEmail,
+      owner_name: ownerName,
+      phone,
+      website,
+      headline,
+      services_text: servicesText,
+      address,
+      city,
+      state: String(state || "").toUpperCase(),
+      base_zip: baseZip,
+      service_radius_miles: Number(radius || 0),
+      business_presence_mode: businessPresenceMode,
       accepts_marketplace_tickets: !!acceptsMarketplace,
-      services_offered: servicesOffered.map((x) => Number(x)).filter(Boolean),
-      business_presence_mode: String(businessPresenceMode || "").trim(),
-      facebook_url: normalizeExternalUrl(facebookUrl),
-      instagram_url: normalizeExternalUrl(instagramUrl),
-      linkedin_url: normalizeExternalUrl(linkedinUrl),
-      google_business_url: normalizeExternalUrl(googleBusinessUrl),
-      youtube_url: normalizeExternalUrl(youtubeUrl),
-      tiktok_url: normalizeExternalUrl(tiktokUrl),
-      is_licensed: !!isLicensed,
-      is_insured: !!isInsured,
-      background_checked: !!backgroundChecked,
-      is_bonded: !!isBonded,
-      emergency_service: !!emergencyService,
-    };
-
-    setSaving(true);
-    try {
-      await api.patch(`/businesses/${activeBiz.id}/`, payload);
-      const detail = await fetchBusinessDetail(activeBiz.id);
-      setActiveBiz(detail || { ...(activeBiz || {}), ...payload });
-      await loadLabels(payload.services_offered);
-      setOk("Business settings saved.");
-      await reloadBusinesses?.();
-    } catch (e) {
-      setErr(
-        e?.response?.data?.detail ||
-          JSON.stringify(e?.response?.data || {}) ||
-          "Save failed."
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function saveServicesOnly() {
-    setErr("");
-    setOk("");
-
-    if (!activeBiz?.id) {
-      setErr("Select a business first.");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      await api.patch(`/businesses/${activeBiz.id}/`, {
-        services_offered: servicesOffered.map((x) => Number(x)).filter(Boolean),
-      });
-      const detail = await fetchBusinessDetail(activeBiz.id);
-      setActiveBiz(detail || activeBiz);
-      await loadLabels(servicesOffered);
-      setOk("Marketplace services saved.");
-      await reloadBusinesses?.();
-    } catch (e) {
-      setErr(
-        e?.response?.data?.detail ||
-          JSON.stringify(e?.response?.data || {}) ||
-          "Service save failed."
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function onPickLogoFile(file) {
-    if (!activeBiz?.id || !file) return;
-
-    const isImg = String(file.type || "").startsWith("image/");
-    if (!isImg) {
-      setErr("Please choose an image file.");
-      return;
-    }
-
-    const fd = new FormData();
-    fd.append("logo", file);
-
-    try {
-      setErr("");
-      setOk("");
-      await api.patch(`/businesses/${activeBiz.id}/`, fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      const detail = await fetchBusinessDetail(activeBiz.id);
-      setActiveBiz(detail || activeBiz);
-      setLogoUrl(getBusinessLogoUrl(detail || activeBiz, logoUrl));
-      setOk("Logo uploaded.");
-      await reloadBusinesses?.();
-    } catch (e) {
-      setErr(
-        e?.response?.data?.detail ||
-          JSON.stringify(e?.response?.data || {}) ||
-          "Logo upload failed."
-      );
-    }
-  }
-
-  async function copyCode() {
-    try {
-      await navigator.clipboard.writeText(String(businessCardCode || ""));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
-    } catch {
-      // ignore
-    }
+      facebook_url: facebookUrl,
+      instagram_url: instagramUrl,
+      linkedin_url: linkedinUrl,
+      google_business_url: googleBusinessUrl,
+    });
   }
 
   return (
-    <div className="space-y-4">
-      <Modal
-        open={serviceAreaOpen}
-        onClose={() => setServiceAreaOpen(false)}
-        title="Service Area Setup"
-        subtitle="Set your base ZIP, radius, and business type in a cleaner flow."
-        right={
-          <button
-            type="button"
-            onClick={() => setServiceAreaOpen(false)}
-            className="rounded-xl px-3 py-2 text-xs border border-cyan-500/35 bg-cyan-500/12 hover:bg-cyan-500/18 text-cyan-200"
-          >
-            Done
-          </button>
-        }
-      >
-        <div className="grid lg:grid-cols-2 gap-4">
-          <div className="space-y-4">
-            <Select
-              label="Business Type / Presence"
-              value={businessPresenceMode}
-              onChange={setBusinessPresenceMode}
-              options={PRESENCE_OPTIONS}
-              hint="Online businesses can still use service tags, but radius is mostly for local / on-site matching."
-            />
-
-            <Input
-              label="Street Address"
-              value={address}
-              onChange={setAddress}
-              placeholder="123 Main St"
-              hint="Optional base location for your business profile."
-            />
-
-            <div className="grid sm:grid-cols-3 gap-3">
-              <Input label="City" value={city} onChange={setCity} placeholder="Montgomery" />
-              <Input label="State" value={state} onChange={setState} placeholder="AL" />
-              <Input label="Base ZIP" value={baseZip} onChange={setBaseZip} placeholder="36117" />
-            </div>
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
-              <div className="text-xs text-slate-200 font-medium">Radius Presets</div>
-              <div className="mt-3 flex gap-2 flex-wrap">
-                {RADIUS_PRESETS.map((preset) => {
-                  const active = Number(radius || 0) === preset;
-                  return (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setRadius(String(preset))}
-                      className={cx(
-                        "rounded-full px-3 py-2 text-xs border transition",
-                        active
-                          ? "bg-cyan-500/15 border-cyan-500/30 text-cyan-200"
-                          : "bg-slate-950 border-slate-800 hover:bg-slate-900 text-slate-100"
-                      )}
-                    >
-                      {preset} mi
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="mt-4">
-                <Input
-                  label="Custom Radius"
-                  value={radius}
-                  onChange={setRadius}
-                  placeholder="25"
-                  type="number"
-                  hint="Use any radius from 1 to 500."
-                />
-              </div>
-            </div>
-
-            <Toggle
-              label={acceptsMarketplace ? "Accepting Marketplace Jobs" : "Marketplace Off"}
-              checked={acceptsMarketplace}
-              onChange={setAcceptsMarketplace}
-              hint="If off, this business will not receive marketplace jobs even if ZIP, radius, and services match."
-            />
-          </div>
-
-          <ServiceAreaVisual
-            baseZip={baseZip}
-            radius={radius}
-            businessPresenceMode={businessPresenceMode}
-          />
-        </div>
-      </Modal>
-
-      <Card
-        title="SBO Business Settings"
-        subtitle="These settings belong to the business profile. They power your business card, marketplace routing, and customer-facing provider details."
-        right={
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={() => nav(returnTo)}
-              className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-700 hover:bg-slate-900 text-slate-100"
-            >
-              Back
-            </button>
-
+    <div className="min-h-screen bg-[#020617] text-slate-100">
+      <ModeBar
+        title="SBO Settings"
+        subtitle="Setup first, refine later"
+        rightActions={
+          <div className="flex gap-2 flex-wrap">
             <BusinessPicker />
-
-            <button
-              onClick={refreshBusinesses}
-              className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-700 hover:bg-slate-900 text-slate-100"
-              disabled={loading}
-            >
-              {loading ? "Refreshing…" : "Refresh"}
-            </button>
+            <Button tone="slate" onClick={() => navigate(returnTo)}>
+              Back
+            </Button>
+            <Button tone="fuchsia" onClick={() => setWizardOpen(true)}>
+              Open Setup Flow
+            </Button>
           </div>
         }
-      >
-        {activeBusinessMissing ? (
-          <div className="text-sm text-amber-100 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
-            Pick your active business from the selector above.
-          </div>
-        ) : null}
+      />
 
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-5">
         {err ? (
-          <div className="mt-3 text-sm text-red-200 bg-red-900/20 border border-red-800 rounded-xl p-3">
+          <div className="text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-2xl p-3">
             {err}
           </div>
         ) : null}
 
         {ok ? (
-          <div className="mt-3 text-sm text-emerald-200 bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3">
+          <div className="text-sm text-emerald-200 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-3">
             {ok}
           </div>
         ) : null}
 
-        {!activeBiz ? (
-          <div className="text-sm text-slate-300 mt-3">No active business selected yet.</div>
-        ) : null}
+        <div className="flex gap-2 flex-wrap">
+          <SectionPill active={section === "setup"} onClick={() => setSection("setup")}>
+            Setup
+          </SectionPill>
+          <SectionPill active={section === "profile"} onClick={() => setSection("profile")}>
+            Profile
+          </SectionPill>
+          <SectionPill active={section === "marketplace"} onClick={() => setSection("marketplace")}>
+            Marketplace
+          </SectionPill>
+          <SectionPill active={section === "socials"} onClick={() => setSection("socials")}>
+            Socials
+          </SectionPill>
+          <SectionPill active={section === "data"} onClick={() => setSection("data")}>
+            Import / Export
+          </SectionPill>
+        </div>
 
-        {activeBiz ? (
-          <div className="grid lg:grid-cols-2 gap-4 mt-4">
-            <Card
-              title="Business Profile"
-              subtitle="Business identity, contact info, logo, trust profile, and business card details."
-            >
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="h-24 w-24 rounded-2xl overflow-hidden border border-slate-700 bg-slate-950/60 flex items-center justify-center">
-                    {logoUrl ? (
-                      <img
-                        src={logoUrl}
-                        alt="Business logo"
-                        className="h-full w-full object-cover"
-                        onError={() => {
-                          setErr("Logo uploaded, but the image file is not being served correctly in production.");
-                        }}
-                      />
-                    ) : (
-                      <div className="text-xs text-slate-400 text-center px-2">No Logo</div>
-                    )}
-                  </div>
-
-                  <div className="flex-1 space-y-2">
-                    <button
-                      type="button"
-                      onClick={() => fileRef.current?.click()}
-                      className="rounded-xl px-4 py-2 text-sm font-semibold border border-cyan-500/35 bg-cyan-500/12 hover:bg-cyan-500/18 text-cyan-200"
-                    >
-                      Upload Logo
-                    </button>
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => onPickLogoFile(e.target.files?.[0])}
-                    />
-                    <SmallText>
-                      This logo is used for the digital business card customers save.
-                    </SmallText>
-                  </div>
-                </div>
-
-                <Input label="Business Name" value={name} onChange={setName} placeholder="e.g. Jacob's Plumbing Co." />
-                <Input
-                  label="Business Email"
-                  value={businessEmail}
-                  onChange={setBusinessEmail}
-                  placeholder="office@yourbusiness.com"
-                  type="email"
-                  hint="This is the business email, separate from the user account."
-                />
-
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <Input label="Owner / Contact Name" value={ownerName} onChange={setOwnerName} placeholder="Jacob Lord" />
-                  <Input label="Phone" value={phone} onChange={setPhone} placeholder="555-123-4567" />
-                </div>
-
-                <Input
-                  label="Website"
-                  value={website}
-                  onChange={setWebsite}
-                  placeholder="yourbusiness.com"
-                  hint="Customers can click this from the business card."
-                />
-
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <Input label="Facebook URL" value={facebookUrl} onChange={setFacebookUrl} placeholder="https://facebook.com/yourbusiness" />
-                  <Input label="Instagram URL" value={instagramUrl} onChange={setInstagramUrl} placeholder="https://instagram.com/yourbusiness" />
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <Input label="LinkedIn URL" value={linkedinUrl} onChange={setLinkedinUrl} placeholder="https://linkedin.com/company/yourbusiness" />
-                  <Input label="Google Business URL" value={googleBusinessUrl} onChange={setGoogleBusinessUrl} placeholder="https://g.page/yourbusiness" />
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <Input label="YouTube URL" value={youtubeUrl} onChange={setYoutubeUrl} placeholder="https://youtube.com/@yourbusiness" />
-                  <Input label="TikTok URL" value={tiktokUrl} onChange={setTiktokUrl} placeholder="https://tiktok.com/@yourbusiness" />
-                </div>
-
-                <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div>
-                      <div className="text-xs text-slate-200 font-medium">Service Area + Presence</div>
-                      <div className="text-[11px] text-slate-400 mt-1">
-                        Easier setup for ZIP, radius, and how your business serves customers.
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setServiceAreaOpen(true)}
-                      className="rounded-xl px-4 py-2 text-sm font-semibold border border-cyan-500/35 bg-cyan-500/12 hover:bg-cyan-500/18 text-cyan-200"
-                    >
-                      Open Service Area Setup
-                    </button>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {businessPresenceMode ? <PresenceBadge mode={businessPresenceMode} /> : null}
-                    {baseZip ? (
-                      <span className="text-[11px] px-3 py-1.5 rounded-full border border-slate-700 bg-slate-950/70 text-slate-200">
-                        ZIP {baseZip}
-                      </span>
-                    ) : null}
-                    {radius ? (
-                      <span className="text-[11px] px-3 py-1.5 rounded-full border border-slate-700 bg-slate-950/70 text-slate-200">
-                        Radius {radius} mi
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-
-                <Input
-                  label="Headline"
-                  value={headline}
-                  onChange={setHeadline}
-                  placeholder="Fast, reliable HVAC and electrical service"
-                  hint="Short customer-facing headline for the digital business card."
-                />
-
-                <Textarea
-                  label="Services Summary"
-                  value={servicesText}
-                  onChange={setServicesText}
-                  placeholder="Repairs, installs, diagnostics, maintenance, after-hours support..."
-                  hint="This also helps drive smart category suggestions below."
-                />
-
-                <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
-                  <div className="font-semibold text-slate-100">Trust Signals</div>
-                  <div className="text-xs text-slate-300 mt-1">These should show up correctly on customer-facing business cards.</div>
-
-                  <div className="mt-4 space-y-3">
-                    <Toggle label={isLicensed ? "Licensed" : "Not Licensed"} checked={isLicensed} onChange={setIsLicensed} />
-                    <Toggle label={isInsured ? "Insured" : "Not Insured"} checked={isInsured} onChange={setIsInsured} />
-                    <Toggle
-                      label={backgroundChecked ? "Background Checked" : "Not Background Checked"}
-                      checked={backgroundChecked}
-                      onChange={setBackgroundChecked}
-                    />
-                    <Toggle label={isBonded ? "Bonded" : "Not Bonded"} checked={isBonded} onChange={setIsBonded} />
-                    <Toggle
-                      label={emergencyService ? "Emergency Service Enabled" : "Emergency Service Off"}
-                      checked={emergencyService}
-                      onChange={setEmergencyService}
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-2 flex gap-2">
-                  <button
-                    onClick={save}
-                    disabled={saving}
-                    className={
-                      "rounded-xl px-4 py-2 text-sm font-semibold border transition " +
-                      (saving
-                        ? "bg-slate-900/40 border-slate-800 text-slate-500 cursor-not-allowed"
-                        : "bg-cyan-500/20 border-cyan-500/40 hover:bg-cyan-500/30 text-cyan-200")
-                    }
-                  >
-                    {saving ? "Saving…" : "Save Business Settings"}
-                  </button>
+        {section === "setup" ? (
+          <Card
+            title="Guided Setup"
+            subtitle="Best for new SBOs. Walk through business basics, services, area, and revenue goals."
+            right={<Button tone="cyan" onClick={() => setWizardOpen(true)}>Launch Wizard</Button>}
+          >
+            <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-3">
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
+                <div className="text-xs text-slate-400">Business</div>
+                <div className="mt-1 text-sm font-semibold text-slate-100">{business?.name || "—"}</div>
+              </div>
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
+                <div className="text-xs text-slate-400">ZIP</div>
+                <div className="mt-1 text-sm font-semibold text-slate-100">{business?.base_zip || "—"}</div>
+              </div>
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
+                <div className="text-xs text-slate-400">Radius</div>
+                <div className="mt-1 text-sm font-semibold text-slate-100">
+                  {business?.service_radius_miles ?? business?.effective_service_radius_miles ?? "—"}
                 </div>
               </div>
-            </Card>
-
-            <div className="space-y-4">
-              <Card
-                title="Business Card Code + QR"
-                subtitle="Customers can save this provider by scanning the QR or entering the SW-code."
-                right={
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={copyCode}
-                      className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-700 hover:bg-slate-900 text-slate-100"
-                      disabled={!businessCardCode}
-                    >
-                      {copied ? "Copied ✅" : "Copy Code"}
-                    </button>
-
-                    <a
-                      href={mailtoHref || "#"}
-                      onClick={(e) => {
-                        if (!mailtoHref) e.preventDefault();
-                      }}
-                      className={cx(
-                        "text-xs rounded-xl px-3 py-2 border",
-                        businessCardCode
-                          ? "bg-cyan-500/15 border-cyan-500/30 hover:bg-cyan-500/20 text-cyan-200"
-                          : "bg-slate-950 border-slate-800 text-slate-500 pointer-events-none"
-                      )}
-                    >
-                      Email Code
-                    </a>
-                  </div>
-                }
-              >
-                <div className="grid md:grid-cols-[160px_1fr] gap-4 items-start">
-                  <div className="rounded-2xl border border-slate-700 bg-white p-3 w-fit">
-                    {qrValue ? <QRCodeSVG value={qrValue} size={128} /> : null}
-                  </div>
-
-                  <div className="space-y-3">
-                    <div>
-                      <div className="text-xs text-slate-300">Business Card Code</div>
-                      <div className="mt-1 text-lg font-extrabold text-cyan-200 font-mono">{businessCardCode || "—"}</div>
-                    </div>
-
-                    <div className="text-sm text-slate-200">Share this with customers so they can save your business card in SyncWorks.</div>
-                    <div className="text-[11px] text-slate-400">Warm email uses your business code and opens the user’s email app.</div>
-                  </div>
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
+                <div className="text-xs text-slate-400">Marketplace</div>
+                <div className="mt-1 text-sm font-semibold text-slate-100">
+                  {business?.accepts_marketplace_tickets ? "On" : "Off"}
                 </div>
-              </Card>
-
-              <Card
-                title="Marketplace Service Tags"
-                subtitle="These tags control which customer requests hit this business in the marketplace."
-                right={
-                  <div className="flex gap-2">
-                    <button
-                      onClick={clearServices}
-                      className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-700 hover:bg-slate-900 text-slate-100"
-                    >
-                      Clear
-                    </button>
-                    <button
-                      onClick={loadTaxonomyOnly}
-                      className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-700 hover:bg-slate-900 text-slate-100"
-                    >
-                      Reload Tags
-                    </button>
-                  </div>
-                }
-              >
-                <div className="space-y-4">
-                  {taxonomyError ? (
-                    <div className="text-sm text-amber-100 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
-                      {taxonomyError}
-                    </div>
-                  ) : null}
-
-                  <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                      <div>
-                        <div className="font-semibold text-slate-100">Broad Service Families</div>
-                        <div className="text-xs text-slate-300 mt-1">
-                          Fast setup for new businesses. Pick a broad lane, then refine specialties below.
-                        </div>
-                      </div>
-
-                      {inferredFamilies.length ? (
-                        <div className="text-[11px] text-cyan-300">
-                          Suggested from your profile: {inferredFamilies.map((x) => x.label).join(", ")}
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className="mt-4 grid md:grid-cols-2 gap-3">
-                      {familyCards.map((family) => {
-                        const familyHasSelected = family.leafPool.some((leaf) =>
-                          servicesOffered.includes(Number(leaf.id))
-                        );
-
-                        return (
-                          <div
-                            key={family.key}
-                            className={cx(
-                              "rounded-2xl border p-4",
-                              familyHasSelected
-                                ? "border-cyan-500/25 bg-cyan-500/8"
-                                : "border-slate-800 bg-slate-950/40"
-                            )}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <div className="text-sm font-semibold text-slate-100">{family.label}</div>
-                                <div className="text-[11px] text-slate-400 mt-1">
-                                  {family.root?.name || "Suggested family"} • {family.leafPool.length} possible specialties
-                                </div>
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() => addFamilyLeafPool(family)}
-                                className="rounded-xl px-3 py-2 text-xs border border-cyan-500/35 bg-cyan-500/12 hover:bg-cyan-500/18 text-cyan-200"
-                              >
-                                Add Family
-                              </button>
-                            </div>
-
-                            {family.preview.length ? (
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                {family.preview.map((leaf) => (
-                                  <button
-                                    key={leaf.id}
-                                    type="button"
-                                    onClick={() => toggleService(leaf.id)}
-                                    className={cx(
-                                      "text-[11px] rounded-full px-3 py-1.5 border transition",
-                                      servicesOffered.includes(Number(leaf.id))
-                                        ? "border-cyan-500/25 bg-cyan-500/10 text-cyan-100"
-                                        : "border-slate-700 bg-slate-950/70 text-slate-200 hover:bg-slate-900"
-                                    )}
-                                  >
-                                    {leaf.name}
-                                  </button>
-                                ))}
-                              </div>
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                      <div>
-                        <div className="font-semibold text-slate-100">Smart Suggestions</div>
-                        <div className="text-xs text-slate-300 mt-1">
-                          Based on your business name, headline, services summary, and business type.
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={applySmartSuggestions}
-                          disabled={!smartSuggestedIds.length}
-                          className={cx(
-                            "rounded-xl px-3 py-2 text-xs border",
-                            smartSuggestedIds.length
-                              ? "border-fuchsia-500/35 bg-fuchsia-500/12 hover:bg-fuchsia-500/18 text-fuchsia-200"
-                              : "border-slate-800 bg-slate-950 text-slate-500 cursor-not-allowed"
-                          )}
-                        >
-                          Add All Suggestions
-                        </button>
-                      </div>
-                    </div>
-
-                    {smartSuggestedObjects.length ? (
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {smartSuggestedObjects.map((obj) => {
-                          const checked = servicesOffered.includes(Number(obj.id));
-                          return (
-                            <button
-                              key={obj.id}
-                              type="button"
-                              onClick={() => toggleService(obj.id)}
-                              className={cx(
-                                "text-xs rounded-full px-3 py-2 border transition",
-                                checked
-                                  ? "border-cyan-500/25 bg-cyan-500/10 text-cyan-100"
-                                  : "border-fuchsia-500/25 bg-fuchsia-500/10 text-fuchsia-100 hover:bg-fuchsia-500/14"
-                              )}
-                              title={buildPath(obj)}
-                            >
-                              {checked ? "✓ " : "+ "}
-                              {obj.name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="mt-3 text-sm text-slate-400">
-                        Add a better business name, headline, or services summary and suggestions will get smarter.
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <div className="font-semibold text-slate-100">Selected Services</div>
-                        <div className="text-xs text-slate-300 mt-1">These are the actual routing tags used for customer ticket matching.</div>
-                      </div>
-                      <div className="text-xs text-slate-300">{servicesOffered.length} selected</div>
-                    </div>
-
-                    {selectedServiceObjects.length === 0 ? (
-                      <div className="mt-3 text-sm text-slate-300">No services selected yet.</div>
-                    ) : (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {selectedServiceObjects.map((obj) => (
-                          <button
-                            key={obj.id}
-                            type="button"
-                            onClick={() => toggleService(obj.id)}
-                            className="text-xs rounded-full px-3 py-2 border border-cyan-500/20 bg-cyan-500/10 hover:bg-cyan-500/15 text-cyan-100"
-                            title="Click to remove"
-                          >
-                            {obj.path || obj.name} ✕
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
-                    <div className="font-semibold text-slate-100">Search Services</div>
-                    <div className="text-xs text-slate-300 mt-1">Search for the exact service task. Matching should use leaf tasks, not only broad groups.</div>
-
-                    <input
-                      value={searchQ}
-                      onChange={(e) => setSearchQ(e.target.value)}
-                      placeholder="plumbing, wedding photography, AC not cooling, laptop repair..."
-                      className="mt-3 w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500"
-                    />
-
-                    <div className="mt-3 max-h-[260px] overflow-auto space-y-2 pr-1">
-                      {searchResults.slice(0, 40).map((c) => {
-                        const id = Number(c.id);
-                        const leaf = isLeaf(c);
-                        const checked = servicesOffered.includes(id);
-
-                        return (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => {
-                              if (leaf) toggleService(id);
-                            }}
-                            className={
-                              "w-full text-left rounded-xl border p-3 transition " +
-                              (checked
-                                ? "bg-cyan-500/10 border-cyan-500/20"
-                                : "bg-slate-950 border-slate-800 hover:bg-slate-900")
-                            }
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <div className="font-semibold text-sm text-slate-100">
-                                  {leaf ? "✅ " : "📁 "}
-                                  {c.name}
-                                </div>
-                                <div className="text-[11px] text-slate-300 mt-1">{buildPath(c)}</div>
-                              </div>
-                              <div className="text-[10px] text-slate-400">{leaf ? (checked ? "Selected" : "Leaf") : "Group"}</div>
-                            </div>
-                          </button>
-                        );
-                      })}
-
-                      {searchQ && searchResults.length === 0 ? (
-                        <div className="text-sm text-slate-300">No results.</div>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
-                      <div className="font-semibold text-slate-100">1) Pick Industry</div>
-                      <div className="text-xs text-slate-300 mt-1">Start with the top-level service industry.</div>
-
-                      {taxonomyLoading ? <div className="mt-3 text-sm text-slate-300">Loading industries…</div> : null}
-
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {roots.map((r) => (
-                          <button
-                            key={r.id}
-                            type="button"
-                            onClick={() => chooseRoot(r)}
-                            className={
-                              "text-xs rounded-full px-3 py-2 border transition " +
-                              (Number(rootPick?.id) === Number(r.id)
-                                ? "bg-cyan-500/15 border-cyan-500/30 text-cyan-200"
-                                : "bg-slate-950 border-slate-800 hover:bg-slate-900 text-slate-100")
-                            }
-                          >
-                            {r.name}
-                          </button>
-                        ))}
-                      </div>
-
-                      {!taxonomyLoading && roots.length === 0 ? (
-                        <div className="mt-3 text-sm text-slate-300">No industries loaded.</div>
-                      ) : null}
-
-                      {rootPick ? (
-                        <div className="mt-4">
-                          <div className="text-xs text-slate-200 font-medium">2) Pick Group</div>
-                          <div className="text-[11px] text-slate-400 mt-1">
-                            In <span className="text-slate-200">{rootPick.name}</span>
-                          </div>
-
-                          <div className="mt-2 max-h-[240px] overflow-auto space-y-2 pr-1">
-                            {rootGroups.map((g) => (
-                              <button
-                                key={g.id}
-                                type="button"
-                                onClick={() => chooseGroup(g)}
-                                className={
-                                  "w-full text-left rounded-xl border p-3 transition " +
-                                  (Number(groupPick?.id) === Number(g.id)
-                                    ? "bg-indigo-500/12 border-indigo-500/30 text-indigo-100"
-                                    : "bg-slate-950 border-slate-800 hover:bg-slate-900 text-slate-100")
-                                }
-                              >
-                                <div className="font-semibold text-sm">{g.name}</div>
-                                <div className="text-[11px] text-slate-300 mt-1">{g.key}</div>
-                              </button>
-                            ))}
-
-                            {rootGroups.length === 0 ? <div className="text-sm text-slate-300">No groups found.</div> : null}
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
-                      <div className="font-semibold text-slate-100">3) Pick Leaf Service</div>
-                      <div className="text-xs text-slate-300 mt-1">Choose the exact atomic task customers request.</div>
-
-                      <div className="mt-3 max-h-[360px] overflow-auto space-y-2 pr-1">
-                        {children.map((c) => {
-                          const id = Number(c.id);
-                          const leaf = isLeaf(c);
-                          const checked = servicesOffered.includes(id);
-
-                          return (
-                            <button
-                              key={c.id}
-                              type="button"
-                              onClick={() => {
-                                if (leaf) toggleService(id);
-                              }}
-                              className={
-                                "w-full text-left rounded-xl border p-3 transition " +
-                                (checked
-                                  ? "bg-cyan-500/10 border-cyan-500/20"
-                                  : "bg-slate-950 border-slate-800 hover:bg-slate-900")
-                              }
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <div className="font-semibold text-sm text-slate-100">
-                                    {leaf ? "✅ " : "📁 "}
-                                    {c.name}
-                                  </div>
-                                  <div className="text-[11px] text-slate-300 mt-1">{buildPath(c)}</div>
-                                </div>
-                                <div className="text-[10px] text-slate-400">{leaf ? (checked ? "Selected" : "Tap") : "Group"}</div>
-                              </div>
-                            </button>
-                          );
-                        })}
-
-                        {!groupPick ? <div className="text-sm text-slate-300">Pick a group on the left first.</div> : null}
-                        {groupPick && children.length === 0 ? <div className="text-sm text-slate-300">No leaf services found.</div> : null}
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={saveServicesOnly}
-                    disabled={saving}
-                    className={
-                      "w-full rounded-xl px-4 py-3 text-sm font-semibold border transition " +
-                      (saving
-                        ? "bg-slate-900/40 border-slate-800 text-slate-500 cursor-not-allowed"
-                        : "bg-cyan-500/20 border-cyan-500/40 hover:bg-cyan-500/30 text-cyan-200")
-                    }
-                  >
-                    {saving ? "Saving…" : "Save Marketplace + Services"}
-                  </button>
-                </div>
-              </Card>
-
-              <Card title="Customer Business Card Preview" subtitle="This is what customers should understand at a glance.">
-                <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-xs uppercase tracking-wider text-slate-400">Business Card</div>
-                      <div className="text-lg font-extrabold text-slate-100 truncate mt-1">{name || "Business Name"}</div>
-
-                      {businessPresenceMode ? (
-                        <div className="mt-3">
-                          <PresenceBadge mode={businessPresenceMode} />
-                        </div>
-                      ) : null}
-
-                      {headline ? <div className="text-sm text-cyan-200/90 mt-3">{headline}</div> : null}
-
-                      {socialLinks.length ? (
-                        <div className="mt-3">
-                          <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-2">Socials</div>
-                          <div className="flex gap-2 flex-wrap">
-                            {socialLinks.map((item) => (
-                              <SocialLinkPill key={item.key} href={item.url} label={item.label} short={item.short} />
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-
-                      <div className="mt-4 flex gap-2 flex-wrap">
-                        <span
-                          className={
-                            "text-[11px] px-3 py-1.5 rounded-full border font-semibold " +
-                            (isLicensed
-                              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
-                              : "bg-slate-950/60 border-slate-700 text-slate-400")
-                          }
-                        >
-                          Licensed
-                        </span>
-                        <span
-                          className={
-                            "text-[11px] px-3 py-1.5 rounded-full border font-semibold " +
-                            (isInsured
-                              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
-                              : "bg-slate-950/60 border-slate-700 text-slate-400")
-                          }
-                        >
-                          Insured
-                        </span>
-                        <span
-                          className={
-                            "text-[11px] px-3 py-1.5 rounded-full border font-semibold " +
-                            (backgroundChecked
-                              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
-                              : "bg-slate-950/60 border-slate-700 text-slate-400")
-                          }
-                        >
-                          Checked
-                        </span>
-                      </div>
-
-                      {servicesText ? (
-                        <div className="text-sm text-slate-200 mt-3 leading-relaxed">{servicesText}</div>
-                      ) : (
-                        <div className="text-sm text-slate-400 mt-3">Add a short service summary so customers know what you offer.</div>
-                      )}
-
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {city || state ? (
-                          <span className="text-[11px] px-3 py-1.5 rounded-full border border-slate-700 bg-slate-950/70 text-slate-200">
-                            {city || "City"}
-                            {city && state ? ", " : ""}
-                            {state || ""}
-                          </span>
-                        ) : null}
-
-                        {baseZip ? (
-                          <span className="text-[11px] px-3 py-1.5 rounded-full border border-slate-700 bg-slate-950/70 text-slate-200">
-                            ZIP {baseZip}
-                          </span>
-                        ) : null}
-
-                        {radius ? (
-                          <span className="text-[11px] px-3 py-1.5 rounded-full border border-slate-700 bg-slate-950/70 text-slate-200">
-                            Radius {radius} mi
-                          </span>
-                        ) : null}
-                      </div>
-
-                      {selectedServiceObjects.length ? (
-                        <div className="mt-3">
-                          <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-2">Routed For</div>
-                          <div className="flex flex-wrap gap-2">
-                            {selectedServiceObjects.slice(0, 6).map((obj) => (
-                              <span
-                                key={obj.id}
-                                className="text-[11px] px-3 py-1.5 rounded-full border border-cyan-500/20 bg-cyan-500/10 text-cyan-100"
-                                title={obj.path}
-                              >
-                                {obj.name}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {customerFacingWebsite ? (
-                        <div className="mt-3">
-                          <a
-                            href={customerFacingWebsite}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-sm text-cyan-300 hover:text-cyan-200 underline break-all"
-                          >
-                            {customerFacingWebsite}
-                          </a>
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className="shrink-0 w-[110px] h-[110px] rounded-2xl border border-slate-700 bg-slate-950/60 overflow-hidden">
-                      {logoUrl ? (
-                        <img src={logoUrl} alt="Business logo" className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center text-slate-400 text-xs">Logo</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </Card>
+              </div>
             </div>
-          </div>
+
+            <div className="mt-4 text-sm text-slate-300">
+              This setup flow is meant to feel like a slide deck, not a giant form wall.
+            </div>
+          </Card>
         ) : null}
-      </Card>
+
+        {section === "profile" ? (
+          <Card
+            title="Business Profile"
+            subtitle="Edit the core business information customers and marketplace routing use."
+            right={<Button tone="cyan" onClick={saveProfile} disabled={saving}>{saving ? "Saving…" : "Save Profile"}</Button>}
+          >
+            <div className="grid md:grid-cols-2 gap-3">
+              <Input label="Business Name" value={name} onChange={setName} placeholder="Acme Plumbing" />
+              <Input label="Business Email" value={businessEmail} onChange={setBusinessEmail} placeholder="office@acme.com" />
+              <Input label="Owner / Contact Name" value={ownerName} onChange={setOwnerName} placeholder="Jacob Lord" />
+              <Input label="Phone" value={phone} onChange={setPhone} placeholder="334-555-1212" />
+              <Input label="Website" value={website} onChange={setWebsite} placeholder="https://acme.com" />
+              <Input label="Headline" value={headline} onChange={setHeadline} placeholder="Fast, reliable service" />
+            </div>
+
+            <div className="mt-3">
+              <Textarea
+                label="Services Summary"
+                value={servicesText}
+                onChange={setServicesText}
+                placeholder="Repairs, installs, diagnostics, recurring service..."
+              />
+            </div>
+          </Card>
+        ) : null}
+
+        {section === "marketplace" ? (
+          <Card
+            title="Marketplace"
+            subtitle="Routing and discovery controls for new jobs."
+            right={<Button tone="cyan" onClick={saveProfile} disabled={saving}>{saving ? "Saving…" : "Save Marketplace"}</Button>}
+          >
+            <div className="grid md:grid-cols-2 gap-3">
+              <Input label="Street Address" value={address} onChange={setAddress} placeholder="123 Main St" />
+              <Input label="City" value={city} onChange={setCity} placeholder="Montgomery" />
+              <Input label="State" value={state} onChange={setState} placeholder="AL" />
+              <Input label="Base ZIP" value={baseZip} onChange={setBaseZip} placeholder="36117" />
+              <Input label="Radius (miles)" value={radius} onChange={setRadius} type="number" placeholder="25" />
+              <Input
+                label="Business Type"
+                value={businessPresenceMode}
+                onChange={setBusinessPresenceMode}
+                placeholder="online / on_site / hybrid / in_person"
+              />
+            </div>
+
+            <div className="mt-3">
+              <Toggle
+                label="Accept Marketplace Tickets"
+                checked={acceptsMarketplace}
+                onChange={setAcceptsMarketplace}
+                hint="If off, the business won’t receive open marketplace jobs."
+              />
+            </div>
+
+            <div className="mt-4">
+              <Button tone="fuchsia" onClick={() => setWizardOpen(true)}>
+                Launch Guided Setup
+              </Button>
+            </div>
+          </Card>
+        ) : null}
+
+        {section === "socials" ? (
+          <Card
+            title="Social Links"
+            subtitle="These support the business card and future social automation flows."
+            right={<Button tone="cyan" onClick={saveProfile} disabled={saving}>{saving ? "Saving…" : "Save Socials"}</Button>}
+          >
+            <div className="grid md:grid-cols-2 gap-3">
+              <Input label="Facebook URL" value={facebookUrl} onChange={setFacebookUrl} placeholder="https://facebook.com/yourbusiness" />
+              <Input label="Instagram URL" value={instagramUrl} onChange={setInstagramUrl} placeholder="https://instagram.com/yourbusiness" />
+              <Input label="LinkedIn URL" value={linkedinUrl} onChange={setLinkedinUrl} placeholder="https://linkedin.com/company/yourbusiness" />
+              <Input label="Google Business URL" value={googleBusinessUrl} onChange={setGoogleBusinessUrl} placeholder="https://g.page/yourbusiness" />
+            </div>
+          </Card>
+        ) : null}
+
+        {section === "data" ? (
+          <Card
+            title="Import / Export"
+            subtitle="We’re preparing the entry points now so onboarding and portability are obvious."
+          >
+            <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-3">
+              <button
+                type="button"
+                onClick={() => navigate("/sbo/import")}
+                className="rounded-2xl border border-cyan-500/25 bg-cyan-500/10 p-4 text-left hover:bg-cyan-500/15"
+              >
+                <div className="text-sm font-semibold text-cyan-100">Import Old Tickets</div>
+                <div className="text-xs text-slate-300 mt-2">Bring in exported ticket history later.</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate("/sbo/export")}
+                className="rounded-2xl border border-indigo-500/25 bg-indigo-500/10 p-4 text-left hover:bg-indigo-500/15"
+              >
+                <div className="text-sm font-semibold text-indigo-100">Export Data</div>
+                <div className="text-xs text-slate-300 mt-2">Customers, invoices, and future tax exports.</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate("/sbo/catalog")}
+                className="rounded-2xl border border-fuchsia-500/25 bg-fuchsia-500/10 p-4 text-left hover:bg-fuchsia-500/15"
+              >
+                <div className="text-sm font-semibold text-fuchsia-100">Build Catalog</div>
+                <div className="text-xs text-slate-300 mt-2">Get invoice-ready services into the system.</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate("/team/invites")}
+                className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-4 text-left hover:bg-emerald-500/15"
+              >
+                <div className="text-sm font-semibold text-emerald-100">Invite Employees</div>
+                <div className="text-xs text-slate-300 mt-2">Start role-based access for techs, office, accounting.</div>
+              </button>
+            </div>
+          </Card>
+        ) : null}
+      </main>
+
+      <SboSetupWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        businessId={activeBusinessId}
+        business={business}
+        categories={categories}
+        onSaveBusiness={saveBusiness}
+        onDone={async () => {
+          await loadAll();
+        }}
+      />
     </div>
   );
 }

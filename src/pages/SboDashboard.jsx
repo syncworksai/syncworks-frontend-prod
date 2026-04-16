@@ -20,8 +20,7 @@ function safeList(data) {
 }
 
 function toMoneyFromCents(cents) {
-  const n = Number(cents || 0) / 100;
-  return n;
+  return Number(cents || 0) / 100;
 }
 
 function sumBy(rows, key) {
@@ -41,8 +40,11 @@ function buildChartData(rows) {
     completedJobs: Number(row?.tickets_completed_count || 0),
     openTickets: Number(row?.tickets_open_count || 0),
     paidTickets: Number(row?.tickets_paid_count || 0),
-    customersApprox: Number(row?.tickets_paid_count || 0),
   }));
+}
+
+function baselineKey(businessId) {
+  return `sw_setup_baseline_v1_${businessId || "no_biz"}`;
 }
 
 export default function SboDashboard() {
@@ -54,6 +56,7 @@ export default function SboDashboard() {
   const [kpiRows, setKpiRows] = useState([]);
   const [ticketRows, setTicketRows] = useState([]);
   const [billingStatus, setBillingStatus] = useState(null);
+  const [localBaseline, setLocalBaseline] = useState({});
 
   const activeBusiness = useMemo(() => {
     const list = Array.isArray(myBusinesses) ? myBusinesses : [];
@@ -77,24 +80,16 @@ export default function SboDashboard() {
         api.get("/billing/status/"),
       ]);
 
-      const kpis =
-        kpiRes.status === "fulfilled"
-          ? safeList(kpiRes.value?.data)
-          : [];
+      setKpiRows(kpiRes.status === "fulfilled" ? safeList(kpiRes.value?.data) : []);
+      setTicketRows(ticketsRes.status === "fulfilled" ? safeList(ticketsRes.value?.data) : []);
+      setBillingStatus(billingRes.status === "fulfilled" ? billingRes.value?.data || null : null);
 
-      const tickets =
-        ticketsRes.status === "fulfilled"
-          ? safeList(ticketsRes.value?.data)
-          : [];
-
-      const billing =
-        billingRes.status === "fulfilled"
-          ? billingRes.value?.data || null
-          : null;
-
-      setKpiRows(kpis);
-      setTicketRows(tickets);
-      setBillingStatus(billing);
+      try {
+        const saved = JSON.parse(localStorage.getItem(baselineKey(activeBusinessId)) || "{}");
+        setLocalBaseline(saved || {});
+      } catch {
+        setLocalBaseline({});
+      }
     } catch (e) {
       setErr(e?.message || "Failed to load SBO dashboard.");
     } finally {
@@ -109,9 +104,9 @@ export default function SboDashboard() {
 
   const chartData = useMemo(() => buildChartData(kpiRows), [kpiRows]);
 
-  const baselineRevenue = Number(activeBusiness?.baseline_monthly_revenue || activeBusiness?.current_monthly_revenue_before_syncworks || 0);
+  const baselineRevenue = Number(localBaseline?.baselineRevenue || 0);
+  const revenueGoal = Number(localBaseline?.targetRevenue || 0);
   const revenueThisMonth = useMemo(() => toMoneyFromCents(sumBy(kpiRows, "gmv_paid_cents")), [kpiRows]);
-  const revenueGoal = Number(activeBusiness?.target_monthly_revenue || 0);
 
   const growthPct = useMemo(() => {
     if (!baselineRevenue || baselineRevenue <= 0) return 0;
@@ -180,8 +175,8 @@ export default function SboDashboard() {
             <Button tone="indigo" onClick={() => navigate("/sbo/catalog")}>
               Catalog
             </Button>
-            <Button tone="slate" onClick={() => navigate("/sbo/settings?return=%2Fsbo")}>
-              Settings
+            <Button tone="slate" onClick={() => navigate("/sbo/settings?return=%2Fsbo&setup=1")}>
+              Setup
             </Button>
           </div>
         }
@@ -210,10 +205,7 @@ export default function SboDashboard() {
 
         <div className="grid xl:grid-cols-3 gap-4">
           <div className="xl:col-span-2">
-            <SboKpiCharts
-              loading={loading}
-              chartData={chartData}
-            />
+            <SboKpiCharts loading={loading} chartData={chartData} />
           </div>
 
           <div className="space-y-4">
@@ -227,18 +219,18 @@ export default function SboDashboard() {
         </div>
 
         <SboActionGrid
-          onOpenInvoicing={() => navigate("/sbo/invoicing")}
-          onOpenTaxes={() => navigate("/sbo/taxes")}
-          onOpenEmployees={() => navigate("/sbo/employees")}
+          onOpenInvoicing={() => navigate("/tickets?view=new")}
+          onOpenTaxes={() => navigate("/billing/cash-fee-invoices")}
+          onOpenEmployees={() => navigate("/team/invites")}
           onOpenCatalog={() => navigate("/sbo/catalog")}
-          onOpenKpis={() => navigate("/sbo/kpis")}
+          onOpenKpis={() => navigate("/sbo")}
           onOpenSettings={() => navigate("/sbo/settings?return=%2Fsbo")}
         />
 
         <SboUtilityCards
-          onOpenSocial={() => navigate("/social")}
-          onOpenImport={() => navigate("/sbo/import")}
-          onOpenExport={() => navigate("/sbo/export")}
+          onOpenSocial={() => window.open("https://buy.stripe.com/28E9AT4aefLp4uJ0Kn2Nq0i", "_blank", "noopener,noreferrer")}
+          onOpenImport={() => navigate("/sbo/settings?return=%2Fsbo&setup=1")}
+          onOpenExport={() => navigate("/sbo/settings?return=%2Fsbo#export")}
           onOpenEmployeeInvite={() => navigate("/employee/invite")}
           keeperUrl="https://www.keepertax.com/invite?referrer=Jacob898531"
           socialPaymentUrl="https://buy.stripe.com/28E9AT4aefLp4uJ0Kn2Nq0i"
