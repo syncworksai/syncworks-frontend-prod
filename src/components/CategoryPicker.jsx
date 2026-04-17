@@ -14,27 +14,15 @@ function getParentMap(categories = []) {
   return byId;
 }
 
-function getRootCategories(categories = []) {
-  return (categories || []).filter((c) => !c?.parent_id);
-}
-
-function getGroupCategories(categories = []) {
-  const byId = getParentMap(categories);
-  return (categories || []).filter((c) => {
-    if (!c?.parent_id) return false;
-    const parent = byId.get(Number(c.parent_id));
-    return !!parent && !parent.parent_id;
-  });
-}
-
-function scoreGroup(cat, query, byId) {
+function scoreCategory(cat, query, byId) {
   const q = norm(query);
   if (!q) return 0;
 
   const name = norm(cat?.name);
   const key = norm(cat?.key);
   const parent = byId.get(Number(cat?.parent_id));
-  const rootName = norm(parent?.name || "");
+  const parentName = norm(parent?.name || "");
+  const hay = `${name} ${key} ${parentName}`.trim();
 
   let score = 0;
 
@@ -42,13 +30,15 @@ function scoreGroup(cat, query, byId) {
   if (name.startsWith(q)) score += 95;
   if (name.includes(q)) score += 75;
 
-  if (rootName.includes(q)) score += 18;
+  if (parentName.includes(q)) score += 18;
   if (key.includes(q)) score += 10;
+  if (hay.includes(q)) score += 8;
 
   const words = q.split(/\s+/).filter(Boolean);
   for (const word of words) {
     if (name.includes(word)) score += 15;
-    if (rootName.includes(word)) score += 5;
+    if (parentName.includes(word)) score += 5;
+    if (key.includes(word)) score += 4;
   }
 
   return score;
@@ -66,7 +56,13 @@ export default function CategoryPicker({
   const [q, setQ] = useState("");
 
   const byId = useMemo(() => getParentMap(categories), [categories]);
-  const groups = useMemo(() => getGroupCategories(categories), [categories]);
+
+  // IMPORTANT:
+  // categories passed in are already the list we want to search.
+  // Do NOT re-filter them into "groups" again here.
+  const searchableCategories = useMemo(() => {
+    return Array.isArray(categories) ? categories : [];
+  }, [categories]);
 
   const selectedIds = useMemo(() => {
     if (multi) return new Set((Array.isArray(value) ? value : []).map((x) => String(x)));
@@ -75,25 +71,25 @@ export default function CategoryPicker({
 
   const selectedObjects = useMemo(() => {
     return Array.from(selectedIds)
-      .map((id) => byId.get(Number(id)))
+      .map((id) => searchableCategories.find((c) => String(c.id) === String(id)))
       .filter(Boolean);
-  }, [selectedIds, byId]);
+  }, [selectedIds, searchableCategories]);
 
   const quickPickObjects = useMemo(() => {
     return (quickPicks || [])
-      .map((id) => byId.get(Number(id)))
+      .map((id) => searchableCategories.find((c) => String(c.id) === String(id)))
       .filter(Boolean)
       .slice(0, 10);
-  }, [quickPicks, byId]);
+  }, [quickPicks, searchableCategories]);
 
   const results = useMemo(() => {
     const query = norm(q);
     if (!query) return [];
 
-    return [...groups]
+    return [...searchableCategories]
       .map((cat) => ({
         cat,
-        score: scoreGroup(cat, query, byId),
+        score: scoreCategory(cat, query, byId),
       }))
       .filter((x) => x.score > 0)
       .sort((a, b) => {
@@ -102,7 +98,7 @@ export default function CategoryPicker({
       })
       .slice(0, 10)
       .map((x) => x.cat);
-  }, [groups, byId, q]);
+  }, [searchableCategories, byId, q]);
 
   function handlePick(id) {
     const sid = String(id);
@@ -205,7 +201,7 @@ export default function CategoryPicker({
           <div className="mt-2 grid gap-2">
             {results.map((cat) => {
               const active = selectedIds.has(String(cat.id));
-              const root = byId.get(Number(cat.parent_id));
+              const parent = byId.get(Number(cat.parent_id));
 
               return (
                 <button
@@ -223,7 +219,7 @@ export default function CategoryPicker({
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-slate-100">{cat.name}</div>
                       <div className="text-[11px] text-slate-500 mt-1">
-                        {root?.name || "Service Type"}
+                        {parent?.name || "Service Type"}
                       </div>
                     </div>
                     <div className="text-[11px] text-slate-500">{active ? "Selected" : "Pick"}</div>
