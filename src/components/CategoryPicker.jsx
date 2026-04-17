@@ -14,69 +14,41 @@ function getParentMap(categories = []) {
   return byId;
 }
 
-function getLeafCategories(categories = []) {
-  const list = Array.isArray(categories) ? categories : [];
-  const parentIds = new Set(list.map((x) => Number(x?.parent_id)).filter(Boolean));
-  return list.filter((x) => !parentIds.has(Number(x.id)));
+function getRootCategories(categories = []) {
+  return (categories || []).filter((c) => !c?.parent_id);
 }
 
-function buildPath(cat, byId) {
-  if (!cat) return "";
-  const parts = [];
-  let cur = cat;
-  let guard = 0;
-
-  while (cur && guard < 20) {
-    parts.unshift(cur.name);
-    cur = cur.parent_id ? byId.get(Number(cur.parent_id)) : null;
-    guard += 1;
-  }
-
-  return parts.join(" → ");
+function getGroupCategories(categories = []) {
+  const byId = getParentMap(categories);
+  return (categories || []).filter((c) => {
+    if (!c?.parent_id) return false;
+    const parent = byId.get(Number(c.parent_id));
+    return !!parent && !parent.parent_id;
+  });
 }
 
-function getGroupName(cat, byId) {
-  if (!cat) return "";
-  const parent = cat.parent_id ? byId.get(Number(cat.parent_id)) : null;
-  return parent?.name || "";
-}
-
-function getRootName(cat, byId) {
-  let cur = cat;
-  let guard = 0;
-  while (cur?.parent_id && guard < 20) {
-    cur = byId.get(Number(cur.parent_id));
-    guard += 1;
-  }
-  return cur?.name || "";
-}
-
-function scoreCategory(cat, query, byId) {
+function scoreGroup(cat, query, byId) {
   const q = norm(query);
   if (!q) return 0;
 
   const name = norm(cat?.name);
   const key = norm(cat?.key);
-  const group = norm(getGroupName(cat, byId));
-  const root = norm(getRootName(cat, byId));
-  const path = norm(buildPath(cat, byId));
+  const parent = byId.get(Number(cat?.parent_id));
+  const rootName = norm(parent?.name || "");
 
   let score = 0;
 
   if (name === q) score += 120;
   if (name.startsWith(q)) score += 95;
-  if (name.includes(q)) score += 65;
+  if (name.includes(q)) score += 75;
 
-  if (group.startsWith(q)) score += 32;
-  if (group.includes(q)) score += 22;
-  if (root.includes(q)) score += 10;
-  if (path.includes(q)) score += 8;
-  if (key.includes(q)) score += 6;
+  if (rootName.includes(q)) score += 18;
+  if (key.includes(q)) score += 10;
 
   const words = q.split(/\s+/).filter(Boolean);
   for (const word of words) {
-    if (name.includes(word)) score += 18;
-    if (group.includes(word)) score += 7;
+    if (name.includes(word)) score += 15;
+    if (rootName.includes(word)) score += 5;
   }
 
   return score;
@@ -86,7 +58,7 @@ export default function CategoryPicker({
   categories = [],
   value,
   onChange,
-  label = "Category",
+  label = "Services",
   multi = false,
   quickPicks = [],
   placeholder = "Type your business type or service...",
@@ -94,7 +66,7 @@ export default function CategoryPicker({
   const [q, setQ] = useState("");
 
   const byId = useMemo(() => getParentMap(categories), [categories]);
-  const leafs = useMemo(() => getLeafCategories(categories), [categories]);
+  const groups = useMemo(() => getGroupCategories(categories), [categories]);
 
   const selectedIds = useMemo(() => {
     if (multi) return new Set((Array.isArray(value) ? value : []).map((x) => String(x)));
@@ -118,10 +90,10 @@ export default function CategoryPicker({
     const query = norm(q);
     if (!query) return [];
 
-    return [...leafs]
+    return [...groups]
       .map((cat) => ({
         cat,
-        score: scoreCategory(cat, query, byId),
+        score: scoreGroup(cat, query, byId),
       }))
       .filter((x) => x.score > 0)
       .sort((a, b) => {
@@ -130,7 +102,7 @@ export default function CategoryPicker({
       })
       .slice(0, 10)
       .map((x) => x.cat);
-  }, [leafs, byId, q]);
+  }, [groups, byId, q]);
 
   function handlePick(id) {
     const sid = String(id);
@@ -151,7 +123,7 @@ export default function CategoryPicker({
       <div>
         <div className="text-xs text-slate-400 mb-1">{label}</div>
         <div className="text-[11px] text-slate-500">
-          Type what the business does. We’ll suggest the closest matching services.
+          Type the kind of work you do. Pick broad service types, not every tiny task.
         </div>
       </div>
 
@@ -177,7 +149,7 @@ export default function CategoryPicker({
 
       {multi ? (
         <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-3">
-          <div className="text-xs text-slate-400">Selected services</div>
+          <div className="text-xs text-slate-400">Selected service types</div>
           <div className="mt-2 flex flex-wrap gap-2">
             {selectedObjects.length ? (
               selectedObjects.map((cat) => (
@@ -191,7 +163,7 @@ export default function CategoryPicker({
                 </button>
               ))
             ) : (
-              <div className="text-sm text-slate-500">No services selected yet.</div>
+              <div className="text-sm text-slate-500">No service types selected yet.</div>
             )}
           </div>
         </div>
@@ -199,7 +171,7 @@ export default function CategoryPicker({
 
       {!q ? (
         <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-3">
-          <div className="text-xs text-slate-400">Popular suggestions</div>
+          <div className="text-xs text-slate-400">Popular service types</div>
           <div className="mt-2 flex flex-wrap gap-2">
             {quickPickObjects.map((cat) => {
               const active = selectedIds.has(String(cat.id));
@@ -233,6 +205,8 @@ export default function CategoryPicker({
           <div className="mt-2 grid gap-2">
             {results.map((cat) => {
               const active = selectedIds.has(String(cat.id));
+              const root = byId.get(Number(cat.parent_id));
+
               return (
                 <button
                   key={cat.id}
@@ -249,7 +223,7 @@ export default function CategoryPicker({
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-slate-100">{cat.name}</div>
                       <div className="text-[11px] text-slate-500 mt-1">
-                        {getGroupName(cat, byId) || buildPath(cat, byId)}
+                        {root?.name || "Service Type"}
                       </div>
                     </div>
                     <div className="text-[11px] text-slate-500">{active ? "Selected" : "Pick"}</div>
@@ -260,7 +234,7 @@ export default function CategoryPicker({
 
             {!results.length ? (
               <div className="text-sm text-slate-500 p-2">
-                No close matches yet. Try a broader word like “plumbing”, “cleaning”, “training”, or “website”.
+                No close matches yet. Try a broader term like “pest”, “plumbing”, “roofing”, or “cleaning”.
               </div>
             ) : null}
           </div>

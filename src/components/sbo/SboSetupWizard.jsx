@@ -99,30 +99,39 @@ function storageKey(businessId) {
   return `sw_setup_baseline_v1_${businessId || "no_biz"}`;
 }
 
-function getLeafCategories(categories) {
-  const list = Array.isArray(categories) ? categories : [];
-  const parentIds = new Set(list.map((x) => Number(x?.parent_id)).filter(Boolean));
-  return list.filter((x) => !parentIds.has(Number(x.id)));
+function getParentMap(categories = []) {
+  const byId = new Map();
+  (categories || []).forEach((c) => byId.set(Number(c.id), c));
+  return byId;
+}
+
+function getGroupCategories(categories = []) {
+  const byId = getParentMap(categories);
+  return (categories || []).filter((c) => {
+    if (!c?.parent_id) return false;
+    const parent = byId.get(Number(c.parent_id));
+    return !!parent && !parent.parent_id;
+  });
 }
 
 function buildQuickSuggestions(categories = []) {
-  const leafs = getLeafCategories(categories);
+  const groups = getGroupCategories(categories);
 
   const preferredNames = [
-    "Fix leaking pipe",
-    "AC not cooling",
-    "Lawn mowing",
-    "Standard house clean",
-    "Dog grooming",
-    "Computer repair",
-    "Website update",
+    "Plumbing",
+    "Electrical",
+    "HVAC",
+    "Roofing",
+    "Pest Control",
+    "Landscaping",
+    "Residential Cleaning",
+    "Pet Grooming",
     "Bookkeeping",
-    "Personal tax help",
-    "Wedding photography",
+    "Computer Repair",
   ];
 
   return preferredNames
-    .map((name) => leafs.find((x) => String(x?.name || "").toLowerCase() === name.toLowerCase()))
+    .map((name) => groups.find((x) => String(x?.name || "").toLowerCase() === name.toLowerCase()))
     .filter(Boolean)
     .map((x) => Number(x.id))
     .slice(0, 10);
@@ -166,7 +175,7 @@ export default function SboSetupWizard({
 
   const initKeyRef = useRef("");
 
-  const leafCategories = useMemo(() => getLeafCategories(categories), [categories]);
+  const groupCategories = useMemo(() => getGroupCategories(categories), [categories]);
   const quickSuggestions = useMemo(() => buildQuickSuggestions(categories), [categories]);
 
   function hydrateFromPropsAndLocal() {
@@ -350,7 +359,7 @@ export default function SboSetupWizard({
     saveStepLocally(currentStep);
 
     if (currentStep === 2 && selectedServices.length === 0) {
-      setSoftWarn("You can finish setup without services, but marketplace matching works much better if you choose a few.");
+      setSoftWarn("You can finish setup without service types, but marketplace matching works much better if you choose a few.");
     }
 
     if (currentStep < 4) {
@@ -443,14 +452,14 @@ export default function SboSetupWizard({
                   subtitle="Start with the core identity and what this business actually does."
                 >
                   <div className="grid md:grid-cols-2 gap-3">
-                    <Input label="Business Name" value={name} onChange={setName} placeholder="Acme Plumbing" />
+                    <Input label="Business Name" value={name} onChange={setName} placeholder="Acme Pest Control" />
                     <Input label="Phone" value={phone} onChange={setPhone} placeholder="334-555-1212" />
                     <Input label="Website" value={website} onChange={setWebsite} placeholder="https://acme.com" />
                     <Input
                       label="Headline"
                       value={headline}
                       onChange={setHeadline}
-                      placeholder="Fast plumbing service for homes and small businesses"
+                      placeholder="Fast, reliable pest control for homes and small businesses"
                     />
                   </div>
 
@@ -459,7 +468,7 @@ export default function SboSetupWizard({
                       label="Services Summary"
                       value={servicesText}
                       onChange={setServicesText}
-                      placeholder="Water heaters, leak repair, drain cleaning, fixture installs..."
+                      placeholder="General pest control, termite inspection, preventative treatment..."
                     />
                   </div>
                 </StepCard>
@@ -504,22 +513,22 @@ export default function SboSetupWizard({
               {step === 2 ? (
                 <StepCard
                   title="Services"
-                  subtitle="Keep it easy. Type what the business does and pick the closest matches."
+                  subtitle="Pick broad service types. The system will still match detailed customer issues under them."
                 >
                   <CategoryPicker
-                    categories={leafCategories}
+                    categories={groupCategories}
                     value={selectedServices}
                     onChange={(vals) => setSelectedServices(uniqNums(vals))}
-                    label="Services offered"
+                    label="Service types offered"
                     multi
                     quickPicks={quickSuggestions}
-                    placeholder="Type your business type or service… (plumbing, dog grooming, bookkeeping, website...)"
+                    placeholder="Type your business type… (pest, plumbing, roofing, hvac, cleaning...)"
                   />
 
                   <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
                     <div className="text-sm font-semibold text-slate-100">Simple rule</div>
                     <div className="text-xs text-slate-400 mt-2">
-                      Do not try to pick everything. Choose the few services you most want matched for.
+                      Choose the broad service types you want matched for. Example: pick <span className="text-slate-200">Pest Control</span>, not every individual pest task.
                     </div>
                   </div>
                 </StepCard>
@@ -592,14 +601,14 @@ export default function SboSetupWizard({
                         <div>• Business basics</div>
                         <div>• Service area</div>
                         <div>• Marketplace status</div>
-                        <div>• Service categories saved locally</div>
+                        <div>• Broad service types selected</div>
                       </div>
                     </div>
 
                     <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
                       <div className="text-sm font-semibold text-slate-100">Setup snapshot</div>
                       <div className="mt-3 space-y-2 text-sm text-slate-300">
-                        <div>• {selectedServices.length} services selected</div>
+                        <div>• {selectedServices.length} service types selected</div>
                         <div>• Baseline revenue {baselineRevenue ? `$${baselineRevenue}` : "not set"}</div>
                         <div>• Revenue goal {targetRevenue ? `$${targetRevenue}` : "not set"}</div>
                         <div>• Import preference: {oldDataStatus}</div>
