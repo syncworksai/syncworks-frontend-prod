@@ -99,23 +99,18 @@ function storageKey(businessId) {
   return `sw_setup_baseline_v1_${businessId || "no_biz"}`;
 }
 
-function getParentMap(categories = []) {
-  const byId = new Map();
-  (categories || []).forEach((c) => byId.set(Number(c.id), c));
-  return byId;
+function keyDepth(key) {
+  const k = String(key || "");
+  if (!k) return 0;
+  return k.split("--").length - 1;
 }
 
-function getGroupCategories(categories = []) {
-  const byId = getParentMap(categories);
-  return (categories || []).filter((c) => {
-    if (!c?.parent_id) return false;
-    const parent = byId.get(Number(c.parent_id));
-    return !!parent && !parent.parent_id;
-  });
+function getBroadServiceCategories(categories = []) {
+  return (Array.isArray(categories) ? categories : []).filter((c) => keyDepth(c?.key) === 1);
 }
 
 function buildQuickSuggestions(categories = []) {
-  const groups = getGroupCategories(categories);
+  const broad = getBroadServiceCategories(categories);
 
   const preferredNames = [
     "Plumbing",
@@ -131,7 +126,7 @@ function buildQuickSuggestions(categories = []) {
   ];
 
   return preferredNames
-    .map((name) => groups.find((x) => String(x?.name || "").toLowerCase() === name.toLowerCase()))
+    .map((name) => broad.find((x) => String(x?.name || "").toLowerCase() === name.toLowerCase()))
     .filter(Boolean)
     .map((x) => Number(x.id))
     .slice(0, 10);
@@ -175,7 +170,7 @@ export default function SboSetupWizard({
 
   const initKeyRef = useRef("");
 
-  const groupCategories = useMemo(() => getGroupCategories(categories), [categories]);
+  const broadCategories = useMemo(() => getBroadServiceCategories(categories), [categories]);
   const quickSuggestions = useMemo(() => buildQuickSuggestions(categories), [categories]);
 
   function hydrateFromPropsAndLocal() {
@@ -452,14 +447,14 @@ export default function SboSetupWizard({
                   subtitle="Start with the core identity and what this business actually does."
                 >
                   <div className="grid md:grid-cols-2 gap-3">
-                    <Input label="Business Name" value={name} onChange={setName} placeholder="Acme Pest Control" />
+                    <Input label="Business Name" value={name} onChange={setName} placeholder="Acme Roofing" />
                     <Input label="Phone" value={phone} onChange={setPhone} placeholder="334-555-1212" />
                     <Input label="Website" value={website} onChange={setWebsite} placeholder="https://acme.com" />
                     <Input
                       label="Headline"
                       value={headline}
                       onChange={setHeadline}
-                      placeholder="Fast, reliable pest control for homes and small businesses"
+                      placeholder="Fast, reliable roofing service for homes and small businesses"
                     />
                   </div>
 
@@ -468,7 +463,7 @@ export default function SboSetupWizard({
                       label="Services Summary"
                       value={servicesText}
                       onChange={setServicesText}
-                      placeholder="General pest control, termite inspection, preventative treatment..."
+                      placeholder="Roof repair, roof inspections, leak diagnosis, gutter repair..."
                     />
                   </div>
                 </StepCard>
@@ -516,7 +511,7 @@ export default function SboSetupWizard({
                   subtitle="Pick broad service types. The system will still match detailed customer issues under them."
                 >
                   <CategoryPicker
-                    categories={groupCategories}
+                    categories={broadCategories}
                     value={selectedServices}
                     onChange={(vals) => setSelectedServices(uniqNums(vals))}
                     label="Service types offered"
@@ -528,7 +523,7 @@ export default function SboSetupWizard({
                   <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
                     <div className="text-sm font-semibold text-slate-100">Simple rule</div>
                     <div className="text-xs text-slate-400 mt-2">
-                      Choose the broad service types you want matched for. Example: pick <span className="text-slate-200">Pest Control</span>, not every individual pest task.
+                      Choose the broad service types you want matched for. Example: pick <span className="text-slate-200">Roofing</span>, not every individual roof task.
                     </div>
                   </div>
                 </StepCard>

@@ -8,37 +8,33 @@ function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
-function getParentMap(categories = []) {
-  const byId = new Map();
-  (categories || []).forEach((c) => byId.set(Number(c.id), c));
-  return byId;
+function countKeyDepth(key) {
+  const k = String(key || "");
+  if (!k) return 0;
+  return k.split("--").length - 1;
 }
 
-function scoreCategory(cat, query, byId) {
+function scoreCategory(cat, query) {
   const q = norm(query);
   if (!q) return 0;
 
   const name = norm(cat?.name);
   const key = norm(cat?.key);
-  const parent = byId.get(Number(cat?.parent_id));
-  const parentName = norm(parent?.name || "");
-  const hay = `${name} ${key} ${parentName}`.trim();
+  const path = norm(cat?.path || cat?.category_path || "");
+  const hay = `${name} ${key} ${path}`.trim();
 
   let score = 0;
 
   if (name === q) score += 120;
-  if (name.startsWith(q)) score += 95;
-  if (name.includes(q)) score += 75;
-
-  if (parentName.includes(q)) score += 18;
+  if (name.startsWith(q)) score += 100;
+  if (name.includes(q)) score += 80;
+  if (hay.includes(q)) score += 25;
   if (key.includes(q)) score += 10;
-  if (hay.includes(q)) score += 8;
 
   const words = q.split(/\s+/).filter(Boolean);
   for (const word of words) {
     if (name.includes(word)) score += 15;
-    if (parentName.includes(word)) score += 5;
-    if (key.includes(word)) score += 4;
+    if (hay.includes(word)) score += 5;
   }
 
   return score;
@@ -55,11 +51,6 @@ export default function CategoryPicker({
 }) {
   const [q, setQ] = useState("");
 
-  const byId = useMemo(() => getParentMap(categories), [categories]);
-
-  // IMPORTANT:
-  // categories passed in are already the list we want to search.
-  // Do NOT re-filter them into "groups" again here.
   const searchableCategories = useMemo(() => {
     return Array.isArray(categories) ? categories : [];
   }, [categories]);
@@ -89,7 +80,7 @@ export default function CategoryPicker({
     return [...searchableCategories]
       .map((cat) => ({
         cat,
-        score: scoreCategory(cat, query, byId),
+        score: scoreCategory(cat, query),
       }))
       .filter((x) => x.score > 0)
       .sort((a, b) => {
@@ -98,7 +89,7 @@ export default function CategoryPicker({
       })
       .slice(0, 10)
       .map((x) => x.cat);
-  }, [searchableCategories, byId, q]);
+  }, [searchableCategories, q]);
 
   function handlePick(id) {
     const sid = String(id);
@@ -201,7 +192,9 @@ export default function CategoryPicker({
           <div className="mt-2 grid gap-2">
             {results.map((cat) => {
               const active = selectedIds.has(String(cat.id));
-              const parent = byId.get(Number(cat.parent_id));
+              const depth = countKeyDepth(cat?.key);
+              const levelLabel =
+                depth === 0 ? "Industry" : depth === 1 ? "Service Type" : "Specific Task";
 
               return (
                 <button
@@ -218,9 +211,7 @@ export default function CategoryPicker({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-slate-100">{cat.name}</div>
-                      <div className="text-[11px] text-slate-500 mt-1">
-                        {parent?.name || "Service Type"}
-                      </div>
+                      <div className="text-[11px] text-slate-500 mt-1">{levelLabel}</div>
                     </div>
                     <div className="text-[11px] text-slate-500">{active ? "Selected" : "Pick"}</div>
                   </div>
