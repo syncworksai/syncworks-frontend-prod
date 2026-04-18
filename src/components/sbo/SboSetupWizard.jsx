@@ -447,14 +447,14 @@ export default function SboSetupWizard({
                   subtitle="Start with the core identity and what this business actually does."
                 >
                   <div className="grid md:grid-cols-2 gap-3">
-                    <Input label="Business Name" value={name} onChange={setName} placeholder="Acme Roofing" />
+                    <Input label="Business Name" value={name} onChange={setName} placeholder="Acme Plumbing" />
                     <Input label="Phone" value={phone} onChange={setPhone} placeholder="334-555-1212" />
                     <Input label="Website" value={website} onChange={setWebsite} placeholder="https://acme.com" />
                     <Input
                       label="Headline"
                       value={headline}
                       onChange={setHeadline}
-                      placeholder="Fast, reliable roofing service for homes and small businesses"
+                      placeholder="Fast, reliable service for homes and small businesses"
                     />
                   </div>
 
@@ -463,7 +463,7 @@ export default function SboSetupWizard({
                       label="Services Summary"
                       value={servicesText}
                       onChange={setServicesText}
-                      placeholder="Roof repair, roof inspections, leak diagnosis, gutter repair..."
+                      placeholder="Plumbing, drain cleaning, leak repair, fixture installs..."
                     />
                   </div>
                 </StepCard>
@@ -511,7 +511,7 @@ export default function SboSetupWizard({
                   subtitle="Pick broad service types. The system will still match detailed customer issues under them."
                 >
                   <CategoryPicker
-                    categories={broadCategories}
+                    categories={categories}
                     value={selectedServices}
                     onChange={(vals) => setSelectedServices(uniqNums(vals))}
                     label="Service types offered"
@@ -523,7 +523,7 @@ export default function SboSetupWizard({
                   <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
                     <div className="text-sm font-semibold text-slate-100">Simple rule</div>
                     <div className="text-xs text-slate-400 mt-2">
-                      Choose the broad service types you want matched for. Example: pick <span className="text-slate-200">Roofing</span>, not every individual roof task.
+                      Choose the broad service types you want matched for. Example: pick <span className="text-slate-200">Plumbing</span>, not every individual plumbing task.
                     </div>
                   </div>
                 </StepCard>
