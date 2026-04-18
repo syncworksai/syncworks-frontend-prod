@@ -10,6 +10,11 @@ import QuotePanel from "../components/tickets/QuotePanel";
 import InvoicePanel from "../components/tickets/InvoicePanel";
 import TicketWorkspaceNav from "../components/tickets/TicketWorkspaceNav";
 import TicketSummaryRail from "../components/tickets/TicketSummaryRail";
+import TicketHeaderCard from "../components/tickets/TicketHeaderCard";
+import TicketQuickFactsCard from "../components/tickets/TicketQuickFactsCard";
+import TicketCustomerCard from "../components/tickets/TicketCustomerCard";
+import TicketLifecycleCard from "../components/tickets/TicketLifecycleCard";
+import TicketArchiveToolsCard from "../components/tickets/TicketArchiveToolsCard";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -196,6 +201,110 @@ function writeNewRequestPrefill(payload) {
   } catch {
     // ignore
   }
+}
+
+function makeTicketCode(id) {
+  const num = Number(id || 0);
+  if (!num) return "SW-000000";
+  return `SW-${String(num).padStart(6, "0")}`;
+}
+
+function extractIntakeJson(description) {
+  const raw = String(description || "");
+  const marker = "SyncWorks Intake:";
+  const idx = raw.indexOf(marker);
+  if (idx === -1) {
+    return { summary: raw.trim(), intake: null };
+  }
+
+  const summary = raw.slice(0, idx).trim();
+  const jsonPart = raw.slice(idx + marker.length).trim();
+
+  try {
+    const parsed = JSON.parse(jsonPart);
+    return { summary, intake: parsed };
+  } catch {
+    return { summary: raw.trim(), intake: null };
+  }
+}
+
+function humanPaymentPref(ticket, intake) {
+  const intakePref = intake?.payment?.preference || "";
+  if (intakePref === "CARD_ON_FILE") return "Card";
+  if (intakePref === "CASH") return "Cash";
+  if (intakePref === "PAY_LATER") return "Invoice";
+
+  const t = upperStatus(ticket?.payment_method);
+  if (t === "CARD") return "Card";
+  if (t === "CASH") return "Cash";
+  if (t === "OTHER") return "Other";
+  return "—";
+}
+
+function humanContactPref(intake) {
+  const v =
+    intake?.lead?.contact_preference ||
+    intake?.contact_preference ||
+    "";
+  if (!v) return "—";
+  if (v === "call") return "Call";
+  if (v === "text") return "Text";
+  if (v === "email") return "Email";
+  if (v === "any") return "Any";
+  if (v === "either") return "Call or Text";
+  return String(v);
+}
+
+function humanSmsAllowed(intake) {
+  const pref =
+    intake?.lead?.contact_preference ||
+    intake?.contact_preference ||
+    "";
+  if (pref === "text" || pref === "either") return "Yes";
+  if (pref === "call" || pref === "email") return "No";
+  return "—";
+}
+
+function bestPhoneFromIntakeOrTicket(intake, ticketPhone) {
+  return intake?.best_phone || intake?.customer_phone || ticketPhone || "";
+}
+
+function cityStateFromIntake(intake) {
+  const city =
+    intake?.routing?.service_city ||
+    "";
+  const state =
+    intake?.routing?.service_state ||
+    "";
+  if (city && state) return `${city}, ${state}`;
+  return city || state || "";
+}
+
+function workTypeFromTicket(ticket, intake) {
+  return (
+    intake?.category_path ||
+    ticket?.category_path ||
+    ticket?.category_name ||
+    "—"
+  );
+}
+
+function detailSummaryFromTicket(ticket) {
+  const sr = ticket?.service_request_detail || ticket?.service_request || null;
+  const base =
+    sr?.description ||
+    ticket?.description ||
+    "";
+  return extractIntakeJson(base).summary || "";
+}
+
+function intakeFromTicket(ticket) {
+  const sr = ticket?.service_request_detail || ticket?.service_request || null;
+  const base =
+    sr?.description ||
+    ticket?.description ||
+    "";
+  return extractIntakeJson(base).intake;
 }
 
 function AssignedBusinessCardPanel({ ticket, onBookAgain }) {
@@ -394,7 +503,7 @@ function ProviderWorkflowCard({
   );
 }
 
-function CustomerOverviewCard({ ticket, ticketId, onOpenMessages, onOpenFiles }) {
+function CustomerOverviewCard({ ticket, ticketCode, onOpenMessages, onOpenFiles }) {
   const invoice = ticket?.latest_invoice || ticket?.invoice || null;
   const pdfUrl =
     invoice?.pdf_url ||
@@ -434,7 +543,7 @@ function CustomerOverviewCard({ ticket, ticketId, onOpenMessages, onOpenFiles })
       </div>
 
       <div className="mt-4 grid md:grid-cols-2 gap-3">
-        <Row k="Ticket #" v={ticketId || "—"} />
+        <Row k="Ticket Code" v={ticketCode || "—"} />
         <Row k="Status" v={statusLabel(ticket?.status)} />
         <Row k="Category" v={ticket?.category_name || ticket?.category_path || "—"} />
         <Row k="Marketplace" v={ticket?.is_marketplace ? "Yes" : "No"} />
@@ -542,6 +651,7 @@ export default function TicketDetail() {
   }, [returnTo, isCustomer]);
 
   const ticketId = useMemo(() => Number(id), [id]);
+  const ticketCode = useMemo(() => makeTicketCode(ticketId), [ticketId]);
 
   const [ticket, setTicket] = useState(null);
   const [err, setErr] = useState("");
@@ -680,12 +790,44 @@ export default function TicketDetail() {
     nav(`/customer/new-request?${qs.toString()}`);
   }
 
+  function exportTicketJson() {
+    const payload = {
+      exported_at: new Date().toISOString(),
+      ticket_code: ticketCode,
+      ticket,
+      intake: intakeFromTicket(ticket),
+      detail_summary: detailSummaryFromTicket(ticket),
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json;charset=utf-8",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${ticketCode}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const assignedName = assignedBusinessName(ticket);
   const customerName = getCustomerName(ticket);
-  const { email: customerEmail, phone: customerPhone } = getCustomerContact(ticket);
+  const { email: customerEmail, phone: ticketPhone } = getCustomerContact(ticket);
   const isMarketplace = !!ticket?.is_marketplace;
   const assigned = !!assignedName;
   const status = upperStatus(ticket?.status);
+
+  const intake = useMemo(() => intakeFromTicket(ticket), [ticket]);
+  const detailSummary = useMemo(() => detailSummaryFromTicket(ticket), [ticket]);
+
+  const bestPhone = bestPhoneFromIntakeOrTicket(intake, ticketPhone);
+  const paymentPref = humanPaymentPref(ticket, intake);
+  const contactPref = humanContactPref(intake);
+  const smsAllowed = humanSmsAllowed(intake);
+  const workType = workTypeFromTicket(ticket, intake);
+  const cityState = cityStateFromIntake(intake) || [ticket?.city, ticket?.state].filter(Boolean).join(", ");
+  const priority = intake?.priority || "—";
 
   const overviewStats = useMemo(() => {
     return {
@@ -703,7 +845,7 @@ export default function TicketDetail() {
         title={
           <div className="leading-tight">
             <div className="flex items-center gap-2 flex-wrap">
-              <div className="text-base font-semibold">{`#${id} • ${customerName}`}</div>
+              <div className="text-base font-semibold">{ticketCode}</div>
               <span className={cx("text-[11px] px-2 py-1 rounded-full border font-semibold", statusTone(ticket?.status))}>
                 {statusLabel(ticket?.status)}
               </span>
@@ -794,51 +936,22 @@ export default function TicketDetail() {
           </div>
         ) : null}
 
-        <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 overflow-hidden relative">
-          <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.10),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.10),transparent_28%)]" />
-          <div className="relative">
-            <div className="grid xl:grid-cols-12 gap-4 items-start">
-              <div className="xl:col-span-7">
-                <div className="text-xl font-extrabold">Ticket Workspace</div>
-                <div className="text-sm text-slate-400 mt-1 max-w-2xl">
-                  {isCustomer
-                    ? "Customer view for ticket updates, messages, files, and invoice PDF access."
-                    : "Fast operating system view for job communication, quote pulling, invoice building, and execution."}
-                </div>
+        <TicketHeaderCard
+          ticketCode={ticketCode}
+          customerName={customerName}
+          serviceAddress={ticket?.service_address || intake?.routing?.service_address || ""}
+          workType={workType}
+          status={ticket?.status}
+          isMarketplace={isMarketplace}
+          assignedName={assignedName}
+          detailSummary={detailSummary}
+        />
 
-                <div className="mt-4 flex gap-2 flex-wrap">
-                  {!isCustomer && !isMarketplace ? (
-                    <Btn tone="fuchsia" onClick={() => setActiveTab("quote")}>
-                      Open Quote
-                    </Btn>
-                  ) : null}
-
-                  {!isCustomer && !isMarketplace ? (
-                    <Btn tone="cyan" onClick={() => setActiveTab("invoice")}>
-                      Open Invoice Builder
-                    </Btn>
-                  ) : null}
-
-                  <Btn tone="slate" onClick={() => setActiveTab("messages")}>
-                    Open Messages
-                  </Btn>
-
-                  {isCustomer ? (
-                    <Btn tone="slate" onClick={() => setActiveTab("files")}>
-                      Open Files
-                    </Btn>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="xl:col-span-5 grid grid-cols-2 gap-3">
-                <GlowStat label="Status" value={overviewStats.status} tone="cyan" />
-                <GlowStat label="Source" value={overviewStats.source} tone="fuchsia" />
-                <GlowStat label="Assigned" value={overviewStats.assigned} tone="emerald" />
-                <GlowStat label="Updated" value={overviewStats.updated} tone="amber" />
-              </div>
-            </div>
-          </div>
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-3">
+          <GlowStat label="Status" value={overviewStats.status} tone="cyan" />
+          <GlowStat label="Source" value={overviewStats.source} tone="fuchsia" />
+          <GlowStat label="Assigned" value={overviewStats.assigned} tone="emerald" />
+          <GlowStat label="Updated" value={overviewStats.updated} tone="amber" />
         </div>
 
         <TicketWorkspaceNav items={tabs} activeKey={activeTab} onChange={setActiveTab} />
@@ -854,20 +967,34 @@ export default function TicketDetail() {
                 {isCustomer ? (
                   <CustomerOverviewCard
                     ticket={ticket}
-                    ticketId={ticketId}
+                    ticketCode={ticketCode}
                     onOpenMessages={() => setActiveTab("messages")}
                     onOpenFiles={() => setActiveTab("files")}
                   />
                 ) : (
                   <>
-                    <AssignedBusinessCardPanel ticket={ticket} onBookAgain={bookAgainWithAssignedBusiness} />
+                    <TicketQuickFactsCard
+                      paymentPref={paymentPref}
+                      contactPref={contactPref}
+                      bestPhone={bestPhone}
+                      smsAllowed={smsAllowed}
+                      categoryPath={workType}
+                      priority={priority}
+                      zip={ticket?.service_zip || intake?.routing?.service_zip || ""}
+                      cityState={cityState}
+                      isMarketplace={isMarketplace}
+                    />
 
-                    <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-3">
-                      <GlowStat label="Created" value={overviewStats.created} tone="slate" />
-                      <GlowStat label="Updated" value={overviewStats.updated} tone="slate" />
-                      <GlowStat label="Customer" value={customerName} tone="cyan" />
-                      <GlowStat label="Ticket ID" value={`#${ticketId || "—"}`} tone="fuchsia" />
-                    </div>
+                    <TicketCustomerCard
+                      customerName={customerName}
+                      customerEmail={customerEmail}
+                      customerPhone={bestPhone}
+                      serviceAddress={ticket?.service_address || intake?.routing?.service_address || ""}
+                      detailSummary={detailSummary}
+                      onOpenMessages={() => setActiveTab("messages")}
+                    />
+
+                    <AssignedBusinessCardPanel ticket={ticket} onBookAgain={bookAgainWithAssignedBusiness} />
 
                     <ProviderWorkflowCard
                       isCustomer={isCustomer}
@@ -884,33 +1011,13 @@ export default function TicketDetail() {
                       onOpenInvoice={() => setActiveTab("invoice")}
                     />
 
-                    {!isMarketplace ? (
-                      <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
-                        <div className="flex items-center justify-between gap-3 flex-wrap">
-                          <div>
-                            <div className="text-lg font-extrabold">Quick Access</div>
-                            <div className="text-xs text-slate-400 mt-1">
-                              Jump into the exact workflow you need right now.
-                            </div>
-                          </div>
+                    <TicketLifecycleCard ticket={ticket} />
 
-                          <div className="flex gap-2 flex-wrap">
-                            <Btn tone="fuchsia" onClick={() => setActiveTab("quote")}>Quote</Btn>
-                            <Btn tone="cyan" onClick={() => setActiveTab("invoice")}>Invoice Builder</Btn>
-                            <Btn tone="slate" onClick={() => setActiveTab("messages")}>Messages</Btn>
-                            <Btn tone="emerald" onClick={() => setActiveTab("work")}>Work Notes</Btn>
-                            <Btn tone="slate" onClick={() => setActiveTab("files")}>Files</Btn>
-                          </div>
-                        </div>
-
-                        {(customerEmail || customerPhone) ? (
-                          <div className="mt-4 grid md:grid-cols-2 gap-2">
-                            <Row k="Customer Email" v={customerEmail || "—"} />
-                            <Row k="Customer Phone" v={customerPhone || "—"} />
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : null}
+                    <TicketArchiveToolsCard
+                      ticket={ticket}
+                      ticketCode={ticketCode}
+                      onExport={exportTicketJson}
+                    />
                   </>
                 )}
 
