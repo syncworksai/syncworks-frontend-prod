@@ -216,7 +216,7 @@ export default function SboSettings() {
     try {
       const [bizRes, catRes] = await Promise.all([
         api.get(`/businesses/${activeBusinessId}/`),
-        api.get("/service-categories/", { params: { page_size: 300 } }),
+        api.get("/service-categories/"),
       ]);
 
       const biz = bizRes?.data || null;
@@ -283,9 +283,7 @@ export default function SboSettings() {
       setBusiness(refreshed?.data || null);
       setOk("Saved.");
 
-      Promise.resolve(reloadBusinesses?.()).catch(() => {
-        // keep wizard/profile save non-blocking
-      });
+      Promise.resolve(reloadBusinesses?.()).catch(() => {});
 
       return refreshed?.data || null;
     } catch (e) {
@@ -352,9 +350,7 @@ export default function SboSettings() {
       setOk("Logo uploaded.");
       setLogoFile(null);
 
-      Promise.resolve(reloadBusinesses?.()).catch(() => {
-        // keep upload non-blocking
-      });
+      Promise.resolve(reloadBusinesses?.()).catch(() => {});
     } catch (e) {
       setErr(
         e?.response?.data?.detail ||
