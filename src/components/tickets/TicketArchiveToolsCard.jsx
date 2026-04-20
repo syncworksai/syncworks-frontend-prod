@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
+import api from "../../api/client";
 
 function Btn({ children, tone = "slate", className = "", disabled = false, ...props }) {
   const tones = {
     slate: "bg-slate-950 border-slate-800 hover:bg-slate-900 text-slate-200",
     cyan: "bg-cyan-500/20 border-cyan-500/40 hover:bg-cyan-500/30 text-cyan-200",
     amber: "bg-amber-500/15 border-amber-500/30 hover:bg-amber-500/20 text-amber-200",
+    emerald: "bg-emerald-500/15 border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-200",
   };
 
   return (
@@ -22,8 +24,30 @@ export default function TicketArchiveToolsCard({
   ticket,
   ticketCode,
   onExport,
+  onAfterChange,
 }) {
   const archived = !!ticket?.is_archived || !!ticket?.archived_at;
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [ok, setOk] = useState("");
+
+  async function toggleArchive() {
+    if (!ticket?.id || busy) return;
+    setBusy(true);
+    setErr("");
+    setOk("");
+
+    try {
+      const endpoint = archived ? "unarchive" : "archive";
+      await api.post(`/tickets/${ticket.id}/${endpoint}/`);
+      setOk(archived ? "Ticket restored." : "Ticket archived.");
+      await onAfterChange?.();
+    } catch (e) {
+      setErr(e?.response?.data?.detail || "Archive action failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
@@ -31,7 +55,7 @@ export default function TicketArchiveToolsCard({
         <div>
           <div className="text-lg font-extrabold">Archive / Export</div>
           <div className="text-xs text-slate-400 mt-1">
-            Export works now. Archive is surfaced here and can be wired once the backend archive action is added.
+            Export records or move completed tickets out of the active queue.
           </div>
         </div>
 
@@ -45,6 +69,18 @@ export default function TicketArchiveToolsCard({
           {archived ? "Archived" : "Active"}
         </span>
       </div>
+
+      {err ? (
+        <div className="mt-3 text-xs text-red-200 bg-red-900/10 border border-red-800 rounded-2xl p-3">
+          {err}
+        </div>
+      ) : null}
+
+      {ok ? (
+        <div className="mt-3 text-xs text-emerald-200 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-3">
+          {ok}
+        </div>
+      ) : null}
 
       <div className="mt-4 grid md:grid-cols-2 gap-3">
         <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-4">
@@ -62,11 +98,11 @@ export default function TicketArchiveToolsCard({
         <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-4">
           <div className="text-sm font-semibold">Archive Queue</div>
           <div className="text-xs text-slate-400 mt-2">
-            UI is ready. Wire backend actions like <span className="text-slate-300">/tickets/:id/archive/</span> and <span className="text-slate-300">/tickets/:id/unarchive/</span> next.
+            Archive tickets that are done so your live workspace stays clean.
           </div>
           <div className="mt-3 flex gap-2 flex-wrap">
-            <Btn tone="amber" disabled>
-              {archived ? "Unarchive Ticket" : "Archive Ticket"}
+            <Btn tone={archived ? "emerald" : "amber"} onClick={toggleArchive} disabled={busy}>
+              {busy ? "Saving…" : archived ? "Unarchive Ticket" : "Archive Ticket"}
             </Btn>
           </div>
         </div>

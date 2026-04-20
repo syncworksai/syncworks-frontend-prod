@@ -50,6 +50,7 @@ export default function TicketHeaderCard({
   isMarketplace,
   assignedName,
   detailSummary,
+  isCustomer = false,
 }) {
   return (
     <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 overflow-hidden relative">
@@ -75,7 +76,9 @@ export default function TicketHeaderCard({
               </span>
             </div>
 
-            <div className="mt-3 text-2xl font-extrabold break-words">{customerName || "Customer"}</div>
+            <div className="mt-3 text-2xl font-extrabold break-words">
+              {isCustomer ? "Your Ticket" : customerName || "Customer"}
+            </div>
 
             <div className="mt-2 text-sm text-slate-300 break-words">
               {serviceAddress || "No service address yet"}
@@ -90,12 +93,14 @@ export default function TicketHeaderCard({
             ) : null}
           </div>
 
-          <div className="shrink-0 rounded-2xl border border-slate-800 bg-slate-950/55 px-4 py-3">
-            <div className="text-[11px] text-slate-500">Assigned Provider</div>
-            <div className="mt-1 text-sm font-semibold text-slate-100">
-              {assignedName || "Not assigned"}
+          {!isCustomer ? (
+            <div className="shrink-0 rounded-2xl border border-slate-800 bg-slate-950/55 px-4 py-3">
+              <div className="text-[11px] text-slate-500">Assigned Provider</div>
+              <div className="mt-1 text-sm font-semibold text-slate-100">
+                {assignedName || "Not assigned"}
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
       </div>
     </div>

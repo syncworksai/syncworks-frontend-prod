@@ -8,6 +8,7 @@ import MessagePanel from "../components/tickets/MessagePanel";
 import AttachmentPanel from "../components/tickets/AttachmentPanel";
 import QuotePanel from "../components/tickets/QuotePanel";
 import InvoicePanel from "../components/tickets/InvoicePanel";
+import CustomerInvoicePanel from "../components/tickets/CustomerInvoicePanel";
 import TicketWorkspaceNav from "../components/tickets/TicketWorkspaceNav";
 import TicketSummaryRail from "../components/tickets/TicketSummaryRail";
 import TicketHeaderCard from "../components/tickets/TicketHeaderCard";
@@ -35,7 +36,7 @@ function statusTone(status) {
   if (s === "PAID" || s === "COMPLETED") return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
   if (s === "CANCELLED") return "border-rose-500/30 bg-rose-500/10 text-rose-200";
   if (s === "IN_PROGRESS" || s === "EN_ROUTE" || s === "ON_SITE") return "border-cyan-500/30 bg-cyan-500/10 text-cyan-200";
-  if (s === "INVOICED" || s === "AWAITING_APPROVAL") return "border-amber-500/30 bg-amber-500/10 text-amber-200";
+  if (s === "INVOICED" || s === "AWAITING_APPROVAL" || s === "SENT") return "border-amber-500/30 bg-amber-500/10 text-amber-200";
   return "border-slate-700 bg-slate-900/40 text-slate-200";
 }
 
@@ -93,15 +94,6 @@ function Btn({ children, tone = "slate", className = "", ...props }) {
     >
       {children}
     </button>
-  );
-}
-
-function Row({ k, v }) {
-  return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
-      <div className="text-[11px] text-slate-400">{k}</div>
-      <div className="text-sm font-semibold mt-1 break-words">{v || "—"}</div>
-    </div>
   );
 }
 
@@ -203,10 +195,12 @@ function writeNewRequestPrefill(payload) {
   }
 }
 
-function makeTicketCode(id) {
-  const num = Number(id || 0);
-  if (!num) return "SW-000000";
-  return `SW-${String(num).padStart(6, "0")}`;
+function makeTicketCode(ticket) {
+  if (ticket?.ticket_code) return ticket.ticket_code;
+  const num = Number(ticket?.id || 0);
+  if (!num) return "DT-000000";
+  const prefix = ticket?.is_marketplace ? "MP" : "DT";
+  return `${prefix}-${String(num).padStart(6, "0")}`;
 }
 
 function extractIntakeJson(description) {
@@ -242,10 +236,7 @@ function humanPaymentPref(ticket, intake) {
 }
 
 function humanContactPref(intake) {
-  const v =
-    intake?.lead?.contact_preference ||
-    intake?.contact_preference ||
-    "";
+  const v = intake?.lead?.contact_preference || intake?.contact_preference || "";
   if (!v) return "—";
   if (v === "call") return "Call";
   if (v === "text") return "Text";
@@ -256,10 +247,7 @@ function humanContactPref(intake) {
 }
 
 function humanSmsAllowed(intake) {
-  const pref =
-    intake?.lead?.contact_preference ||
-    intake?.contact_preference ||
-    "";
+  const pref = intake?.lead?.contact_preference || intake?.contact_preference || "";
   if (pref === "text" || pref === "either") return "Yes";
   if (pref === "call" || pref === "email") return "No";
   return "—";
@@ -270,40 +258,25 @@ function bestPhoneFromIntakeOrTicket(intake, ticketPhone) {
 }
 
 function cityStateFromIntake(intake) {
-  const city =
-    intake?.routing?.service_city ||
-    "";
-  const state =
-    intake?.routing?.service_state ||
-    "";
+  const city = intake?.routing?.service_city || "";
+  const state = intake?.routing?.service_state || "";
   if (city && state) return `${city}, ${state}`;
   return city || state || "";
 }
 
 function workTypeFromTicket(ticket, intake) {
-  return (
-    intake?.category_path ||
-    ticket?.category_path ||
-    ticket?.category_name ||
-    "—"
-  );
+  return intake?.category_path || ticket?.category_path || ticket?.category_name || "—";
 }
 
 function detailSummaryFromTicket(ticket) {
   const sr = ticket?.service_request_detail || ticket?.service_request || null;
-  const base =
-    sr?.description ||
-    ticket?.description ||
-    "";
+  const base = sr?.description || ticket?.description || "";
   return extractIntakeJson(base).summary || "";
 }
 
 function intakeFromTicket(ticket) {
   const sr = ticket?.service_request_detail || ticket?.service_request || null;
-  const base =
-    sr?.description ||
-    ticket?.description ||
-    "";
+  const base = sr?.description || ticket?.description || "";
   return extractIntakeJson(base).intake;
 }
 
@@ -360,10 +333,22 @@ function AssignedBusinessCardPanel({ ticket, onBookAgain }) {
           </div>
 
           <div className="mt-4 grid md:grid-cols-2 gap-2">
-            <Row k="Phone" v={phone || "—"} />
-            <Row k="Email" v={email || "—"} />
-            <Row k="Location" v={location || "—"} />
-            <Row k="Website" v={website || "—"} />
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
+              <div className="text-[11px] text-slate-400">Phone</div>
+              <div className="text-sm font-semibold mt-1">{phone || "—"}</div>
+            </div>
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
+              <div className="text-[11px] text-slate-400">Email</div>
+              <div className="text-sm font-semibold mt-1">{email || "—"}</div>
+            </div>
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
+              <div className="text-[11px] text-slate-400">Location</div>
+              <div className="text-sm font-semibold mt-1">{location || "—"}</div>
+            </div>
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
+              <div className="text-[11px] text-slate-400">Website</div>
+              <div className="text-sm font-semibold mt-1">{website || "—"}</div>
+            </div>
           </div>
 
           {servicesText ? (
@@ -503,59 +488,63 @@ function ProviderWorkflowCard({
   );
 }
 
-function CustomerOverviewCard({ ticket, ticketCode, onOpenMessages, onOpenFiles }) {
+function CustomerOverviewCard({ ticket, ticketCode, onOpenMessages, onOpenFiles, onOpenInvoice }) {
   const invoice = ticket?.latest_invoice || ticket?.invoice || null;
-  const pdfUrl =
-    invoice?.pdf_url ||
-    invoice?.invoice_pdf_url ||
-    invoice?.public_pdf_url ||
-    invoice?.download_url ||
-    "";
+  const invoiceReady = !!invoice?.id;
 
   return (
     <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <div className="text-lg font-extrabold">Customer Overview</div>
+          <div className="text-lg font-extrabold">Ticket Overview</div>
           <div className="text-xs text-slate-400 mt-1">
-            Messages, files, and invoice PDF access live here for customers.
+            Messages, photos, and payment live here for customers.
           </div>
         </div>
 
         <div className="flex gap-2 flex-wrap">
           <Btn tone="slate" onClick={onOpenMessages}>
-            Open Messages
+            Messages
           </Btn>
           <Btn tone="slate" onClick={onOpenFiles}>
-            Open Files
+            Files
           </Btn>
-          {pdfUrl ? (
-            <a
-              href={pdfUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 border transition whitespace-nowrap gap-2 bg-cyan-500/20 border-cyan-500/40 hover:bg-cyan-500/30 text-cyan-200"
-            >
-              Open Invoice PDF
-            </a>
-          ) : null}
+          <Btn tone={invoiceReady ? "cyan" : "slate"} onClick={onOpenInvoice}>
+            {invoiceReady ? "Open Invoice" : "Invoice Pending"}
+          </Btn>
         </div>
       </div>
 
       <div className="mt-4 grid md:grid-cols-2 gap-3">
-        <Row k="Ticket Code" v={ticketCode || "—"} />
-        <Row k="Status" v={statusLabel(ticket?.status)} />
-        <Row k="Category" v={ticket?.category_name || ticket?.category_path || "—"} />
-        <Row k="Marketplace" v={ticket?.is_marketplace ? "Yes" : "No"} />
-        <Row k="Service Address" v={ticket?.service_address || "—"} />
-        <Row k="ZIP" v={ticket?.service_zip || "—"} />
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
+          <div className="text-[11px] text-slate-400">Ticket Code</div>
+          <div className="mt-1 text-sm font-semibold">{ticketCode || "—"}</div>
+        </div>
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
+          <div className="text-[11px] text-slate-400">Status</div>
+          <div className="mt-1 text-sm font-semibold">{statusLabel(ticket?.status)}</div>
+        </div>
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
+          <div className="text-[11px] text-slate-400">Category</div>
+          <div className="mt-1 text-sm font-semibold">{ticket?.category_name || ticket?.category_path || "—"}</div>
+        </div>
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
+          <div className="text-[11px] text-slate-400">Routing</div>
+          <div className="mt-1 text-sm font-semibold">{ticket?.is_marketplace ? "Marketplace" : "Direct"}</div>
+        </div>
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
+          <div className="text-[11px] text-slate-400">Service Address</div>
+          <div className="mt-1 text-sm font-semibold">{ticket?.service_address || "—"}</div>
+        </div>
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
+          <div className="text-[11px] text-slate-400">ZIP</div>
+          <div className="mt-1 text-sm font-semibold">{ticket?.service_zip || "—"}</div>
+        </div>
       </div>
 
-      {!pdfUrl ? (
-        <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/30 p-4 text-sm text-slate-400">
-          No invoice PDF is available yet.
-        </div>
-      ) : null}
+      <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/30 p-4 text-sm text-slate-300">
+        You can message the business, upload photos, and pay when the final invoice is ready.
+      </div>
     </div>
   );
 }
@@ -651,7 +640,6 @@ export default function TicketDetail() {
   }, [returnTo, isCustomer]);
 
   const ticketId = useMemo(() => Number(id), [id]);
-  const ticketCode = useMemo(() => makeTicketCode(ticketId), [ticketId]);
 
   const [ticket, setTicket] = useState(null);
   const [err, setErr] = useState("");
@@ -667,6 +655,7 @@ export default function TicketDetail() {
         { key: "overview", label: "Overview", icon: <IconOverview /> },
         { key: "messages", label: "Messages", icon: <IconChat /> },
         { key: "files", label: "Files", icon: <IconFiles /> },
+        { key: "invoice", label: "Invoice", icon: <IconInvoice /> },
       ];
     }
 
@@ -793,7 +782,7 @@ export default function TicketDetail() {
   function exportTicketJson() {
     const payload = {
       exported_at: new Date().toISOString(),
-      ticket_code: ticketCode,
+      ticket_code: makeTicketCode(ticket),
       ticket,
       intake: intakeFromTicket(ticket),
       detail_summary: detailSummaryFromTicket(ticket),
@@ -806,11 +795,12 @@ export default function TicketDetail() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${ticketCode}.json`;
+    a.download = `${makeTicketCode(ticket)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
+  const ticketCode = useMemo(() => makeTicketCode(ticket || { id: ticketId }), [ticket, ticketId]);
   const assignedName = assignedBusinessName(ticket);
   const customerName = getCustomerName(ticket);
   const { email: customerEmail, phone: ticketPhone } = getCustomerContact(ticket);
@@ -945,6 +935,7 @@ export default function TicketDetail() {
           isMarketplace={isMarketplace}
           assignedName={assignedName}
           detailSummary={detailSummary}
+          isCustomer={isCustomer}
         />
 
         <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-3">
@@ -954,7 +945,7 @@ export default function TicketDetail() {
           <GlowStat label="Updated" value={overviewStats.updated} tone="amber" />
         </div>
 
-        <TicketWorkspaceNav items={tabs} activeKey={activeTab} onChange={setActiveTab} />
+        <TicketWorkspaceNav items={tabs} activeKey={activeTab} onChange={setActiveTab} isCustomer={isCustomer} />
 
         <div className="grid xl:grid-cols-12 gap-4">
           <aside className="xl:col-span-4">
@@ -970,6 +961,7 @@ export default function TicketDetail() {
                     ticketCode={ticketCode}
                     onOpenMessages={() => setActiveTab("messages")}
                     onOpenFiles={() => setActiveTab("files")}
+                    onOpenInvoice={() => setActiveTab("invoice")}
                   />
                 ) : (
                   <>
@@ -1017,32 +1009,40 @@ export default function TicketDetail() {
                       ticket={ticket}
                       ticketCode={ticketCode}
                       onExport={exportTicketJson}
+                      onAfterChange={loadTicket}
                     />
                   </>
                 )}
-
-                <MessagePanel
-                  ticketId={ticketId}
-                  compact
-                  title="Recent Messages"
-                  subtitle="Fast view of the ticket conversation."
-                />
               </div>
             ) : null}
 
-            {activeTab === "invoice" && !isCustomer && !isMarketplace ? (
-              <InvoicePanel
-                ticketId={ticketId}
-                ticket={ticket}
-                onAfterChange={loadTicket}
-              />
+            {activeTab === "invoice" ? (
+              isCustomer ? (
+                <CustomerInvoicePanel
+                  ticketId={ticketId}
+                  invoice={ticket?.latest_invoice || ticket?.invoice || null}
+                  onAfterPay={loadTicket}
+                />
+              ) : !isMarketplace ? (
+                <InvoicePanel
+                  ticketId={ticketId}
+                  ticket={ticket}
+                  onAfterChange={loadTicket}
+                />
+              ) : (
+                <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 text-sm text-slate-400">
+                  Invoice builder is only available after the ticket is assigned.
+                </div>
+              )
             ) : null}
 
             {activeTab === "quote" && !isCustomer && !isMarketplace ? (
               <QuotePanel ticketId={ticketId} ticket={ticket} onAfterChange={loadTicket} />
             ) : null}
 
-            {activeTab === "messages" ? <MessagePanel ticketId={ticketId} /> : null}
+            {activeTab === "messages" ? (
+              <MessagePanel ticketId={ticketId} isCustomer={isCustomer} />
+            ) : null}
 
             {activeTab === "work" && !isCustomer && !isMarketplace ? (
               <div className="space-y-4">
@@ -1051,7 +1051,7 @@ export default function TicketDetail() {
                     <div>
                       <div className="text-lg font-extrabold">Work Notes</div>
                       <div className="text-xs text-slate-400 mt-1">
-                        This tab is now for active-job notes and execution chat only.
+                        This tab is for active-job notes and execution updates only.
                       </div>
                     </div>
 
@@ -1069,6 +1069,7 @@ export default function TicketDetail() {
                     <MessagePanel
                       ticketId={ticketId}
                       compact
+                      isCustomer={false}
                       title="Work Chat"
                       subtitle="Arrival notes, on-site updates, completion notes, and active-job communication."
                     />
@@ -1078,7 +1079,7 @@ export default function TicketDetail() {
             ) : null}
 
             {activeTab === "files" ? (
-              <AttachmentPanel ticketId={ticketId} canUpload={isCustomer || isSboLike} />
+              <AttachmentPanel ticketId={ticketId} canUpload={isCustomer || isSboLike} isCustomer={isCustomer} />
             ) : null}
           </section>
         </div>

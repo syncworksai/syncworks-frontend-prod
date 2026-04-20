@@ -1,4 +1,3 @@
-// src/components/tickets/TicketSummaryRail.jsx
 import React from "react";
 
 function cx(...parts) {
@@ -85,6 +84,13 @@ function assignedBusinessName(ticket) {
   );
 }
 
+function ticketCode(ticket) {
+  if (ticket?.ticket_code) return ticket.ticket_code;
+  const num = Number(ticket?.id || 0);
+  const prefix = ticket?.is_marketplace ? "MP" : "DT";
+  return num ? `${prefix}-${String(num).padStart(6, "0")}` : "DT-000000";
+}
+
 export default function TicketSummaryRail({ ticket, isCustomer = false }) {
   const assignedName = assignedBusinessName(ticket);
   const customerName = getCustomerName(ticket);
@@ -105,11 +111,11 @@ export default function TicketSummaryRail({ ticket, isCustomer = false }) {
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <Row label="Ticket #" value={ticket?.id || "—"} />
+          <Row label="Ticket #" value={ticketCode(ticket)} />
           <Row label="Customer" value={customerName} />
           <Row label="Category" value={ticket?.category_name || ticket?.category_path || "—"} />
           <Row label="ZIP" value={ticket?.service_zip || "—"} />
-          <Row label="Marketplace" value={ticket?.is_marketplace ? "Yes" : "No"} />
+          <Row label="Routing" value={ticket?.is_marketplace ? "Marketplace" : "Direct"} />
           <Row label="Assigned" value={assignedName || "Not yet"} />
         </div>
 
@@ -117,15 +123,6 @@ export default function TicketSummaryRail({ ticket, isCustomer = false }) {
           <div className="mt-3 rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
             <div className="text-[11px] text-slate-400">Service Address</div>
             <div className="text-sm font-semibold mt-1 break-words">{ticket.service_address}</div>
-          </div>
-        ) : null}
-
-        {ticket?.description ? (
-          <div className="mt-3 rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
-            <div className="text-[11px] text-slate-400">Request Details</div>
-            <div className="text-sm text-slate-200 mt-1 whitespace-pre-wrap break-words">
-              {ticket.description}
-            </div>
           </div>
         ) : null}
       </div>
@@ -148,7 +145,7 @@ export default function TicketSummaryRail({ ticket, isCustomer = false }) {
               Keep all job communication in Messages.
             </div>
             <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
-              Use Work for status changes only.
+              Use Work for status changes and field notes only.
             </div>
             <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
               Quote first when needed, then mark invoice ready for payment.
@@ -160,13 +157,13 @@ export default function TicketSummaryRail({ ticket, isCustomer = false }) {
           <div className="text-lg font-extrabold text-slate-100">Customer Tips</div>
           <div className="mt-3 space-y-2 text-sm text-slate-300">
             <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
-              Use Messages for updates, access details, and follow-ups.
+              Use Messages for updates, questions, and access details.
             </div>
             <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
               Use Files to upload photos, receipts, or documents.
             </div>
             <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
-              When the business sends an invoice, it will appear in the Invoice tab.
+              When the business sends a final invoice, it will appear in the Invoice tab.
             </div>
           </div>
         </div>
