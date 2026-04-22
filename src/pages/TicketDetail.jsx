@@ -408,8 +408,16 @@ function ProviderWorkflowCard({
   isMarketplace,
   assigned,
   loading,
+  canSchedule,
+  canEnRoute,
+  canOnSite,
+  canStart,
+  canComplete,
   onAccept,
   onDecline,
+  onSchedule,
+  onEnRoute,
+  onOnSite,
   onStart,
   onComplete,
   onCancel,
@@ -421,8 +429,11 @@ function ProviderWorkflowCard({
   const s = upperStatus(status);
   const showMarketplaceActions = isMarketplace && !assigned && s === "NEW";
   const showAccept = !showMarketplaceActions && ["NEW", "ASSIGNED"].includes(s);
-  const showStart = !isMarketplace && s === "ACCEPTED";
-  const showComplete = !isMarketplace && ["IN_PROGRESS", "ON_SITE", "EN_ROUTE"].includes(s);
+  const showSchedule = !isMarketplace && canSchedule && ["NEW", "ASSIGNED", "ACCEPTED"].includes(s);
+  const showEnRoute = !isMarketplace && canEnRoute && ["SCHEDULED", "ACCEPTED"].includes(s);
+  const showOnSite = !isMarketplace && canOnSite && ["EN_ROUTE", "SCHEDULED", "ACCEPTED"].includes(s);
+  const showStart = !isMarketplace && canStart && ["ACCEPTED", "SCHEDULED", "EN_ROUTE", "ON_SITE", "APPROVED"].includes(s);
+  const showComplete = !isMarketplace && canComplete && ["IN_PROGRESS", "ON_SITE", "EN_ROUTE", "SCHEDULED", "ACCEPTED", "APPROVED"].includes(s);
   const showCancel = !isMarketplace && !["PAID", "COMPLETED", "CANCELLED", "CLOSED"].includes(s);
   const showQuoteInvoiceTools = !showMarketplaceActions;
 
@@ -432,7 +443,7 @@ function ProviderWorkflowCard({
         <div>
           <div className="text-lg font-extrabold">Provider Workflow</div>
           <div className="text-xs text-slate-400 mt-1">
-            Marketplace tickets get Accept or Deny first. Assigned jobs unlock the full workflow.
+            Dispatch schedules. Assigned technician runs field updates. Office can still manage quote and invoice handoff.
           </div>
         </div>
 
@@ -463,6 +474,24 @@ function ProviderWorkflowCard({
         {showAccept ? (
           <Btn tone="cyan" onClick={onAccept} disabled={loading}>
             Accept
+          </Btn>
+        ) : null}
+
+        {showSchedule ? (
+          <Btn tone="amber" onClick={onSchedule} disabled={loading}>
+            Schedule
+          </Btn>
+        ) : null}
+
+        {showEnRoute ? (
+          <Btn tone="cyan" onClick={onEnRoute} disabled={loading}>
+            En Route
+          </Btn>
+        ) : null}
+
+        {showOnSite ? (
+          <Btn tone="cyan" onClick={onOnSite} disabled={loading}>
+            On Site
           </Btn>
         ) : null}
 
@@ -642,6 +671,7 @@ export default function TicketDetail() {
   const ticketId = useMemo(() => Number(id), [id]);
 
   const [ticket, setTicket] = useState(null);
+  const [me, setMe] = useState(null);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -677,6 +707,15 @@ export default function TicketDetail() {
     }
   }, [tabs, activeTab]);
 
+  const loadMe = useCallback(async () => {
+    try {
+      const res = await api.get("/auth/me/");
+      setMe(res.data || null);
+    } catch {
+      setMe(null);
+    }
+  }, []);
+
   const loadTicket = useCallback(async () => {
     if (!id) return;
     setErr("");
@@ -703,14 +742,16 @@ export default function TicketDetail() {
 
   useEffect(() => {
     loadTicket();
+    loadMe();
 
     function onBizChanged() {
       loadTicket();
+      loadMe();
     }
 
     window.addEventListener("sw:activeBusinessChanged", onBizChanged);
     return () => window.removeEventListener("sw:activeBusinessChanged", onBizChanged);
-  }, [loadTicket]);
+  }, [loadTicket, loadMe]);
 
   async function providerAction(actionName) {
     setErr("");
@@ -828,6 +869,15 @@ export default function TicketDetail() {
       assigned: assigned ? "Yes" : "No",
     };
   }, [ticket, isMarketplace, assigned]);
+
+  const currentUserId = Number(me?.id || me?.user?.id || 0);
+  const assignedMemberId = Number(ticket?.assigned_member || ticket?.assigned_member_id || 0);
+
+  const isAssignedTech = !!currentUserId && !!assignedMemberId && currentUserId === assignedMemberId;
+  const isOfficeLikeMode = mode === "SBO" || mode === "PM" || mode === "PROPERTY_MGR";
+  const isEmployeeMode = mode === "EMPLOYEE";
+  const canOfficeWorkflow = !isCustomer && (isOfficeLikeMode || (isEmployeeMode && !isAssignedTech));
+  const canTechWorkflow = !isCustomer && isAssignedTech;
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 pb-10">
@@ -994,8 +1044,16 @@ export default function TicketDetail() {
                       isMarketplace={isMarketplace}
                       assigned={assigned}
                       loading={loading}
+                      canSchedule={canOfficeWorkflow}
+                      canEnRoute={canTechWorkflow}
+                      canOnSite={canTechWorkflow}
+                      canStart={canTechWorkflow}
+                      canComplete={canTechWorkflow || canOfficeWorkflow}
                       onAccept={() => providerAction("accept")}
                       onDecline={declineMarketplace}
+                      onSchedule={() => providerAction("schedule")}
+                      onEnRoute={() => providerAction("en-route")}
+                      onOnSite={() => providerAction("on-site")}
                       onStart={() => providerAction("start")}
                       onComplete={() => providerAction("complete")}
                       onCancel={() => providerAction("cancel")}
