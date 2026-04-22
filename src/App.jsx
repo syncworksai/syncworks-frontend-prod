@@ -119,6 +119,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
 
         <Route path="/employee/invite" element={<EmployeeInvite />} />
+        <Route path="/accept-invite" element={<EmployeeInvite />} />
 
         <Route
           path="/platform"
@@ -522,6 +523,14 @@ export default function App() {
         />
         <Route
           path="/team/invites"
+          element={
+            <ProtectedRoute>
+              <TeamInvites />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/team"
           element={
             <ProtectedRoute>
               <TeamInvites />

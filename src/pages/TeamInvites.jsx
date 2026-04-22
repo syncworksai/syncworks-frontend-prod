@@ -1,8 +1,14 @@
-// src/pages/TeamInvites.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/client";
 import BusinessPicker from "../components/BusinessPicker";
+
+const ROLE_OPTIONS = [
+  ["TECHNICIAN", "Technician"],
+  ["DISPATCH", "Dispatch"],
+  ["ACCOUNTING", "Accounting"],
+  ["MANAGER", "Manager"],
+];
 
 const PERMS = [
   ["can_manage_team", "Manage Team"],
@@ -18,76 +24,219 @@ const PERMS = [
   ["can_manage_connections", "Manage Connections"],
 ];
 
+function cx(...parts) {
+  return parts.filter(Boolean).join(" ");
+}
+
+function getActiveBusinessId() {
+  try {
+    return localStorage.getItem("sw_active_business_id") || "";
+  } catch {
+    return "";
+  }
+}
+
+function roleLabel(role) {
+  const raw = String(role || "").trim();
+  if (!raw) return "Team Member";
+  return raw
+    .toLowerCase()
+    .split("_")
+    .map((x) => x.charAt(0).toUpperCase() + x.slice(1))
+    .join(" ");
+}
+
+function displayMemberName(member) {
+  const full =
+    `${member?.user?.first_name || ""} ${member?.user?.last_name || ""}`.trim() ||
+    member?.user_name ||
+    member?.name ||
+    member?.user_email ||
+    member?.user?.email ||
+    member?.email ||
+    `Member #${member?.id || ""}`;
+  return full;
+}
+
+function permCount(item) {
+  return PERMS.reduce((count, [key]) => count + (item?.[key] ? 1 : 0), 0);
+}
+
+function Badge({ children, tone = "slate" }) {
+  const tones = {
+    slate: "border-slate-800 bg-slate-950/40 text-slate-200",
+    cyan: "border-cyan-500/30 bg-cyan-500/10 text-cyan-200",
+    emerald: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
+    amber: "border-amber-500/30 bg-amber-500/10 text-amber-200",
+    fuchsia: "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-200",
+    rose: "border-rose-500/30 bg-rose-500/10 text-rose-200",
+  };
+
+  return (
+    <span
+      className={cx(
+        "inline-flex items-center px-2 py-1 rounded-full border text-[11px] font-semibold",
+        tones[tone] || tones.slate
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function SectionCard({ title, subtitle, right, children }) {
+  return (
+    <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <div className="text-lg font-extrabold">{title}</div>
+          {subtitle ? <div className="text-xs text-slate-400 mt-1">{subtitle}</div> : null}
+        </div>
+        {right ? <div>{right}</div> : null}
+      </div>
+      <div className="mt-4">{children}</div>
+    </div>
+  );
+}
+
 export default function TeamInvites() {
+  const [activeBusinessId, setActiveBusinessId] = useState(getActiveBusinessId());
+
+  const [members, setMembers] = useState([]);
   const [invites, setInvites] = useState([]);
+
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("TECHNICIAN");
-  const [codeToAccept, setCodeToAccept] = useState("");
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [inviteBusy, setInviteBusy] = useState(false);
 
   const [perms, setPerms] = useState(() => {
     const obj = {};
-    PERMS.forEach(([k]) => (obj[k] = k === "can_create_tickets"));
+    PERMS.forEach(([k]) => {
+      obj[k] = k === "can_create_tickets";
+    });
     return obj;
   });
 
-  const loadInvites = async () => {
-    setErr("");
+  const selectedRoleLabel = useMemo(
+    () => ROLE_OPTIONS.find(([value]) => value === role)?.[1] || role,
+    [role]
+  );
+
+  useEffect(() => {
+    function handleBusinessChanged() {
+      setActiveBusinessId(getActiveBusinessId());
+    }
+
+    window.addEventListener("sw:activeBusinessChanged", handleBusinessChanged);
+    return () => window.removeEventListener("sw:activeBusinessChanged", handleBusinessChanged);
+  }, []);
+
+  async function loadMembers() {
+    if (!activeBusinessId) {
+      setMembers([]);
+      return;
+    }
+
+    try {
+      const res = await api.get(`/businesses/${activeBusinessId}/members/`);
+      const list = Array.isArray(res?.data) ? res.data : res?.data?.results || [];
+      setMembers(list);
+    } catch (e) {
+      setMembers([]);
+      throw e;
+    }
+  }
+
+  async function loadInvites() {
     try {
       const res = await api.get("/team/invites/");
       setInvites(res.data?.results || res.data || []);
     } catch (e) {
-      setErr(e?.response?.data?.detail || "Failed to load invites (check business context).");
       setInvites([]);
+      throw e;
     }
-  };
+  }
+
+  async function loadAll() {
+    setErr("");
+    setLoading(true);
+    try {
+      await Promise.all([loadMembers(), loadInvites()]);
+    } catch (e) {
+      setErr(e?.response?.data?.detail || "Failed to load team data. Check business context.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    loadInvites();
-  }, []);
+    loadAll();
+  }, [activeBusinessId]);
 
-  const togglePerm = (k) => setPerms((p) => ({ ...p, [k]: !p[k] }));
+  function togglePerm(key) {
+    setPerms((p) => ({ ...p, [key]: !p[key] }));
+  }
 
-  const createInvite = async () => {
+  async function createInvite() {
     setMsg("");
     setErr("");
+
+    if (!activeBusinessId) {
+      setErr("Pick a business first.");
+      return;
+    }
+
+    setInviteBusy(true);
     try {
-      const payload = { email: email || null, role, ...perms };
-      await api.post("/team/invites/", payload);
+      const permissions = {};
+      PERMS.forEach(([key]) => {
+        permissions[key] = !!perms[key];
+      });
+
+      const payload = {
+        email: (email || "").trim(),
+        role,
+        permissions,
+      };
+
+      await api.post(`/businesses/${activeBusinessId}/invite-employee/`, payload);
+
       setEmail("");
-      await loadInvites();
-      setMsg("Invite created ✅");
+      await loadAll();
+      setMsg(`Invite created for ${selectedRoleLabel}. Copy the invite link or code below and send it to the employee.`);
     } catch (e) {
       setErr(e?.response?.data?.detail || JSON.stringify(e?.response?.data || {}) || "Failed to create invite");
+    } finally {
+      setInviteBusy(false);
     }
-  };
+  }
 
-  const acceptInvite = async () => {
-    setMsg("");
-    setErr("");
+  async function copy(text, success = "Copied!") {
     try {
-      await api.post("/team/invites/accept/", { code: codeToAccept });
-      setCodeToAccept("");
-      setMsg("Invite accepted ✅ (reload /auth/me and set business context if needed)");
-    } catch (e) {
-      setErr(e?.response?.data?.detail || "Failed to accept invite");
+      await navigator.clipboard.writeText(text);
+      setMsg(success);
+      setErr("");
+    } catch {
+      setErr("Copy failed. Please copy manually.");
     }
-  };
+  }
 
-  const copy = async (t) => {
-    await navigator.clipboard.writeText(t);
-    alert("Copied!");
-  };
+  const inviteLinkBase = `${window.location.origin}/accept-invite`;
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">
       <header className="border-b border-slate-800 bg-slate-950/40">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <div className="text-lg font-bold">Team Invites</div>
-            <div className="text-xs text-slate-400">Invite employees & subcontractors with permission snapshots</div>
+            <div className="text-lg font-bold">Team & Employees</div>
+            <div className="text-xs text-slate-400">
+              Send employee invites, review your team, and manage who can work tickets.
+            </div>
           </div>
+
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <BusinessPicker />
             <Link
@@ -98,7 +247,7 @@ export default function TeamInvites() {
             </Link>
             <button
               className="rounded-xl px-3 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-xs"
-              onClick={loadInvites}
+              onClick={loadAll}
             >
               Refresh
             </button>
@@ -106,128 +255,213 @@ export default function TeamInvites() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-        {msg && <div className="text-sm text-emerald-300 bg-emerald-900/10 border border-emerald-800 rounded-xl p-3">{msg}</div>}
-        {err && <div className="text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-xl p-3">{err}</div>}
+      <main className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+        {msg ? (
+          <div className="text-sm text-emerald-300 bg-emerald-900/10 border border-emerald-800 rounded-xl p-3">
+            {msg}
+          </div>
+        ) : null}
 
-        <div className="grid lg:grid-cols-2 gap-4">
-          <div className="bg-slate-950/40 border border-slate-800 rounded-2xl p-5">
-            <div className="font-semibold mb-3">Create Invite</div>
+        {err ? (
+          <div className="text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-xl p-3">
+            {err}
+          </div>
+        ) : null}
 
-            <div className="grid md:grid-cols-3 gap-3 mb-4">
+        {!activeBusinessId ? (
+          <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5">
+            <div className="text-lg font-extrabold text-amber-100">Pick a business first</div>
+            <div className="text-sm text-amber-200/90 mt-2">
+              Use the business picker in the top right, then come back here to send employee invites.
+            </div>
+          </div>
+        ) : null}
+
+        <div className="grid xl:grid-cols-2 gap-6">
+          <SectionCard
+            title="Send Employee Invite"
+            subtitle="Create a role-based invite for a technician, dispatch user, accounting seat, or manager."
+            right={<Badge tone="cyan">Business #{activeBusinessId || "—"}</Badge>}
+          >
+            <div className="grid md:grid-cols-3 gap-3">
               <input
-                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm"
-                placeholder="Optional email lock"
+                className="bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm"
+                placeholder="Employee email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
+
               <select
-                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm"
+                className="bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
               >
-                <option value="TECHNICIAN">Technician</option>
-                <option value="DISPATCH">Dispatch</option>
-                <option value="ACCOUNTING">Accounting</option>
-                <option value="MANAGER">Manager</option>
+                {ROLE_OPTIONS.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
               </select>
+
               <button
-                className="rounded-xl px-4 py-2 bg-cyan-500/20 border border-cyan-500/40 hover:bg-cyan-500/30 text-sm font-semibold"
+                className="rounded-2xl px-4 py-3 bg-cyan-500/20 border border-cyan-500/40 hover:bg-cyan-500/30 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={createInvite}
+                disabled={inviteBusy || !activeBusinessId}
               >
-                Create
+                {inviteBusy ? "Creating…" : "Send Invite"}
               </button>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-2">
-              {PERMS.map(([k, label]) => (
+            <div className="mt-4 grid md:grid-cols-2 gap-2">
+              {PERMS.map(([key, label]) => (
                 <label
-                  key={k}
-                  className="flex items-center gap-2 text-sm bg-slate-950 border border-slate-800 rounded-xl px-3 py-2"
+                  key={key}
+                  className="flex items-center gap-2 text-sm bg-slate-950 border border-slate-800 rounded-2xl px-3 py-3"
                 >
-                  <input type="checkbox" checked={!!perms[k]} onChange={() => togglePerm(k)} />
+                  <input type="checkbox" checked={!!perms[key]} onChange={() => togglePerm(key)} />
                   <span>{label}</span>
                 </label>
               ))}
             </div>
 
-            <div className="mt-3 text-xs text-slate-400">
-              These permissions snapshot onto the membership when they accept the code.
+            <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/30 p-4">
+              <div className="text-xs text-slate-400">How this works</div>
+              <div className="mt-2 text-sm text-slate-200">
+                Step 1: create the invite here. Step 2: copy the invite link or code from the pending invites section.
+                Step 3: send it to the employee. Step 4: after they accept, they will appear in your team list and
+                can be assigned to tickets.
+              </div>
             </div>
-          </div>
+          </SectionCard>
 
-          <div className="bg-slate-950/40 border border-slate-800 rounded-2xl p-5">
-            <div className="font-semibold mb-3">Accept Invite (testing)</div>
-            <div className="flex gap-2">
-              <input
-                className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 font-mono text-sm"
-                placeholder="Invite code"
-                value={codeToAccept}
-                onChange={(e) => setCodeToAccept(e.target.value)}
-              />
-              <button
-                className="rounded-xl px-4 py-2 bg-emerald-500/20 border border-emerald-500/40 hover:bg-emerald-500/30 text-sm font-semibold"
-                onClick={acceptInvite}
-                disabled={!codeToAccept}
-              >
-                Accept
-              </button>
-            </div>
-            <div className="mt-3 text-xs text-slate-400">
-              After acceptance, set your <b>Business context</b> (top right) to that business id.
-            </div>
-          </div>
+          <SectionCard
+            title="Current Team Members"
+            subtitle="These members should appear in your ticket assignment dropdowns."
+            right={
+              <Badge tone="emerald">
+                {loading ? "Loading…" : `${members.length} Member${members.length === 1 ? "" : "s"}`}
+              </Badge>
+            }
+          >
+            {members.length === 0 ? (
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-5 text-slate-400">
+                No team members found for this business yet.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {members.map((member) => (
+                  <div key={member.id} className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div>
+                        <div className="font-semibold text-slate-100">{displayMemberName(member)}</div>
+                        <div className="text-sm text-slate-400 mt-1">
+                          {member?.user_email || member?.user?.email || "No email"}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge tone="fuchsia">{roleLabel(member.role)}</Badge>
+                        <Badge tone={member.is_active ? "emerald" : "rose"}>
+                          {member.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                        <Badge tone="slate">{permCount(member)} perms</Badge>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid md:grid-cols-3 gap-2 text-xs text-slate-400">
+                      {PERMS.map(([key, label]) => (
+                        <div key={key} className="flex items-center gap-2">
+                          <span
+                            className={cx(
+                              "inline-block w-2 h-2 rounded-full",
+                              member[key] ? "bg-emerald-400" : "bg-slate-700"
+                            )}
+                          />
+                          {label}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </SectionCard>
         </div>
 
-        <div className="bg-slate-950/40 border border-slate-800 rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="font-semibold">Invites</div>
-          </div>
-
+        <SectionCard
+          title="Pending Invites"
+          subtitle="Create the invite here, then send the copied code or link to the employee."
+          right={<Badge tone="amber">{invites.length} Pending</Badge>}
+        >
           {invites.length === 0 ? (
-            <div className="text-slate-400">No invites.</div>
+            <div className="text-slate-400">No pending invites.</div>
           ) : (
             <div className="space-y-3">
-              {invites.map((inv) => (
-                <div key={inv.id || inv.code} className="bg-slate-950 border border-slate-800 rounded-2xl p-4">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                    <div>
-                      <div className="font-semibold">
-                        {inv.email || "Open Invite"} • {inv.role}
+              {invites.map((inv) => {
+                const inviteLink = `${inviteLinkBase}?code=${encodeURIComponent(inv.code || "")}`;
+                return (
+                  <div key={inv.id || inv.code} className="bg-slate-950 border border-slate-800 rounded-2xl p-4">
+                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+                      <div>
+                        <div className="font-semibold text-slate-100">
+                          {inv.email || "Open Invite"} • {roleLabel(inv.role)}
+                        </div>
+                        <div className="text-slate-400 text-sm mt-1">
+                          Invite Code: <span className="font-mono text-slate-200">{inv.code}</span>
+                        </div>
                       </div>
-                      <div className="text-slate-400 text-sm">
-                        <span className="font-mono">{inv.code}</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        className="rounded-xl px-3 py-2 bg-indigo-500/20 border border-indigo-500/40 hover:bg-indigo-500/30 text-xs"
-                        onClick={() => copy(inv.code)}
-                      >
-                        Copy Code
-                      </button>
-                      <button
-                        className="rounded-xl px-3 py-2 bg-emerald-500/20 border border-emerald-500/40 hover:bg-emerald-500/30 text-xs"
-                        onClick={() => copy(`${window.location.origin}/accept-invite?code=${inv.code}`)}
-                      >
-                        Copy Link
-                      </button>
-                    </div>
-                  </div>
 
-                  <div className="mt-3 grid md:grid-cols-3 gap-2 text-xs text-slate-400">
-                    {PERMS.map(([k, label]) => (
-                      <div key={k} className="flex items-center gap-2">
-                        <span className={`inline-block w-2 h-2 rounded-full ${inv[k] ? "bg-emerald-400" : "bg-slate-700"}`} />
-                        {label}
+                      <div className="flex gap-2 flex-wrap">
+                        <button
+                          className="rounded-xl px-3 py-2 bg-indigo-500/20 border border-indigo-500/40 hover:bg-indigo-500/30 text-xs"
+                          onClick={() => copy(inv.code, "Invite code copied.")}
+                        >
+                          Copy Code
+                        </button>
+
+                        <button
+                          className="rounded-xl px-3 py-2 bg-emerald-500/20 border border-emerald-500/40 hover:bg-emerald-500/30 text-xs"
+                          onClick={() => copy(inviteLink, "Invite link copied.")}
+                        >
+                          Copy Link
+                        </button>
                       </div>
-                    ))}
+                    </div>
+
+                    <div className="mt-3 grid md:grid-cols-3 gap-2 text-xs text-slate-400">
+                      {PERMS.map(([key, label]) => (
+                        <div key={key} className="flex items-center gap-2">
+                          <span
+                            className={cx(
+                              "inline-block w-2 h-2 rounded-full",
+                              inv[key] ? "bg-emerald-400" : "bg-slate-700"
+                            )}
+                          />
+                          {label}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
-        </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Employee Side"
+          subtitle="Use this link for the employee. The owner should not accept invites on this page."
+        >
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-4">
+            <div className="text-sm text-slate-200">
+              Employee acceptance page:
+              <span className="ml-2 font-mono text-cyan-200">{inviteLinkBase}</span>
+            </div>
+            <div className="mt-2 text-xs text-slate-500">
+              Once the employee accepts, come back here and refresh. Then go to tickets and assign them.
+            </div>
+          </div>
+        </SectionCard>
       </main>
     </div>
   );
