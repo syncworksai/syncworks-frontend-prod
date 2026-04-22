@@ -60,6 +60,25 @@ const STATUS_LABELS = {
   CLOSED: "Closed",
 };
 
+const MANUAL_STATUS_OPTIONS = [
+  "NEW",
+  "ASSIGNED",
+  "ACCEPTED",
+  "SCHEDULED",
+  "EN_ROUTE",
+  "ON_SITE",
+  "IN_PROGRESS",
+  "NEEDS_QUOTE",
+  "QUOTED",
+  "APPROVED",
+  "AWAITING_APPROVAL",
+  "COMPLETED",
+  "INVOICED",
+  "PAID",
+  "CANCELLED",
+  "CLOSED",
+];
+
 function statusLabel(s) {
   return STATUS_LABELS[upperStatus(s)] || s || "—";
 }
@@ -438,8 +457,11 @@ function OperationsControlCard({
   loading,
   assignBusy,
   actionBusy,
+  manualBusy,
   assignValue,
   setAssignValue,
+  manualStatus,
+  setManualStatus,
   onAssign,
   onAccept,
   onSchedule,
@@ -447,12 +469,14 @@ function OperationsControlCard({
   onOnSite,
   onStart,
   onComplete,
+  onManualStatus,
   canAssign,
   canSchedule,
   canEnRoute,
   canOnSite,
   canStart,
   canComplete,
+  canManualOverride,
   assignedMemberDisplay,
   currentRoleLabel,
 }) {
@@ -549,7 +573,7 @@ function OperationsControlCard({
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-          <div className="text-sm font-semibold text-slate-100">Change Status</div>
+          <div className="text-sm font-semibold text-slate-100">Guided Workflow</div>
           <div className="text-[11px] text-slate-500 mt-1">
             Owner can do everything. Technician actions are tied to the assigned member.
           </div>
@@ -610,6 +634,39 @@ function OperationsControlCard({
           </div>
         </div>
       </div>
+
+      {canManualOverride ? (
+        <div className="mt-4 rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/5 p-4">
+          <div className="text-sm font-semibold text-slate-100">Manual Status Override</div>
+          <div className="text-[11px] text-slate-500 mt-1">
+            Use only when you need to manually correct or force a status change.
+          </div>
+
+          <div className="mt-3 grid md:grid-cols-[1fr_auto] gap-3">
+            <select
+              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm"
+              value={manualStatus}
+              onChange={(e) => setManualStatus(e.target.value)}
+              disabled={manualBusy}
+            >
+              {MANUAL_STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {statusLabel(s)}
+                </option>
+              ))}
+            </select>
+
+            <Btn
+              tone="fuchsia"
+              onClick={onManualStatus}
+              disabled={manualBusy || !manualStatus || manualStatus === status}
+              className="h-[50px] px-5"
+            >
+              {manualBusy ? "Updating…" : "Set Status"}
+            </Btn>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -771,10 +828,12 @@ export default function TicketDetail() {
   const [me, setMe] = useState(null);
   const [members, setMembers] = useState([]);
   const [assignValue, setAssignValue] = useState("");
+  const [manualStatus, setManualStatus] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
   const [assignBusy, setAssignBusy] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
+  const [manualBusy, setManualBusy] = useState(false);
 
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
@@ -874,7 +933,8 @@ export default function TicketDetail() {
   useEffect(() => {
     const currentAssigned = String(ticket?.assigned_member || ticket?.assigned_member_id || "");
     setAssignValue(currentAssigned);
-  }, [ticket?.assigned_member, ticket?.assigned_member_id]);
+    setManualStatus(upperStatus(ticket?.status));
+  }, [ticket?.assigned_member, ticket?.assigned_member_id, ticket?.status]);
 
   async function providerAction(actionName) {
     setErr("");
@@ -906,6 +966,22 @@ export default function TicketDetail() {
       setErr(e?.response?.data?.detail || "Failed to assign technician.");
     } finally {
       setAssignBusy(false);
+    }
+  }
+
+  async function manualSetStatus() {
+    if (!manualStatus) return;
+    setErr("");
+    setManualBusy(true);
+    try {
+      await api.post(`/tickets/${id}/set-status/`, {
+        status: manualStatus,
+      });
+      await loadTicket();
+    } catch (e) {
+      setErr(e?.response?.data?.detail || "Failed to update ticket status.");
+    } finally {
+      setManualBusy(false);
     }
   }
 
@@ -1026,7 +1102,10 @@ export default function TicketDetail() {
 
   const currentMemberRole = upperStatus(currentMember?.role);
   const isOwner = mode === "SBO";
-  const isDispatchLike = ["MANAGER", "DISPATCH", "ADMIN", "OWNER"].includes(currentMemberRole) || isOwner || canManageScheduleFromMode(mode);
+  const isDispatchLike =
+    ["MANAGER", "DISPATCH", "ADMIN", "OWNER"].includes(currentMemberRole) ||
+    isOwner ||
+    canManageScheduleFromMode(mode);
   const isAssignedTech = !!currentUserId && !!assignedMemberUserId && currentUserId === assignedMemberUserId;
   const canAssign = isDispatchLike;
   const canSchedule = isDispatchLike;
@@ -1034,14 +1113,17 @@ export default function TicketDetail() {
   const canOnSite = isAssignedTech || isOwner;
   const canStart = isAssignedTech || isOwner;
   const canComplete = isAssignedTech || isDispatchLike || isOwner;
+  const canManualOverride = isDispatchLike || isOwner;
 
   const assignedMemberDisplay = useMemo(() => {
-    const found = (members || []).find((m) => String(m?.user || m?.user_id || m?.user?.id || "") === String(assignedMemberUserId));
+    const found = (members || []).find(
+      (m) => String(m?.user || m?.user_id || m?.user?.id || "") === String(assignedMemberUserId)
+    );
     return found ? `${displayMemberName(found)} • ${roleLabel(found?.role)}` : "";
   }, [members, assignedMemberUserId]);
 
   const currentRoleLabel = useMemo(() => {
-    if (isOwner) return "Owner access: can assign, schedule, and override workflow.";
+    if (isOwner) return "Owner access: can assign, schedule, manually override, and run the whole workflow.";
     if (currentMember) return `${roleLabel(currentMember.role)} access`;
     if (mode === "EMPLOYEE") return "Employee access";
     if (mode === "PM" || mode === "PROPERTY_MGR") return "Office access";
@@ -1190,8 +1272,11 @@ export default function TicketDetail() {
                       loading={loading}
                       assignBusy={assignBusy}
                       actionBusy={actionBusy}
+                      manualBusy={manualBusy}
                       assignValue={assignValue}
                       setAssignValue={setAssignValue}
+                      manualStatus={manualStatus}
+                      setManualStatus={setManualStatus}
                       onAssign={assignTechnician}
                       onAccept={() => providerAction("accept")}
                       onSchedule={() => providerAction("schedule")}
@@ -1199,12 +1284,14 @@ export default function TicketDetail() {
                       onOnSite={() => providerAction("on-site")}
                       onStart={() => providerAction("start")}
                       onComplete={() => providerAction("complete")}
+                      onManualStatus={manualSetStatus}
                       canAssign={canAssign}
                       canSchedule={canSchedule}
                       canEnRoute={canEnRoute}
                       canOnSite={canOnSite}
                       canStart={canStart}
                       canComplete={canComplete}
+                      canManualOverride={canManualOverride}
                       assignedMemberDisplay={assignedMemberDisplay}
                       currentRoleLabel={currentRoleLabel}
                     />
@@ -1283,11 +1370,7 @@ export default function TicketDetail() {
                   onAfterPay={loadTicket}
                 />
               ) : !isMarketplace ? (
-                <InvoicePanel
-                  ticketId={ticketId}
-                  ticket={ticket}
-                  onAfterChange={loadTicket}
-                />
+                <InvoicePanel ticketId={ticketId} ticket={ticket} onAfterChange={loadTicket} />
               ) : (
                 <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 text-sm text-slate-400">
                   Invoice builder is only available after the ticket is assigned.
@@ -1299,9 +1382,7 @@ export default function TicketDetail() {
               <QuotePanel ticketId={ticketId} ticket={ticket} onAfterChange={loadTicket} />
             ) : null}
 
-            {activeTab === "messages" ? (
-              <MessagePanel ticketId={ticketId} isCustomer={isCustomer} />
-            ) : null}
+            {activeTab === "messages" ? <MessagePanel ticketId={ticketId} isCustomer={isCustomer} /> : null}
 
             {activeTab === "work" && !isCustomer && !isMarketplace ? (
               <div className="space-y-4">
