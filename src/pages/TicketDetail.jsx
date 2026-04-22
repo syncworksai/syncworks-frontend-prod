@@ -37,6 +37,8 @@ function statusTone(status) {
   if (s === "CANCELLED") return "border-rose-500/30 bg-rose-500/10 text-rose-200";
   if (s === "IN_PROGRESS" || s === "EN_ROUTE" || s === "ON_SITE") return "border-cyan-500/30 bg-cyan-500/10 text-cyan-200";
   if (s === "INVOICED" || s === "AWAITING_APPROVAL" || s === "SENT") return "border-amber-500/30 bg-amber-500/10 text-amber-200";
+  if (s === "SCHEDULED") return "border-sky-500/30 bg-sky-500/10 text-sky-200";
+  if (s === "ACCEPTED") return "border-violet-500/30 bg-violet-500/10 text-violet-200";
   return "border-slate-700 bg-slate-900/40 text-slate-200";
 }
 
@@ -60,7 +62,7 @@ const STATUS_LABELS = {
   CLOSED: "Closed",
 };
 
-const MANUAL_STATUS_OPTIONS = [
+const STATUS_CHANGE_OPTIONS = [
   "NEW",
   "ASSIGNED",
   "ACCEPTED",
@@ -100,6 +102,7 @@ function Btn({ children, tone = "slate", className = "", ...props }) {
     rose: "bg-rose-500/15 border-rose-500/30 hover:bg-rose-500/20 text-rose-200",
     amber: "bg-amber-500/15 border-amber-500/30 hover:bg-amber-500/20 text-amber-200",
     fuchsia: "bg-fuchsia-500/15 border-fuchsia-500/30 hover:bg-fuchsia-500/20 text-fuchsia-200",
+    sky: "bg-sky-500/15 border-sky-500/30 hover:bg-sky-500/20 text-sky-200",
   };
 
   return (
@@ -123,6 +126,7 @@ function GlowStat({ label, value, tone = "slate" }) {
     emerald: "border-emerald-500/20 bg-emerald-500/10 text-emerald-100",
     amber: "border-amber-500/20 bg-amber-500/10 text-amber-100",
     fuchsia: "border-fuchsia-500/20 bg-fuchsia-500/10 text-fuchsia-100",
+    sky: "border-sky-500/20 bg-sky-500/10 text-sky-100",
   };
 
   return (
@@ -476,17 +480,14 @@ function OperationsControlCard({
   canOnSite,
   canStart,
   canComplete,
-  canManualOverride,
+  canStatusChange,
   assignedMemberDisplay,
   currentRoleLabel,
 }) {
   const status = upperStatus(ticket?.status);
   const isMarketplace = !!ticket?.is_marketplace;
   const assignedBusiness = !!ticket?.assigned_business_id;
-  const availableTechs = (members || []).filter((m) => {
-    const role = upperStatus(m?.role);
-    return ["TECHNICIAN", "TECH"].includes(role);
-  });
+  const availableTeam = (members || []).filter((m) => upperStatus(m?.role) !== "CUSTOMER");
 
   const nextStep =
     status === "NEW" || status === "ASSIGNED"
@@ -513,17 +514,17 @@ function OperationsControlCard({
   const showComplete = ["IN_PROGRESS", "ON_SITE", "EN_ROUTE", "SCHEDULED", "ACCEPTED", "APPROVED"].includes(status);
 
   return (
-    <div className="rounded-3xl border border-cyan-500/30 bg-cyan-500/5 p-5">
+    <div className="rounded-3xl border border-cyan-500/30 bg-[linear-gradient(135deg,rgba(6,182,212,0.10),rgba(168,85,247,0.07))] p-5">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <div className="text-lg font-extrabold text-slate-100">Operations Control</div>
-          <div className="text-xs text-slate-400 mt-1">
-            Fast assign + status control for the team. This is the main place to manage ticket flow.
+          <div className="text-xs text-slate-300/80 mt-1">
+            Fast assign, status flow, and owner override.
           </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] px-2 py-1 rounded-full border border-slate-700 bg-slate-950/50 text-slate-200 font-semibold">
+          <span className="text-[11px] px-2 py-1 rounded-full border border-slate-700 bg-slate-950/60 text-slate-100 font-semibold">
             Current: {statusLabel(ticket?.status)}
           </span>
           <span className="text-[11px] px-2 py-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-200 font-semibold">
@@ -532,24 +533,24 @@ function OperationsControlCard({
         </div>
       </div>
 
-      <div className="mt-4 grid lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-          <div className="text-sm font-semibold text-slate-100">Assign Technician</div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            Assign who should own field updates for this ticket.
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
+          <div className="text-sm font-semibold text-slate-100">Assign Tech / Employee</div>
+          <div className="text-[11px] text-slate-400 mt-1">
+            Pick who owns the ticket from here.
           </div>
 
-          <div className="mt-3 grid md:grid-cols-[1fr_auto] gap-3">
+          <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
             <select
-              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm"
+              className="w-full bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3 text-sm text-slate-100"
               value={assignValue}
               onChange={(e) => setAssignValue(e.target.value)}
               disabled={!canAssign || assignBusy}
             >
               <option value="">
-                {availableTechs.length ? "Select technician…" : "No technicians found"}
+                {availableTeam.length ? "Select team member…" : "No team members found"}
               </option>
-              {availableTechs.map((m) => (
+              {availableTeam.map((m) => (
                 <option key={m.id} value={String(m.id)}>
                   {displayMemberName(m)} • {roleLabel(m.role)}
                 </option>
@@ -557,28 +558,30 @@ function OperationsControlCard({
             </select>
 
             <Btn
-              tone="cyan"
+              tone="sky"
               onClick={onAssign}
               disabled={!canAssign || assignBusy || !assignValue}
               className="h-[50px] px-5"
             >
-              {assignBusy ? "Assigning…" : "Assign"}
+              {assignBusy ? "Saving…" : "Assign"}
             </Btn>
           </div>
 
-          <div className="mt-3 rounded-2xl border border-slate-800 bg-slate-950/30 p-3 text-sm">
-            <div className="text-[11px] text-slate-400">Assigned technician</div>
-            <div className="mt-1 font-semibold text-slate-100">{assignedMemberDisplay || "No technician assigned yet."}</div>
+          <div className="mt-3 rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
+            <div className="text-[11px] text-slate-400">Assigned team member</div>
+            <div className="mt-1 text-sm font-semibold text-slate-100">
+              {assignedMemberDisplay || "Nobody assigned yet."}
+            </div>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-          <div className="text-sm font-semibold text-slate-100">Guided Workflow</div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            Owner can do everything. Technician actions are tied to the assigned member.
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
+          <div className="text-sm font-semibold text-slate-100">Guided Actions</div>
+          <div className="text-[11px] text-slate-400 mt-1">
+            Fastest way to move the ticket in the right order.
           </div>
 
-          <div className="mt-3 flex gap-2 flex-wrap">
+          <div className="mt-3 flex flex-wrap gap-2">
             {showAccept ? (
               <Btn tone="cyan" onClick={onAccept} disabled={loading || actionBusy}>
                 Accept
@@ -592,13 +595,13 @@ function OperationsControlCard({
             ) : null}
 
             {showEnRoute ? (
-              <Btn tone="cyan" onClick={onEnRoute} disabled={loading || actionBusy || !canEnRoute}>
+              <Btn tone="sky" onClick={onEnRoute} disabled={loading || actionBusy || !canEnRoute}>
                 En Route
               </Btn>
             ) : null}
 
             {showOnSite ? (
-              <Btn tone="cyan" onClick={onOnSite} disabled={loading || actionBusy || !canOnSite}>
+              <Btn tone="fuchsia" onClick={onOnSite} disabled={loading || actionBusy || !canOnSite}>
                 On Site
               </Btn>
             ) : null}
@@ -617,39 +620,39 @@ function OperationsControlCard({
           </div>
 
           <div className="mt-3 rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
-            <div className="text-[11px] text-slate-400">Your access right now</div>
-            <div className="mt-1 text-sm text-slate-200">{currentRoleLabel}</div>
+            <div className="text-[11px] text-slate-400">Your access</div>
+            <div className="mt-1 text-sm text-slate-100">{currentRoleLabel}</div>
 
             {!canSchedule && !canEnRoute && !canOnSite && !canStart && !canComplete ? (
               <div className="mt-2 text-[11px] text-amber-300">
-                You can view this workflow, but the current ticket actions are limited by your role or assignment.
+                You can view this, but current actions are limited by role or assignment.
               </div>
             ) : null}
 
             {isMarketplace && !assignedBusiness ? (
               <div className="mt-2 text-[11px] text-slate-400">
-                Marketplace tickets must be accepted first before normal workflow continues.
+                Marketplace tickets must be accepted before normal workflow continues.
               </div>
             ) : null}
           </div>
         </div>
       </div>
 
-      {canManualOverride ? (
+      {canStatusChange ? (
         <div className="mt-4 rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/5 p-4">
-          <div className="text-sm font-semibold text-slate-100">Manual Status Override</div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            Use only when you need to manually correct or force a status change.
+          <div className="text-sm font-semibold text-slate-100">Status Change</div>
+          <div className="text-[11px] text-slate-400 mt-1">
+            Owner/office override when you need to correct status manually.
           </div>
 
-          <div className="mt-3 grid md:grid-cols-[1fr_auto] gap-3">
+          <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
             <select
-              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm"
+              className="w-full bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3 text-sm text-slate-100"
               value={manualStatus}
               onChange={(e) => setManualStatus(e.target.value)}
               disabled={manualBusy}
             >
-              {MANUAL_STATUS_OPTIONS.map((s) => (
+              {STATUS_CHANGE_OPTIONS.map((s) => (
                 <option key={s} value={s}>
                   {statusLabel(s)}
                 </option>
@@ -662,7 +665,7 @@ function OperationsControlCard({
               disabled={manualBusy || !manualStatus || manualStatus === status}
               className="h-[50px] px-5"
             >
-              {manualBusy ? "Updating…" : "Set Status"}
+              {manualBusy ? "Updating…" : "Update Status"}
             </Btn>
           </div>
         </div>
@@ -700,7 +703,7 @@ function CustomerOverviewCard({ ticket, ticketCode, onOpenMessages, onOpenFiles,
 
       <div className="mt-4 grid md:grid-cols-2 gap-3">
         <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
-          <div className="text-[11px] text-slate-400">Ticket Code</div>
+          <div className="text-[11px] text-slate-400">Ticket #</div>
           <div className="mt-1 text-sm font-semibold">{ticketCode || "—"}</div>
         </div>
         <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
@@ -963,7 +966,7 @@ export default function TicketDetail() {
       await loadTicket();
       await loadMembers();
     } catch (e) {
-      setErr(e?.response?.data?.detail || "Failed to assign technician.");
+      setErr(e?.response?.data?.detail || "Failed to assign team member.");
     } finally {
       setAssignBusy(false);
     }
@@ -1085,10 +1088,9 @@ export default function TicketDetail() {
   const overviewStats = useMemo(() => {
     return {
       status: statusLabel(ticket?.status),
-      created: fmtPretty(ticket?.created_at),
-      updated: fmtPretty(ticket?.updated_at),
       source: isMarketplace ? "Marketplace" : "Direct",
       assigned: assigned ? "Yes" : "No",
+      updated: fmtPretty(ticket?.updated_at),
     };
   }, [ticket, isMarketplace, assigned]);
 
@@ -1113,7 +1115,7 @@ export default function TicketDetail() {
   const canOnSite = isAssignedTech || isOwner;
   const canStart = isAssignedTech || isOwner;
   const canComplete = isAssignedTech || isDispatchLike || isOwner;
-  const canManualOverride = isDispatchLike || isOwner;
+  const canStatusChange = isDispatchLike || isOwner;
 
   const assignedMemberDisplay = useMemo(() => {
     const found = (members || []).find(
@@ -1123,7 +1125,7 @@ export default function TicketDetail() {
   }, [members, assignedMemberUserId]);
 
   const currentRoleLabel = useMemo(() => {
-    if (isOwner) return "Owner access: can assign, schedule, manually override, and run the whole workflow.";
+    if (isOwner) return "Owner access: assign, guide workflow, and override when needed.";
     if (currentMember) return `${roleLabel(currentMember.role)} access`;
     if (mode === "EMPLOYEE") return "Employee access";
     if (mode === "PM" || mode === "PROPERTY_MGR") return "Office access";
@@ -1182,7 +1184,7 @@ export default function TicketDetail() {
               <div>
                 <div className="text-lg font-extrabold">Quick Note</div>
                 <div className="text-xs text-slate-400 mt-1">
-                  Fast internal note — saved into the ticket message stream.
+                  Fast internal note saved to the ticket messages.
                 </div>
               </div>
 
@@ -1206,7 +1208,7 @@ export default function TicketDetail() {
             />
 
             <div className="mt-4 flex items-center justify-between gap-2 flex-wrap">
-              <div className="text-[11px] text-slate-500">Tip: short, clear, action-oriented.</div>
+              <div className="text-[11px] text-slate-500">Keep it short and actionable.</div>
               <div className="flex gap-2">
                 <Btn tone="slate" onClick={() => setNoteOpen(false)} disabled={noteSaving}>
                   Cancel
@@ -1243,7 +1245,7 @@ export default function TicketDetail() {
           <GlowStat label="Status" value={overviewStats.status} tone="cyan" />
           <GlowStat label="Source" value={overviewStats.source} tone="fuchsia" />
           <GlowStat label="Assigned" value={overviewStats.assigned} tone="emerald" />
-          <GlowStat label="Updated" value={overviewStats.updated} tone="amber" />
+          <GlowStat label="Updated" value={overviewStats.updated} tone="sky" />
         </div>
 
         <TicketWorkspaceNav items={tabs} activeKey={activeTab} onChange={setActiveTab} isCustomer={isCustomer} />
@@ -1257,13 +1259,16 @@ export default function TicketDetail() {
             {activeTab === "overview" ? (
               <div className="space-y-4">
                 {isCustomer ? (
-                  <CustomerOverviewCard
-                    ticket={ticket}
-                    ticketCode={ticketCode}
-                    onOpenMessages={() => setActiveTab("messages")}
-                    onOpenFiles={() => setActiveTab("files")}
-                    onOpenInvoice={() => setActiveTab("invoice")}
-                  />
+                  <>
+                    <CustomerOverviewCard
+                      ticket={ticket}
+                      ticketCode={ticketCode}
+                      onOpenMessages={() => setActiveTab("messages")}
+                      onOpenFiles={() => setActiveTab("files")}
+                      onOpenInvoice={() => setActiveTab("invoice")}
+                    />
+                    <AssignedBusinessCardPanel ticket={ticket} onBookAgain={bookAgainWithAssignedBusiness} />
+                  </>
                 ) : (
                   <>
                     <OperationsControlCard
@@ -1291,7 +1296,7 @@ export default function TicketDetail() {
                       canOnSite={canOnSite}
                       canStart={canStart}
                       canComplete={canComplete}
-                      canManualOverride={canManualOverride}
+                      canStatusChange={canStatusChange}
                       assignedMemberDisplay={assignedMemberDisplay}
                       currentRoleLabel={currentRoleLabel}
                     />
@@ -1317,14 +1322,12 @@ export default function TicketDetail() {
                       onOpenMessages={() => setActiveTab("messages")}
                     />
 
-                    <AssignedBusinessCardPanel ticket={ticket} onBookAgain={bookAgainWithAssignedBusiness} />
-
                     <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
                       <div className="flex items-center justify-between gap-3 flex-wrap">
                         <div>
                           <div className="text-lg font-extrabold">Quote + Invoice Tools</div>
                           <div className="text-xs text-slate-400 mt-1">
-                            Use these after workflow is moving. Overview status controls now live above.
+                            Workflow stays up top. Billing tools stay here.
                           </div>
                         </div>
 
@@ -1391,7 +1394,7 @@ export default function TicketDetail() {
                     <div>
                       <div className="text-lg font-extrabold">Work Notes</div>
                       <div className="text-xs text-slate-400 mt-1">
-                        This tab is for active-job notes and execution updates only.
+                        Arrival notes, on-site updates, and completion notes.
                       </div>
                     </div>
 
@@ -1411,7 +1414,7 @@ export default function TicketDetail() {
                       compact
                       isCustomer={false}
                       title="Work Chat"
-                      subtitle="Arrival notes, on-site updates, completion notes, and active-job communication."
+                      subtitle="Execution updates and internal job communication."
                     />
                   </div>
                 </div>
