@@ -280,6 +280,36 @@ function intakeFromTicket(ticket) {
   return extractIntakeJson(base).intake;
 }
 
+function roleLabel(role) {
+  const raw = String(role || "").trim();
+  if (!raw) return "Team Member";
+  return raw
+    .toLowerCase()
+    .split("_")
+    .map((x) => x.charAt(0).toUpperCase() + x.slice(1))
+    .join(" ");
+}
+
+function displayMemberName(member) {
+  const full =
+    `${member?.user?.first_name || ""} ${member?.user?.last_name || ""}`.trim() ||
+    member?.user_name ||
+    member?.name ||
+    member?.user_email ||
+    member?.user?.email ||
+    member?.email ||
+    `Member #${member?.id || ""}`;
+  return full;
+}
+
+function currentUserIdFromMe(me) {
+  return Number(me?.id || me?.user?.id || 0);
+}
+
+function canManageScheduleFromMode(mode) {
+  return mode === "SBO" || mode === "PM" || mode === "PROPERTY_MGR";
+}
+
 function AssignedBusinessCardPanel({ ticket, onBookAgain }) {
   const card = assignedBusinessCard(ticket);
   const name = assignedBusinessName(ticket);
@@ -402,116 +432,183 @@ function AssignedBusinessCardPanel({ ticket, onBookAgain }) {
   );
 }
 
-function ProviderWorkflowCard({
-  isCustomer,
-  status,
-  isMarketplace,
-  assigned,
+function OperationsControlCard({
+  ticket,
+  members,
   loading,
-  canSchedule,
-  canEnRoute,
-  canOnSite,
-  canStart,
-  canComplete,
+  assignBusy,
+  actionBusy,
+  assignValue,
+  setAssignValue,
+  onAssign,
   onAccept,
-  onDecline,
   onSchedule,
   onEnRoute,
   onOnSite,
   onStart,
   onComplete,
-  onCancel,
-  onOpenQuote,
-  onOpenInvoice,
+  canAssign,
+  canSchedule,
+  canEnRoute,
+  canOnSite,
+  canStart,
+  canComplete,
+  assignedMemberDisplay,
+  currentRoleLabel,
 }) {
-  if (isCustomer) return null;
+  const status = upperStatus(ticket?.status);
+  const isMarketplace = !!ticket?.is_marketplace;
+  const assignedBusiness = !!ticket?.assigned_business_id;
+  const availableTechs = (members || []).filter((m) => {
+    const role = upperStatus(m?.role);
+    return ["TECHNICIAN", "TECH"].includes(role);
+  });
 
-  const s = upperStatus(status);
-  const showMarketplaceActions = isMarketplace && !assigned && s === "NEW";
-  const showAccept = !showMarketplaceActions && ["NEW", "ASSIGNED"].includes(s);
-  const showSchedule = !isMarketplace && canSchedule && ["NEW", "ASSIGNED", "ACCEPTED"].includes(s);
-  const showEnRoute = !isMarketplace && canEnRoute && ["SCHEDULED", "ACCEPTED"].includes(s);
-  const showOnSite = !isMarketplace && canOnSite && ["EN_ROUTE", "SCHEDULED", "ACCEPTED"].includes(s);
-  const showStart = !isMarketplace && canStart && ["ACCEPTED", "SCHEDULED", "EN_ROUTE", "ON_SITE", "APPROVED"].includes(s);
-  const showComplete = !isMarketplace && canComplete && ["IN_PROGRESS", "ON_SITE", "EN_ROUTE", "SCHEDULED", "ACCEPTED", "APPROVED"].includes(s);
-  const showCancel = !isMarketplace && !["PAID", "COMPLETED", "CANCELLED", "CLOSED"].includes(s);
-  const showQuoteInvoiceTools = !showMarketplaceActions;
+  const nextStep =
+    status === "NEW" || status === "ASSIGNED"
+      ? "Accept"
+      : status === "ACCEPTED"
+      ? "Schedule"
+      : status === "SCHEDULED"
+      ? "En Route"
+      : status === "EN_ROUTE"
+      ? "On Site"
+      : status === "ON_SITE"
+      ? "Start"
+      : status === "IN_PROGRESS"
+      ? "Complete"
+      : status === "APPROVED"
+      ? "Start or Complete"
+      : "No workflow action";
+
+  const showAccept = ["NEW", "ASSIGNED"].includes(status);
+  const showSchedule = ["NEW", "ASSIGNED", "ACCEPTED"].includes(status);
+  const showEnRoute = ["SCHEDULED", "ACCEPTED"].includes(status);
+  const showOnSite = ["EN_ROUTE", "SCHEDULED", "ACCEPTED"].includes(status);
+  const showStart = ["ACCEPTED", "SCHEDULED", "EN_ROUTE", "ON_SITE", "APPROVED"].includes(status);
+  const showComplete = ["IN_PROGRESS", "ON_SITE", "EN_ROUTE", "SCHEDULED", "ACCEPTED", "APPROVED"].includes(status);
 
   return (
-    <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+    <div className="rounded-3xl border border-cyan-500/30 bg-cyan-500/5 p-5">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <div className="text-lg font-extrabold">Provider Workflow</div>
+          <div className="text-lg font-extrabold text-slate-100">Operations Control</div>
           <div className="text-xs text-slate-400 mt-1">
-            Dispatch schedules. Assigned technician runs field updates. Office can still manage quote and invoice handoff.
+            Fast assign + status control for the team. This is the main place to manage ticket flow.
           </div>
         </div>
 
-        {showQuoteInvoiceTools ? (
-          <div className="flex gap-2 flex-wrap">
-            <Btn tone="fuchsia" onClick={onOpenQuote}>
-              Open Quote
-            </Btn>
-            <Btn tone="cyan" onClick={onOpenInvoice}>
-              Open Invoice
-            </Btn>
-          </div>
-        ) : null}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] px-2 py-1 rounded-full border border-slate-700 bg-slate-950/50 text-slate-200 font-semibold">
+            Current: {statusLabel(ticket?.status)}
+          </span>
+          <span className="text-[11px] px-2 py-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-200 font-semibold">
+            Next: {nextStep}
+          </span>
+        </div>
       </div>
 
-      <div className="mt-4 flex gap-2 flex-wrap">
-        {showMarketplaceActions ? (
-          <>
-            <Btn tone="cyan" onClick={onAccept} disabled={loading}>
-              Accept
+      <div className="mt-4 grid lg:grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+          <div className="text-sm font-semibold text-slate-100">Assign Technician</div>
+          <div className="text-[11px] text-slate-500 mt-1">
+            Assign who should own field updates for this ticket.
+          </div>
+
+          <div className="mt-3 grid md:grid-cols-[1fr_auto] gap-3">
+            <select
+              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm"
+              value={assignValue}
+              onChange={(e) => setAssignValue(e.target.value)}
+              disabled={!canAssign || assignBusy}
+            >
+              <option value="">
+                {availableTechs.length ? "Select technician…" : "No technicians found"}
+              </option>
+              {availableTechs.map((m) => (
+                <option key={m.id} value={String(m.id)}>
+                  {displayMemberName(m)} • {roleLabel(m.role)}
+                </option>
+              ))}
+            </select>
+
+            <Btn
+              tone="cyan"
+              onClick={onAssign}
+              disabled={!canAssign || assignBusy || !assignValue}
+              className="h-[50px] px-5"
+            >
+              {assignBusy ? "Assigning…" : "Assign"}
             </Btn>
-            <Btn tone="rose" onClick={onDecline} disabled={loading}>
-              Deny
-            </Btn>
-          </>
-        ) : null}
+          </div>
 
-        {showAccept ? (
-          <Btn tone="cyan" onClick={onAccept} disabled={loading}>
-            Accept
-          </Btn>
-        ) : null}
+          <div className="mt-3 rounded-2xl border border-slate-800 bg-slate-950/30 p-3 text-sm">
+            <div className="text-[11px] text-slate-400">Assigned technician</div>
+            <div className="mt-1 font-semibold text-slate-100">{assignedMemberDisplay || "No technician assigned yet."}</div>
+          </div>
+        </div>
 
-        {showSchedule ? (
-          <Btn tone="amber" onClick={onSchedule} disabled={loading}>
-            Schedule
-          </Btn>
-        ) : null}
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+          <div className="text-sm font-semibold text-slate-100">Change Status</div>
+          <div className="text-[11px] text-slate-500 mt-1">
+            Owner can do everything. Technician actions are tied to the assigned member.
+          </div>
 
-        {showEnRoute ? (
-          <Btn tone="cyan" onClick={onEnRoute} disabled={loading}>
-            En Route
-          </Btn>
-        ) : null}
+          <div className="mt-3 flex gap-2 flex-wrap">
+            {showAccept ? (
+              <Btn tone="cyan" onClick={onAccept} disabled={loading || actionBusy}>
+                Accept
+              </Btn>
+            ) : null}
 
-        {showOnSite ? (
-          <Btn tone="cyan" onClick={onOnSite} disabled={loading}>
-            On Site
-          </Btn>
-        ) : null}
+            {showSchedule ? (
+              <Btn tone="amber" onClick={onSchedule} disabled={loading || actionBusy || !canSchedule}>
+                Schedule
+              </Btn>
+            ) : null}
 
-        {showStart ? (
-          <Btn tone="cyan" onClick={onStart} disabled={loading}>
-            Start
-          </Btn>
-        ) : null}
+            {showEnRoute ? (
+              <Btn tone="cyan" onClick={onEnRoute} disabled={loading || actionBusy || !canEnRoute}>
+                En Route
+              </Btn>
+            ) : null}
 
-        {showComplete ? (
-          <Btn tone="emerald" onClick={onComplete} disabled={loading}>
-            Complete
-          </Btn>
-        ) : null}
+            {showOnSite ? (
+              <Btn tone="cyan" onClick={onOnSite} disabled={loading || actionBusy || !canOnSite}>
+                On Site
+              </Btn>
+            ) : null}
 
-        {showCancel ? (
-          <Btn tone="rose" onClick={onCancel} disabled={loading}>
-            Cancel
-          </Btn>
-        ) : null}
+            {showStart ? (
+              <Btn tone="cyan" onClick={onStart} disabled={loading || actionBusy || !canStart}>
+                Start
+              </Btn>
+            ) : null}
+
+            {showComplete ? (
+              <Btn tone="emerald" onClick={onComplete} disabled={loading || actionBusy || !canComplete}>
+                Complete
+              </Btn>
+            ) : null}
+          </div>
+
+          <div className="mt-3 rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
+            <div className="text-[11px] text-slate-400">Your access right now</div>
+            <div className="mt-1 text-sm text-slate-200">{currentRoleLabel}</div>
+
+            {!canSchedule && !canEnRoute && !canOnSite && !canStart && !canComplete ? (
+              <div className="mt-2 text-[11px] text-amber-300">
+                You can view this workflow, but the current ticket actions are limited by your role or assignment.
+              </div>
+            ) : null}
+
+            {isMarketplace && !assignedBusiness ? (
+              <div className="mt-2 text-[11px] text-slate-400">
+                Marketplace tickets must be accepted first before normal workflow continues.
+              </div>
+            ) : null}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -652,7 +749,7 @@ export default function TicketDetail() {
   const { id } = useParams();
   const loc = useLocation();
   const nav = useNavigate();
-  const { mode } = useAuth();
+  const { mode, activeBusinessId } = useAuth();
 
   const isCustomer = mode === "CUSTOMER";
   const isSboLike = mode === "SBO" || mode === "EMPLOYEE" || mode === "PROPERTY_MGR" || mode === "PM";
@@ -672,8 +769,12 @@ export default function TicketDetail() {
 
   const [ticket, setTicket] = useState(null);
   const [me, setMe] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [assignValue, setAssignValue] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
+  const [assignBusy, setAssignBusy] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
 
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
@@ -740,21 +841,44 @@ export default function TicketDetail() {
     }
   }, [id, isSboLike]);
 
+  const loadMembers = useCallback(async () => {
+    if (!activeBusinessId || isCustomer) {
+      setMembers([]);
+      return;
+    }
+
+    try {
+      const res = await api.get(`/businesses/${activeBusinessId}/members/`);
+      const list = Array.isArray(res?.data) ? res.data : res?.data?.results || [];
+      setMembers(list);
+    } catch {
+      setMembers([]);
+    }
+  }, [activeBusinessId, isCustomer]);
+
   useEffect(() => {
     loadTicket();
     loadMe();
+    loadMembers();
 
     function onBizChanged() {
       loadTicket();
       loadMe();
+      loadMembers();
     }
 
     window.addEventListener("sw:activeBusinessChanged", onBizChanged);
     return () => window.removeEventListener("sw:activeBusinessChanged", onBizChanged);
-  }, [loadTicket, loadMe]);
+  }, [loadTicket, loadMe, loadMembers]);
+
+  useEffect(() => {
+    const currentAssigned = String(ticket?.assigned_member || ticket?.assigned_member_id || "");
+    setAssignValue(currentAssigned);
+  }, [ticket?.assigned_member, ticket?.assigned_member_id]);
 
   async function providerAction(actionName) {
     setErr("");
+    setActionBusy(true);
     try {
       await api.post(`/tickets/${id}/${actionName}/`);
       await loadTicket();
@@ -763,16 +887,38 @@ export default function TicketDetail() {
       }
     } catch (e) {
       setErr(e?.response?.data?.detail || `Action failed: ${actionName}`);
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  async function assignTechnician() {
+    if (!assignValue) return;
+    setErr("");
+    setAssignBusy(true);
+    try {
+      await api.post(`/tickets/${id}/assign_member/`, {
+        business_member_id: Number(assignValue),
+      });
+      await loadTicket();
+      await loadMembers();
+    } catch (e) {
+      setErr(e?.response?.data?.detail || "Failed to assign technician.");
+    } finally {
+      setAssignBusy(false);
     }
   }
 
   async function declineMarketplace() {
     setErr("");
+    setActionBusy(true);
     try {
       await api.post(`/tickets/${id}/decline_marketplace/`);
       nav("/tickets?view=marketplace");
     } catch (e) {
       setErr(e?.response?.data?.detail || "Decline failed");
+    } finally {
+      setActionBusy(false);
     }
   }
 
@@ -870,14 +1016,37 @@ export default function TicketDetail() {
     };
   }, [ticket, isMarketplace, assigned]);
 
-  const currentUserId = Number(me?.id || me?.user?.id || 0);
-  const assignedMemberId = Number(ticket?.assigned_member || ticket?.assigned_member_id || 0);
+  const currentUserId = currentUserIdFromMe(me);
+  const assignedMemberUserId = Number(ticket?.assigned_member || ticket?.assigned_member_id || 0);
 
-  const isAssignedTech = !!currentUserId && !!assignedMemberId && currentUserId === assignedMemberId;
-  const isOfficeLikeMode = mode === "SBO" || mode === "PM" || mode === "PROPERTY_MGR";
-  const isEmployeeMode = mode === "EMPLOYEE";
-  const canOfficeWorkflow = !isCustomer && (isOfficeLikeMode || (isEmployeeMode && !isAssignedTech));
-  const canTechWorkflow = !isCustomer && isAssignedTech;
+  const currentMember = useMemo(() => {
+    if (!currentUserId) return null;
+    return (members || []).find((m) => Number(m?.user || m?.user_id || m?.user?.id || 0) === currentUserId) || null;
+  }, [members, currentUserId]);
+
+  const currentMemberRole = upperStatus(currentMember?.role);
+  const isOwner = mode === "SBO";
+  const isDispatchLike = ["MANAGER", "DISPATCH", "ADMIN", "OWNER"].includes(currentMemberRole) || isOwner || canManageScheduleFromMode(mode);
+  const isAssignedTech = !!currentUserId && !!assignedMemberUserId && currentUserId === assignedMemberUserId;
+  const canAssign = isDispatchLike;
+  const canSchedule = isDispatchLike;
+  const canEnRoute = isAssignedTech || isOwner;
+  const canOnSite = isAssignedTech || isOwner;
+  const canStart = isAssignedTech || isOwner;
+  const canComplete = isAssignedTech || isDispatchLike || isOwner;
+
+  const assignedMemberDisplay = useMemo(() => {
+    const found = (members || []).find((m) => String(m?.user || m?.user_id || m?.user?.id || "") === String(assignedMemberUserId));
+    return found ? `${displayMemberName(found)} • ${roleLabel(found?.role)}` : "";
+  }, [members, assignedMemberUserId]);
+
+  const currentRoleLabel = useMemo(() => {
+    if (isOwner) return "Owner access: can assign, schedule, and override workflow.";
+    if (currentMember) return `${roleLabel(currentMember.role)} access`;
+    if (mode === "EMPLOYEE") return "Employee access";
+    if (mode === "PM" || mode === "PROPERTY_MGR") return "Office access";
+    return "Business access";
+  }, [currentMember, isOwner, mode]);
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 pb-10">
@@ -1015,6 +1184,31 @@ export default function TicketDetail() {
                   />
                 ) : (
                   <>
+                    <OperationsControlCard
+                      ticket={ticket}
+                      members={members}
+                      loading={loading}
+                      assignBusy={assignBusy}
+                      actionBusy={actionBusy}
+                      assignValue={assignValue}
+                      setAssignValue={setAssignValue}
+                      onAssign={assignTechnician}
+                      onAccept={() => providerAction("accept")}
+                      onSchedule={() => providerAction("schedule")}
+                      onEnRoute={() => providerAction("en-route")}
+                      onOnSite={() => providerAction("on-site")}
+                      onStart={() => providerAction("start")}
+                      onComplete={() => providerAction("complete")}
+                      canAssign={canAssign}
+                      canSchedule={canSchedule}
+                      canEnRoute={canEnRoute}
+                      canOnSite={canOnSite}
+                      canStart={canStart}
+                      canComplete={canComplete}
+                      assignedMemberDisplay={assignedMemberDisplay}
+                      currentRoleLabel={currentRoleLabel}
+                    />
+
                     <TicketQuickFactsCard
                       paymentPref={paymentPref}
                       contactPref={contactPref}
@@ -1038,28 +1232,35 @@ export default function TicketDetail() {
 
                     <AssignedBusinessCardPanel ticket={ticket} onBookAgain={bookAgainWithAssignedBusiness} />
 
-                    <ProviderWorkflowCard
-                      isCustomer={isCustomer}
-                      status={status}
-                      isMarketplace={isMarketplace}
-                      assigned={assigned}
-                      loading={loading}
-                      canSchedule={canOfficeWorkflow}
-                      canEnRoute={canTechWorkflow}
-                      canOnSite={canTechWorkflow}
-                      canStart={canTechWorkflow}
-                      canComplete={canTechWorkflow || canOfficeWorkflow}
-                      onAccept={() => providerAction("accept")}
-                      onDecline={declineMarketplace}
-                      onSchedule={() => providerAction("schedule")}
-                      onEnRoute={() => providerAction("en-route")}
-                      onOnSite={() => providerAction("on-site")}
-                      onStart={() => providerAction("start")}
-                      onComplete={() => providerAction("complete")}
-                      onCancel={() => providerAction("cancel")}
-                      onOpenQuote={() => setActiveTab("quote")}
-                      onOpenInvoice={() => setActiveTab("invoice")}
-                    />
+                    <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div>
+                          <div className="text-lg font-extrabold">Quote + Invoice Tools</div>
+                          <div className="text-xs text-slate-400 mt-1">
+                            Use these after workflow is moving. Overview status controls now live above.
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 flex-wrap">
+                          <Btn tone="fuchsia" onClick={() => setActiveTab("quote")}>
+                            Open Quote
+                          </Btn>
+                          <Btn tone="cyan" onClick={() => setActiveTab("invoice")}>
+                            Open Invoice
+                          </Btn>
+                          {!isMarketplace && !["PAID", "COMPLETED", "CANCELLED", "CLOSED"].includes(status) ? (
+                            <Btn tone="rose" onClick={() => providerAction("cancel")} disabled={loading || actionBusy}>
+                              Cancel
+                            </Btn>
+                          ) : null}
+                          {isMarketplace && !assigned && status === "NEW" ? (
+                            <Btn tone="rose" onClick={declineMarketplace} disabled={loading || actionBusy}>
+                              Deny Marketplace
+                            </Btn>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
 
                     <TicketLifecycleCard ticket={ticket} />
 
