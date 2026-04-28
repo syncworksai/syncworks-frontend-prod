@@ -72,16 +72,20 @@ function toneFromStatus(status) {
 export default function PlatformGrowthEngineTab() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [updateErr, setUpdateErr] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [busyLeadIds, setBusyLeadIds] = useState({});
 
   const [dashboard, setDashboard] = useState({});
   const [leads, setLeads] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [conversations, setConversations] = useState([]);
+  const EDITABLE_STATUSES = ["NEW", "QUALIFIED", "NURTURING", "WON", "LOST"];
 
   async function loadAll() {
     setLoading(true);
     setErr("");
+    setUpdateErr("");
 
     const requests = [
       api.get("/platform-growth/dashboard/").catch(() => ({ __failed: true })),
@@ -117,6 +121,49 @@ export default function PlatformGrowthEngineTab() {
   useEffect(() => {
     loadAll();
   }, []);
+
+  async function refreshLeads() {
+    try {
+      const res = await api.get("/platform-growth/leads/");
+      setLeads(safeList(res?.data).slice(0, 50));
+    } catch {
+      // keep optimistic state if refresh fails
+    }
+  }
+
+  async function patchLeadStatus(lead, nextStatus) {
+    const leadId = lead?.id || lead?.lead_id;
+    if (!leadId || !nextStatus) return;
+    const prevStatus = lead?.status || "";
+    const key = String(leadId);
+
+    setUpdateErr("");
+    setBusyLeadIds((prev) => ({ ...prev, [key]: true }));
+
+    setLeads((prev) =>
+      (prev || []).map((x) =>
+        String(x?.id || x?.lead_id) === key ? { ...x, status: nextStatus } : x
+      )
+    );
+
+    try {
+      await api.patch(`/platform-growth/leads/${leadId}/`, { status: nextStatus });
+      await refreshLeads();
+    } catch (e) {
+      setLeads((prev) =>
+        (prev || []).map((x) =>
+          String(x?.id || x?.lead_id) === key ? { ...x, status: prevStatus } : x
+        )
+      );
+      setUpdateErr(e?.response?.data?.detail || "Failed to update lead status.");
+    } finally {
+      setBusyLeadIds((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  }
 
   const kpis = useMemo(() => {
     const d = dashboard || {};
@@ -166,7 +213,7 @@ export default function PlatformGrowthEngineTab() {
   }, [dashboard]);
 
   const leadStatuses = useMemo(() => {
-    const known = ["NEW", "MESSAGED", "QUALIFIED", "SIGNED_UP", "ACTIVATED", "CLOSED"];
+    const known = ["NEW", "QUALIFIED", "NURTURING", "WON", "LOST"];
     const discovered = Array.from(
       new Set(
         leads
@@ -211,6 +258,7 @@ export default function PlatformGrowthEngineTab() {
       </div>
 
       {err ? <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/20 rounded-2xl p-3">{err}</div> : null}
+      {updateErr ? <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/20 rounded-2xl p-3">{updateErr}</div> : null}
       {loading ? <div className="text-sm text-slate-400">Loading Growth OS…</div> : null}
 
       <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -257,6 +305,7 @@ export default function PlatformGrowthEngineTab() {
                       <th className="text-left py-2 pr-3">Source</th>
                       <th className="text-left py-2 pr-3">Stage</th>
                       <th className="text-left py-2 pr-3">Last Activity</th>
+                      <th className="text-left py-2 pr-3">Update</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -269,6 +318,26 @@ export default function PlatformGrowthEngineTab() {
                         <td className="py-2 pr-3 text-slate-300">{l.source || l.channel || "—"}</td>
                         <td className="py-2 pr-3 text-slate-300">{l.stage || l.pipeline_stage || l.status || "—"}</td>
                         <td className="py-2 pr-3 text-slate-400">{fmtDateTime(l.last_activity_at || l.updated_at || l.created_at)}</td>
+                        <td className="py-2 pr-3">
+                          {(() => {
+                            const current = String(l.status || "").toUpperCase();
+                            const selectValue = EDITABLE_STATUSES.includes(current) ? current : "NEW";
+                            return (
+                          <select
+                            value={selectValue}
+                            disabled={!!busyLeadIds[String(l.id || l.lead_id)]}
+                            onChange={(e) => patchLeadStatus(l, e.target.value)}
+                            className="w-full max-w-[160px] rounded-xl border border-slate-800 bg-slate-950 px-2 py-1.5 text-xs text-slate-200 disabled:opacity-60"
+                          >
+                            {EDITABLE_STATUSES.map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                            );
+                          })()}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
