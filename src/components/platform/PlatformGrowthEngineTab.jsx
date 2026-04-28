@@ -78,6 +78,12 @@ export default function PlatformGrowthEngineTab() {
 
   const [dashboard, setDashboard] = useState({});
   const [leads, setLeads] = useState([]);
+  const [demoLeads, setDemoLeads] = useState([
+    { id: "demo-1", name: "Roofing Lead", source: "Organic", status: "NEW", stage: "NEW" },
+    { id: "demo-2", name: "HVAC Commercial Prospect", source: "Paid Search", status: "QUALIFIED", stage: "QUALIFIED" },
+    { id: "demo-3", name: "Property Mgmt Referral", source: "Referral", status: "NURTURING", stage: "NURTURING" },
+    { id: "demo-4", name: "Plumbing Contract", source: "Outbound", status: "WON", stage: "WON" },
+  ]);
   const [campaigns, setCampaigns] = useState([]);
   const [conversations, setConversations] = useState([]);
   const EDITABLE_STATUSES = ["NEW", "QUALIFIED", "NURTURING", "WON", "LOST"];
@@ -132,6 +138,17 @@ export default function PlatformGrowthEngineTab() {
   }
 
   async function patchLeadStatus(lead, nextStatus) {
+    const demoMode = leads.length === 0;
+    if (demoMode) {
+      const key = String(lead?.id || lead?.lead_id);
+      setDemoLeads((prev) =>
+        (prev || []).map((x) =>
+          String(x?.id || x?.lead_id) === key ? { ...x, status: nextStatus, stage: nextStatus } : x
+        )
+      );
+      return;
+    }
+
     const leadId = lead?.id || lead?.lead_id;
     if (!leadId || !nextStatus) return;
     const prevStatus = lead?.status || "";
@@ -214,9 +231,10 @@ export default function PlatformGrowthEngineTab() {
 
   const leadStatuses = useMemo(() => {
     const known = ["NEW", "QUALIFIED", "NURTURING", "WON", "LOST"];
+    const source = (leads || []).length ? leads : demoLeads;
     const discovered = Array.from(
       new Set(
-        leads
+        source
           .map((l) => String(l.status || l.stage || l.pipeline_stage || "").trim().toUpperCase())
           .filter(Boolean)
       )
@@ -224,22 +242,28 @@ export default function PlatformGrowthEngineTab() {
 
     const ordered = [...known.filter((x) => discovered.includes(x)), ...discovered.filter((x) => !known.includes(x))];
     return ["ALL", ...ordered];
-  }, [leads]);
+  }, [leads, demoLeads]);
+
+  const displayLeads = useMemo(() => {
+    if ((leads || []).length) return leads;
+    return demoLeads;
+  }, [leads, demoLeads]);
+
+  const isDemoMode = useMemo(() => (leads || []).length === 0, [leads]);
 
   const pipelineGroups = useMemo(() => {
     const map = new Map();
+    const source = displayLeads || [];
 
-    (leads || []).forEach((lead) => {
+    source.forEach((lead) => {
       const bucket = String(lead.status || lead.stage || lead.pipeline_stage || "UNSPECIFIED").toUpperCase();
       if (statusFilter !== "ALL" && bucket !== statusFilter) return;
       if (!map.has(bucket)) map.set(bucket, []);
       map.get(bucket).push(lead);
     });
 
-    return Array.from(map.entries())
-      .map(([key, items]) => ({ key, items }))
-      .sort((a, b) => b.items.length - a.items.length);
-  }, [leads, statusFilter]);
+    return EDITABLE_STATUSES.map((key) => ({ key, items: map.get(key) || [] }));
+  }, [displayLeads, statusFilter]);
 
   return (
     <div className="space-y-5">
@@ -270,7 +294,7 @@ export default function PlatformGrowthEngineTab() {
         <KpiCard label="Growth score" value={kpis.growthScore} />
       </div>
 
-      <GlassCard title="Lead pipeline" right="read-only">
+      <GlassCard title="Lead pipeline" right={isDemoMode ? "demo mode • read-only backend" : "live mode"}>
         <div className="flex flex-wrap gap-2">
           {leadStatuses.map((s) => (
             <button
@@ -289,7 +313,13 @@ export default function PlatformGrowthEngineTab() {
           ))}
         </div>
 
-        <div className="mt-4 grid xl:grid-cols-2 gap-3">
+        {isDemoMode ? (
+          <div className="mt-3 rounded-2xl border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-100">
+            Demo leads are shown because no live leads were returned.
+          </div>
+        ) : null}
+
+        <div className="mt-4 grid md:grid-cols-2 xl:grid-cols-5 gap-3">
           {pipelineGroups.map((group) => (
             <div key={group.key} className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
               <div className="flex items-center justify-between gap-3">
@@ -297,58 +327,45 @@ export default function PlatformGrowthEngineTab() {
                 <StatusPill tone={toneFromStatus(group.key)}>{group.items.length}</StatusPill>
               </div>
 
-              <div className="mt-3 overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="text-xs uppercase tracking-wider text-slate-400">
-                    <tr>
-                      <th className="text-left py-2 pr-3">Lead</th>
-                      <th className="text-left py-2 pr-3">Source</th>
-                      <th className="text-left py-2 pr-3">Stage</th>
-                      <th className="text-left py-2 pr-3">Last Activity</th>
-                      <th className="text-left py-2 pr-3">Update</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {group.items.map((l, idx) => (
-                      <tr key={l.id || l.lead_id || l.email || `${group.key}-${idx}`} className="border-t border-slate-800">
-                        <td className="py-2 pr-3">
-                          <div className="font-semibold text-slate-100">{l.name || l.full_name || l.email || `Lead #${l.id || idx + 1}`}</div>
-                          {l.email ? <div className="text-xs text-slate-500">{l.email}</div> : null}
-                        </td>
-                        <td className="py-2 pr-3 text-slate-300">{l.source || l.channel || "—"}</td>
-                        <td className="py-2 pr-3 text-slate-300">{l.stage || l.pipeline_stage || l.status || "—"}</td>
-                        <td className="py-2 pr-3 text-slate-400">{fmtDateTime(l.last_activity_at || l.updated_at || l.created_at)}</td>
-                        <td className="py-2 pr-3">
-                          {(() => {
-                            const current = String(l.status || "").toUpperCase();
-                            const selectValue = EDITABLE_STATUSES.includes(current) ? current : "NEW";
-                            return (
-                          <select
-                            value={selectValue}
-                            disabled={!!busyLeadIds[String(l.id || l.lead_id)]}
-                            onChange={(e) => patchLeadStatus(l, e.target.value)}
-                            className="w-full max-w-[160px] rounded-xl border border-slate-800 bg-slate-950 px-2 py-1.5 text-xs text-slate-200 disabled:opacity-60"
-                          >
-                            {EDITABLE_STATUSES.map((s) => (
-                              <option key={s} value={s}>
-                                {s}
-                              </option>
-                            ))}
-                          </select>
-                            );
-                          })()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="mt-3 space-y-2">
+                {group.items.map((l, idx) => {
+                  const current = String(l.status || "").toUpperCase();
+                  const selectValue = EDITABLE_STATUSES.includes(current) ? current : "NEW";
+                  return (
+                    <div key={l.id || l.lead_id || l.email || `${group.key}-${idx}`} className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
+                      <div className="font-semibold text-sm text-slate-100">{l.name || l.full_name || l.email || `Lead #${l.id || idx + 1}`}</div>
+                      <div className="text-[11px] text-slate-400 mt-1">
+                        Source: {l.source || l.channel || "—"} • Last: {fmtDateTime(l.last_activity_at || l.updated_at || l.created_at)}
+                      </div>
+                      <div className="mt-2">
+                        <select
+                          value={selectValue}
+                          disabled={!isDemoMode && !!busyLeadIds[String(l.id || l.lead_id)]}
+                          onChange={(e) => patchLeadStatus(l, e.target.value)}
+                          className="w-full rounded-xl border border-slate-800 bg-slate-950 px-2 py-1.5 text-xs text-slate-200 disabled:opacity-60"
+                        >
+                          {EDITABLE_STATUSES.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  );
+                })}
+                {!group.items.length ? (
+                  <div className="rounded-xl border border-dashed border-slate-800 bg-slate-950/30 px-3 py-4 text-xs text-slate-500">
+                    No leads
+                  </div>
+                ) : null}
               </div>
             </div>
           ))}
         </div>
 
-        {!leads.length ? <div className="text-slate-500 text-sm py-2">No leads available.</div> : null}
-        {!!leads.length && !pipelineGroups.length ? (
+        {!displayLeads.length ? <div className="text-slate-500 text-sm py-2">No leads available.</div> : null}
+        {!!displayLeads.length && !pipelineGroups.some((g) => g.items.length) ? (
           <div className="text-slate-500 text-sm py-2">No leads for selected status.</div>
         ) : null}
       </GlassCard>
