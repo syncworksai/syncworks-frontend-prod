@@ -69,6 +69,27 @@ function toneFromStatus(status) {
   return "slate";
 }
 
+function normalizeSource(v) {
+  const raw = String(v || "").trim().toLowerCase();
+  if (!raw) return "Manual";
+  if (raw.includes("facebook")) return "Facebook Ads";
+  if (raw.includes("instagram")) return "Instagram";
+  if (raw.includes("google")) return "Google";
+  if (raw.includes("referral")) return "Referral";
+  if (raw.includes("website") || raw.includes("web")) return "Website";
+  if (raw.includes("manual")) return "Manual";
+  return "Manual";
+}
+
+function sourceTone(source) {
+  if (source === "Facebook Ads") return "cyan";
+  if (source === "Instagram") return "purple";
+  if (source === "Google") return "emerald";
+  if (source === "Referral") return "amber";
+  if (source === "Website") return "slate";
+  return "slate";
+}
+
 export default function PlatformGrowthEngineTab() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -87,6 +108,7 @@ export default function PlatformGrowthEngineTab() {
   const [campaigns, setCampaigns] = useState([]);
   const [conversations, setConversations] = useState([]);
   const EDITABLE_STATUSES = ["NEW", "QUALIFIED", "NURTURING", "WON", "LOST"];
+  const CHANNELS = ["Facebook Ads", "Instagram", "Google", "Referral", "Website", "Manual"];
 
   async function loadAll() {
     setLoading(true);
@@ -249,11 +271,18 @@ export default function PlatformGrowthEngineTab() {
     return demoLeads;
   }, [leads, demoLeads]);
 
+  const enrichedLeads = useMemo(() => {
+    return (displayLeads || []).map((l, idx) => ({
+      ...l,
+      source: normalizeSource(l.source || l.channel || (isDemoMode ? CHANNELS[idx % CHANNELS.length] : "Manual")),
+    }));
+  }, [displayLeads, isDemoMode]);
+
   const isDemoMode = useMemo(() => (leads || []).length === 0, [leads]);
 
   const pipelineGroups = useMemo(() => {
     const map = new Map();
-    const source = displayLeads || [];
+    const source = enrichedLeads || [];
 
     source.forEach((lead) => {
       const bucket = String(lead.status || lead.stage || lead.pipeline_stage || "UNSPECIFIED").toUpperCase();
@@ -263,7 +292,43 @@ export default function PlatformGrowthEngineTab() {
     });
 
     return EDITABLE_STATUSES.map((key) => ({ key, items: map.get(key) || [] }));
-  }, [displayLeads, statusFilter]);
+  }, [enrichedLeads, statusFilter]);
+
+  const channelStates = useMemo(() => {
+    const fromBackend = dashboard?.channel_connections;
+    if (fromBackend && typeof fromBackend === "object" && !Array.isArray(fromBackend)) {
+      return CHANNELS.map((name) => ({
+        name,
+        connected: !!fromBackend[name] || !!fromBackend[name.toLowerCase()],
+      }));
+    }
+
+    // demo seed
+    return [
+      { name: "Facebook Ads", connected: true },
+      { name: "Instagram", connected: true },
+      { name: "Google", connected: false },
+      { name: "Referral", connected: true },
+      { name: "Website", connected: true },
+      { name: "Manual", connected: true },
+    ];
+  }, [dashboard]);
+
+  const funnel = useMemo(() => {
+    const byStatus = (enrichedLeads || []).reduce((acc, l) => {
+      const key = String(l.status || "").toUpperCase();
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+
+    return {
+      captured: Number(dashboard?.funnel?.captured ?? dashboard?.captured ?? enrichedLeads.length ?? 0),
+      qualified: Number(dashboard?.funnel?.qualified ?? byStatus.QUALIFIED ?? 0),
+      activated: Number(dashboard?.funnel?.activated ?? byStatus.WON ?? byStatus.ACTIVATED ?? 0),
+      paying: Number(dashboard?.funnel?.paying ?? dashboard?.paying ?? 0),
+      referred: Number(dashboard?.funnel?.referred ?? dashboard?.referred ?? 0),
+    };
+  }, [dashboard, enrichedLeads]);
 
   return (
     <div className="space-y-5">
@@ -294,6 +359,39 @@ export default function PlatformGrowthEngineTab() {
         <KpiCard label="Growth score" value={kpis.growthScore} />
       </div>
 
+      <div className="grid md:grid-cols-2 gap-4">
+        <GlassCard title="Connect Channels" right={isDemoMode ? "demo seed" : "live + demo fallback"}>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {channelStates.map((c) => (
+              <div key={c.name} className="rounded-xl border border-slate-800 bg-slate-950/55 px-3 py-2 flex items-center justify-between gap-2">
+                <div className="text-sm text-slate-200">{c.name}</div>
+                <StatusPill tone={c.connected ? "emerald" : "amber"}>
+                  {c.connected ? "Connected" : "Disconnected"}
+                </StatusPill>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              className="h-9 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-100"
+            >
+              Connect Channels
+            </button>
+          </div>
+        </GlassCard>
+
+        <GlassCard title="Acquisition funnel" right="captured → referred">
+          <div className="grid grid-cols-2 xl:grid-cols-5 gap-2">
+            <KpiCard label="Captured" value={funnel.captured} />
+            <KpiCard label="Qualified" value={funnel.qualified} />
+            <KpiCard label="Activated" value={funnel.activated} />
+            <KpiCard label="Paying" value={funnel.paying} />
+            <KpiCard label="Referred" value={funnel.referred} />
+          </div>
+        </GlassCard>
+      </div>
+
       <GlassCard title="Lead pipeline" right={isDemoMode ? "demo mode • read-only backend" : "live mode"}>
         <div className="flex flex-wrap gap-2">
           {leadStatuses.map((s) => (
@@ -319,6 +417,15 @@ export default function PlatformGrowthEngineTab() {
           </div>
         ) : null}
 
+        <div className="mt-3 flex justify-end">
+          <button
+            type="button"
+            className="h-9 px-3 rounded-2xl text-xs border border-indigo-500/35 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-100"
+          >
+            Import Leads
+          </button>
+        </div>
+
         <div className="mt-4 grid md:grid-cols-2 xl:grid-cols-5 gap-3">
           {pipelineGroups.map((group) => (
             <div key={group.key} className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
@@ -335,7 +442,11 @@ export default function PlatformGrowthEngineTab() {
                     <div key={l.id || l.lead_id || l.email || `${group.key}-${idx}`} className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
                       <div className="font-semibold text-sm text-slate-100">{l.name || l.full_name || l.email || `Lead #${l.id || idx + 1}`}</div>
                       <div className="text-[11px] text-slate-400 mt-1">
-                        Source: {l.source || l.channel || "—"} • Last: {fmtDateTime(l.last_activity_at || l.updated_at || l.created_at)}
+                        <span className="inline-flex items-center gap-2">
+                          <span>Source:</span>
+                          <StatusPill tone={sourceTone(l.source)}>{l.source || "Manual"}</StatusPill>
+                        </span>{" "}
+                        • Last: {fmtDateTime(l.last_activity_at || l.updated_at || l.created_at)}
                       </div>
                       <div className="mt-2">
                         <select
