@@ -79,8 +79,11 @@ function isSalesRequest(config) {
 function isPlatformRequest(config) {
   const url = String(config?.url || "");
   if (url.startsWith("/platform/")) return true;
+  if (url.startsWith("/platform-growth/")) return true;
   if (url === "/platform") return true;
+  if (url === "/platform-growth") return true;
   if (url.includes("/api/v1/platform/")) return true;
+  if (url.includes("/api/v1/platform-growth/")) return true;
   return false;
 }
 
