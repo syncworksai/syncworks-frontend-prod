@@ -72,6 +72,7 @@ function toneFromStatus(status) {
 export default function PlatformGrowthEngineTab() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
   const [dashboard, setDashboard] = useState({});
   const [leads, setLeads] = useState([]);
@@ -164,6 +165,35 @@ export default function PlatformGrowthEngineTab() {
     return [];
   }, [dashboard]);
 
+  const leadStatuses = useMemo(() => {
+    const known = ["NEW", "MESSAGED", "QUALIFIED", "SIGNED_UP", "ACTIVATED", "CLOSED"];
+    const discovered = Array.from(
+      new Set(
+        leads
+          .map((l) => String(l.status || l.stage || l.pipeline_stage || "").trim().toUpperCase())
+          .filter(Boolean)
+      )
+    );
+
+    const ordered = [...known.filter((x) => discovered.includes(x)), ...discovered.filter((x) => !known.includes(x))];
+    return ["ALL", ...ordered];
+  }, [leads]);
+
+  const pipelineGroups = useMemo(() => {
+    const map = new Map();
+
+    (leads || []).forEach((lead) => {
+      const bucket = String(lead.status || lead.stage || lead.pipeline_stage || "UNSPECIFIED").toUpperCase();
+      if (statusFilter !== "ALL" && bucket !== statusFilter) return;
+      if (!map.has(bucket)) map.set(bucket, []);
+      map.get(bucket).push(lead);
+    });
+
+    return Array.from(map.entries())
+      .map(([key, items]) => ({ key, items }))
+      .sort((a, b) => b.items.length - a.items.length);
+  }, [leads, statusFilter]);
+
   return (
     <div className="space-y-5">
       <div className="rounded-3xl border border-slate-800 bg-slate-950/35 p-4 flex items-center justify-between gap-3 flex-wrap">
@@ -192,37 +222,66 @@ export default function PlatformGrowthEngineTab() {
         <KpiCard label="Growth score" value={kpis.growthScore} />
       </div>
 
-      <GlassCard title="Leads pipeline" right="read-only">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="text-xs uppercase tracking-wider text-slate-400">
-              <tr>
-                <th className="text-left py-3 pr-4">Lead</th>
-                <th className="text-left py-3 pr-4">Source</th>
-                <th className="text-left py-3 pr-4">Stage</th>
-                <th className="text-left py-3 pr-4">Status</th>
-                <th className="text-left py-3 pr-4">Last Activity</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leads.map((l, idx) => (
-                <tr key={l.id || l.lead_id || l.email || idx} className="border-t border-slate-800">
-                  <td className="py-3 pr-4">
-                    <div className="font-semibold text-slate-100">{l.name || l.full_name || l.email || `Lead #${l.id || idx + 1}`}</div>
-                    {l.email ? <div className="text-xs text-slate-500">{l.email}</div> : null}
-                  </td>
-                  <td className="py-3 pr-4 text-slate-300">{l.source || l.channel || "—"}</td>
-                  <td className="py-3 pr-4 text-slate-300">{l.stage || l.pipeline_stage || "—"}</td>
-                  <td className="py-3 pr-4">
-                    <StatusPill tone={toneFromStatus(l.status)}>{l.status || "Unknown"}</StatusPill>
-                  </td>
-                  <td className="py-3 pr-4 text-slate-400">{fmtDateTime(l.last_activity_at || l.updated_at || l.created_at)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {!leads.length ? <div className="text-slate-500 text-sm py-2">No leads available.</div> : null}
+      <GlassCard title="Lead pipeline" right="read-only">
+        <div className="flex flex-wrap gap-2">
+          {leadStatuses.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setStatusFilter(s)}
+              className={cx(
+                "h-8 px-3 rounded-2xl text-xs border transition",
+                statusFilter === s
+                  ? "border-cyan-500/35 bg-cyan-500/15 text-cyan-100"
+                  : "border-slate-800 bg-slate-950/55 hover:bg-slate-900/50 text-slate-300"
+              )}
+            >
+              {s}
+            </button>
+          ))}
         </div>
+
+        <div className="mt-4 grid xl:grid-cols-2 gap-3">
+          {pipelineGroups.map((group) => (
+            <div key={group.key} className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="font-semibold text-slate-100">{group.key}</div>
+                <StatusPill tone={toneFromStatus(group.key)}>{group.items.length}</StatusPill>
+              </div>
+
+              <div className="mt-3 overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="text-xs uppercase tracking-wider text-slate-400">
+                    <tr>
+                      <th className="text-left py-2 pr-3">Lead</th>
+                      <th className="text-left py-2 pr-3">Source</th>
+                      <th className="text-left py-2 pr-3">Stage</th>
+                      <th className="text-left py-2 pr-3">Last Activity</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.items.map((l, idx) => (
+                      <tr key={l.id || l.lead_id || l.email || `${group.key}-${idx}`} className="border-t border-slate-800">
+                        <td className="py-2 pr-3">
+                          <div className="font-semibold text-slate-100">{l.name || l.full_name || l.email || `Lead #${l.id || idx + 1}`}</div>
+                          {l.email ? <div className="text-xs text-slate-500">{l.email}</div> : null}
+                        </td>
+                        <td className="py-2 pr-3 text-slate-300">{l.source || l.channel || "—"}</td>
+                        <td className="py-2 pr-3 text-slate-300">{l.stage || l.pipeline_stage || l.status || "—"}</td>
+                        <td className="py-2 pr-3 text-slate-400">{fmtDateTime(l.last_activity_at || l.updated_at || l.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {!leads.length ? <div className="text-slate-500 text-sm py-2">No leads available.</div> : null}
+        {!!leads.length && !pipelineGroups.length ? (
+          <div className="text-slate-500 text-sm py-2">No leads for selected status.</div>
+        ) : null}
       </GlassCard>
 
       <div className="grid xl:grid-cols-3 gap-4">
