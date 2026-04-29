@@ -350,6 +350,53 @@ export default function PlatformGrowthEngineTab() {
     }
   }
 
+  const contentQueue = useMemo(
+    () => [
+      { id: "cq-1", title: "Spring HVAC Promo", status: "SCHEDULED" },
+      { id: "cq-2", title: "Review Request Campaign", status: "DRAFT" },
+      { id: "cq-3", title: "Property Mgmt Tips Reel", status: "QUEUED" },
+      { id: "cq-4", title: "Plumbing Before/After Post", status: "PUBLISHED" },
+    ],
+    []
+  );
+
+  const aiPostPresets = useMemo(
+    () => [
+      { key: "promo", label: "Generate Promo Post" },
+      { key: "review", label: "Generate Review Ask" },
+      { key: "educational", label: "Generate Educational Post" },
+      { key: "before_after", label: "Generate Before/After Post" },
+    ],
+    []
+  );
+
+  const aiGeneratedPreviews = useMemo(
+    () => [
+      {
+        id: "gp-1",
+        title: "Promo Draft",
+        body:
+          "Spring tune-up special is live. Book this week and get priority scheduling plus a filter health check.",
+        channel: "Facebook + Instagram",
+      },
+      {
+        id: "gp-2",
+        title: "Review Ask Draft",
+        body:
+          "Thanks for trusting our team today. If we earned it, leave a quick review and help neighbors find reliable service.",
+        channel: "Google Business + Email",
+      },
+      {
+        id: "gp-3",
+        title: "Educational Draft",
+        body:
+          "3 signs your HVAC needs service: uneven cooling, rising utility bills, and noisy startup cycles.",
+        channel: "Instagram Reel + Blog Snippet",
+      },
+    ],
+    []
+  );
+
   const recipeCards = useMemo(() => {
     const fromBackend = safeList(dashboard?.automation_recipes);
     if (fromBackend.length) {
@@ -660,6 +707,99 @@ export default function PlatformGrowthEngineTab() {
           </div>
         </div>
       ) : null}
+
+      <GlassCard title="Content Engine" right="frontend-first • clone-ready for SBO add-on">
+        <div className="grid xl:grid-cols-3 gap-4">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="font-semibold text-slate-100">Content Queue</div>
+              <StatusPill tone="cyan">Demo Queue</StatusPill>
+            </div>
+            <div className="mt-3 space-y-2">
+              {contentQueue.map((item) => (
+                <div key={item.id} className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
+                  <div className="text-sm text-slate-100 font-semibold">{item.title}</div>
+                  <div className="mt-1">
+                    <StatusPill tone={toneFromStatus(item.status)}>{item.status}</StatusPill>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4 xl:col-span-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div>
+                <div className="font-semibold text-slate-100">AI Post Generator</div>
+                <div className="text-xs text-slate-400 mt-1">Promptless starter actions for social + review growth.</div>
+              </div>
+              <button
+                type="button"
+                className="h-8 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 text-cyan-100"
+              >
+                Clone for SBO Add-On
+              </button>
+            </div>
+            <div className="mt-3 grid sm:grid-cols-2 xl:grid-cols-4 gap-2">
+              {aiPostPresets.map((preset) => (
+                <button
+                  key={preset.key}
+                  type="button"
+                  className="h-9 px-3 rounded-xl text-xs border border-slate-800 bg-slate-950/70 hover:bg-slate-900/50 text-slate-200 text-left"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-3 grid md:grid-cols-3 gap-2">
+              {aiGeneratedPreviews.map((card) => (
+                <div key={card.id} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                  <div className="text-sm text-slate-100 font-semibold">{card.title}</div>
+                  <div className="mt-1 text-xs text-slate-300">{card.body}</div>
+                  <div className="mt-2 text-[11px] text-slate-500">{card.channel}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid md:grid-cols-2 gap-4">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
+            <div className="font-semibold text-slate-100">Calendar-lite publishing view</div>
+            <div className="text-xs text-slate-400 mt-1">Weekly strip with Mon/Wed/Fri cadence.</div>
+            <div className="mt-3 grid grid-cols-7 gap-2 text-center text-xs">
+              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+                <div key={d} className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
+                  <div className="text-slate-300">{d}</div>
+                  {["Mon", "Wed", "Fri"].includes(d) ? (
+                    <div className="mt-2"><StatusPill tone="purple">Post</StatusPill></div>
+                  ) : (
+                    <div className="mt-2 text-slate-600">—</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4 flex flex-col justify-between">
+            <div>
+              <div className="font-semibold text-slate-100">Create from Ticket</div>
+              <div className="text-sm text-slate-300 mt-2">
+                Convert completed service ticket into social post.
+              </div>
+              <div className="text-xs text-slate-500 mt-1">Frontend-only mock CTA for content automation pipeline.</div>
+            </div>
+            <div className="mt-4">
+              <button
+                type="button"
+                className="h-9 px-3 rounded-2xl text-xs border border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-100"
+              >
+                Convert completed service ticket into social post
+              </button>
+            </div>
+          </div>
+        </div>
+      </GlassCard>
 
       <div className="grid xl:grid-cols-3 gap-4">
         <GlassCard title="Campaigns" right="read-only">
