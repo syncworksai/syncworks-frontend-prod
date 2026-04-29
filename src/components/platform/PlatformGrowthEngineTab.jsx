@@ -1,4 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
+import {
+  Activity,
+  AtSign,
+  Building2,
+  Camera,
+  Clapperboard,
+  Hash,
+  Mail,
+  MessageSquare,
+  PlayCircle,
+  Search,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import api from "../../api/client";
 
 function cx(...parts) {
@@ -51,7 +65,6 @@ function StatusPill({ children, tone = "slate" }) {
     rose: "bg-rose-500/10 border-rose-500/20 text-rose-200",
     purple: "bg-purple-500/10 border-purple-500/20 text-purple-200",
   };
-
   return (
     <span className={cx("text-[11px] px-2 py-1 rounded-full border", tones[tone] || tones.slate)}>
       {children}
@@ -61,10 +74,10 @@ function StatusPill({ children, tone = "slate" }) {
 
 function toneFromStatus(status) {
   const s = String(status || "").toUpperCase();
-  if (["ACTIVE", "LIVE", "OPEN", "RUNNING", "CONNECTED"].includes(s)) return "emerald";
-  if (["NEW", "PENDING", "QUEUED", "WARM"].includes(s)) return "cyan";
-  if (["PAUSED", "WAITING", "IDLE"].includes(s)) return "amber";
-  if (["FAILED", "ERROR", "BLOCKED", "DROPPED", "LOST"].includes(s)) return "rose";
+  if (["ACTIVE", "LIVE", "OPEN", "RUNNING", "CONNECTED", "PUBLISHED", "HEALTHY"].includes(s)) return "emerald";
+  if (["NEW", "PENDING", "QUEUED", "WARM", "SCHEDULED"].includes(s)) return "cyan";
+  if (["PAUSED", "WAITING", "IDLE", "DRAFT", "PLANNED", "WARN"].includes(s)) return "amber";
+  if (["FAILED", "ERROR", "BLOCKED", "DROPPED", "LOST", "EXPIRED", "MISSING"].includes(s)) return "rose";
   if (["QUALIFIED", "IN_PROGRESS"].includes(s)) return "purple";
   return "slate";
 }
@@ -90,6 +103,32 @@ function sourceTone(source) {
   return "slate";
 }
 
+function ChannelBadge({ channel }) {
+  const iconClass = "w-3.5 h-3.5";
+  const icons = {
+    facebook: <Users className={iconClass} />,
+    instagram: <Camera className={iconClass} />,
+    google_business: <Building2 className={iconClass} />,
+    youtube: <PlayCircle className={iconClass} />,
+    tiktok: <Clapperboard className={iconClass} />,
+    x: <AtSign className={iconClass} />,
+    linkedin: <Users className={iconClass} />,
+    pinterest: <Hash className={iconClass} />,
+    snapchat: <Camera className={iconClass} />,
+    nextdoor: <Building2 className={iconClass} />,
+    truth_social: <MessageSquare className={iconClass} />,
+    threads: <AtSign className={iconClass} />,
+    email: <Mail className={iconClass} />,
+    sms_twilio_planned: <MessageSquare className={iconClass} />,
+  };
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] text-slate-200 border-slate-600/40 bg-slate-600/10">
+      {icons[channel.key] || <Hash className={iconClass} />}
+      {channel.short}
+    </span>
+  );
+}
+
 export default function PlatformGrowthEngineTab() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -98,6 +137,8 @@ export default function PlatformGrowthEngineTab() {
   const [busyLeadIds, setBusyLeadIds] = useState({});
   const [connectModalOpen, setConnectModalOpen] = useState(false);
   const [channelSetupPending, setChannelSetupPending] = useState({});
+  const [channelQuery, setChannelQuery] = useState("");
+  const [drawerTab, setDrawerTab] = useState("connect_accounts");
 
   const [dashboard, setDashboard] = useState({});
   const [leads, setLeads] = useState([]);
@@ -110,29 +151,41 @@ export default function PlatformGrowthEngineTab() {
   const [campaigns, setCampaigns] = useState([]);
   const [conversations, setConversations] = useState([]);
   const EDITABLE_STATUSES = ["NEW", "QUALIFIED", "NURTURING", "WON", "LOST"];
-  const CHANNELS = ["Facebook", "Instagram", "Google Business", "Email/SMS"];
+
+  const CHANNELS = useMemo(
+    () => [
+      { key: "facebook", name: "Facebook", short: "FB", description: "Run lead-ad follow-up and comment capture automations.", oauth: true },
+      { key: "instagram", name: "Instagram", short: "IG", description: "Trigger DM responders and nurture sequences from engagement.", oauth: true },
+      { key: "google_business", name: "Google Business", short: "GB", description: "Capture local-intent leads and automate review nudges.", oauth: true },
+      { key: "youtube", name: "YouTube", short: "YT", description: "Publish video snippets and route CTA traffic into SyncWorks.", oauth: true },
+      { key: "tiktok", name: "TikTok", short: "TT", description: "Queue short-form campaign clips and track inquiry volume.", oauth: true },
+      { key: "x", name: "X", short: "X", description: "Publish timely updates and drive reply/DM engagement flows.", oauth: true },
+      { key: "linkedin", name: "LinkedIn", short: "LI", description: "Share trust-building posts for B2B and property management audiences.", oauth: true },
+      { key: "pinterest", name: "Pinterest", short: "P", description: "Distribute evergreen visual content and drive site intent traffic.", oauth: true },
+      { key: "snapchat", name: "Snapchat", short: "SC", description: "Test geo-targeted story creative and short-lifecycle promotions.", oauth: true },
+      { key: "nextdoor", name: "Nextdoor", short: "ND", description: "Reach neighborhood audiences for local service visibility.", oauth: true },
+      { key: "truth_social", name: "Truth Social", short: "TS", description: "Publish brand-safe updates and monitor audience interactions.", oauth: true },
+      { key: "threads", name: "Threads", short: "TH", description: "Post conversational updates and route responses to nurture flows.", oauth: true },
+      { key: "email", name: "Email", short: "EM", description: "Available now: manual/free channel for lifecycle follow-up.", oauth: false, alwaysAvailable: true },
+      { key: "sms_twilio_planned", name: "SMS / Twilio planned", short: "SMS", description: "Planned: SMS/Twilio disabled until compliance/legal setup is approved.", oauth: false, planned: true },
+    ],
+    []
+  );
 
   async function loadAll() {
     setLoading(true);
     setErr("");
     setUpdateErr("");
-
     const requests = [
       api.get("/platform-growth/dashboard/").catch(() => ({ __failed: true })),
       api.get("/platform-growth/leads/").catch(() => ({ __failed: true })),
       api.get("/platform-growth/campaigns/").catch(() => ({ __failed: true })),
       api.get("/platform-growth/conversations/").catch(() => ({ __failed: true })),
     ];
-
     try {
       const [rDashboard, rLeads, rCampaigns, rConversations] = await Promise.all(requests);
-
       const anySuccess = [rDashboard, rLeads, rCampaigns, rConversations].some((x) => !x?.__failed);
-
-      if (!anySuccess) {
-        throw new Error("Growth OS endpoints unavailable.");
-      }
-
+      if (!anySuccess) throw new Error("Growth OS endpoints unavailable.");
       setDashboard(rDashboard?.data || {});
       setLeads(safeList(rLeads?.data).slice(0, 50));
       setCampaigns(safeList(rCampaigns?.data).slice(0, 12));
@@ -156,9 +209,7 @@ export default function PlatformGrowthEngineTab() {
     try {
       const res = await api.get("/platform-growth/leads/");
       setLeads(safeList(res?.data).slice(0, 50));
-    } catch {
-      // keep optimistic state if refresh fails
-    }
+    } catch {}
   }
 
   async function patchLeadStatus(lead, nextStatus) {
@@ -209,22 +260,11 @@ export default function PlatformGrowthEngineTab() {
   const kpis = useMemo(() => {
     const d = dashboard || {};
     return {
-      leadsCaptured:
-        d.leads_captured ?? d.leads_total ?? d.kpis?.leads_captured ?? d.summary?.leads_captured,
-      conversationsActive:
-        d.conversations_active ??
-        d.active_conversations ??
-        d.kpis?.conversations_active ??
-        d.summary?.conversations_active,
-      campaignsLive:
-        d.campaigns_live ?? d.active_campaigns ?? d.kpis?.campaigns_live ?? d.summary?.campaigns_live,
-      activationEvents:
-        d.activation_events ??
-        d.activation_events_count ??
-        d.kpis?.activation_events ??
-        d.summary?.activation_events,
-      conversionPlaceholder:
-        d.conversion_rate ?? d.kpis?.conversion_rate ?? d.summary?.conversion_rate ?? "—",
+      leadsCaptured: d.leads_captured ?? d.leads_total ?? d.kpis?.leads_captured ?? d.summary?.leads_captured,
+      conversationsActive: d.conversations_active ?? d.active_conversations ?? d.kpis?.conversations_active ?? d.summary?.conversations_active,
+      campaignsLive: d.campaigns_live ?? d.active_campaigns ?? d.kpis?.campaigns_live ?? d.summary?.campaigns_live,
+      activationEvents: d.activation_events ?? d.activation_events_count ?? d.kpis?.activation_events ?? d.summary?.activation_events,
+      conversionPlaceholder: d.conversion_rate ?? d.kpis?.conversion_rate ?? d.summary?.conversion_rate ?? "—",
       growthScore: d.growth_score ?? d.kpis?.growth_score ?? d.summary?.growth_score,
     };
   }, [dashboard]);
@@ -236,92 +276,91 @@ export default function PlatformGrowthEngineTab() {
       ...safeList(dashboard?.recent_events),
     ];
     if (fromDashboard.length) return fromDashboard.slice(0, 20);
-
-    const total = Number(dashboard?.events_last_24h);
-    if (Number.isFinite(total) && total >= 0) {
-      return [
-        {
-          id: "events-last-24h",
-          title: "Automation activity (24h)",
-          status: total > 0 ? "ACTIVE" : "IDLE",
-          description: `${total} automation event${total === 1 ? "" : "s"} in the last 24 hours.`,
-          created_at: new Date().toISOString(),
-        },
-      ];
-    }
-
     return [];
   }, [dashboard]);
 
   const leadStatuses = useMemo(() => {
-    const known = ["NEW", "QUALIFIED", "NURTURING", "WON", "LOST"];
     const source = (leads || []).length ? leads : demoLeads;
-    const discovered = Array.from(
-      new Set(
-        source
-          .map((l) => String(l.status || l.stage || l.pipeline_stage || "").trim().toUpperCase())
-          .filter(Boolean)
-      )
-    );
-
-    const ordered = [...known.filter((x) => discovered.includes(x)), ...discovered.filter((x) => !known.includes(x))];
-    return ["ALL", ...ordered];
+    const found = Array.from(new Set(source.map((l) => String(l.status || l.stage || "NEW").toUpperCase())));
+    return ["ALL", ...found];
   }, [leads, demoLeads]);
 
-  const displayLeads = useMemo(() => {
-    if ((leads || []).length) return leads;
-    return demoLeads;
-  }, [leads, demoLeads]);
-
+  const displayLeads = useMemo(() => ((leads || []).length ? leads : demoLeads), [leads, demoLeads]);
   const isDemoMode = useMemo(() => (leads || []).length === 0, [leads]);
 
-  const enrichedLeads = useMemo(() => {
-    return (displayLeads || []).map((l, idx) => ({
-      ...l,
-      source: normalizeSource(l.source || l.channel || (isDemoMode ? ["Facebook Ads", "Instagram", "Google", "Referral", "Website", "Manual"][idx % 6] : "Manual")),
-    }));
-  }, [displayLeads, isDemoMode]);
+  const enrichedLeads = useMemo(
+    () =>
+      (displayLeads || []).map((l, idx) => ({
+        ...l,
+        source: normalizeSource(
+          l.source ||
+            l.channel ||
+            (isDemoMode
+              ? ["Facebook Ads", "Instagram", "Google", "Referral", "Website", "Manual"][idx % 6]
+              : "Manual")
+        ),
+      })),
+    [displayLeads, isDemoMode]
+  );
 
   const pipelineGroups = useMemo(() => {
     const map = new Map();
-    const source = enrichedLeads || [];
-
-    source.forEach((lead) => {
-      const bucket = String(lead.status || lead.stage || lead.pipeline_stage || "UNSPECIFIED").toUpperCase();
+    enrichedLeads.forEach((lead) => {
+      const bucket = String(lead.status || lead.stage || "UNSPECIFIED").toUpperCase();
       if (statusFilter !== "ALL" && bucket !== statusFilter) return;
       if (!map.has(bucket)) map.set(bucket, []);
       map.get(bucket).push(lead);
     });
-
     return EDITABLE_STATUSES.map((key) => ({ key, items: map.get(key) || [] }));
   }, [enrichedLeads, statusFilter]);
 
-  const channelStates = useMemo(() => {
-    const fromBackend = dashboard?.channel_connections;
-    if (fromBackend && typeof fromBackend === "object" && !Array.isArray(fromBackend)) {
-      return CHANNELS.map((name) => ({
-        name,
-        connected: !!fromBackend[name] || !!fromBackend[name.toLowerCase()],
-      }));
-    }
+  const channelStateMap = useMemo(() => {
+    const backend = dashboard?.channel_connections || {};
+    const map = {};
+    CHANNELS.forEach((ch) => {
+      const connected = ch.alwaysAvailable ? true : !!backend[ch.key] || !!backend[ch.name] || !!backend[ch.name?.toLowerCase?.()];
+      map[ch.key] = { ...ch, connected };
+    });
+    return map;
+  }, [dashboard, CHANNELS]);
 
-    // demo seed
-    return [
-      { name: "Facebook", connected: true },
-      { name: "Instagram", connected: true },
-      { name: "Google Business", connected: false },
-      { name: "Email/SMS", connected: true },
-    ];
-  }, [dashboard]);
+  const channelListFiltered = useMemo(() => {
+    const q = channelQuery.toLowerCase().trim();
+    const list = Object.values(channelStateMap);
+    if (!q) return list;
+    return list.filter((c) => c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q) || c.short.toLowerCase().includes(q));
+  }, [channelStateMap, channelQuery]);
 
-  const channelCapabilities = useMemo(
-    () => ({
-      Facebook: "Run comment capture and lead ad follow-up flows.",
-      Instagram: "Trigger DM responders and nurture sequences.",
-      "Google Business": "Capture local intent leads and review nudges.",
-      "Email/SMS": "Send lifecycle follow-up, win-back, and review requests.",
-    }),
-    []
+  function getChannelStatus(channel) {
+    if (channel.planned) return "PLANNED";
+    if (channelSetupPending[channel.key]) return "SETUP_PENDING";
+    if (channel.connected) return "CONNECTED";
+    return "NOT_CONNECTED";
+  }
+
+  function getChannelLabel(status) {
+    if (status === "PLANNED") return "Planned";
+    if (status === "SETUP_PENDING") return "Setup Pending";
+    if (status === "CONNECTED") return "Connected";
+    return "Not Connected";
+  }
+
+  function handleConnectChannel(channel) {
+    if (channel.planned || channel.alwaysAvailable) return;
+    setChannelSetupPending((prev) => ({ ...prev, [channel.key]: true }));
+  }
+
+  const accountHealthRows = useMemo(
+    () =>
+      Object.values(channelStateMap).map((c, idx) => {
+        const status = getChannelStatus(c);
+        const connected = status === "CONNECTED";
+        const token = c.planned ? "N/A" : connected ? (idx % 4 === 0 ? "WARN" : "HEALTHY") : "MISSING";
+        const lastRun = connected ? `${idx + 1}h ago` : "—";
+        const needsAttention = status === "SETUP_PENDING" || token === "WARN" || token === "MISSING";
+        return { ...c, status, token, lastRun, needsAttention };
+      }),
+    [channelStateMap, channelSetupPending]
   );
 
   const funnel = useMemo(() => {
@@ -330,25 +369,24 @@ export default function PlatformGrowthEngineTab() {
       acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {});
-
     return {
-      captured: Number(dashboard?.funnel?.captured ?? dashboard?.captured ?? enrichedLeads.length ?? 0),
+      captured: Number(dashboard?.funnel?.captured ?? enrichedLeads.length ?? 0),
       qualified: Number(dashboard?.funnel?.qualified ?? byStatus.QUALIFIED ?? 0),
-      activated: Number(dashboard?.funnel?.activated ?? byStatus.WON ?? byStatus.ACTIVATED ?? 0),
-      paying: Number(dashboard?.funnel?.paying ?? dashboard?.paying ?? 0),
-      referred: Number(dashboard?.funnel?.referred ?? dashboard?.referred ?? 0),
+      activated: Number(dashboard?.funnel?.activated ?? byStatus.WON ?? 0),
+      paying: Number(dashboard?.funnel?.paying ?? 0),
+      referred: Number(dashboard?.funnel?.referred ?? 0),
     };
   }, [dashboard, enrichedLeads]);
 
-  function isOauthChannel(name) {
-    return ["Facebook", "Instagram", "Google Business"].includes(name);
-  }
-
-  function handleConnectChannel(name) {
-    if (isOauthChannel(name)) {
-      setChannelSetupPending((prev) => ({ ...prev, [name]: true }));
-    }
-  }
+  const recipeCards = useMemo(
+    () => [
+      { id: "r1", name: "New lead follow-up", summary: "Auto-send first touch and reminders.", status: "ACTIVE", audience: "Platform + future SBO add-on" },
+      { id: "r2", name: "Review request", summary: "Send post-service review asks.", status: "DRAFT", audience: "Platform + future SBO add-on" },
+      { id: "r3", name: "Win-back campaign", summary: "Re-engage cooled leads.", status: "DRAFT", audience: "Platform + future SBO add-on" },
+      { id: "r4", name: "Comment-to-DM responder", summary: "Route CTA comments to DM flow.", status: "ACTIVE", audience: "Platform + future SBO add-on" },
+    ],
+    []
+  );
 
   const contentQueue = useMemo(
     () => [
@@ -372,74 +410,12 @@ export default function PlatformGrowthEngineTab() {
 
   const aiGeneratedPreviews = useMemo(
     () => [
-      {
-        id: "gp-1",
-        title: "Promo Draft",
-        body:
-          "Spring tune-up special is live. Book this week and get priority scheduling plus a filter health check.",
-        channel: "Facebook + Instagram",
-      },
-      {
-        id: "gp-2",
-        title: "Review Ask Draft",
-        body:
-          "Thanks for trusting our team today. If we earned it, leave a quick review and help neighbors find reliable service.",
-        channel: "Google Business + Email",
-      },
-      {
-        id: "gp-3",
-        title: "Educational Draft",
-        body:
-          "3 signs your HVAC needs service: uneven cooling, rising utility bills, and noisy startup cycles.",
-        channel: "Instagram Reel + Blog Snippet",
-      },
+      { id: "gp-1", title: "Promo Draft", body: "Spring tune-up special is live.", channel: "Facebook + Instagram" },
+      { id: "gp-2", title: "Review Ask Draft", body: "If we earned it, leave us a quick review.", channel: "Google Business + Email" },
+      { id: "gp-3", title: "Educational Draft", body: "3 signs your HVAC needs service.", channel: "Instagram Reel + Blog Snippet" },
     ],
     []
   );
-
-  const recipeCards = useMemo(() => {
-    const fromBackend = safeList(dashboard?.automation_recipes);
-    if (fromBackend.length) {
-      return fromBackend.map((r, idx) => ({
-        id: r.id || `recipe-${idx + 1}`,
-        name: r.name || r.title || "Automation Recipe",
-        summary: r.summary || r.description || "No summary available.",
-        status: r.is_active === true ? "ACTIVE" : "DRAFT",
-        audience: r.audience || "Platform",
-      }));
-    }
-
-    return [
-      {
-        id: "recipe-new-lead-follow-up",
-        name: "New lead follow-up",
-        summary: "Auto-send first-touch follow-up after capture and remind after inactivity.",
-        status: "ACTIVE",
-        audience: "Platform + future SBO add-on",
-      },
-      {
-        id: "recipe-review-request",
-        name: "Review request",
-        summary: "After successful activation/payment, send review request with smart timing.",
-        status: "DRAFT",
-        audience: "Platform + future SBO add-on",
-      },
-      {
-        id: "recipe-win-back",
-        name: "Win-back campaign",
-        summary: "Re-engage cooled leads with a staged value-based sequence.",
-        status: "DRAFT",
-        audience: "Platform + future SBO add-on",
-      },
-      {
-        id: "recipe-comment-to-dm",
-        name: "Comment-to-DM responder",
-        summary: "Detect CTA comments and route personalized DM responder flow.",
-        status: "ACTIVE",
-        audience: "Platform + future SBO add-on",
-      },
-    ];
-  }, [dashboard]);
 
   return (
     <div className="space-y-5">
@@ -448,13 +424,7 @@ export default function PlatformGrowthEngineTab() {
           <div className="text-sm font-semibold text-slate-100">Growth OS</div>
           <div className="text-xs text-slate-500 mt-1">Read-only growth intelligence across leads, campaigns, conversations, and activations.</div>
         </div>
-        <button
-          type="button"
-          onClick={loadAll}
-          className="h-9 px-3 rounded-2xl text-xs border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40 text-slate-200"
-        >
-          Refresh
-        </button>
+        <button type="button" onClick={loadAll} className="h-9 px-3 rounded-2xl text-xs border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40 text-slate-200">Refresh</button>
       </div>
 
       {err ? <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/20 rounded-2xl p-3">{err}</div> : null}
@@ -471,23 +441,25 @@ export default function PlatformGrowthEngineTab() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
-        <GlassCard title="Connect Channels" right={isDemoMode ? "demo seed" : "live + demo fallback"}>
-          <div className="grid sm:grid-cols-2 gap-2">
-            {channelStates.map((c) => (
-              <div key={c.name} className="rounded-xl border border-slate-800 bg-slate-950/55 px-3 py-2 flex items-center justify-between gap-2">
-                <div className="text-sm text-slate-200">{c.name}</div>
-                <StatusPill tone={c.connected ? "emerald" : "amber"}>
-                  {c.connected ? "Connected" : "Disconnected"}
-                </StatusPill>
-              </div>
-            ))}
+        <GlassCard title="Connect Channels" right={isDemoMode ? "demo seed + expanded coverage" : "live + expanded coverage"}>
+          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-2">
+            {Object.values(channelStateMap).map((c) => {
+              const status = getChannelStatus(c);
+              return (
+                <div key={c.key} className="rounded-xl border border-slate-800 bg-slate-950/55 px-3 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <ChannelBadge channel={c} />
+                      <div className="text-sm text-slate-200">{c.name}</div>
+                    </div>
+                    <StatusPill tone={toneFromStatus(status)}>{getChannelLabel(status)}</StatusPill>
+                  </div>
+                </div>
+              );
+            })}
           </div>
           <div className="mt-3 flex justify-end">
-            <button
-              type="button"
-              onClick={() => setConnectModalOpen(true)}
-              className="h-9 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-100"
-            >
+            <button type="button" onClick={() => setConnectModalOpen(true)} className="h-9 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-100">
               Connect Channels
             </button>
           </div>
@@ -515,18 +487,8 @@ export default function PlatformGrowthEngineTab() {
               <div className="mt-2 text-sm text-slate-300">{r.summary}</div>
               <div className="mt-2 text-[11px] text-slate-500">{r.audience}</div>
               <div className="mt-3 flex items-center gap-2">
-                <button
-                  type="button"
-                  className="h-8 px-3 rounded-2xl text-xs border border-slate-800 bg-slate-950/70 text-slate-300"
-                >
-                  View recipe
-                </button>
-                <button
-                  type="button"
-                  className="h-8 px-3 rounded-2xl text-xs border border-cyan-500/30 bg-cyan-500/10 text-cyan-100"
-                >
-                  Clone for SBO
-                </button>
+                <button type="button" className="h-8 px-3 rounded-2xl text-xs border border-slate-800 bg-slate-950/70 text-slate-300">View recipe</button>
+                <button type="button" className="h-8 px-3 rounded-2xl text-xs border border-cyan-500/30 bg-cyan-500/10 text-cyan-100">Clone for SBO</button>
               </div>
             </div>
           ))}
@@ -536,37 +498,11 @@ export default function PlatformGrowthEngineTab() {
       <GlassCard title="Lead pipeline" right={isDemoMode ? "demo mode • read-only backend" : "live mode"}>
         <div className="flex flex-wrap gap-2">
           {leadStatuses.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setStatusFilter(s)}
-              className={cx(
-                "h-8 px-3 rounded-2xl text-xs border transition",
-                statusFilter === s
-                  ? "border-cyan-500/35 bg-cyan-500/15 text-cyan-100"
-                  : "border-slate-800 bg-slate-950/55 hover:bg-slate-900/50 text-slate-300"
-              )}
-            >
+            <button key={s} type="button" onClick={() => setStatusFilter(s)} className={cx("h-8 px-3 rounded-2xl text-xs border transition", statusFilter === s ? "border-cyan-500/35 bg-cyan-500/15 text-cyan-100" : "border-slate-800 bg-slate-950/55 hover:bg-slate-900/50 text-slate-300")}>
               {s}
             </button>
           ))}
         </div>
-
-        {isDemoMode ? (
-          <div className="mt-3 rounded-2xl border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-100">
-            Demo leads are shown because no live leads were returned.
-          </div>
-        ) : null}
-
-        <div className="mt-3 flex justify-end">
-          <button
-            type="button"
-            className="h-9 px-3 rounded-2xl text-xs border border-indigo-500/35 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-100"
-          >
-            Import Leads
-          </button>
-        </div>
-
         <div className="mt-4 grid md:grid-cols-2 xl:grid-cols-5 gap-3">
           {pipelineGroups.map((group) => (
             <div key={group.key} className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
@@ -574,134 +510,154 @@ export default function PlatformGrowthEngineTab() {
                 <div className="font-semibold text-slate-100">{group.key}</div>
                 <StatusPill tone={toneFromStatus(group.key)}>{group.items.length}</StatusPill>
               </div>
-
               <div className="mt-3 space-y-2">
                 {group.items.map((l, idx) => {
                   const current = String(l.status || "").toUpperCase();
                   const selectValue = EDITABLE_STATUSES.includes(current) ? current : "NEW";
                   return (
-                    <div key={l.id || l.lead_id || l.email || `${group.key}-${idx}`} className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
-                      <div className="font-semibold text-sm text-slate-100">{l.name || l.full_name || l.email || `Lead #${l.id || idx + 1}`}</div>
+                    <div key={l.id || l.lead_id || `${group.key}-${idx}`} className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
+                      <div className="font-semibold text-sm text-slate-100">{l.name || l.email || `Lead #${idx + 1}`}</div>
                       <div className="text-[11px] text-slate-400 mt-1">
-                        <span className="inline-flex items-center gap-2">
-                          <span>Source:</span>
-                          <StatusPill tone={sourceTone(l.source)}>{l.source || "Manual"}</StatusPill>
-                        </span>{" "}
-                        • Last: {fmtDateTime(l.last_activity_at || l.updated_at || l.created_at)}
+                        <StatusPill tone={sourceTone(l.source)}>{l.source || "Manual"}</StatusPill> • Last: {fmtDateTime(l.updated_at || l.created_at)}
                       </div>
                       <div className="mt-2">
-                        <select
-                          value={selectValue}
-                          disabled={!isDemoMode && !!busyLeadIds[String(l.id || l.lead_id)]}
-                          onChange={(e) => patchLeadStatus(l, e.target.value)}
-                          className="w-full rounded-xl border border-slate-800 bg-slate-950 px-2 py-1.5 text-xs text-slate-200 disabled:opacity-60"
-                        >
-                          {EDITABLE_STATUSES.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
+                        <select value={selectValue} disabled={!isDemoMode && !!busyLeadIds[String(l.id || l.lead_id)]} onChange={(e) => patchLeadStatus(l, e.target.value)} className="w-full rounded-xl border border-slate-800 bg-slate-950 px-2 py-1.5 text-xs text-slate-200">
+                          {EDITABLE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                         </select>
                       </div>
                     </div>
                   );
                 })}
-                {!group.items.length ? (
-                  <div className="rounded-xl border border-dashed border-slate-800 bg-slate-950/30 px-3 py-4 text-xs text-slate-500">
-                    No leads
-                  </div>
-                ) : null}
               </div>
             </div>
           ))}
         </div>
-
-        {!displayLeads.length ? <div className="text-slate-500 text-sm py-2">No leads available.</div> : null}
-        {!!displayLeads.length && !pipelineGroups.some((g) => g.items.length) ? (
-          <div className="text-slate-500 text-sm py-2">No leads for selected status.</div>
-        ) : null}
       </GlassCard>
 
       {connectModalOpen ? (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConnectModalOpen(false)} />
-          <div className="absolute inset-y-0 right-0 w-full max-w-xl border-l border-slate-800 bg-[#070a12] text-slate-100 shadow-2xl">
+          <div className="absolute inset-y-0 right-0 w-full max-w-5xl border-l border-slate-800 bg-[#070a12] text-slate-100 shadow-2xl">
             <div className="p-4 border-b border-slate-800 flex items-center justify-between">
               <div>
                 <div className="font-semibold text-slate-100">Connect Channels</div>
                 <div className="text-xs text-slate-400 mt-1">God Mode controls now • same engine later powers SBO Growth Automation add-on.</div>
               </div>
-              <button
-                type="button"
-                onClick={() => setConnectModalOpen(false)}
-                className="h-9 px-3 rounded-2xl text-xs border border-slate-800 bg-slate-950/60 text-slate-200"
-              >
-                Close
-              </button>
+              <button type="button" onClick={() => setConnectModalOpen(false)} className="h-9 px-3 rounded-2xl text-xs border border-slate-800 bg-slate-950/60 text-slate-200">Close</button>
             </div>
 
-            <div className="p-4 space-y-3 overflow-y-auto h-[calc(100%-73px)]">
-              <div className="rounded-2xl border border-cyan-500/25 bg-cyan-500/10 p-4">
-                <div className="font-semibold text-cyan-100">How it works</div>
-                <ul className="mt-2 space-y-1 text-sm text-cyan-50/90 list-disc pl-5">
-                  <li>Connect a channel</li>
-                  <li>Pick automation recipes</li>
-                  <li>Capture leads into SyncWorks</li>
-                  <li>Follow up automatically</li>
-                </ul>
-              </div>
+            <div className="p-4 border-b border-slate-800 flex gap-2">
+              {[
+                { key: "connect_accounts", label: "Connect Accounts" },
+                { key: "automation_recipes", label: "Automation Recipes" },
+                { key: "account_health", label: "Account Health" },
+              ].map((t) => (
+                <button key={t.key} type="button" onClick={() => setDrawerTab(t.key)} className={cx("h-8 px-3 rounded-2xl text-xs border", drawerTab === t.key ? "border-cyan-500/35 bg-cyan-500/15 text-cyan-100" : "border-slate-800 bg-slate-950/60 text-slate-300")}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
 
-              {channelStates.map((c) => {
-                const pending = !!channelSetupPending[c.name];
-                const smsChannel = c.name === "Email/SMS";
-                return (
-                  <div key={c.name} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="font-semibold text-slate-100">{smsChannel ? "Email/SMS (Email ready / SMS planned)" : c.name}</div>
-                      <StatusPill tone={pending ? "amber" : c.connected ? "emerald" : "amber"}>
-                        {pending ? "Setup Pending" : c.connected ? "Connected" : "Not Connected"}
-                      </StatusPill>
-                    </div>
-                    <div className="mt-2 text-sm text-slate-300">
-                      {smsChannel
-                        ? "Email automations are ready now. SMS/Twilio is disabled until compliance and legal setup is complete."
-                        : channelCapabilities[c.name] || "Channel integration for growth automations."}
-                    </div>
-                    {pending ? (
-                      <div className="mt-2 text-xs text-amber-200 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2">
-                        OAuth credentials required in backend settings before live connection.
-                      </div>
-                    ) : null}
-                    <div className="mt-3">
-                      <button
-                        type="button"
-                        onClick={() => handleConnectChannel(c.name)}
-                        disabled={pending || smsChannel}
-                        className="h-9 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-100 disabled:opacity-60 disabled:hover:bg-cyan-500/10"
-                      >
-                        {pending ? "Setup Pending" : smsChannel ? "Email ready / SMS planned" : "Connect"}
-                      </button>
+            <div className="p-4 space-y-4 overflow-y-auto h-[calc(100%-122px)]">
+              {drawerTab === "connect_accounts" ? (
+                <>
+                  <div className="rounded-2xl border border-cyan-500/25 bg-cyan-500/10 p-4">
+                    <div className="font-semibold text-cyan-100">How it works</div>
+                    <ul className="mt-2 space-y-1 text-sm text-cyan-50/90 list-disc pl-5">
+                      <li>Connect a channel</li>
+                      <li>Pick automation recipes</li>
+                      <li>Capture leads into SyncWorks</li>
+                      <li>Follow up automatically</li>
+                    </ul>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
+                    <div className="relative">
+                      <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input value={channelQuery} onChange={(e) => setChannelQuery(e.target.value)} placeholder="Search channels..." className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-800 bg-slate-950 text-sm text-slate-200 placeholder:text-slate-500" />
                     </div>
                   </div>
-                );
-              })}
+
+                  <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
+                    {channelListFiltered.map((c) => {
+                      const status = getChannelStatus(c);
+                      const pending = status === "SETUP_PENDING";
+                      const planned = status === "PLANNED";
+                      const email = c.key === "email";
+                      return (
+                        <div key={c.key} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2"><ChannelBadge channel={c} /><div className="font-semibold text-slate-100">{c.name}</div></div>
+                            <StatusPill tone={toneFromStatus(status)}>{getChannelLabel(status)}</StatusPill>
+                          </div>
+                          <div className="mt-2 text-sm text-slate-300">{c.description}</div>
+                          {pending ? <div className="mt-2 text-xs text-amber-200 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2">OAuth credentials required in backend settings before live connection.</div> : null}
+                          {planned ? <div className="mt-2 text-xs text-amber-200 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2">SMS/Twilio remains disabled until compliance and legal setup is complete.</div> : null}
+                          <div className="mt-3">
+                            <button type="button" onClick={() => handleConnectChannel(c)} disabled={pending || planned || email} className="h-9 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 text-cyan-100 disabled:opacity-60">
+                              {pending ? "Setup Pending" : planned ? "Planned" : email ? "Email Available" : "Connect"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : null}
+
+              {drawerTab === "automation_recipes" ? (
+                <div className="grid md:grid-cols-2 gap-3">
+                  {recipeCards.map((r) => (
+                    <div key={r.id} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-semibold text-slate-100">{r.name}</div>
+                        <StatusPill tone={r.status === "ACTIVE" ? "emerald" : "amber"}>{r.status}</StatusPill>
+                      </div>
+                      <div className="mt-2 text-sm text-slate-300">{r.summary}</div>
+                      <div className="mt-3 flex gap-2">
+                        <button type="button" className="h-8 px-3 rounded-2xl text-xs border border-slate-800 bg-slate-950/70 text-slate-300">Preview</button>
+                        <button type="button" className="h-8 px-3 rounded-2xl text-xs border border-cyan-500/30 bg-cyan-500/10 text-cyan-100">Clone for SBO</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {drawerTab === "account_health" ? (
+                <div className="space-y-3">
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                    <div className="font-semibold text-slate-100">Account Health</div>
+                    <div className="text-xs text-slate-400 mt-1">Connected status, mock token health, sync last run, and needs-attention indicators.</div>
+                  </div>
+                  <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
+                    {accountHealthRows.map((row) => (
+                      <div key={row.key} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2"><ChannelBadge channel={row} /><div className="font-semibold text-slate-100">{row.name}</div></div>
+                          <StatusPill tone={toneFromStatus(row.status)}>{getChannelLabel(row.status)}</StatusPill>
+                        </div>
+                        <div className="mt-3 space-y-1 text-xs text-slate-300">
+                          <div className="flex items-center justify-between"><span className="text-slate-400">Token health</span><StatusPill tone={toneFromStatus(row.token)}>{row.token}</StatusPill></div>
+                          <div className="flex items-center justify-between"><span className="text-slate-400">Sync last run</span><span>{row.lastRun}</span></div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Needs attention</span>
+                            {row.needsAttention ? <StatusPill tone="rose"><Activity className="w-3 h-3 inline mr-1" />Yes</StatusPill> : <StatusPill tone="emerald"><ShieldCheck className="w-3 h-3 inline mr-1" />No</StatusPill>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
                 <div className="font-semibold text-slate-100">Admin setup checklist</div>
                 <ul className="mt-2 grid sm:grid-cols-2 gap-2 text-xs text-slate-300">
-                  {[
-                    "META_APP_ID",
-                    "META_APP_SECRET",
-                    "META_REDIRECT_URI",
-                    "GOOGLE_CLIENT_ID",
-                    "GOOGLE_CLIENT_SECRET",
-                    "GOOGLE_REDIRECT_URI",
-                  ].map((item) => (
-                    <li key={item} className="rounded-lg border border-slate-800 bg-slate-900/60 px-2 py-1.5">
-                      {item}
-                    </li>
+                  {["META_APP_ID", "META_APP_SECRET", "META_REDIRECT_URI", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI"].map((item) => (
+                    <li key={item} className="rounded-lg border border-slate-800 bg-slate-900/60 px-2 py-1.5">{item}</li>
                   ))}
                 </ul>
+                <div className="mt-3 text-xs text-slate-400">Official OAuth connections require provider credentials and app review where applicable.</div>
               </div>
             </div>
           </div>
@@ -711,17 +667,12 @@ export default function PlatformGrowthEngineTab() {
       <GlassCard title="Content Engine" right="frontend-first • clone-ready for SBO add-on">
         <div className="grid xl:grid-cols-3 gap-4">
           <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
-            <div className="flex items-center justify-between gap-2">
-              <div className="font-semibold text-slate-100">Content Queue</div>
-              <StatusPill tone="cyan">Demo Queue</StatusPill>
-            </div>
+            <div className="flex items-center justify-between gap-2"><div className="font-semibold text-slate-100">Content Queue</div><StatusPill tone="cyan">Demo Queue</StatusPill></div>
             <div className="mt-3 space-y-2">
               {contentQueue.map((item) => (
                 <div key={item.id} className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
                   <div className="text-sm text-slate-100 font-semibold">{item.title}</div>
-                  <div className="mt-1">
-                    <StatusPill tone={toneFromStatus(item.status)}>{item.status}</StatusPill>
-                  </div>
+                  <div className="mt-1"><StatusPill tone={toneFromStatus(item.status)}>{item.status}</StatusPill></div>
                 </div>
               ))}
             </div>
@@ -733,22 +684,11 @@ export default function PlatformGrowthEngineTab() {
                 <div className="font-semibold text-slate-100">AI Post Generator</div>
                 <div className="text-xs text-slate-400 mt-1">Promptless starter actions for social + review growth.</div>
               </div>
-              <button
-                type="button"
-                className="h-8 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 text-cyan-100"
-              >
-                Clone for SBO Add-On
-              </button>
+              <button type="button" className="h-8 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 text-cyan-100">Clone for SBO Add-On</button>
             </div>
             <div className="mt-3 grid sm:grid-cols-2 xl:grid-cols-4 gap-2">
               {aiPostPresets.map((preset) => (
-                <button
-                  key={preset.key}
-                  type="button"
-                  className="h-9 px-3 rounded-xl text-xs border border-slate-800 bg-slate-950/70 hover:bg-slate-900/50 text-slate-200 text-left"
-                >
-                  {preset.label}
-                </button>
+                <button key={preset.key} type="button" className="h-9 px-3 rounded-xl text-xs border border-slate-800 bg-slate-950/70 hover:bg-slate-900/50 text-slate-200 text-left">{preset.label}</button>
               ))}
             </div>
             <div className="mt-3 grid md:grid-cols-3 gap-2">
@@ -771,11 +711,7 @@ export default function PlatformGrowthEngineTab() {
               {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
                 <div key={d} className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
                   <div className="text-slate-300">{d}</div>
-                  {["Mon", "Wed", "Fri"].includes(d) ? (
-                    <div className="mt-2"><StatusPill tone="purple">Post</StatusPill></div>
-                  ) : (
-                    <div className="mt-2 text-slate-600">—</div>
-                  )}
+                  {["Mon", "Wed", "Fri"].includes(d) ? <div className="mt-2"><StatusPill tone="purple">Post</StatusPill></div> : <div className="mt-2 text-slate-600">—</div>}
                 </div>
               ))}
             </div>
@@ -784,16 +720,11 @@ export default function PlatformGrowthEngineTab() {
           <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4 flex flex-col justify-between">
             <div>
               <div className="font-semibold text-slate-100">Create from Ticket</div>
-              <div className="text-sm text-slate-300 mt-2">
-                Convert completed service ticket into social post.
-              </div>
+              <div className="text-sm text-slate-300 mt-2">Convert completed service ticket into social post.</div>
               <div className="text-xs text-slate-500 mt-1">Frontend-only mock CTA for content automation pipeline.</div>
             </div>
             <div className="mt-4">
-              <button
-                type="button"
-                className="h-9 px-3 rounded-2xl text-xs border border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-100"
-              >
+              <button type="button" className="h-9 px-3 rounded-2xl text-xs border border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-100">
                 Convert completed service ticket into social post
               </button>
             </div>
@@ -805,49 +736,44 @@ export default function PlatformGrowthEngineTab() {
         <GlassCard title="Campaigns" right="read-only">
           <div className="space-y-3">
             {campaigns.map((c, idx) => (
-              <div key={c.id || c.campaign_id || idx} className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
+              <div key={c.id || idx} className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="font-semibold text-slate-100 truncate">{c.name || c.title || `Campaign #${c.id || idx + 1}`}</div>
+                  <div className="font-semibold text-slate-100 truncate">{c.name || `Campaign #${idx + 1}`}</div>
                   <StatusPill tone={toneFromStatus(c.status)}>{c.status || "Unknown"}</StatusPill>
                 </div>
-                <div className="mt-2 text-xs text-slate-400">
-                  Channel: {c.channel || c.source || "—"} • Reach: {c.reach ?? c.audience_size ?? "—"}
-                </div>
+                <div className="mt-2 text-xs text-slate-400">Channel: {c.channel || "—"} • Reach: {c.reach ?? "—"}</div>
               </div>
             ))}
-            {!campaigns.length ? <div className="text-slate-500 text-sm">No campaigns available.</div> : null}
           </div>
         </GlassCard>
 
         <GlassCard title="Conversation inbox preview" right="read-only">
           <div className="space-y-3">
             {conversations.map((cv, idx) => (
-              <div key={cv.id || cv.thread_id || idx} className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
+              <div key={cv.id || idx} className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="font-semibold text-slate-100 truncate">{cv.subject || cv.lead_name || cv.contact || `Conversation #${cv.id || idx + 1}`}</div>
+                  <div className="font-semibold text-slate-100 truncate">{cv.subject || `Conversation #${idx + 1}`}</div>
                   <StatusPill tone={toneFromStatus(cv.status)}>{cv.status || "Open"}</StatusPill>
                 </div>
-                <div className="mt-2 text-xs text-slate-400 truncate">{cv.preview || cv.last_message || cv.snippet || "No preview available."}</div>
-                <div className="mt-1 text-[11px] text-slate-500">Last activity: {fmtDateTime(cv.last_activity_at || cv.updated_at || cv.created_at)}</div>
+                <div className="mt-2 text-xs text-slate-400 truncate">{cv.preview || "No preview available."}</div>
+                <div className="mt-1 text-[11px] text-slate-500">Last activity: {fmtDateTime(cv.updated_at || cv.created_at)}</div>
               </div>
             ))}
-            {!conversations.length ? <div className="text-slate-500 text-sm">No conversations available.</div> : null}
           </div>
         </GlassCard>
 
         <GlassCard title="Automation events" right="activity feed">
           <div className="space-y-3">
             {activityFeed.map((ev, idx) => (
-              <div key={ev.id || `${ev.type || "event"}-${idx}`} className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
+              <div key={ev.id || idx} className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="font-semibold text-slate-100">{ev.title || ev.type || "Automation Event"}</div>
+                  <div className="font-semibold text-slate-100">{ev.title || "Automation Event"}</div>
                   <StatusPill tone={toneFromStatus(ev.status || ev.level)}>{ev.status || ev.level || "Info"}</StatusPill>
                 </div>
                 <div className="mt-1 text-xs text-slate-400">{ev.description || ev.message || "No description provided."}</div>
-                <div className="mt-1 text-[11px] text-slate-500">{fmtDateTime(ev.created_at || ev.timestamp || ev.occurred_at)}</div>
+                <div className="mt-1 text-[11px] text-slate-500">{fmtDateTime(ev.created_at || ev.timestamp)}</div>
               </div>
             ))}
-            {!activityFeed.length ? <div className="text-slate-500 text-sm">No automation events available.</div> : null}
           </div>
         </GlassCard>
       </div>
