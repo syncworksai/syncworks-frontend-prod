@@ -96,6 +96,7 @@ export default function PlatformGrowthEngineTab() {
   const [updateErr, setUpdateErr] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [busyLeadIds, setBusyLeadIds] = useState({});
+  const [connectModalOpen, setConnectModalOpen] = useState(false);
 
   const [dashboard, setDashboard] = useState({});
   const [leads, setLeads] = useState([]);
@@ -107,9 +108,8 @@ export default function PlatformGrowthEngineTab() {
   ]);
   const [campaigns, setCampaigns] = useState([]);
   const [conversations, setConversations] = useState([]);
-
   const EDITABLE_STATUSES = ["NEW", "QUALIFIED", "NURTURING", "WON", "LOST"];
-  const CHANNELS = ["Facebook Ads", "Instagram", "Google", "Referral", "Website", "Manual"];
+  const CHANNELS = ["Facebook", "Instagram", "Google Business", "Email/SMS"];
 
   async function loadAll() {
     setLoading(true);
@@ -125,9 +125,12 @@ export default function PlatformGrowthEngineTab() {
 
     try {
       const [rDashboard, rLeads, rCampaigns, rConversations] = await Promise.all(requests);
+
       const anySuccess = [rDashboard, rLeads, rCampaigns, rConversations].some((x) => !x?.__failed);
 
-      if (!anySuccess) throw new Error("Growth OS endpoints unavailable.");
+      if (!anySuccess) {
+        throw new Error("Growth OS endpoints unavailable.");
+      }
 
       setDashboard(rDashboard?.data || {});
       setLeads(safeList(rLeads?.data).slice(0, 50));
@@ -171,7 +174,6 @@ export default function PlatformGrowthEngineTab() {
 
     const leadId = lead?.id || lead?.lead_id;
     if (!leadId || !nextStatus) return;
-
     const prevStatus = lead?.status || "";
     const key = String(leadId);
 
@@ -179,7 +181,9 @@ export default function PlatformGrowthEngineTab() {
     setBusyLeadIds((prev) => ({ ...prev, [key]: true }));
 
     setLeads((prev) =>
-      (prev || []).map((x) => (String(x?.id || x?.lead_id) === key ? { ...x, status: nextStatus } : x))
+      (prev || []).map((x) =>
+        String(x?.id || x?.lead_id) === key ? { ...x, status: nextStatus } : x
+      )
     );
 
     try {
@@ -187,7 +191,9 @@ export default function PlatformGrowthEngineTab() {
       await refreshLeads();
     } catch (e) {
       setLeads((prev) =>
-        (prev || []).map((x) => (String(x?.id || x?.lead_id) === key ? { ...x, status: prevStatus } : x))
+        (prev || []).map((x) =>
+          String(x?.id || x?.lead_id) === key ? { ...x, status: prevStatus } : x
+        )
       );
       setUpdateErr(e?.response?.data?.detail || "Failed to update lead status.");
     } finally {
@@ -202,13 +208,22 @@ export default function PlatformGrowthEngineTab() {
   const kpis = useMemo(() => {
     const d = dashboard || {};
     return {
-      leadsCaptured: d.leads_captured ?? d.leads_total ?? d.kpis?.leads_captured ?? d.summary?.leads_captured,
+      leadsCaptured:
+        d.leads_captured ?? d.leads_total ?? d.kpis?.leads_captured ?? d.summary?.leads_captured,
       conversationsActive:
-        d.conversations_active ?? d.active_conversations ?? d.kpis?.conversations_active ?? d.summary?.conversations_active,
-      campaignsLive: d.campaigns_live ?? d.active_campaigns ?? d.kpis?.campaigns_live ?? d.summary?.campaigns_live,
+        d.conversations_active ??
+        d.active_conversations ??
+        d.kpis?.conversations_active ??
+        d.summary?.conversations_active,
+      campaignsLive:
+        d.campaigns_live ?? d.active_campaigns ?? d.kpis?.campaigns_live ?? d.summary?.campaigns_live,
       activationEvents:
-        d.activation_events ?? d.activation_events_count ?? d.kpis?.activation_events ?? d.summary?.activation_events,
-      conversionPlaceholder: d.conversion_rate ?? d.kpis?.conversion_rate ?? d.summary?.conversion_rate ?? "—",
+        d.activation_events ??
+        d.activation_events_count ??
+        d.kpis?.activation_events ??
+        d.summary?.activation_events,
+      conversionPlaceholder:
+        d.conversion_rate ?? d.kpis?.conversion_rate ?? d.summary?.conversion_rate ?? "—",
       growthScore: d.growth_score ?? d.kpis?.growth_score ?? d.summary?.growth_score,
     };
   }, [dashboard]);
@@ -237,7 +252,20 @@ export default function PlatformGrowthEngineTab() {
     return [];
   }, [dashboard]);
 
-  const isDemoMode = useMemo(() => (leads || []).length === 0, [leads]);
+  const leadStatuses = useMemo(() => {
+    const known = ["NEW", "QUALIFIED", "NURTURING", "WON", "LOST"];
+    const source = (leads || []).length ? leads : demoLeads;
+    const discovered = Array.from(
+      new Set(
+        source
+          .map((l) => String(l.status || l.stage || l.pipeline_stage || "").trim().toUpperCase())
+          .filter(Boolean)
+      )
+    );
+
+    const ordered = [...known.filter((x) => discovered.includes(x)), ...discovered.filter((x) => !known.includes(x))];
+    return ["ALL", ...ordered];
+  }, [leads, demoLeads]);
 
   const displayLeads = useMemo(() => {
     if ((leads || []).length) return leads;
@@ -247,28 +275,17 @@ export default function PlatformGrowthEngineTab() {
   const enrichedLeads = useMemo(() => {
     return (displayLeads || []).map((l, idx) => ({
       ...l,
-      source: normalizeSource(l.source || l.channel || (isDemoMode ? CHANNELS[idx % CHANNELS.length] : "Manual")),
+      source: normalizeSource(l.source || l.channel || (isDemoMode ? ["Facebook Ads", "Instagram", "Google", "Referral", "Website", "Manual"][idx % 6] : "Manual")),
     }));
   }, [displayLeads, isDemoMode]);
 
-  const leadStatuses = useMemo(() => {
-    const known = ["NEW", "QUALIFIED", "NURTURING", "WON", "LOST"];
-    const discovered = Array.from(
-      new Set(
-        (displayLeads || [])
-          .map((l) => String(l.status || l.stage || l.pipeline_stage || "").trim().toUpperCase())
-          .filter(Boolean)
-      )
-    );
-
-    const ordered = [...known.filter((x) => discovered.includes(x)), ...discovered.filter((x) => !known.includes(x))];
-    return ["ALL", ...ordered];
-  }, [displayLeads]);
+  const isDemoMode = useMemo(() => (leads || []).length === 0, [leads]);
 
   const pipelineGroups = useMemo(() => {
     const map = new Map();
+    const source = enrichedLeads || [];
 
-    (enrichedLeads || []).forEach((lead) => {
+    source.forEach((lead) => {
       const bucket = String(lead.status || lead.stage || lead.pipeline_stage || "UNSPECIFIED").toUpperCase();
       if (statusFilter !== "ALL" && bucket !== statusFilter) return;
       if (!map.has(bucket)) map.set(bucket, []);
@@ -287,15 +304,24 @@ export default function PlatformGrowthEngineTab() {
       }));
     }
 
+    // demo seed
     return [
-      { name: "Facebook Ads", connected: true },
+      { name: "Facebook", connected: true },
       { name: "Instagram", connected: true },
-      { name: "Google", connected: false },
-      { name: "Referral", connected: true },
-      { name: "Website", connected: true },
-      { name: "Manual", connected: true },
+      { name: "Google Business", connected: false },
+      { name: "Email/SMS", connected: true },
     ];
   }, [dashboard]);
+
+  const channelCapabilities = useMemo(
+    () => ({
+      Facebook: "Run comment capture and lead ad follow-up flows.",
+      Instagram: "Trigger DM responders and nurture sequences.",
+      "Google Business": "Capture local intent leads and review nudges.",
+      "Email/SMS": "Send lifecycle follow-up, win-back, and review requests.",
+    }),
+    []
+  );
 
   const funnel = useMemo(() => {
     const byStatus = (enrichedLeads || []).reduce((acc, l) => {
@@ -313,14 +339,56 @@ export default function PlatformGrowthEngineTab() {
     };
   }, [dashboard, enrichedLeads]);
 
+  const recipeCards = useMemo(() => {
+    const fromBackend = safeList(dashboard?.automation_recipes);
+    if (fromBackend.length) {
+      return fromBackend.map((r, idx) => ({
+        id: r.id || `recipe-${idx + 1}`,
+        name: r.name || r.title || "Automation Recipe",
+        summary: r.summary || r.description || "No summary available.",
+        status: r.is_active === true ? "ACTIVE" : "DRAFT",
+        audience: r.audience || "Platform",
+      }));
+    }
+
+    return [
+      {
+        id: "recipe-new-lead-follow-up",
+        name: "New lead follow-up",
+        summary: "Auto-send first-touch follow-up after capture and remind after inactivity.",
+        status: "ACTIVE",
+        audience: "Platform + future SBO add-on",
+      },
+      {
+        id: "recipe-review-request",
+        name: "Review request",
+        summary: "After successful activation/payment, send review request with smart timing.",
+        status: "DRAFT",
+        audience: "Platform + future SBO add-on",
+      },
+      {
+        id: "recipe-win-back",
+        name: "Win-back campaign",
+        summary: "Re-engage cooled leads with a staged value-based sequence.",
+        status: "DRAFT",
+        audience: "Platform + future SBO add-on",
+      },
+      {
+        id: "recipe-comment-to-dm",
+        name: "Comment-to-DM responder",
+        summary: "Detect CTA comments and route personalized DM responder flow.",
+        status: "ACTIVE",
+        audience: "Platform + future SBO add-on",
+      },
+    ];
+  }, [dashboard]);
+
   return (
     <div className="space-y-5">
       <div className="rounded-3xl border border-slate-800 bg-slate-950/35 p-4 flex items-center justify-between gap-3 flex-wrap">
         <div>
           <div className="text-sm font-semibold text-slate-100">Growth OS</div>
-          <div className="text-xs text-slate-500 mt-1">
-            Read-only growth intelligence across leads, campaigns, conversations, and activations.
-          </div>
+          <div className="text-xs text-slate-500 mt-1">Read-only growth intelligence across leads, campaigns, conversations, and activations.</div>
         </div>
         <button
           type="button"
@@ -332,9 +400,7 @@ export default function PlatformGrowthEngineTab() {
       </div>
 
       {err ? <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/20 rounded-2xl p-3">{err}</div> : null}
-      {updateErr ? (
-        <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/20 rounded-2xl p-3">{updateErr}</div>
-      ) : null}
+      {updateErr ? <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/20 rounded-2xl p-3">{updateErr}</div> : null}
       {loading ? <div className="text-sm text-slate-400">Loading Growth OS…</div> : null}
 
       <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -350,10 +416,7 @@ export default function PlatformGrowthEngineTab() {
         <GlassCard title="Connect Channels" right={isDemoMode ? "demo seed" : "live + demo fallback"}>
           <div className="grid sm:grid-cols-2 gap-2">
             {channelStates.map((c) => (
-              <div
-                key={c.name}
-                className="rounded-xl border border-slate-800 bg-slate-950/55 px-3 py-2 flex items-center justify-between gap-2"
-              >
+              <div key={c.name} className="rounded-xl border border-slate-800 bg-slate-950/55 px-3 py-2 flex items-center justify-between gap-2">
                 <div className="text-sm text-slate-200">{c.name}</div>
                 <StatusPill tone={c.connected ? "emerald" : "amber"}>
                   {c.connected ? "Connected" : "Disconnected"}
@@ -364,6 +427,7 @@ export default function PlatformGrowthEngineTab() {
           <div className="mt-3 flex justify-end">
             <button
               type="button"
+              onClick={() => setConnectModalOpen(true)}
               className="h-9 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-100"
             >
               Connect Channels
@@ -381,6 +445,35 @@ export default function PlatformGrowthEngineTab() {
           </div>
         </GlassCard>
       </div>
+
+      <GlassCard title="Automation recipes (lightweight)" right="frontend-first • demo fallback">
+        <div className="grid md:grid-cols-2 gap-3">
+          {recipeCards.map((r) => (
+            <div key={r.id} className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="font-semibold text-slate-100">{r.name}</div>
+                <StatusPill tone={r.status === "ACTIVE" ? "emerald" : "amber"}>{r.status}</StatusPill>
+              </div>
+              <div className="mt-2 text-sm text-slate-300">{r.summary}</div>
+              <div className="mt-2 text-[11px] text-slate-500">{r.audience}</div>
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  className="h-8 px-3 rounded-2xl text-xs border border-slate-800 bg-slate-950/70 text-slate-300"
+                >
+                  View recipe
+                </button>
+                <button
+                  type="button"
+                  className="h-8 px-3 rounded-2xl text-xs border border-cyan-500/30 bg-cyan-500/10 text-cyan-100"
+                >
+                  Clone for SBO
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </GlassCard>
 
       <GlassCard title="Lead pipeline" right={isDemoMode ? "demo mode • read-only backend" : "live mode"}>
         <div className="flex flex-wrap gap-2">
@@ -428,15 +521,9 @@ export default function PlatformGrowthEngineTab() {
                 {group.items.map((l, idx) => {
                   const current = String(l.status || "").toUpperCase();
                   const selectValue = EDITABLE_STATUSES.includes(current) ? current : "NEW";
-
                   return (
-                    <div
-                      key={l.id || l.lead_id || l.email || `${group.key}-${idx}`}
-                      className="rounded-xl border border-slate-800 bg-slate-950/70 p-2"
-                    >
-                      <div className="font-semibold text-sm text-slate-100">
-                        {l.name || l.full_name || l.email || `Lead #${l.id || idx + 1}`}
-                      </div>
+                    <div key={l.id || l.lead_id || l.email || `${group.key}-${idx}`} className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
+                      <div className="font-semibold text-sm text-slate-100">{l.name || l.full_name || l.email || `Lead #${l.id || idx + 1}`}</div>
                       <div className="text-[11px] text-slate-400 mt-1">
                         <span className="inline-flex items-center gap-2">
                           <span>Source:</span>
@@ -470,7 +557,57 @@ export default function PlatformGrowthEngineTab() {
             </div>
           ))}
         </div>
+
+        {!displayLeads.length ? <div className="text-slate-500 text-sm py-2">No leads available.</div> : null}
+        {!!displayLeads.length && !pipelineGroups.some((g) => g.items.length) ? (
+          <div className="text-slate-500 text-sm py-2">No leads for selected status.</div>
+        ) : null}
       </GlassCard>
+
+      {connectModalOpen ? (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConnectModalOpen(false)} />
+          <div className="absolute inset-y-0 right-0 w-full max-w-xl border-l border-slate-800 bg-[#070a12] text-slate-100 shadow-2xl">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+              <div>
+                <div className="font-semibold text-slate-100">Connect Channels</div>
+                <div className="text-xs text-slate-400 mt-1">God Mode controls now • same engine later powers SBO Growth Automation add-on.</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConnectModalOpen(false)}
+                className="h-9 px-3 rounded-2xl text-xs border border-slate-800 bg-slate-950/60 text-slate-200"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="p-4 space-y-3 overflow-y-auto h-[calc(100%-73px)]">
+              {channelStates.map((c) => (
+                <div key={c.name} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-semibold text-slate-100">{c.name}</div>
+                    <StatusPill tone={c.connected ? "emerald" : "amber"}>
+                      {c.connected ? "Connected" : "Not Connected"}
+                    </StatusPill>
+                  </div>
+                  <div className="mt-2 text-sm text-slate-300">
+                    {channelCapabilities[c.name] || "Channel integration for growth automations."}
+                  </div>
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      className="h-9 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-100"
+                    >
+                      Connect
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid xl:grid-cols-3 gap-4">
         <GlassCard title="Campaigns" right="read-only">
@@ -495,15 +632,11 @@ export default function PlatformGrowthEngineTab() {
             {conversations.map((cv, idx) => (
               <div key={cv.id || cv.thread_id || idx} className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="font-semibold text-slate-100 truncate">
-                    {cv.subject || cv.lead_name || cv.contact || `Conversation #${cv.id || idx + 1}`}
-                  </div>
+                  <div className="font-semibold text-slate-100 truncate">{cv.subject || cv.lead_name || cv.contact || `Conversation #${cv.id || idx + 1}`}</div>
                   <StatusPill tone={toneFromStatus(cv.status)}>{cv.status || "Open"}</StatusPill>
                 </div>
                 <div className="mt-2 text-xs text-slate-400 truncate">{cv.preview || cv.last_message || cv.snippet || "No preview available."}</div>
-                <div className="mt-1 text-[11px] text-slate-500">
-                  Last activity: {fmtDateTime(cv.last_activity_at || cv.updated_at || cv.created_at)}
-                </div>
+                <div className="mt-1 text-[11px] text-slate-500">Last activity: {fmtDateTime(cv.last_activity_at || cv.updated_at || cv.created_at)}</div>
               </div>
             ))}
             {!conversations.length ? <div className="text-slate-500 text-sm">No conversations available.</div> : null}
