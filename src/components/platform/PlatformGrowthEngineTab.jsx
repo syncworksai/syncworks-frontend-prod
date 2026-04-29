@@ -1,38 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  Activity,
-  AtSign,
-  Building2,
-  Camera,
-  Clapperboard,
-  Hash,
-  Mail,
-  MessageSquare,
-  PlayCircle,
-  Search,
-  ShieldCheck,
-  Users,
-} from "lucide-react";
 import api from "../../api/client";
-
-function cx(...parts) {
-  return parts.filter(Boolean).join(" ");
-}
-
-function safeList(data) {
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.results)) return data.results;
-  if (Array.isArray(data?.items)) return data.items;
-  if (Array.isArray(data?.value)) return data.value;
-  return [];
-}
-
-function fmtDateTime(v) {
-  if (!v) return "—";
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return String(v);
-  return d.toLocaleString();
-}
+import { CHANNELS, DEMO_LEADS, EDITABLE_STATUSES } from "./growth/growthData";
+import { cx, fmtDateTime, normalizeSource, safeList, sourceTone, toneFromStatus } from "./growth/growthUtils";
 
 function GlassCard({ title, right, children }) {
   return (
@@ -65,6 +34,7 @@ function StatusPill({ children, tone = "slate" }) {
     rose: "bg-rose-500/10 border-rose-500/20 text-rose-200",
     purple: "bg-purple-500/10 border-purple-500/20 text-purple-200",
   };
+
   return (
     <span className={cx("text-[11px] px-2 py-1 rounded-full border", tones[tone] || tones.slate)}>
       {children}
@@ -72,58 +42,10 @@ function StatusPill({ children, tone = "slate" }) {
   );
 }
 
-function toneFromStatus(status) {
-  const s = String(status || "").toUpperCase();
-  if (["ACTIVE", "LIVE", "OPEN", "RUNNING", "CONNECTED", "PUBLISHED", "HEALTHY"].includes(s)) return "emerald";
-  if (["NEW", "PENDING", "QUEUED", "WARM", "SCHEDULED"].includes(s)) return "cyan";
-  if (["PAUSED", "WAITING", "IDLE", "DRAFT", "PLANNED", "WARN"].includes(s)) return "amber";
-  if (["FAILED", "ERROR", "BLOCKED", "DROPPED", "LOST", "EXPIRED", "MISSING"].includes(s)) return "rose";
-  if (["QUALIFIED", "IN_PROGRESS"].includes(s)) return "purple";
-  return "slate";
-}
-
-function normalizeSource(v) {
-  const raw = String(v || "").trim().toLowerCase();
-  if (!raw) return "Manual";
-  if (raw.includes("facebook")) return "Facebook Ads";
-  if (raw.includes("instagram")) return "Instagram";
-  if (raw.includes("google")) return "Google";
-  if (raw.includes("referral")) return "Referral";
-  if (raw.includes("website") || raw.includes("web")) return "Website";
-  if (raw.includes("manual")) return "Manual";
-  return "Manual";
-}
-
-function sourceTone(source) {
-  if (source === "Facebook Ads") return "cyan";
-  if (source === "Instagram") return "purple";
-  if (source === "Google") return "emerald";
-  if (source === "Referral") return "amber";
-  if (source === "Website") return "slate";
-  return "slate";
-}
-
 function ChannelBadge({ channel }) {
-  const iconClass = "w-3.5 h-3.5";
-  const icons = {
-    facebook: <Users className={iconClass} />,
-    instagram: <Camera className={iconClass} />,
-    google_business: <Building2 className={iconClass} />,
-    youtube: <PlayCircle className={iconClass} />,
-    tiktok: <Clapperboard className={iconClass} />,
-    x: <AtSign className={iconClass} />,
-    linkedin: <Users className={iconClass} />,
-    pinterest: <Hash className={iconClass} />,
-    snapchat: <Camera className={iconClass} />,
-    nextdoor: <Building2 className={iconClass} />,
-    truth_social: <MessageSquare className={iconClass} />,
-    threads: <AtSign className={iconClass} />,
-    email: <Mail className={iconClass} />,
-    sms_twilio_planned: <MessageSquare className={iconClass} />,
-  };
   return (
     <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] text-slate-200 border-slate-600/40 bg-slate-600/10">
-      {icons[channel.key] || <Hash className={iconClass} />}
+      <span className="inline-block w-3.5 h-3.5 rounded-sm bg-slate-500/40" />
       {channel.short}
     </span>
   );
@@ -142,35 +64,9 @@ export default function PlatformGrowthEngineTab() {
 
   const [dashboard, setDashboard] = useState({});
   const [leads, setLeads] = useState([]);
-  const [demoLeads, setDemoLeads] = useState([
-    { id: "demo-1", name: "Roofing Lead", source: "Organic", status: "NEW", stage: "NEW" },
-    { id: "demo-2", name: "HVAC Commercial Prospect", source: "Paid Search", status: "QUALIFIED", stage: "QUALIFIED" },
-    { id: "demo-3", name: "Property Mgmt Referral", source: "Referral", status: "NURTURING", stage: "NURTURING" },
-    { id: "demo-4", name: "Plumbing Contract", source: "Outbound", status: "WON", stage: "WON" },
-  ]);
+  const [demoLeads, setDemoLeads] = useState(DEMO_LEADS);
   const [campaigns, setCampaigns] = useState([]);
   const [conversations, setConversations] = useState([]);
-  const EDITABLE_STATUSES = ["NEW", "QUALIFIED", "NURTURING", "WON", "LOST"];
-
-  const CHANNELS = useMemo(
-    () => [
-      { key: "facebook", name: "Facebook", short: "FB", description: "Run lead-ad follow-up and comment capture automations.", oauth: true },
-      { key: "instagram", name: "Instagram", short: "IG", description: "Trigger DM responders and nurture sequences from engagement.", oauth: true },
-      { key: "google_business", name: "Google Business", short: "GB", description: "Capture local-intent leads and automate review nudges.", oauth: true },
-      { key: "youtube", name: "YouTube", short: "YT", description: "Publish video snippets and route CTA traffic into SyncWorks.", oauth: true },
-      { key: "tiktok", name: "TikTok", short: "TT", description: "Queue short-form campaign clips and track inquiry volume.", oauth: true },
-      { key: "x", name: "X", short: "X", description: "Publish timely updates and drive reply/DM engagement flows.", oauth: true },
-      { key: "linkedin", name: "LinkedIn", short: "LI", description: "Share trust-building posts for B2B and property management audiences.", oauth: true },
-      { key: "pinterest", name: "Pinterest", short: "P", description: "Distribute evergreen visual content and drive site intent traffic.", oauth: true },
-      { key: "snapchat", name: "Snapchat", short: "SC", description: "Test geo-targeted story creative and short-lifecycle promotions.", oauth: true },
-      { key: "nextdoor", name: "Nextdoor", short: "ND", description: "Reach neighborhood audiences for local service visibility.", oauth: true },
-      { key: "truth_social", name: "Truth Social", short: "TS", description: "Publish brand-safe updates and monitor audience interactions.", oauth: true },
-      { key: "threads", name: "Threads", short: "TH", description: "Post conversational updates and route responses to nurture flows.", oauth: true },
-      { key: "email", name: "Email", short: "EM", description: "Available now: manual/free channel for lifecycle follow-up.", oauth: false, alwaysAvailable: true },
-      { key: "sms_twilio_planned", name: "SMS / Twilio planned", short: "SMS", description: "Planned: SMS/Twilio disabled until compliance/legal setup is approved.", oauth: false, planned: true },
-    ],
-    []
-  );
 
   async function loadAll() {
     setLoading(true);
@@ -322,7 +218,7 @@ export default function PlatformGrowthEngineTab() {
       map[ch.key] = { ...ch, connected };
     });
     return map;
-  }, [dashboard, CHANNELS]);
+  }, [dashboard]);
 
   const channelListFiltered = useMemo(() => {
     const q = channelQuery.toLowerCase().trim();
@@ -573,7 +469,7 @@ export default function PlatformGrowthEngineTab() {
 
                   <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
                     <div className="relative">
-                      <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">⌕</span>
                       <input value={channelQuery} onChange={(e) => setChannelQuery(e.target.value)} placeholder="Search channels..." className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-800 bg-slate-950 text-sm text-slate-200 placeholder:text-slate-500" />
                     </div>
                   </div>
@@ -641,7 +537,7 @@ export default function PlatformGrowthEngineTab() {
                           <div className="flex items-center justify-between"><span className="text-slate-400">Sync last run</span><span>{row.lastRun}</span></div>
                           <div className="flex items-center justify-between">
                             <span className="text-slate-400">Needs attention</span>
-                            {row.needsAttention ? <StatusPill tone="rose"><Activity className="w-3 h-3 inline mr-1" />Yes</StatusPill> : <StatusPill tone="emerald"><ShieldCheck className="w-3 h-3 inline mr-1" />No</StatusPill>}
+                            {row.needsAttention ? <StatusPill tone="rose">Yes</StatusPill> : <StatusPill tone="emerald">No</StatusPill>}
                           </div>
                         </div>
                       </div>
