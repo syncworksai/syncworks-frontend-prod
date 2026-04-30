@@ -4,8 +4,11 @@ import { CHANNELS, DEMO_LEADS, EDITABLE_STATUSES } from "./growth/growthData";
 import { cx, fmtDateTime, normalizeSource, safeList, sourceTone, toneFromStatus } from "./growth/growthUtils";
 import GrowthKpiGrid from "./growth/GrowthKpiGrid";
 import AcquisitionFunnel from "./growth/AcquisitionFunnel";
+import GrowthConnectChannelsCard from "./growth/GrowthConnectChannelsCard";
 import GrowthConnectChannelsDrawer from "./growth/GrowthConnectChannelsDrawer";
 import GrowthAutomationRecipesCard from "./growth/GrowthAutomationRecipesCard";
+import GrowthLeadPipelineCard from "./growth/GrowthLeadPipelineCard";
+import GrowthContentEngineCard from "./growth/GrowthContentEngineCard";
 
 function GlassCard({ title, right, children }) {
   return (
@@ -15,16 +18,6 @@ function GlassCard({ title, right, children }) {
         {right ? <div className="text-xs text-slate-400">{right}</div> : null}
       </div>
       <div className="mt-4">{children}</div>
-    </div>
-  );
-}
-
-function KpiCard({ label, value, hint }) {
-  return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
-      <div className="text-xs text-slate-400">{label}</div>
-      <div className="text-2xl font-extrabold mt-1 text-slate-100">{value ?? "—"}</div>
-      {hint ? <div className="text-[11px] text-slate-500 mt-1">{hint}</div> : null}
     </div>
   );
 }
@@ -42,15 +35,6 @@ function StatusPill({ children, tone = "slate" }) {
   return (
     <span className={cx("text-[11px] px-2 py-1 rounded-full border", tones[tone] || tones.slate)}>
       {children}
-    </span>
-  );
-}
-
-function ChannelBadge({ channel }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] text-slate-200 border-slate-600/40 bg-slate-600/10">
-      <span className="inline-block w-3.5 h-3.5 rounded-sm bg-slate-500/40" />
-      {channel.short}
     </span>
   );
 }
@@ -334,29 +318,14 @@ export default function PlatformGrowthEngineTab() {
       <GrowthKpiGrid kpis={kpis} />
 
       <div className="grid md:grid-cols-2 gap-4">
-        <GlassCard title="Connect Channels" right={isDemoMode ? "demo seed + expanded coverage" : "live + expanded coverage"}>
-          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-2">
-            {Object.values(channelStateMap).map((c) => {
-              const status = getChannelStatus(c);
-              return (
-                <div key={c.key} className="rounded-xl border border-slate-800 bg-slate-950/55 px-3 py-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <ChannelBadge channel={c} />
-                      <div className="text-sm text-slate-200">{c.name}</div>
-                    </div>
-                    <StatusPill tone={toneFromStatus(status)}>{getChannelLabel(status)}</StatusPill>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-3 flex justify-end">
-            <button type="button" onClick={() => setConnectModalOpen(true)} className="h-9 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-100">
-              Connect Channels
-            </button>
-          </div>
-        </GlassCard>
+        <GrowthConnectChannelsCard
+          channelStateMap={channelStateMap}
+          getChannelStatus={getChannelStatus}
+          getChannelLabel={getChannelLabel}
+          toneFromStatus={toneFromStatus}
+          setConnectModalOpen={setConnectModalOpen}
+          isDemoMode={isDemoMode}
+        />
 
         <GlassCard title="Acquisition funnel" right="captured → referred">
           <AcquisitionFunnel funnel={funnel} />
@@ -365,44 +334,19 @@ export default function PlatformGrowthEngineTab() {
 
       <GrowthAutomationRecipesCard recipeCards={recipeCards} />
 
-      <GlassCard title="Lead pipeline" right={isDemoMode ? "demo mode • read-only backend" : "live mode"}>
-        <div className="flex flex-wrap gap-2">
-          {leadStatuses.map((s) => (
-            <button key={s} type="button" onClick={() => setStatusFilter(s)} className={cx("h-8 px-3 rounded-2xl text-xs border transition", statusFilter === s ? "border-cyan-500/35 bg-cyan-500/15 text-cyan-100" : "border-slate-800 bg-slate-950/55 hover:bg-slate-900/50 text-slate-300")}>
-              {s}
-            </button>
-          ))}
-        </div>
-        <div className="mt-4 grid md:grid-cols-2 xl:grid-cols-5 gap-3">
-          {pipelineGroups.map((group) => (
-            <div key={group.key} className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="font-semibold text-slate-100">{group.key}</div>
-                <StatusPill tone={toneFromStatus(group.key)}>{group.items.length}</StatusPill>
-              </div>
-              <div className="mt-3 space-y-2">
-                {group.items.map((l, idx) => {
-                  const current = String(l.status || "").toUpperCase();
-                  const selectValue = EDITABLE_STATUSES.includes(current) ? current : "NEW";
-                  return (
-                    <div key={l.id || l.lead_id || `${group.key}-${idx}`} className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
-                      <div className="font-semibold text-sm text-slate-100">{l.name || l.email || `Lead #${idx + 1}`}</div>
-                      <div className="text-[11px] text-slate-400 mt-1">
-                        <StatusPill tone={sourceTone(l.source)}>{l.source || "Manual"}</StatusPill> • Last: {fmtDateTime(l.updated_at || l.created_at)}
-                      </div>
-                      <div className="mt-2">
-                        <select value={selectValue} disabled={!isDemoMode && !!busyLeadIds[String(l.id || l.lead_id)]} onChange={(e) => patchLeadStatus(l, e.target.value)} className="w-full rounded-xl border border-slate-800 bg-slate-950 px-2 py-1.5 text-xs text-slate-200">
-                          {EDITABLE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </GlassCard>
+      <GrowthLeadPipelineCard
+        pipelineGroups={pipelineGroups}
+        leadStatuses={leadStatuses}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        patchLeadStatus={patchLeadStatus}
+        busyLeadIds={busyLeadIds}
+        isDemoMode={isDemoMode}
+        cx={cx}
+        toneFromStatus={toneFromStatus}
+        sourceTone={sourceTone}
+        fmtDateTime={fmtDateTime}
+      />
 
       <GrowthConnectChannelsDrawer
         connectModalOpen={connectModalOpen}
@@ -421,73 +365,12 @@ export default function PlatformGrowthEngineTab() {
         cx={cx}
       />
 
-      <GlassCard title="Content Engine" right="frontend-first • clone-ready for SBO add-on">
-        <div className="grid xl:grid-cols-3 gap-4">
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
-            <div className="flex items-center justify-between gap-2"><div className="font-semibold text-slate-100">Content Queue</div><StatusPill tone="cyan">Demo Queue</StatusPill></div>
-            <div className="mt-3 space-y-2">
-              {contentQueue.map((item) => (
-                <div key={item.id} className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
-                  <div className="text-sm text-slate-100 font-semibold">{item.title}</div>
-                  <div className="mt-1"><StatusPill tone={toneFromStatus(item.status)}>{item.status}</StatusPill></div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4 xl:col-span-2">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div>
-                <div className="font-semibold text-slate-100">AI Post Generator</div>
-                <div className="text-xs text-slate-400 mt-1">Promptless starter actions for social + review growth.</div>
-              </div>
-              <button type="button" className="h-8 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 text-cyan-100">Clone for SBO Add-On</button>
-            </div>
-            <div className="mt-3 grid sm:grid-cols-2 xl:grid-cols-4 gap-2">
-              {aiPostPresets.map((preset) => (
-                <button key={preset.key} type="button" className="h-9 px-3 rounded-xl text-xs border border-slate-800 bg-slate-950/70 hover:bg-slate-900/50 text-slate-200 text-left">{preset.label}</button>
-              ))}
-            </div>
-            <div className="mt-3 grid md:grid-cols-3 gap-2">
-              {aiGeneratedPreviews.map((card) => (
-                <div key={card.id} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
-                  <div className="text-sm text-slate-100 font-semibold">{card.title}</div>
-                  <div className="mt-1 text-xs text-slate-300">{card.body}</div>
-                  <div className="mt-2 text-[11px] text-slate-500">{card.channel}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 grid md:grid-cols-2 gap-4">
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
-            <div className="font-semibold text-slate-100">Calendar-lite publishing view</div>
-            <div className="text-xs text-slate-400 mt-1">Weekly strip with Mon/Wed/Fri cadence.</div>
-            <div className="mt-3 grid grid-cols-7 gap-2 text-center text-xs">
-              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-                <div key={d} className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
-                  <div className="text-slate-300">{d}</div>
-                  {["Mon", "Wed", "Fri"].includes(d) ? <div className="mt-2"><StatusPill tone="purple">Post</StatusPill></div> : <div className="mt-2 text-slate-600">—</div>}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4 flex flex-col justify-between">
-            <div>
-              <div className="font-semibold text-slate-100">Create from Ticket</div>
-              <div className="text-sm text-slate-300 mt-2">Convert completed service ticket into social post.</div>
-              <div className="text-xs text-slate-500 mt-1">Frontend-only mock CTA for content automation pipeline.</div>
-            </div>
-            <div className="mt-4">
-              <button type="button" className="h-9 px-3 rounded-2xl text-xs border border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-100">
-                Convert completed service ticket into social post
-              </button>
-            </div>
-          </div>
-        </div>
-      </GlassCard>
+      <GrowthContentEngineCard
+        contentQueue={contentQueue}
+        aiPostPresets={aiPostPresets}
+        aiGeneratedPreviews={aiGeneratedPreviews}
+        toneFromStatus={toneFromStatus}
+      />
 
       <div className="grid xl:grid-cols-3 gap-4">
         <GlassCard title="Campaigns" right="read-only">
