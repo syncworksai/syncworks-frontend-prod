@@ -4,8 +4,8 @@ import { CHANNELS, DEMO_LEADS, EDITABLE_STATUSES } from "./growth/growthData";
 import { cx, fmtDateTime, normalizeSource, safeList, sourceTone, toneFromStatus } from "./growth/growthUtils";
 import GrowthKpiGrid from "./growth/GrowthKpiGrid";
 import AcquisitionFunnel from "./growth/AcquisitionFunnel";
-import ChannelBadge from "./growth/ChannelBadge";
-import GrowthConnectChannelsCard from "./growth/GrowthConnectChannelsCard";
+import GrowthConnectChannelsDrawer from "./growth/GrowthConnectChannelsDrawer";
+import GrowthAutomationRecipesCard from "./growth/GrowthAutomationRecipesCard";
 
 function GlassCard({ title, right, children }) {
   return (
@@ -15,6 +15,16 @@ function GlassCard({ title, right, children }) {
         {right ? <div className="text-xs text-slate-400">{right}</div> : null}
       </div>
       <div className="mt-4">{children}</div>
+    </div>
+  );
+}
+
+function KpiCard({ label, value, hint }) {
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
+      <div className="text-xs text-slate-400">{label}</div>
+      <div className="text-2xl font-extrabold mt-1 text-slate-100">{value ?? "—"}</div>
+      {hint ? <div className="text-[11px] text-slate-500 mt-1">{hint}</div> : null}
     </div>
   );
 }
@@ -32,6 +42,15 @@ function StatusPill({ children, tone = "slate" }) {
   return (
     <span className={cx("text-[11px] px-2 py-1 rounded-full border", tones[tone] || tones.slate)}>
       {children}
+    </span>
+  );
+}
+
+function ChannelBadge({ channel }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] text-slate-200 border-slate-600/40 bg-slate-600/10">
+      <span className="inline-block w-3.5 h-3.5 rounded-sm bg-slate-500/40" />
+      {channel.short}
     </span>
   );
 }
@@ -315,38 +334,36 @@ export default function PlatformGrowthEngineTab() {
       <GrowthKpiGrid kpis={kpis} />
 
       <div className="grid md:grid-cols-2 gap-4">
-        <GrowthConnectChannelsCard
-          channelStateMap={channelStateMap}
-          getChannelStatus={getChannelStatus}
-          getChannelLabel={getChannelLabel}
-          toneFromStatus={toneFromStatus}
-          setConnectModalOpen={setConnectModalOpen}
-          isDemoMode={isDemoMode}
-        />
+        <GlassCard title="Connect Channels" right={isDemoMode ? "demo seed + expanded coverage" : "live + expanded coverage"}>
+          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-2">
+            {Object.values(channelStateMap).map((c) => {
+              const status = getChannelStatus(c);
+              return (
+                <div key={c.key} className="rounded-xl border border-slate-800 bg-slate-950/55 px-3 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <ChannelBadge channel={c} />
+                      <div className="text-sm text-slate-200">{c.name}</div>
+                    </div>
+                    <StatusPill tone={toneFromStatus(status)}>{getChannelLabel(status)}</StatusPill>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-3 flex justify-end">
+            <button type="button" onClick={() => setConnectModalOpen(true)} className="h-9 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-100">
+              Connect Channels
+            </button>
+          </div>
+        </GlassCard>
 
         <GlassCard title="Acquisition funnel" right="captured → referred">
           <AcquisitionFunnel funnel={funnel} />
         </GlassCard>
       </div>
 
-      <GlassCard title="Automation recipes (lightweight)" right="frontend-first • demo fallback">
-        <div className="grid md:grid-cols-2 gap-3">
-          {recipeCards.map((r) => (
-            <div key={r.id} className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <div className="font-semibold text-slate-100">{r.name}</div>
-                <StatusPill tone={r.status === "ACTIVE" ? "emerald" : "amber"}>{r.status}</StatusPill>
-              </div>
-              <div className="mt-2 text-sm text-slate-300">{r.summary}</div>
-              <div className="mt-2 text-[11px] text-slate-500">{r.audience}</div>
-              <div className="mt-3 flex items-center gap-2">
-                <button type="button" className="h-8 px-3 rounded-2xl text-xs border border-slate-800 bg-slate-950/70 text-slate-300">View recipe</button>
-                <button type="button" className="h-8 px-3 rounded-2xl text-xs border border-cyan-500/30 bg-cyan-500/10 text-cyan-100">Clone for SBO</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </GlassCard>
+      <GrowthAutomationRecipesCard recipeCards={recipeCards} />
 
       <GlassCard title="Lead pipeline" right={isDemoMode ? "demo mode • read-only backend" : "live mode"}>
         <div className="flex flex-wrap gap-2">
@@ -387,135 +404,22 @@ export default function PlatformGrowthEngineTab() {
         </div>
       </GlassCard>
 
-      {connectModalOpen ? (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConnectModalOpen(false)} />
-          <div className="absolute inset-y-0 right-0 w-full max-w-5xl border-l border-slate-800 bg-[#070a12] text-slate-100 shadow-2xl">
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-slate-100">Connect Channels</div>
-                <div className="text-xs text-slate-400 mt-1">God Mode controls now • same engine later powers SBO Growth Automation add-on.</div>
-              </div>
-              <button type="button" onClick={() => setConnectModalOpen(false)} className="h-9 px-3 rounded-2xl text-xs border border-slate-800 bg-slate-950/60 text-slate-200">Close</button>
-            </div>
-
-            <div className="p-4 border-b border-slate-800 flex gap-2">
-              {[
-                { key: "connect_accounts", label: "Connect Accounts" },
-                { key: "automation_recipes", label: "Automation Recipes" },
-                { key: "account_health", label: "Account Health" },
-              ].map((t) => (
-                <button key={t.key} type="button" onClick={() => setDrawerTab(t.key)} className={cx("h-8 px-3 rounded-2xl text-xs border", drawerTab === t.key ? "border-cyan-500/35 bg-cyan-500/15 text-cyan-100" : "border-slate-800 bg-slate-950/60 text-slate-300")}>
-                  {t.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="p-4 space-y-4 overflow-y-auto h-[calc(100%-122px)]">
-              {drawerTab === "connect_accounts" ? (
-                <>
-                  <div className="rounded-2xl border border-cyan-500/25 bg-cyan-500/10 p-4">
-                    <div className="font-semibold text-cyan-100">How it works</div>
-                    <ul className="mt-2 space-y-1 text-sm text-cyan-50/90 list-disc pl-5">
-                      <li>Connect a channel</li>
-                      <li>Pick automation recipes</li>
-                      <li>Capture leads into SyncWorks</li>
-                      <li>Follow up automatically</li>
-                    </ul>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">⌕</span>
-                      <input value={channelQuery} onChange={(e) => setChannelQuery(e.target.value)} placeholder="Search channels..." className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-800 bg-slate-950 text-sm text-slate-200 placeholder:text-slate-500" />
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
-                    {channelListFiltered.map((c) => {
-                      const status = getChannelStatus(c);
-                      const pending = status === "SETUP_PENDING";
-                      const planned = status === "PLANNED";
-                      const email = c.key === "email";
-                      return (
-                        <div key={c.key} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2"><ChannelBadge channel={c} /><div className="font-semibold text-slate-100">{c.name}</div></div>
-                            <StatusPill tone={toneFromStatus(status)}>{getChannelLabel(status)}</StatusPill>
-                          </div>
-                          <div className="mt-2 text-sm text-slate-300">{c.description}</div>
-                          {pending ? <div className="mt-2 text-xs text-amber-200 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2">OAuth credentials required in backend settings before live connection.</div> : null}
-                          {planned ? <div className="mt-2 text-xs text-amber-200 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2">SMS/Twilio remains disabled until compliance and legal setup is complete.</div> : null}
-                          <div className="mt-3">
-                            <button type="button" onClick={() => handleConnectChannel(c)} disabled={pending || planned || email} className="h-9 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 text-cyan-100 disabled:opacity-60">
-                              {pending ? "Setup Pending" : planned ? "Planned" : email ? "Email Available" : "Connect"}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              ) : null}
-
-              {drawerTab === "automation_recipes" ? (
-                <div className="grid md:grid-cols-2 gap-3">
-                  {recipeCards.map((r) => (
-                    <div key={r.id} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="font-semibold text-slate-100">{r.name}</div>
-                        <StatusPill tone={r.status === "ACTIVE" ? "emerald" : "amber"}>{r.status}</StatusPill>
-                      </div>
-                      <div className="mt-2 text-sm text-slate-300">{r.summary}</div>
-                      <div className="mt-3 flex gap-2">
-                        <button type="button" className="h-8 px-3 rounded-2xl text-xs border border-slate-800 bg-slate-950/70 text-slate-300">Preview</button>
-                        <button type="button" className="h-8 px-3 rounded-2xl text-xs border border-cyan-500/30 bg-cyan-500/10 text-cyan-100">Clone for SBO</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
-              {drawerTab === "account_health" ? (
-                <div className="space-y-3">
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                    <div className="font-semibold text-slate-100">Account Health</div>
-                    <div className="text-xs text-slate-400 mt-1">Connected status, mock token health, sync last run, and needs-attention indicators.</div>
-                  </div>
-                  <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
-                    {accountHealthRows.map((row) => (
-                      <div key={row.key} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2"><ChannelBadge channel={row} /><div className="font-semibold text-slate-100">{row.name}</div></div>
-                          <StatusPill tone={toneFromStatus(row.status)}>{getChannelLabel(row.status)}</StatusPill>
-                        </div>
-                        <div className="mt-3 space-y-1 text-xs text-slate-300">
-                          <div className="flex items-center justify-between"><span className="text-slate-400">Token health</span><StatusPill tone={toneFromStatus(row.token)}>{row.token}</StatusPill></div>
-                          <div className="flex items-center justify-between"><span className="text-slate-400">Sync last run</span><span>{row.lastRun}</span></div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-slate-400">Needs attention</span>
-                            {row.needsAttention ? <StatusPill tone="rose">Yes</StatusPill> : <StatusPill tone="emerald">No</StatusPill>}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                <div className="font-semibold text-slate-100">Admin setup checklist</div>
-                <ul className="mt-2 grid sm:grid-cols-2 gap-2 text-xs text-slate-300">
-                  {["META_APP_ID", "META_APP_SECRET", "META_REDIRECT_URI", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI"].map((item) => (
-                    <li key={item} className="rounded-lg border border-slate-800 bg-slate-900/60 px-2 py-1.5">{item}</li>
-                  ))}
-                </ul>
-                <div className="mt-3 text-xs text-slate-400">Official OAuth connections require provider credentials and app review where applicable.</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <GrowthConnectChannelsDrawer
+        connectModalOpen={connectModalOpen}
+        setConnectModalOpen={setConnectModalOpen}
+        drawerTab={drawerTab}
+        setDrawerTab={setDrawerTab}
+        channelQuery={channelQuery}
+        setChannelQuery={setChannelQuery}
+        channelListFiltered={channelListFiltered}
+        getChannelStatus={getChannelStatus}
+        getChannelLabel={getChannelLabel}
+        toneFromStatus={toneFromStatus}
+        handleConnectChannel={handleConnectChannel}
+        recipeCards={recipeCards}
+        accountHealthRows={accountHealthRows}
+        cx={cx}
+      />
 
       <GlassCard title="Content Engine" right="frontend-first • clone-ready for SBO add-on">
         <div className="grid xl:grid-cols-3 gap-4">
