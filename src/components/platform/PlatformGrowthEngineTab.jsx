@@ -4,6 +4,8 @@ import { CHANNELS, DEMO_LEADS, EDITABLE_STATUSES } from "./growth/growthData";
 import { cx, fmtDateTime, normalizeSource, safeList, sourceTone, toneFromStatus } from "./growth/growthUtils";
 import GrowthKpiGrid from "./growth/GrowthKpiGrid";
 import AcquisitionFunnel from "./growth/AcquisitionFunnel";
+import ChannelBadge from "./growth/ChannelBadge";
+import GrowthConnectChannelsCard from "./growth/GrowthConnectChannelsCard";
 
 function GlassCard({ title, right, children }) {
   return (
@@ -13,16 +15,6 @@ function GlassCard({ title, right, children }) {
         {right ? <div className="text-xs text-slate-400">{right}</div> : null}
       </div>
       <div className="mt-4">{children}</div>
-    </div>
-  );
-}
-
-function KpiCard({ label, value, hint }) {
-  return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
-      <div className="text-xs text-slate-400">{label}</div>
-      <div className="text-2xl font-extrabold mt-1 text-slate-100">{value ?? "—"}</div>
-      {hint ? <div className="text-[11px] text-slate-500 mt-1">{hint}</div> : null}
     </div>
   );
 }
@@ -40,15 +32,6 @@ function StatusPill({ children, tone = "slate" }) {
   return (
     <span className={cx("text-[11px] px-2 py-1 rounded-full border", tones[tone] || tones.slate)}>
       {children}
-    </span>
-  );
-}
-
-function ChannelBadge({ channel }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] text-slate-200 border-slate-600/40 bg-slate-600/10">
-      <span className="inline-block w-3.5 h-3.5 rounded-sm bg-slate-500/40" />
-      {channel.short}
     </span>
   );
 }
@@ -332,29 +315,14 @@ export default function PlatformGrowthEngineTab() {
       <GrowthKpiGrid kpis={kpis} />
 
       <div className="grid md:grid-cols-2 gap-4">
-        <GlassCard title="Connect Channels" right={isDemoMode ? "demo seed + expanded coverage" : "live + expanded coverage"}>
-          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-2">
-            {Object.values(channelStateMap).map((c) => {
-              const status = getChannelStatus(c);
-              return (
-                <div key={c.key} className="rounded-xl border border-slate-800 bg-slate-950/55 px-3 py-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <ChannelBadge channel={c} />
-                      <div className="text-sm text-slate-200">{c.name}</div>
-                    </div>
-                    <StatusPill tone={toneFromStatus(status)}>{getChannelLabel(status)}</StatusPill>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-3 flex justify-end">
-            <button type="button" onClick={() => setConnectModalOpen(true)} className="h-9 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-100">
-              Connect Channels
-            </button>
-          </div>
-        </GlassCard>
+        <GrowthConnectChannelsCard
+          channelStateMap={channelStateMap}
+          getChannelStatus={getChannelStatus}
+          getChannelLabel={getChannelLabel}
+          toneFromStatus={toneFromStatus}
+          setConnectModalOpen={setConnectModalOpen}
+          isDemoMode={isDemoMode}
+        />
 
         <GlassCard title="Acquisition funnel" right="captured → referred">
           <AcquisitionFunnel funnel={funnel} />
