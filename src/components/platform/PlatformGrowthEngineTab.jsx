@@ -9,6 +9,7 @@ import GrowthConnectChannelsDrawer from "./growth/GrowthConnectChannelsDrawer";
 import GrowthAutomationRecipesCard from "./growth/GrowthAutomationRecipesCard";
 import GrowthLeadPipelineCard from "./growth/GrowthLeadPipelineCard";
 import GrowthContentEngineCard from "./growth/GrowthContentEngineCard";
+import GrowthSummaryCards from "./growth/GrowthSummaryCards";
 
 function GlassCard({ title, right, children }) {
   return (
@@ -19,23 +20,6 @@ function GlassCard({ title, right, children }) {
       </div>
       <div className="mt-4">{children}</div>
     </div>
-  );
-}
-
-function StatusPill({ children, tone = "slate" }) {
-  const tones = {
-    slate: "bg-slate-500/10 border-slate-500/20 text-slate-200",
-    cyan: "bg-cyan-500/10 border-cyan-500/20 text-cyan-200",
-    emerald: "bg-emerald-500/10 border-emerald-500/20 text-emerald-200",
-    amber: "bg-amber-500/10 border-amber-500/20 text-amber-200",
-    rose: "bg-rose-500/10 border-rose-500/20 text-rose-200",
-    purple: "bg-purple-500/10 border-purple-500/20 text-purple-200",
-  };
-
-  return (
-    <span className={cx("text-[11px] px-2 py-1 rounded-full border", tones[tone] || tones.slate)}>
-      {children}
-    </span>
   );
 }
 
@@ -60,16 +44,20 @@ export default function PlatformGrowthEngineTab() {
     setLoading(true);
     setErr("");
     setUpdateErr("");
+
     const requests = [
       api.get("/platform-growth/dashboard/").catch(() => ({ __failed: true })),
       api.get("/platform-growth/leads/").catch(() => ({ __failed: true })),
       api.get("/platform-growth/campaigns/").catch(() => ({ __failed: true })),
       api.get("/platform-growth/conversations/").catch(() => ({ __failed: true })),
     ];
+
     try {
       const [rDashboard, rLeads, rCampaigns, rConversations] = await Promise.all(requests);
       const anySuccess = [rDashboard, rLeads, rCampaigns, rConversations].some((x) => !x?.__failed);
+
       if (!anySuccess) throw new Error("Growth OS endpoints unavailable.");
+
       setDashboard(rDashboard?.data || {});
       setLeads(safeList(rLeads?.data).slice(0, 50));
       setCampaigns(safeList(rCampaigns?.data).slice(0, 12));
@@ -98,6 +86,7 @@ export default function PlatformGrowthEngineTab() {
 
   async function patchLeadStatus(lead, nextStatus) {
     const demoMode = leads.length === 0;
+
     if (demoMode) {
       const key = String(lead?.id || lead?.lead_id);
       setDemoLeads((prev) =>
@@ -110,6 +99,7 @@ export default function PlatformGrowthEngineTab() {
 
     const leadId = lead?.id || lead?.lead_id;
     if (!leadId || !nextStatus) return;
+
     const prevStatus = lead?.status || "";
     const key = String(leadId);
 
@@ -189,30 +179,46 @@ export default function PlatformGrowthEngineTab() {
 
   const pipelineGroups = useMemo(() => {
     const map = new Map();
+
     enrichedLeads.forEach((lead) => {
       const bucket = String(lead.status || lead.stage || "UNSPECIFIED").toUpperCase();
       if (statusFilter !== "ALL" && bucket !== statusFilter) return;
       if (!map.has(bucket)) map.set(bucket, []);
       map.get(bucket).push(lead);
     });
+
     return EDITABLE_STATUSES.map((key) => ({ key, items: map.get(key) || [] }));
   }, [enrichedLeads, statusFilter]);
 
   const channelStateMap = useMemo(() => {
     const backend = dashboard?.channel_connections || {};
     const map = {};
+
     CHANNELS.forEach((ch) => {
-      const connected = ch.alwaysAvailable ? true : !!backend[ch.key] || !!backend[ch.name] || !!backend[ch.name?.toLowerCase?.()];
+      const connected =
+        ch.alwaysAvailable ||
+        !!backend[ch.key] ||
+        !!backend[ch.name] ||
+        !!backend[ch.name?.toLowerCase?.()];
+
       map[ch.key] = { ...ch, connected };
     });
+
     return map;
   }, [dashboard]);
 
   const channelListFiltered = useMemo(() => {
     const q = channelQuery.toLowerCase().trim();
     const list = Object.values(channelStateMap);
+
     if (!q) return list;
-    return list.filter((c) => c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q) || c.short.toLowerCase().includes(q));
+
+    return list.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.description.toLowerCase().includes(q) ||
+        c.short.toLowerCase().includes(q)
+    );
   }, [channelStateMap, channelQuery]);
 
   function getChannelStatus(channel) {
@@ -242,6 +248,7 @@ export default function PlatformGrowthEngineTab() {
         const token = c.planned ? "N/A" : connected ? (idx % 4 === 0 ? "WARN" : "HEALTHY") : "MISSING";
         const lastRun = connected ? `${idx + 1}h ago` : "—";
         const needsAttention = status === "SETUP_PENDING" || token === "WARN" || token === "MISSING";
+
         return { ...c, status, token, lastRun, needsAttention };
       }),
     [channelStateMap, channelSetupPending]
@@ -253,6 +260,7 @@ export default function PlatformGrowthEngineTab() {
       acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {});
+
     return {
       captured: Number(dashboard?.funnel?.captured ?? enrichedLeads.length ?? 0),
       qualified: Number(dashboard?.funnel?.qualified ?? byStatus.QUALIFIED ?? 0),
@@ -306,9 +314,18 @@ export default function PlatformGrowthEngineTab() {
       <div className="rounded-3xl border border-slate-800 bg-slate-950/35 p-4 flex items-center justify-between gap-3 flex-wrap">
         <div>
           <div className="text-sm font-semibold text-slate-100">Growth OS</div>
-          <div className="text-xs text-slate-500 mt-1">Read-only growth intelligence across leads, campaigns, conversations, and activations.</div>
+          <div className="text-xs text-slate-500 mt-1">
+            Read-only growth intelligence across leads, campaigns, conversations, and activations.
+          </div>
         </div>
-        <button type="button" onClick={loadAll} className="h-9 px-3 rounded-2xl text-xs border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40 text-slate-200">Refresh</button>
+
+        <button
+          type="button"
+          onClick={loadAll}
+          className="h-9 px-3 rounded-2xl text-xs border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40 text-slate-200"
+        >
+          Refresh
+        </button>
       </div>
 
       {err ? <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/20 rounded-2xl p-3">{err}</div> : null}
@@ -372,51 +389,13 @@ export default function PlatformGrowthEngineTab() {
         toneFromStatus={toneFromStatus}
       />
 
-      <div className="grid xl:grid-cols-3 gap-4">
-        <GlassCard title="Campaigns" right="read-only">
-          <div className="space-y-3">
-            {campaigns.map((c, idx) => (
-              <div key={c.id || idx} className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-semibold text-slate-100 truncate">{c.name || `Campaign #${idx + 1}`}</div>
-                  <StatusPill tone={toneFromStatus(c.status)}>{c.status || "Unknown"}</StatusPill>
-                </div>
-                <div className="mt-2 text-xs text-slate-400">Channel: {c.channel || "—"} • Reach: {c.reach ?? "—"}</div>
-              </div>
-            ))}
-          </div>
-        </GlassCard>
-
-        <GlassCard title="Conversation inbox preview" right="read-only">
-          <div className="space-y-3">
-            {conversations.map((cv, idx) => (
-              <div key={cv.id || idx} className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-semibold text-slate-100 truncate">{cv.subject || `Conversation #${idx + 1}`}</div>
-                  <StatusPill tone={toneFromStatus(cv.status)}>{cv.status || "Open"}</StatusPill>
-                </div>
-                <div className="mt-2 text-xs text-slate-400 truncate">{cv.preview || "No preview available."}</div>
-                <div className="mt-1 text-[11px] text-slate-500">Last activity: {fmtDateTime(cv.updated_at || cv.created_at)}</div>
-              </div>
-            ))}
-          </div>
-        </GlassCard>
-
-        <GlassCard title="Automation events" right="activity feed">
-          <div className="space-y-3">
-            {activityFeed.map((ev, idx) => (
-              <div key={ev.id || idx} className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-semibold text-slate-100">{ev.title || "Automation Event"}</div>
-                  <StatusPill tone={toneFromStatus(ev.status || ev.level)}>{ev.status || ev.level || "Info"}</StatusPill>
-                </div>
-                <div className="mt-1 text-xs text-slate-400">{ev.description || ev.message || "No description provided."}</div>
-                <div className="mt-1 text-[11px] text-slate-500">{fmtDateTime(ev.created_at || ev.timestamp)}</div>
-              </div>
-            ))}
-          </div>
-        </GlassCard>
-      </div>
+      <GrowthSummaryCards
+        campaigns={campaigns}
+        conversations={conversations}
+        activityFeed={activityFeed}
+        fmtDateTime={fmtDateTime}
+        toneFromStatus={toneFromStatus}
+      />
     </div>
   );
 }
