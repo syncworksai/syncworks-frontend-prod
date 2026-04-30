@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import api from "../../api/client";
 import { CHANNELS, DEMO_LEADS, EDITABLE_STATUSES } from "./growth/growthData";
 import { cx, fmtDateTime, normalizeSource, safeList, sourceTone, toneFromStatus } from "./growth/growthUtils";
+import GrowthKpiGrid from "./growth/GrowthKpiGrid";
+import AcquisitionFunnel from "./growth/AcquisitionFunnel";
 
 function GlassCard({ title, right, children }) {
   return (
@@ -327,14 +329,7 @@ export default function PlatformGrowthEngineTab() {
       {updateErr ? <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/20 rounded-2xl p-3">{updateErr}</div> : null}
       {loading ? <div className="text-sm text-slate-400">Loading Growth OS…</div> : null}
 
-      <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        <KpiCard label="Leads captured" value={kpis.leadsCaptured} />
-        <KpiCard label="Conversations active" value={kpis.conversationsActive} />
-        <KpiCard label="Campaigns live" value={kpis.campaignsLive} />
-        <KpiCard label="Activation events" value={kpis.activationEvents} />
-        <KpiCard label="Conversion" value={kpis.conversionPlaceholder} hint="Placeholder until conversion model ships" />
-        <KpiCard label="Growth score" value={kpis.growthScore} />
-      </div>
+      <GrowthKpiGrid kpis={kpis} />
 
       <div className="grid md:grid-cols-2 gap-4">
         <GlassCard title="Connect Channels" right={isDemoMode ? "demo seed + expanded coverage" : "live + expanded coverage"}>
@@ -362,13 +357,7 @@ export default function PlatformGrowthEngineTab() {
         </GlassCard>
 
         <GlassCard title="Acquisition funnel" right="captured → referred">
-          <div className="grid grid-cols-2 xl:grid-cols-5 gap-2">
-            <KpiCard label="Captured" value={funnel.captured} />
-            <KpiCard label="Qualified" value={funnel.qualified} />
-            <KpiCard label="Activated" value={funnel.activated} />
-            <KpiCard label="Paying" value={funnel.paying} />
-            <KpiCard label="Referred" value={funnel.referred} />
-          </div>
+          <AcquisitionFunnel funnel={funnel} />
         </GlassCard>
       </div>
 
