@@ -3,6 +3,7 @@ import ModeBar from "../components/ModeBar";
 
 import PlatformTabs from "../components/platform/PlatformTabs";
 import PlatformOverviewTab from "../components/platform/PlatformOverviewTab";
+import PlatformGrowthEngineTab from "../components/platform/PlatformGrowthEngineTab";
 import UsersManager from "../components/platform/UsersManager";
 import BusinessesManager from "../components/platform/BusinessesManager";
 import BillingManager from "../components/platform/BillingManager";
@@ -13,6 +14,7 @@ import AdsOrdersManager from "../components/platform/AdsOrdersManager";
 
 const TABS = [
   { id: "overview", label: "Overview" },
+  { id: "growth_os", label: "Growth OS" },
   { id: "users", label: "Users" },
   { id: "businesses", label: "Businesses" },
   { id: "billing", label: "Billing" },
@@ -42,6 +44,7 @@ export default function PlatformDashboard() {
         <PlatformTabs tabs={TABS} active={tab} onChange={setTab} />
 
         {tab === "overview" ? <PlatformOverviewTab /> : null}
+        {tab === "growth_os" ? <PlatformGrowthEngineTab /> : null}
         {tab === "users" ? <UsersManager /> : null}
         {tab === "businesses" ? <BusinessesManager /> : null}
         {tab === "billing" ? <BillingManager /> : null}
