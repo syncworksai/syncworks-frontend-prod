@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from "react";
 import api from "../../../api/client";
 
+function asList(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.results)) return data.results;
+  return [];
+}
+
 function GlassCard({ title, right, children }) {
   return (
     <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
@@ -19,6 +25,10 @@ function StatusPill({ status }) {
     DRAFT: "border-amber-500/20 bg-amber-500/10 text-amber-200",
     PAUSED: "border-slate-500/20 bg-slate-500/10 text-slate-200",
     ARCHIVED: "border-rose-500/20 bg-rose-500/10 text-rose-200",
+    COMPLETED: "border-emerald-500/20 bg-emerald-500/10 text-emerald-200",
+    FAILED: "border-rose-500/20 bg-rose-500/10 text-rose-200",
+    QUEUED: "border-cyan-500/20 bg-cyan-500/10 text-cyan-200",
+    SKIPPED: "border-slate-500/20 bg-slate-500/10 text-slate-200",
   };
 
   return (
@@ -45,8 +55,8 @@ export default function GrowthAutomationControlCard() {
         api.get("/platform-growth/automation-executions/"),
       ]);
 
-      setRules(Array.isArray(rulesRes.data) ? rulesRes.data : []);
-      setExecutions(Array.isArray(executionsRes.data) ? executionsRes.data.slice(0, 6) : []);
+      setRules(asList(rulesRes.data));
+      setExecutions(asList(executionsRes.data).slice(0, 6));
     } catch (e) {
       setErr(e?.response?.data?.detail || "Failed to load automation engine.");
     } finally {
@@ -119,9 +129,7 @@ export default function GrowthAutomationControlCard() {
                     <StatusPill status={rule.status} />
                   </div>
 
-                  {rule.description ? (
-                    <div className="mt-2 text-sm text-slate-300">{rule.description}</div>
-                  ) : null}
+                  {rule.description ? <div className="mt-2 text-sm text-slate-300">{rule.description}</div> : null}
 
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
@@ -173,9 +181,7 @@ export default function GrowthAutomationControlCard() {
                       </div>
                       <StatusPill status={execution.status} />
                     </div>
-                    <div className="mt-1 text-[11px] text-slate-400">
-                      {execution.trigger_type}
-                    </div>
+                    <div className="mt-1 text-[11px] text-slate-400">{execution.trigger_type}</div>
                   </div>
                 ))
               ) : (
