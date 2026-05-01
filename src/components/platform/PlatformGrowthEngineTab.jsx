@@ -5,6 +5,7 @@ import { cx, fmtDateTime, normalizeSource, safeList, sourceTone, toneFromStatus 
 import GrowthKpiGrid from "./growth/GrowthKpiGrid";
 import AcquisitionFunnel from "./growth/AcquisitionFunnel";
 import GrowthConnectChannelsCard from "./growth/GrowthConnectChannelsCard";
+import GrowthAutomationControlCard from "./growth/GrowthAutomationControlCard";
 
 const GrowthConnectChannelsDrawer = React.lazy(() => import("./growth/GrowthConnectChannelsDrawer"));
 const GrowthAutomationRecipesCard = React.lazy(() => import("./growth/GrowthAutomationRecipesCard"));
@@ -384,6 +385,8 @@ export default function PlatformGrowthEngineTab() {
           <AcquisitionFunnel funnel={funnel} />
         </GlassCard>
       </div>
+
+      <GrowthAutomationControlCard />
 
       <Suspense fallback={suspenseFallback}>
         <GrowthAutomationRecipesCard recipeCards={recipeCards} />
