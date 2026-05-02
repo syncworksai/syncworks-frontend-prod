@@ -37,11 +37,13 @@ export default function GrowthContentEngineCard({
   toneFromStatus,
 }) {
   const [drafts, setDrafts] = useState([]);
+  const [loadingIds, setLoadingIds] = useState({});
 
   async function loadDrafts() {
     try {
       const res = await api.get("/platform-growth/growth/drafts/");
-      setDrafts(Array.isArray(res.data) ? res.data : []);
+      const data = Array.isArray(res.data) ? res.data : res.data.results || [];
+      setDrafts(data);
     } catch {
       setDrafts([]);
     }
@@ -51,10 +53,32 @@ export default function GrowthContentEngineCard({
     loadDrafts();
   }, []);
 
-  // 🔥 Merge backend drafts with existing queue
+  async function queueDraft(id) {
+    setLoadingIds((p) => ({ ...p, [id]: true }));
+    try {
+      await api.post(`/platform-growth/growth/drafts/${id}/queue/`, {});
+      await loadDrafts();
+    } finally {
+      setLoadingIds((p) => ({ ...p, [id]: false }));
+    }
+  }
+
+  async function simulatePost(id) {
+    setLoadingIds((p) => ({ ...p, [id]: true }));
+    try {
+      const queueRes = await api.post(`/platform-growth/growth/drafts/${id}/queue/`, {});
+      const queueId = queueRes.data.id;
+
+      await api.post(`/platform-growth/growth/queue/${queueId}/simulate-post/`, {});
+      await loadDrafts();
+    } finally {
+      setLoadingIds((p) => ({ ...p, [id]: false }));
+    }
+  }
+
   const combinedQueue = [
     ...drafts.map((d) => ({
-      id: `draft-${d.id}`,
+      id: d.id,
       title: d.title,
       status: d.status || "DRAFT",
       source: "AUTOMATION",
@@ -66,7 +90,7 @@ export default function GrowthContentEngineCard({
     <GlassCard title="Content Engine" right="frontend-first • clone-ready for SBO add-on">
       <div className="grid xl:grid-cols-3 gap-4">
         <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between">
             <div className="font-semibold text-slate-100">Content Queue</div>
             <StatusPill tone="cyan">Live + Auto</StatusPill>
           </div>
@@ -77,7 +101,6 @@ export default function GrowthContentEngineCard({
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-slate-100 font-semibold">{item.title}</div>
 
-                  {/* 🔥 AUTO TAG */}
                   {item.source === "AUTOMATION" && (
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-200">
                       AUTO
@@ -90,48 +113,43 @@ export default function GrowthContentEngineCard({
                     {item.status}
                   </StatusPill>
                 </div>
+
+                {item.source === "AUTOMATION" && (
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => queueDraft(item.id)}
+                      disabled={loadingIds[item.id]}
+                      className="h-7 px-2 rounded-xl text-[11px] border border-slate-700 text-slate-200"
+                    >
+                      Queue
+                    </button>
+
+                    <button
+                      onClick={() => simulatePost(item.id)}
+                      disabled={loadingIds[item.id]}
+                      className="h-7 px-2 rounded-xl text-[11px] border border-cyan-500/40 text-cyan-200"
+                    >
+                      Simulate Post
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4 xl:col-span-2">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div>
-              <div className="font-semibold text-slate-100">AI Post Generator</div>
-              <div className="text-xs text-slate-400 mt-1">
-                Promptless starter actions for social + review growth.
-              </div>
-            </div>
-            <button className="h-8 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 text-cyan-100">
-              Clone for SBO Add-On
-            </button>
-          </div>
+          <div className="font-semibold text-slate-100">AI Post Generator</div>
 
           <div className="mt-3 grid sm:grid-cols-2 xl:grid-cols-4 gap-2">
             {aiPostPresets.map((preset) => (
-              <button
-                key={preset.key}
-                className="h-9 px-3 rounded-xl text-xs border border-slate-800 bg-slate-950/70 hover:bg-slate-900/50 text-slate-200 text-left"
-              >
+              <button key={preset.key} className="h-9 px-3 rounded-xl text-xs border border-slate-800 text-slate-200">
                 {preset.label}
               </button>
             ))}
           </div>
-
-          <div className="mt-3 grid md:grid-cols-3 gap-2">
-            {aiGeneratedPreviews.map((card) => (
-              <div key={card.id} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
-                <div className="text-sm text-slate-100 font-semibold">{card.title}</div>
-                <div className="mt-1 text-xs text-slate-300">{card.body}</div>
-                <div className="mt-2 text-[11px] text-slate-500">{card.channel}</div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
-
-      {/* keep rest unchanged */}
     </GlassCard>
   );
 }
