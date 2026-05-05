@@ -1,5 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import api from "../../../api/client";
+
+function asList(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.results)) return data.results;
+  return [];
+}
 
 function GlassCard({ title, right, children }) {
   return (
@@ -30,6 +36,14 @@ function StatusPill({ children, tone = "slate" }) {
   );
 }
 
+function statusTone(status, toneFromStatus) {
+  const s = String(status || "").toUpperCase();
+  if (s === "POSTED" || s === "PUBLISHED") return "emerald";
+  if (s === "QUEUED" || s === "SCHEDULED") return "amber";
+  if (s === "FAILED") return "rose";
+  return toneFromStatus ? toneFromStatus(status) : "slate";
+}
+
 export default function GrowthContentEngineCard({
   contentQueue,
   aiPostPresets,
@@ -37,57 +51,114 @@ export default function GrowthContentEngineCard({
   toneFromStatus,
 }) {
   const [drafts, setDrafts] = useState([]);
+  const [queueItems, setQueueItems] = useState([]);
   const [loadingIds, setLoadingIds] = useState({});
+  const [err, setErr] = useState("");
 
-  async function loadDrafts() {
+  async function loadContentPipeline() {
+    setErr("");
+
     try {
-      const res = await api.get("/platform-growth/growth/drafts/");
-      const data = Array.isArray(res.data) ? res.data : res.data.results || [];
-      setDrafts(data);
-    } catch {
+      const [draftsRes, queueRes] = await Promise.all([
+        api.get("/platform-growth/growth/drafts/"),
+        api.get("/platform-growth/growth/queue/"),
+      ]);
+
+      setDrafts(asList(draftsRes.data));
+      setQueueItems(asList(queueRes.data));
+    } catch (e) {
+      setErr(e?.response?.data?.detail || "Failed to load content pipeline.");
       setDrafts([]);
+      setQueueItems([]);
     }
   }
 
   useEffect(() => {
-    loadDrafts();
+    loadContentPipeline();
   }, []);
 
+  const queueByDraftId = useMemo(() => {
+    const map = new Map();
+
+    queueItems.forEach((item) => {
+      const draftId = item?.draft;
+      if (!draftId) return;
+
+      const existing = map.get(draftId);
+      if (!existing || Number(item.id) > Number(existing.id)) {
+        map.set(draftId, item);
+      }
+    });
+
+    return map;
+  }, [queueItems]);
+
   async function queueDraft(id) {
-    setLoadingIds((p) => ({ ...p, [id]: true }));
+    setLoadingIds((prev) => ({ ...prev, [id]: true }));
+    setErr("");
+
     try {
       await api.post(`/platform-growth/growth/drafts/${id}/queue/`, {});
-      await loadDrafts();
+      await loadContentPipeline();
+    } catch (e) {
+      setErr(e?.response?.data?.detail || "Failed to queue draft.");
     } finally {
-      setLoadingIds((p) => ({ ...p, [id]: false }));
+      setLoadingIds((prev) => ({ ...prev, [id]: false }));
     }
   }
 
   async function simulatePost(id) {
-    setLoadingIds((p) => ({ ...p, [id]: true }));
+    setLoadingIds((prev) => ({ ...prev, [id]: true }));
+    setErr("");
+
     try {
-      const queueRes = await api.post(`/platform-growth/growth/drafts/${id}/queue/`, {});
-      const queueId = queueRes.data.id;
+      const existingQueue = queueByDraftId.get(id);
+
+      let queueId = existingQueue?.id;
+      if (!queueId || existingQueue?.status === "POSTED") {
+        const queueRes = await api.post(`/platform-growth/growth/drafts/${id}/queue/`, {});
+        queueId = queueRes.data?.id;
+      }
 
       await api.post(`/platform-growth/growth/queue/${queueId}/simulate-post/`, {});
-      await loadDrafts();
+      await loadContentPipeline();
+    } catch (e) {
+      setErr(e?.response?.data?.detail || "Failed to simulate post.");
     } finally {
-      setLoadingIds((p) => ({ ...p, [id]: false }));
+      setLoadingIds((prev) => ({ ...prev, [id]: false }));
     }
   }
 
   const combinedQueue = [
-    ...drafts.map((d) => ({
-      id: d.id,
-      title: d.title,
-      status: d.status || "DRAFT",
-      source: "AUTOMATION",
+    ...drafts.map((draft) => {
+      const queueItem = queueByDraftId.get(draft.id);
+      const liveStatus = queueItem?.status || draft.status || "DRAFT";
+
+      return {
+        id: draft.id,
+        title: draft.title,
+        status: liveStatus,
+        source: "AUTOMATION",
+        queueId: queueItem?.id,
+        postedAt: queueItem?.posted_at,
+        scheduledFor: queueItem?.scheduled_for,
+        metadata: queueItem?.metadata || draft.metadata || {},
+      };
+    }),
+    ...contentQueue.map((item) => ({
+      ...item,
+      source: item.source || "DEMO",
     })),
-    ...contentQueue,
   ];
 
   return (
-    <GlassCard title="Content Engine" right="frontend-first • clone-ready for SBO add-on">
+    <GlassCard title="Content Engine" right="automation drafts + safe publish queue">
+      {err ? (
+        <div className="mb-3 rounded-2xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-200">
+          {err}
+        </div>
+      ) : null}
+
       <div className="grid xl:grid-cols-3 gap-4">
         <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
           <div className="flex items-center justify-between">
@@ -96,56 +167,97 @@ export default function GrowthContentEngineCard({
           </div>
 
           <div className="mt-3 space-y-2">
-            {combinedQueue.map((item) => (
-              <div key={item.id} className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-slate-100 font-semibold">{item.title}</div>
+            {combinedQueue.map((item) => {
+              const isAutomation = item.source === "AUTOMATION";
+              const isQueued = item.status === "QUEUED";
+              const isPosted = item.status === "POSTED" || item.status === "PUBLISHED";
 
-                  {item.source === "AUTOMATION" && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-200">
-                      AUTO
-                    </span>
-                  )}
-                </div>
+              return (
+                <div key={`${item.source}-${item.id}`} className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="text-sm text-slate-100 font-semibold">{item.title}</div>
 
-                <div className="mt-1">
-                  <StatusPill tone={toneFromStatus(item.status)}>
-                    {item.status}
-                  </StatusPill>
-                </div>
-
-                {item.source === "AUTOMATION" && (
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      onClick={() => queueDraft(item.id)}
-                      disabled={loadingIds[item.id]}
-                      className="h-7 px-2 rounded-xl text-[11px] border border-slate-700 text-slate-200"
-                    >
-                      Queue
-                    </button>
-
-                    <button
-                      onClick={() => simulatePost(item.id)}
-                      disabled={loadingIds[item.id]}
-                      className="h-7 px-2 rounded-xl text-[11px] border border-cyan-500/40 text-cyan-200"
-                    >
-                      Simulate Post
-                    </button>
+                    {isAutomation ? (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-200">
+                        AUTO
+                      </span>
+                    ) : null}
                   </div>
-                )}
-              </div>
-            ))}
+
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <StatusPill tone={statusTone(item.status, toneFromStatus)}>{item.status}</StatusPill>
+
+                    {isAutomation && item.queueId ? (
+                      <span className="text-[10px] text-slate-500">Queue #{item.queueId}</span>
+                    ) : null}
+                  </div>
+
+                  {isAutomation && item.postedAt ? (
+                    <div className="mt-1 text-[11px] text-emerald-300">
+                      Posted safely: {new Date(item.postedAt).toLocaleString()}
+                    </div>
+                  ) : null}
+
+                  {isAutomation ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => queueDraft(item.id)}
+                        disabled={loadingIds[item.id] || isQueued || isPosted}
+                        className="h-7 px-2 rounded-xl text-[11px] border border-slate-700 text-slate-200 disabled:opacity-50"
+                      >
+                        {isQueued ? "Queued" : isPosted ? "Posted" : "Queue"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => simulatePost(item.id)}
+                        disabled={loadingIds[item.id] || isPosted}
+                        className="h-7 px-2 rounded-xl text-[11px] border border-cyan-500/40 text-cyan-200 disabled:opacity-50"
+                      >
+                        {isPosted ? "Posted" : "Simulate Post"}
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4 xl:col-span-2">
-          <div className="font-semibold text-slate-100">AI Post Generator</div>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <div className="font-semibold text-slate-100">AI Post Generator</div>
+              <div className="text-xs text-slate-400 mt-1">Promptless starter actions for social + review growth.</div>
+            </div>
+            <button
+              type="button"
+              className="h-8 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 text-cyan-100"
+            >
+              Clone for SBO Add-On
+            </button>
+          </div>
 
           <div className="mt-3 grid sm:grid-cols-2 xl:grid-cols-4 gap-2">
             {aiPostPresets.map((preset) => (
-              <button key={preset.key} className="h-9 px-3 rounded-xl text-xs border border-slate-800 text-slate-200">
+              <button
+                key={preset.key}
+                type="button"
+                className="h-9 px-3 rounded-xl text-xs border border-slate-800 bg-slate-950/70 hover:bg-slate-900/50 text-slate-200 text-left"
+              >
                 {preset.label}
               </button>
+            ))}
+          </div>
+
+          <div className="mt-3 grid md:grid-cols-3 gap-2">
+            {aiGeneratedPreviews.map((card) => (
+              <div key={card.id} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                <div className="text-sm text-slate-100 font-semibold">{card.title}</div>
+                <div className="mt-1 text-xs text-slate-300">{card.body}</div>
+                <div className="mt-2 text-[11px] text-slate-500">{card.channel}</div>
+              </div>
             ))}
           </div>
         </div>
