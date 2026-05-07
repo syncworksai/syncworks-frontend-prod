@@ -1230,6 +1230,7 @@ export default function TicketDetail() {
         ) : null}
 
         <TicketHeaderCard
+          ticket={ticket}
           ticketCode={ticketCode}
           customerName={customerName}
           serviceAddress={ticket?.service_address || intake?.routing?.service_address || ""}

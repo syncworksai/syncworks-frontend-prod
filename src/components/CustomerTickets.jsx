@@ -2,8 +2,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api/client";
+import PriorityBadge, { isPriorityOne } from "./tickets/PriorityBadge";
 
-const LS_SMS_KEY = "sw_customer_sms_ok"; // global consent (device-based for now)
+const LS_SMS_KEY = "sw_customer_sms_ok";
 
 function safeList(data) {
   if (!data) return [];
@@ -12,11 +13,22 @@ function safeList(data) {
   return [];
 }
 
+function cx(...parts) {
+  return parts.filter(Boolean).join(" ");
+}
+
 function statusPill(status) {
   const s = String(status || "").toUpperCase();
   const base = "text-[10px] px-2 py-1 rounded-full border font-semibold ";
-  if (s === "COMPLETED" || s === "PAID") return base + "bg-emerald-500/10 border-emerald-500/30 text-emerald-200";
-  if (s === "CANCELLED") return base + "bg-rose-500/10 border-rose-500/30 text-rose-200";
+
+  if (s === "COMPLETED" || s === "PAID") {
+    return base + "bg-emerald-500/10 border-emerald-500/30 text-emerald-200";
+  }
+
+  if (s === "CANCELLED") {
+    return base + "bg-rose-500/10 border-rose-500/30 text-rose-200";
+  }
+
   return base + "bg-cyan-500/10 border-cyan-500/30 text-cyan-200";
 }
 
@@ -32,18 +44,22 @@ function titleCase(s) {
 
 function extractSyncworksIntake(description) {
   const desc = safeStr(description);
+
   if (!desc) return null;
 
   const marker = "SyncWorks Intake:";
   const idx = desc.lastIndexOf(marker);
+
   if (idx === -1) return null;
 
   const after = desc.slice(idx + marker.length).trim();
   const start = after.indexOf("{");
   const end = after.lastIndexOf("}");
+
   if (start === -1 || end === -1 || end <= start) return null;
 
   const jsonStr = after.slice(start, end + 1);
+
   try {
     return JSON.parse(jsonStr);
   } catch {
@@ -183,48 +199,75 @@ function resolveCustomerFriendlyTitle(ticket) {
     .map((x) => (typeof x === "string" ? x.trim() : ""))
     .filter(Boolean);
 
-  const blacklist = new Set(["ac not cooling", "ac-not-cooling", "uncategorized", "unknown", "not set"]);
+  const blacklist = new Set([
+    "ac not cooling",
+    "ac-not-cooling",
+    "uncategorized",
+    "unknown",
+    "not set",
+  ]);
+
   const firstGood = preferred.find((s) => !blacklist.has(s.toLowerCase()));
+
   if (firstGood) return firstGood;
 
   const intake = extractSyncworksIntake(t.description || t.details || "");
   const lifeKey = intake?.life_category || intake?.lifeCategory || "";
   const subtypeKey = intake?.subtype || intake?.type || "";
 
-  const subtypeLabel = SUBTYPE_LABELS[subtypeKey] || (subtypeKey ? titleCase(subtypeKey) : "");
-  const lifeLabel = LIFE_CATEGORY_LABELS[lifeKey] || (lifeKey ? titleCase(lifeKey) : "");
+  const subtypeLabel =
+    SUBTYPE_LABELS[subtypeKey] || (subtypeKey ? titleCase(subtypeKey) : "");
+  const lifeLabel =
+    LIFE_CATEGORY_LABELS[lifeKey] || (lifeKey ? titleCase(lifeKey) : "");
 
   if (subtypeLabel) return subtypeLabel;
   if (lifeLabel) return lifeLabel;
 
-  if (t.category_name && typeof t.category_name === "string") return t.category_name;
+  if (t.category_name && typeof t.category_name === "string") {
+    return t.category_name;
+  }
 
   return "Service Request";
 }
 
 function safeDate(iso) {
   if (!iso) return null;
+
   const d = new Date(iso);
+
   return Number.isFinite(d.getTime()) ? d : null;
 }
 
 function fmtPretty(iso) {
   const d = safeDate(iso);
+
   if (!d) return "—";
-  const date = d.toLocaleDateString(undefined, { year: "2-digit", month: "numeric", day: "numeric" });
-  const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+
+  const date = d.toLocaleDateString(undefined, {
+    year: "2-digit",
+    month: "numeric",
+    day: "numeric",
+  });
+
+  const time = d.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
   return `${date} @ ${time}`;
 }
 
 function readSmsConsent() {
   try {
     const raw = localStorage.getItem(LS_SMS_KEY);
+
     if (raw === "1") return true;
     if (raw === "0") return false;
   } catch {
     // ignore
   }
-  return true; // default ON (you can change default here)
+
+  return true;
 }
 
 function writeSmsConsent(v) {
@@ -235,12 +278,11 @@ function writeSmsConsent(v) {
   }
 }
 
-/**
- * CustomerTickets
- * - embedded: if true, renders only inner content (no full-page wrapper)
- * - onOpenTicket: optional callback(ticketId) to override navigation
- */
-export default function CustomerTickets({ title = "My Orders", embedded = false, onOpenTicket = null }) {
+export default function CustomerTickets({
+  title = "My Orders",
+  embedded = false,
+  onOpenTicket = null,
+}) {
   const nav = useNavigate();
   const loc = useLocation();
 
@@ -249,10 +291,9 @@ export default function CustomerTickets({ title = "My Orders", embedded = false,
   const [err, setErr] = useState("");
 
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState("ALL"); // ALL | ACTIVE | COMPLETED | CANCELLED
-  const [sort, setSort] = useState("NEWEST"); // NEWEST | OLDEST
+  const [status, setStatus] = useState("ALL");
+  const [sort, setSort] = useState("NEWEST");
 
-  // NEW: global customer consent (device-based)
   const [smsOk, setSmsOk] = useState(() => readSmsConsent());
 
   useEffect(() => {
@@ -262,11 +303,14 @@ export default function CustomerTickets({ title = "My Orders", embedded = false,
   async function load() {
     setErr("");
     setLoading(true);
+
     try {
       const r = await api.get("/tickets/");
       setTickets(safeList(r.data));
     } catch (e) {
-      setErr(e?.response?.data?.detail || e?.message || "Failed to load tickets");
+      setErr(
+        e?.response?.data?.detail || e?.message || "Failed to load tickets"
+      );
       setTickets([]);
     } finally {
       setLoading(false);
@@ -282,14 +326,24 @@ export default function CustomerTickets({ title = "My Orders", embedded = false,
 
     const byStatus = list.filter((t) => {
       const s = String(t?.status || "").toUpperCase();
+
       if (status === "ALL") return true;
-      if (status === "ACTIVE") return !["COMPLETED", "PAID", "CANCELLED", "CLOSED"].includes(s);
-      if (status === "COMPLETED") return ["COMPLETED", "PAID", "CLOSED", "INVOICED"].includes(s);
+
+      if (status === "ACTIVE") {
+        return !["COMPLETED", "PAID", "CANCELLED", "CLOSED"].includes(s);
+      }
+
+      if (status === "COMPLETED") {
+        return ["COMPLETED", "PAID", "CLOSED", "INVOICED"].includes(s);
+      }
+
       if (status === "CANCELLED") return s === "CANCELLED";
+
       return true;
     });
 
     const query = q.trim().toLowerCase();
+
     const byQuery = !query
       ? byStatus
       : byStatus.filter((t) => {
@@ -297,12 +351,19 @@ export default function CustomerTickets({ title = "My Orders", embedded = false,
           const id = String(t?.id || "");
           const addr = String(t?.service_address || "").toLowerCase();
           const zip = String(t?.service_zip || "");
-          return title.includes(query) || id.includes(query) || addr.includes(query) || zip.includes(query);
+
+          return (
+            title.includes(query) ||
+            id.includes(query) ||
+            addr.includes(query) ||
+            zip.includes(query)
+          );
         });
 
     const sorted = [...byQuery].sort((a, b) => {
       const da = safeDate(a?.created_at)?.getTime() || 0;
       const db = safeDate(b?.created_at)?.getTime() || 0;
+
       return sort === "OLDEST" ? da - db : db - da;
     });
 
@@ -311,52 +372,85 @@ export default function CustomerTickets({ title = "My Orders", embedded = false,
 
   function openTicket(tid) {
     const id = Number(tid);
+
     if (!Number.isFinite(id)) return;
 
-    if (typeof onOpenTicket === "function") return onOpenTicket(id);
+    if (typeof onOpenTicket === "function") {
+      return onOpenTicket(id);
+    }
 
     const returnTo = "/customer?tab=orders";
-    nav(`/tickets/${id}?return=${encodeURIComponent(returnTo)}`, { state: { from: loc.pathname + loc.search } });
+
+    nav(`/tickets/${id}?return=${encodeURIComponent(returnTo)}`, {
+      state: { from: loc.pathname + loc.search },
+    });
   }
 
   const Inner = (
-    <div className={embedded ? "space-y-4" : "min-h-screen bg-[#020617] text-slate-100"}>
-      <div className={embedded ? "space-y-4" : "max-w-6xl mx-auto px-4 py-6 space-y-4"}>
+    <div
+      className={
+        embedded ? "space-y-4" : "min-h-screen bg-[#020617] text-slate-100"
+      }
+    >
+      <div
+        className={
+          embedded ? "space-y-4" : "max-w-6xl mx-auto px-4 py-6 space-y-4"
+        }
+      >
         {!embedded ? (
           <div className="flex items-start justify-between gap-2">
             <div>
               <div className="text-2xl font-bold">{title}</div>
-              <div className="text-sm text-slate-400">Every service request you’ve created.</div>
+              <div className="text-sm text-slate-400">
+                Every service request you’ve created.
+              </div>
             </div>
-            <button onClick={load} className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900">
+
+            <button
+              onClick={load}
+              className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900"
+            >
               Refresh
             </button>
           </div>
         ) : null}
 
-        {/* NEW: Customer Consent Card */}
         <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-4">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-slate-100">Text message consent (from businesses)</div>
+              <div className="text-sm font-semibold text-slate-100">
+                Text message consent (from businesses)
+              </div>
               <div className="text-xs text-slate-400 mt-1">
-                This lets the provider’s <b>company phone</b> text you about scheduling/updates. SyncWorks is <b>not</b> sending texts yet.
+                This lets the provider’s <b>company phone</b> text you about
+                scheduling/updates. SyncWorks is <b>not</b> sending texts yet.
               </div>
               <div className="text-[11px] text-slate-500 mt-2">
-                Saved on this device for now. Later we’ll store it on your account + support in-app messaging.
+                Saved on this device for now. Later we’ll store it on your
+                account + support in-app messaging.
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className={"text-[10px] px-2 py-1 rounded-full border font-semibold " + (smsOk ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200" : "bg-rose-500/10 border-rose-500/30 text-rose-200")}>
+              <span
+                className={
+                  "text-[10px] px-2 py-1 rounded-full border font-semibold " +
+                  (smsOk
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
+                    : "bg-rose-500/10 border-rose-500/30 text-rose-200")
+                }
+              >
                 {smsOk ? "Allowed" : "Not allowed"}
               </span>
+
               <button
                 type="button"
                 onClick={() => setSmsOk((v) => !v)}
                 className={
                   "h-10 text-xs rounded-2xl px-4 border transition " +
-                  (smsOk ? "bg-cyan-500/15 border-cyan-500/40 text-cyan-100 hover:bg-cyan-500/25" : "bg-slate-950 border-slate-800 text-slate-200 hover:bg-slate-900")
+                  (smsOk
+                    ? "bg-cyan-500/15 border-cyan-500/40 text-cyan-100 hover:bg-cyan-500/25"
+                    : "bg-slate-950 border-slate-800 text-slate-200 hover:bg-slate-900")
                 }
                 title="Toggle consent"
               >
@@ -366,7 +460,6 @@ export default function CustomerTickets({ title = "My Orders", embedded = false,
           </div>
         </div>
 
-        {/* Controls */}
         <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
           <input
             value={q}
@@ -408,16 +501,22 @@ export default function CustomerTickets({ title = "My Orders", embedded = false,
         </div>
 
         {err ? (
-          <div className="text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-2xl p-3">{err}</div>
+          <div className="text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-2xl p-3">
+            {err}
+          </div>
         ) : null}
 
         {loading ? <div className="text-sm text-slate-400">Loading…</div> : null}
 
-        {!loading && filtered.length === 0 ? <div className="text-sm text-slate-400">No orders found.</div> : null}
+        {!loading && filtered.length === 0 ? (
+          <div className="text-sm text-slate-400">No orders found.</div>
+        ) : null}
 
         <div className="grid md:grid-cols-2 gap-3">
           {filtered.map((t) => {
             const friendlyTitle = resolveCustomerFriendlyTitle(t);
+            const p1 = isPriorityOne(t);
+
             return (
               <div
                 key={t.id}
@@ -427,14 +526,32 @@ export default function CustomerTickets({ title = "My Orders", embedded = false,
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") openTicket(t.id);
                 }}
-                className="rounded-3xl border border-slate-800 bg-slate-950/40 hover:bg-slate-900/45 p-4 transition cursor-pointer outline-none focus:ring-2 focus:ring-cyan-500/30"
+                className={cx(
+                  "rounded-3xl border bg-slate-950/40 hover:bg-slate-900/45 p-4 transition cursor-pointer outline-none focus:ring-2 focus:ring-cyan-500/30",
+                  p1
+                    ? "border-red-500/60 shadow-[0_0_28px_rgba(239,68,68,0.2)]"
+                    : "border-slate-800"
+                )}
                 title="Open ticket"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="font-semibold">
                     #{t.id} • {friendlyTitle}
                   </div>
-                  <span className={statusPill(t.status)}>{String(t.status || "NEW")}</span>
+
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    <PriorityBadge ticket={t} showEta={false} />
+
+                    {p1 ? (
+                      <span className="text-[10px] px-2 py-1 rounded-full border font-black bg-red-500/20 border-red-500/40 text-red-100 shadow-[0_0_14px_rgba(239,68,68,0.2)]">
+                        SERVICE NOW
+                      </span>
+                    ) : null}
+
+                    <span className={statusPill(t.status)}>
+                      {String(t.status || "NEW")}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="text-xs text-slate-400 mt-2">
@@ -442,7 +559,9 @@ export default function CustomerTickets({ title = "My Orders", embedded = false,
                   {t.service_address ? ` • ${t.service_address}` : ""}
                 </div>
 
-                <div className="text-[11px] text-slate-500 mt-3">Created: {fmtPretty(t.created_at)}</div>
+                <div className="text-[11px] text-slate-500 mt-3">
+                  Created: {fmtPretty(t.created_at)}
+                </div>
               </div>
             );
           })}

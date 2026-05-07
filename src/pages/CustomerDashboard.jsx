@@ -1,3 +1,4 @@
+// src/pages/CustomerDashboard.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
@@ -9,6 +10,7 @@ import CustomerWeeklyCalendar from "../components/CustomerWeeklyCalendar";
 import TodoList from "../components/TodoList";
 import InboxPanel from "../components/Inbox/InboxPanel";
 import CustomerTickets from "../components/CustomerTickets";
+import PriorityBadge, { isPriorityOne } from "../components/tickets/PriorityBadge";
 
 const BASE_TABS = [
   { id: "overview", label: "Overview" },
@@ -21,13 +23,17 @@ const BASE_TABS = [
   { id: "fitness", label: "Fitness" },
 ];
 
+function cx(...parts) {
+  return parts.filter(Boolean).join(" ");
+}
+
 function Card({ title, right, children, className = "" }) {
   return (
     <div
-      className={
-        "rounded-3xl border border-slate-800/80 bg-slate-950/35 backdrop-blur-xl p-5 shadow-[0_0_60px_rgba(0,0,0,0.35)] " +
+      className={cx(
+        "rounded-3xl border border-slate-800/80 bg-slate-950/35 backdrop-blur-xl p-5 shadow-[0_0_60px_rgba(0,0,0,0.35)]",
         className
-      }
+      )}
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="font-semibold text-slate-100">{title}</div>
@@ -47,32 +53,42 @@ function safeList(data) {
 
 function statusPill(status) {
   const s = String(status || "").toUpperCase();
-  const base = "text-[10px] px-2.5 py-1 rounded-full border font-semibold tracking-wide ";
-  if (s === "COMPLETED" || s === "PAID") return base + "bg-emerald-500/10 border-emerald-500/30 text-emerald-200";
-  if (s === "CANCELLED") return base + "bg-rose-500/10 border-rose-500/30 text-rose-200";
+  const base =
+    "text-[10px] px-2.5 py-1 rounded-full border font-semibold tracking-wide ";
+  if (s === "COMPLETED" || s === "PAID")
+    return base + "bg-emerald-500/10 border-emerald-500/30 text-emerald-200";
+  if (s === "CANCELLED")
+    return base + "bg-rose-500/10 border-rose-500/30 text-rose-200";
   return base + "bg-cyan-500/10 border-cyan-500/30 text-cyan-200";
 }
 
 function invoicePill(status) {
   const s = String(status || "").toUpperCase();
-  const base = "text-[10px] px-2.5 py-1 rounded-full border font-semibold tracking-wide ";
-  if (s === "PAID") return base + "bg-emerald-500/10 border-emerald-500/30 text-emerald-200";
-  if (s === "VOID") return base + "bg-slate-500/10 border-slate-500/30 text-slate-300";
-  if (s === "SENT" || s === "READY_FOR_PAYMENT" || s === "OPEN") {
+  const base =
+    "text-[10px] px-2.5 py-1 rounded-full border font-semibold tracking-wide ";
+  if (s === "PAID")
+    return base + "bg-emerald-500/10 border-emerald-500/30 text-emerald-200";
+  if (s === "VOID")
+    return base + "bg-slate-500/10 border-slate-500/30 text-slate-300";
+  if (s === "SENT" || s === "READY_FOR_PAYMENT" || s === "OPEN")
     return base + "bg-amber-500/10 border-amber-500/30 text-amber-200";
-  }
   return base + "bg-cyan-500/10 border-cyan-500/30 text-cyan-200";
 }
 
 function IconBtn({ title, tone = "slate", disabled, onClick, children }) {
   const tones = {
-    slate: "bg-slate-950/70 border-slate-800 hover:bg-slate-900/60 text-slate-200",
+    slate:
+      "bg-slate-950/70 border-slate-800 hover:bg-slate-900/60 text-slate-200",
     cyan: "bg-cyan-500/18 border-cyan-500/35 hover:bg-cyan-500/24 text-cyan-100",
-    indigo: "bg-indigo-500/18 border-indigo-500/35 hover:bg-indigo-500/24 text-indigo-100",
-    emerald: "bg-emerald-500/14 border-emerald-500/28 hover:bg-emerald-500/18 text-emerald-100",
+    indigo:
+      "bg-indigo-500/18 border-indigo-500/35 hover:bg-indigo-500/24 text-indigo-100",
+    emerald:
+      "bg-emerald-500/14 border-emerald-500/28 hover:bg-emerald-500/18 text-emerald-100",
     rose: "bg-rose-500/14 border-rose-500/28 hover:bg-rose-500/18 text-rose-100",
-    fuchsia: "bg-fuchsia-500/14 border-fuchsia-500/28 hover:bg-fuchsia-500/18 text-fuchsia-100",
-    amber: "bg-amber-500/14 border-amber-500/28 hover:bg-amber-500/18 text-amber-100",
+    fuchsia:
+      "bg-fuchsia-500/14 border-fuchsia-500/28 hover:bg-fuchsia-500/18 text-fuchsia-100",
+    amber:
+      "bg-amber-500/14 border-amber-500/28 hover:bg-amber-500/18 text-amber-100",
   };
 
   return (
@@ -81,12 +97,11 @@ function IconBtn({ title, tone = "slate", disabled, onClick, children }) {
       title={title}
       disabled={!!disabled}
       onClick={onClick}
-      className={
-        "inline-flex items-center justify-center h-9 w-9 rounded-2xl border transition select-none " +
-        (tones[tone] || tones.slate) +
-        " " +
-        (disabled ? "opacity-50 cursor-not-allowed" : "")
-      }
+      className={cx(
+        "inline-flex items-center justify-center h-9 w-9 rounded-2xl border transition select-none",
+        tones[tone] || tones.slate,
+        disabled ? "opacity-50 cursor-not-allowed" : ""
+      )}
     >
       <span className="text-[14px] leading-none">{children}</span>
     </button>
@@ -113,9 +128,7 @@ function readArchivedSet(user) {
 function writeArchivedSet(user, set) {
   try {
     localStorage.setItem(archiveKeyForUser(user), JSON.stringify(Array.from(set)));
-  } catch {
-    // ignore
-  }
+  } catch {}
 }
 
 function readLocalFeed() {
@@ -131,9 +144,7 @@ function readLocalFeed() {
 function writeLocalFeed(items) {
   try {
     localStorage.setItem("sw_feed_items", JSON.stringify(Array.isArray(items) ? items : []));
-  } catch {
-    // ignore
-  }
+  } catch {}
 }
 
 function seedFeedIfNeeded() {
@@ -194,14 +205,18 @@ function PromoPill({ children, tone = "slate" }) {
     tone === "fuchsia"
       ? "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-200"
       : tone === "emerald"
-      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-      : tone === "cyan"
-      ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-200"
-      : tone === "amber"
-      ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
-      : "border-slate-800 bg-slate-950/60 text-slate-200";
+        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+        : tone === "cyan"
+          ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-200"
+          : tone === "amber"
+            ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
+            : "border-slate-800 bg-slate-950/60 text-slate-200";
 
-  return <span className={`text-[11px] px-3 py-1.5 rounded-full border font-semibold ${cls}`}>{children}</span>;
+  return (
+    <span className={`text-[11px] px-3 py-1.5 rounded-full border font-semibold ${cls}`}>
+      {children}
+    </span>
+  );
 }
 
 function FeaturedDealsRail({ items, onOpenFeedItem, onViewFeed }) {
@@ -209,15 +224,13 @@ function FeaturedDealsRail({ items, onOpenFeedItem, onViewFeed }) {
     <Card
       title="Featured Local Deals"
       right={
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onViewFeed}
-            className="inline-flex items-center justify-center h-9 text-xs rounded-2xl px-4 bg-fuchsia-500/14 border border-fuchsia-500/28 hover:bg-fuchsia-500/18 text-fuchsia-100"
-          >
-            Open Newsfeed
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onViewFeed}
+          className="inline-flex items-center justify-center h-9 text-xs rounded-2xl px-4 bg-fuchsia-500/14 border border-fuchsia-500/28 hover:bg-fuchsia-500/18 text-fuchsia-100"
+        >
+          Open Newsfeed
+        </button>
       }
     >
       <div className="text-sm text-slate-400">
@@ -288,7 +301,6 @@ const SUBTYPE_LABELS = {
   moving_help: "Moving / hauling help",
   roadside: "Roadside help (jump/flat/lockout)",
   other_transport: "Other transportation help",
-
   plumbing: "Plumbing",
   hvac: "HVAC",
   electrical: "Electrical",
@@ -299,79 +311,6 @@ const SUBTYPE_LABELS = {
   remodeling: "Construction & Remodeling",
   appliance: "Appliance Repair",
   pest: "Pest Control",
-  security_low_voltage: "Security / Low Voltage",
-  other_home: "Other home/property",
-
-  pet_grooming: "Grooming",
-  pet_sitting: "Sitting / boarding",
-  pet_walking: "Dog walking",
-  pet_training: "Training",
-  pet_vet_mobile: "Mobile vet (non-emergency)",
-  other_pets: "Other pet help",
-
-  babysitting: "Babysitting",
-  tutoring: "Tutoring",
-  kids_activity: "Kids activity instructor",
-  family_errands: "Family help / errands",
-  other_kids: "Other kids/family",
-
-  baseball: "Baseball coach",
-  basketball: "Basketball coach",
-  soccer: "Soccer coach",
-  personal_training: "Personal trainer",
-  dance: "Dance coach",
-  martial_arts: "Martial arts",
-  other_sports: "Other sports/activity",
-
-  math: "Math tutoring",
-  reading: "Reading / writing help",
-  test_prep: "Test prep",
-  music_lessons: "Music lessons",
-  language: "Language lessons",
-  other_edu: "Other education",
-
-  piano: "Piano instructor",
-  guitar: "Guitar instructor",
-  voice: "Voice lessons",
-  art: "Art instructor",
-  other_music: "Other creative",
-
-  photography: "Photography",
-  video: "Videography / editing",
-  dj: "DJ / music",
-  party_help: "Party help / setup",
-  other_events: "Other events/media",
-
-  insurance: "Insurance (auto/home/life)",
-  notary: "Notary",
-  bookkeeping: "Bookkeeping / accounting",
-  tax: "Tax help",
-  marketing: "Marketing / ads",
-  other_business: "Other business help",
-
-  tenant_repair: "Tenant repair dispatch",
-  turnover: "Turnover / make-ready",
-  inspection: "Inspection walkthrough",
-  preventative: "Preventative maintenance",
-  other_pm: "Other PM help",
-
-  computer_fix: "Computer help",
-  wifi_network: "WiFi / network",
-  phone_help: "Phone / device help",
-  web_dev: "Website / web help",
-  other_tech: "Other tech help",
-
-  grocery: "Grocery / errands",
-  pickup_dropoff: "Pickup / drop-off",
-  assembly: "Assembly help",
-  other_errands: "Other help",
-
-  barber: "Barber / haircut",
-  stylist: "Hair stylist",
-  nails: "Nails",
-  massage: "Massage",
-  other_beauty: "Other beauty/wellness",
-
   other_any: "Describe a custom job",
 };
 
@@ -398,9 +337,8 @@ function extractSyncworksIntake(description) {
   const end = after.lastIndexOf("}");
   if (start === -1 || end === -1 || end <= start) return null;
 
-  const jsonStr = after.slice(start, end + 1);
   try {
-    return JSON.parse(jsonStr);
+    return JSON.parse(after.slice(start, end + 1));
   } catch {
     return null;
   }
@@ -408,7 +346,6 @@ function extractSyncworksIntake(description) {
 
 function resolveCustomerFriendlyTitle(ticket) {
   const t = ticket || {};
-
   const preferred = [
     t.taxonomy_label,
     t.taxonomy?.label,
@@ -439,7 +376,6 @@ function resolveCustomerFriendlyTitle(ticket) {
 
   if (subtypeLabel) return subtypeLabel;
   if (lifeLabel) return lifeLabel;
-
   if (t.category_name && typeof t.category_name === "string") return t.category_name;
 
   return "Service Request";
@@ -451,8 +387,7 @@ function resolveServiceStyle(ticket) {
     .map((x) => (typeof x === "string" ? x.trim() : ""))
     .filter(Boolean);
 
-  const first = candidates.find(Boolean);
-  return first || "Service";
+  return candidates[0] || "Service";
 }
 
 function resolveBusinessName(ticket) {
@@ -488,6 +423,7 @@ function getAcceptedBy(ticket) {
     t.assigned_business_name,
     t.assigned_business_card?.name,
   ];
+
   const found = candidates.find((x) => typeof x === "string" && x.trim());
   return found ? found.trim() : "";
 }
@@ -524,17 +460,6 @@ function ComingSoonPanel({ icon, title, desc, onUpgrade, bullets = [] }) {
         >
           Unlock via Upgrade
         </button>
-        <button
-          type="button"
-          onClick={() => alert("We’ll wire this module next.")}
-          className="inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 bg-slate-950/60 border border-slate-800 hover:bg-slate-900/40 text-slate-200"
-        >
-          See pricing
-        </button>
-      </div>
-
-      <div className="mt-3 text-[11px] text-slate-500">
-        Settings are always in the top bar gear — no duplicate settings buttons.
       </div>
     </div>
   );
@@ -544,23 +469,6 @@ function DealsPanel({ feedItems, onOpenFeedItem, onOpenNewsfeed }) {
   return (
     <div className="space-y-4">
       <FeaturedDealsRail items={feedItems} onOpenFeedItem={onOpenFeedItem} onViewFeed={onOpenNewsfeed} />
-
-      <Card
-        title="Deals Categories"
-        right={
-          <span className="text-[11px] px-3 py-1.5 rounded-full border font-semibold bg-indigo-500/10 border-indigo-500/30 text-indigo-200">
-            MVP
-          </span>
-        }
-      >
-        <div className="text-sm text-slate-400">
-          This is where promoted services, internal ads, and featured local offers will live.
-        </div>
-
-        <div className="mt-4 text-[11px] text-slate-500">
-          Next step: add ZIP/category targeting so customers only see relevant promos.
-        </div>
-      </Card>
     </div>
   );
 }
@@ -593,11 +501,7 @@ function PaymentsDueCard({ invoices, totalDue, onPayNow, onOpenOrder, onViewOrde
     <Card
       title="Payments Due"
       right={
-        invoices.length ? (
-          <PromoPill tone="amber">{invoices.length} due</PromoPill>
-        ) : (
-          <PromoPill>No balance</PromoPill>
-        )
+        invoices.length ? <PromoPill tone="amber">{invoices.length} due</PromoPill> : <PromoPill>No balance</PromoPill>
       }
     >
       {invoices.length ? (
@@ -605,9 +509,6 @@ function PaymentsDueCard({ invoices, totalDue, onPayNow, onOpenOrder, onViewOrde
           <div className="rounded-3xl border border-amber-500/20 bg-amber-500/8 p-4">
             <div className="text-xs uppercase tracking-[0.18em] text-amber-200/80">Total Due</div>
             <div className="mt-2 text-3xl font-extrabold text-amber-100">{toMoney(totalDue)}</div>
-            <div className="mt-2 text-sm text-slate-300">
-              You have {invoices.length} invoice{invoices.length === 1 ? "" : "s"} ready for payment.
-            </div>
           </div>
 
           <div className="mt-4 space-y-3">
@@ -618,10 +519,7 @@ function PaymentsDueCard({ invoices, totalDue, onPayNow, onOpenOrder, onViewOrde
               const amount = invoiceAmount(invoice);
 
               return (
-                <div
-                  key={`due-${ticket.id}-${invoice.id || "latest"}`}
-                  className="rounded-3xl border border-slate-800/80 bg-slate-950/40 p-4"
-                >
+                <div key={`due-${ticket.id}-${invoice.id || "latest"}`} className="rounded-3xl border border-slate-800/80 bg-slate-950/40 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="font-extrabold text-slate-100 truncate">{serviceTitle}</div>
@@ -637,18 +535,10 @@ function PaymentsDueCard({ invoices, totalDue, onPayNow, onOpenOrder, onViewOrde
                     </div>
 
                     <div className="flex gap-2 flex-wrap justify-end">
-                      <button
-                        type="button"
-                        onClick={() => onOpenOrder(ticket.id)}
-                        className="inline-flex items-center justify-center h-9 text-xs rounded-2xl px-4 bg-slate-950/55 border border-slate-800/80 hover:bg-slate-900/40 text-slate-200"
-                      >
+                      <button type="button" onClick={() => onOpenOrder(ticket.id)} className="inline-flex items-center justify-center h-9 text-xs rounded-2xl px-4 bg-slate-950/55 border border-slate-800/80 hover:bg-slate-900/40 text-slate-200">
                         Open Order
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => onPayNow(ticket.id)}
-                        className="inline-flex items-center justify-center h-9 text-xs rounded-2xl px-4 bg-amber-500/18 border border-amber-500/35 hover:bg-amber-500/24 text-amber-100"
-                      >
+                      <button type="button" onClick={() => onPayNow(ticket.id)} className="inline-flex items-center justify-center h-9 text-xs rounded-2xl px-4 bg-amber-500/18 border border-amber-500/35 hover:bg-amber-500/24 text-amber-100">
                         Pay Now
                       </button>
                     </div>
@@ -658,20 +548,14 @@ function PaymentsDueCard({ invoices, totalDue, onPayNow, onOpenOrder, onViewOrde
             })}
           </div>
 
-          <button
-            type="button"
-            onClick={onViewOrders}
-            className="mt-4 w-full inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 bg-cyan-500/18 border border-cyan-500/35 hover:bg-cyan-500/24 text-cyan-100"
-          >
+          <button type="button" onClick={onViewOrders} className="mt-4 w-full inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 bg-cyan-500/18 border border-cyan-500/35 hover:bg-cyan-500/24 text-cyan-100">
             View All Orders
           </button>
         </>
       ) : (
         <div className="rounded-3xl border border-slate-800/80 bg-slate-950/30 p-4">
           <div className="text-sm text-slate-200 font-semibold">No invoices due right now.</div>
-          <div className="text-xs text-slate-500 mt-2">
-            When a business marks an invoice ready for payment, it will show here.
-          </div>
+          <div className="text-xs text-slate-500 mt-2">When a business marks an invoice ready for payment, it will show here.</div>
         </div>
       )}
     </Card>
@@ -683,21 +567,17 @@ export default function CustomerDashboard() {
   const navigate = useNavigate();
 
   const [tab, setTab] = useState("overview");
-
   const [tickets, setTickets] = useState([]);
   const [ticketsErr, setTicketsErr] = useState("");
   const [ticketsLoading, setTicketsLoading] = useState(false);
-
   const [archivedIds, setArchivedIds] = useState(() => readArchivedSet(user));
   const [ticketActionErr, setTicketActionErr] = useState("");
-
   const [feedItems, setFeedItems] = useState([]);
 
   const displayName = user?.first_name || user?.username || user?.email || "User";
 
   useEffect(() => {
     setArchivedIds(readArchivedSet(user));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, user?.email]);
 
   useEffect(() => {
@@ -772,19 +652,12 @@ export default function CustomerDashboard() {
   }, [tickets, archivedIds]);
 
   const recentTickets = useMemo(() => (visibleTickets || []).slice(0, 4), [visibleTickets]);
-
   const archivedCount = useMemo(() => archivedIds.size, [archivedIds]);
-
-  const featuredFeedItems = useMemo(() => {
-    return (feedItems || []).filter((x) => !!x?.sponsored).slice(0, 6);
-  }, [feedItems]);
+  const featuredFeedItems = useMemo(() => (feedItems || []).filter((x) => !!x?.sponsored).slice(0, 6), [feedItems]);
 
   const dueInvoiceItems = useMemo(() => {
     return (visibleTickets || [])
-      .map((ticket) => ({
-        ticket,
-        invoice: ticket?.latest_invoice || null,
-      }))
+      .map((ticket) => ({ ticket, invoice: ticket?.latest_invoice || null }))
       .filter((x) => isInvoiceDue(x.invoice))
       .sort((a, b) => {
         const ad = a?.invoice?.due_date ? new Date(a.invoice.due_date).getTime() : Number.MAX_SAFE_INTEGER;
@@ -794,16 +667,11 @@ export default function CustomerDashboard() {
   }, [visibleTickets]);
 
   const unpaidInvoiceCount = useMemo(() => dueInvoiceItems.length, [dueInvoiceItems]);
-
-  const totalDue = useMemo(() => {
-    return dueInvoiceItems.reduce((sum, item) => sum + invoiceAmount(item.invoice), 0);
-  }, [dueInvoiceItems]);
+  const totalDue = useMemo(() => dueInvoiceItems.reduce((sum, item) => sum + invoiceAmount(item.invoice), 0), [dueInvoiceItems]);
 
   const tabs = useMemo(() => {
     return BASE_TABS.map((t) =>
-      t.id === "orders"
-        ? { ...t, label: orderTabLabel(unpaidInvoiceCount) }
-        : t
+      t.id === "orders" ? { ...t, label: orderTabLabel(unpaidInvoiceCount) } : t
     );
   }, [unpaidInvoiceCount]);
 
@@ -816,7 +684,10 @@ export default function CustomerDashboard() {
         <div className="absolute -bottom-40 -left-40 h-[520px] w-[520px] rounded-full bg-cyan-500/10 blur-3xl" />
       </div>
 
-      <ModeBar title="Customer Home" subtitle="Create requests • Track orders • Keep everything in one place" />
+      <ModeBar
+        title="Customer Home"
+        subtitle="Create requests • Track orders • Keep everything in one place"
+      />
 
       <main className="relative max-w-6xl mx-auto px-4 py-6 space-y-6">
         <NewsReel />
@@ -862,10 +733,8 @@ export default function CustomerDashboard() {
                     <div className="text-sm text-slate-400 mt-2">
                       Your life-first service hub — requests, schedules, and updates in one place.
                     </div>
-
                     <div className="mt-3 text-[11px] text-slate-500">
-                      Context:{" "}
-                      <span className="font-mono text-slate-200">{activeBusinessId || "auto"}</span>
+                      Context: <span className="font-mono text-slate-200">{activeBusinessId || "auto"}</span>
                     </div>
                   </div>
                 </div>
@@ -904,14 +773,7 @@ export default function CustomerDashboard() {
               onViewFeed={() => navigate("/newsfeed")}
             />
 
-            <Card
-              title="This Week"
-              right={
-                <IconBtn title="Open calendar tab" tone="cyan" onClick={() => setTab("calendar")}>
-                  📅
-                </IconBtn>
-              }
-            >
+            <Card title="This Week" right={<IconBtn title="Open calendar tab" tone="cyan" onClick={() => setTab("calendar")}>📅</IconBtn>}>
               <div className="text-sm text-slate-400">Weekly view of what’s coming (MVP uses ticket data).</div>
               <div className="mt-4">
                 <CustomerWeeklyCalendar tickets={tickets} onOpenTicket={(id) => navigate(`/tickets/${id}`)} showHeader />
@@ -938,13 +800,8 @@ export default function CustomerDashboard() {
                         </IconBtn>
                       ) : null}
 
-                      <IconBtn title="Refresh" tone="slate" onClick={loadTickets}>
-                        🔄
-                      </IconBtn>
-
-                      <IconBtn title="Open All Orders" tone="cyan" onClick={() => setTab("orders")}>
-                        🧾
-                      </IconBtn>
+                      <IconBtn title="Refresh" tone="slate" onClick={loadTickets}>🔄</IconBtn>
+                      <IconBtn title="Open All Orders" tone="cyan" onClick={() => setTab("orders")}>🧾</IconBtn>
                     </div>
                   }
                 >
@@ -973,11 +830,11 @@ export default function CustomerDashboard() {
                       const tid = Number(t.id);
                       const st = String(t.status || "").toUpperCase();
                       const canCancel = !["COMPLETED", "PAID", "CANCELLED", "CLOSED"].includes(st);
-
                       const serviceTitle = resolveCustomerFriendlyTitle(t);
                       const serviceStyle = resolveServiceStyle(t);
                       const acceptedBy = getAcceptedBy(t);
                       const businessName = resolveBusinessName(t);
+                      const p1 = isPriorityOne(t);
 
                       return (
                         <div
@@ -988,12 +845,16 @@ export default function CustomerDashboard() {
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") navigate(`/tickets/${t.id}`);
                           }}
-                          className="w-full text-left rounded-3xl border border-slate-800/80 bg-slate-950/45 hover:bg-slate-900/40 p-4 transition cursor-pointer outline-none focus:ring-2 focus:ring-cyan-500/30"
+                          className={cx(
+                            "w-full text-left rounded-3xl border bg-slate-950/45 hover:bg-slate-900/40 p-4 transition cursor-pointer outline-none focus:ring-2 focus:ring-cyan-500/30",
+                            p1
+                              ? "border-red-500/60 shadow-[0_0_28px_rgba(239,68,68,0.2)]"
+                              : "border-slate-800/80"
+                          )}
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <div className="font-extrabold truncate">{serviceTitle}</div>
-
                               <div className="text-xs text-slate-400 mt-1">
                                 Ticket #{t.id}
                                 <span className="mx-2 text-slate-600">•</span>
@@ -1002,7 +863,9 @@ export default function CustomerDashboard() {
                                     Business <span className="text-slate-200">{businessName}</span>
                                   </>
                                 ) : (
-                                  <>Business <span className="text-slate-500">Not assigned yet</span></>
+                                  <>
+                                    Business <span className="text-slate-500">Not assigned yet</span>
+                                  </>
                                 )}
                               </div>
 
@@ -1021,7 +884,15 @@ export default function CustomerDashboard() {
                               </div>
                             </div>
 
-                            <span className={statusPill(t.status)}>{String(t.status || "NEW")}</span>
+                            <div className="flex items-center gap-2 flex-wrap justify-end">
+                              <PriorityBadge ticket={t} showEta={false} />
+                              {p1 ? (
+                                <span className="text-[10px] px-2 py-1 rounded-full border font-black bg-red-500/20 border-red-500/40 text-red-100 shadow-[0_0_14px_rgba(239,68,68,0.2)]">
+                                  SERVICE NOW
+                                </span>
+                              ) : null}
+                              <span className={statusPill(t.status)}>{String(t.status || "NEW")}</span>
+                            </div>
                           </div>
 
                           <div className="text-xs text-slate-400 mt-3">
@@ -1029,7 +900,10 @@ export default function CustomerDashboard() {
                             {t.service_address ? ` • ${t.service_address}` : ""}
                           </div>
 
-                          <div className="mt-3 flex items-center justify-between gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                          <div
+                            className="mt-3 flex items-center justify-between gap-2 flex-wrap"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <div className="flex items-center gap-2 flex-wrap">
                               <AddToCalendarButton ticket={t} />
 
@@ -1042,7 +916,9 @@ export default function CustomerDashboard() {
                                 tone="rose"
                                 disabled={!canCancel}
                                 onClick={() => {
-                                  const ok = window.confirm(`Cancel request #${t.id}? This will set status to CANCELLED.`);
+                                  const ok = window.confirm(
+                                    `Cancel request #${t.id}? This will set status to CANCELLED.`
+                                  );
                                   if (ok) cancelTicket(tid);
                                 }}
                               >
@@ -1110,66 +986,12 @@ export default function CustomerDashboard() {
                 />
 
                 <Card title="Inbox Snapshot">
-                  <div className="text-[11px] text-slate-500 -mt-1 mb-3">Ticket updates, reminders, broadcasts, and messages.</div>
+                  <div className="text-[11px] text-slate-500 -mt-1 mb-3">
+                    Ticket updates, reminders, broadcasts, and messages.
+                  </div>
                   <div className="rounded-3xl border border-slate-800/80 bg-slate-950/30 p-3">
                     <InboxPanel />
                   </div>
-                </Card>
-
-                <Card title="Apps (Coming Soon)">
-                  <div className="text-[11px] text-slate-500 -mt-1 mb-3">Extra tools you can enable as we roll them out.</div>
-
-                  <div className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={() => setTab("fitness")}
-                      className="w-full text-left rounded-3xl border border-slate-800/80 bg-slate-950/40 hover:bg-slate-900/35 p-4 transition"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="font-semibold">🏋️ Fitness</div>
-                          <div className="text-xs text-slate-400 mt-1">Habits, workouts, goals, accountability.</div>
-                        </div>
-                        <span className="text-[10px] px-2 py-1 rounded-full border font-semibold bg-indigo-500/10 border-indigo-500/30 text-indigo-200">
-                          Soon
-                        </span>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setTab("finance")}
-                      className="w-full text-left rounded-3xl border border-slate-800/80 bg-slate-950/40 hover:bg-slate-900/35 p-4 transition"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="font-semibold">💳 Finance</div>
-                          <div className="text-xs text-slate-400 mt-1">Bills, budgets, cashflow snapshots.</div>
-                        </div>
-                        <span className="text-[10px] px-2 py-1 rounded-full border font-semibold bg-indigo-500/10 border-indigo-500/30 text-indigo-200">
-                          Soon
-                        </span>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setTab("deals")}
-                      className="w-full text-left rounded-3xl border border-slate-800/80 bg-slate-950/40 hover:bg-slate-900/35 p-4 transition"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="font-semibold">🔥 Deals</div>
-                          <div className="text-xs text-slate-400 mt-1">Promoted services, offers, and niche ads.</div>
-                        </div>
-                        <span className="text-[10px] px-2 py-1 rounded-full border font-semibold bg-indigo-500/10 border-indigo-500/30 text-indigo-200">
-                          MVP
-                        </span>
-                      </div>
-                    </button>
-                  </div>
-
-                  <div className="mt-3 text-[11px] text-slate-500">Tap an app → we’ll open the current module or placeholder.</div>
                 </Card>
               </div>
             </div>
@@ -1198,48 +1020,32 @@ export default function CustomerDashboard() {
               </div>
             }
           >
-            <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-              <div className="text-sm text-slate-400">Every request you’ve created — searchable + clickable.</div>
-              {unpaidInvoiceCount > 0 ? (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <PromoPill tone="amber">{unpaidInvoiceCount} invoice{unpaidInvoiceCount === 1 ? "" : "s"} due</PromoPill>
-                  <PromoPill tone="cyan">Total {toMoney(totalDue)}</PromoPill>
-                </div>
-              ) : null}
-            </div>
             <CustomerTickets embedded />
           </Card>
         ) : null}
 
         {tab === "calendar" ? (
-          <Card
-            title="Calendar"
-            right={
-              <IconBtn title="Refresh tickets" tone="slate" onClick={loadTickets}>
-                🔄
-              </IconBtn>
-            }
-          >
-            <div className="text-sm text-slate-400">Weekly calendar view.</div>
-            <div className="mt-4">
-              <CustomerWeeklyCalendar tickets={tickets} onOpenTicket={(id) => navigate(`/tickets/${id}`)} showHeader />
-            </div>
+          <Card title="Calendar">
+            <CustomerWeeklyCalendar tickets={tickets} onOpenTicket={(id) => navigate(`/tickets/${id}`)} showHeader />
           </Card>
         ) : null}
 
         {tab === "todo" ? (
-          <div className="space-y-4">
-            <TodoList
-              scope="customer"
-              title="Quick To-Do"
-              subtitle="Fast notes + checkboxes (MVP). Full Planner module comes next."
-              showStatus
-              rightRailAds
-            />
-          </div>
+          <TodoList
+            scope="customer"
+            title="Quick To-Do"
+            subtitle="Fast notes + checkboxes (MVP). Full Planner module comes next."
+            showStatus
+            rightRailAds
+          />
         ) : null}
 
-        {tab === "inbox" ? <InboxPanel title="Inbox" subtitle="Ticket updates, messages, broadcasts, and reminders." /> : null}
+        {tab === "inbox" ? (
+          <InboxPanel
+            title="Inbox"
+            subtitle="Ticket updates, messages, broadcasts, and reminders."
+          />
+        ) : null}
 
         {tab === "deals" ? (
           <DealsPanel
@@ -1255,11 +1061,6 @@ export default function CustomerDashboard() {
             title="Finance"
             desc="Bills, budgets, cashflow snapshots, and property-friendly money tracking."
             onUpgrade={() => navigate("/upgrade")}
-            bullets={[
-              "Monthly snapshots + reminders",
-              "Invoice + receipts hub (customer side)",
-              "Property cashflow view (later ties into PM module)",
-            ]}
           />
         ) : null}
 
@@ -1269,11 +1070,6 @@ export default function CustomerDashboard() {
             title="Fitness"
             desc="Habits, workouts, goals, and accountability — tied into your daily life flow."
             onUpgrade={() => navigate("/upgrade")}
-            bullets={[
-              "Workouts + habit streaks",
-              "Weekly goals + accountability",
-              "Future: coach sharing + templates",
-            ]}
           />
         ) : null}
       </main>

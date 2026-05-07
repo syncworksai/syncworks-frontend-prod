@@ -1,8 +1,12 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/client";
 import ModeBar from "../components/ModeBar";
 import { useAuth } from "../auth/AuthContext";
+import PriorityBadge, {
+  isPriorityOne,
+  priorityRank,
+} from "../components/tickets/PriorityBadge";
 
 function cx(...p) {
   return p.filter(Boolean).join(" ");
@@ -50,7 +54,12 @@ const STATUS_CHANGE_OPTIONS = [
 ];
 
 function isAssigned(t) {
-  return !!(t?.assigned_business || t?.assigned_business_id || t?.business || t?.business_id);
+  return !!(
+    t?.assigned_business ||
+    t?.assigned_business_id ||
+    t?.business ||
+    t?.business_id
+  );
 }
 
 function isMarketplace(t) {
@@ -59,6 +68,7 @@ function isMarketplace(t) {
 
 function statusLabel(s) {
   const u = String(s || "").toUpperCase();
+
   return (
     {
       NEW: "New",
@@ -77,17 +87,21 @@ function statusLabel(s) {
       PAID: "Paid",
       CANCELLED: "Cancelled",
       CLOSED: "Closed",
-    }[u] || u || "Status"
+    }[u] ||
+    u ||
+    "Status"
   );
 }
 
 function statusTone(s) {
   const u = String(s || "").toUpperCase();
+
   if (["PAID"].includes(u)) return "emerald";
   if (["COMPLETED", "INVOICED"].includes(u)) return "cyan";
   if (["CANCELLED"].includes(u)) return "rose";
   if (["IN_PROGRESS", "ON_SITE", "EN_ROUTE"].includes(u)) return "amber";
   if (["SCHEDULED", "ACCEPTED"].includes(u)) return "fuchsia";
+
   return "slate";
 }
 
@@ -101,8 +115,14 @@ function Pill({ children, tone = "slate" }) {
     rose: "border-rose-500/30 bg-rose-500/10 text-rose-200",
     sky: "border-sky-500/30 bg-sky-500/10 text-sky-200",
   };
+
   return (
-    <span className={cx("inline-flex items-center px-2 py-1 rounded-full border text-[11px] font-semibold", m[tone] || m.slate)}>
+    <span
+      className={cx(
+        "inline-flex items-center px-2 py-1 rounded-full border text-[11px] font-semibold",
+        m[tone] || m.slate
+      )}
+    >
       {children}
     </span>
   );
@@ -113,11 +133,15 @@ function SmallBtn({ children, tone = "slate", className = "", ...props }) {
     slate: "bg-slate-950 border-slate-800 hover:bg-slate-900 text-slate-200",
     cyan: "bg-cyan-500/15 border-cyan-500/30 hover:bg-cyan-500/20 text-cyan-200",
     rose: "bg-rose-500/15 border-rose-500/30 hover:bg-rose-500/20 text-rose-200",
-    fuchsia: "bg-fuchsia-500/15 border-fuchsia-500/30 hover:bg-fuchsia-500/20 text-fuchsia-200",
-    emerald: "bg-emerald-500/15 border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-200",
-    amber: "bg-amber-500/15 border-amber-500/30 hover:bg-amber-500/20 text-amber-200",
+    fuchsia:
+      "bg-fuchsia-500/15 border-fuchsia-500/30 hover:bg-fuchsia-500/20 text-fuchsia-200",
+    emerald:
+      "bg-emerald-500/15 border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-200",
+    amber:
+      "bg-amber-500/15 border-amber-500/30 hover:bg-amber-500/20 text-amber-200",
     sky: "bg-sky-500/15 border-sky-500/30 hover:bg-sky-500/20 text-sky-200",
   };
+
   return (
     <button
       className={cx(
@@ -138,8 +162,10 @@ function FieldLabel({ children }) {
 
 function makeTicketCode(ticket) {
   if (ticket?.ticket_code) return ticket.ticket_code;
+
   const num = Number(ticket?.id || 0);
   if (!num) return "DT-000000";
+
   const prefix = ticket?.is_marketplace ? "MP" : "DT";
   return `${prefix}-${String(num).padStart(6, "0")}`;
 }
@@ -149,12 +175,16 @@ function locationLine(ticket) {
   const city = String(ticket?.service_city || ticket?.city || "").trim();
   const state = String(ticket?.service_state || ticket?.state || "").trim();
   const zip = String(ticket?.service_zip || "").trim();
-  return [address, [city, state].filter(Boolean).join(", "), zip].filter(Boolean).join(" • ");
+
+  return [address, [city, state].filter(Boolean).join(", "), zip]
+    .filter(Boolean)
+    .join(" • ");
 }
 
 function roleLabel(role) {
   const raw = String(role || "").trim();
   if (!raw) return "Team Member";
+
   return raw
     .toLowerCase()
     .split("_")
@@ -163,15 +193,19 @@ function roleLabel(role) {
 }
 
 function displayMemberName(member) {
-  const full =
-    `${member?.user?.first_name || ""} ${member?.user?.last_name || ""}`.trim() ||
+  const full = `${member?.user?.first_name || ""} ${
+    member?.user?.last_name || ""
+  }`.trim();
+
+  return (
+    full ||
     member?.user_name ||
     member?.name ||
     member?.user_email ||
     member?.user?.email ||
     member?.email ||
-    `Member #${member?.id || ""}`;
-  return full;
+    `Member #${member?.id || ""}`
+  );
 }
 
 function parseLockError(e) {
@@ -193,7 +227,9 @@ function parseLockError(e) {
     locked: true,
     lock_reason: lock_reason || "LOCKED",
     business_id: business_id || null,
-    detail: detail || "Business account is locked. Update billing or submit an unlock request.",
+    detail:
+      detail ||
+      "Business account is locked. Update billing or submit an unlock request.",
   };
 }
 
@@ -208,40 +244,58 @@ function BoardTicketCard({
   isSboLike,
   locked,
 }) {
-  const navigate = useNavigate();
   const ticketCode = makeTicketCode(ticket);
   const status = String(ticket?.status || "").toUpperCase();
   const tone = statusTone(status);
   const mp = isMarketplace(ticket);
   const asg = isAssigned(ticket);
   const showMpActions = view === "marketplace" && isSboLike && mp && !asg && !locked;
+  const p1 = isPriorityOne(ticket);
   const isBusy = String(busyId || "") === String(ticket.id);
 
   const [assignValue, setAssignValue] = useState("");
   const [statusValue, setStatusValue] = useState(status);
 
   useEffect(() => {
-    const assignedUserId = String(ticket?.assigned_member || ticket?.assigned_member_id || "");
+    const assignedUserId = String(
+      ticket?.assigned_member || ticket?.assigned_member_id || ""
+    );
+
     const found = (members || []).find(
       (m) => String(m?.user || m?.user_id || m?.user?.id || "") === assignedUserId
     );
+
     setAssignValue(found ? String(found.id) : "");
     setStatusValue(status);
   }, [members, status, ticket?.assigned_member, ticket?.assigned_member_id]);
 
   return (
-    <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-4 md:p-5">
+    <div
+      className={cx(
+        "rounded-3xl border bg-slate-950/40 p-4 md:p-5",
+        p1
+          ? "border-red-500/60 bg-red-500/5 shadow-[0_0_32px_rgba(239,68,68,0.22)]"
+          : "border-slate-800"
+      )}
+    >
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="text-base font-extrabold text-slate-100">{ticketCode}</div>
+            <div className="text-base font-extrabold text-slate-100">
+              {ticketCode}
+            </div>
+            <PriorityBadge ticket={ticket} />
+            {p1 ? <Pill tone="rose">SERVICE NOW</Pill> : null}
             <Pill tone={tone}>{statusLabel(status)}</Pill>
-            {mp ? <Pill tone="fuchsia">Marketplace</Pill> : <Pill tone="slate">Direct</Pill>}
+            {mp ? <Pill tone="fuchsia">Marketplace</Pill> : <Pill>Direct</Pill>}
             {asg ? <Pill tone="emerald">Assigned</Pill> : <Pill tone="amber">Unassigned</Pill>}
           </div>
 
           <div className="mt-2 text-sm font-semibold text-slate-100 truncate">
-            {ticket?.category_path || ticket?.category_name || ticket?.title || "Ticket"}
+            {ticket?.category_path ||
+              ticket?.category_name ||
+              ticket?.title ||
+              "Ticket"}
           </div>
 
           <div className="mt-1 text-xs text-slate-400 break-words">
@@ -249,7 +303,8 @@ function BoardTicketCard({
           </div>
 
           <div className="mt-2 text-[11px] text-slate-500">
-            {ticket?.sms_allowed ? "Allows text messaging" : "In app or phone call"} • {ticket?.created_at ? new Date(ticket.created_at).toLocaleString() : "—"}
+            {ticket?.sms_allowed ? "Allows text messaging" : "In app or phone call"} •{" "}
+            {ticket?.created_at ? new Date(ticket.created_at).toLocaleString() : "—"}
           </div>
         </div>
 
@@ -321,53 +376,89 @@ function BoardTicketCard({
       <div className="mt-4 flex items-center gap-2 flex-wrap">
         {showMpActions ? (
           <>
-            <SmallBtn tone="cyan" onClick={() => onAction(ticket.id, "accept")} disabled={isBusy}>
+            <SmallBtn
+              tone="cyan"
+              onClick={() => onAction(ticket.id, "accept")}
+              disabled={isBusy}
+            >
               {isBusy ? "..." : "Accept"}
             </SmallBtn>
-            <SmallBtn tone="rose" onClick={() => onAction(ticket.id, "decline_marketplace")} disabled={isBusy}>
+            <SmallBtn
+              tone="rose"
+              onClick={() => onAction(ticket.id, "decline_marketplace")}
+              disabled={isBusy}
+            >
               {isBusy ? "..." : "Deny"}
             </SmallBtn>
           </>
         ) : (
           <>
             {["NEW", "ASSIGNED"].includes(status) ? (
-              <SmallBtn tone="cyan" onClick={() => onAction(ticket.id, "accept")} disabled={isBusy}>
+              <SmallBtn
+                tone="cyan"
+                onClick={() => onAction(ticket.id, "accept")}
+                disabled={isBusy}
+              >
                 {isBusy ? "..." : "Accept"}
               </SmallBtn>
             ) : null}
 
             {status === "ACCEPTED" ? (
-              <SmallBtn tone="amber" onClick={() => onAction(ticket.id, "schedule")} disabled={isBusy}>
+              <SmallBtn
+                tone="amber"
+                onClick={() => onAction(ticket.id, "schedule")}
+                disabled={isBusy}
+              >
                 {isBusy ? "..." : "Schedule"}
               </SmallBtn>
             ) : null}
 
             {status === "SCHEDULED" ? (
-              <SmallBtn tone="sky" onClick={() => onAction(ticket.id, "en-route")} disabled={isBusy}>
+              <SmallBtn
+                tone="sky"
+                onClick={() => onAction(ticket.id, "en-route")}
+                disabled={isBusy}
+              >
                 {isBusy ? "..." : "En Route"}
               </SmallBtn>
             ) : null}
 
             {status === "EN_ROUTE" ? (
-              <SmallBtn tone="fuchsia" onClick={() => onAction(ticket.id, "on-site")} disabled={isBusy}>
+              <SmallBtn
+                tone="fuchsia"
+                onClick={() => onAction(ticket.id, "on-site")}
+                disabled={isBusy}
+              >
                 {isBusy ? "..." : "On Site"}
               </SmallBtn>
             ) : null}
 
             {["ACCEPTED", "SCHEDULED", "EN_ROUTE", "ON_SITE", "APPROVED"].includes(status) ? (
-              <SmallBtn tone="cyan" onClick={() => onAction(ticket.id, "start")} disabled={isBusy}>
+              <SmallBtn
+                tone="cyan"
+                onClick={() => onAction(ticket.id, "start")}
+                disabled={isBusy}
+              >
                 {isBusy ? "..." : "Start"}
               </SmallBtn>
             ) : null}
 
             {["IN_PROGRESS", "ON_SITE", "EN_ROUTE", "SCHEDULED", "ACCEPTED"].includes(status) ? (
-              <SmallBtn tone="emerald" onClick={() => onAction(ticket.id, "complete")} disabled={isBusy}>
+              <SmallBtn
+                tone="emerald"
+                onClick={() => onAction(ticket.id, "complete")}
+                disabled={isBusy}
+              >
                 {isBusy ? "..." : "Complete"}
               </SmallBtn>
             ) : null}
 
             {!["PAID", "COMPLETED", "CANCELLED", "CLOSED"].includes(status) ? (
-              <SmallBtn tone="rose" onClick={() => onAction(ticket.id, "cancel")} disabled={isBusy}>
+              <SmallBtn
+                tone="rose"
+                onClick={() => onAction(ticket.id, "cancel")}
+                disabled={isBusy}
+              >
                 {isBusy ? "..." : "Cancel"}
               </SmallBtn>
             ) : null}
@@ -384,15 +475,15 @@ export default function TicketsBoard() {
   const [params, setParams] = useSearchParams();
 
   const isCustomer = mode === "CUSTOMER";
-  const isSboLike = mode === "SBO" || mode === "EMPLOYEE" || mode === "PROPERTY_MGR" || mode === "PM";
+  const isSboLike =
+    mode === "SBO" ||
+    mode === "EMPLOYEE" ||
+    mode === "PROPERTY_MGR" ||
+    mode === "PM";
 
   const view = params.get("view") || "all";
   const defaultViewMode = view === "marketplace" ? "queue" : "table";
   const [viewMode, setViewMode] = useState(defaultViewMode);
-
-  useEffect(() => {
-    setViewMode(view === "marketplace" ? "queue" : "table");
-  }, [view]);
 
   const [items, setItems] = useState([]);
   const [members, setMembers] = useState([]);
@@ -410,6 +501,10 @@ export default function TicketsBoard() {
   const locked = !!billing?.is_locked;
   const lockReason = billing?.lock_reason || "LOCKED";
   const bizId = useMemo(() => String(activeBusinessId || "").trim(), [activeBusinessId]);
+
+  useEffect(() => {
+    setViewMode(view === "marketplace" ? "queue" : "table");
+  }, [view]);
 
   function setView(next) {
     setParams((p) => {
@@ -437,6 +532,7 @@ export default function TicketsBoard() {
       setMembers([]);
       return;
     }
+
     try {
       const res = await api.get(`/businesses/${activeBusinessId}/members/`);
       setMembers(safeResults(res.data));
@@ -447,18 +543,23 @@ export default function TicketsBoard() {
 
   const openSetupCard = useCallback(async () => {
     setErr("");
+
     try {
       let res = null;
+
       try {
         res = await api.post("/billing/setup-card/", {});
       } catch {
         res = await api.get("/billing/setup-card/");
       }
+
       const url = res?.data?.url || res?.data?.checkout_url || res?.data?.checkoutUrl;
+
       if (url) {
         window.location.href = url;
         return;
       }
+
       setErr("No Stripe checkout URL returned from /billing/setup-card/.");
     } catch (e) {
       setErr(e?.response?.data?.detail || "Failed to open card setup.");
@@ -467,10 +568,14 @@ export default function TicketsBoard() {
 
   const submitUnlockRequest = useCallback(async () => {
     setErr("");
+
     try {
       await api.post("/billing/unlock-request/", {
-        message: `Unlock request from TicketsBoard. Business ${bizId || "—"} is locked (${lockReason}). Billing updated / requesting review.`,
+        message: `Unlock request from TicketsBoard. Business ${
+          bizId || "—"
+        } is locked (${lockReason}). Billing updated / requesting review.`,
       });
+
       await loadBilling();
     } catch (e) {
       setErr(e?.response?.data?.detail || "Failed to submit unlock request.");
@@ -489,19 +594,24 @@ export default function TicketsBoard() {
 
       if (!isCustomer && isSboLike && view === "marketplace" && billing?.is_locked) {
         setItems([]);
-        setErr("Marketplace is blocked while your business is locked. Fix billing to continue.");
+        setErr(
+          "Marketplace is blocked while your business is locked. Fix billing to continue."
+        );
         setLoading(false);
         return;
       }
 
       let url = "/tickets/";
-      if (!isCustomer && isSboLike && view === "marketplace") url = "/tickets/marketplace/";
+      if (!isCustomer && isSboLike && view === "marketplace") {
+        url = "/tickets/marketplace/";
+      }
 
       const res = await api.get(url);
       setItems(safeResults(res.data));
     } catch (e) {
       setItems([]);
       const lock = parseLockError(e);
+
       if (lock) {
         await loadBilling();
         setErr(lock.detail);
@@ -520,18 +630,22 @@ export default function TicketsBoard() {
     function onBizChanged() {
       load();
     }
+
     window.addEventListener("sw:activeBusinessChanged", onBizChanged);
+
     return () => window.removeEventListener("sw:activeBusinessChanged", onBizChanged);
   }, [view, mode, activeBusinessId]);
 
   async function onAction(ticketId, action) {
     setErr("");
     setActingId(ticketId);
+
     try {
       await api.post(`/tickets/${ticketId}/${action}/`, {});
       await load();
     } catch (e) {
       const lock = parseLockError(e);
+
       if (lock) {
         await loadBilling();
         setErr(lock.detail);
@@ -547,6 +661,7 @@ export default function TicketsBoard() {
   async function onAssign(ticketId, memberId) {
     setErr("");
     setActingId(ticketId);
+
     try {
       await api.post(`/tickets/${ticketId}/assign_member/`, {
         business_member_id: Number(memberId),
@@ -562,8 +677,11 @@ export default function TicketsBoard() {
   async function onStatusChange(ticketId, nextStatus) {
     setErr("");
     setActingId(ticketId);
+
     try {
-      await api.post(`/tickets/${ticketId}/set-status/`, { status: nextStatus });
+      await api.post(`/tickets/${ticketId}/set-status/`, {
+        status: nextStatus,
+      });
       await load();
     } catch (e) {
       setErr(e?.response?.data?.detail || "Failed to update status");
@@ -578,7 +696,9 @@ export default function TicketsBoard() {
 
     if (!isCustomer && isSboLike) {
       if (view === "my") list = list.filter((t) => isAssigned(t));
-      if (view === "marketplace") list = list.filter((t) => isMarketplace(t) && !isAssigned(t));
+      if (view === "marketplace") {
+        list = list.filter((t) => isMarketplace(t) && !isAssigned(t));
+      }
     }
 
     if (status !== "ALL") {
@@ -611,6 +731,7 @@ export default function TicketsBoard() {
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
+
         return blob.includes(text);
       });
     }
@@ -618,6 +739,10 @@ export default function TicketsBoard() {
     list.sort((a, b) => {
       const da = a?.created_at ? new Date(a.created_at).getTime() : 0;
       const db = b?.created_at ? new Date(b.created_at).getTime() : 0;
+      const urgency = priorityRank(a) - priorityRank(b);
+
+      if (view === "marketplace" && urgency !== 0) return urgency;
+
       return sort === "NEWEST" ? db - da : da - db;
     });
 
@@ -628,6 +753,7 @@ export default function TicketsBoard() {
     const total = filtered.length;
     const mp = filtered.filter((t) => isMarketplace(t) && !isAssigned(t)).length;
     const asg = filtered.filter((t) => isAssigned(t)).length;
+
     return { total, mp, asg };
   }, [filtered]);
 
@@ -636,19 +762,25 @@ export default function TicketsBoard() {
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">
-      <ModeBar title="Tickets" subtitle="Ticket number search + team assignment + fast status controls" />
+      <ModeBar
+        title="Tickets"
+        subtitle="Ticket number search + team assignment + fast status controls"
+      />
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-4">
         {showViewTabs && locked ? (
           <div className="rounded-3xl border border-rose-500/35 bg-rose-500/10 p-4">
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="min-w-0">
-                <div className="text-base font-extrabold text-rose-100">Business Locked</div>
+                <div className="text-base font-extrabold text-rose-100">
+                  Business Locked
+                </div>
                 <div className="text-xs text-rose-200/90 mt-1">
                   Reason: <b className="font-mono">{lockReason}</b>
                 </div>
                 <div className="text-xs text-slate-300 mt-2">
-                  Marketplace is blocked until billing is updated. You can still view and manage your tickets.
+                  Marketplace is blocked until billing is updated. You can still
+                  view and manage your tickets.
                 </div>
               </div>
 
@@ -659,7 +791,10 @@ export default function TicketsBoard() {
                 <SmallBtn tone="fuchsia" onClick={submitUnlockRequest}>
                   Submit Unlock Request
                 </SmallBtn>
-                <SmallBtn tone="slate" onClick={() => nav("/billing/cash-fee-invoices")}>
+                <SmallBtn
+                  tone="slate"
+                  onClick={() => nav("/billing/cash-fee-invoices")}
+                >
                   View Invoices
                 </SmallBtn>
                 <SmallBtn tone="slate" onClick={load}>
@@ -672,11 +807,13 @@ export default function TicketsBoard() {
 
         <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 overflow-hidden relative">
           <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.10),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.10),transparent_28%)]" />
+
           <div className="relative flex items-start justify-between gap-3 flex-wrap">
             <div>
               <div className="text-2xl font-extrabold">Tickets Board</div>
               <div className="text-sm text-slate-400 mt-1">
-                Search ticket number, assign team, change status, and open details fast.
+                Search ticket number, assign team, change status, and open
+                details fast.
               </div>
             </div>
 
@@ -698,12 +835,18 @@ export default function TicketsBoard() {
           </div>
         </div>
 
-        {err ? <div className="text-sm text-red-200 bg-red-900/10 border border-red-800 rounded-xl p-3">{err}</div> : null}
+        {err ? (
+          <div className="text-sm text-red-200 bg-red-900/10 border border-red-800 rounded-xl p-3">
+            {err}
+          </div>
+        ) : null}
 
         <div className="grid md:grid-cols-3 gap-3">
           <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/10 p-4">
             <div className="text-[11px] text-slate-400">In View</div>
-            <div className="mt-1 text-lg font-extrabold">{loading ? "…" : counts.total}</div>
+            <div className="mt-1 text-lg font-extrabold">
+              {loading ? "…" : counts.total}
+            </div>
           </div>
           <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4">
             <div className="text-[11px] text-slate-400">Assigned</div>
@@ -717,15 +860,23 @@ export default function TicketsBoard() {
 
         {showViewTabs ? (
           <div className="flex items-center gap-2 flex-wrap">
-            <SmallBtn tone={view === "all" ? "cyan" : "slate"} onClick={() => setView("all")}>
+            <SmallBtn
+              tone={view === "all" ? "cyan" : "slate"}
+              onClick={() => setView("all")}
+            >
               All
             </SmallBtn>
-            <SmallBtn tone={view === "my" ? "cyan" : "slate"} onClick={() => setView("my")}>
+            <SmallBtn
+              tone={view === "my" ? "cyan" : "slate"}
+              onClick={() => setView("my")}
+            >
               My Business
             </SmallBtn>
             <SmallBtn
               tone={view === "marketplace" ? "cyan" : "slate"}
-              onClick={() => (marketplaceDisabled ? null : setView("marketplace"))}
+              onClick={() =>
+                marketplaceDisabled ? null : setView("marketplace")
+              }
               disabled={marketplaceDisabled}
               className={marketplaceDisabled ? "opacity-50" : ""}
             >
@@ -851,7 +1002,9 @@ export default function TicketsBoard() {
         {viewMode === "table" ? (
           <div className="space-y-3">
             {filtered.length === 0 ? (
-              <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-8 text-slate-400">No tickets match your filters.</div>
+              <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-8 text-slate-400">
+                No tickets match your filters.
+              </div>
             ) : (
               filtered.map((ticket) => (
                 <BoardTicketCard
@@ -872,54 +1025,106 @@ export default function TicketsBoard() {
         ) : (
           <div className="space-y-3">
             {filtered.length === 0 ? (
-              <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-8 text-slate-400">No tickets in this view.</div>
+              <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-8 text-slate-400">
+                No tickets in this view.
+              </div>
             ) : (
               filtered.map((ticket) => {
-                const title = `${makeTicketCode(ticket)} • ${ticket?.category_path || ticket?.category_name || ticket?.title || "Ticket"}`;
+                const title = `${makeTicketCode(ticket)} • ${
+                  ticket?.category_path ||
+                  ticket?.category_name ||
+                  ticket?.title ||
+                  "Ticket"
+                }`;
                 const st = String(ticket?.status || "NEW").toUpperCase();
                 const tone = statusTone(st);
                 const mp = isMarketplace(ticket);
                 const asg = isAssigned(ticket);
-                const showMpActions = view === "marketplace" && isSboLike && mp && !asg && !locked;
+                const showMpActions =
+                  view === "marketplace" && isSboLike && mp && !asg && !locked;
 
                 return (
-                  <div key={ticket.id} className="rounded-3xl border border-slate-800 bg-slate-950/40 hover:bg-slate-900/30 transition p-5">
+                  <div
+                    key={ticket.id}
+                    className={cx(
+                      "rounded-3xl border bg-slate-950/40 hover:bg-slate-900/30 transition p-5",
+                      isPriorityOne(ticket)
+                        ? "border-red-500/60 bg-red-500/5 shadow-[0_0_30px_rgba(239,68,68,0.2)]"
+                        : "border-slate-800"
+                    )}
+                  >
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div className="min-w-0">
-                        <div className="text-base font-extrabold truncate">{title}</div>
+                        <div className="text-base font-extrabold truncate">
+                          {title}
+                        </div>
                         <div className="text-sm text-slate-400 mt-1">
                           {locationLine(ticket) || "No service location"}
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 flex-wrap">
+                        <PriorityBadge ticket={ticket} />
+                        {isPriorityOne(ticket) ? (
+                          <Pill tone="rose">SERVICE NOW</Pill>
+                        ) : null}
                         <Pill tone={tone}>{statusLabel(st)}</Pill>
-                        {mp ? <Pill tone="fuchsia">Marketplace</Pill> : <Pill tone="slate">Direct</Pill>}
-                        {asg ? <Pill tone="emerald">Assigned</Pill> : <Pill tone="amber">Unassigned</Pill>}
+                        {mp ? (
+                          <Pill tone="fuchsia">Marketplace</Pill>
+                        ) : (
+                          <Pill tone="slate">Direct</Pill>
+                        )}
+                        {asg ? (
+                          <Pill tone="emerald">Assigned</Pill>
+                        ) : (
+                          <Pill tone="amber">Unassigned</Pill>
+                        )}
                       </div>
                     </div>
 
                     <div className="mt-4 flex items-center justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-3">
-                        <Link to={`/tickets/${ticket.id}`} className="text-[12px] text-slate-200 hover:text-white underline underline-offset-4">
+                        <Link
+                          to={`/tickets/${ticket.id}`}
+                          className="text-[12px] text-slate-200 hover:text-white underline underline-offset-4"
+                        >
                           Details
                         </Link>
                         {ticket.created_at ? (
-                          <span className="text-[11px] text-slate-500">Created: {new Date(ticket.created_at).toLocaleString()}</span>
+                          <span className="text-[11px] text-slate-500">
+                            Created:{" "}
+                            {new Date(ticket.created_at).toLocaleString()}
+                          </span>
                         ) : null}
                       </div>
 
                       {showMpActions ? (
                         <div className="flex gap-2">
-                          <SmallBtn tone="cyan" onClick={() => onAction(ticket.id, "accept")} disabled={actingId === ticket.id}>
+                          <SmallBtn
+                            tone="cyan"
+                            onClick={() => onAction(ticket.id, "accept")}
+                            disabled={actingId === ticket.id}
+                          >
                             {actingId === ticket.id ? "..." : "Accept"}
                           </SmallBtn>
-                          <SmallBtn tone="rose" onClick={() => onAction(ticket.id, "decline_marketplace")} disabled={actingId === ticket.id}>
+                          <SmallBtn
+                            tone="rose"
+                            onClick={() =>
+                              onAction(ticket.id, "decline_marketplace")
+                            }
+                            disabled={actingId === ticket.id}
+                          >
                             {actingId === ticket.id ? "..." : "Decline"}
                           </SmallBtn>
                         </div>
                       ) : (
-                        <div className="text-[11px] text-slate-500">{view === "marketplace" ? (locked ? "Locked" : "Not actionable") : ""}</div>
+                        <div className="text-[11px] text-slate-500">
+                          {view === "marketplace"
+                            ? locked
+                              ? "Locked"
+                              : "Not actionable"
+                            : ""}
+                        </div>
                       )}
                     </div>
                   </div>

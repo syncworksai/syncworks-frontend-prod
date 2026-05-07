@@ -1,4 +1,6 @@
+// src/components/tickets/TicketHeaderCard.jsx
 import React from "react";
+import PriorityBadge, { isPriorityOne } from "./PriorityBadge";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -34,10 +36,23 @@ function statusLabel(s) {
 
 function statusTone(status) {
   const s = upperStatus(status);
-  if (s === "PAID" || s === "COMPLETED") return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
-  if (s === "CANCELLED") return "border-rose-500/30 bg-rose-500/10 text-rose-200";
-  if (s === "IN_PROGRESS" || s === "EN_ROUTE" || s === "ON_SITE") return "border-cyan-500/30 bg-cyan-500/10 text-cyan-200";
-  if (s === "INVOICED" || s === "AWAITING_APPROVAL") return "border-amber-500/30 bg-amber-500/10 text-amber-200";
+
+  if (s === "PAID" || s === "COMPLETED") {
+    return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
+  }
+
+  if (s === "CANCELLED") {
+    return "border-rose-500/30 bg-rose-500/10 text-rose-200";
+  }
+
+  if (s === "IN_PROGRESS" || s === "EN_ROUTE" || s === "ON_SITE") {
+    return "border-cyan-500/30 bg-cyan-500/10 text-cyan-200";
+  }
+
+  if (s === "INVOICED" || s === "AWAITING_APPROVAL") {
+    return "border-amber-500/30 bg-amber-500/10 text-amber-200";
+  }
+
   return "border-slate-700 bg-slate-900/40 text-slate-200";
 }
 
@@ -51,19 +66,59 @@ export default function TicketHeaderCard({
   assignedName,
   detailSummary,
   isCustomer = false,
+  ticket = null,
+  priority = "",
 }) {
+  const p1 =
+    isPriorityOne(ticket) ||
+    String(priority || "").toUpperCase() === "P1";
+
   return (
-    <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 overflow-hidden relative">
-      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.10),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.10),transparent_28%)]" />
+    <div
+      className={cx(
+        "rounded-3xl border bg-slate-950/40 p-5 overflow-hidden relative",
+        p1
+          ? "border-red-500/60 shadow-[0_0_36px_rgba(239,68,68,0.2)]"
+          : "border-slate-800"
+      )}
+    >
+      <div
+        className={cx(
+          "absolute inset-0 pointer-events-none",
+          p1
+            ? "bg-[radial-gradient(circle_at_top_right,rgba(239,68,68,0.18),transparent_32%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.10),transparent_28%)]"
+            : "bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.10),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.10),transparent_28%)]"
+        )}
+      />
 
       <div className="relative">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <div className="text-lg font-extrabold tracking-tight">{ticketCode}</div>
-              <span className={cx("text-[11px] px-2 py-1 rounded-full border font-semibold", statusTone(status))}>
+              <div className="text-lg font-extrabold tracking-tight">
+                {ticketCode}
+              </div>
+
+              <span
+                className={cx(
+                  "text-[11px] px-2 py-1 rounded-full border font-semibold",
+                  statusTone(status)
+                )}
+              >
                 {statusLabel(status)}
               </span>
+
+              <PriorityBadge
+                ticket={ticket}
+                priority={priority}
+              />
+
+              {p1 ? (
+                <span className="text-[11px] font-black px-2 py-1 rounded-full bg-red-500/20 border border-red-500/40 text-red-100 shadow-[0_0_16px_rgba(239,68,68,0.24)]">
+                  SERVICE NOW
+                </span>
+              ) : null}
+
               <span
                 className={cx(
                   "text-[11px] px-2 py-1 rounded-full border font-semibold",
@@ -82,8 +137,13 @@ export default function TicketHeaderCard({
 
             <div className="mt-2 text-sm text-slate-300 break-words">
               {serviceAddress || "No service address yet"}
-              {workType ? <span className="text-slate-500"> • </span> : null}
-              {workType ? <span className="text-cyan-200">{workType}</span> : null}
+
+              {workType ? (
+                <>
+                  <span className="text-slate-500"> • </span>
+                  <span className="text-cyan-200">{workType}</span>
+                </>
+              ) : null}
             </div>
 
             {detailSummary ? (
@@ -95,7 +155,10 @@ export default function TicketHeaderCard({
 
           {!isCustomer ? (
             <div className="shrink-0 rounded-2xl border border-slate-800 bg-slate-950/55 px-4 py-3">
-              <div className="text-[11px] text-slate-500">Assigned Provider</div>
+              <div className="text-[11px] text-slate-500">
+                Assigned Provider
+              </div>
+
               <div className="mt-1 text-sm font-semibold text-slate-100">
                 {assignedName || "Not assigned"}
               </div>
