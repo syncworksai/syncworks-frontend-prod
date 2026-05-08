@@ -39,6 +39,7 @@ export function getActiveBusinessId() {
 export function setActiveBusinessId(id) {
   if (!id) localStorage.removeItem(ACTIVE_BIZ_KEY);
   else localStorage.setItem(ACTIVE_BIZ_KEY, String(id).trim());
+
   try {
     window.dispatchEvent(new Event("sw:activeBusinessChanged"));
   } catch {
@@ -48,6 +49,7 @@ export function setActiveBusinessId(id) {
 
 export function clearActiveBusinessId() {
   localStorage.removeItem(ACTIVE_BIZ_KEY);
+
   try {
     window.dispatchEvent(new Event("sw:activeBusinessChanged"));
   } catch {
@@ -62,70 +64,81 @@ function resolveBusinessId() {
   const fromWindow = (String(window?.__sw_active_business_id || "") || "").trim();
   if (fromWindow) return fromWindow;
 
-  const last = (String(localStorage.getItem("sw_last_business_id") || "") || "").trim();
+  const last = (
+    String(localStorage.getItem("sw_last_business_id") || "") || ""
+  ).trim();
   if (last) return last;
 
   return "";
 }
 
+function normalizedPath(config) {
+  const raw = String(config?.url || "");
+
+  try {
+    const parsed = new URL(raw, baseURL);
+    return parsed.pathname.replace(/^\/api\/v1/, "") || "/";
+  } catch {
+    return raw.replace(/^\/api\/v1/, "") || "/";
+  }
+}
+
+function methodOf(config) {
+  return String(config?.method || "get").toLowerCase();
+}
+
 function isSalesRequest(config) {
-  const url = String(config?.url || "");
-  if (url.startsWith("/sales/")) return true;
-  if (url === "/sales") return true;
-  if (url.includes("/api/v1/sales/")) return true;
-  return false;
+  const path = normalizedPath(config);
+  return path === "/sales" || path.startsWith("/sales/");
 }
 
 function isPlatformRequest(config) {
-  const url = String(config?.url || "");
-  if (url.startsWith("/platform/")) return true;
-  if (url.startsWith("/platform-growth/")) return true;
-  if (url === "/platform") return true;
-  if (url === "/platform-growth") return true;
-  if (url.includes("/api/v1/platform/")) return true;
-  if (url.includes("/api/v1/platform-growth/")) return true;
-  return false;
+  const path = normalizedPath(config);
+  return (
+    path === "/platform" ||
+    path === "/platform-growth" ||
+    path.startsWith("/platform/") ||
+    path.startsWith("/platform-growth/")
+  );
 }
 
 function isTenantRequest(config) {
-  const url = String(config?.url || "");
-  if (url.startsWith("/tenant/")) return true;
-  if (url === "/tenant") return true;
-  if (url.includes("/api/v1/tenant/")) return true;
-  return false;
+  const path = normalizedPath(config);
+  return path === "/tenant" || path.startsWith("/tenant/");
 }
 
 function isInvestorRequest(config) {
-  const url = String(config?.url || "");
-  if (url.startsWith("/investor/")) return true;
-  if (url === "/investor") return true;
-  if (url.includes("/api/v1/investor/")) return true;
-  return false;
+  const path = normalizedPath(config);
+  return path === "/investor" || path.startsWith("/investor/");
 }
 
-// ✅ Me-scoped endpoints should never send X-Business-Id
+// Me-scoped endpoints should never send X-Business-Id
 function isMeScopedRequest(config) {
-  const url = String(config?.url || "");
-  if (url.startsWith("/me/")) return true;
-  if (url === "/me") return true;
-  if (url.includes("/api/v1/me/")) return true;
-  return false;
+  const path = normalizedPath(config);
+  return path === "/me" || path.startsWith("/me/");
 }
 
-// ✅ Auth endpoints that must stay user-scoped only
+// Auth endpoints that must stay user-scoped only
 function isUserScopedAuthRequest(config) {
-  const url = String(config?.url || "");
-  if (url.startsWith("/auth/upgrade-to-sbo-promo")) return true;
-  if (url.startsWith("/auth/register")) return true;
-  if (url.startsWith("/auth/login")) return true;
-  if (url.startsWith("/auth/logout")) return true;
-  if (url.startsWith("/auth/me")) return true;
-  if (url.includes("/api/v1/auth/upgrade-to-sbo-promo/")) return true;
-  if (url.includes("/api/v1/auth/register/")) return true;
-  if (url.includes("/api/v1/auth/login/")) return true;
-  if (url.includes("/api/v1/auth/logout/")) return true;
-  if (url.includes("/api/v1/auth/me/")) return true;
-  return false;
+  const path = normalizedPath(config);
+
+  return (
+    path.startsWith("/auth/upgrade-to-sbo-promo") ||
+    path.startsWith("/auth/register") ||
+    path.startsWith("/auth/login") ||
+    path.startsWith("/auth/logout") ||
+    path.startsWith("/auth/me")
+  );
+}
+
+// Customer marketplace intake should not be forced into active business context.
+// This prevents customer-created marketplace requests from accidentally carrying
+// an old SBO X-Business-Id header.
+function isCustomerServiceRequestCreate(config) {
+  const path = normalizedPath(config);
+  const method = methodOf(config);
+
+  return method === "post" && (path === "/service-requests/" || path === "/service-requests");
 }
 
 // ----------------------
@@ -148,6 +161,7 @@ function ensureTrailingSlash(urlRaw) {
   if (qIndex >= 0) {
     const path = url.slice(0, qIndex);
     const qs = url.slice(qIndex);
+
     if (path.endsWith("/")) return path + qs;
     return path + "/" + qs;
   }
@@ -180,21 +194,18 @@ api.interceptors.request.use(
     const token = getToken();
     if (token) config.headers.Authorization = `Token ${token}`;
 
-    // ✅ Never send X-Business-Id for:
-    // - Sales OS
-    // - Platform
-    // - /me/* routes
-    // - auth user-scoped routes
-    // - tenant / investor portal endpoints
+    // Never send X-Business-Id for user/customer scoped flows.
     if (
       !isSalesRequest(config) &&
       !isPlatformRequest(config) &&
       !isTenantRequest(config) &&
       !isInvestorRequest(config) &&
       !isMeScopedRequest(config) &&
-      !isUserScopedAuthRequest(config)
+      !isUserScopedAuthRequest(config) &&
+      !isCustomerServiceRequestCreate(config)
     ) {
       const bizId = resolveBusinessId();
+
       if (bizId) {
         config.headers["X-Business-Id"] = String(bizId).trim();
         localStorage.setItem("sw_last_business_id", String(bizId).trim());
@@ -230,6 +241,7 @@ api.interceptors.response.use(
     if (status === 401) {
       clearToken();
       clearActiveBusinessId();
+
       try {
         window.dispatchEvent(new Event("sw:authChanged"));
       } catch {
@@ -244,7 +256,12 @@ api.interceptors.response.use(
           err?.response?.data?.reason ||
           err?.response?.data?.detail ||
           "LOCKED";
-        window.dispatchEvent(new CustomEvent("sw:billingLocked", { detail: { lock_reason } }));
+
+        window.dispatchEvent(
+          new CustomEvent("sw:billingLocked", {
+            detail: { lock_reason },
+          })
+        );
       } catch {
         // ignore
       }
