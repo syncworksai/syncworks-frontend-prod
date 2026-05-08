@@ -443,25 +443,28 @@ export default function CustomerNewRequest() {
     return selectedType ? [selectedType] : [];
   }, [categories, childCache, selectedType]);
 
-  function selectCategory(category) {
-    setSelectedCategory(category);
-    setSelectedType(null);
-    setSelectedJob(null);
-    loadChildren(category);
-    setSubmitErr("");
-  }
+function selectCategory(category) {
+  setSelectedCategory(category);
+  setSelectedType(null);
+  setSelectedJob(null);
+  loadChildren(category);
+  setSubmitErr("");
+  setStep(1);
+}
 
-  function selectType(type) {
-    setSelectedType(type);
-    setSelectedJob(null);
-    loadChildren(type);
-    setSubmitErr("");
-  }
+function selectType(type) {
+  setSelectedType(type);
+  setSelectedJob(null);
+  loadChildren(type);
+  setSubmitErr("");
+  setStep(2);
+}
 
-  function selectJob(job) {
-    setSelectedJob(job);
-    setSubmitErr("");
-  }
+function selectJob(job) {
+  setSelectedJob(job);
+  setSubmitErr("");
+  setStep(3);
+}
 
   function canGoTo(nextStep) {
     if (nextStep <= 0) return true;
