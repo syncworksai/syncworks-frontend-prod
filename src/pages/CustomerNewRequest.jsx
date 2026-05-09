@@ -5,7 +5,6 @@ import api from "../api/client";
 
 import RequestStepNav from "../components/requests/RequestStepNav";
 import RequestDetailsCard from "../components/requests/RequestDetailsCard";
-import RequestLocationCard from "../components/requests/RequestLocationCard";
 
 function safeList(data) {
   if (Array.isArray(data)) return data;
@@ -58,7 +57,6 @@ function uniqueById(list) {
   (list || []).forEach((item) => {
     const id = String(getId(item) || "");
     if (!id || seen.has(id)) return;
-
     seen.add(id);
     out.push(item);
   });
@@ -66,9 +64,8 @@ function uniqueById(list) {
   return out;
 }
 
-function extractZip(address) {
-  const match = String(address || "").match(/\b\d{5}(?:-\d{4})?\b/);
-  return match?.[0] || "";
+function normalizeZip(value) {
+  return String(value || "").replace(/[^\d-]/g, "").slice(0, 10);
 }
 
 function getCreatedId(data) {
@@ -329,6 +326,9 @@ export default function CustomerNewRequest() {
   const [details, setDetails] = useState("");
   const [address, setAddress] = useState("");
   const [unit, setUnit] = useState("");
+  const [city, setCity] = useState("");
+  const [stateRegion, setStateRegion] = useState("");
+  const [serviceZip, setServiceZip] = useState("");
   const [accessNotes, setAccessNotes] = useState("");
 
   const [paymentPreference, setPaymentPreference] = useState("card");
@@ -443,28 +443,28 @@ export default function CustomerNewRequest() {
     return selectedType ? [selectedType] : [];
   }, [categories, childCache, selectedType]);
 
-function selectCategory(category) {
-  setSelectedCategory(category);
-  setSelectedType(null);
-  setSelectedJob(null);
-  loadChildren(category);
-  setSubmitErr("");
-  setStep(1);
-}
+  function selectCategory(category) {
+    setSelectedCategory(category);
+    setSelectedType(null);
+    setSelectedJob(null);
+    loadChildren(category);
+    setSubmitErr("");
+    setStep(1);
+  }
 
-function selectType(type) {
-  setSelectedType(type);
-  setSelectedJob(null);
-  loadChildren(type);
-  setSubmitErr("");
-  setStep(2);
-}
+  function selectType(type) {
+    setSelectedType(type);
+    setSelectedJob(null);
+    loadChildren(type);
+    setSubmitErr("");
+    setStep(2);
+  }
 
-function selectJob(job) {
-  setSelectedJob(job);
-  setSubmitErr("");
-  setStep(3);
-}
+  function selectJob(job) {
+    setSelectedJob(job);
+    setSubmitErr("");
+    setStep(3);
+  }
 
   function canGoTo(nextStep) {
     if (nextStep <= 0) return true;
@@ -483,11 +483,26 @@ function selectJob(job) {
     }
   }
 
+  const cleanZip = normalizeZip(serviceZip);
+
+  const fullServiceAddress = [
+    address.trim(),
+    unit.trim(),
+    city.trim(),
+    [stateRegion.trim(), cleanZip].filter(Boolean).join(" "),
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   const canSubmit =
     !!selectedCategory &&
     !!selectedType &&
     !!selectedJob &&
     !!address.trim() &&
+    !!city.trim() &&
+    !!stateRegion.trim() &&
+    !!cleanZip &&
+    cleanZip.length >= 5 &&
     !!details.trim() &&
     !!priority &&
     !!neededByDate &&
@@ -537,7 +552,6 @@ function selectJob(job) {
     const typeId = getId(selectedType);
     const jobId = getId(selectedJob);
     const title = getLabel(selectedJob);
-    const serviceZip = extractZip(address);
 
     const structuredIntake = {
       category_id: categoryId,
@@ -549,8 +563,12 @@ function selectJob(job) {
       job_id: jobId,
       job_key: selectedJob?.key || "",
       job_name: getLabel(selectedJob),
-      address: address.trim(),
+      street_address: address.trim(),
       unit: unit.trim(),
+      city: city.trim(),
+      state: stateRegion.trim(),
+      service_zip: cleanZip,
+      service_address: fullServiceAddress,
       access_notes: accessNotes.trim(),
       payment_preference: paymentPreference,
       contact_preference: contactPreference,
@@ -568,6 +586,7 @@ function selectJob(job) {
 
     const notes = [
       details.trim(),
+      `Service address: ${fullServiceAddress}`,
       accessNotes.trim() ? `Access notes: ${accessNotes.trim()}` : "",
       unit.trim() ? `Unit / Apt: ${unit.trim()}` : "",
       bestPhone.trim() ? `Best phone: ${bestPhone.trim()}` : "",
@@ -598,8 +617,8 @@ function selectJob(job) {
       category: jobId || typeId || categoryId,
       title,
       description: notes,
-      service_address: [address.trim(), unit.trim()].filter(Boolean).join(" "),
-      service_zip: serviceZip,
+      service_address: fullServiceAddress,
+      service_zip: cleanZip,
       service_radius_miles: 25,
       is_marketplace: true,
     };
@@ -620,6 +639,8 @@ function selectJob(job) {
       const data = e?.response?.data;
       const msg =
         data?.detail ||
+        data?.service_zip?.[0] ||
+        data?.service_address?.[0] ||
         data?.non_field_errors?.[0] ||
         (typeof data === "string" ? data : null) ||
         e?.message ||
@@ -702,6 +723,87 @@ function selectJob(job) {
             </button>
           );
         })}
+      </div>
+    );
+  }
+
+  function LocationFields() {
+    return (
+      <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4 space-y-3">
+        <div>
+          <div className="text-sm font-bold text-slate-100">
+            Service location
+          </div>
+          <div className="text-xs text-slate-400 mt-1">
+            Enter the service address. ZIP is required so SyncWorks can route
+            this to nearby providers.
+          </div>
+        </div>
+
+        <label className="block">
+          <span className="text-[11px] text-slate-400">Street address</span>
+          <input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="9073 Chastain Park Dr"
+            className="mt-1 w-full rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500/50"
+          />
+        </label>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="block">
+            <span className="text-[11px] text-slate-400">Unit / Apt</span>
+            <input
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              placeholder="Optional"
+              className="mt-1 w-full rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500/50"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-[11px] text-slate-400">City</span>
+            <input
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="Montgomery"
+              className="mt-1 w-full rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500/50"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-[11px] text-slate-400">State</span>
+            <input
+              value={stateRegion}
+              onChange={(e) => setStateRegion(e.target.value.toUpperCase())}
+              placeholder="AL"
+              maxLength={2}
+              className="mt-1 w-full rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500/50"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-[11px] text-slate-400">ZIP code</span>
+            <input
+              value={serviceZip}
+              onChange={(e) => setServiceZip(normalizeZip(e.target.value))}
+              placeholder="36109"
+              inputMode="numeric"
+              className="mt-1 w-full rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500/50"
+            />
+          </label>
+        </div>
+
+        <label className="block">
+          <span className="text-[11px] text-slate-400">Access notes</span>
+          <textarea
+            value={accessNotes}
+            onChange={(e) => setAccessNotes(e.target.value)}
+            placeholder="Gate code, parking notes, pets, entry instructions..."
+            rows={3}
+            className="mt-1 w-full rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500/50"
+          />
+        </label>
       </div>
     );
   }
@@ -1103,14 +1205,7 @@ function selectJob(job) {
               </div>
             </div>
 
-            <RequestLocationCard
-              address={address}
-              setAddress={setAddress}
-              unit={unit}
-              setUnit={setUnit}
-              accessNotes={accessNotes}
-              setAccessNotes={setAccessNotes}
-            />
+            {LocationFields()}
 
             <RequestDetailsCard
               details={details}
@@ -1154,8 +1249,9 @@ function selectJob(job) {
 
             {!canSubmit && !submitting ? (
               <div className="text-xs text-slate-500">
-                Select a category, type, job, priority, schedule, address,
-                description, and marketplace agreement to submit.
+                Select a category, type, job, priority, schedule, street
+                address, city, state, ZIP, description, and marketplace
+                agreement to submit.
               </div>
             ) : null}
           </div>
