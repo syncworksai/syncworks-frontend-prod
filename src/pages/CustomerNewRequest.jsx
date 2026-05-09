@@ -1123,10 +1123,10 @@ function selectJob(job) {
               setBestPhone={setBestPhone}
             />
 
-            <PrioritySelector />
-            <ScheduleFields />
-            <DynamicIntakeFields />
-            <MarketplaceAgreement />
+            {PrioritySelector()}
+            {ScheduleFields()}
+            {DynamicIntakeFields()}
+            {MarketplaceAgreement()}
 
             <div className="flex items-center justify-between gap-3 pt-2">
               <button
