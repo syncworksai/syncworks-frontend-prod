@@ -146,7 +146,7 @@ export default function PlatformGrowthEngineTab() {
         starter_type: preset?.key || "lead_follow_up",
       });
 
-      setSetupMessage(`God Mode preview draft created: ${res?.data?.title || preset?.label || "Starter draft"}`);
+      setSetupMessage(`Platform preview draft created: ${res?.data?.title || preset?.label || "Starter draft"}`);
       setContentEngineKey((x) => x + 1);
       await loadAll();
     } catch (e) {
@@ -373,7 +373,7 @@ export default function PlatformGrowthEngineTab() {
         <div>
           <div className="text-sm font-semibold text-slate-100">Growth OS</div>
           <div className="text-xs text-slate-500 mt-1">
-            God Mode growth intelligence across leads, campaigns, conversations, activations, and SBO setup readiness.
+            Internal growth intelligence across leads, campaigns, conversations, activations, and SBO setup readiness.
           </div>
         </div>
 

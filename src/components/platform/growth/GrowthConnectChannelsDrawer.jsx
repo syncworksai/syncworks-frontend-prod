@@ -44,7 +44,7 @@ export default function GrowthConnectChannelsDrawer({
           <div>
             <div className="font-semibold text-slate-100">Connect Channels</div>
             <div className="text-xs text-slate-400 mt-1">
-              God Mode controls now • same engine later powers SBO Growth Automation add-on.
+              Internal channel setup • same engine powers the SBO Growth OS add-on.
             </div>
           </div>
           <button

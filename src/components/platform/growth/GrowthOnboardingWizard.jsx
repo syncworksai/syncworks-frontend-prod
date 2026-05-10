@@ -105,12 +105,12 @@ export default function GrowthOnboardingWizard({
           </div>
           <h2 className="mt-2 text-xl md:text-2xl font-black text-white">
             {isPlatform
-              ? "Preview the SBO onboarding flow from God Mode."
+              ? "Preview the SBO onboarding flow."
               : "Let SyncWorks guide your first automation."}
           </h2>
           <p className="mt-2 text-sm text-slate-300 max-w-3xl">
             {isPlatform
-              ? "This keeps the admin side aware of exactly what business owners will see while preserving the full platform dashboard below."
+              ? "This shows the same setup flow business owners will use while preserving the full internal platform dashboard below."
               : "Answer a few simple questions, connect accounts when ready, and create your first safe-mode draft."}
           </p>
         </div>
