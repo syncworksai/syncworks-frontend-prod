@@ -22,9 +22,17 @@ export default function SboActionGrid({
   onOpenCatalog,
   onOpenKpis,
   onOpenSettings,
+  onOpenGrowth,
 }) {
   return (
     <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <ActionCard
+        title="Growth OS"
+        subtitle="Automate lead follow-ups, review requests, content drafts, and safe publishing."
+        buttonLabel="Open Growth OS"
+        onClick={onOpenGrowth}
+        tone="fuchsia"
+      />
       <ActionCard
         title="Invoicing"
         subtitle="Create, send, and track invoices. This should be one of the main work tabs."
@@ -52,13 +60,6 @@ export default function SboActionGrid({
         buttonLabel="Open Catalog"
         onClick={onOpenCatalog}
         tone="cyan"
-      />
-      <ActionCard
-        title="KPIs"
-        subtitle="See revenue, growth, jobs completed, customers, and trend lines."
-        buttonLabel="Open KPI View"
-        onClick={onOpenKpis}
-        tone="fuchsia"
       />
       <ActionCard
         title="Settings"

@@ -47,6 +47,35 @@ function baselineKey(businessId) {
   return `sw_setup_baseline_v1_${businessId || "no_biz"}`;
 }
 
+function GrowthHeroCard({ onOpenGrowth, onUpgrade }) {
+  return (
+    <section className="rounded-3xl border border-fuchsia-500/25 bg-gradient-to-br from-fuchsia-500/10 via-indigo-500/10 to-cyan-500/10 p-5 shadow-[0_0_60px_rgba(217,70,239,0.10)]">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <div className="text-[11px] uppercase tracking-[0.24em] text-fuchsia-200 font-black">
+            New Growth Module
+          </div>
+          <h2 className="mt-2 text-xl md:text-2xl font-black tracking-tight text-white">
+            Growth OS: automate follow-ups, review requests, and social drafts.
+          </h2>
+          <p className="mt-2 text-sm text-slate-300 max-w-3xl">
+            Turn new leads into ready-to-send content, queue posts safely, and keep your business visible without juggling extra tools.
+          </p>
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          <Button tone="fuchsia" onClick={onOpenGrowth}>
+            Open Growth OS
+          </Button>
+          <Button tone="slate" onClick={onUpgrade}>
+            Upgrade / Manage
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function SboDashboard() {
   const navigate = useNavigate();
   const { myBusinesses, activeBusinessId } = useAuth();
@@ -177,6 +206,9 @@ export default function SboDashboard() {
         subtitle="Financial-first business command center"
         rightActions={
           <div className="flex gap-2 flex-wrap">
+            <Button tone="fuchsia" onClick={() => navigate("/sbo/growth")}>
+              Growth OS
+            </Button>
             <Button tone="cyan" onClick={() => navigate("/tickets?view=new")}>
               Tickets
             </Button>
@@ -196,6 +228,11 @@ export default function SboDashboard() {
             {err}
           </div>
         ) : null}
+
+        <GrowthHeroCard
+          onOpenGrowth={() => navigate("/sbo/growth")}
+          onUpgrade={() => window.open("https://buy.stripe.com/28E9AT4aefLp4uJ0Kn2Nq0i", "_blank", "noopener,noreferrer")}
+        />
 
         <SboKpiHero
           loading={loading}
@@ -227,6 +264,7 @@ export default function SboDashboard() {
         </div>
 
         <SboActionGrid
+          onOpenGrowth={() => navigate("/sbo/growth")}
           onOpenInvoicing={() => navigate("/tickets?view=new")}
           onOpenTaxes={() => navigate("/billing/cash-fee-invoices")}
           onOpenEmployees={() => navigate("/team/invites")}
@@ -236,7 +274,7 @@ export default function SboDashboard() {
         />
 
         <SboUtilityCards
-          onOpenSocial={() => window.open("https://buy.stripe.com/28E9AT4aefLp4uJ0Kn2Nq0i", "_blank", "noopener,noreferrer")}
+          onOpenSocial={() => navigate("/sbo/growth")}
           onOpenImport={() => openSettingsSection("data", "intent=import")}
           onOpenExport={() => openSettingsSection("data", "intent=export")}
           onOpenEmployeeInvite={() => navigate("/team/invites")}

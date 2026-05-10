@@ -18,6 +18,7 @@ import CustomerBusinessCards from "./pages/CustomerBusinessCards";
 import CustomerBusinessCardDetail from "./pages/CustomerBusinessCardDetail";
 
 import SboDashboard from "./pages/SboDashboard";
+import SboGrowth from "./pages/SboGrowth";
 import SboZipLeaderboard from "./pages/SboZipLeaderboard";
 import SboSettings from "./pages/SboSettings";
 import SboCatalog from "./pages/SboCatalog";
@@ -176,6 +177,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <SboCatalog />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sbo/growth"
+          element={
+            <ProtectedRoute>
+              <SboGrowth />
             </ProtectedRoute>
           }
         />
