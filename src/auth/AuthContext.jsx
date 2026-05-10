@@ -66,6 +66,9 @@ function parseModuleAccess(data, fallback = {}) {
     sales: false,
     finance: false,
     fitness: false,
+    growth: false,
+    growth_os: false,
+    social_media: false,
     ...fallback,
   };
 
@@ -129,6 +132,20 @@ function parseModuleAccess(data, fallback = {}) {
   out.finance = active.has("FINANCE");
   out.fitness = active.has("FITNESS");
 
+  out.growth =
+    active.has("GROWTH") ||
+    active.has("GROWTHOS") ||
+    active.has("GROWTH_OS") ||
+    active.has("PLATFORM_GROWTH") ||
+    active.has("SOCIAL") ||
+    active.has("SOCIAL_MEDIA") ||
+    active.has("SOCIALMEDIA") ||
+    active.has("SOCIAL_AUTOMATION") ||
+    active.has("AUTOMATION");
+
+  out.growth_os = out.growth;
+  out.social_media = out.growth;
+
   return out;
 }
 
@@ -165,12 +182,24 @@ export function AuthProvider({ children }) {
     sales: false,
     finance: false,
     fitness: false,
+    growth: false,
+    growth_os: false,
+    social_media: false,
   });
 
   const isGod = useMemo(() => {
     const email = normalizeEmail(user?.email);
     return GOD_EMAIL_ALLOWLIST.has(email);
   }, [user?.email]);
+
+  const canAccessGrowthOs = useMemo(() => {
+    if (isGod) return true;
+    return !!(
+      moduleAccess?.growth ||
+      moduleAccess?.growth_os ||
+      moduleAccess?.social_media
+    );
+  }, [isGod, moduleAccess]);
 
   const setMode = useCallback((next) => {
     const allowed = new Set([
@@ -191,9 +220,16 @@ export function AuthProvider({ children }) {
       if (isGod) return true;
       if (key === "finance") return !!entitlements?.finance_access;
       if (key === "health") return !!entitlements?.health_access;
+      if (key === "growth" || key === "growth_os" || key === "social_media") {
+        return !!(
+          moduleAccess?.growth ||
+          moduleAccess?.growth_os ||
+          moduleAccess?.social_media
+        );
+      }
       return false;
     },
-    [isGod, entitlements]
+    [isGod, entitlements, moduleAccess]
   );
 
   const resetAuthedState = useCallback(() => {
@@ -215,6 +251,9 @@ export function AuthProvider({ children }) {
       sales: false,
       finance: false,
       fitness: false,
+      growth: false,
+      growth_os: false,
+      social_media: false,
     });
   }, []);
 
@@ -269,6 +308,9 @@ export function AuthProvider({ children }) {
           sales: true,
           finance: true,
           fitness: true,
+          growth: true,
+          growth_os: true,
+          social_media: true,
         });
         return;
       }
@@ -289,6 +331,9 @@ export function AuthProvider({ children }) {
           sales: false,
           finance: false,
           fitness: false,
+          growth: false,
+          growth_os: false,
+          social_media: false,
         });
       }
     },
@@ -330,6 +375,9 @@ export function AuthProvider({ children }) {
             sales: true,
             finance: true,
             fitness: true,
+            growth: true,
+            growth_os: true,
+            social_media: true,
           });
         } else {
           await loadModuleAccess(list);
@@ -428,6 +476,9 @@ export function AuthProvider({ children }) {
           sales: true,
           finance: true,
           fitness: true,
+          growth: true,
+          growth_os: true,
+          social_media: true,
         });
       } else {
         await loadModuleAccess(myBusinesses);
@@ -479,6 +530,7 @@ export function AuthProvider({ children }) {
       reloadBusinesses,
 
       moduleAccess,
+      canAccessGrowthOs,
 
       isGod,
       mode,
@@ -503,6 +555,7 @@ export function AuthProvider({ children }) {
       myBusinesses,
       reloadBusinesses,
       moduleAccess,
+      canAccessGrowthOs,
       isGod,
       mode,
       setMode,
