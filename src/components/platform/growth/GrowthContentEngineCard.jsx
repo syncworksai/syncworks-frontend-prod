@@ -47,11 +47,31 @@ function statusTone(status, toneFromStatus) {
 function niceStatus(status) {
   const s = String(status || "").toUpperCase();
   if (s === "DRAFT") return "Draft";
+  if (s === "READY") return "Ready";
+  if (s === "APPROVED") return "Approved";
   if (s === "QUEUED") return "Queued";
   if (s === "SCHEDULED") return "Scheduled";
   if (s === "POSTED" || s === "PUBLISHED") return "Posted safely";
   if (s === "FAILED") return "Needs attention";
   return s || "Draft";
+}
+
+function normalizeStarterKey(key) {
+  const raw = String(key || "").trim().toLowerCase();
+
+  if (raw === "lead_follow_up" || raw === "follow_up" || raw === "lead") return "lead_follow_up";
+  if (raw === "review_request" || raw === "review" || raw === "review_ask") return "review_request";
+  if (raw === "weekly_tip" || raw === "educational" || raw === "service_tip") return "weekly_tip";
+  if (raw === "promo" || raw === "promotion" || raw === "service_promo") return "promo";
+
+  return raw;
+}
+
+function draftSourceLabel(source) {
+  const s = String(source || "").toUpperCase();
+  if (s === "AUTOMATION") return "AUTO";
+  if (s === "STARTER") return "STARTER";
+  return "DRAFT";
 }
 
 export default function GrowthContentEngineCard({
@@ -67,7 +87,7 @@ export default function GrowthContentEngineCard({
   const [queueItems, setQueueItems] = useState([]);
   const [loadingIds, setLoadingIds] = useState({});
   const [err, setErr] = useState("");
-  const [selectedStarter, setSelectedStarter] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
   async function loadContentPipeline() {
     setErr("");
@@ -107,12 +127,41 @@ export default function GrowthContentEngineCard({
     return map;
   }, [queueItems]);
 
+  async function createStarterDraft(preset) {
+    const starterType = normalizeStarterKey(preset?.key);
+    if (!starterType) {
+      setErr("Invalid starter type.");
+      return;
+    }
+
+    const loadingKey = `starter-${starterType}`;
+    setLoadingIds((prev) => ({ ...prev, [loadingKey]: true }));
+    setErr("");
+    setSuccessMsg("");
+
+    try {
+      const res = await api.post("/platform-growth/growth/drafts/starter/", {
+        starter_type: starterType,
+      });
+
+      const title = res?.data?.title || preset?.label || "Starter draft";
+      setSuccessMsg(`Draft created: ${title}`);
+      await loadContentPipeline();
+    } catch (e) {
+      setErr(e?.response?.data?.detail || "Failed to create starter draft.");
+    } finally {
+      setLoadingIds((prev) => ({ ...prev, [loadingKey]: false }));
+    }
+  }
+
   async function queueDraft(id) {
     setLoadingIds((prev) => ({ ...prev, [id]: true }));
     setErr("");
+    setSuccessMsg("");
 
     try {
       await api.post(`/platform-growth/growth/drafts/${id}/queue/`, {});
+      setSuccessMsg("Draft scheduled safely.");
       await loadContentPipeline();
     } catch (e) {
       setErr(e?.response?.data?.detail || "Failed to schedule draft.");
@@ -124,6 +173,7 @@ export default function GrowthContentEngineCard({
   async function simulatePost(id) {
     setLoadingIds((prev) => ({ ...prev, [id]: true }));
     setErr("");
+    setSuccessMsg("");
 
     try {
       const existingQueue = queueByDraftId.get(id);
@@ -135,6 +185,7 @@ export default function GrowthContentEngineCard({
       }
 
       await api.post(`/platform-growth/growth/queue/${queueId}/simulate-post/`, {});
+      setSuccessMsg("Posted safely inside SyncWorks.");
       await loadContentPipeline();
     } catch (e) {
       setErr(e?.response?.data?.detail || "Failed to post safely.");
@@ -152,16 +203,19 @@ export default function GrowthContentEngineCard({
         id: draft.id,
         title: draft.title,
         status: liveStatus,
-        source: "AUTOMATION",
+        source: draft.source || "AUTOMATION",
+        body: draft.body,
         queueId: queueItem?.id,
         postedAt: queueItem?.posted_at,
         scheduledFor: queueItem?.scheduled_for,
         metadata: queueItem?.metadata || draft.metadata || {},
+        isLiveDraft: true,
       };
     }),
     ...contentQueue.map((item) => ({
       ...item,
       source: item.source || "STARTER",
+      isLiveDraft: false,
     })),
   ];
 
@@ -178,15 +232,15 @@ export default function GrowthContentEngineCard({
         </div>
       ) : null}
 
-      {selectedStarter ? (
-        <div className="mb-3 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">
-          Starter selected: <span className="font-bold">{selectedStarter}</span>. Next stage will connect this to live starter rule creation.
+      {successMsg ? (
+        <div className="mb-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+          {successMsg}
         </div>
       ) : null}
 
       <div className="grid xl:grid-cols-3 gap-4">
         <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <div>
               <div className="font-semibold text-slate-100">{isSbo ? "Your Drafts & Schedule" : "Content Queue"}</div>
               <div className="mt-1 text-xs text-slate-500">
@@ -204,48 +258,58 @@ export default function GrowthContentEngineCard({
             ) : null}
 
             {combinedQueue.map((item) => {
-              const isAutomation = item.source === "AUTOMATION";
               const statusUpper = String(item.status || "").toUpperCase();
               const isQueued = statusUpper === "QUEUED" || statusUpper === "SCHEDULED";
               const isPosted = statusUpper === "POSTED" || statusUpper === "PUBLISHED";
+              const label = draftSourceLabel(item.source);
+              const canAct = !!item.isLiveDraft;
 
               return (
                 <div key={`${item.source}-${item.id}`} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="text-sm text-slate-100 font-semibold">{item.title}</div>
+                    <div>
+                      <div className="text-sm text-slate-100 font-semibold">{item.title}</div>
+                      {item.body ? (
+                        <div className="mt-1 text-[11px] leading-relaxed text-slate-400 line-clamp-2">
+                          {item.body}
+                        </div>
+                      ) : null}
+                    </div>
 
-                    {isAutomation ? (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-200">
-                        AUTO
-                      </span>
-                    ) : (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-500/10 border border-slate-500/20 text-slate-300">
-                        STARTER
-                      </span>
-                    )}
+                    <span
+                      className={
+                        label === "AUTO"
+                          ? "text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-200"
+                          : label === "STARTER"
+                          ? "text-[10px] px-2 py-0.5 rounded-full bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-200"
+                          : "text-[10px] px-2 py-0.5 rounded-full bg-slate-500/10 border border-slate-500/20 text-slate-300"
+                      }
+                    >
+                      {label}
+                    </span>
                   </div>
 
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <StatusPill tone={statusTone(item.status, toneFromStatus)}>{niceStatus(item.status)}</StatusPill>
 
-                    {isAutomation && item.queueId ? (
+                    {item.queueId ? (
                       <span className="text-[10px] text-slate-500">Queue #{item.queueId}</span>
                     ) : null}
                   </div>
 
-                  {isAutomation && item.postedAt ? (
+                  {item.postedAt ? (
                     <div className="mt-2 text-[11px] text-emerald-300">
                       Posted safely: {new Date(item.postedAt).toLocaleString()}
                     </div>
                   ) : null}
 
-                  {isAutomation && item.scheduledFor ? (
+                  {item.scheduledFor ? (
                     <div className="mt-2 text-[11px] text-cyan-300">
                       Scheduled: {new Date(item.scheduledFor).toLocaleString()}
                     </div>
                   ) : null}
 
-                  {isAutomation ? (
+                  {canAct ? (
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         type="button"
@@ -253,7 +317,7 @@ export default function GrowthContentEngineCard({
                         disabled={loadingIds[item.id] || isQueued || isPosted}
                         className="h-8 px-3 rounded-xl text-[11px] border border-slate-700 text-slate-200 hover:bg-slate-900/60 disabled:opacity-50"
                       >
-                        {isQueued ? "Scheduled" : isPosted ? "Posted" : "Schedule"}
+                        {loadingIds[item.id] ? "Working..." : isQueued ? "Scheduled" : isPosted ? "Posted" : "Schedule"}
                       </button>
 
                       <button
@@ -262,7 +326,7 @@ export default function GrowthContentEngineCard({
                         disabled={loadingIds[item.id] || isPosted}
                         className="h-8 px-3 rounded-xl text-[11px] border border-cyan-500/40 bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/15 disabled:opacity-50"
                       >
-                        {isPosted ? "Posted safely" : "Post Safely"}
+                        {loadingIds[item.id] ? "Working..." : isPosted ? "Posted safely" : "Post Safely"}
                       </button>
                     </div>
                   ) : null}
@@ -295,16 +359,22 @@ export default function GrowthContentEngineCard({
           </div>
 
           <div className="mt-3 grid sm:grid-cols-2 xl:grid-cols-4 gap-2">
-            {aiPostPresets.map((preset) => (
-              <button
-                key={preset.key}
-                type="button"
-                onClick={() => setSelectedStarter(preset.label)}
-                className="min-h-10 px-3 py-2 rounded-xl text-xs border border-slate-800 bg-slate-950/70 hover:bg-slate-900/50 text-slate-200 text-left"
-              >
-                {preset.label}
-              </button>
-            ))}
+            {aiPostPresets.map((preset) => {
+              const starterType = normalizeStarterKey(preset.key);
+              const loadingKey = `starter-${starterType}`;
+
+              return (
+                <button
+                  key={preset.key}
+                  type="button"
+                  onClick={() => createStarterDraft(preset)}
+                  disabled={!!loadingIds[loadingKey]}
+                  className="min-h-10 px-3 py-2 rounded-xl text-xs border border-slate-800 bg-slate-950/70 hover:bg-slate-900/50 text-slate-200 text-left disabled:opacity-50"
+                >
+                  {loadingIds[loadingKey] ? "Creating draft..." : preset.label}
+                </button>
+              );
+            })}
           </div>
 
           <div className="mt-4 grid md:grid-cols-3 gap-2">
