@@ -39,21 +39,35 @@ function StatusPill({ children, tone = "slate" }) {
 function statusTone(status, toneFromStatus) {
   const s = String(status || "").toUpperCase();
   if (s === "POSTED" || s === "PUBLISHED") return "emerald";
-  if (s === "QUEUED" || s === "SCHEDULED") return "amber";
+  if (s === "QUEUED" || s === "SCHEDULED") return "cyan";
   if (s === "FAILED") return "rose";
   return toneFromStatus ? toneFromStatus(status) : "slate";
 }
 
+function niceStatus(status) {
+  const s = String(status || "").toUpperCase();
+  if (s === "DRAFT") return "Draft";
+  if (s === "QUEUED") return "Queued";
+  if (s === "SCHEDULED") return "Scheduled";
+  if (s === "POSTED" || s === "PUBLISHED") return "Posted safely";
+  if (s === "FAILED") return "Needs attention";
+  return s || "Draft";
+}
+
 export default function GrowthContentEngineCard({
-  contentQueue,
-  aiPostPresets,
-  aiGeneratedPreviews,
+  contentQueue = [],
+  aiPostPresets = [],
+  aiGeneratedPreviews = [],
   toneFromStatus,
+  variant = "platform",
 }) {
+  const isSbo = variant === "sbo";
+
   const [drafts, setDrafts] = useState([]);
   const [queueItems, setQueueItems] = useState([]);
   const [loadingIds, setLoadingIds] = useState({});
   const [err, setErr] = useState("");
+  const [selectedStarter, setSelectedStarter] = useState("");
 
   async function loadContentPipeline() {
     setErr("");
@@ -101,7 +115,7 @@ export default function GrowthContentEngineCard({
       await api.post(`/platform-growth/growth/drafts/${id}/queue/`, {});
       await loadContentPipeline();
     } catch (e) {
-      setErr(e?.response?.data?.detail || "Failed to queue draft.");
+      setErr(e?.response?.data?.detail || "Failed to schedule draft.");
     } finally {
       setLoadingIds((prev) => ({ ...prev, [id]: false }));
     }
@@ -123,7 +137,7 @@ export default function GrowthContentEngineCard({
       await api.post(`/platform-growth/growth/queue/${queueId}/simulate-post/`, {});
       await loadContentPipeline();
     } catch (e) {
-      setErr(e?.response?.data?.detail || "Failed to simulate post.");
+      setErr(e?.response?.data?.detail || "Failed to post safely.");
     } finally {
       setLoadingIds((prev) => ({ ...prev, [id]: false }));
     }
@@ -147,33 +161,56 @@ export default function GrowthContentEngineCard({
     }),
     ...contentQueue.map((item) => ({
       ...item,
-      source: item.source || "DEMO",
+      source: item.source || "STARTER",
     })),
   ];
 
+  const emptyQueue = combinedQueue.length === 0;
+
   return (
-    <GlassCard title="Content Engine" right="automation drafts + safe publish queue">
+    <GlassCard
+      title={isSbo ? "Growth OS Content Engine" : "Content Engine"}
+      right={isSbo ? "drafts + schedule + safe posting" : "automation drafts + safe publish queue"}
+    >
       {err ? (
         <div className="mb-3 rounded-2xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-200">
           {err}
         </div>
       ) : null}
 
+      {selectedStarter ? (
+        <div className="mb-3 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">
+          Starter selected: <span className="font-bold">{selectedStarter}</span>. Next stage will connect this to live starter rule creation.
+        </div>
+      ) : null}
+
       <div className="grid xl:grid-cols-3 gap-4">
         <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
           <div className="flex items-center justify-between">
-            <div className="font-semibold text-slate-100">Content Queue</div>
-            <StatusPill tone="cyan">Live + Auto</StatusPill>
+            <div>
+              <div className="font-semibold text-slate-100">{isSbo ? "Your Drafts & Schedule" : "Content Queue"}</div>
+              <div className="mt-1 text-xs text-slate-500">
+                {isSbo ? "Review drafts, schedule them, then post safely." : "Live automation drafts and queue status."}
+              </div>
+            </div>
+            <StatusPill tone="cyan">{isSbo ? "Safe Mode" : "Live + Auto"}</StatusPill>
           </div>
 
           <div className="mt-3 space-y-2">
+            {emptyQueue ? (
+              <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-sm text-slate-400">
+                No drafts yet. Start with a starter action on the right.
+              </div>
+            ) : null}
+
             {combinedQueue.map((item) => {
               const isAutomation = item.source === "AUTOMATION";
-              const isQueued = item.status === "QUEUED";
-              const isPosted = item.status === "POSTED" || item.status === "PUBLISHED";
+              const statusUpper = String(item.status || "").toUpperCase();
+              const isQueued = statusUpper === "QUEUED" || statusUpper === "SCHEDULED";
+              const isPosted = statusUpper === "POSTED" || statusUpper === "PUBLISHED";
 
               return (
-                <div key={`${item.source}-${item.id}`} className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
+                <div key={`${item.source}-${item.id}`} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="text-sm text-slate-100 font-semibold">{item.title}</div>
 
@@ -181,11 +218,15 @@ export default function GrowthContentEngineCard({
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-200">
                         AUTO
                       </span>
-                    ) : null}
+                    ) : (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-500/10 border border-slate-500/20 text-slate-300">
+                        STARTER
+                      </span>
+                    )}
                   </div>
 
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <StatusPill tone={statusTone(item.status, toneFromStatus)}>{item.status}</StatusPill>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <StatusPill tone={statusTone(item.status, toneFromStatus)}>{niceStatus(item.status)}</StatusPill>
 
                     {isAutomation && item.queueId ? (
                       <span className="text-[10px] text-slate-500">Queue #{item.queueId}</span>
@@ -193,29 +234,35 @@ export default function GrowthContentEngineCard({
                   </div>
 
                   {isAutomation && item.postedAt ? (
-                    <div className="mt-1 text-[11px] text-emerald-300">
+                    <div className="mt-2 text-[11px] text-emerald-300">
                       Posted safely: {new Date(item.postedAt).toLocaleString()}
                     </div>
                   ) : null}
 
+                  {isAutomation && item.scheduledFor ? (
+                    <div className="mt-2 text-[11px] text-cyan-300">
+                      Scheduled: {new Date(item.scheduledFor).toLocaleString()}
+                    </div>
+                  ) : null}
+
                   {isAutomation ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         type="button"
                         onClick={() => queueDraft(item.id)}
                         disabled={loadingIds[item.id] || isQueued || isPosted}
-                        className="h-7 px-2 rounded-xl text-[11px] border border-slate-700 text-slate-200 disabled:opacity-50"
+                        className="h-8 px-3 rounded-xl text-[11px] border border-slate-700 text-slate-200 hover:bg-slate-900/60 disabled:opacity-50"
                       >
-                        {isQueued ? "Queued" : isPosted ? "Posted" : "Queue"}
+                        {isQueued ? "Scheduled" : isPosted ? "Posted" : "Schedule"}
                       </button>
 
                       <button
                         type="button"
                         onClick={() => simulatePost(item.id)}
                         disabled={loadingIds[item.id] || isPosted}
-                        className="h-7 px-2 rounded-xl text-[11px] border border-cyan-500/40 text-cyan-200 disabled:opacity-50"
+                        className="h-8 px-3 rounded-xl text-[11px] border border-cyan-500/40 bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/15 disabled:opacity-50"
                       >
-                        {isPosted ? "Posted" : "Simulate Post"}
+                        {isPosted ? "Posted safely" : "Post Safely"}
                       </button>
                     </div>
                   ) : null}
@@ -228,14 +275,22 @@ export default function GrowthContentEngineCard({
         <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4 xl:col-span-2">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
-              <div className="font-semibold text-slate-100">AI Post Generator</div>
-              <div className="text-xs text-slate-400 mt-1">Promptless starter actions for social + review growth.</div>
+              <div className="font-semibold text-slate-100">
+                {isSbo ? "Starter Automations" : "AI Post Generator"}
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                {isSbo
+                  ? "Choose a simple growth workflow. Everything stays in safe mode."
+                  : "Promptless starter actions for social + review growth."}
+              </div>
             </div>
+
             <button
               type="button"
-              className="h-8 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 text-cyan-100"
+              onClick={loadContentPipeline}
+              className="h-8 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/15"
             >
-              Clone for SBO Add-On
+              Refresh
             </button>
           </div>
 
@@ -244,22 +299,29 @@ export default function GrowthContentEngineCard({
               <button
                 key={preset.key}
                 type="button"
-                className="h-9 px-3 rounded-xl text-xs border border-slate-800 bg-slate-950/70 hover:bg-slate-900/50 text-slate-200 text-left"
+                onClick={() => setSelectedStarter(preset.label)}
+                className="min-h-10 px-3 py-2 rounded-xl text-xs border border-slate-800 bg-slate-950/70 hover:bg-slate-900/50 text-slate-200 text-left"
               >
                 {preset.label}
               </button>
             ))}
           </div>
 
-          <div className="mt-3 grid md:grid-cols-3 gap-2">
+          <div className="mt-4 grid md:grid-cols-3 gap-2">
             {aiGeneratedPreviews.map((card) => (
               <div key={card.id} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
                 <div className="text-sm text-slate-100 font-semibold">{card.title}</div>
-                <div className="mt-1 text-xs text-slate-300">{card.body}</div>
+                <div className="mt-1 text-xs text-slate-300 leading-relaxed">{card.body}</div>
                 <div className="mt-2 text-[11px] text-slate-500">{card.channel}</div>
               </div>
             ))}
           </div>
+
+          {isSbo ? (
+            <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-100">
+              Safe-mode note: “Post Safely” only simulates posting inside SyncWorks until real channel connections are enabled.
+            </div>
+          ) : null}
         </div>
       </div>
     </GlassCard>

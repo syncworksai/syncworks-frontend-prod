@@ -84,6 +84,27 @@ function UnlockGrowthOsCard({ onBack }) {
   );
 }
 
+function StarterRecipeCard({ title, copy, status, tone = "cyan" }) {
+  const tones = {
+    cyan: "border-cyan-500/20 bg-cyan-500/10 text-cyan-100",
+    indigo: "border-indigo-500/20 bg-indigo-500/10 text-indigo-100",
+    fuchsia: "border-fuchsia-500/20 bg-fuchsia-500/10 text-fuchsia-100",
+    emerald: "border-emerald-500/20 bg-emerald-500/10 text-emerald-100",
+  };
+
+  return (
+    <div className={`rounded-2xl border p-4 ${tones[tone] || tones.cyan}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-sm font-black">{title}</div>
+        <span className="rounded-full border border-white/10 bg-slate-950/30 px-2 py-1 text-[10px] font-black text-slate-100">
+          {status}
+        </span>
+      </div>
+      <div className="mt-2 text-xs leading-relaxed text-slate-300">{copy}</div>
+    </div>
+  );
+}
+
 export default function SboGrowth() {
   const navigate = useNavigate();
   const { booting, isGod, canAccessGrowthOs, moduleAccess } = useAuth();
@@ -92,18 +113,18 @@ export default function SboGrowth() {
 
   const contentQueue = useMemo(
     () => [
-      { id: "sbo-demo-1", title: "Weekly service tip", status: "DRAFT", source: "DEMO" },
-      { id: "sbo-demo-2", title: "Review request campaign", status: "SCHEDULED", source: "DEMO" },
+      { id: "sbo-demo-1", title: "Weekly service tip", status: "DRAFT", source: "STARTER" },
+      { id: "sbo-demo-2", title: "Review request campaign", status: "SCHEDULED", source: "STARTER" },
     ],
     []
   );
 
   const aiPostPresets = useMemo(
     () => [
-      { key: "promo", label: "Generate Promo Post" },
-      { key: "review", label: "Generate Review Ask" },
-      { key: "educational", label: "Generate Educational Post" },
-      { key: "before_after", label: "Generate Before/After Post" },
+      { key: "lead_follow_up", label: "Start Lead Follow-Up" },
+      { key: "review_request", label: "Start Review Request" },
+      { key: "weekly_tip", label: "Start Weekly Service Tip" },
+      { key: "promo", label: "Start Promo Post" },
     ],
     []
   );
@@ -118,7 +139,7 @@ export default function SboGrowth() {
       },
       {
         id: "gp-2",
-        title: "Review Ask",
+        title: "Review Request",
         body: "If we earned it, a quick review helps our small business grow.",
         channel: "Google / Facebook",
       },
@@ -169,8 +190,8 @@ export default function SboGrowth() {
                   Turn leads into follow-ups, drafts, and posts automatically.
                 </h1>
                 <p className="mt-2 text-sm text-slate-300 max-w-3xl">
-                  This is the SBO version of the Growth OS. It stays in safe mode for now: drafts can be queued and simulated,
-                  but nothing is posted externally until real channel connections are enabled.
+                  Safe-mode Growth OS helps you create follow-ups, review asks, and social content. You can queue and test posts
+                  safely before real channel connections go live.
                 </p>
               </div>
 
@@ -186,11 +207,39 @@ export default function SboGrowth() {
             </div>
           </section>
 
+          <section className="grid md:grid-cols-4 gap-3">
+            <StarterRecipeCard
+              title="New Lead Follow-Up"
+              copy="Create a ready-to-send reply when a customer asks for service."
+              status="Start Automation"
+              tone="cyan"
+            />
+            <StarterRecipeCard
+              title="Review Request"
+              copy="Draft a review ask after a completed job or paid invoice."
+              status="Starter"
+              tone="indigo"
+            />
+            <StarterRecipeCard
+              title="Weekly Service Tip"
+              copy="Keep your business visible with helpful posts customers understand."
+              status="Starter"
+              tone="fuchsia"
+            />
+            <StarterRecipeCard
+              title="Win-Back Message"
+              copy="Re-engage old leads that never booked or went quiet."
+              status="Starter"
+              tone="emerald"
+            />
+          </section>
+
           <GrowthContentEngineCard
             contentQueue={contentQueue}
             aiPostPresets={aiPostPresets}
             aiGeneratedPreviews={aiGeneratedPreviews}
             toneFromStatus={toneFromStatus}
+            variant="sbo"
           />
         </main>
       )}
