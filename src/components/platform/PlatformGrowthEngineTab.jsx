@@ -6,6 +6,7 @@ import GrowthKpiGrid from "./growth/GrowthKpiGrid";
 import AcquisitionFunnel from "./growth/AcquisitionFunnel";
 import GrowthConnectChannelsCard from "./growth/GrowthConnectChannelsCard";
 import GrowthAutomationControlCard from "./growth/GrowthAutomationControlCard";
+import GrowthOnboardingWizard from "./growth/GrowthOnboardingWizard";
 
 const GrowthConnectChannelsDrawer = React.lazy(() => import("./growth/GrowthConnectChannelsDrawer"));
 const GrowthAutomationRecipesCard = React.lazy(() => import("./growth/GrowthAutomationRecipesCard"));
@@ -35,6 +36,9 @@ export default function PlatformGrowthEngineTab() {
   const [channelSetupPending, setChannelSetupPending] = useState({});
   const [channelQuery, setChannelQuery] = useState("");
   const [drawerTab, setDrawerTab] = useState("connect_accounts");
+  const [showSetupPreview, setShowSetupPreview] = useState(true);
+  const [setupMessage, setSetupMessage] = useState("");
+  const [contentEngineKey, setContentEngineKey] = useState(0);
 
   const [dashboard, setDashboard] = useState({});
   const [leads, setLeads] = useState([]);
@@ -130,6 +134,23 @@ export default function PlatformGrowthEngineTab() {
         delete next[key];
         return next;
       });
+    }
+  }
+
+  async function createStarterFromPlatformGuide(preset) {
+    setSetupMessage("");
+    setUpdateErr("");
+
+    try {
+      const res = await api.post("/platform-growth/growth/drafts/starter/", {
+        starter_type: preset?.key || "lead_follow_up",
+      });
+
+      setSetupMessage(`God Mode preview draft created: ${res?.data?.title || preset?.label || "Starter draft"}`);
+      setContentEngineKey((x) => x + 1);
+      await loadAll();
+    } catch (e) {
+      setUpdateErr(e?.response?.data?.detail || "Failed to create preview starter draft.");
     }
   }
 
@@ -288,28 +309,28 @@ export default function PlatformGrowthEngineTab() {
         name: "New lead follow-up",
         summary: "Auto-send first touch and reminders.",
         status: "ACTIVE",
-        audience: "Platform + future SBO add-on",
+        audience: "Platform + SBO Growth OS",
       },
       {
         id: "r2",
         name: "Review request",
         summary: "Send post-service review asks.",
         status: "DRAFT",
-        audience: "Platform + future SBO add-on",
+        audience: "Platform + SBO Growth OS",
       },
       {
         id: "r3",
         name: "Win-back campaign",
         summary: "Re-engage cooled leads.",
         status: "DRAFT",
-        audience: "Platform + future SBO add-on",
+        audience: "Platform + SBO Growth OS",
       },
       {
         id: "r4",
         name: "Comment-to-DM responder",
         summary: "Route CTA comments to DM flow.",
         status: "ACTIVE",
-        audience: "Platform + future SBO add-on",
+        audience: "Platform + SBO Growth OS",
       },
     ],
     []
@@ -327,10 +348,10 @@ export default function PlatformGrowthEngineTab() {
 
   const aiPostPresets = useMemo(
     () => [
-      { key: "promo", label: "Generate Promo Post" },
-      { key: "review", label: "Generate Review Ask" },
-      { key: "educational", label: "Generate Educational Post" },
-      { key: "before_after", label: "Generate Before/After Post" },
+      { key: "lead_follow_up", label: "Start Lead Follow-Up" },
+      { key: "review_request", label: "Start Review Request" },
+      { key: "weekly_tip", label: "Start Weekly Service Tip" },
+      { key: "promo", label: "Start Promo Post" },
     ],
     []
   );
@@ -352,7 +373,7 @@ export default function PlatformGrowthEngineTab() {
         <div>
           <div className="text-sm font-semibold text-slate-100">Growth OS</div>
           <div className="text-xs text-slate-500 mt-1">
-            Read-only growth intelligence across leads, campaigns, conversations, and activations.
+            God Mode growth intelligence across leads, campaigns, conversations, activations, and SBO setup readiness.
           </div>
         </div>
 
@@ -365,9 +386,34 @@ export default function PlatformGrowthEngineTab() {
         </button>
       </div>
 
+      {setupMessage ? (
+        <div className="text-sm text-emerald-200 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-3">
+          {setupMessage}
+        </div>
+      ) : null}
+
       {err ? <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/20 rounded-2xl p-3">{err}</div> : null}
       {updateErr ? <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/20 rounded-2xl p-3">{updateErr}</div> : null}
       {loading ? <div className="text-sm text-slate-400">Loading Growth OS…</div> : null}
+
+      {showSetupPreview ? (
+        <GrowthOnboardingWizard
+          variant="platform"
+          onCreateStarter={createStarterFromPlatformGuide}
+          onOpenChannels={() => setConnectModalOpen(true)}
+          onSkip={() => setShowSetupPreview(false)}
+        />
+      ) : (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setShowSetupPreview(true)}
+            className="rounded-2xl border border-cyan-500/35 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/15"
+          >
+            Show SBO setup preview
+          </button>
+        </div>
+      )}
 
       <GrowthKpiGrid kpis={kpis} />
 
@@ -429,6 +475,7 @@ export default function PlatformGrowthEngineTab() {
 
       <Suspense fallback={suspenseFallback}>
         <GrowthContentEngineCard
+          key={contentEngineKey}
           contentQueue={contentQueue}
           aiPostPresets={aiPostPresets}
           aiGeneratedPreviews={aiGeneratedPreviews}

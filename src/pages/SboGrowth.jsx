@@ -1,10 +1,12 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import ModeBar from "../components/ModeBar";
 import Button from "../components/ui/Button";
 import GrowthContentEngineCard from "../components/platform/growth/GrowthContentEngineCard";
+import GrowthOnboardingWizard from "../components/platform/growth/GrowthOnboardingWizard";
 import { toneFromStatus } from "../components/platform/growth/growthUtils";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import api from "../api/client";
 
 const GROWTH_OS_PAYMENT_URL = "https://buy.stripe.com/28E9AT4aefLp4uJ0Kn2Nq0i";
 
@@ -109,6 +111,13 @@ export default function SboGrowth() {
   const navigate = useNavigate();
   const { booting, isGod, canAccessGrowthOs, moduleAccess } = useAuth();
 
+  const [showGuide, setShowGuide] = useState(() => {
+    return localStorage.getItem("sw_growth_guide_hidden") !== "1";
+  });
+  const [contentEngineKey, setContentEngineKey] = useState(0);
+  const [guideMessage, setGuideMessage] = useState("");
+  const [guideError, setGuideError] = useState("");
+
   const growthUnlocked = !!isGod || !!canAccessGrowthOs;
 
   const contentQueue = useMemo(
@@ -152,6 +161,32 @@ export default function SboGrowth() {
     ],
     []
   );
+
+  async function createStarterFromGuide(preset) {
+    setGuideMessage("");
+    setGuideError("");
+
+    try {
+      const res = await api.post("/platform-growth/growth/drafts/starter/", {
+        starter_type: preset?.key || "lead_follow_up",
+      });
+
+      setGuideMessage(`Draft created: ${res?.data?.title || preset?.label || "Starter draft"}`);
+      setContentEngineKey((x) => x + 1);
+    } catch (e) {
+      setGuideError(e?.response?.data?.detail || "Failed to create starter draft.");
+    }
+  }
+
+  function hideGuide() {
+    localStorage.setItem("sw_growth_guide_hidden", "1");
+    setShowGuide(false);
+  }
+
+  function showChannelsMessage() {
+    setGuideError("");
+    setGuideMessage("Channel connection setup is coming next. Safe mode is active now.");
+  }
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">
@@ -207,6 +242,37 @@ export default function SboGrowth() {
             </div>
           </section>
 
+          {guideMessage ? (
+            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+              {guideMessage}
+            </div>
+          ) : null}
+
+          {guideError ? (
+            <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-200">
+              {guideError}
+            </div>
+          ) : null}
+
+          {showGuide ? (
+            <GrowthOnboardingWizard
+              variant="sbo"
+              onCreateStarter={createStarterFromGuide}
+              onOpenChannels={showChannelsMessage}
+              onSkip={hideGuide}
+            />
+          ) : (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowGuide(true)}
+                className="rounded-2xl border border-cyan-500/35 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/15"
+              >
+                Show Growth OS guide
+              </button>
+            </div>
+          )}
+
           <section className="grid md:grid-cols-4 gap-3">
             <StarterRecipeCard
               title="New Lead Follow-Up"
@@ -235,6 +301,7 @@ export default function SboGrowth() {
           </section>
 
           <GrowthContentEngineCard
+            key={contentEngineKey}
             contentQueue={contentQueue}
             aiPostPresets={aiPostPresets}
             aiGeneratedPreviews={aiGeneratedPreviews}
