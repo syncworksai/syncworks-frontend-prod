@@ -14,6 +14,81 @@ const GrowthLeadPipelineCard = React.lazy(() => import("./growth/GrowthLeadPipel
 const GrowthContentEngineCard = React.lazy(() => import("./growth/GrowthContentEngineCard"));
 const GrowthSummaryCards = React.lazy(() => import("./growth/GrowthSummaryCards"));
 
+const META_OAUTH_PROVIDERS = new Set(["facebook", "instagram"]);
+
+function normalizeConnectionCandidate(value) {
+  if (!value) return { connected: false, accountLabel: "" };
+
+  if (typeof value === "boolean") {
+    return { connected: value, accountLabel: "" };
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim();
+    const connected = ["connected", "active", "ok", "true", "enabled"].includes(normalized.toLowerCase());
+    return { connected, accountLabel: connected ? "" : normalized };
+  }
+
+  if (typeof value !== "object") return { connected: false, accountLabel: "" };
+
+  const rawStatus = String(value.status || value.state || value.connection_status || "").toLowerCase();
+
+  const connected =
+    value.connected === true ||
+    value.is_connected === true ||
+    value.active === true ||
+    ["connected", "active", "ok", "ready", "authorized"].includes(rawStatus);
+
+  const accountLabel =
+    value.account_label ||
+    value.account_name ||
+    value.business_name ||
+    value.page_name ||
+    value.display_name ||
+    value.username ||
+    value.handle ||
+    value.name ||
+    value.account?.name ||
+    value.page?.name ||
+    "";
+
+  return { connected, accountLabel: accountLabel ? String(accountLabel) : "" };
+}
+
+function oauthProviderLabel(provider) {
+  const key = String(provider || "facebook").toLowerCase();
+  if (key === "instagram") return "Instagram";
+  return "Facebook";
+}
+
+function getOAuthCallbackResult() {
+  const params = new URLSearchParams(window.location.search || "");
+
+  const provider =
+    params.get("provider") ||
+    params.get("channel") ||
+    params.get("oauth_provider") ||
+    params.get("meta_provider") ||
+    params.get("platform") ||
+    "facebook";
+
+  const error = params.get("error") || params.get("error_description") || params.get("message");
+
+  const successValue =
+    params.get("success") ||
+    params.get("connected") ||
+    params.get("oauth_success") ||
+    params.get("status");
+
+  const success =
+    !error &&
+    ["1", "true", "yes", "connected", "success", "ok"].includes(String(successValue || "").toLowerCase());
+
+  if (!error && !success) return null;
+
+  return { provider, error, success };
+}
+
 function GlassCard({ title, right, children }) {
   return (
     <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
@@ -30,10 +105,13 @@ export default function PlatformGrowthEngineTab() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [updateErr, setUpdateErr] = useState("");
+  const [connectError, setConnectError] = useState("");
+
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [busyLeadIds, setBusyLeadIds] = useState({});
   const [connectModalOpen, setConnectModalOpen] = useState(false);
   const [channelSetupPending, setChannelSetupPending] = useState({});
+  const [connectingChannel, setConnectingChannel] = useState("");
   const [channelQuery, setChannelQuery] = useState("");
   const [drawerTab, setDrawerTab] = useState("connect_accounts");
   const [showSetupPreview, setShowSetupPreview] = useState(true);
@@ -42,25 +120,32 @@ export default function PlatformGrowthEngineTab() {
 
   const [dashboard, setDashboard] = useState({});
   const [leads, setLeads] = useState([]);
+  const [growthChannels, setGrowthChannels] = useState([]);
   const [demoLeads, setDemoLeads] = useState(DEMO_LEADS);
   const [campaigns, setCampaigns] = useState([]);
   const [conversations, setConversations] = useState([]);
 
-  async function loadAll() {
+  async function loadAll({ preserveMessages = false } = {}) {
     setLoading(true);
     setErr("");
-    setUpdateErr("");
+
+    if (!preserveMessages) {
+      setUpdateErr("");
+      setConnectError("");
+    }
 
     const requests = [
       api.get("/platform-growth/dashboard/").catch(() => ({ __failed: true })),
       api.get("/platform-growth/leads/").catch(() => ({ __failed: true })),
       api.get("/platform-growth/campaigns/").catch(() => ({ __failed: true })),
       api.get("/platform-growth/conversations/").catch(() => ({ __failed: true })),
+      api.get("/platform-growth/growth/channels/").catch(() => ({ __failed: true })),
     ];
 
     try {
-      const [rDashboard, rLeads, rCampaigns, rConversations] = await Promise.all(requests);
-      const anySuccess = [rDashboard, rLeads, rCampaigns, rConversations].some((x) => !x?.__failed);
+      const [rDashboard, rLeads, rCampaigns, rConversations, rChannels] = await Promise.all(requests);
+
+      const anySuccess = [rDashboard, rLeads, rCampaigns, rConversations, rChannels].some((x) => !x?.__failed);
 
       if (!anySuccess) throw new Error("Growth OS endpoints unavailable.");
 
@@ -68,12 +153,14 @@ export default function PlatformGrowthEngineTab() {
       setLeads(safeList(rLeads?.data).slice(0, 50));
       setCampaigns(safeList(rCampaigns?.data).slice(0, 12));
       setConversations(safeList(rConversations?.data).slice(0, 12));
+      setGrowthChannels(safeList(rChannels?.data).slice(0, 50));
     } catch (e) {
       setErr(e?.response?.data?.detail || e?.message || "Failed to load Growth OS.");
       setDashboard({});
       setLeads([]);
       setCampaigns([]);
       setConversations([]);
+      setGrowthChannels([]);
     } finally {
       setLoading(false);
     }
@@ -81,6 +168,25 @@ export default function PlatformGrowthEngineTab() {
 
   useEffect(() => {
     loadAll();
+  }, []);
+
+  useEffect(() => {
+    const callbackResult = getOAuthCallbackResult();
+    if (!callbackResult) return;
+
+    if (callbackResult.error) {
+      setUpdateErr(callbackResult.error || "Meta connection failed.");
+      setSetupMessage("");
+      loadAll({ preserveMessages: true });
+    } else {
+      setSetupMessage(`${oauthProviderLabel(callbackResult.provider)} connected successfully.`);
+      setUpdateErr("");
+      setConnectError("");
+      loadAll({ preserveMessages: true });
+    }
+
+    const cleanUrl = `${window.location.pathname}${window.location.hash || ""}`;
+    window.history.replaceState({}, document.title, cleanUrl);
   }, []);
 
   async function refreshLeads() {
@@ -154,6 +260,42 @@ export default function PlatformGrowthEngineTab() {
     }
   }
 
+  async function handleConnectChannel(channel) {
+    if (channel.planned || channel.alwaysAvailable || channel.connected) return;
+
+    if (!META_OAUTH_PROVIDERS.has(channel.key)) {
+      setChannelSetupPending((prev) => ({ ...prev, [channel.key]: true }));
+      return;
+    }
+
+    setConnectingChannel(channel.key);
+    setConnectError("");
+    setUpdateErr("");
+
+    try {
+      const res = await api.post("/platform-growth/growth/oauth/meta/start/", {
+        provider: channel.key,
+      });
+
+      const authorizationUrl = res?.data?.authorization_url;
+
+      if (!authorizationUrl) {
+        throw new Error("Meta did not return an authorization URL.");
+      }
+
+      window.location.assign(authorizationUrl);
+    } catch (e) {
+      const message =
+        e?.response?.data?.detail ||
+        e?.response?.data?.error ||
+        e?.message ||
+        `Failed to start ${channel.name} connection.`;
+
+      setConnectError(message);
+      setConnectingChannel("");
+    }
+  }
+
   const kpis = useMemo(() => {
     const d = dashboard || {};
     return {
@@ -223,21 +365,64 @@ export default function PlatformGrowthEngineTab() {
   }, [enrichedLeads, statusFilter]);
 
   const channelStateMap = useMemo(() => {
-    const backend = dashboard?.channel_connections || {};
+    const backend = dashboard?.channel_connections || dashboard?.channels || {};
     const map = {};
 
-    CHANNELS.forEach((ch) => {
-      const connected =
-        ch.alwaysAvailable ||
-        !!backend[ch.key] ||
-        !!backend[ch.name] ||
-        !!backend[ch.name?.toLowerCase?.()];
+    const liveConnectionsByKey = {};
 
-      map[ch.key] = { ...ch, connected };
+    growthChannels.forEach((conn) => {
+      const provider = String(conn?.provider || "").toLowerCase();
+      const status = String(conn?.status || "").toUpperCase();
+
+      if (provider === "meta" && status === "CONNECTED") {
+        const accountLabel = conn?.account_label || conn?.metadata?.selected_account?.name || "";
+
+        liveConnectionsByKey.facebook = {
+          connected: true,
+          accountLabel,
+        };
+
+        const selected = conn?.metadata?.selected_account || {};
+        const ig = selected?.instagram_business_account || conn?.metadata?.instagram_business_account || null;
+
+        if (ig) {
+          liveConnectionsByKey.instagram = {
+            connected: true,
+            accountLabel: ig?.username ? `@${ig.username}` : ig?.name || accountLabel,
+          };
+        }
+      }
+
+      if (provider && status === "CONNECTED") {
+        liveConnectionsByKey[provider] = {
+          connected: true,
+          accountLabel: conn?.account_label || "",
+        };
+      }
+    });
+
+    CHANNELS.forEach((ch) => {
+      const candidates = [
+        liveConnectionsByKey[ch.key],
+        backend[ch.key],
+        backend[ch.name],
+        backend[ch.name?.toLowerCase?.()],
+      ];
+
+      const normalized = candidates.map(normalizeConnectionCandidate);
+      const backendConnection = normalized.find((item) => item.connected) || normalized.find((item) => item.accountLabel);
+
+      const connected = ch.alwaysAvailable || !!backendConnection?.connected;
+
+      map[ch.key] = {
+        ...ch,
+        connected,
+        accountLabel: connected ? backendConnection?.accountLabel || "" : "",
+      };
     });
 
     return map;
-  }, [dashboard]);
+  }, [dashboard, growthChannels]);
 
   const channelListFiltered = useMemo(() => {
     const q = channelQuery.toLowerCase().trim();
@@ -255,8 +440,8 @@ export default function PlatformGrowthEngineTab() {
 
   function getChannelStatus(channel) {
     if (channel.planned) return "PLANNED";
-    if (channelSetupPending[channel.key]) return "SETUP_PENDING";
     if (channel.connected) return "CONNECTED";
+    if (!META_OAUTH_PROVIDERS.has(channel.key) && channelSetupPending[channel.key]) return "SETUP_PENDING";
     return "NOT_CONNECTED";
   }
 
@@ -265,11 +450,6 @@ export default function PlatformGrowthEngineTab() {
     if (status === "SETUP_PENDING") return "Setup Pending";
     if (status === "CONNECTED") return "Connected";
     return "Not Connected";
-  }
-
-  function handleConnectChannel(channel) {
-    if (channel.planned || channel.alwaysAvailable) return;
-    setChannelSetupPending((prev) => ({ ...prev, [channel.key]: true }));
   }
 
   const accountHealthRows = useMemo(
@@ -379,7 +559,7 @@ export default function PlatformGrowthEngineTab() {
 
         <button
           type="button"
-          onClick={loadAll}
+          onClick={() => loadAll()}
           className="h-9 px-3 rounded-2xl text-xs border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40 text-slate-200"
         >
           Refresh
@@ -389,6 +569,12 @@ export default function PlatformGrowthEngineTab() {
       {setupMessage ? (
         <div className="text-sm text-emerald-200 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-3">
           {setupMessage}
+        </div>
+      ) : null}
+
+      {connectError ? (
+        <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/20 rounded-2xl p-3">
+          {connectError}
         </div>
       ) : null}
 
@@ -467,6 +653,7 @@ export default function PlatformGrowthEngineTab() {
           getChannelLabel={getChannelLabel}
           toneFromStatus={toneFromStatus}
           handleConnectChannel={handleConnectChannel}
+          connectingChannel={connectingChannel}
           recipeCards={recipeCards}
           accountHealthRows={accountHealthRows}
           cx={cx}

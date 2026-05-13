@@ -30,6 +30,7 @@ export default function GrowthConnectChannelsDrawer({
   getChannelLabel,
   toneFromStatus,
   handleConnectChannel,
+  connectingChannel,
   recipeCards,
   accountHealthRows,
   cx,
@@ -112,7 +113,9 @@ export default function GrowthConnectChannelsDrawer({
                   const status = getChannelStatus(c);
                   const pending = status === "SETUP_PENDING";
                   const planned = status === "PLANNED";
+                  const connected = status === "CONNECTED";
                   const email = c.key === "email";
+                  const loading = connectingChannel === c.key;
 
                   return (
                     <div key={c.key} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
@@ -127,6 +130,12 @@ export default function GrowthConnectChannelsDrawer({
                       </div>
 
                       <div className="mt-2 text-sm text-slate-300">{c.description}</div>
+
+                      {connected && c.accountLabel ? (
+                        <div className="mt-2 text-xs text-emerald-200 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2">
+                          Connected as {c.accountLabel}
+                        </div>
+                      ) : null}
 
                       {pending && (
                         <div className="mt-2 text-xs text-amber-200 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2">
@@ -144,10 +153,20 @@ export default function GrowthConnectChannelsDrawer({
                         <button
                           type="button"
                           onClick={() => handleConnectChannel(c)}
-                          disabled={pending || planned || email}
+                          disabled={loading || pending || planned || email || connected}
                           className="h-9 px-3 rounded-2xl text-xs border border-cyan-500/35 bg-cyan-500/10 text-cyan-100 disabled:opacity-60"
                         >
-                          {pending ? "Setup Pending" : planned ? "Planned" : email ? "Email Available" : "Connect"}
+                          {loading
+                            ? "Redirecting..."
+                            : connected
+                              ? "Connected"
+                              : pending
+                                ? "Setup Pending"
+                                : planned
+                                  ? "Planned"
+                                  : email
+                                    ? "Email Available"
+                                    : "Connect"}
                         </button>
                       </div>
                     </div>
@@ -185,6 +204,9 @@ export default function GrowthConnectChannelsDrawer({
                       {getChannelLabel(row.status)}
                     </StatusPill>
                   </div>
+                  {row.status === "CONNECTED" && row.accountLabel ? (
+                    <div className="mt-3 text-xs text-emerald-200">Connected as {row.accountLabel}</div>
+                  ) : null}
                 </div>
               ))}
             </div>

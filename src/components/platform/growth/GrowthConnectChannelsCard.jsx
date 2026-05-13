@@ -52,6 +52,9 @@ export default function GrowthConnectChannelsCard({
                 </div>
                 <StatusPill tone={toneFromStatus(status)}>{getChannelLabel(status)}</StatusPill>
               </div>
+              {status === "CONNECTED" && c.accountLabel ? (
+                <div className="mt-2 text-xs text-emerald-200">Connected as {c.accountLabel}</div>
+              ) : null}
             </div>
           );
         })}
