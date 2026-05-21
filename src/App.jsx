@@ -16,6 +16,7 @@ import CustomerTickets from "./pages/CustomerTickets";
 import CustomerFavorites from "./pages/CustomerFavorites";
 import CustomerBusinessCards from "./pages/CustomerBusinessCards";
 import CustomerBusinessCardDetail from "./pages/CustomerBusinessCardDetail";
+import AffiliateDashboard from "./pages/AffiliateDashboard";
 
 import SboDashboard from "./pages/SboDashboard";
 import SboGrowth from "./pages/SboGrowth";
@@ -310,6 +311,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <CustomerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer/affiliate"
+          element={
+            <ProtectedRoute>
+              <AffiliateDashboard />
             </ProtectedRoute>
           }
         />

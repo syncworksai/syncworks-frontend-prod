@@ -11,6 +11,7 @@ import BroadcastsManager from "../components/platform/BroadcastsManager";
 import NewsReelManager from "../components/platform/NewsReelManager";
 import SupportRequestsManager from "../components/platform/SupportRequestsManager";
 import AdsOrdersManager from "../components/platform/AdsOrdersManager";
+import GodModeAffiliates from "./platform/GodModeAffiliates";
 
 const TABS = [
   { id: "overview", label: "Overview" },
@@ -22,6 +23,7 @@ const TABS = [
   { id: "ads", label: "Ads Orders" },
   { id: "news", label: "News Reel" },
   { id: "broadcasts", label: "Broadcasts" },
+  { id: "affiliates", label: "Affiliates" },
 ];
 
 export default function PlatformDashboard() {
@@ -52,6 +54,7 @@ export default function PlatformDashboard() {
         {tab === "ads" ? <AdsOrdersManager /> : null}
         {tab === "news" ? <NewsReelManager /> : null}
         {tab === "broadcasts" ? <BroadcastsManager /> : null}
+        {tab === "affiliates" ? <GodModeAffiliates /> : null}
       </main>
     </div>
   );
