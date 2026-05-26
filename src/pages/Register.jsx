@@ -4,6 +4,8 @@ import { useAuth } from "../auth/AuthContext";
 import {
   captureAffiliateCodeFromLocation,
   getStoredAffiliateCode,
+  normalizeAffiliateCode,
+  storeAffiliateCode,
 } from "../api/platformAffiliates";
 
 function cx(...parts) {
@@ -140,10 +142,17 @@ function RegisterCard({
   password,
   setPassword,
   affiliateCode,
+  setAffiliateCode,
   onSubmit,
   setPricingOpen,
   setClaimOpen,
 }) {
+  function updateAffiliateCode(value) {
+    const normalized = normalizeAffiliateCode(value);
+    setAffiliateCode(normalized);
+    if (normalized) storeAffiliateCode(normalized);
+  }
+
   return (
     <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-5 shadow-[0_0_90px_rgba(0,0,0,0.45)] backdrop-blur">
       <div className="flex items-center justify-between gap-3">
@@ -226,6 +235,21 @@ function RegisterCard({
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+        </div>
+
+        <div>
+          <label className="text-[11px] text-slate-400">
+            Affiliate / Referral Code (optional)
+          </label>
+          <input
+            className="mt-1 w-full rounded-2xl border border-emerald-500/20 bg-slate-950 px-4 py-2.5 uppercase outline-none focus:border-emerald-500/50"
+            placeholder="SW-JACOB7"
+            value={affiliateCode}
+            onChange={(e) => updateAffiliateCode(e.target.value)}
+          />
+          <div className="mt-1 text-[11px] text-slate-500">
+            If someone referred you, enter their code here. QR/referral links fill this in automatically.
+          </div>
         </div>
 
         <button
@@ -337,16 +361,22 @@ export default function Register() {
     setErr("");
     setLoading(true);
     try {
+      const cleanAffiliateCode = normalizeAffiliateCode(affiliateCode);
+
+      if (cleanAffiliateCode) {
+        storeAffiliateCode(cleanAffiliateCode);
+      }
+
       await register({
         email,
         username: username || (email.includes("@") ? email.split("@")[0] : email),
         first_name,
         last_name,
         password,
-        ...(affiliateCode
+        ...(cleanAffiliateCode
           ? {
-              affiliate_code: affiliateCode,
-              referral_code: affiliateCode,
+              affiliate_code: cleanAffiliateCode,
+              referral_code: cleanAffiliateCode,
             }
           : {}),
       });
@@ -515,6 +545,7 @@ export default function Register() {
                 password={password}
                 setPassword={setPassword}
                 affiliateCode={affiliateCode}
+                setAffiliateCode={setAffiliateCode}
                 onSubmit={onSubmit}
                 setPricingOpen={setPricingOpen}
                 setClaimOpen={setClaimOpen}
