@@ -13,7 +13,6 @@ import CustomerTickets from "../components/CustomerTickets";
 import PriorityBadge, { isPriorityOne } from "../components/tickets/PriorityBadge";
 import CustomerDashboardTabs from "../components/customer/dashboard/CustomerDashboardTabs";
 import CustomerHeroCard from "../components/customer/dashboard/CustomerHeroCard";
-import CustomerQuickActionsGrid from "../components/customer/dashboard/CustomerQuickActionsGrid";
 import CustomerAffiliateProgramCard from "../components/customer/dashboard/CustomerAffiliateProgramCard";
 
 const BASE_TABS = [
@@ -723,7 +722,6 @@ export default function CustomerDashboard() {
   onAffiliate={() => navigate("/customer/affiliate")}
 />
 
-<CustomerQuickActionsGrid />
 
 <div className="grid xl:grid-cols-3 gap-4">
   <div className="lg:col-span-2">
