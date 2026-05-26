@@ -11,6 +11,10 @@ import TodoList from "../components/TodoList";
 import InboxPanel from "../components/Inbox/InboxPanel";
 import CustomerTickets from "../components/CustomerTickets";
 import PriorityBadge, { isPriorityOne } from "../components/tickets/PriorityBadge";
+import CustomerDashboardTabs from "../components/customer/dashboard/CustomerDashboardTabs";
+import CustomerHeroCard from "../components/customer/dashboard/CustomerHeroCard";
+import CustomerQuickActionsGrid from "../components/customer/dashboard/CustomerQuickActionsGrid";
+import CustomerAffiliateProgramCard from "../components/customer/dashboard/CustomerAffiliateProgramCard";
 
 const BASE_TABS = [
   { id: "overview", label: "Overview" },
@@ -692,80 +696,43 @@ export default function CustomerDashboard() {
       <main className="relative max-w-6xl mx-auto px-4 py-6 space-y-6">
         <NewsReel />
 
-        <div className="flex gap-2 flex-wrap items-center">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={
-                "inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 border transition " +
-                (tab === t.id
-                  ? "bg-cyan-500/18 border-cyan-500/35 hover:bg-cyan-500/24 text-cyan-100 shadow-[0_0_30px_rgba(34,211,238,0.10)]"
-                  : "bg-slate-950/55 border-slate-800/80 hover:bg-slate-900/40 text-slate-200")
-              }
-              onClick={() => setTab(t.id)}
-            >
-              {t.label}
-            </button>
-          ))}
+        <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
+  <CustomerDashboardTabs
+    tabs={tabs}
+    activeTab={tab}
+    onChange={setTab}
+  />
 
-          <button
-            type="button"
-            onClick={() => navigate("/upgrade")}
-            className="ml-auto inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 bg-indigo-500/18 border border-indigo-500/35 hover:bg-indigo-500/24 text-indigo-100"
-          >
-            Start a business (Upgrade)
-          </button>
-        </div>
+  <button
+    type="button"
+    onClick={() => navigate("/upgrade")}
+    className="lg:ml-auto inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 bg-indigo-500/18 border border-indigo-500/35 hover:bg-indigo-500/24 text-indigo-100"
+  >
+    Start a business (Upgrade)
+  </button>
+</div>
 
         {tab === "overview" ? (
           <>
-            <section className="rounded-3xl border border-slate-800/80 bg-slate-950/30 backdrop-blur-xl p-6 shadow-[0_0_80px_rgba(0,0,0,0.40)] relative overflow-hidden">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 relative">
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="h-14 w-14 rounded-2xl border border-slate-800/80 bg-slate-950/70 overflow-hidden shrink-0">
-                    <img src="/brands/syncworks-logo.jpg" alt="SyncWorks" className="h-full w-full object-cover" />
-                  </div>
+            <CustomerHeroCard
+  displayName={displayName}
+  activeBusinessId={activeBusinessId || "auto"}
+  onNewRequest={() => navigate("/customer/new-request")}
+  onViewOrders={() => setTab("orders")}
+  onBusinessCards={() => navigate("/customer/business-cards")}
+  onAffiliate={() => navigate("/customer/affiliate")}
+/>
 
-                  <div className="min-w-0">
-                    <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Welcome back</div>
-                    <div className="text-2xl font-extrabold mt-1 truncate">{displayName}</div>
-                    <div className="text-sm text-slate-400 mt-2">
-                      Your life-first service hub — requests, schedules, and updates in one place.
-                    </div>
-                    <div className="mt-3 text-[11px] text-slate-500">
-                      Context: <span className="font-mono text-slate-200">{activeBusinessId || "auto"}</span>
-                    </div>
-                  </div>
-                </div>
+<CustomerQuickActionsGrid />
 
-                <div className="flex gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => navigate("/customer/new-request")}
-                    className="inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 bg-cyan-500/18 border border-cyan-500/35 hover:bg-cyan-500/24 text-cyan-100 shadow-[0_0_30px_rgba(34,211,238,0.10)]"
-                  >
-                    + New Request
-                  </button>
+<div className="grid lg:grid-cols-3 gap-4">
+  <div className="lg:col-span-2">
+    <CustomerAffiliateProgramCard
+      onOpen={() => navigate("/customer/affiliate")}
+    />
+  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setTab("orders")}
-                    className="inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 bg-slate-950/55 border border-slate-800/80 hover:bg-slate-900/40 text-slate-200"
-                  >
-                    View Orders
-                  </button>
 
-                  <button
-                    type="button"
-                    onClick={() => navigate("/customer/business-cards")}
-                    className="inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 bg-indigo-500/18 border border-indigo-500/35 hover:bg-indigo-500/24 text-indigo-100"
-                  >
-                    Business Cards
-                  </button>
-                </div>
-              </div>
-            </section>
 
             <FeaturedDealsRail
               items={featuredFeedItems}
@@ -976,7 +943,7 @@ export default function CustomerDashboard() {
                 </Card>
               </div>
 
-              <div className="space-y-4">
+              
                 <PaymentsDueCard
                   invoices={dueInvoiceItems}
                   totalDue={totalDue}
