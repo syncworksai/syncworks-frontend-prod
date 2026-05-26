@@ -515,7 +515,7 @@ function PaymentsDueCard({ invoices, totalDue, onPayNow, onOpenOrder, onViewOrde
             <div className="mt-2 text-3xl font-extrabold text-amber-100">{toMoney(totalDue)}</div>
           </div>
 
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 space-y-3 min-w-0">
             {invoices.slice(0, 3).map((item) => {
               const ticket = item.ticket;
               const invoice = item.invoice;
@@ -532,13 +532,13 @@ function PaymentsDueCard({ invoices, totalDue, onPayNow, onOpenOrder, onViewOrde
                     <span className={invoicePill(invoice?.status)}>{String(invoice?.status || "OPEN")}</span>
                   </div>
 
-                  <div className="mt-3 flex items-end justify-between gap-3">
-                    <div>
+                  <div className="mt-3 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between min-w-0">
+                    <div className="shrink-0">
                       <div className="text-[11px] text-slate-500">Amount Due</div>
                       <div className="text-xl font-extrabold text-cyan-100">{toMoney(amount)}</div>
                     </div>
 
-                    <div className="flex gap-2 flex-wrap justify-end">
+                    <div className="flex flex-wrap gap-2 xl:justify-end">
                       <button type="button" onClick={() => onOpenOrder(ticket.id)} className="inline-flex items-center justify-center h-9 text-xs rounded-2xl px-4 bg-slate-950/55 border border-slate-800/80 hover:bg-slate-900/40 text-slate-200">
                         Open Order
                       </button>
@@ -725,14 +725,23 @@ export default function CustomerDashboard() {
 
 <CustomerQuickActionsGrid />
 
-<div className="grid lg:grid-cols-3 gap-4">
+<div className="grid xl:grid-cols-3 gap-4">
   <div className="lg:col-span-2">
     <CustomerAffiliateProgramCard
       onOpen={() => navigate("/customer/affiliate")}
     />
   </div>
 
+  
 
+  <PaymentsDueCard
+    invoices={dueInvoiceItems}
+    totalDue={totalDue}
+    onPayNow={(ticketId) => navigate(`/tickets/${ticketId}`)}
+    onOpenOrder={(ticketId) => navigate(`/tickets/${ticketId}`)}
+    onViewOrders={() => setTab("orders")}
+  />
+</div>
 
             <FeaturedDealsRail
               items={featuredFeedItems}
@@ -941,17 +950,9 @@ export default function CustomerDashboard() {
                     </div>
                   ) : null}
                 </Card>
-              </div>
+                            </div>
 
-              
-                <PaymentsDueCard
-                  invoices={dueInvoiceItems}
-                  totalDue={totalDue}
-                  onPayNow={(ticketId) => navigate(`/tickets/${ticketId}`)}
-                  onOpenOrder={(ticketId) => navigate(`/tickets/${ticketId}`)}
-                  onViewOrders={() => setTab("orders")}
-                />
-
+              <div className="space-y-4">
                 <Card title="Inbox Snapshot">
                   <div className="text-[11px] text-slate-500 -mt-1 mb-3">
                     Ticket updates, reminders, broadcasts, and messages.
