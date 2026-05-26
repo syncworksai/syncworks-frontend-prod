@@ -12,7 +12,9 @@ import InboxPanel from "../components/Inbox/InboxPanel";
 import CustomerTickets from "../components/CustomerTickets";
 import PriorityBadge, { isPriorityOne } from "../components/tickets/PriorityBadge";
 import CustomerDashboardTabs from "../components/customer/dashboard/CustomerDashboardTabs";
-import CustomerHeroCard from "../components/customer/dashboard/CustomerHeroCard";
+import CustomerCommandHero from "../components/customer/dashboard/CustomerCommandHero";
+import CustomerOverviewGrid from "../components/customer/dashboard/CustomerOverviewGrid";
+import CustomerSidebarStack from "../components/customer/dashboard/CustomerSidebarStack";
 import CustomerAffiliateProgramCard from "../components/customer/dashboard/CustomerAffiliateProgramCard";
 
 const BASE_TABS = [
@@ -713,33 +715,30 @@ export default function CustomerDashboard() {
 
         {tab === "overview" ? (
           <>
-            <CustomerHeroCard
+            <CustomerCommandHero
   displayName={displayName}
-  activeBusinessId={activeBusinessId || "auto"}
   onNewRequest={() => navigate("/customer/new-request")}
   onViewOrders={() => setTab("orders")}
-  onBusinessCards={() => navigate("/customer/business-cards")}
   onAffiliate={() => navigate("/customer/affiliate")}
+  onBusinessCards={() => navigate("/customer/business-cards")}
 />
 
-
-<div className="grid xl:grid-cols-3 gap-4">
-  <div className="lg:col-span-2">
-    <CustomerAffiliateProgramCard
-      onOpen={() => navigate("/customer/affiliate")}
-    />
-  </div>
-
-  
-
-  <PaymentsDueCard
-    invoices={dueInvoiceItems}
+<div className="grid 2xl:grid-cols-[1fr_360px] gap-6 items-start">
+  <CustomerOverviewGrid
+    dueInvoiceItems={dueInvoiceItems}
     totalDue={totalDue}
-    onPayNow={(ticketId) => navigate(`/tickets/${ticketId}`)}
-    onOpenOrder={(ticketId) => navigate(`/tickets/${ticketId}`)}
-    onViewOrders={() => setTab("orders")}
+    navigate={navigate}
+    setTab={setTab}
+    featuredFeedItems={featuredFeedItems}
+    openFeedItem={openFeedItem}
+  />
+
+  <CustomerSidebarStack
+    navigate={navigate}
+    recentTickets={recentTickets}
   />
 </div>
+
 
             <FeaturedDealsRail
               items={featuredFeedItems}
