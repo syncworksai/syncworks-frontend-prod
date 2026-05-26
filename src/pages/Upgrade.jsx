@@ -3,6 +3,10 @@ import { useLocation, useNavigate } from "react-router-dom";
 import ModeBar from "../components/ModeBar";
 import { useAuth } from "../auth/AuthContext";
 import api from "../api/client";
+import {
+  buildAffiliatePayload,
+  getStoredAffiliateCode,
+} from "../api/platformAffiliates";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -194,6 +198,7 @@ export default function Upgrade() {
   const [promoStatus, setPromoStatus] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoApplied, setPromoApplied] = useState(false);
+  const [affiliateCode] = useState(getStoredAffiliateCode());
 
   const search = useMemo(() => new URLSearchParams(loc.search || ""), [loc.search]);
   const subState = search.get("sub") || "";

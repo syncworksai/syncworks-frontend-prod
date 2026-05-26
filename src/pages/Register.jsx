@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import {
+  captureAffiliateCodeFromLocation,
+  getStoredAffiliateCode,
+} from "../api/platformAffiliates";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -135,6 +139,7 @@ function RegisterCard({
   setLastName,
   password,
   setPassword,
+  affiliateCode,
   onSubmit,
   setPricingOpen,
   setClaimOpen,
@@ -148,6 +153,21 @@ function RegisterCard({
         </div>
         <Pill tone="cyan">v7.1</Pill>
       </div>
+
+      {affiliateCode ? (
+        <div className="mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3">
+          <div className="text-[11px] uppercase tracking-[0.18em] text-emerald-300/80">
+            Affiliate referral detected
+          </div>
+          <div className="mt-1 flex items-center justify-between gap-3">
+            <div className="text-lg font-black text-emerald-100">{affiliateCode}</div>
+            <Pill tone="emerald">Saved</Pill>
+          </div>
+          <div className="mt-1 text-xs text-emerald-200/75">
+            If you start a business, this referral code will be carried forward automatically.
+          </div>
+        </div>
+      ) : null}
 
       {err ? (
         <div className="mt-4 rounded-2xl border border-red-800 bg-red-900/20 p-3 text-sm text-red-300">
@@ -265,6 +285,7 @@ function RegisterCard({
 export default function Register() {
   const { register, user } = useAuth();
   const nav = useNavigate();
+  const location = useLocation();
 
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
@@ -277,6 +298,12 @@ export default function Register() {
 
   const [pricingOpen, setPricingOpen] = useState(false);
   const [claimOpen, setClaimOpen] = useState(false);
+  const [affiliateCode, setAffiliateCode] = useState("");
+
+  useEffect(() => {
+    const code = captureAffiliateCodeFromLocation(location);
+    setAffiliateCode(code || getStoredAffiliateCode());
+  }, [location]);
 
   useEffect(() => {
     if (user) nav("/customer", { replace: true });
@@ -316,6 +343,12 @@ export default function Register() {
         first_name,
         last_name,
         password,
+        ...(affiliateCode
+          ? {
+              affiliate_code: affiliateCode,
+              referral_code: affiliateCode,
+            }
+          : {}),
       });
       nav("/customer", { replace: true });
     } catch (e2) {
@@ -481,6 +514,7 @@ export default function Register() {
                 setLastName={setLastName}
                 password={password}
                 setPassword={setPassword}
+                affiliateCode={affiliateCode}
                 onSubmit={onSubmit}
                 setPricingOpen={setPricingOpen}
                 setClaimOpen={setClaimOpen}
