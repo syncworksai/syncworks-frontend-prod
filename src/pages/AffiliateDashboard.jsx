@@ -8,6 +8,9 @@ import AffiliateSignupModal from "../components/affiliates/AffiliateSignupModal"
 import AffiliateFinancialSummary from "../components/affiliates/dashboard/AffiliateFinancialSummary";
 import AffiliateReferredBusinesses from "../components/affiliates/dashboard/AffiliateReferredBusinesses";
 import AffiliatePayoutHistory from "../components/affiliates/dashboard/AffiliatePayoutHistory";
+import AffiliateShareTools from "../components/affiliates/dashboard/AffiliateShareTools";
+import AffiliateTaxDocuments from "../components/affiliates/dashboard/AffiliateTaxDocuments";
+import AffiliatePayoutMethodCard from "../components/affiliates/dashboard/AffiliatePayoutMethodCard";
 
 import {
   getMyAffiliateBusinesses,
@@ -25,13 +28,10 @@ function statusTone(status) {
   switch ((status || "").toUpperCase()) {
     case "ACTIVE":
       return "border-cyan-500/30 bg-cyan-500/10 text-cyan-200";
-
     case "PENDING":
       return "border-amber-500/30 bg-amber-500/10 text-amber-200";
-
     case "SUSPENDED":
       return "border-rose-500/30 bg-rose-500/10 text-rose-200";
-
     default:
       return "border-slate-700 bg-slate-800/40 text-slate-300";
   }
@@ -41,10 +41,8 @@ export default function AffiliateDashboard() {
   const [data, setData] = useState(null);
   const [businesses, setBusinesses] = useState([]);
   const [commissions, setCommissions] = useState([]);
-
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
-
   const [signupOpen, setSignupOpen] = useState(false);
 
   async function load() {
@@ -53,7 +51,6 @@ export default function AffiliateDashboard() {
 
     try {
       const me = await getMyAffiliateDashboard();
-
       setData(me);
 
       if (me?.has_affiliate_profile) {
@@ -81,51 +78,25 @@ export default function AffiliateDashboard() {
   }, []);
 
   const affiliate = data?.affiliate || null;
-
-  const metrics = useMemo(() => {
-    return data?.metrics || {};
-  }, [data]);
-
-  const affiliateStatus = String(
-    affiliate?.status || ""
-  ).toUpperCase();
+  const metrics = useMemo(() => data?.metrics || {}, [data]);
+  const affiliateStatus = String(affiliate?.status || "").toUpperCase();
 
   const payoutMetrics = {
     expected_monthly_payout:
-      metrics.expected_monthly_payout ||
-      metrics.pending_commission ||
-      0,
-
-    pending_commission:
-      metrics.pending_commission || 0,
-
-    lifetime_paid:
-      metrics.lifetime_paid || 0,
-
+      metrics.expected_monthly_payout || metrics.pending_commission || 0,
+    pending_commission: metrics.pending_commission || 0,
+    lifetime_paid: metrics.lifetime_paid || 0,
     active_businesses:
-      metrics.active_businesses ||
-      metrics.businesses_referred ||
-      businesses.length,
+      metrics.active_businesses || metrics.businesses_referred || businesses.length,
   };
 
   const payoutRows = commissions.map((c) => ({
     id: c.id,
-    period:
-      c.period_label ||
-      c.created_at ||
-      "Current Period",
-
-    platform_revenue:
-      c.net_syncworks_revenue_amount || 0,
-
-    commission_amount:
-      c.commission_amount || 0,
-
-    status:
-      c.status || "PENDING",
-
-    paid_at:
-      c.paid_at || null,
+    period: c.period_label || c.created_at || "Current Period",
+    platform_revenue: c.net_syncworks_revenue_amount || 0,
+    commission_amount: c.commission_amount || 0,
+    status: c.status || "PENDING",
+    paid_at: c.paid_at || null,
   }));
 
   return (
@@ -180,7 +151,6 @@ export default function AffiliateDashboard() {
                   <div className="text-cyan-200 font-semibold">
                     Lifetime Attribution
                   </div>
-
                   <div className="text-sm text-slate-400 mt-2">
                     Businesses remain tied to your affiliate account after approval.
                   </div>
@@ -190,7 +160,6 @@ export default function AffiliateDashboard() {
                   <div className="text-cyan-200 font-semibold">
                     Recurring Revenue
                   </div>
-
                   <div className="text-sm text-slate-400 mt-2">
                     Earn 10% of SyncWorks revenue generated from your referred businesses.
                   </div>
@@ -200,7 +169,6 @@ export default function AffiliateDashboard() {
                   <div className="text-cyan-200 font-semibold">
                     QR + Referral Tools
                   </div>
-
                   <div className="text-sm text-slate-400 mt-2">
                     Share your affiliate link, QR card, and referral code anywhere.
                   </div>
@@ -222,13 +190,11 @@ export default function AffiliateDashboard() {
             <div className="text-3xl font-black">
               Affiliate Application Pending
             </div>
-
             <p className="mt-3 text-slate-300 max-w-2xl">
               Your application has been submitted and is currently under review.
               Once approved, your affiliate tools, payout tracking, and referral
               dashboard will unlock automatically.
             </p>
-
             <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-200 text-sm font-semibold">
               Pending Review
             </div>
@@ -240,12 +206,10 @@ export default function AffiliateDashboard() {
             <div className="text-3xl font-black">
               Affiliate Account Restricted
             </div>
-
             <p className="mt-3 text-slate-300 max-w-2xl">
               Your affiliate account is currently suspended or restricted.
               Please contact SyncWorks support for assistance.
             </p>
-
             <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full border border-rose-500/30 bg-rose-500/10 text-rose-200 text-sm font-semibold">
               Account Restricted
             </div>
@@ -297,30 +261,23 @@ export default function AffiliateDashboard() {
             </section>
 
             <AffiliateKpiCards metrics={metrics} />
-
             <AffiliateFinancialSummary metrics={payoutMetrics} />
 
             <div className="grid xl:grid-cols-3 gap-4">
-              <div className="xl:col-span-1">
+              <div className="xl:col-span-1 space-y-4">
                 <AffiliateQrCard affiliate={affiliate} />
+                <AffiliateShareTools affiliate={affiliate} />
+                <AffiliatePayoutMethodCard affiliate={affiliate} />
               </div>
 
               <div className="xl:col-span-2">
                 <AffiliateReferredBusinesses
                   businesses={businesses.map((b) => ({
                     id: b.id,
-                    name:
-                      b.business_name ||
-                      `Business #${b.business}`,
-
+                    name: b.business_name || `Business #${b.business}`,
                     city: b.city,
                     state: b.state,
-
-                    active:
-                      String(
-                        b.status || ""
-                      ).toUpperCase() !== "INACTIVE",
-
+                    active: String(b.status || "").toUpperCase() !== "INACTIVE",
                     monthly_platform_revenue:
                       b.monthly_platform_revenue ||
                       b.total_platform_revenue ||
@@ -332,39 +289,16 @@ export default function AffiliateDashboard() {
 
             <AffiliatePayoutHistory payouts={payoutRows} />
 
-            <section className="rounded-3xl border border-slate-800 bg-slate-950/35 p-5">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                <div>
-                  <div className="text-xl font-black">
-                    Tax Documents
-                  </div>
-
-                  <div className="mt-1 text-sm text-slate-400">
-                    Year-end payout and 1099 reporting documents.
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-5 grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                <div className="rounded-2xl border border-dashed border-slate-700 p-5">
-                  <div className="text-sm font-semibold text-slate-300">
-                    2026 1099
-                  </div>
-
-                  <div className="mt-2 text-xs text-slate-500">
-                    Available after year-end processing.
-                  </div>
-
-                  <button
-                    type="button"
-                    disabled
-                    className="mt-4 h-10 px-4 rounded-2xl border border-slate-700 bg-slate-900/50 text-slate-500 text-xs font-semibold cursor-not-allowed"
-                  >
-                    Coming Soon
-                  </button>
-                </div>
-              </div>
-            </section>
+            <AffiliateTaxDocuments
+              documents={[
+                {
+                  id: 1,
+                  label: "2026 1099",
+                  description: "Year-end affiliate tax reporting document.",
+                  url: "",
+                },
+              ]}
+            />
           </>
         ) : null}
       </main>
