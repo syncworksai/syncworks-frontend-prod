@@ -23,6 +23,10 @@ import SboGrowth from "./pages/SboGrowth";
 import SboZipLeaderboard from "./pages/SboZipLeaderboard";
 import SboSettings from "./pages/SboSettings";
 import SboCatalog from "./pages/SboCatalog";
+import SboCustomers from "./pages/sbo/SboCustomers";
+import SboLeads from "./pages/sbo/SboLeads";
+import SboReports from "./pages/sbo/SboReports";
+import SboFinance from "./pages/sbo/SboFinance";
 
 import PlatformDashboard from "./pages/PlatformDashboard";
 import PlatformSupportRequests from "./pages/platform/PlatformSupportRequests";
@@ -189,6 +193,39 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/sbo/customers"
+          element={
+            <ProtectedRoute>
+              <SboCustomers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sbo/leads"
+          element={
+            <ProtectedRoute>
+              <SboLeads />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sbo/reports"
+          element={
+            <ProtectedRoute>
+              <SboReports />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sbo/finance"
+          element={
+            <ProtectedRoute>
+              <SboFinance />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="/pm/settings"
           element={
