@@ -1212,11 +1212,7 @@ export default function CustomerDashboard() {
 
                 <QuickActionsCard navigate={navigate} setTab={setTab} />
 
-                <GlassCard title="Inbox Snapshot" subtitle="Messages, updates, reminders, and broadcasts." tone="slate">
-                  <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-3">
-                    <InboxPanel />
-                  </div>
-                </GlassCard>
+                
               </div>
             </div>
           </>
