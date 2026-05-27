@@ -1,116 +1,126 @@
-// src/pages/CustomerDashboard.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import ModeBar from "../components/ModeBar";
-import NewsReel from "../components/NewsReel";
+
 import AddToCalendarButton from "../components/AddToCalendarButton";
-import CustomerWeeklyCalendar from "../components/CustomerWeeklyCalendar";
-import TodoList from "../components/TodoList";
-import InboxPanel from "../components/Inbox/InboxPanel";
 import CustomerTickets from "../components/CustomerTickets";
+import CustomerWeeklyCalendar from "../components/CustomerWeeklyCalendar";
+import InboxPanel from "../components/Inbox/InboxPanel";
+import NewsReel from "../components/NewsReel";
 import PriorityBadge, { isPriorityOne } from "../components/tickets/PriorityBadge";
-import CustomerDashboardTabs from "../components/customer/dashboard/CustomerDashboardTabs";
-import CustomerCommandHero from "../components/customer/dashboard/CustomerCommandHero";
-import CustomerOverviewGrid from "../components/customer/dashboard/CustomerOverviewGrid";
-import CustomerSidebarStack from "../components/customer/dashboard/CustomerSidebarStack";
-import CustomerAffiliateProgramCard from "../components/customer/dashboard/CustomerAffiliateProgramCard";
+import TodoList from "../components/TodoList";
+import Button from "../components/ui/Button";
+
+import DashboardShell from "../components/dashboard/DashboardShell";
+import GlassCard, { cx } from "../components/dashboard/GlassCard";
+import StatCard from "../components/dashboard/StatCard";
 
 const BASE_TABS = [
   { id: "overview", label: "Overview" },
-  { id: "orders", label: "All Orders" },
+  { id: "orders", label: "My Requests" },
   { id: "calendar", label: "Calendar" },
-  { id: "todo", label: "Quick To-Do" },
-  { id: "inbox", label: "Inbox" },
+  { id: "todo", label: "To-Do" },
+  { id: "inbox", label: "Messages" },
   { id: "deals", label: "Deals" },
   { id: "finance", label: "Finance" },
-  { id: "fitness", label: "Fitness" },
 ];
-
-function cx(...parts) {
-  return parts.filter(Boolean).join(" ");
-}
-
-function Card({ title, right, children, className = "" }) {
-  return (
-    <div
-      className={cx(
-        "rounded-3xl border border-slate-800/80 bg-slate-950/35 backdrop-blur-xl p-5 shadow-[0_0_60px_rgba(0,0,0,0.35)]",
-        className
-      )}
-    >
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="font-semibold text-slate-100">{title}</div>
-        {right ? <div>{right}</div> : null}
-      </div>
-      {children}
-    </div>
-  );
-}
 
 function safeList(data) {
   if (!data) return [];
   if (Array.isArray(data)) return data;
   if (Array.isArray(data.results)) return data.results;
+  if (Array.isArray(data.value)) return data.value;
   return [];
 }
 
+function safeCount(value) {
+  const n = Number(value || 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function safeMoney(value) {
+  const n = Number(value || 0);
+  return n.toLocaleString(undefined, {
+    style: "currency",
+    currency: "USD",
+  });
+}
+
+function safeDate(value) {
+  if (!value) return "—";
+  try {
+    return new Date(value).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return "—";
+  }
+}
+
+function safeDateTime(value) {
+  if (!value) return "—";
+  try {
+    return new Date(value).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return "—";
+  }
+}
+
+function safeStr(x) {
+  return String(x ?? "").trim();
+}
+
+function titleCase(s) {
+  return safeStr(s)
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function statusPill(status) {
-  const s = String(status || "").toUpperCase();
+  const s = String(status || "NEW").toUpperCase();
   const base =
-    "text-[10px] px-2.5 py-1 rounded-full border font-semibold tracking-wide ";
-  if (s === "COMPLETED" || s === "PAID")
-    return base + "bg-emerald-500/10 border-emerald-500/30 text-emerald-200";
-  if (s === "CANCELLED")
-    return base + "bg-rose-500/10 border-rose-500/30 text-rose-200";
-  return base + "bg-cyan-500/10 border-cyan-500/30 text-cyan-200";
+    "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]";
+
+  if (["COMPLETED", "PAID", "CLOSED"].includes(s)) {
+    return `${base} border-emerald-500/30 bg-emerald-500/10 text-emerald-200`;
+  }
+
+  if (["CANCELLED", "VOID"].includes(s)) {
+    return `${base} border-rose-500/30 bg-rose-500/10 text-rose-200`;
+  }
+
+  if (["IN_PROGRESS", "ACCEPTED", "ASSIGNED", "SCHEDULED"].includes(s)) {
+    return `${base} border-indigo-500/30 bg-indigo-500/10 text-indigo-200`;
+  }
+
+  if (["INVOICED", "SENT", "OPEN", "READY_FOR_PAYMENT"].includes(s)) {
+    return `${base} border-amber-500/30 bg-amber-500/10 text-amber-200`;
+  }
+
+  return `${base} border-cyan-500/30 bg-cyan-500/10 text-cyan-200`;
 }
 
 function invoicePill(status) {
-  const s = String(status || "").toUpperCase();
+  const s = String(status || "OPEN").toUpperCase();
   const base =
-    "text-[10px] px-2.5 py-1 rounded-full border font-semibold tracking-wide ";
-  if (s === "PAID")
-    return base + "bg-emerald-500/10 border-emerald-500/30 text-emerald-200";
-  if (s === "VOID")
-    return base + "bg-slate-500/10 border-slate-500/30 text-slate-300";
-  if (s === "SENT" || s === "READY_FOR_PAYMENT" || s === "OPEN")
-    return base + "bg-amber-500/10 border-amber-500/30 text-amber-200";
-  return base + "bg-cyan-500/10 border-cyan-500/30 text-cyan-200";
-}
+    "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]";
 
-function IconBtn({ title, tone = "slate", disabled, onClick, children }) {
-  const tones = {
-    slate:
-      "bg-slate-950/70 border-slate-800 hover:bg-slate-900/60 text-slate-200",
-    cyan: "bg-cyan-500/18 border-cyan-500/35 hover:bg-cyan-500/24 text-cyan-100",
-    indigo:
-      "bg-indigo-500/18 border-indigo-500/35 hover:bg-indigo-500/24 text-indigo-100",
-    emerald:
-      "bg-emerald-500/14 border-emerald-500/28 hover:bg-emerald-500/18 text-emerald-100",
-    rose: "bg-rose-500/14 border-rose-500/28 hover:bg-rose-500/18 text-rose-100",
-    fuchsia:
-      "bg-fuchsia-500/14 border-fuchsia-500/28 hover:bg-fuchsia-500/18 text-fuchsia-100",
-    amber:
-      "bg-amber-500/14 border-amber-500/28 hover:bg-amber-500/18 text-amber-100",
-  };
+  if (s === "PAID") {
+    return `${base} border-emerald-500/30 bg-emerald-500/10 text-emerald-200`;
+  }
 
-  return (
-    <button
-      type="button"
-      title={title}
-      disabled={!!disabled}
-      onClick={onClick}
-      className={cx(
-        "inline-flex items-center justify-center h-9 w-9 rounded-2xl border transition select-none",
-        tones[tone] || tones.slate,
-        disabled ? "opacity-50 cursor-not-allowed" : ""
-      )}
-    >
-      <span className="text-[14px] leading-none">{children}</span>
-    </button>
-  );
+  if (s === "VOID") {
+    return `${base} border-slate-700 bg-slate-950/60 text-slate-300`;
+  }
+
+  return `${base} border-amber-500/30 bg-amber-500/10 text-amber-200`;
 }
 
 function archiveKeyForUser(user) {
@@ -121,10 +131,12 @@ function archiveKeyForUser(user) {
 function readArchivedSet(user) {
   try {
     const raw = localStorage.getItem(archiveKeyForUser(user));
-    if (!raw) return new Set();
-    const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return new Set();
-    return new Set(arr.map((x) => Number(x)).filter((n) => Number.isFinite(n)));
+    const parsed = raw ? JSON.parse(raw) : [];
+    return new Set(
+      Array.isArray(parsed)
+        ? parsed.map((x) => Number(x)).filter((n) => Number.isFinite(n))
+        : []
+    );
   } catch {
     return new Set();
   }
@@ -133,7 +145,9 @@ function readArchivedSet(user) {
 function writeArchivedSet(user, set) {
   try {
     localStorage.setItem(archiveKeyForUser(user), JSON.stringify(Array.from(set)));
-  } catch {}
+  } catch {
+    // no-op
+  }
 }
 
 function readLocalFeed() {
@@ -149,7 +163,9 @@ function readLocalFeed() {
 function writeLocalFeed(items) {
   try {
     localStorage.setItem("sw_feed_items", JSON.stringify(Array.isArray(items) ? items : []));
-  } catch {}
+  } catch {
+    // no-op
+  }
 }
 
 function seedFeedIfNeeded() {
@@ -159,126 +175,44 @@ function seedFeedIfNeeded() {
   const demo = [
     {
       id: "feed-1",
-      type: "AD",
+      type: "FEATURED",
       sponsored: true,
-      title: "Quantum Edge FX",
-      business_name: "Quantum Edge FX",
-      headline: "Trading tools, insights, and education built for serious traders.",
-      body: "Get structure, clarity, and execution support with premium trading resources.",
-      cta: "Learn More",
-      cta_href: "/newsfeed",
-      city: "Remote",
-      state: "",
-      image_url: "",
-    },
-    {
-      id: "feed-2",
-      type: "FEATURED_BUSINESS",
-      sponsored: true,
-      title: "Featured Local Service",
       business_name: "SyncWorks Demo Plumbing",
-      headline: "Fast plumbing service with clean scheduling and trusted routing.",
-      body: "Book directly through SyncWorks and save your favorite providers to Business Cards.",
+      headline: "Fast plumbing service with trusted routing.",
+      body: "Book directly through SyncWorks and track everything from your dashboard.",
       cta: "Book Now",
       cta_href: "/customer/new-request",
       city: "Montgomery",
       state: "AL",
-      image_url: "",
     },
     {
-      id: "feed-3",
-      type: "LOCAL_PROMO",
+      id: "feed-2",
+      type: "LOCAL PROMO",
       sponsored: true,
-      title: "Featured Provider",
       business_name: "Montgomery Auto Detail",
-      headline: "On-site detailing with fast booking and premium finish packages.",
-      body: "Mobile service available this week. Save the provider card and book in minutes.",
-      cta: "View Card",
+      headline: "Mobile detailing with fast booking.",
+      body: "Save the provider card and book again in minutes.",
+      cta: "View Cards",
       cta_href: "/customer/business-cards",
       city: "Montgomery",
       state: "AL",
-      image_url: "",
+    },
+    {
+      id: "feed-3",
+      type: "AFFILIATE",
+      sponsored: true,
+      business_name: "Refer & Earn",
+      headline: "Help grow the SyncWorks network.",
+      body: "Share SyncWorks with local service businesses and track referral opportunities.",
+      cta: "Open Affiliate",
+      cta_href: "/customer/affiliate",
+      city: "Remote",
+      state: "",
     },
   ];
 
   writeLocalFeed(demo);
   return demo;
-}
-
-function PromoPill({ children, tone = "slate" }) {
-  const cls =
-    tone === "fuchsia"
-      ? "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-200"
-      : tone === "emerald"
-        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-        : tone === "cyan"
-          ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-200"
-          : tone === "amber"
-            ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
-            : "border-slate-800 bg-slate-950/60 text-slate-200";
-
-  return (
-    <span className={`text-[11px] px-3 py-1.5 rounded-full border font-semibold ${cls}`}>
-      {children}
-    </span>
-  );
-}
-
-function FeaturedDealsRail({ items, onOpenFeedItem, onViewFeed }) {
-  return (
-    <Card
-      title="Featured Local Deals"
-      right={
-        <button
-          type="button"
-          onClick={onViewFeed}
-          className="inline-flex items-center justify-center h-9 text-xs rounded-2xl px-4 bg-fuchsia-500/14 border border-fuchsia-500/28 hover:bg-fuchsia-500/18 text-fuchsia-100"
-        >
-          Open Newsfeed
-        </button>
-      }
-    >
-      <div className="text-sm text-slate-400">
-        Sponsored businesses, featured offers, and local promos customers can act on quickly.
-      </div>
-
-      <div className="mt-4 flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="min-w-[310px] max-w-[310px] snap-start rounded-3xl border border-fuchsia-500/20 bg-slate-950/45 p-4 shadow-[0_0_30px_rgba(217,70,239,0.08)]"
-          >
-            <div className="flex items-center gap-2 flex-wrap">
-              <PromoPill tone="fuchsia">{item.type || "AD"}</PromoPill>
-              <PromoPill tone="emerald">Sponsored</PromoPill>
-              {(item.city || item.state) && (
-                <PromoPill tone="cyan">
-                  {item.city || ""}
-                  {item.city && item.state ? ", " : ""}
-                  {item.state || ""}
-                </PromoPill>
-              )}
-            </div>
-
-            <div className="mt-3 text-lg font-extrabold text-slate-100">
-              {item.business_name || item.title || "Featured"}
-            </div>
-
-            {item.headline ? <div className="mt-2 text-sm text-cyan-200">{item.headline}</div> : null}
-            {item.body ? <div className="mt-3 text-sm text-slate-300">{item.body}</div> : null}
-
-            <button
-              type="button"
-              onClick={() => onOpenFeedItem(item)}
-              className="mt-4 w-full h-10 rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/12 hover:bg-fuchsia-500/18 text-fuchsia-100 text-sm font-semibold"
-            >
-              {item.cta || "Open"}
-            </button>
-          </div>
-        ))}
-      </div>
-    </Card>
-  );
 }
 
 const LIFE_CATEGORY_LABELS = {
@@ -299,13 +233,12 @@ const LIFE_CATEGORY_LABELS = {
 };
 
 const SUBTYPE_LABELS = {
-  ride_local: "Need a ride (local)",
-  ride_airport: "Airport ride",
-  ride_medical: "Medical transport (non-emergency)",
-  delivery_pickup: "Delivery / pickup",
-  moving_help: "Moving / hauling help",
-  roadside: "Roadside help (jump/flat/lockout)",
-  other_transport: "Other transportation help",
+  ride_local: "Need a Ride",
+  ride_airport: "Airport Ride",
+  ride_medical: "Medical Transport",
+  delivery_pickup: "Delivery / Pickup",
+  moving_help: "Moving / Hauling Help",
+  roadside: "Roadside Help",
   plumbing: "Plumbing",
   hvac: "HVAC",
   electrical: "Electrical",
@@ -316,18 +249,8 @@ const SUBTYPE_LABELS = {
   remodeling: "Construction & Remodeling",
   appliance: "Appliance Repair",
   pest: "Pest Control",
-  other_any: "Describe a custom job",
+  other_any: "Custom Job",
 };
-
-function safeStr(x) {
-  return (x ?? "").toString();
-}
-
-function titleCase(s) {
-  return safeStr(s)
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 function extractSyncworksIntake(description) {
   const desc = safeStr(description);
@@ -368,7 +291,14 @@ function resolveCustomerFriendlyTitle(ticket) {
     .map((x) => (typeof x === "string" ? x.trim() : ""))
     .filter(Boolean);
 
-  const blacklist = new Set(["ac not cooling", "ac-not-cooling", "uncategorized", "unknown", "not set"]);
+  const blacklist = new Set([
+    "ac not cooling",
+    "ac-not-cooling",
+    "uncategorized",
+    "unknown",
+    "not set",
+  ]);
+
   const firstGood = preferred.find((s) => !blacklist.has(s.toLowerCase()));
   if (firstGood) return firstGood;
 
@@ -376,23 +306,16 @@ function resolveCustomerFriendlyTitle(ticket) {
   const lifeKey = intake?.life_category || intake?.lifeCategory || "";
   const subtypeKey = intake?.subtype || intake?.type || "";
 
-  const subtypeLabel = SUBTYPE_LABELS[subtypeKey] || (subtypeKey ? titleCase(subtypeKey) : "");
-  const lifeLabel = LIFE_CATEGORY_LABELS[lifeKey] || (lifeKey ? titleCase(lifeKey) : "");
+  const subtypeLabel =
+    SUBTYPE_LABELS[subtypeKey] || (subtypeKey ? titleCase(subtypeKey) : "");
+  const lifeLabel =
+    LIFE_CATEGORY_LABELS[lifeKey] || (lifeKey ? titleCase(lifeKey) : "");
 
   if (subtypeLabel) return subtypeLabel;
   if (lifeLabel) return lifeLabel;
   if (t.category_name && typeof t.category_name === "string") return t.category_name;
 
   return "Service Request";
-}
-
-function resolveServiceStyle(ticket) {
-  const t = ticket || {};
-  const candidates = [t.category_name, t.category_path, t.category_key, t.taxonomy_label, t.display_title]
-    .map((x) => (typeof x === "string" ? x.trim() : ""))
-    .filter(Boolean);
-
-  return candidates[0] || "Service";
 }
 
 function resolveBusinessName(ticket) {
@@ -410,84 +333,28 @@ function resolveBusinessName(ticket) {
   return candidates[0] || "";
 }
 
-function getAcceptedBy(ticket) {
-  const t = ticket || {};
-  const candidates = [
-    t.accepted_by_name,
-    t.assigned_to_name,
-    t.provider_name,
-    t.contractor_name,
-    t.business_name,
-    t.accepted_by?.name,
-    t.accepted_by?.full_name,
-    t.assigned_to?.name,
-    t.assigned_to?.full_name,
-    t.assigned_to?.email,
-    t.accepted_by?.email,
-    t.business?.name,
-    t.assigned_business_name,
-    t.assigned_business_card?.name,
-  ];
+function resolveServiceLocation(ticket) {
+  const parts = [
+    ticket?.service_address,
+    ticket?.service_city,
+    ticket?.service_state,
+    ticket?.service_zip,
+  ]
+    .map((x) => safeStr(x))
+    .filter(Boolean);
 
-  const found = candidates.find((x) => typeof x === "string" && x.trim());
-  return found ? found.trim() : "";
-}
-
-function ComingSoonPanel({ icon, title, desc, onUpgrade, bullets = [] }) {
-  return (
-    <div className="rounded-3xl border border-slate-800 bg-slate-950/35 backdrop-blur-xl p-6 shadow-[0_0_60px_rgba(0,0,0,0.35)]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-lg font-extrabold truncate">
-            <span className="mr-2">{icon}</span>
-            {title}
-          </div>
-          <div className="text-sm text-slate-400 mt-2">{desc}</div>
-        </div>
-        <span className="text-[11px] px-3 py-1.5 rounded-full border font-semibold bg-indigo-500/10 border-indigo-500/30 text-indigo-200">
-          Coming Soon
-        </span>
-      </div>
-
-      {bullets?.length ? (
-        <ul className="mt-4 text-sm text-slate-300 list-disc pl-5 space-y-1">
-          {bullets.map((b) => (
-            <li key={b}>{b}</li>
-          ))}
-        </ul>
-      ) : null}
-
-      <div className="mt-5 flex gap-2 flex-wrap">
-        <button
-          type="button"
-          onClick={onUpgrade}
-          className="inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 bg-cyan-500/18 border border-cyan-500/35 hover:bg-cyan-500/24 text-cyan-100"
-        >
-          Unlock via Upgrade
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function DealsPanel({ feedItems, onOpenFeedItem, onOpenNewsfeed }) {
-  return (
-    <div className="space-y-4">
-      <FeaturedDealsRail items={feedItems} onOpenFeedItem={onOpenFeedItem} onViewFeed={onOpenNewsfeed} />
-    </div>
-  );
-}
-
-function toMoney(n) {
-  const v = Number(n || 0);
-  return `$${v.toFixed(2)}`;
+  if (parts.length) return parts.join(", ");
+  if (ticket?.service_zip) return `ZIP ${ticket.service_zip}`;
+  return "Location pending";
 }
 
 function invoiceAmount(invoice) {
   if (!invoice) return 0;
   if (invoice.total != null && invoice.total !== "") return Number(invoice.total || 0);
   if (invoice.amount != null && invoice.amount !== "") return Number(invoice.amount || 0);
-  if (invoice.amount_cents != null && invoice.amount_cents !== "") return Number(invoice.amount_cents || 0) / 100;
+  if (invoice.amount_cents != null && invoice.amount_cents !== "") {
+    return Number(invoice.amount_cents || 0) / 100;
+  }
   return 0;
 }
 
@@ -497,78 +364,566 @@ function isInvoiceDue(invoice) {
   return !["PAID", "VOID"].includes(status);
 }
 
-function orderTabLabel(unpaidCount) {
-  return unpaidCount > 0 ? `All Orders (${unpaidCount})` : "All Orders";
+function isCompletedStatus(status) {
+  return ["COMPLETED", "PAID", "CLOSED"].includes(String(status || "").toUpperCase());
+}
+
+function isInProgressStatus(status) {
+  return ["IN_PROGRESS", "ACCEPTED", "ASSIGNED", "SCHEDULED"].includes(
+    String(status || "").toUpperCase()
+  );
+}
+
+function IconButton({ title, tone = "slate", disabled, onClick, children }) {
+  const tones = {
+    slate:
+      "border-slate-800 bg-slate-950/65 text-slate-200 hover:bg-slate-900/70",
+    cyan:
+      "border-cyan-500/35 bg-cyan-500/12 text-cyan-100 hover:bg-cyan-500/18",
+    rose:
+      "border-rose-500/35 bg-rose-500/12 text-rose-100 hover:bg-rose-500/18",
+    amber:
+      "border-amber-500/35 bg-amber-500/12 text-amber-100 hover:bg-amber-500/18",
+  };
+
+  return (
+    <button
+      type="button"
+      title={title}
+      disabled={!!disabled}
+      onClick={disabled ? undefined : onClick}
+      className={cx(
+        "inline-flex h-9 w-9 items-center justify-center rounded-2xl border text-sm transition",
+        tones[tone] || tones.slate,
+        disabled && "cursor-not-allowed opacity-50"
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Pill({ children, tone = "slate" }) {
+  const tones = {
+    cyan: "border-cyan-500/35 bg-cyan-500/10 text-cyan-200",
+    indigo: "border-indigo-500/35 bg-indigo-500/10 text-indigo-200",
+    fuchsia: "border-fuchsia-500/35 bg-fuchsia-500/10 text-fuchsia-200",
+    emerald: "border-emerald-500/35 bg-emerald-500/10 text-emerald-200",
+    amber: "border-amber-500/35 bg-amber-500/10 text-amber-200",
+    rose: "border-rose-500/35 bg-rose-500/10 text-rose-200",
+    slate: "border-slate-700 bg-slate-950/60 text-slate-300",
+  };
+
+  return (
+    <span
+      className={cx(
+        "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]",
+        tones[tone] || tones.slate
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function CustomerHero({
+  displayName,
+  totalDue,
+  openCount,
+  onNewRequest,
+  onViewOrders,
+  onBusinessCards,
+  onAffiliate,
+}) {
+  return (
+    <section className="relative overflow-hidden rounded-[2rem] border border-cyan-500/20 bg-slate-950/55 p-5 shadow-[0_0_70px_rgba(34,211,238,0.10)] md:p-7">
+      <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-cyan-500/15 blur-3xl" />
+      <div className="absolute -bottom-28 left-1/3 h-80 w-80 rounded-full bg-fuchsia-500/12 blur-3xl" />
+      <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-indigo-500/10 to-fuchsia-500/10" />
+
+      <div className="relative grid gap-5 lg:grid-cols-[1fr_360px] lg:items-center">
+        <div className="min-w-0">
+          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-cyan-200">
+            SyncWorks Customer Command
+          </div>
+
+          <h1 className="mt-4 text-3xl font-black tracking-tight text-white md:text-5xl">
+            Hey {displayName}, what do you need done today?
+          </h1>
+
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
+            Request services, track active jobs, manage payments, message providers,
+            and save your favorite businesses in one clean dashboard.
+          </p>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={onNewRequest}
+              className="inline-flex h-12 items-center justify-center rounded-2xl border border-cyan-300/40 bg-gradient-to-r from-cyan-500 to-blue-600 px-5 text-sm font-black text-white shadow-[0_0_35px_rgba(34,211,238,0.28)] transition hover:brightness-110"
+            >
+              + New Request
+            </button>
+
+            <Button tone="slate" size="lg" onClick={onViewOrders}>
+              My Requests
+            </Button>
+
+            <Button tone="indigo" size="lg" onClick={onBusinessCards}>
+              Saved Businesses
+            </Button>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-slate-700/80 bg-slate-950/60 p-4 backdrop-blur-xl">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4">
+              <div className="text-xs text-cyan-200">Open</div>
+              <div className="mt-2 text-3xl font-black text-white">{openCount}</div>
+            </div>
+            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
+              <div className="text-xs text-amber-200">Due</div>
+              <div className="mt-2 text-3xl font-black text-white">{safeMoney(totalDue)}</div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onAffiliate}
+            className="mt-3 w-full rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/10 px-4 py-3 text-left transition hover:bg-fuchsia-500/15"
+          >
+            <div className="text-sm font-black text-fuchsia-100">Refer & Earn</div>
+            <div className="mt-1 text-xs text-slate-400">
+              Help grow the network and track referral opportunities.
+            </div>
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DashboardTabs({ tabs, activeTab, onChange }) {
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-1">
+      {tabs.map((tab) => {
+        const active = tab.id === activeTab;
+
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => onChange(tab.id)}
+            className={cx(
+              "h-10 shrink-0 rounded-2xl border px-4 text-xs font-black uppercase tracking-[0.12em] transition",
+              active
+                ? "border-cyan-400/40 bg-cyan-500/15 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.12)]"
+                : "border-slate-800 bg-slate-950/45 text-slate-400 hover:bg-slate-900/70 hover:text-slate-100"
+            )}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function RecentRequestsList({
+  tickets,
+  loading,
+  error,
+  actionError,
+  onRefresh,
+  onOpenTicket,
+  onArchive,
+  onCancel,
+}) {
+  return (
+    <GlassCard
+      title="Recent Requests"
+      subtitle="Live job tracking, provider assignment, calendar actions, and payment status."
+      tone="cyan"
+      right={
+        <div className="flex gap-2">
+          <IconButton title="Refresh" onClick={onRefresh}>
+            ↻
+          </IconButton>
+        </div>
+      }
+    >
+      {actionError ? (
+        <div className="mb-3 rounded-2xl border border-red-800 bg-red-900/20 p-3 text-sm text-red-300">
+          {actionError}
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="mb-3 rounded-2xl border border-red-800 bg-red-900/20 p-3 text-sm text-red-300">
+          {error}
+        </div>
+      ) : null}
+
+      {loading ? <div className="text-sm text-slate-400">Loading requests…</div> : null}
+
+      {!loading && !tickets.length ? (
+        <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-5 text-sm text-slate-400">
+          No requests yet. Tap <span className="font-bold text-cyan-200">+ New Request</span> to start.
+        </div>
+      ) : null}
+
+      <div className="space-y-3">
+        {tickets.map((ticket) => {
+          const status = String(ticket?.status || "NEW").toUpperCase();
+          const canCancel = !["COMPLETED", "PAID", "CANCELLED", "CLOSED"].includes(status);
+          const serviceTitle = resolveCustomerFriendlyTitle(ticket);
+          const businessName = resolveBusinessName(ticket);
+          const p1 = isPriorityOne(ticket);
+
+          return (
+            <article
+              key={ticket.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => onOpenTicket(ticket.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") onOpenTicket(ticket.id);
+              }}
+              className={cx(
+                "cursor-pointer rounded-3xl border bg-slate-950/50 p-4 outline-none transition hover:bg-slate-900/55 focus:ring-2 focus:ring-cyan-500/30",
+                p1
+                  ? "border-rose-500/55 shadow-[0_0_28px_rgba(244,63,94,0.16)]"
+                  : "border-slate-800/80"
+              )}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="truncate text-base font-black text-slate-100">
+                      {serviceTitle}
+                    </div>
+                    {p1 ? <Pill tone="rose">Service Now</Pill> : null}
+                  </div>
+
+                  <div className="mt-1 text-xs text-slate-500">
+                    Ticket #{ticket.id} • {resolveServiceLocation(ticket)}
+                  </div>
+
+                  <div className="mt-2 text-xs text-slate-400">
+                    {businessName ? (
+                      <>
+                        Provider: <span className="text-slate-200">{businessName}</span>
+                      </>
+                    ) : (
+                      <>Provider not assigned yet</>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <span className={statusPill(ticket.status)}>
+                    {String(ticket.status || "NEW")}
+                  </span>
+                  <PriorityBadge ticket={ticket} showEta={false} />
+                </div>
+              </div>
+
+              <div
+                className="mt-4 flex flex-wrap items-center justify-between gap-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <AddToCalendarButton ticket={ticket} />
+
+                  <IconButton
+                    title="Archive from dashboard"
+                    tone="slate"
+                    onClick={() => onArchive(ticket.id)}
+                  >
+                    🗄
+                  </IconButton>
+
+                  <IconButton
+                    title={canCancel ? "Cancel request" : "Cancel disabled"}
+                    tone="rose"
+                    disabled={!canCancel}
+                    onClick={() => {
+                      const ok = window.confirm(`Cancel request #${ticket.id}?`);
+                      if (ok) onCancel(ticket.id);
+                    }}
+                  >
+                    ✕
+                  </IconButton>
+                </div>
+
+                <div className="text-[11px] text-slate-500">
+                  {safeDateTime(ticket.created_at)}
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </GlassCard>
+  );
 }
 
 function PaymentsDueCard({ invoices, totalDue, onPayNow, onOpenOrder, onViewOrders }) {
   return (
-    <Card
-      title="Payments Due"
-      right={
-        invoices.length ? <PromoPill tone="amber">{invoices.length} due</PromoPill> : <PromoPill>No balance</PromoPill>
-      }
+    <GlassCard
+      title="Saved Payments / Balance"
+      subtitle="Invoices ready for payment show here."
+      tone={invoices.length ? "amber" : "emerald"}
+      right={invoices.length ? <Pill tone="amber">{invoices.length} Due</Pill> : <Pill tone="emerald">Clear</Pill>}
     >
-      {invoices.length ? (
-        <>
-          <div className="rounded-3xl border border-amber-500/20 bg-amber-500/8 p-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-amber-200/80">Total Due</div>
-            <div className="mt-2 text-3xl font-extrabold text-amber-100">{toMoney(totalDue)}</div>
-          </div>
+      <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-4">
+        <div className="text-xs font-black uppercase tracking-[0.18em] text-amber-200/80">
+          Total Due
+        </div>
+        <div className="mt-2 text-3xl font-black text-amber-100">{safeMoney(totalDue)}</div>
+      </div>
 
-          <div className="mt-4 space-y-3 min-w-0">
-            {invoices.slice(0, 3).map((item) => {
-              const ticket = item.ticket;
-              const invoice = item.invoice;
-              const serviceTitle = resolveCustomerFriendlyTitle(ticket);
-              const amount = invoiceAmount(invoice);
+      <div className="mt-4 space-y-3">
+        {invoices.length ? (
+          invoices.slice(0, 3).map((item) => {
+            const ticket = item.ticket;
+            const invoice = item.invoice;
+            const amount = invoiceAmount(invoice);
 
-              return (
-                <div key={`due-${ticket.id}-${invoice.id || "latest"}`} className="rounded-3xl border border-slate-800/80 bg-slate-950/40 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="font-extrabold text-slate-100 truncate">{serviceTitle}</div>
-                      <div className="text-xs text-slate-400 mt-1">Ticket #{ticket.id}</div>
+            return (
+              <div
+                key={`due-${ticket.id}-${invoice?.id || "latest"}`}
+                className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate font-black text-slate-100">
+                      {resolveCustomerFriendlyTitle(ticket)}
                     </div>
-                    <span className={invoicePill(invoice?.status)}>{String(invoice?.status || "OPEN")}</span>
+                    <div className="mt-1 text-xs text-slate-500">Ticket #{ticket.id}</div>
+                  </div>
+                  <span className={invoicePill(invoice?.status)}>
+                    {String(invoice?.status || "OPEN")}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                  <div className="shrink-0">
+                    <div className="text-[11px] text-slate-500">Amount Due</div>
+                    <div className="text-xl font-black text-cyan-100">{safeMoney(amount)}</div>
                   </div>
 
-                  <div className="mt-3 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between min-w-0">
-                    <div className="shrink-0">
-                      <div className="text-[11px] text-slate-500">Amount Due</div>
-                      <div className="text-xl font-extrabold text-cyan-100">{toMoney(amount)}</div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 xl:justify-end">
-                      <button type="button" onClick={() => onOpenOrder(ticket.id)} className="inline-flex items-center justify-center h-9 text-xs rounded-2xl px-4 bg-slate-950/55 border border-slate-800/80 hover:bg-slate-900/40 text-slate-200">
-                        Open Order
-                      </button>
-                      <button type="button" onClick={() => onPayNow(ticket.id)} className="inline-flex items-center justify-center h-9 text-xs rounded-2xl px-4 bg-amber-500/18 border border-amber-500/35 hover:bg-amber-500/24 text-amber-100">
-                        Pay Now
-                      </button>
-                    </div>
+                  <div className="flex flex-wrap gap-2 xl:justify-end">
+                    <button
+                      type="button"
+                      onClick={() => onOpenOrder(ticket.id)}
+                      className="inline-flex h-9 items-center justify-center rounded-2xl border border-slate-800 bg-slate-950/60 px-4 text-xs font-semibold text-slate-200 hover:bg-slate-900/70"
+                    >
+                      Open
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onPayNow(ticket.id)}
+                      className="inline-flex h-9 items-center justify-center rounded-2xl border border-amber-500/35 bg-amber-500/14 px-4 text-xs font-semibold text-amber-100 hover:bg-amber-500/20"
+                    >
+                      Pay Now
+                    </button>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            );
+          })
+        ) : (
+          <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-4">
+            <div className="text-sm font-bold text-slate-200">No invoices due right now.</div>
+            <div className="mt-1 text-xs text-slate-500">
+              When a provider sends an invoice, it will appear here.
+            </div>
           </div>
+        )}
+      </div>
 
-          <button type="button" onClick={onViewOrders} className="mt-4 w-full inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 bg-cyan-500/18 border border-cyan-500/35 hover:bg-cyan-500/24 text-cyan-100">
-            View All Orders
-          </button>
-        </>
+      <button
+        type="button"
+        onClick={onViewOrders}
+        className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-2xl border border-cyan-500/30 bg-cyan-500/12 px-4 text-xs font-black text-cyan-100 hover:bg-cyan-500/18"
+      >
+        View All Requests
+      </button>
+    </GlassCard>
+  );
+}
+
+function ActivityFeed({ tickets, invoices }) {
+  const items = useMemo(() => {
+    const ticketItems = (tickets || []).slice(0, 4).map((ticket) => ({
+      id: `ticket-${ticket.id}`,
+      title: resolveCustomerFriendlyTitle(ticket),
+      meta: `Request ${String(ticket.status || "NEW").replaceAll("_", " ")}`,
+      time: safeDateTime(ticket.created_at || ticket.updated_at),
+      tone: isPriorityOne(ticket) ? "rose" : "cyan",
+    }));
+
+    const invoiceItems = (invoices || []).slice(0, 2).map((item) => ({
+      id: `invoice-${item.ticket.id}-${item.invoice?.id || "latest"}`,
+      title: "Invoice ready",
+      meta: `${resolveCustomerFriendlyTitle(item.ticket)} • ${safeMoney(invoiceAmount(item.invoice))}`,
+      time: safeDate(item.invoice?.due_date || item.ticket?.updated_at),
+      tone: "amber",
+    }));
+
+    return [...invoiceItems, ...ticketItems].slice(0, 6);
+  }, [tickets, invoices]);
+
+  return (
+    <GlassCard title="Recent Activity" subtitle="Updates across requests, invoices, and provider actions." tone="indigo">
+      {items.length ? (
+        <div className="space-y-3">
+          {items.map((item) => (
+            <div key={item.id} className="flex gap-3 rounded-3xl border border-slate-800 bg-slate-950/40 p-3">
+              <div
+                className={cx(
+                  "mt-1 h-2.5 w-2.5 shrink-0 rounded-full shadow-[0_0_16px_currentColor]",
+                  item.tone === "rose"
+                    ? "bg-rose-400 text-rose-400"
+                    : item.tone === "amber"
+                    ? "bg-amber-400 text-amber-400"
+                    : "bg-cyan-400 text-cyan-400"
+                )}
+              />
+              <div className="min-w-0">
+                <div className="truncate text-sm font-bold text-slate-100">{item.title}</div>
+                <div className="mt-1 text-xs text-slate-400">{item.meta}</div>
+                <div className="mt-1 text-[11px] text-slate-600">{item.time}</div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
-        <div className="rounded-3xl border border-slate-800/80 bg-slate-950/30 p-4">
-          <div className="text-sm text-slate-200 font-semibold">No invoices due right now.</div>
-          <div className="text-xs text-slate-500 mt-2">When a business marks an invoice ready for payment, it will show here.</div>
+        <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-4 text-sm text-slate-400">
+          Activity will appear after your first request.
         </div>
       )}
-    </Card>
+    </GlassCard>
+  );
+}
+
+function QuickActionsCard({ navigate, setTab }) {
+  const actions = [
+    { label: "New Request", icon: "+", tone: "cyan", onClick: () => navigate("/customer/new-request") },
+    { label: "My Requests", icon: "🧾", tone: "indigo", onClick: () => setTab("orders") },
+    { label: "Messages", icon: "💬", tone: "fuchsia", onClick: () => setTab("inbox") },
+    { label: "Saved Business", icon: "★", tone: "emerald", onClick: () => navigate("/customer/business-cards") },
+    { label: "Support", icon: "🎧", tone: "cyan", onClick: () => navigate("/support") },
+    { label: "Account", icon: "⚙", tone: "slate", onClick: () => navigate("/settings") },
+  ];
+
+  return (
+    <GlassCard title="Quick Actions" subtitle="Fast access to the tools customers use most." tone="fuchsia">
+      <div className="grid grid-cols-2 gap-3">
+        {actions.map((action) => (
+          <button
+            key={action.label}
+            type="button"
+            onClick={action.onClick}
+            className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4 text-left transition hover:border-cyan-500/30 hover:bg-slate-900/60"
+          >
+            <div className="text-2xl">{action.icon}</div>
+            <div className="mt-3 text-sm font-black text-slate-100">{action.label}</div>
+          </button>
+        ))}
+      </div>
+    </GlassCard>
+  );
+}
+
+function DealsCard({ items, onOpenFeedItem, onViewFeed }) {
+  return (
+    <GlassCard
+      title="Featured Local Deals"
+      subtitle="Sponsored businesses, saved providers, and marketplace promos."
+      tone="fuchsia"
+      right={
+        <button
+          type="button"
+          onClick={onViewFeed}
+          className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/12 px-4 py-2 text-xs font-black text-fuchsia-100 hover:bg-fuchsia-500/18"
+        >
+          Newsfeed
+        </button>
+      }
+    >
+      <div className="flex gap-3 overflow-x-auto pb-2">
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="min-w-[280px] rounded-3xl border border-slate-800 bg-slate-950/45 p-4"
+          >
+            <div className="flex flex-wrap gap-2">
+              <Pill tone="fuchsia">{item.type || "Featured"}</Pill>
+              {item.sponsored ? <Pill tone="emerald">Sponsored</Pill> : null}
+            </div>
+
+            <div className="mt-4 text-lg font-black text-white">
+              {item.business_name || item.title || "Featured Business"}
+            </div>
+            <div className="mt-2 text-sm text-cyan-200">{item.headline}</div>
+            <div className="mt-3 text-sm text-slate-400">{item.body}</div>
+
+            <button
+              type="button"
+              onClick={() => onOpenFeedItem(item)}
+              className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/12 px-4 text-xs font-black text-fuchsia-100 hover:bg-fuchsia-500/18"
+            >
+              {item.cta || "Open"}
+            </button>
+          </div>
+        ))}
+      </div>
+    </GlassCard>
+  );
+}
+
+function SavedBusinessCard({ navigate }) {
+  return (
+    <GlassCard title="My Business Cards" subtitle="Save providers you trust and rebook faster." tone="emerald">
+      <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+        <div className="text-sm font-black text-emerald-100">Saved businesses live here.</div>
+        <div className="mt-2 text-xs leading-5 text-slate-400">
+          When you favorite a provider, SyncWorks keeps them one tap away for future jobs.
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => navigate("/customer/business-cards")}
+        className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/12 px-4 text-xs font-black text-emerald-100 hover:bg-emerald-500/18"
+      >
+        Open Saved Businesses
+      </button>
+    </GlassCard>
+  );
+}
+
+function ComingSoonPanel({ title, desc, icon = "✦", onUpgrade }) {
+  return (
+    <GlassCard title={title} subtitle={desc} tone="indigo">
+      <div className="rounded-3xl border border-indigo-500/20 bg-indigo-500/10 p-6">
+        <div className="text-4xl">{icon}</div>
+        <div className="mt-4 text-lg font-black text-white">Coming soon inside SyncWorks.</div>
+        <div className="mt-2 text-sm text-slate-400">
+          This module is staged for future customer expansion.
+        </div>
+        <Button className="mt-5" tone="indigo" onClick={onUpgrade}>
+          Upgrade / Learn More
+        </Button>
+      </div>
+    </GlassCard>
   );
 }
 
 export default function CustomerDashboard() {
-  const { user, activeBusinessId } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [tab, setTab] = useState("overview");
@@ -579,7 +934,8 @@ export default function CustomerDashboard() {
   const [ticketActionErr, setTicketActionErr] = useState("");
   const [feedItems, setFeedItems] = useState([]);
 
-  const displayName = user?.first_name || user?.username || user?.email || "User";
+  const displayName =
+    user?.first_name || user?.firstName || user?.username || user?.email || "there";
 
   useEffect(() => {
     setArchivedIds(readArchivedSet(user));
@@ -592,6 +948,7 @@ export default function CustomerDashboard() {
   async function loadTickets() {
     setTicketsErr("");
     setTicketsLoading(true);
+
     try {
       const r = await api.get("/tickets/");
       setTickets(safeList(r.data));
@@ -610,17 +967,9 @@ export default function CustomerDashboard() {
   function archiveTicket(id) {
     const tid = Number(id);
     if (!Number.isFinite(tid)) return;
+
     const next = new Set(archivedIds);
     next.add(tid);
-    setArchivedIds(next);
-    writeArchivedSet(user, next);
-  }
-
-  function unarchiveTicket(id) {
-    const tid = Number(id);
-    if (!Number.isFinite(tid)) return;
-    const next = new Set(archivedIds);
-    next.delete(tid);
     setArchivedIds(next);
     writeArchivedSet(user, next);
   }
@@ -630,6 +979,7 @@ export default function CustomerDashboard() {
     if (!Number.isFinite(tid)) return;
 
     setTicketActionErr("");
+
     try {
       await api.post(`/tickets/${tid}/cancel/`);
       await loadTickets();
@@ -652,354 +1002,261 @@ export default function CustomerDashboard() {
   }
 
   const visibleTickets = useMemo(() => {
-    const list = Array.isArray(tickets) ? tickets : [];
-    return list.filter((t) => !archivedIds.has(Number(t?.id)));
+    return safeList(tickets).filter((ticket) => !archivedIds.has(Number(ticket?.id)));
   }, [tickets, archivedIds]);
 
-  const recentTickets = useMemo(() => (visibleTickets || []).slice(0, 4), [visibleTickets]);
-  const archivedCount = useMemo(() => archivedIds.size, [archivedIds]);
-  const featuredFeedItems = useMemo(() => (feedItems || []).filter((x) => !!x?.sponsored).slice(0, 6), [feedItems]);
+  const recentTickets = useMemo(() => visibleTickets.slice(0, 5), [visibleTickets]);
 
   const dueInvoiceItems = useMemo(() => {
-    return (visibleTickets || [])
+    return visibleTickets
       .map((ticket) => ({ ticket, invoice: ticket?.latest_invoice || null }))
       .filter((x) => isInvoiceDue(x.invoice))
       .sort((a, b) => {
-        const ad = a?.invoice?.due_date ? new Date(a.invoice.due_date).getTime() : Number.MAX_SAFE_INTEGER;
-        const bd = b?.invoice?.due_date ? new Date(b.invoice.due_date).getTime() : Number.MAX_SAFE_INTEGER;
+        const ad = a?.invoice?.due_date
+          ? new Date(a.invoice.due_date).getTime()
+          : Number.MAX_SAFE_INTEGER;
+        const bd = b?.invoice?.due_date
+          ? new Date(b.invoice.due_date).getTime()
+          : Number.MAX_SAFE_INTEGER;
         return ad - bd;
       });
   }, [visibleTickets]);
 
-  const unpaidInvoiceCount = useMemo(() => dueInvoiceItems.length, [dueInvoiceItems]);
-  const totalDue = useMemo(() => dueInvoiceItems.reduce((sum, item) => sum + invoiceAmount(item.invoice), 0), [dueInvoiceItems]);
+  const totalDue = useMemo(() => {
+    return dueInvoiceItems.reduce((sum, item) => sum + invoiceAmount(item.invoice), 0);
+  }, [dueInvoiceItems]);
+
+  const metrics = useMemo(() => {
+    const open = visibleTickets.filter((t) => {
+      const s = String(t?.status || "").toUpperCase();
+      return !["COMPLETED", "PAID", "CLOSED", "CANCELLED"].includes(s);
+    }).length;
+
+    const inProgress = visibleTickets.filter((t) => isInProgressStatus(t?.status)).length;
+    const completed = visibleTickets.filter((t) => isCompletedStatus(t?.status)).length;
+
+    const totalSpent = visibleTickets.reduce((sum, t) => {
+      const inv = t?.latest_invoice;
+      const status = String(inv?.status || "").toUpperCase();
+      if (status === "PAID") return sum + invoiceAmount(inv);
+      return sum;
+    }, 0);
+
+    return {
+      open,
+      inProgress,
+      completed,
+      totalSpent,
+    };
+  }, [visibleTickets]);
 
   const tabs = useMemo(() => {
     return BASE_TABS.map((t) =>
-      t.id === "orders" ? { ...t, label: orderTabLabel(unpaidInvoiceCount) } : t
+      t.id === "orders" && dueInvoiceItems.length
+        ? { ...t, label: `My Requests (${dueInvoiceItems.length})` }
+        : t
     );
-  }, [unpaidInvoiceCount]);
+  }, [dueInvoiceItems.length]);
+
+  const featuredFeedItems = useMemo(() => {
+    return safeList(feedItems).filter((x) => !!x?.sponsored).slice(0, 6);
+  }, [feedItems]);
+
+  const bottomNavItems = [
+    { label: "Home", icon: "⌂", active: tab === "overview", onClick: () => setTab("overview") },
+    { label: "Requests", icon: "▤", active: tab === "orders", onClick: () => setTab("orders") },
+    { label: "Messages", icon: "💬", active: tab === "inbox", onClick: () => setTab("inbox") },
+    { label: "Account", icon: "◉", active: false, onClick: () => navigate("/settings") },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[#020617]" />
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-indigo-500/10 to-fuchsia-500/10" />
-        <div className="absolute -top-40 -right-40 h-[520px] w-[520px] rounded-full bg-fuchsia-500/10 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 h-[520px] w-[520px] rounded-full bg-cyan-500/10 blur-3xl" />
-      </div>
-
-      <ModeBar
-        title="Customer Home"
-        subtitle="Create requests • Track orders • Keep everything in one place"
-      />
-
-      <main className="relative max-w-6xl mx-auto px-4 py-6 space-y-6">
+    <DashboardShell
+      title="Customer Home"
+      subtitle="Create requests • Track work • Pay invoices • Message providers"
+      modeBarTitle="Customer Home"
+      modeBarSubtitle="Create requests • Track orders • Keep everything in one place"
+      bottomNavItems={bottomNavItems}
+      bottomCenterAction={{
+        label: "Request",
+        onClick: () => navigate("/customer/new-request"),
+      }}
+      rightActions={
+        <div className="flex flex-wrap gap-2">
+          <Button tone="cyan" onClick={() => navigate("/customer/new-request")}>
+            + New Request
+          </Button>
+          <Button tone="slate" onClick={() => navigate("/support")}>
+            Support
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-5">
         <NewsReel />
 
-        <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
-  <CustomerDashboardTabs
-    tabs={tabs}
-    activeTab={tab}
-    onChange={setTab}
-  />
+        <CustomerHero
+          displayName={displayName}
+          totalDue={totalDue}
+          openCount={metrics.open}
+          onNewRequest={() => navigate("/customer/new-request")}
+          onViewOrders={() => setTab("orders")}
+          onBusinessCards={() => navigate("/customer/business-cards")}
+          onAffiliate={() => navigate("/customer/affiliate")}
+        />
 
-  <button
-    type="button"
-    onClick={() => navigate("/upgrade")}
-    className="lg:ml-auto inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 bg-indigo-500/18 border border-indigo-500/35 hover:bg-indigo-500/24 text-indigo-100"
-  >
-    Start a business (Upgrade)
-  </button>
-</div>
+        <DashboardTabs tabs={tabs} activeTab={tab} onChange={setTab} />
 
         {tab === "overview" ? (
           <>
-            <CustomerCommandHero
-  displayName={displayName}
-  onNewRequest={() => navigate("/customer/new-request")}
-  onViewOrders={() => setTab("orders")}
-  onAffiliate={() => navigate("/customer/affiliate")}
-  onBusinessCards={() => navigate("/customer/business-cards")}
-/>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <StatCard
+                label="Open Requests"
+                value={safeCount(metrics.open)}
+                hint="Active customer requests"
+                icon="▤"
+                tone="cyan"
+                badge="Live"
+                onClick={() => setTab("orders")}
+              />
+              <StatCard
+                label="In Progress"
+                value={safeCount(metrics.inProgress)}
+                hint="Accepted or scheduled"
+                icon="↗"
+                tone="indigo"
+                onClick={() => setTab("orders")}
+              />
+              <StatCard
+                label="Completed"
+                value={safeCount(metrics.completed)}
+                hint="Finished jobs"
+                icon="✓"
+                tone="emerald"
+                onClick={() => setTab("orders")}
+              />
+              <StatCard
+                label="Total Spent"
+                value={safeMoney(metrics.totalSpent)}
+                hint="Paid invoices"
+                icon="$"
+                tone="fuchsia"
+                onClick={() => setTab("finance")}
+              />
+            </div>
 
-<div className="grid 2xl:grid-cols-[1fr_360px] gap-6 items-start">
-  <CustomerOverviewGrid
-    dueInvoiceItems={dueInvoiceItems}
-    totalDue={totalDue}
-    navigate={navigate}
-    setTab={setTab}
-    featuredFeedItems={featuredFeedItems}
-    openFeedItem={openFeedItem}
-  />
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+              <div className="space-y-5">
+                <RecentRequestsList
+                  tickets={recentTickets}
+                  loading={ticketsLoading}
+                  error={ticketsErr}
+                  actionError={ticketActionErr}
+                  onRefresh={loadTickets}
+                  onOpenTicket={(id) => navigate(`/tickets/${id}`)}
+                  onArchive={archiveTicket}
+                  onCancel={cancelTicket}
+                />
 
-  <CustomerSidebarStack
-    navigate={navigate}
-    recentTickets={recentTickets}
-  />
-</div>
-
-
-            <FeaturedDealsRail
-              items={featuredFeedItems}
-              onOpenFeedItem={openFeedItem}
-              onViewFeed={() => navigate("/newsfeed")}
-            />
-
-            <Card title="This Week" right={<IconBtn title="Open calendar tab" tone="cyan" onClick={() => setTab("calendar")}>📅</IconBtn>}>
-              <div className="text-sm text-slate-400">Weekly view of what’s coming (MVP uses ticket data).</div>
-              <div className="mt-4">
-                <CustomerWeeklyCalendar tickets={tickets} onOpenTicket={(id) => navigate(`/tickets/${id}`)} showHeader />
-              </div>
-            </Card>
-
-            <div className="grid lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-2 space-y-4">
-                <Card
-                  title="Recent Requests"
-                  right={
-                    <div className="flex gap-2 flex-wrap items-center justify-end">
-                      {archivedCount ? (
-                        <IconBtn
-                          title={`Clear archived (${archivedCount})`}
-                          tone="slate"
-                          onClick={() => {
-                            const next = new Set();
-                            setArchivedIds(next);
-                            writeArchivedSet(user, next);
-                          }}
-                        >
-                          🧹
-                        </IconBtn>
-                      ) : null}
-
-                      <IconBtn title="Refresh" tone="slate" onClick={loadTickets}>🔄</IconBtn>
-                      <IconBtn title="Open All Orders" tone="cyan" onClick={() => setTab("orders")}>🧾</IconBtn>
-                    </div>
-                  }
+                <GlassCard
+                  title="Request Status Overview"
+                  subtitle="Simple snapshot of the customer workflow."
+                  tone="indigo"
                 >
-                  {ticketActionErr ? (
-                    <div className="text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-2xl p-3 mb-3">
-                      {ticketActionErr}
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/10 p-4">
+                      <div className="text-xs text-cyan-200">Open</div>
+                      <div className="mt-2 text-3xl font-black text-white">{metrics.open}</div>
                     </div>
-                  ) : null}
-
-                  {ticketsErr ? (
-                    <div className="text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-2xl p-3">
-                      {ticketsErr}
+                    <div className="rounded-3xl border border-indigo-500/20 bg-indigo-500/10 p-4">
+                      <div className="text-xs text-indigo-200">In Progress</div>
+                      <div className="mt-2 text-3xl font-black text-white">
+                        {metrics.inProgress}
+                      </div>
                     </div>
-                  ) : null}
-
-                  {ticketsLoading ? <div className="text-sm text-slate-400">Loading…</div> : null}
-
-                  {!ticketsLoading && recentTickets.length === 0 ? (
-                    <div className="text-sm text-slate-400">
-                      No requests yet. Click <span className="text-cyan-200 font-semibold">+ New Request</span> to start.
+                    <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+                      <div className="text-xs text-emerald-200">Completed</div>
+                      <div className="mt-2 text-3xl font-black text-white">
+                        {metrics.completed}
+                      </div>
                     </div>
-                  ) : null}
-
-                  <div className="space-y-2">
-                    {recentTickets.map((t) => {
-                      const tid = Number(t.id);
-                      const st = String(t.status || "").toUpperCase();
-                      const canCancel = !["COMPLETED", "PAID", "CANCELLED", "CLOSED"].includes(st);
-                      const serviceTitle = resolveCustomerFriendlyTitle(t);
-                      const serviceStyle = resolveServiceStyle(t);
-                      const acceptedBy = getAcceptedBy(t);
-                      const businessName = resolveBusinessName(t);
-                      const p1 = isPriorityOne(t);
-
-                      return (
-                        <div
-                          key={t.id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => navigate(`/tickets/${t.id}`)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") navigate(`/tickets/${t.id}`);
-                          }}
-                          className={cx(
-                            "w-full text-left rounded-3xl border bg-slate-950/45 hover:bg-slate-900/40 p-4 transition cursor-pointer outline-none focus:ring-2 focus:ring-cyan-500/30",
-                            p1
-                              ? "border-red-500/60 shadow-[0_0_28px_rgba(239,68,68,0.2)]"
-                              : "border-slate-800/80"
-                          )}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="font-extrabold truncate">{serviceTitle}</div>
-                              <div className="text-xs text-slate-400 mt-1">
-                                Ticket #{t.id}
-                                <span className="mx-2 text-slate-600">•</span>
-                                {businessName ? (
-                                  <>
-                                    Business <span className="text-slate-200">{businessName}</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    Business <span className="text-slate-500">Not assigned yet</span>
-                                  </>
-                                )}
-                              </div>
-
-                              <div className="text-xs text-slate-500 mt-1">
-                                Service Style: <span className="text-slate-300">{serviceStyle || "Service"}</span>
-                              </div>
-
-                              <div className="text-xs text-slate-400 mt-1">
-                                {acceptedBy ? (
-                                  <>
-                                    Accepted by <span className="text-slate-200">{acceptedBy}</span>
-                                  </>
-                                ) : (
-                                  <>Not accepted yet</>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 flex-wrap justify-end">
-                              <PriorityBadge ticket={t} showEta={false} />
-                              {p1 ? (
-                                <span className="text-[10px] px-2 py-1 rounded-full border font-black bg-red-500/20 border-red-500/40 text-red-100 shadow-[0_0_14px_rgba(239,68,68,0.2)]">
-                                  SERVICE NOW
-                                </span>
-                              ) : null}
-                              <span className={statusPill(t.status)}>{String(t.status || "NEW")}</span>
-                            </div>
-                          </div>
-
-                          <div className="text-xs text-slate-400 mt-3">
-                            {t.service_zip ? `ZIP ${t.service_zip}` : "No ZIP"}
-                            {t.service_address ? ` • ${t.service_address}` : ""}
-                          </div>
-
-                          <div
-                            className="mt-3 flex items-center justify-between gap-2 flex-wrap"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <AddToCalendarButton ticket={t} />
-
-                              <IconBtn title="Archive (hide from dashboard)" tone="slate" onClick={() => archiveTicket(tid)}>
-                                🗄️
-                              </IconBtn>
-
-                              <IconBtn
-                                title={canCancel ? "Cancel request" : "Cancel disabled"}
-                                tone="rose"
-                                disabled={!canCancel}
-                                onClick={() => {
-                                  const ok = window.confirm(
-                                    `Cancel request #${t.id}? This will set status to CANCELLED.`
-                                  );
-                                  if (ok) cancelTicket(tid);
-                                }}
-                              >
-                                ✖️
-                              </IconBtn>
-                            </div>
-
-                            <span className="text-[11px] text-slate-500">
-                              {t.created_at ? new Date(t.created_at).toLocaleString() : "—"}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
                   </div>
+                </GlassCard>
 
-                  {archivedCount ? (
-                    <div className="mt-4 rounded-3xl border border-slate-800/80 bg-slate-950/30 p-4">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="font-semibold text-sm">Archived</div>
-                        <IconBtn
-                          title="Clear archived"
-                          tone="slate"
-                          onClick={() => {
-                            const next = new Set();
-                            setArchivedIds(next);
-                            writeArchivedSet(user, next);
-                          }}
-                        >
-                          🧹
-                        </IconBtn>
-                      </div>
+                <GlassCard title="This Week" subtitle="Weekly view of upcoming request activity." tone="cyan">
+                  <CustomerWeeklyCalendar
+                    tickets={visibleTickets}
+                    onOpenTicket={(id) => navigate(`/tickets/${id}`)}
+                    showHeader
+                  />
+                </GlassCard>
 
-                      <div className="text-xs text-slate-500 mt-1">
-                        Archived requests are hidden from the dashboard only (MVP). They still exist in All Orders.
-                      </div>
+                <DealsCard
+                  items={featuredFeedItems}
+                  onOpenFeedItem={openFeedItem}
+                  onViewFeed={() => navigate("/newsfeed")}
+                />
+              </div>
 
-                      <div className="mt-3 flex gap-2 flex-wrap">
-                        {Array.from(archivedIds)
-                          .slice(0, 12)
-                          .map((id) => (
-                            <button
-                              key={id}
-                              type="button"
-                              onClick={() => unarchiveTicket(id)}
-                              className="text-[11px] px-3 py-2 rounded-full border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40 text-slate-200 transition"
-                              title="Restore"
-                            >
-                              ↩️ #{id}
-                            </button>
-                          ))}
-                      </div>
-                    </div>
-                  ) : null}
-                </Card>
-                            </div>
+              <div className="space-y-5">
+                <PaymentsDueCard
+                  invoices={dueInvoiceItems}
+                  totalDue={totalDue}
+                  onPayNow={(ticketId) => navigate(`/tickets/${ticketId}`)}
+                  onOpenOrder={(ticketId) => navigate(`/tickets/${ticketId}`)}
+                  onViewOrders={() => setTab("orders")}
+                />
 
-              <div className="space-y-4">
-                <Card title="Inbox Snapshot">
-                  <div className="text-[11px] text-slate-500 -mt-1 mb-3">
-                    Ticket updates, reminders, broadcasts, and messages.
-                  </div>
-                  <div className="rounded-3xl border border-slate-800/80 bg-slate-950/30 p-3">
+                <SavedBusinessCard navigate={navigate} />
+
+                <ActivityFeed tickets={recentTickets} invoices={dueInvoiceItems} />
+
+                <QuickActionsCard navigate={navigate} setTab={setTab} />
+
+                <GlassCard title="Inbox Snapshot" subtitle="Messages, updates, reminders, and broadcasts." tone="slate">
+                  <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-3">
                     <InboxPanel />
                   </div>
-                </Card>
+                </GlassCard>
               </div>
             </div>
           </>
         ) : null}
 
         {tab === "orders" ? (
-          <Card
-            title="All Orders"
+          <GlassCard
+            title="My Requests"
+            subtitle="All customer tickets and service orders."
+            tone="cyan"
             right={
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => navigate("/customer/new-request")}
-                  className="inline-flex items-center justify-center h-9 text-xs rounded-2xl px-4 bg-cyan-500/18 border border-cyan-500/35 hover:bg-cyan-500/24 text-cyan-100"
-                >
+              <div className="flex flex-wrap gap-2">
+                <Button tone="cyan" onClick={() => navigate("/customer/new-request")}>
                   + New Request
-                </button>
-                <button
-                  type="button"
-                  onClick={loadTickets}
-                  className="inline-flex items-center justify-center h-9 text-xs rounded-2xl px-4 bg-slate-950/55 border border-slate-800/80 hover:bg-slate-900/40 text-slate-200"
-                >
+                </Button>
+                <Button tone="slate" onClick={loadTickets}>
                   Refresh
-                </button>
+                </Button>
               </div>
             }
           >
             <CustomerTickets embedded />
-          </Card>
+          </GlassCard>
         ) : null}
 
         {tab === "calendar" ? (
-          <Card title="Calendar">
-            <CustomerWeeklyCalendar tickets={tickets} onOpenTicket={(id) => navigate(`/tickets/${id}`)} showHeader />
-          </Card>
+          <GlassCard title="Calendar" subtitle="Your customer service schedule." tone="cyan">
+            <CustomerWeeklyCalendar
+              tickets={visibleTickets}
+              onOpenTicket={(id) => navigate(`/tickets/${id}`)}
+              showHeader
+            />
+          </GlassCard>
         ) : null}
 
         {tab === "todo" ? (
           <TodoList
             scope="customer"
             title="Quick To-Do"
-            subtitle="Fast notes + checkboxes (MVP). Full Planner module comes next."
+            subtitle="Fast notes + checkboxes."
             showStatus
             rightRailAds
           />
@@ -1007,16 +1264,16 @@ export default function CustomerDashboard() {
 
         {tab === "inbox" ? (
           <InboxPanel
-            title="Inbox"
+            title="Messages"
             subtitle="Ticket updates, messages, broadcasts, and reminders."
           />
         ) : null}
 
         {tab === "deals" ? (
-          <DealsPanel
-            feedItems={featuredFeedItems}
+          <DealsCard
+            items={featuredFeedItems}
             onOpenFeedItem={openFeedItem}
-            onOpenNewsfeed={() => navigate("/newsfeed")}
+            onViewFeed={() => navigate("/newsfeed")}
           />
         ) : null}
 
@@ -1024,20 +1281,11 @@ export default function CustomerDashboard() {
           <ComingSoonPanel
             icon="💳"
             title="Finance"
-            desc="Bills, budgets, cashflow snapshots, and property-friendly money tracking."
+            desc="Bills, budgets, saved cards, cashflow snapshots, and payment history."
             onUpgrade={() => navigate("/upgrade")}
           />
         ) : null}
-
-        {tab === "fitness" ? (
-          <ComingSoonPanel
-            icon="🏋️"
-            title="Fitness"
-            desc="Habits, workouts, goals, and accountability — tied into your daily life flow."
-            onUpgrade={() => navigate("/upgrade")}
-          />
-        ) : null}
-      </main>
-    </div>
+      </div>
+    </DashboardShell>
   );
 }
