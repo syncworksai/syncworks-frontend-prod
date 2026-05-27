@@ -132,7 +132,14 @@ function MiniPill({ children, tone = "slate" }) {
   );
 }
 
-function SboCommandHero({ businessName, revenueThisMonth, openTickets, onNewRequest, onOpenGrowth, onOpenTickets }) {
+function SboCommandHero({
+  businessName,
+  revenueThisMonth,
+  openTickets,
+  onNewRequest,
+  onOpenSocial,
+  onOpenRequests,
+}) {
   return (
     <section className="relative overflow-hidden rounded-[2rem] border border-cyan-500/20 bg-slate-950/55 p-5 shadow-[0_0_70px_rgba(34,211,238,0.10)] md:p-7">
       <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-cyan-500/15 blur-3xl" />
@@ -142,16 +149,16 @@ function SboCommandHero({ businessName, revenueThisMonth, openTickets, onNewRequ
       <div className="relative grid gap-5 xl:grid-cols-[1fr_380px] xl:items-center">
         <div className="min-w-0">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-cyan-200">
-            SyncWorks Business Command
+            SyncWorks Business OS
           </div>
 
           <h1 className="mt-4 text-3xl font-black tracking-tight text-white md:text-5xl">
-            {businessName ? `${businessName} dashboard` : "Business owner dashboard"}
+            {businessName ? `${businessName} command center` : "Business command center"}
           </h1>
 
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
-            Run requests, jobs, quotes, invoices, team workflows, marketplace readiness,
-            and Growth OS from one futuristic business cockpit.
+            Track performance, manage job requests, monitor revenue, operate your team,
+            and grow through Social Media CRM from one dashboard.
           </p>
 
           <div className="mt-5 flex flex-wrap gap-2">
@@ -163,12 +170,12 @@ function SboCommandHero({ businessName, revenueThisMonth, openTickets, onNewRequ
               + New Request
             </button>
 
-            <Button tone="fuchsia" size="lg" onClick={onOpenGrowth}>
-              Growth OS
+            <Button tone="fuchsia" size="lg" onClick={onOpenSocial}>
+              Social Media
             </Button>
 
-            <Button tone="slate" size="lg" onClick={onOpenTickets}>
-              View Requests
+            <Button tone="slate" size="lg" onClick={onOpenRequests}>
+              Job Requests
             </Button>
           </div>
         </div>
@@ -177,19 +184,23 @@ function SboCommandHero({ businessName, revenueThisMonth, openTickets, onNewRequ
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
               <div className="text-xs text-emerald-200">Collected</div>
-              <div className="mt-2 text-3xl font-black text-white">{safeMoney(revenueThisMonth)}</div>
+              <div className="mt-2 text-3xl font-black text-white">
+                {safeMoney(revenueThisMonth)}
+              </div>
             </div>
 
             <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4">
-              <div className="text-xs text-cyan-200">Open</div>
+              <div className="text-xs text-cyan-200">Open Jobs</div>
               <div className="mt-2 text-3xl font-black text-white">{openTickets}</div>
             </div>
           </div>
 
           <div className="mt-3 rounded-2xl border border-fuchsia-500/25 bg-fuchsia-500/10 p-4">
-            <div className="text-sm font-black text-fuchsia-100">Growth OS Ready</div>
+            <div className="text-sm font-black text-fuchsia-100">
+              Social Media CRM
+            </div>
             <div className="mt-1 text-xs text-slate-400">
-              Automate follow-ups, review asks, and social content drafts.
+              Leads, posts, campaigns, and automations will connect here.
             </div>
           </div>
         </div>
@@ -203,13 +214,13 @@ function RequestsOverviewCard({ tickets, onOpenTickets }) {
 
   return (
     <GlassCard
-      title="Recent Requests"
-      subtitle="Live operational snapshot from your ticket pipeline."
+      title="Recent Job Requests"
+      subtitle="Live operational snapshot from your request pipeline."
       tone="cyan"
       right={
         <button
           type="button"
-          onClick={onOpenTickets}
+          onClick={() => onOpenTickets()}
           className="rounded-2xl border border-cyan-500/30 bg-cyan-500/12 px-4 py-2 text-xs font-black text-cyan-100 hover:bg-cyan-500/18"
         >
           Open Board
@@ -231,12 +242,16 @@ function RequestsOverviewCard({ tickets, onOpenTickets }) {
                     {resolveTicketTitle(ticket)}
                   </div>
                   <div className="mt-1 text-xs text-slate-500">
-                    Ticket #{ticket.id} • {ticket?.service_zip ? `ZIP ${ticket.service_zip}` : "Location pending"}
+                    Ticket #{ticket.id} •{" "}
+                    {ticket?.service_zip ? `ZIP ${ticket.service_zip}` : "Location pending"}
                   </div>
                   <div className="mt-1 text-xs text-slate-400">
                     Customer:{" "}
                     <span className="text-slate-200">
-                      {ticket?.customer_name || ticket?.customer_email || ticket?.customer || "Customer"}
+                      {ticket?.customer_name ||
+                        ticket?.customer_email ||
+                        ticket?.customer ||
+                        "Customer"}
                     </span>
                   </div>
                 </div>
@@ -254,59 +269,16 @@ function RequestsOverviewCard({ tickets, onOpenTickets }) {
         </div>
       ) : (
         <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-5 text-sm text-slate-400">
-          No requests found yet. New marketplace or direct tickets will show here.
+          No job requests found yet. Marketplace and direct jobs will show here.
         </div>
       )}
     </GlassCard>
   );
 }
 
-function FinancialOverviewCard({ revenueThisMonth, revenueGoal, paidInvoices, outstandingInvoices, goalPct }) {
+function TeamStatusCard({ newCustomers, completedJobs, onOpenEmployees, onOpenCustomers }) {
   return (
-    <GlassCard
-      title="Financial Overview"
-      subtitle="Collected revenue, invoices, and monthly goal progress."
-      tone="emerald"
-      right={<MiniPill tone="emerald">Live</MiniPill>}
-    >
-      <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4">
-        <div className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200/80">
-          Revenue This Month
-        </div>
-        <div className="mt-2 text-3xl font-black text-emerald-100">
-          {safeMoney(revenueThisMonth)}
-        </div>
-
-        <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-900">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-fuchsia-400"
-            style={{ width: `${Math.max(0, Math.min(goalPct || 0, 100))}%` }}
-          />
-        </div>
-
-        <div className="mt-2 text-xs text-slate-400">
-          Goal: {revenueGoal > 0 ? safeMoney(revenueGoal) : "Set goal in setup"}
-        </div>
-      </div>
-
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4">
-          <div className="text-xs text-slate-400">Paid Invoices</div>
-          <div className="mt-2 text-2xl font-black text-white">{paidInvoices}</div>
-        </div>
-
-        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-4">
-          <div className="text-xs text-amber-200">Outstanding</div>
-          <div className="mt-2 text-2xl font-black text-white">{outstandingInvoices}</div>
-        </div>
-      </div>
-    </GlassCard>
-  );
-}
-
-function TeamStatusCard({ newCustomers, completedJobs, onOpenTeam, onOpenCustomers }) {
-  return (
-    <GlassCard title="Team & Customers" subtitle="People, customers, and job throughput." tone="indigo">
+    <GlassCard title="Customers & Employees" subtitle="People, customers, and job throughput." tone="indigo">
       <div className="grid grid-cols-2 gap-3">
         <button
           type="button"
@@ -319,7 +291,7 @@ function TeamStatusCard({ newCustomers, completedJobs, onOpenTeam, onOpenCustome
 
         <button
           type="button"
-          onClick={onOpenTeam}
+          onClick={onOpenEmployees}
           className="rounded-3xl border border-indigo-500/20 bg-indigo-500/10 p-4 text-left transition hover:bg-indigo-500/15"
         >
           <div className="text-xs text-indigo-200">Completed Jobs</div>
@@ -329,10 +301,10 @@ function TeamStatusCard({ newCustomers, completedJobs, onOpenTeam, onOpenCustome
 
       <button
         type="button"
-        onClick={onOpenTeam}
+        onClick={onOpenEmployees}
         className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-2xl border border-indigo-500/30 bg-indigo-500/12 px-4 text-xs font-black text-indigo-100 hover:bg-indigo-500/18"
       >
-        Manage Team / Invites
+        Manage Employees
       </button>
     </GlassCard>
   );
@@ -345,7 +317,7 @@ function UpcomingScheduleCard({ tickets, onOpenCalendar }) {
 
   return (
     <GlassCard
-      title="Upcoming Schedule"
+      title="Calendar"
       subtitle="Scheduled jobs and upcoming request deadlines."
       tone="fuchsia"
       right={<MiniPill tone="fuchsia">{upcoming.length || 0} Items</MiniPill>}
@@ -372,35 +344,35 @@ function UpcomingScheduleCard({ tickets, onOpenCalendar }) {
         onClick={onOpenCalendar}
         className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/12 px-4 text-xs font-black text-fuchsia-100 hover:bg-fuchsia-500/18"
       >
-        Open Schedule
+        Open Calendar
       </button>
     </GlassCard>
   );
 }
 
-function GrowthHeroCard({ onOpenGrowth, onUpgrade }) {
+function SocialMediaCard({ onOpenSocial, onOpenLeads }) {
   return (
     <GlassCard tone="fuchsia" className="border-fuchsia-500/25">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
         <div className="min-w-0">
           <div className="text-[11px] font-black uppercase tracking-[0.24em] text-fuchsia-200">
-            Growth Module
+            Social Media
           </div>
           <h2 className="mt-2 text-xl font-black tracking-tight text-white md:text-2xl">
-            Automate follow-ups, review requests, and social drafts.
+            Content, lead capture, follow-ups, and campaign automation.
           </h2>
           <p className="mt-2 max-w-3xl text-sm text-slate-300">
-            Turn new leads into ready-to-send content, queue posts safely, and keep your
-            business visible without juggling extra tools.
+            This is where Growth OS becomes customer-facing: social posts, automations,
+            social inbox, and CRM leads.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button tone="fuchsia" onClick={onOpenGrowth}>
-            Open Growth OS
+          <Button tone="fuchsia" onClick={onOpenSocial}>
+            Open Social Media
           </Button>
-          <Button tone="slate" onClick={onUpgrade}>
-            Upgrade / Manage
+          <Button tone="slate" onClick={onOpenLeads}>
+            View Leads
           </Button>
         </div>
       </div>
@@ -419,7 +391,9 @@ function ActivityCard({ tickets }) {
             <div key={ticket.id} className="flex gap-3 rounded-3xl border border-slate-800 bg-slate-950/45 p-3">
               <div className="mt-1 h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_16px_rgba(34,211,238,0.8)]" />
               <div className="min-w-0">
-                <div className="truncate text-sm font-bold text-slate-100">{resolveTicketTitle(ticket)}</div>
+                <div className="truncate text-sm font-bold text-slate-100">
+                  {resolveTicketTitle(ticket)}
+                </div>
                 <div className="mt-1 text-xs text-slate-400">
                   {String(ticket.status || "NEW").replaceAll("_", " ")}
                 </div>
@@ -435,6 +409,43 @@ function ActivityCard({ tickets }) {
           Activity will appear after jobs, invoices, or messages begin moving.
         </div>
       )}
+    </GlassCard>
+  );
+}
+
+function NotificationUpsellCard({ onOpenSettings }) {
+  return (
+    <GlassCard
+      title="Direct Request Notifications"
+      subtitle="Future add-on: email and SMS alerts for speed-to-lead."
+      tone="amber"
+      right={<MiniPill tone="amber">Planned</MiniPill>}
+    >
+      <div className="space-y-3">
+        <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4">
+          <div className="text-sm font-black text-slate-100">Email Alerts</div>
+          <div className="mt-1 text-xs text-slate-400">
+            Direct request, marketplace match, invoice, and customer response emails.
+          </div>
+          <div className="mt-2 text-xs font-black text-cyan-200">$0.99/mo idea</div>
+        </div>
+
+        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-4">
+          <div className="text-sm font-black text-amber-100">SMS Alerts</div>
+          <div className="mt-1 text-xs text-slate-400">
+            Instant job alerts for direct requests and high-priority marketplace work.
+          </div>
+          <div className="mt-2 text-xs font-black text-amber-200">$9.99/mo idea</div>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={onOpenSettings}
+        className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/12 px-4 text-xs font-black text-amber-100 hover:bg-amber-500/18"
+      >
+        Open Business Settings
+      </button>
     </GlassCard>
   );
 }
@@ -522,6 +533,14 @@ export default function SboDashboard() {
   const completedJobs = useMemo(() => sumBy(kpiRows, "tickets_completed_count"), [kpiRows]);
   const openTickets = useMemo(() => latestValue(kpiRows, "tickets_open_count"), [kpiRows]);
 
+  const inProgressTickets = useMemo(() => {
+    return ticketRows.filter((t) =>
+      ["IN_PROGRESS", "ACCEPTED", "ASSIGNED", "SCHEDULED"].includes(
+        String(t?.status || "").toUpperCase()
+      )
+    ).length;
+  }, [ticketRows]);
+
   const outstandingInvoices = useMemo(() => {
     return (ticketRows || []).filter((t) => {
       const s = String(t?.status || "").toUpperCase();
@@ -574,32 +593,32 @@ export default function SboDashboard() {
 
   const sidebarItems = [
     { label: "Dashboard", icon: "⌂", active: true, onClick: () => navigate("/sbo") },
-    { label: "Requests", icon: "▤", onClick: () => navigate("/tickets?view=new"), badge: openTickets || "" },
-    { label: "Inbox", icon: "💬", onClick: () => navigate("/inbox") },
-    { label: "Quotes & Deals", icon: "◇", onClick: () => navigate("/tickets?view=quotes") },
-    { label: "Jobs / Orders", icon: "✓", onClick: () => navigate("/tickets") },
-    { label: "Schedule", icon: "◷", onClick: () => navigate("/calendar") },
-    { label: "Customers", icon: "◉", onClick: () => navigate("/tickets?view=customers") },
-    { label: "Team", icon: "👥", onClick: () => navigate("/team/invites") },
-    { label: "Services", icon: "⚙", onClick: () => navigate("/sbo/catalog") },
-    { label: "Finance", icon: "$", onClick: () => navigate("/billing/cash-fee-invoices") },
-    { label: "Reports", icon: "↗", onClick: () => navigate("/sbo/metrics/zip") },
+    { label: "Job Requests", icon: "▤", onClick: () => navigate("/tickets?view=new"), badge: openTickets || "" },
+    { label: "Inbox", icon: "💬", onClick: () => navigate("/inbox"), badge: "0" },
+    { label: "Calendar", icon: "◷", onClick: () => navigate("/calendar") },
+    { label: "Customers", icon: "◉", onClick: () => navigate("/sbo/customers") },
+    { label: "Leads", icon: "◎", onClick: () => navigate("/sbo/leads") },
+    { label: "Employees", icon: "👥", onClick: () => navigate("/team/invites") },
+    { label: "Product Settings", icon: "⚙", onClick: () => navigate("/sbo/catalog") },
+    { label: "Finance", icon: "$", onClick: () => navigate("/sbo/finance") },
+    { label: "Social Media", icon: "✦", onClick: () => navigate("/sbo/growth") },
+    { label: "Reports", icon: "↗", onClick: () => navigate("/sbo/reports") },
     { label: "Settings", icon: "⚙", onClick: () => navigate("/sbo/settings?return=%2Fsbo") },
   ];
 
   const bottomNavItems = [
     { label: "Home", icon: "⌂", active: true, onClick: () => navigate("/sbo") },
     { label: "Requests", icon: "▤", onClick: () => navigate("/tickets?view=new") },
-    { label: "Growth", icon: "✦", onClick: () => navigate("/sbo/growth") },
+    { label: "Leads", icon: "◎", onClick: () => navigate("/sbo/leads") },
     { label: "Settings", icon: "⚙", onClick: () => navigate("/sbo/settings?return=%2Fsbo") },
   ];
 
   return (
     <DashboardShell
       title="SBO Dashboard"
-      subtitle="Financial-first business command center"
+      subtitle="Performance • Job requests • Revenue • Social Media CRM"
       modeBarTitle="SBO Dashboard"
-      modeBarSubtitle="Requests • Revenue • Growth OS • Marketplace readiness"
+      modeBarSubtitle="Performance charts • job requests • revenue • marketplace readiness"
       bottomNavItems={bottomNavItems}
       bottomCenterAction={{
         label: "New",
@@ -608,13 +627,10 @@ export default function SboDashboard() {
       rightActions={
         <div className="flex flex-wrap gap-2">
           <Button tone="fuchsia" onClick={() => navigate("/sbo/growth")}>
-            Growth OS
+            Social Media
           </Button>
           <Button tone="cyan" onClick={() => navigate("/tickets?view=new")}>
-            Tickets
-          </Button>
-          <Button tone="indigo" onClick={() => navigate("/sbo/catalog")}>
-            Catalog
+            Job Requests
           </Button>
           <Button tone="slate" onClick={() => navigate("/sbo/settings?return=%2Fsbo&setup=1")}>
             Setup
@@ -630,17 +646,17 @@ export default function SboDashboard() {
           footer={
             <div className="rounded-3xl border border-fuchsia-500/20 bg-fuchsia-500/10 p-4">
               <div className="text-xs font-black uppercase tracking-[0.18em] text-fuchsia-200">
-                Growth OS
+                Social Media CRM
               </div>
               <div className="mt-2 text-sm text-slate-300">
-                Automate follow-ups and content drafts.
+                Content, automations, and lead capture.
               </div>
               <button
                 type="button"
                 onClick={() => navigate("/sbo/growth")}
                 className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/12 px-3 text-xs font-black text-fuchsia-100 hover:bg-fuchsia-500/18"
               >
-                Open Growth
+                Open Social Media
               </button>
             </div>
           }
@@ -658,15 +674,15 @@ export default function SboDashboard() {
             revenueThisMonth={revenueThisMonth}
             openTickets={openTickets}
             onNewRequest={() => navigate("/tickets?view=new")}
-            onOpenGrowth={() => navigate("/sbo/growth")}
-            onOpenTickets={() => navigate("/tickets?view=new")}
+            onOpenSocial={() => navigate("/sbo/growth")}
+            onOpenRequests={() => navigate("/tickets?view=new")}
           />
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard
               label="Open Requests"
               value={openTickets}
-              hint="Tickets requiring attention"
+              hint="Jobs requiring attention"
               icon="▤"
               tone="cyan"
               badge="Live"
@@ -674,11 +690,7 @@ export default function SboDashboard() {
             />
             <StatCard
               label="In Progress"
-              value={ticketRows.filter((t) =>
-                ["IN_PROGRESS", "ACCEPTED", "ASSIGNED", "SCHEDULED"].includes(
-                  String(t?.status || "").toUpperCase()
-                )
-              ).length}
+              value={inProgressTickets}
               hint="Accepted or scheduled"
               icon="↗"
               tone="indigo"
@@ -698,19 +710,13 @@ export default function SboDashboard() {
               hint="Collected this month"
               icon="$"
               tone="fuchsia"
-              onClick={() => navigate("/billing/cash-fee-invoices")}
+              onClick={() => navigate("/sbo/finance")}
             />
           </div>
 
-          <GrowthHeroCard
-            onOpenGrowth={() => navigate("/sbo/growth")}
-            onUpgrade={() =>
-              window.open(
-                "https://buy.stripe.com/28E9AT4aefLp4uJ0Kn2Nq0i",
-                "_blank",
-                "noopener,noreferrer"
-              )
-            }
+          <SocialMediaCard
+            onOpenSocial={() => navigate("/sbo/growth")}
+            onOpenLeads={() => navigate("/sbo/leads")}
           />
 
           <SboKpiHero
@@ -741,23 +747,15 @@ export default function SboDashboard() {
               <SboActionGrid
                 onOpenGrowth={() => navigate("/sbo/growth")}
                 onOpenInvoicing={() => navigate("/tickets?view=new")}
-                onOpenTaxes={() => navigate("/billing/cash-fee-invoices")}
+                onOpenTaxes={() => navigate("/sbo/finance")}
                 onOpenEmployees={() => navigate("/team/invites")}
                 onOpenCatalog={() => navigate("/sbo/catalog")}
-                onOpenKpis={() => navigate("/sbo")}
+                onOpenKpis={() => navigate("/sbo/reports")}
                 onOpenSettings={() => navigate("/sbo/settings?return=%2Fsbo")}
               />
             </div>
 
             <div className="space-y-5">
-              <FinancialOverviewCard
-                revenueThisMonth={revenueThisMonth}
-                revenueGoal={revenueGoal}
-                paidInvoices={paidInvoices}
-                outstandingInvoices={outstandingInvoices}
-                goalPct={goalPct}
-              />
-
               <SboSetupReadiness
                 loading={loading}
                 setupState={setupState}
@@ -773,11 +771,15 @@ export default function SboDashboard() {
               <TeamStatusCard
                 newCustomers={newCustomersApprox}
                 completedJobs={completedJobs}
-                onOpenTeam={() => navigate("/team/invites")}
-                onOpenCustomers={() => navigate("/tickets?view=customers")}
+                onOpenEmployees={() => navigate("/team/invites")}
+                onOpenCustomers={() => navigate("/sbo/customers")}
               />
 
               <ActivityCard tickets={ticketRows} />
+
+              <NotificationUpsellCard
+                onOpenSettings={() => navigate("/sbo/settings?return=%2Fsbo")}
+              />
             </div>
           </div>
 
