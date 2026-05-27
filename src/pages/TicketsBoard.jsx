@@ -4,6 +4,7 @@ import api from "../api/client";
 import ModeBar from "../components/ModeBar";
 import { useAuth } from "../auth/AuthContext";
 import PriorityBadge, { isPriorityOne, priorityRank } from "../components/tickets/PriorityBadge";
+import TicketMobileActionBar from "../components/tickets/TicketMobileActionBar";
 
 function cx(...p) {
   return p.filter(Boolean).join(" ");
@@ -795,25 +796,57 @@ export default function TicketsBoard() {
     }
   }
 
-  async function onArchiveToggle(ticketId, archived) {
-    setErr("");
-    setActingId(ticketId);
+async function onArchiveToggle(ticketId, archived) {
+  setErr("");
+  setActingId(ticketId);
 
-    try {
-      await api.post(`/tickets/${ticketId}/${archived ? "unarchive" : "archive"}/`, {});
-      await load();
-    } catch (e) {
-      const lock = parseLockError(e);
-      if (lock) {
-        await loadBilling();
-        setErr(lock.detail);
-      } else {
-        setErr(e?.response?.data?.detail || (archived ? "Failed to restore ticket" : "Failed to archive ticket"));
+  try {
+    await api.post(
+      `/tickets/${ticketId}/${archived ? "unarchive" : "archive"}/`,
+      {}
+    );
+
+    setItems((prev) => {
+      const id = Number(ticketId);
+
+      if (view === "archived" && archived) {
+        return prev.filter((t) => Number(t.id) !== id);
       }
-    } finally {
-      setActingId(null);
+
+      if (view !== "archived" && !archived) {
+        return prev.filter((t) => Number(t.id) !== id);
+      }
+
+      return prev.map((t) =>
+        Number(t.id) === id
+          ? {
+              ...t,
+              is_archived: !archived,
+              archived_at: archived ? null : new Date().toISOString(),
+            }
+          : t
+      );
+    });
+
+    await load();
+  } catch (e) {
+    const lock = parseLockError(e);
+
+    if (lock) {
+      await loadBilling();
+      setErr(lock.detail);
+    } else {
+      setErr(
+        e?.response?.data?.detail ||
+          (archived
+            ? "Failed to restore ticket"
+            : "Failed to archive ticket")
+      );
     }
+  } finally {
+    setActingId(null);
   }
+}
 
   function onSavedToggle(ticketId) {
     const id = Number(ticketId);
@@ -1159,6 +1192,13 @@ export default function TicketsBoard() {
             )}
           </div>
         )}
+             <TicketMobileActionBar
+          view={view}
+          onActive={() => setView("active")}
+          onSaved={() => setView("saved")}
+          onArchived={() => setView("archived")}
+          onNew={goCreate}
+        />
       </main>
     </div>
   );
