@@ -1,3 +1,4 @@
+// src/pages/SboSettings.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api/client";
@@ -19,13 +20,80 @@ function safeList(data) {
   return [];
 }
 
+const STATE_CODE_BY_NAME = {
+  alabama: "AL",
+  alaska: "AK",
+  arizona: "AZ",
+  arkansas: "AR",
+  california: "CA",
+  colorado: "CO",
+  connecticut: "CT",
+  delaware: "DE",
+  florida: "FL",
+  georgia: "GA",
+  hawaii: "HI",
+  idaho: "ID",
+  illinois: "IL",
+  indiana: "IN",
+  iowa: "IA",
+  kansas: "KS",
+  kentucky: "KY",
+  louisiana: "LA",
+  maine: "ME",
+  maryland: "MD",
+  massachusetts: "MA",
+  michigan: "MI",
+  minnesota: "MN",
+  mississippi: "MS",
+  missouri: "MO",
+  montana: "MT",
+  nebraska: "NE",
+  nevada: "NV",
+  "new hampshire": "NH",
+  "new jersey": "NJ",
+  "new mexico": "NM",
+  "new york": "NY",
+  "north carolina": "NC",
+  "north dakota": "ND",
+  ohio: "OH",
+  oklahoma: "OK",
+  oregon: "OR",
+  pennsylvania: "PA",
+  "rhode island": "RI",
+  "south carolina": "SC",
+  "south dakota": "SD",
+  tennessee: "TN",
+  texas: "TX",
+  utah: "UT",
+  vermont: "VT",
+  virginia: "VA",
+  washington: "WA",
+  "west virginia": "WV",
+  wisconsin: "WI",
+  wyoming: "WY",
+  "district of columbia": "DC",
+};
+
+function normalizeStateCode(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (raw.length === 2) return raw.toUpperCase();
+
+  const lowered = raw.toLowerCase();
+  if (STATE_CODE_BY_NAME[lowered]) return STATE_CODE_BY_NAME[lowered];
+
+  return raw.toUpperCase();
+}
+
 function Card({ title, subtitle, right, children }) {
   return (
     <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <div className="font-semibold text-slate-100">{title}</div>
-          {subtitle ? <div className="text-xs text-slate-400 mt-1">{subtitle}</div> : null}
+          {subtitle ? (
+            <div className="text-xs text-slate-400 mt-1">{subtitle}</div>
+          ) : null}
         </div>
         {right}
       </div>
@@ -79,7 +147,9 @@ function Toggle({ label, checked, onChange, hint = "" }) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-sm font-semibold">{label}</div>
-          {hint ? <div className="text-[11px] text-slate-400 mt-1">{hint}</div> : null}
+          {hint ? (
+            <div className="text-[11px] text-slate-400 mt-1">{hint}</div>
+          ) : null}
         </div>
         <div className="text-[11px]">{checked ? "ON" : "OFF"}</div>
       </div>
@@ -97,7 +167,11 @@ function Select({ label, value, onChange, options = [] }) {
         className="w-full rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-cyan-500/40"
       >
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value} className="bg-slate-950 text-slate-100">
+          <option
+            key={opt.value}
+            value={opt.value}
+            className="bg-slate-950 text-slate-100"
+          >
             {opt.label}
           </option>
         ))}
@@ -125,6 +199,299 @@ function SectionPill({ active, children, onClick }) {
 
 function setupStorageKey(businessId) {
   return `sw_setup_baseline_v1_${businessId || "no_biz"}`;
+}
+
+function categoryId(cat) {
+  const raw = cat?.id ?? cat?.pk ?? cat?.value ?? "";
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function categoryParentId(cat) {
+  const raw =
+    cat?.parent_id ??
+    cat?.parent ??
+    cat?.parentId ??
+    cat?.parent_category ??
+    cat?.parentCategory ??
+    "";
+
+  if (raw && typeof raw === "object") {
+    return categoryId(raw);
+  }
+
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function categoryKey(cat) {
+  return String(cat?.key || cat?.slug || cat?.code || cat?.name || "")
+    .trim()
+    .toLowerCase();
+}
+
+function categoryName(cat) {
+  return String(cat?.name || cat?.label || cat?.title || cat?.key || "Service").trim();
+}
+
+function categoryPath(cat) {
+  return String(cat?.path || cat?.category_path || cat?.full_path || "").trim();
+}
+
+function isActiveCategory(cat) {
+  if (cat?.is_active === false) return false;
+  if (cat?.active === false) return false;
+  return true;
+}
+
+function extractBusinessServiceIds(biz) {
+  const possible = [
+    biz?.services_offered,
+    biz?.services_offered_ids,
+    biz?.service_categories,
+    biz?.service_category_ids,
+    biz?.selected_services,
+    biz?.selectedServices,
+  ];
+
+  const ids = [];
+
+  possible.forEach((value) => {
+    if (!value) return;
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => {
+        if (typeof item === "number" || typeof item === "string") {
+          const n = Number(item);
+          if (Number.isFinite(n) && n > 0) ids.push(n);
+          return;
+        }
+
+        const n = categoryId(item);
+        if (n) ids.push(n);
+      });
+    }
+  });
+
+  return Array.from(new Set(ids));
+}
+
+function buildSelectableServiceGroups(categories) {
+  const active = safeList(categories).filter(isActiveCategory);
+  const byId = new Map();
+
+  active.forEach((cat) => {
+    const id = categoryId(cat);
+    if (id) byId.set(id, cat);
+  });
+
+  const childCount = new Map();
+
+  active.forEach((cat) => {
+    const pid = categoryParentId(cat);
+    if (!pid) return;
+    childCount.set(pid, (childCount.get(pid) || 0) + 1);
+  });
+
+  let selectable = active.filter((cat) => {
+    const id = categoryId(cat);
+    const pid = categoryParentId(cat);
+    return id && pid && childCount.get(id) > 0;
+  });
+
+  if (!selectable.length) {
+    selectable = active.filter((cat) => {
+      const id = categoryId(cat);
+      return id && childCount.get(id) > 0;
+    });
+  }
+
+  if (!selectable.length) {
+    selectable = active;
+  }
+
+  return selectable
+    .map((cat) => {
+      const id = categoryId(cat);
+      const pid = categoryParentId(cat);
+      const parent = pid ? byId.get(pid) : null;
+
+      return {
+        id,
+        key: categoryKey(cat),
+        name: categoryName(cat),
+        path: categoryPath(cat),
+        parentName: parent ? categoryName(parent) : "",
+        childCount: childCount.get(id) || 0,
+      };
+    })
+    .filter((x) => x.id)
+    .sort((a, b) => {
+      const ap = a.parentName || "";
+      const bp = b.parentName || "";
+      if (ap !== bp) return ap.localeCompare(bp);
+      return a.name.localeCompare(b.name);
+    });
+}
+
+function serviceIcon(key, name) {
+  const text = `${key || ""} ${name || ""}`.toLowerCase();
+
+  if (text.includes("plumb")) return "🚰";
+  if (text.includes("hvac") || text.includes("air")) return "❄️";
+  if (text.includes("electric")) return "⚡";
+  if (text.includes("tree")) return "🌳";
+  if (text.includes("lawn") || text.includes("landscap")) return "🌿";
+  if (text.includes("junk") || text.includes("haul")) return "🚚";
+  if (text.includes("clean")) return "🧽";
+  if (text.includes("handyman")) return "🛠️";
+  if (text.includes("roof")) return "🏠";
+  if (text.includes("dog") || text.includes("pet")) return "🐶";
+  if (text.includes("tutor") || text.includes("education")) return "📚";
+  if (text.includes("real")) return "🏡";
+  if (text.includes("restaurant") || text.includes("food")) return "🍔";
+  if (text.includes("auto") || text.includes("mechanic")) return "🚗";
+  if (text.includes("beauty") || text.includes("hair")) return "✨";
+  if (text.includes("tech") || text.includes("computer")) return "💻";
+
+  return "🎫";
+}
+
+function ServicesOfferedPicker({
+  categories,
+  selectedServiceIds,
+  setSelectedServiceIds,
+}) {
+  const [query, setQuery] = useState("");
+
+  const rows = useMemo(() => buildSelectableServiceGroups(categories), [categories]);
+  const selectedSet = useMemo(
+    () => new Set((selectedServiceIds || []).map(Number).filter(Boolean)),
+    [selectedServiceIds]
+  );
+
+  const filtered = useMemo(() => {
+    const q = String(query || "").trim().toLowerCase();
+    if (!q) return rows;
+
+    return rows.filter((row) => {
+      return [row.name, row.key, row.path, row.parentName]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(q);
+    });
+  }, [query, rows]);
+
+  function toggle(id) {
+    const n = Number(id);
+    if (!Number.isFinite(n) || n <= 0) return;
+
+    setSelectedServiceIds((prev) => {
+      const next = new Set((prev || []).map(Number).filter(Boolean));
+      if (next.has(n)) next.delete(n);
+      else next.add(n);
+      return Array.from(next);
+    });
+  }
+
+  function clearAll() {
+    setSelectedServiceIds([]);
+  }
+
+  return (
+    <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <div className="text-sm font-black text-cyan-100">
+            Services this business provides
+          </div>
+          <div className="mt-1 text-xs leading-5 text-slate-400">
+            Pick main service groups, not every tiny job.
+          </div>
+        </div>
+
+        <div className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1 text-[11px] font-black text-cyan-100">
+          {selectedSet.size} selected
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/70 p-2">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search services: plumbing, tree, tutoring, dog grooming..."
+          className="h-11 w-full bg-transparent px-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none"
+        />
+      </div>
+
+      <div className="mt-3 flex gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={clearAll}
+          className="rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-900"
+        >
+          Clear
+        </button>
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="mt-4 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4 text-sm text-amber-100">
+          No service categories loaded yet.
+        </div>
+      ) : (
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((row) => {
+            const active = selectedSet.has(row.id);
+
+            return (
+              <button
+                key={row.id}
+                type="button"
+                onClick={() => toggle(row.id)}
+                className={cx(
+                  "rounded-3xl border p-4 text-left transition",
+                  active
+                    ? "border-cyan-400/50 bg-cyan-500/15 text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.12)]"
+                    : "border-slate-800 bg-slate-950/65 text-slate-200 hover:border-cyan-500/30 hover:bg-slate-900/60"
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-2xl">{serviceIcon(row.key, row.name)}</div>
+                    <div className="mt-2 text-sm font-black text-slate-50">
+                      {row.name}
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-500">
+                      {row.parentName ? `${row.parentName} • ` : ""}
+                      {row.childCount ? `${row.childCount} sub-services` : row.key}
+                    </div>
+                  </div>
+
+                  <span
+                    className={cx(
+                      "shrink-0 rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em]",
+                      active
+                        ? "border-cyan-300 bg-cyan-400 text-black"
+                        : "border-slate-700 bg-slate-900 text-slate-500"
+                    )}
+                  >
+                    {active ? "ON" : "OFF"}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {filtered.length === 0 && rows.length > 0 ? (
+        <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-400">
+          No service groups matched your search.
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export default function SboSettings() {
@@ -158,6 +525,7 @@ export default function SboSettings() {
   const [radius, setRadius] = useState("25");
   const [businessPresenceMode, setBusinessPresenceMode] = useState("");
   const [acceptsMarketplace, setAcceptsMarketplace] = useState(true);
+  const [selectedServiceIds, setSelectedServiceIds] = useState([]);
 
   const [facebookUrl, setFacebookUrl] = useState("");
   const [instagramUrl, setInstagramUrl] = useState("");
@@ -175,9 +543,9 @@ export default function SboSettings() {
     }
   }, [activeBusinessId, ok, wizardOpen]);
 
-  const selectedServicesCount = Array.isArray(localSetup?.selectedServices)
-    ? localSetup.selectedServices.length
-    : 0;
+  const selectedServicesCount =
+    selectedServiceIds.length ||
+    (Array.isArray(localSetup?.selectedServices) ? localSetup.selectedServices.length : 0);
 
   const returnTo = useMemo(() => {
     const qs = new URLSearchParams(location.search || "");
@@ -240,6 +608,7 @@ export default function SboSettings() {
       setRadius(String(biz?.service_radius_miles ?? biz?.effective_service_radius_miles ?? 25));
       setBusinessPresenceMode(biz?.business_presence_mode || "");
       setAcceptsMarketplace(!!biz?.accepts_marketplace_tickets);
+      setSelectedServiceIds(extractBusinessServiceIds(biz));
 
       setFacebookUrl(biz?.facebook_url || "");
       setInstagramUrl(biz?.instagram_url || "");
@@ -281,21 +650,24 @@ export default function SboSettings() {
       await api.patch(`/businesses/${activeBusinessId}/`, payload);
       const refreshed = await api.get(`/businesses/${activeBusinessId}/`);
       setBusiness(refreshed?.data || null);
+      setSelectedServiceIds(extractBusinessServiceIds(refreshed?.data || null));
       setOk("Saved.");
-
       Promise.resolve(reloadBusinesses?.()).catch(() => {});
-
       return refreshed?.data || null;
     } catch (e) {
-      setErr(e?.response?.data?.detail || JSON.stringify(e?.response?.data || {}) || "Save failed.");
+      setErr(
+        e?.response?.data?.detail ||
+          JSON.stringify(e?.response?.data || {}) ||
+          "Save failed."
+      );
       throw e;
     } finally {
       setSaving(false);
     }
   }
 
-  async function saveProfile() {
-    await saveBusiness({
+  function baseProfilePayload() {
+    return {
       name,
       business_email: businessEmail,
       owner_name: ownerName,
@@ -305,7 +677,7 @@ export default function SboSettings() {
       services_text: servicesText,
       address,
       city,
-      state: String(state || "").toUpperCase(),
+      state: normalizeStateCode(state),
       base_zip: baseZip,
       service_radius_miles: Number(radius || 0),
       business_presence_mode: businessPresenceMode,
@@ -314,6 +686,17 @@ export default function SboSettings() {
       instagram_url: instagramUrl,
       linkedin_url: linkedinUrl,
       google_business_url: googleBusinessUrl,
+    };
+  }
+
+  async function saveProfile() {
+    await saveBusiness(baseProfilePayload());
+  }
+
+  async function saveMarketplace() {
+    await saveBusiness({
+      ...baseProfilePayload(),
+      services_offered: selectedServiceIds,
     });
   }
 
@@ -483,10 +866,6 @@ export default function SboSettings() {
                 </div>
               </div>
             </div>
-
-            <div className="mt-4 text-sm text-slate-300">
-              This setup flow is meant to feel like a slide deck, not a giant form wall.
-            </div>
           </Card>
         ) : null}
 
@@ -553,7 +932,7 @@ export default function SboSettings() {
                 </label>
 
                 <div className="text-[11px] text-slate-500">
-                  Best result: square PNG with transparent background. This tries the backend field name <span className="text-slate-300">logo</span>.
+                  Best result: square PNG with transparent background.
                 </div>
               </div>
             </Card>
@@ -565,7 +944,7 @@ export default function SboSettings() {
             title="Marketplace"
             subtitle="Routing and discovery controls for new jobs."
             right={
-              <Button tone="cyan" onClick={saveProfile} disabled={saving}>
+              <Button tone="cyan" onClick={saveMarketplace} disabled={saving}>
                 {saving ? "Saving…" : "Save Marketplace"}
               </Button>
             }
@@ -573,7 +952,7 @@ export default function SboSettings() {
             <div className="grid md:grid-cols-2 gap-3">
               <Input label="Street Address" value={address} onChange={setAddress} placeholder="123 Main St" />
               <Input label="City" value={city} onChange={setCity} placeholder="Montgomery" />
-              <Input label="State" value={state} onChange={setState} placeholder="AL" />
+              <Input label="State" value={state} onChange={setState} placeholder="AL or Alabama" />
               <Input label="Base ZIP" value={baseZip} onChange={setBaseZip} placeholder="36117" />
               <Input label="Radius (miles)" value={radius} onChange={setRadius} type="number" placeholder="25" />
 
@@ -601,6 +980,18 @@ export default function SboSettings() {
             </div>
 
             <div className="mt-4">
+              <ServicesOfferedPicker
+                categories={categories}
+                selectedServiceIds={selectedServiceIds}
+                setSelectedServiceIds={setSelectedServiceIds}
+              />
+            </div>
+
+            <div className="mt-4 flex gap-2 flex-wrap">
+              <Button tone="cyan" onClick={saveMarketplace} disabled={saving}>
+                {saving ? "Saving…" : "Save Marketplace"}
+              </Button>
+
               <Button tone="fuchsia" onClick={() => setWizardOpen(true)}>
                 Launch Guided Setup
               </Button>
