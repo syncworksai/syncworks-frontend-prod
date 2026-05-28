@@ -4,9 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import ModeBar from "../components/ModeBar";
-import Button from "../components/ui/Button";
 import BusinessPicker from "../components/BusinessPicker";
-import SboSetupWizard from "../components/sbo/SboSetupWizard";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -82,123 +80,11 @@ function normalizeStateCode(value) {
   const lowered = raw.toLowerCase();
   if (STATE_CODE_BY_NAME[lowered]) return STATE_CODE_BY_NAME[lowered];
 
-  return raw.toUpperCase();
-}
-
-function Card({ title, subtitle, right, children }) {
-  return (
-    <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <div className="font-semibold text-slate-100">{title}</div>
-          {subtitle ? (
-            <div className="text-xs text-slate-400 mt-1">{subtitle}</div>
-          ) : null}
-        </div>
-        {right}
-      </div>
-      <div className="mt-4">{children}</div>
-    </div>
-  );
-}
-
-function Input({ label, value, onChange, placeholder = "", type = "text" }) {
-  return (
-    <label className="block">
-      <div className="text-xs text-slate-300 mb-1">{label}</div>
-      <input
-        value={value}
-        type={type}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-cyan-500/40"
-      />
-    </label>
-  );
-}
-
-function Textarea({ label, value, onChange, placeholder = "" }) {
-  return (
-    <label className="block">
-      <div className="text-xs text-slate-300 mb-1">{label}</div>
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        rows={4}
-        className="w-full rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-cyan-500/40"
-      />
-    </label>
-  );
-}
-
-function Toggle({ label, checked, onChange, hint = "" }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className={cx(
-        "w-full rounded-2xl border px-4 py-3 text-left transition",
-        checked
-          ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-100"
-          : "border-slate-800 bg-slate-950/60 text-slate-100 hover:bg-slate-900/40"
-      )}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="text-sm font-semibold">{label}</div>
-          {hint ? (
-            <div className="text-[11px] text-slate-400 mt-1">{hint}</div>
-          ) : null}
-        </div>
-        <div className="text-[11px]">{checked ? "ON" : "OFF"}</div>
-      </div>
-    </button>
-  );
-}
-
-function Select({ label, value, onChange, options = [] }) {
-  return (
-    <label className="block">
-      <div className="text-xs text-slate-300 mb-1">{label}</div>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-cyan-500/40"
-      >
-        {options.map((opt) => (
-          <option
-            key={opt.value}
-            value={opt.value}
-            className="bg-slate-950 text-slate-100"
-          >
-            {opt.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function SectionPill({ active, children, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cx(
-        "text-xs rounded-2xl px-3 py-2 border transition",
-        active
-          ? "bg-cyan-500/15 border-cyan-500/35 text-cyan-200"
-          : "bg-slate-950/60 border border-slate-800 hover:bg-slate-900/40 text-slate-200"
-      )}
-    >
-      {children}
-    </button>
-  );
+  return raw.toUpperCase().slice(0, 2);
 }
 
 function setupStorageKey(businessId) {
-  return `sw_setup_baseline_v1_${businessId || "no_biz"}`;
+  return `sw_sbo_settings_snapshot_v2_${businessId || "no_biz"}`;
 }
 
 function categoryId(cat) {
@@ -216,9 +102,7 @@ function categoryParentId(cat) {
     cat?.parentCategory ??
     "";
 
-  if (raw && typeof raw === "object") {
-    return categoryId(raw);
-  }
+  if (raw && typeof raw === "object") return categoryId(raw);
 
   const n = Number(raw);
   return Number.isFinite(n) && n > 0 ? n : null;
@@ -306,9 +190,7 @@ function buildSelectableServiceGroups(categories) {
     });
   }
 
-  if (!selectable.length) {
-    selectable = active;
-  }
+  if (!selectable.length) selectable = active;
 
   return selectable
     .map((cat) => {
@@ -357,11 +239,150 @@ function serviceIcon(key, name) {
   return "🎫";
 }
 
-function ServicesOfferedPicker({
-  categories,
-  selectedServiceIds,
-  setSelectedServiceIds,
-}) {
+function SmallButton({ children, tone = "slate", disabled = false, onClick, type = "button" }) {
+  const tones = {
+    slate:
+      "border-slate-800 bg-slate-950/70 text-slate-200 hover:bg-slate-900 disabled:text-slate-600",
+    cyan:
+      "border-cyan-400/40 bg-cyan-500/90 text-black hover:bg-cyan-400 disabled:bg-slate-800 disabled:text-slate-500",
+    fuchsia:
+      "border-fuchsia-400/40 bg-fuchsia-500/20 text-fuchsia-100 hover:bg-fuchsia-500/25 disabled:text-slate-500",
+    emerald:
+      "border-emerald-400/40 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/20 disabled:text-slate-500",
+  };
+
+  return (
+    <button
+      type={type}
+      disabled={disabled}
+      onClick={onClick}
+      className={cx(
+        "inline-flex min-h-10 items-center justify-center rounded-2xl border px-4 py-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60",
+        tones[tone] || tones.slate
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Card({ title, subtitle, right, children }) {
+  return (
+    <section className="rounded-3xl border border-slate-800 bg-slate-950/50 p-4 shadow-[0_0_34px_rgba(15,23,42,0.35)] md:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-base font-black text-slate-100">{title}</div>
+          {subtitle ? (
+            <div className="mt-1 text-xs leading-5 text-slate-400">{subtitle}</div>
+          ) : null}
+        </div>
+        {right ? <div className="shrink-0">{right}</div> : null}
+      </div>
+      <div className="mt-4">{children}</div>
+    </section>
+  );
+}
+
+function Input({ label, value, onChange, placeholder = "", type = "text", inputMode }) {
+  return (
+    <label className="block">
+      <div className="mb-1 text-xs font-semibold text-slate-300">{label}</div>
+      <input
+        value={value}
+        type={type}
+        inputMode={inputMode}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10"
+      />
+    </label>
+  );
+}
+
+function Textarea({ label, value, onChange, placeholder = "", rows = 4 }) {
+  return (
+    <label className="block">
+      <div className="mb-1 text-xs font-semibold text-slate-300">{label}</div>
+      <textarea
+        value={value}
+        rows={rows}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10"
+      />
+    </label>
+  );
+}
+
+function Select({ label, value, onChange, options = [] }) {
+  return (
+    <label className="block">
+      <div className="mb-1 text-xs font-semibold text-slate-300">{label}</div>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10"
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value} className="bg-slate-950 text-slate-100">
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function Toggle({ label, checked, onChange, hint = "" }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className={cx(
+        "w-full rounded-3xl border p-4 text-left transition",
+        checked
+          ? "border-cyan-400/40 bg-cyan-500/12 text-cyan-100 shadow-[0_0_22px_rgba(34,211,238,0.12)]"
+          : "border-slate-800 bg-slate-950/70 text-slate-200 hover:bg-slate-900/70"
+      )}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-black">{label}</div>
+          {hint ? <div className="mt-1 text-xs leading-5 text-slate-400">{hint}</div> : null}
+        </div>
+        <div
+          className={cx(
+            "rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em]",
+            checked
+              ? "border-cyan-300 bg-cyan-400 text-black"
+              : "border-slate-700 bg-slate-900 text-slate-500"
+          )}
+        >
+          {checked ? "ON" : "OFF"}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function MobileTab({ active, children, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx(
+        "shrink-0 rounded-2xl border px-4 py-2 text-sm font-bold transition",
+        active
+          ? "border-cyan-400/45 bg-cyan-500/15 text-cyan-100"
+          : "border-slate-800 bg-slate-950/70 text-slate-300 hover:bg-slate-900"
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ServicesPicker({ categories, selectedServiceIds, setSelectedServiceIds }) {
   const [query, setQuery] = useState("");
 
   const rows = useMemo(() => buildSelectableServiceGroups(categories), [categories]);
@@ -370,17 +391,24 @@ function ServicesOfferedPicker({
     [selectedServiceIds]
   );
 
-  const filtered = useMemo(() => {
-    const q = String(query || "").trim().toLowerCase();
-    if (!q) return rows;
+  const selectedRows = useMemo(
+    () => rows.filter((row) => selectedSet.has(row.id)),
+    [rows, selectedSet]
+  );
 
-    return rows.filter((row) => {
-      return [row.name, row.key, row.path, row.parentName]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-        .includes(q);
-    });
+  const filteredRows = useMemo(() => {
+    const q = String(query || "").trim().toLowerCase();
+    if (!q) return rows.slice(0, 36);
+
+    return rows
+      .filter((row) =>
+        [row.name, row.key, row.path, row.parentName]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(q)
+      )
+      .slice(0, 36);
   }, [query, rows]);
 
   function toggle(id) {
@@ -395,53 +423,59 @@ function ServicesOfferedPicker({
     });
   }
 
-  function clearAll() {
-    setSelectedServiceIds([]);
-  }
-
   return (
-    <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/5 p-4">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <div className="text-sm font-black text-cyan-100">
-            Services this business provides
+    <div className="space-y-4">
+      <div className="rounded-3xl border border-fuchsia-500/25 bg-gradient-to-br from-fuchsia-500/10 via-purple-500/8 to-cyan-500/8 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-sm font-black text-fuchsia-100">Services provided</div>
+            <div className="mt-1 text-xs leading-5 text-slate-300">
+              Pick broad service groups. Example: Plumbing covers leak repair,
+              drains, water heaters, toilets, and garbage disposals underneath it.
+            </div>
           </div>
-          <div className="mt-1 text-xs leading-5 text-slate-400">
-            Pick main service groups, not every tiny job.
+
+          <div className="rounded-full border border-fuchsia-400/35 bg-fuchsia-500/15 px-3 py-1 text-[11px] font-black text-fuchsia-100">
+            {selectedSet.size}
           </div>
         </div>
 
-        <div className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1 text-[11px] font-black text-cyan-100">
-          {selectedSet.size} selected
+        <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/75 p-2">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search plumbing, tree, tutoring, dog grooming..."
+            className="h-11 w-full bg-transparent px-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none"
+          />
         </div>
-      </div>
 
-      <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/70 p-2">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search services: plumbing, tree, tutoring, dog grooming..."
-          className="h-11 w-full bg-transparent px-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none"
-        />
-      </div>
-
-      <div className="mt-3 flex gap-2 flex-wrap">
-        <button
-          type="button"
-          onClick={clearAll}
-          className="rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-900"
-        >
-          Clear
-        </button>
+        {selectedRows.length ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {selectedRows.map((row) => (
+              <button
+                key={row.id}
+                type="button"
+                onClick={() => toggle(row.id)}
+                className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/18 px-3 py-2 text-xs font-bold text-fuchsia-50"
+              >
+                {row.name} ×
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/55 p-3 text-sm text-slate-500">
+            No services selected yet.
+          </div>
+        )}
       </div>
 
       {rows.length === 0 ? (
-        <div className="mt-4 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4 text-sm text-amber-100">
-          No service categories loaded yet.
+        <div className="rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4 text-sm text-amber-100">
+          No service categories loaded. Backend categories need to be seeded.
         </div>
       ) : (
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((row) => {
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {filteredRows.map((row) => {
             const active = selectedSet.has(row.id);
 
             return (
@@ -452,17 +486,15 @@ function ServicesOfferedPicker({
                 className={cx(
                   "rounded-3xl border p-4 text-left transition",
                   active
-                    ? "border-cyan-400/50 bg-cyan-500/15 text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.12)]"
-                    : "border-slate-800 bg-slate-950/65 text-slate-200 hover:border-cyan-500/30 hover:bg-slate-900/60"
+                    ? "border-fuchsia-400/60 bg-gradient-to-r from-fuchsia-500/20 to-cyan-500/12 shadow-[0_0_26px_rgba(217,70,239,0.18)]"
+                    : "border-slate-800 bg-slate-950/65 hover:border-fuchsia-500/35 hover:bg-slate-900/70"
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="text-2xl">{serviceIcon(row.key, row.name)}</div>
-                    <div className="mt-2 text-sm font-black text-slate-50">
-                      {row.name}
-                    </div>
-                    <div className="mt-1 text-[11px] text-slate-500">
+                    <div className="mt-2 text-sm font-black text-white">{row.name}</div>
+                    <div className="mt-1 text-xs text-slate-500">
                       {row.parentName ? `${row.parentName} • ` : ""}
                       {row.childCount ? `${row.childCount} sub-services` : row.key}
                     </div>
@@ -470,9 +502,9 @@ function ServicesOfferedPicker({
 
                   <span
                     className={cx(
-                      "shrink-0 rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em]",
+                      "rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em]",
                       active
-                        ? "border-cyan-300 bg-cyan-400 text-black"
+                        ? "border-fuchsia-300 bg-fuchsia-400 text-black"
                         : "border-slate-700 bg-slate-900 text-slate-500"
                     )}
                   >
@@ -484,12 +516,6 @@ function ServicesOfferedPicker({
           })}
         </div>
       )}
-
-      {filtered.length === 0 && rows.length > 0 ? (
-        <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-400">
-          No service groups matched your search.
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -502,11 +528,11 @@ export default function SboSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [logoSaving, setLogoSaving] = useState(false);
+
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [section, setSection] = useState("profile");
 
+  const [section, setSection] = useState("business");
   const [business, setBusiness] = useState(null);
   const [categories, setCategories] = useState([]);
 
@@ -525,7 +551,13 @@ export default function SboSettings() {
   const [radius, setRadius] = useState("25");
   const [businessPresenceMode, setBusinessPresenceMode] = useState("");
   const [acceptsMarketplace, setAcceptsMarketplace] = useState(true);
+
   const [selectedServiceIds, setSelectedServiceIds] = useState([]);
+
+  const [baselineRevenue, setBaselineRevenue] = useState("");
+  const [targetRevenue, setTargetRevenue] = useState("");
+  const [oldDataStatus, setOldDataStatus] = useState("LATER");
+  const [usageIntent, setUsageIntent] = useState("MAJORITY");
 
   const [facebookUrl, setFacebookUrl] = useState("");
   const [instagramUrl, setInstagramUrl] = useState("");
@@ -534,18 +566,6 @@ export default function SboSettings() {
 
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
-
-  const localSetup = useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem(setupStorageKey(activeBusinessId)) || "{}");
-    } catch {
-      return {};
-    }
-  }, [activeBusinessId, ok, wizardOpen]);
-
-  const selectedServicesCount =
-    selectedServiceIds.length ||
-    (Array.isArray(localSetup?.selectedServices) ? localSetup.selectedServices.length : 0);
 
   const returnTo = useMemo(() => {
     const qs = new URLSearchParams(location.search || "");
@@ -564,6 +584,20 @@ export default function SboSettings() {
     );
   }, [business, logoPreviewUrl]);
 
+  const readiness = useMemo(() => {
+    const checks = [
+      !!name.trim(),
+      !!phone.trim() || !!businessEmail.trim(),
+      !!baseZip.trim(),
+      !!normalizeStateCode(state).trim(),
+      selectedServiceIds.length > 0,
+      !!acceptsMarketplace,
+    ];
+
+    const completed = checks.filter(Boolean).length;
+    return Math.round((completed / checks.length) * 100);
+  }, [name, phone, businessEmail, baseZip, state, selectedServiceIds, acceptsMarketplace]);
+
   useEffect(() => {
     return () => {
       if (logoPreviewUrl && logoPreviewUrl.startsWith("blob:")) {
@@ -580,6 +614,7 @@ export default function SboSettings() {
 
     setLoading(true);
     setErr("");
+    setOk("");
 
     try {
       const [bizRes, catRes] = await Promise.all([
@@ -614,6 +649,16 @@ export default function SboSettings() {
       setInstagramUrl(biz?.instagram_url || "");
       setLinkedinUrl(biz?.linkedin_url || "");
       setGoogleBusinessUrl(biz?.google_business_url || "");
+
+      try {
+        const local = JSON.parse(localStorage.getItem(setupStorageKey(activeBusinessId)) || "{}");
+        setBaselineRevenue(String(local.baselineRevenue || ""));
+        setTargetRevenue(String(local.targetRevenue || ""));
+        setOldDataStatus(local.oldDataStatus || "LATER");
+        setUsageIntent(local.usageIntent || "MAJORITY");
+      } catch {
+        // keep defaults
+      }
     } catch (e) {
       setErr(e?.response?.data?.detail || "Failed to load settings.");
     } finally {
@@ -626,47 +671,21 @@ export default function SboSettings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBusinessId]);
 
-  useEffect(() => {
-    const qs = new URLSearchParams(location.search || "");
-    if (qs.get("setup") === "1") {
-      setWizardOpen(true);
-      setSection("setup");
-    }
-  }, [location.search]);
-
-  useEffect(() => {
-    if (location.hash === "#export") {
-      setSection("data");
-    }
-  }, [location.hash]);
-
-  async function saveBusiness(payload) {
-    if (!activeBusinessId) return;
-    setSaving(true);
-    setErr("");
-    setOk("");
-
-    try {
-      await api.patch(`/businesses/${activeBusinessId}/`, payload);
-      const refreshed = await api.get(`/businesses/${activeBusinessId}/`);
-      setBusiness(refreshed?.data || null);
-      setSelectedServiceIds(extractBusinessServiceIds(refreshed?.data || null));
-      setOk("Saved.");
-      Promise.resolve(reloadBusinesses?.()).catch(() => {});
-      return refreshed?.data || null;
-    } catch (e) {
-      setErr(
-        e?.response?.data?.detail ||
-          JSON.stringify(e?.response?.data || {}) ||
-          "Save failed."
-      );
-      throw e;
-    } finally {
-      setSaving(false);
-    }
+  function saveLocalSnapshot() {
+    localStorage.setItem(
+      setupStorageKey(activeBusinessId),
+      JSON.stringify({
+        baselineRevenue,
+        targetRevenue,
+        oldDataStatus,
+        usageIntent,
+        selectedServices: selectedServiceIds,
+        updatedAt: new Date().toISOString(),
+      })
+    );
   }
 
-  function baseProfilePayload() {
+  function basePayload() {
     return {
       name,
       business_email: businessEmail,
@@ -686,18 +705,37 @@ export default function SboSettings() {
       instagram_url: instagramUrl,
       linkedin_url: linkedinUrl,
       google_business_url: googleBusinessUrl,
+      services_offered: selectedServiceIds,
     };
   }
 
-  async function saveProfile() {
-    await saveBusiness(baseProfilePayload());
-  }
+  async function saveSettings() {
+    if (!activeBusinessId) return;
 
-  async function saveMarketplace() {
-    await saveBusiness({
-      ...baseProfilePayload(),
-      services_offered: selectedServiceIds,
-    });
+    setSaving(true);
+    setErr("");
+    setOk("");
+
+    try {
+      saveLocalSnapshot();
+
+      await api.patch(`/businesses/${activeBusinessId}/`, basePayload());
+
+      const refreshed = await api.get(`/businesses/${activeBusinessId}/`);
+      setBusiness(refreshed?.data || null);
+      setSelectedServiceIds(extractBusinessServiceIds(refreshed?.data || null));
+
+      Promise.resolve(reloadBusinesses?.()).catch(() => {});
+      setOk("Settings saved.");
+    } catch (e) {
+      setErr(
+        e?.response?.data?.detail ||
+          JSON.stringify(e?.response?.data || {}) ||
+          "Save failed."
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleLogoFileChange(file) {
@@ -707,12 +745,8 @@ export default function SboSettings() {
       URL.revokeObjectURL(logoPreviewUrl);
     }
 
-    if (file) {
-      const blobUrl = URL.createObjectURL(file);
-      setLogoPreviewUrl(blobUrl);
-    } else {
-      setLogoPreviewUrl("");
-    }
+    if (file) setLogoPreviewUrl(URL.createObjectURL(file));
+    else setLogoPreviewUrl("");
   }
 
   async function uploadLogo() {
@@ -737,352 +771,267 @@ export default function SboSettings() {
     } catch (e) {
       setErr(
         e?.response?.data?.detail ||
-          "Logo upload failed. The backend may use a different field name than 'logo'."
+          JSON.stringify(e?.response?.data || {}) ||
+          "Logo upload failed. Backend may use a different logo field."
       );
     } finally {
       setLogoSaving(false);
     }
   }
 
-  const importReady = !!localSetup?.oldDataStatus && localSetup.oldDataStatus !== "NONE";
-  const baselineReady = !!localSetup?.baselineRevenue;
-  const goalReady = !!localSetup?.targetRevenue;
-
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">
       <ModeBar
         title="SBO Settings"
-        subtitle="Setup first, refine later"
+        subtitle="Business profile, marketplace routing, services, and setup goals"
         rightActions={
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex flex-wrap gap-2">
             <BusinessPicker />
-            <Button tone="slate" onClick={() => navigate(returnTo)}>
+            <SmallButton tone="slate" onClick={() => navigate(returnTo)}>
               Back
-            </Button>
-            <Button tone="fuchsia" onClick={() => setWizardOpen(true)}>
-              Open Setup Flow
-            </Button>
+            </SmallButton>
+            <SmallButton tone="cyan" onClick={saveSettings} disabled={saving || loading}>
+              {saving ? "Saving…" : "Save"}
+            </SmallButton>
           </div>
         }
       />
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-5">
+      <main className="mx-auto max-w-6xl px-4 py-5 pb-28 md:py-6 md:pb-8">
         {err ? (
-          <div className="text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-2xl p-3">
+          <div className="mb-4 rounded-2xl border border-red-500/35 bg-red-500/10 p-3 text-sm text-red-100">
             {err}
           </div>
         ) : null}
 
         {ok ? (
-          <div className="text-sm text-emerald-200 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-3">
+          <div className="mb-4 rounded-2xl border border-emerald-500/35 bg-emerald-500/10 p-3 text-sm text-emerald-100">
             {ok}
           </div>
         ) : null}
 
         {loading ? (
-          <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5 text-sm text-slate-400">
+          <div className="rounded-3xl border border-slate-800 bg-slate-950/50 p-5 text-sm text-slate-400">
             Loading settings…
           </div>
         ) : null}
 
-        <div className="flex gap-2 flex-wrap">
-          <SectionPill active={section === "setup"} onClick={() => setSection("setup")}>
-            Setup
-          </SectionPill>
-          <SectionPill active={section === "profile"} onClick={() => setSection("profile")}>
-            Profile
-          </SectionPill>
-          <SectionPill active={section === "marketplace"} onClick={() => setSection("marketplace")}>
-            Marketplace
-          </SectionPill>
-          <SectionPill active={section === "socials"} onClick={() => setSection("socials")}>
-            Socials
-          </SectionPill>
-          <SectionPill active={section === "data"} onClick={() => setSection("data")}>
-            Import / Export
-          </SectionPill>
+        <div className="mb-4 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex min-w-max gap-2">
+            <MobileTab active={section === "business"} onClick={() => setSection("business")}>
+              Business
+            </MobileTab>
+            <MobileTab active={section === "marketplace"} onClick={() => setSection("marketplace")}>
+              Marketplace
+            </MobileTab>
+            <MobileTab active={section === "services"} onClick={() => setSection("services")}>
+              Services
+            </MobileTab>
+            <MobileTab active={section === "goals"} onClick={() => setSection("goals")}>
+              Goals
+            </MobileTab>
+          </div>
         </div>
 
-        {section === "setup" ? (
-          <Card
-            title="Guided Setup"
-            subtitle="Best for new SBOs. Walk through business basics, service area, services, and revenue goals."
-            right={
-              <Button tone="cyan" onClick={() => setWizardOpen(true)}>
-                Launch Wizard
-              </Button>
-            }
-          >
-            <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-3">
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
-                <div className="text-xs text-slate-400">Business</div>
-                <div className="mt-1 text-sm font-semibold text-slate-100">{business?.name || "—"}</div>
+        <div className="mb-5 rounded-3xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-black text-cyan-100">
+                Setup readiness
               </div>
-
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
-                <div className="text-xs text-slate-400">ZIP</div>
-                <div className="mt-1 text-sm font-semibold text-slate-100">{business?.base_zip || "—"}</div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
-                <div className="text-xs text-slate-400">Radius</div>
-                <div className="mt-1 text-sm font-semibold text-slate-100">
-                  {business?.service_radius_miles ?? business?.effective_service_radius_miles ?? "—"}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
-                <div className="text-xs text-slate-400">Marketplace</div>
-                <div className="mt-1 text-sm font-semibold text-slate-100">
-                  {business?.accepts_marketplace_tickets ? "On" : "Off"}
-                </div>
+              <div className="mt-1 text-xs text-slate-400">
+                The more complete this is, the better SyncWorks can route jobs and score activity.
               </div>
             </div>
 
-            <div className="mt-4 grid md:grid-cols-2 xl:grid-cols-4 gap-3">
-              <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4">
-                <div className="text-xs text-slate-400">Selected Services</div>
-                <div className="mt-1 text-sm font-semibold text-cyan-100">{selectedServicesCount}</div>
-              </div>
+            <div className="text-2xl font-black text-white">{readiness}%</div>
+          </div>
 
-              <div className="rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/5 p-4">
-                <div className="text-xs text-slate-400">Baseline Revenue</div>
-                <div className="mt-1 text-sm font-semibold text-fuchsia-100">
-                  {baselineReady ? `$${Number(localSetup.baselineRevenue || 0).toLocaleString()}` : "Not set"}
-                </div>
-              </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-900">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-purple-400"
+              style={{ width: `${readiness}%` }}
+            />
+          </div>
+        </div>
 
-              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-                <div className="text-xs text-slate-400">Revenue Goal</div>
-                <div className="mt-1 text-sm font-semibold text-emerald-100">
-                  {goalReady ? `$${Number(localSetup.targetRevenue || 0).toLocaleString()}` : "Not set"}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4">
-                <div className="text-xs text-slate-400">Import Preference</div>
-                <div className="mt-1 text-sm font-semibold text-indigo-100">
-                  {importReady ? "Ready later" : "Not chosen"}
-                </div>
-              </div>
-            </div>
-          </Card>
-        ) : null}
-
-        {section === "profile" ? (
-          <div className="grid xl:grid-cols-[1fr_360px] gap-5">
-            <Card
-              title="Business Profile"
-              subtitle="Edit the core business information customers and marketplace routing use."
-              right={
-                <Button tone="cyan" onClick={saveProfile} disabled={saving}>
-                  {saving ? "Saving…" : "Save Profile"}
-                </Button>
-              }
-            >
-              <div className="grid md:grid-cols-2 gap-3">
-                <Input label="Business Name" value={name} onChange={setName} placeholder="Acme Plumbing" />
-                <Input label="Business Email" value={businessEmail} onChange={setBusinessEmail} placeholder="office@acme.com" />
-                <Input label="Owner / Contact Name" value={ownerName} onChange={setOwnerName} placeholder="Jacob Lord" />
-                <Input label="Phone" value={phone} onChange={setPhone} placeholder="334-555-1212" />
-                <Input label="Website" value={website} onChange={setWebsite} placeholder="https://acme.com" />
-                <Input label="Headline" value={headline} onChange={setHeadline} placeholder="Fast, reliable service" />
-              </div>
-
-              <div className="mt-3">
-                <Textarea
-                  label="Services Summary"
-                  value={servicesText}
-                  onChange={setServicesText}
-                  placeholder="Repairs, installs, diagnostics, recurring service..."
-                />
-              </div>
-            </Card>
-
-            <Card
-              title="Business Logo"
-              subtitle="Upload a logo for your business card and branded presence."
-              right={
-                <Button tone="indigo" onClick={uploadLogo} disabled={!logoFile || logoSaving}>
-                  {logoSaving ? "Uploading…" : "Upload Logo"}
-                </Button>
-              }
-            >
-              <div className="space-y-4">
-                <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-4 flex items-center justify-center min-h-[220px]">
-                  {currentLogoUrl ? (
-                    <img
-                      src={currentLogoUrl}
-                      alt="Business logo preview"
-                      className="max-h-40 max-w-full object-contain rounded-2xl"
-                    />
-                  ) : (
-                    <div className="text-sm text-slate-500">No logo uploaded yet.</div>
-                  )}
+        <div className="space-y-5">
+          {section === "business" ? (
+            <div className="grid gap-5 xl:grid-cols-[1fr_340px]">
+              <Card
+                title="Business Profile"
+                subtitle="Core information customers and SyncWorks use."
+              >
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Input label="Business Name" value={name} onChange={setName} placeholder="Acme Plumbing" />
+                  <Input label="Business Email" value={businessEmail} onChange={setBusinessEmail} placeholder="office@acme.com" />
+                  <Input label="Owner / Contact Name" value={ownerName} onChange={setOwnerName} placeholder="Jacob Lord" />
+                  <Input label="Phone" value={phone} onChange={setPhone} placeholder="334-555-1212" inputMode="tel" />
+                  <Input label="Website" value={website} onChange={setWebsite} placeholder="https://acme.com" />
+                  <Input label="Headline" value={headline} onChange={setHeadline} placeholder="Fast, reliable service" />
                 </div>
 
-                <label className="block">
-                  <div className="text-xs text-slate-300 mb-1">Choose Logo File</div>
+                <div className="mt-3">
+                  <Textarea
+                    label="Services Summary"
+                    value={servicesText}
+                    onChange={setServicesText}
+                    placeholder="Repairs, installs, diagnostics, recurring service..."
+                  />
+                </div>
+              </Card>
+
+              <Card
+                title="Business Logo"
+                subtitle="Optional logo for business card/profile."
+                right={
+                  <SmallButton tone="fuchsia" onClick={uploadLogo} disabled={!logoFile || logoSaving}>
+                    {logoSaving ? "Uploading…" : "Upload"}
+                  </SmallButton>
+                }
+              >
+                <div className="space-y-4">
+                  <div className="flex min-h-44 items-center justify-center rounded-3xl border border-slate-800 bg-slate-950/60 p-4">
+                    {currentLogoUrl ? (
+                      <img
+                        src={currentLogoUrl}
+                        alt="Business logo preview"
+                        className="max-h-36 max-w-full rounded-2xl object-contain"
+                      />
+                    ) : (
+                      <div className="text-sm text-slate-500">No logo uploaded.</div>
+                    )}
+                  </div>
+
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/webp,image/svg+xml"
                     onChange={(e) => handleLogoFileChange(e.target.files?.[0] || null)}
-                    className="block w-full rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-sm text-slate-100 file:mr-3 file:rounded-xl file:border-0 file:bg-cyan-500/15 file:px-3 file:py-2 file:text-cyan-200"
+                    className="block w-full rounded-2xl border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 file:mr-3 file:rounded-xl file:border-0 file:bg-cyan-500/15 file:px-3 file:py-2 file:text-cyan-200"
                   />
-                </label>
 
-                <div className="text-[11px] text-slate-500">
-                  Best result: square PNG with transparent background.
+                  <div className="text-xs leading-5 text-slate-500">
+                    Logo upload may need backend field alignment later if this errors.
+                  </div>
                 </div>
+              </Card>
+            </div>
+          ) : null}
+
+          {section === "marketplace" ? (
+            <Card
+              title="Marketplace Routing"
+              subtitle="Controls whether this business can receive local marketplace tickets."
+            >
+              <div className="grid gap-3 md:grid-cols-2">
+                <Input label="Street Address" value={address} onChange={setAddress} placeholder="123 Main St" />
+                <Input label="City" value={city} onChange={setCity} placeholder="Montgomery" />
+                <Input label="State" value={state} onChange={setState} placeholder="AL or Alabama" />
+                <Input label="Base ZIP" value={baseZip} onChange={setBaseZip} placeholder="36117" inputMode="numeric" />
+                <Input label="Radius (miles)" value={radius} onChange={setRadius} type="number" placeholder="25" />
+
+                <Select
+                  label="Business Type"
+                  value={businessPresenceMode}
+                  onChange={setBusinessPresenceMode}
+                  options={[
+                    { value: "", label: "Select business type…" },
+                    { value: "online", label: "Online / Remote" },
+                    { value: "in_person", label: "In Person" },
+                    { value: "on_site", label: "On-Site Service" },
+                    { value: "hybrid", label: "Hybrid" },
+                  ]}
+                />
+              </div>
+
+              <div className="mt-4">
+                <Toggle
+                  label="Accept Marketplace Tickets"
+                  checked={acceptsMarketplace}
+                  onChange={setAcceptsMarketplace}
+                  hint="If off, this business will not receive new open marketplace jobs."
+                />
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-3 text-xs leading-5 text-slate-400">
+                State names are normalized before save. Example: Alabama saves as AL.
               </div>
             </Card>
-          </div>
-        ) : null}
+          ) : null}
 
-        {section === "marketplace" ? (
-          <Card
-            title="Marketplace"
-            subtitle="Routing and discovery controls for new jobs."
-            right={
-              <Button tone="cyan" onClick={saveMarketplace} disabled={saving}>
-                {saving ? "Saving…" : "Save Marketplace"}
-              </Button>
-            }
-          >
-            <div className="grid md:grid-cols-2 gap-3">
-              <Input label="Street Address" value={address} onChange={setAddress} placeholder="123 Main St" />
-              <Input label="City" value={city} onChange={setCity} placeholder="Montgomery" />
-              <Input label="State" value={state} onChange={setState} placeholder="AL or Alabama" />
-              <Input label="Base ZIP" value={baseZip} onChange={setBaseZip} placeholder="36117" />
-              <Input label="Radius (miles)" value={radius} onChange={setRadius} type="number" placeholder="25" />
-
-              <Select
-                label="Business Type"
-                value={businessPresenceMode}
-                onChange={setBusinessPresenceMode}
-                options={[
-                  { value: "", label: "Select business type…" },
-                  { value: "online", label: "Online / Remote" },
-                  { value: "in_person", label: "In Person" },
-                  { value: "on_site", label: "On-Site Service" },
-                  { value: "hybrid", label: "Hybrid" },
-                ]}
-              />
-            </div>
-
-            <div className="mt-3">
-              <Toggle
-                label="Accept Marketplace Tickets"
-                checked={acceptsMarketplace}
-                onChange={setAcceptsMarketplace}
-                hint="If off, the business won’t receive open marketplace jobs."
-              />
-            </div>
-
-            <div className="mt-4">
-              <ServicesOfferedPicker
+          {section === "services" ? (
+            <Card
+              title="Services"
+              subtitle="Pick broad service groups for routing and internal ticket creation."
+            >
+              <ServicesPicker
                 categories={categories}
                 selectedServiceIds={selectedServiceIds}
                 setSelectedServiceIds={setSelectedServiceIds}
               />
-            </div>
+            </Card>
+          ) : null}
 
-            <div className="mt-4 flex gap-2 flex-wrap">
-              <Button tone="cyan" onClick={saveMarketplace} disabled={saving}>
-                {saving ? "Saving…" : "Save Marketplace"}
-              </Button>
+          {section === "goals" ? (
+            <Card
+              title="God Mode CRM Snapshot"
+              subtitle="These values are saved locally now. Later we’ll add backend fields so God Mode can score account adoption."
+            >
+              <div className="grid gap-3 md:grid-cols-2">
+                <Input
+                  label="Baseline Monthly Revenue"
+                  value={baselineRevenue}
+                  onChange={setBaselineRevenue}
+                  type="number"
+                  placeholder="5000"
+                />
 
-              <Button tone="fuchsia" onClick={() => setWizardOpen(true)}>
-                Launch Guided Setup
-              </Button>
-            </div>
-          </Card>
-        ) : null}
+                <Input
+                  label="Target Monthly Revenue"
+                  value={targetRevenue}
+                  onChange={setTargetRevenue}
+                  type="number"
+                  placeholder="10000"
+                />
 
-        {section === "socials" ? (
-          <Card
-            title="Social Links"
-            subtitle="These support the business card and future social automation flows."
-            right={
-              <Button tone="cyan" onClick={saveProfile} disabled={saving}>
-                {saving ? "Saving…" : "Save Socials"}
-              </Button>
-            }
-          >
-            <div className="grid md:grid-cols-2 gap-3">
-              <Input label="Facebook URL" value={facebookUrl} onChange={setFacebookUrl} placeholder="https://facebook.com/yourbusiness" />
-              <Input label="Instagram URL" value={instagramUrl} onChange={setInstagramUrl} placeholder="https://instagram.com/yourbusiness" />
-              <Input label="LinkedIn URL" value={linkedinUrl} onChange={setLinkedinUrl} placeholder="https://linkedin.com/company/yourbusiness" />
-              <Input label="Google Business URL" value={googleBusinessUrl} onChange={setGoogleBusinessUrl} placeholder="https://g.page/yourbusiness" />
-            </div>
-          </Card>
-        ) : null}
+                <Select
+                  label="Old Data / Import Preference"
+                  value={oldDataStatus}
+                  onChange={setOldDataStatus}
+                  options={[
+                    { value: "LATER", label: "Import later" },
+                    { value: "YES", label: "Yes, wants import help" },
+                    { value: "NONE", label: "No old data" },
+                  ]}
+                />
 
-        {section === "data" ? (
-          <Card
-            title="Import / Export"
-            subtitle="Visible entry points now, workflow pages next."
-          >
-            <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-3">
-              <button
-                type="button"
-                onClick={() => setWizardOpen(true)}
-                className="rounded-2xl border border-cyan-500/25 bg-cyan-500/10 p-4 text-left hover:bg-cyan-500/15"
-              >
-                <div className="text-sm font-semibold text-cyan-100">Import Old Tickets</div>
-                <div className="text-xs text-slate-300 mt-2">
-                  Use the guided setup flow to capture import preference until the full import page is live.
-                </div>
-              </button>
+                <Select
+                  label="SyncWorks Usage Intent"
+                  value={usageIntent}
+                  onChange={setUsageIntent}
+                  options={[
+                    { value: "MAJORITY", label: "Run majority of business through SyncWorks" },
+                    { value: "PARTIAL", label: "Use SyncWorks for part of the business" },
+                    { value: "TESTING", label: "Testing / exploring" },
+                  ]}
+                />
+              </div>
 
-              <button
-                type="button"
-                onClick={() => setSection("setup")}
-                className="rounded-2xl border border-indigo-500/25 bg-indigo-500/10 p-4 text-left hover:bg-indigo-500/15"
-              >
-                <div className="text-sm font-semibold text-indigo-100">Export Data</div>
-                <div className="text-xs text-slate-300 mt-2">
-                  Export architecture is planned here first so it stays visible in the product.
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/sbo/catalog")}
-                className="rounded-2xl border border-fuchsia-500/25 bg-fuchsia-500/10 p-4 text-left hover:bg-fuchsia-500/15"
-              >
-                <div className="text-sm font-semibold text-fuchsia-100">Build Catalog</div>
-                <div className="text-xs text-slate-300 mt-2">
-                  Get invoice-ready services into the system.
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/team/invites")}
-                className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-4 text-left hover:bg-emerald-500/15"
-              >
-                <div className="text-sm font-semibold text-emerald-100">Invite Employees</div>
-                <div className="text-xs text-slate-300 mt-2">
-                  Start role-based access for techs, office, accounting.
-                </div>
-              </button>
-            </div>
-          </Card>
-        ) : null}
+              <div className="mt-4 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs leading-5 text-amber-100">
+                Backend CRM fields should be added later so God Mode can report on
+                majority-use vs partial-use businesses. For now this snapshot saves
+                locally and does not block the setup flow.
+              </div>
+            </Card>
+          ) : null}
+        </div>
       </main>
 
-      <SboSetupWizard
-        open={wizardOpen}
-        onClose={() => setWizardOpen(false)}
-        businessId={activeBusinessId}
-        business={business}
-        categories={categories}
-        onSaveBusiness={saveBusiness}
-        onDone={async () => {
-          await loadAll();
-        }}
-      />
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-800 bg-[#020617]/95 px-4 py-3 backdrop-blur-xl md:hidden">
+        <SmallButton tone="cyan" onClick={saveSettings} disabled={saving || loading}>
+          {saving ? "Saving…" : "Save Settings"}
+        </SmallButton>
+      </div>
     </div>
   );
 }
