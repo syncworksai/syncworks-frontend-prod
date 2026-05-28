@@ -1,3 +1,4 @@
+// src/App.jsx
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -23,6 +24,7 @@ import SboGrowth from "./pages/SboGrowth";
 import SboZipLeaderboard from "./pages/SboZipLeaderboard";
 import SboSettings from "./pages/SboSettings";
 import SboCatalog from "./pages/SboCatalog";
+import BusinessInternalTicketCreator from "./pages/BusinessInternalTicketCreator";
 import SboCustomers from "./pages/sbo/SboCustomers";
 import SboLeads from "./pages/sbo/SboLeads";
 import SboReports from "./pages/sbo/SboReports";
@@ -190,6 +192,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <SboGrowth />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sbo/new-ticket"
+          element={
+            <ProtectedRoute>
+              <BusinessInternalTicketCreator />
             </ProtectedRoute>
           }
         />
