@@ -750,34 +750,51 @@ export default function SboSettings() {
   }
 
   async function uploadLogo() {
-    if (!activeBusinessId || !logoFile) return;
+  if (!activeBusinessId || !logoFile) return;
 
-    setLogoSaving(true);
-    setErr("");
-    setOk("");
+  setLogoSaving(true);
+  setErr("");
+  setOk("");
 
-    try {
-      const fd = new FormData();
-      fd.append("logo", logoFile);
+  try {
+    const fd = new FormData();
+    fd.append("logo", logoFile);
 
-      await api.patch(`/businesses/${activeBusinessId}/`, fd);
+    const res = await api.post(`/businesses/${activeBusinessId}/upload-logo/`, fd, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
 
-      const refreshed = await api.get(`/businesses/${activeBusinessId}/`);
-      setBusiness(refreshed?.data || null);
-      setOk("Logo uploaded.");
-      setLogoFile(null);
+    const refreshed = await api.get(`/businesses/${activeBusinessId}/`);
+    setBusiness(refreshed?.data || null);
+    setOk("Logo uploaded.");
+    setLogoFile(null);
 
-      Promise.resolve(reloadBusinesses?.()).catch(() => {});
-    } catch (e) {
-      setErr(
-        e?.response?.data?.detail ||
-          JSON.stringify(e?.response?.data || {}) ||
-          "Logo upload failed. Backend may use a different logo field."
-      );
-    } finally {
-      setLogoSaving(false);
+    if (res?.data?.logo_url) {
+      setLogoPreviewUrl(res.data.logo_url);
     }
+
+    Promise.resolve(reloadBusinesses?.()).catch(() => {});
+  } catch (e) {
+    const data = e?.response?.data;
+
+    let message = "Logo upload failed. Please try a small PNG or JPG file.";
+
+    if (data && typeof data === "object") {
+      message =
+        data?.detail ||
+        data?.logo?.[0] ||
+        data?.non_field_errors?.[0] ||
+        data?.error ||
+        JSON.stringify(data);
+    }
+
+    setErr(message);
+  } finally {
+    setLogoSaving(false);
   }
+}
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">
