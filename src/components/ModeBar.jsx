@@ -741,7 +741,7 @@ function MobileMenuDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-[88] xl:hidden">
+    <div className="fixed inset-0 z-[88]">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
       <div className="absolute right-3 top-3 bottom-3 w-[min(390px,calc(100vw-24px))] overflow-hidden rounded-[2rem] border border-cyan-500/20 bg-slate-950 shadow-[0_0_80px_rgba(34,211,238,0.16)]">
@@ -758,7 +758,7 @@ function MobileMenuDrawer({
                 Choose where to go
               </div>
               <div className="mt-1 text-xs text-slate-400">
-                Clean mobile flow. Everything else stays tucked away.
+                Clean app flow. Everything else stays tucked away.
               </div>
             </div>
 
@@ -984,15 +984,6 @@ export default function ModeBar({
   const showBusinessCreate = useMemo(() => {
     return ["CUSTOMER", "SBO", "EMPLOYEE", "PM", "PLATFORM"].includes(mode) || isGod;
   }, [mode, isGod]);
-
-  const showPortals = useMemo(() => {
-    return (
-      mode === "PM" ||
-      isGod ||
-      pathname.startsWith("/tenant") ||
-      pathname.startsWith("/investor")
-    );
-  }, [mode, isGod, pathname]);
 
   const investorActive = pathname.startsWith("/investor");
   const tenantActive = pathname.startsWith("/tenant");
@@ -1245,98 +1236,11 @@ export default function ModeBar({
                 </button>
               ) : null}
 
-              <div className="hidden xl:flex items-end gap-4">
-                <div>
-                  <SectionLabel>Customer / SBO</SectionLabel>
-                  <div className="flex items-center gap-2">
-                    <ModeButton
-                      label="Customer"
-                      accent="cyan"
-                      active={mode === "CUSTOMER"}
-                      locked={!canCustomer}
-                      onClick={() => goMode("CUSTOMER", "/customer", !canCustomer)}
-                    />
-                    <ModeButton
-                      label="SBO"
-                      accent="indigo"
-                      active={mode === "SBO"}
-                      locked={!canSbo}
-                      onClick={() => goMode("SBO", "/sbo", !canSbo)}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <SectionLabel>Work Roles</SectionLabel>
-                  <div className="flex items-center gap-2">
-                    <ModeButton
-                      label="Employee"
-                      accent="cyan"
-                      active={mode === "EMPLOYEE"}
-                      locked={!canEmployee}
-                      onClick={() => goMode("EMPLOYEE", "/employee", !canEmployee)}
-                    />
-                    <ModeButton
-                      label="Property Mgr"
-                      accent="fuchsia"
-                      active={mode === "PM"}
-                      locked={!canPm}
-                      onClick={() => goMode("PM", "/pm", !canPm)}
-                    />
-                    <ModeButton
-                      label="Projects"
-                      accent="emerald"
-                      active={mode === "SALES"}
-                      locked={!canProjects}
-                      title={canProjects ? "Open Projects" : "Upgrade to unlock Projects"}
-                      onClick={() => goMode("SALES", "/sales/dashboard", !canProjects)}
-                    />
-                  </div>
-                </div>
-
-                {showPortals ? (
-                  <div>
-                    <SectionLabel>Portals</SectionLabel>
-                    <div className="flex items-center gap-2">
-                      <ModeButton
-                        label="Investor"
-                        accent="slate"
-                        active={investorActive}
-                        locked={false}
-                        title="Open Investor Portal"
-                        onClick={openInvestorPortal}
-                      />
-                      <ModeButton
-                        label="Tenant"
-                        accent="slate"
-                        active={tenantActive}
-                        locked={false}
-                        title="Open Tenant Portal"
-                        onClick={openTenantPortal}
-                      />
-                    </div>
-                  </div>
-                ) : null}
-
-                {canAdmin ? (
-                  <div>
-                    <SectionLabel>Admin</SectionLabel>
-                    <div className="flex items-center gap-2">
-                      <ModeButton
-                        label="Admin"
-                        accent="cyan"
-                        active={mode === "PLATFORM"}
-                        locked={false}
-                        onClick={() => goMode("PLATFORM", "/platform", false)}
-                      />
-                    </div>
-                  </div>
-                ) : null}
+              <div className="hidden">
+                <RightActions rightActions={rightActions} />
               </div>
 
-              <RightActions rightActions={rightActions} />
-
-              <div className="hidden md:flex items-center gap-2">
+              <div className="hidden">
                 <IconButton title="Newsfeed (ads + updates)" onClick={goFeed} tone="fuchsia">
                   <FeedIcon className="h-5 w-5" />
                 </IconButton>
@@ -1378,7 +1282,7 @@ export default function ModeBar({
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(true)}
-                className="xl:hidden h-11 w-11 rounded-2xl border border-cyan-500/30 bg-slate-950/65 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.14)] transition hover:bg-cyan-500/10 flex items-center justify-center"
+                className="h-11 w-11 rounded-2xl border border-cyan-500/30 bg-slate-950/65 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.14)] transition hover:bg-cyan-500/10 flex items-center justify-center"
                 title="Open menu"
               >
                 <MenuIcon className="h-5 w-5" />
