@@ -175,6 +175,22 @@ function PlusIcon({ className = "" }) {
   );
 }
 
+function MenuIcon({ className = "" }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon({ className = "" }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="m9 6 6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function ModeButton({ label, active, locked, onClick, accent = "cyan", title }) {
   const accents = {
     cyan: {
@@ -298,7 +314,7 @@ function RightActions({ rightActions }) {
   );
 }
 
-function IconButton({ title, onClick, children, tone = "slate" }) {
+function IconButton({ title, onClick, children, tone = "slate", className = "" }) {
   const toneClass =
     tone === "cyan"
       ? "border-cyan-500/35 bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/16"
@@ -313,10 +329,66 @@ function IconButton({ title, onClick, children, tone = "slate" }) {
       title={title}
       className={cx(
         "h-10 w-10 rounded-2xl border transition flex items-center justify-center",
-        toneClass
+        toneClass,
+        className
       )}
     >
       {children}
+    </button>
+  );
+}
+
+function DrawerItem({
+  label,
+  subtitle = "",
+  active = false,
+  locked = false,
+  onClick,
+  tone = "cyan",
+}) {
+  const tones = {
+    cyan: "border-cyan-500/25 bg-cyan-500/8 text-cyan-100",
+    indigo: "border-indigo-500/25 bg-indigo-500/8 text-indigo-100",
+    fuchsia: "border-fuchsia-500/25 bg-fuchsia-500/8 text-fuchsia-100",
+    emerald: "border-emerald-500/25 bg-emerald-500/8 text-emerald-100",
+    slate: "border-slate-800 bg-slate-950/45 text-slate-100",
+    rose: "border-rose-500/25 bg-rose-500/8 text-rose-100",
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx(
+        "w-full rounded-2xl border p-3 text-left transition flex items-center justify-between gap-3",
+        tones[tone] || tones.slate,
+        active ? "ring-1 ring-cyan-300/35 shadow-[0_0_24px_rgba(34,211,238,0.12)]" : "",
+        locked ? "opacity-75" : "hover:bg-slate-900/60"
+      )}
+    >
+      <span className="min-w-0">
+        <span className="flex items-center gap-2">
+          <span className="text-sm font-black text-white">{label}</span>
+          {active ? (
+            <span className="rounded-full border border-cyan-400/35 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-cyan-200">
+              Active
+            </span>
+          ) : null}
+          {locked ? (
+            <span className="rounded-full border border-slate-700 bg-slate-900/60 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-slate-300">
+              Locked
+            </span>
+          ) : null}
+        </span>
+
+        {subtitle ? (
+          <span className="mt-1 block truncate text-xs text-slate-400">
+            {subtitle}
+          </span>
+        ) : null}
+      </span>
+
+      <ChevronRightIcon className="h-4 w-4 shrink-0 text-slate-400" />
     </button>
   );
 }
@@ -434,7 +506,7 @@ function CreateBusinessDrawer({ open, onClose, onCreated }) {
       try {
         const res = await api.post("/businesses/", payload);
         created = res.data;
-      } catch (firstErr) {
+      } catch {
         const fallbackPayload = {
           name,
           business_name: name,
@@ -637,6 +709,221 @@ function CreateBusinessDrawer({ open, onClose, onCreated }) {
   );
 }
 
+function MobileMenuDrawer({
+  open,
+  onClose,
+  mode,
+  canCustomer,
+  canSbo,
+  canEmployee,
+  canPm,
+  canAdmin,
+  canProjects,
+  isGod,
+  goMode,
+  goFeed,
+  goSupport,
+  goProfile,
+  goSettings,
+  onLogout,
+  openInvestorPortal,
+  openTenantPortal,
+  investorActive,
+  tenantActive,
+}) {
+  if (!open) return null;
+
+  function run(fn) {
+    onClose?.();
+    setTimeout(() => {
+      fn?.();
+    }, 80);
+  }
+
+  return (
+    <div className="fixed inset-0 z-[88] xl:hidden">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+
+      <div className="absolute right-3 top-3 bottom-3 w-[min(390px,calc(100vw-24px))] overflow-hidden rounded-[2rem] border border-cyan-500/20 bg-slate-950 shadow-[0_0_80px_rgba(34,211,238,0.16)]">
+        <div className="relative border-b border-slate-800 p-4">
+          <div className="absolute -right-16 -top-20 h-52 w-52 rounded-full bg-cyan-500/15 blur-3xl" />
+          <div className="absolute -left-16 -bottom-20 h-52 w-52 rounded-full bg-fuchsia-500/10 blur-3xl" />
+
+          <div className="relative flex items-start justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-200">
+                SyncWorks Menu
+              </div>
+              <div className="mt-2 text-lg font-black text-white">
+                Choose where to go
+              </div>
+              <div className="mt-1 text-xs text-slate-400">
+                Clean mobile flow. Everything else stays tucked away.
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-900"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+
+        <div className="h-[calc(100%-105px)] overflow-y-auto p-4">
+          <div className="space-y-3">
+            <div>
+              <div className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                Main Modes
+              </div>
+
+              <div className="space-y-2">
+                <DrawerItem
+                  label="Customer"
+                  subtitle="Request services, track jobs, messages, payments"
+                  active={mode === "CUSTOMER"}
+                  locked={!canCustomer}
+                  tone="cyan"
+                  onClick={() => run(() => goMode("CUSTOMER", "/customer", !canCustomer))}
+                />
+
+                <DrawerItem
+                  label="SBO"
+                  subtitle="Business dashboard, requests, customers, finance"
+                  active={mode === "SBO"}
+                  locked={!canSbo}
+                  tone="indigo"
+                  onClick={() => run(() => goMode("SBO", "/sbo", !canSbo))}
+                />
+
+                <DrawerItem
+                  label="PM"
+                  subtitle="Property manager portal"
+                  active={mode === "PM"}
+                  locked={!canPm}
+                  tone="fuchsia"
+                  onClick={() => run(() => goMode("PM", "/pm", !canPm))}
+                />
+
+                <DrawerItem
+                  label="Employee"
+                  subtitle="Team member workspace"
+                  active={mode === "EMPLOYEE"}
+                  locked={!canEmployee}
+                  tone="cyan"
+                  onClick={() => run(() => goMode("EMPLOYEE", "/employee", !canEmployee))}
+                />
+
+                <DrawerItem
+                  label="Projects"
+                  subtitle="Leads, pipeline, future project workspace"
+                  active={mode === "SALES"}
+                  locked={!canProjects}
+                  tone="emerald"
+                  onClick={() => run(() => goMode("SALES", "/sales/dashboard", !canProjects))}
+                />
+
+                {canAdmin ? (
+                  <DrawerItem
+                    label="Admin"
+                    subtitle="Platform command center"
+                    active={mode === "PLATFORM"}
+                    locked={false}
+                    tone="slate"
+                    onClick={() => run(() => goMode("PLATFORM", "/platform", false))}
+                  />
+                ) : null}
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <div className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                Portals
+              </div>
+
+              <div className="space-y-2">
+                <DrawerItem
+                  label="Investor"
+                  subtitle="Investor portal"
+                  active={investorActive}
+                  locked={false}
+                  tone="slate"
+                  onClick={() => run(openInvestorPortal)}
+                />
+
+                <DrawerItem
+                  label="Tenant"
+                  subtitle="Tenant portal"
+                  active={tenantActive}
+                  locked={false}
+                  tone="slate"
+                  onClick={() => run(openTenantPortal)}
+                />
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <div className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                Account
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => run(goFeed)}
+                  className="rounded-2xl border border-fuchsia-500/25 bg-fuchsia-500/10 px-3 py-3 text-sm font-bold text-fuchsia-100"
+                >
+                  Newsfeed
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => run(goSupport)}
+                  className="rounded-2xl border border-cyan-500/25 bg-cyan-500/10 px-3 py-3 text-sm font-bold text-cyan-100"
+                >
+                  Support
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => run(goProfile)}
+                  className="rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-3 text-sm font-bold text-slate-100"
+                >
+                  Profile
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => run(goSettings)}
+                  className="rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-3 text-sm font-bold text-slate-100"
+                >
+                  Settings
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => run(onLogout)}
+                className="mt-2 w-full rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3 py-3 text-sm font-black text-rose-100"
+              >
+                Logout
+              </button>
+            </div>
+
+            {isGod ? (
+              <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/8 p-3 text-xs text-cyan-100">
+                God Mode access detected. Admin tools appear when allowed.
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ModeBar({
   title = "SyncWorks",
   subtitle = "",
@@ -657,6 +944,7 @@ export default function ModeBar({
 
   const [salesLinked, setSalesLinked] = useState(false);
   const [createBusinessOpen, setCreateBusinessOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const id = "syncworks-modebar-clean-css";
@@ -685,14 +973,6 @@ export default function ModeBar({
   }, []);
 
   const pathname = String(loc.pathname || "").toLowerCase();
-
-  const hideSalesButton = useMemo(() => {
-    if (pathname.startsWith("/tenant")) return true;
-    if (pathname.startsWith("/investor")) return true;
-    if (pathname.startsWith("/employee")) return true;
-    if (mode === "EMPLOYEE") return true;
-    return false;
-  }, [pathname, mode]);
 
   const businesses = useMemo(() => normalizeBusinesses(myBusinesses), [myBusinesses]);
   const hasBusinesses = businesses.length > 0;
@@ -745,7 +1025,7 @@ export default function ModeBar({
   const canEmployee = !!availableModes?.EMPLOYEE || isGod;
   const canPm = !!availableModes?.PM || isGod;
   const canAdmin = !!availableModes?.PLATFORM && isGod;
-  const canSales = isGod || !!moduleAccess?.sales || salesLinked;
+  const canProjects = isGod || !!moduleAccess?.sales || salesLinked;
 
   function goSettings() {
     const from = `${loc.pathname || "/"}${loc.search || ""}`;
@@ -792,7 +1072,7 @@ export default function ModeBar({
     if (mode === "SBO") return "Business Owner";
     if (mode === "EMPLOYEE") return "Employee";
     if (mode === "PM") return "Property Manager";
-    if (mode === "SALES") return "Sales OS";
+    if (mode === "SALES") return "Projects";
     if (mode === "PLATFORM") return "Admin";
     return "SyncWorks";
   }, [mode]);
@@ -828,7 +1108,7 @@ export default function ModeBar({
     if (["SBO", "EMPLOYEE", "PM", "PLATFORM"].includes(mode)) {
       return businessName || "No Business Selected";
     }
-    if (mode === "SALES") return "Sales OS";
+    if (mode === "SALES") return "Projects";
     return "SyncWorks";
   }, [mode, customerName, businessName]);
 
@@ -903,21 +1183,21 @@ export default function ModeBar({
         </div>
 
         <div className="relative max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-start lg:items-center gap-3">
+          <div className="flex items-center gap-3">
             <div className="min-w-0 flex items-center gap-3">
               <img
                 src="/brands/syncworks new logo.jpg"
                 alt="SyncWorks"
-                className="h-14 w-14 md:h-16 md:w-16 rounded-2xl object-cover border border-cyan-500/20 bg-slate-950/70 shrink-0 shadow-[0_0_40px_rgba(99,102,241,0.18)]"
+                className="h-12 w-12 md:h-16 md:w-16 rounded-2xl object-cover border border-cyan-500/20 bg-slate-950/70 shrink-0 shadow-[0_0_40px_rgba(99,102,241,0.18)]"
               />
 
               <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <div className="text-base font-extrabold tracking-wide text-slate-100">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="text-base font-extrabold tracking-wide text-slate-100 truncate">
                     SyncWorks
                   </div>
 
-                  <Pill className="border-slate-800 text-slate-300 bg-slate-900/40">
+                  <Pill className="hidden sm:inline-flex border-slate-800 text-slate-300 bg-slate-900/40">
                     v7.1
                   </Pill>
 
@@ -926,31 +1206,31 @@ export default function ModeBar({
                   </ModuleBadge>
                 </div>
 
-                <div className="mt-1 text-sm text-slate-200 truncate">
+                <div className="mt-1 text-sm text-slate-200 truncate max-w-[190px] sm:max-w-[320px] md:max-w-[520px]">
                   {identityLeft}
                 </div>
 
                 {identitySub ? (
-                  <div className="mt-0.5 text-[11px] text-slate-400 truncate">
+                  <div className="hidden sm:block mt-0.5 text-[11px] text-slate-400 truncate max-w-[520px]">
                     {identitySub}
                   </div>
                 ) : null}
 
                 {title && title !== "SyncWorks" ? (
-                  <div className="mt-1 text-[11px] text-cyan-200 truncate">
+                  <div className="hidden sm:block mt-1 text-[11px] text-cyan-200 truncate">
                     {title}
                   </div>
                 ) : null}
 
                 {subtitle ? (
-                  <div className="mt-0.5 text-[11px] text-slate-500 truncate">
+                  <div className="hidden sm:block mt-0.5 text-[11px] text-slate-500 truncate">
                     {subtitle}
                   </div>
                 ) : null}
               </div>
             </div>
 
-            <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
+            <div className="ml-auto flex items-center gap-2">
               {showBiz ? <BusinessPicker className="hidden md:block" /> : null}
 
               {showBusinessCreate ? (
@@ -1003,16 +1283,14 @@ export default function ModeBar({
                       locked={!canPm}
                       onClick={() => goMode("PM", "/pm", !canPm)}
                     />
-                    {!hideSalesButton ? (
-                      <ModeButton
-                        label="Sales OS"
-                        accent="emerald"
-                        active={mode === "SALES"}
-                        locked={!canSales}
-                        title={canSales ? "Open Sales OS" : "Upgrade to unlock Sales OS"}
-                        onClick={() => goMode("SALES", "/sales/dashboard", !canSales)}
-                      />
-                    ) : null}
+                    <ModeButton
+                      label="Projects"
+                      accent="emerald"
+                      active={mode === "SALES"}
+                      locked={!canProjects}
+                      title={canProjects ? "Open Projects" : "Upgrade to unlock Projects"}
+                      onClick={() => goMode("SALES", "/sales/dashboard", !canProjects)}
+                    />
                   </div>
                 </div>
 
@@ -1056,85 +1334,54 @@ export default function ModeBar({
                 ) : null}
               </div>
 
-              <div className="xl:hidden flex items-center gap-2 overflow-x-auto max-w-[calc(100vw-120px)] pb-1">
-                <ModeButton
-                  label="Customer"
-                  accent="cyan"
-                  active={mode === "CUSTOMER"}
-                  locked={!canCustomer}
-                  onClick={() => goMode("CUSTOMER", "/customer", !canCustomer)}
-                />
-                <ModeButton
-                  label="SBO"
-                  accent="indigo"
-                  active={mode === "SBO"}
-                  locked={!canSbo}
-                  onClick={() => goMode("SBO", "/sbo", !canSbo)}
-                />
-                <ModeButton
-                  label="PM"
-                  accent="fuchsia"
-                  active={mode === "PM"}
-                  locked={!canPm}
-                  onClick={() => goMode("PM", "/pm", !canPm)}
-                />
-                {!hideSalesButton ? (
-                  <ModeButton
-                    label="Sales"
-                    accent="emerald"
-                    active={mode === "SALES"}
-                    locked={!canSales}
-                    onClick={() => goMode("SALES", "/sales/dashboard", !canSales)}
-                  />
-                ) : null}
-                {canAdmin ? (
-                  <ModeButton
-                    label="Admin"
-                    accent="cyan"
-                    active={mode === "PLATFORM"}
-                    locked={false}
-                    onClick={() => goMode("PLATFORM", "/platform", false)}
-                  />
-                ) : null}
-              </div>
-
               <RightActions rightActions={rightActions} />
 
-              <IconButton title="Newsfeed (ads + updates)" onClick={goFeed} tone="fuchsia">
-                <FeedIcon className="h-5 w-5" />
-              </IconButton>
+              <div className="hidden md:flex items-center gap-2">
+                <IconButton title="Newsfeed (ads + updates)" onClick={goFeed} tone="fuchsia">
+                  <FeedIcon className="h-5 w-5" />
+                </IconButton>
 
-              <IconButton title="Support (Contact SyncWorks)" onClick={goSupport} tone="cyan">
-                <SupportIcon className="h-5 w-5" />
-              </IconButton>
+                <IconButton title="Support (Contact SyncWorks)" onClick={goSupport} tone="cyan">
+                  <SupportIcon className="h-5 w-5" />
+                </IconButton>
 
-              <NotificationsBell />
+                <NotificationsBell />
+
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  title="Logout"
+                  className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
+                >
+                  <LogoutIcon className="h-5 w-5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={goProfile}
+                  title="Profile"
+                  className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
+                >
+                  <ProfileIcon className="h-5 w-5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={goSettings}
+                  title="Settings"
+                  className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
+                >
+                  <GearIcon className="h-5 w-5" />
+                </button>
+              </div>
 
               <button
                 type="button"
-                onClick={onLogout}
-                title="Logout"
-                className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
+                onClick={() => setMobileMenuOpen(true)}
+                className="xl:hidden h-11 w-11 rounded-2xl border border-cyan-500/30 bg-slate-950/65 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.14)] transition hover:bg-cyan-500/10 flex items-center justify-center"
+                title="Open menu"
               >
-                <LogoutIcon className="h-5 w-5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={goProfile}
-                title="Profile"
-                className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
-              >
-                <ProfileIcon className="h-5 w-5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={goSettings}
-                title="Settings"
-                className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
-              >
-                <GearIcon className="h-5 w-5" />
+                <MenuIcon className="h-5 w-5" />
               </button>
             </div>
           </div>
@@ -1154,26 +1401,30 @@ export default function ModeBar({
             </button>
           ) : null}
         </div>
-
-        {showPortals ? (
-          <div className="relative xl:hidden px-4 pb-3 flex gap-2">
-            <ModeButton
-              label="Investor"
-              accent="slate"
-              active={investorActive}
-              locked={false}
-              onClick={openInvestorPortal}
-            />
-            <ModeButton
-              label="Tenant"
-              accent="slate"
-              active={tenantActive}
-              locked={false}
-              onClick={openTenantPortal}
-            />
-          </div>
-        ) : null}
       </div>
+
+      <MobileMenuDrawer
+        open={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        mode={mode}
+        canCustomer={canCustomer}
+        canSbo={canSbo}
+        canEmployee={canEmployee}
+        canPm={canPm}
+        canAdmin={canAdmin}
+        canProjects={canProjects}
+        isGod={isGod}
+        goMode={goMode}
+        goFeed={goFeed}
+        goSupport={goSupport}
+        goProfile={goProfile}
+        goSettings={goSettings}
+        onLogout={onLogout}
+        openInvestorPortal={openInvestorPortal}
+        openTenantPortal={openTenantPortal}
+        investorActive={investorActive}
+        tenantActive={tenantActive}
+      />
 
       <CreateBusinessDrawer
         open={createBusinessOpen}
