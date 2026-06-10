@@ -17,14 +17,6 @@ function Pill({ children, className = "" }) {
   );
 }
 
-function SectionLabel({ children }) {
-  return (
-    <div className="hidden lg:block text-[10px] uppercase tracking-widest text-slate-500 mb-1">
-      {children}
-    </div>
-  );
-}
-
 function ModuleBadge({ children, tone = "cyan" }) {
   const tones = {
     cyan: "border-cyan-500/35 bg-cyan-500/12 text-cyan-200 shadow-[0_0_20px_rgba(34,211,238,0.14)]",
@@ -188,74 +180,6 @@ function ChevronRightIcon({ className = "" }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="m9 6 6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
-  );
-}
-
-function ModeButton({ label, active, locked, onClick, accent = "cyan", title }) {
-  const accents = {
-    cyan: {
-      ring: "from-cyan-400/60 via-blue-400/60 to-fuchsia-400/45",
-      softGlow: "shadow-[0_0_22px_rgba(34,211,238,0.20)]",
-    },
-    indigo: {
-      ring: "from-indigo-400/60 via-blue-400/60 to-cyan-400/45",
-      softGlow: "shadow-[0_0_22px_rgba(99,102,241,0.18)]",
-    },
-    fuchsia: {
-      ring: "from-fuchsia-400/60 via-pink-400/60 to-purple-400/45",
-      softGlow: "shadow-[0_0_22px_rgba(217,70,239,0.16)]",
-    },
-    slate: {
-      ring: "from-slate-300/40 via-slate-300/25 to-slate-300/15",
-      softGlow: "shadow-[0_0_16px_rgba(148,163,184,0.14)]",
-    },
-    emerald: {
-      ring: "from-emerald-400/60 via-teal-400/50 to-cyan-400/40",
-      softGlow: "shadow-[0_0_18px_rgba(52,211,153,0.16)]",
-    },
-  };
-
-  const cfg = accents[accent] || accents.cyan;
-  const activeGradient = "from-fuchsia-500/45 via-purple-500/40 to-indigo-500/35";
-  const activeGlow =
-    "shadow-[0_0_40px_rgba(217,70,239,0.35)] shadow-[0_0_70px_rgba(99,102,241,0.18)]";
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title || label}
-      className={cx(
-        "group relative h-10 px-3 rounded-2xl border text-[12px] font-semibold transition duration-300 overflow-hidden flex items-center gap-2",
-        locked
-          ? "border-slate-800 bg-slate-950/35 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
-          : "border-slate-800 bg-slate-950/55 text-slate-200 hover:border-transparent hover:bg-slate-900/60",
-        active && !locked
-          ? cx("border-transparent bg-gradient-to-r", activeGradient, activeGlow, "text-white")
-          : cfg.softGlow
-      )}
-    >
-      <span className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-300">
-        <span className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10 blur-sm animate-[ripple_900ms_ease-out_infinite]" />
-      </span>
-
-      {active && !locked ? (
-        <>
-          <span className="absolute inset-[1px] rounded-2xl bg-slate-950/35" />
-          <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/18 to-white/0 opacity-20" />
-        </>
-      ) : null}
-
-      <span className="relative z-10">{label}</span>
-
-      {locked ? (
-        <span className="relative z-10 text-[10px] px-2 py-0.5 rounded-full border border-slate-700 bg-slate-900/35 text-slate-200">
-          ✕
-        </span>
-      ) : active ? (
-        <span className={cx("relative z-10 h-2 w-2 rounded-full", "bg-gradient-to-r", cfg.ring)} />
-      ) : null}
-    </button>
   );
 }
 
@@ -713,8 +637,8 @@ function MobileMenuDrawer({
   open,
   onClose,
   mode,
-  canCustomer,
-  canSbo,
+  canPersonal,
+  canBusiness,
   canEmployee,
   canPm,
   canAdmin,
@@ -781,21 +705,21 @@ function MobileMenuDrawer({
 
               <div className="space-y-2">
                 <DrawerItem
-                  label="Customer"
+                  label="Personal"
                   subtitle="Request services, track jobs, messages, payments"
                   active={mode === "CUSTOMER"}
-                  locked={!canCustomer}
+                  locked={!canPersonal}
                   tone="cyan"
-                  onClick={() => run(() => goMode("CUSTOMER", "/customer", !canCustomer))}
+                  onClick={() => run(() => goMode("CUSTOMER", "/customer", !canPersonal))}
                 />
 
                 <DrawerItem
-                  label="SBO"
+                  label="Business"
                   subtitle="Business dashboard, requests, customers, finance"
                   active={mode === "SBO"}
-                  locked={!canSbo}
+                  locked={!canBusiness}
                   tone="indigo"
-                  onClick={() => run(() => goMode("SBO", "/sbo", !canSbo))}
+                  onClick={() => run(() => goMode("SBO", "/sbo", !canBusiness))}
                 />
 
                 <DrawerItem
@@ -964,10 +888,6 @@ export default function ModeBar({
         60%  { opacity: .08; }
         100% { transform: translateX(120%); opacity: 0; }
       }
-      @keyframes ripple {
-        0% { transform: translate(-50%,-50%) scale(1); opacity:.25; }
-        100% { transform: translate(-50%,-50%) scale(26); opacity:0; }
-      }
     `;
     document.head.appendChild(style);
   }, []);
@@ -1011,8 +931,8 @@ export default function ModeBar({
     };
   }, []);
 
-  const canCustomer = !!availableModes?.CUSTOMER;
-  const canSbo = !!availableModes?.SBO || isGod;
+  const canPersonal = !!availableModes?.CUSTOMER;
+  const canBusiness = !!availableModes?.SBO || isGod;
   const canEmployee = !!availableModes?.EMPLOYEE || isGod;
   const canPm = !!availableModes?.PM || isGod;
   const canAdmin = !!availableModes?.PLATFORM && isGod;
@@ -1059,8 +979,8 @@ export default function ModeBar({
   }, [businesses]);
 
   const roleLabel = useMemo(() => {
-    if (mode === "CUSTOMER") return "Customer";
-    if (mode === "SBO") return "Business Owner";
+    if (mode === "CUSTOMER") return "Personal";
+    if (mode === "SBO") return "Business";
     if (mode === "EMPLOYEE") return "Employee";
     if (mode === "PM") return "Property Manager";
     if (mode === "SALES") return "Projects";
@@ -1095,7 +1015,7 @@ export default function ModeBar({
   );
 
   const identityLeft = useMemo(() => {
-    if (mode === "CUSTOMER") return customerName || "Customer";
+    if (mode === "CUSTOMER") return customerName || "Personal";
     if (["SBO", "EMPLOYEE", "PM", "PLATFORM"].includes(mode)) {
       return businessName || "No Business Selected";
     }
@@ -1311,8 +1231,8 @@ export default function ModeBar({
         open={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
         mode={mode}
-        canCustomer={canCustomer}
-        canSbo={canSbo}
+        canPersonal={canPersonal}
+        canBusiness={canBusiness}
         canEmployee={canEmployee}
         canPm={canPm}
         canAdmin={canAdmin}
