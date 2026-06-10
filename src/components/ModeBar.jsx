@@ -10,19 +10,30 @@ function cx(...parts) {
 }
 
 function Pill({ children, className = "" }) {
-  return <span className={"text-[11px] px-2 py-1 rounded-full border " + className}>{children}</span>;
+  return (
+    <span className={"text-[11px] px-2 py-1 rounded-full border " + className}>
+      {children}
+    </span>
+  );
 }
 
 function SectionLabel({ children }) {
-  return <div className="hidden lg:block text-[10px] uppercase tracking-widest text-slate-500 mb-1">{children}</div>;
+  return (
+    <div className="hidden lg:block text-[10px] uppercase tracking-widest text-slate-500 mb-1">
+      {children}
+    </div>
+  );
 }
 
 function ModuleBadge({ children, tone = "cyan" }) {
   const tones = {
     cyan: "border-cyan-500/35 bg-cyan-500/12 text-cyan-200 shadow-[0_0_20px_rgba(34,211,238,0.14)]",
-    indigo: "border-indigo-500/35 bg-indigo-500/12 text-indigo-200 shadow-[0_0_20px_rgba(99,102,241,0.14)]",
-    fuchsia: "border-fuchsia-500/35 bg-fuchsia-500/12 text-fuchsia-200 shadow-[0_0_20px_rgba(217,70,239,0.14)]",
-    emerald: "border-emerald-500/35 bg-emerald-500/12 text-emerald-200 shadow-[0_0_20px_rgba(52,211,153,0.14)]",
+    indigo:
+      "border-indigo-500/35 bg-indigo-500/12 text-indigo-200 shadow-[0_0_20px_rgba(99,102,241,0.14)]",
+    fuchsia:
+      "border-fuchsia-500/35 bg-fuchsia-500/12 text-fuchsia-200 shadow-[0_0_20px_rgba(217,70,239,0.14)]",
+    emerald:
+      "border-emerald-500/35 bg-emerald-500/12 text-emerald-200 shadow-[0_0_20px_rgba(52,211,153,0.14)]",
     slate: "border-slate-700 bg-slate-900/60 text-slate-200",
   };
 
@@ -40,8 +51,18 @@ function ModuleBadge({ children, tone = "cyan" }) {
 
 function GearIcon({ className = "" }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 15.25a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5Z" stroke="currentColor" strokeWidth="1.8" />
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M12 15.25a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
       <path
         d="M19.4 13.02c.05-.33.08-.67.08-1.02s-.03-.69-.08-1.02l2.02-1.57a.7.7 0 0 0 .17-.88l-1.91-3.31a.7.7 0 0 0-.83-.31l-2.39.96a7.6 7.6 0 0 0-1.77-1.02l-.36-2.53A.7.7 0 0 0 13.65 0h-3.3a.7.7 0 0 0-.69.59L9.3 3.12c-.63.25-1.22.58-1.77 1.02l-2.39-.96a.7.7 0 0 0-.83.31L2.4 6.8a.7.7 0 0 0 .17.88l2.02 1.57c-.05.33-.08.67-.08 1.02s.03.69.08 1.02L2.57 14.6a.7.7 0 0 0-.17.88l1.91 3.31c.18.31.55.43.88.31l2.39-.96c.55.44 1.14.77 1.77 1.02l.36 2.53c.05.34.35.59.69.59h3.3c.34 0 .64-.25.69-.59l.36-2.53c.63-.25 1.22-.58 1.77-1.02l2.39.96c.33.12.7 0 .88-.31l1.91-3.31a.7.7 0 0 0-.17-.88l-2.02-1.57Z"
         stroke="currentColor"
@@ -54,7 +75,13 @@ function GearIcon({ className = "" }) {
 
 function ProfileIcon({ className = "" }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <path
         d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z"
         stroke="currentColor"
@@ -75,7 +102,13 @@ function ProfileIcon({ className = "" }) {
 
 function LogoutIcon({ className = "" }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <path
         d="M10 7V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-1"
         stroke="currentColor"
@@ -95,7 +128,13 @@ function LogoutIcon({ className = "" }) {
 
 function SupportIcon({ className = "" }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <path
         d="M12 2a8 8 0 0 0-8 8v3a4 4 0 0 0 4 4h1v-7H6V10a6 6 0 1 1 12 0v.5h-3v7h1a4 4 0 0 0 4-4v-3a8 8 0 0 0-8-8Z"
         stroke="currentColor"
@@ -110,25 +149,60 @@ function SupportIcon({ className = "" }) {
 
 function FeedIcon({ className = "" }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <path d="M6 6h12M6 11h12M6 16h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M20 20V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v16" stroke="currentColor" strokeWidth="1.3" opacity="0.9" />
+      <path
+        d="M20 20V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v16"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        opacity="0.9"
+      />
+    </svg>
+  );
+}
+
+function PlusIcon({ className = "" }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
 
 function ModeButton({ label, active, locked, onClick, accent = "cyan", title }) {
   const accents = {
-    cyan: { ring: "from-cyan-400/60 via-blue-400/60 to-fuchsia-400/45", softGlow: "shadow-[0_0_22px_rgba(34,211,238,0.20)]" },
-    indigo: { ring: "from-indigo-400/60 via-blue-400/60 to-cyan-400/45", softGlow: "shadow-[0_0_22px_rgba(99,102,241,0.18)]" },
-    fuchsia: { ring: "from-fuchsia-400/60 via-pink-400/60 to-purple-400/45", softGlow: "shadow-[0_0_22px_rgba(217,70,239,0.16)]" },
-    slate: { ring: "from-slate-300/40 via-slate-300/25 to-slate-300/15", softGlow: "shadow-[0_0_16px_rgba(148,163,184,0.14)]" },
-    emerald: { ring: "from-emerald-400/60 via-teal-400/50 to-cyan-400/40", softGlow: "shadow-[0_0_18px_rgba(52,211,153,0.16)]" },
+    cyan: {
+      ring: "from-cyan-400/60 via-blue-400/60 to-fuchsia-400/45",
+      softGlow: "shadow-[0_0_22px_rgba(34,211,238,0.20)]",
+    },
+    indigo: {
+      ring: "from-indigo-400/60 via-blue-400/60 to-cyan-400/45",
+      softGlow: "shadow-[0_0_22px_rgba(99,102,241,0.18)]",
+    },
+    fuchsia: {
+      ring: "from-fuchsia-400/60 via-pink-400/60 to-purple-400/45",
+      softGlow: "shadow-[0_0_22px_rgba(217,70,239,0.16)]",
+    },
+    slate: {
+      ring: "from-slate-300/40 via-slate-300/25 to-slate-300/15",
+      softGlow: "shadow-[0_0_16px_rgba(148,163,184,0.14)]",
+    },
+    emerald: {
+      ring: "from-emerald-400/60 via-teal-400/50 to-cyan-400/40",
+      softGlow: "shadow-[0_0_18px_rgba(52,211,153,0.16)]",
+    },
   };
 
   const cfg = accents[accent] || accents.cyan;
-  const ACTIVE_GRADIENT = "from-fuchsia-500/45 via-purple-500/40 to-indigo-500/35";
-  const ACTIVE_GLOW = "shadow-[0_0_40px_rgba(217,70,239,0.35)] shadow-[0_0_70px_rgba(99,102,241,0.18)]";
+  const activeGradient = "from-fuchsia-500/45 via-purple-500/40 to-indigo-500/35";
+  const activeGlow =
+    "shadow-[0_0_40px_rgba(217,70,239,0.35)] shadow-[0_0_70px_rgba(99,102,241,0.18)]";
 
   return (
     <button
@@ -140,7 +214,9 @@ function ModeButton({ label, active, locked, onClick, accent = "cyan", title }) 
         locked
           ? "border-slate-800 bg-slate-950/35 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
           : "border-slate-800 bg-slate-950/55 text-slate-200 hover:border-transparent hover:bg-slate-900/60",
-        active && !locked ? cx("border-transparent bg-gradient-to-r", ACTIVE_GRADIENT, ACTIVE_GLOW, "text-white") : cfg.softGlow
+        active && !locked
+          ? cx("border-transparent bg-gradient-to-r", activeGradient, activeGlow, "text-white")
+          : cfg.softGlow
       )}
     >
       <span className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-300">
@@ -157,7 +233,9 @@ function ModeButton({ label, active, locked, onClick, accent = "cyan", title }) 
       <span className="relative z-10">{label}</span>
 
       {locked ? (
-        <span className="relative z-10 text-[10px] px-2 py-0.5 rounded-full border border-slate-700 bg-slate-900/35 text-slate-200">✕</span>
+        <span className="relative z-10 text-[10px] px-2 py-0.5 rounded-full border border-slate-700 bg-slate-900/35 text-slate-200">
+          ✕
+        </span>
       ) : active ? (
         <span className={cx("relative z-10 h-2 w-2 rounded-full", "bg-gradient-to-r", cfg.ring)} />
       ) : null}
@@ -168,7 +246,13 @@ function ModeButton({ label, active, locked, onClick, accent = "cyan", title }) 
 function RightActions({ rightActions }) {
   const isConfigArray =
     Array.isArray(rightActions) &&
-    rightActions.every((x) => x && typeof x === "object" && typeof x.label === "string" && typeof x.onClick === "function");
+    rightActions.every(
+      (x) =>
+        x &&
+        typeof x === "object" &&
+        typeof x.label === "string" &&
+        typeof x.onClick === "function"
+    );
 
   if (!rightActions) return null;
 
@@ -177,10 +261,18 @@ function RightActions({ rightActions }) {
   }
 
   const toneClass = (tone) => {
-    if (tone === "cyan") return "bg-cyan-500/18 border border-cyan-500/35 hover:bg-cyan-500/24 text-cyan-100";
-    if (tone === "indigo") return "bg-indigo-500/18 border border-indigo-500/35 hover:bg-indigo-500/24 text-indigo-100";
-    if (tone === "fuchsia") return "bg-fuchsia-500/14 border border-fuchsia-500/28 hover:bg-fuchsia-500/20 text-fuchsia-100";
-    if (tone === "emerald") return "bg-emerald-500/14 border border-emerald-500/28 hover:bg-emerald-500/18 text-emerald-100";
+    if (tone === "cyan") {
+      return "bg-cyan-500/18 border border-cyan-500/35 hover:bg-cyan-500/24 text-cyan-100";
+    }
+    if (tone === "indigo") {
+      return "bg-indigo-500/18 border border-indigo-500/35 hover:bg-indigo-500/24 text-indigo-100";
+    }
+    if (tone === "fuchsia") {
+      return "bg-fuchsia-500/14 border border-fuchsia-500/28 hover:bg-fuchsia-500/20 text-fuchsia-100";
+    }
+    if (tone === "emerald") {
+      return "bg-emerald-500/14 border border-emerald-500/28 hover:bg-emerald-500/18 text-emerald-100";
+    }
     return "bg-slate-950/60 border border-slate-800 hover:bg-slate-900/40 text-slate-200";
   };
 
@@ -219,7 +311,10 @@ function IconButton({ title, onClick, children, tone = "slate" }) {
       type="button"
       onClick={onClick}
       title={title}
-      className={cx("h-10 w-10 rounded-2xl border transition flex items-center justify-center", toneClass)}
+      className={cx(
+        "h-10 w-10 rounded-2xl border transition flex items-center justify-center",
+        toneClass
+      )}
     >
       {children}
     </button>
@@ -248,12 +343,320 @@ function toNiceName({ first, last, fallback = "" }) {
   return full || safeStr(fallback);
 }
 
-export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActions = null }) {
+function normalizeApiError(e) {
+  const data = e?.response?.data;
+  if (!data) return e?.message || "Request failed.";
+  if (typeof data === "string") return data;
+  if (data.detail) return String(data.detail);
+
+  if (typeof data === "object") {
+    return Object.entries(data)
+      .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : String(v)}`)
+      .join(" • ");
+  }
+
+  return "Request failed.";
+}
+
+function setActiveBusinessEverywhere(businessId) {
+  if (!businessId) return;
+
+  const id = String(businessId);
+
+  try {
+    localStorage.setItem("activeBusinessId", id);
+    localStorage.setItem("active_business_id", id);
+    localStorage.setItem("sw_active_business_id", id);
+    localStorage.setItem("syncworks_active_business_id", id);
+  } catch {
+    // no-op
+  }
+
+  try {
+    window.dispatchEvent(
+      new CustomEvent("sw:activeBusinessChanged", {
+        detail: { businessId: id },
+      })
+    );
+  } catch {
+    // no-op
+  }
+}
+
+function CreateBusinessDrawer({ open, onClose, onCreated }) {
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+  const [ok, setOk] = useState("");
+
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    base_zip: "",
+    accepts_marketplace_tickets: true,
+    access_code: "",
+  });
+
+  useEffect(() => {
+    if (!open) return;
+
+    setErr("");
+    setOk("");
+  }, [open]);
+
+  if (!open) return null;
+
+  async function submit() {
+    setErr("");
+    setOk("");
+
+    const name = safeStr(form.name);
+    const baseZip = safeStr(form.base_zip);
+    const phone = safeStr(form.phone);
+    const accessCode = safeStr(form.access_code);
+
+    if (!name) {
+      setErr("Business name is required.");
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const payload = {
+        name,
+        base_zip: baseZip || undefined,
+        phone: phone || undefined,
+        accepts_marketplace_tickets: !!form.accepts_marketplace_tickets,
+      };
+
+      let created = null;
+
+      try {
+        const res = await api.post("/businesses/", payload);
+        created = res.data;
+      } catch (firstErr) {
+        const fallbackPayload = {
+          name,
+          business_name: name,
+          base_zip: baseZip || "",
+          phone: phone || "",
+          accepts_marketplace_tickets: !!form.accepts_marketplace_tickets,
+        };
+
+        const res = await api.post("/businesses/", fallbackPayload);
+        created = res.data;
+      }
+
+      const businessId =
+        created?.id ||
+        created?.business_id ||
+        created?.business?.id ||
+        created?.business?.business_id;
+
+      if (businessId) {
+        setActiveBusinessEverywhere(businessId);
+      }
+
+      if (accessCode) {
+        try {
+          await api.post("/access-codes/redeem/", {
+            code: accessCode,
+            business_id: businessId || undefined,
+          });
+        } catch {
+          try {
+            await api.post("/businesses/redeem-access-code/", {
+              code: accessCode,
+              business_id: businessId || undefined,
+            });
+          } catch {
+            // Do not block business creation if access-code endpoint is different.
+          }
+        }
+      }
+
+      setOk("Business created. Opening setup...");
+      setForm({
+        name: "",
+        phone: "",
+        base_zip: "",
+        accepts_marketplace_tickets: true,
+        access_code: "",
+      });
+
+      setTimeout(() => {
+        onCreated?.(created);
+      }, 250);
+    } catch (e) {
+      setErr(normalizeApiError(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[90]">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={saving ? undefined : onClose} />
+
+      <div className="absolute inset-x-0 bottom-0 mx-auto max-h-[92vh] w-full overflow-y-auto rounded-t-[2rem] border border-cyan-500/20 bg-slate-950 shadow-[0_0_80px_rgba(34,211,238,0.16)] md:inset-y-4 md:right-4 md:left-auto md:w-[460px] md:rounded-[2rem]">
+        <div className="relative overflow-hidden border-b border-slate-800 px-5 py-5">
+          <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-cyan-500/15 blur-3xl" />
+          <div className="absolute -left-20 -bottom-20 h-56 w-56 rounded-full bg-fuchsia-500/10 blur-3xl" />
+
+          <div className="relative flex items-start justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-200">
+                Business Setup
+              </div>
+              <div className="mt-2 text-xl font-black text-white">
+                Create a business
+              </div>
+              <div className="mt-1 text-sm text-slate-400">
+                Add the business, set the active business, then continue setup.
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              className="rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-900 disabled:opacity-50"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4 px-5 py-5">
+          {err ? (
+            <div className="rounded-2xl border border-rose-500/35 bg-rose-500/10 p-3 text-sm text-rose-200">
+              {err}
+            </div>
+          ) : null}
+
+          {ok ? (
+            <div className="rounded-2xl border border-emerald-500/35 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+              {ok}
+            </div>
+          ) : null}
+
+          <div>
+            <label className="text-xs font-semibold text-slate-400">
+              Business name <span className="text-rose-300">*</span>
+            </label>
+            <input
+              value={form.name}
+              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              className="mt-1 h-11 w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 text-sm text-slate-100 outline-none focus:border-cyan-500/50"
+              placeholder="Jacob's Lawn Care"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-semibold text-slate-400">Base ZIP</label>
+              <input
+                value={form.base_zip}
+                onChange={(e) => setForm((p) => ({ ...p, base_zip: e.target.value }))}
+                className="mt-1 h-11 w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 text-sm text-slate-100 outline-none focus:border-cyan-500/50"
+                placeholder="36117"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-400">Phone</label>
+              <input
+                value={form.phone}
+                onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+                className="mt-1 h-11 w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 text-sm text-slate-100 outline-none focus:border-cyan-500/50"
+                placeholder="334..."
+              />
+            </div>
+          </div>
+
+          <label className="flex items-start gap-3 rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
+            <input
+              type="checkbox"
+              checked={!!form.accepts_marketplace_tickets}
+              onChange={(e) =>
+                setForm((p) => ({
+                  ...p,
+                  accepts_marketplace_tickets: e.target.checked,
+                }))
+              }
+              className="mt-1"
+            />
+            <span>
+              <span className="block text-sm font-semibold text-slate-100">
+                Accept marketplace requests
+              </span>
+              <span className="mt-1 block text-xs text-slate-500">
+                Allows matching requests in this business ZIP/service area once services are configured.
+              </span>
+            </span>
+          </label>
+
+          <div>
+            <label className="text-xs font-semibold text-slate-400">
+              Access code
+            </label>
+            <input
+              value={form.access_code}
+              onChange={(e) => setForm((p) => ({ ...p, access_code: e.target.value }))}
+              className="mt-1 h-11 w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 text-sm text-slate-100 outline-none focus:border-cyan-500/50"
+              placeholder="Optional lifetime / promo code"
+            />
+            <div className="mt-1 text-[11px] text-slate-500">
+              Business creation will not fail if the access-code endpoint needs separate backend wiring.
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={submit}
+            disabled={saving}
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/40 bg-gradient-to-r from-cyan-500 to-blue-600 px-5 text-sm font-black text-white shadow-[0_0_35px_rgba(34,211,238,0.28)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {saving ? "Creating..." : "Create Business"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              onClose?.();
+              window.location.href = "/upgrade";
+            }}
+            disabled={saving}
+            className="inline-flex h-11 w-full items-center justify-center rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/10 px-5 text-sm font-semibold text-fuchsia-100 transition hover:bg-fuchsia-500/15 disabled:opacity-50"
+          >
+            Use upgrade / access-code page instead
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function ModeBar({
+  title = "SyncWorks",
+  subtitle = "",
+  rightActions = null,
+}) {
   const nav = useNavigate();
   const loc = useLocation();
-  const { mode, setMode, availableModes, isGod, myBusinesses, logout, user, moduleAccess } = useAuth();
+  const {
+    mode,
+    setMode,
+    availableModes,
+    isGod,
+    myBusinesses,
+    logout,
+    user,
+    moduleAccess,
+  } = useAuth();
 
   const [salesLinked, setSalesLinked] = useState(false);
+  const [createBusinessOpen, setCreateBusinessOpen] = useState(false);
 
   useEffect(() => {
     const id = "syncworks-modebar-clean-css";
@@ -291,13 +694,24 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
     return false;
   }, [pathname, mode]);
 
+  const businesses = useMemo(() => normalizeBusinesses(myBusinesses), [myBusinesses]);
+  const hasBusinesses = businesses.length > 0;
+
   const showBiz = useMemo(() => {
-    const hasBiz = Array.isArray(myBusinesses) && myBusinesses.length > 0;
-    return hasBiz && ["SBO", "EMPLOYEE", "PM", "PLATFORM"].includes(mode);
-  }, [myBusinesses, mode]);
+    return hasBusinesses && ["SBO", "EMPLOYEE", "PM", "PLATFORM"].includes(mode);
+  }, [hasBusinesses, mode]);
+
+  const showBusinessCreate = useMemo(() => {
+    return ["CUSTOMER", "SBO", "EMPLOYEE", "PM", "PLATFORM"].includes(mode) || isGod;
+  }, [mode, isGod]);
 
   const showPortals = useMemo(() => {
-    return mode === "PM" || isGod || pathname.startsWith("/tenant") || pathname.startsWith("/investor");
+    return (
+      mode === "PM" ||
+      isGod ||
+      pathname.startsWith("/tenant") ||
+      pathname.startsWith("/investor")
+    );
   }, [mode, isGod, pathname]);
 
   const investorActive = pathname.startsWith("/investor");
@@ -308,9 +722,11 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
 
     async function checkSales() {
       setSalesLinked(false);
+
       try {
         const res = await api.get("/sales/pipelines/me/");
         const arr = Array.isArray(res.data) ? res.data : res.data?.results || [];
+
         if (!cancelled) setSalesLinked(arr.length > 0);
       } catch {
         if (!cancelled) setSalesLinked(false);
@@ -318,6 +734,7 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
     }
 
     checkSales();
+
     return () => {
       cancelled = true;
     };
@@ -348,6 +765,7 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
       const from = `${loc.pathname || "/"}${loc.search || ""}`;
       return nav(`/upgrade?return=${encodeURIComponent(from)}`);
     }
+
     setMode(nextMode);
     nav(to);
   }
@@ -360,12 +778,12 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
     }
   }
 
-  const businesses = useMemo(() => normalizeBusinesses(myBusinesses), [myBusinesses]);
-
   const activeBiz = useMemo(() => {
     const activeIdRaw = getActiveBusinessId?.() || "";
     const activeId = activeIdRaw ? Number(activeIdRaw) : null;
+
     if (!activeId) return null;
+
     return (businesses || []).find((b) => Number(b?.id) === Number(activeId)) || null;
   }, [businesses]);
 
@@ -391,6 +809,7 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
 
   const customerName = useMemo(() => {
     const u = user || {};
+
     return toNiceName({
       first: u.first_name || u.firstName,
       last: u.last_name || u.lastName,
@@ -400,23 +819,29 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
 
   const businessName = safeStr(activeBiz?.name);
   const businessOwner = safeStr(activeBiz?.owner_name || activeBiz?.ownerName);
-  const businessPhone = safeStr(activeBiz?.phone || activeBiz?.phone_number || activeBiz?.phoneNumber);
+  const businessPhone = safeStr(
+    activeBiz?.phone || activeBiz?.phone_number || activeBiz?.phoneNumber
+  );
 
   const identityLeft = useMemo(() => {
     if (mode === "CUSTOMER") return customerName || "Customer";
-    if (["SBO", "EMPLOYEE", "PM", "PLATFORM"].includes(mode)) return businessName || "Select a Business";
+    if (["SBO", "EMPLOYEE", "PM", "PLATFORM"].includes(mode)) {
+      return businessName || "No Business Selected";
+    }
     if (mode === "SALES") return "Sales OS";
     return "SyncWorks";
   }, [mode, customerName, businessName]);
 
   const identitySub = useMemo(() => {
     if (["SBO", "EMPLOYEE", "PM", "PLATFORM"].includes(mode)) {
+      if (!hasBusinesses) return "Create a business to unlock business tools.";
       return [businessOwner ? `Owner: ${businessOwner}` : "", businessPhone ? `Phone: ${businessPhone}` : ""]
         .filter(Boolean)
         .join(" • ");
     }
+
     return "";
-  }, [mode, businessOwner, businessPhone]);
+  }, [mode, businessOwner, businessPhone, hasBusinesses]);
 
   function goSupport() {
     nav("/support");
@@ -434,195 +859,327 @@ export default function ModeBar({ title = "SyncWorks", subtitle = "", rightActio
     nav("/tenant");
   }
 
+  function onBusinessCreated() {
+    setCreateBusinessOpen(false);
+    setMode?.("SBO");
+    nav("/sbo/settings?return=%2Fsbo&setup=1&created=1");
+    window.location.reload();
+  }
+
   return (
-    <div className="sticky top-0 z-50 border-b border-slate-800 bg-slate-950/80 backdrop-blur relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0">
-        <div
-          className="absolute -inset-10 blur-3xl"
-          style={{
-            animation: "swWaveDrift 10s ease-in-out infinite",
-            background:
-              "radial-gradient(900px 180px at 20% 50%, rgba(34,211,238,0.14), rgba(0,0,0,0) 60%)," +
-              "radial-gradient(900px 180px at 70% 55%, rgba(99,102,241,0.12), rgba(0,0,0,0) 60%)," +
-              "radial-gradient(900px 180px at 90% 45%, rgba(217,70,239,0.12), rgba(0,0,0,0) 60%)",
-          }}
-        />
-
-        <div
-          className="absolute inset-0 flex items-center justify-center"
-          style={{ opacity: 0.09 }}
-        >
-          <img
-            src="/brands/syncworks new logo.jpg"
-            alt="SyncWorks background"
-            className="w-[820px] max-w-none object-contain blur-[2px] select-none"
-            draggable={false}
+    <>
+      <div className="sticky top-0 z-50 border-b border-slate-800 bg-slate-950/80 backdrop-blur relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0">
+          <div
+            className="absolute -inset-10 blur-3xl"
+            style={{
+              animation: "swWaveDrift 10s ease-in-out infinite",
+              background:
+                "radial-gradient(900px 180px at 20% 50%, rgba(34,211,238,0.14), rgba(0,0,0,0) 60%)," +
+                "radial-gradient(900px 180px at 70% 55%, rgba(99,102,241,0.12), rgba(0,0,0,0) 60%)," +
+                "radial-gradient(900px 180px at 90% 45%, rgba(217,70,239,0.12), rgba(0,0,0,0) 60%)",
+            }}
           />
-        </div>
 
-        <div
-          className="absolute -inset-y-10 -inset-x-40 blur-xl"
-          style={{
-            animation: "swShineSweep 12s ease-in-out infinite",
-            background: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.09) 45%, rgba(255,255,255,0) 100%)",
-          }}
-        />
-
-        <div className="absolute inset-0 bg-slate-950/72" />
-      </div>
-
-      <div className="relative max-w-7xl mx-auto px-4 py-3">
-        <div className="flex items-start lg:items-center gap-3">
-          <div className="min-w-0 flex items-center gap-3">
+          <div className="absolute inset-0 flex items-center justify-center" style={{ opacity: 0.09 }}>
             <img
               src="/brands/syncworks new logo.jpg"
-              alt="SyncWorks"
-              className="h-14 w-14 md:h-16 md:w-16 rounded-2xl object-cover border border-cyan-500/20 bg-slate-950/70 shrink-0 shadow-[0_0_40px_rgba(99,102,241,0.18)]"
+              alt="SyncWorks background"
+              className="w-[820px] max-w-none object-contain blur-[2px] select-none"
+              draggable={false}
             />
-
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="text-base font-extrabold tracking-wide text-slate-100">SyncWorks</div>
-                <Pill className="border-slate-800 text-slate-300 bg-slate-900/40">v7.1</Pill>
-                <ModuleBadge tone={roleBadgeTone}>{roleLabel}</ModuleBadge>
-              </div>
-
-              <div className="mt-1 text-sm text-slate-200 truncate">{identityLeft}</div>
-              {identitySub ? <div className="mt-0.5 text-[11px] text-slate-400 truncate">{identitySub}</div> : null}
-              {title && title !== "SyncWorks" ? <div className="mt-1 text-[11px] text-cyan-200 truncate">{title}</div> : null}
-              {subtitle ? <div className="mt-0.5 text-[11px] text-slate-500 truncate">{subtitle}</div> : null}
-            </div>
           </div>
 
-          <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
-            {showBiz ? <BusinessPicker className="hidden md:block" /> : null}
+          <div
+            className="absolute -inset-y-10 -inset-x-40 blur-xl"
+            style={{
+              animation: "swShineSweep 12s ease-in-out infinite",
+              background:
+                "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.09) 45%, rgba(255,255,255,0) 100%)",
+            }}
+          />
 
-            <div className="hidden xl:flex items-end gap-4">
-              <div>
-                <SectionLabel>Customer / SBO</SectionLabel>
-                <div className="flex items-center gap-2">
-                  <ModeButton label="Customer" accent="cyan" active={mode === "CUSTOMER"} locked={!canCustomer} onClick={() => goMode("CUSTOMER", "/customer", !canCustomer)} />
-                  <ModeButton label="SBO" accent="indigo" active={mode === "SBO"} locked={!canSbo} onClick={() => goMode("SBO", "/sbo", !canSbo)} />
+          <div className="absolute inset-0 bg-slate-950/72" />
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-4 py-3">
+          <div className="flex items-start lg:items-center gap-3">
+            <div className="min-w-0 flex items-center gap-3">
+              <img
+                src="/brands/syncworks new logo.jpg"
+                alt="SyncWorks"
+                className="h-14 w-14 md:h-16 md:w-16 rounded-2xl object-cover border border-cyan-500/20 bg-slate-950/70 shrink-0 shadow-[0_0_40px_rgba(99,102,241,0.18)]"
+              />
+
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="text-base font-extrabold tracking-wide text-slate-100">
+                    SyncWorks
+                  </div>
+
+                  <Pill className="border-slate-800 text-slate-300 bg-slate-900/40">
+                    v7.1
+                  </Pill>
+
+                  <ModuleBadge tone={roleBadgeTone}>
+                    {roleLabel}
+                  </ModuleBadge>
                 </div>
-              </div>
 
-              <div>
-                <SectionLabel>Work Roles</SectionLabel>
-                <div className="flex items-center gap-2">
-                  <ModeButton label="Employee" accent="cyan" active={mode === "EMPLOYEE"} locked={!canEmployee} onClick={() => goMode("EMPLOYEE", "/employee", !canEmployee)} />
-                  <ModeButton label="Property Mgr" accent="fuchsia" active={mode === "PM"} locked={!canPm} onClick={() => goMode("PM", "/pm", !canPm)} />
-                  {!hideSalesButton ? (
-                    <ModeButton
-                      label="Sales OS"
-                      accent="emerald"
-                      active={mode === "SALES"}
-                      locked={!canSales}
-                      title={canSales ? "Open Sales OS" : "Upgrade to unlock Sales OS"}
-                      onClick={() => goMode("SALES", "/sales/dashboard", !canSales)}
-                    />
-                  ) : null}
+                <div className="mt-1 text-sm text-slate-200 truncate">
+                  {identityLeft}
                 </div>
-              </div>
 
-              {showPortals ? (
+                {identitySub ? (
+                  <div className="mt-0.5 text-[11px] text-slate-400 truncate">
+                    {identitySub}
+                  </div>
+                ) : null}
+
+                {title && title !== "SyncWorks" ? (
+                  <div className="mt-1 text-[11px] text-cyan-200 truncate">
+                    {title}
+                  </div>
+                ) : null}
+
+                {subtitle ? (
+                  <div className="mt-0.5 text-[11px] text-slate-500 truncate">
+                    {subtitle}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
+              {showBiz ? <BusinessPicker className="hidden md:block" /> : null}
+
+              {showBusinessCreate ? (
+                <button
+                  type="button"
+                  onClick={() => setCreateBusinessOpen(true)}
+                  className="hidden md:inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-cyan-500/35 bg-cyan-500/12 px-4 text-xs font-black text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.18)] transition hover:bg-cyan-500/18"
+                  title="Create a business"
+                >
+                  <PlusIcon className="h-4 w-4" />
+                  Business
+                </button>
+              ) : null}
+
+              <div className="hidden xl:flex items-end gap-4">
                 <div>
-                  <SectionLabel>Portals</SectionLabel>
+                  <SectionLabel>Customer / SBO</SectionLabel>
                   <div className="flex items-center gap-2">
                     <ModeButton
-                      label="Investor"
-                      accent="slate"
-                      active={investorActive}
-                      locked={false}
-                      title="Open Investor Portal"
-                      onClick={openInvestorPortal}
+                      label="Customer"
+                      accent="cyan"
+                      active={mode === "CUSTOMER"}
+                      locked={!canCustomer}
+                      onClick={() => goMode("CUSTOMER", "/customer", !canCustomer)}
                     />
                     <ModeButton
-                      label="Tenant"
-                      accent="slate"
-                      active={tenantActive}
-                      locked={false}
-                      title="Open Tenant Portal"
-                      onClick={openTenantPortal}
+                      label="SBO"
+                      accent="indigo"
+                      active={mode === "SBO"}
+                      locked={!canSbo}
+                      onClick={() => goMode("SBO", "/sbo", !canSbo)}
                     />
                   </div>
                 </div>
-              ) : null}
 
-              {canAdmin ? (
                 <div>
-                  <SectionLabel>Admin</SectionLabel>
+                  <SectionLabel>Work Roles</SectionLabel>
                   <div className="flex items-center gap-2">
-                    <ModeButton label="Admin" accent="cyan" active={mode === "PLATFORM"} locked={false} onClick={() => goMode("PLATFORM", "/platform", false)} />
+                    <ModeButton
+                      label="Employee"
+                      accent="cyan"
+                      active={mode === "EMPLOYEE"}
+                      locked={!canEmployee}
+                      onClick={() => goMode("EMPLOYEE", "/employee", !canEmployee)}
+                    />
+                    <ModeButton
+                      label="Property Mgr"
+                      accent="fuchsia"
+                      active={mode === "PM"}
+                      locked={!canPm}
+                      onClick={() => goMode("PM", "/pm", !canPm)}
+                    />
+                    {!hideSalesButton ? (
+                      <ModeButton
+                        label="Sales OS"
+                        accent="emerald"
+                        active={mode === "SALES"}
+                        locked={!canSales}
+                        title={canSales ? "Open Sales OS" : "Upgrade to unlock Sales OS"}
+                        onClick={() => goMode("SALES", "/sales/dashboard", !canSales)}
+                      />
+                    ) : null}
                   </div>
                 </div>
-              ) : null}
+
+                {showPortals ? (
+                  <div>
+                    <SectionLabel>Portals</SectionLabel>
+                    <div className="flex items-center gap-2">
+                      <ModeButton
+                        label="Investor"
+                        accent="slate"
+                        active={investorActive}
+                        locked={false}
+                        title="Open Investor Portal"
+                        onClick={openInvestorPortal}
+                      />
+                      <ModeButton
+                        label="Tenant"
+                        accent="slate"
+                        active={tenantActive}
+                        locked={false}
+                        title="Open Tenant Portal"
+                        onClick={openTenantPortal}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+
+                {canAdmin ? (
+                  <div>
+                    <SectionLabel>Admin</SectionLabel>
+                    <div className="flex items-center gap-2">
+                      <ModeButton
+                        label="Admin"
+                        accent="cyan"
+                        active={mode === "PLATFORM"}
+                        locked={false}
+                        onClick={() => goMode("PLATFORM", "/platform", false)}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="xl:hidden flex items-center gap-2 overflow-x-auto max-w-[calc(100vw-120px)] pb-1">
+                <ModeButton
+                  label="Customer"
+                  accent="cyan"
+                  active={mode === "CUSTOMER"}
+                  locked={!canCustomer}
+                  onClick={() => goMode("CUSTOMER", "/customer", !canCustomer)}
+                />
+                <ModeButton
+                  label="SBO"
+                  accent="indigo"
+                  active={mode === "SBO"}
+                  locked={!canSbo}
+                  onClick={() => goMode("SBO", "/sbo", !canSbo)}
+                />
+                <ModeButton
+                  label="PM"
+                  accent="fuchsia"
+                  active={mode === "PM"}
+                  locked={!canPm}
+                  onClick={() => goMode("PM", "/pm", !canPm)}
+                />
+                {!hideSalesButton ? (
+                  <ModeButton
+                    label="Sales"
+                    accent="emerald"
+                    active={mode === "SALES"}
+                    locked={!canSales}
+                    onClick={() => goMode("SALES", "/sales/dashboard", !canSales)}
+                  />
+                ) : null}
+                {canAdmin ? (
+                  <ModeButton
+                    label="Admin"
+                    accent="cyan"
+                    active={mode === "PLATFORM"}
+                    locked={false}
+                    onClick={() => goMode("PLATFORM", "/platform", false)}
+                  />
+                ) : null}
+              </div>
+
+              <RightActions rightActions={rightActions} />
+
+              <IconButton title="Newsfeed (ads + updates)" onClick={goFeed} tone="fuchsia">
+                <FeedIcon className="h-5 w-5" />
+              </IconButton>
+
+              <IconButton title="Support (Contact SyncWorks)" onClick={goSupport} tone="cyan">
+                <SupportIcon className="h-5 w-5" />
+              </IconButton>
+
+              <NotificationsBell />
+
+              <button
+                type="button"
+                onClick={onLogout}
+                title="Logout"
+                className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
+              >
+                <LogoutIcon className="h-5 w-5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={goProfile}
+                title="Profile"
+                className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
+              >
+                <ProfileIcon className="h-5 w-5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={goSettings}
+                title="Settings"
+                className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
+              >
+                <GearIcon className="h-5 w-5" />
+              </button>
             </div>
-
-            <div className="xl:hidden flex items-center gap-2">
-              <ModeButton label="Customer" accent="cyan" active={mode === "CUSTOMER"} locked={!canCustomer} onClick={() => goMode("CUSTOMER", "/customer", !canCustomer)} />
-              <ModeButton label="SBO" accent="indigo" active={mode === "SBO"} locked={!canSbo} onClick={() => goMode("SBO", "/sbo", !canSbo)} />
-              <ModeButton label="Employee" accent="cyan" active={mode === "EMPLOYEE"} locked={!canEmployee} onClick={() => goMode("EMPLOYEE", "/employee", !canEmployee)} />
-              <ModeButton label="PM" accent="fuchsia" active={mode === "PM"} locked={!canPm} onClick={() => goMode("PM", "/pm", !canPm)} />
-              {!hideSalesButton ? (
-                <ModeButton label="Sales" accent="emerald" active={mode === "SALES"} locked={!canSales} onClick={() => goMode("SALES", "/sales/dashboard", !canSales)} />
-              ) : null}
-              {canAdmin ? <ModeButton label="Admin" accent="cyan" active={mode === "PLATFORM"} locked={false} onClick={() => goMode("PLATFORM", "/platform", false)} /> : null}
-            </div>
-
-            <RightActions rightActions={rightActions} />
-
-            <IconButton title="Newsfeed (ads + updates)" onClick={goFeed} tone="fuchsia">
-              <FeedIcon className="h-5 w-5" />
-            </IconButton>
-
-            <IconButton title="Support (Contact SyncWorks)" onClick={goSupport} tone="cyan">
-              <SupportIcon className="h-5 w-5" />
-            </IconButton>
-
-            <NotificationsBell />
-
-            <button
-              type="button"
-              onClick={onLogout}
-              title="Logout"
-              className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
-            >
-              <LogoutIcon className="h-5 w-5" />
-            </button>
-
-            <button
-              type="button"
-              onClick={goProfile}
-              title="Profile"
-              className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
-            >
-              <ProfileIcon className="h-5 w-5" />
-            </button>
-
-            <button
-              type="button"
-              onClick={goSettings}
-              title="Settings"
-              className="h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
-            >
-              <GearIcon className="h-5 w-5" />
-            </button>
           </div>
         </div>
+
+        <div className="relative md:hidden px-4 pb-3 space-y-2">
+          {showBiz ? <BusinessPicker /> : null}
+
+          {showBusinessCreate ? (
+            <button
+              type="button"
+              onClick={() => setCreateBusinessOpen(true)}
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-500/35 bg-cyan-500/12 px-4 text-sm font-black text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.18)] transition hover:bg-cyan-500/18"
+            >
+              <PlusIcon className="h-4 w-4" />
+              Create Business
+            </button>
+          ) : null}
+        </div>
+
+        {showPortals ? (
+          <div className="relative xl:hidden px-4 pb-3 flex gap-2">
+            <ModeButton
+              label="Investor"
+              accent="slate"
+              active={investorActive}
+              locked={false}
+              onClick={openInvestorPortal}
+            />
+            <ModeButton
+              label="Tenant"
+              accent="slate"
+              active={tenantActive}
+              locked={false}
+              onClick={openTenantPortal}
+            />
+          </div>
+        ) : null}
       </div>
 
-      {showBiz ? (
-        <div className="relative md:hidden px-4 pb-3">
-          <BusinessPicker />
-        </div>
-      ) : null}
-
-      {showPortals ? (
-        <div className="relative xl:hidden px-4 pb-3 flex gap-2">
-          <ModeButton label="Investor" accent="slate" active={investorActive} locked={false} onClick={openInvestorPortal} />
-          <ModeButton label="Tenant" accent="slate" active={tenantActive} locked={false} onClick={openTenantPortal} />
-        </div>
-      ) : null}
-    </div>
+      <CreateBusinessDrawer
+        open={createBusinessOpen}
+        onClose={() => setCreateBusinessOpen(false)}
+        onCreated={onBusinessCreated}
+      />
+    </>
   );
 }
