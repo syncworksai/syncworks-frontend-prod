@@ -5,8 +5,8 @@ import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 
 import AddToCalendarButton from "../components/AddToCalendarButton";
+import CalendarAgenda from "../components/CalendarAgenda";
 import CustomerTickets from "../components/CustomerTickets";
-import CustomerWeeklyCalendar from "../components/CustomerWeeklyCalendar";
 import InboxPanel from "../components/Inbox/InboxPanel";
 import NewsReel from "../components/NewsReel";
 import PriorityBadge, { isPriorityOne } from "../components/tickets/PriorityBadge";
@@ -1208,12 +1208,8 @@ function CompactScheduleCard({ tickets, onOpenTicket, onOpenCalendar }) {
   );
 }
 
-function FullCalendarPanel({ tickets, onOpenTicket }) {
-  return (
-    <GlassCard title="Schedule" subtitle="Weekly view of upcoming request activity." tone="cyan">
-      <CustomerWeeklyCalendar tickets={tickets} onOpenTicket={onOpenTicket} showHeader />
-    </GlassCard>
-  );
+function FullCalendarPanel() {
+  return <CalendarAgenda modeLabel="Life Schedule" showComposer />;
 }
 
 function DealsCard({ items, onOpenFeedItem, onViewFeed }) {
@@ -1706,12 +1702,7 @@ export default function CustomerDashboard() {
           </GlassCard>
         ) : null}
 
-        {tab === "calendar" ? (
-          <FullCalendarPanel
-            tickets={visibleTickets}
-            onOpenTicket={(id) => navigate(`/tickets/${id}`)}
-          />
-        ) : null}
+        {tab === "calendar" ? <FullCalendarPanel /> : null}
 
         {tab === "todo" ? (
           <TodoList
