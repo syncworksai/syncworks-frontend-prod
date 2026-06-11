@@ -49,6 +49,47 @@ function writeJson(key, value) {
   }
 }
 
+function todayYmd() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function prettyDate(value) {
+  if (!value) return "Not set";
+
+  const d = new Date(`${value}T00:00:00`);
+  if (!Number.isFinite(d.getTime())) return value;
+
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function daysUntil(value) {
+  if (!value) return null;
+
+  const due = new Date(`${value}T00:00:00`);
+  if (!Number.isFinite(due.getTime())) return null;
+
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  const diff = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  return diff;
+}
+
+function coverageTone(percent) {
+  if (percent >= 100) return "emerald";
+  if (percent >= 75) return "cyan";
+  if (percent >= 40) return "amber";
+  return "rose";
+}
+
 function Card({ title, subtitle, right, children, tone = "slate", className = "" }) {
   const tones = {
     cyan: "border-cyan-400/20 bg-cyan-500/10",
@@ -56,6 +97,7 @@ function Card({ title, subtitle, right, children, tone = "slate", className = ""
     emerald: "border-emerald-400/20 bg-emerald-500/10",
     fuchsia: "border-fuchsia-400/20 bg-fuchsia-500/10",
     indigo: "border-indigo-400/20 bg-indigo-500/10",
+    rose: "border-rose-400/20 bg-rose-500/10",
     slate: "border-white/10 bg-white/[0.03]",
   };
 
@@ -90,6 +132,7 @@ function Pill({ children, tone = "slate" }) {
     emerald: "border-emerald-500/25 bg-emerald-500/10 text-emerald-200",
     fuchsia: "border-fuchsia-500/25 bg-fuchsia-500/10 text-fuchsia-200",
     indigo: "border-indigo-500/25 bg-indigo-500/10 text-indigo-200",
+    rose: "border-rose-500/25 bg-rose-500/10 text-rose-200",
     slate: "border-white/10 bg-white/[0.04] text-slate-300",
   };
 
@@ -132,6 +175,44 @@ function Field({ label, value, onChange, type = "text", placeholder = "", prefix
   );
 }
 
+function SelectField({ label, value, onChange, options }) {
+  return (
+    <label className="block">
+      <div className="mb-1 text-xs font-semibold text-slate-400">{label}</div>
+
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40"
+      >
+        {options.map((option) => (
+          <option key={option}>{option}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function ProgressBar({ percent, tone = "cyan" }) {
+  const fill =
+    tone === "emerald"
+      ? "bg-emerald-400"
+      : tone === "amber"
+      ? "bg-amber-400"
+      : tone === "rose"
+      ? "bg-rose-400"
+      : "bg-cyan-400";
+
+  return (
+    <div className="h-2.5 overflow-hidden rounded-full bg-slate-950/70">
+      <div
+        className={cx("h-full rounded-full transition-all", fill)}
+        style={{ width: `${Math.max(0, Math.min(100, percent || 0))}%` }}
+      />
+    </div>
+  );
+}
+
 export default function CustomerFinance() {
   const nav = useNavigate();
 
@@ -146,6 +227,7 @@ export default function CustomerFinance() {
       mortgage_due_date: saved?.mortgage_due_date ?? "",
       emergency_buffer: saved?.emergency_buffer ?? "",
       top_priority: saved?.top_priority ?? "",
+      spending_status: saved?.spending_status ?? "Normal",
     };
   });
 
@@ -163,8 +245,31 @@ export default function CustomerFinance() {
 
   const monthlyBills = safeNumber(form.monthly_bills);
   const coveredAmount = safeNumber(form.covered_amount);
+  const emergencyBuffer = safeNumber(form.emergency_buffer);
   const coveredPercent = monthlyBills > 0 ? Math.min(100, Math.round((coveredAmount / monthlyBills) * 100)) : 0;
   const remaining = Math.max(0, monthlyBills - coveredAmount);
+  const mainPaymentAmount = safeNumber(form.mortgage_amount);
+  const mainPaymentDays = daysUntil(form.mortgage_due_date);
+  const billTotal = bills.reduce((sum, bill) => sum + safeNumber(bill.amount), 0);
+  const readyBills = bills.filter((bill) => bill.status === "Ready" || bill.status === "Paid").length;
+  const paidBills = bills.filter((bill) => bill.status === "Paid").length;
+  const coverage = coverageTone(coveredPercent);
+
+  const readinessLabel =
+    coveredPercent >= 100
+      ? "Covered"
+      : coveredPercent >= 75
+      ? "Close"
+      : coveredPercent >= 40
+      ? "Watch"
+      : "Needs Attention";
+
+  const nextAction =
+    coveredPercent >= 100
+      ? "Your required monthly bills are covered. Keep tracking paid status and upcoming due dates."
+      : remaining > 0
+      ? `You still need ${money(remaining)} to fully cover this month. Prioritize required bills first.`
+      : "Add your monthly bills and covered amount to activate your money snapshot.";
 
   const snapshot = useMemo(() => {
     return {
@@ -172,13 +277,27 @@ export default function CustomerFinance() {
       covered_amount: coveredAmount,
       covered_percent: coveredPercent,
       mortgage_label: form.mortgage_label,
-      mortgage_amount: safeNumber(form.mortgage_amount),
+      mortgage_amount: mainPaymentAmount,
       mortgage_due_date: form.mortgage_due_date,
-      emergency_buffer: safeNumber(form.emergency_buffer),
+      emergency_buffer: emergencyBuffer,
       top_priority: form.top_priority,
+      spending_status: form.spending_status,
+      bill_count: bills.length,
+      ready_bill_count: readyBills,
+      paid_bill_count: paidBills,
       updated_at: new Date().toISOString(),
     };
-  }, [monthlyBills, coveredAmount, coveredPercent, form]);
+  }, [
+    monthlyBills,
+    coveredAmount,
+    coveredPercent,
+    form,
+    mainPaymentAmount,
+    emergencyBuffer,
+    bills.length,
+    readyBills,
+    paidBills,
+  ]);
 
   useEffect(() => {
     writeJson(SNAPSHOT_KEY, snapshot);
@@ -214,8 +333,6 @@ export default function CustomerFinance() {
     setBills((prev) => prev.filter((bill) => bill.id !== id));
   }
 
-  const billTotal = bills.reduce((sum, bill) => sum + safeNumber(bill.amount), 0);
-
   return (
     <div className="min-h-dvh overflow-x-hidden bg-[#020617] text-slate-100">
       <div className="pointer-events-none fixed inset-0">
@@ -225,7 +342,7 @@ export default function CustomerFinance() {
 
       <ModeBar
         title="Money"
-        subtitle="Bills • payment readiness • priorities • personal finance ops"
+        subtitle="Bills • coverage • payment readiness • personal finance systems"
         rightActions={
           <button
             type="button"
@@ -241,7 +358,7 @@ export default function CustomerFinance() {
         <PaidGate
           entitlementKey="finance"
           title="Money Hub"
-          subtitle="Track recurring bills, payment readiness, priorities, and personal finance systems."
+          subtitle="Track bills, payment readiness, required expenses, and monthly priorities."
           checkoutUrl={STRIPE_FINANCE_CHECKOUT_URL}
           ctaTo="/upgrade"
           ctaLabel="View plans / Upgrade"
@@ -260,18 +377,15 @@ export default function CustomerFinance() {
                     </div>
 
                     <h1 className="mt-2 text-2xl font-black tracking-tight text-white md:text-4xl">
-                      Your monthly money snapshot
+                      Monthly money command center
                     </h1>
 
                     <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                      Start manual first: mortgage, rent, utilities, subscriptions, and payment readiness.
-                      Later we can connect bank/payment links as a paid automation add-on.
+                      Keep required bills, due dates, coverage, and priorities organized before the month gets noisy.
                     </p>
                   </div>
 
-                  <Pill tone={coveredPercent >= 80 ? "emerald" : coveredPercent > 0 ? "amber" : "slate"}>
-                    {coveredPercent ? `${coveredPercent}% Covered` : "Setup"}
-                  </Pill>
+                  <Pill tone={coverage}>{readinessLabel}</Pill>
                 </div>
 
                 <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -280,13 +394,18 @@ export default function CustomerFinance() {
                       Monthly Bills
                     </div>
                     <div className="mt-2 text-3xl font-black text-white">{money(monthlyBills)}</div>
+                    <div className="mt-1 text-xs text-slate-400">{bills.length} tracked bills</div>
                   </Card>
 
                   <Card tone="cyan" className="shadow-none">
                     <div className="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-200">
-                      Covered / Ready
+                      Covered
                     </div>
                     <div className="mt-2 text-3xl font-black text-white">{money(coveredAmount)}</div>
+                    <div className="mt-3">
+                      <ProgressBar percent={coveredPercent} tone={coverage} />
+                    </div>
+                    <div className="mt-1 text-xs text-slate-400">{coveredPercent}% ready</div>
                   </Card>
 
                   <Card tone={remaining > 0 ? "fuchsia" : "emerald"} className="shadow-none">
@@ -294,6 +413,9 @@ export default function CustomerFinance() {
                       Remaining
                     </div>
                     <div className="mt-2 text-3xl font-black text-white">{money(remaining)}</div>
+                    <div className="mt-1 text-xs text-slate-400">
+                      Buffer: {money(emergencyBuffer)}
+                    </div>
                   </Card>
                 </div>
               </div>
@@ -302,10 +424,10 @@ export default function CustomerFinance() {
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
               <div className="space-y-5">
                 <Card
-                  title="Bill Coverage Setup"
-                  subtitle="This updates the Money card on the customer dashboard."
+                  title="Monthly Snapshot"
+                  subtitle="Updates your customer dashboard and Life Schedule automatically."
                   tone="cyan"
-                  right={<Pill tone="cyan">Dashboard Sync</Pill>}
+                  right={<Pill tone="cyan">Synced</Pill>}
                 >
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Field
@@ -318,7 +440,7 @@ export default function CustomerFinance() {
                     />
 
                     <Field
-                      label="Amount already covered / ready"
+                      label="Amount covered / ready"
                       value={form.covered_amount}
                       onChange={(value) => setForm((p) => ({ ...p, covered_amount: value }))}
                       type="number"
@@ -357,17 +479,24 @@ export default function CustomerFinance() {
                       prefix="$"
                       placeholder="1000"
                     />
+
+                    <SelectField
+                      label="Spending status"
+                      value={form.spending_status}
+                      onChange={(value) => setForm((p) => ({ ...p, spending_status: value }))}
+                      options={["Normal", "Tight", "Hold Spending", "Extra Available"]}
+                    />
                   </div>
 
                   <label className="mt-3 block">
                     <div className="mb-1 text-xs font-semibold text-slate-400">
-                      Today’s top money priority
+                      Top money priority
                     </div>
 
                     <textarea
                       value={form.top_priority}
                       onChange={(e) => setForm((p) => ({ ...p, top_priority: e.target.value }))}
-                      placeholder="Example: cover mortgage first, then reduce credit card balance, then cancel unused subscriptions."
+                      placeholder="Example: cover mortgage first, then utilities, then reduce credit card balance."
                       rows={3}
                       className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-400/40"
                     />
@@ -375,8 +504,8 @@ export default function CustomerFinance() {
                 </Card>
 
                 <Card
-                  title="Recurring Bill List"
-                  subtitle="Manual tracker for mortgage, rent, utilities, auto, insurance, subscriptions, and more."
+                  title="Bill List"
+                  subtitle="Track recurring bills, due days, readiness, and paid status."
                   tone="amber"
                   right={
                     <button
@@ -444,47 +573,92 @@ export default function CustomerFinance() {
                     ))}
                   </div>
 
-                  <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                    <div className="text-xs text-slate-400">Manual bill list total</div>
-                    <div className="mt-1 text-2xl font-black text-white">{money(billTotal)}</div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <div className="text-xs text-slate-400">Bill list total</div>
+                      <div className="mt-1 text-xl font-black text-white">{money(billTotal)}</div>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <div className="text-xs text-slate-400">Ready / paid</div>
+                      <div className="mt-1 text-xl font-black text-white">
+                        {readyBills}/{bills.length}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <div className="text-xs text-slate-400">Paid</div>
+                      <div className="mt-1 text-xl font-black text-white">{paidBills}</div>
+                    </div>
                   </div>
                 </Card>
               </div>
 
               <div className="space-y-5">
-                <Card title="Top 3 Priorities" subtitle="Simple money operating system." tone="indigo">
+                <Card title="Required Payment" subtitle="Your most important recurring payment." tone="indigo">
+                  <div className="rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-4">
+                    <div className="text-[11px] font-black uppercase tracking-[0.16em] text-indigo-200">
+                      {form.mortgage_label || "Mortgage / Rent"}
+                    </div>
+
+                    <div className="mt-2 text-3xl font-black text-white">
+                      {money(mainPaymentAmount)}
+                    </div>
+
+                    <div className="mt-2 text-sm text-slate-300">
+                      Due {prettyDate(form.mortgage_due_date)}
+                    </div>
+
+                    {mainPaymentDays != null ? (
+                      <div
+                        className={cx(
+                          "mt-3 rounded-2xl border px-3 py-2 text-xs font-black",
+                          mainPaymentDays < 0
+                            ? "border-rose-500/25 bg-rose-500/10 text-rose-100"
+                            : mainPaymentDays <= 3
+                            ? "border-amber-500/25 bg-amber-500/10 text-amber-100"
+                            : "border-emerald-500/25 bg-emerald-500/10 text-emerald-100"
+                        )}
+                      >
+                        {mainPaymentDays < 0
+                          ? `${Math.abs(mainPaymentDays)} day(s) overdue`
+                          : mainPaymentDays === 0
+                          ? "Due today"
+                          : `${mainPaymentDays} day(s) away`}
+                      </div>
+                    ) : null}
+                  </div>
+                </Card>
+
+                <Card title="Money Priority" subtitle="Clear next action." tone={coverage}>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <div className="text-sm font-black text-white">{readinessLabel}</div>
+                    <div className="mt-2 text-sm leading-6 text-slate-400">{nextAction}</div>
+                  </div>
+
+                  {form.top_priority ? (
+                    <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <div className="text-xs text-slate-400">Your priority</div>
+                      <div className="mt-1 text-sm leading-6 text-slate-200">{form.top_priority}</div>
+                    </div>
+                  ) : null}
+                </Card>
+
+                <Card title="Systems" subtitle="Simple operating rules." tone="slate">
                   <div className="space-y-3">
                     {[
-                      "Protect required payments first.",
-                      "Know what is covered before spending extra.",
-                      "Build repeatable systems, then automate later.",
-                    ].map((item, idx) => (
+                      "Cover required payments before optional spending.",
+                      "Review upcoming due dates once per week.",
+                      "Mark bills Ready before they are paid.",
+                      "Use Watch for anything that could create pressure.",
+                    ].map((item, index) => (
                       <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-indigo-200">
-                          Priority {idx + 1}
+                        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">
+                          Rule {index + 1}
                         </div>
-                        <div className="mt-2 text-sm leading-6 text-slate-200">{item}</div>
+                        <div className="mt-1 text-sm leading-6 text-slate-300">{item}</div>
                       </div>
                     ))}
-                  </div>
-                </Card>
-
-                <Card title="Linked Payments Add-On" subtitle="Future paid automation layer." tone="fuchsia">
-                  <div className="rounded-2xl border border-fuchsia-400/20 bg-fuchsia-500/10 p-4">
-                    <div className="text-sm font-black text-fuchsia-100">
-                      Later: connect payment accounts.
-                    </div>
-                    <div className="mt-2 text-xs leading-5 text-slate-400">
-                      SyncWorks can eventually detect recurring bills, show bill coverage percentage,
-                      remind before due dates, and surface cashflow pressure.
-                    </div>
-                  </div>
-                </Card>
-
-                <Card title="Important Note" subtitle="Personal finance ops only." tone="slate">
-                  <div className="text-sm leading-6 text-slate-400">
-                    This module should stay focused on budgeting, bills, planning, organization,
-                    and payment readiness. No trading or investing advice.
                   </div>
                 </Card>
               </div>

@@ -132,6 +132,49 @@ function SelectField({ label, value, onChange, options }) {
   );
 }
 
+function ProgressBar({ percent, tone = "emerald" }) {
+  const fill =
+    tone === "cyan"
+      ? "bg-cyan-400"
+      : tone === "amber"
+      ? "bg-amber-400"
+      : tone === "rose"
+      ? "bg-rose-400"
+      : "bg-emerald-400";
+
+  return (
+    <div className="h-2.5 overflow-hidden rounded-full bg-slate-950/70">
+      <div
+        className={cx("h-full rounded-full transition-all", fill)}
+        style={{ width: `${Math.max(0, Math.min(100, percent || 0))}%` }}
+      />
+    </div>
+  );
+}
+
+function readinessTone(readiness) {
+  if (readiness === "Pain / Limit") return "rose";
+  if (readiness === "Need Recovery") return "amber";
+  if (readiness === "Moderate") return "cyan";
+  return "emerald";
+}
+
+function readinessSuggestion(readiness) {
+  if (readiness === "Pain / Limit") {
+    return "Keep it conservative. Focus on mobility, walking, stretching, or rest.";
+  }
+
+  if (readiness === "Need Recovery") {
+    return "Go lighter today. Choose recovery work, steps, and mobility over heavy training.";
+  }
+
+  if (readiness === "Moderate") {
+    return "Train, but keep intensity controlled. A shorter session or reduced volume fits today.";
+  }
+
+  return "You look ready for a normal session. Hit the planned workout and track completion.";
+}
+
 export default function CustomerHealth() {
   const nav = useNavigate();
 
@@ -145,6 +188,8 @@ export default function CustomerHealth() {
       calories: saved?.calories ?? "",
       calorie_goal: saved?.calorie_goal ?? 2200,
       protein_goal: saved?.protein_goal ?? "",
+      protein_today: saved?.protein_today ?? "",
+      weight: saved?.weight ?? "",
       readiness: saved?.readiness ?? "Ready",
       time_available: saved?.time_available ?? "30 minutes",
       equipment: saved?.equipment ?? "Bodyweight",
@@ -169,8 +214,16 @@ export default function CustomerHealth() {
   const stepGoal = safeNumber(form.step_goal) || 8000;
   const calories = safeNumber(form.calories);
   const calorieGoal = safeNumber(form.calorie_goal) || 2200;
+  const proteinGoal = safeNumber(form.protein_goal);
+  const proteinToday = safeNumber(form.protein_today);
+  const weight = safeNumber(form.weight);
+
   const stepPercent = stepGoal > 0 ? Math.min(100, Math.round((steps / stepGoal) * 100)) : 0;
   const caloriePercent = calorieGoal > 0 ? Math.min(100, Math.round((calories / calorieGoal) * 100)) : 0;
+  const proteinPercent = proteinGoal > 0 ? Math.min(100, Math.round((proteinToday / proteinGoal) * 100)) : 0;
+  const completedWorkouts = workouts.filter((w) => w.status === "Completed").length;
+  const plannedWorkouts = workouts.filter((w) => w.status === "Planned").length;
+  const tone = readinessTone(form.readiness);
 
   const snapshot = useMemo(() => {
     return {
@@ -179,15 +232,30 @@ export default function CustomerHealth() {
       step_goal: stepGoal,
       calories,
       calorie_goal: calorieGoal,
-      protein_goal: safeNumber(form.protein_goal),
+      protein_goal: proteinGoal,
+      protein_today: proteinToday,
+      weight,
       readiness: form.readiness,
       time_available: form.time_available,
       equipment: form.equipment,
       goal: form.goal,
       notes: form.notes,
+      completed_workouts: completedWorkouts,
+      planned_workouts: plannedWorkouts,
       updated_at: new Date().toISOString(),
     };
-  }, [form, steps, stepGoal, calories, calorieGoal]);
+  }, [
+    form,
+    steps,
+    stepGoal,
+    calories,
+    calorieGoal,
+    proteinGoal,
+    proteinToday,
+    weight,
+    completedWorkouts,
+    plannedWorkouts,
+  ]);
 
   useEffect(() => {
     writeJson(SNAPSHOT_KEY, snapshot);
@@ -231,13 +299,6 @@ export default function CustomerHealth() {
     }));
   }
 
-  const readinessTone =
-    form.readiness === "Need Recovery"
-      ? "amber"
-      : form.readiness === "Pain / Limit"
-      ? "rose"
-      : "emerald";
-
   return (
     <div className="min-h-dvh overflow-x-hidden bg-[#020617] text-slate-100">
       <div className="pointer-events-none fixed inset-0">
@@ -247,7 +308,7 @@ export default function CustomerHealth() {
 
       <ModeBar
         title="Health"
-        subtitle="Readiness • workouts • steps • nutrition basics"
+        subtitle="Readiness • workouts • steps • nutrition • routines"
         rightActions={
           <button
             type="button"
@@ -263,7 +324,7 @@ export default function CustomerHealth() {
         <PaidGate
           entitlementKey="health"
           title="Health & Fitness"
-          subtitle="Daily readiness, workout planning, steps, calories, and simple nutrition tools."
+          subtitle="Plan workouts, track readiness, steps, calories, protein, and simple daily execution."
           checkoutUrl={STRIPE_HEALTH_CHECKOUT_URL}
           ctaTo="/upgrade"
           ctaLabel="View plans / Upgrade"
@@ -282,16 +343,15 @@ export default function CustomerHealth() {
                     </div>
 
                     <h1 className="mt-2 text-2xl font-black tracking-tight text-white md:text-4xl">
-                      Your daily fitness snapshot
+                      Daily health command center
                     </h1>
 
                     <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                      Start with readiness, steps, calories, and a workout plan.
-                      Later we can build full programs, history, strength tracking, and goals.
+                      Track the basics that matter: readiness, movement, food targets, and today’s workout.
                     </p>
                   </div>
 
-                  <Pill tone={readinessTone}>{form.readiness}</Pill>
+                  <Pill tone={tone}>{form.readiness}</Pill>
                 </div>
 
                 <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -302,6 +362,9 @@ export default function CustomerHealth() {
                     <div className="mt-2 text-xl font-black text-white">
                       {form.workout || "Not set"}
                     </div>
+                    <div className="mt-1 text-xs text-slate-400">
+                      {form.time_available} • {form.equipment}
+                    </div>
                   </Card>
 
                   <Card tone="cyan" className="shadow-none">
@@ -310,6 +373,9 @@ export default function CustomerHealth() {
                     </div>
                     <div className="mt-2 text-3xl font-black text-white">
                       {steps.toLocaleString()}
+                    </div>
+                    <div className="mt-3">
+                      <ProgressBar percent={stepPercent} tone="cyan" />
                     </div>
                     <div className="mt-1 text-xs text-slate-400">{stepPercent}% of goal</div>
                   </Card>
@@ -321,7 +387,10 @@ export default function CustomerHealth() {
                     <div className="mt-2 text-3xl font-black text-white">
                       {calories.toLocaleString()}
                     </div>
-                    <div className="mt-1 text-xs text-slate-400">{caloriePercent}% of goal</div>
+                    <div className="mt-3">
+                      <ProgressBar percent={caloriePercent} tone="emerald" />
+                    </div>
+                    <div className="mt-1 text-xs text-slate-400">{caloriePercent}% of target</div>
                   </Card>
                 </div>
               </div>
@@ -331,9 +400,9 @@ export default function CustomerHealth() {
               <div className="space-y-5">
                 <Card
                   title="Daily Readiness"
-                  subtitle="This updates the Health card on the customer dashboard."
+                  subtitle="Updates your dashboard and Life Schedule automatically."
                   tone="emerald"
-                  right={<Pill tone="emerald">Dashboard Sync</Pill>}
+                  right={<Pill tone="emerald">Synced</Pill>}
                 >
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Field
@@ -375,11 +444,19 @@ export default function CustomerHealth() {
                     />
 
                     <Field
-                      label="Calorie goal"
+                      label="Calorie target"
                       value={form.calorie_goal}
                       onChange={(value) => setForm((p) => ({ ...p, calorie_goal: value }))}
                       type="number"
                       placeholder="2200"
+                    />
+
+                    <Field
+                      label="Protein today"
+                      value={form.protein_today}
+                      onChange={(value) => setForm((p) => ({ ...p, protein_today: value }))}
+                      type="number"
+                      placeholder="120"
                     />
 
                     <Field
@@ -388,6 +465,14 @@ export default function CustomerHealth() {
                       onChange={(value) => setForm((p) => ({ ...p, protein_goal: value }))}
                       type="number"
                       placeholder="180"
+                    />
+
+                    <Field
+                      label="Weight"
+                      value={form.weight}
+                      onChange={(value) => setForm((p) => ({ ...p, weight: value }))}
+                      type="number"
+                      placeholder="205"
                     />
 
                     <SelectField
@@ -429,7 +514,7 @@ export default function CustomerHealth() {
 
                 <Card
                   title="Workout Builder"
-                  subtitle="Create reusable workout blocks. Tap Use Today to push one to the dashboard."
+                  subtitle="Create reusable workouts and send one to Today."
                   tone="cyan"
                   right={
                     <button
@@ -506,51 +591,105 @@ export default function CustomerHealth() {
                       </div>
                     ))}
                   </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <div className="text-xs text-slate-400">Workouts</div>
+                      <div className="mt-1 text-xl font-black text-white">{workouts.length}</div>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <div className="text-xs text-slate-400">Planned</div>
+                      <div className="mt-1 text-xl font-black text-white">{plannedWorkouts}</div>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <div className="text-xs text-slate-400">Completed</div>
+                      <div className="mt-1 text-xl font-black text-white">{completedWorkouts}</div>
+                    </div>
+                  </div>
                 </Card>
               </div>
 
               <div className="space-y-5">
-                <Card title="Smart Suggestion" subtitle="Simple rule-based starting point." tone="indigo">
-                  <div className="rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-4">
-                    <div className="text-sm font-black text-indigo-100">
-                      {form.readiness === "Pain / Limit"
-                        ? "Recovery day recommended."
-                        : form.readiness === "Need Recovery"
-                        ? "Light movement and mobility recommended."
-                        : "Training day looks good."}
-                    </div>
-
-                    <div className="mt-2 text-xs leading-5 text-slate-400">
-                      Based on readiness, available time, and equipment. This can become AI-assisted later.
+                <Card title="Smart Readiness" subtitle="Simple daily execution guidance." tone={tone}>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <div className="text-sm font-black text-white">{form.readiness}</div>
+                    <div className="mt-2 text-sm leading-6 text-slate-400">
+                      {readinessSuggestion(form.readiness)}
                     </div>
                   </div>
+
+                  {form.notes ? (
+                    <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <div className="text-xs text-slate-400">Notes</div>
+                      <div className="mt-1 text-sm leading-6 text-slate-200">{form.notes}</div>
+                    </div>
+                  ) : null}
                 </Card>
 
-                <Card title="Nutrition Basics" subtitle="Keep it simple first." tone="emerald">
+                <Card title="Nutrition" subtitle="Calories and protein basics." tone="emerald">
                   <div className="space-y-3">
                     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                      <div className="text-xs text-slate-400">Protein Goal</div>
-                      <div className="mt-1 text-2xl font-black text-white">
-                        {safeNumber(form.protein_goal).toLocaleString()}g
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-xs text-slate-400">Protein</div>
+                          <div className="mt-1 text-2xl font-black text-white">
+                            {proteinToday.toLocaleString()}g
+                          </div>
+                        </div>
+
+                        <Pill tone="emerald">{proteinPercent}%</Pill>
+                      </div>
+
+                      <div className="mt-3">
+                        <ProgressBar percent={proteinPercent} tone="emerald" />
+                      </div>
+
+                      <div className="mt-1 text-xs text-slate-500">
+                        Goal {proteinGoal.toLocaleString()}g
                       </div>
                     </div>
 
                     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                      <div className="text-sm leading-6 text-slate-400">
-                        Later: meal templates, macro targets, weight tracking, and grocery-style planning.
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-xs text-slate-400">Calories</div>
+                          <div className="mt-1 text-2xl font-black text-white">
+                            {calories.toLocaleString()}
+                          </div>
+                        </div>
+
+                        <Pill tone="cyan">{caloriePercent}%</Pill>
+                      </div>
+
+                      <div className="mt-3">
+                        <ProgressBar percent={caloriePercent} tone="cyan" />
+                      </div>
+
+                      <div className="mt-1 text-xs text-slate-500">
+                        Target {calorieGoal.toLocaleString()}
                       </div>
                     </div>
                   </div>
                 </Card>
 
-                <Card title="Coming Next" subtitle="Backend expansion path." tone="fuchsia">
-                  <ul className="space-y-2 pl-5 text-sm leading-6 text-slate-400 list-disc">
-                    <li>Readiness history</li>
-                    <li>Workout completion log</li>
-                    <li>Weight and strength tracking</li>
-                    <li>Weekly program templates</li>
-                    <li>Calendar export for workouts</li>
-                  </ul>
+                <Card title="Training Rules" subtitle="Keep the system simple." tone="slate">
+                  <div className="space-y-3">
+                    {[
+                      "Match intensity to readiness.",
+                      "Log steps even on recovery days.",
+                      "Protein and calories beat perfection.",
+                      "Use one workout as today’s plan before training.",
+                    ].map((item, index) => (
+                      <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">
+                          Rule {index + 1}
+                        </div>
+                        <div className="mt-1 text-sm leading-6 text-slate-300">{item}</div>
+                      </div>
+                    ))}
+                  </div>
                 </Card>
               </div>
             </div>
