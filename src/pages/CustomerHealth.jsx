@@ -10,9 +10,16 @@ const HEALTH_LOGO_URL = "/brands/health.jpg";
 
 const SNAPSHOT_KEY = "sw_customer_health_snapshot_v1";
 const WORKOUTS_KEY = "sw_customer_health_workouts_v1";
+const PROFILE_KEY = "sw_customer_health_profile_v1";
+const HISTORY_KEY = "sw_customer_health_history_v1";
+const PROGRESS_KEY = "sw_customer_health_progress_v1";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
+}
+
+function uid(prefix = "id") {
+  return `${prefix}-${Math.random().toString(16).slice(2)}-${Date.now().toString(16)}`;
 }
 
 function safeNumber(value) {
@@ -38,6 +45,44 @@ function writeJson(key, value) {
   } catch {
     // no-op
   }
+}
+
+function todayYmd() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function prettyDate(value) {
+  if (!value) return "Not set";
+
+  const d = new Date(`${value}T00:00:00`);
+  if (!Number.isFinite(d.getTime())) return value;
+
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function isWithinDays(dateStr, days) {
+  if (!dateStr) return false;
+
+  const d = new Date(`${dateStr}T00:00:00`);
+  if (!Number.isFinite(d.getTime())) return false;
+
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  const diff = Math.round((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+  return diff >= 0 && diff <= days;
+}
+
+function clampPercent(value) {
+  return Math.max(0, Math.min(100, safeNumber(value)));
 }
 
 function Card({ title, subtitle, right, children, tone = "slate", className = "" }) {
@@ -140,13 +185,15 @@ function ProgressBar({ percent, tone = "emerald" }) {
       ? "bg-amber-400"
       : tone === "rose"
       ? "bg-rose-400"
+      : tone === "indigo"
+      ? "bg-indigo-400"
       : "bg-emerald-400";
 
   return (
     <div className="h-2.5 overflow-hidden rounded-full bg-slate-950/70">
       <div
         className={cx("h-full rounded-full transition-all", fill)}
-        style={{ width: `${Math.max(0, Math.min(100, percent || 0))}%` }}
+        style={{ width: `${clampPercent(percent)}%` }}
       />
     </div>
   );
@@ -161,28 +208,215 @@ function readinessTone(readiness) {
 
 function readinessSuggestion(readiness) {
   if (readiness === "Pain / Limit") {
-    return "Keep it conservative. Focus on mobility, walking, stretching, or rest.";
+    return "Keep it conservative. Use rest, mobility, walking, or light recovery work today.";
   }
 
   if (readiness === "Need Recovery") {
-    return "Go lighter today. Choose recovery work, steps, and mobility over heavy training.";
+    return "Go lighter today. Choose recovery, steps, mobility, and lower intensity work.";
   }
 
   if (readiness === "Moderate") {
-    return "Train, but keep intensity controlled. A shorter session or reduced volume fits today.";
+    return "Train with control. Shorten the workout or reduce volume if needed.";
   }
 
   return "You look ready for a normal session. Hit the planned workout and track completion.";
 }
 
+const PROGRAM_TEMPLATES = [
+  {
+    id: "starter_3_day",
+    name: "Starter 3-Day Strength",
+    label: "3-Day",
+    description: "Simple full-body strength structure for consistency.",
+    workouts: [
+      {
+        name: "Full Body A",
+        duration: "35",
+        focus: "Legs • Push • Pull • Core",
+        status: "Planned",
+        exercises: [
+          { name: "Squat Pattern", sets: "3", reps: "8-10", weight: "", rest: "90 sec", notes: "" },
+          { name: "Push-Up / Chest Press", sets: "3", reps: "8-12", weight: "", rest: "90 sec", notes: "" },
+          { name: "Row", sets: "3", reps: "10-12", weight: "", rest: "90 sec", notes: "" },
+          { name: "Plank", sets: "3", reps: "30 sec", weight: "", rest: "60 sec", notes: "" },
+        ],
+      },
+      {
+        name: "Full Body B",
+        duration: "35",
+        focus: "Hinge • Shoulders • Back • Core",
+        status: "Planned",
+        exercises: [
+          { name: "Hip Hinge / RDL", sets: "3", reps: "8-10", weight: "", rest: "90 sec", notes: "" },
+          { name: "Shoulder Press", sets: "3", reps: "8-12", weight: "", rest: "90 sec", notes: "" },
+          { name: "Pulldown / Assisted Pull", sets: "3", reps: "10-12", weight: "", rest: "90 sec", notes: "" },
+          { name: "Dead Bug", sets: "3", reps: "8 each", weight: "", rest: "45 sec", notes: "" },
+        ],
+      },
+      {
+        name: "Full Body C",
+        duration: "35",
+        focus: "Single Leg • Push • Pull • Carry",
+        status: "Planned",
+        exercises: [
+          { name: "Split Squat / Step-Up", sets: "3", reps: "8 each", weight: "", rest: "90 sec", notes: "" },
+          { name: "Incline Press", sets: "3", reps: "8-12", weight: "", rest: "90 sec", notes: "" },
+          { name: "Cable / Band Row", sets: "3", reps: "10-12", weight: "", rest: "90 sec", notes: "" },
+          { name: "Farmer Carry", sets: "3", reps: "30-45 sec", weight: "", rest: "60 sec", notes: "" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "bodyweight_recovery",
+    name: "Bodyweight + Recovery",
+    label: "Recovery",
+    description: "Low-equipment plan for movement, steps, and consistency.",
+    workouts: [
+      {
+        name: "Mobility Reset",
+        duration: "20",
+        focus: "Mobility • Breathing • Core",
+        status: "Planned",
+        exercises: [
+          { name: "Walk", sets: "1", reps: "10 min", weight: "", rest: "", notes: "" },
+          { name: "Hip Mobility", sets: "2", reps: "8 each", weight: "", rest: "30 sec", notes: "" },
+          { name: "Cat Cow", sets: "2", reps: "10", weight: "", rest: "30 sec", notes: "" },
+          { name: "Dead Bug", sets: "2", reps: "8 each", weight: "", rest: "30 sec", notes: "" },
+        ],
+      },
+      {
+        name: "Bodyweight Strength",
+        duration: "25",
+        focus: "Push • Legs • Core",
+        status: "Planned",
+        exercises: [
+          { name: "Bodyweight Squat", sets: "3", reps: "10-15", weight: "", rest: "60 sec", notes: "" },
+          { name: "Push-Up Variation", sets: "3", reps: "6-12", weight: "", rest: "60 sec", notes: "" },
+          { name: "Glute Bridge", sets: "3", reps: "12-15", weight: "", rest: "60 sec", notes: "" },
+          { name: "Side Plank", sets: "2", reps: "20 sec each", weight: "", rest: "45 sec", notes: "" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "gym_4_day",
+    name: "Gym 4-Day Split",
+    label: "4-Day",
+    description: "Upper/lower structure for gym training.",
+    workouts: [
+      {
+        name: "Upper A",
+        duration: "45",
+        focus: "Chest • Back • Shoulders",
+        status: "Planned",
+        exercises: [
+          { name: "Bench Press", sets: "3", reps: "6-10", weight: "", rest: "2 min", notes: "" },
+          { name: "Row", sets: "3", reps: "8-12", weight: "", rest: "90 sec", notes: "" },
+          { name: "Shoulder Press", sets: "3", reps: "8-10", weight: "", rest: "90 sec", notes: "" },
+          { name: "Lat Pulldown", sets: "3", reps: "10-12", weight: "", rest: "90 sec", notes: "" },
+        ],
+      },
+      {
+        name: "Lower A",
+        duration: "45",
+        focus: "Squat • Hinge • Core",
+        status: "Planned",
+        exercises: [
+          { name: "Squat", sets: "3", reps: "6-10", weight: "", rest: "2 min", notes: "" },
+          { name: "Romanian Deadlift", sets: "3", reps: "8-10", weight: "", rest: "2 min", notes: "" },
+          { name: "Leg Curl", sets: "3", reps: "10-12", weight: "", rest: "90 sec", notes: "" },
+          { name: "Core", sets: "3", reps: "30 sec", weight: "", rest: "60 sec", notes: "" },
+        ],
+      },
+      {
+        name: "Upper B",
+        duration: "45",
+        focus: "Incline • Pull • Arms",
+        status: "Planned",
+        exercises: [
+          { name: "Incline Press", sets: "3", reps: "8-10", weight: "", rest: "90 sec", notes: "" },
+          { name: "Pull-Up / Pulldown", sets: "3", reps: "8-12", weight: "", rest: "90 sec", notes: "" },
+          { name: "Lateral Raise", sets: "3", reps: "12-15", weight: "", rest: "60 sec", notes: "" },
+          { name: "Arm Superset", sets: "3", reps: "10-12", weight: "", rest: "60 sec", notes: "" },
+        ],
+      },
+      {
+        name: "Lower B",
+        duration: "45",
+        focus: "Single Leg • Glutes • Conditioning",
+        status: "Planned",
+        exercises: [
+          { name: "Split Squat", sets: "3", reps: "8 each", weight: "", rest: "90 sec", notes: "" },
+          { name: "Hip Thrust", sets: "3", reps: "8-12", weight: "", rest: "90 sec", notes: "" },
+          { name: "Leg Press", sets: "3", reps: "10-12", weight: "", rest: "90 sec", notes: "" },
+          { name: "Conditioning", sets: "1", reps: "8-12 min", weight: "", rest: "", notes: "" },
+        ],
+      },
+    ],
+  },
+];
+
+function defaultWorkouts() {
+  return [
+    {
+      id: "w-push",
+      name: "Push Day",
+      duration: "35",
+      focus: "Chest • Shoulders • Triceps",
+      status: "Planned",
+      exercises: [
+        { name: "Push-Up / Chest Press", sets: "3", reps: "8-12", weight: "", rest: "90 sec", notes: "" },
+        { name: "Shoulder Press", sets: "3", reps: "8-10", weight: "", rest: "90 sec", notes: "" },
+        { name: "Triceps Extension", sets: "3", reps: "10-12", weight: "", rest: "60 sec", notes: "" },
+      ],
+    },
+    {
+      id: "w-walk",
+      name: "Walk / Steps",
+      duration: "25",
+      focus: "Recovery • Cardio",
+      status: "Optional",
+      exercises: [
+        { name: "Walk", sets: "1", reps: "25 min", weight: "", rest: "", notes: "" },
+      ],
+    },
+    {
+      id: "w-core",
+      name: "Core Reset",
+      duration: "12",
+      focus: "Core • Mobility",
+      status: "Optional",
+      exercises: [
+        { name: "Dead Bug", sets: "2", reps: "8 each", weight: "", rest: "30 sec", notes: "" },
+        { name: "Side Plank", sets: "2", reps: "20 sec each", weight: "", rest: "30 sec", notes: "" },
+      ],
+    },
+  ];
+}
+
 export default function CustomerHealth() {
   const nav = useNavigate();
+
+  const [profile, setProfile] = useState(() => {
+    const saved = readJson(PROFILE_KEY, null);
+
+    return {
+      primary_goal: saved?.primary_goal ?? "General fitness",
+      experience: saved?.experience ?? "Beginner",
+      training_days: saved?.training_days ?? "3",
+      preferred_time: saved?.preferred_time ?? "Morning",
+      limitations: saved?.limitations ?? "",
+      preferred_equipment: saved?.preferred_equipment ?? "Bodyweight",
+    };
+  });
 
   const [form, setForm] = useState(() => {
     const saved = readJson(SNAPSHOT_KEY, null);
 
     return {
       workout: saved?.workout ?? "",
+      today_workout_id: saved?.today_workout_id ?? "",
       steps: saved?.steps ?? "",
       step_goal: saved?.step_goal ?? 8000,
       calories: saved?.calories ?? "",
@@ -201,13 +435,24 @@ export default function CustomerHealth() {
   const [workouts, setWorkouts] = useState(() => {
     const saved = readJson(WORKOUTS_KEY, null);
 
-    if (Array.isArray(saved) && saved.length) return saved;
+    if (Array.isArray(saved) && saved.length) {
+      return saved.map((w) => ({
+        ...w,
+        exercises: Array.isArray(w.exercises) ? w.exercises : [],
+      }));
+    }
 
-    return [
-      { id: "w-push", name: "Push Day", duration: "35", focus: "Chest • Shoulders • Triceps", status: "Planned" },
-      { id: "w-walk", name: "Walk / Steps", duration: "25", focus: "Recovery • Cardio", status: "Optional" },
-      { id: "w-core", name: "Core Reset", duration: "12", focus: "Core • Mobility", status: "Optional" },
-    ];
+    return defaultWorkouts();
+  });
+
+  const [history, setHistory] = useState(() => {
+    const saved = readJson(HISTORY_KEY, []);
+    return Array.isArray(saved) ? saved : [];
+  });
+
+  const [progressLogs, setProgressLogs] = useState(() => {
+    const saved = readJson(PROGRESS_KEY, []);
+    return Array.isArray(saved) ? saved : [];
   });
 
   const steps = safeNumber(form.steps);
@@ -221,13 +466,24 @@ export default function CustomerHealth() {
   const stepPercent = stepGoal > 0 ? Math.min(100, Math.round((steps / stepGoal) * 100)) : 0;
   const caloriePercent = calorieGoal > 0 ? Math.min(100, Math.round((calories / calorieGoal) * 100)) : 0;
   const proteinPercent = proteinGoal > 0 ? Math.min(100, Math.round((proteinToday / proteinGoal) * 100)) : 0;
+
   const completedWorkouts = workouts.filter((w) => w.status === "Completed").length;
   const plannedWorkouts = workouts.filter((w) => w.status === "Planned").length;
+  const weeklyCompleted = history.filter((item) => isWithinDays(item.date, 7)).length;
   const tone = readinessTone(form.readiness);
+
+  const todayWorkout = useMemo(() => {
+    return (
+      workouts.find((w) => w.id === form.today_workout_id) ||
+      workouts.find((w) => w.name === form.workout) ||
+      null
+    );
+  }, [workouts, form.today_workout_id, form.workout]);
 
   const snapshot = useMemo(() => {
     return {
       workout: form.workout,
+      today_workout_id: form.today_workout_id,
       steps,
       step_goal: stepGoal,
       calories,
@@ -242,6 +498,7 @@ export default function CustomerHealth() {
       notes: form.notes,
       completed_workouts: completedWorkouts,
       planned_workouts: plannedWorkouts,
+      weekly_completed: weeklyCompleted,
       updated_at: new Date().toISOString(),
     };
   }, [
@@ -255,6 +512,7 @@ export default function CustomerHealth() {
     weight,
     completedWorkouts,
     plannedWorkouts,
+    weeklyCompleted,
   ]);
 
   useEffect(() => {
@@ -265,6 +523,18 @@ export default function CustomerHealth() {
     writeJson(WORKOUTS_KEY, workouts);
   }, [workouts]);
 
+  useEffect(() => {
+    writeJson(PROFILE_KEY, profile);
+  }, [profile]);
+
+  useEffect(() => {
+    writeJson(HISTORY_KEY, history);
+  }, [history]);
+
+  useEffect(() => {
+    writeJson(PROGRESS_KEY, progressLogs);
+  }, [progressLogs]);
+
   function updateWorkout(id, patch) {
     setWorkouts((prev) =>
       prev.map((workout) => {
@@ -274,28 +544,159 @@ export default function CustomerHealth() {
     );
   }
 
+  function updateExercise(workoutId, exerciseIndex, patch) {
+    setWorkouts((prev) =>
+      prev.map((workout) => {
+        if (workout.id !== workoutId) return workout;
+
+        const exercises = Array.isArray(workout.exercises) ? [...workout.exercises] : [];
+        exercises[exerciseIndex] = {
+          ...exercises[exerciseIndex],
+          ...patch,
+        };
+
+        return {
+          ...workout,
+          exercises,
+        };
+      })
+    );
+  }
+
+  function addExercise(workoutId) {
+    setWorkouts((prev) =>
+      prev.map((workout) => {
+        if (workout.id !== workoutId) return workout;
+
+        return {
+          ...workout,
+          exercises: [
+            ...(Array.isArray(workout.exercises) ? workout.exercises : []),
+            { name: "New Exercise", sets: "3", reps: "10", weight: "", rest: "60 sec", notes: "" },
+          ],
+        };
+      })
+    );
+  }
+
+  function removeExercise(workoutId, exerciseIndex) {
+    setWorkouts((prev) =>
+      prev.map((workout) => {
+        if (workout.id !== workoutId) return workout;
+
+        return {
+          ...workout,
+          exercises: (workout.exercises || []).filter((_, index) => index !== exerciseIndex),
+        };
+      })
+    );
+  }
+
   function addWorkout() {
     setWorkouts((prev) => [
       ...prev,
       {
-        id: `w-${Date.now()}`,
+        id: uid("w"),
         name: "New Workout",
         duration: "30",
         focus: "Strength",
         status: "Planned",
+        exercises: [
+          { name: "New Exercise", sets: "3", reps: "10", weight: "", rest: "60 sec", notes: "" },
+        ],
       },
     ]);
   }
 
   function removeWorkout(id) {
     setWorkouts((prev) => prev.filter((workout) => workout.id !== id));
+
+    if (form.today_workout_id === id) {
+      setForm((prev) => ({
+        ...prev,
+        today_workout_id: "",
+        workout: "",
+      }));
+    }
   }
 
   function useWorkoutAsToday(workout) {
     setForm((prev) => ({
       ...prev,
       workout: workout.name,
+      today_workout_id: workout.id,
       time_available: `${workout.duration || 30} minutes`,
+    }));
+  }
+
+  function completeWorkout(workout = todayWorkout) {
+    const name = workout?.name || form.workout || "Workout";
+    if (!name) return;
+
+    const log = {
+      id: uid("hist"),
+      date: todayYmd(),
+      workout_id: workout?.id || "",
+      workout_name: name,
+      duration: workout?.duration || form.time_available || "",
+      readiness: form.readiness,
+      steps,
+      calories,
+      protein_today: proteinToday,
+      notes: form.notes || "",
+      exercises: Array.isArray(workout?.exercises) ? workout.exercises : [],
+      completed_at: new Date().toISOString(),
+    };
+
+    setHistory((prev) => [log, ...prev].slice(0, 100));
+
+    if (workout?.id) {
+      updateWorkout(workout.id, { status: "Completed" });
+    }
+  }
+
+  function addProgressLog() {
+    const log = {
+      id: uid("progress"),
+      date: todayYmd(),
+      weight,
+      steps,
+      calories,
+      protein_today: proteinToday,
+      readiness: form.readiness,
+      workout: form.workout || "",
+      note: form.notes || "",
+      created_at: new Date().toISOString(),
+    };
+
+    setProgressLogs((prev) => [log, ...prev].slice(0, 100));
+  }
+
+  function removeProgressLog(id) {
+    setProgressLogs((prev) => prev.filter((item) => item.id !== id));
+  }
+
+  function removeHistoryLog(id) {
+    setHistory((prev) => prev.filter((item) => item.id !== id));
+  }
+
+  function applyTemplate(template) {
+    const next = template.workouts.map((workout) => ({
+      ...workout,
+      id: uid("w"),
+      exercises: (workout.exercises || []).map((exercise) => ({ ...exercise })),
+    }));
+
+    setWorkouts((prev) => [...next, ...prev]);
+  }
+
+  function setProteinFromWeight() {
+    const w = safeNumber(form.weight);
+    if (!w) return;
+
+    setForm((prev) => ({
+      ...prev,
+      protein_goal: String(Math.round(w * 0.8)),
     }));
   }
 
@@ -308,7 +709,7 @@ export default function CustomerHealth() {
 
       <ModeBar
         title="Health"
-        subtitle="Readiness • workouts • steps • nutrition • routines"
+        subtitle="Readiness • workouts • nutrition • progress • routines"
         rightActions={
           <button
             type="button"
@@ -324,7 +725,7 @@ export default function CustomerHealth() {
         <PaidGate
           entitlementKey="health"
           title="Health & Fitness"
-          subtitle="Plan workouts, track readiness, steps, calories, protein, and simple daily execution."
+          subtitle="Build workouts, track readiness, log progress, and keep your routine organized."
           checkoutUrl={STRIPE_HEALTH_CHECKOUT_URL}
           ctaTo="/upgrade"
           ctaLabel="View plans / Upgrade"
@@ -339,19 +740,22 @@ export default function CustomerHealth() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-200/90">
-                      SyncWorks Health
+                      SyncWorks Fitness
                     </div>
 
                     <h1 className="mt-2 text-2xl font-black tracking-tight text-white md:text-4xl">
-                      Daily health command center
+                      Fitness command center
                     </h1>
 
                     <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                      Track the basics that matter: readiness, movement, food targets, and today’s workout.
+                      Plan the session, track the basics, finish the workout, and keep your history organized.
                     </p>
                   </div>
 
-                  <Pill tone={tone}>{form.readiness}</Pill>
+                  <div className="flex flex-wrap gap-2">
+                    <Pill tone={tone}>{form.readiness}</Pill>
+                    <Pill tone="cyan">{weeklyCompleted} This Week</Pill>
+                  </div>
                 </div>
 
                 <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -382,15 +786,17 @@ export default function CustomerHealth() {
 
                   <Card tone="indigo" className="shadow-none">
                     <div className="text-[11px] font-black uppercase tracking-[0.16em] text-indigo-200">
-                      Calories
+                      Protein
                     </div>
                     <div className="mt-2 text-3xl font-black text-white">
-                      {calories.toLocaleString()}
+                      {proteinToday.toLocaleString()}g
                     </div>
                     <div className="mt-3">
-                      <ProgressBar percent={caloriePercent} tone="emerald" />
+                      <ProgressBar percent={proteinPercent} tone="emerald" />
                     </div>
-                    <div className="mt-1 text-xs text-slate-400">{caloriePercent}% of target</div>
+                    <div className="mt-1 text-xs text-slate-400">
+                      Goal {proteinGoal.toLocaleString()}g
+                    </div>
                   </Card>
                 </div>
               </div>
@@ -399,8 +805,79 @@ export default function CustomerHealth() {
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
               <div className="space-y-5">
                 <Card
+                  title="Fitness Profile"
+                  subtitle="Set the training direction for workouts and daily targets."
+                  tone="indigo"
+                  right={<Pill tone="indigo">Profile</Pill>}
+                >
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <SelectField
+                      label="Primary goal"
+                      value={profile.primary_goal}
+                      onChange={(value) => {
+                        setProfile((p) => ({ ...p, primary_goal: value }));
+                        setForm((p) => ({ ...p, goal: value }));
+                      }}
+                      options={[
+                        "General fitness",
+                        "Fat loss",
+                        "Muscle gain",
+                        "Strength",
+                        "Mobility",
+                        "Athletic performance",
+                      ]}
+                    />
+
+                    <SelectField
+                      label="Experience"
+                      value={profile.experience}
+                      onChange={(value) => setProfile((p) => ({ ...p, experience: value }))}
+                      options={["Beginner", "Intermediate", "Advanced"]}
+                    />
+
+                    <SelectField
+                      label="Training days"
+                      value={profile.training_days}
+                      onChange={(value) => setProfile((p) => ({ ...p, training_days: value }))}
+                      options={["2", "3", "4", "5", "6"]}
+                    />
+
+                    <SelectField
+                      label="Preferred time"
+                      value={profile.preferred_time}
+                      onChange={(value) => setProfile((p) => ({ ...p, preferred_time: value }))}
+                      options={["Morning", "Lunch", "Afternoon", "Evening", "Flexible"]}
+                    />
+
+                    <SelectField
+                      label="Preferred equipment"
+                      value={profile.preferred_equipment}
+                      onChange={(value) => {
+                        setProfile((p) => ({ ...p, preferred_equipment: value }));
+                        setForm((p) => ({ ...p, equipment: value }));
+                      }}
+                      options={["Bodyweight", "Dumbbells", "Full gym", "Bands", "Cardio only"]}
+                    />
+                  </div>
+
+                  <label className="mt-3 block">
+                    <div className="mb-1 text-xs font-semibold text-slate-400">
+                      Limitations / notes
+                    </div>
+
+                    <textarea
+                      value={profile.limitations}
+                      onChange={(e) => setProfile((p) => ({ ...p, limitations: e.target.value }))}
+                      placeholder="Example: hip feels tight, avoid heavy squats, keep sessions under 45 minutes."
+                      rows={3}
+                      className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-emerald-400/40"
+                    />
+                  </label>
+                </Card>
+
+                <Card
                   title="Daily Readiness"
-                  subtitle="Updates your dashboard and Life Schedule automatically."
+                  subtitle="This powers the dashboard and Life Schedule."
                   tone="emerald"
                   right={<Pill tone="emerald">Synced</Pill>}
                 >
@@ -408,7 +885,7 @@ export default function CustomerHealth() {
                     <Field
                       label="Today’s workout"
                       value={form.workout}
-                      onChange={(value) => setForm((p) => ({ ...p, workout: value }))}
+                      onChange={(value) => setForm((p) => ({ ...p, workout: value, today_workout_id: "" }))}
                       placeholder="Push Day"
                     />
 
@@ -459,13 +936,25 @@ export default function CustomerHealth() {
                       placeholder="120"
                     />
 
-                    <Field
-                      label="Protein goal"
-                      value={form.protein_goal}
-                      onChange={(value) => setForm((p) => ({ ...p, protein_goal: value }))}
-                      type="number"
-                      placeholder="180"
-                    />
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                      <Field
+                        label="Protein goal"
+                        value={form.protein_goal}
+                        onChange={(value) => setForm((p) => ({ ...p, protein_goal: value }))}
+                        type="number"
+                        placeholder="180"
+                      />
+
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={setProteinFromWeight}
+                          className="h-11 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 text-xs font-black text-emerald-100 hover:bg-emerald-500/15"
+                        >
+                          Auto
+                        </button>
+                      </div>
+                    </div>
 
                     <Field
                       label="Weight"
@@ -493,28 +982,53 @@ export default function CustomerHealth() {
                       label="Goal"
                       value={form.goal}
                       onChange={(value) => setForm((p) => ({ ...p, goal: value }))}
-                      options={["General fitness", "Fat loss", "Muscle gain", "Strength", "Mobility", "Athletic performance"]}
+                      options={[
+                        "General fitness",
+                        "Fat loss",
+                        "Muscle gain",
+                        "Strength",
+                        "Mobility",
+                        "Athletic performance",
+                      ]}
                     />
                   </div>
 
                   <label className="mt-3 block">
                     <div className="mb-1 text-xs font-semibold text-slate-400">
-                      Notes / limitations
+                      Daily notes
                     </div>
 
                     <textarea
                       value={form.notes}
                       onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-                      placeholder="Example: hip feels tight, avoid heavy squats today, 30 minutes max."
+                      placeholder="Example: hip feels tight, keep lower body light, 30 minutes max."
                       rows={3}
                       className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-emerald-400/40"
                     />
                   </label>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => completeWorkout()}
+                      className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-xs font-black text-emerald-100 hover:bg-emerald-500/15"
+                    >
+                      Complete Workout
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={addProgressLog}
+                      className="rounded-2xl border border-cyan-500/25 bg-cyan-500/10 px-4 py-3 text-xs font-black text-cyan-100 hover:bg-cyan-500/15"
+                    >
+                      Log Progress
+                    </button>
+                  </div>
                 </Card>
 
                 <Card
                   title="Workout Builder"
-                  subtitle="Create reusable workouts and send one to Today."
+                  subtitle="Build sessions with exercises, sets, reps, rest, and notes."
                   tone="cyan"
                   right={
                     <button
@@ -530,7 +1044,12 @@ export default function CustomerHealth() {
                     {workouts.map((workout) => (
                       <div
                         key={workout.id}
-                        className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+                        className={cx(
+                          "rounded-2xl border bg-white/[0.03] p-4",
+                          form.today_workout_id === workout.id
+                            ? "border-emerald-400/30"
+                            : "border-white/10"
+                        )}
                       >
                         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_110px]">
                           <Field
@@ -558,6 +1077,81 @@ export default function CustomerHealth() {
                           />
                         </div>
 
+                        <div className="mt-4 space-y-3">
+                          {(workout.exercises || []).map((exercise, index) => (
+                            <div
+                              key={`${workout.id}-exercise-${index}`}
+                              className="rounded-2xl border border-white/10 bg-slate-950/45 p-3"
+                            >
+                              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_80px_100px]">
+                                <Field
+                                  label="Exercise"
+                                  value={exercise.name}
+                                  onChange={(value) =>
+                                    updateExercise(workout.id, index, { name: value })
+                                  }
+                                  placeholder="Exercise"
+                                />
+
+                                <Field
+                                  label="Sets"
+                                  value={exercise.sets}
+                                  onChange={(value) =>
+                                    updateExercise(workout.id, index, { sets: value })
+                                  }
+                                  placeholder="3"
+                                />
+
+                                <Field
+                                  label="Reps"
+                                  value={exercise.reps}
+                                  onChange={(value) =>
+                                    updateExercise(workout.id, index, { reps: value })
+                                  }
+                                  placeholder="10"
+                                />
+                              </div>
+
+                              <div className="mt-2 grid gap-2 sm:grid-cols-[120px_120px_minmax(0,1fr)]">
+                                <Field
+                                  label="Weight"
+                                  value={exercise.weight}
+                                  onChange={(value) =>
+                                    updateExercise(workout.id, index, { weight: value })
+                                  }
+                                  placeholder="Optional"
+                                />
+
+                                <Field
+                                  label="Rest"
+                                  value={exercise.rest}
+                                  onChange={(value) =>
+                                    updateExercise(workout.id, index, { rest: value })
+                                  }
+                                  placeholder="60 sec"
+                                />
+
+                                <Field
+                                  label="Notes"
+                                  value={exercise.notes}
+                                  onChange={(value) =>
+                                    updateExercise(workout.id, index, { notes: value })
+                                  }
+                                  placeholder="Optional"
+                                />
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => removeExercise(workout.id, index)}
+                                className="mt-2 rounded-xl border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-xs font-black text-rose-100 hover:bg-rose-500/15"
+                              >
+                                Remove Exercise
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
                         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                           <select
                             value={workout.status}
@@ -573,10 +1167,26 @@ export default function CustomerHealth() {
                           <div className="flex flex-wrap gap-2">
                             <button
                               type="button"
+                              onClick={() => addExercise(workout.id)}
+                              className="h-10 rounded-2xl border border-cyan-500/25 bg-cyan-500/10 px-3 text-xs font-black text-cyan-100 hover:bg-cyan-500/15"
+                            >
+                              + Exercise
+                            </button>
+
+                            <button
+                              type="button"
                               onClick={() => useWorkoutAsToday(workout)}
                               className="h-10 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 text-xs font-black text-emerald-100 hover:bg-emerald-500/15"
                             >
                               Use Today
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => completeWorkout(workout)}
+                              className="h-10 rounded-2xl border border-indigo-500/25 bg-indigo-500/10 px-3 text-xs font-black text-indigo-100 hover:bg-indigo-500/15"
+                            >
+                              Complete
                             </button>
 
                             <button
@@ -591,28 +1201,11 @@ export default function CustomerHealth() {
                       </div>
                     ))}
                   </div>
-
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                      <div className="text-xs text-slate-400">Workouts</div>
-                      <div className="mt-1 text-xl font-black text-white">{workouts.length}</div>
-                    </div>
-
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                      <div className="text-xs text-slate-400">Planned</div>
-                      <div className="mt-1 text-xl font-black text-white">{plannedWorkouts}</div>
-                    </div>
-
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                      <div className="text-xs text-slate-400">Completed</div>
-                      <div className="mt-1 text-xl font-black text-white">{completedWorkouts}</div>
-                    </div>
-                  </div>
                 </Card>
               </div>
 
               <div className="space-y-5">
-                <Card title="Smart Readiness" subtitle="Simple daily execution guidance." tone={tone}>
+                <Card title="Smart Readiness" subtitle="Daily execution guide." tone={tone}>
                   <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                     <div className="text-sm font-black text-white">{form.readiness}</div>
                     <div className="mt-2 text-sm leading-6 text-slate-400">
@@ -620,12 +1213,44 @@ export default function CustomerHealth() {
                     </div>
                   </div>
 
-                  {form.notes ? (
+                  {profile.limitations ? (
                     <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                      <div className="text-xs text-slate-400">Notes</div>
-                      <div className="mt-1 text-sm leading-6 text-slate-200">{form.notes}</div>
+                      <div className="text-xs text-slate-400">Limitations</div>
+                      <div className="mt-1 text-sm leading-6 text-slate-200">
+                        {profile.limitations}
+                      </div>
                     </div>
                   ) : null}
+                </Card>
+
+                <Card title="Program Templates" subtitle="Add a ready-made structure." tone="fuchsia">
+                  <div className="space-y-3">
+                    {PROGRAM_TEMPLATES.map((template) => (
+                      <div
+                        key={template.id}
+                        className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="text-sm font-black text-white">{template.name}</div>
+                            <div className="mt-1 text-xs leading-5 text-slate-400">
+                              {template.description}
+                            </div>
+                          </div>
+
+                          <Pill tone="fuchsia">{template.label}</Pill>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => applyTemplate(template)}
+                          className="mt-3 w-full rounded-2xl border border-fuchsia-500/25 bg-fuchsia-500/10 px-3 py-3 text-xs font-black text-fuchsia-100 hover:bg-fuchsia-500/15"
+                        >
+                          Add Template
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </Card>
 
                 <Card title="Nutrition" subtitle="Calories and protein basics." tone="emerald">
@@ -674,21 +1299,103 @@ export default function CustomerHealth() {
                   </div>
                 </Card>
 
-                <Card title="Training Rules" subtitle="Keep the system simple." tone="slate">
-                  <div className="space-y-3">
-                    {[
-                      "Match intensity to readiness.",
-                      "Log steps even on recovery days.",
-                      "Protein and calories beat perfection.",
-                      "Use one workout as today’s plan before training.",
-                    ].map((item, index) => (
-                      <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">
-                          Rule {index + 1}
+                <Card title="Progress Log" subtitle="Bodyweight, activity, and daily notes." tone="cyan">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <div className="text-xs text-slate-400">Weight</div>
+                      <div className="mt-1 text-xl font-black text-white">
+                        {weight ? `${weight}` : "—"}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <div className="text-xs text-slate-400">Logged</div>
+                      <div className="mt-1 text-xl font-black text-white">
+                        {progressLogs.length}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <div className="text-xs text-slate-400">Completed</div>
+                      <div className="mt-1 text-xl font-black text-white">
+                        {history.length}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 space-y-3">
+                    {progressLogs.slice(0, 5).map((log) => (
+                      <div
+                        key={log.id}
+                        className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="text-sm font-black text-white">
+                              {prettyDate(log.date)}
+                            </div>
+                            <div className="mt-1 text-xs leading-5 text-slate-400">
+                              Weight: {log.weight || "—"} • Steps:{" "}
+                              {safeNumber(log.steps).toLocaleString()} • Protein:{" "}
+                              {safeNumber(log.protein_today).toLocaleString()}g
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => removeProgressLog(log.id)}
+                            className="rounded-xl border border-rose-500/25 bg-rose-500/10 px-2 py-1 text-[11px] font-black text-rose-100 hover:bg-rose-500/15"
+                          >
+                            Remove
+                          </button>
                         </div>
-                        <div className="mt-1 text-sm leading-6 text-slate-300">{item}</div>
                       </div>
                     ))}
+
+                    {!progressLogs.length ? (
+                      <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                        No progress entries yet. Tap Log Progress after entering today’s numbers.
+                      </div>
+                    ) : null}
+                  </div>
+                </Card>
+
+                <Card title="Workout History" subtitle="Completed sessions." tone="indigo">
+                  <div className="space-y-3">
+                    {history.slice(0, 7).map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-black text-white">
+                              {item.workout_name}
+                            </div>
+                            <div className="mt-1 text-xs text-slate-400">
+                              {prettyDate(item.date)} • {item.readiness || "Readiness not set"}
+                            </div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              Exercises: {Array.isArray(item.exercises) ? item.exercises.length : 0}
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => removeHistoryLog(item.id)}
+                            className="rounded-xl border border-rose-500/25 bg-rose-500/10 px-2 py-1 text-[11px] font-black text-rose-100 hover:bg-rose-500/15"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {!history.length ? (
+                      <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                        No completed workouts yet. Use Complete Workout to start history.
+                      </div>
+                    ) : null}
                   </div>
                 </Card>
               </div>
