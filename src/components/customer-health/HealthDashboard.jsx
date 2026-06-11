@@ -36,6 +36,8 @@ function ProgressBar({ percent, tone = "emerald" }) {
       ? "bg-rose-400"
       : tone === "indigo"
       ? "bg-indigo-400"
+      : tone === "fuchsia"
+      ? "bg-fuchsia-400"
       : "bg-emerald-400";
 
   return (
@@ -108,12 +110,14 @@ export default function HealthDashboard({
   const completedThisWeek = history.length;
   const activeDevices = devices.filter((x) => String(x.status || "").includes("Active")).length;
   const tone = readinessTone(snapshot.readiness);
+
   const healthScore = Math.round(
-    (clampPercent(stepPercent) * 0.25) +
-      (clampPercent(proteinPercent) * 0.25) +
-      (clampPercent(caloriePercent) * 0.2) +
-      (clampPercent(waterPercent) * 0.1) +
-      (snapshot.readiness === "Ready" ? 20 : snapshot.readiness === "Moderate" ? 14 : 8)
+    clampPercent(stepPercent) * 0.22 +
+      clampPercent(proteinPercent) * 0.22 +
+      clampPercent(caloriePercent) * 0.18 +
+      clampPercent(waterPercent) * 0.1 +
+      (snapshot.readiness === "Ready" ? 18 : snapshot.readiness === "Moderate" ? 12 : 6) +
+      Math.min(10, completedThisWeek * 2)
   );
 
   return (
@@ -134,13 +138,14 @@ export default function HealthDashboard({
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                Quick metrics, smarter workouts, daily synopsis, and a path toward device-powered coaching.
+                Quick metrics, smarter workouts, progression, daily synopsis, and device-ready coaching.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
               <Pill tone={tone}>{snapshot.readiness}</Pill>
               <Pill tone="cyan">{completedThisWeek} Recent</Pill>
+              <Pill tone="fuchsia">AI Coach</Pill>
             </div>
           </div>
 
@@ -162,7 +167,7 @@ export default function HealthDashboard({
               </div>
             </button>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard
                 label="Training For"
                 value={profile.primary_goal || "General fitness"}
@@ -177,6 +182,14 @@ export default function HealthDashboard({
                 sub={`${snapshot.time_available || "30 minutes"} • ${snapshot.equipment || "Bodyweight"}`}
                 tone="emerald"
                 onClick={() => onOpen("workout")}
+              />
+
+              <MetricCard
+                label="AI Coach"
+                value="Progress"
+                sub="Next workout, weak areas, and week-to-week overload."
+                tone="fuchsia"
+                onClick={() => onOpen("coach")}
               />
 
               <MetricCard
@@ -228,7 +241,7 @@ export default function HealthDashboard({
         />
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-4">
         <button
           type="button"
           onClick={() => onOpen("library")}
@@ -253,12 +266,23 @@ export default function HealthDashboard({
 
         <button
           type="button"
+          onClick={() => onOpen("coach")}
+          className="rounded-[1.35rem] border border-fuchsia-500/25 bg-fuchsia-500/10 p-4 text-left transition hover:bg-fuchsia-500/15"
+        >
+          <div className="text-sm font-black text-white">AI Coach</div>
+          <div className="mt-1 text-xs leading-5 text-fuchsia-100/80">
+            Increase week to week when ready.
+          </div>
+        </button>
+
+        <button
+          type="button"
           onClick={() => onOpen("synopsis")}
           className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-4 text-left transition hover:bg-white/[0.06]"
         >
           <div className="text-sm font-black text-white">Daily Synopsis</div>
           <div className="mt-1 text-xs leading-5 text-slate-400">
-            End-of-day recap and week-to-week recommendation.
+            End-of-day recap and recommendation.
           </div>
         </button>
       </div>
