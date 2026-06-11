@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 
@@ -10,20 +11,19 @@ import InboxPanel from "../components/Inbox/InboxPanel";
 import NewsReel from "../components/NewsReel";
 import PriorityBadge, { isPriorityOne } from "../components/tickets/PriorityBadge";
 import TodoList from "../components/TodoList";
-import Button from "../components/ui/Button";
 
 import DashboardShell from "../components/dashboard/DashboardShell";
 import GlassCard, { cx } from "../components/dashboard/GlassCard";
-import StatCard from "../components/dashboard/StatCard";
 
 const BASE_TABS = [
-  { id: "overview", label: "Overview" },
-  { id: "orders", label: "My Requests" },
-  { id: "calendar", label: "Calendar" },
-  { id: "todo", label: "To-Do" },
+  { id: "overview", label: "Home" },
+  { id: "orders", label: "Requests" },
+  { id: "calendar", label: "Schedule" },
   { id: "inbox", label: "Messages" },
+  { id: "finance", label: "Money" },
+  { id: "health", label: "Health" },
+  { id: "todo", label: "To-Do" },
   { id: "deals", label: "Deals" },
-  { id: "finance", label: "Finance" },
 ];
 
 function safeList(data) {
@@ -41,6 +41,7 @@ function safeCount(value) {
 
 function safeMoney(value) {
   const n = Number(value || 0);
+
   return n.toLocaleString(undefined, {
     style: "currency",
     currency: "USD",
@@ -49,6 +50,7 @@ function safeMoney(value) {
 
 function safeDate(value) {
   if (!value) return "—";
+
   try {
     return new Date(value).toLocaleDateString(undefined, {
       month: "short",
@@ -61,6 +63,7 @@ function safeDate(value) {
 
 function safeDateTime(value) {
   if (!value) return "—";
+
   try {
     return new Date(value).toLocaleString(undefined, {
       month: "short",
@@ -83,46 +86,6 @@ function titleCase(s) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function statusPill(status) {
-  const s = String(status || "NEW").toUpperCase();
-  const base =
-    "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]";
-
-  if (["COMPLETED", "PAID", "CLOSED"].includes(s)) {
-    return `${base} border-emerald-500/30 bg-emerald-500/10 text-emerald-200`;
-  }
-
-  if (["CANCELLED", "VOID"].includes(s)) {
-    return `${base} border-rose-500/30 bg-rose-500/10 text-rose-200`;
-  }
-
-  if (["IN_PROGRESS", "ACCEPTED", "ASSIGNED", "SCHEDULED"].includes(s)) {
-    return `${base} border-indigo-500/30 bg-indigo-500/10 text-indigo-200`;
-  }
-
-  if (["INVOICED", "SENT", "OPEN", "READY_FOR_PAYMENT"].includes(s)) {
-    return `${base} border-amber-500/30 bg-amber-500/10 text-amber-200`;
-  }
-
-  return `${base} border-cyan-500/30 bg-cyan-500/10 text-cyan-200`;
-}
-
-function invoicePill(status) {
-  const s = String(status || "OPEN").toUpperCase();
-  const base =
-    "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]";
-
-  if (s === "PAID") {
-    return `${base} border-emerald-500/30 bg-emerald-500/10 text-emerald-200`;
-  }
-
-  if (s === "VOID") {
-    return `${base} border-slate-700 bg-slate-950/60 text-slate-300`;
-  }
-
-  return `${base} border-amber-500/30 bg-amber-500/10 text-amber-200`;
-}
-
 function archiveKeyForUser(user) {
   const uid = user?.id || user?.pk || user?.email || "anon";
   return `sw:customer_archived_tickets:${uid}`;
@@ -132,6 +95,7 @@ function readArchivedSet(user) {
   try {
     const raw = localStorage.getItem(archiveKeyForUser(user));
     const parsed = raw ? JSON.parse(raw) : [];
+
     return new Set(
       Array.isArray(parsed)
         ? parsed.map((x) => Number(x)).filter((n) => Number.isFinite(n))
@@ -352,14 +316,17 @@ function invoiceAmount(invoice) {
   if (!invoice) return 0;
   if (invoice.total != null && invoice.total !== "") return Number(invoice.total || 0);
   if (invoice.amount != null && invoice.amount !== "") return Number(invoice.amount || 0);
+
   if (invoice.amount_cents != null && invoice.amount_cents !== "") {
     return Number(invoice.amount_cents || 0) / 100;
   }
+
   return 0;
 }
 
 function isInvoiceDue(invoice) {
   if (!invoice) return false;
+
   const status = String(invoice.status || "").toUpperCase();
   return !["PAID", "VOID"].includes(status);
 }
@@ -374,16 +341,100 @@ function isInProgressStatus(status) {
   );
 }
 
+function statusPill(status) {
+  const s = String(status || "NEW").toUpperCase();
+  const base =
+    "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em]";
+
+  if (["COMPLETED", "PAID", "CLOSED"].includes(s)) {
+    return `${base} border-emerald-500/25 bg-emerald-500/10 text-emerald-200`;
+  }
+
+  if (["CANCELLED", "VOID"].includes(s)) {
+    return `${base} border-rose-500/25 bg-rose-500/10 text-rose-200`;
+  }
+
+  if (["IN_PROGRESS", "ACCEPTED", "ASSIGNED", "SCHEDULED"].includes(s)) {
+    return `${base} border-indigo-500/25 bg-indigo-500/10 text-indigo-200`;
+  }
+
+  if (["INVOICED", "SENT", "OPEN", "READY_FOR_PAYMENT"].includes(s)) {
+    return `${base} border-amber-500/25 bg-amber-500/10 text-amber-200`;
+  }
+
+  return `${base} border-cyan-500/25 bg-cyan-500/10 text-cyan-200`;
+}
+
+function invoicePill(status) {
+  const s = String(status || "OPEN").toUpperCase();
+  const base =
+    "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em]";
+
+  if (s === "PAID") {
+    return `${base} border-emerald-500/25 bg-emerald-500/10 text-emerald-200`;
+  }
+
+  if (s === "VOID") {
+    return `${base} border-white/10 bg-white/[0.04] text-slate-300`;
+  }
+
+  return `${base} border-amber-500/25 bg-amber-500/10 text-amber-200`;
+}
+
+function Pill({ children, tone = "slate" }) {
+  const tones = {
+    cyan: "border-cyan-500/25 bg-cyan-500/10 text-cyan-200",
+    indigo: "border-indigo-500/25 bg-indigo-500/10 text-indigo-200",
+    fuchsia: "border-fuchsia-500/25 bg-fuchsia-500/10 text-fuchsia-200",
+    emerald: "border-emerald-500/25 bg-emerald-500/10 text-emerald-200",
+    amber: "border-amber-500/25 bg-amber-500/10 text-amber-200",
+    rose: "border-rose-500/25 bg-rose-500/10 text-rose-200",
+    slate: "border-white/10 bg-white/[0.04] text-slate-300",
+  };
+
+  return (
+    <span
+      className={cx(
+        "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em]",
+        tones[tone] || tones.slate
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function MiniActionButton({ children, onClick, tone = "slate", className = "" }) {
+  const tones = {
+    cyan: "border-cyan-400/25 bg-cyan-500/12 text-cyan-100 hover:bg-cyan-500/18",
+    indigo: "border-indigo-400/25 bg-indigo-500/12 text-indigo-100 hover:bg-indigo-500/18",
+    fuchsia: "border-fuchsia-400/25 bg-fuchsia-500/12 text-fuchsia-100 hover:bg-fuchsia-500/18",
+    emerald: "border-emerald-400/25 bg-emerald-500/12 text-emerald-100 hover:bg-emerald-500/18",
+    amber: "border-amber-400/25 bg-amber-500/12 text-amber-100 hover:bg-amber-500/18",
+    slate: "border-white/10 bg-white/[0.04] text-slate-100 hover:bg-white/[0.07]",
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx(
+        "inline-flex h-10 items-center justify-center rounded-2xl border px-4 text-xs font-black transition",
+        tones[tone] || tones.slate,
+        className
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 function IconButton({ title, tone = "slate", disabled, onClick, children }) {
   const tones = {
-    slate:
-      "border-slate-800 bg-slate-950/65 text-slate-200 hover:bg-slate-900/70",
-    cyan:
-      "border-cyan-500/35 bg-cyan-500/12 text-cyan-100 hover:bg-cyan-500/18",
-    rose:
-      "border-rose-500/35 bg-rose-500/12 text-rose-100 hover:bg-rose-500/18",
-    amber:
-      "border-amber-500/35 bg-amber-500/12 text-amber-100 hover:bg-amber-500/18",
+    slate: "border-white/10 bg-white/[0.04] text-slate-200 hover:bg-white/[0.07]",
+    cyan: "border-cyan-500/25 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/15",
+    rose: "border-rose-500/25 bg-rose-500/10 text-rose-100 hover:bg-rose-500/15",
+    amber: "border-amber-500/25 bg-amber-500/10 text-amber-100 hover:bg-amber-500/15",
   };
 
   return (
@@ -403,109 +454,9 @@ function IconButton({ title, tone = "slate", disabled, onClick, children }) {
   );
 }
 
-function Pill({ children, tone = "slate" }) {
-  const tones = {
-    cyan: "border-cyan-500/35 bg-cyan-500/10 text-cyan-200",
-    indigo: "border-indigo-500/35 bg-indigo-500/10 text-indigo-200",
-    fuchsia: "border-fuchsia-500/35 bg-fuchsia-500/10 text-fuchsia-200",
-    emerald: "border-emerald-500/35 bg-emerald-500/10 text-emerald-200",
-    amber: "border-amber-500/35 bg-amber-500/10 text-amber-200",
-    rose: "border-rose-500/35 bg-rose-500/10 text-rose-200",
-    slate: "border-slate-700 bg-slate-950/60 text-slate-300",
-  };
-
-  return (
-    <span
-      className={cx(
-        "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]",
-        tones[tone] || tones.slate
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
-function CustomerHero({
-  displayName,
-  totalDue,
-  openCount,
-  onNewRequest,
-  onViewOrders,
-  onBusinessCards,
-  onAffiliate,
-}) {
-  return (
-    <section className="relative overflow-hidden rounded-[2rem] border border-cyan-500/20 bg-slate-950/55 p-5 shadow-[0_0_70px_rgba(34,211,238,0.10)] md:p-7">
-      <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-cyan-500/15 blur-3xl" />
-      <div className="absolute -bottom-28 left-1/3 h-80 w-80 rounded-full bg-fuchsia-500/12 blur-3xl" />
-      <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-indigo-500/10 to-fuchsia-500/10" />
-
-      <div className="relative grid gap-5 lg:grid-cols-[1fr_360px] lg:items-center">
-        <div className="min-w-0">
-          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-cyan-200">
-            SyncWorks Customer Command
-          </div>
-
-          <h1 className="mt-4 text-3xl font-black tracking-tight text-white md:text-5xl">
-            Hey {displayName}, what do you need done today?
-          </h1>
-
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
-            Request services, track active jobs, manage payments, message providers,
-            and save your favorite businesses in one clean dashboard.
-          </p>
-
-          <div className="mt-5 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={onNewRequest}
-              className="inline-flex h-12 items-center justify-center rounded-2xl border border-cyan-300/40 bg-gradient-to-r from-cyan-500 to-blue-600 px-5 text-sm font-black text-white shadow-[0_0_35px_rgba(34,211,238,0.28)] transition hover:brightness-110"
-            >
-              + New Request
-            </button>
-
-            <Button tone="slate" size="lg" onClick={onViewOrders}>
-              My Requests
-            </Button>
-
-            <Button tone="indigo" size="lg" onClick={onBusinessCards}>
-              Saved Businesses
-            </Button>
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-slate-700/80 bg-slate-950/60 p-4 backdrop-blur-xl">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4">
-              <div className="text-xs text-cyan-200">Open</div>
-              <div className="mt-2 text-3xl font-black text-white">{openCount}</div>
-            </div>
-            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
-              <div className="text-xs text-amber-200">Due</div>
-              <div className="mt-2 text-3xl font-black text-white">{safeMoney(totalDue)}</div>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onAffiliate}
-            className="mt-3 w-full rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/10 px-4 py-3 text-left transition hover:bg-fuchsia-500/15"
-          >
-            <div className="text-sm font-black text-fuchsia-100">Refer & Earn</div>
-            <div className="mt-1 text-xs text-slate-400">
-              Help grow the network and track referral opportunities.
-            </div>
-          </button>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function DashboardTabs({ tabs, activeTab, onChange }) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1">
+    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
       {tabs.map((tab) => {
         const active = tab.id === activeTab;
 
@@ -515,10 +466,10 @@ function DashboardTabs({ tabs, activeTab, onChange }) {
             type="button"
             onClick={() => onChange(tab.id)}
             className={cx(
-              "h-10 shrink-0 rounded-2xl border px-4 text-xs font-black uppercase tracking-[0.12em] transition",
+              "h-10 shrink-0 rounded-2xl border px-4 text-xs font-black uppercase tracking-[0.1em] transition",
               active
-                ? "border-cyan-400/40 bg-cyan-500/15 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.12)]"
-                : "border-slate-800 bg-slate-950/45 text-slate-400 hover:bg-slate-900/70 hover:text-slate-100"
+                ? "border-cyan-400/35 bg-cyan-500/14 text-cyan-100"
+                : "border-white/10 bg-white/[0.03] text-slate-400 hover:bg-white/[0.06] hover:text-slate-100"
             )}
           >
             {tab.label}
@@ -529,7 +480,233 @@ function DashboardTabs({ tabs, activeTab, onChange }) {
   );
 }
 
-function RecentRequestsList({
+function CustomerHero({
+  displayName,
+  totalDue,
+  openCount,
+  onNewRequest,
+  onOpenMoney,
+  onOpenHealth,
+}) {
+  return (
+    <section className="relative overflow-hidden rounded-[1.65rem] border border-white/10 bg-slate-950/65 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.28)] md:rounded-[2rem] md:p-6">
+      <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-cyan-500/14 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-28 left-1/4 h-72 w-72 rounded-full bg-fuchsia-500/10 blur-3xl" />
+
+      <div className="relative">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-200/90">
+              Personal Life Hub
+            </div>
+
+            <h1 className="mt-2 text-2xl font-black tracking-tight text-white md:text-4xl">
+              Hey {displayName}
+            </h1>
+
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-400">
+              Requests, payments, schedule, money, health, and local services in one place.
+            </p>
+          </div>
+
+          <div className="hidden shrink-0 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-right sm:block">
+            <div className="text-[10px] font-black uppercase tracking-widest text-cyan-200">
+              Open
+            </div>
+            <div className="text-xl font-black text-white">{safeCount(openCount)}</div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <MiniActionButton tone="cyan" onClick={onNewRequest}>
+            + New Request
+          </MiniActionButton>
+
+          <MiniActionButton tone="amber" onClick={onOpenMoney}>
+            Pay / Money
+          </MiniActionButton>
+
+          <MiniActionButton tone="emerald" onClick={onOpenHealth}>
+            Health
+          </MiniActionButton>
+
+          <MiniActionButton tone="slate" onClick={onOpenMoney}>
+            Due {safeMoney(totalDue)}
+          </MiniActionButton>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TodayCard({
+  tickets,
+  invoices,
+  onOpenTicket,
+  onNewRequest,
+  onOpenCalendar,
+  onOpenMoney,
+  onOpenHealth,
+}) {
+  const scheduledTickets = useMemo(() => {
+    return safeList(tickets)
+      .filter((ticket) => {
+        return (
+          ticket?.scheduled_at ||
+          ticket?.schedule_time ||
+          ticket?.scheduled_start ||
+          ticket?.appointment_at
+        );
+      })
+      .slice(0, 2);
+  }, [tickets]);
+
+  const firstInvoice = safeList(invoices)[0] || null;
+
+  return (
+    <GlassCard title="Today" subtitle="Your clean snapshot across services, payments, and life." tone="cyan">
+      <div className="space-y-3">
+        {firstInvoice ? (
+          <button
+            type="button"
+            onClick={() => onOpenTicket(firstInvoice.ticket.id)}
+            className="w-full rounded-2xl border border-amber-400/20 bg-amber-500/10 p-4 text-left transition hover:bg-amber-500/15"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-amber-200">
+                  Payment Ready
+                </div>
+
+                <div className="mt-1 truncate text-base font-black text-white">
+                  {resolveCustomerFriendlyTitle(firstInvoice.ticket)}
+                </div>
+
+                <div className="mt-1 text-xs text-slate-400">
+                  Due {safeDate(firstInvoice.invoice?.due_date)}
+                </div>
+              </div>
+
+              <div className="shrink-0 text-right">
+                <div className="text-lg font-black text-amber-100">
+                  {safeMoney(invoiceAmount(firstInvoice.invoice))}
+                </div>
+
+                <div className="mt-1 text-[11px] font-bold text-amber-200/80">
+                  Pay now
+                </div>
+              </div>
+            </div>
+          </button>
+        ) : (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="text-sm font-black text-white">No service payments due.</div>
+            <div className="mt-1 text-xs leading-5 text-slate-400">
+              When invoices are ready, they will show here first.
+            </div>
+          </div>
+        )}
+
+        {scheduledTickets.length ? (
+          scheduledTickets.map((ticket) => {
+            const when =
+              ticket.scheduled_at ||
+              ticket.schedule_time ||
+              ticket.scheduled_start ||
+              ticket.appointment_at;
+
+            return (
+              <button
+                key={`today-ticket-${ticket.id}`}
+                type="button"
+                onClick={() => onOpenTicket(ticket.id)}
+                className="w-full rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 text-left transition hover:bg-cyan-500/15"
+              >
+                <div className="text-[11px] font-black uppercase tracking-[0.14em] text-cyan-200">
+                  Scheduled Service
+                </div>
+
+                <div className="mt-1 text-sm font-black text-white">
+                  {resolveCustomerFriendlyTitle(ticket)}
+                </div>
+
+                <div className="mt-1 text-xs text-slate-400">{safeDateTime(when)}</div>
+              </button>
+            );
+          })
+        ) : (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="text-sm font-black text-white">No scheduled service today.</div>
+            <div className="mt-1 text-xs leading-5 text-slate-400">
+              Bills, mortgage/rent, workouts, and appointments can layer into this next.
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-2">
+          <MiniActionButton tone="cyan" onClick={onNewRequest}>
+            Request
+          </MiniActionButton>
+
+          <MiniActionButton tone="indigo" onClick={onOpenCalendar}>
+            Schedule
+          </MiniActionButton>
+
+          <MiniActionButton tone="amber" onClick={onOpenMoney}>
+            Add Bill
+          </MiniActionButton>
+
+          <MiniActionButton tone="emerald" onClick={onOpenHealth}>
+            Workout
+          </MiniActionButton>
+        </div>
+      </div>
+    </GlassCard>
+  );
+}
+
+function QuickActionsCard({ navigate, setTab }) {
+  const actions = [
+    { label: "Request", icon: "+", tone: "cyan", onClick: () => navigate("/customer/new-request") },
+    { label: "Money", icon: "$", tone: "amber", onClick: () => setTab("finance") },
+    { label: "Chat", icon: "💬", tone: "fuchsia", onClick: () => setTab("inbox") },
+    { label: "Health", icon: "♥", tone: "emerald", onClick: () => setTab("health") },
+    { label: "Saved", icon: "★", tone: "indigo", onClick: () => navigate("/customer/business-cards") },
+    { label: "Support", icon: "?", tone: "slate", onClick: () => navigate("/support") },
+  ];
+
+  const toneClasses = {
+    cyan: "border-cyan-400/20 bg-cyan-500/10 text-cyan-100",
+    amber: "border-amber-400/20 bg-amber-500/10 text-amber-100",
+    fuchsia: "border-fuchsia-400/20 bg-fuchsia-500/10 text-fuchsia-100",
+    emerald: "border-emerald-400/20 bg-emerald-500/10 text-emerald-100",
+    indigo: "border-indigo-400/20 bg-indigo-500/10 text-indigo-100",
+    slate: "border-white/10 bg-white/[0.03] text-slate-100",
+  };
+
+  return (
+    <GlassCard title="Quick Actions" subtitle="Fast access without crowding the home page." tone="indigo">
+      <div className="grid grid-cols-3 gap-2">
+        {actions.map((action) => (
+          <button
+            key={action.label}
+            type="button"
+            onClick={action.onClick}
+            className={cx(
+              "min-h-[76px] rounded-2xl border p-3 text-left transition hover:bg-white/[0.06]",
+              toneClasses[action.tone] || toneClasses.slate
+            )}
+          >
+            <div className="text-lg font-black">{action.icon}</div>
+            <div className="mt-2 text-xs font-black leading-tight">{action.label}</div>
+          </button>
+        ))}
+      </div>
+    </GlassCard>
+  );
+}
+
+function RequestsPreviewCard({
   tickets,
   loading,
   error,
@@ -538,28 +715,27 @@ function RecentRequestsList({
   onOpenTicket,
   onArchive,
   onCancel,
+  onViewAll,
 }) {
   return (
     <GlassCard
-      title="Recent Requests"
-      subtitle="Live job tracking, provider assignment, calendar actions, and payment status."
+      title="Active Requests"
+      subtitle="Only the most important service activity stays on the home screen."
       tone="cyan"
       right={
-        <div className="flex gap-2">
-          <IconButton title="Refresh" onClick={onRefresh}>
-            ↻
-          </IconButton>
-        </div>
+        <IconButton title="Refresh" onClick={onRefresh}>
+          ↻
+        </IconButton>
       }
     >
       {actionError ? (
-        <div className="mb-3 rounded-2xl border border-red-800 bg-red-900/20 p-3 text-sm text-red-300">
+        <div className="mb-3 rounded-2xl border border-rose-500/25 bg-rose-500/10 p-3 text-sm text-rose-200">
           {actionError}
         </div>
       ) : null}
 
       {error ? (
-        <div className="mb-3 rounded-2xl border border-red-800 bg-red-900/20 p-3 text-sm text-red-300">
+        <div className="mb-3 rounded-2xl border border-rose-500/25 bg-rose-500/10 p-3 text-sm text-rose-200">
           {error}
         </div>
       ) : null}
@@ -567,8 +743,11 @@ function RecentRequestsList({
       {loading ? <div className="text-sm text-slate-400">Loading requests…</div> : null}
 
       {!loading && !tickets.length ? (
-        <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-5 text-sm text-slate-400">
-          No requests yet. Tap <span className="font-bold text-cyan-200">+ New Request</span> to start.
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="text-sm font-black text-white">No active requests yet.</div>
+          <div className="mt-1 text-xs leading-5 text-slate-400">
+            Tap the center + button to request a service.
+          </div>
         </div>
       ) : null}
 
@@ -590,19 +769,17 @@ function RecentRequestsList({
                 if (e.key === "Enter" || e.key === " ") onOpenTicket(ticket.id);
               }}
               className={cx(
-                "cursor-pointer rounded-3xl border bg-slate-950/50 p-4 outline-none transition hover:bg-slate-900/55 focus:ring-2 focus:ring-cyan-500/30",
-                p1
-                  ? "border-rose-500/55 shadow-[0_0_28px_rgba(244,63,94,0.16)]"
-                  : "border-slate-800/80"
+                "cursor-pointer rounded-2xl border bg-white/[0.03] p-4 outline-none transition hover:bg-white/[0.06] focus:ring-2 focus:ring-cyan-500/25",
+                p1 ? "border-rose-400/35" : "border-white/10"
               )}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
                     <div className="truncate text-base font-black text-slate-100">
                       {serviceTitle}
                     </div>
-                    {p1 ? <Pill tone="rose">Service Now</Pill> : null}
+                    {p1 ? <Pill tone="rose">Now</Pill> : null}
                   </div>
 
                   <div className="mt-1 text-xs text-slate-500">
@@ -615,14 +792,14 @@ function RecentRequestsList({
                         Provider: <span className="text-slate-200">{businessName}</span>
                       </>
                     ) : (
-                      <>Provider not assigned yet</>
+                      <>Provider pending</>
                     )}
                   </div>
                 </div>
 
                 <div className="flex shrink-0 flex-col items-end gap-2">
                   <span className={statusPill(ticket.status)}>
-                    {String(ticket.status || "NEW")}
+                    {String(ticket.status || "NEW").replaceAll("_", " ")}
                   </span>
                   <PriorityBadge ticket={ticket} showEta={false} />
                 </div>
@@ -664,6 +841,133 @@ function RecentRequestsList({
           );
         })}
       </div>
+
+      <MiniActionButton tone="cyan" className="mt-4 w-full" onClick={onViewAll}>
+        View All Requests
+      </MiniActionButton>
+    </GlassCard>
+  );
+}
+
+function MoneySnapshotCard({
+  invoices,
+  totalDue,
+  paidThisYear,
+  onOpenMoney,
+  onViewRequests,
+}) {
+  const dueCount = safeList(invoices).length;
+
+  const billSnapshot = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("sw_customer_money_snapshot_v1");
+      const parsed = raw ? JSON.parse(raw) : null;
+
+      if (!parsed || typeof parsed !== "object") {
+        return {
+          monthly_bills: 0,
+          covered_amount: 0,
+          covered_percent: 0,
+        };
+      }
+
+      const monthlyBills = Number(parsed.monthly_bills || parsed.monthlyBills || 0);
+      const coveredAmount = Number(parsed.covered_amount || parsed.coveredAmount || 0);
+      const percent =
+        monthlyBills > 0
+          ? Math.min(100, Math.max(0, Math.round((coveredAmount / monthlyBills) * 100)))
+          : 0;
+
+      return {
+        monthly_bills: Number.isFinite(monthlyBills) ? monthlyBills : 0,
+        covered_amount: Number.isFinite(coveredAmount) ? coveredAmount : 0,
+        covered_percent: Number.isFinite(percent) ? percent : 0,
+      };
+    } catch {
+      return {
+        monthly_bills: 0,
+        covered_amount: 0,
+        covered_percent: 0,
+      };
+    }
+  }, []);
+
+  const hasBillTracker = billSnapshot.monthly_bills > 0;
+
+  return (
+    <GlassCard
+      title="Money"
+      subtitle="Bills, service payments, subscriptions, and future linked payments."
+      tone={totalDue > 0 ? "amber" : "emerald"}
+      right={dueCount ? <Pill tone="amber">{dueCount} Due</Pill> : <Pill tone="emerald">Clear</Pill>}
+    >
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 p-4">
+          <div className="text-[11px] font-black uppercase tracking-[0.16em] text-amber-200/90">
+            Service Due
+          </div>
+
+          <div className="mt-2 text-3xl font-black text-amber-50">
+            {safeMoney(totalDue)}
+          </div>
+
+          <div className="mt-1 text-xs text-slate-400">
+            Invoices ready through SyncWorks.
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4">
+          <div className="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-200/90">
+            Bills Covered
+          </div>
+
+          <div className="mt-2 flex items-end gap-2">
+            <div className="text-3xl font-black text-cyan-50">
+              {hasBillTracker ? `${billSnapshot.covered_percent}%` : "—"}
+            </div>
+
+            {hasBillTracker ? (
+              <div className="pb-1 text-xs text-slate-400">
+                {safeMoney(billSnapshot.covered_amount)}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-1 text-xs text-slate-400">
+            Add mortgage, rent, auto, utilities, and subscriptions.
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-sm font-black text-white">
+              Mortgage / rent tracking is ready for the next phase.
+            </div>
+
+            <div className="mt-1 text-xs leading-5 text-slate-400">
+              Start manual first, then add a paid linked-payments add-on later.
+            </div>
+          </div>
+
+          <Pill tone="slate">Add-on</Pill>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <MiniActionButton tone="amber" onClick={onOpenMoney}>
+          Open Money
+        </MiniActionButton>
+
+        <MiniActionButton tone="slate" onClick={onViewRequests}>
+          Requests
+        </MiniActionButton>
+      </div>
+
+      <div className="mt-3 text-[11px] leading-5 text-slate-500">
+        Paid service history: {safeMoney(paidThisYear)}. Bill coverage will become active once manual bills or linked payments are added.
+      </div>
     </GlassCard>
   );
 }
@@ -671,16 +975,19 @@ function RecentRequestsList({
 function PaymentsDueCard({ invoices, totalDue, onPayNow, onOpenOrder, onViewOrders }) {
   return (
     <GlassCard
-      title="Saved Payments / Balance"
+      title="Payments"
       subtitle="Invoices ready for payment show here."
       tone={invoices.length ? "amber" : "emerald"}
       right={invoices.length ? <Pill tone="amber">{invoices.length} Due</Pill> : <Pill tone="emerald">Clear</Pill>}
     >
-      <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-4">
-        <div className="text-xs font-black uppercase tracking-[0.18em] text-amber-200/80">
+      <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 p-4">
+        <div className="text-xs font-black uppercase tracking-[0.16em] text-amber-200/80">
           Total Due
         </div>
-        <div className="mt-2 text-3xl font-black text-amber-100">{safeMoney(totalDue)}</div>
+
+        <div className="mt-2 text-3xl font-black text-amber-100">
+          {safeMoney(totalDue)}
+        </div>
       </div>
 
       <div className="mt-4 space-y-3">
@@ -693,49 +1000,51 @@ function PaymentsDueCard({ invoices, totalDue, onPayNow, onOpenOrder, onViewOrde
             return (
               <div
                 key={`due-${ticket.id}-${invoice?.id || "latest"}`}
-                className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4"
+                className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="truncate font-black text-slate-100">
                       {resolveCustomerFriendlyTitle(ticket)}
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">Ticket #{ticket.id}</div>
+
+                    <div className="mt-1 text-xs text-slate-500">
+                      Ticket #{ticket.id}
+                    </div>
                   </div>
+
                   <span className={invoicePill(invoice?.status)}>
                     {String(invoice?.status || "OPEN")}
                   </span>
                 </div>
 
-                <div className="mt-3 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="shrink-0">
                     <div className="text-[11px] text-slate-500">Amount Due</div>
-                    <div className="text-xl font-black text-cyan-100">{safeMoney(amount)}</div>
+                    <div className="text-xl font-black text-cyan-100">
+                      {safeMoney(amount)}
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 xl:justify-end">
-                    <button
-                      type="button"
-                      onClick={() => onOpenOrder(ticket.id)}
-                      className="inline-flex h-9 items-center justify-center rounded-2xl border border-slate-800 bg-slate-950/60 px-4 text-xs font-semibold text-slate-200 hover:bg-slate-900/70"
-                    >
+                  <div className="flex flex-wrap gap-2 sm:justify-end">
+                    <MiniActionButton tone="slate" onClick={() => onOpenOrder(ticket.id)}>
                       Open
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onPayNow(ticket.id)}
-                      className="inline-flex h-9 items-center justify-center rounded-2xl border border-amber-500/35 bg-amber-500/14 px-4 text-xs font-semibold text-amber-100 hover:bg-amber-500/20"
-                    >
-                      Pay Now
-                    </button>
+                    </MiniActionButton>
+
+                    <MiniActionButton tone="amber" onClick={() => onPayNow(ticket.id)}>
+                      Pay
+                    </MiniActionButton>
                   </div>
                 </div>
               </div>
             );
           })
         ) : (
-          <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-4">
-            <div className="text-sm font-bold text-slate-200">No invoices due right now.</div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="text-sm font-bold text-slate-200">
+              No invoices due right now.
+            </div>
+
             <div className="mt-1 text-xs text-slate-500">
               When a provider sends an invoice, it will appear here.
             </div>
@@ -743,44 +1052,289 @@ function PaymentsDueCard({ invoices, totalDue, onPayNow, onOpenOrder, onViewOrde
         )}
       </div>
 
-      <button
-        type="button"
-        onClick={onViewOrders}
-        className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-2xl border border-cyan-500/30 bg-cyan-500/12 px-4 text-xs font-black text-cyan-100 hover:bg-cyan-500/18"
-      >
+      <MiniActionButton tone="cyan" className="mt-4 w-full" onClick={onViewOrders}>
         View All Requests
-      </button>
+      </MiniActionButton>
+    </GlassCard>
+  );
+}
+
+function HealthSnapshotCard({ onOpenHealth }) {
+  const healthSnapshot = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("sw_customer_health_snapshot_v1");
+      const parsed = raw ? JSON.parse(raw) : null;
+
+      if (!parsed || typeof parsed !== "object") {
+        return {
+          workout: "",
+          steps: 0,
+          step_goal: 8000,
+          calories: 0,
+          calorie_goal: 2200,
+        };
+      }
+
+      return {
+        workout: safeStr(parsed.workout || parsed.today_workout || ""),
+        steps: Number(parsed.steps || 0),
+        step_goal: Number(parsed.step_goal || parsed.stepGoal || 8000),
+        calories: Number(parsed.calories || 0),
+        calorie_goal: Number(parsed.calorie_goal || parsed.calorieGoal || 2200),
+      };
+    } catch {
+      return {
+        workout: "",
+        steps: 0,
+        step_goal: 8000,
+        calories: 0,
+        calorie_goal: 2200,
+      };
+    }
+  }, []);
+
+  const stepPercent =
+    healthSnapshot.step_goal > 0
+      ? Math.min(
+          100,
+          Math.max(0, Math.round((healthSnapshot.steps / healthSnapshot.step_goal) * 100))
+        )
+      : 0;
+
+  return (
+    <GlassCard title="Health" subtitle="Fitness, calories, steps, and goals will live here." tone="emerald">
+      <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
+        <div className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-200/90">
+          Today
+        </div>
+
+        <div className="mt-2 text-lg font-black text-white">
+          {healthSnapshot.workout || "No workout planned yet"}
+        </div>
+
+        <div className="mt-1 text-xs leading-5 text-slate-400">
+          Open Health to build workouts, goals, weight tracking, calories, and progress.
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="text-xs text-slate-400">Steps</div>
+
+          <div className="mt-1 text-xl font-black text-white">
+            {safeCount(healthSnapshot.steps).toLocaleString()}
+          </div>
+
+          <div className="mt-1 text-[11px] text-slate-500">
+            {stepPercent}% of goal
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="text-xs text-slate-400">Calories</div>
+
+          <div className="mt-1 text-xl font-black text-white">
+            {safeCount(healthSnapshot.calories).toLocaleString()}
+          </div>
+
+          <div className="mt-1 text-[11px] text-slate-500">
+            Goal {safeCount(healthSnapshot.calorie_goal).toLocaleString()}
+          </div>
+        </div>
+      </div>
+
+      <MiniActionButton tone="emerald" className="mt-4 w-full" onClick={onOpenHealth}>
+        Open Health
+      </MiniActionButton>
+    </GlassCard>
+  );
+}
+
+function CompactScheduleCard({ tickets, onOpenTicket, onOpenCalendar }) {
+  const scheduledTickets = safeList(tickets)
+    .filter((ticket) => {
+      return (
+        ticket?.scheduled_at ||
+        ticket?.schedule_time ||
+        ticket?.scheduled_start ||
+        ticket?.appointment_at
+      );
+    })
+    .slice(0, 3);
+
+  return (
+    <GlassCard title="Schedule" subtitle="Compact on mobile. Full calendar stays one tap away." tone="cyan">
+      {scheduledTickets.length ? (
+        <div className="space-y-3">
+          {scheduledTickets.map((ticket) => {
+            const when =
+              ticket.scheduled_at ||
+              ticket.schedule_time ||
+              ticket.scheduled_start ||
+              ticket.appointment_at;
+
+            return (
+              <button
+                key={`schedule-${ticket.id}`}
+                type="button"
+                onClick={() => onOpenTicket(ticket.id)}
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition hover:bg-white/[0.06]"
+              >
+                <div className="text-sm font-black text-white">
+                  {resolveCustomerFriendlyTitle(ticket)}
+                </div>
+
+                <div className="mt-1 text-xs text-slate-400">
+                  {safeDateTime(when)}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="text-sm font-black text-white">No scheduled tickets.</div>
+
+          <div className="mt-1 text-xs leading-5 text-slate-400">
+            Bills, mortgage/rent, fitness reminders, and appointments can be layered here next.
+          </div>
+        </div>
+      )}
+
+      <MiniActionButton tone="cyan" className="mt-4 w-full" onClick={onOpenCalendar}>
+        View Schedule
+      </MiniActionButton>
+    </GlassCard>
+  );
+}
+
+function FullCalendarPanel({ tickets, onOpenTicket }) {
+  return (
+    <GlassCard title="Schedule" subtitle="Weekly view of upcoming request activity." tone="cyan">
+      <CustomerWeeklyCalendar tickets={tickets} onOpenTicket={onOpenTicket} showHeader />
+    </GlassCard>
+  );
+}
+
+function DealsCard({ items, onOpenFeedItem, onViewFeed }) {
+  const list = safeList(items).slice(0, 3);
+
+  return (
+    <GlassCard
+      title="Featured Local Deals"
+      subtitle="One-column mobile cards. No more cramped side-scroll."
+      tone="fuchsia"
+      right={<Pill tone="fuchsia">Local</Pill>}
+    >
+      {list.length ? (
+        <div className="space-y-3">
+          {list.map((item) => (
+            <article
+              key={item.id || `${item.business_name}-${item.headline}`}
+              className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+            >
+              <div className="flex flex-wrap gap-2">
+                {item.type ? <Pill tone="fuchsia">{item.type}</Pill> : null}
+                {item.sponsored ? <Pill tone="emerald">Sponsored</Pill> : null}
+              </div>
+
+              <div className="mt-3 text-lg font-black text-white">
+                {item.business_name || "Local Business"}
+              </div>
+
+              {item.headline ? (
+                <div className="mt-2 text-sm font-semibold leading-6 text-cyan-100">
+                  {item.headline}
+                </div>
+              ) : null}
+
+              {item.body ? (
+                <div className="mt-2 text-sm leading-6 text-slate-400">
+                  {item.body}
+                </div>
+              ) : null}
+
+              <MiniActionButton
+                tone="fuchsia"
+                className="mt-4 w-full"
+                onClick={() => onOpenFeedItem(item)}
+              >
+                {item.cta || "Open"}
+              </MiniActionButton>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+          Local promos will appear here.
+        </div>
+      )}
+
+      <MiniActionButton tone="slate" className="mt-4 w-full" onClick={onViewFeed}>
+        View Feed
+      </MiniActionButton>
+    </GlassCard>
+  );
+}
+
+function SavedBusinessCard({ navigate }) {
+  return (
+    <GlassCard title="Saved Providers" subtitle="Favorite providers and rebook faster." tone="emerald">
+      <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
+        <div className="text-sm font-black text-emerald-100">
+          Saved businesses live here.
+        </div>
+
+        <div className="mt-1 text-xs leading-5 text-slate-400">
+          When you favorite a provider, SyncWorks keeps them one tap away.
+        </div>
+      </div>
+
+      <MiniActionButton
+        tone="emerald"
+        className="mt-4 w-full"
+        onClick={() => navigate("/customer/business-cards")}
+      >
+        Open Saved Providers
+      </MiniActionButton>
     </GlassCard>
   );
 }
 
 function ActivityFeed({ tickets, invoices }) {
   const items = useMemo(() => {
-    const ticketItems = (tickets || []).slice(0, 4).map((ticket) => ({
-      id: `ticket-${ticket.id}`,
-      title: resolveCustomerFriendlyTitle(ticket),
-      meta: `Request ${String(ticket.status || "NEW").replaceAll("_", " ")}`,
-      time: safeDateTime(ticket.created_at || ticket.updated_at),
-      tone: isPriorityOne(ticket) ? "rose" : "cyan",
-    }));
+    const ticketItems = safeList(tickets)
+      .slice(0, 3)
+      .map((ticket) => ({
+        id: `ticket-${ticket.id}`,
+        title: resolveCustomerFriendlyTitle(ticket),
+        meta: `Request ${String(ticket.status || "NEW").replaceAll("_", " ")}`,
+        time: safeDateTime(ticket.created_at || ticket.updated_at),
+        tone: isPriorityOne(ticket) ? "rose" : "cyan",
+      }));
 
-    const invoiceItems = (invoices || []).slice(0, 2).map((item) => ({
-      id: `invoice-${item.ticket.id}-${item.invoice?.id || "latest"}`,
-      title: "Invoice ready",
-      meta: `${resolveCustomerFriendlyTitle(item.ticket)} • ${safeMoney(invoiceAmount(item.invoice))}`,
-      time: safeDate(item.invoice?.due_date || item.ticket?.updated_at),
-      tone: "amber",
-    }));
+    const invoiceItems = safeList(invoices)
+      .slice(0, 2)
+      .map((item) => ({
+        id: `invoice-${item.ticket.id}-${item.invoice?.id || "latest"}`,
+        title: "Invoice ready",
+        meta: `${resolveCustomerFriendlyTitle(item.ticket)} • ${safeMoney(invoiceAmount(item.invoice))}`,
+        time: safeDate(item.invoice?.due_date || item.ticket?.updated_at),
+        tone: "amber",
+      }));
 
-    return [...invoiceItems, ...ticketItems].slice(0, 6);
+    return [...invoiceItems, ...ticketItems].slice(0, 5);
   }, [tickets, invoices]);
 
   return (
-    <GlassCard title="Recent Activity" subtitle="Updates across requests, invoices, and provider actions." tone="indigo">
+    <GlassCard title="Recent Activity" subtitle="Short, readable updates only." tone="indigo">
       {items.length ? (
         <div className="space-y-3">
           {items.map((item) => (
-            <div key={item.id} className="flex gap-3 rounded-3xl border border-slate-800 bg-slate-950/40 p-3">
+            <div
+              key={item.id}
+              className="flex gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3"
+            >
               <div
                 className={cx(
                   "mt-1 h-2.5 w-2.5 shrink-0 rounded-full shadow-[0_0_16px_currentColor]",
@@ -791,16 +1345,25 @@ function ActivityFeed({ tickets, invoices }) {
                     : "bg-cyan-400 text-cyan-400"
                 )}
               />
+
               <div className="min-w-0">
-                <div className="truncate text-sm font-bold text-slate-100">{item.title}</div>
-                <div className="mt-1 text-xs text-slate-400">{item.meta}</div>
-                <div className="mt-1 text-[11px] text-slate-600">{item.time}</div>
+                <div className="truncate text-sm font-bold text-slate-100">
+                  {item.title}
+                </div>
+
+                <div className="mt-1 text-xs text-slate-400">
+                  {item.meta}
+                </div>
+
+                <div className="mt-1 text-[11px] text-slate-600">
+                  {item.time}
+                </div>
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-4 text-sm text-slate-400">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
           Activity will appear after your first request.
         </div>
       )}
@@ -808,115 +1371,29 @@ function ActivityFeed({ tickets, invoices }) {
   );
 }
 
-function QuickActionsCard({ navigate, setTab }) {
-  const actions = [
-    { label: "New Request", icon: "+", tone: "cyan", onClick: () => navigate("/customer/new-request") },
-    { label: "My Requests", icon: "🧾", tone: "indigo", onClick: () => setTab("orders") },
-    { label: "Messages", icon: "💬", tone: "fuchsia", onClick: () => setTab("inbox") },
-    { label: "Saved Business", icon: "★", tone: "emerald", onClick: () => navigate("/customer/business-cards") },
-    { label: "Support", icon: "🎧", tone: "cyan", onClick: () => navigate("/support") },
-    { label: "Account", icon: "⚙", tone: "slate", onClick: () => navigate("/settings") },
-  ];
-
-  return (
-    <GlassCard title="Quick Actions" subtitle="Fast access to the tools customers use most." tone="fuchsia">
-      <div className="grid grid-cols-2 gap-3">
-        {actions.map((action) => (
-          <button
-            key={action.label}
-            type="button"
-            onClick={action.onClick}
-            className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4 text-left transition hover:border-cyan-500/30 hover:bg-slate-900/60"
-          >
-            <div className="text-2xl">{action.icon}</div>
-            <div className="mt-3 text-sm font-black text-slate-100">{action.label}</div>
-          </button>
-        ))}
-      </div>
-    </GlassCard>
-  );
-}
-
-function DealsCard({ items, onOpenFeedItem, onViewFeed }) {
-  return (
-    <GlassCard
-      title="Featured Local Deals"
-      subtitle="Sponsored businesses, saved providers, and marketplace promos."
-      tone="fuchsia"
-      right={
-        <button
-          type="button"
-          onClick={onViewFeed}
-          className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/12 px-4 py-2 text-xs font-black text-fuchsia-100 hover:bg-fuchsia-500/18"
-        >
-          Newsfeed
-        </button>
-      }
-    >
-      <div className="flex gap-3 overflow-x-auto pb-2">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="min-w-[280px] rounded-3xl border border-slate-800 bg-slate-950/45 p-4"
-          >
-            <div className="flex flex-wrap gap-2">
-              <Pill tone="fuchsia">{item.type || "Featured"}</Pill>
-              {item.sponsored ? <Pill tone="emerald">Sponsored</Pill> : null}
-            </div>
-
-            <div className="mt-4 text-lg font-black text-white">
-              {item.business_name || item.title || "Featured Business"}
-            </div>
-            <div className="mt-2 text-sm text-cyan-200">{item.headline}</div>
-            <div className="mt-3 text-sm text-slate-400">{item.body}</div>
-
-            <button
-              type="button"
-              onClick={() => onOpenFeedItem(item)}
-              className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/12 px-4 text-xs font-black text-fuchsia-100 hover:bg-fuchsia-500/18"
-            >
-              {item.cta || "Open"}
-            </button>
-          </div>
-        ))}
-      </div>
-    </GlassCard>
-  );
-}
-
-function SavedBusinessCard({ navigate }) {
-  return (
-    <GlassCard title="My Business Cards" subtitle="Save providers you trust and rebook faster." tone="emerald">
-      <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4">
-        <div className="text-sm font-black text-emerald-100">Saved businesses live here.</div>
-        <div className="mt-2 text-xs leading-5 text-slate-400">
-          When you favorite a provider, SyncWorks keeps them one tap away for future jobs.
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => navigate("/customer/business-cards")}
-        className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/12 px-4 text-xs font-black text-emerald-100 hover:bg-emerald-500/18"
-      >
-        Open Saved Businesses
-      </button>
-    </GlassCard>
-  );
-}
-
-function ComingSoonPanel({ title, desc, icon = "✦", onUpgrade }) {
+function ComingSoonPanel({
+  title,
+  desc,
+  icon = "✦",
+  primaryLabel = "Open",
+  onPrimary,
+}) {
   return (
     <GlassCard title={title} subtitle={desc} tone="indigo">
-      <div className="rounded-3xl border border-indigo-500/20 bg-indigo-500/10 p-6">
+      <div className="rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-5">
         <div className="text-4xl">{icon}</div>
-        <div className="mt-4 text-lg font-black text-white">Coming soon inside SyncWorks.</div>
-        <div className="mt-2 text-sm text-slate-400">
-          This module is staged for future customer expansion.
+
+        <div className="mt-4 text-lg font-black text-white">
+          Built into the Life OS path.
         </div>
-        <Button className="mt-5" tone="indigo" onClick={onUpgrade}>
-          Upgrade / Learn More
-        </Button>
+
+        <div className="mt-2 text-sm leading-6 text-slate-400">
+          This keeps the home dashboard clean while the full module grows behind it.
+        </div>
+
+        <MiniActionButton tone="indigo" className="mt-5" onClick={onPrimary}>
+          {primaryLabel}
+        </MiniActionButton>
       </div>
     </GlassCard>
   );
@@ -1005,7 +1482,7 @@ export default function CustomerDashboard() {
     return safeList(tickets).filter((ticket) => !archivedIds.has(Number(ticket?.id)));
   }, [tickets, archivedIds]);
 
-  const recentTickets = useMemo(() => visibleTickets.slice(0, 5), [visibleTickets]);
+  const recentTickets = useMemo(() => visibleTickets.slice(0, 4), [visibleTickets]);
 
   const dueInvoiceItems = useMemo(() => {
     return visibleTickets
@@ -1015,9 +1492,11 @@ export default function CustomerDashboard() {
         const ad = a?.invoice?.due_date
           ? new Date(a.invoice.due_date).getTime()
           : Number.MAX_SAFE_INTEGER;
+
         const bd = b?.invoice?.due_date
           ? new Date(b.invoice.due_date).getTime()
           : Number.MAX_SAFE_INTEGER;
+
         return ad - bd;
       });
   }, [visibleTickets]);
@@ -1051,11 +1530,17 @@ export default function CustomerDashboard() {
   }, [visibleTickets]);
 
   const tabs = useMemo(() => {
-    return BASE_TABS.map((t) =>
-      t.id === "orders" && dueInvoiceItems.length
-        ? { ...t, label: `My Requests (${dueInvoiceItems.length})` }
-        : t
-    );
+    return BASE_TABS.map((t) => {
+      if (t.id === "orders" && dueInvoiceItems.length) {
+        return { ...t, label: `Requests (${dueInvoiceItems.length})` };
+      }
+
+      if (t.id === "finance" && dueInvoiceItems.length) {
+        return { ...t, label: `Money (${dueInvoiceItems.length})` };
+      }
+
+      return t;
+    });
   }, [dueInvoiceItems.length]);
 
   const featuredFeedItems = useMemo(() => {
@@ -1063,18 +1548,38 @@ export default function CustomerDashboard() {
   }, [feedItems]);
 
   const bottomNavItems = [
-    { label: "Home", icon: "⌂", active: tab === "overview", onClick: () => setTab("overview") },
-    { label: "Requests", icon: "▤", active: tab === "orders", onClick: () => setTab("orders") },
-    { label: "Messages", icon: "💬", active: tab === "inbox", onClick: () => setTab("inbox") },
-    { label: "Account", icon: "◉", active: false, onClick: () => navigate("/settings") },
+    {
+      label: "Home",
+      icon: "⌂",
+      active: tab === "overview",
+      onClick: () => setTab("overview"),
+    },
+    {
+      label: "Jobs",
+      icon: "▤",
+      active: tab === "orders",
+      onClick: () => setTab("orders"),
+    },
+    {
+      label: "Chat",
+      icon: "💬",
+      active: tab === "inbox",
+      onClick: () => setTab("inbox"),
+    },
+    {
+      label: "Me",
+      icon: "◉",
+      active: false,
+      onClick: () => navigate("/settings"),
+    },
   ];
 
   return (
     <DashboardShell
       title="Customer Home"
-      subtitle="Create requests • Track work • Pay invoices • Message providers"
+      subtitle="Life, services, payments, schedule, money, and health"
       modeBarTitle="Customer Home"
-      modeBarSubtitle="Create requests • Track orders • Keep everything in one place"
+      modeBarSubtitle="Personal Life OS"
       bottomNavItems={bottomNavItems}
       bottomCenterAction={{
         label: "Request",
@@ -1082,140 +1587,102 @@ export default function CustomerDashboard() {
       }}
       rightActions={
         <div className="flex flex-wrap gap-2">
-          <Button tone="cyan" onClick={() => navigate("/customer/new-request")}>
+          <button
+            type="button"
+            onClick={() => navigate("/customer/new-request")}
+            className="inline-flex h-10 items-center justify-center rounded-2xl border border-cyan-400/25 bg-cyan-500/12 px-4 text-xs font-black text-cyan-100 hover:bg-cyan-500/18"
+          >
             + New Request
-          </Button>
-          <Button tone="slate" onClick={() => navigate("/support")}>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate("/support")}
+            className="inline-flex h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-xs font-black text-slate-100 hover:bg-white/[0.07]"
+          >
             Support
-          </Button>
+          </button>
         </div>
       }
     >
-      <div className="space-y-5">
+      <div className="space-y-5 pb-4">
         <NewsReel />
 
         <CustomerHero
           displayName={displayName}
-          totalDue={totalDue}
           openCount={metrics.open}
+          totalDue={totalDue}
           onNewRequest={() => navigate("/customer/new-request")}
-          onViewOrders={() => setTab("orders")}
-          onBusinessCards={() => navigate("/customer/business-cards")}
-          onAffiliate={() => navigate("/customer/affiliate")}
+          onOpenMoney={() => setTab("finance")}
+          onOpenHealth={() => setTab("health")}
         />
 
         <DashboardTabs tabs={tabs} activeTab={tab} onChange={setTab} />
 
         {tab === "overview" ? (
-          <>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <StatCard
-                label="Open Requests"
-                value={safeCount(metrics.open)}
-                hint="Active customer requests"
-                icon="▤"
-                tone="cyan"
-                badge="Live"
-                onClick={() => setTab("orders")}
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
+            <div className="space-y-5">
+              <TodayCard
+                tickets={visibleTickets}
+                invoices={dueInvoiceItems}
+                onOpenTicket={(id) => navigate(`/tickets/${id}`)}
+                onNewRequest={() => navigate("/customer/new-request")}
+                onOpenCalendar={() => setTab("calendar")}
+                onOpenMoney={() => setTab("finance")}
+                onOpenHealth={() => setTab("health")}
               />
-              <StatCard
-                label="In Progress"
-                value={safeCount(metrics.inProgress)}
-                hint="Accepted or scheduled"
-                icon="↗"
-                tone="indigo"
-                onClick={() => setTab("orders")}
+
+              <RequestsPreviewCard
+                tickets={recentTickets}
+                loading={ticketsLoading}
+                error={ticketsErr}
+                actionError={ticketActionErr}
+                onRefresh={loadTickets}
+                onOpenTicket={(id) => navigate(`/tickets/${id}`)}
+                onArchive={archiveTicket}
+                onCancel={cancelTicket}
+                onViewAll={() => setTab("orders")}
               />
-              <StatCard
-                label="Completed"
-                value={safeCount(metrics.completed)}
-                hint="Finished jobs"
-                icon="✓"
-                tone="emerald"
-                onClick={() => setTab("orders")}
+
+              <MoneySnapshotCard
+                invoices={dueInvoiceItems}
+                totalDue={totalDue}
+                paidThisYear={metrics.totalSpent}
+                onOpenMoney={() => setTab("finance")}
+                onViewRequests={() => setTab("orders")}
               />
-              <StatCard
-                label="Total Spent"
-                value={safeMoney(metrics.totalSpent)}
-                hint="Paid invoices"
-                icon="$"
-                tone="fuchsia"
-                onClick={() => setTab("finance")}
+
+              <HealthSnapshotCard onOpenHealth={() => setTab("health")} />
+
+              <DealsCard
+                items={featuredFeedItems}
+                onOpenFeedItem={openFeedItem}
+                onViewFeed={() => navigate("/newsfeed")}
               />
             </div>
 
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
-              <div className="space-y-5">
-                <RecentRequestsList
-                  tickets={recentTickets}
-                  loading={ticketsLoading}
-                  error={ticketsErr}
-                  actionError={ticketActionErr}
-                  onRefresh={loadTickets}
-                  onOpenTicket={(id) => navigate(`/tickets/${id}`)}
-                  onArchive={archiveTicket}
-                  onCancel={cancelTicket}
-                />
+            <div className="space-y-5">
+              <QuickActionsCard navigate={navigate} setTab={setTab} />
 
-                <GlassCard
-                  title="Request Status Overview"
-                  subtitle="Simple snapshot of the customer workflow."
-                  tone="indigo"
-                >
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/10 p-4">
-                      <div className="text-xs text-cyan-200">Open</div>
-                      <div className="mt-2 text-3xl font-black text-white">{metrics.open}</div>
-                    </div>
-                    <div className="rounded-3xl border border-indigo-500/20 bg-indigo-500/10 p-4">
-                      <div className="text-xs text-indigo-200">In Progress</div>
-                      <div className="mt-2 text-3xl font-black text-white">
-                        {metrics.inProgress}
-                      </div>
-                    </div>
-                    <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4">
-                      <div className="text-xs text-emerald-200">Completed</div>
-                      <div className="mt-2 text-3xl font-black text-white">
-                        {metrics.completed}
-                      </div>
-                    </div>
-                  </div>
-                </GlassCard>
+              <CompactScheduleCard
+                tickets={visibleTickets}
+                onOpenTicket={(id) => navigate(`/tickets/${id}`)}
+                onOpenCalendar={() => setTab("calendar")}
+              />
 
-                <GlassCard title="This Week" subtitle="Weekly view of upcoming request activity." tone="cyan">
-                  <CustomerWeeklyCalendar
-                    tickets={visibleTickets}
-                    onOpenTicket={(id) => navigate(`/tickets/${id}`)}
-                    showHeader
-                  />
-                </GlassCard>
+              <PaymentsDueCard
+                invoices={dueInvoiceItems}
+                totalDue={totalDue}
+                onPayNow={(ticketId) => navigate(`/tickets/${ticketId}`)}
+                onOpenOrder={(ticketId) => navigate(`/tickets/${ticketId}`)}
+                onViewOrders={() => setTab("orders")}
+              />
 
-                <DealsCard
-                  items={featuredFeedItems}
-                  onOpenFeedItem={openFeedItem}
-                  onViewFeed={() => navigate("/newsfeed")}
-                />
-              </div>
+              <SavedBusinessCard navigate={navigate} />
 
-              <div className="space-y-5">
-                <PaymentsDueCard
-                  invoices={dueInvoiceItems}
-                  totalDue={totalDue}
-                  onPayNow={(ticketId) => navigate(`/tickets/${ticketId}`)}
-                  onOpenOrder={(ticketId) => navigate(`/tickets/${ticketId}`)}
-                  onViewOrders={() => setTab("orders")}
-                />
-
-                <SavedBusinessCard navigate={navigate} />
-
-                <ActivityFeed tickets={recentTickets} invoices={dueInvoiceItems} />
-
-                <QuickActionsCard navigate={navigate} setTab={setTab} />
-
-                
-              </div>
+              <ActivityFeed tickets={recentTickets} invoices={dueInvoiceItems} />
             </div>
-          </>
+          </div>
         ) : null}
 
         {tab === "orders" ? (
@@ -1225,12 +1692,13 @@ export default function CustomerDashboard() {
             tone="cyan"
             right={
               <div className="flex flex-wrap gap-2">
-                <Button tone="cyan" onClick={() => navigate("/customer/new-request")}>
+                <MiniActionButton tone="cyan" onClick={() => navigate("/customer/new-request")}>
                   + New Request
-                </Button>
-                <Button tone="slate" onClick={loadTickets}>
+                </MiniActionButton>
+
+                <MiniActionButton tone="slate" onClick={loadTickets}>
                   Refresh
-                </Button>
+                </MiniActionButton>
               </div>
             }
           >
@@ -1239,22 +1707,19 @@ export default function CustomerDashboard() {
         ) : null}
 
         {tab === "calendar" ? (
-          <GlassCard title="Calendar" subtitle="Your customer service schedule." tone="cyan">
-            <CustomerWeeklyCalendar
-              tickets={visibleTickets}
-              onOpenTicket={(id) => navigate(`/tickets/${id}`)}
-              showHeader
-            />
-          </GlassCard>
+          <FullCalendarPanel
+            tickets={visibleTickets}
+            onOpenTicket={(id) => navigate(`/tickets/${id}`)}
+          />
         ) : null}
 
         {tab === "todo" ? (
           <TodoList
             scope="customer"
             title="Quick To-Do"
-            subtitle="Fast notes + checkboxes."
+            subtitle="Fast notes, reminders, and checkboxes."
             showStatus
-            rightRailAds
+            rightRailAds={false}
           />
         ) : null}
 
@@ -1274,12 +1739,51 @@ export default function CustomerDashboard() {
         ) : null}
 
         {tab === "finance" ? (
-          <ComingSoonPanel
-            icon="💳"
-            title="Finance"
-            desc="Bills, budgets, saved cards, cashflow snapshots, and payment history."
-            onUpgrade={() => navigate("/upgrade")}
-          />
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
+            <div className="space-y-5">
+              <MoneySnapshotCard
+                invoices={dueInvoiceItems}
+                totalDue={totalDue}
+                paidThisYear={metrics.totalSpent}
+                onOpenMoney={() => navigate("/customer/finance")}
+                onViewRequests={() => setTab("orders")}
+              />
+
+              <ComingSoonPanel
+                icon="🏦"
+                title="Linked Payments"
+                desc="Mortgage, rent, car payments, utilities, subscriptions, and bill coverage percentage."
+                primaryLabel="Open Finance"
+                onPrimary={() => navigate("/customer/finance")}
+              />
+            </div>
+
+            <div className="space-y-5">
+              <PaymentsDueCard
+                invoices={dueInvoiceItems}
+                totalDue={totalDue}
+                onPayNow={(ticketId) => navigate(`/tickets/${ticketId}`)}
+                onOpenOrder={(ticketId) => navigate(`/tickets/${ticketId}`)}
+                onViewOrders={() => setTab("orders")}
+              />
+
+              <ActivityFeed tickets={recentTickets} invoices={dueInvoiceItems} />
+            </div>
+          </div>
+        ) : null}
+
+        {tab === "health" ? (
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
+            <HealthSnapshotCard onOpenHealth={() => navigate("/customer/health")} />
+
+            <ComingSoonPanel
+              icon="💪"
+              title="Fitness"
+              desc="Workouts, goals, steps, calories, weight tracking, strength progress, and routines."
+              primaryLabel="Open Health"
+              onPrimary={() => navigate("/customer/health")}
+            />
+          </div>
         ) : null}
       </div>
     </DashboardShell>
