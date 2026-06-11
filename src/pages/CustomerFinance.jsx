@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import ModeBar from "../components/ModeBar";
-import PaidGate from "../components/paid/PaidGate";
+import { useAuth } from "../auth/AuthContext";
 
 const STRIPE_FINANCE_CHECKOUT_URL = "https://buy.stripe.com/6oU00jgX07eT3qFgJl2Nq0c";
 const FINANCE_LOGO_URL = "/brands/finance.jpg";
@@ -49,14 +49,6 @@ function writeJson(key, value) {
   }
 }
 
-function todayYmd() {
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
-
 function prettyDate(value) {
   if (!value) return "Not set";
 
@@ -79,8 +71,7 @@ function daysUntil(value) {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
-  const diff = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  return diff;
+  return Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 function coverageTone(percent) {
@@ -213,8 +204,128 @@ function ProgressBar({ percent, tone = "cyan" }) {
   );
 }
 
+function FinanceSignupScreen({ onBack }) {
+  return (
+    <div className="space-y-5">
+      <section className="relative overflow-hidden rounded-[1.85rem] border border-cyan-400/25 bg-slate-950/70 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.32)] md:p-7">
+        <div className="pointer-events-none absolute -right-28 -top-28 h-80 w-80 rounded-full bg-amber-500/14 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-28 left-1/4 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute right-1/4 top-1/3 h-72 w-72 rounded-full bg-fuchsia-500/10 blur-3xl" />
+
+        <div className="relative">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex items-center gap-3">
+                <img
+                  src={FINANCE_LOGO_URL}
+                  alt="Money Hub"
+                  className="h-16 w-16 rounded-2xl border border-amber-400/25 object-cover"
+                />
+
+                <div>
+                  <div className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-200">
+                    SyncWorks Money
+                  </div>
+                  <h1 className="mt-1 text-3xl font-black tracking-tight text-white md:text-5xl">
+                    Money Hub
+                  </h1>
+                </div>
+              </div>
+
+              <p className="mt-5 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
+                Track bills, due dates, payment readiness, required expenses, subscriptions, and monthly priorities from one clean dashboard.
+              </p>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-emerald-100">
+                  30 days free
+                </span>
+
+                <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-cyan-100">
+                  $2.99/month after
+                </span>
+
+                <span className="rounded-full border border-fuchsia-500/25 bg-fuchsia-500/10 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-fuchsia-100">
+                  Cancel anytime
+                </span>
+              </div>
+            </div>
+
+            <div className="w-full shrink-0 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 lg:w-[360px]">
+              <div className="text-sm font-black uppercase tracking-[0.16em] text-slate-400">
+                Plan
+              </div>
+
+              <div className="mt-3 flex items-end gap-2">
+                <div className="text-5xl font-black text-white">$2.99</div>
+                <div className="pb-2 text-sm font-semibold text-slate-400">/ month</div>
+              </div>
+
+              <div className="mt-2 text-sm text-emerald-200">
+                First 30 days free.
+              </div>
+
+              <a
+                href={STRIPE_FINANCE_CHECKOUT_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-5 inline-flex h-12 w-full items-center justify-center rounded-2xl border border-amber-300/40 bg-gradient-to-r from-amber-500 to-cyan-500 px-5 text-sm font-black text-white shadow-[0_0_34px_rgba(245,158,11,0.24)] transition hover:brightness-110"
+              >
+                Start Free Trial
+              </a>
+
+              <button
+                type="button"
+                onClick={onBack}
+                className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-5 text-sm font-black text-slate-100 transition hover:bg-white/[0.08]"
+              >
+                Back to Dashboard
+              </button>
+
+              <div className="mt-4 text-xs leading-5 text-slate-500">
+                After checkout, access is unlocked by your backend entitlement. Log out/in or refresh if you just purchased.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
+          <div className="text-sm font-black text-white">Bill command center</div>
+          <div className="mt-2 text-sm leading-6 text-slate-400">
+            Track mortgage, rent, auto, utilities, subscriptions, due days, paid status, and readiness.
+          </div>
+        </div>
+
+        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
+          <div className="text-sm font-black text-white">Monthly coverage</div>
+          <div className="mt-2 text-sm leading-6 text-slate-400">
+            See what percentage of required bills are covered and what still needs attention.
+          </div>
+        </div>
+
+        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
+          <div className="text-sm font-black text-white">Life Schedule sync</div>
+          <div className="mt-2 text-sm leading-6 text-slate-400">
+            Main payment due dates can feed the customer Life Schedule and dashboard snapshot.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CustomerFinance() {
   const nav = useNavigate();
+  const { moduleAccess, isGod } = useAuth();
+
+  const hasFinanceAccess =
+    !!isGod ||
+    !!moduleAccess?.finance ||
+    !!moduleAccess?.money ||
+    !!moduleAccess?.customer_finance ||
+    !!moduleAccess?.customerFinance;
 
   const [form, setForm] = useState(() => {
     const saved = readJson(SNAPSHOT_KEY, null);
@@ -246,7 +357,8 @@ export default function CustomerFinance() {
   const monthlyBills = safeNumber(form.monthly_bills);
   const coveredAmount = safeNumber(form.covered_amount);
   const emergencyBuffer = safeNumber(form.emergency_buffer);
-  const coveredPercent = monthlyBills > 0 ? Math.min(100, Math.round((coveredAmount / monthlyBills) * 100)) : 0;
+  const coveredPercent =
+    monthlyBills > 0 ? Math.min(100, Math.round((coveredAmount / monthlyBills) * 100)) : 0;
   const remaining = Math.max(0, monthlyBills - coveredAmount);
   const mainPaymentAmount = safeNumber(form.mortgage_amount);
   const mainPaymentDays = daysUntil(form.mortgage_due_date);
@@ -337,33 +449,36 @@ export default function CustomerFinance() {
     <div className="min-h-dvh overflow-x-hidden bg-[#020617] text-slate-100">
       <div className="pointer-events-none fixed inset-0">
         <div className="absolute inset-0 bg-[#020617]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.12),transparent_30%),radial-gradient(circle_at_top_right,rgba(217,70,239,0.10),transparent_32%),radial-gradient(circle_at_bottom,rgba(99,102,241,0.12),transparent_38%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.12),transparent_30%),radial-gradient(circle_at_top_right,rgba(34,211,238,0.10),transparent_32%),radial-gradient(circle_at_bottom,rgba(99,102,241,0.12),transparent_38%)]" />
       </div>
 
       <ModeBar
         title="Money"
-        subtitle="Bills • coverage • payment readiness • personal finance systems"
+        subtitle={
+          hasFinanceAccess
+            ? "Bills • coverage • payments • monthly systems"
+            : "30 days free • $2.99/month after"
+        }
         rightActions={
           <button
             type="button"
             onClick={() => nav("/customer")}
-            className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900"
+            className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs hover:bg-slate-900"
           >
             Back
           </button>
         }
       />
 
-      <main className="relative mx-auto max-w-6xl px-3 pb-12 pt-4 sm:px-5">
-        <PaidGate
-          entitlementKey="finance"
-          title="Money Hub"
-          subtitle="Track bills, payment readiness, required expenses, and monthly priorities."
-          checkoutUrl={STRIPE_FINANCE_CHECKOUT_URL}
-          ctaTo="/upgrade"
-          ctaLabel="View plans / Upgrade"
-          iconUrl={FINANCE_LOGO_URL}
-        >
+      <main
+        className={cx(
+          "relative mx-auto px-3 pb-12 pt-4 sm:px-5",
+          hasFinanceAccess ? "max-w-6xl" : "max-w-5xl"
+        )}
+      >
+        {!hasFinanceAccess ? (
+          <FinanceSignupScreen onBack={() => nav("/customer")} />
+        ) : (
           <div className="space-y-5">
             <section className="relative overflow-hidden rounded-[1.65rem] border border-white/10 bg-slate-950/65 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.28)] md:p-6">
               <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-amber-500/12 blur-3xl" />
@@ -664,7 +779,7 @@ export default function CustomerFinance() {
               </div>
             </div>
           </div>
-        </PaidGate>
+        )}
       </main>
     </div>
   );
