@@ -93,22 +93,22 @@ const SECTION_META = {
   TODAY: {
     label: "Today",
     tone: "border-cyan-500/35 bg-cyan-500/10 text-cyan-200",
-    helper: "Urgent work and day-of execution.",
+    helper: "Day-of reminders, errands, and priorities.",
   },
   WEEK: {
     label: "This Week",
     tone: "border-indigo-500/35 bg-indigo-500/10 text-indigo-200",
-    helper: "Important work that should move soon.",
+    helper: "Important items that need movement soon.",
   },
   MONTH: {
     label: "This Month",
     tone: "border-fuchsia-500/35 bg-fuchsia-500/10 text-fuchsia-200",
-    helper: "Planning, admin, billing, projects.",
+    helper: "Bills, admin, planning, and recurring responsibilities.",
   },
   GOALS: {
     label: "Goals",
     tone: "border-emerald-500/35 bg-emerald-500/10 text-emerald-200",
-    helper: "Long-term milestones and targets.",
+    helper: "Longer-term targets and milestones.",
   },
 };
 
@@ -372,7 +372,7 @@ function TaskCard({
 
         {overdue ? (
           <div className="text-xs font-semibold text-rose-200">
-            Overdue — this should be reviewed first.
+            Overdue — review this item first.
           </div>
         ) : null}
       </div>
@@ -423,7 +423,7 @@ function PlannerColumn({
       <div className="mt-4 space-y-3 min-h-[140px]">
         {items.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/30 p-4 text-center text-sm text-slate-500">
-            Drag an item here
+            Drop an item here
           </div>
         ) : (
           items.map((item) => (
@@ -517,11 +517,19 @@ function CompactTaskRow({ item, onToggleDone, onQuickStart }) {
 
 export default function TodoList({
   scope = "sbo",
-  title = "Planner",
-  subtitle = "Daily, weekly, monthly, yearly tasks and goals.",
+  title,
+  subtitle,
   compact = false,
 }) {
   const { activeBusinessId } = useAuth();
+
+  const isCustomer = scope === "customer";
+  const resolvedTitle = title || (isCustomer ? "Life Tasks" : "Planner");
+  const resolvedSubtitle =
+    subtitle ||
+    (isCustomer
+      ? "Track reminders, bills, errands, goals, and day-to-day priorities."
+      : "Daily, weekly, monthly, yearly tasks and goals.");
 
   const storageKey = useMemo(() => {
     const biz = activeBusinessId || "no_biz";
@@ -815,7 +823,7 @@ export default function TodoList({
         <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4">
           <div className="text-sm font-semibold text-slate-100">Quick add</div>
           <div className="mt-1 text-xs text-slate-400">
-            Keep this simple on the dashboard. Full planning opens in the modal.
+            Add a reminder, bill, errand, goal, or priority.
           </div>
 
           <div className="mt-3 grid gap-2 md:grid-cols-[1fr_140px_140px_auto]">
@@ -874,7 +882,7 @@ export default function TodoList({
         {!hasAny ? (
           <EmptyState
             title="No tasks yet"
-            subtitle="Add a quick task above, then open the full planner for deeper organization."
+            subtitle="Add a quick task above to start organizing your day."
           />
         ) : (
           <div className="grid gap-4 xl:grid-cols-2">
@@ -882,7 +890,7 @@ export default function TodoList({
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <div className="text-sm font-semibold text-slate-100">Today</div>
-                  <div className="text-xs text-slate-400">Day-of priorities and urgent tasks.</div>
+                  <div className="text-xs text-slate-400">Day-of reminders and priorities.</div>
                 </div>
                 <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[11px] text-cyan-200">
                   {sectioned.TODAY.length}
@@ -892,7 +900,7 @@ export default function TodoList({
               <div className="mt-3 space-y-3">
                 {todayItems.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/30 p-4 text-sm text-slate-500">
-                    Nothing scheduled for today.
+                    Nothing due today.
                   </div>
                 ) : (
                   todayItems.map((item) => (
@@ -911,7 +919,7 @@ export default function TodoList({
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <div className="text-sm font-semibold text-slate-100">This Week</div>
-                  <div className="text-xs text-slate-400">Short-term work that needs movement.</div>
+                  <div className="text-xs text-slate-400">Items that need attention soon.</div>
                 </div>
                 <span className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2 py-1 text-[11px] text-indigo-200">
                   {sectioned.WEEK.length}
@@ -921,7 +929,7 @@ export default function TodoList({
               <div className="mt-3 space-y-3">
                 {weekItems.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/30 p-4 text-sm text-slate-500">
-                    No weekly priorities yet.
+                    No weekly items yet.
                   </div>
                 ) : (
                   weekItems.map((item) => (
@@ -945,17 +953,17 @@ export default function TodoList({
     <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4 sm:p-5">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
-          <div className="text-lg font-extrabold text-slate-100">{title}</div>
-          {subtitle ? <div className="mt-1 text-sm text-slate-400">{subtitle}</div> : null}
+          <div className="text-lg font-extrabold text-slate-100">{resolvedTitle}</div>
+          {resolvedSubtitle ? <div className="mt-1 text-sm text-slate-400">{resolvedSubtitle}</div> : null}
           <div className="mt-2 flex flex-wrap gap-2">
             <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[11px] text-cyan-200">
               Drag + drop
             </span>
             <span className="rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 px-2 py-1 text-[11px] text-fuchsia-200">
-              Full planner
+              Organized lists
             </span>
             <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[11px] text-emerald-200">
-              Business scoped
+              {isCustomer ? "Personal" : "Business"}
             </span>
           </div>
         </div>
@@ -973,7 +981,7 @@ export default function TodoList({
           <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-4">
             <div className="text-sm font-semibold text-slate-100">Quick add</div>
             <div className="mt-1 text-xs text-slate-400">
-              Add a task, recurring item, or long-term goal.
+              Add a task, reminder, bill, errand, or goal.
             </div>
 
             <div className="mt-4 space-y-3">
@@ -982,7 +990,11 @@ export default function TodoList({
                 <input
                   value={draft.title}
                   onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
-                  placeholder="Ex: Call hot lead / Finish quotes / Monthly P&L / 2026 revenue target"
+                  placeholder={
+                    isCustomer
+                      ? "Ex: Pay power bill / Book dentist / Workout / Renew subscription"
+                      : "Ex: Call lead / Finish quote / Monthly P&L / Revenue target"
+                  }
                   className="mt-1 w-full rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-sm outline-none focus:border-cyan-500/50"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
@@ -1006,7 +1018,7 @@ export default function TodoList({
 
               <div className="grid gap-2 sm:grid-cols-2">
                 <div>
-                  <label className="text-[11px] text-slate-400">Planner section</label>
+                  <label className="text-[11px] text-slate-400">Section</label>
                   <select
                     value={draft.section}
                     onChange={(e) =>
@@ -1082,15 +1094,11 @@ export default function TodoList({
                   Reset
                 </button>
               </div>
-
-              <div className="text-[11px] leading-relaxed text-slate-500">
-                Drag cards between planner sections anytime. Moving a card also updates its default cadence.
-              </div>
             </div>
           </div>
 
           <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-4">
-            <div className="text-sm font-semibold text-slate-100">Planner controls</div>
+            <div className="text-sm font-semibold text-slate-100">Controls</div>
 
             <div className="mt-3 space-y-3">
               <input
@@ -1141,8 +1149,8 @@ export default function TodoList({
         <div className="space-y-4 xl:col-span-8">
           {visibleItems.length === 0 ? (
             <EmptyState
-              title="No planner items yet"
-              subtitle="Add your first item on the left and organize it by dragging between sections."
+              title="No items yet"
+              subtitle="Add your first item and organize it into Today, This Week, This Month, or Goals."
             />
           ) : null}
 

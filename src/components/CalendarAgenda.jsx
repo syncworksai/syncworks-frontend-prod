@@ -80,17 +80,6 @@ function addDays(date, days) {
   return d;
 }
 
-function dateOnlyLabel(value) {
-  const d = toDate(value);
-  if (!d) return "No date";
-
-  return d.toLocaleDateString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 function dateTimeLabel(value) {
   const d = toDate(value);
   if (!d) return "No date";
@@ -126,7 +115,8 @@ function buildGoogleCalendarLink({ title, details, location, start, end }) {
   }
 
   const safeStart = toDate(start);
-  const safeEnd = toDate(end) || (safeStart ? new Date(safeStart.getTime() + 60 * 60 * 1000) : null);
+  const safeEnd =
+    toDate(end) || (safeStart ? new Date(safeStart.getTime() + 60 * 60 * 1000) : null);
 
   const s = safeStart ? fmt(safeStart) : null;
   const e = safeEnd ? fmt(safeEnd) : s;
@@ -149,6 +139,15 @@ function eventTone(type) {
   if (type === "todo") return "indigo";
   if (type === "life") return "fuchsia";
   return "slate";
+}
+
+function eventLabel(type) {
+  if (type === "ticket") return "Service";
+  if (type === "money") return "Money";
+  if (type === "health") return "Health";
+  if (type === "todo") return "Task";
+  if (type === "life") return "Life";
+  return "Event";
 }
 
 function toneClasses(tone) {
@@ -178,7 +177,14 @@ function Pill({ children, tone = "slate" }) {
   );
 }
 
-function Button({ children, onClick, tone = "slate", type = "button", disabled = false, className = "" }) {
+function Button({
+  children,
+  onClick,
+  tone = "slate",
+  type = "button",
+  disabled = false,
+  className = "",
+}) {
   return (
     <button
       type={type}
@@ -286,8 +292,8 @@ function buildTodoEvents(activeBusinessId) {
       if (!start) return null;
 
       const end = new Date(start.getTime() + 30 * 60 * 1000);
+      const title = item.title || "Life Task";
 
-      const title = item.title || "To-Do Item";
       const details = [
         `Status: ${normalizeTodoStatus(item.status)}`,
         `Priority: ${item.priority || "MED"}`,
@@ -309,7 +315,7 @@ function buildTodoEvents(activeBusinessId) {
         status: item.status || "TODO",
         href: "",
         calendarUrl: buildGoogleCalendarLink({
-          title: `To-Do: ${title}`,
+          title: `Task: ${title}`,
           details,
           location: "",
           start,
@@ -451,7 +457,7 @@ function groupLabel(key) {
   if (key === "today") return "Today";
   if (key === "week") return "Next 7 Days";
   if (key === "later") return "Later";
-  return "Past / Needs Review";
+  return "Needs Review";
 }
 
 function groupEvents(events) {
@@ -492,7 +498,7 @@ function EventRow({ event, onRemoveLifeEvent }) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <Pill tone={tone}>{event.type}</Pill>
+            <Pill tone={tone}>{eventLabel(event.type)}</Pill>
             {event.status ? <Pill tone="slate">{String(event.status).replaceAll("_", " ")}</Pill> : null}
           </div>
 
@@ -583,7 +589,7 @@ export default function CalendarAgenda({ modeLabel = "Life Schedule", showCompos
       const res = await api.get("/tickets/");
       setTickets(safeResults(res.data));
     } catch (e) {
-      setErr(e?.response?.data?.detail || "Failed to load tickets");
+      setErr(e?.response?.data?.detail || "Schedule could not be loaded.");
       setTickets([]);
     } finally {
       setLoading(false);
@@ -643,7 +649,7 @@ export default function CalendarAgenda({ modeLabel = "Life Schedule", showCompos
 
         const details = [
           `Status: ${ticket.status || "—"}`,
-          `Marketplace: ${ticket.is_marketplace ? "Yes" : "No"}`,
+          ticket.is_marketplace ? "Booked through marketplace" : "",
           ticket.category_path ? `Category: ${ticket.category_path}` : "",
         ]
           .filter(Boolean)
@@ -719,14 +725,14 @@ export default function CalendarAgenda({ modeLabel = "Life Schedule", showCompos
         <div className="min-w-0">
           <div className="text-lg font-black text-white">{modeLabel}</div>
           <div className="mt-1 text-sm leading-6 text-slate-400">
-            Tickets, bills, workouts, tasks, and life reminders in one schedule.
+            Services, bills, workouts, tasks, and personal reminders in one place.
           </div>
 
           <div className="mt-3 flex flex-wrap gap-2">
-            <Pill tone="cyan">Tickets {stats.tickets}</Pill>
+            <Pill tone="cyan">Services {stats.tickets}</Pill>
             <Pill tone="amber">Money {stats.money}</Pill>
             <Pill tone="emerald">Health {stats.health}</Pill>
-            <Pill tone="indigo">To-Do {stats.todo}</Pill>
+            <Pill tone="indigo">Tasks {stats.todo}</Pill>
             <Pill tone="fuchsia">Life {stats.life}</Pill>
           </div>
         </div>
@@ -746,9 +752,9 @@ export default function CalendarAgenda({ modeLabel = "Life Schedule", showCompos
         <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div className="text-sm font-black text-white">Add life event</div>
+              <div className="text-sm font-black text-white">Add event</div>
               <div className="mt-1 text-xs text-slate-400">
-                Mortgage reminder, appointment, practice, family task, subscription renewal, or anything else.
+                Add a bill reminder, appointment, practice, family task, subscription renewal, or personal event.
               </div>
             </div>
 
@@ -844,7 +850,7 @@ export default function CalendarAgenda({ modeLabel = "Life Schedule", showCompos
         <div className="mt-5 rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-6 text-center">
           <div className="text-sm font-black text-white">No scheduled items yet.</div>
           <div className="mt-1 text-sm text-slate-400">
-            Add a life event, schedule a ticket, add a to-do due date, or update Money/Health.
+            Add an event, schedule a service, create a task, or update Money and Health.
           </div>
         </div>
       ) : null}
@@ -873,10 +879,6 @@ export default function CalendarAgenda({ modeLabel = "Life Schedule", showCompos
             </section>
           );
         })}
-      </div>
-
-      <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-xs leading-5 text-slate-500">
-        Production note: this is frontend-first storage. Backend persistence can come next once the UX is locked.
       </div>
     </div>
   );
