@@ -1408,7 +1408,8 @@ export default function CustomerDashboard() {
   const [feedItems, setFeedItems] = useState([]);
 
   const displayName =
-    user?.first_name || user?.firstName || user?.username || user?.email || "there";
+  user?.first_name || user?.firstName || user?.username || user?.email || "there";
+
 function openHealth() {
   navigate("/customer/health");
 }
@@ -1774,19 +1775,7 @@ function handleTabChange(nextTab) {
           </div>
         ) : null}
 
-        {tab === "health" ? (
-  <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
-    <HealthSnapshotCard onOpenHealth={() => navigate("/customer/health")} />
-
-    <ComingSoonPanel
-      icon="💪"
-      title="Fitness"
-      desc="Workouts, goals, steps, calories, weight tracking, strength progress, and routines."
-      primaryLabel="Open Health"
-      onPrimary={() => navigate("/customer/health")}
-    />
-  </div>
-) : null}
+      
       </div>
     </DashboardShell>
   );
