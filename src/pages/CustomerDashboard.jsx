@@ -668,7 +668,7 @@ function TodayCard({
 function QuickActionsCard({ navigate, setTab }) {
   const actions = [
     { label: "Request", icon: "+", tone: "cyan", onClick: () => navigate("/customer/new-request") },
-    { label: "Money", icon: "$", tone: "amber", onClick: () => setTab("finance") },
+    { label: "Money", icon: "$", tone: "amber", onClick: () => navigate("/customer/finance") },
     { label: "Chat", icon: "💬", tone: "fuchsia", onClick: () => setTab("inbox") },
     { label: "Health", icon: "♥", tone: "emerald", onClick: () => navigate("/customer/health") },
     { label: "Saved", icon: "★", tone: "indigo", onClick: () => navigate("/customer/business-cards") },
@@ -943,15 +943,15 @@ function MoneySnapshotCard({
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-sm font-black text-white">
-              Mortgage / rent tracking is ready for the next phase.
+              Mortgage / rent tracking is ready.
             </div>
 
             <div className="mt-1 text-xs leading-5 text-slate-400">
-              Start manual first, then add a paid linked-payments add-on later.
+              Open Money to manage bills, due dates, coverage, and priorities.
             </div>
           </div>
 
-          <Pill tone="slate">Add-on</Pill>
+          <Pill tone="slate">Money</Pill>
         </div>
       </div>
 
@@ -966,7 +966,7 @@ function MoneySnapshotCard({
       </div>
 
       <div className="mt-3 text-[11px] leading-5 text-slate-500">
-        Paid service history: {safeMoney(paidThisYear)}. Bill coverage will become active once manual bills or linked payments are added.
+        Paid service history: {safeMoney(paidThisYear)}.
       </div>
     </GlassCard>
   );
@@ -1102,7 +1102,7 @@ function HealthSnapshotCard({ onOpenHealth }) {
       : 0;
 
   return (
-    <GlassCard title="Health" subtitle="Fitness, calories, steps, and goals will live here." tone="emerald">
+    <GlassCard title="Health" subtitle="Fitness, calories, steps, and goals." tone="emerald">
       <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
         <div className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-200/90">
           Today
@@ -1113,7 +1113,7 @@ function HealthSnapshotCard({ onOpenHealth }) {
         </div>
 
         <div className="mt-1 text-xs leading-5 text-slate-400">
-          Open Health to build workouts, goals, weight tracking, calories, and progress.
+          Open Health for workouts, goals, steps, calories, progress, and devices.
         </div>
       </div>
 
@@ -1367,34 +1367,6 @@ function ActivityFeed({ tickets, invoices }) {
   );
 }
 
-function ComingSoonPanel({
-  title,
-  desc,
-  icon = "✦",
-  primaryLabel = "Open",
-  onPrimary,
-}) {
-  return (
-    <GlassCard title={title} subtitle={desc} tone="indigo">
-      <div className="rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-5">
-        <div className="text-4xl">{icon}</div>
-
-        <div className="mt-4 text-lg font-black text-white">
-          Built into the Life OS path.
-        </div>
-
-        <div className="mt-2 text-sm leading-6 text-slate-400">
-          This keeps the home dashboard clean while the full module grows behind it.
-        </div>
-
-        <MiniActionButton tone="indigo" className="mt-5" onClick={onPrimary}>
-          {primaryLabel}
-        </MiniActionButton>
-      </div>
-    </GlassCard>
-  );
-}
-
 export default function CustomerDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -1408,20 +1380,30 @@ export default function CustomerDashboard() {
   const [feedItems, setFeedItems] = useState([]);
 
   const displayName =
-  user?.first_name || user?.firstName || user?.username || user?.email || "there";
+    user?.first_name || user?.firstName || user?.username || user?.email || "there";
 
-function openHealth() {
-  navigate("/customer/health");
-}
-
-function handleTabChange(nextTab) {
-  if (nextTab === "health") {
-    navigate("/customer/health");
-    return;
+  function openMoney() {
+    navigate("/customer/finance");
   }
 
-  setTab(nextTab);
-}
+  function openHealth() {
+    navigate("/customer/health");
+  }
+
+  function handleTabChange(nextTab) {
+    if (nextTab === "health") {
+      openHealth();
+      return;
+    }
+
+    if (nextTab === "finance") {
+      openMoney();
+      return;
+    }
+
+    setTab(nextTab);
+  }
+
   useEffect(() => {
     setArchivedIds(readArchivedSet(user));
   }, [user?.id, user?.email]);
@@ -1621,7 +1603,7 @@ function handleTabChange(nextTab) {
           openCount={metrics.open}
           totalDue={totalDue}
           onNewRequest={() => navigate("/customer/new-request")}
-          onOpenMoney={() => setTab("finance")}
+          onOpenMoney={openMoney}
           onOpenHealth={openHealth}
         />
 
@@ -1636,7 +1618,7 @@ function handleTabChange(nextTab) {
                 onOpenTicket={(id) => navigate(`/tickets/${id}`)}
                 onNewRequest={() => navigate("/customer/new-request")}
                 onOpenCalendar={() => setTab("calendar")}
-                onOpenMoney={() => setTab("finance")}
+                onOpenMoney={openMoney}
                 onOpenHealth={openHealth}
               />
 
@@ -1656,7 +1638,7 @@ function handleTabChange(nextTab) {
                 invoices={dueInvoiceItems}
                 totalDue={totalDue}
                 paidThisYear={metrics.totalSpent}
-                onOpenMoney={() => setTab("finance")}
+                onOpenMoney={openMoney}
                 onViewRequests={() => setTab("orders")}
               />
 
@@ -1740,42 +1722,6 @@ function handleTabChange(nextTab) {
             onViewFeed={() => navigate("/newsfeed")}
           />
         ) : null}
-
-        {tab === "finance" ? (
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
-            <div className="space-y-5">
-              <MoneySnapshotCard
-                invoices={dueInvoiceItems}
-                totalDue={totalDue}
-                paidThisYear={metrics.totalSpent}
-                onOpenMoney={() => navigate("/customer/finance")}
-                onViewRequests={() => setTab("orders")}
-              />
-
-              <ComingSoonPanel
-                icon="🏦"
-                title="Linked Payments"
-                desc="Mortgage, rent, car payments, utilities, subscriptions, and bill coverage percentage."
-                primaryLabel="Open Finance"
-                onPrimary={() => navigate("/customer/finance")}
-              />
-            </div>
-
-            <div className="space-y-5">
-              <PaymentsDueCard
-                invoices={dueInvoiceItems}
-                totalDue={totalDue}
-                onPayNow={(ticketId) => navigate(`/tickets/${ticketId}`)}
-                onOpenOrder={(ticketId) => navigate(`/tickets/${ticketId}`)}
-                onViewOrders={() => setTab("orders")}
-              />
-
-              <ActivityFeed tickets={recentTickets} invoices={dueInvoiceItems} />
-            </div>
-          </div>
-        ) : null}
-
-      
       </div>
     </DashboardShell>
   );
