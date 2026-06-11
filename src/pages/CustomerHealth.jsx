@@ -9,6 +9,7 @@ import HealthDashboard from "../components/customer-health/HealthDashboard";
 import QuestionnaireDrawer from "../components/customer-health/QuestionnaireDrawer";
 import WorkoutStudioDrawer from "../components/customer-health/WorkoutStudioDrawer";
 import ExerciseLibraryDrawer from "../components/customer-health/ExerciseLibraryDrawer";
+import AiCoachDrawer from "../components/customer-health/AiCoachDrawer";
 import {
   NutritionDrawer,
   ProgressDrawer,
@@ -311,7 +312,7 @@ export default function CustomerHealth() {
         title="Health"
         subtitle={
           hasHealthAccess
-            ? "Dashboard • workouts • nutrition • progress • devices"
+            ? "Dashboard • workouts • nutrition • progress • AI coach"
             : "30 days free • $2.99/month after"
         }
         rightActions={
@@ -405,6 +406,17 @@ export default function CustomerHealth() {
             snapshot={syncedSnapshot}
             profile={profile}
             history={history}
+          />
+
+          <AiCoachDrawer
+            open={drawer === "coach"}
+            onClose={() => setDrawer("")}
+            profile={profile}
+            snapshot={syncedSnapshot}
+            workouts={workouts}
+            history={history}
+            progressLogs={progressLogs}
+            setSnapshot={setSnapshot}
           />
 
           <DevicesDrawer
