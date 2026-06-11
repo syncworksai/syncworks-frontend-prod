@@ -670,7 +670,7 @@ function QuickActionsCard({ navigate, setTab }) {
     { label: "Request", icon: "+", tone: "cyan", onClick: () => navigate("/customer/new-request") },
     { label: "Money", icon: "$", tone: "amber", onClick: () => setTab("finance") },
     { label: "Chat", icon: "💬", tone: "fuchsia", onClick: () => setTab("inbox") },
-    { label: "Health", icon: "♥", tone: "emerald", onClick: () => setTab("health") },
+    { label: "Health", icon: "♥", tone: "emerald", onClick: () => navigate("/customer/health") },
     { label: "Saved", icon: "★", tone: "indigo", onClick: () => navigate("/customer/business-cards") },
     { label: "Support", icon: "?", tone: "slate", onClick: () => navigate("/support") },
   ];
@@ -1409,7 +1409,18 @@ export default function CustomerDashboard() {
 
   const displayName =
     user?.first_name || user?.firstName || user?.username || user?.email || "there";
+function openHealth() {
+  navigate("/customer/health");
+}
 
+function handleTabChange(nextTab) {
+  if (nextTab === "health") {
+    navigate("/customer/health");
+    return;
+  }
+
+  setTab(nextTab);
+}
   useEffect(() => {
     setArchivedIds(readArchivedSet(user));
   }, [user?.id, user?.email]);
@@ -1610,10 +1621,10 @@ export default function CustomerDashboard() {
           totalDue={totalDue}
           onNewRequest={() => navigate("/customer/new-request")}
           onOpenMoney={() => setTab("finance")}
-          onOpenHealth={() => setTab("health")}
+          onOpenHealth={openHealth}
         />
 
-        <DashboardTabs tabs={tabs} activeTab={tab} onChange={setTab} />
+        <DashboardTabs tabs={tabs} activeTab={tab} onChange={handleTabChange} />
 
         {tab === "overview" ? (
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
@@ -1625,7 +1636,7 @@ export default function CustomerDashboard() {
                 onNewRequest={() => navigate("/customer/new-request")}
                 onOpenCalendar={() => setTab("calendar")}
                 onOpenMoney={() => setTab("finance")}
-                onOpenHealth={() => setTab("health")}
+                onOpenHealth={openHealth}
               />
 
               <RequestsPreviewCard
@@ -1648,7 +1659,7 @@ export default function CustomerDashboard() {
                 onViewRequests={() => setTab("orders")}
               />
 
-              <HealthSnapshotCard onOpenHealth={() => setTab("health")} />
+              <HealthSnapshotCard onOpenHealth={openHealth} />
 
               <DealsCard
                 items={featuredFeedItems}
@@ -1764,18 +1775,18 @@ export default function CustomerDashboard() {
         ) : null}
 
         {tab === "health" ? (
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
-            <HealthSnapshotCard onOpenHealth={() => navigate("/customer/health")} />
+  <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
+    <HealthSnapshotCard onOpenHealth={() => navigate("/customer/health")} />
 
-            <ComingSoonPanel
-              icon="💪"
-              title="Fitness"
-              desc="Workouts, goals, steps, calories, weight tracking, strength progress, and routines."
-              primaryLabel="Open Health"
-              onPrimary={() => navigate("/customer/health")}
-            />
-          </div>
-        ) : null}
+    <ComingSoonPanel
+      icon="💪"
+      title="Fitness"
+      desc="Workouts, goals, steps, calories, weight tracking, strength progress, and routines."
+      primaryLabel="Open Health"
+      onPrimary={() => navigate("/customer/health")}
+    />
+  </div>
+) : null}
       </div>
     </DashboardShell>
   );

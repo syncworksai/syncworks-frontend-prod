@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import ModeBar from "../components/ModeBar";
-import PaidGate from "../components/paid/PaidGate";
+import { useAuth } from "../auth/AuthContext";
 
 import HealthDashboard from "../components/customer-health/HealthDashboard";
 import QuestionnaireDrawer from "../components/customer-health/QuestionnaireDrawer";
@@ -37,10 +37,139 @@ import {
   writeJson,
 } from "../components/customer-health/healthStorage";
 
+function cx(...parts) {
+  return parts.filter(Boolean).join(" ");
+}
+
+function HealthSignupScreen({ onBack }) {
+  return (
+    <div className="space-y-5">
+      <section className="relative overflow-hidden rounded-[1.85rem] border border-cyan-400/25 bg-slate-950/70 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.32)] md:p-7">
+        <div className="pointer-events-none absolute -right-28 -top-28 h-80 w-80 rounded-full bg-emerald-500/14 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-28 left-1/4 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute right-1/4 top-1/3 h-72 w-72 rounded-full bg-fuchsia-500/10 blur-3xl" />
+
+        <div className="relative">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex items-center gap-3">
+                <img
+                  src={HEALTH_LOGO_URL}
+                  alt="Health & Fitness"
+                  className="h-16 w-16 rounded-2xl border border-emerald-400/25 object-cover"
+                />
+
+                <div>
+                  <div className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-200">
+                    SyncWorks Health
+                  </div>
+                  <h1 className="mt-1 text-3xl font-black tracking-tight text-white md:text-5xl">
+                    Health & Fitness
+                  </h1>
+                </div>
+              </div>
+
+              <p className="mt-5 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
+                Build workouts, track steps, calories, protein, progress, and connect a fitness profile that can grow into smarter week-to-week recommendations.
+              </p>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-emerald-100">
+                  30 days free
+                </span>
+
+                <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-cyan-100">
+                  $2.99/month after
+                </span>
+
+                <span className="rounded-full border border-fuchsia-500/25 bg-fuchsia-500/10 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-fuchsia-100">
+                  Cancel anytime
+                </span>
+              </div>
+            </div>
+
+            <div className="w-full shrink-0 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 lg:w-[360px]">
+              <div className="text-sm font-black uppercase tracking-[0.16em] text-slate-400">
+                Plan
+              </div>
+
+              <div className="mt-3 flex items-end gap-2">
+                <div className="text-5xl font-black text-white">$2.99</div>
+                <div className="pb-2 text-sm font-semibold text-slate-400">/ month</div>
+              </div>
+
+              <div className="mt-2 text-sm text-emerald-200">
+                First 30 days free.
+              </div>
+
+              <a
+                href={STRIPE_HEALTH_CHECKOUT_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-5 inline-flex h-12 w-full items-center justify-center rounded-2xl border border-emerald-300/40 bg-gradient-to-r from-emerald-500 to-cyan-500 px-5 text-sm font-black text-white shadow-[0_0_34px_rgba(16,185,129,0.24)] transition hover:brightness-110"
+              >
+                Start Free Trial
+              </a>
+
+              <button
+                type="button"
+                onClick={onBack}
+                className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-5 text-sm font-black text-slate-100 transition hover:bg-white/[0.08]"
+              >
+                Back to Dashboard
+              </button>
+
+              <div className="mt-4 text-xs leading-5 text-slate-500">
+                After checkout, access is unlocked by your backend entitlement. Log out/in or refresh if you just purchased.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
+          <div className="text-sm font-black text-white">Quick health dashboard</div>
+          <div className="mt-2 text-sm leading-6 text-slate-400">
+            See readiness, workout, steps, calories, protein, weight, devices, and progress from one clean screen.
+          </div>
+        </div>
+
+        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
+          <div className="text-sm font-black text-white">Workout intelligence</div>
+          <div className="mt-2 text-sm leading-6 text-slate-400">
+            Track exercises, sets, reps, weight, rest, difficulty, pain level, and completion history.
+          </div>
+        </div>
+
+        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
+          <div className="text-sm font-black text-white">Future device sync</div>
+          <div className="mt-2 text-sm leading-6 text-slate-400">
+            Manual tracking works now. Apple Health, Google Fit, Fitbit, and Garmin can be connected later.
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-[1.5rem] border border-amber-500/25 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
+        Health guidance is fitness support, not medical diagnosis. Pain, injury, or medical limitations should be reviewed with a qualified professional.
+      </div>
+    </div>
+  );
+}
+
 export default function CustomerHealth() {
   const nav = useNavigate();
+  const { moduleAccess, isGod } = useAuth();
+
+  const hasHealthAccess =
+    !!isGod ||
+    !!moduleAccess?.health ||
+    !!moduleAccess?.fitness ||
+    !!moduleAccess?.customer_health ||
+    !!moduleAccess?.customerHealth;
 
   const [drawer, setDrawer] = useState("");
+
   const [profile, setProfile] = useState(() => ({
     ...defaultProfile(),
     ...(readJson(PROFILE_KEY, null) || {}),
@@ -180,28 +309,29 @@ export default function CustomerHealth() {
 
       <ModeBar
         title="Health"
-        subtitle="Dashboard • workouts • nutrition • progress • devices"
+        subtitle={
+          hasHealthAccess
+            ? "Dashboard • workouts • nutrition • progress • devices"
+            : "30 days free • $2.99/month after"
+        }
         rightActions={
           <button
             type="button"
             onClick={() => nav("/customer")}
-            className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900"
+            className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs hover:bg-slate-900"
           >
             Back
           </button>
         }
       />
 
-      <main className="relative mx-auto max-w-6xl px-3 pb-12 pt-4 sm:px-5">
-        <PaidGate
-          entitlementKey="health"
-          title="Health & Fitness"
-          subtitle="Health dashboard, workout tracking, exercise library, progress logs, and device-ready metrics."
-          checkoutUrl={STRIPE_HEALTH_CHECKOUT_URL}
-          ctaTo="/upgrade"
-          ctaLabel="View plans / Upgrade"
-          iconUrl={HEALTH_LOGO_URL}
-        >
+      <main
+        className={cx(
+          "relative mx-auto px-3 pb-12 pt-4 sm:px-5",
+          hasHealthAccess ? "max-w-6xl" : "max-w-5xl"
+        )}
+      >
+        {hasHealthAccess ? (
           <HealthDashboard
             profile={profile}
             snapshot={syncedSnapshot}
@@ -211,74 +341,80 @@ export default function CustomerHealth() {
             devices={devices}
             onOpen={setDrawer}
           />
-        </PaidGate>
+        ) : (
+          <HealthSignupScreen onBack={() => nav("/customer")} />
+        )}
       </main>
 
-      <QuestionnaireDrawer
-        open={drawer === "questionnaire"}
-        onClose={() => setDrawer("")}
-        profile={profile}
-        setProfile={setProfile}
-        snapshot={snapshot}
-        setSnapshot={setSnapshot}
-      />
+      {hasHealthAccess ? (
+        <>
+          <QuestionnaireDrawer
+            open={drawer === "questionnaire"}
+            onClose={() => setDrawer("")}
+            profile={profile}
+            setProfile={setProfile}
+            snapshot={snapshot}
+            setSnapshot={setSnapshot}
+          />
 
-      <WorkoutStudioDrawer
-        open={drawer === "workout"}
-        onClose={() => setDrawer("")}
-        snapshot={syncedSnapshot}
-        setSnapshot={setSnapshot}
-        workouts={workouts}
-        setWorkouts={setWorkouts}
-        history={history}
-        setHistory={setHistory}
-      />
+          <WorkoutStudioDrawer
+            open={drawer === "workout"}
+            onClose={() => setDrawer("")}
+            snapshot={syncedSnapshot}
+            setSnapshot={setSnapshot}
+            workouts={workouts}
+            setWorkouts={setWorkouts}
+            history={history}
+            setHistory={setHistory}
+          />
 
-      <ExerciseLibraryDrawer
-        open={drawer === "library"}
-        onClose={() => setDrawer("")}
-        onAddExercise={addExerciseFromLibrary}
-      />
+          <ExerciseLibraryDrawer
+            open={drawer === "library"}
+            onClose={() => setDrawer("")}
+            onAddExercise={addExerciseFromLibrary}
+          />
 
-      <NutritionDrawer
-        open={drawer === "nutrition"}
-        onClose={() => setDrawer("")}
-        snapshot={syncedSnapshot}
-        setSnapshot={setSnapshot}
-      />
+          <NutritionDrawer
+            open={drawer === "nutrition"}
+            onClose={() => setDrawer("")}
+            snapshot={syncedSnapshot}
+            setSnapshot={setSnapshot}
+          />
 
-      <StepsDrawer
-        open={drawer === "steps"}
-        onClose={() => setDrawer("")}
-        snapshot={syncedSnapshot}
-        setSnapshot={setSnapshot}
-      />
+          <StepsDrawer
+            open={drawer === "steps"}
+            onClose={() => setDrawer("")}
+            snapshot={syncedSnapshot}
+            setSnapshot={setSnapshot}
+          />
 
-      <ProgressDrawer
-        open={drawer === "progress"}
-        onClose={() => setDrawer("")}
-        snapshot={syncedSnapshot}
-        setSnapshot={setSnapshot}
-        progressLogs={progressLogs}
-        setProgressLogs={setProgressLogs}
-        history={history}
-        setHistory={setHistory}
-      />
+          <ProgressDrawer
+            open={drawer === "progress"}
+            onClose={() => setDrawer("")}
+            snapshot={syncedSnapshot}
+            setSnapshot={setSnapshot}
+            progressLogs={progressLogs}
+            setProgressLogs={setProgressLogs}
+            history={history}
+            setHistory={setHistory}
+          />
 
-      <SynopsisDrawer
-        open={drawer === "synopsis"}
-        onClose={() => setDrawer("")}
-        snapshot={syncedSnapshot}
-        profile={profile}
-        history={history}
-      />
+          <SynopsisDrawer
+            open={drawer === "synopsis"}
+            onClose={() => setDrawer("")}
+            snapshot={syncedSnapshot}
+            profile={profile}
+            history={history}
+          />
 
-      <DevicesDrawer
-        open={drawer === "devices"}
-        onClose={() => setDrawer("")}
-        devices={devices}
-        setDevices={setDevices}
-      />
+          <DevicesDrawer
+            open={drawer === "devices"}
+            onClose={() => setDrawer("")}
+            devices={devices}
+            setDevices={setDevices}
+          />
+        </>
+      ) : null}
     </div>
   );
 }
