@@ -1,5 +1,6 @@
 // src/components/customer-health/HealthDashboard.jsx
 import React, { useEffect, useMemo, useState } from "react";
+import HealthMomentumCard from "./HealthMomentumCard";
 import {
   clampPercent,
   cx,
@@ -43,7 +44,12 @@ function StatPill({ label, value, tone = "cyan" }) {
   };
 
   return (
-    <div className={cx("rounded-2xl border px-3 py-2", toneMap[tone] || toneMap.cyan)}>
+    <div
+      className={cx(
+        "rounded-2xl border px-3 py-2",
+        toneMap[tone] || toneMap.cyan
+      )}
+    >
       <div className="text-[10px] font-black uppercase tracking-[0.18em] opacity-80">
         {label}
       </div>
@@ -68,6 +74,7 @@ function ProgressBar({ label, value, goal, suffix = "", tone = "cyan" }) {
         <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
           {label}
         </div>
+
         <div className="text-sm font-black text-white">
           {value}
           {suffix} / {goal}
@@ -77,7 +84,10 @@ function ProgressBar({ label, value, goal, suffix = "", tone = "cyan" }) {
 
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-900">
         <div
-          className={cx("h-full rounded-full bg-gradient-to-r", barTone[tone] || barTone.cyan)}
+          className={cx(
+            "h-full rounded-full bg-gradient-to-r",
+            barTone[tone] || barTone.cyan
+          )}
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -90,9 +100,12 @@ function ProgressBar({ label, value, goal, suffix = "", tone = "cyan" }) {
 function ActionButton({ label, onClick, tone = "cyan" }) {
   const toneMap = {
     cyan: "border-cyan-500/25 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/20",
-    emerald: "border-emerald-500/25 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20",
-    amber: "border-amber-500/25 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20",
-    fuchsia: "border-fuchsia-500/25 bg-fuchsia-500/10 text-fuchsia-100 hover:bg-fuchsia-500/20",
+    emerald:
+      "border-emerald-500/25 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20",
+    amber:
+      "border-amber-500/25 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20",
+    fuchsia:
+      "border-fuchsia-500/25 bg-fuchsia-500/10 text-fuchsia-100 hover:bg-fuchsia-500/20",
   };
 
   return (
@@ -122,7 +135,9 @@ function nextPlannedSession(weekPlan = []) {
     .filter((item) => item?.status !== "Completed")
     .map((item) => ({
       ...item,
-      sortTime: new Date(`${item.ymd || "2099-01-01"}T${item.time || "23:59"}:00`).getTime(),
+      sortTime: new Date(
+        `${item.ymd || "2099-01-01"}T${item.time || "23:59"}:00`
+      ).getTime(),
     }))
     .filter((item) => item.sortTime >= startOfToday)
     .sort((a, b) => a.sortTime - b.sortTime)[0];
@@ -136,18 +151,24 @@ function buildGoogleCalendarLink(item) {
 
   function fmt(d) {
     const pad = (n) => String(n).padStart(2, "0");
+
     return (
       `${d.getUTCFullYear()}` +
       `${pad(d.getUTCMonth() + 1)}` +
       `${pad(d.getUTCDate())}` +
-      `T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`
+      `T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(
+        d.getUTCSeconds()
+      )}Z`
     );
   }
 
   const params = new URLSearchParams();
   params.set("action", "TEMPLATE");
   params.set("text", item.workout_name);
-  params.set("details", `SyncWorks Health Planner • ${item.note || "Workout session"}`);
+  params.set(
+    "details",
+    `SyncWorks Health Planner • ${item.note || "Workout session"}`
+  );
   params.set("dates", `${fmt(start)}/${fmt(end)}`);
 
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
@@ -212,9 +233,10 @@ export default function HealthDashboard({
       : `You are training for ${goalTitle}. Win today by doing the next workout, hitting protein, and staying on top of recovery.`;
 
   const healthScore = clampPercent(
-    (clampPercent((steps / Math.max(stepGoal, 1)) * 100) * 0.25) +
-      (clampPercent((protein / Math.max(proteinGoal, 1)) * 100) * 0.3) +
-      (clampPercent((weeklyCompleted / Math.max(trainingDaysGoal, 1)) * 100) * 0.3) +
+    clampPercent((steps / Math.max(stepGoal, 1)) * 100) * 0.25 +
+      clampPercent((protein / Math.max(proteinGoal, 1)) * 100) * 0.3 +
+      clampPercent((weeklyCompleted / Math.max(trainingDaysGoal, 1)) * 100) *
+        0.3 +
       (snapshot?.readiness === "Ready"
         ? 15
         : snapshot?.readiness === "Moderate"
@@ -237,9 +259,11 @@ export default function HealthDashboard({
                 <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-100">
                   SyncWorks Health
                 </span>
+
                 <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100">
                   {snapshot?.readiness || "Moderate"}
                 </span>
+
                 <span className="rounded-full border border-fuchsia-500/25 bg-fuchsia-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-100">
                   AI Coach
                 </span>
@@ -254,31 +278,44 @@ export default function HealthDashboard({
                   <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
                     Today’s Mission
                   </div>
+
                   <h1 className="mt-1 text-3xl font-black tracking-tight text-white md:text-4xl">
                     {nextSession?.workout_name || "Build momentum today"}
                   </h1>
+
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-                    Train for <span className="font-bold text-white">{goalTitle}</span>, stay on top of
-                    your progress, and keep the app focused on what matters today.
+                    Train for{" "}
+                    <span className="font-bold text-white">{goalTitle}</span>,
+                    stay on top of your progress, and keep the app focused on
+                    what matters today.
                   </p>
                 </div>
               </div>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <StatPill label="Goal" value={goalTitle} tone="emerald" />
+
                 <StatPill
                   label="Weekly Workouts"
                   value={`${weeklyCompleted}/${trainingDaysGoal}`}
                   tone="cyan"
                 />
+
                 <StatPill
                   label="Health Score"
                   value={`${healthScore}/100`}
                   tone="amber"
                 />
+
                 <StatPill
                   label="Next Workout"
-                  value={nextSession ? `${nextSession.day_label} ${nextSession.time || ""}`.trim() : "Not scheduled"}
+                  value={
+                    nextSession
+                      ? `${nextSession.day_label} ${
+                          nextSession.time || ""
+                        }`.trim()
+                      : "Not scheduled"
+                  }
                   tone="fuchsia"
                 />
               </div>
@@ -288,10 +325,14 @@ export default function HealthDashboard({
                   <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
                     Coach Message
                   </div>
+
                   <div className="mt-2 text-lg font-black text-white">
                     “{QUOTES[quoteIndex]}”
                   </div>
-                  <div className="mt-2 text-sm leading-6 text-slate-300">{coachMessage}</div>
+
+                  <div className="mt-2 text-sm leading-6 text-slate-300">
+                    {coachMessage}
+                  </div>
                 </div>
 
                 <div className="rounded-3xl border border-white/10 bg-slate-950/55 p-4">
@@ -304,15 +345,22 @@ export default function HealthDashboard({
                       <div className="mt-2 text-lg font-black text-white">
                         {nextSession.workout_name}
                       </div>
+
                       <div className="mt-1 text-sm text-slate-300">
-                        {prettyDate(nextSession.ymd)} • {nextSession.time || "Anytime"}
+                        {prettyDate(nextSession.ymd)} •{" "}
+                        {nextSession.time || "Anytime"}
                       </div>
+
                       <div className="mt-1 text-sm text-slate-500">
                         {nextSession.note || "Planned workout"}
                       </div>
 
                       <div className="mt-4 flex flex-wrap gap-2">
-                        <ActionButton label="Open Planner" onClick={() => onOpen("planner")} />
+                        <ActionButton
+                          label="Open Planner"
+                          onClick={() => onOpen("planner")}
+                        />
+
                         <a
                           href={buildGoogleCalendarLink(nextSession)}
                           target="_blank"
@@ -325,12 +373,21 @@ export default function HealthDashboard({
                     </>
                   ) : (
                     <>
-                      <div className="mt-2 text-lg font-black text-white">No workout scheduled yet</div>
-                      <div className="mt-2 text-sm leading-6 text-slate-400">
-                        Build the week inside your planner so the app becomes a daily checkpoint.
+                      <div className="mt-2 text-lg font-black text-white">
+                        No workout scheduled yet
                       </div>
+
+                      <div className="mt-2 text-sm leading-6 text-slate-400">
+                        Build the week inside your planner so the app becomes a
+                        daily checkpoint.
+                      </div>
+
                       <div className="mt-4">
-                        <ActionButton label="Build Weekly Planner" onClick={() => onOpen("planner")} tone="emerald" />
+                        <ActionButton
+                          label="Build Weekly Planner"
+                          onClick={() => onOpen("planner")}
+                          tone="emerald"
+                        />
                       </div>
                     </>
                   )}
@@ -338,57 +395,132 @@ export default function HealthDashboard({
               </div>
 
               <div className="mt-5 flex flex-wrap gap-2">
-                <ActionButton label="Today’s AI Plan" onClick={() => onOpen("today")} />
-                <ActionButton label="Quick Log Workout" onClick={() => onOpen("workout")} tone="emerald" />
-                <ActionButton label="Log Steps" onClick={() => onOpen("steps")} tone="amber" />
-                <ActionButton label="Log Nutrition" onClick={() => onOpen("nutrition")} tone="fuchsia" />
-                <ActionButton label="Open AI Coach" onClick={() => onOpen("coach")} />
+                <ActionButton
+                  label="Today’s AI Plan"
+                  onClick={() => onOpen("today")}
+                />
+
+                <ActionButton
+                  label="Quick Log Workout"
+                  onClick={() => onOpen("workout")}
+                  tone="emerald"
+                />
+
+                <ActionButton
+                  label="Log Steps"
+                  onClick={() => onOpen("steps")}
+                  tone="amber"
+                />
+
+                <ActionButton
+                  label="Log Nutrition"
+                  onClick={() => onOpen("nutrition")}
+                  tone="fuchsia"
+                />
+
+                <ActionButton
+                  label="Open AI Coach"
+                  onClick={() => onOpen("coach")}
+                />
               </div>
             </div>
           </div>
         </div>
       </Card>
 
+      <HealthMomentumCard
+        profile={profile}
+        snapshot={snapshot}
+        history={history}
+        progressLogs={progressLogs}
+        onOpen={onOpen}
+      />
+
       <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
         <Card>
           <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
             Goal Snapshot
           </div>
-          <div className="mt-2 text-xl font-black text-white">See your progress at a glance</div>
+
+          <div className="mt-2 text-xl font-black text-white">
+            See your progress at a glance
+          </div>
+
           <div className="mt-1 text-sm text-slate-400">
             This section should make people want to log in every day.
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <ProgressBar label="Steps" value={steps} goal={stepGoal} tone="cyan" />
-            <ProgressBar label="Protein" value={protein} goal={proteinGoal} suffix="g" tone="emerald" />
-            <ProgressBar label="Calories" value={calories} goal={calorieGoal} tone="amber" />
-            <ProgressBar label="Water" value={water} goal={waterGoal} suffix=" oz" tone="fuchsia" />
+            <ProgressBar
+              label="Steps"
+              value={steps}
+              goal={stepGoal}
+              tone="cyan"
+            />
+
+            <ProgressBar
+              label="Protein"
+              value={protein}
+              goal={proteinGoal}
+              suffix="g"
+              tone="emerald"
+            />
+
+            <ProgressBar
+              label="Calories"
+              value={calories}
+              goal={calorieGoal}
+              tone="amber"
+            />
+
+            <ProgressBar
+              label="Water"
+              value={water}
+              goal={waterGoal}
+              suffix=" oz"
+              tone="fuchsia"
+            />
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-4">
             <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-              <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">Current Weight</div>
+              <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                Current Weight
+              </div>
+
               <div className="mt-2 text-2xl font-black text-white">
                 {currentWeight ? `${currentWeight} lb` : "—"}
               </div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-              <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">Target Weight</div>
+              <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                Target Weight
+              </div>
+
               <div className="mt-2 text-2xl font-black text-white">
                 {targetWeight ? `${targetWeight} lb` : "—"}
               </div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-              <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">Planned This Week</div>
-              <div className="mt-2 text-2xl font-black text-white">{plannedCount}</div>
+              <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                Planned This Week
+              </div>
+
+              <div className="mt-2 text-2xl font-black text-white">
+                {plannedCount}
+              </div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-              <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">Progress Logs</div>
-              <div className="mt-2 text-2xl font-black text-white">{progressLogs?.length || 0}</div>
+              <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                Progress Logs
+              </div>
+
+              <div className="mt-2 text-2xl font-black text-white">
+                {progressLogs?.length || 0}
+              </div>
             </div>
           </div>
         </Card>
@@ -397,7 +529,9 @@ export default function HealthDashboard({
           <div className="text-xs font-black uppercase tracking-[0.16em] text-emerald-200">
             Weekly Planner Preview
           </div>
+
           <div className="mt-2 text-xl font-black text-white">This week</div>
+
           <div className="mt-1 text-sm text-slate-400">
             Build habit by showing today, tomorrow, and the next sessions.
           </div>
@@ -413,6 +547,7 @@ export default function HealthDashboard({
                     <div className="text-sm font-black text-white">
                       {item.day_label} • {prettyDate(item.ymd)}
                     </div>
+
                     <div className="mt-1 text-xs text-slate-400">
                       {item.workout_name || "Recovery / open day"}
                       {item.time ? ` • ${item.time}` : ""}
@@ -432,43 +567,87 @@ export default function HealthDashboard({
           </div>
 
           <div className="mt-4">
-            <ActionButton label="Open Planner" onClick={() => onOpen("planner")} tone="emerald" />
+            <ActionButton
+              label="Open Planner"
+              onClick={() => onOpen("planner")}
+              tone="emerald"
+            />
           </div>
         </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
-          <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Workout Studio</div>
-          <div className="mt-2 text-lg font-black text-white">Build and log sessions</div>
-          <div className="mt-2 text-sm leading-6 text-slate-400">
-            Add exercises, sets, reps, weight, pain, difficulty, and use the AI coach to adjust.
+          <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+            Workout Studio
           </div>
+
+          <div className="mt-2 text-lg font-black text-white">
+            Build and log sessions
+          </div>
+
+          <div className="mt-2 text-sm leading-6 text-slate-400">
+            Add exercises, sets, reps, weight, pain, difficulty, and use the AI
+            coach to adjust.
+          </div>
+
           <div className="mt-4">
-            <ActionButton label="Open Workout Studio" onClick={() => onOpen("workout")} tone="cyan" />
+            <ActionButton
+              label="Open Workout Studio"
+              onClick={() => onOpen("workout")}
+              tone="cyan"
+            />
           </div>
         </Card>
 
         <Card>
-          <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Exercise Library</div>
-          <div className="mt-2 text-lg font-black text-white">Pick movements by goal</div>
-          <div className="mt-2 text-sm leading-6 text-slate-400">
-            Make it easier for users to choose movements by muscle group, feel, and equipment.
+          <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+            Exercise Library
           </div>
+
+          <div className="mt-2 text-lg font-black text-white">
+            Pick movements by goal
+          </div>
+
+          <div className="mt-2 text-sm leading-6 text-slate-400">
+            Make it easier for users to choose movements by muscle group, feel,
+            and equipment.
+          </div>
+
           <div className="mt-4">
-            <ActionButton label="Open Exercise Library" onClick={() => onOpen("library")} tone="fuchsia" />
+            <ActionButton
+              label="Open Exercise Library"
+              onClick={() => onOpen("library")}
+              tone="fuchsia"
+            />
           </div>
         </Card>
 
         <Card>
-          <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Recovery / Devices</div>
-          <div className="mt-2 text-lg font-black text-white">Track recovery and future sync</div>
-          <div className="mt-2 text-sm leading-6 text-slate-400">
-            Devices active: {devices?.length || 0}. Keep users ready for Apple Health, Fitbit, Garmin, and more.
+          <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+            Recovery / Devices
           </div>
+
+          <div className="mt-2 text-lg font-black text-white">
+            Track recovery and future sync
+          </div>
+
+          <div className="mt-2 text-sm leading-6 text-slate-400">
+            Devices active: {devices?.length || 0}. Keep users ready for Apple
+            Health, Fitbit, Garmin, and more.
+          </div>
+
           <div className="mt-4 flex flex-wrap gap-2">
-            <ActionButton label="Devices" onClick={() => onOpen("devices")} tone="amber" />
-            <ActionButton label="Daily Synopsis" onClick={() => onOpen("synopsis")} />
+            <ActionButton
+              label="Devices"
+              onClick={() => onOpen("devices")}
+              tone="amber"
+            />
+
+            <ActionButton
+              label="Daily Synopsis"
+              onClick={() => onOpen("synopsis")}
+            />
           </div>
         </Card>
       </div>
@@ -476,11 +655,15 @@ export default function HealthDashboard({
       <div className="grid gap-4 xl:grid-cols-2">
         <Card className="border-fuchsia-500/20">
           <div className="text-xs font-black uppercase tracking-[0.16em] text-fuchsia-200">
-            Recommended Partner
+            Partner Recommendation
           </div>
-          <div className="mt-2 text-xl font-black text-white">Seeq Protein</div>
+
+          <div className="mt-2 text-xl font-black text-white">
+            Seeq Protein
+          </div>
+
           <div className="mt-2 text-sm leading-6 text-slate-300">
-            Great fit if you want a clean protein/EAAs option for recovery and hitting daily protein targets.
+            Helpful option for recovery and hitting daily protein targets.
           </div>
 
           <div className="mt-4 flex flex-wrap gap-3">
@@ -507,9 +690,12 @@ export default function HealthDashboard({
           <div className="text-xs font-black uppercase tracking-[0.16em] text-cyan-200">
             Step Motivation Partner
           </div>
+
           <div className="mt-2 text-xl font-black text-white">WeWard</div>
+
           <div className="mt-2 text-sm leading-6 text-slate-300">
-            Add a little fun to steps. Users can stay more motivated when they feel rewarded for walking and daily movement.
+            Add a little fun to steps. Users can stay more motivated when they
+            feel rewarded for walking and daily movement.
           </div>
 
           <div className="mt-4 flex flex-wrap gap-3">

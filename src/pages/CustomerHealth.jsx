@@ -10,6 +10,8 @@ import {
   patchCustomerHealthProfile,
 } from "../api/customerHealth";
 
+import { buildHealthAchievements } from "../components/customer-health/healthAchievements";
+import HealthConfetti from "../components/customer-health/HealthConfetti";
 import TodayPlanDrawer from "../components/customer-health/TodayPlanDrawer";
 import HealthDashboard from "../components/customer-health/HealthDashboard";
 import HealthPlannerDrawer from "../components/customer-health/HealthPlannerDrawer";
@@ -42,6 +44,7 @@ import {
   defaultSnapshot,
   defaultWorkouts,
   readJson,
+  todayYmd,
   uid,
   writeJson,
 } from "../components/customer-health/healthStorage";
@@ -75,7 +78,9 @@ function findNextPlanned(weekPlan = []) {
     .filter((item) => item?.status !== "Completed")
     .map((item) => ({
       ...item,
-      sortTime: new Date(`${item.ymd || "2099-01-01"}T${item.time || "23:59"}:00`).getTime(),
+      sortTime: new Date(
+        `${item.ymd || "2099-01-01"}T${item.time || "23:59"}:00`
+      ).getTime(),
     }))
     .filter((item) => item.sortTime >= startOfToday)
     .sort((a, b) => a.sortTime - b.sortTime)[0];
@@ -132,6 +137,7 @@ function HealthSignupScreen({ onBack }) {
                   <div className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-200">
                     SyncWorks Health
                   </div>
+
                   <h1 className="mt-1 text-3xl font-black tracking-tight text-white md:text-5xl">
                     Health & Fitness
                   </h1>
@@ -139,8 +145,9 @@ function HealthSignupScreen({ onBack }) {
               </div>
 
               <p className="mt-5 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
-                A daily-use health hub with an AI fitness coach, workout planning, goal tracking, progress logging,
-                and a cleaner reason to come back every day.
+                A daily-use health hub with an AI fitness coach, workout
+                planning, goal tracking, progress logging, and a cleaner reason
+                to come back every day.
               </p>
 
               <div className="mt-5 flex flex-wrap gap-2">
@@ -165,10 +172,14 @@ function HealthSignupScreen({ onBack }) {
 
               <div className="mt-3 flex items-end gap-2">
                 <div className="text-5xl font-black text-white">$2.99</div>
-                <div className="pb-2 text-sm font-semibold text-slate-400">/ month</div>
+                <div className="pb-2 text-sm font-semibold text-slate-400">
+                  / month
+                </div>
               </div>
 
-              <div className="mt-2 text-sm text-emerald-200">First 30 days free.</div>
+              <div className="mt-2 text-sm text-emerald-200">
+                First 30 days free.
+              </div>
 
               <a
                 href={STRIPE_HEALTH_CHECKOUT_URL}
@@ -188,7 +199,8 @@ function HealthSignupScreen({ onBack }) {
               </button>
 
               <div className="mt-4 text-xs leading-5 text-slate-500">
-                After checkout, access is unlocked by your backend entitlement. Log out/in or refresh if you just purchased.
+                After checkout, access is unlocked by your backend entitlement.
+                Log out/in or refresh if you just purchased.
               </div>
             </div>
           </div>
@@ -197,29 +209,42 @@ function HealthSignupScreen({ onBack }) {
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
-          <div className="text-sm font-black text-white">Daily-use home screen</div>
+          <div className="text-sm font-black text-white">
+            Daily-use home screen
+          </div>
+
           <div className="mt-2 text-sm leading-6 text-slate-400">
-            Quick sight of goals, progress, workout plan, next session, and daily coach guidance.
+            Quick sight of goals, progress, workout plan, next session, and
+            daily coach guidance.
           </div>
         </div>
 
         <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
-          <div className="text-sm font-black text-white">Workout planner + calendar</div>
+          <div className="text-sm font-black text-white">
+            Workout planner + calendar
+          </div>
+
           <div className="mt-2 text-sm leading-6 text-slate-400">
             Build a weekly workout plan and send sessions to calendar.
           </div>
         </div>
 
         <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
-          <div className="text-sm font-black text-white">AI coach + partner tools</div>
+          <div className="text-sm font-black text-white">
+            AI coach + partner tools
+          </div>
+
           <div className="mt-2 text-sm leading-6 text-slate-400">
-            Better motivation, better tracking, plus helpful partner recommendations like protein and step rewards.
+            Better motivation, better tracking, plus helpful partner
+            recommendations like protein and step rewards.
           </div>
         </div>
       </div>
 
       <div className="rounded-[1.5rem] border border-amber-500/25 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
-        Health guidance is fitness support, not medical diagnosis. Pain, injury, or medical limitations should be reviewed with a qualified professional.
+        Health guidance is fitness support, not medical diagnosis. Pain,
+        injury, or medical limitations should be reviewed with a qualified
+        professional.
       </div>
     </div>
   );
@@ -239,7 +264,10 @@ export default function CustomerHealth() {
   const [drawer, setDrawer] = useState("");
   const [syncStatus, setSyncStatus] = useState("local");
   const [cloudLoaded, setCloudLoaded] = useState(false);
+  const [celebration, setCelebration] = useState(null);
+
   const skipNextCloudSaveRef = useRef(false);
+  const achievedMilestoneIdsRef = useRef(new Set());
 
   const [profile, setProfile] = useState(() => ({
     ...defaultProfile(),
@@ -288,7 +316,8 @@ export default function CustomerHealth() {
       return {
         ...prev,
         week_plan: starterPlan,
-        planned_workouts: starterPlan.filter((item) => item.workout_name).length,
+        planned_workouts: starterPlan.filter((item) => item.workout_name)
+          .length,
       };
     });
   }, [workouts]);
@@ -302,7 +331,8 @@ export default function CustomerHealth() {
       week_plan: weekPlan,
       workout: snapshot.workout || "",
       goal: profile.primary_goal || snapshot.goal || "General fitness",
-      equipment: snapshot.equipment || profile.preferred_equipment || "Bodyweight",
+      equipment:
+        snapshot.equipment || profile.preferred_equipment || "Bodyweight",
       weekly_completed: history.length,
       progress_count: progressLogs.length,
       planned_workouts: weekPlan.filter((item) => item?.workout_name).length,
@@ -310,7 +340,9 @@ export default function CustomerHealth() {
         ? "Device selected"
         : "Manual tracking active",
       next_session_note: nextSession
-        ? `${nextSession.day_label} • ${nextSession.time || "Anytime"} • ${nextSession.workout_name}`
+        ? `${nextSession.day_label} • ${
+            nextSession.time || "Anytime"
+          } • ${nextSession.workout_name}`
         : "",
       updated_at: new Date().toISOString(),
     };
@@ -379,7 +411,9 @@ export default function CustomerHealth() {
           setWorkouts(
             data.workouts_json.map((workout) => ({
               ...workout,
-              exercises: Array.isArray(workout.exercises) ? workout.exercises : [],
+              exercises: Array.isArray(workout.exercises)
+                ? workout.exercises
+                : [],
             }))
           );
         }
@@ -454,6 +488,41 @@ export default function CustomerHealth() {
     progressLogs,
     devices,
   ]);
+
+  useEffect(() => {
+    if (!hasHealthAccess) return;
+
+    const achievements = buildHealthAchievements({
+      profile,
+      snapshot: syncedSnapshot,
+      history,
+      progressLogs,
+    });
+
+    for (const item of achievements.achieved) {
+      if (!achievedMilestoneIdsRef.current.has(item.id)) {
+        achievedMilestoneIdsRef.current.add(item.id);
+
+        const seenKey = `sw_health_milestone_seen_${item.id}_${todayYmd()}`;
+        const seenToday = localStorage.getItem(seenKey);
+
+        if (!seenToday) {
+          localStorage.setItem(seenKey, "1");
+
+          setCelebration({
+            title: `${item.icon} ${item.label}`,
+            subtitle: item.description,
+          });
+
+          break;
+        }
+      }
+    }
+
+    for (const item of achievements.achieved) {
+      achievedMilestoneIdsRef.current.add(item.id);
+    }
+  }, [hasHealthAccess, profile, syncedSnapshot, history, progressLogs]);
 
   function addExerciseFromLibrary(exercise) {
     setWorkouts((prev) => {
@@ -657,6 +726,13 @@ export default function CustomerHealth() {
           />
         </>
       ) : null}
+
+      <HealthConfetti
+        active={!!celebration}
+        title={celebration?.title}
+        subtitle={celebration?.subtitle}
+        onDone={() => setCelebration(null)}
+      />
     </div>
   );
 }
