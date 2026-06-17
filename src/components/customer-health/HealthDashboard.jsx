@@ -1,66 +1,98 @@
 // src/components/customer-health/HealthDashboard.jsx
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   clampPercent,
   cx,
+  prettyDate,
   readinessSuggestion,
-  readinessTone,
   safeNumber,
 } from "./healthStorage";
 
-function Pill({ children, tone = "slate" }) {
-  const tones = {
-    cyan: "border-cyan-500/25 bg-cyan-500/10 text-cyan-200",
-    amber: "border-amber-500/25 bg-amber-500/10 text-amber-200",
-    emerald: "border-emerald-500/25 bg-emerald-500/10 text-emerald-200",
-    fuchsia: "border-fuchsia-500/25 bg-fuchsia-500/10 text-fuchsia-200",
-    indigo: "border-indigo-500/25 bg-indigo-500/10 text-indigo-200",
-    rose: "border-rose-500/25 bg-rose-500/10 text-rose-200",
-    slate: "border-white/10 bg-white/[0.04] text-slate-300",
-  };
+const SEEQ_AFFILIATE_URL = "https://www.seeqsupply.com/JACOB78279";
+const WEWARD_AFFILIATE_URL =
+  "https://wewardapp.go.link/profile?adj_t=1rg2xpwh&userId=22865998";
 
+const QUOTES = [
+  "Consistency beats intensity you can’t repeat.",
+  "You do not need a perfect week. You need to win today.",
+  "Short workout > skipped workout.",
+  "Momentum matters more than motivation.",
+  "Hit the protein. Hit the steps. The body follows.",
+  "Train for the goal, not just the mood.",
+];
+
+function Card({ className = "", children }) {
   return (
-    <span
+    <section
       className={cx(
-        "rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em]",
-        tones[tone] || tones.slate
+        "rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-4 shadow-[0_10px_36px_rgba(0,0,0,0.18)]",
+        className
       )}
     >
       {children}
-    </span>
+    </section>
   );
 }
 
-function ProgressBar({ percent, tone = "emerald" }) {
-  const fill =
-    tone === "cyan"
-      ? "bg-cyan-400"
-      : tone === "amber"
-      ? "bg-amber-400"
-      : tone === "rose"
-      ? "bg-rose-400"
-      : tone === "indigo"
-      ? "bg-indigo-400"
-      : tone === "fuchsia"
-      ? "bg-fuchsia-400"
-      : "bg-emerald-400";
+function StatPill({ label, value, tone = "cyan" }) {
+  const toneMap = {
+    cyan: "border-cyan-500/25 bg-cyan-500/10 text-cyan-100",
+    emerald: "border-emerald-500/25 bg-emerald-500/10 text-emerald-100",
+    amber: "border-amber-500/25 bg-amber-500/10 text-amber-100",
+    fuchsia: "border-fuchsia-500/25 bg-fuchsia-500/10 text-fuchsia-100",
+  };
 
   return (
-    <div className="h-2.5 overflow-hidden rounded-full bg-slate-950/70">
-      <div className={cx("h-full rounded-full", fill)} style={{ width: `${clampPercent(percent)}%` }} />
+    <div className={cx("rounded-2xl border px-3 py-2", toneMap[tone] || toneMap.cyan)}>
+      <div className="text-[10px] font-black uppercase tracking-[0.18em] opacity-80">
+        {label}
+      </div>
+      <div className="mt-1 text-sm font-black">{value}</div>
     </div>
   );
 }
 
-function MetricCard({ label, value, sub, tone = "slate", percent, onClick }) {
-  const tones = {
-    cyan: "border-cyan-400/20 bg-cyan-500/10",
-    amber: "border-amber-400/20 bg-amber-500/10",
-    emerald: "border-emerald-400/20 bg-emerald-500/10",
-    fuchsia: "border-fuchsia-400/20 bg-fuchsia-500/10",
-    indigo: "border-indigo-400/20 bg-indigo-500/10",
-    rose: "border-rose-400/20 bg-rose-500/10",
-    slate: "border-white/10 bg-white/[0.03]",
+function ProgressBar({ label, value, goal, suffix = "", tone = "cyan" }) {
+  const pct = goal > 0 ? clampPercent((value / goal) * 100) : 0;
+
+  const barTone = {
+    cyan: "from-cyan-400 to-blue-500",
+    emerald: "from-emerald-400 to-cyan-500",
+    amber: "from-amber-400 to-orange-500",
+    fuchsia: "from-fuchsia-400 to-purple-500",
+  };
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+          {label}
+        </div>
+        <div className="text-sm font-black text-white">
+          {value}
+          {suffix} / {goal}
+          {suffix}
+        </div>
+      </div>
+
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-900">
+        <div
+          className={cx("h-full rounded-full bg-gradient-to-r", barTone[tone] || barTone.cyan)}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+
+      <div className="mt-2 text-[11px] text-slate-500">{pct}% complete</div>
+    </div>
+  );
+}
+
+function ActionButton({ label, onClick, tone = "cyan" }) {
+  const toneMap = {
+    cyan: "border-cyan-500/25 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/20",
+    emerald: "border-emerald-500/25 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20",
+    amber: "border-amber-500/25 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20",
+    fuchsia: "border-fuchsia-500/25 bg-fuchsia-500/10 text-fuchsia-100 hover:bg-fuchsia-500/20",
   };
 
   return (
@@ -68,47 +100,57 @@ function MetricCard({ label, value, sub, tone = "slate", percent, onClick }) {
       type="button"
       onClick={onClick}
       className={cx(
-        "rounded-[1.35rem] border p-4 text-left transition hover:bg-white/[0.06]",
-        tones[tone] || tones.slate
+        "inline-flex h-11 items-center justify-center rounded-2xl border px-4 text-sm font-black transition",
+        toneMap[tone] || toneMap.cyan
       )}
     >
-      <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-        {label}
-      </div>
-
-      <div className="mt-2 text-2xl font-black text-white">{value}</div>
-
-      {percent != null ? (
-        <div className="mt-3">
-          <ProgressBar percent={percent} tone={tone} />
-        </div>
-      ) : null}
-
-      {sub ? <div className="mt-2 text-xs leading-5 text-slate-400">{sub}</div> : null}
+      {label}
     </button>
   );
 }
 
-function ActionCard({ title, sub, tone = "slate", onClick }) {
-  const tones = {
-    cyan: "border-cyan-500/25 bg-cyan-500/10 hover:bg-cyan-500/15",
-    amber: "border-amber-500/25 bg-amber-500/10 hover:bg-amber-500/15",
-    emerald: "border-emerald-500/25 bg-emerald-500/10 hover:bg-emerald-500/15",
-    fuchsia: "border-fuchsia-500/25 bg-fuchsia-500/10 hover:bg-fuchsia-500/15",
-    indigo: "border-indigo-500/25 bg-indigo-500/10 hover:bg-indigo-500/15",
-    slate: "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]",
-  };
+function nextPlannedSession(weekPlan = []) {
+  const today = new Date();
+  const startOfToday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  ).getTime();
 
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cx("rounded-[1.35rem] border p-4 text-left transition", tones[tone] || tones.slate)}
-    >
-      <div className="text-sm font-black text-white">{title}</div>
-      <div className="mt-1 text-xs leading-5 text-slate-400">{sub}</div>
-    </button>
-  );
+  return [...weekPlan]
+    .filter((item) => item?.workout_name)
+    .filter((item) => item?.status !== "Completed")
+    .map((item) => ({
+      ...item,
+      sortTime: new Date(`${item.ymd || "2099-01-01"}T${item.time || "23:59"}:00`).getTime(),
+    }))
+    .filter((item) => item.sortTime >= startOfToday)
+    .sort((a, b) => a.sortTime - b.sortTime)[0];
+}
+
+function buildGoogleCalendarLink(item) {
+  if (!item?.ymd || !item?.workout_name) return "#";
+
+  const start = new Date(`${item.ymd}T${item.time || "09:00"}:00`);
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+
+  function fmt(d) {
+    const pad = (n) => String(n).padStart(2, "0");
+    return (
+      `${d.getUTCFullYear()}` +
+      `${pad(d.getUTCMonth() + 1)}` +
+      `${pad(d.getUTCDate())}` +
+      `T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`
+    );
+  }
+
+  const params = new URLSearchParams();
+  params.set("action", "TEMPLATE");
+  params.set("text", item.workout_name);
+  params.set("details", `SyncWorks Health Planner • ${item.note || "Workout session"}`);
+  params.set("dates", `${fmt(start)}/${fmt(end)}`);
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
 export default function HealthDashboard({
@@ -120,180 +162,375 @@ export default function HealthDashboard({
   devices,
   onOpen,
 }) {
-  const steps = safeNumber(snapshot.steps);
-  const stepGoal = safeNumber(snapshot.step_goal) || 8000;
-  const calories = safeNumber(snapshot.calories);
-  const calorieGoal = safeNumber(snapshot.calorie_goal) || 2200;
-  const proteinToday = safeNumber(snapshot.protein_today);
-  const proteinGoal = safeNumber(snapshot.protein_goal);
-  const water = safeNumber(snapshot.water);
-  const waterGoal = safeNumber(snapshot.water_goal) || 100;
+  const [quoteIndex, setQuoteIndex] = useState(0);
 
-  const stepPercent = stepGoal > 0 ? Math.round((steps / stepGoal) * 100) : 0;
-  const caloriePercent = calorieGoal > 0 ? Math.round((calories / calorieGoal) * 100) : 0;
-  const proteinPercent = proteinGoal > 0 ? Math.round((proteinToday / proteinGoal) * 100) : 0;
-  const waterPercent = waterGoal > 0 ? Math.round((water / waterGoal) * 100) : 0;
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setQuoteIndex((prev) => (prev + 1) % QUOTES.length);
+    }, 7000);
 
-  const completedThisWeek = history.length;
-  const activeDevices = devices.filter((x) => String(x.status || "").includes("Active")).length;
-  const tone = readinessTone(snapshot.readiness);
+    return () => window.clearInterval(timer);
+  }, []);
 
-  const healthScore = Math.round(
-    clampPercent(stepPercent) * 0.22 +
-      clampPercent(proteinPercent) * 0.22 +
-      clampPercent(caloriePercent) * 0.18 +
-      clampPercent(waterPercent) * 0.1 +
-      (snapshot.readiness === "Ready" ? 18 : snapshot.readiness === "Moderate" ? 12 : 6) +
-      Math.min(10, completedThisWeek * 2)
+  const stepGoal = safeNumber(snapshot?.step_goal || 8000);
+  const steps = safeNumber(snapshot?.steps || 0);
+
+  const calorieGoal = safeNumber(snapshot?.calorie_goal || 2200);
+  const calories = safeNumber(snapshot?.calories || 0);
+
+  const proteinGoal = safeNumber(snapshot?.protein_goal || 150);
+  const protein = safeNumber(snapshot?.protein_today || 0);
+
+  const waterGoal = safeNumber(snapshot?.water_goal || 100);
+  const water = safeNumber(snapshot?.water || 0);
+
+  const currentWeight = safeNumber(snapshot?.weight || profile?.weight || 0);
+  const targetWeight = safeNumber(profile?.target_weight || 0);
+
+  const trainingDaysGoal = Math.max(1, safeNumber(profile?.training_days || 3));
+  const weeklyCompleted = Math.max(
+    0,
+    safeNumber(snapshot?.weekly_completed || history?.length || 0)
+  );
+
+  const weekPlan = Array.isArray(snapshot?.week_plan) ? snapshot.week_plan : [];
+  const plannedCount = weekPlan.filter(
+    (item) => item?.workout_name && item?.status !== "Rest Day"
+  ).length;
+
+  const nextSession = useMemo(() => nextPlannedSession(weekPlan), [weekPlan]);
+
+  const goalTitle =
+    profile?.inspiration_goal ||
+    profile?.primary_goal ||
+    snapshot?.goal ||
+    "General fitness";
+
+  const coachMessage =
+    snapshot?.readiness && snapshot?.readiness !== "Moderate"
+      ? readinessSuggestion(snapshot.readiness)
+      : `You are training for ${goalTitle}. Win today by doing the next workout, hitting protein, and staying on top of recovery.`;
+
+  const healthScore = clampPercent(
+    (clampPercent((steps / Math.max(stepGoal, 1)) * 100) * 0.25) +
+      (clampPercent((protein / Math.max(proteinGoal, 1)) * 100) * 0.3) +
+      (clampPercent((weeklyCompleted / Math.max(trainingDaysGoal, 1)) * 100) * 0.3) +
+      (snapshot?.readiness === "Ready"
+        ? 15
+        : snapshot?.readiness === "Moderate"
+        ? 10
+        : snapshot?.readiness === "Recovery"
+        ? 6
+        : 3)
   );
 
   return (
     <div className="space-y-5">
-      <section className="relative overflow-hidden rounded-[1.65rem] border border-white/10 bg-slate-950/65 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.28)] md:p-6">
-        <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-emerald-500/14 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-28 left-1/4 h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl" />
+      <Card className="relative overflow-hidden border-cyan-500/25 bg-gradient-to-br from-cyan-500/10 via-slate-950/60 to-fuchsia-500/10">
+        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-cyan-500/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 left-1/4 h-64 w-64 rounded-full bg-fuchsia-500/15 blur-3xl" />
 
         <div className="relative">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-200/90">
-                SyncWorks Health
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-100">
+                  SyncWorks Health
+                </span>
+                <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100">
+                  {snapshot?.readiness || "Moderate"}
+                </span>
+                <span className="rounded-full border border-fuchsia-500/25 bg-fuchsia-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-100">
+                  AI Coach
+                </span>
               </div>
 
-              <h1 className="mt-2 text-2xl font-black tracking-tight text-white md:text-4xl">
-                AI fitness coach
-              </h1>
+              <div className="mt-4 flex items-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-cyan-400/25 bg-cyan-500/10 text-3xl animate-pulse">
+                  🏋️
+                </div>
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                Daily plan, adaptive workouts, progression, recovery guardrails, and user-specific coaching.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Pill tone={tone}>{snapshot.readiness}</Pill>
-              <Pill tone="cyan">{completedThisWeek} Recent</Pill>
-              <Pill tone="fuchsia">AI Coach</Pill>
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-3 lg:grid-cols-[260px_minmax(0,1fr)]">
-            <button
-              type="button"
-              onClick={() => onOpen("today")}
-              className="rounded-[1.35rem] border border-cyan-400/25 bg-cyan-500/10 p-5 text-left"
-            >
-              <div className="text-xs font-black uppercase tracking-[0.16em] text-cyan-200">
-                Today’s Plan
+                <div className="min-w-0">
+                  <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
+                    Today’s Mission
+                  </div>
+                  <h1 className="mt-1 text-3xl font-black tracking-tight text-white md:text-4xl">
+                    {nextSession?.workout_name || "Build momentum today"}
+                  </h1>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
+                    Train for <span className="font-bold text-white">{goalTitle}</span>, stay on top of
+                    your progress, and keep the app focused on what matters today.
+                  </p>
+                </div>
               </div>
-              <div className="mt-2 text-3xl font-black text-white">Open Coach</div>
-              <div className="mt-3 text-sm leading-6 text-slate-300">
-                Get one clear mission based on your goal, readiness, missed logs, nutrition, and recovery.
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <StatPill label="Goal" value={goalTitle} tone="emerald" />
+                <StatPill
+                  label="Weekly Workouts"
+                  value={`${weeklyCompleted}/${trainingDaysGoal}`}
+                  tone="cyan"
+                />
+                <StatPill
+                  label="Health Score"
+                  value={`${healthScore}/100`}
+                  tone="amber"
+                />
+                <StatPill
+                  label="Next Workout"
+                  value={nextSession ? `${nextSession.day_label} ${nextSession.time || ""}`.trim() : "Not scheduled"}
+                  tone="fuchsia"
+                />
               </div>
-            </button>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <MetricCard
-                label="Health Score"
-                value={healthScore}
-                sub={readinessSuggestion(snapshot.readiness)}
-                tone="emerald"
-                percent={healthScore}
-                onClick={() => onOpen("synopsis")}
-              />
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                <div className="rounded-3xl border border-white/10 bg-slate-950/55 p-4">
+                  <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                    Coach Message
+                  </div>
+                  <div className="mt-2 text-lg font-black text-white">
+                    “{QUOTES[quoteIndex]}”
+                  </div>
+                  <div className="mt-2 text-sm leading-6 text-slate-300">{coachMessage}</div>
+                </div>
 
-              <MetricCard
-                label="Training For"
-                value={profile.primary_goal || "General fitness"}
-                sub={profile.sport ? `Sport: ${profile.sport}` : "Tap to update your questionnaire."}
-                tone="indigo"
-                onClick={() => onOpen("questionnaire")}
-              />
+                <div className="rounded-3xl border border-white/10 bg-slate-950/55 p-4">
+                  <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                    Next Planned Session
+                  </div>
 
-              <MetricCard
-                label="Workout"
-                value={snapshot.workout || "Choose workout"}
-                sub={`${snapshot.time_available || "30 minutes"} • ${snapshot.equipment || "Bodyweight"}`}
-                tone="emerald"
-                onClick={() => onOpen("workout")}
-              />
+                  {nextSession ? (
+                    <>
+                      <div className="mt-2 text-lg font-black text-white">
+                        {nextSession.workout_name}
+                      </div>
+                      <div className="mt-1 text-sm text-slate-300">
+                        {prettyDate(nextSession.ymd)} • {nextSession.time || "Anytime"}
+                      </div>
+                      <div className="mt-1 text-sm text-slate-500">
+                        {nextSession.note || "Planned workout"}
+                      </div>
 
-              <MetricCard
-                label="AI Coach"
-                value="Progress"
-                sub="Next workout, weak areas, missed logs, and overload."
-                tone="fuchsia"
-                onClick={() => onOpen("coach")}
-              />
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <ActionButton label="Open Planner" onClick={() => onOpen("planner")} />
+                        <a
+                          href={buildGoogleCalendarLink(nextSession)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex h-11 items-center justify-center rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-4 text-sm font-black text-emerald-100 transition hover:bg-emerald-500/20"
+                        >
+                          Add to Calendar
+                        </a>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="mt-2 text-lg font-black text-white">No workout scheduled yet</div>
+                      <div className="mt-2 text-sm leading-6 text-slate-400">
+                        Build the week inside your planner so the app becomes a daily checkpoint.
+                      </div>
+                      <div className="mt-4">
+                        <ActionButton label="Build Weekly Planner" onClick={() => onOpen("planner")} tone="emerald" />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                <ActionButton label="Today’s AI Plan" onClick={() => onOpen("today")} />
+                <ActionButton label="Quick Log Workout" onClick={() => onOpen("workout")} tone="emerald" />
+                <ActionButton label="Log Steps" onClick={() => onOpen("steps")} tone="amber" />
+                <ActionButton label="Log Nutrition" onClick={() => onOpen("nutrition")} tone="fuchsia" />
+                <ActionButton label="Open AI Coach" onClick={() => onOpen("coach")} />
+              </div>
             </div>
           </div>
         </div>
-      </section>
+      </Card>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Steps"
-          value={steps.toLocaleString()}
-          sub={`Goal ${stepGoal.toLocaleString()}`}
-          tone="cyan"
-          percent={stepPercent}
-          onClick={() => onOpen("steps")}
-        />
+      <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <Card>
+          <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+            Goal Snapshot
+          </div>
+          <div className="mt-2 text-xl font-black text-white">See your progress at a glance</div>
+          <div className="mt-1 text-sm text-slate-400">
+            This section should make people want to log in every day.
+          </div>
 
-        <MetricCard
-          label="Calories"
-          value={calories.toLocaleString()}
-          sub={`Target ${calorieGoal.toLocaleString()}`}
-          tone="amber"
-          percent={caloriePercent}
-          onClick={() => onOpen("nutrition")}
-        />
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <ProgressBar label="Steps" value={steps} goal={stepGoal} tone="cyan" />
+            <ProgressBar label="Protein" value={protein} goal={proteinGoal} suffix="g" tone="emerald" />
+            <ProgressBar label="Calories" value={calories} goal={calorieGoal} tone="amber" />
+            <ProgressBar label="Water" value={water} goal={waterGoal} suffix=" oz" tone="fuchsia" />
+          </div>
 
-        <MetricCard
-          label="Protein"
-          value={`${proteinToday.toLocaleString()}g`}
-          sub={`Goal ${proteinGoal.toLocaleString()}g`}
-          tone="emerald"
-          percent={proteinPercent}
-          onClick={() => onOpen("nutrition")}
-        />
+          <div className="mt-4 grid gap-3 md:grid-cols-4">
+            <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+              <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">Current Weight</div>
+              <div className="mt-2 text-2xl font-black text-white">
+                {currentWeight ? `${currentWeight} lb` : "—"}
+              </div>
+            </div>
 
-        <MetricCard
-          label="Devices"
-          value={`${activeDevices}/${devices.length || 4}`}
-          sub="Manual tracking active. Device sync path ready."
-          tone="cyan"
-          onClick={() => onOpen("devices")}
-        />
+            <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+              <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">Target Weight</div>
+              <div className="mt-2 text-2xl font-black text-white">
+                {targetWeight ? `${targetWeight} lb` : "—"}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+              <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">Planned This Week</div>
+              <div className="mt-2 text-2xl font-black text-white">{plannedCount}</div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+              <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">Progress Logs</div>
+              <div className="mt-2 text-2xl font-black text-white">{progressLogs?.length || 0}</div>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="border-emerald-500/20">
+          <div className="text-xs font-black uppercase tracking-[0.16em] text-emerald-200">
+            Weekly Planner Preview
+          </div>
+          <div className="mt-2 text-xl font-black text-white">This week</div>
+          <div className="mt-1 text-sm text-slate-400">
+            Build habit by showing today, tomorrow, and the next sessions.
+          </div>
+
+          <div className="mt-4 space-y-2">
+            {weekPlan.length ? (
+              weekPlan.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-black text-white">
+                      {item.day_label} • {prettyDate(item.ymd)}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-400">
+                      {item.workout_name || "Recovery / open day"}
+                      {item.time ? ` • ${item.time}` : ""}
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100">
+                    {item.status || "Planned"}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-sm text-slate-400">
+                No week planned yet.
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4">
+            <ActionButton label="Open Planner" onClick={() => onOpen("planner")} tone="emerald" />
+          </div>
+        </Card>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-4">
-        <ActionCard
-          title="Today’s AI Plan"
-          sub="One clear mission for the day."
-          tone="cyan"
-          onClick={() => onOpen("today")}
-        />
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Workout Studio</div>
+          <div className="mt-2 text-lg font-black text-white">Build and log sessions</div>
+          <div className="mt-2 text-sm leading-6 text-slate-400">
+            Add exercises, sets, reps, weight, pain, difficulty, and use the AI coach to adjust.
+          </div>
+          <div className="mt-4">
+            <ActionButton label="Open Workout Studio" onClick={() => onOpen("workout")} tone="cyan" />
+          </div>
+        </Card>
 
-        <ActionCard
-          title="Workout Studio"
-          sub="Sets, reps, weight, rest, pain, and difficulty."
-          tone="emerald"
-          onClick={() => onOpen("workout")}
-        />
+        <Card>
+          <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Exercise Library</div>
+          <div className="mt-2 text-lg font-black text-white">Pick movements by goal</div>
+          <div className="mt-2 text-sm leading-6 text-slate-400">
+            Make it easier for users to choose movements by muscle group, feel, and equipment.
+          </div>
+          <div className="mt-4">
+            <ActionButton label="Open Exercise Library" onClick={() => onOpen("library")} tone="fuchsia" />
+          </div>
+        </Card>
 
-        <ActionCard
-          title="Exercise Library"
-          sub="Pick movements by muscle group and what to feel."
-          tone="slate"
-          onClick={() => onOpen("library")}
-        />
+        <Card>
+          <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Recovery / Devices</div>
+          <div className="mt-2 text-lg font-black text-white">Track recovery and future sync</div>
+          <div className="mt-2 text-sm leading-6 text-slate-400">
+            Devices active: {devices?.length || 0}. Keep users ready for Apple Health, Fitbit, Garmin, and more.
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <ActionButton label="Devices" onClick={() => onOpen("devices")} tone="amber" />
+            <ActionButton label="Daily Synopsis" onClick={() => onOpen("synopsis")} />
+          </div>
+        </Card>
+      </div>
 
-        <ActionCard
-          title="AI Coach"
-          sub="Progression, accountability, weak areas, and missed logs."
-          tone="fuchsia"
-          onClick={() => onOpen("coach")}
-        />
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Card className="border-fuchsia-500/20">
+          <div className="text-xs font-black uppercase tracking-[0.16em] text-fuchsia-200">
+            Recommended Partner
+          </div>
+          <div className="mt-2 text-xl font-black text-white">Seeq Protein</div>
+          <div className="mt-2 text-sm leading-6 text-slate-300">
+            Great fit if you want a clean protein/EAAs option for recovery and hitting daily protein targets.
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <a
+              href={SEEQ_AFFILIATE_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-11 items-center justify-center rounded-2xl border border-fuchsia-500/25 bg-fuchsia-500/10 px-4 text-sm font-black text-fuchsia-100 transition hover:bg-fuchsia-500/20"
+            >
+              Shop Seeq
+            </a>
+
+            <button
+              type="button"
+              onClick={() => onOpen("nutrition")}
+              className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-black text-slate-100 transition hover:bg-white/[0.08]"
+            >
+              Log Protein Goal
+            </button>
+          </div>
+        </Card>
+
+        <Card className="border-cyan-500/20">
+          <div className="text-xs font-black uppercase tracking-[0.16em] text-cyan-200">
+            Step Motivation Partner
+          </div>
+          <div className="mt-2 text-xl font-black text-white">WeWard</div>
+          <div className="mt-2 text-sm leading-6 text-slate-300">
+            Add a little fun to steps. Users can stay more motivated when they feel rewarded for walking and daily movement.
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <a
+              href={WEWARD_AFFILIATE_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-11 items-center justify-center rounded-2xl border border-cyan-500/25 bg-cyan-500/10 px-4 text-sm font-black text-cyan-100 transition hover:bg-cyan-500/20"
+            >
+              Explore WeWard
+            </a>
+
+            <button
+              type="button"
+              onClick={() => onOpen("steps")}
+              className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-black text-slate-100 transition hover:bg-white/[0.08]"
+            >
+              Update Steps
+            </button>
+          </div>
+        </Card>
       </div>
     </div>
   );

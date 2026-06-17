@@ -12,6 +12,7 @@ import {
 
 import TodayPlanDrawer from "../components/customer-health/TodayPlanDrawer";
 import HealthDashboard from "../components/customer-health/HealthDashboard";
+import HealthPlannerDrawer from "../components/customer-health/HealthPlannerDrawer";
 import QuestionnaireDrawer from "../components/customer-health/QuestionnaireDrawer";
 import WorkoutStudioDrawer from "../components/customer-health/WorkoutStudioDrawer";
 import ExerciseLibraryDrawer from "../components/customer-health/ExerciseLibraryDrawer";
@@ -35,6 +36,7 @@ import {
   SNAPSHOT_KEY,
   STRIPE_HEALTH_CHECKOUT_URL,
   WORKOUTS_KEY,
+  buildStarterWeekPlan,
   defaultDevices,
   defaultProfile,
   defaultSnapshot,
@@ -58,6 +60,25 @@ function hasObjectData(value) {
 
 function hasArrayData(value) {
   return Array.isArray(value) && value.length > 0;
+}
+
+function findNextPlanned(weekPlan = []) {
+  const today = new Date();
+  const startOfToday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  ).getTime();
+
+  return [...weekPlan]
+    .filter((item) => item?.workout_name)
+    .filter((item) => item?.status !== "Completed")
+    .map((item) => ({
+      ...item,
+      sortTime: new Date(`${item.ymd || "2099-01-01"}T${item.time || "23:59"}:00`).getTime(),
+    }))
+    .filter((item) => item.sortTime >= startOfToday)
+    .sort((a, b) => a.sortTime - b.sortTime)[0];
 }
 
 function SyncStatusPill({ status }) {
@@ -118,7 +139,8 @@ function HealthSignupScreen({ onBack }) {
               </div>
 
               <p className="mt-5 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
-                Build workouts, track steps, calories, protein, progress, and connect a fitness profile that can grow into smarter week-to-week recommendations.
+                A daily-use health hub with an AI fitness coach, workout planning, goal tracking, progress logging,
+                and a cleaner reason to come back every day.
               </p>
 
               <div className="mt-5 flex flex-wrap gap-2">
@@ -146,9 +168,7 @@ function HealthSignupScreen({ onBack }) {
                 <div className="pb-2 text-sm font-semibold text-slate-400">/ month</div>
               </div>
 
-              <div className="mt-2 text-sm text-emerald-200">
-                First 30 days free.
-              </div>
+              <div className="mt-2 text-sm text-emerald-200">First 30 days free.</div>
 
               <a
                 href={STRIPE_HEALTH_CHECKOUT_URL}
@@ -177,23 +197,23 @@ function HealthSignupScreen({ onBack }) {
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
-          <div className="text-sm font-black text-white">Quick health dashboard</div>
+          <div className="text-sm font-black text-white">Daily-use home screen</div>
           <div className="mt-2 text-sm leading-6 text-slate-400">
-            See readiness, workout, steps, calories, protein, weight, devices, and progress from one clean screen.
+            Quick sight of goals, progress, workout plan, next session, and daily coach guidance.
           </div>
         </div>
 
         <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
-          <div className="text-sm font-black text-white">Workout intelligence</div>
+          <div className="text-sm font-black text-white">Workout planner + calendar</div>
           <div className="mt-2 text-sm leading-6 text-slate-400">
-            Track exercises, sets, reps, weight, rest, difficulty, pain level, and completion history.
+            Build a weekly workout plan and send sessions to calendar.
           </div>
         </div>
 
         <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
-          <div className="text-sm font-black text-white">Future device sync</div>
+          <div className="text-sm font-black text-white">AI coach + partner tools</div>
           <div className="mt-2 text-sm leading-6 text-slate-400">
-            Manual tracking works now. Apple Health, Google Fit, Fitbit, and Garmin can be connected later.
+            Better motivation, better tracking, plus helpful partner recommendations like protein and step rewards.
           </div>
         </div>
       </div>
@@ -259,17 +279,39 @@ export default function CustomerHealth() {
     return Array.isArray(saved) && saved.length ? saved : defaultDevices();
   });
 
+  useEffect(() => {
+    setSnapshot((prev) => {
+      if (Array.isArray(prev.week_plan) && prev.week_plan.length) return prev;
+
+      const starterPlan = buildStarterWeekPlan(workouts);
+
+      return {
+        ...prev,
+        week_plan: starterPlan,
+        planned_workouts: starterPlan.filter((item) => item.workout_name).length,
+      };
+    });
+  }, [workouts]);
+
   const syncedSnapshot = useMemo(() => {
+    const weekPlan = Array.isArray(snapshot.week_plan) ? snapshot.week_plan : [];
+    const nextSession = findNextPlanned(weekPlan);
+
     return {
       ...snapshot,
+      week_plan: weekPlan,
       workout: snapshot.workout || "",
       goal: profile.primary_goal || snapshot.goal || "General fitness",
       equipment: snapshot.equipment || profile.preferred_equipment || "Bodyweight",
       weekly_completed: history.length,
       progress_count: progressLogs.length,
+      planned_workouts: weekPlan.filter((item) => item?.workout_name).length,
       device_status: devices.some((x) => x.status === "Selected for Sync")
         ? "Device selected"
         : "Manual tracking active",
+      next_session_note: nextSession
+        ? `${nextSession.day_label} • ${nextSession.time || "Anytime"} • ${nextSession.workout_name}`
+        : "",
       updated_at: new Date().toISOString(),
     };
   }, [snapshot, profile, history.length, progressLogs.length, devices]);
@@ -477,7 +519,7 @@ export default function CustomerHealth() {
         title="Health"
         subtitle={
           hasHealthAccess
-            ? "Dashboard • workouts • nutrition • progress • AI coach"
+            ? "Dashboard • planner • workouts • nutrition • progress • AI coach"
             : "30 days free • $2.99/month after"
         }
         rightActions={
@@ -498,7 +540,7 @@ export default function CustomerHealth() {
       <main
         className={cx(
           "relative mx-auto px-3 pb-12 pt-4 sm:px-5",
-          hasHealthAccess ? "max-w-6xl" : "max-w-5xl"
+          hasHealthAccess ? "max-w-7xl" : "max-w-5xl"
         )}
       >
         {hasHealthAccess ? (
@@ -526,6 +568,14 @@ export default function CustomerHealth() {
             workouts={workouts}
             history={history}
             setSnapshot={setSnapshot}
+          />
+
+          <HealthPlannerDrawer
+            open={drawer === "planner"}
+            onClose={() => setDrawer("")}
+            snapshot={syncedSnapshot}
+            setSnapshot={setSnapshot}
+            workouts={workouts}
           />
 
           <QuestionnaireDrawer

@@ -49,27 +49,22 @@ export function writeJson(key, value) {
 }
 
 export function todayYmd() {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 }
 
-export function prettyDate(value) {
-  if (!value) return "Today";
-
-  try {
-    const d = new Date(`${value}T00:00:00`);
-
-    if (!Number.isFinite(d.getTime())) {
-      return String(value);
-    }
-
-    return d.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return String(value);
-  }
+export function prettyDate(ymd) {
+  if (!ymd) return "";
+  const d = new Date(`${ymd}T12:00:00`);
+  if (!Number.isFinite(d.getTime())) return ymd;
+  return d.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 export function readinessTone(readiness = "") {
@@ -173,6 +168,7 @@ export function defaultSnapshot() {
     last_completed_at: "",
 
     notes: "",
+    week_plan: [],
   };
 }
 
@@ -205,6 +201,64 @@ export function defaultDevices() {
   ];
 }
 
+function addDays(date, days) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function asYmd(date) {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+export function buildStarterWeekPlan(workouts = []) {
+  const now = new Date();
+  const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const primaryWorkout = workouts?.[0];
+  const walkWorkout = workouts?.find((w) =>
+    String(w?.name || "").toLowerCase().includes("walk")
+  );
+
+  return Array.from({ length: 7 }).map((_, index) => {
+    const date = addDays(now, index);
+    const dayLabel = names[date.getDay()];
+
+    let workout = null;
+    let time = "";
+
+    if (index === 0) {
+      workout = primaryWorkout || null;
+      time = "06:00";
+    } else if (index === 1) {
+      workout = walkWorkout || null;
+      time = "18:00";
+    } else if (index === 2) {
+      workout = primaryWorkout || null;
+      time = "06:00";
+    } else if (index === 4) {
+      workout = primaryWorkout || null;
+      time = "06:00";
+    } else if (index === 5) {
+      workout = walkWorkout || null;
+      time = "09:00";
+    }
+
+    return {
+      id: uid("plan"),
+      ymd: asYmd(date),
+      day_label: dayLabel,
+      workout_id: workout?.id || "",
+      workout_name: workout?.name || "",
+      time,
+      status: workout ? "Planned" : "Rest Day",
+      note: workout ? "Planned session" : "Recovery / open day",
+    };
+  });
+}
+
 export const EXERCISE_LIBRARY = [
   {
     group: "Chest",
@@ -232,14 +286,6 @@ export const EXERCISE_LIBRARY = [
         equipment: "Dumbbells",
         sets: "3",
         reps: "8-12",
-      },
-      {
-        name: "Cable Chest Fly",
-        feel: "Chest squeeze with controlled shoulder position.",
-        mistake: "Overstretching shoulders or bending elbows too much.",
-        equipment: "Cable",
-        sets: "3",
-        reps: "10-15",
       },
     ],
   },
@@ -270,14 +316,6 @@ export const EXERCISE_LIBRARY = [
         sets: "3",
         reps: "8-12",
       },
-      {
-        name: "Chest Supported Row",
-        feel: "Upper back and lats without low-back stress.",
-        mistake: "Jerking the weight instead of squeezing.",
-        equipment: "Machine / dumbbells",
-        sets: "3",
-        reps: "8-12",
-      },
     ],
   },
   {
@@ -298,14 +336,6 @@ export const EXERCISE_LIBRARY = [
         equipment: "Dumbbells",
         sets: "3",
         reps: "8-12",
-      },
-      {
-        name: "Face Pull / Band Pull-Apart",
-        feel: "Rear delts, upper back, and shoulder blade control.",
-        mistake: "Pulling with traps instead of rear shoulders.",
-        equipment: "Band / cable",
-        sets: "3",
-        reps: "12-15",
       },
       {
         name: "Rear Delt Fly",
@@ -337,65 +367,12 @@ export const EXERCISE_LIBRARY = [
         reps: "8-12",
       },
       {
-        name: "Reverse Lunge",
-        feel: "Glutes, quads, balance, and hip control.",
-        mistake: "Pushing off the back leg too much.",
-        equipment: "Bodyweight / dumbbells",
-        sets: "3",
-        reps: "8-10 each",
-      },
-      {
         name: "Romanian Deadlift",
         feel: "Hamstrings, glutes, and hip hinge.",
         mistake: "Rounding the back or turning it into a squat.",
         equipment: "Dumbbells / barbell",
         sets: "3",
         reps: "8-12",
-      },
-      {
-        name: "Step-Up",
-        feel: "Glutes, quads, balance, and single-leg control.",
-        mistake: "Pushing too much from the trailing leg.",
-        equipment: "Box / bench",
-        sets: "3",
-        reps: "8-10 each",
-      },
-    ],
-  },
-  {
-    group: "Arms",
-    items: [
-      {
-        name: "Biceps Curl",
-        feel: "Biceps working without shoulder swing.",
-        mistake: "Using momentum instead of controlled reps.",
-        equipment: "Dumbbells / band",
-        sets: "3",
-        reps: "10-12",
-      },
-      {
-        name: "Triceps Pressdown",
-        feel: "Triceps locking elbows down and back.",
-        mistake: "Moving the shoulders instead of elbows.",
-        equipment: "Cable / band",
-        sets: "3",
-        reps: "10-15",
-      },
-      {
-        name: "Hammer Curl",
-        feel: "Biceps, forearms, and grip.",
-        mistake: "Swinging or shortening the range.",
-        equipment: "Dumbbells",
-        sets: "3",
-        reps: "10-12",
-      },
-      {
-        name: "Overhead Triceps Extension",
-        feel: "Long head of triceps with shoulder control.",
-        mistake: "Flaring ribs or forcing shoulder range.",
-        equipment: "Dumbbell / cable",
-        sets: "3",
-        reps: "10-15",
       },
     ],
   },
@@ -417,14 +394,6 @@ export const EXERCISE_LIBRARY = [
         equipment: "Bodyweight",
         sets: "3",
         reps: "20-45 sec",
-      },
-      {
-        name: "Farmer Carry",
-        feel: "Grip, core, posture, and breathing control.",
-        mistake: "Leaning or rushing steps.",
-        equipment: "Dumbbells / kettlebells",
-        sets: "4",
-        reps: "30 sec",
       },
       {
         name: "Pallof Press",
@@ -456,57 +425,12 @@ export const EXERCISE_LIBRARY = [
         reps: "20-30 sec",
       },
       {
-        name: "Sprint / Bike Intervals",
-        feel: "Explosive effort with controlled recovery.",
-        mistake: "Doing max effort without warm-up.",
-        equipment: "Track / bike",
-        sets: "6",
-        reps: "20 sec",
-      },
-      {
         name: "Zone 2 Cardio",
         feel: "Steady breathing and sustainable pace.",
         mistake: "Turning an easy conditioning day into a hard workout.",
         equipment: "Walk / bike / rower",
         sets: "1",
         reps: "20-45 min",
-      },
-    ],
-  },
-  {
-    group: "Mobility",
-    items: [
-      {
-        name: "Hip Mobility Flow",
-        feel: "Hips opening without pain.",
-        mistake: "Forcing range instead of controlling it.",
-        equipment: "Bodyweight",
-        sets: "2",
-        reps: "60 sec",
-      },
-      {
-        name: "Glute Bridge",
-        feel: "Glutes lifting hips, not low back.",
-        mistake: "Overarching the lower back.",
-        equipment: "Bodyweight",
-        sets: "3",
-        reps: "10-15",
-      },
-      {
-        name: "Child's Pose Breathing",
-        feel: "Back, hips, ribs, and breathing reset.",
-        mistake: "Holding tension instead of relaxing.",
-        equipment: "Bodyweight",
-        sets: "2",
-        reps: "60 sec",
-      },
-      {
-        name: "World's Greatest Stretch",
-        feel: "Hips, hamstrings, upper back, and rotation.",
-        mistake: "Rushing through without controlling position.",
-        equipment: "Bodyweight",
-        sets: "2",
-        reps: "5 each",
       },
     ],
   },
@@ -554,16 +478,6 @@ export const PROGRAM_TEMPLATES = [
             difficulty: "Medium",
             pain: "0",
           },
-          {
-            name: "Walk",
-            sets: "1",
-            reps: "10 min",
-            weight: "",
-            rest: "",
-            notes: "Easy pace",
-            difficulty: "Easy",
-            pain: "0",
-          },
         ],
       },
     ],
@@ -571,7 +485,7 @@ export const PROGRAM_TEMPLATES = [
   {
     id: "fitness-model",
     name: "Fitness Model Lean Build",
-    description: "Lean muscle, conditioning, protein consistency, and visible progress.",
+    description: "Lean muscle, conditioning, and consistent protein support.",
     workouts: [
       {
         name: "Lean Upper Body",
@@ -606,16 +520,6 @@ export const PROGRAM_TEMPLATES = [
             weight: "",
             rest: "45 sec",
             notes: "Shoulders",
-            difficulty: "Medium",
-            pain: "0",
-          },
-          {
-            name: "Plank",
-            sets: "3",
-            reps: "30 sec",
-            weight: "",
-            rest: "45 sec",
-            notes: "Brace",
             difficulty: "Medium",
             pain: "0",
           },
@@ -655,17 +559,7 @@ export const PROGRAM_TEMPLATES = [
             pain: "0",
           },
           {
-            name: "Dead Bug",
-            sets: "3",
-            reps: "10 each",
-            weight: "",
-            rest: "45 sec",
-            notes: "Core control",
-            difficulty: "Medium",
-            pain: "0",
-          },
-          {
-            name: "Sprint / Bike Intervals",
+            name: "Bike Intervals",
             sets: "6",
             reps: "20 sec",
             weight: "",
@@ -690,7 +584,7 @@ export const PROGRAM_TEMPLATES = [
         status: "Planned",
         exercises: [
           {
-            name: "Squat Pattern",
+            name: "Bodyweight Squat",
             sets: "4",
             reps: "5",
             weight: "",
@@ -700,32 +594,22 @@ export const PROGRAM_TEMPLATES = [
             pain: "0",
           },
           {
-            name: "Bench Press Pattern",
+            name: "Push-Up",
             sets: "4",
-            reps: "5",
+            reps: "8",
             weight: "",
-            rest: "2 min",
+            rest: "90 sec",
             notes: "Controlled press",
             difficulty: "Medium",
             pain: "0",
           },
           {
-            name: "Row Pattern",
+            name: "One Arm Row",
             sets: "4",
             reps: "6",
             weight: "",
             rest: "90 sec",
             notes: "Upper back",
-            difficulty: "Medium",
-            pain: "0",
-          },
-          {
-            name: "Farmer Carry",
-            sets: "4",
-            reps: "30 sec",
-            weight: "",
-            rest: "60 sec",
-            notes: "Grip and core",
             difficulty: "Medium",
             pain: "0",
           },
@@ -736,7 +620,7 @@ export const PROGRAM_TEMPLATES = [
   {
     id: "recovery-mobility",
     name: "Recovery / Weak Area Reset",
-    description: "For pain, tightness, surgery history, mobility, or low-readiness days.",
+    description: "For pain, tightness, mobility, or low-readiness days.",
     workouts: [
       {
         name: "Recovery Reset",
@@ -761,26 +645,6 @@ export const PROGRAM_TEMPLATES = [
             weight: "",
             rest: "45 sec",
             notes: "Brace",
-            difficulty: "Easy",
-            pain: "0",
-          },
-          {
-            name: "Glute Bridge",
-            sets: "3",
-            reps: "10",
-            weight: "",
-            rest: "45 sec",
-            notes: "Glutes not low back",
-            difficulty: "Easy",
-            pain: "0",
-          },
-          {
-            name: "Hip Mobility Flow",
-            sets: "2",
-            reps: "60 sec",
-            weight: "",
-            rest: "30 sec",
-            notes: "Pain-free range",
             difficulty: "Easy",
             pain: "0",
           },
