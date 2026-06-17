@@ -11,9 +11,11 @@ import {
   removeSetFromExercise,
   toggleRestTimer,
   toggleSessionPause,
+  updateCompletedWorkoutSession,
   updateExerciseField,
   updateSessionTimer,
   updateSetField,
+  validateWorkoutSessionForFinish,
 } from "./healthWorkoutSession";
 
 function cx(...parts) {
@@ -32,6 +34,10 @@ function ScoreSelect({ label, value, onChange, options }) {
         onChange={(event) => onChange(event.target.value)}
         className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm font-bold text-white outline-none focus:border-cyan-300/40"
       >
+        <option value="" className="bg-slate-950">
+          Select
+        </option>
+
         {options.map((option) => (
           <option key={option} value={option} className="bg-slate-950">
             {option}
@@ -157,13 +163,7 @@ function SetLogger({ exercise, onAddSet, onUpdateSet, onRemoveSet }) {
   );
 }
 
-function ExercisePanel({
-  session,
-  exercise,
-  index,
-  total,
-  onSessionChange,
-}) {
+function ExercisePanel({ session, exercise, index, total, onSessionChange }) {
   if (!exercise) return null;
 
   function patchExercise(field, value) {
@@ -218,14 +218,14 @@ function ExercisePanel({
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <ScoreSelect
           label="Pain"
-          value={exercise.pain_score || "0"}
+          value={exercise.pain_score ?? ""}
           onChange={(value) => patchExercise("pain_score", value)}
           options={["0", "1", "2", "3", "4", "5"]}
         />
 
         <ScoreSelect
           label="Difficulty"
-          value={exercise.difficulty_score || "Medium"}
+          value={exercise.difficulty_score || ""}
           onChange={(value) => patchExercise("difficulty_score", value)}
           options={["Easy", "Medium", "Hard", "Max"]}
         />
@@ -286,9 +286,7 @@ function ExercisePanel({
         <button
           type="button"
           onClick={() =>
-            onSessionChange(
-              moveToExercise(session, Math.max(0, index - 1))
-            )
+            onSessionChange(moveToExercise(session, Math.max(0, index - 1)))
           }
           disabled={index === 0}
           className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-slate-100 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
@@ -313,6 +311,131 @@ function ExercisePanel({
   );
 }
 
+function FinishReviewPanel({
+  validation,
+  session,
+  onBackToWorkout,
+  onFinishAnyway,
+}) {
+  const hasMissing = validation?.missing?.length > 0;
+  const hasWarnings = validation?.warnings?.length > 0;
+
+  return (
+    <div className="rounded-[2rem] border border-amber-300/25 bg-amber-300/10 p-5">
+      <div className="text-xs font-black uppercase tracking-[0.22em] text-amber-100">
+        Finish Review
+      </div>
+
+      <h3 className="mt-2 text-2xl font-black text-white">
+        Check this before saving
+      </h3>
+
+      <p className="mt-2 text-sm leading-6 text-amber-50/80">
+        The workout can be saved now, but SyncWorks noticed a few things that
+        may make the coach less accurate later. Go back to fill them in, or
+        finish anyway if this is correct.
+      </p>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <StatTile
+          label="Sets"
+          value={session?.completed_sets || 0}
+          tone="emerald"
+        />
+        <StatTile
+          label="Skipped"
+          value={session?.skipped_exercises || 0}
+          tone="rose"
+        />
+        <StatTile
+          label="Total"
+          value={formatSeconds(session?.total_seconds || 0)}
+          tone="cyan"
+        />
+        <StatTile
+          label="Rest"
+          value={formatSeconds(session?.rest_seconds || 0)}
+          tone="amber"
+        />
+      </div>
+
+      {hasMissing ? (
+        <div className="mt-5 rounded-3xl border border-rose-300/25 bg-rose-300/10 p-4">
+          <div className="text-sm font-black text-rose-100">
+            Recommended before finishing
+          </div>
+
+          <div className="mt-3 space-y-2">
+            {validation.missing.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-2xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-rose-50"
+              >
+                <div className="font-bold">{item.label}</div>
+
+                {Array.isArray(item.items) && item.items.length ? (
+                  <div className="mt-1 text-xs text-rose-100/70">
+                    {item.items.join(", ")}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {hasWarnings ? (
+        <div className="mt-4 rounded-3xl border border-white/10 bg-black/20 p-4">
+          <div className="text-sm font-black text-white">
+            Helpful but optional
+          </div>
+
+          <div className="mt-3 space-y-2">
+            {validation.warnings.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-sm leading-6 text-slate-300"
+              >
+                <div className="font-bold">{item.label}</div>
+
+                {Array.isArray(item.items) && item.items.length ? (
+                  <div className="mt-1 text-xs text-slate-500">
+                    {item.items.join(", ")}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {!hasMissing && !hasWarnings ? (
+        <div className="mt-5 rounded-3xl border border-emerald-300/25 bg-emerald-300/10 p-4 text-sm font-bold leading-6 text-emerald-100">
+          Looks good. Everything important is filled out and ready to save.
+        </div>
+      ) : null}
+
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <button
+          type="button"
+          onClick={onBackToWorkout}
+          className="rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-300/20"
+        >
+          Go Back and Edit
+        </button>
+
+        <button
+          type="button"
+          onClick={onFinishAnyway}
+          className="rounded-2xl border border-emerald-300/30 bg-emerald-300/15 px-4 py-3 text-sm font-black text-emerald-100 transition hover:bg-emerald-300/20"
+        >
+          Save Workout
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function ActiveWorkoutSessionDrawer({
   open,
   onClose,
@@ -325,6 +448,8 @@ export default function ActiveWorkoutSessionDrawer({
 }) {
   const [session, setSession] = useState(null);
   const [finishMessage, setFinishMessage] = useState("");
+  const [reviewMode, setReviewMode] = useState(false);
+  const [editAfterFinish, setEditAfterFinish] = useState(false);
 
   useEffect(() => {
     if (!open || !plannerItem) return;
@@ -336,6 +461,8 @@ export default function ActiveWorkoutSessionDrawer({
       })
     );
     setFinishMessage("");
+    setReviewMode(false);
+    setEditAfterFinish(false);
   }, [open, plannerItem, workouts]);
 
   useEffect(() => {
@@ -356,16 +483,31 @@ export default function ActiveWorkoutSessionDrawer({
     return session.exercises[session.current_exercise_index || 0] || null;
   }, [session]);
 
+  const validation = useMemo(
+    () => validateWorkoutSessionForFinish(session || {}),
+    [session]
+  );
+
   const totalExercises = Array.isArray(session?.exercises)
     ? session.exercises.length
     : 0;
 
+  const isCompleted = session?.status === "completed";
+  const canEditFields = !isCompleted || editAfterFinish;
+
   function closeDrawer() {
     setFinishMessage("");
+    setReviewMode(false);
+    setEditAfterFinish(false);
     onClose?.();
   }
 
-  function handleFinishWorkout() {
+  function beginFinishReview() {
+    setReviewMode(true);
+    setFinishMessage("");
+  }
+
+  function saveWorkout() {
     if (!session) return;
 
     const result = finishWorkoutSession({
@@ -383,11 +525,40 @@ export default function ActiveWorkoutSessionDrawer({
     }
 
     setSession(result.finishedSession);
+    setReviewMode(false);
+    setEditAfterFinish(false);
     setFinishMessage(
       `Workout saved. ${result.summary.completed_sets} sets logged, ${formatSeconds(
         result.summary.total_seconds
       )} total time.`
     );
+  }
+
+  function saveEditedCompletedWorkout() {
+    if (!session) return;
+
+    const result = updateCompletedWorkoutSession({
+      session,
+      snapshot: snapshot || {},
+      history: history || [],
+    });
+
+    if (typeof setHistory === "function") {
+      setHistory(result.nextHistory);
+    }
+
+    if (typeof setSnapshot === "function") {
+      setSnapshot(result.nextSnapshot);
+    }
+
+    setSession(result.editedSession);
+    setEditAfterFinish(false);
+    setFinishMessage("Workout edits saved. Coach stats updated.");
+  }
+
+  function handleSessionChange(nextSession) {
+    if (!canEditFields) return;
+    setSession(nextSession);
   }
 
   if (!open) return null;
@@ -415,8 +586,8 @@ export default function ActiveWorkoutSessionDrawer({
 
               <p className="mt-2 text-sm leading-6 text-slate-300">
                 Track sets, reps, weight, rest, pain, difficulty, skipped
-                exercises, and substitutions. This creates the stats the coach
-                will use in Phase 7C.
+                exercises, and substitutions. Before saving, SyncWorks reviews
+                what is missing so the coach can adjust accurately.
               </p>
             </div>
 
@@ -475,6 +646,13 @@ export default function ActiveWorkoutSessionDrawer({
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 text-sm text-slate-300">
               No active workout selected.
             </div>
+          ) : reviewMode ? (
+            <FinishReviewPanel
+              validation={validation}
+              session={session}
+              onBackToWorkout={() => setReviewMode(false)}
+              onFinishAnyway={saveWorkout}
+            />
           ) : (
             <div className="space-y-4">
               {finishMessage ? (
@@ -483,12 +661,57 @@ export default function ActiveWorkoutSessionDrawer({
                 </div>
               ) : null}
 
+              {isCompleted ? (
+                <div className="rounded-3xl border border-cyan-300/25 bg-cyan-300/10 p-4">
+                  <div className="text-xs font-black uppercase tracking-[0.2em] text-cyan-100">
+                    Completed Workout
+                  </div>
+
+                  <div className="mt-2 text-sm leading-6 text-slate-200">
+                    This workout is saved. You can still edit it before closing
+                    if you forgot a set, weight, pain score, substitution, or
+                    note.
+                  </div>
+
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    {!editAfterFinish ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditAfterFinish(true);
+                          setFinishMessage("");
+                        }}
+                        className="rounded-2xl border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm font-black text-amber-100 transition hover:bg-amber-300/20"
+                      >
+                        Edit Completed Workout
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={saveEditedCompletedWorkout}
+                        className="rounded-2xl border border-emerald-300/30 bg-emerald-300/15 px-4 py-3 text-sm font-black text-emerald-100 transition hover:bg-emerald-300/20"
+                      >
+                        Save Edits
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={closeDrawer}
+                      className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-slate-100 transition hover:bg-white/[0.08]"
+                    >
+                      Close Workout
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
               <div className="rounded-[2rem] border border-white/10 bg-black/20 p-4">
                 <div className="grid gap-3 md:grid-cols-4">
                   <button
                     type="button"
                     onClick={() => setSession(toggleSessionPause(session))}
-                    disabled={session.status === "completed"}
+                    disabled={isCompleted}
                     className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-white transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {session.paused ? "Resume" : "Pause"}
@@ -497,7 +720,7 @@ export default function ActiveWorkoutSessionDrawer({
                   <button
                     type="button"
                     onClick={() => setSession(toggleRestTimer(session))}
-                    disabled={session.status === "completed"}
+                    disabled={isCompleted}
                     className={cx(
                       "rounded-2xl border px-4 py-3 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50",
                       session.rest_active
@@ -510,8 +733,8 @@ export default function ActiveWorkoutSessionDrawer({
 
                   <button
                     type="button"
-                    onClick={handleFinishWorkout}
-                    disabled={session.status === "completed"}
+                    onClick={beginFinishReview}
+                    disabled={isCompleted}
                     className="rounded-2xl border border-emerald-300/30 bg-emerald-300/15 px-4 py-3 text-sm font-black text-emerald-100 transition hover:bg-emerald-300/20 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Finish Workout
@@ -574,13 +797,15 @@ export default function ActiveWorkoutSessionDrawer({
                   ))}
                 </div>
 
-                <ExercisePanel
-                  session={session}
-                  exercise={currentExercise}
-                  index={session.current_exercise_index || 0}
-                  total={totalExercises}
-                  onSessionChange={setSession}
-                />
+                <div className={cx(!canEditFields && "pointer-events-none opacity-70")}>
+                  <ExercisePanel
+                    session={session}
+                    exercise={currentExercise}
+                    index={session.current_exercise_index || 0}
+                    total={totalExercises}
+                    onSessionChange={handleSessionChange}
+                  />
+                </div>
               </div>
 
               <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-4">
@@ -591,8 +816,9 @@ export default function ActiveWorkoutSessionDrawer({
                 <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <ScoreSelect
                     label="Overall Pain"
-                    value={session.pain_score || "0"}
+                    value={session.pain_score ?? ""}
                     onChange={(value) =>
+                      canEditFields &&
                       setSession((prev) => ({ ...prev, pain_score: value }))
                     }
                     options={["0", "1", "2", "3", "4", "5"]}
@@ -600,8 +826,9 @@ export default function ActiveWorkoutSessionDrawer({
 
                   <ScoreSelect
                     label="Difficulty"
-                    value={session.difficulty_score || "Medium"}
+                    value={session.difficulty_score || ""}
                     onChange={(value) =>
+                      canEditFields &&
                       setSession((prev) => ({
                         ...prev,
                         difficulty_score: value,
@@ -612,8 +839,9 @@ export default function ActiveWorkoutSessionDrawer({
 
                   <ScoreSelect
                     label="Energy"
-                    value={session.energy_score || "Good"}
+                    value={session.energy_score || ""}
                     onChange={(value) =>
+                      canEditFields &&
                       setSession((prev) => ({ ...prev, energy_score: value }))
                     }
                     options={["Low", "Okay", "Good", "Great"]}
@@ -621,8 +849,9 @@ export default function ActiveWorkoutSessionDrawer({
 
                   <ScoreSelect
                     label="Soreness"
-                    value={session.soreness_score || "Normal"}
+                    value={session.soreness_score || ""}
                     onChange={(value) =>
+                      canEditFields &&
                       setSession((prev) => ({
                         ...prev,
                         soreness_score: value,
@@ -640,6 +869,7 @@ export default function ActiveWorkoutSessionDrawer({
                   <textarea
                     value={session.notes || ""}
                     onChange={(event) =>
+                      canEditFields &&
                       setSession((prev) => ({
                         ...prev,
                         notes: event.target.value,
@@ -650,6 +880,16 @@ export default function ActiveWorkoutSessionDrawer({
                     className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-slate-950 px-3 py-3 text-sm font-bold leading-6 text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
                   />
                 </label>
+
+                {isCompleted && !editAfterFinish ? (
+                  <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-xs leading-5 text-slate-500">
+                    This workout is locked because it is saved. Click{" "}
+                    <span className="font-bold text-amber-100">
+                      Edit Completed Workout
+                    </span>{" "}
+                    above to make changes.
+                  </div>
+                ) : null}
               </div>
             </div>
           )}

@@ -116,6 +116,8 @@ export function createWorkoutSessionFromPlannerItem({
     status: "active",
     started_at: nowIso(),
     finished_at: "",
+    saved_at: "",
+    edited_after_finish_at: "",
     paused: false,
     rest_active: false,
     current_exercise_index: 0,
@@ -129,9 +131,10 @@ export function createWorkoutSessionFromPlannerItem({
     substituted_exercises: 0,
     pain_score: "0",
     difficulty_score: "Medium",
-    energy_score: "Good",
-    soreness_score: "Normal",
+    energy_score: "",
+    soreness_score: "",
     notes: "",
+    review_acknowledged: false,
     exercises: exercises.map((exercise, index) =>
       normalizeExercise(exercise, index)
     ),
@@ -369,6 +372,140 @@ export function recalcSessionStats(session = {}) {
   };
 }
 
+export function validateWorkoutSessionForFinish(session = {}) {
+  const safeExercises = Array.isArray(session.exercises)
+    ? session.exercises
+    : [];
+
+  const missing = [];
+  const warnings = [];
+
+  const untouchedExercises = safeExercises.filter(
+    (exercise) =>
+      !exercise.skipped &&
+      !exercise.completed &&
+      (!Array.isArray(exercise.set_logs) || exercise.set_logs.length === 0)
+  );
+
+  const exercisesWithoutPain = safeExercises.filter(
+    (exercise) =>
+      !exercise.skipped &&
+      (exercise.pain_score === "" ||
+        exercise.pain_score === null ||
+        exercise.pain_score === undefined)
+  );
+
+  const exercisesWithoutDifficulty = safeExercises.filter(
+    (exercise) =>
+      !exercise.skipped &&
+      !String(exercise.difficulty_score || "").trim()
+  );
+
+  const substitutedWithoutName = safeExercises.filter(
+    (exercise) => exercise.substituted && !String(exercise.substitute_name || "").trim()
+  );
+
+  if (safeNumber(session.completed_sets) <= 0) {
+    missing.push({
+      id: "no_sets",
+      label: "No sets have been logged yet.",
+      severity: "important",
+    });
+  }
+
+  if (untouchedExercises.length > 0) {
+    missing.push({
+      id: "untouched_exercises",
+      label: `${untouchedExercises.length} exercise${
+        untouchedExercises.length === 1 ? "" : "s"
+      } still need sets logged or need to be marked skipped.`,
+      severity: "important",
+      items: untouchedExercises.map((exercise) => exercise.name),
+    });
+  }
+
+  if (!String(session.energy_score || "").trim()) {
+    missing.push({
+      id: "energy",
+      label: "Energy score is not filled out.",
+      severity: "normal",
+    });
+  }
+
+  if (!String(session.soreness_score || "").trim()) {
+    missing.push({
+      id: "soreness",
+      label: "Soreness score is not filled out.",
+      severity: "normal",
+    });
+  }
+
+  if (!String(session.difficulty_score || "").trim()) {
+    missing.push({
+      id: "difficulty",
+      label: "Overall difficulty score is not filled out.",
+      severity: "normal",
+    });
+  }
+
+  if (
+    session.pain_score === "" ||
+    session.pain_score === null ||
+    session.pain_score === undefined
+  ) {
+    missing.push({
+      id: "pain",
+      label: "Overall pain score is not filled out.",
+      severity: "normal",
+    });
+  }
+
+  if (exercisesWithoutPain.length > 0) {
+    warnings.push({
+      id: "exercise_pain",
+      label: `${exercisesWithoutPain.length} exercise${
+        exercisesWithoutPain.length === 1 ? "" : "s"
+      } do not have pain scores.`,
+      items: exercisesWithoutPain.map((exercise) => exercise.name),
+    });
+  }
+
+  if (exercisesWithoutDifficulty.length > 0) {
+    warnings.push({
+      id: "exercise_difficulty",
+      label: `${exercisesWithoutDifficulty.length} exercise${
+        exercisesWithoutDifficulty.length === 1 ? "" : "s"
+      } do not have difficulty scores.`,
+      items: exercisesWithoutDifficulty.map((exercise) => exercise.name),
+    });
+  }
+
+  if (substitutedWithoutName.length > 0) {
+    warnings.push({
+      id: "substitution_name",
+      label: "A substituted exercise is missing the replacement name.",
+      items: substitutedWithoutName.map((exercise) => exercise.name),
+    });
+  }
+
+  if (!String(session.notes || "").trim()) {
+    warnings.push({
+      id: "notes",
+      label:
+        "Workout notes are empty. A quick note helps the coach adjust your next plan.",
+    });
+  }
+
+  return {
+    canFinish: true,
+    missing,
+    warnings,
+    hasIssues: missing.length > 0 || warnings.length > 0,
+    importantCount: missing.filter((item) => item.severity === "important")
+      .length,
+  };
+}
+
 export function formatSeconds(totalSeconds = 0) {
   const total = Math.max(0, safeNumber(totalSeconds, 0));
   const hours = Math.floor(total / 3600);
@@ -397,6 +534,8 @@ export function buildWorkoutSummary(session = {}) {
     workout_name: session.workout_name || "Workout",
     started_at: session.started_at || "",
     finished_at: session.finished_at || "",
+    saved_at: session.saved_at || "",
+    edited_after_finish_at: session.edited_after_finish_at || "",
     total_seconds: safeNumber(session.total_seconds),
     active_seconds: safeNumber(session.active_seconds),
     rest_seconds: safeNumber(session.rest_seconds),
@@ -408,8 +547,9 @@ export function buildWorkoutSummary(session = {}) {
     substituted_exercises: safeNumber(session.substituted_exercises),
     pain_score: session.pain_score || "0",
     difficulty_score: session.difficulty_score || "Medium",
-    energy_score: session.energy_score || "Good",
-    soreness_score: session.soreness_score || "Normal",
+    energy_score: session.energy_score || "",
+    soreness_score: session.soreness_score || "",
+    notes: session.notes || "",
   };
 }
 
@@ -435,9 +575,11 @@ export function finishWorkoutSession({
   const finishedSession = recalcSessionStats({
     ...session,
     status: "completed",
-    finished_at: nowIso(),
+    finished_at: session.finished_at || nowIso(),
+    saved_at: nowIso(),
     paused: false,
     rest_active: false,
+    review_acknowledged: true,
   });
 
   const summary = buildWorkoutSummary(finishedSession);
@@ -468,6 +610,7 @@ export function finishWorkoutSession({
     last_completed_workout: finishedSession.workout_name || "Workout",
     last_completed_at: finishedSession.finished_at,
     last_workout_stats: summary,
+    last_workout_session: finishedSession,
     weekly_completed: nextHistory.length,
     completed_workouts: safeNumber(snapshot.completed_workouts) + 1,
     updated_at: nowIso(),
@@ -477,6 +620,61 @@ export function finishWorkoutSession({
     finishedSession,
     summary,
     historyEntry,
+    nextHistory,
+    nextSnapshot,
+  };
+}
+
+export function updateCompletedWorkoutSession({
+  session,
+  snapshot = {},
+  history = [],
+}) {
+  const editedSession = recalcSessionStats({
+    ...session,
+    status: "completed",
+    edited_after_finish_at: nowIso(),
+    saved_at: session.saved_at || nowIso(),
+    paused: false,
+    rest_active: false,
+  });
+
+  const summary = buildWorkoutSummary(editedSession);
+
+  const nextHistory = Array.isArray(history)
+    ? history.map((item, index) => {
+        const sameSession =
+          item?.session?.id && item.session.id === editedSession.id;
+        const samePlanner =
+          item?.planner_item_id &&
+          item.planner_item_id === editedSession.planner_item_id;
+
+        if (sameSession || (!sameSession && samePlanner && index === 0)) {
+          return {
+            ...item,
+            workout_name: editedSession.workout_name || item.workout_name,
+            summary,
+            session: editedSession,
+            edited_after_finish_at: editedSession.edited_after_finish_at,
+          };
+        }
+
+        return item;
+      })
+    : [];
+
+  const nextSnapshot = {
+    ...snapshot,
+    last_completed_workout: editedSession.workout_name || "Workout",
+    last_completed_at: editedSession.finished_at,
+    last_workout_stats: summary,
+    last_workout_session: editedSession,
+    updated_at: nowIso(),
+  };
+
+  return {
+    editedSession,
+    summary,
     nextHistory,
     nextSnapshot,
   };
