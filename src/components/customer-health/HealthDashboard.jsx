@@ -97,7 +97,7 @@ function ProgressBar({ label, value, goal, suffix = "", tone = "cyan" }) {
   );
 }
 
-function ActionButton({ label, onClick, tone = "cyan" }) {
+function ActionButton({ label, onClick, tone = "cyan", className = "" }) {
   const toneMap = {
     cyan: "border-cyan-500/25 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/20",
     emerald:
@@ -106,6 +106,8 @@ function ActionButton({ label, onClick, tone = "cyan" }) {
       "border-amber-500/25 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20",
     fuchsia:
       "border-fuchsia-500/25 bg-fuchsia-500/10 text-fuchsia-100 hover:bg-fuchsia-500/20",
+    white:
+      "border-white/10 bg-white/[0.04] text-slate-100 hover:bg-white/[0.08]",
   };
 
   return (
@@ -114,7 +116,8 @@ function ActionButton({ label, onClick, tone = "cyan" }) {
       onClick={onClick}
       className={cx(
         "inline-flex h-11 items-center justify-center rounded-2xl border px-4 text-sm font-black transition",
-        toneMap[tone] || toneMap.cyan
+        toneMap[tone] || toneMap.cyan,
+        className
       )}
     >
       {label}
@@ -123,6 +126,8 @@ function ActionButton({ label, onClick, tone = "cyan" }) {
 }
 
 function nextPlannedSession(weekPlan = []) {
+  const safeWeekPlan = Array.isArray(weekPlan) ? weekPlan : [];
+
   const today = new Date();
   const startOfToday = new Date(
     today.getFullYear(),
@@ -130,7 +135,7 @@ function nextPlannedSession(weekPlan = []) {
     today.getDate()
   ).getTime();
 
-  return [...weekPlan]
+  return [...safeWeekPlan]
     .filter((item) => item?.workout_name)
     .filter((item) => item?.status !== "Completed")
     .map((item) => ({
@@ -172,6 +177,110 @@ function buildGoogleCalendarLink(item) {
   params.set("dates", `${fmt(start)}/${fmt(end)}`);
 
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+function CoachChatStartCard({ snapshot, onOpen }) {
+  const coachChat = Array.isArray(snapshot?.coach_chat)
+    ? snapshot.coach_chat
+    : [];
+  const proposal = snapshot?.coach_plan_proposal || null;
+  const hasPlannerProposal = !!proposal;
+  const isAdded = proposal?.status === "added_to_planner";
+
+  return (
+    <Card className="relative overflow-hidden border-emerald-400/25 bg-gradient-to-br from-emerald-500/10 via-slate-950/70 to-cyan-500/10">
+      <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-emerald-400/15 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 left-10 h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl" />
+
+      <div className="relative">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-100">
+                Phase 7A
+              </span>
+
+              <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100">
+                Coach Chat
+              </span>
+
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">
+                Local Smart Engine
+              </span>
+            </div>
+
+            <h2 className="mt-4 text-2xl font-black tracking-tight text-white md:text-3xl">
+              Start with your AI Fitness Coach
+            </h2>
+
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
+              Tell the coach what you are chasing, where you train, how many
+              days this week, pain or limits, and whether you want to be pushed
+              hard or kept balanced. It will build a plan and ask if you are
+              ready to add it to the planner.
+            </p>
+          </div>
+
+          <div className="grid shrink-0 grid-cols-2 gap-2 sm:min-w-[260px]">
+            <StatPill
+              label="Messages"
+              value={coachChat.length || 1}
+              tone="cyan"
+            />
+
+            <StatPill
+              label="Proposal"
+              value={isAdded ? "Added" : hasPlannerProposal ? "Ready" : "None"}
+              tone={isAdded ? "emerald" : hasPlannerProposal ? "amber" : "fuchsia"}
+            />
+          </div>
+        </div>
+
+        {proposal?.summary ? (
+          <div className="mt-4 rounded-3xl border border-emerald-300/15 bg-black/25 p-4">
+            <div className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200">
+              Latest Coach Summary
+            </div>
+            <div className="mt-2 text-sm leading-6 text-slate-200">
+              {proposal.summary}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 rounded-3xl border border-white/10 bg-black/25 p-4">
+            <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
+              First prompt
+            </div>
+            <div className="mt-2 text-sm leading-6 text-slate-200">
+              “I want a gym plan this week. My goal is fitness model strength
+              with chest, abs, and athletic performance. I can train 4 days for
+              45 minutes. Push me hard but protect my hips.”
+            </div>
+          </div>
+        )}
+
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <ActionButton
+            label={hasPlannerProposal && !isAdded ? "Review Coach Plan" : "Chat With Coach"}
+            onClick={() => onOpen("coach-chat")}
+            tone="emerald"
+            className="shadow-[0_0_30px_rgba(16,185,129,0.16)]"
+          />
+
+          <ActionButton
+            label="Open Questionnaire"
+            onClick={() => onOpen("questionnaire")}
+            tone="white"
+          />
+
+          <ActionButton
+            label="Open Planner"
+            onClick={() => onOpen("planner")}
+            tone="cyan"
+          />
+        </div>
+      </div>
+    </Card>
+  );
 }
 
 export default function HealthDashboard({
@@ -228,9 +337,10 @@ export default function HealthDashboard({
     "General fitness";
 
   const coachMessage =
-    snapshot?.readiness && snapshot?.readiness !== "Moderate"
+    snapshot?.last_coach_summary ||
+    (snapshot?.readiness && snapshot?.readiness !== "Moderate"
       ? readinessSuggestion(snapshot.readiness)
-      : `You are training for ${goalTitle}. Win today by doing the next workout, hitting protein, and staying on top of recovery.`;
+      : `You are training for ${goalTitle}. Win today by doing the next workout, hitting protein, and staying on top of recovery.`);
 
   const healthScore = clampPercent(
     clampPercent((steps / Math.max(stepGoal, 1)) * 100) * 0.25 +
@@ -248,6 +358,8 @@ export default function HealthDashboard({
 
   return (
     <div className="space-y-5">
+      <CoachChatStartCard snapshot={snapshot} onOpen={onOpen} />
+
       <Card className="relative overflow-hidden border-cyan-500/25 bg-gradient-to-br from-cyan-500/10 via-slate-950/60 to-fuchsia-500/10">
         <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-cyan-500/15 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 left-1/4 h-64 w-64 rounded-full bg-fuchsia-500/15 blur-3xl" />
@@ -265,7 +377,7 @@ export default function HealthDashboard({
                 </span>
 
                 <span className="rounded-full border border-fuchsia-500/25 bg-fuchsia-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-100">
-                  AI Coach
+                  Trainer Loop
                 </span>
               </div>
 
@@ -396,6 +508,12 @@ export default function HealthDashboard({
 
               <div className="mt-5 flex flex-wrap gap-2">
                 <ActionButton
+                  label="Chat With Coach"
+                  onClick={() => onOpen("coach-chat")}
+                  tone="emerald"
+                />
+
+                <ActionButton
                   label="Today’s AI Plan"
                   onClick={() => onOpen("today")}
                 />
@@ -419,7 +537,7 @@ export default function HealthDashboard({
                 />
 
                 <ActionButton
-                  label="Open AI Coach"
+                  label="Coach Report"
                   onClick={() => onOpen("coach")}
                 />
               </div>
@@ -552,6 +670,12 @@ export default function HealthDashboard({
                       {item.workout_name || "Recovery / open day"}
                       {item.time ? ` • ${item.time}` : ""}
                     </div>
+
+                    {item.source === "coach_chat" ? (
+                      <div className="mt-2 w-fit rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-100">
+                        Coach Built
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="shrink-0 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100">
@@ -566,11 +690,17 @@ export default function HealthDashboard({
             )}
           </div>
 
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap gap-2">
             <ActionButton
               label="Open Planner"
               onClick={() => onOpen("planner")}
               tone="emerald"
+            />
+
+            <ActionButton
+              label="Ask Coach"
+              onClick={() => onOpen("coach-chat")}
+              tone="cyan"
             />
           </div>
         </Card>

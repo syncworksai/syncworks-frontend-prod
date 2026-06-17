@@ -19,6 +19,7 @@ import QuestionnaireDrawer from "../components/customer-health/QuestionnaireDraw
 import WorkoutStudioDrawer from "../components/customer-health/WorkoutStudioDrawer";
 import ExerciseLibraryDrawer from "../components/customer-health/ExerciseLibraryDrawer";
 import AiCoachDrawer from "../components/customer-health/AiCoachDrawer";
+import CoachChatDrawer from "../components/customer-health/CoachChatDrawer";
 import {
   NutritionDrawer,
   ProgressDrawer,
@@ -66,6 +67,8 @@ function hasArrayData(value) {
 }
 
 function findNextPlanned(weekPlan = []) {
+  const safeWeekPlan = Array.isArray(weekPlan) ? weekPlan : [];
+
   const today = new Date();
   const startOfToday = new Date(
     today.getFullYear(),
@@ -73,7 +76,7 @@ function findNextPlanned(weekPlan = []) {
     today.getDate()
   ).getTime();
 
-  return [...weekPlan]
+  return [...safeWeekPlan]
     .filter((item) => item?.workout_name)
     .filter((item) => item?.status !== "Completed")
     .map((item) => ({
@@ -84,6 +87,83 @@ function findNextPlanned(weekPlan = []) {
     }))
     .filter((item) => item.sortTime >= startOfToday)
     .sort((a, b) => a.sortTime - b.sortTime)[0];
+}
+
+function addDays(date, days) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function asYmd(date) {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function normalizeCoachWorkoutName(workout) {
+  return (
+    workout?.workout_name ||
+    workout?.title ||
+    workout?.name ||
+    workout?.focus ||
+    "Coach Planned Workout"
+  );
+}
+
+function convertCoachWorkoutToPlannerItem(workout, index = 0) {
+  const now = new Date();
+  const date = addDays(now, index);
+  const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  return {
+    id: workout?.planner_id || workout?.id || uid("coach-plan"),
+    ymd: workout?.ymd || asYmd(date),
+    day_label: workout?.day_label || names[date.getDay()],
+    workout_id: workout?.workout_id || workout?.id || "",
+    workout_name: normalizeCoachWorkoutName(workout),
+    time: workout?.time || "06:00",
+    status: workout?.status === "added_to_planner" ? "Planned" : workout?.status || "Planned",
+    note:
+      workout?.note ||
+      workout?.focus ||
+      "Built by SyncWorks AI Fitness Coach",
+    source: "coach_chat",
+    duration_minutes: workout?.duration_minutes || "",
+    exercises: Array.isArray(workout?.exercises) ? workout.exercises : [],
+    added_to_planner_at:
+      workout?.added_to_planner_at || new Date().toISOString(),
+  };
+}
+
+function normalizeWeekPlanForDashboard(weekPlan) {
+  if (Array.isArray(weekPlan)) {
+    return weekPlan;
+  }
+
+  if (isPlainObject(weekPlan)) {
+    const possibleWorkouts = Array.isArray(weekPlan.workouts)
+      ? weekPlan.workouts
+      : Array.isArray(weekPlan.days)
+      ? weekPlan.days
+      : [];
+
+    return possibleWorkouts.map((workout, index) =>
+      convertCoachWorkoutToPlannerItem(workout, index)
+    );
+  }
+
+  return [];
+}
+
+function normalizeHealthSnapshot(nextSnapshot) {
+  const safeSnapshot = nextSnapshot || {};
+
+  return {
+    ...safeSnapshot,
+    week_plan: normalizeWeekPlanForDashboard(safeSnapshot.week_plan),
+  };
 }
 
 function SyncStatusPill({ status }) {
@@ -274,10 +354,21 @@ export default function CustomerHealth() {
     ...(readJson(PROFILE_KEY, null) || {}),
   }));
 
-  const [snapshot, setSnapshot] = useState(() => ({
-    ...defaultSnapshot(),
-    ...(readJson(SNAPSHOT_KEY, null) || {}),
-  }));
+  const [snapshot, setSnapshotBase] = useState(() =>
+    normalizeHealthSnapshot({
+      ...defaultSnapshot(),
+      ...(readJson(SNAPSHOT_KEY, null) || {}),
+    })
+  );
+
+  function setSnapshot(nextValue) {
+    if (typeof nextValue === "function") {
+      setSnapshotBase((prev) => normalizeHealthSnapshot(nextValue(prev)));
+      return;
+    }
+
+    setSnapshotBase(normalizeHealthSnapshot(nextValue));
+  }
 
   const [workouts, setWorkouts] = useState(() => {
     const saved = readJson(WORKOUTS_KEY, null);
@@ -323,7 +414,7 @@ export default function CustomerHealth() {
   }, [workouts]);
 
   const syncedSnapshot = useMemo(() => {
-    const weekPlan = Array.isArray(snapshot.week_plan) ? snapshot.week_plan : [];
+    const weekPlan = normalizeWeekPlanForDashboard(snapshot.week_plan);
     const nextSession = findNextPlanned(weekPlan);
 
     return {
@@ -577,6 +668,10 @@ export default function CustomerHealth() {
     setDrawer("workout");
   }
 
+  function openQuestionnaireFromCoach() {
+    setDrawer("questionnaire");
+  }
+
   return (
     <div className="min-h-dvh overflow-x-hidden bg-[#020617] text-slate-100">
       <div className="pointer-events-none fixed inset-0">
@@ -716,6 +811,14 @@ export default function CustomerHealth() {
             history={history}
             progressLogs={progressLogs}
             setSnapshot={setSnapshot}
+          />
+
+          <CoachChatDrawer
+            open={drawer === "coach-chat"}
+            onClose={() => setDrawer("")}
+            snapshot={syncedSnapshot}
+            setSnapshot={setSnapshot}
+            onOpenQuestionnaire={openQuestionnaireFromCoach}
           />
 
           <DevicesDrawer
