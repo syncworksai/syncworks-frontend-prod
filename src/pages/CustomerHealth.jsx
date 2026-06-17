@@ -361,6 +361,7 @@ export default function CustomerHealth() {
           <WorkoutStudioDrawer
             open={drawer === "workout"}
             onClose={() => setDrawer("")}
+            profile={profile}
             snapshot={syncedSnapshot}
             setSnapshot={setSnapshot}
             workouts={workouts}
