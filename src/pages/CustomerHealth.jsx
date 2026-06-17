@@ -1,9 +1,14 @@
 // src/pages/CustomerHealth.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import ModeBar from "../components/ModeBar";
 import { useAuth } from "../auth/AuthContext";
+
+import {
+  getCustomerHealthProfile,
+  patchCustomerHealthProfile,
+} from "../api/customerHealth";
 
 import TodayPlanDrawer from "../components/customer-health/TodayPlanDrawer";
 import HealthDashboard from "../components/customer-health/HealthDashboard";
@@ -41,6 +46,47 @@ import {
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
+}
+
+function isPlainObject(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasObjectData(value) {
+  return isPlainObject(value) && Object.keys(value).length > 0;
+}
+
+function hasArrayData(value) {
+  return Array.isArray(value) && value.length > 0;
+}
+
+function SyncStatusPill({ status }) {
+  const copy = {
+    local: "Local save",
+    loading: "Loading cloud",
+    syncing: "Syncing",
+    saved: "Cloud saved",
+    error: "Sync failed",
+  };
+
+  const styles = {
+    local: "border-slate-700 bg-slate-950 text-slate-300",
+    loading: "border-cyan-500/25 bg-cyan-500/10 text-cyan-100",
+    syncing: "border-amber-500/25 bg-amber-500/10 text-amber-100",
+    saved: "border-emerald-500/25 bg-emerald-500/10 text-emerald-100",
+    error: "border-rose-500/25 bg-rose-500/10 text-rose-100",
+  };
+
+  return (
+    <span
+      className={cx(
+        "rounded-xl border px-3 py-2 text-xs font-black uppercase tracking-[0.12em]",
+        styles[status] || styles.local
+      )}
+    >
+      {copy[status] || "Local save"}
+    </span>
+  );
 }
 
 function HealthSignupScreen({ onBack }) {
@@ -171,6 +217,9 @@ export default function CustomerHealth() {
     !!moduleAccess?.customerHealth;
 
   const [drawer, setDrawer] = useState("");
+  const [syncStatus, setSyncStatus] = useState("local");
+  const [cloudLoaded, setCloudLoaded] = useState(false);
+  const skipNextCloudSaveRef = useRef(false);
 
   const [profile, setProfile] = useState(() => ({
     ...defaultProfile(),
@@ -249,6 +298,121 @@ export default function CustomerHealth() {
     writeJson(DEVICE_KEY, devices);
   }, [devices]);
 
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadCloudProfile() {
+      if (!hasHealthAccess) {
+        setCloudLoaded(false);
+        setSyncStatus("local");
+        return;
+      }
+
+      setSyncStatus("loading");
+
+      try {
+        const data = await getCustomerHealthProfile();
+
+        if (!mounted) return;
+
+        skipNextCloudSaveRef.current = true;
+
+        if (hasObjectData(data?.profile_json)) {
+          setProfile((prev) => ({
+            ...defaultProfile(),
+            ...prev,
+            ...data.profile_json,
+          }));
+        }
+
+        if (hasObjectData(data?.snapshot_json)) {
+          setSnapshot((prev) => ({
+            ...defaultSnapshot(),
+            ...prev,
+            ...data.snapshot_json,
+          }));
+        }
+
+        if (hasArrayData(data?.workouts_json)) {
+          setWorkouts(
+            data.workouts_json.map((workout) => ({
+              ...workout,
+              exercises: Array.isArray(workout.exercises) ? workout.exercises : [],
+            }))
+          );
+        }
+
+        if (Array.isArray(data?.history_json)) {
+          setHistory(data.history_json);
+        }
+
+        if (Array.isArray(data?.progress_json)) {
+          setProgressLogs(data.progress_json);
+        }
+
+        if (hasArrayData(data?.devices_json)) {
+          setDevices(data.devices_json);
+        }
+
+        setCloudLoaded(true);
+        setSyncStatus("saved");
+      } catch (err) {
+        console.error("Failed to load customer health cloud profile", err);
+
+        if (!mounted) return;
+
+        setCloudLoaded(false);
+        setSyncStatus("error");
+      }
+    }
+
+    loadCloudProfile();
+
+    return () => {
+      mounted = false;
+    };
+  }, [hasHealthAccess]);
+
+  useEffect(() => {
+    if (!hasHealthAccess || !cloudLoaded) return;
+
+    if (skipNextCloudSaveRef.current) {
+      skipNextCloudSaveRef.current = false;
+      return;
+    }
+
+    const timer = window.setTimeout(async () => {
+      setSyncStatus("syncing");
+
+      try {
+        await patchCustomerHealthProfile({
+          profile_json: profile,
+          snapshot_json: syncedSnapshot,
+          workouts_json: workouts,
+          history_json: history,
+          progress_json: progressLogs,
+          devices_json: devices,
+        });
+
+        setSyncStatus("saved");
+      } catch (err) {
+        console.error("Failed to save customer health cloud profile", err);
+        setSyncStatus("error");
+      }
+    }, 900);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    hasHealthAccess,
+    cloudLoaded,
+    profile,
+    syncedSnapshot,
+    workouts,
+    history,
+    progressLogs,
+    devices,
+  ]);
+
   function addExerciseFromLibrary(exercise) {
     setWorkouts((prev) => {
       const targetId = snapshot.today_workout_id || prev[0]?.id;
@@ -317,13 +481,17 @@ export default function CustomerHealth() {
             : "30 days free • $2.99/month after"
         }
         rightActions={
-          <button
-            type="button"
-            onClick={() => nav("/customer")}
-            className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs hover:bg-slate-900"
-          >
-            Back
-          </button>
+          <div className="flex items-center gap-2">
+            {hasHealthAccess ? <SyncStatusPill status={syncStatus} /> : null}
+
+            <button
+              type="button"
+              onClick={() => nav("/customer")}
+              className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs hover:bg-slate-900"
+            >
+              Back
+            </button>
+          </div>
         }
       />
 

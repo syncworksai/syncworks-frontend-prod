@@ -115,7 +115,13 @@ function isInvestorRequest(config) {
 // Me-scoped endpoints should never send X-Business-Id
 function isMeScopedRequest(config) {
   const path = normalizedPath(config);
-  return path === "/me" || path.startsWith("/me/");
+
+  return (
+    path === "/me" ||
+    path.startsWith("/me/") ||
+    path === "/customer-health" ||
+    path.startsWith("/customer-health/")
+  );
 }
 
 // Auth endpoints that must stay user-scoped only
