@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import ModeBar from "../components/ModeBar";
 import { useAuth } from "../auth/AuthContext";
 
+import TodayPlanDrawer from "../components/customer-health/TodayPlanDrawer";
 import HealthDashboard from "../components/customer-health/HealthDashboard";
 import QuestionnaireDrawer from "../components/customer-health/QuestionnaireDrawer";
 import WorkoutStudioDrawer from "../components/customer-health/WorkoutStudioDrawer";
@@ -349,6 +350,16 @@ export default function CustomerHealth() {
 
       {hasHealthAccess ? (
         <>
+          <TodayPlanDrawer
+            open={drawer === "today"}
+            onClose={() => setDrawer("")}
+            profile={profile}
+            snapshot={syncedSnapshot}
+            workouts={workouts}
+            history={history}
+            setSnapshot={setSnapshot}
+          />
+
           <QuestionnaireDrawer
             open={drawer === "questionnaire"}
             onClose={() => setDrawer("")}

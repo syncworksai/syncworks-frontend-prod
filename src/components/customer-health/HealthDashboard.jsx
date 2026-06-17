@@ -20,7 +20,12 @@ function Pill({ children, tone = "slate" }) {
   };
 
   return (
-    <span className={cx("rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em]", tones[tone] || tones.slate)}>
+    <span
+      className={cx(
+        "rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em]",
+        tones[tone] || tones.slate
+      )}
+    >
       {children}
     </span>
   );
@@ -84,6 +89,28 @@ function MetricCard({ label, value, sub, tone = "slate", percent, onClick }) {
   );
 }
 
+function ActionCard({ title, sub, tone = "slate", onClick }) {
+  const tones = {
+    cyan: "border-cyan-500/25 bg-cyan-500/10 hover:bg-cyan-500/15",
+    amber: "border-amber-500/25 bg-amber-500/10 hover:bg-amber-500/15",
+    emerald: "border-emerald-500/25 bg-emerald-500/10 hover:bg-emerald-500/15",
+    fuchsia: "border-fuchsia-500/25 bg-fuchsia-500/10 hover:bg-fuchsia-500/15",
+    indigo: "border-indigo-500/25 bg-indigo-500/10 hover:bg-indigo-500/15",
+    slate: "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]",
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx("rounded-[1.35rem] border p-4 text-left transition", tones[tone] || tones.slate)}
+    >
+      <div className="text-sm font-black text-white">{title}</div>
+      <div className="mt-1 text-xs leading-5 text-slate-400">{sub}</div>
+    </button>
+  );
+}
+
 export default function HealthDashboard({
   profile,
   snapshot,
@@ -134,11 +161,11 @@ export default function HealthDashboard({
               </div>
 
               <h1 className="mt-2 text-2xl font-black tracking-tight text-white md:text-4xl">
-                Health command center
+                AI fitness coach
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                Quick metrics, smarter workouts, progression, daily synopsis, and device-ready coaching.
+                Daily plan, adaptive workouts, progression, recovery guardrails, and user-specific coaching.
               </p>
             </div>
 
@@ -152,22 +179,28 @@ export default function HealthDashboard({
           <div className="mt-5 grid gap-3 lg:grid-cols-[260px_minmax(0,1fr)]">
             <button
               type="button"
-              onClick={() => onOpen("synopsis")}
-              className="rounded-[1.35rem] border border-emerald-400/25 bg-emerald-500/10 p-5 text-left"
+              onClick={() => onOpen("today")}
+              className="rounded-[1.35rem] border border-cyan-400/25 bg-cyan-500/10 p-5 text-left"
             >
-              <div className="text-xs font-black uppercase tracking-[0.16em] text-emerald-200">
-                Health Score
+              <div className="text-xs font-black uppercase tracking-[0.16em] text-cyan-200">
+                Today’s Plan
               </div>
-              <div className="mt-2 text-5xl font-black text-white">{healthScore}</div>
-              <div className="mt-3">
-                <ProgressBar percent={healthScore} tone="emerald" />
-              </div>
+              <div className="mt-2 text-3xl font-black text-white">Open Coach</div>
               <div className="mt-3 text-sm leading-6 text-slate-300">
-                {readinessSuggestion(snapshot.readiness)}
+                Get one clear mission based on your goal, readiness, missed logs, nutrition, and recovery.
               </div>
             </button>
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <MetricCard
+                label="Health Score"
+                value={healthScore}
+                sub={readinessSuggestion(snapshot.readiness)}
+                tone="emerald"
+                percent={healthScore}
+                onClick={() => onOpen("synopsis")}
+              />
+
               <MetricCard
                 label="Training For"
                 value={profile.primary_goal || "General fitness"}
@@ -187,17 +220,9 @@ export default function HealthDashboard({
               <MetricCard
                 label="AI Coach"
                 value="Progress"
-                sub="Next workout, weak areas, and week-to-week overload."
+                sub="Next workout, weak areas, missed logs, and overload."
                 tone="fuchsia"
                 onClick={() => onOpen("coach")}
-              />
-
-              <MetricCard
-                label="Devices"
-                value={`${activeDevices}/${devices.length || 4}`}
-                sub="Manual tracking active. Device sync path ready."
-                tone="cyan"
-                onClick={() => onOpen("devices")}
               />
             </div>
           </div>
@@ -233,58 +258,42 @@ export default function HealthDashboard({
         />
 
         <MetricCard
-          label="Progress"
-          value={safeNumber(snapshot.weight) ? `${snapshot.weight}` : "Log"}
-          sub={`${progressLogs.length} entries • ${workouts.length} workouts`}
-          tone="fuchsia"
-          onClick={() => onOpen("progress")}
+          label="Devices"
+          value={`${activeDevices}/${devices.length || 4}`}
+          sub="Manual tracking active. Device sync path ready."
+          tone="cyan"
+          onClick={() => onOpen("devices")}
         />
       </div>
 
       <div className="grid gap-3 md:grid-cols-4">
-        <button
-          type="button"
-          onClick={() => onOpen("library")}
-          className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-4 text-left transition hover:bg-white/[0.06]"
-        >
-          <div className="text-sm font-black text-white">Exercise Library</div>
-          <div className="mt-1 text-xs leading-5 text-slate-400">
-            Pick movements by muscle group and learn what to feel.
-          </div>
-        </button>
+        <ActionCard
+          title="Today’s AI Plan"
+          sub="One clear mission for the day."
+          tone="cyan"
+          onClick={() => onOpen("today")}
+        />
 
-        <button
-          type="button"
+        <ActionCard
+          title="Workout Studio"
+          sub="Sets, reps, weight, rest, pain, and difficulty."
+          tone="emerald"
           onClick={() => onOpen("workout")}
-          className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-4 text-left transition hover:bg-white/[0.06]"
-        >
-          <div className="text-sm font-black text-white">Workout Studio</div>
-          <div className="mt-1 text-xs leading-5 text-slate-400">
-            Sets, reps, weight, rest, pain level, and difficulty.
-          </div>
-        </button>
+        />
 
-        <button
-          type="button"
+        <ActionCard
+          title="Exercise Library"
+          sub="Pick movements by muscle group and what to feel."
+          tone="slate"
+          onClick={() => onOpen("library")}
+        />
+
+        <ActionCard
+          title="AI Coach"
+          sub="Progression, accountability, weak areas, and missed logs."
+          tone="fuchsia"
           onClick={() => onOpen("coach")}
-          className="rounded-[1.35rem] border border-fuchsia-500/25 bg-fuchsia-500/10 p-4 text-left transition hover:bg-fuchsia-500/15"
-        >
-          <div className="text-sm font-black text-white">AI Coach</div>
-          <div className="mt-1 text-xs leading-5 text-fuchsia-100/80">
-            Increase week to week when ready.
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onOpen("synopsis")}
-          className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-4 text-left transition hover:bg-white/[0.06]"
-        >
-          <div className="text-sm font-black text-white">Daily Synopsis</div>
-          <div className="mt-1 text-xs leading-5 text-slate-400">
-            End-of-day recap and recommendation.
-          </div>
-        </button>
+        />
       </div>
     </div>
   );
