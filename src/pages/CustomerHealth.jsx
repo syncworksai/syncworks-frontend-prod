@@ -20,6 +20,7 @@ import WorkoutStudioDrawer from "../components/customer-health/WorkoutStudioDraw
 import ExerciseLibraryDrawer from "../components/customer-health/ExerciseLibraryDrawer";
 import AiCoachDrawer from "../components/customer-health/AiCoachDrawer";
 import CoachChatDrawer from "../components/customer-health/CoachChatDrawer";
+import ActiveWorkoutSessionDrawer from "../components/customer-health/ActiveWorkoutSessionDrawer";
 import {
   NutritionDrawer,
   ProgressDrawer,
@@ -124,7 +125,10 @@ function convertCoachWorkoutToPlannerItem(workout, index = 0) {
     workout_id: workout?.workout_id || workout?.id || "",
     workout_name: normalizeCoachWorkoutName(workout),
     time: workout?.time || "06:00",
-    status: workout?.status === "added_to_planner" ? "Planned" : workout?.status || "Planned",
+    status:
+      workout?.status === "added_to_planner"
+        ? "Planned"
+        : workout?.status || "Planned",
     note:
       workout?.note ||
       workout?.focus ||
@@ -345,6 +349,7 @@ export default function CustomerHealth() {
   const [syncStatus, setSyncStatus] = useState("local");
   const [cloudLoaded, setCloudLoaded] = useState(false);
   const [celebration, setCelebration] = useState(null);
+  const [activePlannerItem, setActivePlannerItem] = useState(null);
 
   const skipNextCloudSaveRef = useRef(false);
   const achievedMilestoneIdsRef = useRef(new Set());
@@ -672,6 +677,13 @@ export default function CustomerHealth() {
     setDrawer("questionnaire");
   }
 
+  function startPlannerWorkout(plannerItem) {
+    if (!plannerItem) return;
+
+    setActivePlannerItem(plannerItem);
+    setDrawer("active-workout");
+  }
+
   return (
     <div className="min-h-dvh overflow-x-hidden bg-[#020617] text-slate-100">
       <div className="pointer-events-none fixed inset-0">
@@ -683,7 +695,7 @@ export default function CustomerHealth() {
         title="Health"
         subtitle={
           hasHealthAccess
-            ? "Dashboard • planner • workouts • nutrition • progress • AI coach"
+            ? "Dashboard • planner • active workouts • nutrition • progress • AI coach"
             : "30 days free • $2.99/month after"
         }
         rightActions={
@@ -716,6 +728,7 @@ export default function CustomerHealth() {
             progressLogs={progressLogs}
             devices={devices}
             onOpen={setDrawer}
+            onStartWorkout={startPlannerWorkout}
           />
         ) : (
           <HealthSignupScreen onBack={() => nav("/customer")} />
@@ -819,6 +832,17 @@ export default function CustomerHealth() {
             snapshot={syncedSnapshot}
             setSnapshot={setSnapshot}
             onOpenQuestionnaire={openQuestionnaireFromCoach}
+          />
+
+          <ActiveWorkoutSessionDrawer
+            open={drawer === "active-workout"}
+            onClose={() => setDrawer("")}
+            plannerItem={activePlannerItem}
+            workouts={workouts}
+            snapshot={syncedSnapshot}
+            setSnapshot={setSnapshot}
+            history={history}
+            setHistory={setHistory}
           />
 
           <DevicesDrawer

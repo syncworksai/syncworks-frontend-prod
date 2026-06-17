@@ -8,6 +8,7 @@ import {
   readinessSuggestion,
   safeNumber,
 } from "./healthStorage";
+import { formatSeconds } from "./healthWorkoutSession";
 
 const SEEQ_AFFILIATE_URL = "https://www.seeqsupply.com/JACOB78279";
 const WEWARD_AFFILIATE_URL =
@@ -231,7 +232,9 @@ function CoachChatStartCard({ snapshot, onOpen }) {
             <StatPill
               label="Proposal"
               value={isAdded ? "Added" : hasPlannerProposal ? "Ready" : "None"}
-              tone={isAdded ? "emerald" : hasPlannerProposal ? "amber" : "fuchsia"}
+              tone={
+                isAdded ? "emerald" : hasPlannerProposal ? "amber" : "fuchsia"
+              }
             />
           </div>
         </div>
@@ -260,7 +263,11 @@ function CoachChatStartCard({ snapshot, onOpen }) {
 
         <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <ActionButton
-            label={hasPlannerProposal && !isAdded ? "Review Coach Plan" : "Chat With Coach"}
+            label={
+              hasPlannerProposal && !isAdded
+                ? "Review Coach Plan"
+                : "Chat With Coach"
+            }
             onClick={() => onOpen("coach-chat")}
             tone="emerald"
             className="shadow-[0_0_30px_rgba(16,185,129,0.16)]"
@@ -283,6 +290,68 @@ function CoachChatStartCard({ snapshot, onOpen }) {
   );
 }
 
+function LastWorkoutStatsCard({ stats }) {
+  if (!stats) return null;
+
+  return (
+    <Card className="border-emerald-500/20">
+      <div className="text-xs font-black uppercase tracking-[0.16em] text-emerald-200">
+        Last Workout Stats
+      </div>
+
+      <div className="mt-2 text-xl font-black text-white">
+        {stats.workout_name || "Completed Workout"}
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <StatPill
+          label="Total Time"
+          value={formatSeconds(stats.total_seconds)}
+          tone="cyan"
+        />
+        <StatPill
+          label="Active Time"
+          value={formatSeconds(stats.active_seconds)}
+          tone="emerald"
+        />
+        <StatPill
+          label="Rest Time"
+          value={formatSeconds(stats.rest_seconds)}
+          tone="amber"
+        />
+        <StatPill
+          label="Sets"
+          value={stats.completed_sets || 0}
+          tone="fuchsia"
+        />
+      </div>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <StatPill
+          label="Pain"
+          value={stats.pain_score || "0"}
+          tone="emerald"
+        />
+        <StatPill
+          label="Difficulty"
+          value={stats.difficulty_score || "Medium"}
+          tone="cyan"
+        />
+        <StatPill
+          label="Energy"
+          value={stats.energy_score || "Good"}
+          tone="amber"
+        />
+        <StatPill
+          label="Skipped"
+          value={stats.skipped_exercises || 0}
+          tone="fuchsia"
+        />
+      </div>
+    </Card>
+  );
+}
+
 export default function HealthDashboard({
   profile,
   snapshot,
@@ -291,6 +360,7 @@ export default function HealthDashboard({
   progressLogs,
   devices,
   onOpen,
+  onStartWorkout,
 }) {
   const [quoteIndex, setQuoteIndex] = useState(0);
 
@@ -469,6 +539,12 @@ export default function HealthDashboard({
 
                       <div className="mt-4 flex flex-wrap gap-2">
                         <ActionButton
+                          label="Start Workout"
+                          onClick={() => onStartWorkout?.(nextSession)}
+                          tone="emerald"
+                        />
+
+                        <ActionButton
                           label="Open Planner"
                           onClick={() => onOpen("planner")}
                         />
@@ -545,6 +621,8 @@ export default function HealthDashboard({
           </div>
         </div>
       </Card>
+
+      <LastWorkoutStatsCard stats={snapshot?.last_workout_stats} />
 
       <HealthMomentumCard
         profile={profile}
@@ -659,28 +737,50 @@ export default function HealthDashboard({
               weekPlan.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3"
+                  className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3"
                 >
-                  <div className="min-w-0">
-                    <div className="text-sm font-black text-white">
-                      {item.day_label} • {prettyDate(item.ymd)}
-                    </div>
-
-                    <div className="mt-1 text-xs text-slate-400">
-                      {item.workout_name || "Recovery / open day"}
-                      {item.time ? ` • ${item.time}` : ""}
-                    </div>
-
-                    {item.source === "coach_chat" ? (
-                      <div className="mt-2 w-fit rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-100">
-                        Coach Built
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-black text-white">
+                        {item.day_label} • {prettyDate(item.ymd)}
                       </div>
-                    ) : null}
+
+                      <div className="mt-1 text-xs text-slate-400">
+                        {item.workout_name || "Recovery / open day"}
+                        {item.time ? ` • ${item.time}` : ""}
+                      </div>
+
+                      {item.source === "coach_chat" ? (
+                        <div className="mt-2 w-fit rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-100">
+                          Coach Built
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="shrink-0 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100">
+                      {item.status || "Planned"}
+                    </div>
                   </div>
 
-                  <div className="shrink-0 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100">
-                    {item.status || "Planned"}
-                  </div>
+                  {item.workout_name && item.status !== "Completed" ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onStartWorkout?.(item)}
+                        className="inline-flex h-10 items-center justify-center rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 text-xs font-black text-emerald-100 transition hover:bg-emerald-500/20"
+                      >
+                        Start
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => onOpen("planner")}
+                        className="inline-flex h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-xs font-black text-slate-100 transition hover:bg-white/[0.08]"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               ))
             ) : (
