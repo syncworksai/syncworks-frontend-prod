@@ -75,6 +75,30 @@ function StatTile({ label, value, tone = "cyan" }) {
   );
 }
 
+function CompactStatTile({ label, value, tone = "cyan" }) {
+  const toneMap = {
+    cyan: "border-cyan-300/20 bg-cyan-300/10 text-cyan-100",
+    emerald: "border-emerald-300/20 bg-emerald-300/10 text-emerald-100",
+    amber: "border-amber-300/20 bg-amber-300/10 text-amber-100",
+    rose: "border-rose-300/20 bg-rose-300/10 text-rose-100",
+    slate: "border-white/10 bg-white/[0.04] text-slate-200",
+  };
+
+  return (
+    <div
+      className={cx(
+        "min-w-0 rounded-2xl border px-2.5 py-2",
+        toneMap[tone] || toneMap.cyan
+      )}
+    >
+      <div className="truncate text-[9px] font-black uppercase tracking-[0.14em] opacity-75">
+        {label}
+      </div>
+      <div className="mt-0.5 truncate text-sm font-black">{value}</div>
+    </div>
+  );
+}
+
 function SetLogger({ exercise, onAddSet, onUpdateSet, onRemoveSet }) {
   const suggestion = useMemo(
     () => buildNextSetSuggestion(exercise),
@@ -640,18 +664,18 @@ export default function ActiveWorkoutSessionDrawer({
       />
 
       <section className="relative z-[91] flex h-full w-full max-w-5xl flex-col border-l border-white/10 bg-[#06111f] shadow-[-30px_0_80px_rgba(0,0,0,0.5)]">
-        <div className="border-b border-white/10 bg-white/[0.04] px-4 py-4 sm:px-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
-              <div className="text-xs font-black uppercase tracking-[0.28em] text-emerald-200">
+        <div className="border-b border-white/10 bg-white/[0.04] px-3 py-3 sm:px-6 sm:py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-200 sm:text-xs">
                 SyncWorks Trainer Loop
               </div>
 
-              <h2 className="mt-1 text-2xl font-black text-white sm:text-3xl">
+              <h2 className="mt-1 text-xl font-black leading-tight text-white sm:text-3xl">
                 {session?.workout_name || "Active Workout"}
               </h2>
 
-              <p className="mt-2 text-sm leading-6 text-slate-300">
+              <p className="mt-2 hidden text-sm leading-6 text-slate-300 sm:block">
                 Track sets, reps, weight, rest, pain, difficulty, skipped
                 exercises, substitutions, and live trainer guidance.
               </p>
@@ -660,54 +684,82 @@ export default function ActiveWorkoutSessionDrawer({
             <button
               type="button"
               onClick={closeDrawer}
-              className="w-fit rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-sm font-black text-white transition hover:bg-white/15"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-sm font-black text-white transition hover:bg-white/15"
             >
               ✕
             </button>
           </div>
 
           {session ? (
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
-              <StatTile
-                label="Total"
-                value={formatSeconds(session.total_seconds)}
-                tone="cyan"
-              />
+            <>
+              <div className="mt-3 grid grid-cols-4 gap-2 lg:hidden">
+                <CompactStatTile
+                  label="Total"
+                  value={formatSeconds(session.total_seconds)}
+                  tone="cyan"
+                />
 
-              <StatTile
-                label="Active"
-                value={formatSeconds(session.active_seconds)}
-                tone="emerald"
-              />
+                <CompactStatTile
+                  label="Active"
+                  value={formatSeconds(session.active_seconds)}
+                  tone="emerald"
+                />
 
-              <StatTile
-                label="Rest"
-                value={formatSeconds(session.rest_seconds)}
-                tone="amber"
-              />
+                <CompactStatTile
+                  label="Rest"
+                  value={formatSeconds(session.rest_seconds)}
+                  tone="amber"
+                />
 
-              <StatTile
-                label="Idle"
-                value={formatSeconds(session.idle_seconds)}
-                tone="slate"
-              />
+                <CompactStatTile
+                  label="Sets"
+                  value={session.completed_sets || 0}
+                  tone="emerald"
+                />
+              </div>
 
-              <StatTile
-                label="Sets"
-                value={session.completed_sets || 0}
-                tone="emerald"
-              />
+              <div className="mt-4 hidden gap-2 lg:grid lg:grid-cols-6">
+                <StatTile
+                  label="Total"
+                  value={formatSeconds(session.total_seconds)}
+                  tone="cyan"
+                />
 
-              <StatTile
-                label="Skipped"
-                value={session.skipped_exercises || 0}
-                tone="rose"
-              />
-            </div>
+                <StatTile
+                  label="Active"
+                  value={formatSeconds(session.active_seconds)}
+                  tone="emerald"
+                />
+
+                <StatTile
+                  label="Rest"
+                  value={formatSeconds(session.rest_seconds)}
+                  tone="amber"
+                />
+
+                <StatTile
+                  label="Idle"
+                  value={formatSeconds(session.idle_seconds)}
+                  tone="slate"
+                />
+
+                <StatTile
+                  label="Sets"
+                  value={session.completed_sets || 0}
+                  tone="emerald"
+                />
+
+                <StatTile
+                  label="Skipped"
+                  value={session.skipped_exercises || 0}
+                  tone="rose"
+                />
+              </div>
+            </>
           ) : null}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-5 pb-28 sm:px-6">
+        <div className="flex-1 overflow-y-auto px-3 py-3 pb-28 sm:px-6 sm:py-5">
           {!session ? (
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 text-sm text-slate-300">
               No active workout selected.
