@@ -21,6 +21,7 @@ import ExerciseLibraryDrawer from "../components/customer-health/ExerciseLibrary
 import AiCoachDrawer from "../components/customer-health/AiCoachDrawer";
 import CoachChatDrawer from "../components/customer-health/CoachChatDrawer";
 import ActiveWorkoutSessionDrawer from "../components/customer-health/ActiveWorkoutSessionDrawer";
+import HealthMobileQuickNav from "../components/customer-health/HealthMobileQuickNav";
 import {
   NutritionDrawer,
   ProgressDrawer,
@@ -684,8 +685,11 @@ export default function CustomerHealth() {
     setDrawer("active-workout");
   }
 
+  const mobileNextSession = findNextPlanned(syncedSnapshot.week_plan);
+  const hasCoachProposal = !!syncedSnapshot?.coach_plan_proposal;
+
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-[#020617] text-slate-100">
+    <div className="min-h-dvh overflow-x-hidden bg-[#020617] pb-24 text-slate-100 lg:pb-0">
       <div className="pointer-events-none fixed inset-0">
         <div className="absolute inset-0 bg-[#020617]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,0.12),transparent_30%),radial-gradient(circle_at_top_right,rgba(34,211,238,0.10),transparent_32%),radial-gradient(circle_at_bottom,rgba(99,102,241,0.12),transparent_38%)]" />
@@ -715,7 +719,7 @@ export default function CustomerHealth() {
 
       <main
         className={cx(
-          "relative mx-auto px-3 pb-12 pt-4 sm:px-5",
+          "relative mx-auto px-3 pb-16 pt-4 sm:px-5 lg:pb-12",
           hasHealthAccess ? "max-w-7xl" : "max-w-5xl"
         )}
       >
@@ -850,6 +854,13 @@ export default function CustomerHealth() {
             onClose={() => setDrawer("")}
             devices={devices}
             setDevices={setDevices}
+          />
+
+          <HealthMobileQuickNav
+            onOpen={setDrawer}
+            onStartWorkout={startPlannerWorkout}
+            nextSession={mobileNextSession}
+            hasCoachProposal={hasCoachProposal}
           />
         </>
       ) : null}

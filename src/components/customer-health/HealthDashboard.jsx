@@ -27,7 +27,7 @@ function Card({ className = "", children }) {
   return (
     <section
       className={cx(
-        "rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-4 shadow-[0_10px_36px_rgba(0,0,0,0.18)]",
+        "rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-3 shadow-[0_10px_36px_rgba(0,0,0,0.18)] sm:rounded-[1.75rem] sm:p-4",
         className
       )}
     >
@@ -70,7 +70,7 @@ function ProgressBar({ label, value, goal, suffix = "", tone = "cyan" }) {
   };
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
+    <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-3 sm:p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
           {label}
@@ -116,7 +116,7 @@ function ActionButton({ label, onClick, tone = "cyan", className = "" }) {
       type="button"
       onClick={onClick}
       className={cx(
-        "inline-flex h-11 items-center justify-center rounded-2xl border px-4 text-sm font-black transition",
+        "inline-flex h-11 items-center justify-center rounded-2xl border px-4 text-sm font-black transition active:scale-[0.99]",
         toneMap[tone] || toneMap.cyan,
         className
       )}
@@ -427,7 +427,7 @@ export default function HealthDashboard({
   );
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       <CoachChatStartCard snapshot={snapshot} onOpen={onOpen} />
 
       <Card className="relative overflow-hidden border-cyan-500/25 bg-gradient-to-br from-cyan-500/10 via-slate-950/60 to-fuchsia-500/10">
@@ -435,9 +435,9 @@ export default function HealthDashboard({
         <div className="pointer-events-none absolute -bottom-20 left-1/4 h-64 w-64 rounded-full bg-fuchsia-500/15 blur-3xl" />
 
         <div className="relative">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-100">
                   SyncWorks Health
                 </span>
@@ -451,8 +451,8 @@ export default function HealthDashboard({
                 </span>
               </div>
 
-              <div className="mt-4 flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-cyan-400/25 bg-cyan-500/10 text-3xl animate-pulse">
+              <div className="mt-4 flex items-start gap-3 sm:items-center sm:gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl border border-cyan-400/25 bg-cyan-500/10 text-2xl animate-pulse sm:h-16 sm:w-16 sm:text-3xl">
                   🏋️
                 </div>
 
@@ -461,7 +461,7 @@ export default function HealthDashboard({
                     Today’s Mission
                   </div>
 
-                  <h1 className="mt-1 text-3xl font-black tracking-tight text-white md:text-4xl">
+                  <h1 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl md:text-4xl">
                     {nextSession?.workout_name || "Build momentum today"}
                   </h1>
 
@@ -474,7 +474,7 @@ export default function HealthDashboard({
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="mt-5 grid gap-2 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
                 <StatPill label="Goal" value={goalTitle} tone="emerald" />
 
                 <StatPill
@@ -503,12 +503,12 @@ export default function HealthDashboard({
               </div>
 
               <div className="mt-5 grid gap-3 md:grid-cols-2">
-                <div className="rounded-3xl border border-white/10 bg-slate-950/55 p-4">
+                <div className="rounded-3xl border border-white/10 bg-slate-950/55 p-3 sm:p-4">
                   <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
                     Coach Message
                   </div>
 
-                  <div className="mt-2 text-lg font-black text-white">
+                  <div className="mt-2 text-base font-black text-white sm:text-lg">
                     “{QUOTES[quoteIndex]}”
                   </div>
 
@@ -517,7 +517,7 @@ export default function HealthDashboard({
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-white/10 bg-slate-950/55 p-4">
+                <div className="rounded-3xl border border-white/10 bg-slate-950/55 p-3 sm:p-4">
                   <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
                     Next Planned Session
                   </div>
@@ -553,7 +553,7 @@ export default function HealthDashboard({
                           href={buildGoogleCalendarLink(nextSession)}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex h-11 items-center justify-center rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-4 text-sm font-black text-emerald-100 transition hover:bg-emerald-500/20"
+                          className="inline-flex h-11 items-center justify-center rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-4 text-sm font-black text-emerald-100 transition hover:bg-emerald-500/20 active:scale-[0.99]"
                         >
                           Add to Calendar
                         </a>
@@ -582,7 +582,7 @@ export default function HealthDashboard({
                 </div>
               </div>
 
-              <div className="mt-5 flex flex-wrap gap-2">
+              <div className="mt-5 hidden flex-wrap gap-2 lg:flex">
                 <ActionButton
                   label="Chat With Coach"
                   onClick={() => onOpen("coach-chat")}
@@ -638,7 +638,7 @@ export default function HealthDashboard({
             Goal Snapshot
           </div>
 
-          <div className="mt-2 text-xl font-black text-white">
+          <div className="mt-2 text-lg font-black text-white sm:text-xl">
             See your progress at a glance
           </div>
 
@@ -679,7 +679,7 @@ export default function HealthDashboard({
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-4">
-            <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+            <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-3 sm:p-4">
               <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
                 Current Weight
               </div>
@@ -689,7 +689,7 @@ export default function HealthDashboard({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+            <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-3 sm:p-4">
               <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
                 Target Weight
               </div>
@@ -699,7 +699,7 @@ export default function HealthDashboard({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+            <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-3 sm:p-4">
               <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
                 Planned This Week
               </div>
@@ -709,7 +709,7 @@ export default function HealthDashboard({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+            <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-3 sm:p-4">
               <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
                 Progress Logs
               </div>
@@ -726,7 +726,9 @@ export default function HealthDashboard({
             Weekly Planner Preview
           </div>
 
-          <div className="mt-2 text-xl font-black text-white">This week</div>
+          <div className="mt-2 text-lg font-black text-white sm:text-xl">
+            This week
+          </div>
 
           <div className="mt-1 text-sm text-slate-400">
             Build habit by showing today, tomorrow, and the next sessions.
@@ -737,7 +739,7 @@ export default function HealthDashboard({
               weekPlan.map((item) => (
                 <div
                   key={item.id}
-                  className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3"
+                  className="rounded-2xl border border-white/10 bg-slate-950/50 px-3 py-3 sm:px-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -767,7 +769,7 @@ export default function HealthDashboard({
                       <button
                         type="button"
                         onClick={() => onStartWorkout?.(item)}
-                        className="inline-flex h-10 items-center justify-center rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 text-xs font-black text-emerald-100 transition hover:bg-emerald-500/20"
+                        className="inline-flex h-10 items-center justify-center rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 text-xs font-black text-emerald-100 transition hover:bg-emerald-500/20 active:scale-[0.99]"
                       >
                         Start
                       </button>
@@ -775,7 +777,7 @@ export default function HealthDashboard({
                       <button
                         type="button"
                         onClick={() => onOpen("planner")}
-                        className="inline-flex h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-xs font-black text-slate-100 transition hover:bg-white/[0.08]"
+                        className="inline-flex h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-xs font-black text-slate-100 transition hover:bg-white/[0.08] active:scale-[0.99]"
                       >
                         Edit
                       </button>
@@ -790,7 +792,7 @@ export default function HealthDashboard({
             )}
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 hidden flex-wrap gap-2 lg:flex">
             <ActionButton
               label="Open Planner"
               onClick={() => onOpen("planner")}
@@ -821,7 +823,7 @@ export default function HealthDashboard({
             coach to adjust.
           </div>
 
-          <div className="mt-4">
+          <div className="mt-4 hidden lg:block">
             <ActionButton
               label="Open Workout Studio"
               onClick={() => onOpen("workout")}
@@ -901,7 +903,7 @@ export default function HealthDashboard({
               href={SEEQ_AFFILIATE_URL}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex h-11 items-center justify-center rounded-2xl border border-fuchsia-500/25 bg-fuchsia-500/10 px-4 text-sm font-black text-fuchsia-100 transition hover:bg-fuchsia-500/20"
+              className="inline-flex h-11 items-center justify-center rounded-2xl border border-fuchsia-500/25 bg-fuchsia-500/10 px-4 text-sm font-black text-fuchsia-100 transition hover:bg-fuchsia-500/20 active:scale-[0.99]"
             >
               Shop Seeq
             </a>
@@ -909,7 +911,7 @@ export default function HealthDashboard({
             <button
               type="button"
               onClick={() => onOpen("nutrition")}
-              className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-black text-slate-100 transition hover:bg-white/[0.08]"
+              className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-black text-slate-100 transition hover:bg-white/[0.08] active:scale-[0.99]"
             >
               Log Protein Goal
             </button>
@@ -933,7 +935,7 @@ export default function HealthDashboard({
               href={WEWARD_AFFILIATE_URL}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex h-11 items-center justify-center rounded-2xl border border-cyan-500/25 bg-cyan-500/10 px-4 text-sm font-black text-cyan-100 transition hover:bg-cyan-500/20"
+              className="inline-flex h-11 items-center justify-center rounded-2xl border border-cyan-500/25 bg-cyan-500/10 px-4 text-sm font-black text-cyan-100 transition hover:bg-cyan-500/20 active:scale-[0.99]"
             >
               Explore WeWard
             </a>
@@ -941,7 +943,7 @@ export default function HealthDashboard({
             <button
               type="button"
               onClick={() => onOpen("steps")}
-              className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-black text-slate-100 transition hover:bg-white/[0.08]"
+              className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-black text-slate-100 transition hover:bg-white/[0.08] active:scale-[0.99]"
             >
               Update Steps
             </button>
