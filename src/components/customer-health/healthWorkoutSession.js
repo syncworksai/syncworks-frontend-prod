@@ -113,6 +113,10 @@ export function createWorkoutSessionFromPlannerItem({
     edited_after_finish_at: "",
     paused: false,
     rest_active: false,
+    set_active: false,
+    active_exercise_id: "",
+    active_set_started_at: "",
+    current_set_seconds: 0,
     current_exercise_index: 0,
     active_seconds: 0,
     rest_seconds: 0,
@@ -122,6 +126,8 @@ export function createWorkoutSessionFromPlannerItem({
     completed_sets: 0,
     skipped_exercises: 0,
     substituted_exercises: 0,
+    average_ease_score: "",
+    average_set_seconds: 0,
     pain_score: "0",
     difficulty_score: "Medium",
     energy_score: "",
@@ -134,7 +140,7 @@ export function createWorkoutSessionFromPlannerItem({
   };
 }
 
-export function updateSessionTimer(session = {}, mode = "active") {
+export function updateSessionTimer(session = {}) {
   const next = {
     ...session,
     total_seconds: safeNumber(session.total_seconds) + 1,
@@ -145,7 +151,13 @@ export function updateSessionTimer(session = {}, mode = "active") {
     return next;
   }
 
-  if (mode === "rest" || session.rest_active) {
+  if (session.set_active) {
+    next.active_seconds = safeNumber(session.active_seconds) + 1;
+    next.current_set_seconds = safeNumber(session.current_set_seconds) + 1;
+    return next;
+  }
+
+  if (session.rest_active) {
     const nextRest = safeNumber(session.rest_seconds) + 1;
 
     next.rest_seconds = nextRest;
@@ -157,7 +169,7 @@ export function updateSessionTimer(session = {}, mode = "active") {
     return next;
   }
 
-  next.active_seconds = safeNumber(session.active_seconds) + 1;
+  next.idle_seconds = safeNumber(session.idle_seconds) + 1;
   return next;
 }
 
@@ -166,6 +178,10 @@ export function toggleSessionPause(session = {}) {
     ...session,
     paused: !session.paused,
     rest_active: false,
+    set_active: false,
+    active_exercise_id: "",
+    active_set_started_at: "",
+    current_set_seconds: 0,
   };
 }
 
@@ -173,8 +189,74 @@ export function toggleRestTimer(session = {}) {
   return {
     ...session,
     paused: false,
+    set_active: false,
+    active_exercise_id: "",
+    active_set_started_at: "",
+    current_set_seconds: 0,
     rest_active: !session.rest_active,
   };
+}
+
+export function startActiveSet(session = {}, exerciseId) {
+  if (!exerciseId) return session;
+
+  return {
+    ...session,
+    paused: false,
+    rest_active: false,
+    set_active: true,
+    active_exercise_id: exerciseId,
+    active_set_started_at: nowIso(),
+    current_set_seconds: 0,
+  };
+}
+
+export function completeActiveSet(session = {}, exerciseId, setLog = {}) {
+  const safeExercises = Array.isArray(session.exercises)
+    ? session.exercises
+    : [];
+
+  const targetExerciseId =
+    exerciseId || session.active_exercise_id || safeExercises[0]?.id;
+
+  const duration = Math.max(1, safeNumber(session.current_set_seconds, 0));
+
+  const nextExercises = safeExercises.map((exercise) => {
+    if (exercise.id !== targetExerciseId) return exercise;
+
+    const setNumber = (exercise.set_logs || []).length + 1;
+
+    const nextSet = {
+      id: uid("set"),
+      set_number: setNumber,
+      reps: setLog.reps || exercise.planned_reps || "",
+      weight: setLog.weight || exercise.planned_weight || "",
+      ease_score: setLog.ease_score || "",
+      pain_score: setLog.pain_score ?? exercise.pain_score ?? "0",
+      set_duration_seconds: duration,
+      started_at: session.active_set_started_at || "",
+      completed_at: nowIso(),
+      completed: true,
+    };
+
+    return {
+      ...exercise,
+      completed: true,
+      skipped: false,
+      pain_score: nextSet.pain_score,
+      set_logs: [...(exercise.set_logs || []), nextSet],
+    };
+  });
+
+  return recalcSessionStats({
+    ...session,
+    exercises: nextExercises,
+    set_active: false,
+    active_exercise_id: "",
+    active_set_started_at: "",
+    current_set_seconds: 0,
+    rest_active: true,
+  });
 }
 
 export function moveToExercise(session = {}, index = 0) {
@@ -187,6 +269,10 @@ export function moveToExercise(session = {}, index = 0) {
     ...session,
     current_exercise_index: nextIndex,
     rest_active: false,
+    set_active: false,
+    active_exercise_id: "",
+    active_set_started_at: "",
+    current_set_seconds: 0,
   };
 }
 
@@ -200,16 +286,22 @@ export function addSetToExercise(session = {}, exerciseId, setLog = {}) {
 
     const nextSet = {
       id: uid("set"),
+      set_number: (exercise.set_logs || []).length + 1,
       reps: setLog.reps || exercise.planned_reps || "",
       weight: setLog.weight || exercise.planned_weight || "",
+      ease_score: setLog.ease_score || "",
+      pain_score: setLog.pain_score ?? exercise.pain_score ?? "0",
+      set_duration_seconds: safeNumber(setLog.set_duration_seconds, 0),
       completed: true,
       logged_at: nowIso(),
+      completed_at: nowIso(),
     };
 
     return {
       ...exercise,
       completed: true,
       skipped: false,
+      pain_score: nextSet.pain_score,
       set_logs: [...(exercise.set_logs || []), nextSet],
     };
   });
@@ -313,6 +405,10 @@ export function markExerciseSkipped(session = {}, exerciseId) {
     ...session,
     exercises: nextExercises,
     rest_active: false,
+    set_active: false,
+    active_exercise_id: "",
+    active_set_started_at: "",
+    current_set_seconds: 0,
   });
 }
 
@@ -339,15 +435,26 @@ export function markExerciseSubstituted(session = {}, exerciseId, value = "") {
   });
 }
 
+function getAverage(numbers = []) {
+  const clean = numbers
+    .map((value) => safeNumber(value, NaN))
+    .filter((value) => Number.isFinite(value));
+
+  if (!clean.length) return "";
+
+  return Math.round((clean.reduce((sum, value) => sum + value, 0) / clean.length) * 10) / 10;
+}
+
 export function recalcSessionStats(session = {}) {
   const safeExercises = Array.isArray(session.exercises)
     ? session.exercises
     : [];
 
-  const completedSets = safeExercises.reduce(
-    (total, exercise) => total + (exercise.set_logs || []).length,
-    0
+  const allSetLogs = safeExercises.flatMap((exercise) =>
+    Array.isArray(exercise.set_logs) ? exercise.set_logs : []
   );
+
+  const completedSets = allSetLogs.length;
 
   const skippedExercises = safeExercises.filter(
     (exercise) => exercise.skipped
@@ -357,11 +464,27 @@ export function recalcSessionStats(session = {}) {
     (exercise) => exercise.substituted
   ).length;
 
+  const averageEaseScore = getAverage(
+    allSetLogs.map((setLog) => setLog.ease_score)
+  );
+
+  const averageSetSeconds =
+    allSetLogs.length > 0
+      ? Math.round(
+          allSetLogs.reduce(
+            (sum, setLog) => sum + safeNumber(setLog.set_duration_seconds),
+            0
+          ) / allSetLogs.length
+        )
+      : 0;
+
   return {
     ...session,
     completed_sets: completedSets,
     skipped_exercises: skippedExercises,
     substituted_exercises: substitutedExercises,
+    average_ease_score: averageEaseScore,
+    average_set_seconds: averageSetSeconds,
   };
 }
 
@@ -394,10 +517,30 @@ export function validateWorkoutSessionForFinish(session = {}) {
       !String(exercise.difficulty_score || "").trim()
   );
 
+  const setsWithoutEase = safeExercises.flatMap((exercise) =>
+    (exercise.set_logs || [])
+      .filter((setLog) => !String(setLog.ease_score || "").trim())
+      .map((setLog) => `${exercise.name} set ${setLog.set_number || ""}`.trim())
+  );
+
+  const setsWithoutDuration = safeExercises.flatMap((exercise) =>
+    (exercise.set_logs || [])
+      .filter((setLog) => safeNumber(setLog.set_duration_seconds) <= 0)
+      .map((setLog) => `${exercise.name} set ${setLog.set_number || ""}`.trim())
+  );
+
   const substitutedWithoutName = safeExercises.filter(
     (exercise) =>
       exercise.substituted && !String(exercise.substitute_name || "").trim()
   );
+
+  if (session.set_active) {
+    missing.push({
+      id: "active_set",
+      label: "A set is currently active. Complete or cancel it before finishing.",
+      severity: "important",
+    });
+  }
 
   if (safeNumber(session.completed_sets) <= 0) {
     missing.push({
@@ -451,6 +594,26 @@ export function validateWorkoutSessionForFinish(session = {}) {
       id: "pain",
       label: "Overall pain score is not filled out.",
       severity: "normal",
+    });
+  }
+
+  if (setsWithoutEase.length > 0) {
+    warnings.push({
+      id: "set_ease",
+      label: `${setsWithoutEase.length} logged set${
+        setsWithoutEase.length === 1 ? "" : "s"
+      } do not have an ease score.`,
+      items: setsWithoutEase,
+    });
+  }
+
+  if (setsWithoutDuration.length > 0) {
+    warnings.push({
+      id: "set_duration",
+      label: `${setsWithoutDuration.length} logged set${
+        setsWithoutDuration.length === 1 ? "" : "s"
+      } do not have active set duration tracked.`,
+      items: setsWithoutDuration,
     });
   }
 
@@ -524,6 +687,10 @@ export function buildWorkoutSummary(session = {}) {
     (exercise) => exercise.completed
   ).length;
 
+  const allSetLogs = safeExercises.flatMap((exercise) =>
+    Array.isArray(exercise.set_logs) ? exercise.set_logs : []
+  );
+
   return {
     workout_name: session.workout_name || "Workout",
     started_at: session.started_at || "",
@@ -539,6 +706,16 @@ export function buildWorkoutSummary(session = {}) {
     completed_exercises: completedExercises,
     skipped_exercises: safeNumber(session.skipped_exercises),
     substituted_exercises: safeNumber(session.substituted_exercises),
+    average_ease_score: session.average_ease_score || "",
+    average_set_seconds: safeNumber(session.average_set_seconds),
+    total_set_volume: allSetLogs.reduce((sum, setLog) => {
+      const reps = safeNumber(setLog.reps);
+      const weight = safeNumber(setLog.weight);
+
+      if (!reps || !weight) return sum;
+
+      return sum + reps * weight;
+    }, 0),
     pain_score: session.pain_score || "0",
     difficulty_score: session.difficulty_score || "Medium",
     energy_score: session.energy_score || "",
@@ -573,6 +750,10 @@ export function finishWorkoutSession({
     saved_at: nowIso(),
     paused: false,
     rest_active: false,
+    set_active: false,
+    active_exercise_id: "",
+    active_set_started_at: "",
+    current_set_seconds: 0,
     review_acknowledged: true,
   });
 
@@ -631,6 +812,10 @@ export function updateCompletedWorkoutSession({
     saved_at: session.saved_at || nowIso(),
     paused: false,
     rest_active: false,
+    set_active: false,
+    active_exercise_id: "",
+    active_set_started_at: "",
+    current_set_seconds: 0,
   });
 
   const summary = buildWorkoutSummary(editedSession);

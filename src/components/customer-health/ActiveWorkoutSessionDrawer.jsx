@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   addSetToExercise,
+  completeActiveSet,
   createWorkoutSessionFromPlannerItem,
   finishWorkoutSession,
   formatSeconds,
@@ -9,6 +10,7 @@ import {
   markExerciseSubstituted,
   moveToExercise,
   removeSetFromExercise,
+  startActiveSet,
   toggleRestTimer,
   toggleSessionPause,
   updateCompletedWorkoutSession,
@@ -20,6 +22,7 @@ import {
 import { buildNextSetSuggestion, buildTrainerNudge } from "./healthTrainerLogic";
 import TrainerExerciseGuide from "./TrainerExerciseGuide";
 import TrainerNudgeCard from "./TrainerNudgeCard";
+import TrainerThumbControls from "./TrainerThumbControls";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -99,7 +102,47 @@ function CompactStatTile({ label, value, tone = "cyan" }) {
   );
 }
 
-function SetLogger({ exercise, onAddSet, onUpdateSet, onRemoveSet }) {
+function EaseButtons({ value, onChange }) {
+  return (
+    <div>
+      <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
+        Ease Score
+      </div>
+
+      <div className="mt-2 grid grid-cols-5 gap-1.5">
+        {["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"].map((score) => (
+          <button
+            key={score}
+            type="button"
+            onClick={() => onChange(score)}
+            className={cx(
+              "rounded-xl border px-2 py-2 text-xs font-black transition active:scale-[0.98]",
+              String(value) === score
+                ? "border-emerald-300/35 bg-emerald-300/15 text-emerald-100"
+                : "border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]"
+            )}
+          >
+            {score}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-2 text-[11px] leading-5 text-slate-500">
+        1 = very easy. 10 = very hard / near failure.
+      </div>
+    </div>
+  );
+}
+
+function SetLogger({
+  session,
+  exercise,
+  onStartSet,
+  onCompleteSet,
+  onAddSet,
+  onUpdateSet,
+  onRemoveSet,
+}) {
   const suggestion = useMemo(
     () => buildNextSetSuggestion(exercise),
     [exercise]
@@ -107,13 +150,34 @@ function SetLogger({ exercise, onAddSet, onUpdateSet, onRemoveSet }) {
 
   const [reps, setReps] = useState(suggestion.reps || "");
   const [weight, setWeight] = useState(suggestion.weight || "");
+  const [easeScore, setEaseScore] = useState(suggestion.ease_score || "");
+  const [painScore, setPainScore] = useState(suggestion.pain_score || "0");
 
   useEffect(() => {
     setReps(suggestion.reps || "");
     setWeight(suggestion.weight || "");
-  }, [exercise.id, suggestion.reps, suggestion.weight]);
+    setEaseScore(suggestion.ease_score || "");
+    setPainScore(suggestion.pain_score || "0");
+  }, [
+    exercise.id,
+    suggestion.reps,
+    suggestion.weight,
+    suggestion.ease_score,
+    suggestion.pain_score,
+  ]);
 
   const quickReps = ["6", "8", "10", "12", "15"];
+  const isSetActive =
+    !!session?.set_active && session?.active_exercise_id === exercise.id;
+
+  function buildSetLog() {
+    return {
+      reps,
+      weight,
+      ease_score: easeScore,
+      pain_score: painScore,
+    };
+  }
 
   return (
     <div className="rounded-3xl border border-white/10 bg-black/20 p-4">
@@ -121,9 +185,29 @@ function SetLogger({ exercise, onAddSet, onUpdateSet, onRemoveSet }) {
         <span className="font-black">Next set suggestion:</span>{" "}
         {suggestion.weight ? `${suggestion.weight} x ` : ""}
         {suggestion.reps || exercise.planned_reps || "clean reps"}
+        {suggestion.note ? (
+          <div className="mt-1 text-xs text-emerald-100/75">
+            {suggestion.note}
+          </div>
+        ) : null}
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+      {isSetActive ? (
+        <div className="mt-4 rounded-2xl border border-emerald-300/25 bg-emerald-300/10 p-3">
+          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-100">
+            Active Set Running
+          </div>
+          <div className="mt-1 text-3xl font-black text-white">
+            {formatSeconds(session.current_set_seconds || 0)}
+          </div>
+          <div className="mt-1 text-xs leading-5 text-emerald-50/75">
+            Complete the set when the reps are done. This time becomes the real
+            active work time for this set.
+          </div>
+        </div>
+      ) : null}
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label>
           <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
             Reps
@@ -147,14 +231,6 @@ function SetLogger({ exercise, onAddSet, onUpdateSet, onRemoveSet }) {
             className="mt-2 h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
           />
         </label>
-
-        <button
-          type="button"
-          onClick={() => onAddSet({ reps, weight })}
-          className="mt-6 h-11 rounded-2xl border border-emerald-300/25 bg-emerald-300/10 px-4 text-sm font-black text-emerald-100 transition hover:bg-emerald-300/20 sm:mt-auto"
-        >
-          Add Set
-        </button>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
@@ -170,12 +246,57 @@ function SetLogger({ exercise, onAddSet, onUpdateSet, onRemoveSet }) {
         ))}
       </div>
 
+      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_180px]">
+        <EaseButtons value={easeScore} onChange={setEaseScore} />
+
+        <ScoreSelect
+          label="Set Pain"
+          value={painScore ?? ""}
+          onChange={setPainScore}
+          options={["0", "1", "2", "3", "4", "5"]}
+        />
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        {!isSetActive ? (
+          <button
+            type="button"
+            onClick={onStartSet}
+            className="h-12 rounded-2xl border border-emerald-300/30 bg-emerald-300/15 px-4 text-sm font-black text-emerald-100 transition hover:bg-emerald-300/25"
+          >
+            ▶ Start Set
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onCompleteSet(buildSetLog())}
+            className="h-12 rounded-2xl border border-emerald-300/30 bg-emerald-300/20 px-4 text-sm font-black text-emerald-50 transition hover:bg-emerald-300/30"
+          >
+            ✓ Complete Set
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={() =>
+            onAddSet({
+              ...buildSetLog(),
+              set_duration_seconds: 0,
+            })
+          }
+          disabled={isSetActive}
+          className="h-12 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-black text-slate-100 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Quick Log Without Timer
+        </button>
+      </div>
+
       <div className="mt-4 space-y-2">
         {(exercise.set_logs || []).length ? (
           exercise.set_logs.map((setLog, index) => (
             <div
               key={setLog.id}
-              className="grid gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:grid-cols-[auto_1fr_1fr_auto]"
+              className="grid gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:grid-cols-[auto_1fr_1fr_1fr_1fr_auto]"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-sm font-black text-cyan-100">
                 {index + 1}
@@ -197,6 +318,21 @@ function SetLogger({ exercise, onAddSet, onUpdateSet, onRemoveSet }) {
                 className="h-10 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white outline-none focus:border-cyan-300/40"
               />
 
+              <input
+                value={setLog.ease_score || ""}
+                onChange={(event) =>
+                  onUpdateSet(setLog.id, "ease_score", event.target.value)
+                }
+                placeholder="Ease"
+                className="h-10 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
+              />
+
+              <div className="flex h-10 items-center rounded-xl border border-white/10 bg-slate-950 px-3 text-xs font-black text-slate-300">
+                {setLog.set_duration_seconds
+                  ? formatSeconds(setLog.set_duration_seconds)
+                  : "No time"}
+              </div>
+
               <button
                 type="button"
                 onClick={() => onRemoveSet(setLog.id)}
@@ -208,7 +344,8 @@ function SetLogger({ exercise, onAddSet, onUpdateSet, onRemoveSet }) {
           ))
         ) : (
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-500">
-            No sets logged yet.
+            No sets logged yet. Tap Start Set to begin tracking real active
+            time.
           </div>
         )}
       </div>
@@ -216,7 +353,15 @@ function SetLogger({ exercise, onAddSet, onUpdateSet, onRemoveSet }) {
   );
 }
 
-function ExercisePanel({ session, exercise, index, total, onSessionChange }) {
+function ExercisePanel({
+  session,
+  exercise,
+  index,
+  total,
+  onSessionChange,
+  onStartSet,
+  onCompleteSet,
+}) {
   if (!exercise) return null;
 
   function patchExercise(field, value) {
@@ -310,7 +455,10 @@ function ExercisePanel({ session, exercise, index, total, onSessionChange }) {
 
         <div className="mt-4">
           <SetLogger
+            session={session}
             exercise={exercise}
+            onStartSet={onStartSet}
+            onCompleteSet={onCompleteSet}
             onAddSet={(setLog) =>
               onSessionChange(addSetToExercise(session, exercise.id, setLog))
             }
@@ -540,7 +688,7 @@ export default function ActiveWorkoutSessionDrawer({
     const timer = window.setInterval(() => {
       setSession((prev) => {
         if (!prev || prev.status !== "active") return prev;
-        return updateSessionTimer(prev, prev.rest_active ? "rest" : "active");
+        return updateSessionTimer(prev);
       });
     }, 1000);
 
@@ -596,6 +744,33 @@ export default function ActiveWorkoutSessionDrawer({
   function beginFinishReview() {
     setReviewMode(true);
     setFinishMessage("");
+  }
+
+  function handleStartSet() {
+    if (!session || !currentExercise || isCompleted) return;
+    setSession(startActiveSet(session, currentExercise.id));
+  }
+
+  function handleCompleteSet(setLog = {}) {
+    if (!session || !currentExercise || isCompleted) return;
+    setSession(completeActiveSet(session, currentExercise.id, setLog));
+  }
+
+  function handlePreviousExercise() {
+    if (!session || isCompleted) return;
+    setSession(
+      moveToExercise(session, Math.max(0, (session.current_exercise_index || 0) - 1))
+    );
+  }
+
+  function handleNextExercise() {
+    if (!session || isCompleted) return;
+    setSession(
+      moveToExercise(
+        session,
+        Math.min(totalExercises - 1, (session.current_exercise_index || 0) + 1)
+      )
+    );
   }
 
   function saveWorkout() {
@@ -676,8 +851,8 @@ export default function ActiveWorkoutSessionDrawer({
               </h2>
 
               <p className="mt-2 hidden text-sm leading-6 text-slate-300 sm:block">
-                Track sets, reps, weight, rest, pain, difficulty, skipped
-                exercises, substitutions, and live trainer guidance.
+                Track set duration, reps, weight, rest, pain, ease score, and
+                live trainer guidance.
               </p>
             </div>
 
@@ -759,7 +934,7 @@ export default function ActiveWorkoutSessionDrawer({
           ) : null}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-3 pb-28 sm:px-6 sm:py-5">
+        <div className="flex-1 overflow-y-auto px-3 py-3 pb-56 sm:px-6 sm:py-5">
           {!session ? (
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 text-sm text-slate-300">
               No active workout selected.
@@ -830,50 +1005,6 @@ export default function ActiveWorkoutSessionDrawer({
                 </div>
               ) : null}
 
-              <div className="rounded-[2rem] border border-white/10 bg-black/20 p-4">
-                <div className="grid gap-3 md:grid-cols-4">
-                  <button
-                    type="button"
-                    onClick={() => setSession(toggleSessionPause(session))}
-                    disabled={isCompleted}
-                    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-white transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {session.paused ? "Resume" : "Pause"}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setSession(toggleRestTimer(session))}
-                    disabled={isCompleted}
-                    className={cx(
-                      "rounded-2xl border px-4 py-3 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50",
-                      session.rest_active
-                        ? "border-amber-300/30 bg-amber-300/15 text-amber-100 hover:bg-amber-300/20"
-                        : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100 hover:bg-cyan-300/20"
-                    )}
-                  >
-                    {session.rest_active ? "Stop Rest" : "Start Rest"}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={beginFinishReview}
-                    disabled={isCompleted}
-                    className="rounded-2xl border border-emerald-300/30 bg-emerald-300/15 px-4 py-3 text-sm font-black text-emerald-100 transition hover:bg-emerald-300/20 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Finish Workout
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={closeDrawer}
-                    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-slate-100 transition hover:bg-white/[0.08]"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-
               <div className="grid gap-3 lg:grid-cols-[280px_1fr]">
                 <div className="space-y-2">
                   {(session.exercises || []).map((exercise, index) => (
@@ -932,6 +1063,8 @@ export default function ActiveWorkoutSessionDrawer({
                     index={session.current_exercise_index || 0}
                     total={totalExercises}
                     onSessionChange={handleSessionChange}
+                    onStartSet={handleStartSet}
+                    onCompleteSet={handleCompleteSet}
                   />
                 </div>
               </div>
@@ -1022,6 +1155,20 @@ export default function ActiveWorkoutSessionDrawer({
             </div>
           )}
         </div>
+
+        <TrainerThumbControls
+          session={session}
+          currentExercise={currentExercise}
+          currentIndex={session?.current_exercise_index || 0}
+          totalExercises={totalExercises}
+          onPrevious={handlePreviousExercise}
+          onNext={handleNextExercise}
+          onStartSet={handleStartSet}
+          onCompleteSet={() => handleCompleteSet({})}
+          onToggleRest={() => session && setSession(toggleRestTimer(session))}
+          onFinish={beginFinishReview}
+          onClose={closeDrawer}
+        />
       </section>
     </div>
   );
