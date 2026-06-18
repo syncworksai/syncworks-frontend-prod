@@ -17,6 +17,9 @@ import {
   updateSetField,
   validateWorkoutSessionForFinish,
 } from "./healthWorkoutSession";
+import { buildNextSetSuggestion, buildTrainerNudge } from "./healthTrainerLogic";
+import TrainerExerciseGuide from "./TrainerExerciseGuide";
+import TrainerNudgeCard from "./TrainerNudgeCard";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -73,17 +76,30 @@ function StatTile({ label, value, tone = "cyan" }) {
 }
 
 function SetLogger({ exercise, onAddSet, onUpdateSet, onRemoveSet }) {
-  const [reps, setReps] = useState(exercise.planned_reps || "");
-  const [weight, setWeight] = useState(exercise.planned_weight || "");
+  const suggestion = useMemo(
+    () => buildNextSetSuggestion(exercise),
+    [exercise]
+  );
+
+  const [reps, setReps] = useState(suggestion.reps || "");
+  const [weight, setWeight] = useState(suggestion.weight || "");
 
   useEffect(() => {
-    setReps(exercise.planned_reps || "");
-    setWeight(exercise.planned_weight || "");
-  }, [exercise.id, exercise.planned_reps, exercise.planned_weight]);
+    setReps(suggestion.reps || "");
+    setWeight(suggestion.weight || "");
+  }, [exercise.id, suggestion.reps, suggestion.weight]);
+
+  const quickReps = ["6", "8", "10", "12", "15"];
 
   return (
     <div className="rounded-3xl border border-white/10 bg-black/20 p-4">
-      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+      <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-3 text-sm leading-6 text-emerald-50">
+        <span className="font-black">Next set suggestion:</span>{" "}
+        {suggestion.weight ? `${suggestion.weight} x ` : ""}
+        {suggestion.reps || exercise.planned_reps || "clean reps"}
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
         <label>
           <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
             Reps
@@ -115,6 +131,19 @@ function SetLogger({ exercise, onAddSet, onUpdateSet, onRemoveSet }) {
         >
           Add Set
         </button>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {quickReps.map((value) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setReps(value)}
+            className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-black text-slate-200 transition hover:bg-white/[0.08]"
+          >
+            {value}
+          </button>
+        ))}
       </div>
 
       <div className="mt-4 space-y-2">
@@ -171,142 +200,158 @@ function ExercisePanel({ session, exercise, index, total, onSessionChange }) {
   }
 
   return (
-    <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
-            Exercise {index + 1} of {total}
-          </div>
-
-          <h3 className="mt-2 text-2xl font-black text-white">
-            {exercise.substituted && exercise.substitute_name
-              ? exercise.substitute_name
-              : exercise.name}
-          </h3>
-
-          <div className="mt-2 text-sm leading-6 text-slate-300">
-            Planned: {exercise.planned_sets} x {exercise.planned_reps}
-            {exercise.target ? ` • ${exercise.target}` : ""}
-            {exercise.rest_seconds ? ` • ${exercise.rest_seconds}s rest` : ""}
-          </div>
-
-          {exercise.notes ? (
-            <div className="mt-2 text-sm leading-6 text-slate-500">
-              {exercise.notes}
+    <div className="space-y-4">
+      <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
+              Exercise {index + 1} of {total}
             </div>
-          ) : null}
-        </div>
 
-        <div
-          className={cx(
-            "w-fit rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em]",
-            exercise.skipped
-              ? "border-rose-300/25 bg-rose-300/10 text-rose-100"
-              : exercise.completed
-              ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100"
-              : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
-          )}
-        >
-          {exercise.skipped
-            ? "Skipped"
-            : exercise.completed
-            ? "Logged"
-            : "Active"}
-        </div>
-      </div>
+            <h3 className="mt-2 text-2xl font-black text-white">
+              {exercise.substituted && exercise.substitute_name
+                ? exercise.substitute_name
+                : exercise.name}
+            </h3>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <ScoreSelect
-          label="Pain"
-          value={exercise.pain_score ?? ""}
-          onChange={(value) => patchExercise("pain_score", value)}
-          options={["0", "1", "2", "3", "4", "5"]}
-        />
+            <div className="mt-2 text-sm leading-6 text-slate-300">
+              Planned: {exercise.planned_sets} x {exercise.planned_reps}
+              {exercise.target ? ` • ${exercise.target}` : ""}
+              {exercise.rest_seconds ? ` • ${exercise.rest_seconds}s rest` : ""}
+            </div>
 
-        <ScoreSelect
-          label="Difficulty"
-          value={exercise.difficulty_score || ""}
-          onChange={(value) => patchExercise("difficulty_score", value)}
-          options={["Easy", "Medium", "Hard", "Max"]}
-        />
-      </div>
-
-      <div className="mt-4">
-        <label className="block">
-          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
-            Substitute exercise
+            {exercise.notes ? (
+              <div className="mt-2 text-sm leading-6 text-slate-500">
+                {exercise.notes}
+              </div>
+            ) : null}
           </div>
 
-          <input
-            value={exercise.substitute_name || ""}
-            onChange={(event) =>
+          <div
+            className={cx(
+              "w-fit rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em]",
+              exercise.skipped
+                ? "border-rose-300/25 bg-rose-300/10 text-rose-100"
+                : exercise.completed
+                ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100"
+                : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
+            )}
+          >
+            {exercise.skipped
+              ? "Skipped"
+              : exercise.completed
+              ? "Logged"
+              : "Active"}
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <ScoreSelect
+            label="Pain"
+            value={exercise.pain_score ?? ""}
+            onChange={(value) => patchExercise("pain_score", value)}
+            options={["0", "1", "2", "3", "4", "5"]}
+          />
+
+          <ScoreSelect
+            label="Difficulty"
+            value={exercise.difficulty_score || ""}
+            onChange={(value) => patchExercise("difficulty_score", value)}
+            options={["Easy", "Medium", "Hard", "Max"]}
+          />
+        </div>
+
+        <div className="mt-4">
+          <label className="block">
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
+              Substitute exercise
+            </div>
+
+            <input
+              value={exercise.substitute_name || ""}
+              onChange={(event) =>
+                onSessionChange(
+                  markExerciseSubstituted(
+                    session,
+                    exercise.id,
+                    event.target.value
+                  )
+                )
+              }
+              placeholder="Example: swap Bench Press for Push-Ups"
+              className="mt-2 h-11 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
+            />
+          </label>
+        </div>
+
+        <div className="mt-4">
+          <SetLogger
+            exercise={exercise}
+            onAddSet={(setLog) =>
+              onSessionChange(addSetToExercise(session, exercise.id, setLog))
+            }
+            onUpdateSet={(setId, field, value) =>
               onSessionChange(
-                markExerciseSubstituted(session, exercise.id, event.target.value)
+                updateSetField(session, exercise.id, setId, field, value)
               )
             }
-            placeholder="Example: swap Bench Press for Push-Ups"
-            className="mt-2 h-11 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
+            onRemoveSet={(setId) =>
+              onSessionChange(
+                removeSetFromExercise(session, exercise.id, setId)
+              )
+            }
           />
-        </label>
+        </div>
+
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <button
+            type="button"
+            onClick={() =>
+              onSessionChange(markExerciseSkipped(session, exercise.id))
+            }
+            className={cx(
+              "rounded-2xl border px-4 py-3 text-sm font-black transition",
+              exercise.skipped
+                ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100 hover:bg-emerald-300/20"
+                : "border-rose-300/25 bg-rose-300/10 text-rose-100 hover:bg-rose-300/20"
+            )}
+          >
+            {exercise.skipped ? "Undo Skip" : "Skip Exercise"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              onSessionChange(moveToExercise(session, Math.max(0, index - 1)))
+            }
+            disabled={index === 0}
+            className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-slate-100 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Previous
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              onSessionChange(
+                moveToExercise(session, Math.min(total - 1, index + 1))
+              )
+            }
+            disabled={index >= total - 1}
+            className="rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-300/20 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Next Exercise
+          </button>
+        </div>
       </div>
 
-      <div className="mt-4">
-        <SetLogger
-          exercise={exercise}
-          onAddSet={(setLog) =>
-            onSessionChange(addSetToExercise(session, exercise.id, setLog))
-          }
-          onUpdateSet={(setId, field, value) =>
-            onSessionChange(
-              updateSetField(session, exercise.id, setId, field, value)
-            )
-          }
-          onRemoveSet={(setId) =>
-            onSessionChange(removeSetFromExercise(session, exercise.id, setId))
-          }
-        />
-      </div>
-
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        <button
-          type="button"
-          onClick={() =>
-            onSessionChange(markExerciseSkipped(session, exercise.id))
-          }
-          className={cx(
-            "rounded-2xl border px-4 py-3 text-sm font-black transition",
-            exercise.skipped
-              ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100 hover:bg-emerald-300/20"
-              : "border-rose-300/25 bg-rose-300/10 text-rose-100 hover:bg-rose-300/20"
-          )}
-        >
-          {exercise.skipped ? "Undo Skip" : "Skip Exercise"}
-        </button>
-
-        <button
-          type="button"
-          onClick={() =>
-            onSessionChange(moveToExercise(session, Math.max(0, index - 1)))
-          }
-          disabled={index === 0}
-          className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-slate-100 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Previous
-        </button>
-
-        <button
-          type="button"
-          onClick={() =>
-            onSessionChange(
-              moveToExercise(session, Math.min(total - 1, index + 1))
-            )
-          }
-          disabled={index >= total - 1}
-          className="rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-300/20 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Next Exercise
-        </button>
-      </div>
+      <TrainerExerciseGuide
+        exerciseName={
+          exercise.substituted && exercise.substitute_name
+            ? exercise.substitute_name
+            : exercise.name
+        }
+      />
     </div>
   );
 }
@@ -488,6 +533,18 @@ export default function ActiveWorkoutSessionDrawer({
     [session]
   );
 
+  const audibleEnabled = !!snapshot?.audible_trainer_enabled;
+
+  const trainerNudge = useMemo(
+    () =>
+      buildTrainerNudge({
+        session,
+        exercise: currentExercise,
+        audibleEnabled,
+      }),
+    [session, currentExercise, audibleEnabled]
+  );
+
   const totalExercises = Array.isArray(session?.exercises)
     ? session.exercises.length
     : 0;
@@ -500,6 +557,16 @@ export default function ActiveWorkoutSessionDrawer({
     setReviewMode(false);
     setEditAfterFinish(false);
     onClose?.();
+  }
+
+  function toggleAudibleTrainer() {
+    if (typeof setSnapshot !== "function") return;
+
+    setSnapshot((prev) => ({
+      ...prev,
+      audible_trainer_enabled: !prev?.audible_trainer_enabled,
+      updated_at: new Date().toISOString(),
+    }));
   }
 
   function beginFinishReview() {
@@ -586,8 +653,7 @@ export default function ActiveWorkoutSessionDrawer({
 
               <p className="mt-2 text-sm leading-6 text-slate-300">
                 Track sets, reps, weight, rest, pain, difficulty, skipped
-                exercises, and substitutions. Before saving, SyncWorks reviews
-                what is missing so the coach can adjust accurately.
+                exercises, substitutions, and live trainer guidance.
               </p>
             </div>
 
@@ -641,7 +707,7 @@ export default function ActiveWorkoutSessionDrawer({
           ) : null}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+        <div className="flex-1 overflow-y-auto px-4 py-5 pb-28 sm:px-6">
           {!session ? (
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 text-sm text-slate-300">
               No active workout selected.
@@ -655,6 +721,12 @@ export default function ActiveWorkoutSessionDrawer({
             />
           ) : (
             <div className="space-y-4">
+              <TrainerNudgeCard
+                nudge={trainerNudge}
+                audibleEnabled={audibleEnabled}
+                onToggleAudible={toggleAudibleTrainer}
+              />
+
               {finishMessage ? (
                 <div className="rounded-3xl border border-emerald-300/25 bg-emerald-300/10 p-4 text-sm font-bold leading-6 text-emerald-100">
                   {finishMessage}
@@ -797,7 +869,11 @@ export default function ActiveWorkoutSessionDrawer({
                   ))}
                 </div>
 
-                <div className={cx(!canEditFields && "pointer-events-none opacity-70")}>
+                <div
+                  className={cx(
+                    !canEditFields && "pointer-events-none opacity-70"
+                  )}
+                >
                   <ExercisePanel
                     session={session}
                     exercise={currentExercise}

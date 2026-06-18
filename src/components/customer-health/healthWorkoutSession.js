@@ -1,4 +1,5 @@
 // src/components/customer-health/healthWorkoutSession.js
+import { buildExercisesForWorkoutName } from "./healthExerciseKnowledge";
 
 function nowIso() {
   return new Date().toISOString();
@@ -45,7 +46,7 @@ function normalizeExercise(exercise = {}, index = 0) {
     skipped: false,
     substituted: false,
     substitute_name: "",
-    pain_score: exercise.pain || "0",
+    pain_score: exercise.pain ?? "0",
     difficulty_score: exercise.difficulty || "Medium",
     set_logs: [],
   };
@@ -81,17 +82,9 @@ function getExercisesForPlannerItem(plannerItem = {}, workouts = []) {
     return matchedWorkout.exercises;
   }
 
-  return [
-    {
-      name: plannerItem.workout_name || "Workout Warm-Up",
-      sets: "1",
-      reps: "5 min",
-      rest: "30 sec",
-      notes: "Start controlled and log how the body feels.",
-      difficulty: "Medium",
-      pain: "0",
-    },
-  ];
+  return buildExercisesForWorkoutName(
+    plannerItem.workout_name || plannerItem.title || plannerItem.name || ""
+  );
 }
 
 export function createWorkoutSessionFromPlannerItem({
@@ -402,7 +395,8 @@ export function validateWorkoutSessionForFinish(session = {}) {
   );
 
   const substitutedWithoutName = safeExercises.filter(
-    (exercise) => exercise.substituted && !String(exercise.substitute_name || "").trim()
+    (exercise) =>
+      exercise.substituted && !String(exercise.substitute_name || "").trim()
   );
 
   if (safeNumber(session.completed_sets) <= 0) {
