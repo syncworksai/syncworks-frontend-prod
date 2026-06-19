@@ -22,6 +22,7 @@ import AiCoachDrawer from "../components/customer-health/AiCoachDrawer";
 import CoachChatDrawer from "../components/customer-health/CoachChatDrawer";
 import ActiveWorkoutSessionDrawer from "../components/customer-health/ActiveWorkoutSessionDrawer";
 import HealthMobileQuickNav from "../components/customer-health/HealthMobileQuickNav";
+import SleepPlannerDrawer from "../components/customer-health/SleepPlannerDrawer";
 import {
   NutritionDrawer,
   ProgressDrawer,
@@ -854,6 +855,15 @@ export default function CustomerHealth() {
             onClose={() => setDrawer("")}
             devices={devices}
             setDevices={setDevices}
+          />
+
+          <SleepPlannerDrawer
+            open={drawer === "sleep"}
+            onClose={() => setDrawer("")}
+            profile={profile}
+            setProfile={setProfile}
+            snapshot={syncedSnapshot}
+            setSnapshot={setSnapshot}
           />
 
           <HealthMobileQuickNav

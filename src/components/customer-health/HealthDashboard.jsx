@@ -1,6 +1,7 @@
 // src/components/customer-health/HealthDashboard.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import HealthMomentumCard from "./HealthMomentumCard";
+import SleepPlanCard from "./SleepPlanCard";
 import {
   clampPercent,
   cx,
@@ -429,6 +430,12 @@ export default function HealthDashboard({
   return (
     <div className="space-y-4 sm:space-y-5">
       <CoachChatStartCard snapshot={snapshot} onOpen={onOpen} />
+
+      <SleepPlanCard
+        profile={profile}
+        snapshot={snapshot}
+        onOpen={onOpen}
+      />
 
       <Card className="relative overflow-hidden border-cyan-500/25 bg-gradient-to-br from-cyan-500/10 via-slate-950/60 to-fuchsia-500/10">
         <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-cyan-500/15 blur-3xl" />
