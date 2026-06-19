@@ -1,104 +1,82 @@
 // src/components/customer-health/TrainerNudgeCard.jsx
 import React, { useEffect, useRef } from "react";
+import { speakCoachText } from "./healthCoachVoice";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
-const toneMap = {
-  cyan: "border-cyan-300/25 bg-cyan-300/10 text-cyan-100",
-  emerald: "border-emerald-300/25 bg-emerald-300/10 text-emerald-100",
-  amber: "border-amber-300/25 bg-amber-300/10 text-amber-100",
-  rose: "border-rose-300/25 bg-rose-300/10 text-rose-100",
-  slate: "border-white/10 bg-white/[0.04] text-slate-200",
-};
-
-function speakText(text) {
-  if (typeof window === "undefined") return false;
-  if (!("speechSynthesis" in window)) return false;
-
-  try {
-    window.speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
-    utterance.pitch = 1;
-    utterance.volume = 0.75;
-
-    window.speechSynthesis.speak(utterance);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export default function TrainerNudgeCard({
   nudge,
-  audibleEnabled,
-  onToggleAudible,
+  audioMode = "off",
+  voicePreference = "auto",
+  onReplay,
 }) {
   const lastSpokenRef = useRef("");
-  const lastSpokenAtRef = useRef(0);
+
+  const toneMap = {
+    cyan: "border-cyan-300/20 bg-cyan-300/10 text-cyan-50",
+    emerald: "border-emerald-300/20 bg-emerald-300/10 text-emerald-50",
+    amber: "border-amber-300/20 bg-amber-300/10 text-amber-50",
+    rose: "border-rose-300/20 bg-rose-300/10 text-rose-50",
+    slate: "border-white/10 bg-white/[0.04] text-slate-100",
+  };
 
   useEffect(() => {
-    if (!audibleEnabled || !nudge?.speak || !nudge?.message) return;
+    if (!nudge?.speak || audioMode === "off") return;
 
-    const now = Date.now();
-    const sameMessage = lastSpokenRef.current === nudge.message;
-    const tooSoon = now - lastSpokenAtRef.current < 45000;
+    const speakKey = `${nudge?.title || ""}|${nudge?.message || ""}|${audioMode}|${voicePreference}`;
+    if (lastSpokenRef.current === speakKey) return;
 
-    if (sameMessage && tooSoon) return;
+    const fullText = [nudge?.title, nudge?.message].filter(Boolean).join(". ");
 
-    const didSpeak = speakText(nudge.message);
+    speakCoachText({
+      text: fullText,
+      audioMode,
+      voicePreference,
+      rate: audioMode === "full" ? 1 : 1.03,
+      pitch: 1,
+      volume: 1,
+    });
 
-    if (didSpeak) {
-      lastSpokenRef.current = nudge.message;
-      lastSpokenAtRef.current = now;
-    }
-  }, [audibleEnabled, nudge?.message, nudge?.speak]);
+    lastSpokenRef.current = speakKey;
+  }, [nudge, audioMode, voicePreference]);
 
-  const tone = nudge?.tone || "cyan";
+  if (!nudge) return null;
 
   return (
     <div
       className={cx(
-        "rounded-[1.75rem] border p-4 shadow-[0_10px_34px_rgba(0,0,0,0.18)]",
-        toneMap[tone] || toneMap.cyan
+        "rounded-[2rem] border p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)]",
+        toneMap[nudge?.tone] || toneMap.cyan
       )}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">
+          <div className="text-[10px] font-black uppercase tracking-[0.22em] opacity-75">
             Live Trainer
           </div>
 
-          <div className="mt-1 text-lg font-black text-white">
-            {nudge?.title || "Coach Ready"}
+          <h3 className="mt-1 text-2xl font-black text-white">{nudge?.title}</h3>
+
+          <div className="mt-3 text-base leading-8 text-white/95">
+            {nudge?.message}
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onToggleAudible}
-          className={cx(
-            "shrink-0 rounded-2xl border px-3 py-2 text-xs font-black transition active:scale-[0.98]",
-            audibleEnabled
-              ? "border-emerald-300/30 bg-emerald-300/15 text-emerald-100"
-              : "border-white/10 bg-black/20 text-slate-300"
-          )}
-        >
-          {audibleEnabled ? "🔊 On" : "🔇 Off"}
-        </button>
-      </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-200">
+            {audioMode === "off" ? "Audio Off" : `${voicePreference} voice`}
+          </div>
 
-      <p className="mt-3 text-sm font-semibold leading-6 text-slate-100">
-        {nudge?.message ||
-          "Log a set and I’ll adjust the next recommendation."}
-      </p>
-
-      <div className="mt-3 text-[11px] leading-5 text-slate-300/80">
-        Audible coach uses short browser voice cues. Phone browsers may still
-        control how this mixes with music.
+          <button
+            type="button"
+            onClick={onReplay}
+            className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-white transition hover:bg-white/10"
+          >
+            Replay
+          </button>
+        </div>
       </div>
     </div>
   );
