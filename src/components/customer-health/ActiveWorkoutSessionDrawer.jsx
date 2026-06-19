@@ -1,7 +1,14 @@
 // src/components/customer-health/ActiveWorkoutSessionDrawer.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
 import {
   addSetToExercise,
+  completeActiveSet,
   createWorkoutSessionFromPlannerItem,
   finishWorkoutSession,
   formatSeconds,
@@ -9,6 +16,8 @@ import {
   markExerciseSubstituted,
   moveToExercise,
   removeSetFromExercise,
+  startActiveSet,
+  stopRestTimer,
   toggleRestTimer,
   toggleSessionPause,
   updateCompletedWorkoutSession,
@@ -17,13 +26,20 @@ import {
   updateSetField,
   validateWorkoutSessionForFinish,
 } from "./healthWorkoutSession";
-import { buildNextSetSuggestion, buildTrainerNudge } from "./healthTrainerLogic";
+
+import {
+  buildNextSetSuggestion,
+  buildTrainerNudge,
+} from "./healthTrainerLogic";
+
 import { getExerciseKnowledge } from "./healthExerciseKnowledge";
+
 import {
   buildExerciseIntroSpeech,
   speakCoachText,
   stopCoachVoice,
 } from "./healthCoachVoice";
+
 import TrainerExerciseIntroCard from "./TrainerExerciseIntroCard";
 import CoachVoiceSettingsCard from "./CoachVoiceSettingsCard";
 import TrainerNudgeCard from "./TrainerNudgeCard";
@@ -32,7 +48,12 @@ function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
-function ScoreSelect({ label, value, onChange, options }) {
+function ScoreSelect({
+  label,
+  value,
+  onChange,
+  options,
+}) {
   return (
     <label className="block rounded-2xl border border-white/10 bg-white/[0.04] p-3">
       <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
@@ -44,12 +65,10 @@ function ScoreSelect({ label, value, onChange, options }) {
         onChange={(event) => onChange(event.target.value)}
         className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm font-bold text-white outline-none focus:border-cyan-300/40"
       >
-        <option value="" className="bg-slate-950">
-          Select
-        </option>
+        <option value="">Select</option>
 
         {options.map((option) => (
-          <option key={option} value={option} className="bg-slate-950">
+          <option key={option} value={option}>
             {option}
           </option>
         ))}
@@ -59,360 +78,329 @@ function ScoreSelect({ label, value, onChange, options }) {
 }
 
 function StatTile({ label, value, tone = "cyan" }) {
-  const toneMap = {
+  const tones = {
     cyan: "border-cyan-300/20 bg-cyan-300/10 text-cyan-100",
-    emerald: "border-lime-300/20 bg-lime-300/10 text-lime-100",
-    amber: "border-amber-300/20 bg-amber-300/10 text-amber-100",
-    purple: "border-fuchsia-300/20 bg-fuchsia-300/10 text-fuchsia-100",
-    slate: "border-white/10 bg-white/[0.04] text-slate-200",
-    rose: "border-rose-300/20 bg-rose-300/10 text-rose-100",
+    emerald:
+      "border-lime-300/20 bg-lime-300/10 text-lime-100",
+    amber:
+      "border-amber-300/20 bg-amber-300/10 text-amber-100",
+    purple:
+      "border-fuchsia-300/20 bg-fuchsia-300/10 text-fuchsia-100",
+    rose:
+      "border-rose-300/20 bg-rose-300/10 text-rose-100",
+    slate:
+      "border-white/10 bg-white/[0.04] text-slate-200",
   };
 
   return (
     <div
       className={cx(
         "rounded-2xl border px-3 py-3",
-        toneMap[tone] || toneMap.cyan
+        tones[tone] || tones.cyan
       )}
     >
       <div className="text-[10px] font-black uppercase tracking-[0.16em] opacity-75">
         {label}
       </div>
-      <div className="mt-1 text-lg font-black">{value}</div>
+
+      <div className="mt-1 text-lg font-black">
+        {value}
+      </div>
     </div>
   );
 }
 
-function SetLogger({ exercise, onAddSet, onUpdateSet, onRemoveSet }) {
-  const suggestion = useMemo(
-    () => buildNextSetSuggestion(exercise),
-    [exercise]
-  );
+function MobileStat({
+  label,
+  value,
+  tone = "cyan",
+}) {
+  const tones = {
+    cyan: "border-cyan-300/20 bg-cyan-300/10 text-cyan-100",
+    emerald:
+      "border-lime-300/20 bg-lime-300/10 text-lime-100",
+    amber:
+      "border-amber-300/20 bg-amber-300/10 text-amber-100",
+    purple:
+      "border-fuchsia-300/20 bg-fuchsia-300/10 text-fuchsia-100",
+  };
 
-  const [reps, setReps] = useState(suggestion.reps || "");
-  const [weight, setWeight] = useState(suggestion.weight || "");
-  const [effort, setEffort] = useState("");
+  return (
+    <div
+      className={cx(
+        "min-w-0 rounded-xl border px-1.5 py-2 text-center",
+        tones[tone] || tones.cyan
+      )}
+    >
+      <div className="truncate text-[8px] font-black uppercase tracking-[0.1em] opacity-75">
+        {label}
+      </div>
+
+      <div className="mt-0.5 truncate text-sm font-black">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function SetCompletionSheet({
+  open,
+  exercise,
+  durationSeconds,
+  suggestion,
+  onCancel,
+  onSave,
+}) {
+  const [reps, setReps] = useState("");
+  const [weight, setWeight] = useState("");
+  const [effort, setEffort] = useState("6");
+  const [pain, setPain] = useState("0");
 
   useEffect(() => {
-    setReps(suggestion.reps || "");
-    setWeight(suggestion.weight || "");
-    setEffort("");
-  }, [exercise.id, suggestion.reps, suggestion.weight]);
+    if (!open || !exercise) return;
 
-  const quickReps = ["6", "8", "10", "12", "15"];
+    setReps(
+      suggestion?.reps ||
+        exercise.planned_reps ||
+        ""
+    );
 
-  return (
-    <div className="rounded-[2rem] border border-cyan-300/12 bg-[#06111f] p-4">
-      <div className="rounded-2xl border border-lime-300/20 bg-lime-300/10 p-3 text-sm leading-6 text-lime-50">
-        <span className="font-black">Suggested next set:</span>{" "}
-        {suggestion.weight ? `${suggestion.weight} x ` : ""}
-        {suggestion.reps || exercise.planned_reps || "clean reps"}
-        {suggestion.note ? (
-          <div className="mt-1 text-xs text-lime-100/70">{suggestion.note}</div>
-        ) : null}
-      </div>
+    setWeight(
+      suggestion?.weight ||
+        exercise.planned_weight ||
+        ""
+    );
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
-        <label>
-          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
-            Reps
-          </div>
-          <input
-            value={reps}
-            onChange={(event) => setReps(event.target.value)}
-            placeholder="10"
-            className="mt-2 h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
-          />
-        </label>
+    setEffort("6");
+    setPain(exercise.pain_score || "0");
+  }, [
+    open,
+    exercise?.id,
+    suggestion?.reps,
+    suggestion?.weight,
+  ]);
 
-        <label>
-          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
-            Weight
-          </div>
-          <input
-            value={weight}
-            onChange={(event) => setWeight(event.target.value)}
-            placeholder="Bodyweight"
-            className="mt-2 h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
-          />
-        </label>
-
-        <label>
-          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
-            Effort 1-10
-          </div>
-          <input
-            value={effort}
-            onChange={(event) => setEffort(event.target.value)}
-            placeholder="5"
-            className="mt-2 h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
-          />
-        </label>
-
-        <button
-          type="button"
-          onClick={() => onAddSet({ reps, weight, ease_score: effort })}
-          className="mt-6 h-11 rounded-2xl border border-lime-300/25 bg-lime-300/10 px-4 text-sm font-black text-lime-100 transition hover:bg-lime-300/20 sm:mt-auto"
-        >
-          Add Set
-        </button>
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        {quickReps.map((value) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setReps(value)}
-            className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-black text-slate-200 transition hover:bg-white/[0.08]"
-          >
-            {value}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-4 space-y-2">
-        {(exercise.set_logs || []).length ? (
-          exercise.set_logs.map((setLog, index) => (
-            <div
-              key={setLog.id}
-              className="grid gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:grid-cols-[auto_1fr_1fr_1fr_auto]"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-sm font-black text-cyan-100">
-                {index + 1}
-              </div>
-
-              <input
-                value={setLog.reps || ""}
-                onChange={(event) =>
-                  onUpdateSet(setLog.id, "reps", event.target.value)
-                }
-                className="h-10 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white outline-none focus:border-cyan-300/40"
-              />
-
-              <input
-                value={setLog.weight || ""}
-                onChange={(event) =>
-                  onUpdateSet(setLog.id, "weight", event.target.value)
-                }
-                className="h-10 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white outline-none focus:border-cyan-300/40"
-              />
-
-              <input
-                value={setLog.ease_score || ""}
-                onChange={(event) =>
-                  onUpdateSet(setLog.id, "ease_score", event.target.value)
-                }
-                placeholder="Effort"
-                className="h-10 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
-              />
-
-              <button
-                type="button"
-                onClick={() => onRemoveSet(setLog.id)}
-                className="h-10 rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 text-xs font-black text-rose-100 transition hover:bg-rose-300/20"
-              >
-                Remove
-              </button>
-            </div>
-          ))
-        ) : (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-500">
-            No sets logged yet.
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ExercisePanel({
-  session,
-  exercise,
-  index,
-  total,
-  onSessionChange,
-  trainerNudge,
-  coachAudioMode,
-  coachVoicePreference,
-  onReplayNudge,
-  onReplayExerciseCue,
-  onPatchCoachSettings,
-}) {
-  if (!exercise) return null;
-
-  function patchExercise(field, value) {
-    onSessionChange(updateExerciseField(session, exercise.id, field, value));
-  }
+  if (!open || !exercise) return null;
 
   return (
-    <div className="space-y-4">
-      <TrainerExerciseIntroCard
-        exerciseName={
-          exercise.substituted && exercise.substitute_name
-            ? exercise.substitute_name
-            : exercise.name
-        }
-        onReplayCue={onReplayExerciseCue}
-        onFindAlternative={() => {
-          const current = exercise.substitute_name || "";
-          const suggestion = current || `Alternative for ${exercise.name}`;
-          onSessionChange(
-            markExerciseSubstituted(session, exercise.id, suggestion)
-          );
-        }}
+    <div className="fixed inset-0 z-[130] flex items-end justify-center bg-black/80 p-3 backdrop-blur-md sm:items-center">
+      <button
+        type="button"
+        aria-label="Close set check-in"
+        onClick={onCancel}
+        className="absolute inset-0"
       />
 
-      <TrainerNudgeCard
-        nudge={trainerNudge}
-        audioMode={coachAudioMode}
-        voicePreference={coachVoicePreference}
-        onReplay={onReplayNudge}
-      />
+      <section className="relative z-[131] w-full max-w-lg rounded-[2rem] border border-lime-300/20 bg-[#07111f] p-4 shadow-[0_28px_90px_rgba(0,0,0,0.7)]">
+        <div className="text-[10px] font-black uppercase tracking-[0.22em] text-lime-300">
+          Set Complete
+        </div>
 
-      <CoachVoiceSettingsCard
-        audioMode={coachAudioMode}
-        voicePreference={coachVoicePreference}
-        onChange={onPatchCoachSettings}
-      />
-
-      <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="mt-1 flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
-              Exercise {index + 1} of {total}
-            </div>
-
-            <h3 className="mt-2 text-2xl font-black text-white">
-              {exercise.substituted && exercise.substitute_name
-                ? exercise.substitute_name
-                : exercise.name}
+            <h3 className="truncate text-2xl font-black text-white">
+              {exercise.name}
             </h3>
 
-            <div className="mt-2 text-sm leading-6 text-slate-300">
-              Planned: {exercise.planned_sets} x {exercise.planned_reps}
-              {exercise.target ? ` • ${exercise.target}` : ""}
-              {exercise.rest_seconds ? ` • ${exercise.rest_seconds}s rest` : ""}
+            <div className="mt-1 text-sm text-slate-400">
+              Set duration: {formatSeconds(durationSeconds)}
             </div>
           </div>
 
-          <div
-            className={cx(
-              "w-fit rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em]",
-              exercise.skipped
-                ? "border-rose-300/25 bg-rose-300/10 text-rose-100"
-                : exercise.completed
-                ? "border-lime-300/25 bg-lime-300/10 text-lime-100"
-                : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
-            )}
-          >
-            {exercise.skipped
-              ? "Skipped"
-              : exercise.completed
-              ? "Logged"
-              : "Active"}
+          <div className="shrink-0 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-sm font-black text-cyan-100">
+            Set {(exercise.set_logs || []).length + 1}
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <ScoreSelect
-            label="Pain"
-            value={exercise.pain_score ?? ""}
-            onChange={(value) => patchExercise("pain_score", value)}
-            options={["0", "1", "2", "3", "4", "5"]}
-          />
-
-          <ScoreSelect
-            label="Difficulty"
-            value={exercise.difficulty_score || ""}
-            onChange={(value) => patchExercise("difficulty_score", value)}
-            options={["Easy", "Medium", "Hard", "Max"]}
-          />
-        </div>
-
-        <div className="mt-4">
-          <label className="block">
-            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
-              Substitute exercise
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <label>
+            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+              Reps completed
             </div>
 
             <input
-              value={exercise.substitute_name || ""}
+              value={reps}
               onChange={(event) =>
-                onSessionChange(
-                  markExerciseSubstituted(
-                    session,
-                    exercise.id,
-                    event.target.value
-                  )
-                )
+                setReps(event.target.value)
               }
-              placeholder="Example: swap Bench Press for Push-Ups"
-              className="mt-2 h-11 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
+              inputMode="numeric"
+              className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-lg font-black text-white outline-none focus:border-cyan-300/40"
+            />
+          </label>
+
+          <label>
+            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+              Weight used
+            </div>
+
+            <input
+              value={weight}
+              onChange={(event) =>
+                setWeight(event.target.value)
+              }
+              inputMode="decimal"
+              placeholder="Bodyweight"
+              className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-lg font-black text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
             />
           </label>
         </div>
 
         <div className="mt-4">
-          <SetLogger
-            exercise={exercise}
-            onAddSet={(setLog) =>
-              onSessionChange(addSetToExercise(session, exercise.id, setLog))
-            }
-            onUpdateSet={(setId, field, value) =>
-              onSessionChange(
-                updateSetField(session, exercise.id, setId, field, value)
-              )
-            }
-            onRemoveSet={(setId) =>
-              onSessionChange(
-                removeSetFromExercise(session, exercise.id, setId)
-              )
-            }
-          />
+          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+            How did it feel?
+          </div>
+
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {[
+              ["3", "Too Easy"],
+              ["6", "About Right"],
+              ["9", "Too Hard"],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setEffort(value)}
+                className={cx(
+                  "rounded-2xl border px-2 py-3 text-xs font-black transition",
+                  effort === value
+                    ? "border-fuchsia-300/30 bg-fuchsia-300/15 text-fuchsia-100"
+                    : "border-white/10 bg-white/[0.04] text-slate-300"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <div className="mt-4">
+          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+            Pain during the set?
+          </div>
+
+          <div className="mt-2 grid grid-cols-4 gap-2">
+            {[
+              ["0", "None"],
+              ["1", "Mild"],
+              ["3", "Moderate"],
+              ["5", "Stop"],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setPain(value)}
+                className={cx(
+                  "rounded-2xl border px-2 py-3 text-xs font-black transition",
+                  pain === value
+                    ? value === "0"
+                      ? "border-lime-300/30 bg-lime-300/15 text-lime-100"
+                      : "border-rose-300/30 bg-rose-300/15 text-rose-100"
+                    : "border-white/10 bg-white/[0.04] text-slate-300"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-[0.8fr_1.2fr] gap-2">
           <button
             type="button"
-            onClick={() =>
-              onSessionChange(markExerciseSkipped(session, exercise.id))
-            }
-            className={cx(
-              "rounded-2xl border px-4 py-3 text-sm font-black transition",
-              exercise.skipped
-                ? "border-lime-300/25 bg-lime-300/10 text-lime-100 hover:bg-lime-300/20"
-                : "border-rose-300/25 bg-rose-300/10 text-rose-100 hover:bg-rose-300/20"
-            )}
+            onClick={onCancel}
+            className="h-12 rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-black text-slate-200"
           >
-            {exercise.skipped ? "Undo Skip" : "Skip Exercise"}
+            Continue Set
           </button>
 
           <button
             type="button"
             onClick={() =>
-              onSessionChange(moveToExercise(session, Math.max(0, index - 1)))
+              onSave({
+                reps,
+                weight,
+                ease_score: effort,
+                pain_score: pain,
+              })
             }
-            disabled={index === 0}
-            className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-slate-100 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100 shadow-[0_0_30px_rgba(57,255,136,0.14)]"
           >
-            Previous
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              onSessionChange(
-                moveToExercise(session, Math.min(total - 1, index + 1))
-              )
-            }
-            disabled={index >= total - 1}
-            className="rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-300/20 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Next Exercise
+            Save Set + Start Rest
           </button>
         </div>
+      </section>
+    </div>
+  );
+}
+
+function SetHistory({
+  exercise,
+  onUpdateSet,
+  onRemoveSet,
+}) {
+  const logs = Array.isArray(exercise?.set_logs)
+    ? exercise.set_logs
+    : [];
+
+  if (!logs.length) {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-500">
+        Your completed sets will appear here.
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {logs.map((setLog, index) => (
+        <div
+          key={setLog.id}
+          className="grid grid-cols-[42px_1fr_1fr] gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:grid-cols-[42px_1fr_1fr_1fr_auto]"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-sm font-black text-cyan-100">
+            {index + 1}
+          </div>
+
+          <input
+            value={setLog.reps || ""}
+            onChange={(event) =>
+              onUpdateSet(
+                setLog.id,
+                "reps",
+                event.target.value
+              )
+            }
+            aria-label={`Set ${index + 1} reps`}
+            className="h-10 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-2 text-sm font-bold text-white outline-none"
+          />
+
+          <input
+            value={setLog.weight || ""}
+            onChange={(event) =>
+              onUpdateSet(
+                setLog.id,
+                "weight",
+                event.target.value
+              )
+            }
+            aria-label={`Set ${index + 1} weight`}
+            className="h-10 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-2 text-sm font-bold text-white outline-none"
+          />
+
+          <div className="col-span-2 rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-slate-300 sm:col-span-1">
+            Effort {setLog.ease_score || "—"} •{" "}
+            {formatSeconds(setLog.set_duration_seconds || 0)}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onRemoveSet(setLog.id)}
+            className="col-span-3 h-10 rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 text-xs font-black text-rose-100 sm:col-span-1"
+          >
+            Remove
+          </button>
+        </div>
+      ))}
     </div>
   );
 }
@@ -420,12 +408,9 @@ function ExercisePanel({
 function FinishReviewPanel({
   validation,
   session,
-  onBackToWorkout,
-  onFinishAnyway,
+  onBack,
+  onSave,
 }) {
-  const hasMissing = validation?.missing?.length > 0;
-  const hasWarnings = validation?.warnings?.length > 0;
-
   return (
     <div className="rounded-[2rem] border border-amber-300/25 bg-amber-300/10 p-5">
       <div className="text-xs font-black uppercase tracking-[0.22em] text-amber-100">
@@ -433,85 +418,86 @@ function FinishReviewPanel({
       </div>
 
       <h3 className="mt-2 text-2xl font-black text-white">
-        Check this before saving
+        Save this workout?
       </h3>
 
-      <p className="mt-2 text-sm leading-6 text-amber-50/80">
-        The workout can be saved now, but SyncWorks noticed a few things that
-        may make the coach less accurate later. Go back to fill them in, or
-        finish anyway if this is correct.
-      </p>
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <StatTile
+          label="Sets"
+          value={session.completed_sets || 0}
+          tone="emerald"
+        />
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile label="Sets" value={session?.completed_sets || 0} tone="emerald" />
-        <StatTile label="Skipped" value={session?.skipped_exercises || 0} tone="rose" />
-        <StatTile label="Total" value={formatSeconds(session?.total_seconds || 0)} tone="cyan" />
-        <StatTile label="Rest" value={formatSeconds(session?.rest_seconds || 0)} tone="amber" />
+        <StatTile
+          label="Total"
+          value={formatSeconds(session.total_seconds)}
+          tone="cyan"
+        />
+
+        <StatTile
+          label="Active"
+          value={formatSeconds(session.active_seconds)}
+          tone="emerald"
+        />
+
+        <StatTile
+          label="Rest"
+          value={formatSeconds(session.rest_seconds)}
+          tone="amber"
+        />
       </div>
 
-      {hasMissing ? (
-        <div className="mt-5 rounded-3xl border border-rose-300/25 bg-rose-300/10 p-4">
+      {validation?.missing?.length ? (
+        <div className="mt-4 rounded-2xl border border-rose-300/20 bg-rose-300/10 p-3">
           <div className="text-sm font-black text-rose-100">
-            Recommended before finishing
+            Recommended before saving
           </div>
 
-          <div className="mt-3 space-y-2">
+          <div className="mt-2 space-y-2">
             {validation.missing.map((item) => (
               <div
                 key={item.id}
-                className="rounded-2xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-rose-50"
+                className="text-sm leading-6 text-rose-50"
               >
-                <div className="font-bold">{item.label}</div>
-
-                {Array.isArray(item.items) && item.items.length ? (
-                  <div className="mt-1 text-xs text-rose-100/70">
-                    {item.items.join(", ")}
-                  </div>
-                ) : null}
+                {item.label}
               </div>
             ))}
           </div>
         </div>
       ) : null}
 
-      {hasWarnings ? (
-        <div className="mt-4 rounded-3xl border border-white/10 bg-black/20 p-4">
+      {validation?.warnings?.length ? (
+        <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3">
           <div className="text-sm font-black text-white">
-            Helpful but optional
+            Helpful details
           </div>
 
-          <div className="mt-3 space-y-2">
+          <div className="mt-2 space-y-2">
             {validation.warnings.map((item) => (
               <div
                 key={item.id}
-                className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-sm leading-6 text-slate-300"
+                className="text-sm leading-6 text-slate-400"
               >
-                <div className="font-bold">{item.label}</div>
-
-                {Array.isArray(item.items) && item.items.length ? (
-                  <div className="mt-1 text-xs text-slate-500">
-                    {item.items.join(", ")}
-                  </div>
-                ) : null}
+                {item.label}
               </div>
             ))}
           </div>
         </div>
       ) : null}
 
-      <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+      <div className="mt-5 grid grid-cols-2 gap-2">
         <button
           type="button"
-          onClick={onBackToWorkout}
-          className="rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-300/20"
+          onClick={onBack}
+          className="h-12 rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-black text-slate-200"
         >
-          Go Back and Edit
+          Go Back
         </button>
 
         <button
           type="button"
-          onClick={onFinishAnyway}
-          className="rounded-2xl border border-lime-300/30 bg-lime-300/15 px-4 py-3 text-sm font-black text-lime-100 transition hover:bg-lime-300/20"
+          onClick={onSave}
+          className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100"
         >
           Save Workout
         </button>
@@ -531,10 +517,16 @@ export default function ActiveWorkoutSessionDrawer({
   setHistory,
 }) {
   const [session, setSession] = useState(null);
-  const [finishMessage, setFinishMessage] = useState("");
   const [reviewMode, setReviewMode] = useState(false);
-  const [editAfterFinish, setEditAfterFinish] = useState(false);
-  const lastIntroKeyRef = useRef("");
+  const [finishMessage, setFinishMessage] = useState("");
+  const [editAfterFinish, setEditAfterFinish] =
+    useState(false);
+  const [setCheckInOpen, setSetCheckInOpen] =
+    useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  const lastExerciseCueRef = useRef("");
+  const lastRestCueRef = useRef("");
 
   useEffect(() => {
     if (!open || !plannerItem) return;
@@ -545,39 +537,60 @@ export default function ActiveWorkoutSessionDrawer({
         workouts,
       })
     );
-    setFinishMessage("");
+
     setReviewMode(false);
+    setFinishMessage("");
     setEditAfterFinish(false);
-    lastIntroKeyRef.current = "";
+    setSetCheckInOpen(false);
+    setDetailsOpen(false);
+    lastExerciseCueRef.current = "";
+    lastRestCueRef.current = "";
   }, [open, plannerItem, workouts]);
 
   useEffect(() => {
-    if (!open || !session || session.status !== "active") return;
+    if (
+      !open ||
+      !session ||
+      session.status !== "active"
+    ) {
+      return undefined;
+    }
 
     const timer = window.setInterval(() => {
-      setSession((prev) => {
-        if (!prev || prev.status !== "active") return prev;
-        return updateSessionTimer(prev, prev.rest_active ? "rest" : "active");
-      });
+      setSession((previous) =>
+        previous &&
+        previous.status === "active"
+          ? updateSessionTimer(previous)
+          : previous
+      );
     }, 1000);
 
     return () => window.clearInterval(timer);
   }, [open, session?.id, session?.status]);
 
   useEffect(() => {
-    if (!open) {
-      stopCoachVoice();
-    }
+    if (!open) stopCoachVoice();
 
-    return () => {
-      stopCoachVoice();
-    };
+    return () => stopCoachVoice();
   }, [open]);
 
   const currentExercise = useMemo(() => {
-    if (!session || !Array.isArray(session.exercises)) return null;
-    return session.exercises[session.current_exercise_index || 0] || null;
+    if (!Array.isArray(session?.exercises)) return null;
+
+    return (
+      session.exercises[
+        session.current_exercise_index || 0
+      ] || null
+    );
   }, [session]);
+
+  const currentSuggestion = useMemo(
+    () =>
+      currentExercise
+        ? buildNextSetSuggestion(currentExercise)
+        : {},
+    [currentExercise]
+  );
 
   const validation = useMemo(
     () => validateWorkoutSessionForFinish(session || {}),
@@ -586,9 +599,12 @@ export default function ActiveWorkoutSessionDrawer({
 
   const coachAudioMode =
     snapshot?.coach_audio_mode ||
-    (snapshot?.audible_trainer_enabled ? "essential" : "off");
+    (snapshot?.audible_trainer_enabled
+      ? "essential"
+      : "off");
 
-  const coachVoicePreference = snapshot?.coach_voice_preference || "female";
+  const coachVoicePreference =
+    snapshot?.coach_voice_preference || "female";
 
   const trainerNudge = useMemo(
     () =>
@@ -604,50 +620,159 @@ export default function ActiveWorkoutSessionDrawer({
     ? session.exercises.length
     : 0;
 
-  const isCompleted = session?.status === "completed";
-  const canEditFields = !isCompleted || editAfterFinish;
+  const isCompleted =
+    session?.status === "completed";
+
+  const canEdit =
+    !isCompleted || editAfterFinish;
 
   useEffect(() => {
-    if (!open || !currentExercise || coachAudioMode === "off") return;
+    if (
+      !open ||
+      !currentExercise ||
+      coachAudioMode === "off"
+    ) {
+      return;
+    }
 
-    const key = `${session?.id || "session"}:${currentExercise.id || currentExercise.name}`;
-    if (lastIntroKeyRef.current === key) return;
+    const key = `${session?.id}:${currentExercise.id}`;
 
-    const knowledge = getExerciseKnowledge(
-      currentExercise.substituted && currentExercise.substitute_name
+    if (lastExerciseCueRef.current === key) return;
+
+    const exerciseName =
+      currentExercise.substituted &&
+      currentExercise.substitute_name
         ? currentExercise.substitute_name
-        : currentExercise.name
-    );
+        : currentExercise.name;
+
+    const knowledge =
+      getExerciseKnowledge(exerciseName);
 
     speakCoachText({
       text: buildExerciseIntroSpeech(knowledge),
       audioMode: coachAudioMode,
       voicePreference: coachVoicePreference,
-      rate: coachAudioMode === "full" ? 1 : 1.03,
+      rate: 1.02,
       pitch: 1,
       volume: 1,
     });
 
-    lastIntroKeyRef.current = key;
-  }, [open, currentExercise, coachAudioMode, coachVoicePreference, session?.id]);
+    lastExerciseCueRef.current = key;
+  }, [
+    open,
+    currentExercise,
+    coachAudioMode,
+    coachVoicePreference,
+    session?.id,
+  ]);
+
+  useEffect(() => {
+    if (
+      !open ||
+      !session?.rest_active ||
+      coachAudioMode === "off"
+    ) {
+      return;
+    }
+
+    const remaining = Number(
+      session.rest_remaining_seconds || 0
+    );
+
+    const target = Number(
+      session.rest_target_seconds || 0
+    );
+
+    let message = "";
+
+    if (target > 30 && remaining === 30) {
+      message = "Thirty seconds remaining.";
+    } else if (remaining === 10) {
+      message = "Ten seconds remaining.";
+    } else if (target > 0 && remaining === 0) {
+      const completedSets =
+        currentExercise?.set_logs?.length || 0;
+
+      const plannedSets = Number(
+        currentExercise?.planned_sets || 0
+      );
+
+      const exerciseFinished =
+        plannedSets > 0 &&
+        completedSets >= plannedSets;
+
+      const nextExercise =
+        exerciseFinished &&
+        Array.isArray(session.exercises) &&
+        session.current_exercise_index <
+          session.exercises.length - 1
+          ? session.exercises[
+              session.current_exercise_index + 1
+            ]
+          : null;
+
+      message = nextExercise
+        ? `Rest complete. Move to ${nextExercise.name} and tap start set.`
+        : "Rest complete. Reset your position and tap start set.";
+    }
+
+    if (!message) return;
+
+    const key = `${session.id}:${session.current_exercise_index}:${remaining}:${message}`;
+
+    if (lastRestCueRef.current === key) return;
+
+    speakCoachText({
+      text: message,
+      audioMode: coachAudioMode,
+      voicePreference: coachVoicePreference,
+      rate: 1.02,
+      pitch: 1,
+      volume: 1,
+    });
+
+    lastRestCueRef.current = key;
+
+    if (remaining === 0) {
+      setSession((previous) =>
+        previous ? stopRestTimer(previous) : previous
+      );
+    }
+  }, [
+    open,
+    session?.id,
+    session?.rest_active,
+    session?.rest_remaining_seconds,
+    session?.rest_target_seconds,
+    session?.current_exercise_index,
+    currentExercise,
+    coachAudioMode,
+    coachVoicePreference,
+  ]);
 
   function patchCoachSettings(patch = {}) {
     if (typeof setSnapshot !== "function") return;
 
-    setSnapshot((prev) => {
-      const nextAudioMode =
+    setSnapshot((previous) => {
+      const audioMode =
         patch.audioMode ??
-        prev?.coach_audio_mode ??
-        (prev?.audible_trainer_enabled ? "essential" : "off");
+        previous?.coach_audio_mode ??
+        (previous?.audible_trainer_enabled
+          ? "essential"
+          : "off");
 
-      const nextVoicePreference =
-        patch.voicePreference ?? prev?.coach_voice_preference ?? "female";
+      const voicePreference =
+        patch.voicePreference ??
+        previous?.coach_voice_preference ??
+        "female";
 
       return {
-        ...prev,
-        coach_audio_mode: nextAudioMode,
-        coach_voice_preference: nextVoicePreference,
-        audible_trainer_enabled: nextAudioMode !== "off",
+        ...previous,
+        coach_audio_mode: audioMode,
+        coach_voice_preference:
+          voicePreference,
+        audible_trainer_enabled:
+          audioMode !== "off",
         updated_at: new Date().toISOString(),
       };
     });
@@ -656,14 +781,16 @@ export default function ActiveWorkoutSessionDrawer({
   function replayExerciseCue() {
     if (!currentExercise) return;
 
-    const knowledge = getExerciseKnowledge(
-      currentExercise.substituted && currentExercise.substitute_name
+    const exerciseName =
+      currentExercise.substituted &&
+      currentExercise.substitute_name
         ? currentExercise.substitute_name
-        : currentExercise.name
-    );
+        : currentExercise.name;
 
     speakCoachText({
-      text: buildExerciseIntroSpeech(knowledge),
+      text: buildExerciseIntroSpeech(
+        getExerciseKnowledge(exerciseName)
+      ),
       audioMode: coachAudioMode,
       voicePreference: coachVoicePreference,
       rate: 1.02,
@@ -676,7 +803,12 @@ export default function ActiveWorkoutSessionDrawer({
     if (!trainerNudge) return;
 
     speakCoachText({
-      text: [trainerNudge.title, trainerNudge.message].filter(Boolean).join(". "),
+      text: [
+        trainerNudge.title,
+        trainerNudge.message,
+      ]
+        .filter(Boolean)
+        .join(". "),
       audioMode: coachAudioMode,
       voicePreference: coachVoicePreference,
       rate: 1.02,
@@ -685,17 +817,100 @@ export default function ActiveWorkoutSessionDrawer({
     });
   }
 
-  function closeDrawer() {
-    setFinishMessage("");
-    setReviewMode(false);
-    setEditAfterFinish(false);
-    stopCoachVoice();
-    onClose?.();
+  function startSet() {
+    if (
+      !session ||
+      !currentExercise ||
+      isCompleted ||
+      session.paused ||
+      session.rest_active
+    ) {
+      return;
+    }
+
+    setSession(
+      startActiveSet(session, currentExercise.id)
+    );
+
+    setSetCheckInOpen(false);
+
+    speakCoachText({
+      text: `Set ${
+        (currentExercise.set_logs || []).length + 1
+      }. Start.`,
+      audioMode: coachAudioMode,
+      voicePreference: coachVoicePreference,
+      rate: 1.04,
+      pitch: 1,
+      volume: 1,
+    });
   }
 
-  function beginFinishReview() {
-    setReviewMode(true);
+  function requestCompleteSet() {
+    if (!session?.set_active) return;
+
+    setSetCheckInOpen(true);
+  }
+
+  function saveTimedSet(setLog) {
+    if (!session || !currentExercise) return;
+
+    const nextSession = completeActiveSet(
+      session,
+      currentExercise.id,
+      setLog
+    );
+
+    setSession(nextSession);
+    setSetCheckInOpen(false);
+
+    const restSeconds =
+      nextSession.rest_target_seconds ||
+      currentExercise.rest_seconds ||
+      0;
+
+    const pain = Number(setLog.pain_score || 0);
+
+    speakCoachText({
+      text:
+        pain >= 3
+          ? `Set saved. Pain was reported. Reduce the load or adjust the movement. Rest for ${restSeconds} seconds.`
+          : `Set saved. Rest for ${restSeconds} seconds.`,
+      audioMode: coachAudioMode,
+      voicePreference: coachVoicePreference,
+      rate: 1.02,
+      pitch: 1,
+      volume: 1,
+    });
+  }
+
+  function moveExercise(index) {
+    if (!session) return;
+
+    setSession(moveToExercise(session, index));
+    setSetCheckInOpen(false);
+  }
+
+  function patchExercise(field, value) {
+    if (!session || !currentExercise || !canEdit) return;
+
+    setSession(
+      updateExerciseField(
+        session,
+        currentExercise.id,
+        field,
+        value
+      )
+    );
+  }
+
+  function closeDrawer() {
+    setReviewMode(false);
     setFinishMessage("");
+    setEditAfterFinish(false);
+    setSetCheckInOpen(false);
+    stopCoachVoice();
+    onClose?.();
   }
 
   function saveWorkout() {
@@ -707,49 +922,38 @@ export default function ActiveWorkoutSessionDrawer({
       history: history || [],
     });
 
-    if (typeof setHistory === "function") {
-      setHistory(result.nextHistory);
-    }
-
-    if (typeof setSnapshot === "function") {
-      setSnapshot(result.nextSnapshot);
-    }
-
+    setHistory?.(result.nextHistory);
+    setSnapshot?.(result.nextSnapshot);
     setSession(result.finishedSession);
     setReviewMode(false);
     setEditAfterFinish(false);
+
     setFinishMessage(
-      `Workout saved. ${result.summary.completed_sets} sets logged, ${formatSeconds(
+      `Workout saved. ${
+        result.summary.completed_sets
+      } sets logged in ${formatSeconds(
         result.summary.total_seconds
-      )} total time.`
+      )}.`
     );
   }
 
-  function saveEditedCompletedWorkout() {
+  function saveEditedWorkout() {
     if (!session) return;
 
-    const result = updateCompletedWorkoutSession({
-      session,
-      snapshot: snapshot || {},
-      history: history || [],
-    });
+    const result =
+      updateCompletedWorkoutSession({
+        session,
+        snapshot: snapshot || {},
+        history: history || [],
+      });
 
-    if (typeof setHistory === "function") {
-      setHistory(result.nextHistory);
-    }
-
-    if (typeof setSnapshot === "function") {
-      setSnapshot(result.nextSnapshot);
-    }
-
+    setHistory?.(result.nextHistory);
+    setSnapshot?.(result.nextSnapshot);
     setSession(result.editedSession);
     setEditAfterFinish(false);
-    setFinishMessage("Workout edits saved. Coach stats updated.");
-  }
-
-  function handleSessionChange(nextSession) {
-    if (!canEditFields) return;
-    setSession(nextSession);
+    setFinishMessage(
+      "Workout edits saved. Coach statistics updated."
+    );
   }
 
   if (!open) return null;
@@ -760,73 +964,135 @@ export default function ActiveWorkoutSessionDrawer({
         type="button"
         aria-label="Close active workout"
         onClick={closeDrawer}
-        className="absolute inset-0 cursor-default"
+        className="absolute inset-0"
       />
 
-      <section className="relative z-[91] flex h-full w-full max-w-6xl flex-col border-l border-cyan-300/10 bg-[radial-gradient(circle_at_top_left,rgba(57,255,136,0.09),transparent_18%),radial-gradient(circle_at_top_right,rgba(255,59,212,0.07),transparent_20%),linear-gradient(180deg,#040812_0%,#07111f_100%)] shadow-[-30px_0_80px_rgba(0,0,0,0.5)]">
-        <div className="border-b border-white/10 px-4 py-4 sm:px-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <section className="relative z-[91] flex h-full w-full max-w-6xl flex-col overflow-hidden border-l border-cyan-300/10 bg-[radial-gradient(circle_at_top_left,rgba(57,255,136,0.09),transparent_18%),radial-gradient(circle_at_top_right,rgba(255,59,212,0.07),transparent_20%),linear-gradient(180deg,#040812_0%,#07111f_100%)] shadow-[-30px_0_80px_rgba(0,0,0,0.6)]">
+        <header className="sticky top-0 z-30 border-b border-white/10 bg-[#040812]/95 px-3 py-3 backdrop-blur-xl sm:px-6 sm:py-4">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-xs font-black uppercase tracking-[0.28em] text-emerald-200">
+              <div className="text-[9px] font-black uppercase tracking-[0.24em] text-emerald-200 sm:text-xs">
                 SyncWorks Trainer Loop
               </div>
 
-              <h2 className="mt-1 text-2xl font-black text-white sm:text-4xl">
-                {session?.workout_name || "Active Workout"}
+              <h2 className="mt-1 truncate text-xl font-black text-white sm:text-4xl">
+                {session?.workout_name ||
+                  "Active Workout"}
               </h2>
 
-              <p className="mt-2 text-sm leading-6 text-slate-300">
-                Exercise reminders, live coach guidance, weight logging, and
-                premium mobile workout flow.
+              <p className="mt-2 hidden text-sm leading-6 text-slate-300 sm:block">
+                Active time only runs while a set is
+                being performed.
               </p>
             </div>
 
             <button
               type="button"
               onClick={closeDrawer}
-              className="w-fit rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-sm font-black text-white transition hover:bg-white/15"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-sm font-black text-white"
             >
               ✕
             </button>
           </div>
 
           {session ? (
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
-              <StatTile
-                label="Total"
-                value={formatSeconds(session.total_seconds)}
-                tone="cyan"
-              />
-              <StatTile
-                label="Active"
-                value={formatSeconds(session.active_seconds)}
-                tone="emerald"
-              />
-              <StatTile
-                label="Rest"
-                value={formatSeconds(session.rest_seconds)}
-                tone="amber"
-              />
-              <StatTile
-                label="Idle"
-                value={formatSeconds(session.idle_seconds)}
-                tone="slate"
-              />
-              <StatTile
-                label="Sets"
-                value={session.completed_sets || 0}
-                tone="purple"
-              />
-              <StatTile
-                label="Skipped"
-                value={session.skipped_exercises || 0}
-                tone="rose"
-              />
-            </div>
-          ) : null}
-        </div>
+            <>
+              <div className="mt-3 grid grid-cols-4 gap-1.5 sm:hidden">
+                <MobileStat
+                  label="Total"
+                  value={formatSeconds(
+                    session.total_seconds
+                  )}
+                  tone="cyan"
+                />
 
-        <div className="flex-1 overflow-y-auto px-4 py-5 pb-28 sm:px-6">
+                <MobileStat
+                  label="Active"
+                  value={formatSeconds(
+                    session.active_seconds
+                  )}
+                  tone="emerald"
+                />
+
+                <MobileStat
+                  label={
+                    session.rest_active
+                      ? "Rest Left"
+                      : "Rest"
+                  }
+                  value={formatSeconds(
+                    session.rest_active
+                      ? session.rest_remaining_seconds
+                      : session.rest_seconds
+                  )}
+                  tone="amber"
+                />
+
+                <MobileStat
+                  label="Sets"
+                  value={session.completed_sets || 0}
+                  tone="purple"
+                />
+              </div>
+
+              <div className="mt-4 hidden gap-2 sm:grid sm:grid-cols-2 lg:grid-cols-6">
+                <StatTile
+                  label="Total"
+                  value={formatSeconds(
+                    session.total_seconds
+                  )}
+                  tone="cyan"
+                />
+
+                <StatTile
+                  label="Active"
+                  value={formatSeconds(
+                    session.active_seconds
+                  )}
+                  tone="emerald"
+                />
+
+                <StatTile
+                  label={
+                    session.rest_active
+                      ? "Rest Remaining"
+                      : "Rest"
+                  }
+                  value={formatSeconds(
+                    session.rest_active
+                      ? session.rest_remaining_seconds
+                      : session.rest_seconds
+                  )}
+                  tone="amber"
+                />
+
+                <StatTile
+                  label="Idle"
+                  value={formatSeconds(
+                    session.idle_seconds
+                  )}
+                  tone="slate"
+                />
+
+                <StatTile
+                  label="Sets"
+                  value={session.completed_sets || 0}
+                  tone="purple"
+                />
+
+                <StatTile
+                  label="Skipped"
+                  value={
+                    session.skipped_exercises || 0
+                  }
+                  tone="rose"
+                />
+              </div>
+            </>
+          ) : null}
+        </header>
+
+        <main className="flex-1 overflow-y-auto px-3 py-3 pb-36 sm:px-6 sm:py-5 sm:pb-28">
           {!session ? (
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 text-sm text-slate-300">
               No active workout selected.
@@ -835,45 +1101,179 @@ export default function ActiveWorkoutSessionDrawer({
             <FinishReviewPanel
               validation={validation}
               session={session}
-              onBackToWorkout={() => setReviewMode(false)}
-              onFinishAnyway={saveWorkout}
+              onBack={() => setReviewMode(false)}
+              onSave={saveWorkout}
             />
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {finishMessage ? (
-                <div className="rounded-3xl border border-lime-300/25 bg-lime-300/10 p-4 text-sm font-bold leading-6 text-lime-100">
+                <div className="rounded-2xl border border-lime-300/25 bg-lime-300/10 p-3 text-sm font-bold text-lime-100">
                   {finishMessage}
                 </div>
               ) : null}
 
+              {!isCompleted && currentExercise ? (
+                <div className="rounded-[1.5rem] border border-cyan-300/15 bg-[linear-gradient(135deg,rgba(34,211,238,0.08),rgba(57,255,136,0.06))] p-3 sm:rounded-[2rem] sm:p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-[9px] font-black uppercase tracking-[0.18em] text-cyan-200">
+                        Current Exercise
+                      </div>
+
+                      <div className="mt-1 truncate text-lg font-black text-white">
+                        {currentExercise.substituted &&
+                        currentExercise.substitute_name
+                          ? currentExercise.substitute_name
+                          : currentExercise.name}
+                      </div>
+
+                      <div className="mt-1 text-xs text-slate-400">
+                        Set{" "}
+                        {(currentExercise.set_logs || [])
+                          .length + 1}{" "}
+                        of{" "}
+                        {currentExercise.planned_sets ||
+                          "—"}{" "}
+                        •{" "}
+                        {currentExercise.planned_reps ||
+                          "clean reps"}
+                      </div>
+                    </div>
+
+                    {session.set_active ? (
+                      <div className="shrink-0 rounded-2xl border border-lime-300/25 bg-lime-300/10 px-3 py-2 text-center">
+                        <div className="text-[8px] font-black uppercase tracking-[0.14em] text-lime-200">
+                          Set Time
+                        </div>
+
+                        <div className="mt-0.5 text-lg font-black text-lime-100">
+                          {formatSeconds(
+                            session.current_set_seconds
+                          )}
+                        </div>
+                      </div>
+                    ) : session.rest_active ? (
+                      <div className="shrink-0 rounded-2xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-center">
+                        <div className="text-[8px] font-black uppercase tracking-[0.14em] text-amber-200">
+                          Rest Left
+                        </div>
+
+                        <div className="mt-0.5 text-lg font-black text-amber-100">
+                          {formatSeconds(
+                            session.rest_remaining_seconds
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={
+                      session.set_active
+                        ? requestCompleteSet
+                        : startSet
+                    }
+                    disabled={
+                      session.paused ||
+                      session.rest_active
+                    }
+                    className={cx(
+                      "mt-3 h-14 w-full rounded-2xl border text-base font-black transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45",
+                      session.set_active
+                        ? "border-fuchsia-300/30 bg-fuchsia-300/15 text-fuchsia-100"
+                        : "border-lime-300/35 bg-lime-300/20 text-lime-100 shadow-[0_0_30px_rgba(57,255,136,0.12)]"
+                    )}
+                  >
+                    {session.set_active
+                      ? "Complete Set"
+                      : session.rest_active
+                      ? `Resting • ${formatSeconds(
+                          session.rest_remaining_seconds
+                        )}`
+                      : "Start Set"}
+                  </button>
+
+                  {!session.set_active &&
+                  !session.rest_active ? (
+                    <div className="mt-2 text-center text-[11px] text-slate-500">
+                      Active time begins only after
+                      Start Set is tapped.
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className="overflow-x-auto pb-1">
+                <div className="flex min-w-max gap-2">
+                  {(session.exercises || []).map(
+                    (exercise, index) => (
+                      <button
+                        key={exercise.id}
+                        type="button"
+                        onClick={() =>
+                          moveExercise(index)
+                        }
+                        className={cx(
+                          "w-[155px] rounded-2xl border px-3 py-3 text-left transition",
+                          index ===
+                            session.current_exercise_index
+                            ? "border-cyan-300/30 bg-cyan-300/10"
+                            : "border-white/10 bg-white/[0.03]"
+                        )}
+                      >
+                        <div className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">
+                          {String(index + 1).padStart(
+                            2,
+                            "0"
+                          )}
+                        </div>
+
+                        <div className="mt-1 truncate text-sm font-black text-white">
+                          {exercise.substituted &&
+                          exercise.substitute_name
+                            ? exercise.substitute_name
+                            : exercise.name}
+                        </div>
+
+                        <div className="mt-1 text-xs text-slate-500">
+                          {(exercise.set_logs || [])
+                            .length}
+                          /{exercise.planned_sets} sets
+                        </div>
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
+
               {isCompleted ? (
-                <div className="rounded-3xl border border-cyan-300/25 bg-cyan-300/10 p-4">
-                  <div className="text-xs font-black uppercase tracking-[0.2em] text-cyan-100">
-                    Completed Workout
+                <div className="rounded-2xl border border-cyan-300/25 bg-cyan-300/10 p-4">
+                  <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-100">
+                    Workout Completed
                   </div>
 
                   <div className="mt-2 text-sm leading-6 text-slate-200">
-                    This workout is saved. You can still edit it before closing
-                    if you forgot a set, weight, pain score, substitution, or note.
+                    This workout is saved. You can
+                    edit it before closing.
                   </div>
 
-                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  <div className="mt-3 flex flex-wrap gap-2">
                     {!editAfterFinish ? (
                       <button
                         type="button"
-                        onClick={() => {
-                          setEditAfterFinish(true);
-                          setFinishMessage("");
-                        }}
-                        className="rounded-2xl border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm font-black text-amber-100 transition hover:bg-amber-300/20"
+                        onClick={() =>
+                          setEditAfterFinish(true)
+                        }
+                        className="rounded-2xl border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm font-black text-amber-100"
                       >
                         Edit Completed Workout
                       </button>
                     ) : (
                       <button
                         type="button"
-                        onClick={saveEditedCompletedWorkout}
-                        className="rounded-2xl border border-lime-300/30 bg-lime-300/15 px-4 py-3 text-sm font-black text-lime-100 transition hover:bg-lime-300/20"
+                        onClick={saveEditedWorkout}
+                        className="rounded-2xl border border-lime-300/25 bg-lime-300/10 px-4 py-3 text-sm font-black text-lime-100"
                       >
                         Save Edits
                       </button>
@@ -882,105 +1282,292 @@ export default function ActiveWorkoutSessionDrawer({
                     <button
                       type="button"
                       onClick={closeDrawer}
-                      className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-slate-100 transition hover:bg-white/[0.08]"
+                      className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-white"
                     >
-                      Close Workout
+                      Close
                     </button>
                   </div>
                 </div>
               ) : null}
 
-              <div className="rounded-[2rem] border border-white/10 bg-black/20 p-4">
-                <div className="grid gap-3 md:grid-cols-4">
+              <div
+                className={cx(
+                  !canEdit &&
+                    "pointer-events-none opacity-60"
+                )}
+              >
+                <TrainerExerciseIntroCard
+                  exerciseName={
+                    currentExercise?.substituted &&
+                    currentExercise?.substitute_name
+                      ? currentExercise.substitute_name
+                      : currentExercise?.name
+                  }
+                  onReplayCue={replayExerciseCue}
+                  onFindAlternative={() => {
+                    if (
+                      !session ||
+                      !currentExercise
+                    ) {
+                      return;
+                    }
+
+                    setSession(
+                      markExerciseSubstituted(
+                        session,
+                        currentExercise.id,
+                        currentExercise.substitute_name ||
+                          `Alternative for ${currentExercise.name}`
+                      )
+                    );
+                  }}
+                />
+              </div>
+
+              <TrainerNudgeCard
+                nudge={trainerNudge}
+                audioMode={coachAudioMode}
+                voicePreference={
+                  coachVoicePreference
+                }
+                onReplay={replayNudge}
+              />
+
+              <details className="rounded-[1.5rem] border border-white/10 bg-white/[0.03]">
+                <summary className="cursor-pointer px-4 py-3 text-sm font-black text-white">
+                  Coach Voice Settings
+                </summary>
+
+                <div className="px-3 pb-3">
+                  <CoachVoiceSettingsCard
+                    audioMode={coachAudioMode}
+                    voicePreference={
+                      coachVoicePreference
+                    }
+                    onChange={patchCoachSettings}
+                  />
+                </div>
+              </details>
+
+              {currentExercise ? (
+                <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3 sm:rounded-[2rem] sm:p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
+                        Set History
+                      </div>
+
+                      <div className="mt-1 text-lg font-black text-white">
+                        Logged sets
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDetailsOpen(
+                          (previous) => !previous
+                        )
+                      }
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-black text-slate-200"
+                    >
+                      {detailsOpen
+                        ? "Hide Details"
+                        : "More Details"}
+                    </button>
+                  </div>
+
+                  <div className="mt-3">
+                    <SetHistory
+                      exercise={currentExercise}
+                      onUpdateSet={(
+                        setId,
+                        field,
+                        value
+                      ) =>
+                        setSession(
+                          updateSetField(
+                            session,
+                            currentExercise.id,
+                            setId,
+                            field,
+                            value
+                          )
+                        )
+                      }
+                      onRemoveSet={(setId) =>
+                        setSession(
+                          removeSetFromExercise(
+                            session,
+                            currentExercise.id,
+                            setId
+                          )
+                        )
+                      }
+                    />
+                  </div>
+
+                  {detailsOpen ? (
+                    <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <ScoreSelect
+                          label="Exercise Pain"
+                          value={
+                            currentExercise.pain_score ??
+                            ""
+                          }
+                          onChange={(value) =>
+                            patchExercise(
+                              "pain_score",
+                              value
+                            )
+                          }
+                          options={[
+                            "0",
+                            "1",
+                            "2",
+                            "3",
+                            "4",
+                            "5",
+                          ]}
+                        />
+
+                        <ScoreSelect
+                          label="Difficulty"
+                          value={
+                            currentExercise.difficulty_score ||
+                            ""
+                          }
+                          onChange={(value) =>
+                            patchExercise(
+                              "difficulty_score",
+                              value
+                            )
+                          }
+                          options={[
+                            "Easy",
+                            "Medium",
+                            "Hard",
+                            "Max",
+                          ]}
+                        />
+                      </div>
+
+                      <label className="block">
+                        <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
+                          Substitute exercise
+                        </div>
+
+                        <input
+                          value={
+                            currentExercise.substitute_name ||
+                            ""
+                          }
+                          onChange={(event) =>
+                            setSession(
+                              markExerciseSubstituted(
+                                session,
+                                currentExercise.id,
+                                event.target.value
+                              )
+                            )
+                          }
+                          placeholder="Enter replacement exercise"
+                          className="mt-2 h-11 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white outline-none"
+                        />
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSession(
+                            markExerciseSkipped(
+                              session,
+                              currentExercise.id
+                            )
+                          )
+                        }
+                        className={cx(
+                          "w-full rounded-2xl border px-4 py-3 text-sm font-black",
+                          currentExercise.skipped
+                            ? "border-lime-300/25 bg-lime-300/10 text-lime-100"
+                            : "border-rose-300/25 bg-rose-300/10 text-rose-100"
+                        )}
+                      >
+                        {currentExercise.skipped
+                          ? "Undo Skip"
+                          : "Skip Exercise"}
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-3 sm:rounded-[2rem] sm:p-4">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <button
                     type="button"
-                    onClick={() => setSession(toggleSessionPause(session))}
+                    onClick={() =>
+                      setSession(
+                        toggleSessionPause(session)
+                      )
+                    }
                     disabled={isCompleted}
-                    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-white transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-11 rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-black text-white disabled:opacity-40"
                   >
-                    {session.paused ? "Resume" : "Pause"}
+                    {session.paused
+                      ? "Resume"
+                      : "Pause"}
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => setSession(toggleRestTimer(session))}
-                    disabled={isCompleted}
+                    onClick={() =>
+                      setSession(
+                        toggleRestTimer(session)
+                      )
+                    }
+                    disabled={
+                      isCompleted ||
+                      session.set_active
+                    }
                     className={cx(
-                      "rounded-2xl border px-4 py-3 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50",
+                      "h-11 rounded-2xl border text-sm font-black disabled:opacity-40",
                       session.rest_active
-                        ? "border-amber-300/30 bg-amber-300/15 text-amber-100 hover:bg-amber-300/20"
-                        : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100 hover:bg-cyan-300/20"
+                        ? "border-amber-300/25 bg-amber-300/10 text-amber-100"
+                        : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
                     )}
                   >
-                    {session.rest_active ? "Stop Rest" : "Start Rest"}
+                    {session.rest_active
+                      ? "Stop Rest"
+                      : "Start Rest"}
                   </button>
 
                   <button
                     type="button"
-                    onClick={beginFinishReview}
-                    disabled={isCompleted}
-                    className="rounded-2xl border border-lime-300/30 bg-lime-300/15 px-4 py-3 text-sm font-black text-lime-100 transition hover:bg-lime-300/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={() =>
+                      setReviewMode(true)
+                    }
+                    disabled={
+                      isCompleted ||
+                      session.set_active
+                    }
+                    className="h-11 rounded-2xl border border-lime-300/25 bg-lime-300/10 text-sm font-black text-lime-100 disabled:opacity-40"
                   >
-                    Finish Workout
+                    Finish
                   </button>
 
                   <button
                     type="button"
                     onClick={closeDrawer}
-                    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-slate-100 transition hover:bg-white/[0.08]"
+                    className="h-11 rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-black text-slate-200"
                   >
                     Close
                   </button>
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <div className="flex min-w-max gap-2">
-                  {(session.exercises || []).map((exercise, index) => (
-                    <button
-                      key={exercise.id}
-                      type="button"
-                      onClick={() => setSession(moveToExercise(session, index))}
-                      className={cx(
-                        "rounded-2xl border px-4 py-3 text-left transition",
-                        index === session.current_exercise_index
-                          ? "border-cyan-300/30 bg-cyan-300/10"
-                          : "border-white/10 bg-white/[0.03] hover:bg-white/[0.07]"
-                      )}
-                    >
-                      <div className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                        {String(index + 1).padStart(2, "0")}
-                      </div>
-                      <div className="mt-1 text-sm font-black text-white">
-                        {exercise.substituted && exercise.substitute_name
-                          ? exercise.substitute_name
-                          : exercise.name}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-500">
-                        {exercise.planned_sets} x {exercise.planned_reps}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className={cx(!canEditFields && "pointer-events-none opacity-70")}>
-                <ExercisePanel
-                  session={session}
-                  exercise={currentExercise}
-                  index={session.current_exercise_index || 0}
-                  total={totalExercises}
-                  onSessionChange={handleSessionChange}
-                  trainerNudge={trainerNudge}
-                  coachAudioMode={coachAudioMode}
-                  coachVoicePreference={coachVoicePreference}
-                  onReplayNudge={replayNudge}
-                  onReplayExerciseCue={replayExerciseCue}
-                  onPatchCoachSettings={patchCoachSettings}
-                />
-              </div>
-
-              <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-4">
+              <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3 sm:rounded-[2rem] sm:p-4">
                 <div className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
                   Finish Check-In
                 </div>
@@ -990,72 +1577,189 @@ export default function ActiveWorkoutSessionDrawer({
                     label="Overall Pain"
                     value={session.pain_score ?? ""}
                     onChange={(value) =>
-                      canEditFields &&
-                      setSession((prev) => ({ ...prev, pain_score: value }))
+                      canEdit &&
+                      setSession((previous) => ({
+                        ...previous,
+                        pain_score: value,
+                      }))
                     }
-                    options={["0", "1", "2", "3", "4", "5"]}
+                    options={[
+                      "0",
+                      "1",
+                      "2",
+                      "3",
+                      "4",
+                      "5",
+                    ]}
                   />
 
                   <ScoreSelect
                     label="Difficulty"
-                    value={session.difficulty_score || ""}
+                    value={
+                      session.difficulty_score || ""
+                    }
                     onChange={(value) =>
-                      canEditFields &&
-                      setSession((prev) => ({
-                        ...prev,
+                      canEdit &&
+                      setSession((previous) => ({
+                        ...previous,
                         difficulty_score: value,
                       }))
                     }
-                    options={["Easy", "Medium", "Hard", "Max"]}
+                    options={[
+                      "Easy",
+                      "Medium",
+                      "Hard",
+                      "Max",
+                    ]}
                   />
 
                   <ScoreSelect
                     label="Energy"
                     value={session.energy_score || ""}
                     onChange={(value) =>
-                      canEditFields &&
-                      setSession((prev) => ({ ...prev, energy_score: value }))
+                      canEdit &&
+                      setSession((previous) => ({
+                        ...previous,
+                        energy_score: value,
+                      }))
                     }
-                    options={["Low", "Okay", "Good", "Great"]}
+                    options={[
+                      "Low",
+                      "Okay",
+                      "Good",
+                      "Great",
+                    ]}
                   />
 
                   <ScoreSelect
                     label="Soreness"
-                    value={session.soreness_score || ""}
+                    value={
+                      session.soreness_score || ""
+                    }
                     onChange={(value) =>
-                      canEditFields &&
-                      setSession((prev) => ({
-                        ...prev,
+                      canEdit &&
+                      setSession((previous) => ({
+                        ...previous,
                         soreness_score: value,
                       }))
                     }
-                    options={["None", "Normal", "High", "Painful"]}
+                    options={[
+                      "None",
+                      "Normal",
+                      "High",
+                      "Painful",
+                    ]}
                   />
                 </div>
 
-                <label className="mt-3 block">
-                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
-                    Workout notes
-                  </div>
-
-                  <textarea
-                    value={session.notes || ""}
-                    onChange={(event) =>
-                      canEditFields &&
-                      setSession((prev) => ({
-                        ...prev,
-                        notes: event.target.value,
-                      }))
-                    }
-                    rows={3}
-                    placeholder="What felt good, what hurt, what should the coach adjust next time?"
-                    className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-slate-950 px-3 py-3 text-sm font-bold leading-6 text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
-                  />
-                </label>
+                <textarea
+                  value={session.notes || ""}
+                  onChange={(event) =>
+                    canEdit &&
+                    setSession((previous) => ({
+                      ...previous,
+                      notes: event.target.value,
+                    }))
+                  }
+                  rows={3}
+                  placeholder="What felt good, what hurt, and what should change next time?"
+                  className="mt-3 w-full resize-none rounded-2xl border border-white/10 bg-slate-950 px-3 py-3 text-sm font-bold leading-6 text-white outline-none placeholder:text-slate-600"
+                />
               </div>
             </div>
           )}
-        </div>
+        </main>
+
+        {session &&
+        !reviewMode &&
+        !isCompleted ? (
+          <div className="absolute inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#020617]/95 px-3 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] pt-2 backdrop-blur-xl sm:hidden">
+            <div className="grid grid-cols-[0.72fr_1.56fr_0.72fr] gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  moveExercise(
+                    Math.max(
+                      0,
+                      (session.current_exercise_index ||
+                        0) - 1
+                    )
+                  )
+                }
+                disabled={
+                  (session.current_exercise_index ||
+                    0) === 0
+                }
+                className="h-12 rounded-2xl border border-white/10 bg-white/[0.04] text-xs font-black text-slate-200 disabled:opacity-35"
+              >
+                Prev
+              </button>
+
+              <button
+                type="button"
+                onClick={
+                  session.set_active
+                    ? requestCompleteSet
+                    : startSet
+                }
+                disabled={
+                  session.paused ||
+                  session.rest_active
+                }
+                className={cx(
+                  "h-12 rounded-2xl border text-sm font-black disabled:opacity-45",
+                  session.set_active
+                    ? "border-fuchsia-300/30 bg-fuchsia-300/15 text-fuchsia-100"
+                    : "border-lime-300/35 bg-lime-300/20 text-lime-100"
+                )}
+              >
+                {session.set_active
+                  ? `Complete • ${formatSeconds(
+                      session.current_set_seconds
+                    )}`
+                  : session.rest_active
+                  ? `Rest ${formatSeconds(
+                      session.rest_remaining_seconds
+                    )}`
+                  : "Start Set"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  moveExercise(
+                    Math.min(
+                      totalExercises - 1,
+                      (session.current_exercise_index ||
+                        0) + 1
+                    )
+                  )
+                }
+                disabled={
+                  (session.current_exercise_index ||
+                    0) >=
+                  totalExercises - 1
+                }
+                className="h-12 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 text-xs font-black text-cyan-100 disabled:opacity-35"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        <SetCompletionSheet
+          open={setCheckInOpen}
+          exercise={currentExercise}
+          durationSeconds={
+            session?.current_set_seconds || 0
+          }
+          suggestion={currentSuggestion}
+          onCancel={() =>
+            setSetCheckInOpen(false)
+          }
+          onSave={saveTimedSet}
+        />
       </section>
     </div>
   );

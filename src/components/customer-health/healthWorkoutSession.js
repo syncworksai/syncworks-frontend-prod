@@ -10,12 +10,15 @@ function uid(prefix = "id") {
 }
 
 function safeNumber(value, fallback = 0) {
-  const n = Number(String(value ?? "").replace(/[^\d.-]/g, ""));
-  return Number.isFinite(n) ? n : fallback;
+  const parsed = Number(String(value ?? "").replace(/[^\d.-]/g, ""));
+
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function normalizeRestSeconds(value) {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.max(0, value);
+  }
 
   const raw = String(value || "").toLowerCase();
   const number = safeNumber(raw, 0);
@@ -24,6 +27,10 @@ function normalizeRestSeconds(value) {
   if (raw.includes("min")) return number * 60;
 
   return number;
+}
+
+function plannedSetCount(exercise = {}) {
+  return Math.max(0, safeNumber(exercise.planned_sets || exercise.sets, 0));
 }
 
 function normalizeExercise(exercise = {}, index = 0) {
@@ -37,7 +44,8 @@ function normalizeExercise(exercise = {}, index = 0) {
     equipment: exercise.equipment || "",
     planned_sets: plannedSets,
     planned_reps: plannedReps,
-    planned_weight: exercise.weight || "",
+    planned_weight:
+      exercise.planned_weight || exercise.weight || exercise.load || "",
     rest_seconds: normalizeRestSeconds(
       exercise.rest_seconds || exercise.rest || "60 sec"
     ),
@@ -46,9 +54,10 @@ function normalizeExercise(exercise = {}, index = 0) {
     skipped: false,
     substituted: false,
     substitute_name: "",
-    pain_score: exercise.pain ?? "0",
-    difficulty_score: exercise.difficulty || "Medium",
-    set_logs: [],
+    pain_score: exercise.pain_score ?? exercise.pain ?? "0",
+    difficulty_score:
+      exercise.difficulty_score || exercise.difficulty || "Medium",
+    set_logs: Array.isArray(exercise.set_logs) ? exercise.set_logs : [],
   };
 }
 
@@ -83,7 +92,23 @@ function getExercisesForPlannerItem(plannerItem = {}, workouts = []) {
   }
 
   return buildExercisesForWorkoutName(
-    plannerItem.workout_name || plannerItem.title || plannerItem.name || ""
+    plannerItem.workout_name ||
+      plannerItem.title ||
+      plannerItem.name ||
+      ""
+  );
+}
+
+function activeExerciseForSession(session = {}) {
+  const exercises = Array.isArray(session.exercises)
+    ? session.exercises
+    : [];
+
+  return (
+    exercises[session.current_exercise_index || 0] ||
+    exercises.find((exercise) => exercise.id === session.active_exercise_id) ||
+    exercises[0] ||
+    null
   );
 }
 
@@ -106,34 +131,50 @@ export function createWorkoutSessionFromPlannerItem({
     day_label: safePlannerItem.day_label || "",
     ymd: safePlannerItem.ymd || "",
     source: safePlannerItem.source || "planner",
+
     status: "active",
     started_at: nowIso(),
     finished_at: "",
     saved_at: "",
     edited_after_finish_at: "",
+
     paused: false,
-    rest_active: false,
+
     set_active: false,
     active_exercise_id: "",
     active_set_started_at: "",
     current_set_seconds: 0,
+
+    rest_active: false,
+    rest_target_seconds: 0,
+    rest_remaining_seconds: 0,
+    current_rest_seconds: 0,
+    rest_started_at: "",
+    rest_completed_at: "",
+    last_rest_seconds: 0,
+    rest_overrun_seconds: 0,
+
     current_exercise_index: 0,
+
+    total_seconds: 0,
     active_seconds: 0,
     rest_seconds: 0,
     idle_seconds: 0,
     longest_rest_seconds: 0,
-    total_seconds: 0,
+
     completed_sets: 0,
     skipped_exercises: 0,
     substituted_exercises: 0,
     average_ease_score: "",
     average_set_seconds: 0,
+
     pain_score: "0",
     difficulty_score: "Medium",
     energy_score: "",
     soreness_score: "",
     notes: "",
     review_acknowledged: false,
+
     exercises: exercises.map((exercise, index) =>
       normalizeExercise(exercise, index)
     ),
@@ -141,6 +182,8 @@ export function createWorkoutSessionFromPlannerItem({
 }
 
 export function updateSessionTimer(session = {}) {
+  if (session.status !== "active") return session;
+
   const next = {
     ...session,
     total_seconds: safeNumber(session.total_seconds) + 1,
@@ -158,12 +201,20 @@ export function updateSessionTimer(session = {}) {
   }
 
   if (session.rest_active) {
-    const nextRest = safeNumber(session.rest_seconds) + 1;
+    const currentRest = safeNumber(session.current_rest_seconds) + 1;
+    const cumulativeRest = safeNumber(session.rest_seconds) + 1;
+    const targetRest = safeNumber(session.rest_target_seconds);
+    const remaining =
+      targetRest > 0 ? Math.max(0, targetRest - currentRest) : 0;
 
-    next.rest_seconds = nextRest;
+    next.current_rest_seconds = currentRest;
+    next.rest_seconds = cumulativeRest;
+    next.rest_remaining_seconds = remaining;
+    next.rest_overrun_seconds =
+      targetRest > 0 ? Math.max(0, currentRest - targetRest) : 0;
     next.longest_rest_seconds = Math.max(
       safeNumber(session.longest_rest_seconds),
-      nextRest
+      currentRest
     );
 
     return next;
@@ -173,37 +224,22 @@ export function updateSessionTimer(session = {}) {
   return next;
 }
 
-export function toggleSessionPause(session = {}) {
-  return {
-    ...session,
-    paused: !session.paused,
-    rest_active: false,
-    set_active: false,
-    active_exercise_id: "",
-    active_set_started_at: "",
-    current_set_seconds: 0,
-  };
-}
-
-export function toggleRestTimer(session = {}) {
-  return {
-    ...session,
-    paused: false,
-    set_active: false,
-    active_exercise_id: "",
-    active_set_started_at: "",
-    current_set_seconds: 0,
-    rest_active: !session.rest_active,
-  };
-}
-
 export function startActiveSet(session = {}, exerciseId) {
-  if (!exerciseId) return session;
+  if (!exerciseId || session.status !== "active") return session;
 
   return {
     ...session,
     paused: false,
+
     rest_active: false,
+    rest_remaining_seconds: 0,
+    last_rest_seconds: session.rest_active
+      ? safeNumber(session.current_rest_seconds)
+      : safeNumber(session.last_rest_seconds),
+    rest_completed_at: session.rest_active
+      ? nowIso()
+      : session.rest_completed_at || "",
+
     set_active: true,
     active_exercise_id: exerciseId,
     active_set_started_at: nowIso(),
@@ -211,24 +247,123 @@ export function startActiveSet(session = {}, exerciseId) {
   };
 }
 
+export function stopActiveSet(session = {}) {
+  if (!session.set_active) return session;
+
+  return {
+    ...session,
+    set_active: false,
+    active_exercise_id: "",
+    active_set_started_at: "",
+    current_set_seconds: 0,
+  };
+}
+
+export function startRestTimer(session = {}, targetSeconds) {
+  const currentExercise = activeExerciseForSession(session);
+  const target = Math.max(
+    0,
+    safeNumber(
+      targetSeconds ||
+        currentExercise?.rest_seconds ||
+        session.rest_target_seconds ||
+        60,
+      60
+    )
+  );
+
+  return {
+    ...session,
+    paused: false,
+    set_active: false,
+    active_exercise_id: "",
+    active_set_started_at: "",
+    current_set_seconds: 0,
+
+    rest_active: target > 0,
+    rest_target_seconds: target,
+    rest_remaining_seconds: target,
+    current_rest_seconds: 0,
+    rest_started_at: target > 0 ? nowIso() : "",
+    rest_completed_at: "",
+    rest_overrun_seconds: 0,
+  };
+}
+
+export function stopRestTimer(session = {}) {
+  if (!session.rest_active) return session;
+
+  return {
+    ...session,
+    rest_active: false,
+    rest_remaining_seconds: 0,
+    rest_completed_at: nowIso(),
+    last_rest_seconds: safeNumber(session.current_rest_seconds),
+  };
+}
+
+export function toggleRestTimer(session = {}) {
+  if (session.rest_active) {
+    return stopRestTimer(session);
+  }
+
+  return startRestTimer(session);
+}
+
+export function toggleSessionPause(session = {}) {
+  if (session.paused) {
+    return {
+      ...session,
+      paused: false,
+    };
+  }
+
+  return {
+    ...session,
+    paused: true,
+    set_active: false,
+    active_exercise_id: "",
+    active_set_started_at: "",
+    current_set_seconds: 0,
+    rest_active: false,
+    rest_remaining_seconds: 0,
+    rest_completed_at: session.rest_active
+      ? nowIso()
+      : session.rest_completed_at || "",
+    last_rest_seconds: session.rest_active
+      ? safeNumber(session.current_rest_seconds)
+      : safeNumber(session.last_rest_seconds),
+  };
+}
+
 export function completeActiveSet(session = {}, exerciseId, setLog = {}) {
-  const safeExercises = Array.isArray(session.exercises)
+  const exercises = Array.isArray(session.exercises)
     ? session.exercises
     : [];
 
   const targetExerciseId =
-    exerciseId || session.active_exercise_id || safeExercises[0]?.id;
+    exerciseId || session.active_exercise_id || exercises[0]?.id;
 
-  const duration = Math.max(1, safeNumber(session.current_set_seconds, 0));
+  if (!targetExerciseId) return session;
 
-  const nextExercises = safeExercises.map((exercise) => {
+  const duration = Math.max(
+    1,
+    safeNumber(
+      setLog.set_duration_seconds || session.current_set_seconds,
+      1
+    )
+  );
+
+  let completedExercise = null;
+
+  const nextExercises = exercises.map((exercise) => {
     if (exercise.id !== targetExerciseId) return exercise;
 
-    const setNumber = (exercise.set_logs || []).length + 1;
+    const nextSetNumber = (exercise.set_logs || []).length + 1;
 
     const nextSet = {
       id: uid("set"),
-      set_number: setNumber,
+      set_number: nextSetNumber,
       reps: setLog.reps || exercise.planned_reps || "",
       weight: setLog.weight || exercise.planned_weight || "",
       ease_score: setLog.ease_score || "",
@@ -239,49 +374,82 @@ export function completeActiveSet(session = {}, exerciseId, setLog = {}) {
       completed: true,
     };
 
-    return {
+    const nextSetLogs = [...(exercise.set_logs || []), nextSet];
+    const plannedSets = plannedSetCount(exercise);
+
+    completedExercise = {
       ...exercise,
-      completed: true,
+      completed:
+        plannedSets > 0 ? nextSetLogs.length >= plannedSets : true,
       skipped: false,
       pain_score: nextSet.pain_score,
-      set_logs: [...(exercise.set_logs || []), nextSet],
+      set_logs: nextSetLogs,
     };
+
+    return completedExercise;
   });
+
+  const restTarget = Math.max(
+    0,
+    safeNumber(completedExercise?.rest_seconds || 60, 60)
+  );
 
   return recalcSessionStats({
     ...session,
     exercises: nextExercises,
+
     set_active: false,
     active_exercise_id: "",
     active_set_started_at: "",
     current_set_seconds: 0,
-    rest_active: true,
+
+    rest_active: restTarget > 0,
+    rest_target_seconds: restTarget,
+    rest_remaining_seconds: restTarget,
+    current_rest_seconds: 0,
+    rest_started_at: restTarget > 0 ? nowIso() : "",
+    rest_completed_at: "",
+    rest_overrun_seconds: 0,
   });
 }
 
 export function moveToExercise(session = {}, index = 0) {
-  const safeExercises = Array.isArray(session.exercises)
+  const exercises = Array.isArray(session.exercises)
     ? session.exercises
     : [];
-  const nextIndex = Math.max(0, Math.min(index, safeExercises.length - 1));
+
+  if (!exercises.length) return session;
+
+  const nextIndex = Math.max(0, Math.min(index, exercises.length - 1));
 
   return {
     ...session,
     current_exercise_index: nextIndex,
-    rest_active: false,
+
     set_active: false,
     active_exercise_id: "",
     active_set_started_at: "",
     current_set_seconds: 0,
+
+    rest_active: false,
+    rest_remaining_seconds: 0,
+    rest_completed_at: session.rest_active
+      ? nowIso()
+      : session.rest_completed_at || "",
+    last_rest_seconds: session.rest_active
+      ? safeNumber(session.current_rest_seconds)
+      : safeNumber(session.last_rest_seconds),
   };
 }
 
 export function addSetToExercise(session = {}, exerciseId, setLog = {}) {
-  const safeExercises = Array.isArray(session.exercises)
+  const exercises = Array.isArray(session.exercises)
     ? session.exercises
     : [];
 
-  const nextExercises = safeExercises.map((exercise) => {
+  let updatedExercise = null;
+
+  const nextExercises = exercises.map((exercise) => {
     if (exercise.id !== exerciseId) return exercise;
 
     const nextSet = {
@@ -293,251 +461,239 @@ export function addSetToExercise(session = {}, exerciseId, setLog = {}) {
       pain_score: setLog.pain_score ?? exercise.pain_score ?? "0",
       set_duration_seconds: safeNumber(setLog.set_duration_seconds, 0),
       completed: true,
-      logged_at: nowIso(),
+      started_at: setLog.started_at || "",
       completed_at: nowIso(),
+      logged_at: nowIso(),
     };
 
-    return {
+    const nextSetLogs = [...(exercise.set_logs || []), nextSet];
+    const plannedSets = plannedSetCount(exercise);
+
+    updatedExercise = {
       ...exercise,
-      completed: true,
+      completed:
+        plannedSets > 0 ? nextSetLogs.length >= plannedSets : true,
       skipped: false,
       pain_score: nextSet.pain_score,
-      set_logs: [...(exercise.set_logs || []), nextSet],
+      set_logs: nextSetLogs,
     };
+
+    return updatedExercise;
   });
+
+  const restTarget = Math.max(
+    0,
+    safeNumber(updatedExercise?.rest_seconds || 60, 60)
+  );
 
   return recalcSessionStats({
     ...session,
     exercises: nextExercises,
-    rest_active: true,
+    rest_active: restTarget > 0,
+    rest_target_seconds: restTarget,
+    rest_remaining_seconds: restTarget,
+    current_rest_seconds: 0,
+    rest_started_at: restTarget > 0 ? nowIso() : "",
+    rest_completed_at: "",
+    rest_overrun_seconds: 0,
   });
 }
 
 export function updateExerciseField(session = {}, exerciseId, field, value) {
-  const safeExercises = Array.isArray(session.exercises)
+  const exercises = Array.isArray(session.exercises)
     ? session.exercises
     : [];
 
-  const nextExercises = safeExercises.map((exercise) => {
-    if (exercise.id !== exerciseId) return exercise;
-
-    return {
-      ...exercise,
-      [field]: value,
-    };
-  });
-
   return recalcSessionStats({
     ...session,
-    exercises: nextExercises,
+    exercises: exercises.map((exercise) =>
+      exercise.id === exerciseId
+        ? {
+            ...exercise,
+            [field]: value,
+          }
+        : exercise
+    ),
   });
 }
 
-export function updateSetField(session = {}, exerciseId, setId, field, value) {
-  const safeExercises = Array.isArray(session.exercises)
+export function updateSetField(
+  session = {},
+  exerciseId,
+  setId,
+  field,
+  value
+) {
+  const exercises = Array.isArray(session.exercises)
     ? session.exercises
     : [];
 
-  const nextExercises = safeExercises.map((exercise) => {
-    if (exercise.id !== exerciseId) return exercise;
-
-    return {
-      ...exercise,
-      set_logs: (exercise.set_logs || []).map((setLog) => {
-        if (setLog.id !== setId) return setLog;
-
-        return {
-          ...setLog,
-          [field]: value,
-        };
-      }),
-    };
-  });
-
   return recalcSessionStats({
     ...session,
-    exercises: nextExercises,
+    exercises: exercises.map((exercise) => {
+      if (exercise.id !== exerciseId) return exercise;
+
+      return {
+        ...exercise,
+        set_logs: (exercise.set_logs || []).map((setLog) =>
+          setLog.id === setId
+            ? {
+                ...setLog,
+                [field]: value,
+              }
+            : setLog
+        ),
+      };
+    }),
   });
 }
 
 export function removeSetFromExercise(session = {}, exerciseId, setId) {
-  const safeExercises = Array.isArray(session.exercises)
+  const exercises = Array.isArray(session.exercises)
     ? session.exercises
     : [];
 
-  const nextExercises = safeExercises.map((exercise) => {
-    if (exercise.id !== exerciseId) return exercise;
-
-    const nextSetLogs = (exercise.set_logs || []).filter(
-      (setLog) => setLog.id !== setId
-    );
-
-    return {
-      ...exercise,
-      completed: nextSetLogs.length > 0,
-      set_logs: nextSetLogs,
-    };
-  });
-
   return recalcSessionStats({
     ...session,
-    exercises: nextExercises,
+    exercises: exercises.map((exercise) => {
+      if (exercise.id !== exerciseId) return exercise;
+
+      const nextSetLogs = (exercise.set_logs || []).filter(
+        (setLog) => setLog.id !== setId
+      );
+
+      const plannedSets = plannedSetCount(exercise);
+
+      return {
+        ...exercise,
+        completed:
+          plannedSets > 0
+            ? nextSetLogs.length >= plannedSets
+            : nextSetLogs.length > 0,
+        set_logs: nextSetLogs,
+      };
+    }),
   });
 }
 
 export function markExerciseSkipped(session = {}, exerciseId) {
-  const safeExercises = Array.isArray(session.exercises)
+  const exercises = Array.isArray(session.exercises)
     ? session.exercises
     : [];
 
-  const nextExercises = safeExercises.map((exercise) => {
-    if (exercise.id !== exerciseId) return exercise;
-
-    return {
-      ...exercise,
-      skipped: !exercise.skipped,
-      completed: exercise.skipped ? exercise.completed : false,
-      set_logs: exercise.skipped ? exercise.set_logs || [] : [],
-    };
-  });
-
   return recalcSessionStats({
     ...session,
-    exercises: nextExercises,
-    rest_active: false,
+    exercises: exercises.map((exercise) => {
+      if (exercise.id !== exerciseId) return exercise;
+
+      const nextSkipped = !exercise.skipped;
+
+      return {
+        ...exercise,
+        skipped: nextSkipped,
+        completed: nextSkipped ? false : exercise.completed,
+      };
+    }),
     set_active: false,
     active_exercise_id: "",
     active_set_started_at: "",
     current_set_seconds: 0,
+    rest_active: false,
+    rest_remaining_seconds: 0,
   });
 }
 
-export function markExerciseSubstituted(session = {}, exerciseId, value = "") {
-  const safeExercises = Array.isArray(session.exercises)
+export function markExerciseSubstituted(
+  session = {},
+  exerciseId,
+  value = ""
+) {
+  const exercises = Array.isArray(session.exercises)
     ? session.exercises
     : [];
 
   const cleanValue = String(value || "").trim();
 
-  const nextExercises = safeExercises.map((exercise) => {
-    if (exercise.id !== exerciseId) return exercise;
-
-    return {
-      ...exercise,
-      substituted: !!cleanValue,
-      substitute_name: cleanValue,
-    };
-  });
-
   return recalcSessionStats({
     ...session,
-    exercises: nextExercises,
+    exercises: exercises.map((exercise) =>
+      exercise.id === exerciseId
+        ? {
+            ...exercise,
+            substituted: !!cleanValue,
+            substitute_name: cleanValue,
+          }
+        : exercise
+    ),
   });
 }
 
-function getAverage(numbers = []) {
-  const clean = numbers
+function average(numbers = []) {
+  const valid = numbers
     .map((value) => safeNumber(value, NaN))
     .filter((value) => Number.isFinite(value));
 
-  if (!clean.length) return "";
+  if (!valid.length) return "";
 
-  return Math.round((clean.reduce((sum, value) => sum + value, 0) / clean.length) * 10) / 10;
+  return (
+    Math.round(
+      (valid.reduce((sum, value) => sum + value, 0) / valid.length) * 10
+    ) / 10
+  );
 }
 
 export function recalcSessionStats(session = {}) {
-  const safeExercises = Array.isArray(session.exercises)
+  const exercises = Array.isArray(session.exercises)
     ? session.exercises
     : [];
 
-  const allSetLogs = safeExercises.flatMap((exercise) =>
+  const setLogs = exercises.flatMap((exercise) =>
     Array.isArray(exercise.set_logs) ? exercise.set_logs : []
   );
 
-  const completedSets = allSetLogs.length;
-
-  const skippedExercises = safeExercises.filter(
-    (exercise) => exercise.skipped
-  ).length;
-
-  const substitutedExercises = safeExercises.filter(
-    (exercise) => exercise.substituted
-  ).length;
-
-  const averageEaseScore = getAverage(
-    allSetLogs.map((setLog) => setLog.ease_score)
-  );
-
-  const averageSetSeconds =
-    allSetLogs.length > 0
-      ? Math.round(
-          allSetLogs.reduce(
-            (sum, setLog) => sum + safeNumber(setLog.set_duration_seconds),
-            0
-          ) / allSetLogs.length
-        )
-      : 0;
-
   return {
     ...session,
-    completed_sets: completedSets,
-    skipped_exercises: skippedExercises,
-    substituted_exercises: substitutedExercises,
-    average_ease_score: averageEaseScore,
-    average_set_seconds: averageSetSeconds,
+    completed_sets: setLogs.length,
+    skipped_exercises: exercises.filter((exercise) => exercise.skipped)
+      .length,
+    substituted_exercises: exercises.filter(
+      (exercise) => exercise.substituted
+    ).length,
+    average_ease_score: average(
+      setLogs.map((setLog) => setLog.ease_score)
+    ),
+    average_set_seconds: setLogs.length
+      ? Math.round(
+          setLogs.reduce(
+            (sum, setLog) =>
+              sum + safeNumber(setLog.set_duration_seconds),
+            0
+          ) / setLogs.length
+        )
+      : 0,
   };
 }
 
 export function validateWorkoutSessionForFinish(session = {}) {
-  const safeExercises = Array.isArray(session.exercises)
+  const exercises = Array.isArray(session.exercises)
     ? session.exercises
     : [];
 
   const missing = [];
   const warnings = [];
 
-  const untouchedExercises = safeExercises.filter(
+  const untouched = exercises.filter(
     (exercise) =>
       !exercise.skipped &&
-      !exercise.completed &&
-      (!Array.isArray(exercise.set_logs) || exercise.set_logs.length === 0)
-  );
-
-  const exercisesWithoutPain = safeExercises.filter(
-    (exercise) =>
-      !exercise.skipped &&
-      (exercise.pain_score === "" ||
-        exercise.pain_score === null ||
-        exercise.pain_score === undefined)
-  );
-
-  const exercisesWithoutDifficulty = safeExercises.filter(
-    (exercise) =>
-      !exercise.skipped &&
-      !String(exercise.difficulty_score || "").trim()
-  );
-
-  const setsWithoutEase = safeExercises.flatMap((exercise) =>
-    (exercise.set_logs || [])
-      .filter((setLog) => !String(setLog.ease_score || "").trim())
-      .map((setLog) => `${exercise.name} set ${setLog.set_number || ""}`.trim())
-  );
-
-  const setsWithoutDuration = safeExercises.flatMap((exercise) =>
-    (exercise.set_logs || [])
-      .filter((setLog) => safeNumber(setLog.set_duration_seconds) <= 0)
-      .map((setLog) => `${exercise.name} set ${setLog.set_number || ""}`.trim())
-  );
-
-  const substitutedWithoutName = safeExercises.filter(
-    (exercise) =>
-      exercise.substituted && !String(exercise.substitute_name || "").trim()
+      (!Array.isArray(exercise.set_logs) ||
+        exercise.set_logs.length === 0)
   );
 
   if (session.set_active) {
     missing.push({
       id: "active_set",
-      label: "A set is currently active. Complete or cancel it before finishing.",
+      label:
+        "A set is currently active. Complete the set before finishing.",
       severity: "important",
     });
   }
@@ -550,98 +706,28 @@ export function validateWorkoutSessionForFinish(session = {}) {
     });
   }
 
-  if (untouchedExercises.length > 0) {
+  if (untouched.length) {
     missing.push({
       id: "untouched_exercises",
-      label: `${untouchedExercises.length} exercise${
-        untouchedExercises.length === 1 ? "" : "s"
-      } still need sets logged or need to be marked skipped.`,
+      label: `${untouched.length} exercise${
+        untouched.length === 1 ? "" : "s"
+      } still need a set or need to be skipped.`,
       severity: "important",
-      items: untouchedExercises.map((exercise) => exercise.name),
+      items: untouched.map((exercise) => exercise.name),
     });
   }
 
   if (!String(session.energy_score || "").trim()) {
-    missing.push({
+    warnings.push({
       id: "energy",
       label: "Energy score is not filled out.",
-      severity: "normal",
     });
   }
 
   if (!String(session.soreness_score || "").trim()) {
-    missing.push({
+    warnings.push({
       id: "soreness",
       label: "Soreness score is not filled out.",
-      severity: "normal",
-    });
-  }
-
-  if (!String(session.difficulty_score || "").trim()) {
-    missing.push({
-      id: "difficulty",
-      label: "Overall difficulty score is not filled out.",
-      severity: "normal",
-    });
-  }
-
-  if (
-    session.pain_score === "" ||
-    session.pain_score === null ||
-    session.pain_score === undefined
-  ) {
-    missing.push({
-      id: "pain",
-      label: "Overall pain score is not filled out.",
-      severity: "normal",
-    });
-  }
-
-  if (setsWithoutEase.length > 0) {
-    warnings.push({
-      id: "set_ease",
-      label: `${setsWithoutEase.length} logged set${
-        setsWithoutEase.length === 1 ? "" : "s"
-      } do not have an ease score.`,
-      items: setsWithoutEase,
-    });
-  }
-
-  if (setsWithoutDuration.length > 0) {
-    warnings.push({
-      id: "set_duration",
-      label: `${setsWithoutDuration.length} logged set${
-        setsWithoutDuration.length === 1 ? "" : "s"
-      } do not have active set duration tracked.`,
-      items: setsWithoutDuration,
-    });
-  }
-
-  if (exercisesWithoutPain.length > 0) {
-    warnings.push({
-      id: "exercise_pain",
-      label: `${exercisesWithoutPain.length} exercise${
-        exercisesWithoutPain.length === 1 ? "" : "s"
-      } do not have pain scores.`,
-      items: exercisesWithoutPain.map((exercise) => exercise.name),
-    });
-  }
-
-  if (exercisesWithoutDifficulty.length > 0) {
-    warnings.push({
-      id: "exercise_difficulty",
-      label: `${exercisesWithoutDifficulty.length} exercise${
-        exercisesWithoutDifficulty.length === 1 ? "" : "s"
-      } do not have difficulty scores.`,
-      items: exercisesWithoutDifficulty.map((exercise) => exercise.name),
-    });
-  }
-
-  if (substitutedWithoutName.length > 0) {
-    warnings.push({
-      id: "substitution_name",
-      label: "A substituted exercise is missing the replacement name.",
-      items: substitutedWithoutName.map((exercise) => exercise.name),
     });
   }
 
@@ -649,22 +735,23 @@ export function validateWorkoutSessionForFinish(session = {}) {
     warnings.push({
       id: "notes",
       label:
-        "Workout notes are empty. A quick note helps the coach adjust your next plan.",
+        "Workout notes are empty. A quick note helps the coach adjust the next plan.",
     });
   }
 
   return {
-    canFinish: true,
+    canFinish: !session.set_active,
     missing,
     warnings,
     hasIssues: missing.length > 0 || warnings.length > 0,
-    importantCount: missing.filter((item) => item.severity === "important")
-      .length,
+    importantCount: missing.filter(
+      (item) => item.severity === "important"
+    ).length,
   };
 }
 
 export function formatSeconds(totalSeconds = 0) {
-  const total = Math.max(0, safeNumber(totalSeconds, 0));
+  const total = Math.max(0, Math.floor(safeNumber(totalSeconds, 0)));
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor((total % 3600) / 60);
   const seconds = total % 60;
@@ -679,15 +766,11 @@ export function formatSeconds(totalSeconds = 0) {
 }
 
 export function buildWorkoutSummary(session = {}) {
-  const safeExercises = Array.isArray(session.exercises)
+  const exercises = Array.isArray(session.exercises)
     ? session.exercises
     : [];
 
-  const completedExercises = safeExercises.filter(
-    (exercise) => exercise.completed
-  ).length;
-
-  const allSetLogs = safeExercises.flatMap((exercise) =>
+  const setLogs = exercises.flatMap((exercise) =>
     Array.isArray(exercise.set_logs) ? exercise.set_logs : []
   );
 
@@ -697,25 +780,32 @@ export function buildWorkoutSummary(session = {}) {
     finished_at: session.finished_at || "",
     saved_at: session.saved_at || "",
     edited_after_finish_at: session.edited_after_finish_at || "",
+
     total_seconds: safeNumber(session.total_seconds),
     active_seconds: safeNumber(session.active_seconds),
     rest_seconds: safeNumber(session.rest_seconds),
     idle_seconds: safeNumber(session.idle_seconds),
     longest_rest_seconds: safeNumber(session.longest_rest_seconds),
+
     completed_sets: safeNumber(session.completed_sets),
-    completed_exercises: completedExercises,
+    completed_exercises: exercises.filter(
+      (exercise) => exercise.completed
+    ).length,
     skipped_exercises: safeNumber(session.skipped_exercises),
-    substituted_exercises: safeNumber(session.substituted_exercises),
+    substituted_exercises: safeNumber(
+      session.substituted_exercises
+    ),
+
     average_ease_score: session.average_ease_score || "",
     average_set_seconds: safeNumber(session.average_set_seconds),
-    total_set_volume: allSetLogs.reduce((sum, setLog) => {
+
+    total_set_volume: setLogs.reduce((sum, setLog) => {
       const reps = safeNumber(setLog.reps);
       const weight = safeNumber(setLog.weight);
 
-      if (!reps || !weight) return sum;
-
-      return sum + reps * weight;
+      return reps && weight ? sum + reps * weight : sum;
     }, 0),
+
     pain_score: session.pain_score || "0",
     difficulty_score: session.difficulty_score || "Medium",
     energy_score: session.energy_score || "",
@@ -727,15 +817,15 @@ export function buildWorkoutSummary(session = {}) {
 function updatePlannerItemStatus(weekPlan = [], plannerItemId = "") {
   if (!Array.isArray(weekPlan)) return [];
 
-  return weekPlan.map((item) => {
-    if (!plannerItemId || item.id !== plannerItemId) return item;
-
-    return {
-      ...item,
-      status: "Completed",
-      completed_at: nowIso(),
-    };
-  });
+  return weekPlan.map((item) =>
+    plannerItemId && item.id === plannerItemId
+      ? {
+          ...item,
+          status: "Completed",
+          completed_at: nowIso(),
+        }
+      : item
+  );
 }
 
 export function finishWorkoutSession({
@@ -744,16 +834,11 @@ export function finishWorkoutSession({
   history = [],
 }) {
   const finishedSession = recalcSessionStats({
-    ...session,
+    ...stopRestTimer(stopActiveSet(session)),
     status: "completed",
     finished_at: session.finished_at || nowIso(),
     saved_at: nowIso(),
     paused: false,
-    rest_active: false,
-    set_active: false,
-    active_exercise_id: "",
-    active_set_started_at: "",
-    current_set_seconds: 0,
     review_acknowledged: true,
   });
 
@@ -772,22 +857,25 @@ export function finishWorkoutSession({
     session: finishedSession,
   };
 
-  const nextHistory = [historyEntry, ...(Array.isArray(history) ? history : [])];
-
-  const nextWeekPlan = updatePlannerItemStatus(
-    snapshot.week_plan,
-    finishedSession.planner_item_id
-  );
+  const nextHistory = [
+    historyEntry,
+    ...(Array.isArray(history) ? history : []),
+  ];
 
   const nextSnapshot = {
     ...snapshot,
-    week_plan: nextWeekPlan,
-    last_completed_workout: finishedSession.workout_name || "Workout",
+    week_plan: updatePlannerItemStatus(
+      snapshot.week_plan,
+      finishedSession.planner_item_id
+    ),
+    last_completed_workout:
+      finishedSession.workout_name || "Workout",
     last_completed_at: finishedSession.finished_at,
     last_workout_stats: summary,
     last_workout_session: finishedSession,
     weekly_completed: nextHistory.length,
-    completed_workouts: safeNumber(snapshot.completed_workouts) + 1,
+    completed_workouts:
+      safeNumber(snapshot.completed_workouts) + 1,
     updated_at: nowIso(),
   };
 
@@ -806,16 +894,11 @@ export function updateCompletedWorkoutSession({
   history = [],
 }) {
   const editedSession = recalcSessionStats({
-    ...session,
+    ...stopRestTimer(stopActiveSet(session)),
     status: "completed",
     edited_after_finish_at: nowIso(),
     saved_at: session.saved_at || nowIso(),
     paused: false,
-    rest_active: false,
-    set_active: false,
-    active_exercise_id: "",
-    active_set_started_at: "",
-    current_set_seconds: 0,
   });
 
   const summary = buildWorkoutSummary(editedSession);
@@ -823,18 +906,26 @@ export function updateCompletedWorkoutSession({
   const nextHistory = Array.isArray(history)
     ? history.map((item, index) => {
         const sameSession =
-          item?.session?.id && item.session.id === editedSession.id;
+          item?.session?.id &&
+          item.session.id === editedSession.id;
+
         const samePlanner =
           item?.planner_item_id &&
-          item.planner_item_id === editedSession.planner_item_id;
+          item.planner_item_id ===
+            editedSession.planner_item_id;
 
-        if (sameSession || (!sameSession && samePlanner && index === 0)) {
+        if (
+          sameSession ||
+          (!sameSession && samePlanner && index === 0)
+        ) {
           return {
             ...item,
-            workout_name: editedSession.workout_name || item.workout_name,
+            workout_name:
+              editedSession.workout_name || item.workout_name,
             summary,
             session: editedSession,
-            edited_after_finish_at: editedSession.edited_after_finish_at,
+            edited_after_finish_at:
+              editedSession.edited_after_finish_at,
           };
         }
 
@@ -844,7 +935,8 @@ export function updateCompletedWorkoutSession({
 
   const nextSnapshot = {
     ...snapshot,
-    last_completed_workout: editedSession.workout_name || "Workout",
+    last_completed_workout:
+      editedSession.workout_name || "Workout",
     last_completed_at: editedSession.finished_at,
     last_workout_stats: summary,
     last_workout_session: editedSession,
