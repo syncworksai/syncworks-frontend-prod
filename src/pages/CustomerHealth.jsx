@@ -11,6 +11,11 @@ import {
 } from "../api/customerHealth";
 
 import { buildHealthAchievements } from "../components/customer-health/healthAchievements";
+import {
+  countWorkoutsThisWeek,
+  ensureCurrentHealthDay,
+} from "../components/customer-health/healthDailyLifecycle";
+
 import HealthConfetti from "../components/customer-health/HealthConfetti";
 import TodayPlanDrawer from "../components/customer-health/TodayPlanDrawer";
 import HealthDashboard from "../components/customer-health/HealthDashboard";
@@ -23,11 +28,13 @@ import CoachChatDrawer from "../components/customer-health/CoachChatDrawer";
 import ActiveWorkoutSessionDrawer from "../components/customer-health/ActiveWorkoutSessionDrawer";
 import HealthMobileQuickNav from "../components/customer-health/HealthMobileQuickNav";
 import SleepPlannerDrawer from "../components/customer-health/SleepPlannerDrawer";
+
 import {
   NutritionDrawer,
   ProgressDrawer,
   StepsDrawer,
 } from "../components/customer-health/MetricDrawers";
+
 import {
   DevicesDrawer,
   SynopsisDrawer,
@@ -73,6 +80,7 @@ function findNextPlanned(weekPlan = []) {
   const safeWeekPlan = Array.isArray(weekPlan) ? weekPlan : [];
 
   const today = new Date();
+
   const startOfToday = new Date(
     today.getFullYear(),
     today.getMonth(),
@@ -102,6 +110,7 @@ function asYmd(date) {
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   const dd = String(date.getDate()).padStart(2, "0");
+
   return `${yyyy}-${mm}-${dd}`;
 }
 
@@ -121,25 +130,55 @@ function convertCoachWorkoutToPlannerItem(workout, index = 0) {
   const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return {
-    id: workout?.planner_id || workout?.id || uid("coach-plan"),
-    ymd: workout?.ymd || asYmd(date),
-    day_label: workout?.day_label || names[date.getDay()],
-    workout_id: workout?.workout_id || workout?.id || "",
-    workout_name: normalizeCoachWorkoutName(workout),
-    time: workout?.time || "06:00",
+    id:
+      workout?.planner_id ||
+      workout?.id ||
+      uid("coach-plan"),
+
+    ymd:
+      workout?.ymd ||
+      asYmd(date),
+
+    day_label:
+      workout?.day_label ||
+      names[date.getDay()],
+
+    workout_id:
+      workout?.workout_id ||
+      workout?.id ||
+      "",
+
+    workout_name:
+      normalizeCoachWorkoutName(workout),
+
+    time:
+      workout?.time ||
+      "06:00",
+
     status:
       workout?.status === "added_to_planner"
         ? "Planned"
         : workout?.status || "Planned",
+
     note:
       workout?.note ||
       workout?.focus ||
       "Built by SyncWorks AI Fitness Coach",
+
     source: "coach_chat",
-    duration_minutes: workout?.duration_minutes || "",
-    exercises: Array.isArray(workout?.exercises) ? workout.exercises : [],
+
+    duration_minutes:
+      workout?.duration_minutes ||
+      "",
+
+    exercises:
+      Array.isArray(workout?.exercises)
+        ? workout.exercises
+        : [],
+
     added_to_planner_at:
-      workout?.added_to_planner_at || new Date().toISOString(),
+      workout?.added_to_planner_at ||
+      new Date().toISOString(),
   };
 }
 
@@ -168,7 +207,9 @@ function normalizeHealthSnapshot(nextSnapshot) {
 
   return {
     ...safeSnapshot,
-    week_plan: normalizeWeekPlanForDashboard(safeSnapshot.week_plan),
+    week_plan: normalizeWeekPlanForDashboard(
+      safeSnapshot.week_plan
+    ),
   };
 }
 
@@ -182,11 +223,20 @@ function SyncStatusPill({ status }) {
   };
 
   const styles = {
-    local: "border-slate-700 bg-slate-950 text-slate-300",
-    loading: "border-cyan-500/25 bg-cyan-500/10 text-cyan-100",
-    syncing: "border-amber-500/25 bg-amber-500/10 text-amber-100",
-    saved: "border-emerald-500/25 bg-emerald-500/10 text-emerald-100",
-    error: "border-rose-500/25 bg-rose-500/10 text-rose-100",
+    local:
+      "border-slate-700 bg-slate-950 text-slate-300",
+
+    loading:
+      "border-cyan-500/25 bg-cyan-500/10 text-cyan-100",
+
+    syncing:
+      "border-amber-500/25 bg-amber-500/10 text-amber-100",
+
+    saved:
+      "border-emerald-500/25 bg-emerald-500/10 text-emerald-100",
+
+    error:
+      "border-rose-500/25 bg-rose-500/10 text-rose-100",
   };
 
   return (
@@ -257,7 +307,10 @@ function HealthSignupScreen({ onBack }) {
               </div>
 
               <div className="mt-3 flex items-end gap-2">
-                <div className="text-5xl font-black text-white">$2.99</div>
+                <div className="text-5xl font-black text-white">
+                  $2.99
+                </div>
+
                 <div className="pb-2 text-sm font-semibold text-slate-400">
                   / month
                 </div>
@@ -351,7 +404,9 @@ export default function CustomerHealth() {
   const [syncStatus, setSyncStatus] = useState("local");
   const [cloudLoaded, setCloudLoaded] = useState(false);
   const [celebration, setCelebration] = useState(null);
-  const [activePlannerItem, setActivePlannerItem] = useState(null);
+
+  const [activePlannerItem, setActivePlannerItem] =
+    useState(null);
 
   const skipNextCloudSaveRef = useRef(false);
   const achievedMilestoneIdsRef = useRef(new Set());
@@ -361,20 +416,40 @@ export default function CustomerHealth() {
     ...(readJson(PROFILE_KEY, null) || {}),
   }));
 
-  const [snapshot, setSnapshotBase] = useState(() =>
-    normalizeHealthSnapshot({
+  const [snapshot, setSnapshotBase] = useState(() => {
+    const savedHistory = readJson(HISTORY_KEY, []);
+
+    const initialSnapshot = normalizeHealthSnapshot({
       ...defaultSnapshot(),
       ...(readJson(SNAPSHOT_KEY, null) || {}),
-    })
-  );
+    });
+
+    const lifecycle = ensureCurrentHealthDay({
+      snapshot: initialSnapshot,
+      history: Array.isArray(savedHistory)
+        ? savedHistory
+        : [],
+    });
+
+    return normalizeHealthSnapshot(
+      lifecycle.snapshot
+    );
+  });
 
   function setSnapshot(nextValue) {
     if (typeof nextValue === "function") {
-      setSnapshotBase((prev) => normalizeHealthSnapshot(nextValue(prev)));
+      setSnapshotBase((previous) =>
+        normalizeHealthSnapshot(
+          nextValue(previous)
+        )
+      );
+
       return;
     }
 
-    setSnapshotBase(normalizeHealthSnapshot(nextValue));
+    setSnapshotBase(
+      normalizeHealthSnapshot(nextValue)
+    );
   }
 
   const [workouts, setWorkouts] = useState(() => {
@@ -383,7 +458,9 @@ export default function CustomerHealth() {
     if (Array.isArray(saved) && saved.length) {
       return saved.map((workout) => ({
         ...workout,
-        exercises: Array.isArray(workout.exercises) ? workout.exercises : [],
+        exercises: Array.isArray(workout.exercises)
+          ? workout.exercises
+          : [],
       }));
     }
 
@@ -392,82 +469,227 @@ export default function CustomerHealth() {
 
   const [history, setHistory] = useState(() => {
     const saved = readJson(HISTORY_KEY, []);
-    return Array.isArray(saved) ? saved : [];
+
+    return Array.isArray(saved)
+      ? saved
+      : [];
   });
 
   const [progressLogs, setProgressLogs] = useState(() => {
     const saved = readJson(PROGRESS_KEY, []);
-    return Array.isArray(saved) ? saved : [];
+
+    return Array.isArray(saved)
+      ? saved
+      : [];
   });
 
   const [devices, setDevices] = useState(() => {
     const saved = readJson(DEVICE_KEY, null);
-    return Array.isArray(saved) && saved.length ? saved : defaultDevices();
+
+    return Array.isArray(saved) && saved.length
+      ? saved
+      : defaultDevices();
   });
 
   useEffect(() => {
-    setSnapshot((prev) => {
-      if (Array.isArray(prev.week_plan) && prev.week_plan.length) return prev;
+    function runDailyLifecycle() {
+      setSnapshotBase((previous) => {
+        const lifecycle = ensureCurrentHealthDay({
+          snapshot: previous,
+          history,
+        });
 
-      const starterPlan = buildStarterWeekPlan(workouts);
+        const next = normalizeHealthSnapshot(
+          lifecycle.snapshot
+        );
+
+        const dailyCountChanged =
+          Number(previous.daily_workout_count || 0) !==
+          Number(next.daily_workout_count || 0);
+
+        const dailyCompletionChanged =
+          !!previous.workout_completed_today !==
+          !!next.workout_completed_today;
+
+        if (
+          !lifecycle.changed &&
+          !dailyCountChanged &&
+          !dailyCompletionChanged
+        ) {
+          return previous;
+        }
+
+        return next;
+      });
+    }
+
+    runDailyLifecycle();
+
+    const timer = window.setInterval(
+      runDailyLifecycle,
+      60 * 1000
+    );
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        runDailyLifecycle();
+      }
+    }
+
+    window.addEventListener(
+      "focus",
+      runDailyLifecycle
+    );
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange
+    );
+
+    return () => {
+      window.clearInterval(timer);
+
+      window.removeEventListener(
+        "focus",
+        runDailyLifecycle
+      );
+
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange
+      );
+    };
+  }, [history]);
+
+  useEffect(() => {
+    setSnapshot((previous) => {
+      if (
+        Array.isArray(previous.week_plan) &&
+        previous.week_plan.length
+      ) {
+        return previous;
+      }
+
+      const starterPlan =
+        buildStarterWeekPlan(workouts);
 
       return {
-        ...prev,
-        week_plan: starterPlan,
-        planned_workouts: starterPlan.filter((item) => item.workout_name)
-          .length,
+        ...previous,
+
+        week_plan:
+          starterPlan,
+
+        planned_workouts:
+          starterPlan.filter(
+            (item) => item.workout_name
+          ).length,
       };
     });
   }, [workouts]);
 
   const syncedSnapshot = useMemo(() => {
-    const weekPlan = normalizeWeekPlanForDashboard(snapshot.week_plan);
-    const nextSession = findNextPlanned(weekPlan);
+    const weekPlan =
+      normalizeWeekPlanForDashboard(
+        snapshot.week_plan
+      );
+
+    const nextSession =
+      findNextPlanned(weekPlan);
 
     return {
       ...snapshot,
-      week_plan: weekPlan,
-      workout: snapshot.workout || "",
-      goal: profile.primary_goal || snapshot.goal || "General fitness",
+
+      week_plan:
+        weekPlan,
+
+      workout:
+        snapshot.workout ||
+        "",
+
+      goal:
+        profile.primary_goal ||
+        snapshot.goal ||
+        "General fitness",
+
       equipment:
-        snapshot.equipment || profile.preferred_equipment || "Bodyweight",
-      weekly_completed: history.length,
-      progress_count: progressLogs.length,
-      planned_workouts: weekPlan.filter((item) => item?.workout_name).length,
-      device_status: devices.some((x) => x.status === "Selected for Sync")
-        ? "Device selected"
-        : "Manual tracking active",
-      next_session_note: nextSession
-        ? `${nextSession.day_label} • ${
-            nextSession.time || "Anytime"
-          } • ${nextSession.workout_name}`
-        : "",
-      updated_at: new Date().toISOString(),
+        snapshot.equipment ||
+        profile.preferred_equipment ||
+        "Bodyweight",
+
+      weekly_completed:
+        countWorkoutsThisWeek(history),
+
+      progress_count:
+        progressLogs.length,
+
+      planned_workouts:
+        weekPlan.filter(
+          (item) => item?.workout_name
+        ).length,
+
+      device_status:
+        devices.some(
+          (item) =>
+            item.status === "Selected for Sync"
+        )
+          ? "Device selected"
+          : "Manual tracking active",
+
+      next_session_note:
+        nextSession
+          ? `${nextSession.day_label} • ${
+              nextSession.time || "Anytime"
+            } • ${nextSession.workout_name}`
+          : "",
+
+      updated_at:
+        new Date().toISOString(),
     };
-  }, [snapshot, profile, history.length, progressLogs.length, devices]);
+  }, [
+    snapshot,
+    profile,
+    history,
+    progressLogs.length,
+    devices,
+  ]);
 
   useEffect(() => {
     writeJson(PROFILE_KEY, profile);
   }, [profile]);
 
   useEffect(() => {
-    writeJson(SNAPSHOT_KEY, syncedSnapshot);
+    writeJson(
+      SNAPSHOT_KEY,
+      syncedSnapshot
+    );
   }, [syncedSnapshot]);
 
   useEffect(() => {
-    writeJson(WORKOUTS_KEY, workouts);
+    writeJson(
+      WORKOUTS_KEY,
+      workouts
+    );
   }, [workouts]);
 
   useEffect(() => {
-    writeJson(HISTORY_KEY, history);
+    writeJson(
+      HISTORY_KEY,
+      history
+    );
   }, [history]);
 
   useEffect(() => {
-    writeJson(PROGRESS_KEY, progressLogs);
+    writeJson(
+      PROGRESS_KEY,
+      progressLogs
+    );
   }, [progressLogs]);
 
   useEffect(() => {
-    writeJson(DEVICE_KEY, devices);
+    writeJson(
+      DEVICE_KEY,
+      devices
+    );
   }, [devices]);
 
   useEffect(() => {
@@ -483,55 +705,116 @@ export default function CustomerHealth() {
       setSyncStatus("loading");
 
       try {
-        const data = await getCustomerHealthProfile();
+        const data =
+          await getCustomerHealthProfile();
 
         if (!mounted) return;
 
         skipNextCloudSaveRef.current = true;
 
-        if (hasObjectData(data?.profile_json)) {
-          setProfile((prev) => ({
+        const cloudHistory =
+          Array.isArray(data?.history_json)
+            ? data.history_json
+            : history;
+
+        if (
+          hasObjectData(data?.profile_json)
+        ) {
+          setProfile((previous) => ({
             ...defaultProfile(),
-            ...prev,
+            ...previous,
             ...data.profile_json,
           }));
         }
 
-        if (hasObjectData(data?.snapshot_json)) {
-          setSnapshot((prev) => ({
-            ...defaultSnapshot(),
-            ...prev,
-            ...data.snapshot_json,
-          }));
+        if (
+          hasObjectData(data?.snapshot_json)
+        ) {
+          setSnapshotBase((previous) => {
+            const mergedSnapshot =
+              normalizeHealthSnapshot({
+                ...defaultSnapshot(),
+                ...previous,
+                ...data.snapshot_json,
+              });
+
+            const lifecycle =
+              ensureCurrentHealthDay({
+                snapshot:
+                  mergedSnapshot,
+
+                history:
+                  cloudHistory,
+              });
+
+            return normalizeHealthSnapshot(
+              lifecycle.snapshot
+            );
+          });
+        } else {
+          setSnapshotBase((previous) => {
+            const lifecycle =
+              ensureCurrentHealthDay({
+                snapshot: previous,
+                history: cloudHistory,
+              });
+
+            return normalizeHealthSnapshot(
+              lifecycle.snapshot
+            );
+          });
         }
 
-        if (hasArrayData(data?.workouts_json)) {
+        if (
+          hasArrayData(data?.workouts_json)
+        ) {
           setWorkouts(
-            data.workouts_json.map((workout) => ({
-              ...workout,
-              exercises: Array.isArray(workout.exercises)
-                ? workout.exercises
-                : [],
-            }))
+            data.workouts_json.map(
+              (workout) => ({
+                ...workout,
+
+                exercises:
+                  Array.isArray(
+                    workout.exercises
+                  )
+                    ? workout.exercises
+                    : [],
+              })
+            )
           );
         }
 
-        if (Array.isArray(data?.history_json)) {
-          setHistory(data.history_json);
+        if (
+          Array.isArray(data?.history_json)
+        ) {
+          setHistory(
+            data.history_json
+          );
         }
 
-        if (Array.isArray(data?.progress_json)) {
-          setProgressLogs(data.progress_json);
+        if (
+          Array.isArray(data?.progress_json)
+        ) {
+          setProgressLogs(
+            data.progress_json
+          );
         }
 
-        if (hasArrayData(data?.devices_json)) {
-          setDevices(data.devices_json);
+        if (
+          hasArrayData(data?.devices_json)
+        ) {
+          setDevices(
+            data.devices_json
+          );
         }
 
         setCloudLoaded(true);
         setSyncStatus("saved");
-      } catch (err) {
-        console.error("Failed to load customer health cloud profile", err);
+      } catch (error) {
+        console.error(
+          "Failed to load customer health cloud profile",
+          error
+        );
 
         if (!mounted) return;
 
@@ -548,34 +831,56 @@ export default function CustomerHealth() {
   }, [hasHealthAccess]);
 
   useEffect(() => {
-    if (!hasHealthAccess || !cloudLoaded) return;
+    if (
+      !hasHealthAccess ||
+      !cloudLoaded
+    ) {
+      return;
+    }
 
     if (skipNextCloudSaveRef.current) {
       skipNextCloudSaveRef.current = false;
       return;
     }
 
-    const timer = window.setTimeout(async () => {
-      setSyncStatus("syncing");
+    const timer =
+      window.setTimeout(async () => {
+        setSyncStatus("syncing");
 
-      try {
-        await patchCustomerHealthProfile({
-          profile_json: profile,
-          snapshot_json: syncedSnapshot,
-          workouts_json: workouts,
-          history_json: history,
-          progress_json: progressLogs,
-          devices_json: devices,
-        });
+        try {
+          await patchCustomerHealthProfile({
+            profile_json:
+              profile,
 
-        setSyncStatus("saved");
-      } catch (err) {
-        console.error("Failed to save customer health cloud profile", err);
-        setSyncStatus("error");
-      }
-    }, 900);
+            snapshot_json:
+              syncedSnapshot,
 
-    return () => window.clearTimeout(timer);
+            workouts_json:
+              workouts,
+
+            history_json:
+              history,
+
+            progress_json:
+              progressLogs,
+
+            devices_json:
+              devices,
+          });
+
+          setSyncStatus("saved");
+        } catch (error) {
+          console.error(
+            "Failed to save customer health cloud profile",
+            error
+          );
+
+          setSyncStatus("error");
+        }
+      }, 900);
+
+    return () =>
+      window.clearTimeout(timer);
   }, [
     hasHealthAccess,
     cloudLoaded,
@@ -590,26 +895,45 @@ export default function CustomerHealth() {
   useEffect(() => {
     if (!hasHealthAccess) return;
 
-    const achievements = buildHealthAchievements({
-      profile,
-      snapshot: syncedSnapshot,
-      history,
-      progressLogs,
-    });
+    const achievements =
+      buildHealthAchievements({
+        profile,
+        snapshot:
+          syncedSnapshot,
+        history,
+        progressLogs,
+      });
 
-    for (const item of achievements.achieved) {
-      if (!achievedMilestoneIdsRef.current.has(item.id)) {
-        achievedMilestoneIdsRef.current.add(item.id);
+    for (
+      const item of achievements.achieved
+    ) {
+      if (
+        !achievedMilestoneIdsRef.current.has(
+          item.id
+        )
+      ) {
+        achievedMilestoneIdsRef.current.add(
+          item.id
+        );
 
-        const seenKey = `sw_health_milestone_seen_${item.id}_${todayYmd()}`;
-        const seenToday = localStorage.getItem(seenKey);
+        const seenKey =
+          `sw_health_milestone_seen_${item.id}_${todayYmd()}`;
+
+        const seenToday =
+          localStorage.getItem(seenKey);
 
         if (!seenToday) {
-          localStorage.setItem(seenKey, "1");
+          localStorage.setItem(
+            seenKey,
+            "1"
+          );
 
           setCelebration({
-            title: `${item.icon} ${item.label}`,
-            subtitle: item.description,
+            title:
+              `${item.icon} ${item.label}`,
+
+            subtitle:
+              item.description,
           });
 
           break;
@@ -617,55 +941,111 @@ export default function CustomerHealth() {
       }
     }
 
-    for (const item of achievements.achieved) {
-      achievedMilestoneIdsRef.current.add(item.id);
+    for (
+      const item of achievements.achieved
+    ) {
+      achievedMilestoneIdsRef.current.add(
+        item.id
+      );
     }
-  }, [hasHealthAccess, profile, syncedSnapshot, history, progressLogs]);
+  }, [
+    hasHealthAccess,
+    profile,
+    syncedSnapshot,
+    history,
+    progressLogs,
+  ]);
 
   function addExerciseFromLibrary(exercise) {
-    setWorkouts((prev) => {
-      const targetId = snapshot.today_workout_id || prev[0]?.id;
+    setWorkouts((previous) => {
+      const targetId =
+        snapshot.today_workout_id ||
+        previous[0]?.id;
 
       if (!targetId) {
         return [
           {
-            id: uid("w"),
-            name: "Custom Workout",
-            duration: "30",
-            focus: exercise.group,
-            status: "Planned",
+            id:
+              uid("w"),
+
+            name:
+              "Custom Workout",
+
+            duration:
+              "30",
+
+            focus:
+              exercise.group,
+
+            status:
+              "Planned",
+
             exercises: [
               {
-                name: exercise.name,
-                sets: "3",
-                reps: "10",
-                weight: "",
-                rest: "60 sec",
-                notes: `Focus: ${exercise.feel}`,
-                difficulty: "Medium",
-                pain: "0",
+                name:
+                  exercise.name,
+
+                sets:
+                  "3",
+
+                reps:
+                  "10",
+
+                weight:
+                  "",
+
+                rest:
+                  "60 sec",
+
+                notes:
+                  `Focus: ${exercise.feel}`,
+
+                difficulty:
+                  "Medium",
+
+                pain:
+                  "0",
               },
             ],
           },
         ];
       }
 
-      return prev.map((workout) => {
-        if (workout.id !== targetId) return workout;
+      return previous.map((workout) => {
+        if (workout.id !== targetId) {
+          return workout;
+        }
 
         return {
           ...workout,
+
           exercises: [
             ...(workout.exercises || []),
+
             {
-              name: exercise.name,
-              sets: "3",
-              reps: "10",
-              weight: "",
-              rest: "60 sec",
-              notes: `Focus: ${exercise.feel}`,
-              difficulty: "Medium",
-              pain: "0",
+              name:
+                exercise.name,
+
+              sets:
+                "3",
+
+              reps:
+                "10",
+
+              weight:
+                "",
+
+              rest:
+                "60 sec",
+
+              notes:
+                `Focus: ${exercise.feel}`,
+
+              difficulty:
+                "Medium",
+
+              pain:
+                "0",
             },
           ],
         };
@@ -682,34 +1062,55 @@ export default function CustomerHealth() {
   function startPlannerWorkout(plannerItem) {
     if (!plannerItem) return;
 
-    setActivePlannerItem(plannerItem);
-    setDrawer("active-workout");
+    setActivePlannerItem(
+      plannerItem
+    );
+
+    setDrawer(
+      "active-workout"
+    );
   }
 
-  const mobileNextSession = findNextPlanned(syncedSnapshot.week_plan);
-  const hasCoachProposal = !!syncedSnapshot?.coach_plan_proposal;
+  const mobileNextSession =
+    findNextPlanned(
+      syncedSnapshot.week_plan
+    );
+
+  const hasCoachProposal =
+    !!syncedSnapshot?.coach_plan_proposal;
 
   return (
     <div className="min-h-dvh overflow-x-hidden bg-[#020617] pb-24 text-slate-100 lg:pb-0">
       <div className="pointer-events-none fixed inset-0">
         <div className="absolute inset-0 bg-[#020617]" />
+
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,0.12),transparent_30%),radial-gradient(circle_at_top_right,rgba(34,211,238,0.10),transparent_32%),radial-gradient(circle_at_bottom,rgba(99,102,241,0.12),transparent_38%)]" />
       </div>
 
       <ModeBar
         title="Health"
+
         subtitle={
           hasHealthAccess
             ? "Dashboard • planner • active workouts • nutrition • progress • AI coach"
             : "30 days free • $2.99/month after"
         }
+
         rightActions={
           <div className="flex items-center gap-2">
-            {hasHealthAccess ? <SyncStatusPill status={syncStatus} /> : null}
+            {hasHealthAccess ? (
+              <SyncStatusPill
+                status={syncStatus}
+              />
+            ) : null}
 
             <button
               type="button"
-              onClick={() => nav("/customer")}
+
+              onClick={() =>
+                nav("/customer")
+              }
+
               className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs hover:bg-slate-900"
             >
               Back
@@ -721,7 +1122,10 @@ export default function CustomerHealth() {
       <main
         className={cx(
           "relative mx-auto px-3 pb-16 pt-4 sm:px-5 lg:pb-12",
-          hasHealthAccess ? "max-w-7xl" : "max-w-5xl"
+
+          hasHealthAccess
+            ? "max-w-7xl"
+            : "max-w-5xl"
         )}
       >
         {hasHealthAccess ? (
@@ -733,10 +1137,16 @@ export default function CustomerHealth() {
             progressLogs={progressLogs}
             devices={devices}
             onOpen={setDrawer}
-            onStartWorkout={startPlannerWorkout}
+            onStartWorkout={
+              startPlannerWorkout
+            }
           />
         ) : (
-          <HealthSignupScreen onBack={() => nav("/customer")} />
+          <HealthSignupScreen
+            onBack={() =>
+              nav("/customer")
+            }
+          />
         )}
       </main>
 
@@ -744,7 +1154,9 @@ export default function CustomerHealth() {
         <>
           <TodayPlanDrawer
             open={drawer === "today"}
-            onClose={() => setDrawer("")}
+            onClose={() =>
+              setDrawer("")
+            }
             profile={profile}
             snapshot={syncedSnapshot}
             workouts={workouts}
@@ -754,15 +1166,21 @@ export default function CustomerHealth() {
 
           <HealthPlannerDrawer
             open={drawer === "planner"}
-            onClose={() => setDrawer("")}
+            onClose={() =>
+              setDrawer("")
+            }
             snapshot={syncedSnapshot}
             setSnapshot={setSnapshot}
             workouts={workouts}
           />
 
           <QuestionnaireDrawer
-            open={drawer === "questionnaire"}
-            onClose={() => setDrawer("")}
+            open={
+              drawer === "questionnaire"
+            }
+            onClose={() =>
+              setDrawer("")
+            }
             profile={profile}
             setProfile={setProfile}
             snapshot={snapshot}
@@ -771,7 +1189,9 @@ export default function CustomerHealth() {
 
           <WorkoutStudioDrawer
             open={drawer === "workout"}
-            onClose={() => setDrawer("")}
+            onClose={() =>
+              setDrawer("")
+            }
             profile={profile}
             snapshot={syncedSnapshot}
             setSnapshot={setSnapshot}
@@ -783,38 +1203,52 @@ export default function CustomerHealth() {
 
           <ExerciseLibraryDrawer
             open={drawer === "library"}
-            onClose={() => setDrawer("")}
-            onAddExercise={addExerciseFromLibrary}
+            onClose={() =>
+              setDrawer("")
+            }
+            onAddExercise={
+              addExerciseFromLibrary
+            }
           />
 
           <NutritionDrawer
             open={drawer === "nutrition"}
-            onClose={() => setDrawer("")}
+            onClose={() =>
+              setDrawer("")
+            }
             snapshot={syncedSnapshot}
             setSnapshot={setSnapshot}
           />
 
           <StepsDrawer
             open={drawer === "steps"}
-            onClose={() => setDrawer("")}
+            onClose={() =>
+              setDrawer("")
+            }
             snapshot={syncedSnapshot}
             setSnapshot={setSnapshot}
           />
 
           <ProgressDrawer
             open={drawer === "progress"}
-            onClose={() => setDrawer("")}
+            onClose={() =>
+              setDrawer("")
+            }
             snapshot={syncedSnapshot}
             setSnapshot={setSnapshot}
             progressLogs={progressLogs}
-            setProgressLogs={setProgressLogs}
+            setProgressLogs={
+              setProgressLogs
+            }
             history={history}
             setHistory={setHistory}
           />
 
           <SynopsisDrawer
             open={drawer === "synopsis"}
-            onClose={() => setDrawer("")}
+            onClose={() =>
+              setDrawer("")
+            }
             snapshot={syncedSnapshot}
             profile={profile}
             history={history}
@@ -822,7 +1256,9 @@ export default function CustomerHealth() {
 
           <AiCoachDrawer
             open={drawer === "coach"}
-            onClose={() => setDrawer("")}
+            onClose={() =>
+              setDrawer("")
+            }
             profile={profile}
             snapshot={syncedSnapshot}
             workouts={workouts}
@@ -832,17 +1268,29 @@ export default function CustomerHealth() {
           />
 
           <CoachChatDrawer
-            open={drawer === "coach-chat"}
-            onClose={() => setDrawer("")}
+            open={
+              drawer === "coach-chat"
+            }
+            onClose={() =>
+              setDrawer("")
+            }
             snapshot={syncedSnapshot}
             setSnapshot={setSnapshot}
-            onOpenQuestionnaire={openQuestionnaireFromCoach}
+            onOpenQuestionnaire={
+              openQuestionnaireFromCoach
+            }
           />
 
           <ActiveWorkoutSessionDrawer
-            open={drawer === "active-workout"}
-            onClose={() => setDrawer("")}
-            plannerItem={activePlannerItem}
+            open={
+              drawer === "active-workout"
+            }
+            onClose={() =>
+              setDrawer("")
+            }
+            plannerItem={
+              activePlannerItem
+            }
             workouts={workouts}
             snapshot={syncedSnapshot}
             setSnapshot={setSnapshot}
@@ -852,14 +1300,18 @@ export default function CustomerHealth() {
 
           <DevicesDrawer
             open={drawer === "devices"}
-            onClose={() => setDrawer("")}
+            onClose={() =>
+              setDrawer("")
+            }
             devices={devices}
             setDevices={setDevices}
           />
 
           <SleepPlannerDrawer
             open={drawer === "sleep"}
-            onClose={() => setDrawer("")}
+            onClose={() =>
+              setDrawer("")
+            }
             profile={profile}
             setProfile={setProfile}
             snapshot={syncedSnapshot}
@@ -868,9 +1320,15 @@ export default function CustomerHealth() {
 
           <HealthMobileQuickNav
             onOpen={setDrawer}
-            onStartWorkout={startPlannerWorkout}
-            nextSession={mobileNextSession}
-            hasCoachProposal={hasCoachProposal}
+            onStartWorkout={
+              startPlannerWorkout
+            }
+            nextSession={
+              mobileNextSession
+            }
+            hasCoachProposal={
+              hasCoachProposal
+            }
           />
         </>
       ) : null}
@@ -879,7 +1337,9 @@ export default function CustomerHealth() {
         active={!!celebration}
         title={celebration?.title}
         subtitle={celebration?.subtitle}
-        onDone={() => setCelebration(null)}
+        onDone={() =>
+          setCelebration(null)
+        }
       />
     </div>
   );

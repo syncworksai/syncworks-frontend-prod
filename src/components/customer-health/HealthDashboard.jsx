@@ -15,6 +15,11 @@ import {
 
 import { formatSeconds } from "./healthWorkoutSession";
 
+import {
+  countWorkoutsThisWeek,
+  localYmd,
+} from "./healthDailyLifecycle";
+
 const SEEQ_AFFILIATE_URL = "https://www.seeqsupply.com/JACOB78279";
 
 const WEWARD_AFFILIATE_URL =
@@ -28,6 +33,14 @@ const QUOTES = [
   "Hit the protein. Hit the steps. The body follows.",
   "Train for the goal, not just the mood.",
 ];
+
+function formatTodayLabel() {
+  return new Date().toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
 
 function Card({ className = "", children }) {
   return (
@@ -495,11 +508,7 @@ export default function HealthDashboard({
 
   const weeklyCompleted = Math.max(
     0,
-    safeNumber(
-      snapshot?.weekly_completed ||
-        history?.length ||
-        0
-    )
+    countWorkoutsThisWeek(history)
   );
 
   const weekPlan = Array.isArray(snapshot?.week_plan)
@@ -579,6 +588,10 @@ export default function HealthDashboard({
                   SyncWorks Health
                 </span>
 
+                <span className="rounded-full border border-blue-500/25 bg-blue-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-blue-100">
+                  {formatTodayLabel()}
+                </span>
+
                 <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100">
                   {snapshot?.readiness || "Moderate"}
                 </span>
@@ -595,7 +608,7 @@ export default function HealthDashboard({
 
                 <div className="min-w-0">
                   <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
-                    Today’s Mission
+                    Today’s Mission • {localYmd()}
                   </div>
 
                   <h1 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl md:text-4xl">
