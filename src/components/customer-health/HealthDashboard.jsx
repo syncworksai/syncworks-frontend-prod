@@ -1,7 +1,10 @@
 // src/components/customer-health/HealthDashboard.jsx
 import React, { useEffect, useMemo, useState } from "react";
+
 import HealthMomentumCard from "./HealthMomentumCard";
+import HealthKpiSection from "./HealthKpiSection";
 import SleepPlanCard from "./SleepPlanCard";
+
 import {
   clampPercent,
   cx,
@@ -9,16 +12,18 @@ import {
   readinessSuggestion,
   safeNumber,
 } from "./healthStorage";
+
 import { formatSeconds } from "./healthWorkoutSession";
 
 const SEEQ_AFFILIATE_URL = "https://www.seeqsupply.com/JACOB78279";
+
 const WEWARD_AFFILIATE_URL =
   "https://wewardapp.go.link/profile?adj_t=1rg2xpwh&userId=22865998";
 
 const QUOTES = [
   "Consistency beats intensity you can’t repeat.",
   "You do not need a perfect week. You need to win today.",
-  "Short workout > skipped workout.",
+  "Short workout beats a skipped workout.",
   "Momentum matters more than motivation.",
   "Hit the protein. Hit the steps. The body follows.",
   "Train for the goal, not just the mood.",
@@ -39,10 +44,14 @@ function Card({ className = "", children }) {
 
 function StatPill({ label, value, tone = "cyan" }) {
   const toneMap = {
-    cyan: "border-cyan-500/25 bg-cyan-500/10 text-cyan-100",
-    emerald: "border-emerald-500/25 bg-emerald-500/10 text-emerald-100",
-    amber: "border-amber-500/25 bg-amber-500/10 text-amber-100",
-    fuchsia: "border-fuchsia-500/25 bg-fuchsia-500/10 text-fuchsia-100",
+    cyan:
+      "border-cyan-500/25 bg-cyan-500/10 text-cyan-100",
+    emerald:
+      "border-emerald-500/25 bg-emerald-500/10 text-emerald-100",
+    amber:
+      "border-amber-500/25 bg-amber-500/10 text-amber-100",
+    fuchsia:
+      "border-fuchsia-500/25 bg-fuchsia-500/10 text-fuchsia-100",
   };
 
   return (
@@ -55,13 +64,25 @@ function StatPill({ label, value, tone = "cyan" }) {
       <div className="text-[10px] font-black uppercase tracking-[0.18em] opacity-80">
         {label}
       </div>
-      <div className="mt-1 text-sm font-black">{value}</div>
+
+      <div className="mt-1 text-sm font-black">
+        {value}
+      </div>
     </div>
   );
 }
 
-function ProgressBar({ label, value, goal, suffix = "", tone = "cyan" }) {
-  const pct = goal > 0 ? clampPercent((value / goal) * 100) : 0;
+function ProgressBar({
+  label,
+  value,
+  goal,
+  suffix = "",
+  tone = "cyan",
+}) {
+  const pct =
+    goal > 0
+      ? clampPercent((value / goal) * 100)
+      : 0;
 
   const barTone = {
     cyan: "from-cyan-400 to-blue-500",
@@ -94,14 +115,22 @@ function ProgressBar({ label, value, goal, suffix = "", tone = "cyan" }) {
         />
       </div>
 
-      <div className="mt-2 text-[11px] text-slate-500">{pct}% complete</div>
+      <div className="mt-2 text-[11px] text-slate-500">
+        {pct}% complete
+      </div>
     </div>
   );
 }
 
-function ActionButton({ label, onClick, tone = "cyan", className = "" }) {
+function ActionButton({
+  label,
+  onClick,
+  tone = "cyan",
+  className = "",
+}) {
   const toneMap = {
-    cyan: "border-cyan-500/25 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/20",
+    cyan:
+      "border-cyan-500/25 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/20",
     emerald:
       "border-emerald-500/25 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20",
     amber:
@@ -128,9 +157,12 @@ function ActionButton({ label, onClick, tone = "cyan", className = "" }) {
 }
 
 function nextPlannedSession(weekPlan = []) {
-  const safeWeekPlan = Array.isArray(weekPlan) ? weekPlan : [];
+  const safeWeekPlan = Array.isArray(weekPlan)
+    ? weekPlan
+    : [];
 
   const today = new Date();
+
   const startOfToday = new Date(
     today.getFullYear(),
     today.getMonth(),
@@ -143,7 +175,9 @@ function nextPlannedSession(weekPlan = []) {
     .map((item) => ({
       ...item,
       sortTime: new Date(
-        `${item.ymd || "2099-01-01"}T${item.time || "23:59"}:00`
+        `${item.ymd || "2099-01-01"}T${
+          item.time || "23:59"
+        }:00`
       ).getTime(),
     }))
     .filter((item) => item.sortTime >= startOfToday)
@@ -151,32 +185,53 @@ function nextPlannedSession(weekPlan = []) {
 }
 
 function buildGoogleCalendarLink(item) {
-  if (!item?.ymd || !item?.workout_name) return "#";
+  if (!item?.ymd || !item?.workout_name) {
+    return "#";
+  }
 
-  const start = new Date(`${item.ymd}T${item.time || "09:00"}:00`);
-  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  const start = new Date(
+    `${item.ymd}T${item.time || "09:00"}:00`
+  );
 
-  function fmt(d) {
-    const pad = (n) => String(n).padStart(2, "0");
+  const durationMinutes = Math.max(
+    15,
+    safeNumber(item.duration_minutes || 60)
+  );
+
+  const end = new Date(
+    start.getTime() + durationMinutes * 60 * 1000
+  );
+
+  function fmt(date) {
+    const pad = (value) =>
+      String(value).padStart(2, "0");
 
     return (
-      `${d.getUTCFullYear()}` +
-      `${pad(d.getUTCMonth() + 1)}` +
-      `${pad(d.getUTCDate())}` +
-      `T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(
-        d.getUTCSeconds()
-      )}Z`
+      `${date.getUTCFullYear()}` +
+      `${pad(date.getUTCMonth() + 1)}` +
+      `${pad(date.getUTCDate())}` +
+      `T${pad(date.getUTCHours())}` +
+      `${pad(date.getUTCMinutes())}` +
+      `${pad(date.getUTCSeconds())}Z`
     );
   }
 
   const params = new URLSearchParams();
+
   params.set("action", "TEMPLATE");
   params.set("text", item.workout_name);
+
   params.set(
     "details",
-    `SyncWorks Health Planner • ${item.note || "Workout session"}`
+    `SyncWorks Health Planner • ${
+      item.note || "Workout session"
+    }`
   );
-  params.set("dates", `${fmt(start)}/${fmt(end)}`);
+
+  params.set(
+    "dates",
+    `${fmt(start)}/${fmt(end)}`
+  );
 
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
@@ -185,9 +240,14 @@ function CoachChatStartCard({ snapshot, onOpen }) {
   const coachChat = Array.isArray(snapshot?.coach_chat)
     ? snapshot.coach_chat
     : [];
-  const proposal = snapshot?.coach_plan_proposal || null;
+
+  const proposal =
+    snapshot?.coach_plan_proposal || null;
+
   const hasPlannerProposal = !!proposal;
-  const isAdded = proposal?.status === "added_to_planner";
+
+  const isAdded =
+    proposal?.status === "added_to_planner";
 
   return (
     <Card className="relative overflow-hidden border-emerald-400/25 bg-gradient-to-br from-emerald-500/10 via-slate-950/70 to-cyan-500/10">
@@ -199,7 +259,7 @@ function CoachChatStartCard({ snapshot, onOpen }) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-100">
-                Phase 7A
+                Adaptive Coach
               </span>
 
               <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100">
@@ -207,19 +267,18 @@ function CoachChatStartCard({ snapshot, onOpen }) {
               </span>
 
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">
-                Local Smart Engine
+                Personal Plan
               </span>
             </div>
 
             <h2 className="mt-4 text-2xl font-black tracking-tight text-white md:text-3xl">
-              Start with your AI Fitness Coach
+              Start with your fitness coach
             </h2>
 
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
               Tell the coach what you are chasing, where you train, how many
               days this week, pain or limits, and whether you want to be pushed
-              hard or kept balanced. It will build a plan and ask if you are
-              ready to add it to the planner.
+              or kept balanced.
             </p>
           </div>
 
@@ -232,9 +291,19 @@ function CoachChatStartCard({ snapshot, onOpen }) {
 
             <StatPill
               label="Proposal"
-              value={isAdded ? "Added" : hasPlannerProposal ? "Ready" : "None"}
+              value={
+                isAdded
+                  ? "Added"
+                  : hasPlannerProposal
+                  ? "Ready"
+                  : "None"
+              }
               tone={
-                isAdded ? "emerald" : hasPlannerProposal ? "amber" : "fuchsia"
+                isAdded
+                  ? "emerald"
+                  : hasPlannerProposal
+                  ? "amber"
+                  : "fuchsia"
               }
             />
           </div>
@@ -245,6 +314,7 @@ function CoachChatStartCard({ snapshot, onOpen }) {
             <div className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200">
               Latest Coach Summary
             </div>
+
             <div className="mt-2 text-sm leading-6 text-slate-200">
               {proposal.summary}
             </div>
@@ -252,12 +322,12 @@ function CoachChatStartCard({ snapshot, onOpen }) {
         ) : (
           <div className="mt-4 rounded-3xl border border-white/10 bg-black/25 p-4">
             <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
-              First prompt
+              Example
             </div>
+
             <div className="mt-2 text-sm leading-6 text-slate-200">
-              “I want a gym plan this week. My goal is fitness model strength
-              with chest, abs, and athletic performance. I can train 4 days for
-              45 minutes. Push me hard but protect my hips.”
+              “Build a four-day plan for strength, athletic performance, and
+              better recovery. Push me, but adjust around pain and sleep.”
             </div>
           </div>
         )}
@@ -304,22 +374,25 @@ function LastWorkoutStatsCard({ stats }) {
         {stats.workout_name || "Completed Workout"}
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
         <StatPill
           label="Total Time"
           value={formatSeconds(stats.total_seconds)}
           tone="cyan"
         />
+
         <StatPill
           label="Active Time"
           value={formatSeconds(stats.active_seconds)}
           tone="emerald"
         />
+
         <StatPill
           label="Rest Time"
           value={formatSeconds(stats.rest_seconds)}
           tone="amber"
         />
+
         <StatPill
           label="Sets"
           value={stats.completed_sets || 0}
@@ -327,22 +400,25 @@ function LastWorkoutStatsCard({ stats }) {
         />
       </div>
 
-      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
         <StatPill
           label="Pain"
           value={stats.pain_score || "0"}
           tone="emerald"
         />
+
         <StatPill
           label="Difficulty"
           value={stats.difficulty_score || "Medium"}
           tone="cyan"
         />
+
         <StatPill
           label="Energy"
           value={stats.energy_score || "Good"}
           tone="amber"
         />
+
         <StatPill
           label="Skipped"
           value={stats.skipped_exercises || 0}
@@ -367,39 +443,79 @@ export default function HealthDashboard({
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setQuoteIndex((prev) => (prev + 1) % QUOTES.length);
+      setQuoteIndex(
+        (previous) =>
+          (previous + 1) % QUOTES.length
+      );
     }, 7000);
 
     return () => window.clearInterval(timer);
   }, []);
 
-  const stepGoal = safeNumber(snapshot?.step_goal || 8000);
-  const steps = safeNumber(snapshot?.steps || 0);
-
-  const calorieGoal = safeNumber(snapshot?.calorie_goal || 2200);
-  const calories = safeNumber(snapshot?.calories || 0);
-
-  const proteinGoal = safeNumber(snapshot?.protein_goal || 150);
-  const protein = safeNumber(snapshot?.protein_today || 0);
-
-  const waterGoal = safeNumber(snapshot?.water_goal || 100);
-  const water = safeNumber(snapshot?.water || 0);
-
-  const currentWeight = safeNumber(snapshot?.weight || profile?.weight || 0);
-  const targetWeight = safeNumber(profile?.target_weight || 0);
-
-  const trainingDaysGoal = Math.max(1, safeNumber(profile?.training_days || 3));
-  const weeklyCompleted = Math.max(
-    0,
-    safeNumber(snapshot?.weekly_completed || history?.length || 0)
+  const stepGoal = safeNumber(
+    snapshot?.step_goal || 8000
   );
 
-  const weekPlan = Array.isArray(snapshot?.week_plan) ? snapshot.week_plan : [];
+  const steps = safeNumber(snapshot?.steps || 0);
+
+  const calorieGoal = safeNumber(
+    snapshot?.calorie_goal || 2200
+  );
+
+  const calories = safeNumber(
+    snapshot?.calories || 0
+  );
+
+  const proteinGoal = safeNumber(
+    snapshot?.protein_goal || 150
+  );
+
+  const protein = safeNumber(
+    snapshot?.protein_today || 0
+  );
+
+  const waterGoal = safeNumber(
+    snapshot?.water_goal || 100
+  );
+
+  const water = safeNumber(snapshot?.water || 0);
+
+  const currentWeight = safeNumber(
+    snapshot?.weight || profile?.weight || 0
+  );
+
+  const targetWeight = safeNumber(
+    profile?.target_weight || 0
+  );
+
+  const trainingDaysGoal = Math.max(
+    1,
+    safeNumber(profile?.training_days || 3)
+  );
+
+  const weeklyCompleted = Math.max(
+    0,
+    safeNumber(
+      snapshot?.weekly_completed ||
+        history?.length ||
+        0
+    )
+  );
+
+  const weekPlan = Array.isArray(snapshot?.week_plan)
+    ? snapshot.week_plan
+    : [];
+
   const plannedCount = weekPlan.filter(
-    (item) => item?.workout_name && item?.status !== "Rest Day"
+    (item) =>
+      item?.workout_name &&
+      item?.status !== "Rest Day"
   ).length;
 
-  const nextSession = useMemo(() => nextPlannedSession(weekPlan), [weekPlan]);
+  const nextSession = useMemo(
+    () => nextPlannedSession(weekPlan),
+    [weekPlan]
+  );
 
   const goalTitle =
     profile?.inspiration_goal ||
@@ -409,14 +525,25 @@ export default function HealthDashboard({
 
   const coachMessage =
     snapshot?.last_coach_summary ||
-    (snapshot?.readiness && snapshot?.readiness !== "Moderate"
+    (snapshot?.readiness &&
+    snapshot?.readiness !== "Moderate"
       ? readinessSuggestion(snapshot.readiness)
-      : `You are training for ${goalTitle}. Win today by doing the next workout, hitting protein, and staying on top of recovery.`);
+      : `You are training for ${goalTitle}. Win today by completing the next action, hitting protein, moving, and protecting recovery.`);
 
   const healthScore = clampPercent(
-    clampPercent((steps / Math.max(stepGoal, 1)) * 100) * 0.25 +
-      clampPercent((protein / Math.max(proteinGoal, 1)) * 100) * 0.3 +
-      clampPercent((weeklyCompleted / Math.max(trainingDaysGoal, 1)) * 100) *
+    clampPercent(
+      (steps / Math.max(stepGoal, 1)) * 100
+    ) *
+      0.25 +
+      clampPercent(
+        (protein / Math.max(proteinGoal, 1)) * 100
+      ) *
+        0.3 +
+      clampPercent(
+        (weeklyCompleted /
+          Math.max(trainingDaysGoal, 1)) *
+          100
+      ) *
         0.3 +
       (snapshot?.readiness === "Ready"
         ? 15
@@ -429,7 +556,10 @@ export default function HealthDashboard({
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      <CoachChatStartCard snapshot={snapshot} onOpen={onOpen} />
+      <CoachChatStartCard
+        snapshot={snapshot}
+        onOpen={onOpen}
+      />
 
       <SleepPlanCard
         profile={profile}
@@ -459,7 +589,7 @@ export default function HealthDashboard({
               </div>
 
               <div className="mt-4 flex items-start gap-3 sm:items-center sm:gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl border border-cyan-400/25 bg-cyan-500/10 text-2xl animate-pulse sm:h-16 sm:w-16 sm:text-3xl">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl border border-cyan-400/25 bg-cyan-500/10 text-2xl sm:h-16 sm:w-16 sm:text-3xl">
                   🏋️
                 </div>
 
@@ -469,20 +599,27 @@ export default function HealthDashboard({
                   </div>
 
                   <h1 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl md:text-4xl">
-                    {nextSession?.workout_name || "Build momentum today"}
+                    {nextSession?.workout_name ||
+                      "Build momentum today"}
                   </h1>
 
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
                     Train for{" "}
-                    <span className="font-bold text-white">{goalTitle}</span>,
-                    stay on top of your progress, and keep the app focused on
-                    what matters today.
+                    <span className="font-bold text-white">
+                      {goalTitle}
+                    </span>
+                    , stay on top of progress, and let
+                    your logged data shape the next plan.
                   </p>
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-2 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
-                <StatPill label="Goal" value={goalTitle} tone="emerald" />
+              <div className="mt-5 grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
+                <StatPill
+                  label="Goal"
+                  value={goalTitle}
+                  tone="emerald"
+                />
 
                 <StatPill
                   label="Weekly Workouts"
@@ -541,13 +678,16 @@ export default function HealthDashboard({
                       </div>
 
                       <div className="mt-1 text-sm text-slate-500">
-                        {nextSession.note || "Planned workout"}
+                        {nextSession.note ||
+                          "Planned workout"}
                       </div>
 
                       <div className="mt-4 flex flex-wrap gap-2">
                         <ActionButton
                           label="Start Workout"
-                          onClick={() => onStartWorkout?.(nextSession)}
+                          onClick={() =>
+                            onStartWorkout?.(nextSession)
+                          }
                           tone="emerald"
                         />
 
@@ -557,7 +697,9 @@ export default function HealthDashboard({
                         />
 
                         <a
-                          href={buildGoogleCalendarLink(nextSession)}
+                          href={buildGoogleCalendarLink(
+                            nextSession
+                          )}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex h-11 items-center justify-center rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-4 text-sm font-black text-emerald-100 transition hover:bg-emerald-500/20 active:scale-[0.99]"
@@ -573,8 +715,9 @@ export default function HealthDashboard({
                       </div>
 
                       <div className="mt-2 text-sm leading-6 text-slate-400">
-                        Build the week inside your planner so the app becomes a
-                        daily checkpoint.
+                        Build your week so SyncWorks can
+                        connect training, recovery, and
+                        daily lifestyle targets.
                       </div>
 
                       <div className="mt-4">
@@ -629,7 +772,15 @@ export default function HealthDashboard({
         </div>
       </Card>
 
-      <LastWorkoutStatsCard stats={snapshot?.last_workout_stats} />
+      <LastWorkoutStatsCard
+        stats={snapshot?.last_workout_stats}
+      />
+
+      <HealthKpiSection
+        history={history}
+        snapshot={snapshot}
+        profile={profile}
+      />
 
       <HealthMomentumCard
         profile={profile}
@@ -650,7 +801,8 @@ export default function HealthDashboard({
           </div>
 
           <div className="mt-1 text-sm text-slate-400">
-            This section should make people want to log in every day.
+            Every useful input should change today’s
+            recommendation or tomorrow’s plan.
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -685,14 +837,16 @@ export default function HealthDashboard({
             />
           </div>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
             <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-3 sm:p-4">
               <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
                 Current Weight
               </div>
 
               <div className="mt-2 text-2xl font-black text-white">
-                {currentWeight ? `${currentWeight} lb` : "—"}
+                {currentWeight
+                  ? `${currentWeight} lb`
+                  : "—"}
               </div>
             </div>
 
@@ -702,13 +856,15 @@ export default function HealthDashboard({
               </div>
 
               <div className="mt-2 text-2xl font-black text-white">
-                {targetWeight ? `${targetWeight} lb` : "—"}
+                {targetWeight
+                  ? `${targetWeight} lb`
+                  : "—"}
               </div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-3 sm:p-4">
               <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
-                Planned This Week
+                Planned
               </div>
 
               <div className="mt-2 text-2xl font-black text-white">
@@ -738,7 +894,8 @@ export default function HealthDashboard({
           </div>
 
           <div className="mt-1 text-sm text-slate-400">
-            Build habit by showing today, tomorrow, and the next sessions.
+            Today, tomorrow, and the next planned
+            sessions.
           </div>
 
           <div className="mt-4 space-y-2">
@@ -751,12 +908,16 @@ export default function HealthDashboard({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-sm font-black text-white">
-                        {item.day_label} • {prettyDate(item.ymd)}
+                        {item.day_label} •{" "}
+                        {prettyDate(item.ymd)}
                       </div>
 
                       <div className="mt-1 text-xs text-slate-400">
-                        {item.workout_name || "Recovery / open day"}
-                        {item.time ? ` • ${item.time}` : ""}
+                        {item.workout_name ||
+                          "Recovery / open day"}
+                        {item.time
+                          ? ` • ${item.time}`
+                          : ""}
                       </div>
 
                       {item.source === "coach_chat" ? (
@@ -771,11 +932,14 @@ export default function HealthDashboard({
                     </div>
                   </div>
 
-                  {item.workout_name && item.status !== "Completed" ? (
+                  {item.workout_name &&
+                  item.status !== "Completed" ? (
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         type="button"
-                        onClick={() => onStartWorkout?.(item)}
+                        onClick={() =>
+                          onStartWorkout?.(item)
+                        }
                         className="inline-flex h-10 items-center justify-center rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 text-xs font-black text-emerald-100 transition hover:bg-emerald-500/20 active:scale-[0.99]"
                       >
                         Start
@@ -783,7 +947,9 @@ export default function HealthDashboard({
 
                       <button
                         type="button"
-                        onClick={() => onOpen("planner")}
+                        onClick={() =>
+                          onOpen("planner")
+                        }
                         className="inline-flex h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-xs font-black text-slate-100 transition hover:bg-white/[0.08] active:scale-[0.99]"
                       >
                         Edit
@@ -826,8 +992,8 @@ export default function HealthDashboard({
           </div>
 
           <div className="mt-2 text-sm leading-6 text-slate-400">
-            Add exercises, sets, reps, weight, pain, difficulty, and use the AI
-            coach to adjust.
+            Add exercises, sets, repetitions, weight,
+            pain, effort, and timing.
           </div>
 
           <div className="mt-4 hidden lg:block">
@@ -849,8 +1015,8 @@ export default function HealthDashboard({
           </div>
 
           <div className="mt-2 text-sm leading-6 text-slate-400">
-            Make it easier for users to choose movements by muscle group, feel,
-            and equipment.
+            Choose movements by muscle group,
+            equipment, target, and training need.
           </div>
 
           <div className="mt-4">
@@ -868,12 +1034,13 @@ export default function HealthDashboard({
           </div>
 
           <div className="mt-2 text-lg font-black text-white">
-            Track recovery and future sync
+            Connect the full picture
           </div>
 
           <div className="mt-2 text-sm leading-6 text-slate-400">
-            Devices active: {devices?.length || 0}. Keep users ready for Apple
-            Health, Fitbit, Garmin, and more.
+            Devices active: {devices?.length || 0}.
+            Prepare for Apple Health, Fitbit, Garmin,
+            and additional recovery data.
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
@@ -902,7 +1069,8 @@ export default function HealthDashboard({
           </div>
 
           <div className="mt-2 text-sm leading-6 text-slate-300">
-            Helpful option for recovery and hitting daily protein targets.
+            Helpful option for recovery and hitting
+            daily protein targets.
           </div>
 
           <div className="mt-4 flex flex-wrap gap-3">
@@ -930,11 +1098,13 @@ export default function HealthDashboard({
             Step Motivation Partner
           </div>
 
-          <div className="mt-2 text-xl font-black text-white">WeWard</div>
+          <div className="mt-2 text-xl font-black text-white">
+            WeWard
+          </div>
 
           <div className="mt-2 text-sm leading-6 text-slate-300">
-            Add a little fun to steps. Users can stay more motivated when they
-            feel rewarded for walking and daily movement.
+            Add motivation to daily movement and step
+            completion.
           </div>
 
           <div className="mt-4 flex flex-wrap gap-3">
