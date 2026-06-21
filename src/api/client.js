@@ -7,71 +7,152 @@ const baseURL =
 
 const TOKEN_KEY = "sw_token";
 const ACTIVE_BIZ_KEY = "sw_active_business_id";
+const LAST_BIZ_KEY = "sw_last_business_id";
+
+// ----------------------
+// Safe storage helpers
+// ----------------------
+function canUseWindow() {
+  return typeof window !== "undefined";
+}
+
+function canUseStorage() {
+  return canUseWindow() && typeof window.localStorage !== "undefined";
+}
+
+function dispatchWindowEvent(event) {
+  if (!canUseWindow()) return;
+
+  try {
+    window.dispatchEvent(event);
+  } catch {
+    // no-op
+  }
+}
 
 // ----------------------
 // Token helpers
 // ----------------------
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY) || "";
+  if (!canUseStorage()) return "";
+
+  try {
+    return localStorage.getItem(TOKEN_KEY) || "";
+  } catch {
+    return "";
+  }
 }
 
 export function setToken(token) {
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
+  if (!canUseStorage()) return;
+
+  try {
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, String(token).trim());
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+    }
+  } catch {
+    // no-op
+  }
 }
 
 export function clearToken() {
-  localStorage.removeItem(TOKEN_KEY);
+  if (!canUseStorage()) return;
+
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // no-op
+  }
 }
 
 // Backwards compatibility
 export function setAuthToken(token) {
-  return setToken(token);
+  setToken(token);
 }
 
 // ----------------------
 // Business context helpers
 // ----------------------
 export function getActiveBusinessId() {
-  return localStorage.getItem(ACTIVE_BIZ_KEY) || "";
+  if (!canUseStorage()) return "";
+
+  try {
+    return localStorage.getItem(ACTIVE_BIZ_KEY) || "";
+  } catch {
+    return "";
+  }
 }
 
 export function setActiveBusinessId(id) {
-  if (!id) localStorage.removeItem(ACTIVE_BIZ_KEY);
-  else localStorage.setItem(ACTIVE_BIZ_KEY, String(id).trim());
+  if (canUseStorage()) {
+    try {
+      const cleaned = String(id || "").trim();
 
-  try {
-    window.dispatchEvent(new Event("sw:activeBusinessChanged"));
-  } catch {
-    // ignore
+      if (!cleaned) {
+        localStorage.removeItem(ACTIVE_BIZ_KEY);
+      } else {
+        localStorage.setItem(ACTIVE_BIZ_KEY, cleaned);
+        localStorage.setItem(LAST_BIZ_KEY, cleaned);
+      }
+    } catch {
+      // no-op
+    }
   }
+
+  dispatchWindowEvent(new Event("sw:activeBusinessChanged"));
 }
 
 export function clearActiveBusinessId() {
-  localStorage.removeItem(ACTIVE_BIZ_KEY);
-
-  try {
-    window.dispatchEvent(new Event("sw:activeBusinessChanged"));
-  } catch {
-    // ignore
+  if (canUseStorage()) {
+    try {
+      localStorage.removeItem(ACTIVE_BIZ_KEY);
+    } catch {
+      // no-op
+    }
   }
+
+  dispatchWindowEvent(new Event("sw:activeBusinessChanged"));
 }
 
 function resolveBusinessId() {
-  const fromLS = (getActiveBusinessId() || "").trim();
-  if (fromLS) return fromLS;
+  const fromLocalStorage = String(getActiveBusinessId() || "").trim();
 
-  const fromWindow = (String(window?.__sw_active_business_id || "") || "").trim();
-  if (fromWindow) return fromWindow;
+  if (fromLocalStorage) {
+    return fromLocalStorage;
+  }
 
-  const last = (
-    String(localStorage.getItem("sw_last_business_id") || "") || ""
-  ).trim();
-  if (last) return last;
+  if (canUseWindow()) {
+    const fromWindow = String(
+      window.__sw_active_business_id || ""
+    ).trim();
+
+    if (fromWindow) {
+      return fromWindow;
+    }
+  }
+
+  if (canUseStorage()) {
+    try {
+      const lastBusinessId = String(
+        localStorage.getItem(LAST_BIZ_KEY) || ""
+      ).trim();
+
+      if (lastBusinessId) {
+        return lastBusinessId;
+      }
+    } catch {
+      // no-op
+    }
+  }
 
   return "";
 }
 
+// ----------------------
+// Request-path helpers
+// ----------------------
 function normalizedPath(config) {
   const raw = String(config?.url || "");
 
@@ -89,30 +170,36 @@ function methodOf(config) {
 
 function isSalesRequest(config) {
   const path = normalizedPath(config);
+
   return path === "/sales" || path.startsWith("/sales/");
 }
 
 function isPlatformRequest(config) {
   const path = normalizedPath(config);
+
   return (
     path === "/platform" ||
     path === "/platform-growth" ||
+    path === "/platform-affiliates" ||
     path.startsWith("/platform/") ||
-    path.startsWith("/platform-growth/")
+    path.startsWith("/platform-growth/") ||
+    path.startsWith("/platform-affiliates/")
   );
 }
 
 function isTenantRequest(config) {
   const path = normalizedPath(config);
+
   return path === "/tenant" || path.startsWith("/tenant/");
 }
 
 function isInvestorRequest(config) {
   const path = normalizedPath(config);
+
   return path === "/investor" || path.startsWith("/investor/");
 }
 
-// Me-scoped endpoints should never send X-Business-Id
+// User-level endpoints should never inherit an active business context.
 function isMeScopedRequest(config) {
   const path = normalizedPath(config);
 
@@ -124,58 +211,84 @@ function isMeScopedRequest(config) {
   );
 }
 
-// Auth endpoints that must stay user-scoped only
+// Authentication and registration endpoints must always stay user-scoped.
+// These requests must never receive X-Business-Id.
 function isUserScopedAuthRequest(config) {
   const path = normalizedPath(config);
 
   return (
-    path.startsWith("/auth/upgrade-to-sbo-promo") ||
+    path === "/auth" ||
+    path.startsWith("/auth/") ||
     path.startsWith("/auth/register") ||
     path.startsWith("/auth/login") ||
     path.startsWith("/auth/logout") ||
-    path.startsWith("/auth/me")
+    path.startsWith("/auth/me") ||
+    path.startsWith("/auth/email/") ||
+    path.startsWith("/auth/resolve-signup-codes") ||
+    path.startsWith("/auth/upgrade-to-sbo-promo")
   );
 }
 
-// Customer marketplace intake should not be forced into active business context.
-// This prevents customer-created marketplace requests from accidentally carrying
-// an old SBO X-Business-Id header.
+// Customer-created marketplace requests must not accidentally inherit an
+// old active-business context.
 function isCustomerServiceRequestCreate(config) {
   const path = normalizedPath(config);
   const method = methodOf(config);
 
-  return method === "post" && (path === "/service-requests/" || path === "/service-requests");
+  return (
+    method === "post" &&
+    (path === "/service-requests" || path === "/service-requests/")
+  );
+}
+
+function shouldExcludeBusinessContext(config) {
+  return (
+    isSalesRequest(config) ||
+    isPlatformRequest(config) ||
+    isTenantRequest(config) ||
+    isInvestorRequest(config) ||
+    isMeScopedRequest(config) ||
+    isUserScopedAuthRequest(config) ||
+    isCustomerServiceRequestCreate(config)
+  );
 }
 
 // ----------------------
-// Trailing slash safety
+// Trailing-slash safety
 // ----------------------
-function isAbsoluteUrl(u) {
-  return /^https?:\/\//i.test(String(u || ""));
+function isAbsoluteUrl(value) {
+  return /^https?:\/\//i.test(String(value || ""));
 }
 
 function ensureTrailingSlash(urlRaw) {
   const url = String(urlRaw || "");
-  if (!url) return url;
 
+  if (!url) return url;
   if (!url.startsWith("/")) return url;
   if (isAbsoluteUrl(url)) return url;
-
   if (url.endsWith("/")) return url;
 
-  const qIndex = url.indexOf("?");
-  if (qIndex >= 0) {
-    const path = url.slice(0, qIndex);
-    const qs = url.slice(qIndex);
+  const queryIndex = url.indexOf("?");
 
-    if (path.endsWith("/")) return path + qs;
-    return path + "/" + qs;
+  if (queryIndex >= 0) {
+    const path = url.slice(0, queryIndex);
+    const queryString = url.slice(queryIndex);
+
+    if (path.endsWith("/")) {
+      return path + queryString;
+    }
+
+    return `${path}/${queryString}`;
   }
 
-  const lastSeg = url.split("/").filter(Boolean).pop() || "";
-  if (lastSeg.includes(".")) return url;
+  const lastSegment = url.split("/").filter(Boolean).pop() || "";
 
-  return url + "/";
+  // Do not alter direct file or asset URLs.
+  if (lastSegment.includes(".")) {
+    return url;
+  }
+
+  return `${url}/`;
 }
 
 // ----------------------
@@ -187,7 +300,7 @@ const api = axios.create({
 });
 
 // ----------------------
-// Request Interceptor
+// Request interceptor
 // ----------------------
 api.interceptors.request.use(
   (config) => {
@@ -198,35 +311,57 @@ api.interceptors.request.use(
     }
 
     const token = getToken();
-    if (token) config.headers.Authorization = `Token ${token}`;
 
-    // Never send X-Business-Id for user/customer scoped flows.
-    if (
-      !isSalesRequest(config) &&
-      !isPlatformRequest(config) &&
-      !isTenantRequest(config) &&
-      !isInvestorRequest(config) &&
-      !isMeScopedRequest(config) &&
-      !isUserScopedAuthRequest(config) &&
-      !isCustomerServiceRequestCreate(config)
-    ) {
-      const bizId = resolveBusinessId();
-
-      if (bizId) {
-        config.headers["X-Business-Id"] = String(bizId).trim();
-        localStorage.setItem("sw_last_business_id", String(bizId).trim());
-      }
+    if (token) {
+      config.headers.Authorization = `Token ${token}`;
     } else {
-      delete config.headers["X-Business-Id"];
+      delete config.headers.Authorization;
     }
 
-    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+    if (shouldExcludeBusinessContext(config)) {
+      delete config.headers["X-Business-Id"];
+      delete config.headers["x-business-id"];
+    } else {
+      const businessId = resolveBusinessId();
+
+      if (businessId) {
+        const cleanedBusinessId = String(businessId).trim();
+
+        config.headers["X-Business-Id"] = cleanedBusinessId;
+
+        if (canUseStorage()) {
+          try {
+            localStorage.setItem(LAST_BIZ_KEY, cleanedBusinessId);
+          } catch {
+            // no-op
+          }
+        }
+      } else {
+        delete config.headers["X-Business-Id"];
+        delete config.headers["x-business-id"];
+      }
+    }
+
+    const isFormData =
+      typeof FormData !== "undefined" &&
+      config.data instanceof FormData;
+
+    const isBlob =
+      typeof Blob !== "undefined" &&
+      config.data instanceof Blob;
+
+    const isArrayBuffer =
+      typeof ArrayBuffer !== "undefined" &&
+      config.data instanceof ArrayBuffer;
+
+    if (isFormData) {
+      // Let the browser generate the multipart boundary.
       delete config.headers["Content-Type"];
     } else if (
       config.data &&
       typeof config.data === "object" &&
-      !(config.data instanceof Blob) &&
-      !(config.data instanceof ArrayBuffer)
+      !isBlob &&
+      !isArrayBuffer
     ) {
       config.headers["Content-Type"] = "application/json";
     }
@@ -237,43 +372,37 @@ api.interceptors.request.use(
 );
 
 // ----------------------
-// Response Interceptor
+// Response interceptor
 // ----------------------
 api.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    const status = err?.response?.status;
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
 
     if (status === 401) {
       clearToken();
       clearActiveBusinessId();
 
-      try {
-        window.dispatchEvent(new Event("sw:authChanged"));
-      } catch {
-        // ignore
-      }
+      dispatchWindowEvent(new Event("sw:authChanged"));
     }
 
     if (status === 423) {
-      try {
-        const lock_reason =
-          err?.response?.data?.lock_reason ||
-          err?.response?.data?.reason ||
-          err?.response?.data?.detail ||
-          "LOCKED";
+      const lockReason =
+        error?.response?.data?.lock_reason ||
+        error?.response?.data?.reason ||
+        error?.response?.data?.detail ||
+        "LOCKED";
 
-        window.dispatchEvent(
-          new CustomEvent("sw:billingLocked", {
-            detail: { lock_reason },
-          })
-        );
-      } catch {
-        // ignore
-      }
+      dispatchWindowEvent(
+        new CustomEvent("sw:billingLocked", {
+          detail: {
+            lock_reason: lockReason,
+          },
+        })
+      );
     }
 
-    return Promise.reject(err);
+    return Promise.reject(error);
   }
 );
 
