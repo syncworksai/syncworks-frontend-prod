@@ -1,9 +1,13 @@
 // src/App.jsx
 import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import {
+  Navigate,
+  Route,
+  Routes,
+} from "react-router-dom";
+
 import ProtectedRoute from "./components/ProtectedRoute";
 import PlatformRoute from "./components/PlatformRoute";
-import SalesModeGate from "./components/SalesModeGate";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -25,6 +29,7 @@ import SboZipLeaderboard from "./pages/SboZipLeaderboard";
 import SboSettings from "./pages/SboSettings";
 import SboCatalog from "./pages/SboCatalog";
 import BusinessInternalTicketCreator from "./pages/BusinessInternalTicketCreator";
+
 import SboCustomers from "./pages/sbo/SboCustomers";
 import SboLeads from "./pages/sbo/SboLeads";
 import SboReports from "./pages/sbo/SboReports";
@@ -58,17 +63,6 @@ import InvestorDashboard from "./pages/InvestorDashboard";
 import InvestorAcceptInvite from "./pages/InvestorAcceptInvite";
 import InvestorSettings from "./pages/InvestorSettings";
 
-import SalesOsDashboard from "./pages/SalesOsDashboard";
-import SalesOsPipelineBoard from "./pages/SalesOsPipelineBoard";
-import SalesOsSeatManagement from "./pages/SalesOsSeatManagement";
-import SalesOsCalendar from "./pages/SalesOsCalendar";
-import SalesOsAgentDashboard from "./pages/SalesOsAgentDashboard";
-import SalesOsSettings from "./pages/SalesOsSettings";
-import SalesOsStagesManager from "./pages/SalesOsStagesManager";
-import SalesOsProspectDetail from "./pages/SalesOsProspectDetail";
-
-import SalesOSHome from "./pages/SalesOSHome";
-
 import Support from "./pages/Support";
 import Newsfeed from "./pages/Newsfeed";
 import PmSettings from "./pages/PmSettings";
@@ -80,28 +74,33 @@ import SettingsHub from "./pages/SettingsHub";
 function EmployeeHome() {
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-[#020617] text-slate-100 p-6">
-        <h1 className="text-xl font-semibold">Employee Dashboard</h1>
-        <p className="text-slate-400 mt-2">
+      <div className="min-h-screen bg-[#020617] p-6 text-slate-100">
+        <h1 className="text-xl font-semibold">
+          Employee Dashboard
+        </h1>
+
+        <p className="mt-2 text-slate-400">
           Your access is based on permissions set by your manager.
         </p>
 
-        <div className="mt-6 flex gap-3 flex-wrap">
+        <div className="mt-6 flex flex-wrap gap-3">
           <a
             href="/customer"
-            className="inline-flex items-center justify-center h-10 px-4 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-200 hover:bg-slate-900/40"
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-950/60 px-4 text-slate-200 hover:bg-slate-900/40"
           >
-            Go to Customer
+            Go to Personal
           </a>
+
           <a
             href="/employee/settings"
-            className="inline-flex items-center justify-center h-10 px-4 rounded-xl border border-cyan-500/35 bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/15"
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-cyan-500/35 bg-cyan-500/10 px-4 text-cyan-200 hover:bg-cyan-500/15"
           >
             Employee Settings
           </a>
+
           <a
             href="/connect"
-            className="inline-flex items-center justify-center h-10 px-4 rounded-xl border border-emerald-500/35 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/15"
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-emerald-500/35 bg-emerald-500/10 px-4 text-emerald-200 hover:bg-emerald-500/15"
           >
             Connect with Code
           </a>
@@ -111,23 +110,29 @@ function EmployeeHome() {
   );
 }
 
-function SalesWrap({ children }) {
-  return (
-    <ProtectedRoute>
-      <SalesModeGate>{children}</SalesModeGate>
-    </ProtectedRoute>
-  );
-}
-
 export default function App() {
   return (
     <div className="sw-autoglow">
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route
+          path="/login"
+          element={<Login />}
+        />
 
-        <Route path="/employee/invite" element={<EmployeeInvite />} />
-        <Route path="/accept-invite" element={<EmployeeInvite />} />
+        <Route
+          path="/register"
+          element={<Register />}
+        />
+
+        <Route
+          path="/employee/invite"
+          element={<EmployeeInvite />}
+        />
+
+        <Route
+          path="/accept-invite"
+          element={<EmployeeInvite />}
+        />
 
         <Route
           path="/platform"
@@ -137,6 +142,7 @@ export default function App() {
             </PlatformRoute>
           }
         />
+
         <Route
           path="/platform/support"
           element={
@@ -154,6 +160,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/newsfeed"
           element={
@@ -162,6 +169,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/settings"
           element={
@@ -179,6 +187,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/sbo/catalog"
           element={
@@ -187,6 +196,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/sbo/growth"
           element={
@@ -195,6 +205,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/sbo/new-ticket"
           element={
@@ -203,6 +214,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/sbo/customers"
           element={
@@ -211,6 +223,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/sbo/leads"
           element={
@@ -219,6 +232,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/sbo/reports"
           element={
@@ -227,6 +241,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/sbo/finance"
           element={
@@ -244,6 +259,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/tenant/settings"
           element={
@@ -252,6 +268,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/investor/settings"
           element={
@@ -260,6 +277,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/employee/settings"
           element={
@@ -278,78 +296,13 @@ export default function App() {
           }
         />
 
-        <Route path="/sales" element={<Navigate to="/sales/dashboard" replace />} />
-
         <Route
-          path="/sales/dashboard"
+          path="/sales/*"
           element={
-            <SalesWrap>
-              <SalesOsDashboard />
-            </SalesWrap>
-          }
-        />
-        <Route
-          path="/sales/board"
-          element={
-            <SalesWrap>
-              <SalesOsPipelineBoard />
-            </SalesWrap>
-          }
-        />
-        <Route
-          path="/sales/seats"
-          element={
-            <SalesWrap>
-              <SalesOsSeatManagement />
-            </SalesWrap>
-          }
-        />
-        <Route
-          path="/sales/calendar"
-          element={
-            <SalesWrap>
-              <SalesOsCalendar />
-            </SalesWrap>
-          }
-        />
-        <Route
-          path="/sales/agent"
-          element={
-            <SalesWrap>
-              <SalesOsAgentDashboard />
-            </SalesWrap>
-          }
-        />
-        <Route
-          path="/sales/settings"
-          element={
-            <SalesWrap>
-              <SalesOsSettings />
-            </SalesWrap>
-          }
-        />
-        <Route
-          path="/sales/stages"
-          element={
-            <SalesWrap>
-              <SalesOsStagesManager />
-            </SalesWrap>
-          }
-        />
-        <Route
-          path="/sales/prospects/:id"
-          element={
-            <SalesWrap>
-              <SalesOsProspectDetail />
-            </SalesWrap>
-          }
-        />
-        <Route
-          path="/sales/home"
-          element={
-            <SalesWrap>
-              <SalesOSHome />
-            </SalesWrap>
+            <Navigate
+              to="/customer"
+              replace
+            />
           }
         />
 
@@ -361,6 +314,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/customer/affiliate"
           element={
@@ -369,6 +323,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/customer/favorites"
           element={
@@ -377,6 +332,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/customer/business-cards"
           element={
@@ -385,6 +341,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/customer/business-cards/:favoriteId"
           element={
@@ -393,6 +350,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/customer/new-request"
           element={
@@ -401,6 +359,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/customer/tickets"
           element={
@@ -409,6 +368,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/customer/settings"
           element={
@@ -417,6 +377,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/customer/finance"
           element={
@@ -425,6 +386,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/customer/health"
           element={
@@ -442,6 +404,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/sbo/metrics/zip"
           element={
@@ -450,9 +413,21 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/dashboard" element={<Navigate to="/sbo" replace />} />
 
-        <Route path="/employee" element={<EmployeeHome />} />
+        <Route
+          path="/dashboard"
+          element={
+            <Navigate
+              to="/sbo"
+              replace
+            />
+          }
+        />
+
+        <Route
+          path="/employee"
+          element={<EmployeeHome />}
+        />
 
         <Route
           path="/pm"
@@ -462,6 +437,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/pm/calendar"
           element={
@@ -470,6 +446,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/pm/employees"
           element={
@@ -478,6 +455,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/pm/properties/:propertyId"
           element={
@@ -495,6 +473,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/tenant/accept"
           element={
@@ -512,6 +491,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/investor/accept"
           element={
@@ -529,14 +509,19 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/tickets/new"
           element={
             <ProtectedRoute>
-              <Navigate to="/customer/new-request" replace />
+              <Navigate
+                to="/customer/new-request"
+                replace
+              />
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/tickets/:id"
           element={
@@ -554,6 +539,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/inbox"
           element={
@@ -562,6 +548,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/profile"
           element={
@@ -570,6 +557,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/upgrade"
           element={
@@ -578,6 +566,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/connect"
           element={
@@ -586,6 +575,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/team/invites"
           element={
@@ -594,6 +584,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/team"
           element={
@@ -603,8 +594,25 @@ export default function App() {
           }
         />
 
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route
+          path="/"
+          element={
+            <Navigate
+              to="/login"
+              replace
+            />
+          }
+        />
+
+        <Route
+          path="*"
+          element={
+            <Navigate
+              to="/login"
+              replace
+            />
+          }
+        />
       </Routes>
     </div>
   );
