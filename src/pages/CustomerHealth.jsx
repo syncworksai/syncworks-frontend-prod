@@ -1,5 +1,10 @@
 // src/pages/CustomerHealth.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate } from "react-router-dom";
 
 import ModeBar from "../components/ModeBar";
@@ -8,6 +13,7 @@ import { useAuth } from "../auth/AuthContext";
 import {
   getCustomerHealthProfile,
   patchCustomerHealthProfile,
+  redeemHealthAccessCode,
 } from "../api/customerHealth";
 
 import { buildHealthAchievements } from "../components/customer-health/healthAchievements";
@@ -65,19 +71,73 @@ function cx(...parts) {
 }
 
 function isPlainObject(value) {
-  return !!value && typeof value === "object" && !Array.isArray(value);
+  return (
+    !!value &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+  );
 }
 
 function hasObjectData(value) {
-  return isPlainObject(value) && Object.keys(value).length > 0;
+  return (
+    isPlainObject(value) &&
+    Object.keys(value).length > 0
+  );
 }
 
 function hasArrayData(value) {
   return Array.isArray(value) && value.length > 0;
 }
 
+function getApiErrorMessage(
+  error,
+  fallback = "Something went wrong."
+) {
+  const data = error?.response?.data;
+
+  if (
+    typeof data?.detail === "string" &&
+    data.detail.trim()
+  ) {
+    return data.detail.trim();
+  }
+
+  if (typeof data === "string" && data.trim()) {
+    return data.trim();
+  }
+
+  if (data && typeof data === "object") {
+    for (const value of Object.values(data)) {
+      if (
+        typeof value === "string" &&
+        value.trim()
+      ) {
+        return value.trim();
+      }
+
+      if (
+        Array.isArray(value) &&
+        value.length
+      ) {
+        return String(value[0] || fallback);
+      }
+    }
+  }
+
+  if (
+    typeof error?.message === "string" &&
+    error.message.trim()
+  ) {
+    return error.message.trim();
+  }
+
+  return fallback;
+}
+
 function findNextPlanned(weekPlan = []) {
-  const safeWeekPlan = Array.isArray(weekPlan) ? weekPlan : [];
+  const safeWeekPlan = Array.isArray(weekPlan)
+    ? weekPlan
+    : [];
 
   const today = new Date();
 
@@ -93,10 +153,16 @@ function findNextPlanned(weekPlan = []) {
     .map((item) => ({
       ...item,
       sortTime: new Date(
-        `${item.ymd || "2099-01-01"}T${item.time || "23:59"}:00`
+        `${item.ymd || "2099-01-01"}T${
+          item.time || "23:59"
+        }:00`
       ).getTime(),
     }))
-    .filter((item) => item.sortTime >= startOfToday)
+    .filter(
+      (item) =>
+        Number.isFinite(item.sortTime) &&
+        item.sortTime >= startOfToday
+    )
     .sort((a, b) => a.sortTime - b.sortTime)[0];
 }
 
@@ -108,8 +174,12 @@ function addDays(date, days) {
 
 function asYmd(date) {
   const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
+  const dd = String(
+    date.getDate()
+  ).padStart(2, "0");
 
   return `${yyyy}-${mm}-${dd}`;
 }
@@ -124,10 +194,22 @@ function normalizeCoachWorkoutName(workout) {
   );
 }
 
-function convertCoachWorkoutToPlannerItem(workout, index = 0) {
+function convertCoachWorkoutToPlannerItem(
+  workout,
+  index = 0
+) {
   const now = new Date();
   const date = addDays(now, index);
-  const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  const names = [
+    "Sun",
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat",
+  ];
 
   return {
     id:
@@ -188,14 +270,19 @@ function normalizeWeekPlanForDashboard(weekPlan) {
   }
 
   if (isPlainObject(weekPlan)) {
-    const possibleWorkouts = Array.isArray(weekPlan.workouts)
-      ? weekPlan.workouts
-      : Array.isArray(weekPlan.days)
-      ? weekPlan.days
-      : [];
+    const possibleWorkouts =
+      Array.isArray(weekPlan.workouts)
+        ? weekPlan.workouts
+        : Array.isArray(weekPlan.days)
+        ? weekPlan.days
+        : [];
 
-    return possibleWorkouts.map((workout, index) =>
-      convertCoachWorkoutToPlannerItem(workout, index)
+    return possibleWorkouts.map(
+      (workout, index) =>
+        convertCoachWorkoutToPlannerItem(
+          workout,
+          index
+        )
     );
   }
 
@@ -207,9 +294,10 @@ function normalizeHealthSnapshot(nextSnapshot) {
 
   return {
     ...safeSnapshot,
-    week_plan: normalizeWeekPlanForDashboard(
-      safeSnapshot.week_plan
-    ),
+    week_plan:
+      normalizeWeekPlanForDashboard(
+        safeSnapshot.week_plan
+      ),
   };
 }
 
@@ -251,7 +339,32 @@ function SyncStatusPill({ status }) {
   );
 }
 
-function HealthSignupScreen({ onBack }) {
+function HealthSignupScreen({
+  onBack,
+  onRedeem,
+  redeeming,
+  redeemError,
+  redeemSuccess,
+}) {
+  const [accessCode, setAccessCode] =
+    useState("");
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    const cleanCode = String(
+      accessCode || ""
+    )
+      .trim()
+      .toUpperCase();
+
+    if (!cleanCode || redeeming) {
+      return;
+    }
+
+    await onRedeem(cleanCode);
+  }
+
   return (
     <div className="space-y-5">
       <section className="relative overflow-hidden rounded-[1.85rem] border border-cyan-400/25 bg-slate-950/70 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.32)] md:p-7">
@@ -281,9 +394,11 @@ function HealthSignupScreen({ onBack }) {
               </div>
 
               <p className="mt-5 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
-                A daily-use health hub with an AI fitness coach, workout
-                planning, goal tracking, progress logging, and a cleaner reason
-                to come back every day.
+                A daily-use health hub with an AI
+                fitness coach, workout planning,
+                goal tracking, progress logging,
+                and a cleaner reason to come back
+                every day.
               </p>
 
               <div className="mt-5 flex flex-wrap gap-2">
@@ -329,17 +444,74 @@ function HealthSignupScreen({ onBack }) {
                 Start Free Trial
               </a>
 
+              <form
+                onSubmit={handleSubmit}
+                className="mt-5 border-t border-white/10 pt-5"
+              >
+                <div className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                  Have a fitness access code?
+                </div>
+
+                <p className="mt-2 text-xs leading-5 text-slate-500">
+                  Enter your Health & Fitness
+                  access code to unlock this
+                  module for your account.
+                </p>
+
+                <input
+                  value={accessCode}
+                  onChange={(event) =>
+                    setAccessCode(
+                      String(
+                        event.target.value || ""
+                      ).toUpperCase()
+                    )
+                  }
+                  placeholder="Enter access code"
+                  autoComplete="off"
+                  spellCheck={false}
+                  maxLength={64}
+                  className="mt-3 h-11 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 text-sm font-bold uppercase text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/60"
+                />
+
+                <button
+                  type="submit"
+                  disabled={
+                    redeeming ||
+                    !accessCode.trim()
+                  }
+                  className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-2xl border border-cyan-400/35 bg-cyan-500/10 px-4 text-sm font-black text-cyan-100 transition hover:bg-cyan-500/15 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {redeeming
+                    ? "Checking Code..."
+                    : "Unlock Health & Fitness"}
+                </button>
+
+                {redeemError ? (
+                  <div className="mt-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs leading-5 text-rose-200">
+                    {redeemError}
+                  </div>
+                ) : null}
+
+                {redeemSuccess ? (
+                  <div className="mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs leading-5 text-emerald-200">
+                    {redeemSuccess}
+                  </div>
+                ) : null}
+              </form>
+
               <button
                 type="button"
                 onClick={onBack}
-                className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-5 text-sm font-black text-slate-100 transition hover:bg-white/[0.08]"
+                className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-5 text-sm font-black text-slate-100 transition hover:bg-white/[0.08]"
               >
                 Back to Dashboard
               </button>
 
               <div className="mt-4 text-xs leading-5 text-slate-500">
-                After checkout, access is unlocked by your backend entitlement.
-                Log out/in or refresh if you just purchased.
+                After checkout or successful code
+                redemption, access is stored on
+                your SyncWorks account.
               </div>
             </div>
           </div>
@@ -353,8 +525,9 @@ function HealthSignupScreen({ onBack }) {
           </div>
 
           <div className="mt-2 text-sm leading-6 text-slate-400">
-            Quick sight of goals, progress, workout plan, next session, and
-            daily coach guidance.
+            Quick sight of goals, progress,
+            workout plan, next session, and daily
+            coach guidance.
           </div>
         </div>
 
@@ -364,7 +537,8 @@ function HealthSignupScreen({ onBack }) {
           </div>
 
           <div className="mt-2 text-sm leading-6 text-slate-400">
-            Build a weekly workout plan and send sessions to calendar.
+            Build a weekly workout plan and send
+            sessions to calendar.
           </div>
         </div>
 
@@ -374,16 +548,18 @@ function HealthSignupScreen({ onBack }) {
           </div>
 
           <div className="mt-2 text-sm leading-6 text-slate-400">
-            Better motivation, better tracking, plus helpful partner
-            recommendations like protein and step rewards.
+            Better motivation, better tracking,
+            plus helpful partner recommendations
+            like protein and step rewards.
           </div>
         </div>
       </div>
 
       <div className="rounded-[1.5rem] border border-amber-500/25 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
-        Health guidance is fitness support, not medical diagnosis. Pain,
-        injury, or medical limitations should be reviewed with a qualified
-        professional.
+        Health guidance is fitness support, not
+        medical diagnosis. Pain, injury, or
+        medical limitations should be reviewed
+        with a qualified professional.
       </div>
     </div>
   );
@@ -391,50 +567,90 @@ function HealthSignupScreen({ onBack }) {
 
 export default function CustomerHealth() {
   const nav = useNavigate();
-  const { moduleAccess, isGod } = useAuth();
+
+  const {
+    moduleAccess,
+    entitlements,
+    refreshEntitlements,
+    isPlatformAdmin,
+  } = useAuth();
 
   const hasHealthAccess =
-    !!isGod ||
+    !!isPlatformAdmin ||
+    !!entitlements?.health_access ||
     !!moduleAccess?.health ||
     !!moduleAccess?.fitness ||
     !!moduleAccess?.customer_health ||
     !!moduleAccess?.customerHealth;
 
   const [drawer, setDrawer] = useState("");
-  const [syncStatus, setSyncStatus] = useState("local");
-  const [cloudLoaded, setCloudLoaded] = useState(false);
-  const [celebration, setCelebration] = useState(null);
-
-  const [activePlannerItem, setActivePlannerItem] =
+  const [syncStatus, setSyncStatus] =
+    useState("local");
+  const [cloudLoaded, setCloudLoaded] =
+    useState(false);
+  const [celebration, setCelebration] =
     useState(null);
 
-  const skipNextCloudSaveRef = useRef(false);
-  const achievedMilestoneIdsRef = useRef(new Set());
+  const [
+    activePlannerItem,
+    setActivePlannerItem,
+  ] = useState(null);
 
-  const [profile, setProfile] = useState(() => ({
-    ...defaultProfile(),
-    ...(readJson(PROFILE_KEY, null) || {}),
-  }));
+  const [
+    redeemingCode,
+    setRedeemingCode,
+  ] = useState(false);
 
-  const [snapshot, setSnapshotBase] = useState(() => {
-    const savedHistory = readJson(HISTORY_KEY, []);
+  const [
+    redeemError,
+    setRedeemError,
+  ] = useState("");
 
-    const initialSnapshot = normalizeHealthSnapshot({
-      ...defaultSnapshot(),
-      ...(readJson(SNAPSHOT_KEY, null) || {}),
+  const [
+    redeemSuccess,
+    setRedeemSuccess,
+  ] = useState("");
+
+  const skipNextCloudSaveRef =
+    useRef(false);
+
+  const achievedMilestoneIdsRef =
+    useRef(new Set());
+
+  const [profile, setProfile] = useState(
+    () => ({
+      ...defaultProfile(),
+      ...(readJson(PROFILE_KEY, null) || {}),
+    })
+  );
+
+  const [snapshot, setSnapshotBase] =
+    useState(() => {
+      const savedHistory =
+        readJson(HISTORY_KEY, []);
+
+      const initialSnapshot =
+        normalizeHealthSnapshot({
+          ...defaultSnapshot(),
+          ...(readJson(
+            SNAPSHOT_KEY,
+            null
+          ) || {}),
+        });
+
+      const lifecycle =
+        ensureCurrentHealthDay({
+          snapshot: initialSnapshot,
+          history:
+            Array.isArray(savedHistory)
+              ? savedHistory
+              : [],
+        });
+
+      return normalizeHealthSnapshot(
+        lifecycle.snapshot
+      );
     });
-
-    const lifecycle = ensureCurrentHealthDay({
-      snapshot: initialSnapshot,
-      history: Array.isArray(savedHistory)
-        ? savedHistory
-        : [],
-    });
-
-    return normalizeHealthSnapshot(
-      lifecycle.snapshot
-    );
-  });
 
   function setSnapshot(nextValue) {
     if (typeof nextValue === "function") {
@@ -452,60 +668,89 @@ export default function CustomerHealth() {
     );
   }
 
-  const [workouts, setWorkouts] = useState(() => {
-    const saved = readJson(WORKOUTS_KEY, null);
+  const [workouts, setWorkouts] = useState(
+    () => {
+      const saved =
+        readJson(WORKOUTS_KEY, null);
 
-    if (Array.isArray(saved) && saved.length) {
-      return saved.map((workout) => ({
-        ...workout,
-        exercises: Array.isArray(workout.exercises)
-          ? workout.exercises
-          : [],
-      }));
+      if (
+        Array.isArray(saved) &&
+        saved.length
+      ) {
+        return saved.map((workout) => ({
+          ...workout,
+          exercises:
+            Array.isArray(
+              workout.exercises
+            )
+              ? workout.exercises
+              : [],
+        }));
+      }
+
+      return defaultWorkouts();
     }
+  );
 
-    return defaultWorkouts();
-  });
+  const [history, setHistory] = useState(
+    () => {
+      const saved =
+        readJson(HISTORY_KEY, []);
 
-  const [history, setHistory] = useState(() => {
-    const saved = readJson(HISTORY_KEY, []);
+      return Array.isArray(saved)
+        ? saved
+        : [];
+    }
+  );
+
+  const [
+    progressLogs,
+    setProgressLogs,
+  ] = useState(() => {
+    const saved =
+      readJson(PROGRESS_KEY, []);
 
     return Array.isArray(saved)
       ? saved
       : [];
   });
 
-  const [progressLogs, setProgressLogs] = useState(() => {
-    const saved = readJson(PROGRESS_KEY, []);
+  const [devices, setDevices] = useState(
+    () => {
+      const saved =
+        readJson(DEVICE_KEY, null);
 
-    return Array.isArray(saved)
-      ? saved
-      : [];
-  });
-
-  const [devices, setDevices] = useState(() => {
-    const saved = readJson(DEVICE_KEY, null);
-
-    return Array.isArray(saved) && saved.length
-      ? saved
-      : defaultDevices();
-  });
+      return (
+        Array.isArray(saved) &&
+        saved.length
+      )
+        ? saved
+        : defaultDevices();
+    }
+  );
 
   useEffect(() => {
     function runDailyLifecycle() {
       setSnapshotBase((previous) => {
-        const lifecycle = ensureCurrentHealthDay({
-          snapshot: previous,
-          history,
-        });
+        const lifecycle =
+          ensureCurrentHealthDay({
+            snapshot: previous,
+            history,
+          });
 
-        const next = normalizeHealthSnapshot(
-          lifecycle.snapshot
-        );
+        const next =
+          normalizeHealthSnapshot(
+            lifecycle.snapshot
+          );
 
         const dailyCountChanged =
-          Number(previous.daily_workout_count || 0) !==
-          Number(next.daily_workout_count || 0);
+          Number(
+            previous.daily_workout_count ||
+              0
+          ) !==
+          Number(
+            next.daily_workout_count || 0
+          );
 
         const dailyCompletionChanged =
           !!previous.workout_completed_today !==
@@ -525,13 +770,17 @@ export default function CustomerHealth() {
 
     runDailyLifecycle();
 
-    const timer = window.setInterval(
-      runDailyLifecycle,
-      60 * 1000
-    );
+    const timer =
+      window.setInterval(
+        runDailyLifecycle,
+        60 * 1000
+      );
 
     function handleVisibilityChange() {
-      if (document.visibilityState === "visible") {
+      if (
+        document.visibilityState ===
+        "visible"
+      ) {
         runDailyLifecycle();
       }
     }
@@ -564,7 +813,9 @@ export default function CustomerHealth() {
   useEffect(() => {
     setSnapshot((previous) => {
       if (
-        Array.isArray(previous.week_plan) &&
+        Array.isArray(
+          previous.week_plan
+        ) &&
         previous.week_plan.length
       ) {
         return previous;
@@ -581,7 +832,8 @@ export default function CustomerHealth() {
 
         planned_workouts:
           starterPlan.filter(
-            (item) => item.workout_name
+            (item) =>
+              item.workout_name
           ).length,
       };
     });
@@ -617,29 +869,38 @@ export default function CustomerHealth() {
         "Bodyweight",
 
       weekly_completed:
-        countWorkoutsThisWeek(history),
+        countWorkoutsThisWeek(
+          history
+        ),
 
       progress_count:
         progressLogs.length,
 
       planned_workouts:
         weekPlan.filter(
-          (item) => item?.workout_name
+          (item) =>
+            item?.workout_name
         ).length,
 
       device_status:
         devices.some(
           (item) =>
-            item.status === "Selected for Sync"
+            item.status ===
+            "Selected for Sync"
         )
           ? "Device selected"
           : "Manual tracking active",
 
       next_session_note:
         nextSession
-          ? `${nextSession.day_label} • ${
-              nextSession.time || "Anytime"
-            } • ${nextSession.workout_name}`
+          ? `${
+              nextSession.day_label
+            } • ${
+              nextSession.time ||
+              "Anytime"
+            } • ${
+              nextSession.workout_name
+            }`
           : "",
 
       updated_at:
@@ -710,15 +971,20 @@ export default function CustomerHealth() {
 
         if (!mounted) return;
 
-        skipNextCloudSaveRef.current = true;
+        skipNextCloudSaveRef.current =
+          true;
 
         const cloudHistory =
-          Array.isArray(data?.history_json)
+          Array.isArray(
+            data?.history_json
+          )
             ? data.history_json
             : history;
 
         if (
-          hasObjectData(data?.profile_json)
+          hasObjectData(
+            data?.profile_json
+          )
         ) {
           setProfile((previous) => ({
             ...defaultProfile(),
@@ -728,45 +994,53 @@ export default function CustomerHealth() {
         }
 
         if (
-          hasObjectData(data?.snapshot_json)
+          hasObjectData(
+            data?.snapshot_json
+          )
         ) {
-          setSnapshotBase((previous) => {
-            const mergedSnapshot =
-              normalizeHealthSnapshot({
-                ...defaultSnapshot(),
-                ...previous,
-                ...data.snapshot_json,
-              });
+          setSnapshotBase(
+            (previous) => {
+              const mergedSnapshot =
+                normalizeHealthSnapshot({
+                  ...defaultSnapshot(),
+                  ...previous,
+                  ...data.snapshot_json,
+                });
 
-            const lifecycle =
-              ensureCurrentHealthDay({
-                snapshot:
-                  mergedSnapshot,
+              const lifecycle =
+                ensureCurrentHealthDay({
+                  snapshot:
+                    mergedSnapshot,
 
-                history:
-                  cloudHistory,
-              });
+                  history:
+                    cloudHistory,
+                });
 
-            return normalizeHealthSnapshot(
-              lifecycle.snapshot
-            );
-          });
+              return normalizeHealthSnapshot(
+                lifecycle.snapshot
+              );
+            }
+          );
         } else {
-          setSnapshotBase((previous) => {
-            const lifecycle =
-              ensureCurrentHealthDay({
-                snapshot: previous,
-                history: cloudHistory,
-              });
+          setSnapshotBase(
+            (previous) => {
+              const lifecycle =
+                ensureCurrentHealthDay({
+                  snapshot: previous,
+                  history: cloudHistory,
+                });
 
-            return normalizeHealthSnapshot(
-              lifecycle.snapshot
-            );
-          });
+              return normalizeHealthSnapshot(
+                lifecycle.snapshot
+              );
+            }
+          );
         }
 
         if (
-          hasArrayData(data?.workouts_json)
+          hasArrayData(
+            data?.workouts_json
+          )
         ) {
           setWorkouts(
             data.workouts_json.map(
@@ -785,7 +1059,9 @@ export default function CustomerHealth() {
         }
 
         if (
-          Array.isArray(data?.history_json)
+          Array.isArray(
+            data?.history_json
+          )
         ) {
           setHistory(
             data.history_json
@@ -793,7 +1069,9 @@ export default function CustomerHealth() {
         }
 
         if (
-          Array.isArray(data?.progress_json)
+          Array.isArray(
+            data?.progress_json
+          )
         ) {
           setProgressLogs(
             data.progress_json
@@ -801,7 +1079,9 @@ export default function CustomerHealth() {
         }
 
         if (
-          hasArrayData(data?.devices_json)
+          hasArrayData(
+            data?.devices_json
+          )
         ) {
           setDevices(
             data.devices_json
@@ -835,49 +1115,58 @@ export default function CustomerHealth() {
       !hasHealthAccess ||
       !cloudLoaded
     ) {
-      return;
+      return undefined;
     }
 
-    if (skipNextCloudSaveRef.current) {
-      skipNextCloudSaveRef.current = false;
-      return;
+    if (
+      skipNextCloudSaveRef.current
+    ) {
+      skipNextCloudSaveRef.current =
+        false;
+
+      return undefined;
     }
 
     const timer =
-      window.setTimeout(async () => {
-        setSyncStatus("syncing");
+      window.setTimeout(
+        async () => {
+          setSyncStatus("syncing");
 
-        try {
-          await patchCustomerHealthProfile({
-            profile_json:
-              profile,
+          try {
+            await patchCustomerHealthProfile(
+              {
+                profile_json:
+                  profile,
 
-            snapshot_json:
-              syncedSnapshot,
+                snapshot_json:
+                  syncedSnapshot,
 
-            workouts_json:
-              workouts,
+                workouts_json:
+                  workouts,
 
-            history_json:
-              history,
+                history_json:
+                  history,
 
-            progress_json:
-              progressLogs,
+                progress_json:
+                  progressLogs,
 
-            devices_json:
-              devices,
-          });
+                devices_json:
+                  devices,
+              }
+            );
 
-          setSyncStatus("saved");
-        } catch (error) {
-          console.error(
-            "Failed to save customer health cloud profile",
-            error
-          );
+            setSyncStatus("saved");
+          } catch (error) {
+            console.error(
+              "Failed to save customer health cloud profile",
+              error
+            );
 
-          setSyncStatus("error");
-        }
-      }, 900);
+            setSyncStatus("error");
+          }
+        },
+        900
+      );
 
     return () =>
       window.clearTimeout(timer);
@@ -893,7 +1182,9 @@ export default function CustomerHealth() {
   ]);
 
   useEffect(() => {
-    if (!hasHealthAccess) return;
+    if (!hasHealthAccess) {
+      return;
+    }
 
     const achievements =
       buildHealthAchievements({
@@ -905,7 +1196,8 @@ export default function CustomerHealth() {
       });
 
     for (
-      const item of achievements.achieved
+      const item of
+      achievements.achieved
     ) {
       if (
         !achievedMilestoneIdsRef.current.has(
@@ -920,7 +1212,9 @@ export default function CustomerHealth() {
           `sw_health_milestone_seen_${item.id}_${todayYmd()}`;
 
         const seenToday =
-          localStorage.getItem(seenKey);
+          localStorage.getItem(
+            seenKey
+          );
 
         if (!seenToday) {
           localStorage.setItem(
@@ -942,7 +1236,8 @@ export default function CustomerHealth() {
     }
 
     for (
-      const item of achievements.achieved
+      const item of
+      achievements.achieved
     ) {
       achievedMilestoneIdsRef.current.add(
         item.id
@@ -956,7 +1251,54 @@ export default function CustomerHealth() {
     progressLogs,
   ]);
 
-  function addExerciseFromLibrary(exercise) {
+  async function handleRedeemHealthCode(
+    code
+  ) {
+    const cleanCode = String(
+      code || ""
+    )
+      .trim()
+      .toUpperCase();
+
+    setRedeemError("");
+    setRedeemSuccess("");
+
+    if (!cleanCode) {
+      setRedeemError(
+        "Enter a Health & Fitness access code."
+      );
+      return;
+    }
+
+    setRedeemingCode(true);
+
+    try {
+      const result =
+        await redeemHealthAccessCode(
+          cleanCode
+        );
+
+      setRedeemSuccess(
+        result?.detail ||
+          "Health & Fitness has been unlocked."
+      );
+
+      await refreshEntitlements();
+    } catch (error) {
+      setRedeemError(
+        getApiErrorMessage(
+          error,
+          "Unable to redeem this access code."
+        )
+      );
+    } finally {
+      setRedeemingCode(false);
+    }
+  }
+
+  function addExerciseFromLibrary(
+    exercise
+  ) {
     setWorkouts((previous) => {
       const targetId =
         snapshot.today_workout_id ||
@@ -1011,45 +1353,50 @@ export default function CustomerHealth() {
         ];
       }
 
-      return previous.map((workout) => {
-        if (workout.id !== targetId) {
-          return workout;
+      return previous.map(
+        (workout) => {
+          if (
+            workout.id !== targetId
+          ) {
+            return workout;
+          }
+
+          return {
+            ...workout,
+
+            exercises: [
+              ...(workout.exercises ||
+                []),
+
+              {
+                name:
+                  exercise.name,
+
+                sets:
+                  "3",
+
+                reps:
+                  "10",
+
+                weight:
+                  "",
+
+                rest:
+                  "60 sec",
+
+                notes:
+                  `Focus: ${exercise.feel}`,
+
+                difficulty:
+                  "Medium",
+
+                pain:
+                  "0",
+              },
+            ],
+          };
         }
-
-        return {
-          ...workout,
-
-          exercises: [
-            ...(workout.exercises || []),
-
-            {
-              name:
-                exercise.name,
-
-              sets:
-                "3",
-
-              reps:
-                "10",
-
-              weight:
-                "",
-
-              rest:
-                "60 sec",
-
-              notes:
-                `Focus: ${exercise.feel}`,
-
-              difficulty:
-                "Medium",
-
-              pain:
-                "0",
-            },
-          ],
-        };
-      });
+      );
     });
 
     setDrawer("workout");
@@ -1059,7 +1406,9 @@ export default function CustomerHealth() {
     setDrawer("questionnaire");
   }
 
-  function startPlannerWorkout(plannerItem) {
+  function startPlannerWorkout(
+    plannerItem
+  ) {
     if (!plannerItem) return;
 
     setActivePlannerItem(
@@ -1089,13 +1438,11 @@ export default function CustomerHealth() {
 
       <ModeBar
         title="Health"
-
         subtitle={
           hasHealthAccess
             ? "Dashboard • planner • active workouts • nutrition • progress • AI coach"
             : "30 days free • $2.99/month after"
         }
-
         rightActions={
           <div className="flex items-center gap-2">
             {hasHealthAccess ? (
@@ -1106,11 +1453,9 @@ export default function CustomerHealth() {
 
             <button
               type="button"
-
               onClick={() =>
                 nav("/customer")
               }
-
               className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs hover:bg-slate-900"
             >
               Back
@@ -1122,7 +1467,6 @@ export default function CustomerHealth() {
       <main
         className={cx(
           "relative mx-auto px-3 pb-16 pt-4 sm:px-5 lg:pb-12",
-
           hasHealthAccess
             ? "max-w-7xl"
             : "max-w-5xl"
@@ -1145,6 +1489,18 @@ export default function CustomerHealth() {
           <HealthSignupScreen
             onBack={() =>
               nav("/customer")
+            }
+            onRedeem={
+              handleRedeemHealthCode
+            }
+            redeeming={
+              redeemingCode
+            }
+            redeemError={
+              redeemError
+            }
+            redeemSuccess={
+              redeemSuccess
             }
           />
         )}
@@ -1176,7 +1532,8 @@ export default function CustomerHealth() {
 
           <QuestionnaireDrawer
             open={
-              drawer === "questionnaire"
+              drawer ===
+              "questionnaire"
             }
             onClose={() =>
               setDrawer("")
@@ -1188,7 +1545,9 @@ export default function CustomerHealth() {
           />
 
           <WorkoutStudioDrawer
-            open={drawer === "workout"}
+            open={
+              drawer === "workout"
+            }
             onClose={() =>
               setDrawer("")
             }
@@ -1202,7 +1561,9 @@ export default function CustomerHealth() {
           />
 
           <ExerciseLibraryDrawer
-            open={drawer === "library"}
+            open={
+              drawer === "library"
+            }
             onClose={() =>
               setDrawer("")
             }
@@ -1212,7 +1573,9 @@ export default function CustomerHealth() {
           />
 
           <NutritionDrawer
-            open={drawer === "nutrition"}
+            open={
+              drawer === "nutrition"
+            }
             onClose={() =>
               setDrawer("")
             }
@@ -1230,13 +1593,17 @@ export default function CustomerHealth() {
           />
 
           <ProgressDrawer
-            open={drawer === "progress"}
+            open={
+              drawer === "progress"
+            }
             onClose={() =>
               setDrawer("")
             }
             snapshot={syncedSnapshot}
             setSnapshot={setSnapshot}
-            progressLogs={progressLogs}
+            progressLogs={
+              progressLogs
+            }
             setProgressLogs={
               setProgressLogs
             }
@@ -1245,7 +1612,9 @@ export default function CustomerHealth() {
           />
 
           <SynopsisDrawer
-            open={drawer === "synopsis"}
+            open={
+              drawer === "synopsis"
+            }
             onClose={() =>
               setDrawer("")
             }
@@ -1263,13 +1632,16 @@ export default function CustomerHealth() {
             snapshot={syncedSnapshot}
             workouts={workouts}
             history={history}
-            progressLogs={progressLogs}
+            progressLogs={
+              progressLogs
+            }
             setSnapshot={setSnapshot}
           />
 
           <CoachChatDrawer
             open={
-              drawer === "coach-chat"
+              drawer ===
+              "coach-chat"
             }
             onClose={() =>
               setDrawer("")
@@ -1283,7 +1655,8 @@ export default function CustomerHealth() {
 
           <ActiveWorkoutSessionDrawer
             open={
-              drawer === "active-workout"
+              drawer ===
+              "active-workout"
             }
             onClose={() =>
               setDrawer("")
@@ -1299,7 +1672,9 @@ export default function CustomerHealth() {
           />
 
           <DevicesDrawer
-            open={drawer === "devices"}
+            open={
+              drawer === "devices"
+            }
             onClose={() =>
               setDrawer("")
             }
@@ -1308,7 +1683,9 @@ export default function CustomerHealth() {
           />
 
           <SleepPlannerDrawer
-            open={drawer === "sleep"}
+            open={
+              drawer === "sleep"
+            }
             onClose={() =>
               setDrawer("")
             }
@@ -1336,7 +1713,9 @@ export default function CustomerHealth() {
       <HealthConfetti
         active={!!celebration}
         title={celebration?.title}
-        subtitle={celebration?.subtitle}
+        subtitle={
+          celebration?.subtitle
+        }
         onDone={() =>
           setCelebration(null)
         }
@@ -1344,3 +1723,4 @@ export default function CustomerHealth() {
     </div>
   );
 }
+

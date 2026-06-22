@@ -1,12 +1,33 @@
-// src/api/customerHealth.js
 import api from "./client";
 
 export async function getCustomerHealthProfile() {
-  const res = await api.get("/customer-health/me/");
-  return res.data;
+  const response = await api.get(
+    "/customer-health/me/"
+  );
+
+  return response.data;
 }
 
-export async function patchCustomerHealthProfile(payload) {
-  const res = await api.patch("/customer-health/me/", payload);
-  return res.data;
+export async function patchCustomerHealthProfile(
+  payload
+) {
+  const response = await api.patch(
+    "/customer-health/me/",
+    payload
+  );
+
+  return response.data;
+}
+
+export async function redeemHealthAccessCode(code) {
+  const response = await api.post(
+    "/customer-health/redeem-access-code/",
+    {
+      code: String(code || "")
+        .trim()
+        .toUpperCase(),
+    }
+  );
+
+  return response.data;
 }
