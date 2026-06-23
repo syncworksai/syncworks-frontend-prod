@@ -17,7 +17,12 @@ import { formatSeconds } from "./healthWorkoutSession";
 
 import {
   countWorkoutsThisWeek,
+  getWeekPlanBounds,
+  isWeekPlanCurrent,
+  isWeekPlanExpired,
+  isWeekPlanFuture,
   localYmd,
+  summarizeWeekPlan,
 } from "./healthDailyLifecycle";
 
 const SEEQ_AFFILIATE_URL = "https://www.seeqsupply.com/JACOB78279";
@@ -249,6 +254,155 @@ function buildGoogleCalendarLink(item) {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
+function QuickAction({ icon, label, detail, tone = "cyan", onClick }) {
+  const toneMap = {
+    cyan: "border-cyan-400/25 bg-cyan-400/[0.08] text-cyan-100 hover:bg-cyan-400/[0.14] shadow-[0_0_30px_rgba(34,211,238,0.08)]",
+    emerald: "border-emerald-400/25 bg-emerald-400/[0.08] text-emerald-100 hover:bg-emerald-400/[0.14] shadow-[0_0_30px_rgba(57,255,136,0.08)]",
+    fuchsia: "border-fuchsia-400/25 bg-fuchsia-400/[0.08] text-fuchsia-100 hover:bg-fuchsia-400/[0.14] shadow-[0_0_30px_rgba(255,59,212,0.08)]",
+    violet: "border-violet-400/25 bg-violet-400/[0.08] text-violet-100 hover:bg-violet-400/[0.14] shadow-[0_0_30px_rgba(139,92,255,0.08)]",
+    amber: "border-amber-400/25 bg-amber-400/[0.08] text-amber-100 hover:bg-amber-400/[0.14] shadow-[0_0_30px_rgba(255,200,87,0.08)]",
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx(
+        "group min-w-0 rounded-[1.25rem] border p-3 text-left transition active:scale-[0.985] sm:p-4",
+        toneMap[tone] || toneMap.cyan
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/25 text-xl transition group-hover:scale-105">
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-black text-white">{label}</div>
+          <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-400">
+            {detail}
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function WeekLifecycleCard({
+  weekPlan,
+  history,
+  onOpen,
+  onBuildNextWeek,
+  onRepeatLastWeek,
+}) {
+  const expired = isWeekPlanExpired(weekPlan);
+  const current = isWeekPlanCurrent(weekPlan);
+  const future = isWeekPlanFuture(weekPlan);
+  const bounds = getWeekPlanBounds(weekPlan);
+  const summary = summarizeWeekPlan(weekPlan, history);
+  const missing = !Array.isArray(weekPlan) || weekPlan.length === 0;
+
+  if (!expired && !missing) {
+    return (
+      <Card className="relative overflow-hidden border-cyan-400/20 bg-[linear-gradient(135deg,rgba(34,211,238,0.08),rgba(3,7,18,0.88),rgba(139,92,246,0.08))]">
+        <div className="pointer-events-none absolute right-0 top-0 h-28 w-28 rounded-full bg-cyan-400/10 blur-3xl" />
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-100">
+                {current ? "Current Training Week" : future ? "Upcoming Week" : "Training Plan"}
+              </span>
+              {bounds.hasDates ? (
+                <span className="text-xs font-bold text-slate-400">
+                  {prettyDate(bounds.startYmd)} – {prettyDate(bounds.endYmd)}
+                </span>
+              ) : null}
+            </div>
+            <div className="mt-2 text-lg font-black text-white">
+              {summary.completed_sessions}/{summary.planned_sessions || 0} planned workouts complete
+            </div>
+            <div className="mt-1 text-sm text-slate-400">
+              Keep the week editable. The coach can adjust volume, focus, or recovery at any time.
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <ActionButton label="Adjust With Coach" onClick={() => onOpen?.("coach-chat")} tone="fuchsia" />
+            <ActionButton label="Edit Week" onClick={() => onOpen?.("planner")} tone="cyan" />
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="relative overflow-hidden border-fuchsia-400/30 bg-[linear-gradient(135deg,rgba(255,59,212,0.12),rgba(3,7,18,0.92),rgba(52,223,255,0.12))] shadow-[0_0_50px_rgba(139,92,246,0.12)]">
+      <div className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-fuchsia-500/20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-20 left-20 h-52 w-52 rounded-full bg-cyan-400/15 blur-3xl" />
+      <div className="relative">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+          <div className="max-w-3xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-fuchsia-300/30 bg-fuchsia-300/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-100">
+                {expired ? "Week Complete" : "Plan Needed"}
+              </span>
+              {expired && bounds.hasDates ? (
+                <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-300">
+                  {prettyDate(bounds.startYmd)} – {prettyDate(bounds.endYmd)}
+                </span>
+              ) : null}
+            </div>
+
+            <h2 className="mt-4 text-2xl font-black tracking-tight text-white sm:text-3xl">
+              {expired ? "Your last plan ended. Let’s build the next week." : "Build a training week that fits your life."}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-300">
+              {expired
+                ? `You completed ${summary.completed_sessions} of ${summary.planned_sessions || 0} planned sessions. Preserve the results, then repeat, adapt, or rebuild with your coach.`
+                : "Choose your days, goals, equipment, and limitations. The coach will turn them into a dated seven-day plan."}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:min-w-[300px]">
+            <StatPill label="Completed" value={summary.completed_sessions || 0} tone="emerald" />
+            <StatPill label="Planned" value={summary.planned_sessions || 0} tone="cyan" />
+            <StatPill label="Skipped" value={summary.skipped_sessions || 0} tone="amber" />
+            <StatPill label="Consistency" value={`${summary.completion_rate || 0}%`} tone="fuchsia" />
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <ActionButton
+            label={expired ? "Build My Next Week" : "Build My Week"}
+            onClick={() => {
+              if (typeof onBuildNextWeek === "function") {
+                onBuildNextWeek();
+              } else {
+                onOpen?.("coach-chat");
+              }
+            }}
+            tone="emerald"
+            className="shadow-[0_0_34px_rgba(57,255,136,0.15)]"
+          />
+          {expired ? (
+            <ActionButton
+              label="Repeat Last Week"
+              onClick={() => {
+                if (typeof onRepeatLastWeek === "function") {
+                  onRepeatLastWeek();
+                } else {
+                  onOpen?.("planner");
+                }
+              }}
+              tone="cyan"
+            />
+          ) : null}
+          <ActionButton label="Adjust With Coach" onClick={() => onOpen?.("coach-chat")} tone="fuchsia" />
+          <ActionButton label="Review Planner" onClick={() => onOpen?.("planner")} tone="white" />
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 function CoachChatStartCard({ snapshot, onOpen }) {
   const coachChat = Array.isArray(snapshot?.coach_chat)
     ? snapshot.coach_chat
@@ -451,6 +605,8 @@ export default function HealthDashboard({
   devices,
   onOpen,
   onStartWorkout,
+  onBuildNextWeek,
+  onRepeatLastWeek,
 }) {
   const [quoteIndex, setQuoteIndex] = useState(0);
 
@@ -565,6 +721,74 @@ export default function HealthDashboard({
 
   return (
     <div className="space-y-4 sm:space-y-5">
+      <WeekLifecycleCard
+        weekPlan={weekPlan}
+        history={history}
+        onOpen={onOpen}
+        onBuildNextWeek={onBuildNextWeek}
+        onRepeatLastWeek={onRepeatLastWeek}
+      />
+
+      <Card className="relative overflow-hidden border-blue-400/20 bg-[#050b18]">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/70 to-transparent" />
+        <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-blue-500/15 blur-3xl" />
+        <div className="relative">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-200">Health Command Center</div>
+              <h2 className="mt-1 text-xl font-black text-white sm:text-2xl">What do you want to do?</h2>
+              <p className="mt-1 text-sm text-slate-400">Jump directly to training, planning, progress, or your exercise library.</p>
+            </div>
+            <div className="text-xs font-bold text-slate-500">One-tap navigation</div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+            <QuickAction
+              icon="▶"
+              label="Start Workout"
+              detail={nextSession?.workout_name || "Choose or build today’s session"}
+              tone="emerald"
+              onClick={() => nextSession ? onStartWorkout?.(nextSession) : onOpen?.("workout")}
+            />
+            <QuickAction
+              icon="＋"
+              label="Build Workout"
+              detail="Create and save your own sets"
+              tone="cyan"
+              onClick={() => onOpen?.("workout")}
+            />
+            <QuickAction
+              icon="🦵"
+              label="Train a Muscle"
+              detail="Browse legs, chest, back, arms, and more"
+              tone="fuchsia"
+              onClick={() => onOpen?.("library")}
+            />
+            <QuickAction
+              icon="⌕"
+              label="Exercise Library"
+              detail="Search movements and form guidance"
+              tone="violet"
+              onClick={() => onOpen?.("library")}
+            />
+            <QuickAction
+              icon="↗"
+              label="Progress"
+              detail="Weight, workouts, strength, and trends"
+              tone="amber"
+              onClick={() => onOpen?.("progress")}
+            />
+            <QuickAction
+              icon="◎"
+              label="Profile"
+              detail="Height, weight, goals, limits, equipment"
+              tone="cyan"
+              onClick={() => onOpen?.("questionnaire")}
+            />
+          </div>
+        </div>
+      </Card>
+
       <CoachChatStartCard
         snapshot={snapshot}
         onOpen={onOpen}
