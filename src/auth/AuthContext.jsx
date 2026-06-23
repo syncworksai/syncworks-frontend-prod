@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -11,6 +12,8 @@ import api, {
   clearToken,
   getActiveBusinessId,
   getToken,
+  isNetworkLikeError,
+  isUnauthorizedError,
   setActiveBusinessId,
   setToken,
 } from "../api/client";
@@ -18,6 +21,13 @@ import api, {
 const AuthContext = createContext(null);
 
 const MODE_KEY = "sw_mode";
+
+const AUTH_STATUS = {
+  BOOTING: "booting",
+  AUTHENTICATED: "authenticated",
+  ANONYMOUS: "anonymous",
+  UNAVAILABLE: "unavailable",
+};
 
 const DEFAULT_ENTITLEMENTS = {
   finance_access: false,
@@ -55,9 +65,13 @@ const FULL_MODULE_ACCESS = {
   social_media: true,
 };
 
+function canUseWindow() {
+  return typeof window !== "undefined";
+}
+
 function canUseStorage() {
   return (
-    typeof window !== "undefined" &&
+    canUseWindow() &&
     typeof window.localStorage !== "undefined"
   );
 }
@@ -66,7 +80,10 @@ function getStoredMode() {
   if (!canUseStorage()) return "CUSTOMER";
 
   try {
-    return localStorage.getItem(MODE_KEY) || "CUSTOMER";
+    return (
+      localStorage.getItem(MODE_KEY) ||
+      "CUSTOMER"
+    );
   } catch {
     return "CUSTOMER";
   }
@@ -78,12 +95,14 @@ function setStoredMode(mode) {
   try {
     localStorage.setItem(MODE_KEY, mode);
   } catch {
-    // no-op
+    // Storage failure is non-critical.
   }
 }
 
 function normalizeEmail(value) {
-  return String(value || "").trim().toLowerCase();
+  return String(value || "")
+    .trim()
+    .toLowerCase();
 }
 
 function normalizeMePayload(me) {
@@ -109,7 +128,8 @@ function normalizeMePayload(me) {
       ...DEFAULT_PROFILES,
       ...(profiles || {}),
     },
-    customerSettings: user?.customer_settings || null,
+    customerSettings:
+      user?.customer_settings || null,
   };
 }
 
@@ -120,7 +140,10 @@ function isPlatformUser(user) {
   );
 }
 
-function parseModuleAccess(data, fallback = {}) {
+function parseModuleAccess(
+  data,
+  fallback = {}
+) {
   const output = {
     ...DEFAULT_MODULE_ACCESS,
     checked: true,
@@ -132,7 +155,9 @@ function parseModuleAccess(data, fallback = {}) {
   const addValue = (value) => {
     if (typeof value !== "string") return;
 
-    const normalized = value.trim().toUpperCase();
+    const normalized = value
+      .trim()
+      .toUpperCase();
 
     if (normalized) {
       active.add(normalized);
@@ -156,7 +181,12 @@ function parseModuleAccess(data, fallback = {}) {
         return;
       }
 
-      if (!item || typeof item !== "object") return;
+      if (
+        !item ||
+        typeof item !== "object"
+      ) {
+        return;
+      }
 
       addValue(item.code);
       addValue(item.key);
@@ -181,29 +211,43 @@ function parseModuleAccess(data, fallback = {}) {
       return;
     }
 
-    Object.entries(objectValue).forEach(([key, value]) => {
-      const normalizedKey = String(key || "")
-        .trim()
-        .toUpperCase();
+    Object.entries(objectValue).forEach(
+      ([key, value]) => {
+        const normalizedKey = String(
+          key || ""
+        )
+          .trim()
+          .toUpperCase();
 
-      const normalizedValue = String(value || "")
-        .trim()
-        .toLowerCase();
+        const normalizedValue = String(
+          value || ""
+        )
+          .trim()
+          .toLowerCase();
 
-      const enabled =
-        value === true ||
-        normalizedValue === "active" ||
-        normalizedValue === "trialing" ||
-        (typeof value === "object" &&
-          value !== null &&
-          (value.active === true ||
-            String(value.status || "").toLowerCase() === "active" ||
-            String(value.status || "").toLowerCase() === "trialing"));
+        const enabled =
+          value === true ||
+          normalizedValue === "active" ||
+          normalizedValue === "trialing" ||
+          (
+            typeof value === "object" &&
+            value !== null &&
+            (
+              value.active === true ||
+              String(
+                value.status || ""
+              ).toLowerCase() === "active" ||
+              String(
+                value.status || ""
+              ).toLowerCase() === "trialing"
+            )
+          );
 
-      if (enabled && normalizedKey) {
-        active.add(normalizedKey);
+        if (enabled && normalizedKey) {
+          active.add(normalizedKey);
+        }
       }
-    });
+    );
   });
 
   output.sbo = active.has("SBO");
@@ -218,7 +262,8 @@ function parseModuleAccess(data, fallback = {}) {
     active.has("SALES_OS") ||
     active.has("SALES");
 
-  output.finance = active.has("FINANCE");
+  output.finance =
+    active.has("FINANCE");
 
   output.fitness =
     active.has("FITNESS") ||
@@ -241,25 +286,45 @@ function parseModuleAccess(data, fallback = {}) {
   return output;
 }
 
-function extractErrorMessage(error, fallback = "Something went wrong.") {
+function extractErrorMessage(
+  error,
+  fallback = "Something went wrong."
+) {
   const data = error?.response?.data;
 
-  if (typeof data === "string" && data.trim()) {
+  if (
+    typeof data === "string" &&
+    data.trim()
+  ) {
     return data.trim();
   }
 
-  if (typeof data?.detail === "string" && data.detail.trim()) {
+  if (
+    typeof data?.detail === "string" &&
+    data.detail.trim()
+  ) {
     return data.detail.trim();
   }
 
-  if (data && typeof data === "object") {
+  if (
+    data &&
+    typeof data === "object"
+  ) {
     for (const value of Object.values(data)) {
-      if (typeof value === "string" && value.trim()) {
+      if (
+        typeof value === "string" &&
+        value.trim()
+      ) {
         return value.trim();
       }
 
-      if (Array.isArray(value) && value.length) {
-        return String(value[0] || fallback);
+      if (
+        Array.isArray(value) &&
+        value.length
+      ) {
+        return String(
+          value[0] || fallback
+        );
       }
     }
   }
@@ -267,29 +332,77 @@ function extractErrorMessage(error, fallback = "Something went wrong.") {
   return error?.message || fallback;
 }
 
+function authenticationUnavailableMessage(error) {
+  if (!error?.response) {
+    return (
+      "SyncWorks could not reach the server. " +
+      "Your login has been preserved."
+    );
+  }
+
+  const status = Number(
+    error?.response?.status || 0
+  );
+
+  if (
+    status === 502 ||
+    status === 503 ||
+    status === 504
+  ) {
+    return (
+      "SyncWorks is reconnecting to the server. " +
+      "Your login has been preserved."
+    );
+  }
+
+  if (status === 429) {
+    return (
+      "SyncWorks received too many requests. " +
+      "Your login has been preserved."
+    );
+  }
+
+  return (
+    "SyncWorks could not verify your session. " +
+    "Your login has been preserved."
+  );
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
-  const [entitlements, setEntitlements] = useState(
-    DEFAULT_ENTITLEMENTS
+  const [entitlements, setEntitlements] =
+    useState(DEFAULT_ENTITLEMENTS);
+
+  const [profiles, setProfiles] =
+    useState(DEFAULT_PROFILES);
+
+  const [
+    customerSettings,
+    setCustomerSettings,
+  ] = useState(null);
+
+  const [booting, setBooting] =
+    useState(true);
+
+  const [authStatus, setAuthStatus] =
+    useState(AUTH_STATUS.BOOTING);
+
+  const [authError, setAuthError] =
+    useState("");
+
+  const [
+    activeBusinessIdState,
+    setActiveBusinessIdState,
+  ] = useState(
+    () => getActiveBusinessId() || ""
   );
 
-  const [profiles, setProfiles] = useState(
-    DEFAULT_PROFILES
-  );
+  const [myBusinesses, setMyBusinesses] =
+    useState([]);
 
-  const [customerSettings, setCustomerSettings] =
-    useState(null);
-
-  const [booting, setBooting] = useState(true);
-
-  const [activeBusinessIdState, setActiveBusinessIdState] =
-    useState(() => getActiveBusinessId() || "");
-
-  const [myBusinesses, setMyBusinesses] = useState([]);
-
-  const [mode, setModeState] = useState(() =>
-    getStoredMode()
+  const [mode, setModeState] = useState(
+    () => getStoredMode()
   );
 
   const [
@@ -297,9 +410,11 @@ export function AuthProvider({ children }) {
     setEntitlementsRefreshedAt,
   ] = useState(null);
 
-  const [moduleAccess, setModuleAccess] = useState(
-    DEFAULT_MODULE_ACCESS
-  );
+  const [moduleAccess, setModuleAccess] =
+    useState(DEFAULT_MODULE_ACCESS);
+
+  const loadMePromiseRef = useRef(null);
+  const lastSessionCheckRef = useRef(0);
 
   const isPlatformAdmin = useMemo(
     () => isPlatformUser(user),
@@ -314,36 +429,50 @@ export function AuthProvider({ children }) {
         moduleAccess?.growth_os ||
         moduleAccess?.social_media
     );
-  }, [isPlatformAdmin, moduleAccess]);
+  }, [
+    isPlatformAdmin,
+    moduleAccess,
+  ]);
 
-  const setMode = useCallback((nextMode) => {
-    const allowedModes = new Set([
-      "CUSTOMER",
-      "SBO",
-      "EMPLOYEE",
-      "PM",
-      "PLATFORM",
-      "SALES",
-    ]);
+  const setMode = useCallback(
+    (nextMode) => {
+      const allowedModes = new Set([
+        "CUSTOMER",
+        "SBO",
+        "EMPLOYEE",
+        "PM",
+        "PLATFORM",
+        "SALES",
+      ]);
 
-    const cleanedMode = allowedModes.has(nextMode)
-      ? nextMode
-      : "CUSTOMER";
+      const cleanedMode =
+        allowedModes.has(nextMode)
+          ? nextMode
+          : "CUSTOMER";
 
-    setModeState(cleanedMode);
-    setStoredMode(cleanedMode);
-  }, []);
+      setModeState(cleanedMode);
+      setStoredMode(cleanedMode);
+    },
+    []
+  );
 
   const hasEntitlement = useCallback(
     (key) => {
       if (isPlatformAdmin) return true;
 
       if (key === "finance") {
-        return Boolean(entitlements?.finance_access);
+        return Boolean(
+          entitlements?.finance_access
+        );
       }
 
-      if (key === "health" || key === "fitness") {
-        return Boolean(entitlements?.health_access);
+      if (
+        key === "health" ||
+        key === "fitness"
+      ) {
+        return Boolean(
+          entitlements?.health_access
+        );
       }
 
       if (
@@ -367,19 +496,49 @@ export function AuthProvider({ children }) {
     ]
   );
 
-  const resetAuthedState = useCallback(() => {
-    setUser(null);
-    setEntitlements(DEFAULT_ENTITLEMENTS);
-    setProfiles(DEFAULT_PROFILES);
-    setCustomerSettings(null);
-    setMyBusinesses([]);
-    setEntitlementsRefreshedAt(null);
-    setModuleAccess(DEFAULT_MODULE_ACCESS);
-  }, []);
+  const resetAuthedState =
+    useCallback(() => {
+      setUser(null);
+      setEntitlements(
+        DEFAULT_ENTITLEMENTS
+      );
+      setProfiles(DEFAULT_PROFILES);
+      setCustomerSettings(null);
+      setMyBusinesses([]);
+      setEntitlementsRefreshedAt(null);
+      setModuleAccess(
+        DEFAULT_MODULE_ACCESS
+      );
+    }, []);
+
+  const markAnonymous = useCallback(() => {
+    clearToken();
+    resetAuthedState();
+    setAuthError("");
+    setAuthStatus(
+      AUTH_STATUS.ANONYMOUS
+    );
+  }, [resetAuthedState]);
+
+  const markUnavailable = useCallback(
+    (error) => {
+      setAuthError(
+        authenticationUnavailableMessage(
+          error
+        )
+      );
+
+      setAuthStatus(
+        AUTH_STATUS.UNAVAILABLE
+      );
+    },
+    []
+  );
 
   const enforcePlatformMode = useCallback(
     (currentUser) => {
-      const allowed = isPlatformUser(currentUser);
+      const allowed =
+        isPlatformUser(currentUser);
 
       if (
         getStoredMode() === "PLATFORM" &&
@@ -393,46 +552,69 @@ export function AuthProvider({ children }) {
     [setMode]
   );
 
-  const loadMyBusinesses = useCallback(async () => {
-    try {
-      const response = await api.get("/me/businesses/");
-      const data = response?.data;
+  const loadMyBusinesses =
+    useCallback(async () => {
+      try {
+        const response = await api.get(
+          "/me/businesses/"
+        );
 
-      const list = Array.isArray(data)
-        ? data
-        : Array.isArray(data?.value)
-        ? data.value
-        : Array.isArray(data?.results)
-        ? data.results
-        : [];
+        const data = response?.data;
 
-      setMyBusinesses(list);
+        const list = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.value)
+          ? data.value
+          : Array.isArray(data?.results)
+          ? data.results
+          : [];
 
-      if (!getActiveBusinessId() && list.length > 0) {
-        const firstBusinessId =
-          list[0]?.business_id ||
-          list[0]?.id ||
-          list[0]?.business?.id;
+        setMyBusinesses(list);
 
-        if (firstBusinessId) {
-          setActiveBusinessId(firstBusinessId);
-          setActiveBusinessIdState(
-            String(firstBusinessId)
-          );
+        if (
+          !getActiveBusinessId() &&
+          list.length > 0
+        ) {
+          const firstBusinessId =
+            list[0]?.business_id ||
+            list[0]?.id ||
+            list[0]?.business?.id;
+
+          if (firstBusinessId) {
+            setActiveBusinessId(
+              firstBusinessId
+            );
+
+            setActiveBusinessIdState(
+              String(firstBusinessId)
+            );
+          }
         }
-      }
 
-      return list;
-    } catch {
-      setMyBusinesses([]);
-      return [];
-    }
-  }, []);
+        return list;
+      } catch {
+        /*
+         * Business-list loading is secondary to authentication.
+         * A failure here must never clear a valid user session.
+         *
+         * The shared API client will separately request an
+         * /auth/me/ verification when an authenticated endpoint
+         * returns 401.
+         */
+        return null;
+      }
+    }, []);
 
   const loadModuleAccess = useCallback(
-    async (businesses = [], currentUser = null) => {
-      if (isPlatformUser(currentUser || user)) {
-        setModuleAccess(FULL_MODULE_ACCESS);
+    async (
+      businesses = [],
+      currentUser = null
+    ) => {
+      if (isPlatformUser(currentUser)) {
+        setModuleAccess(
+          FULL_MODULE_ACCESS
+        );
+
         return FULL_MODULE_ACCESS;
       }
 
@@ -453,6 +635,10 @@ export function AuthProvider({ children }) {
         setModuleAccess(parsed);
         return parsed;
       } catch {
+        /*
+         * Subscription/module loading is secondary to authentication.
+         * Preserve the authenticated session and use safe defaults.
+         */
         const fallback = {
           ...DEFAULT_MODULE_ACCESS,
           checked: true,
@@ -465,33 +651,62 @@ export function AuthProvider({ children }) {
         return fallback;
       }
     },
-    [user]
+    []
   );
 
-  const loadMe = useCallback(
+  const performLoadMe = useCallback(
     async ({ silent = false } = {}) => {
       const token = getToken();
 
       if (!token) {
         resetAuthedState();
+        setAuthError("");
+        setAuthStatus(
+          AUTH_STATUS.ANONYMOUS
+        );
         setBooting(false);
+
         return null;
       }
 
+      /*
+       * Re-save the normalized token without removing it
+       * during temporary failures.
+       */
       setToken(token);
 
+      if (!silent) {
+        setAuthStatus(
+          AUTH_STATUS.BOOTING
+        );
+      }
+
       try {
-        const response = await api.get("/auth/me/");
-        const normalized = normalizeMePayload(
-          response.data
+        const response = await api.get(
+          "/auth/me/"
         );
 
+        const normalized =
+          normalizeMePayload(response.data);
+
         setUser(normalized.user);
-        setEntitlements(normalized.entitlements);
-        setProfiles(normalized.profiles);
+        setEntitlements(
+          normalized.entitlements
+        );
+        setProfiles(
+          normalized.profiles
+        );
         setCustomerSettings(
           normalized.customerSettings
         );
+
+        setAuthError("");
+        setAuthStatus(
+          AUTH_STATUS.AUTHENTICATED
+        );
+
+        lastSessionCheckRef.current =
+          Date.now();
 
         if (!silent) {
           setEntitlementsRefreshedAt(
@@ -499,13 +714,22 @@ export function AuthProvider({ children }) {
           );
         }
 
-        const businesses = await loadMyBusinesses();
+        let businesses =
+          await loadMyBusinesses();
+
+        if (!Array.isArray(businesses)) {
+          businesses = [];
+        }
 
         const platformAllowed =
-          enforcePlatformMode(normalized.user);
+          enforcePlatformMode(
+            normalized.user
+          );
 
         if (platformAllowed) {
-          setModuleAccess(FULL_MODULE_ACCESS);
+          setModuleAccess(
+            FULL_MODULE_ACCESS
+          );
         } else {
           await loadModuleAccess(
             businesses,
@@ -515,9 +739,29 @@ export function AuthProvider({ children }) {
 
         return normalized.user;
       } catch (error) {
-        clearToken();
-        resetAuthedState();
-        throw error;
+        /*
+         * Only a confirmed 401 from the authentication
+         * check proves that the saved token is invalid.
+         */
+        if (isUnauthorizedError(error)) {
+          markAnonymous();
+          return null;
+        }
+
+        /*
+         * Timeouts, offline conditions, Render cold starts,
+         * 429s, and 5xx responses preserve the token and
+         * any already-loaded user state.
+         */
+        markUnavailable(error);
+
+        if (
+          !isNetworkLikeError(error)
+        ) {
+          throw error;
+        }
+
+        return null;
       } finally {
         setBooting(false);
       }
@@ -526,15 +770,179 @@ export function AuthProvider({ children }) {
       enforcePlatformMode,
       loadModuleAccess,
       loadMyBusinesses,
+      markAnonymous,
+      markUnavailable,
       resetAuthedState,
     ]
   );
 
+  const loadMe = useCallback(
+    async (options = {}) => {
+      if (loadMePromiseRef.current) {
+        return loadMePromiseRef.current;
+      }
+
+      const promise =
+        performLoadMe(options).finally(
+          () => {
+            loadMePromiseRef.current =
+              null;
+          }
+        );
+
+      loadMePromiseRef.current = promise;
+
+      return promise;
+    },
+    [performLoadMe]
+  );
+
   useEffect(() => {
     loadMe().catch(() => {
-      // Authentication failures are handled inside loadMe.
+      /*
+       * performLoadMe already classifies and stores
+       * authentication state.
+       */
     });
   }, [loadMe]);
+
+  useEffect(() => {
+    if (!canUseWindow()) return undefined;
+
+    let lastResumeAttempt = 0;
+
+    const requestSessionRecovery = () => {
+      const token = getToken();
+
+      if (!token) return;
+
+      const now = Date.now();
+
+      /*
+       * Prevent focus, pageshow, and visibilitychange
+       * from producing duplicate requests together.
+       */
+      if (now - lastResumeAttempt < 2500) {
+        return;
+      }
+
+      lastResumeAttempt = now;
+
+      loadMe({
+        silent: true,
+      }).catch(() => {
+        // State is handled by loadMe.
+      });
+    };
+
+    const handleUnauthorized = () => {
+      /*
+       * Verify against /auth/me/ before clearing the
+       * persistent token.
+       */
+      requestSessionRecovery();
+    };
+
+    const handleAuthChanged = () => {
+      if (!getToken()) {
+        resetAuthedState();
+        setAuthError("");
+        setAuthStatus(
+          AUTH_STATUS.ANONYMOUS
+        );
+        setBooting(false);
+        return;
+      }
+
+      requestSessionRecovery();
+    };
+
+    const handleVisibilityChange = () => {
+      if (
+        document.visibilityState ===
+        "visible"
+      ) {
+        requestSessionRecovery();
+      }
+    };
+
+    const handlePageShow = () => {
+      requestSessionRecovery();
+    };
+
+    const handleOnline = () => {
+      requestSessionRecovery();
+    };
+
+    const handleFocus = () => {
+      requestSessionRecovery();
+    };
+
+    window.addEventListener(
+      "sw:authUnauthorized",
+      handleUnauthorized
+    );
+
+    window.addEventListener(
+      "sw:authChanged",
+      handleAuthChanged
+    );
+
+    window.addEventListener(
+      "pageshow",
+      handlePageShow
+    );
+
+    window.addEventListener(
+      "online",
+      handleOnline
+    );
+
+    window.addEventListener(
+      "focus",
+      handleFocus
+    );
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange
+    );
+
+    return () => {
+      window.removeEventListener(
+        "sw:authUnauthorized",
+        handleUnauthorized
+      );
+
+      window.removeEventListener(
+        "sw:authChanged",
+        handleAuthChanged
+      );
+
+      window.removeEventListener(
+        "pageshow",
+        handlePageShow
+      );
+
+      window.removeEventListener(
+        "online",
+        handleOnline
+      );
+
+      window.removeEventListener(
+        "focus",
+        handleFocus
+      );
+
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange
+      );
+    };
+  }, [
+    loadMe,
+    resetAuthedState,
+  ]);
 
   const login = useCallback(
     async ({
@@ -546,7 +954,10 @@ export function AuthProvider({ children }) {
       const resolvedIdentifier =
         identifier || email || username;
 
-      if (!resolvedIdentifier || !password) {
+      if (
+        !resolvedIdentifier ||
+        !password
+      ) {
         throw new Error(
           "Email or username and password are required."
         );
@@ -562,7 +973,8 @@ export function AuthProvider({ children }) {
         }
       );
 
-      const token = response?.data?.token;
+      const token =
+        response?.data?.token;
 
       if (!token) {
         throw new Error(
@@ -571,46 +983,77 @@ export function AuthProvider({ children }) {
       }
 
       setToken(token);
-      await loadMe();
+      setAuthError("");
+      setAuthStatus(
+        AUTH_STATUS.BOOTING
+      );
+
+      const loadedUser =
+        await loadMe();
+
+      if (
+        !loadedUser &&
+        getToken() &&
+        authStatus ===
+          AUTH_STATUS.UNAVAILABLE
+      ) {
+        throw new Error(
+          "Sign-in succeeded, but SyncWorks could not finish loading your account. Your login was preserved."
+        );
+      }
 
       return response.data;
     },
-    [loadMe]
+    [
+      authStatus,
+      loadMe,
+    ]
   );
 
-  const startEmailVerification = useCallback(
-    async ({ email, purpose = "REGISTER" }) => {
-      try {
-        const response = await api.post(
-          "/auth/email/start-verification/",
-          {
-            email: normalizeEmail(email),
-            purpose,
-          }
-        );
+  const startEmailVerification =
+    useCallback(
+      async ({
+        email,
+        purpose = "REGISTER",
+      }) => {
+        try {
+          const response = await api.post(
+            "/auth/email/start-verification/",
+            {
+              email: normalizeEmail(email),
+              purpose,
+            }
+          );
 
-        return response.data;
-      } catch (error) {
-        throw new Error(
-          extractErrorMessage(
-            error,
-            "Unable to send the verification code."
-          )
-        );
-      }
-    },
-    []
-  );
+          return response.data;
+        } catch (error) {
+          throw new Error(
+            extractErrorMessage(
+              error,
+              "Unable to send the verification code."
+            )
+          );
+        }
+      },
+      []
+    );
 
   const verifyEmailCode = useCallback(
-    async ({ challengeId, challenge_id, code }) => {
+    async ({
+      challengeId,
+      challenge_id,
+      code,
+    }) => {
       try {
         const response = await api.post(
           "/auth/email/verify-code/",
           {
             challenge_id:
-              challengeId || challenge_id,
-            code: String(code || "").trim(),
+              challengeId ||
+              challenge_id,
+            code: String(
+              code || ""
+            ).trim(),
           }
         );
 
@@ -628,13 +1071,17 @@ export function AuthProvider({ children }) {
   );
 
   const resendEmailCode = useCallback(
-    async ({ challengeId, challenge_id }) => {
+    async ({
+      challengeId,
+      challenge_id,
+    }) => {
       try {
         const response = await api.post(
           "/auth/email/resend-code/",
           {
             challenge_id:
-              challengeId || challenge_id,
+              challengeId ||
+              challenge_id,
           }
         );
 
@@ -651,75 +1098,88 @@ export function AuthProvider({ children }) {
     []
   );
 
-  const resolveSignupCodes = useCallback(
-    async ({
-      affiliateCode,
-      affiliate_code,
-      promoCode,
-      promo_code,
-    } = {}) => {
-      try {
-        const response = await api.post(
-          "/auth/resolve-signup-codes/",
-          {
-            affiliate_code:
-              affiliateCode ||
-              affiliate_code ||
-              "",
-            promo_code:
-              promoCode ||
-              promo_code ||
-              "",
-          }
-        );
+  const resolveSignupCodes =
+    useCallback(
+      async ({
+        affiliateCode,
+        affiliate_code,
+        promoCode,
+        promo_code,
+      } = {}) => {
+        try {
+          const response = await api.post(
+            "/auth/resolve-signup-codes/",
+            {
+              affiliate_code:
+                affiliateCode ||
+                affiliate_code ||
+                "",
+              promo_code:
+                promoCode ||
+                promo_code ||
+                "",
+            }
+          );
 
-        return response.data;
-      } catch (error) {
-        throw new Error(
-          extractErrorMessage(
-            error,
-            "Unable to validate the signup codes."
-          )
-        );
-      }
-    },
-    []
-  );
+          return response.data;
+        } catch (error) {
+          throw new Error(
+            extractErrorMessage(
+              error,
+              "Unable to validate the signup codes."
+            )
+          );
+        }
+      },
+      []
+    );
 
   const register = useCallback(
     async (payload = {}) => {
       const normalizedPayload = {
-        email: normalizeEmail(payload.email),
+        email: normalizeEmail(
+          payload.email
+        ),
+
         username: String(
           payload.username || ""
         ).trim(),
+
         first_name: String(
           payload.first_name ||
             payload.firstName ||
             ""
         ).trim(),
+
         last_name: String(
           payload.last_name ||
             payload.lastName ||
             ""
         ).trim(),
-        password: payload.password || "",
+
+        password:
+          payload.password || "",
+
         confirm_password:
           payload.confirm_password ||
           payload.confirmPassword ||
           "",
+
         registration_proof:
           payload.registration_proof ||
           payload.registrationProof ||
           "",
+
         affiliate_code:
           payload.affiliate_code ||
           payload.affiliateCode ||
           "",
+
         promo_code:
           payload.promo_code ||
           payload.promoCode ||
           "",
+
         registration_source:
           payload.registration_source ||
           payload.registrationSource ||
@@ -743,6 +1203,11 @@ export function AuthProvider({ children }) {
         }
 
         setToken(token);
+        setAuthError("");
+        setAuthStatus(
+          AUTH_STATUS.BOOTING
+        );
+
         await loadMe();
 
         return response.data;
@@ -766,8 +1231,14 @@ export function AuthProvider({ children }) {
   );
 
   const logout = useCallback(async () => {
+    /*
+     * This is the only normal application flow that should
+     * intentionally delete the server-side token.
+     */
     try {
-      await api.post("/auth/logout/");
+      await api.post(
+        "/auth/logout/"
+      );
     } catch {
       // Local cleanup must still happen.
     }
@@ -778,10 +1249,18 @@ export function AuthProvider({ children }) {
     setMyBusinesses([]);
     setMode("CUSTOMER");
     resetAuthedState();
-  }, [resetAuthedState, setMode]);
+    setAuthError("");
+    setAuthStatus(
+      AUTH_STATUS.ANONYMOUS
+    );
+    setBooting(false);
+  }, [
+    resetAuthedState,
+    setMode,
+  ]);
 
-  const updateActiveBusinessId = useCallback(
-    (nextId) => {
+  const updateActiveBusinessId =
+    useCallback((nextId) => {
       const cleaned = nextId
         ? String(nextId).trim()
         : "";
@@ -794,28 +1273,37 @@ export function AuthProvider({ children }) {
 
       setActiveBusinessId(cleaned);
       setActiveBusinessIdState(cleaned);
-    },
-    []
-  );
+    }, []);
 
-  const reloadBusinesses = useCallback(async () => {
-    const businesses = await loadMyBusinesses();
+  const reloadBusinesses =
+    useCallback(async () => {
+      const businesses =
+        await loadMyBusinesses();
 
-    await loadModuleAccess(
-      businesses,
-      user
-    );
+      const safeBusinesses =
+        Array.isArray(businesses)
+          ? businesses
+          : myBusinesses;
 
-    return businesses;
-  }, [loadModuleAccess, loadMyBusinesses, user]);
+      await loadModuleAccess(
+        safeBusinesses,
+        user
+      );
 
-  const refreshEntitlements = useCallback(
-    async () => {
+      return safeBusinesses;
+    }, [
+      loadModuleAccess,
+      loadMyBusinesses,
+      myBusinesses,
+      user,
+    ]);
+
+  const refreshEntitlements =
+    useCallback(async () => {
       const token = getToken();
 
       if (!token) {
-        clearToken();
-        resetAuthedState();
+        markAnonymous();
         return DEFAULT_ENTITLEMENTS;
       }
 
@@ -826,15 +1314,21 @@ export function AuthProvider({ children }) {
           "/auth/me/"
         );
 
-        const normalized = normalizeMePayload(
-          response.data
-        );
+        const normalized =
+          normalizeMePayload(
+            response.data
+          );
 
         setUser(normalized.user);
+
         setEntitlements(
           normalized.entitlements
         );
-        setProfiles(normalized.profiles);
+
+        setProfiles(
+          normalized.profiles
+        );
+
         setCustomerSettings(
           normalized.customerSettings
         );
@@ -843,8 +1337,16 @@ export function AuthProvider({ children }) {
           new Date().toISOString()
         );
 
+        setAuthError("");
+
+        setAuthStatus(
+          AUTH_STATUS.AUTHENTICATED
+        );
+
         const platformAllowed =
-          enforcePlatformMode(normalized.user);
+          enforcePlatformMode(
+            normalized.user
+          );
 
         if (platformAllowed) {
           setModuleAccess(
@@ -859,21 +1361,29 @@ export function AuthProvider({ children }) {
 
         return normalized.entitlements;
       } catch (error) {
-        if (error?.response?.status === 401) {
-          clearToken();
-          resetAuthedState();
+        if (isUnauthorizedError(error)) {
+          markAnonymous();
+
+          return DEFAULT_ENTITLEMENTS;
         }
 
+        markUnavailable(error);
         throw error;
       }
-    },
-    [
+    }, [
       enforcePlatformMode,
       loadModuleAccess,
+      markAnonymous,
+      markUnavailable,
       myBusinesses,
-      resetAuthedState,
-    ]
-  );
+    ]);
+
+  const retryAuthentication =
+    useCallback(async () => {
+      return loadMe({
+        silent: true,
+      });
+    }, [loadMe]);
 
   const availableModes = useMemo(() => {
     const hasMemberships =
@@ -881,20 +1391,28 @@ export function AuthProvider({ children }) {
 
     return {
       CUSTOMER: true,
+
       SBO:
         hasMemberships ||
         moduleAccess?.sbo ||
         isPlatformAdmin,
+
       EMPLOYEE:
         hasMemberships ||
         isPlatformAdmin,
+
       PM:
         hasMemberships ||
         moduleAccess?.pm ||
         isPlatformAdmin,
-      PLATFORM: isPlatformAdmin,
+
+      PLATFORM:
+        isPlatformAdmin,
+
       SALES:
-        Boolean(moduleAccess?.sales) ||
+        Boolean(
+          moduleAccess?.sales
+        ) ||
         isPlatformAdmin,
     };
   }, [
@@ -903,15 +1421,37 @@ export function AuthProvider({ children }) {
     myBusinesses,
   ]);
 
+  const hasStoredToken =
+    Boolean(getToken());
+
+  const isAuthenticated =
+    authStatus ===
+      AUTH_STATUS.AUTHENTICATED &&
+    Boolean(user);
+
+  const isAuthenticationUnavailable =
+    authStatus ===
+    AUTH_STATUS.UNAVAILABLE;
+
   const value = useMemo(
     () => ({
       user,
       booting,
-      isAuthed: Boolean(user),
+
+      authStatus,
+      authError,
+
+      hasStoredToken,
+      isAuthenticationUnavailable,
+
+      isAuthed:
+        isAuthenticated,
 
       login,
       register,
       logout,
+
+      retryAuthentication,
 
       startEmailVerification,
       verifyEmailCode,
@@ -927,9 +1467,12 @@ export function AuthProvider({ children }) {
       refreshEntitlements,
       entitlementsRefreshedAt,
 
-      activeBusinessId: activeBusinessIdState,
+      activeBusinessId:
+        activeBusinessIdState,
+
       setActiveBusinessId:
         updateActiveBusinessId,
+
       myBusinesses,
       reloadBusinesses,
 
@@ -943,6 +1486,8 @@ export function AuthProvider({ children }) {
     }),
     [
       activeBusinessIdState,
+      authError,
+      authStatus,
       availableModes,
       booting,
       canAccessGrowthOs,
@@ -950,6 +1495,9 @@ export function AuthProvider({ children }) {
       entitlements,
       entitlementsRefreshedAt,
       hasEntitlement,
+      hasStoredToken,
+      isAuthenticated,
+      isAuthenticationUnavailable,
       isPlatformAdmin,
       loadMe,
       login,
@@ -963,11 +1511,12 @@ export function AuthProvider({ children }) {
       reloadBusinesses,
       resendEmailCode,
       resolveSignupCodes,
+      retryAuthentication,
+      setMode,
       startEmailVerification,
       updateActiveBusinessId,
       user,
       verifyEmailCode,
-      setMode,
     ]
   );
 
@@ -979,7 +1528,8 @@ export function AuthProvider({ children }) {
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
+  const context =
+    useContext(AuthContext);
 
   if (!context) {
     throw new Error(
@@ -989,3 +1539,6 @@ export function useAuth() {
 
   return context;
 }
+
+
+rn

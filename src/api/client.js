@@ -10,14 +10,17 @@ const ACTIVE_BIZ_KEY = "sw_active_business_id";
 const LAST_BIZ_KEY = "sw_last_business_id";
 
 // ----------------------
-// Safe storage helpers
+// Safe browser helpers
 // ----------------------
 function canUseWindow() {
   return typeof window !== "undefined";
 }
 
 function canUseStorage() {
-  return canUseWindow() && typeof window.localStorage !== "undefined";
+  return (
+    canUseWindow() &&
+    typeof window.localStorage !== "undefined"
+  );
 }
 
 function dispatchWindowEvent(event) {
@@ -26,7 +29,7 @@ function dispatchWindowEvent(event) {
   try {
     window.dispatchEvent(event);
   } catch {
-    // no-op
+    // Browser event dispatch is non-critical.
   }
 }
 
@@ -47,13 +50,18 @@ export function setToken(token) {
   if (!canUseStorage()) return;
 
   try {
-    if (token) {
-      localStorage.setItem(TOKEN_KEY, String(token).trim());
+    const cleanedToken = String(token || "").trim();
+
+    if (cleanedToken) {
+      localStorage.setItem(
+        TOKEN_KEY,
+        cleanedToken
+      );
     } else {
       localStorage.removeItem(TOKEN_KEY);
     }
   } catch {
-    // no-op
+    // Storage failure should not crash the app.
   }
 }
 
@@ -63,11 +71,11 @@ export function clearToken() {
   try {
     localStorage.removeItem(TOKEN_KEY);
   } catch {
-    // no-op
+    // Storage failure should not crash the app.
   }
 }
 
-// Backwards compatibility
+// Backwards compatibility.
 export function setAuthToken(token) {
   setToken(token);
 }
@@ -79,7 +87,9 @@ export function getActiveBusinessId() {
   if (!canUseStorage()) return "";
 
   try {
-    return localStorage.getItem(ACTIVE_BIZ_KEY) || "";
+    return (
+      localStorage.getItem(ACTIVE_BIZ_KEY) || ""
+    );
   } catch {
     return "";
   }
@@ -93,15 +103,24 @@ export function setActiveBusinessId(id) {
       if (!cleaned) {
         localStorage.removeItem(ACTIVE_BIZ_KEY);
       } else {
-        localStorage.setItem(ACTIVE_BIZ_KEY, cleaned);
-        localStorage.setItem(LAST_BIZ_KEY, cleaned);
+        localStorage.setItem(
+          ACTIVE_BIZ_KEY,
+          cleaned
+        );
+
+        localStorage.setItem(
+          LAST_BIZ_KEY,
+          cleaned
+        );
       }
     } catch {
-      // no-op
+      // Storage failure should not crash the app.
     }
   }
 
-  dispatchWindowEvent(new Event("sw:activeBusinessChanged"));
+  dispatchWindowEvent(
+    new Event("sw:activeBusinessChanged")
+  );
 }
 
 export function clearActiveBusinessId() {
@@ -109,15 +128,19 @@ export function clearActiveBusinessId() {
     try {
       localStorage.removeItem(ACTIVE_BIZ_KEY);
     } catch {
-      // no-op
+      // Storage failure should not crash the app.
     }
   }
 
-  dispatchWindowEvent(new Event("sw:activeBusinessChanged"));
+  dispatchWindowEvent(
+    new Event("sw:activeBusinessChanged")
+  );
 }
 
 function resolveBusinessId() {
-  const fromLocalStorage = String(getActiveBusinessId() || "").trim();
+  const fromLocalStorage = String(
+    getActiveBusinessId() || ""
+  ).trim();
 
   if (fromLocalStorage) {
     return fromLocalStorage;
@@ -143,7 +166,7 @@ function resolveBusinessId() {
         return lastBusinessId;
       }
     } catch {
-      // no-op
+      // Storage failure should not crash the app.
     }
   }
 
@@ -158,20 +181,29 @@ function normalizedPath(config) {
 
   try {
     const parsed = new URL(raw, baseURL);
-    return parsed.pathname.replace(/^\/api\/v1/, "") || "/";
+
+    return (
+      parsed.pathname.replace(/^\/api\/v1/, "") ||
+      "/"
+    );
   } catch {
     return raw.replace(/^\/api\/v1/, "") || "/";
   }
 }
 
 function methodOf(config) {
-  return String(config?.method || "get").toLowerCase();
+  return String(
+    config?.method || "get"
+  ).toLowerCase();
 }
 
 function isSalesRequest(config) {
   const path = normalizedPath(config);
 
-  return path === "/sales" || path.startsWith("/sales/");
+  return (
+    path === "/sales" ||
+    path.startsWith("/sales/")
+  );
 }
 
 function isPlatformRequest(config) {
@@ -190,16 +222,23 @@ function isPlatformRequest(config) {
 function isTenantRequest(config) {
   const path = normalizedPath(config);
 
-  return path === "/tenant" || path.startsWith("/tenant/");
+  return (
+    path === "/tenant" ||
+    path.startsWith("/tenant/")
+  );
 }
 
 function isInvestorRequest(config) {
   const path = normalizedPath(config);
 
-  return path === "/investor" || path.startsWith("/investor/");
+  return (
+    path === "/investor" ||
+    path.startsWith("/investor/")
+  );
 }
 
-// User-level endpoints should never inherit an active business context.
+// User-level endpoints should never inherit an active
+// business context.
 function isMeScopedRequest(config) {
   const path = normalizedPath(config);
 
@@ -211,8 +250,8 @@ function isMeScopedRequest(config) {
   );
 }
 
-// Authentication and registration endpoints must always stay user-scoped.
-// These requests must never receive X-Business-Id.
+// Authentication and registration endpoints must always
+// stay user-scoped.
 function isUserScopedAuthRequest(config) {
   const path = normalizedPath(config);
 
@@ -224,20 +263,58 @@ function isUserScopedAuthRequest(config) {
     path.startsWith("/auth/logout") ||
     path.startsWith("/auth/me") ||
     path.startsWith("/auth/email/") ||
-    path.startsWith("/auth/resolve-signup-codes") ||
-    path.startsWith("/auth/upgrade-to-sbo-promo")
+    path.startsWith(
+      "/auth/resolve-signup-codes"
+    ) ||
+    path.startsWith(
+      "/auth/upgrade-to-sbo-promo"
+    )
   );
 }
 
-// Customer-created marketplace requests must not accidentally inherit an
-// old active-business context.
+function isPublicAuthRequest(config) {
+  const path = normalizedPath(config);
+
+  return (
+    path.startsWith("/auth/login") ||
+    path.startsWith("/auth/register") ||
+    path.startsWith("/auth/email/") ||
+    path.startsWith(
+      "/auth/resolve-signup-codes"
+    )
+  );
+}
+
+function isAuthMeRequest(config) {
+  const path = normalizedPath(config);
+
+  return (
+    path === "/auth/me" ||
+    path === "/auth/me/"
+  );
+}
+
+function isLogoutRequest(config) {
+  const path = normalizedPath(config);
+
+  return (
+    path === "/auth/logout" ||
+    path === "/auth/logout/"
+  );
+}
+
+// Customer-created marketplace requests must not inherit
+// an old active-business context.
 function isCustomerServiceRequestCreate(config) {
   const path = normalizedPath(config);
   const method = methodOf(config);
 
   return (
     method === "post" &&
-    (path === "/service-requests" || path === "/service-requests/")
+    (
+      path === "/service-requests" ||
+      path === "/service-requests/"
+    )
   );
 }
 
@@ -257,7 +334,9 @@ function shouldExcludeBusinessContext(config) {
 // Trailing-slash safety
 // ----------------------
 function isAbsoluteUrl(value) {
-  return /^https?:\/\//i.test(String(value || ""));
+  return /^https?:\/\//i.test(
+    String(value || "")
+  );
 }
 
 function ensureTrailingSlash(urlRaw) {
@@ -281,7 +360,8 @@ function ensureTrailingSlash(urlRaw) {
     return `${path}/${queryString}`;
   }
 
-  const lastSegment = url.split("/").filter(Boolean).pop() || "";
+  const lastSegment =
+    url.split("/").filter(Boolean).pop() || "";
 
   // Do not alter direct file or asset URLs.
   if (lastSegment.includes(".")) {
@@ -289,6 +369,43 @@ function ensureTrailingSlash(urlRaw) {
   }
 
   return `${url}/`;
+}
+
+// ----------------------
+// Error classification
+// ----------------------
+export function getApiErrorStatus(error) {
+  const status = Number(
+    error?.response?.status || 0
+  );
+
+  return Number.isFinite(status)
+    ? status
+    : 0;
+}
+
+export function isUnauthorizedError(error) {
+  return getApiErrorStatus(error) === 401;
+}
+
+export function isNetworkLikeError(error) {
+  if (!error) return false;
+
+  if (!error.response) {
+    return true;
+  }
+
+  const status = getApiErrorStatus(error);
+
+  return (
+    status === 408 ||
+    status === 425 ||
+    status === 429 ||
+    status === 500 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504
+  );
 }
 
 // ----------------------
@@ -307,13 +424,16 @@ api.interceptors.request.use(
     config.headers = config.headers || {};
 
     if (config?.url) {
-      config.url = ensureTrailingSlash(config.url);
+      config.url = ensureTrailingSlash(
+        config.url
+      );
     }
 
     const token = getToken();
 
     if (token) {
-      config.headers.Authorization = `Token ${token}`;
+      config.headers.Authorization =
+        `Token ${token}`;
     } else {
       delete config.headers.Authorization;
     }
@@ -325,15 +445,21 @@ api.interceptors.request.use(
       const businessId = resolveBusinessId();
 
       if (businessId) {
-        const cleanedBusinessId = String(businessId).trim();
+        const cleanedBusinessId = String(
+          businessId
+        ).trim();
 
-        config.headers["X-Business-Id"] = cleanedBusinessId;
+        config.headers["X-Business-Id"] =
+          cleanedBusinessId;
 
         if (canUseStorage()) {
           try {
-            localStorage.setItem(LAST_BIZ_KEY, cleanedBusinessId);
+            localStorage.setItem(
+              LAST_BIZ_KEY,
+              cleanedBusinessId
+            );
           } catch {
-            // no-op
+            // Storage failure is non-critical.
           }
         }
       } else {
@@ -355,7 +481,7 @@ api.interceptors.request.use(
       config.data instanceof ArrayBuffer;
 
     if (isFormData) {
-      // Let the browser generate the multipart boundary.
+      // Browser must generate multipart boundary.
       delete config.headers["Content-Type"];
     } else if (
       config.data &&
@@ -363,7 +489,8 @@ api.interceptors.request.use(
       !isBlob &&
       !isArrayBuffer
     ) {
-      config.headers["Content-Type"] = "application/json";
+      config.headers["Content-Type"] =
+        "application/json";
     }
 
     return config;
@@ -377,13 +504,42 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const status = error?.response?.status;
+    const status = getApiErrorStatus(error);
+    const config = error?.config || {};
+    const path = normalizedPath(config);
+    const token = getToken();
 
     if (status === 401) {
-      clearToken();
-      clearActiveBusinessId();
+      /*
+       * Important:
+       *
+       * Do not erase the saved token because any random API
+       * endpoint returned 401.
+       *
+       * The AuthProvider will verify the token against
+       * /auth/me/ before deciding whether the session is
+       * truly invalid.
+       */
 
-      dispatchWindowEvent(new Event("sw:authChanged"));
+      if (
+        token &&
+        !isPublicAuthRequest(config) &&
+        !isLogoutRequest(config)
+      ) {
+        dispatchWindowEvent(
+          new CustomEvent(
+            "sw:authUnauthorized",
+            {
+              detail: {
+                path,
+                method: methodOf(config),
+                isAuthMe:
+                  isAuthMeRequest(config),
+              },
+            }
+          )
+        );
+      }
     }
 
     if (status === 423) {
@@ -394,11 +550,14 @@ api.interceptors.response.use(
         "LOCKED";
 
       dispatchWindowEvent(
-        new CustomEvent("sw:billingLocked", {
-          detail: {
-            lock_reason: lockReason,
-          },
-        })
+        new CustomEvent(
+          "sw:billingLocked",
+          {
+            detail: {
+              lock_reason: lockReason,
+            },
+          }
+        )
       );
     }
 
