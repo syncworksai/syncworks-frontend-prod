@@ -1,15 +1,31 @@
 // src/components/customer-health/healthTrainerLogic.js
 
 function safeNumber(value, fallback = 0) {
-  const n = Number(String(value ?? "").replace(/[^\d.-]/g, ""));
-  return Number.isFinite(n) ? n : fallback;
+  const parsed = Number(
+    String(value ?? "").replace(/[^\d.-]/g, "")
+  );
+
+  return Number.isFinite(parsed)
+    ? parsed
+    : fallback;
+}
+
+function roundLoad(value) {
+  const number = safeNumber(value, 0);
+
+  if (!number) return "";
+
+  return String(
+    Math.round(number * 2) / 2
+  );
 }
 
 function parseRepTarget(value = "") {
   const raw = String(value || "");
-  const nums = raw.match(/\d+/g)?.map(Number) || [];
+  const numbers =
+    raw.match(/\d+/g)?.map(Number) || [];
 
-  if (!nums.length) {
+  if (!numbers.length) {
     return {
       min: 8,
       max: 12,
@@ -17,42 +33,773 @@ function parseRepTarget(value = "") {
     };
   }
 
-  if (nums.length === 1) {
+  if (numbers.length === 1) {
     return {
-      min: nums[0],
-      max: nums[0],
-      label: raw,
+      min: numbers[0],
+      max: numbers[0],
+      label: raw || String(numbers[0]),
     };
   }
 
   return {
-    min: nums[0],
-    max: nums[1],
+    min: Math.min(numbers[0], numbers[1]),
+    max: Math.max(numbers[0], numbers[1]),
     label: raw,
   };
 }
 
+function getSetLogs(exercise = {}) {
+  return Array.isArray(exercise?.set_logs)
+    ? exercise.set_logs
+    : [];
+}
+
 function getLastLoggedSet(exercise = {}) {
-  const logs = Array.isArray(exercise.set_logs) ? exercise.set_logs : [];
+  const logs = getSetLogs(exercise);
+
   return logs[logs.length - 1] || null;
 }
 
+function getPreviousLoggedSet(exercise = {}) {
+  const logs = getSetLogs(exercise);
+
+  return logs.length >= 2
+    ? logs[logs.length - 2]
+    : null;
+}
+
 function getExerciseCompletionCount(exercise = {}) {
-  return Array.isArray(exercise.set_logs) ? exercise.set_logs.length : 0;
+  return getSetLogs(exercise).length;
 }
 
 function getPlannedSets(exercise = {}) {
-  return safeNumber(exercise.planned_sets || exercise.sets || 3, 3);
+  return Math.max(
+    1,
+    safeNumber(
+      exercise.planned_sets ||
+        exercise.sets ||
+        3,
+      3
+    )
+  );
 }
 
-function getEaseBand(easeScore) {
-  const score = safeNumber(easeScore, 0);
+function getActualReps(setLog = {}) {
+  return safeNumber(
+    setLog.actual_reps ??
+      setLog.reps,
+    0
+  );
+}
 
-  if (!score) return "unknown";
-  if (score <= 3) return "too_easy";
-  if (score <= 6) return "good";
-  if (score <= 8) return "hard";
-  return "too_hard";
+function getActualWeight(setLog = {}) {
+  const value =
+    setLog.actual_weight ??
+    setLog.weight ??
+    setLog.target_weight ??
+    setLog.planned_weight ??
+    "";
+
+  return safeNumber(value, 0);
+}
+
+function getTargetReps(
+  setLog = {},
+  exercise = {}
+) {
+  return safeNumber(
+    setLog.target_reps ??
+      setLog.planned_reps ??
+      exercise.current_target_reps ??
+      exercise.planned_reps ??
+      exercise.reps,
+    0
+  );
+}
+
+function getTargetWeight(
+  setLog = {},
+  exercise = {}
+) {
+  return safeNumber(
+    setLog.target_weight ??
+      setLog.planned_weight ??
+      exercise.current_target_weight ??
+      exercise.planned_weight ??
+      exercise.weight,
+    0
+  );
+}
+
+function getRpe(setLog = {}) {
+  return safeNumber(
+    setLog.rpe ??
+      setLog.ease_score,
+    0
+  );
+}
+
+function getPain(
+  setLog = {},
+  exercise = {},
+  session = {}
+) {
+  return safeNumber(
+    setLog.pain_score ??
+      exercise.pain_score ??
+      session.pain_score,
+    0
+  );
+}
+
+function getFormQuality(setLog = {}) {
+  return String(
+    setLog.form_quality || ""
+  )
+    .trim()
+    .toLowerCase();
+}
+
+function isPoorForm(formQuality) {
+  return [
+    "poor",
+    "bad",
+    "unsafe",
+    "breaking",
+  ].includes(
+    String(formQuality || "")
+      .trim()
+      .toLowerCase()
+  );
+}
+
+function isGoodForm(formQuality) {
+  return [
+    "good",
+    "great",
+    "clean",
+    "excellent",
+  ].includes(
+    String(formQuality || "")
+      .trim()
+      .toLowerCase()
+  );
+}
+
+function getWeightIncrement(exercise = {}) {
+  const explicitIncrement = safeNumber(
+    exercise.weight_increment ||
+      exercise.load_increment,
+    0
+  );
+
+  if (explicitIncrement > 0) {
+    return explicitIncrement;
+  }
+
+  const equipment = String(
+    exercise.equipment || ""
+  ).toLowerCase();
+
+  if (
+    equipment.includes("dumbbell") ||
+    equipment.includes("machine")
+  ) {
+    return 5;
+  }
+
+  return 5;
+}
+
+function recommendedIncrease(
+  currentWeight,
+  exercise = {}
+) {
+  if (!currentWeight) return "";
+
+  const increment =
+    getWeightIncrement(exercise);
+
+  return roundLoad(
+    currentWeight + increment
+  );
+}
+
+function recommendedDecrease(
+  currentWeight,
+  exercise = {},
+  severity = "normal"
+) {
+  if (!currentWeight) return "";
+
+  const increment =
+    getWeightIncrement(exercise);
+
+  const percentage =
+    severity === "high"
+      ? 0.15
+      : 0.08;
+
+  const percentageReduction =
+    currentWeight * percentage;
+
+  const reduction = Math.max(
+    increment,
+    percentageReduction
+  );
+
+  return roundLoad(
+    Math.max(0, currentWeight - reduction)
+  );
+}
+
+function buildRecommendationBase({
+  exercise,
+  lastSet,
+  target,
+}) {
+  const actualWeight =
+    getActualWeight(lastSet);
+
+  const actualReps =
+    getActualReps(lastSet);
+
+  const targetWeight =
+    getTargetWeight(lastSet, exercise);
+
+  const targetReps =
+    getTargetReps(lastSet, exercise) ||
+    target.max ||
+    target.min ||
+    10;
+
+  return {
+    source: "syncworks_set_coach",
+    generated_after_set:
+      getExerciseCompletionCount(exercise),
+
+    action: "hold",
+    tone: "cyan",
+    priority: "normal",
+    confidence: "medium",
+
+    recommended_weight:
+      actualWeight ||
+      targetWeight ||
+      "",
+
+    recommended_reps:
+      targetReps ||
+      actualReps ||
+      "",
+
+    reason:
+      "Match the last clean working set.",
+
+    planned_weight:
+      targetWeight || "",
+
+    planned_reps:
+      targetReps || "",
+
+    actual_weight:
+      actualWeight || "",
+
+    actual_reps:
+      actualReps || "",
+
+    rpe: getRpe(lastSet),
+
+    pain_score:
+      safeNumber(
+        lastSet?.pain_score,
+        0
+      ),
+
+    form_quality:
+      lastSet?.form_quality || "",
+
+    generated_at:
+      new Date().toISOString(),
+  };
+}
+
+export function buildSetRecommendation({
+  session,
+  exercise,
+} = {}) {
+  if (!exercise) {
+    return {
+      source: "syncworks_set_coach",
+      action: "start",
+      tone: "cyan",
+      priority: "normal",
+      confidence: "low",
+      recommended_weight: "",
+      recommended_reps: "",
+      reason:
+        "Start the exercise and log the first working set.",
+      generated_after_set: 0,
+      generated_at:
+        new Date().toISOString(),
+    };
+  }
+
+  const lastSet =
+    getLastLoggedSet(exercise);
+
+  const previousSet =
+    getPreviousLoggedSet(exercise);
+
+  const target = parseRepTarget(
+    exercise.planned_reps ||
+      exercise.reps ||
+      "8-12"
+  );
+
+  if (!lastSet) {
+    return {
+      source: "syncworks_set_coach",
+      action: "start",
+      tone: "cyan",
+      priority: "normal",
+      confidence: "medium",
+
+      recommended_weight:
+        exercise.current_target_weight ??
+        exercise.planned_weight ??
+        exercise.weight ??
+        "",
+
+      recommended_reps:
+        exercise.current_target_reps ??
+        target.max ??
+        target.min ??
+        "",
+
+      reason:
+        `Begin with the planned ${target.label} clean reps and evaluate effort, pain, and form.`,
+
+      generated_after_set: 0,
+      generated_at:
+        new Date().toISOString(),
+    };
+  }
+
+  const recommendation =
+    buildRecommendationBase({
+      exercise,
+      lastSet,
+      target,
+    });
+
+  const actualWeight =
+    getActualWeight(lastSet);
+
+  const actualReps =
+    getActualReps(lastSet);
+
+  const plannedWeight =
+    getTargetWeight(
+      lastSet,
+      exercise
+    );
+
+  const plannedReps =
+    getTargetReps(
+      lastSet,
+      exercise
+    ) ||
+    target.max ||
+    target.min ||
+    10;
+
+  const rpe = getRpe(lastSet);
+
+  const pain = getPain(
+    lastSet,
+    exercise,
+    session
+  );
+
+  const formQuality =
+    getFormQuality(lastSet);
+
+  const previousReps =
+    getActualReps(previousSet);
+
+  const previousWeight =
+    getActualWeight(previousSet);
+
+  const manualWeightChange = Boolean(
+    lastSet.weight_changed_manually ||
+      lastSet.adjustment_source === "user" ||
+      (
+        plannedWeight > 0 &&
+        actualWeight > 0 &&
+        actualWeight !== plannedWeight
+      )
+  );
+
+  const repDrop =
+    previousSet &&
+    previousWeight === actualWeight
+      ? previousReps - actualReps
+      : 0;
+
+  if (pain >= 4) {
+    return {
+      ...recommendation,
+      action: "stop_or_swap",
+      tone: "rose",
+      priority: "high",
+      confidence: "high",
+      recommended_weight:
+        recommendedDecrease(
+          actualWeight,
+          exercise,
+          "high"
+        ),
+      recommended_reps:
+        Math.max(
+          1,
+          Math.min(
+            actualReps || plannedReps,
+            plannedReps
+          )
+        ),
+      reason:
+        "High pain was reported. Stop the movement, reduce the load substantially, or substitute the exercise.",
+    };
+  }
+
+  if (pain >= 2) {
+    return {
+      ...recommendation,
+      action: "reduce_weight",
+      tone: "rose",
+      priority: "high",
+      confidence: "high",
+      recommended_weight:
+        recommendedDecrease(
+          actualWeight,
+          exercise,
+          "high"
+        ),
+      recommended_reps:
+        Math.max(
+          target.min,
+          Math.min(
+            actualReps || plannedReps,
+            plannedReps
+          )
+        ),
+      reason:
+        "Pain was reported. Reduce the load and continue only with a comfortable range and clean form.",
+    };
+  }
+
+  if (isPoorForm(formQuality)) {
+    return {
+      ...recommendation,
+      action: "reduce_weight",
+      tone: "rose",
+      priority: "high",
+      confidence: "high",
+      recommended_weight:
+        recommendedDecrease(
+          actualWeight,
+          exercise,
+          "normal"
+        ),
+      recommended_reps:
+        Math.max(
+          target.min,
+          Math.min(
+            actualReps || plannedReps,
+            plannedReps
+          )
+        ),
+      reason:
+        "Form quality was poor. Reduce the load and prioritize controlled, technically clean repetitions.",
+    };
+  }
+
+  if (
+    repDrop >= 3 &&
+    rpe >= 8
+  ) {
+    return {
+      ...recommendation,
+      action: "reduce_weight",
+      tone: "rose",
+      priority: "high",
+      confidence: "high",
+      recommended_weight:
+        recommendedDecrease(
+          actualWeight,
+          exercise
+        ),
+      recommended_reps:
+        Math.max(
+          target.min,
+          actualReps
+        ),
+      reason:
+        "Performance dropped sharply at high effort. Reduce the load before fatigue causes poor repetitions.",
+    };
+  }
+
+  if (
+    actualReps < target.min &&
+    rpe >= 9
+  ) {
+    return {
+      ...recommendation,
+      action: "reduce_weight",
+      tone: "rose",
+      priority: "high",
+      confidence: "high",
+      recommended_weight:
+        recommendedDecrease(
+          actualWeight,
+          exercise
+        ),
+      recommended_reps:
+        target.min,
+      reason:
+        "Reps were below target at near-max effort. Reduce the weight so the next set returns to the prescribed range.",
+    };
+  }
+
+  if (
+    actualReps < target.min &&
+    rpe >= 7
+  ) {
+    return {
+      ...recommendation,
+      action: "reduce_weight",
+      tone: "amber",
+      priority: "normal",
+      confidence: "high",
+      recommended_weight:
+        recommendedDecrease(
+          actualWeight,
+          exercise
+        ),
+      recommended_reps:
+        target.min,
+      reason:
+        "The set missed the minimum rep target and felt hard. Reduce the load slightly and restore clean target reps.",
+    };
+  }
+
+  if (
+    manualWeightChange &&
+    actualWeight > plannedWeight &&
+    actualReps < plannedReps
+  ) {
+    return {
+      ...recommendation,
+      action:
+        rpe >= 9
+          ? "reduce_weight"
+          : "hold_weight",
+      tone:
+        rpe >= 9
+          ? "rose"
+          : "amber",
+      priority:
+        rpe >= 9
+          ? "high"
+          : "normal",
+      confidence: "high",
+      recommended_weight:
+        rpe >= 9
+          ? plannedWeight ||
+            recommendedDecrease(
+              actualWeight,
+              exercise
+            )
+          : actualWeight,
+      recommended_reps:
+        Math.max(
+          target.min,
+          actualReps
+        ),
+      reason:
+        rpe >= 9
+          ? "You increased the load manually, missed the rep target, and reached very high effort. Return toward the planned load."
+          : "You increased the load manually and reps fell below plan. Hold this weight and use the achieved rep target before progressing again.",
+    };
+  }
+
+  if (
+    rpe >= 9 ||
+    (
+      actualReps <= target.min &&
+      rpe >= 8
+    )
+  ) {
+    return {
+      ...recommendation,
+      action: "hold_weight",
+      tone: "amber",
+      priority: "normal",
+      confidence: "high",
+      recommended_weight:
+        actualWeight ||
+        plannedWeight,
+      recommended_reps:
+        Math.max(
+          target.min,
+          actualReps
+        ),
+      reason:
+        "That set was near maximum effort. Keep the load steady and protect form rather than adding weight.",
+    };
+  }
+
+  if (
+    actualReps >= target.max &&
+    rpe > 0 &&
+    rpe <= 6 &&
+    !isPoorForm(formQuality)
+  ) {
+    return {
+      ...recommendation,
+      action: "increase_weight",
+      tone: "emerald",
+      priority: "normal",
+      confidence:
+        isGoodForm(formQuality)
+          ? "high"
+          : "medium",
+      recommended_weight:
+        recommendedIncrease(
+          actualWeight ||
+            plannedWeight,
+          exercise
+        ),
+      recommended_reps:
+        target.max,
+      reason:
+        "You completed the full rep target at low-to-moderate effort. Add a small amount of weight while keeping the same clean rep goal.",
+    };
+  }
+
+  if (
+    actualReps > target.max &&
+    rpe <= 7 &&
+    !isPoorForm(formQuality)
+  ) {
+    return {
+      ...recommendation,
+      action: "increase_weight",
+      tone: "emerald",
+      priority: "normal",
+      confidence: "high",
+      recommended_weight:
+        recommendedIncrease(
+          actualWeight ||
+            plannedWeight,
+          exercise
+        ),
+      recommended_reps:
+        target.max,
+      reason:
+        "You exceeded the top of the rep range without excessive effort. Increase the load slightly next set.",
+    };
+  }
+
+  if (
+    actualReps >= target.min &&
+    actualReps <= target.max &&
+    rpe >= 7 &&
+    rpe <= 8
+  ) {
+    return {
+      ...recommendation,
+      action: "hold_weight",
+      tone: "emerald",
+      priority: "normal",
+      confidence: "high",
+      recommended_weight:
+        actualWeight ||
+        plannedWeight,
+      recommended_reps:
+        Math.max(
+          target.min,
+          actualReps
+        ),
+      reason:
+        "The set landed in the target range at productive effort. Keep the same load and match the clean performance.",
+    };
+  }
+
+  if (
+    actualReps >= target.max &&
+    !rpe
+  ) {
+    return {
+      ...recommendation,
+      action: "hold_or_increase",
+      tone: "cyan",
+      priority: "normal",
+      confidence: "medium",
+      recommended_weight:
+        actualWeight ||
+        plannedWeight,
+      recommended_reps:
+        target.max,
+      reason:
+        "You reached the top of the rep range. Log RPE and form quality so the coach can decide whether to increase weight.",
+    };
+  }
+
+  return {
+    ...recommendation,
+    action: "hold_weight",
+    tone: "cyan",
+    priority: "normal",
+    confidence: "medium",
+    recommended_weight:
+      actualWeight ||
+      plannedWeight,
+    recommended_reps:
+      actualReps ||
+      plannedReps ||
+      target.max,
+    reason:
+      "Match the last clean set. Use honest RPE, pain, and form feedback to guide the following adjustment.",
+  };
+}
+
+function recommendationTitle(
+  recommendation = {}
+) {
+  switch (recommendation.action) {
+    case "increase_weight":
+      return "Increase The Load";
+
+    case "reduce_weight":
+      return "Reduce The Load";
+
+    case "stop_or_swap":
+      return "Stop Or Substitute";
+
+    case "hold_weight":
+      return "Hold The Weight";
+
+    case "hold_or_increase":
+      return "Hold Or Add Slightly";
+
+    case "start":
+      return "First Set";
+
+    default:
+      return "Next Set";
+  }
 }
 
 export function buildTrainerNudge({
@@ -65,37 +812,46 @@ export function buildTrainerNudge({
       tone: "cyan",
       priority: "normal",
       title: "Trainer Ready",
-      message: "Start your workout and I’ll guide the next set.",
-      speak: false,
-    };
-  }
-
-  const pain = safeNumber(exercise.pain_score ?? session.pain_score, 0);
-  const difficulty = String(exercise.difficulty_score || "").toLowerCase();
-  const lastSet = getLastLoggedSet(exercise);
-  const loggedSets = getExerciseCompletionCount(exercise);
-  const plannedSets = getPlannedSets(exercise);
-  const target = parseRepTarget(exercise.planned_reps || exercise.reps || "8-12");
-  const lastReps = safeNumber(lastSet?.reps, 0);
-  const lastEase = safeNumber(lastSet?.ease_score, 0);
-  const easeBand = getEaseBand(lastEase);
-  const restSeconds = safeNumber(session.rest_seconds, 0);
-  const idleSeconds = safeNumber(session.idle_seconds, 0);
-  const currentSetSeconds = safeNumber(session.current_set_seconds, 0);
-  const isResting = !!session.rest_active;
-  const isPaused = !!session.paused;
-  const isSetActive = !!session.set_active;
-
-  if (pain >= 4) {
-    return {
-      tone: "rose",
-      priority: "high",
-      title: "Pain Warning",
       message:
-        "Pain is high. Reduce the weight, shorten the range, or swap this exercise before pushing harder.",
-      speak: audibleEnabled,
+        "Start your workout and I’ll guide the next set.",
+      speak: false,
+      recommendation: null,
     };
   }
+
+  const lastSet =
+    getLastLoggedSet(exercise);
+
+  const loggedSets =
+    getExerciseCompletionCount(exercise);
+
+  const plannedSets =
+    getPlannedSets(exercise);
+
+  const restSeconds = safeNumber(
+    session.current_rest_seconds ??
+      session.rest_seconds,
+    0
+  );
+
+  const idleSeconds = safeNumber(
+    session.idle_seconds,
+    0
+  );
+
+  const currentSetSeconds = safeNumber(
+    session.current_set_seconds,
+    0
+  );
+
+  const isResting =
+    Boolean(session.rest_active);
+
+  const isPaused =
+    Boolean(session.paused);
+
+  const isSetActive =
+    Boolean(session.set_active);
 
   if (exercise.skipped) {
     return {
@@ -103,8 +859,9 @@ export function buildTrainerNudge({
       priority: "normal",
       title: "Exercise Skipped",
       message:
-        "Good call if something felt off. Pick a swap or move on clean instead of forcing bad reps.",
+        "Good call if something felt off. Choose a safe substitute or move on instead of forcing poor repetitions.",
       speak: false,
+      recommendation: null,
     };
   }
 
@@ -112,21 +869,26 @@ export function buildTrainerNudge({
     return {
       tone: "slate",
       priority: "normal",
-      title: "Paused",
+      title: "Workout Paused",
       message:
-        "Workout is paused. When you are ready, resume and log the next set.",
+        "Resume when ready. Your workout data and current set position are preserved.",
       speak: false,
+      recommendation: null,
     };
   }
 
-  if (isSetActive && currentSetSeconds >= 90) {
+  if (
+    isSetActive &&
+    currentSetSeconds >= 90
+  ) {
     return {
       tone: "amber",
       priority: "normal",
       title: "Long Set",
       message:
-        "This set is running long. Finish clean reps, stop the set, and log what actually happened.",
+        "This set is running long. Finish only clean repetitions, stop the set, and log what actually happened.",
       speak: audibleEnabled,
+      recommendation: null,
     };
   }
 
@@ -136,41 +898,69 @@ export function buildTrainerNudge({
       priority: "normal",
       title: "Set In Progress",
       message:
-        "Stay tight. Control the rep, finish the set, then log reps, weight, ease, and pain honestly.",
+        "Stay braced, control the repetition, and stop when clean form breaks. Log actual weight, reps, RPE, form, and pain afterward.",
       speak: false,
+      recommendation: null,
     };
   }
 
-  if (isResting && restSeconds >= 180) {
+  if (
+    isResting &&
+    restSeconds >= 240
+  ) {
     return {
       tone: "rose",
       priority: "high",
-      title: "Rest Is Getting Long",
+      title: "Rest Is Too Long",
       message:
-        "You are over three minutes of rest. Start the next set, reduce the weight, or mark the exercise skipped.",
+        "You are over four minutes of rest. Start the next set, reduce the load, or end this exercise.",
       speak: audibleEnabled,
+      recommendation:
+        buildSetRecommendation({
+          session,
+          exercise,
+        }),
     };
   }
 
-  if (isResting && restSeconds >= 90) {
+  if (
+    isResting &&
+    restSeconds >= 120
+  ) {
     return {
       tone: "amber",
       priority: "normal",
-      title: "Rest Check",
+      title: "Prepare For The Next Set",
       message:
-        "Rest is long enough for most sets. Breathe, brace, and get ready to go again.",
+        "Rest is long enough for most working sets. Reset your position and prepare to follow the coach recommendation.",
       speak: audibleEnabled,
+      recommendation:
+        buildSetRecommendation({
+          session,
+          exercise,
+        }),
     };
   }
 
-  if (!lastSet && safeNumber(session.total_seconds, 0) >= 120) {
+  if (
+    !lastSet &&
+    safeNumber(
+      session.total_seconds,
+      0
+    ) >= 120
+  ) {
     return {
       tone: "amber",
       priority: "normal",
       title: "Start Logging",
       message:
-        "You have been in the workout for a bit. Tap Start Set and begin tracking real active time.",
+        "You have been in the workout for a while. Tap Start Set so active time tracks only real work.",
       speak: audibleEnabled,
+      recommendation:
+        buildSetRecommendation({
+          session,
+          exercise,
+        }),
     };
   }
 
@@ -180,168 +970,113 @@ export function buildTrainerNudge({
       priority: "high",
       title: "Idle Too Long",
       message:
-        "You are sitting too long. Start the next set, log the next movement, or close the workout if you are done.",
+        "Start the next set, move to the next exercise, or close the workout if you are finished.",
       speak: audibleEnabled,
+      recommendation:
+        buildSetRecommendation({
+          session,
+          exercise,
+        }),
     };
   }
 
-  if (lastSet && easeBand === "too_easy" && lastReps >= target.min) {
-    return {
-      tone: "emerald",
-      priority: "normal",
-      title: "Push Harder",
-      message:
-        "That set was too easy. Increase weight, add reps, slow the tempo, or shorten rest next set.",
-      speak: audibleEnabled,
-    };
-  }
-
-  if (lastSet && easeBand === "good" && lastReps >= target.min) {
-    return {
-      tone: "emerald",
-      priority: "normal",
-      title: "Good Working Set",
-      message:
-        "That was a good set. Match it next round or add a small push if form still feels clean.",
-      speak: false,
-    };
-  }
-
-  if (lastSet && easeBand === "hard") {
-    return {
-      tone: "amber",
-      priority: "normal",
-      title: "Hold The Weight",
-      message:
-        "That set was hard. Keep the same weight and chase clean reps. Do not force sloppy progress.",
-      speak: false,
-    };
-  }
-
-  if (lastSet && easeBand === "too_hard") {
-    return {
-      tone: "rose",
-      priority: "high",
-      title: "Too Heavy",
-      message:
-        "That set was near max effort. Reduce weight or reps so the next set stays safe and clean.",
-      speak: audibleEnabled,
-    };
-  }
-
-  if (lastSet && lastReps > target.max && difficulty.includes("easy")) {
-    return {
-      tone: "emerald",
-      priority: "normal",
-      title: "Progress It",
-      message: `You beat the ${target.label} target and marked it easy. Add weight next set or slow the tempo.`,
-      speak: audibleEnabled,
-    };
-  }
-
-  if (lastSet && lastReps >= target.max && !difficulty.includes("hard")) {
-    return {
-      tone: "emerald",
-      priority: "normal",
-      title: "Strong Set",
-      message:
-        "You hit the top of the rep range. If form was clean, add a small amount of weight next set.",
-      speak: audibleEnabled,
-    };
-  }
-
-  if (lastSet && lastReps < target.min && difficulty.includes("hard")) {
-    return {
-      tone: "amber",
-      priority: "normal",
-      title: "Adjust Load",
-      message:
-        "Reps were under target and the set felt hard. Keep the same weight or reduce slightly.",
-      speak: audibleEnabled,
-    };
-  }
-
-  if (loggedSets >= plannedSets) {
+  if (
+    loggedSets >= plannedSets
+  ) {
     return {
       tone: "emerald",
       priority: "normal",
       title: "Exercise Complete",
       message:
-        "Planned sets are complete. Move to the next exercise or add one bonus set only if form is still clean.",
+        "All planned sets are complete. Move to the next exercise unless the plan specifically calls for an additional set.",
       speak: false,
+      recommendation: null,
     };
   }
 
-  if (!lastSet) {
-    return {
-      tone: "cyan",
-      priority: "normal",
-      title: "First Set",
-      message: `Target ${target.label} clean reps. Tap Start Set so active time tracks only the work.`,
-      speak: false,
-    };
-  }
+  const recommendation =
+    buildSetRecommendation({
+      session,
+      exercise,
+    });
 
   return {
-    tone: "cyan",
-    priority: "normal",
-    title: "Next Set",
+    tone:
+      recommendation.tone ||
+      "cyan",
+
+    priority:
+      recommendation.priority ||
+      "normal",
+
+    title:
+      recommendationTitle(
+        recommendation
+      ),
+
     message:
-      "Match or beat the last clean set. Keep form tight, control the negative, and log honestly.",
-    speak: false,
+      recommendation.reason,
+
+    speak:
+      Boolean(
+        audibleEnabled &&
+          recommendation.priority === "high"
+      ),
+
+    recommendation,
   };
 }
 
-export function buildNextSetSuggestion(exercise = {}) {
-  const lastSet = getLastLoggedSet(exercise);
-  const target = parseRepTarget(exercise.planned_reps || exercise.reps || "8-12");
-
-  if (!lastSet) {
-    return {
-      reps: target.max || target.min || "",
-      weight: exercise.planned_weight || "",
-      ease_score: "",
-      pain_score: exercise.pain_score || "0",
-    };
-  }
-
-  const easeBand = getEaseBand(lastSet.ease_score);
-  const lastWeight = lastSet.weight || exercise.planned_weight || "";
-  const lastReps = safeNumber(lastSet.reps, target.max || 10);
-
-  if (easeBand === "too_easy") {
-    return {
-      reps: String(Math.max(lastReps, target.max || lastReps)),
-      weight: lastWeight,
-      ease_score: "",
-      pain_score: exercise.pain_score || lastSet.pain_score || "0",
-      note: "Too easy last set. Add weight if possible or beat reps.",
-    };
-  }
-
-  if (easeBand === "too_hard") {
-    return {
-      reps: String(Math.max(target.min || 6, lastReps - 2)),
-      weight: lastWeight,
-      ease_score: "",
-      pain_score: exercise.pain_score || lastSet.pain_score || "0",
-      note: "Too hard last set. Reduce reps or weight.",
-    };
-  }
+export function buildNextSetSuggestion(
+  exercise = {},
+  session = {}
+) {
+  const recommendation =
+    buildSetRecommendation({
+      session,
+      exercise,
+    });
 
   return {
-    reps: lastSet.reps || target.max || "",
-    weight: lastWeight,
+    reps:
+      recommendation.recommended_reps ??
+      "",
+
+    weight:
+      recommendation.recommended_weight ??
+      "",
+
+    target_reps:
+      recommendation.recommended_reps ??
+      "",
+
+    target_weight:
+      recommendation.recommended_weight ??
+      "",
+
     ease_score: "",
-    pain_score: exercise.pain_score || lastSet.pain_score || "0",
-    note: "Match the last clean set.",
+    rpe: "",
+
+    pain_score:
+      exercise.pain_score ||
+      "0",
+
+    action:
+      recommendation.action,
+
+    note:
+      recommendation.reason,
+
+    recommendation,
   };
 }
 
 export function explainFailure() {
   return {
-    title: "What does push to failure mean?",
+    title:
+      "What does pushing to failure mean?",
+
     body:
-      "Push to failure means you keep going until you cannot complete another clean rep with safe form. Technical failure is when form breaks. True failure is when the rep will not move. Most users should stop 1-2 reps before true failure unless the plan specifically says to go to failure.",
+      "Technical failure is the point where you can no longer complete another repetition with safe, controlled form. True muscular failure is when the repetition will not move. Most users should stop one or two repetitions before true failure unless the plan specifically calls for it.",
   };
 }
