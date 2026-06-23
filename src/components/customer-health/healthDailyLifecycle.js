@@ -621,10 +621,9 @@ function inferNextPlanStart(
     startDate,
   } = getLocalWeekBounds(now);
 
-  const nextMonday =
-    addDays(startDate, 7);
-
-  return nextMonday;
+     // Start the replacement plan in the current
+  // Monday-through-Sunday training week.
+  return startDate;
 }
 
 function copyPlannerItemToDate({
