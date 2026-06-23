@@ -1539,6 +1539,3 @@ export function useAuth() {
 
   return context;
 }
-
-
-rn
