@@ -8,6 +8,7 @@ import React, {
 
 import {
   addSetToExercise,
+  applyCoachRecommendationDecision,
   completeActiveSet,
   createWorkoutSessionFromPlannerItem,
   finishWorkoutSession,
@@ -22,6 +23,7 @@ import {
   toggleSessionPause,
   updateCompletedWorkoutSession,
   updateExerciseField,
+  updateExerciseTarget,
   updateSessionTimer,
   updateSetField,
   validateWorkoutSessionForFinish,
@@ -153,34 +155,54 @@ function SetCompletionSheet({
 }) {
   const [reps, setReps] = useState("");
   const [weight, setWeight] = useState("");
-  const [effort, setEffort] = useState("6");
+  const [rpe, setRpe] = useState("7");
+  const [formQuality, setFormQuality] = useState("Good");
   const [pain, setPain] = useState("0");
 
   useEffect(() => {
     if (!open || !exercise) return;
 
     setReps(
-      suggestion?.reps ||
+      exercise.current_target_reps ||
+        suggestion?.target_reps ||
+        suggestion?.reps ||
         exercise.planned_reps ||
         ""
     );
 
     setWeight(
-      suggestion?.weight ||
+      exercise.current_target_weight ||
+        suggestion?.target_weight ||
+        suggestion?.weight ||
         exercise.planned_weight ||
         ""
     );
 
-    setEffort("6");
+    setRpe("7");
+    setFormQuality("Good");
     setPain(exercise.pain_score || "0");
   }, [
     open,
     exercise?.id,
+    exercise?.current_target_reps,
+    exercise?.current_target_weight,
+    suggestion?.target_reps,
+    suggestion?.target_weight,
     suggestion?.reps,
     suggestion?.weight,
   ]);
 
   if (!open || !exercise) return null;
+
+  const targetWeight =
+    exercise.current_target_weight ||
+    exercise.planned_weight ||
+    "";
+
+  const targetReps =
+    exercise.current_target_reps ||
+    exercise.planned_reps ||
+    "";
 
   return (
     <div className="fixed inset-0 z-[130] flex items-end justify-center bg-black/80 p-3 backdrop-blur-md sm:items-center">
@@ -191,7 +213,7 @@ function SetCompletionSheet({
         className="absolute inset-0"
       />
 
-      <section className="relative z-[131] w-full max-w-lg rounded-[2rem] border border-lime-300/20 bg-[#07111f] p-4 shadow-[0_28px_90px_rgba(0,0,0,0.7)]">
+      <section className="relative z-[131] max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-[2rem] border border-lime-300/20 bg-[#07111f] p-4 shadow-[0_28px_90px_rgba(0,0,0,0.7)]">
         <div className="text-[10px] font-black uppercase tracking-[0.22em] text-lime-300">
           Set Complete
         </div>
@@ -212,17 +234,19 @@ function SetCompletionSheet({
           </div>
         </div>
 
+        <div className="mt-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.07] p-3 text-sm text-cyan-50">
+          Target: {targetWeight || "Bodyweight"} × {targetReps || "—"}
+        </div>
+
         <div className="mt-4 grid grid-cols-2 gap-3">
           <label>
             <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-              Reps completed
+              Actual reps
             </div>
 
             <input
               value={reps}
-              onChange={(event) =>
-                setReps(event.target.value)
-              }
+              onChange={(event) => setReps(event.target.value)}
               inputMode="numeric"
               className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-lg font-black text-white outline-none focus:border-cyan-300/40"
             />
@@ -230,14 +254,12 @@ function SetCompletionSheet({
 
           <label>
             <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-              Weight used
+              Actual weight
             </div>
 
             <input
               value={weight}
-              onChange={(event) =>
-                setWeight(event.target.value)
-              }
+              onChange={(event) => setWeight(event.target.value)}
               inputMode="decimal"
               placeholder="Bodyweight"
               className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-lg font-black text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
@@ -246,28 +268,56 @@ function SetCompletionSheet({
         </div>
 
         <div className="mt-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+              RPE
+            </div>
+
+            <div className="text-sm font-black text-fuchsia-100">
+              {rpe}/10
+            </div>
+          </div>
+
+          <input
+            type="range"
+            min="1"
+            max="10"
+            step="1"
+            value={rpe}
+            onChange={(event) => setRpe(event.target.value)}
+            className="mt-3 w-full accent-fuchsia-400"
+          />
+
+          <div className="mt-1 flex justify-between text-[10px] font-bold text-slate-500">
+            <span>Easy</span>
+            <span>Working</span>
+            <span>Max</span>
+          </div>
+        </div>
+
+        <div className="mt-4">
           <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-            How did it feel?
+            Form quality
           </div>
 
           <div className="mt-2 grid grid-cols-3 gap-2">
-            {[
-              ["3", "Too Easy"],
-              ["6", "About Right"],
-              ["9", "Too Hard"],
-            ].map(([value, label]) => (
+            {["Good", "Fair", "Poor"].map((option) => (
               <button
-                key={value}
+                key={option}
                 type="button"
-                onClick={() => setEffort(value)}
+                onClick={() => setFormQuality(option)}
                 className={cx(
                   "rounded-2xl border px-2 py-3 text-xs font-black transition",
-                  effort === value
-                    ? "border-fuchsia-300/30 bg-fuchsia-300/15 text-fuchsia-100"
+                  formQuality === option
+                    ? option === "Poor"
+                      ? "border-rose-300/30 bg-rose-300/15 text-rose-100"
+                      : option === "Fair"
+                      ? "border-amber-300/30 bg-amber-300/15 text-amber-100"
+                      : "border-lime-300/30 bg-lime-300/15 text-lime-100"
                     : "border-white/10 bg-white/[0.04] text-slate-300"
                 )}
               >
-                {label}
+                {option}
               </button>
             ))}
           </div>
@@ -317,10 +367,30 @@ function SetCompletionSheet({
             type="button"
             onClick={() =>
               onSave({
+                actual_reps: reps,
+                actual_weight: weight,
                 reps,
                 weight,
-                ease_score: effort,
+                target_reps: targetReps,
+                target_weight: targetWeight,
+                planned_reps: exercise.planned_reps || "",
+                planned_weight: exercise.planned_weight || "",
+                rpe,
+                ease_score: rpe,
+                form_quality: formQuality,
                 pain_score: pain,
+                adjustment_source:
+                  exercise.target_adjustment_source || "",
+                recommendation:
+                  exercise.last_recommendation?.recommendation || null,
+                recommendation_accepted:
+                  exercise.last_recommendation?.accepted || false,
+                recommendation_overridden:
+                  exercise.last_recommendation?.overridden || false,
+                recommendation_decision:
+                  exercise.last_recommendation?.decision || "",
+                recommendation_decided_at:
+                  exercise.last_recommendation?.decided_at || "",
               })
             }
             className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100 shadow-[0_0_30px_rgba(57,255,136,0.14)]"
@@ -337,70 +407,299 @@ function SetHistory({
   exercise,
   onUpdateSet,
   onRemoveSet,
+  onTargetChange,
+  targetControlsRef,
 }) {
   const logs = Array.isArray(exercise?.set_logs)
     ? exercise.set_logs
     : [];
 
-  if (!logs.length) {
-    return (
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-500">
-        Your completed sets will appear here.
-      </div>
-    );
+  const plannedSets = Math.max(
+    1,
+    Number(exercise?.planned_sets || 1)
+  );
+
+  const currentIndex = logs.length;
+
+  const rows = Array.from(
+    { length: Math.max(plannedSets, logs.length) },
+    (_, index) => ({
+      index,
+      setNumber: index + 1,
+      log: logs[index] || null,
+    })
+  );
+
+  const targetWeight =
+    exercise?.current_target_weight ??
+    exercise?.planned_weight ??
+    "";
+
+  const targetReps =
+    exercise?.current_target_reps ??
+    exercise?.planned_reps ??
+    "";
+
+  function bump(value, amount, minimum = 0) {
+    const current = Number(value || 0);
+    return String(Math.max(minimum, current + amount));
   }
 
   return (
-    <div className="space-y-2">
-      {logs.map((setLog, index) => (
-        <div
-          key={setLog.id}
-          className="grid grid-cols-[42px_1fr_1fr] gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:grid-cols-[42px_1fr_1fr_1fr_auto]"
-        >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-sm font-black text-cyan-100">
-            {index + 1}
+    <div className="space-y-3">
+      <div
+        ref={targetControlsRef}
+        className="rounded-2xl border border-fuchsia-300/20 bg-fuchsia-300/[0.07] p-3"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-200">
+              Current Set Target
+            </div>
+
+            <div className="mt-1 text-xs text-slate-400">
+              Changes carry forward to the remaining sets.
+            </div>
           </div>
 
-          <input
-            value={setLog.reps || ""}
-            onChange={(event) =>
-              onUpdateSet(
-                setLog.id,
-                "reps",
-                event.target.value
-              )
-            }
-            aria-label={`Set ${index + 1} reps`}
-            className="h-10 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-2 text-sm font-bold text-white outline-none"
-          />
-
-          <input
-            value={setLog.weight || ""}
-            onChange={(event) =>
-              onUpdateSet(
-                setLog.id,
-                "weight",
-                event.target.value
-              )
-            }
-            aria-label={`Set ${index + 1} weight`}
-            className="h-10 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-2 text-sm font-bold text-white outline-none"
-          />
-
-          <div className="col-span-2 rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-slate-300 sm:col-span-1">
-            Effort {setLog.ease_score || "—"} •{" "}
-            {formatSeconds(setLog.set_duration_seconds || 0)}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => onRemoveSet(setLog.id)}
-            className="col-span-3 h-10 rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 text-xs font-black text-rose-100 sm:col-span-1"
-          >
-            Remove
-          </button>
+          {exercise?.target_adjustment_source ? (
+            <div className="rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-fuchsia-100">
+              {exercise.target_adjustment_source === "coach"
+                ? "Coach adjusted"
+                : "Adjusted"}
+            </div>
+          ) : null}
         </div>
-      ))}
+
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">
+              Weight
+            </div>
+
+            <div className="mt-2 grid grid-cols-[44px_1fr_44px] gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  onTargetChange({
+                    weight: bump(targetWeight, -5, 0),
+                    reps: targetReps,
+                    source: "user",
+                  })
+                }
+                className="h-11 rounded-xl border border-white/10 bg-white/[0.05] text-sm font-black text-white"
+              >
+                −5
+              </button>
+
+              <input
+                value={targetWeight}
+                onChange={(event) =>
+                  onTargetChange({
+                    weight: event.target.value,
+                    reps: targetReps,
+                    source: "user",
+                  })
+                }
+                inputMode="decimal"
+                placeholder="BW"
+                className="h-11 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-2 text-center text-base font-black text-white outline-none focus:border-fuchsia-300/40"
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  onTargetChange({
+                    weight: bump(targetWeight, 5, 0),
+                    reps: targetReps,
+                    source: "user",
+                  })
+                }
+                className="h-11 rounded-xl border border-white/10 bg-white/[0.05] text-sm font-black text-white"
+              >
+                +5
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">
+              Reps
+            </div>
+
+            <div className="mt-2 grid grid-cols-[44px_1fr_44px] gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  onTargetChange({
+                    weight: targetWeight,
+                    reps: bump(targetReps, -1, 1),
+                    source: "user",
+                  })
+                }
+                className="h-11 rounded-xl border border-white/10 bg-white/[0.05] text-sm font-black text-white"
+              >
+                −1
+              </button>
+
+              <input
+                value={targetReps}
+                onChange={(event) =>
+                  onTargetChange({
+                    weight: targetWeight,
+                    reps: event.target.value,
+                    source: "user",
+                  })
+                }
+                inputMode="numeric"
+                className="h-11 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-2 text-center text-base font-black text-white outline-none focus:border-fuchsia-300/40"
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  onTargetChange({
+                    weight: targetWeight,
+                    reps: bump(targetReps, 1, 1),
+                    source: "user",
+                  })
+                }
+                className="h-11 rounded-xl border border-white/10 bg-white/[0.05] text-sm font-black text-white"
+              >
+                +1
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {rows.map(({ setNumber, index, log }) => {
+          const isCurrent = !log && index === currentIndex;
+
+          return (
+            <div
+              key={log?.id || `planned_set_${setNumber}`}
+              className={cx(
+                "rounded-2xl border p-3",
+                log
+                  ? "border-lime-300/20 bg-lime-300/[0.07]"
+                  : isCurrent
+                  ? "border-cyan-300/30 bg-cyan-300/[0.09] shadow-[0_0_28px_rgba(34,211,238,0.08)]"
+                  : "border-white/10 bg-white/[0.025]"
+              )}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div
+                    className={cx(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-sm font-black",
+                      log
+                        ? "border-lime-300/25 bg-lime-300/10 text-lime-100"
+                        : isCurrent
+                        ? "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
+                        : "border-white/10 bg-white/[0.04] text-slate-400"
+                    )}
+                  >
+                    {setNumber}
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="text-sm font-black text-white">
+                      Set {setNumber}
+                    </div>
+
+                    {log ? (
+                      <div className="mt-0.5 text-sm text-slate-300">
+                        {log.actual_weight ||
+                          log.weight ||
+                          "Bodyweight"}{" "}
+                        ×{" "}
+                        {log.actual_reps ||
+                          log.reps ||
+                          "—"}
+                        {log.rpe || log.ease_score
+                          ? ` · RPE ${log.rpe || log.ease_score}`
+                          : ""}
+                      </div>
+                    ) : (
+                      <div className="mt-0.5 text-sm text-slate-400">
+                        Goal: {targetWeight || "Bodyweight"} ×{" "}
+                        {targetReps || "—"}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  className={cx(
+                    "shrink-0 rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-[0.12em]",
+                    log
+                      ? "border-lime-300/20 bg-lime-300/10 text-lime-100"
+                      : isCurrent
+                      ? "border-cyan-300/20 bg-cyan-300/10 text-cyan-100"
+                      : "border-white/10 bg-white/[0.04] text-slate-500"
+                  )}
+                >
+                  {log ? "Complete" : isCurrent ? "Current" : "Planned"}
+                </div>
+              </div>
+
+              {log ? (
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+                  <input
+                    value={log.actual_reps || log.reps || ""}
+                    onChange={(event) =>
+                      onUpdateSet(
+                        log.id,
+                        "actual_reps",
+                        event.target.value
+                      )
+                    }
+                    aria-label={`Set ${setNumber} reps`}
+                    className="h-10 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-2 text-sm font-bold text-white outline-none"
+                  />
+
+                  <input
+                    value={log.actual_weight || log.weight || ""}
+                    onChange={(event) =>
+                      onUpdateSet(
+                        log.id,
+                        "actual_weight",
+                        event.target.value
+                      )
+                    }
+                    aria-label={`Set ${setNumber} weight`}
+                    className="h-10 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-2 text-sm font-bold text-white outline-none"
+                  />
+
+                  <input
+                    value={log.rpe || log.ease_score || ""}
+                    onChange={(event) =>
+                      onUpdateSet(
+                        log.id,
+                        "rpe",
+                        event.target.value
+                      )
+                    }
+                    aria-label={`Set ${setNumber} RPE`}
+                    placeholder="RPE"
+                    className="h-10 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-2 text-sm font-bold text-white outline-none"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => onRemoveSet(log.id)}
+                    className="col-span-2 h-10 rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 text-xs font-black text-rose-100 sm:col-span-1"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -527,6 +826,7 @@ export default function ActiveWorkoutSessionDrawer({
 
   const lastExerciseCueRef = useRef("");
   const lastRestCueRef = useRef("");
+  const targetControlsRef = useRef(null);
 
   useEffect(() => {
     if (!open || !plannerItem) return;
@@ -587,9 +887,12 @@ export default function ActiveWorkoutSessionDrawer({
   const currentSuggestion = useMemo(
     () =>
       currentExercise
-        ? buildNextSetSuggestion(currentExercise)
+        ? buildNextSetSuggestion(
+            currentExercise,
+            session
+          )
         : {},
-    [currentExercise]
+    [currentExercise, session]
   );
 
   const validation = useMemo(
@@ -817,6 +1120,107 @@ export default function ActiveWorkoutSessionDrawer({
     });
   }
 
+  function useCoachRecommendation(
+    recommendation
+  ) {
+    if (
+      !session ||
+      !currentExercise ||
+      !recommendation
+    ) {
+      return;
+    }
+
+    setSession(
+      applyCoachRecommendationDecision(
+        session,
+        currentExercise.id,
+        recommendation,
+        "accepted"
+      )
+    );
+  }
+
+  function keepCurrentTarget(
+    recommendation
+  ) {
+    if (
+      !session ||
+      !currentExercise ||
+      !recommendation
+    ) {
+      return;
+    }
+
+    setSession(
+      applyCoachRecommendationDecision(
+        session,
+        currentExercise.id,
+        recommendation,
+        "keep_current"
+      )
+    );
+  }
+
+  function adjustTargetManually(
+    recommendation
+  ) {
+    if (
+      session &&
+      currentExercise &&
+      recommendation
+    ) {
+      setSession(
+        applyCoachRecommendationDecision(
+          session,
+          currentExercise.id,
+          recommendation,
+          "manual",
+          {
+            weight:
+              currentExercise.current_target_weight,
+            reps:
+              currentExercise.current_target_reps,
+          }
+        )
+      );
+    }
+
+    window.setTimeout(() => {
+      targetControlsRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 50);
+  }
+
+  function patchCurrentTarget({
+    weight,
+    reps,
+    source = "user",
+  }) {
+    if (
+      !session ||
+      !currentExercise ||
+      !canEdit
+    ) {
+      return;
+    }
+
+    setSession(
+      updateExerciseTarget(
+        session,
+        currentExercise.id,
+        {
+          weight,
+          reps,
+          source,
+          applyToFutureSets: true,
+        }
+      )
+    );
+  }
+
   function startSet() {
     if (
       !session ||
@@ -855,10 +1259,32 @@ export default function ActiveWorkoutSessionDrawer({
   function saveTimedSet(setLog) {
     if (!session || !currentExercise) return;
 
+    const enrichedSetLog = {
+      ...setLog,
+      target_weight:
+        setLog.target_weight ??
+        currentExercise.current_target_weight ??
+        currentExercise.planned_weight ??
+        "",
+      target_reps:
+        setLog.target_reps ??
+        currentExercise.current_target_reps ??
+        currentExercise.planned_reps ??
+        "",
+      planned_weight:
+        setLog.planned_weight ??
+        currentExercise.planned_weight ??
+        "",
+      planned_reps:
+        setLog.planned_reps ??
+        currentExercise.planned_reps ??
+        "",
+    };
+
     const nextSession = completeActiveSet(
       session,
       currentExercise.id,
-      setLog
+      enrichedSetLog
     );
 
     setSession(nextSession);
@@ -869,7 +1295,9 @@ export default function ActiveWorkoutSessionDrawer({
       currentExercise.rest_seconds ||
       0;
 
-    const pain = Number(setLog.pain_score || 0);
+    const pain = Number(
+      enrichedSetLog.pain_score || 0
+    );
 
     speakCoachText({
       text:
@@ -1331,6 +1759,15 @@ export default function ActiveWorkoutSessionDrawer({
                   coachVoicePreference
                 }
                 onReplay={replayNudge}
+                onUseRecommendation={
+                  useCoachRecommendation
+                }
+                onKeepCurrent={
+                  keepCurrentTarget
+                }
+                onAdjustManually={
+                  adjustTargetManually
+                }
               />
 
               <details className="rounded-[1.5rem] border border-white/10 bg-white/[0.03]">
@@ -1354,11 +1791,11 @@ export default function ActiveWorkoutSessionDrawer({
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
-                        Set History
+                        Live Set Board
                       </div>
 
                       <div className="mt-1 text-lg font-black text-white">
-                        Logged sets
+                        Planned and completed sets
                       </div>
                     </div>
 
@@ -1380,6 +1817,12 @@ export default function ActiveWorkoutSessionDrawer({
                   <div className="mt-3">
                     <SetHistory
                       exercise={currentExercise}
+                      targetControlsRef={
+                        targetControlsRef
+                      }
+                      onTargetChange={
+                        patchCurrentTarget
+                      }
                       onUpdateSet={(
                         setId,
                         field,
