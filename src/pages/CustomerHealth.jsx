@@ -27,6 +27,8 @@ import {
 import HealthConfetti from "../components/customer-health/HealthConfetti";
 import TodayPlanDrawer from "../components/customer-health/TodayPlanDrawer";
 import HealthDashboard from "../components/customer-health/HealthDashboard";
+import HealthHome from "../components/customer-health/HealthHome";
+import HealthProfileIntakeDrawer from "../components/customer-health/HealthProfileIntakeDrawer";
 import HealthPlannerDrawer from "../components/customer-health/HealthPlannerDrawer";
 import QuestionnaireDrawer from "../components/customer-health/QuestionnaireDrawer";
 import WorkoutStudioDrawer from "../components/customer-health/WorkoutStudioDrawer";
@@ -586,6 +588,7 @@ export default function CustomerHealth() {
     !!moduleAccess?.customerHealth;
 
   const [drawer, setDrawer] = useState("");
+  const [healthView, setHealthView] = useState("home");
   const [syncStatus, setSyncStatus] =
     useState("local");
   const [cloudLoaded, setCloudLoaded] =
@@ -618,6 +621,9 @@ export default function CustomerHealth() {
 
   const achievedMilestoneIdsRef =
     useRef(new Set());
+
+  const intakePromptedRef =
+    useRef(false);
 
   const [profile, setProfile] = useState(
     () => ({
@@ -730,6 +736,41 @@ export default function CustomerHealth() {
         : defaultDevices();
     }
   );
+
+  useEffect(() => {
+    if (
+      !hasHealthAccess ||
+      intakePromptedRef.current ||
+      profile?.health_intake_completed_at
+    ) {
+      return;
+    }
+
+    const hasStartingProfile =
+      Boolean(profile?.weight) ||
+      Boolean(profile?.height_ft) ||
+      Boolean(profile?.height_in) ||
+      Boolean(profile?.injuries) ||
+      Boolean(profile?.surgeries) ||
+      Boolean(profile?.heart_conditions) ||
+      Boolean(profile?.health_conditions);
+
+    intakePromptedRef.current = true;
+
+    if (!hasStartingProfile) {
+      setDrawer("profile-intake");
+    }
+  }, [
+    hasHealthAccess,
+    profile?.health_intake_completed_at,
+    profile?.weight,
+    profile?.height_ft,
+    profile?.height_in,
+    profile?.injuries,
+    profile?.surgeries,
+    profile?.heart_conditions,
+    profile?.health_conditions,
+  ]);
 
   useEffect(() => {
     function runDailyLifecycle() {
@@ -1429,8 +1470,22 @@ export default function CustomerHealth() {
   }
 
   function handleDashboardOpen(target) {
+    if (target === "home") {
+      setHealthView("home");
+      setDrawer("");
+      return;
+    }
+
+    if (target === "insights") {
+      setHealthView("insights");
+      setDrawer("");
+      return;
+    }
+
     const routeMap = {
-      profile: "questionnaire",
+      profile: "profile-intake",
+      "profile-intake": "profile-intake",
+      questionnaire: "questionnaire",
       "my-workouts": "workout",
       "build-workout": "workout",
       "train-muscle": "library",
@@ -1523,7 +1578,7 @@ export default function CustomerHealth() {
         title="Health"
         subtitle={
           hasHealthAccess
-            ? "Dashboard • planner • active workouts • nutrition • progress • AI coach"
+            ? "Home • daily logging • workouts • coach • insights"
             : "30 days free • $2.99/month after"
         }
         rightActions={
@@ -1556,24 +1611,51 @@ export default function CustomerHealth() {
         )}
       >
         {hasHealthAccess ? (
-          <HealthDashboard
-            profile={profile}
-            snapshot={syncedSnapshot}
-            workouts={workouts}
-            history={history}
-            progressLogs={progressLogs}
-            devices={devices}
-            onOpen={handleDashboardOpen}
-            onStartWorkout={
-              startPlannerWorkout
-            }
-            onBuildNextWeek={
-              handleBuildNextWeek
-            }
-            onRepeatLastWeek={
-              handleRepeatLastWeek
-            }
-          />
+          healthView === "insights" ? (
+            <div className="space-y-4">
+              <button
+                type="button"
+                onClick={() =>
+                  setHealthView("home")
+                }
+                className="h-11 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 text-sm font-black text-cyan-100"
+              >
+                ← Back to Health Home
+              </button>
+
+              <HealthDashboard
+                profile={profile}
+                snapshot={syncedSnapshot}
+                workouts={workouts}
+                history={history}
+                progressLogs={progressLogs}
+                devices={devices}
+                onOpen={handleDashboardOpen}
+                onStartWorkout={
+                  startPlannerWorkout
+                }
+                onBuildNextWeek={
+                  handleBuildNextWeek
+                }
+                onRepeatLastWeek={
+                  handleRepeatLastWeek
+                }
+              />
+            </div>
+          ) : (
+            <HealthHome
+              profile={profile}
+              snapshot={syncedSnapshot}
+              history={history}
+              onOpen={handleDashboardOpen}
+              onStartWorkout={
+                startPlannerWorkout
+              }
+              onShowInsights={() =>
+                setHealthView("insights")
+              }
+            />
+          )
         ) : (
           <HealthSignupScreen
             onBack={() =>
@@ -1617,6 +1699,20 @@ export default function CustomerHealth() {
             snapshot={syncedSnapshot}
             setSnapshot={setSnapshot}
             workouts={workouts}
+          />
+
+          <HealthProfileIntakeDrawer
+            open={
+              drawer ===
+              "profile-intake"
+            }
+            onClose={() =>
+              setDrawer("")
+            }
+            profile={profile}
+            setProfile={setProfile}
+            snapshot={syncedSnapshot}
+            setSnapshot={setSnapshot}
           />
 
           <QuestionnaireDrawer
