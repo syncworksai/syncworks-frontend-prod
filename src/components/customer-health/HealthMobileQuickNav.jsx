@@ -5,13 +5,20 @@ function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
-function NavButton({ label, icon, onClick, active = false, tone = "default" }) {
+function NavButton({
+  label,
+  icon,
+  onClick,
+  active = false,
+  tone = "default",
+}) {
   const toneMap = {
     default:
       "border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]",
     emerald:
       "border-emerald-300/30 bg-emerald-300/15 text-emerald-100 shadow-[0_0_28px_rgba(16,185,129,0.18)]",
-    cyan: "border-cyan-300/25 bg-cyan-300/10 text-cyan-100 hover:bg-cyan-300/15",
+    cyan:
+      "border-cyan-300/25 bg-cyan-300/10 text-cyan-100 hover:bg-cyan-300/15",
     amber:
       "border-amber-300/25 bg-amber-300/10 text-amber-100 hover:bg-amber-300/15",
     fuchsia:
@@ -37,6 +44,7 @@ function NavButton({ label, icon, onClick, active = false, tone = "default" }) {
 export default function HealthMobileQuickNav({
   onOpen,
   onStartWorkout,
+  onLogData,
   nextSession,
   hasCoachProposal,
 }) {
@@ -61,7 +69,9 @@ export default function HealthMobileQuickNav({
           <button
             type="button"
             onClick={() =>
-              nextSession ? onStartWorkout?.(nextSession) : onOpen?.("planner")
+              nextSession
+                ? onStartWorkout?.(nextSession)
+                : onOpen?.("planner")
             }
             className="relative -mt-5 flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[1.35rem] border border-emerald-300/35 bg-gradient-to-br from-emerald-400/25 to-cyan-400/15 px-2 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-50 shadow-[0_0_34px_rgba(16,185,129,0.28)] transition active:scale-[0.98]"
           >
@@ -83,7 +93,7 @@ export default function HealthMobileQuickNav({
             label="Log"
             icon="✍️"
             tone="fuchsia"
-            onClick={() => onOpen?.("workout")}
+            onClick={onLogData}
           />
         </div>
       </div>

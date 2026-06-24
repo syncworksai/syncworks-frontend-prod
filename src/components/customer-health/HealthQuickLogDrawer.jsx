@@ -106,6 +106,7 @@ export default function HealthQuickLogDrawer({
   type,
   onClose,
   onSave,
+  onChooseType,
   profile,
   snapshot,
 }) {
@@ -171,7 +172,97 @@ export default function HealthQuickLogDrawer({
     ]
   );
 
+
   if (!open) return null;
+
+  if (type === "menu") {
+    const groups = [
+      {
+        title: "Daily Health",
+        items: [
+          ["weight", "Weight / BMI", "Track weight changes and BMI."],
+          ["steps", "Steps", "Enter today’s or a past day’s steps."],
+          ["sleep", "Sleep", "Log hours slept for recovery guidance."],
+          ["readiness", "Readiness / Pain", "Tell the coach how your body feels."],
+        ],
+      },
+      {
+        title: "Nutrition",
+        items: [
+          ["meal", "Meal", "Describe what you ate and add known nutrition."],
+          ["protein", "Protein", "Quick-add protein grams."],
+          ["calories", "Calories", "Quick-add calorie intake."],
+          ["water", "Water", "Quick-add hydration."],
+        ],
+      },
+    ];
+
+    return (
+      <div className="fixed inset-0 z-[130] flex items-end justify-center bg-black/80 p-3 backdrop-blur-xl sm:items-center">
+        <button
+          type="button"
+          aria-label="Close health log menu"
+          onClick={onClose}
+          className="absolute inset-0"
+        />
+
+        <section className="relative z-[131] max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-[2rem] border border-cyan-300/20 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.10),transparent_30%),linear-gradient(180deg,#07111f,#040812)] p-4 shadow-[0_28px_90px_rgba(0,0,0,0.72)] sm:p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">
+                Universal Health Log
+              </div>
+
+              <h3 className="mt-1 text-2xl font-black text-white">
+                What would you like to log?
+              </h3>
+
+              <p className="mt-1 text-sm leading-6 text-slate-400">
+                Choose a category, then save today’s data or select a past date.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] font-black text-white"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="mt-5 space-y-5">
+            {groups.map((group) => (
+              <div key={group.title}>
+                <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                  {group.title}
+                </div>
+
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {group.items.map(([value, label, description]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => onChooseType?.(value)}
+                      className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-left transition hover:bg-white/[0.07] active:scale-[0.99]"
+                    >
+                      <div className="text-sm font-black text-white">
+                        {label}
+                      </div>
+
+                      <div className="mt-1 text-xs leading-5 text-slate-400">
+                        {description}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   const titles = {
     weight: "Log weight",
