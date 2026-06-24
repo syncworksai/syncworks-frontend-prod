@@ -19,7 +19,9 @@ import {
 import { buildHealthAchievements } from "../components/customer-health/healthAchievements";
 import {
   countWorkoutsThisWeek,
+  createNextWeekFromSnapshot,
   ensureCurrentHealthDay,
+  ensureCurrentHealthWeek,
 } from "../components/customer-health/healthDailyLifecycle";
 
 import HealthConfetti from "../components/customer-health/HealthConfetti";
@@ -839,6 +841,26 @@ export default function CustomerHealth() {
     });
   }, [workouts]);
 
+  useEffect(() => {
+    setSnapshotBase((previous) => {
+      const lifecycle =
+        ensureCurrentHealthWeek({
+          snapshot: previous,
+          history,
+          workouts,
+          autoCreate: false,
+        });
+
+      if (!lifecycle.changed) {
+        return previous;
+      }
+
+      return normalizeHealthSnapshot(
+        lifecycle.snapshot
+      );
+    });
+  }, [history, workouts]);
+
   const syncedSnapshot = useMemo(() => {
     const weekPlan =
       normalizeWeekPlanForDashboard(
@@ -1406,6 +1428,67 @@ export default function CustomerHealth() {
     setDrawer("questionnaire");
   }
 
+  function handleDashboardOpen(target) {
+    const routeMap = {
+      profile: "questionnaire",
+      "my-workouts": "workout",
+      "build-workout": "workout",
+      "train-muscle": "library",
+      "muscle-map": "library",
+      library: "library",
+      progress: "progress",
+      planner: "planner",
+      "coach-chat": "coach-chat",
+    };
+
+    setDrawer(routeMap[target] || target || "");
+  }
+
+  function buildCurrentWeek(mode = "adaptive") {
+    setSnapshotBase((previous) => {
+      const hasCurrentPlan =
+        Array.isArray(previous.week_plan) &&
+        previous.week_plan.length > 0;
+
+      const hasArchivedPlan =
+        Array.isArray(
+          previous?.last_archived_week?.week_plan
+        ) &&
+        previous.last_archived_week.week_plan.length > 0;
+
+      const sourceSnapshot =
+        hasCurrentPlan || hasArchivedPlan
+          ? previous
+          : {
+              ...previous,
+              week_plan:
+                buildStarterWeekPlan(workouts),
+            };
+
+      const result =
+        createNextWeekFromSnapshot({
+          snapshot: sourceSnapshot,
+          history,
+          workouts,
+          mode,
+        });
+
+      return normalizeHealthSnapshot(
+        result.snapshot
+      );
+    });
+
+    setDrawer("planner");
+  }
+
+  function handleBuildNextWeek() {
+    buildCurrentWeek("adaptive");
+  }
+
+  function handleRepeatLastWeek() {
+    buildCurrentWeek("repeat");
+  }
+
   function startPlannerWorkout(
     plannerItem
   ) {
@@ -1480,9 +1563,15 @@ export default function CustomerHealth() {
             history={history}
             progressLogs={progressLogs}
             devices={devices}
-            onOpen={setDrawer}
+            onOpen={handleDashboardOpen}
             onStartWorkout={
               startPlannerWorkout
+            }
+            onBuildNextWeek={
+              handleBuildNextWeek
+            }
+            onRepeatLastWeek={
+              handleRepeatLastWeek
             }
           />
         ) : (
@@ -1696,7 +1785,7 @@ export default function CustomerHealth() {
           />
 
           <HealthMobileQuickNav
-            onOpen={setDrawer}
+            onOpen={handleDashboardOpen}
             onStartWorkout={
               startPlannerWorkout
             }
