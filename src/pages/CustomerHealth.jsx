@@ -960,10 +960,10 @@ export default function CustomerHealth() {
         nextSession
           ? `${
               nextSession.day_label
-            } • ${
+            } â€¢ ${
               nextSession.time ||
               "Anytime"
-            } • ${
+            } â€¢ ${
               nextSession.workout_name
             }`
           : "",
@@ -1686,8 +1686,8 @@ export default function CustomerHealth() {
         title="Health"
         subtitle={
           hasHealthAccess
-            ? "Home • daily logging • workouts • coach • insights"
-            : "30 days free • $2.99/month after"
+            ? "Home â€¢ daily logging â€¢ workouts â€¢ coach â€¢ insights"
+            : "30 days free â€¢ $2.99/month after"
         }
         rightActions={
           <div className="flex items-center gap-2">
@@ -1728,7 +1728,7 @@ export default function CustomerHealth() {
                 }
                 className="h-11 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 text-sm font-black text-cyan-100"
               >
-                ← Back to Health Home
+                â† Back to Health Home
               </button>
 
               <HealthDashboard
@@ -1817,6 +1817,9 @@ export default function CustomerHealth() {
             type={quickLogType}
             onClose={() =>
               setQuickLogType("")
+            }
+            onChooseType={(type) =>
+              setQuickLogType(type)
             }
             onSave={handleQuickLogSave}
             profile={profile}
@@ -2007,6 +2010,11 @@ export default function CustomerHealth() {
             onStartWorkout={
               startPlannerWorkout
             }
+            onLogData={() => {
+              setHealthView("home");
+              setDrawer("");
+              setQuickLogType("menu");
+            }}
             nextSession={
               mobileNextSession
             }
