@@ -29,6 +29,7 @@ import TodayPlanDrawer from "../components/customer-health/TodayPlanDrawer";
 import HealthDashboard from "../components/customer-health/HealthDashboard";
 import HealthHome from "../components/customer-health/HealthHome";
 import HealthProfileIntakeDrawer from "../components/customer-health/HealthProfileIntakeDrawer";
+import HealthQuickLogDrawer from "../components/customer-health/HealthQuickLogDrawer";
 import HealthPlannerDrawer from "../components/customer-health/HealthPlannerDrawer";
 import QuestionnaireDrawer from "../components/customer-health/QuestionnaireDrawer";
 import WorkoutStudioDrawer from "../components/customer-health/WorkoutStudioDrawer";
@@ -589,6 +590,7 @@ export default function CustomerHealth() {
 
   const [drawer, setDrawer] = useState("");
   const [healthView, setHealthView] = useState("home");
+  const [quickLogType, setQuickLogType] = useState("");
   const [syncStatus, setSyncStatus] =
     useState("local");
   const [cloudLoaded, setCloudLoaded] =
@@ -1469,6 +1471,112 @@ export default function CustomerHealth() {
     setDrawer("questionnaire");
   }
 
+  function handleQuickLogSave(entry = {}) {
+    const type = String(entry?.type || "");
+    const ymd = entry?.ymd || todayYmd();
+    const isToday = ymd === todayYmd();
+    const numericValue = Number(
+      String(entry?.value ?? "").replace(/[^\d.-]/g, "")
+    ) || 0;
+    const secondaryValue = Number(
+      String(entry?.secondary ?? "").replace(/[^\d.-]/g, "")
+    ) || 0;
+    const createdAt = new Date().toISOString();
+
+    const logEntry = {
+      id: uid(`health-${type || "log"}`),
+      type,
+      ymd,
+      value: numericValue,
+      secondary: secondaryValue,
+      note: entry?.note || "",
+      bmi: entry?.bmi || "",
+      created_at: createdAt,
+      source: "manual_quick_log",
+    };
+
+    if (type === "meal") {
+      logEntry.description = entry?.note || "";
+      logEntry.calories = numericValue;
+      logEntry.protein = secondaryValue;
+    }
+
+    setProgressLogs((previous) => [
+      ...(Array.isArray(previous) ? previous : []),
+      logEntry,
+    ]);
+
+    if (type === "weight") {
+      setProfile((previous) => ({
+        ...previous,
+        weight: numericValue || previous?.weight || "",
+        bmi: entry?.bmi || previous?.bmi || "",
+        bmi_source: entry?.bmi
+          ? "calculated"
+          : previous?.bmi_source || "",
+        updated_at: createdAt,
+      }));
+    }
+
+    if (isToday) {
+      setSnapshot((previous) => {
+        const next = {
+          ...previous,
+          last_quick_log_at: createdAt,
+        };
+
+        if (type === "weight") {
+          next.weight = numericValue;
+          next.bmi = entry?.bmi || previous?.bmi || "";
+        }
+
+        if (type === "steps") {
+          next.steps = numericValue;
+        }
+
+        if (type === "water") {
+          next.water =
+            Number(previous?.water || 0) + numericValue;
+        }
+
+        if (type === "protein") {
+          next.protein_today =
+            Number(previous?.protein_today || 0) +
+            numericValue;
+        }
+
+        if (type === "calories") {
+          next.calories =
+            Number(previous?.calories || 0) + numericValue;
+        }
+
+        if (type === "sleep") {
+          next.last_sleep_hours = numericValue;
+          next.sleep_hours = numericValue;
+        }
+
+        if (type === "readiness") {
+          next.readiness = entry?.value || "Good";
+          next.pain_score = secondaryValue;
+        }
+
+        if (type === "meal") {
+          next.calories =
+            Number(previous?.calories || 0) + numericValue;
+          next.protein_today =
+            Number(previous?.protein_today || 0) +
+            secondaryValue;
+          next.last_meal_description =
+            entry?.note || previous?.last_meal_description || "";
+        }
+
+        return next;
+      });
+    }
+
+    setQuickLogType("");
+  }
+
   function handleDashboardOpen(target) {
     if (target === "home") {
       setHealthView("home");
@@ -1654,6 +1762,9 @@ export default function CustomerHealth() {
               onShowInsights={() =>
                 setHealthView("insights")
               }
+              onQuickLog={(type) =>
+                setQuickLogType(type)
+              }
             />
           )
         ) : (
@@ -1699,6 +1810,17 @@ export default function CustomerHealth() {
             snapshot={syncedSnapshot}
             setSnapshot={setSnapshot}
             workouts={workouts}
+          />
+
+          <HealthQuickLogDrawer
+            open={!!quickLogType}
+            type={quickLogType}
+            onClose={() =>
+              setQuickLogType("")
+            }
+            onSave={handleQuickLogSave}
+            profile={profile}
+            snapshot={syncedSnapshot}
           />
 
           <HealthProfileIntakeDrawer

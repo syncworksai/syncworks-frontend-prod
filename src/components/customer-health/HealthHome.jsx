@@ -206,6 +206,7 @@ function LogDataMenu({
   open,
   onClose,
   onOpen,
+  onQuickLog,
 }) {
   if (!open) return null;
 
@@ -213,17 +214,19 @@ function LogDataMenu({
     {
       title: "Daily Health",
       items: [
-        ["Weight / BMI", "progress"],
-        ["Steps", "steps"],
-        ["Sleep", "sleep"],
-        ["Readiness / pain", "profile-intake"],
+        ["Weight / BMI", "quick:weight"],
+        ["Steps", "quick:steps"],
+        ["Sleep", "quick:sleep"],
+        ["Readiness / pain", "quick:readiness"],
       ],
     },
     {
       title: "Nutrition",
       items: [
-        ["Meal, calories or protein", "nutrition"],
-        ["Water", "nutrition"],
+        ["Meal", "quick:meal"],
+        ["Protein", "quick:protein"],
+        ["Calories", "quick:calories"],
+        ["Water", "quick:water"],
       ],
     },
     {
@@ -285,6 +288,14 @@ function LogDataMenu({
                     type="button"
                     onClick={() => {
                       onClose();
+
+                      if (target.startsWith("quick:")) {
+                        onQuickLog?.(
+                          target.replace("quick:", "")
+                        );
+                        return;
+                      }
+
                       onOpen?.(target);
                     }}
                     className="rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3 text-left text-sm font-black text-slate-100 transition hover:bg-white/[0.07]"
@@ -308,6 +319,7 @@ export default function HealthHome({
   onOpen,
   onStartWorkout,
   onShowInsights,
+  onQuickLog,
 }) {
   const [logMenuOpen, setLogMenuOpen] =
     useState(false);
@@ -689,7 +701,7 @@ export default function HealthHome({
             goal={snapshot?.step_goal}
             missing={!snapshot?.steps}
             tone="cyan"
-            onClick={() => onOpen?.("steps")}
+            onClick={() => onQuickLog?.("steps")}
           />
 
           <MetricButton
@@ -699,7 +711,7 @@ export default function HealthHome({
             suffix="g"
             missing={!snapshot?.protein_today}
             tone="lime"
-            onClick={() => onOpen?.("nutrition")}
+            onClick={() => onQuickLog?.("protein")}
           />
 
           <MetricButton
@@ -709,7 +721,7 @@ export default function HealthHome({
             suffix="oz"
             missing={!snapshot?.water}
             tone="cyan"
-            onClick={() => onOpen?.("nutrition")}
+            onClick={() => onQuickLog?.("water")}
           />
 
           <MetricButton
@@ -718,7 +730,7 @@ export default function HealthHome({
             goal={snapshot?.calorie_goal}
             missing={!snapshot?.calories}
             tone="fuchsia"
-            onClick={() => onOpen?.("nutrition")}
+            onClick={() => onQuickLog?.("calories")}
           />
 
           <MetricButton
@@ -733,7 +745,7 @@ export default function HealthHome({
               !snapshot?.sleep_hours
             }
             tone="amber"
-            onClick={() => onOpen?.("sleep")}
+            onClick={() => onQuickLog?.("sleep")}
           />
 
           <MetricButton
@@ -748,7 +760,7 @@ export default function HealthHome({
               !profile?.weight
             }
             tone="slate"
-            onClick={() => onOpen?.("progress")}
+            onClick={() => onQuickLog?.("weight")}
           />
         </div>
       </section>
@@ -785,6 +797,7 @@ export default function HealthHome({
         open={logMenuOpen}
         onClose={() => setLogMenuOpen(false)}
         onOpen={onOpen}
+        onQuickLog={onQuickLog}
       />
     </div>
   );
