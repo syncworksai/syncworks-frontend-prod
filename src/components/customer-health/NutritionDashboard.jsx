@@ -228,6 +228,7 @@ export default function NutritionDashboard({
   snapshot,
   progressLogs,
   onOpenCoach,
+  onOpenGoals,
   onEditMeal,
   onDeleteMeal,
   onReuseMeal,
@@ -329,6 +330,10 @@ export default function NutritionDashboard({
       proteinGoal - totals.protein
     );
 
+    if (!calorieGoal || !proteinGoal) {
+      return "Set your calorie and macro targets to unlock remaining-goal guidance.";
+    }
+
     if (!meals.length) {
       return "No meals are logged for this day yet. Log your first meal so SyncWorks can guide the rest of the day.";
     }
@@ -400,7 +405,15 @@ export default function NutritionDashboard({
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={onOpenGoals}
+              className="h-11 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 text-sm font-black text-cyan-100"
+            >
+              Set Targets
+            </button>
+
             <button
               type="button"
               onClick={() =>

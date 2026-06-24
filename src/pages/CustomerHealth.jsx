@@ -32,6 +32,7 @@ import HealthProfileIntakeDrawer from "../components/customer-health/HealthProfi
 import HealthQuickLogDrawer from "../components/customer-health/HealthQuickLogDrawer";
 import NutritionCoachDrawer from "../components/customer-health/NutritionCoachDrawer";
 import NutritionDashboard from "../components/customer-health/NutritionDashboard";
+import NutritionGoalsDrawer from "../components/customer-health/NutritionGoalsDrawer";
 import HealthPlannerDrawer from "../components/customer-health/HealthPlannerDrawer";
 import QuestionnaireDrawer from "../components/customer-health/QuestionnaireDrawer";
 import WorkoutStudioDrawer from "../components/customer-health/WorkoutStudioDrawer";
@@ -1830,6 +1831,8 @@ export default function CustomerHealth() {
       nutrition: "nutrition-dashboard",
       "nutrition-dashboard":
         "nutrition-dashboard",
+      "nutrition-goals":
+        "nutrition-goals",
       "nutrition-coach":
         "nutrition-coach",
     };
@@ -2138,6 +2141,11 @@ export default function CustomerHealth() {
             onOpenCoach={
               openNutritionCoach
             }
+            onOpenGoals={() =>
+              setDrawer(
+                "nutrition-goals"
+              )
+            }
             onEditMeal={
               openNutritionCoach
             }
@@ -2147,6 +2155,22 @@ export default function CustomerHealth() {
             onReuseMeal={
               handleReuseNutritionMeal
             }
+          />
+
+          <NutritionGoalsDrawer
+            open={
+              drawer ===
+              "nutrition-goals"
+            }
+            onClose={() =>
+              setDrawer(
+                "nutrition-dashboard"
+              )
+            }
+            profile={profile}
+            snapshot={syncedSnapshot}
+            setProfile={setProfile}
+            setSnapshot={setSnapshot}
           />
 
           <NutritionCoachDrawer
