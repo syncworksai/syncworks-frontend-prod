@@ -1281,14 +1281,55 @@ export default function ActiveWorkoutSessionDrawer({
         "",
     };
 
-    const nextSession = completeActiveSet(
+    const completedSession = completeActiveSet(
       session,
       currentExercise.id,
       enrichedSetLog
     );
 
+    const completedExerciseIndex = Math.max(
+      0,
+      Number(session.current_exercise_index || 0)
+    );
+
+    const savedExercise =
+      completedSession.exercises?.[completedExerciseIndex] || null;
+
+    let nextExerciseIndex = completedExerciseIndex;
+
+    if (savedExercise?.completed) {
+      const nextIncompleteIndex =
+        (completedSession.exercises || []).findIndex(
+          (exercise, index) =>
+            index > completedExerciseIndex &&
+            !exercise?.completed &&
+            !exercise?.skipped
+        );
+
+      if (nextIncompleteIndex >= 0) {
+        nextExerciseIndex = nextIncompleteIndex;
+      }
+    }
+
+    const nextSession = {
+      ...completedSession,
+      current_exercise_index: nextExerciseIndex,
+      last_completed_exercise_id: currentExercise.id,
+      last_completed_set_at: new Date().toISOString(),
+    };
+
+    // Save first, close the check-in immediately, and leave the
+    // user on the next actionable set or exercise without backing out.
     setSession(nextSession);
     setSetCheckInOpen(false);
+    setDetailsOpen(false);
+
+    window.requestAnimationFrame(() => {
+      targetControlsRef.current?.scrollIntoView?.({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    });
 
     const restSeconds =
       nextSession.rest_target_seconds ||
@@ -1299,10 +1340,19 @@ export default function ActiveWorkoutSessionDrawer({
       enrichedSetLog.pain_score || 0
     );
 
+    const movedToNextExercise =
+      nextExerciseIndex !== completedExerciseIndex;
+
+    const nextExercise = movedToNextExercise
+      ? nextSession.exercises?.[nextExerciseIndex]
+      : null;
+
     speakCoachText({
       text:
         pain >= 3
           ? `Set saved. Pain was reported. Reduce the load or adjust the movement. Rest for ${restSeconds} seconds.`
+          : movedToNextExercise && nextExercise?.name
+          ? `Set saved. ${currentExercise.name} is complete. Rest for ${restSeconds} seconds, then get ready for ${nextExercise.name}.`
           : `Set saved. Rest for ${restSeconds} seconds.`,
       audioMode: coachAudioMode,
       voicePreference: coachVoicePreference,
