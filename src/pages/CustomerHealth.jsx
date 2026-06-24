@@ -31,6 +31,7 @@ import HealthHome from "../components/customer-health/HealthHome";
 import HealthProfileIntakeDrawer from "../components/customer-health/HealthProfileIntakeDrawer";
 import HealthQuickLogDrawer from "../components/customer-health/HealthQuickLogDrawer";
 import NutritionCoachDrawer from "../components/customer-health/NutritionCoachDrawer";
+import NutritionDashboard from "../components/customer-health/NutritionDashboard";
 import HealthPlannerDrawer from "../components/customer-health/HealthPlannerDrawer";
 import QuestionnaireDrawer from "../components/customer-health/QuestionnaireDrawer";
 import WorkoutStudioDrawer from "../components/customer-health/WorkoutStudioDrawer";
@@ -602,6 +603,11 @@ export default function CustomerHealth() {
   const [
     activePlannerItem,
     setActivePlannerItem,
+  ] = useState(null);
+
+  const [
+    nutritionDraft,
+    setNutritionDraft,
   ] = useState(null);
 
   const [
@@ -1472,6 +1478,207 @@ export default function CustomerHealth() {
     setDrawer("questionnaire");
   }
 
+  function getMealTotalsForDate(
+    logs,
+    ymd
+  ) {
+    return (
+      Array.isArray(logs) ? logs : []
+    )
+      .filter(
+        (item) =>
+          item?.type === "meal" &&
+          item?.ymd === ymd
+      )
+      .reduce(
+        (totals, meal) => ({
+          calories:
+            totals.calories +
+            Number(
+              meal?.calories ??
+                meal?.value ??
+                0
+            ),
+          protein:
+            totals.protein +
+            Number(
+              meal?.protein ??
+                meal?.secondary ??
+                0
+            ),
+          carbs:
+            totals.carbs +
+            Number(meal?.carbs || 0),
+          fat:
+            totals.fat +
+            Number(meal?.fat || 0),
+        }),
+        {
+          calories: 0,
+          protein: 0,
+          carbs: 0,
+          fat: 0,
+        }
+      );
+  }
+
+  function syncTodayNutritionFromLogs(
+    logs
+  ) {
+    const totals =
+      getMealTotalsForDate(
+        logs,
+        todayYmd()
+      );
+
+    setSnapshot((previous) => ({
+      ...previous,
+      calories: totals.calories,
+      protein_today: totals.protein,
+      carbs_today: totals.carbs,
+      fat_today: totals.fat,
+      last_quick_log_at:
+        new Date().toISOString(),
+    }));
+  }
+
+  function handleNutritionMealSave(
+    entry = {}
+  ) {
+    const ymd =
+      entry?.ymd || todayYmd();
+
+    const createdAt =
+      new Date().toISOString();
+
+    const mealEntry = {
+      id:
+        entry?.replace_id ||
+        uid("health-meal"),
+      type: "meal",
+      ymd,
+      value:
+        Number(entry?.value || 0),
+      secondary:
+        Number(entry?.secondary || 0),
+      note: entry?.note || "",
+      description:
+        entry?.note || "",
+      calories:
+        Number(entry?.value || 0),
+      protein:
+        Number(entry?.secondary || 0),
+      carbs:
+        Number(entry?.carbs || 0),
+      fat:
+        Number(entry?.fat || 0),
+      estimate_items:
+        Array.isArray(
+          entry?.estimate_items
+        )
+          ? entry.estimate_items
+          : [],
+      estimate_confidence:
+        entry?.estimate_confidence ||
+        "",
+      source:
+        entry?.source ||
+        "nutrition_manual",
+      created_at: createdAt,
+      updated_at: createdAt,
+    };
+
+    setProgressLogs((previous) => {
+      const safePrevious =
+        Array.isArray(previous)
+          ? previous
+          : [];
+
+      const withoutEdited =
+        entry?.replace_id
+          ? safePrevious.filter(
+              (item) =>
+                item?.id !==
+                entry.replace_id
+            )
+          : safePrevious;
+
+      const nextLogs = [
+        ...withoutEdited,
+        mealEntry,
+      ];
+
+      syncTodayNutritionFromLogs(
+        nextLogs
+      );
+
+      return nextLogs;
+    });
+
+    setNutritionDraft(null);
+  }
+
+  function handleDeleteNutritionMeal(
+    meal
+  ) {
+    if (!meal?.id) return;
+
+    setProgressLogs((previous) => {
+      const nextLogs = (
+        Array.isArray(previous)
+          ? previous
+          : []
+      ).filter(
+        (item) =>
+          item?.id !== meal.id
+      );
+
+      syncTodayNutritionFromLogs(
+        nextLogs
+      );
+
+      return nextLogs;
+    });
+  }
+
+  function handleReuseNutritionMeal(
+    meal
+  ) {
+    if (!meal) return;
+
+    handleNutritionMealSave({
+      ymd: todayYmd(),
+      note:
+        meal.description ||
+        meal.note ||
+        "Reused meal",
+      value:
+        meal.calories ??
+        meal.value ??
+        0,
+      secondary:
+        meal.protein ??
+        meal.secondary ??
+        0,
+      carbs: meal.carbs || 0,
+      fat: meal.fat || 0,
+      estimate_items:
+        meal.estimate_items || [],
+      estimate_confidence:
+        meal.estimate_confidence ||
+        "reused",
+      source:
+        "nutrition_reused_meal",
+    });
+  }
+
+  function openNutritionCoach(
+    meal = null
+  ) {
+    setNutritionDraft(meal);
+    setDrawer("nutrition-coach");
+  }
+
   function handleQuickLogSave(entry = {}) {
     const type = String(entry?.type || "");
     const ymd = entry?.ymd || todayYmd();
@@ -1620,8 +1827,11 @@ export default function CustomerHealth() {
       progress: "progress",
       planner: "planner",
       "coach-chat": "coach-chat",
-      nutrition: "nutrition-coach",
-      "nutrition-coach": "nutrition-coach",
+      nutrition: "nutrition-dashboard",
+      "nutrition-dashboard":
+        "nutrition-dashboard",
+      "nutrition-coach":
+        "nutrition-coach",
     };
 
     setDrawer(routeMap[target] || target || "");
@@ -1839,9 +2049,15 @@ export default function CustomerHealth() {
               setQuickLogType("")
             }
             onChooseType={(type) => {
-              if (type === "nutrition-coach") {
+              if (
+                type ===
+                "nutrition-coach"
+              ) {
                 setQuickLogType("");
-                setDrawer("nutrition-coach");
+                setNutritionDraft(null);
+                setDrawer(
+                  "nutrition-dashboard"
+                );
                 return;
               }
 
@@ -1908,10 +2124,10 @@ export default function CustomerHealth() {
             }
           />
 
-          <NutritionCoachDrawer
+          <NutritionDashboard
             open={
               drawer ===
-              "nutrition-coach"
+              "nutrition-dashboard"
             }
             onClose={() =>
               setDrawer("")
@@ -1919,9 +2135,44 @@ export default function CustomerHealth() {
             profile={profile}
             snapshot={syncedSnapshot}
             progressLogs={progressLogs}
-            onSaveMeal={
-              handleQuickLogSave
+            onOpenCoach={
+              openNutritionCoach
             }
+            onEditMeal={
+              openNutritionCoach
+            }
+            onDeleteMeal={
+              handleDeleteNutritionMeal
+            }
+            onReuseMeal={
+              handleReuseNutritionMeal
+            }
+          />
+
+          <NutritionCoachDrawer
+            open={
+              drawer ===
+              "nutrition-coach"
+            }
+            onClose={() => {
+              setNutritionDraft(null);
+              setDrawer("");
+            }}
+            profile={profile}
+            snapshot={syncedSnapshot}
+            progressLogs={progressLogs}
+            onSaveMeal={
+              handleNutritionMealSave
+            }
+            initialMeal={
+              nutritionDraft
+            }
+            onOpenDashboard={() => {
+              setNutritionDraft(null);
+              setDrawer(
+                "nutrition-dashboard"
+              );
+            }}
           />
 
           <NutritionDrawer

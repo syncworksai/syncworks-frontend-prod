@@ -1,5 +1,6 @@
 // src/components/customer-health/NutritionCoachDrawer.jsx
 import React, {
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -422,6 +423,8 @@ export default function NutritionCoachDrawer({
   snapshot,
   progressLogs,
   onSaveMeal,
+  onOpenDashboard,
+  initialMeal,
 }) {
   const [description, setDescription] =
     useState("");
@@ -441,6 +444,88 @@ export default function NutritionCoachDrawer({
     useState(false);
   const [savedMessage, setSavedMessage] =
     useState("");
+
+  useEffect(() => {
+    if (!open) return;
+
+    if (initialMeal) {
+      setDescription(
+        initialMeal.description ||
+          initialMeal.note ||
+          ""
+      );
+      setDate(initialMeal.ymd || todayYmd());
+      setCalories(
+        String(
+          safeNumber(
+            initialMeal.calories ??
+              initialMeal.value,
+            0
+          ) || ""
+        )
+      );
+      setProtein(
+        String(
+          safeNumber(
+            initialMeal.protein ??
+              initialMeal.secondary,
+            0
+          ) || ""
+        )
+      );
+      setCarbs(
+        String(
+          safeNumber(initialMeal.carbs, 0) ||
+            ""
+        )
+      );
+      setFat(
+        String(
+          safeNumber(initialMeal.fat, 0) ||
+            ""
+        )
+      );
+      setEstimate({
+        items:
+          Array.isArray(
+            initialMeal.estimate_items
+          )
+            ? initialMeal.estimate_items
+            : [],
+        calories: safeNumber(
+          initialMeal.calories ??
+            initialMeal.value,
+          0
+        ),
+        protein: safeNumber(
+          initialMeal.protein ??
+            initialMeal.secondary,
+          0
+        ),
+        carbs: safeNumber(
+          initialMeal.carbs,
+          0
+        ),
+        fat: safeNumber(initialMeal.fat, 0),
+        confidence:
+          initialMeal.estimate_confidence ||
+          "manual",
+        note:
+          "Review and save your updated meal.",
+      });
+      setSavedMessage("");
+      return;
+    }
+
+    setDescription("");
+    setDate(todayYmd());
+    setEstimate(null);
+    setCalories("");
+    setProtein("");
+    setCarbs("");
+    setFat("");
+    setSavedMessage("");
+  }, [open, initialMeal]);
 
   const todayMeals = useMemo(() => {
     return (Array.isArray(progressLogs)
@@ -526,6 +611,7 @@ export default function NutritionCoachDrawer({
           estimate?.items?.length
             ? "nutrition_coach_estimate"
             : "nutrition_manual",
+        replace_id: initialMeal?.id || "",
       });
 
       setSavedMessage(
@@ -567,13 +653,23 @@ export default function NutritionCoachDrawer({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] font-black text-white"
-          >
-            ✕
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onOpenDashboard}
+              className="h-10 rounded-xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 text-xs font-black text-fuchsia-100"
+            >
+              Dashboard
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] font-black text-white"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
