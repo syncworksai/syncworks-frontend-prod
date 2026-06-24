@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 
 import HealthMomentumCard from "./HealthMomentumCard";
 import HealthKpiSection from "./HealthKpiSection";
+import HealthProgressCharts from "./HealthProgressCharts";
 import SleepPlanCard from "./SleepPlanCard";
 
 import {
@@ -1011,6 +1012,14 @@ export default function HealthDashboard({
 
       <LastWorkoutStatsCard
         stats={snapshot?.last_workout_stats}
+      />
+
+      <HealthProgressCharts
+        profile={profile}
+        snapshot={snapshot}
+        history={history}
+        progressLogs={progressLogs}
+        onOpen={onOpen}
       />
 
       <HealthKpiSection
