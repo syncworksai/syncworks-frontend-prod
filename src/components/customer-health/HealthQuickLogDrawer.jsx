@@ -189,7 +189,8 @@ export default function HealthQuickLogDrawer({
       {
         title: "Nutrition",
         items: [
-          ["meal", "Meal", "Describe what you ate and add known nutrition."],
+          ["nutrition-coach", "Nutrition Coach", "Describe a meal, review estimated calories and macros, then confirm before saving."],
+          ["meal", "Manual Meal", "Describe what you ate and add nutrition you already know."],
           ["protein", "Protein", "Quick-add protein grams."],
           ["calories", "Calories", "Quick-add calorie intake."],
           ["water", "Water", "Quick-add hydration."],

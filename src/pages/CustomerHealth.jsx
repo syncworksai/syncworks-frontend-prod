@@ -30,6 +30,7 @@ import HealthDashboard from "../components/customer-health/HealthDashboard";
 import HealthHome from "../components/customer-health/HealthHome";
 import HealthProfileIntakeDrawer from "../components/customer-health/HealthProfileIntakeDrawer";
 import HealthQuickLogDrawer from "../components/customer-health/HealthQuickLogDrawer";
+import NutritionCoachDrawer from "../components/customer-health/NutritionCoachDrawer";
 import HealthPlannerDrawer from "../components/customer-health/HealthPlannerDrawer";
 import QuestionnaireDrawer from "../components/customer-health/QuestionnaireDrawer";
 import WorkoutStudioDrawer from "../components/customer-health/WorkoutStudioDrawer";
@@ -960,10 +961,10 @@ export default function CustomerHealth() {
         nextSession
           ? `${
               nextSession.day_label
-            } â€¢ ${
+            } • ${
               nextSession.time ||
               "Anytime"
-            } â€¢ ${
+            } • ${
               nextSession.workout_name
             }`
           : "",
@@ -1499,6 +1500,17 @@ export default function CustomerHealth() {
       logEntry.description = entry?.note || "";
       logEntry.calories = numericValue;
       logEntry.protein = secondaryValue;
+      logEntry.carbs = Number(entry?.carbs || 0);
+      logEntry.fat = Number(entry?.fat || 0);
+      logEntry.estimate_items = Array.isArray(
+        entry?.estimate_items
+      )
+        ? entry.estimate_items
+        : [];
+      logEntry.estimate_confidence =
+        entry?.estimate_confidence || "";
+      logEntry.source =
+        entry?.source || logEntry.source;
     }
 
     setProgressLogs((previous) => [
@@ -1566,6 +1578,12 @@ export default function CustomerHealth() {
           next.protein_today =
             Number(previous?.protein_today || 0) +
             secondaryValue;
+          next.carbs_today =
+            Number(previous?.carbs_today || 0) +
+            Number(entry?.carbs || 0);
+          next.fat_today =
+            Number(previous?.fat_today || 0) +
+            Number(entry?.fat || 0);
           next.last_meal_description =
             entry?.note || previous?.last_meal_description || "";
         }
@@ -1602,6 +1620,8 @@ export default function CustomerHealth() {
       progress: "progress",
       planner: "planner",
       "coach-chat": "coach-chat",
+      nutrition: "nutrition-coach",
+      "nutrition-coach": "nutrition-coach",
     };
 
     setDrawer(routeMap[target] || target || "");
@@ -1686,8 +1706,8 @@ export default function CustomerHealth() {
         title="Health"
         subtitle={
           hasHealthAccess
-            ? "Home â€¢ daily logging â€¢ workouts â€¢ coach â€¢ insights"
-            : "30 days free â€¢ $2.99/month after"
+            ? "Home • daily logging • workouts • coach • insights"
+            : "30 days free • $2.99/month after"
         }
         rightActions={
           <div className="flex items-center gap-2">
@@ -1728,7 +1748,7 @@ export default function CustomerHealth() {
                 }
                 className="h-11 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 text-sm font-black text-cyan-100"
               >
-                â† Back to Health Home
+                ← Back to Health Home
               </button>
 
               <HealthDashboard
@@ -1818,9 +1838,15 @@ export default function CustomerHealth() {
             onClose={() =>
               setQuickLogType("")
             }
-            onChooseType={(type) =>
-              setQuickLogType(type)
-            }
+            onChooseType={(type) => {
+              if (type === "nutrition-coach") {
+                setQuickLogType("");
+                setDrawer("nutrition-coach");
+                return;
+              }
+
+              setQuickLogType(type);
+            }}
             onSave={handleQuickLogSave}
             profile={profile}
             snapshot={syncedSnapshot}
@@ -1879,6 +1905,22 @@ export default function CustomerHealth() {
             }
             onAddExercise={
               addExerciseFromLibrary
+            }
+          />
+
+          <NutritionCoachDrawer
+            open={
+              drawer ===
+              "nutrition-coach"
+            }
+            onClose={() =>
+              setDrawer("")
+            }
+            profile={profile}
+            snapshot={syncedSnapshot}
+            progressLogs={progressLogs}
+            onSaveMeal={
+              handleQuickLogSave
             }
           />
 
