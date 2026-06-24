@@ -875,12 +875,42 @@ export default function ActiveWorkoutSessionDrawer({
   }, [open]);
 
   const currentExercise = useMemo(() => {
-    if (!Array.isArray(session?.exercises)) return null;
+    const exercises = Array.isArray(session?.exercises)
+      ? session.exercises
+      : [];
+
+    if (!exercises.length) return null;
+
+    const requestedIndex = Number(
+      session?.current_exercise_index
+    );
+
+    if (
+      Number.isInteger(requestedIndex) &&
+      requestedIndex >= 0 &&
+      requestedIndex < exercises.length
+    ) {
+      return exercises[requestedIndex];
+    }
+
+    const activeExercise = exercises.find(
+      (exercise) =>
+        exercise?.id &&
+        exercise.id === session?.active_exercise_id
+    );
+
+    if (activeExercise) {
+      return activeExercise;
+    }
 
     return (
-      session.exercises[
-        session.current_exercise_index || 0
-      ] || null
+      exercises.find(
+        (exercise) =>
+          !exercise?.completed &&
+          !exercise?.skipped
+      ) ||
+      exercises[0] ||
+      null
     );
   }, [session]);
 
@@ -1261,20 +1291,24 @@ export default function ActiveWorkoutSessionDrawer({
 
     const enrichedSetLog = {
       ...setLog,
+
       target_weight:
         setLog.target_weight ??
         currentExercise.current_target_weight ??
         currentExercise.planned_weight ??
         "",
+
       target_reps:
         setLog.target_reps ??
         currentExercise.current_target_reps ??
         currentExercise.planned_reps ??
         "",
+
       planned_weight:
         setLog.planned_weight ??
         currentExercise.planned_weight ??
         "",
+
       planned_reps:
         setLog.planned_reps ??
         currentExercise.planned_reps ??
@@ -1287,49 +1321,63 @@ export default function ActiveWorkoutSessionDrawer({
       enrichedSetLog
     );
 
-    const completedExerciseIndex = Math.max(
-      0,
-      Number(session.current_exercise_index || 0)
-    );
+    const completedExercises = Array.isArray(
+      completedSession?.exercises
+    )
+      ? completedSession.exercises
+      : [];
+
+    const locatedExerciseIndex =
+      completedExercises.findIndex(
+        (exercise) =>
+          exercise?.id === currentExercise.id
+      );
+
+    const currentIndex =
+      locatedExerciseIndex >= 0
+        ? locatedExerciseIndex
+        : 0;
 
     const savedExercise =
-      completedSession.exercises?.[completedExerciseIndex] || null;
+      completedExercises[currentIndex] || null;
 
-    let nextExerciseIndex = completedExerciseIndex;
+    let nextExerciseIndex = currentIndex;
 
+    // Stay on the same exercise after Set 1, Set 2, etc.
+    // Advance only after all planned sets are complete.
     if (savedExercise?.completed) {
       const nextIncompleteIndex =
-        (completedSession.exercises || []).findIndex(
+        completedExercises.findIndex(
           (exercise, index) =>
-            index > completedExerciseIndex &&
+            index > currentIndex &&
             !exercise?.completed &&
             !exercise?.skipped
         );
 
       if (nextIncompleteIndex >= 0) {
-        nextExerciseIndex = nextIncompleteIndex;
+        nextExerciseIndex =
+          nextIncompleteIndex;
       }
     }
 
     const nextSession = {
       ...completedSession,
-      current_exercise_index: nextExerciseIndex,
-      last_completed_exercise_id: currentExercise.id,
-      last_completed_set_at: new Date().toISOString(),
+
+      current_exercise_index:
+        nextExerciseIndex,
+
+      last_completed_exercise_id:
+        currentExercise.id,
+
+      last_completed_set_at:
+        new Date().toISOString(),
     };
 
-    // Save first, close the check-in immediately, and leave the
-    // user on the next actionable set or exercise without backing out.
+    // Update the set board and close the logging sheet
+    // without navigating away from the live workout.
     setSession(nextSession);
     setSetCheckInOpen(false);
     setDetailsOpen(false);
-
-    window.requestAnimationFrame(() => {
-      targetControlsRef.current?.scrollIntoView?.({
-        behavior: "smooth",
-        block: "nearest",
-      });
-    });
 
     const restSeconds =
       nextSession.rest_target_seconds ||
@@ -1341,21 +1389,25 @@ export default function ActiveWorkoutSessionDrawer({
     );
 
     const movedToNextExercise =
-      nextExerciseIndex !== completedExerciseIndex;
+      nextExerciseIndex !== currentIndex;
 
-    const nextExercise = movedToNextExercise
-      ? nextSession.exercises?.[nextExerciseIndex]
-      : null;
+    const nextExercise =
+      movedToNextExercise
+        ? completedExercises[nextExerciseIndex]
+        : null;
 
     speakCoachText({
       text:
         pain >= 3
           ? `Set saved. Pain was reported. Reduce the load or adjust the movement. Rest for ${restSeconds} seconds.`
-          : movedToNextExercise && nextExercise?.name
+          : movedToNextExercise &&
+            nextExercise?.name
           ? `Set saved. ${currentExercise.name} is complete. Rest for ${restSeconds} seconds, then get ready for ${nextExercise.name}.`
-          : `Set saved. Rest for ${restSeconds} seconds.`,
+          : `Set saved. Rest for ${restSeconds} seconds, then continue ${currentExercise.name}.`,
+
       audioMode: coachAudioMode,
-      voicePreference: coachVoicePreference,
+      voicePreference:
+        coachVoicePreference,
       rate: 1.02,
       pitch: 1,
       volume: 1,
