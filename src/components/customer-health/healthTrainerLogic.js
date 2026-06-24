@@ -50,7 +50,11 @@ function parseRepTarget(value = "") {
 
 function getSetLogs(exercise = {}) {
   return Array.isArray(exercise?.set_logs)
-    ? exercise.set_logs
+    ? exercise.set_logs.filter(
+        (setLog) =>
+          setLog &&
+          typeof setLog === "object"
+      )
     : [];
 }
 
@@ -85,19 +89,31 @@ function getPlannedSets(exercise = {}) {
 }
 
 function getActualReps(setLog = {}) {
+  const safeSetLog =
+    setLog &&
+    typeof setLog === "object"
+      ? setLog
+      : {};
+
   return safeNumber(
-    setLog.actual_reps ??
-      setLog.reps,
+    safeSetLog.actual_reps ??
+      safeSetLog.reps,
     0
   );
 }
 
 function getActualWeight(setLog = {}) {
+  const safeSetLog =
+    setLog &&
+    typeof setLog === "object"
+      ? setLog
+      : {};
+
   const value =
-    setLog.actual_weight ??
-    setLog.weight ??
-    setLog.target_weight ??
-    setLog.planned_weight ??
+    safeSetLog.actual_weight ??
+    safeSetLog.weight ??
+    safeSetLog.target_weight ??
+    safeSetLog.planned_weight ??
     "";
 
   return safeNumber(value, 0);
@@ -107,12 +123,24 @@ function getTargetReps(
   setLog = {},
   exercise = {}
 ) {
+  const safeSetLog =
+    setLog &&
+    typeof setLog === "object"
+      ? setLog
+      : {};
+
+  const safeExercise =
+    exercise &&
+    typeof exercise === "object"
+      ? exercise
+      : {};
+
   return safeNumber(
-    setLog.target_reps ??
-      setLog.planned_reps ??
-      exercise.current_target_reps ??
-      exercise.planned_reps ??
-      exercise.reps,
+    safeSetLog.target_reps ??
+      safeSetLog.planned_reps ??
+      safeExercise.current_target_reps ??
+      safeExercise.planned_reps ??
+      safeExercise.reps,
     0
   );
 }
@@ -121,20 +149,38 @@ function getTargetWeight(
   setLog = {},
   exercise = {}
 ) {
+  const safeSetLog =
+    setLog &&
+    typeof setLog === "object"
+      ? setLog
+      : {};
+
+  const safeExercise =
+    exercise &&
+    typeof exercise === "object"
+      ? exercise
+      : {};
+
   return safeNumber(
-    setLog.target_weight ??
-      setLog.planned_weight ??
-      exercise.current_target_weight ??
-      exercise.planned_weight ??
-      exercise.weight,
+    safeSetLog.target_weight ??
+      safeSetLog.planned_weight ??
+      safeExercise.current_target_weight ??
+      safeExercise.planned_weight ??
+      safeExercise.weight,
     0
   );
 }
 
 function getRpe(setLog = {}) {
+  const safeSetLog =
+    setLog &&
+    typeof setLog === "object"
+      ? setLog
+      : {};
+
   return safeNumber(
-    setLog.rpe ??
-      setLog.ease_score,
+    safeSetLog.rpe ??
+      safeSetLog.ease_score,
     0
   );
 }
@@ -144,17 +190,41 @@ function getPain(
   exercise = {},
   session = {}
 ) {
+  const safeSetLog =
+    setLog &&
+    typeof setLog === "object"
+      ? setLog
+      : {};
+
+  const safeExercise =
+    exercise &&
+    typeof exercise === "object"
+      ? exercise
+      : {};
+
+  const safeSession =
+    session &&
+    typeof session === "object"
+      ? session
+      : {};
+
   return safeNumber(
-    setLog.pain_score ??
-      exercise.pain_score ??
-      session.pain_score,
+    safeSetLog.pain_score ??
+      safeExercise.pain_score ??
+      safeSession.pain_score,
     0
   );
 }
 
 function getFormQuality(setLog = {}) {
+  const safeSetLog =
+    setLog &&
+    typeof setLog === "object"
+      ? setLog
+      : {};
+
   return String(
-    setLog.form_quality || ""
+    safeSetLog.form_quality || ""
   )
     .trim()
     .toLowerCase();
