@@ -33,6 +33,7 @@ import HealthQuickLogDrawer from "../components/customer-health/HealthQuickLogDr
 import NutritionCoachDrawer from "../components/customer-health/NutritionCoachDrawer";
 import NutritionDashboard from "../components/customer-health/NutritionDashboard";
 import NutritionGoalsDrawer from "../components/customer-health/NutritionGoalsDrawer";
+import SmartMealPlannerDrawer from "../components/customer-health/SmartMealPlannerDrawer";
 import HealthPlannerDrawer from "../components/customer-health/HealthPlannerDrawer";
 import QuestionnaireDrawer from "../components/customer-health/QuestionnaireDrawer";
 import WorkoutStudioDrawer from "../components/customer-health/WorkoutStudioDrawer";
@@ -1833,6 +1834,8 @@ export default function CustomerHealth() {
         "nutrition-dashboard",
       "nutrition-goals":
         "nutrition-goals",
+      "meal-planner":
+        "meal-planner",
       "nutrition-coach":
         "nutrition-coach",
     };
@@ -2146,6 +2149,11 @@ export default function CustomerHealth() {
                 "nutrition-goals"
               )
             }
+            onOpenMealPlanner={() =>
+              setDrawer(
+                "meal-planner"
+              )
+            }
             onEditMeal={
               openNutritionCoach
             }
@@ -2155,6 +2163,30 @@ export default function CustomerHealth() {
             onReuseMeal={
               handleReuseNutritionMeal
             }
+          />
+
+          <SmartMealPlannerDrawer
+            open={
+              drawer ===
+              "meal-planner"
+            }
+            onClose={() =>
+              setDrawer(
+                "nutrition-dashboard"
+              )
+            }
+            profile={profile}
+            snapshot={syncedSnapshot}
+            progressLogs={progressLogs}
+            onLogMeal={(entry) => {
+              handleNutritionMealSave(
+                entry
+              );
+              setDrawer(
+                "nutrition-dashboard"
+              );
+            }}
+            setProfile={setProfile}
           />
 
           <NutritionGoalsDrawer

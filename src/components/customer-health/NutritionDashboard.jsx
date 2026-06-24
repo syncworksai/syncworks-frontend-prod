@@ -229,6 +229,7 @@ export default function NutritionDashboard({
   progressLogs,
   onOpenCoach,
   onOpenGoals,
+  onOpenMealPlanner,
   onEditMeal,
   onDeleteMeal,
   onReuseMeal,
@@ -406,6 +407,14 @@ export default function NutritionDashboard({
           </div>
 
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={onOpenMealPlanner}
+              className="h-11 rounded-2xl border border-lime-300/30 bg-lime-300/15 px-4 text-sm font-black text-lime-100"
+            >
+              What Should I Eat?
+            </button>
+
             <button
               type="button"
               onClick={onOpenGoals}
