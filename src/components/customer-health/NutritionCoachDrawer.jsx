@@ -361,13 +361,13 @@ function ProgressBar({
   };
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+    <div className="rounded-xl border border-white/10 bg-white/[0.035] p-2.5">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+        <span className="text-[9px] font-black uppercase tracking-[0.1em] text-slate-400">
           {label}
         </span>
 
-        <span className="text-sm font-black text-white">
+        <span className="text-xs font-black text-white">
           {safeValue}
           {suffix}
           {safeGoal
@@ -376,7 +376,7 @@ function ProgressBar({
         </span>
       </div>
 
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-black/35">
+      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-black/35">
         <div
           className={`h-full rounded-full ${
             toneMap[tone] || toneMap.cyan
@@ -407,10 +407,10 @@ function MacroInput({
           onChange={(event) =>
             onChange(event.target.value)
           }
-          className="h-12 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 pr-14 text-base font-black text-white outline-none focus:border-cyan-300/40"
+          className="h-10 w-full rounded-xl border border-white/10 bg-slate-950 px-3 pr-10 text-sm font-black text-white outline-none focus:border-cyan-300/40"
         />
 
-        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-black text-slate-500">
+        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-black text-slate-500">
           {suffix}
         </span>
       </div>
@@ -798,7 +798,7 @@ export default function NutritionCoachDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-[135] flex items-end justify-center bg-black/80 p-3 backdrop-blur-xl sm:items-center">
+    <div className="fixed inset-0 z-[135] flex items-end justify-center bg-black/80 p-0 backdrop-blur-xl sm:items-center sm:p-3">
       <button
         type="button"
         aria-label="Close Nutrition Coach"
@@ -806,18 +806,18 @@ export default function NutritionCoachDrawer({
         className="absolute inset-0"
       />
 
-      <section className="relative z-[136] max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-[2rem] border border-lime-300/20 bg-[radial-gradient(circle_at_top_left,rgba(112,255,61,0.10),transparent_30%),radial-gradient(circle_at_top_right,rgba(255,59,212,0.08),transparent_28%),linear-gradient(180deg,#07111f,#040812)] p-4 shadow-[0_28px_90px_rgba(0,0,0,0.72)] sm:p-6">
-        <div className="flex items-start justify-between gap-3">
+      <section className="relative z-[136] h-[100dvh] w-full max-w-3xl overflow-y-auto border border-lime-300/20 bg-[radial-gradient(circle_at_top_left,rgba(112,255,61,0.10),transparent_30%),radial-gradient(circle_at_top_right,rgba(255,59,212,0.08),transparent_28%),linear-gradient(180deg,#07111f,#040812)] p-3 pb-24 shadow-[0_28px_90px_rgba(0,0,0,0.72)] sm:h-auto sm:max-h-[94vh] sm:rounded-[2rem] sm:p-6">
+        <div className="sticky top-0 z-10 -mx-3 -mt-3 flex items-start justify-between gap-2 border-b border-white/10 bg-[#07111f]/95 px-3 py-3 backdrop-blur-xl sm:static sm:mx-0 sm:mt-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[0.22em] text-lime-200">
               SyncWorks Nutrition Coach
             </div>
 
-            <h2 className="mt-1 text-3xl font-black text-white">
+            <h2 className="mt-0.5 text-xl font-black leading-tight text-white sm:text-3xl">
               Tell me what you ate
             </h2>
 
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400 sm:mt-2 sm:text-sm sm:leading-6">
               Describe the meal naturally. The coach will estimate calories and macros, show its assumptions, and wait for your confirmation before saving.
             </p>
           </div>
@@ -826,7 +826,7 @@ export default function NutritionCoachDrawer({
             <button
               type="button"
               onClick={onOpenDashboard}
-              className="h-10 rounded-xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 text-xs font-black text-fuchsia-100"
+              className="h-9 rounded-xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-2.5 text-[11px] font-black text-fuchsia-100"
             >
               Dashboard
             </button>
@@ -834,14 +834,14 @@ export default function NutritionCoachDrawer({
             <button
               type="button"
               onClick={onClose}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] font-black text-white"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-sm font-black text-white"
             >
               ✕
             </button>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3">
           <ProgressBar
             label="Calories today"
             value={snapshot?.calories}
@@ -858,7 +858,7 @@ export default function NutritionCoachDrawer({
           />
         </div>
 
-        <div className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-4">
+        <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 sm:mt-5 sm:rounded-[1.5rem] sm:p-4">
           <label className="block">
             <div className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">
               Meal description
@@ -871,9 +871,9 @@ export default function NutritionCoachDrawer({
                   event.target.value
                 )
               }
-              rows={4}
+              rows={3}
               placeholder="Example: I ate 3 McDonald’s cheeseburgers and a medium fries"
-              className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold leading-6 text-white outline-none placeholder:text-slate-600 focus:border-lime-300/40"
+              className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm font-bold leading-5 text-white outline-none placeholder:text-slate-600 focus:border-lime-300/40"
             />
           </label>
 
@@ -889,7 +889,7 @@ export default function NutritionCoachDrawer({
                 onChange={(event) =>
                   setDate(event.target.value)
                 }
-                className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-sm font-black text-white outline-none focus:border-cyan-300/40"
+                className="mt-2 h-10 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-xs font-black text-white outline-none focus:border-cyan-300/40"
               />
             </label>
 
@@ -900,7 +900,7 @@ export default function NutritionCoachDrawer({
                 analyzing
               }
               onClick={runEstimate}
-              className="mt-auto h-12 flex-1 rounded-2xl border border-lime-300/30 bg-lime-300/15 px-5 text-sm font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="mt-auto h-10 flex-1 rounded-xl border border-lime-300/30 bg-lime-300/15 px-4 text-xs font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {analyzing
                 ? "Analyzing Meal…"
@@ -916,14 +916,14 @@ export default function NutritionCoachDrawer({
         ) : null}
 
         {estimate ? (
-          <div className="mt-4 rounded-[1.5rem] border border-cyan-300/20 bg-cyan-300/[0.06] p-4">
+          <div className="mt-3 rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.06] p-3 sm:mt-4 sm:rounded-[1.5rem] sm:p-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">
                   Coach Estimate
                 </div>
 
-                <div className="mt-1 text-xl font-black text-white">
+                <div className="mt-0.5 text-lg font-black text-white sm:text-xl">
                   Review before saving
                 </div>
               </div>
@@ -934,19 +934,19 @@ export default function NutritionCoachDrawer({
             </div>
 
             {estimate.items.length ? (
-              <div className="mt-4 space-y-2">
+              <div className="mt-3 space-y-1.5">
                 {estimate.items.map(
                   (item, index) => (
                     <div
                       key={`${item.label}-${index}`}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2"
                     >
-                      <div className="text-sm font-bold text-white">
+                      <div className="truncate text-xs font-bold text-white sm:text-sm">
                         {item.quantity} ×{" "}
                         {item.label}
                       </div>
 
-                      <div className="text-xs font-black text-slate-400">
+                      <div className="whitespace-nowrap text-[10px] font-black text-slate-400 sm:text-xs">
                         {item.calories} cal ·{" "}
                         {item.protein}g protein
                       </div>
@@ -956,11 +956,11 @@ export default function NutritionCoachDrawer({
               </div>
             ) : null}
 
-            <p className="mt-3 text-xs leading-5 text-slate-400">
+            <p className="mt-2 text-[11px] leading-4 text-slate-400 sm:mt-3 sm:text-xs sm:leading-5">
               {estimate.note}
             </p>
 
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:grid-cols-4 sm:gap-3">
               <MacroInput
                 label="Calories"
                 value={calories}
@@ -998,7 +998,7 @@ export default function NutritionCoachDrawer({
                 !description.trim() ||
                 safeNumber(calories, 0) <= 0
               }
-              className="mt-4 h-12 w-full rounded-2xl border border-lime-300/30 bg-gradient-to-r from-lime-300/20 to-cyan-300/15 text-sm font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="mt-3 h-11 w-full rounded-xl border border-lime-300/30 bg-gradient-to-r from-lime-300/20 to-cyan-300/15 text-xs font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-40 sm:mt-4 sm:h-12 sm:rounded-2xl sm:text-sm"
             >
               {saving
                 ? "Saving Meal…"
@@ -1013,7 +1013,7 @@ export default function NutritionCoachDrawer({
           </div>
         ) : null}
 
-        <div className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
+        <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:mt-5 sm:rounded-[1.5rem] sm:p-4">
           <div className="text-[10px] font-black uppercase tracking-[0.16em] text-fuchsia-200">
             Today’s Meals
           </div>
@@ -1025,7 +1025,7 @@ export default function NutritionCoachDrawer({
                   key={meal.id}
                   className="rounded-2xl border border-white/10 bg-black/20 p-3"
                 >
-                  <div className="text-sm font-black text-white">
+                  <div className="text-xs font-black text-white">
                     {meal.description ||
                       meal.note ||
                       "Meal"}
