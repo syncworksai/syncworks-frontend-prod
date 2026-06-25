@@ -1,5 +1,7 @@
 // src/components/customer-health/healthExerciseCatalog.js
 
+import { HEALTH_EXERCISE_CATALOG_EXPANSION } from "./healthExerciseCatalogExpansion";
+
 export const EXERCISE_LIBRARY_KPI_KEY =
   "sw_health_exercise_library_kpis_v1";
 export const EXERCISE_FAVORITES_KEY =
@@ -453,7 +455,8 @@ export function trackExerciseLibraryKpi(event, details = {}) {
     const current = JSON.parse(
       localStorage.getItem(EXERCISE_LIBRARY_KPI_KEY) || "[]"
     );
-    const next = Array.isArray(current) ? current : [];
+    const next = Array.isArray(current) ? current : [  ...HEALTH_EXERCISE_CATALOG_EXPANSION,
+];
 
     next.push({
       id: `exercise-kpi-${Date.now()}-${Math.random()
