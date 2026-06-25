@@ -48,6 +48,13 @@ import TrainerNudgeCard from "./TrainerNudgeCard";
 import WorkoutProgressionCard from "./WorkoutProgressionCard";
 import PersonalRecordsCard from "./PersonalRecordsCard";
 import PostWorkoutReportCard from "./PostWorkoutReportCard";
+import LiveWorkoutAdaptationDrawer from "./LiveWorkoutAdaptationDrawer";
+import {
+  buildAdaptiveExercise,
+  buildPostWorkoutWrapUp,
+  buildPreWorkoutBriefing,
+  trackWorkoutAdaptationKpi,
+} from "./healthWorkoutAdaptation";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -940,6 +947,9 @@ export default function ActiveWorkoutSessionDrawer({
   const [setCheckInOpen, setSetCheckInOpen] =
     useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [adaptationMode, setAdaptationMode] =
+    useState("");
+  const preWorkoutBriefingRef = useRef("");
 
   const lastExerciseCueRef = useRef("");
   const lastRestCueRef = useRef("");
@@ -960,6 +970,8 @@ export default function ActiveWorkoutSessionDrawer({
     setEditAfterFinish(false);
     setSetCheckInOpen(false);
     setDetailsOpen(false);
+    setAdaptationMode("");
+    preWorkoutBriefingRef.current = "";
     lastExerciseCueRef.current = "";
     lastRestCueRef.current = "";
   }, [open, plannerItem, workouts]);
@@ -1045,6 +1057,47 @@ export default function ActiveWorkoutSessionDrawer({
 
   const canEdit =
     !isCompleted || editAfterFinish;
+
+  useEffect(() => {
+    if (
+      !open ||
+      !session ||
+      coachAudioMode === "off"
+    ) {
+      return;
+    }
+
+    const key = `preworkout:${session.id}`;
+
+    if (preWorkoutBriefingRef.current === key) {
+      return;
+    }
+
+    speakCoachText({
+      text: buildPreWorkoutBriefing(session),
+      audioMode: coachAudioMode,
+      voicePreference: coachVoicePreference,
+      rate: 0.98,
+      pitch: 1,
+      volume: 1,
+    });
+
+    trackWorkoutAdaptationKpi(
+      "preworkout_briefing_played",
+      {
+        session_id: session.id,
+        workout_name: session.workout_name,
+        exercise_count: session.exercises?.length || 0,
+      }
+    );
+
+    preWorkoutBriefingRef.current = key;
+  }, [
+    open,
+    session?.id,
+    coachAudioMode,
+    coachVoicePreference,
+  ]);
 
   useEffect(() => {
     if (
@@ -1501,6 +1554,110 @@ export default function ActiveWorkoutSessionDrawer({
     );
   }
 
+  function openAdaptation(mode) {
+    if (
+      !session ||
+      session.set_active ||
+      session.rest_active
+    ) {
+      return;
+    }
+
+    setAdaptationMode(mode);
+
+    trackWorkoutAdaptationKpi(
+      "adaptation_drawer_opened",
+      {
+        mode,
+        session_id: session.id,
+        current_exercise_id: currentExercise?.id || "",
+      }
+    );
+  }
+
+  function selectAdaptiveExercise(catalogExercise, mode) {
+    if (!session || !catalogExercise) return;
+
+    if (mode === "replace" && currentExercise) {
+      setSession((previous) => ({
+        ...previous,
+        exercises: (previous.exercises || []).map(
+          (exercise) =>
+            exercise.id === currentExercise.id
+              ? {
+                  ...exercise,
+                  name: catalogExercise.name,
+                  substituted: true,
+                  substitute_name: catalogExercise.name,
+                  substitution_source: "live_library",
+                  catalog_id: catalogExercise.id,
+                  equipment: catalogExercise.equipment,
+                  movement_pattern: catalogExercise.movement_pattern,
+                  primary_muscles: catalogExercise.primary_muscles,
+                  secondary_muscles: catalogExercise.secondary_muscles,
+                  current_target_reps: catalogExercise.reps,
+                  planned_reps: catalogExercise.reps,
+                  planned_sets: catalogExercise.sets,
+                }
+              : exercise
+        ),
+      }));
+
+      speakCoachText({
+        text: `${currentExercise.name} has been replaced with ${catalogExercise.name}. This keeps the workout moving while I track the substitution.`,
+        audioMode: coachAudioMode,
+        voicePreference: coachVoicePreference,
+        rate: 0.98,
+      });
+    } else {
+      const addedExercise = buildAdaptiveExercise(
+        catalogExercise,
+        mode
+      );
+
+      setSession((previous) => {
+        const currentIndex =
+          previous.current_exercise_index || 0;
+        const exercises = [
+          ...(previous.exercises || []),
+        ];
+
+        const insertAt =
+          mode === "variation"
+            ? currentIndex + 1
+            : exercises.length;
+
+        exercises.splice(insertAt, 0, addedExercise);
+
+        return {
+          ...previous,
+          exercises,
+          workout_extended:
+            mode === "finisher" ||
+            previous.workout_extended,
+          adaptive_additions:
+            Number(previous.adaptive_additions || 0) + 1,
+        };
+      });
+
+      const label =
+        mode === "variation"
+          ? "variation"
+          : mode === "accessory"
+          ? "accessory"
+          : "extra exercise";
+
+      speakCoachText({
+        text: `${catalogExercise.name} added as a ${label}. I will track the extra volume and use it in future coaching.`,
+        audioMode: coachAudioMode,
+        voicePreference: coachVoicePreference,
+        rate: 0.98,
+      });
+    }
+
+    setAdaptationMode("");
+  }
+
   function closeDrawer() {
     setReviewMode(false);
     setFinishMessage("");
@@ -1531,6 +1688,29 @@ export default function ActiveWorkoutSessionDrawer({
       } sets logged in ${formatSeconds(
         result.summary.total_seconds
       )}.`
+    );
+
+    speakCoachText({
+      text: buildPostWorkoutWrapUp(
+        result.finishedSession,
+        result.summary
+      ),
+      audioMode: coachAudioMode,
+      voicePreference: coachVoicePreference,
+      rate: 0.96,
+      pitch: 1,
+      volume: 1,
+    });
+
+    trackWorkoutAdaptationKpi(
+      "postworkout_wrapup_played",
+      {
+        session_id: result.finishedSession.id,
+        completed_sets: result.summary.completed_sets,
+        total_seconds: result.summary.total_seconds,
+        adaptive_additions:
+          result.finishedSession.adaptive_additions || 0,
+      }
     );
   }
 
@@ -1798,6 +1978,46 @@ export default function ActiveWorkoutSessionDrawer({
                       Start Set is tapped.
                     </div>
                   ) : null}
+                </div>
+              ) : null}
+
+              {!isCompleted && currentExercise ? (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <button
+                    type="button"
+                    onClick={() => openAdaptation("replace")}
+                    disabled={session.set_active || session.rest_active}
+                    className="h-11 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-3 text-xs font-black text-cyan-100 disabled:opacity-40"
+                  >
+                    Swap Exercise
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => openAdaptation("variation")}
+                    disabled={session.set_active || session.rest_active}
+                    className="h-11 rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 text-xs font-black text-fuchsia-100 disabled:opacity-40"
+                  >
+                    Add Variation
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => openAdaptation("accessory")}
+                    disabled={session.set_active || session.rest_active}
+                    className="h-11 rounded-2xl border border-amber-300/25 bg-amber-300/10 px-3 text-xs font-black text-amber-100 disabled:opacity-40"
+                  >
+                    Add Accessory
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => openAdaptation("finisher")}
+                    disabled={session.set_active || session.rest_active}
+                    className="h-11 rounded-2xl border border-lime-300/25 bg-lime-300/10 px-3 text-xs font-black text-lime-100 disabled:opacity-40"
+                  >
+                    Keep Training
+                  </button>
                 </div>
               ) : null}
 
@@ -2384,6 +2604,15 @@ export default function ActiveWorkoutSessionDrawer({
             </div>
           </div>
         ) : null}
+
+        <LiveWorkoutAdaptationDrawer
+          open={!!adaptationMode}
+          onClose={() => setAdaptationMode("")}
+          mode={adaptationMode}
+          session={session}
+          currentExercise={currentExercise}
+          onSelect={selectAdaptiveExercise}
+        />
 
         <SetCompletionSheet
           open={setCheckInOpen}
