@@ -5,6 +5,8 @@ import React, {
   useState,
 } from "react";
 
+import api from "../../api/client";
+
 function safeNumber(value, fallback = 0) {
   const parsed = Number(
     String(value ?? "").replace(/[^\d.-]/g, "")
@@ -442,6 +444,10 @@ export default function NutritionCoachDrawer({
     useState("");
   const [saving, setSaving] =
     useState(false);
+  const [analyzing, setAnalyzing] =
+    useState(false);
+  const [analysisError, setAnalysisError] =
+    useState("");
   const [savedMessage, setSavedMessage] =
     useState("");
 
@@ -557,31 +563,192 @@ export default function NutritionCoachDrawer({
 
   if (!open) return null;
 
-  function runEstimate() {
-    const next = estimateMeal(description);
+  async function runEstimate() {
+    if (!description.trim() || analyzing) {
+      return;
+    }
 
-    setEstimate(next);
-    setCalories(
-      next.calories
-        ? String(next.calories)
-        : ""
-    );
-    setProtein(
-      next.protein
-        ? String(next.protein)
-        : ""
-    );
-    setCarbs(
-      next.carbs
-        ? String(next.carbs)
-        : ""
-    );
-    setFat(
-      next.fat
-        ? String(next.fat)
-        : ""
-    );
+    setAnalyzing(true);
+    setAnalysisError("");
     setSavedMessage("");
+
+    try {
+      const response = await api.post(
+        "/customer-health/nutrition/analyze/",
+        {
+          description:
+            description.trim(),
+          meal_type: "",
+          restaurant: "",
+        }
+      );
+
+      const data = response?.data || {};
+      const totals = data?.totals || {};
+
+      const next = {
+        items: Array.isArray(data?.items)
+          ? data.items.map((item) => ({
+              label:
+                item?.name ||
+                "Food item",
+              quantity:
+                safeNumber(
+                  item?.quantity,
+                  1
+                ),
+              serving_description:
+                item?.serving_description ||
+                "",
+              calories:
+                safeNumber(
+                  item?.calories,
+                  0
+                ),
+              protein:
+                safeNumber(
+                  item?.protein,
+                  0
+                ),
+              carbs:
+                safeNumber(
+                  item?.carbs,
+                  0
+                ),
+              fat:
+                safeNumber(
+                  item?.fat,
+                  0
+                ),
+              fiber:
+                safeNumber(
+                  item?.fiber,
+                  0
+                ),
+              sugar:
+                safeNumber(
+                  item?.sugar,
+                  0
+                ),
+            }))
+          : [],
+        calories:
+          safeNumber(
+            totals?.calories,
+            0
+          ),
+        protein:
+          safeNumber(
+            totals?.protein,
+            0
+          ),
+        carbs:
+          safeNumber(
+            totals?.carbs,
+            0
+          ),
+        fat:
+          safeNumber(
+            totals?.fat,
+            0
+          ),
+        fiber:
+          safeNumber(
+            totals?.fiber,
+            0
+          ),
+        sugar:
+          safeNumber(
+            totals?.sugar,
+            0
+          ),
+        confidence:
+          data?.confidence || "low",
+        source_type:
+          data?.source_type ||
+          "unknown",
+        assumptions:
+          Array.isArray(
+            data?.assumptions
+          )
+            ? data.assumptions
+            : [],
+        warnings:
+          Array.isArray(
+            data?.warnings
+          )
+            ? data.warnings
+            : [],
+        note:
+          data?.assumptions?.length
+            ? data.assumptions.join(
+                " "
+              )
+            : "AI estimate generated. Review all values before saving.",
+        provider:
+          data?.provider || "openai",
+      };
+
+      setEstimate(next);
+      setCalories(
+        next.calories
+          ? String(next.calories)
+          : ""
+      );
+      setProtein(
+        next.protein
+          ? String(next.protein)
+          : ""
+      );
+      setCarbs(
+        next.carbs
+          ? String(next.carbs)
+          : ""
+      );
+      setFat(
+        next.fat
+          ? String(next.fat)
+          : ""
+      );
+    } catch (error) {
+      const fallback =
+        estimateMeal(description);
+
+      setEstimate(fallback);
+      setCalories(
+        fallback.calories
+          ? String(
+              fallback.calories
+            )
+          : ""
+      );
+      setProtein(
+        fallback.protein
+          ? String(
+              fallback.protein
+            )
+          : ""
+      );
+      setCarbs(
+        fallback.carbs
+          ? String(
+              fallback.carbs
+            )
+          : ""
+      );
+      setFat(
+        fallback.fat
+          ? String(fallback.fat)
+          : ""
+      );
+
+      setAnalysisError(
+        error?.response?.data?.detail ||
+          "AI analysis was unavailable, so SyncWorks used the local estimate. Review it before saving."
+      );
+    } finally {
+      setAnalyzing(false);
+    }
   }
 
   async function saveMeal() {
@@ -608,7 +775,9 @@ export default function NutritionCoachDrawer({
         estimate_confidence:
           estimate?.confidence || "manual",
         source:
-          estimate?.items?.length
+          estimate?.provider === "openai"
+            ? "nutrition_ai_estimate"
+            : estimate?.items?.length
             ? "nutrition_coach_estimate"
             : "nutrition_manual",
         replace_id: initialMeal?.id || "",
@@ -726,14 +895,25 @@ export default function NutritionCoachDrawer({
 
             <button
               type="button"
-              disabled={!description.trim()}
+              disabled={
+                !description.trim() ||
+                analyzing
+              }
               onClick={runEstimate}
               className="mt-auto h-12 flex-1 rounded-2xl border border-lime-300/30 bg-lime-300/15 px-5 text-sm font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Estimate Nutrition
+              {analyzing
+                ? "Analyzing Meal…"
+                : "Analyze With AI"}
             </button>
           </div>
         </div>
+
+        {analysisError ? (
+          <div className="mt-4 rounded-2xl border border-amber-300/25 bg-amber-300/10 p-4 text-sm font-bold text-amber-100">
+            {analysisError}
+          </div>
+        ) : null}
 
         {estimate ? (
           <div className="mt-4 rounded-[1.5rem] border border-cyan-300/20 bg-cyan-300/[0.06] p-4">
