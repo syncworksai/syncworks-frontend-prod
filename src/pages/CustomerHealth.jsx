@@ -44,6 +44,7 @@ import CoachChatDrawer from "../components/customer-health/CoachChatDrawer";
 import ActiveWorkoutSessionDrawer from "../components/customer-health/ActiveWorkoutSessionDrawer";
 import HealthMobileQuickNav from "../components/customer-health/HealthMobileQuickNav";
 import SleepPlannerDrawer from "../components/customer-health/SleepPlannerDrawer";
+import WorkoutHistoryDrawer from "../components/customer-health/WorkoutHistoryDrawer";
 
 import {
   NutritionDrawer,
@@ -1823,6 +1824,8 @@ export default function CustomerHealth() {
       "profile-intake": "profile-intake",
       questionnaire: "questionnaire",
       "my-workouts": "workout",
+      "workout-history": "workout-history",
+      history: "workout-history",
       "build-workout": "workout",
       "train-muscle": "library",
       "muscle-map": "library",
@@ -2353,6 +2356,14 @@ export default function CustomerHealth() {
             setSnapshot={setSnapshot}
             history={history}
             setHistory={setHistory}
+          />
+
+          <WorkoutHistoryDrawer
+            open={
+              drawer === "workout-history"
+            }
+            onClose={() => setDrawer("")}
+            history={history}
           />
 
           <DevicesDrawer
