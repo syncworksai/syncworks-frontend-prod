@@ -46,6 +46,7 @@ import TrainerExerciseIntroCard from "./TrainerExerciseIntroCard";
 import CoachVoiceSettingsCard from "./CoachVoiceSettingsCard";
 import TrainerNudgeCard from "./TrainerNudgeCard";
 import WorkoutProgressionCard from "./WorkoutProgressionCard";
+import PersonalRecordsCard from "./PersonalRecordsCard";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -1893,6 +1894,14 @@ export default function ActiveWorkoutSessionDrawer({
                   onApply={
                     applyProgressionRecommendation
                   }
+                />
+              ) : null}
+
+              {!isCompleted && currentExercise ? (
+                <PersonalRecordsCard
+                  history={history}
+                  exercise={currentExercise}
+                  session={session}
                 />
               ) : null}
 
