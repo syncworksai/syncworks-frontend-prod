@@ -2,12 +2,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import HealthDrawer from "./HealthDrawer";
 import ExerciseDetailDrawer from "./ExerciseDetailDrawer";
+import HealthBodyMapDrawer from "./HealthBodyMapDrawer";
 import {
   HEALTH_EXERCISE_CATALOG,
   readExerciseFavorites,
   trackExerciseLibraryKpi,
   writeExerciseFavorites,
 } from "./healthExerciseCatalog";
+import {
+  exerciseMatchesBodyGroup,
+} from "./healthBodyMapConfig";
 import { speakCoachText } from "./healthCoachVoice";
 
 function unique(values) {
@@ -71,6 +75,7 @@ export default function ExerciseLibraryDrawer({
   const [equipment, setEquipment] = useState("All");
   const [location, setLocation] = useState("All");
   const [selected, setSelected] = useState(null);
+  const [bodyMapOpen, setBodyMapOpen] = useState(false);
   const [favorites, setFavorites] = useState(() =>
     readExerciseFavorites()
   );
@@ -126,8 +131,7 @@ export default function ExerciseLibraryDrawer({
     return HEALTH_EXERCISE_CATALOG.filter(
       (exercise) =>
         matchesText(exercise, search) &&
-        (muscle === "All" ||
-          exercise.primary_muscles.includes(muscle)) &&
+        exerciseMatchesBodyGroup(exercise, muscle) &&
         (equipment === "All" ||
           exercise.equipment === equipment) &&
         (location === "All" ||
@@ -163,6 +167,8 @@ export default function ExerciseLibraryDrawer({
     trackExerciseLibraryKpi("exercise_added", {
       exercise_id: exercise.id,
       reason,
+      selected_muscle_filter: muscle,
+      active_search: search.trim(),
     });
 
     speakCoachText({
@@ -205,22 +211,58 @@ export default function ExerciseLibraryDrawer({
     setSelected(alternative);
   }
 
+  function selectBodyMuscle(nextMuscle) {
+    setMuscle(nextMuscle);
+
+    trackExerciseLibraryKpi("library_filtered_from_body_map", {
+      muscle_group: nextMuscle,
+    });
+  }
+
   return (
     <>
       <HealthDrawer
         open={open}
         onClose={onClose}
         title="Visual Exercise Library"
-        subtitle="Search, learn, swap equipment, add variations, and let the coach adapt."
+        subtitle="Search, tap the body map, swap equipment, and let the coach adapt."
       >
         <div className="space-y-4">
           <div className="sticky top-0 z-10 -mx-1 space-y-3 bg-[#07101f]/95 px-1 pb-3 backdrop-blur-xl">
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search chest, cable, triceps, hip flexor..."
-              className="h-12 w-full rounded-2xl border border-white/10 bg-slate-950 px-4 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
-            />
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search exercise, muscle, equipment..."
+                className="h-12 min-w-0 rounded-2xl border border-white/10 bg-slate-950 px-4 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
+              />
+
+              <button
+                type="button"
+                onClick={() => {
+                  setBodyMapOpen(true);
+                  trackExerciseLibraryKpi("body_map_opened");
+                }}
+                className="h-12 rounded-2xl border border-cyan-300/35 bg-cyan-300/10 px-4 text-xs font-black text-cyan-100 shadow-[0_0_24px_rgba(52,223,255,0.10)]"
+              >
+                Body Map
+              </button>
+            </div>
+
+            {muscle !== "All" ? (
+              <div className="flex items-center justify-between rounded-2xl border border-emerald-300/25 bg-emerald-300/10 px-3 py-2">
+                <div className="text-xs font-black text-emerald-100">
+                  Muscle: {muscle}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMuscle("All")}
+                  className="text-xs font-black text-emerald-200"
+                >
+                  Clear
+                </button>
+              </div>
+            ) : null}
 
             <div className="grid grid-cols-3 gap-2">
               <select
@@ -333,6 +375,13 @@ export default function ExerciseLibraryDrawer({
           ) : null}
         </div>
       </HealthDrawer>
+
+      <HealthBodyMapDrawer
+        open={bodyMapOpen}
+        onClose={() => setBodyMapOpen(false)}
+        selectedMuscle={muscle}
+        onSelectMuscle={selectBodyMuscle}
+      />
 
       <ExerciseDetailDrawer
         open={!!selected}
