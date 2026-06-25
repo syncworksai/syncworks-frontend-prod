@@ -47,6 +47,7 @@ import CoachVoiceSettingsCard from "./CoachVoiceSettingsCard";
 import TrainerNudgeCard from "./TrainerNudgeCard";
 import WorkoutProgressionCard from "./WorkoutProgressionCard";
 import PersonalRecordsCard from "./PersonalRecordsCard";
+import PostWorkoutReportCard from "./PostWorkoutReportCard";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -1842,6 +1843,12 @@ export default function ActiveWorkoutSessionDrawer({
                   )}
                 </div>
               </div>
+
+              {isCompleted ? (
+                <PostWorkoutReportCard
+                  session={session}
+                />
+              ) : null}
 
               {isCompleted ? (
                 <div className="rounded-2xl border border-cyan-300/25 bg-cyan-300/10 p-4">
