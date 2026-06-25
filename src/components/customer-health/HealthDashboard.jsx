@@ -7,6 +7,7 @@ import HealthProgressCharts from "./HealthProgressCharts";
 import SleepPlanCard from "./SleepPlanCard";
 import HealthCoachIntelligenceCard from "./HealthCoachIntelligenceCard";
 import AdaptiveNextWorkoutCard from "./AdaptiveNextWorkoutCard";
+import CardioProgressCard from "./CardioProgressCard";
 
 import {
   clampPercent,
@@ -731,6 +732,14 @@ export default function HealthDashboard({
         snapshot={snapshot}
         profile={profile}
         onOpen={onOpen}
+      />
+
+      <CardioProgressCard
+        history={history}
+        onOpenCardio={onOpenCardio}
+        onOpenHistory={() =>
+          onOpen?.("workout-history")
+        }
       />
 
       <HealthCoachIntelligenceCard
