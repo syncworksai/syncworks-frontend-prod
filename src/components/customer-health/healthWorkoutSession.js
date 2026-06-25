@@ -150,6 +150,16 @@ function normalizeSetLog(
     form_quality:
       setLog.form_quality || "",
 
+    set_type:
+      setLog.set_type === "warmup"
+        ? "warmup"
+        : "working",
+
+    reached_failure:
+      Boolean(setLog.reached_failure),
+
+    copied_from_set_id:
+      setLog.copied_from_set_id || "",
     pain_score:
       setLog.pain_score ??
       exercise.pain_score ??
@@ -621,6 +631,16 @@ function createSetRecord({
     form_quality:
       setLog.form_quality || "",
 
+    set_type:
+      setLog.set_type === "warmup"
+        ? "warmup"
+        : "working",
+
+    reached_failure:
+      Boolean(setLog.reached_failure),
+
+    copied_from_set_id:
+      setLog.copied_from_set_id || "",
     pain_score:
       setLog.pain_score ??
       exercise.pain_score ??

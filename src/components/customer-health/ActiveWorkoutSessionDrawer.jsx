@@ -158,6 +158,8 @@ function SetCompletionSheet({
   const [rpe, setRpe] = useState("7");
   const [formQuality, setFormQuality] = useState("Good");
   const [pain, setPain] = useState("0");
+  const [setType, setSetType] = useState("working");
+  const [reachedFailure, setReachedFailure] = useState(false);
 
   useEffect(() => {
     if (!open || !exercise) return;
@@ -181,6 +183,13 @@ function SetCompletionSheet({
     setRpe("7");
     setFormQuality("Good");
     setPain(exercise.pain_score || "0");
+    setSetType(
+      (exercise.set_logs || []).length === 0 &&
+        Number(exercise.planned_sets || 0) > 0
+        ? "working"
+        : "working"
+    );
+    setReachedFailure(false);
   }, [
     open,
     exercise?.id,
@@ -323,6 +332,48 @@ function SetCompletionSheet({
           </div>
         </div>
 
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              setSetType(
+                setType === "warmup"
+                  ? "working"
+                  : "warmup"
+              )
+            }
+            className={cx(
+              "rounded-2xl border px-3 py-3 text-xs font-black transition",
+              setType === "warmup"
+                ? "border-amber-300/30 bg-amber-300/15 text-amber-100"
+                : "border-white/10 bg-white/[0.04] text-slate-300"
+            )}
+          >
+            {setType === "warmup"
+              ? "Warm-up Set"
+              : "Working Set"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              setReachedFailure(
+                (current) => !current
+              )
+            }
+            className={cx(
+              "rounded-2xl border px-3 py-3 text-xs font-black transition",
+              reachedFailure
+                ? "border-rose-300/30 bg-rose-300/15 text-rose-100"
+                : "border-white/10 bg-white/[0.04] text-slate-300"
+            )}
+          >
+            {reachedFailure
+              ? "Reached Failure"
+              : "Not to Failure"}
+          </button>
+        </div>
+
         <div className="mt-4">
           <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
             Pain during the set?
@@ -379,6 +430,8 @@ function SetCompletionSheet({
                 ease_score: rpe,
                 form_quality: formQuality,
                 pain_score: pain,
+                set_type: setType,
+                reached_failure: reachedFailure,
                 adjustment_source:
                   exercise.target_adjustment_source || "",
                 recommendation:
@@ -408,6 +461,7 @@ function SetHistory({
   onUpdateSet,
   onRemoveSet,
   onTargetChange,
+  onCopyPrevious,
   targetControlsRef,
 }) {
   const logs = Array.isArray(exercise?.set_logs)
@@ -462,13 +516,25 @@ function SetHistory({
             </div>
           </div>
 
-          {exercise?.target_adjustment_source ? (
-            <div className="rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-fuchsia-100">
-              {exercise.target_adjustment_source === "coach"
-                ? "Coach adjusted"
-                : "Adjusted"}
-            </div>
-          ) : null}
+          <div className="flex shrink-0 items-center gap-2">
+            {logs.length ? (
+              <button
+                type="button"
+                onClick={onCopyPrevious}
+                className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-[10px] font-black text-cyan-100"
+              >
+                Copy Last Set
+              </button>
+            ) : null}
+
+            {exercise?.target_adjustment_source ? (
+              <div className="rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-fuchsia-100">
+                {exercise.target_adjustment_source === "coach"
+                  ? "Coach adjusted"
+                  : "Adjusted"}
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-3">
@@ -621,6 +687,12 @@ function SetHistory({
                         {log.rpe || log.ease_score
                           ? ` · RPE ${log.rpe || log.ease_score}`
                           : ""}
+                        {log.set_type === "warmup"
+                          ? " · Warm-up"
+                          : ""}
+                        {log.reached_failure
+                          ? " · Failure"
+                          : ""}
                       </div>
                     ) : (
                       <div className="mt-0.5 text-sm text-slate-400">
@@ -686,6 +758,48 @@ function SetHistory({
                     placeholder="RPE"
                     className="h-10 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-2 text-sm font-bold text-white outline-none"
                   />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onUpdateSet(
+                        log.id,
+                        "set_type",
+                        log.set_type === "warmup"
+                          ? "working"
+                          : "warmup"
+                      )
+                    }
+                    className={cx(
+                      "h-10 rounded-xl border px-3 text-[10px] font-black",
+                      log.set_type === "warmup"
+                        ? "border-amber-300/25 bg-amber-300/10 text-amber-100"
+                        : "border-white/10 bg-white/[0.04] text-slate-300"
+                    )}
+                  >
+                    {log.set_type === "warmup"
+                      ? "Warm-up"
+                      : "Working"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onUpdateSet(
+                        log.id,
+                        "reached_failure",
+                        !log.reached_failure
+                      )
+                    }
+                    className={cx(
+                      "h-10 rounded-xl border px-3 text-[10px] font-black",
+                      log.reached_failure
+                        ? "border-rose-300/25 bg-rose-300/10 text-rose-100"
+                        : "border-white/10 bg-white/[0.04] text-slate-300"
+                    )}
+                  >
+                    Failure
+                  </button>
 
                   <button
                     type="button"
@@ -875,42 +989,12 @@ export default function ActiveWorkoutSessionDrawer({
   }, [open]);
 
   const currentExercise = useMemo(() => {
-    const exercises = Array.isArray(session?.exercises)
-      ? session.exercises
-      : [];
-
-    if (!exercises.length) return null;
-
-    const requestedIndex = Number(
-      session?.current_exercise_index
-    );
-
-    if (
-      Number.isInteger(requestedIndex) &&
-      requestedIndex >= 0 &&
-      requestedIndex < exercises.length
-    ) {
-      return exercises[requestedIndex];
-    }
-
-    const activeExercise = exercises.find(
-      (exercise) =>
-        exercise?.id &&
-        exercise.id === session?.active_exercise_id
-    );
-
-    if (activeExercise) {
-      return activeExercise;
-    }
+    if (!Array.isArray(session?.exercises)) return null;
 
     return (
-      exercises.find(
-        (exercise) =>
-          !exercise?.completed &&
-          !exercise?.skipped
-      ) ||
-      exercises[0] ||
-      null
+      session.exercises[
+        session.current_exercise_index || 0
+      ] || null
     );
   }, [session]);
 
@@ -1251,6 +1335,34 @@ export default function ActiveWorkoutSessionDrawer({
     );
   }
 
+  function copyPreviousSetTarget() {
+    if (!currentExercise) return;
+
+    const logs = Array.isArray(
+      currentExercise.set_logs
+    )
+      ? currentExercise.set_logs
+      : [];
+
+    const previous = logs[logs.length - 1];
+
+    if (!previous) return;
+
+    patchCurrentTarget({
+      weight:
+        previous.actual_weight ??
+        previous.weight ??
+        currentExercise.current_target_weight ??
+        "",
+      reps:
+        previous.actual_reps ??
+        previous.reps ??
+        currentExercise.current_target_reps ??
+        "",
+      source: "copied_previous_set",
+    });
+  }
+
   function startSet() {
     if (
       !session ||
@@ -1291,93 +1403,34 @@ export default function ActiveWorkoutSessionDrawer({
 
     const enrichedSetLog = {
       ...setLog,
-
       target_weight:
         setLog.target_weight ??
         currentExercise.current_target_weight ??
         currentExercise.planned_weight ??
         "",
-
       target_reps:
         setLog.target_reps ??
         currentExercise.current_target_reps ??
         currentExercise.planned_reps ??
         "",
-
       planned_weight:
         setLog.planned_weight ??
         currentExercise.planned_weight ??
         "",
-
       planned_reps:
         setLog.planned_reps ??
         currentExercise.planned_reps ??
         "",
     };
 
-    const completedSession = completeActiveSet(
+    const nextSession = completeActiveSet(
       session,
       currentExercise.id,
       enrichedSetLog
     );
 
-    const completedExercises = Array.isArray(
-      completedSession?.exercises
-    )
-      ? completedSession.exercises
-      : [];
-
-    const locatedExerciseIndex =
-      completedExercises.findIndex(
-        (exercise) =>
-          exercise?.id === currentExercise.id
-      );
-
-    const currentIndex =
-      locatedExerciseIndex >= 0
-        ? locatedExerciseIndex
-        : 0;
-
-    const savedExercise =
-      completedExercises[currentIndex] || null;
-
-    let nextExerciseIndex = currentIndex;
-
-    // Stay on the same exercise after Set 1, Set 2, etc.
-    // Advance only after all planned sets are complete.
-    if (savedExercise?.completed) {
-      const nextIncompleteIndex =
-        completedExercises.findIndex(
-          (exercise, index) =>
-            index > currentIndex &&
-            !exercise?.completed &&
-            !exercise?.skipped
-        );
-
-      if (nextIncompleteIndex >= 0) {
-        nextExerciseIndex =
-          nextIncompleteIndex;
-      }
-    }
-
-    const nextSession = {
-      ...completedSession,
-
-      current_exercise_index:
-        nextExerciseIndex,
-
-      last_completed_exercise_id:
-        currentExercise.id,
-
-      last_completed_set_at:
-        new Date().toISOString(),
-    };
-
-    // Update the set board and close the logging sheet
-    // without navigating away from the live workout.
     setSession(nextSession);
     setSetCheckInOpen(false);
-    setDetailsOpen(false);
 
     const restSeconds =
       nextSession.rest_target_seconds ||
@@ -1388,26 +1441,13 @@ export default function ActiveWorkoutSessionDrawer({
       enrichedSetLog.pain_score || 0
     );
 
-    const movedToNextExercise =
-      nextExerciseIndex !== currentIndex;
-
-    const nextExercise =
-      movedToNextExercise
-        ? completedExercises[nextExerciseIndex]
-        : null;
-
     speakCoachText({
       text:
         pain >= 3
           ? `Set saved. Pain was reported. Reduce the load or adjust the movement. Rest for ${restSeconds} seconds.`
-          : movedToNextExercise &&
-            nextExercise?.name
-          ? `Set saved. ${currentExercise.name} is complete. Rest for ${restSeconds} seconds, then get ready for ${nextExercise.name}.`
-          : `Set saved. Rest for ${restSeconds} seconds, then continue ${currentExercise.name}.`,
-
+          : `Set saved. Rest for ${restSeconds} seconds.`,
       audioMode: coachAudioMode,
-      voicePreference:
-        coachVoicePreference,
+      voicePreference: coachVoicePreference,
       rate: 1.02,
       pitch: 1,
       volume: 1,
