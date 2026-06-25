@@ -426,6 +426,7 @@ export default function NutritionCoachDrawer({
   progressLogs,
   onSaveMeal,
   onOpenDashboard,
+  onOpenUpgrade,
   initialMeal,
 }) {
   const [description, setDescription] =
@@ -823,6 +824,14 @@ export default function NutritionCoachDrawer({
           </div>
 
           <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onOpenUpgrade}
+              className="h-9 rounded-xl border border-lime-300/25 bg-lime-300/10 px-2.5 text-[11px] font-black text-lime-100"
+            >
+              AI Plan
+            </button>
+
             <button
               type="button"
               onClick={onOpenDashboard}

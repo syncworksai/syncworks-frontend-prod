@@ -34,6 +34,7 @@ import NutritionCoachDrawer from "../components/customer-health/NutritionCoachDr
 import NutritionDashboard from "../components/customer-health/NutritionDashboard";
 import NutritionGoalsDrawer from "../components/customer-health/NutritionGoalsDrawer";
 import SmartMealPlannerDrawer from "../components/customer-health/SmartMealPlannerDrawer";
+import AICoachUpgradeDrawer from "../components/customer-health/AICoachUpgradeDrawer";
 import HealthPlannerDrawer from "../components/customer-health/HealthPlannerDrawer";
 import QuestionnaireDrawer from "../components/customer-health/QuestionnaireDrawer";
 import WorkoutStudioDrawer from "../components/customer-health/WorkoutStudioDrawer";
@@ -1836,6 +1837,8 @@ export default function CustomerHealth() {
         "nutrition-goals",
       "meal-planner":
         "meal-planner",
+      "ai-coach-upgrade":
+        "ai-coach-upgrade",
       "nutrition-coach":
         "nutrition-coach",
     };
@@ -2229,6 +2232,28 @@ export default function CustomerHealth() {
                 "nutrition-dashboard"
               );
             }}
+            onOpenUpgrade={() =>
+              setDrawer(
+                "ai-coach-upgrade"
+              )
+            }
+          />
+
+          <AICoachUpgradeDrawer
+            open={
+              drawer ===
+              "ai-coach-upgrade"
+            }
+            onClose={() =>
+              setDrawer(
+                "nutrition-coach"
+              )
+            }
+            onContinueFree={() =>
+              setDrawer(
+                "nutrition-dashboard"
+              )
+            }
           />
 
           <NutritionDrawer
