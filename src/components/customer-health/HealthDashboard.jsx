@@ -5,6 +5,7 @@ import HealthMomentumCard from "./HealthMomentumCard";
 import HealthKpiSection from "./HealthKpiSection";
 import HealthProgressCharts from "./HealthProgressCharts";
 import SleepPlanCard from "./SleepPlanCard";
+import HealthCoachIntelligenceCard from "./HealthCoachIntelligenceCard";
 
 import {
   clampPercent,
@@ -722,6 +723,12 @@ export default function HealthDashboard({
 
   return (
     <div className="space-y-4 sm:space-y-5">
+      <HealthCoachIntelligenceCard
+        history={history}
+        snapshot={snapshot}
+        onOpen={onOpen}
+      />
+
       <WeekLifecycleCard
         weekPlan={weekPlan}
         history={history}
