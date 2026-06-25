@@ -841,8 +841,18 @@ function FinishReviewPanel({
       </div>
 
       <h3 className="mt-2 text-2xl font-black text-white">
-        Save this workout?
+        Finish, cool down, and save?
       </h3>
+
+      <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-3">
+        <div className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100">
+          Cooldown guidance
+        </div>
+
+        <div className="mt-2 text-sm leading-6 text-slate-200">
+          Walk or breathe for two to five minutes. Then use gentle stretches for the muscles trained today. Do not force range of motion or stretch into pain.
+        </div>
+      </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <StatTile
@@ -873,7 +883,7 @@ function FinishReviewPanel({
       {validation?.missing?.length ? (
         <div className="mt-4 rounded-2xl border border-rose-300/20 bg-rose-300/10 p-3">
           <div className="text-sm font-black text-rose-100">
-            Recommended before saving
+            Before finishing
           </div>
 
           <div className="mt-2 space-y-2">
@@ -1012,6 +1022,25 @@ export default function ActiveWorkoutSessionDrawer({
       ] || null
     );
   }, [session]);
+
+  const isTimedExercise = useMemo(() => {
+    if (!currentExercise) return false;
+
+    const searchable = [
+      currentExercise.name,
+      currentExercise.planned_reps,
+      currentExercise.current_target_reps,
+      currentExercise.category,
+      currentExercise.movement_pattern,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return /sec|second|min|minute|timed|hold|plank|carry|wall sit|isometric|stretch|mobility|battle rope|jump rope|interval/.test(
+      searchable
+    );
+  }, [currentExercise]);
 
   const currentSuggestion = useMemo(
     () =>
@@ -1473,7 +1502,45 @@ export default function ActiveWorkoutSessionDrawer({
   }
 
   function requestCompleteSet() {
-    if (!session?.set_active) return;
+    if (!session?.set_active || !currentExercise) return;
+
+    if (isTimedExercise) {
+      const seconds = Math.max(
+        1,
+        Number(session.current_set_seconds || 0)
+      );
+
+      saveTimedSet({
+        actual_reps: `${seconds} sec`,
+        reps: `${seconds} sec`,
+        actual_weight:
+          currentExercise.current_target_weight ||
+          currentExercise.planned_weight ||
+          "",
+        weight:
+          currentExercise.current_target_weight ||
+          currentExercise.planned_weight ||
+          "",
+        target_reps:
+          currentExercise.current_target_reps ||
+          currentExercise.planned_reps ||
+          "",
+        target_weight:
+          currentExercise.current_target_weight ||
+          currentExercise.planned_weight ||
+          "",
+        rpe: "7",
+        ease_score: "7",
+        form_quality: "Good",
+        pain_score: "0",
+        set_type: "working",
+        reached_failure: false,
+        timed_set: true,
+        timed_seconds: seconds,
+      });
+
+      return;
+    }
 
     setSetCheckInOpen(true);
   }
@@ -1589,15 +1656,50 @@ export default function ActiveWorkoutSessionDrawer({
                   name: catalogExercise.name,
                   substituted: true,
                   substitute_name: catalogExercise.name,
+                  original_exercise_name:
+                    exercise.original_exercise_name ||
+                    exercise.name,
                   substitution_source: "live_library",
                   catalog_id: catalogExercise.id,
+                  slug: catalogExercise.slug,
+                  image: catalogExercise.image,
                   equipment: catalogExercise.equipment,
-                  movement_pattern: catalogExercise.movement_pattern,
-                  primary_muscles: catalogExercise.primary_muscles,
-                  secondary_muscles: catalogExercise.secondary_muscles,
-                  current_target_reps: catalogExercise.reps,
-                  planned_reps: catalogExercise.reps,
-                  planned_sets: catalogExercise.sets,
+                  location: catalogExercise.location,
+                  category: catalogExercise.category,
+                  difficulty: catalogExercise.difficulty,
+                  movement_pattern:
+                    catalogExercise.movement_pattern,
+                  primary_muscles:
+                    catalogExercise.primary_muscles || [],
+                  secondary_muscles:
+                    catalogExercise.secondary_muscles || [],
+                  feel: catalogExercise.feel || "",
+                  instructions:
+                    catalogExercise.instructions || [],
+                  mistakes:
+                    catalogExercise.mistakes || [],
+                  safety: catalogExercise.safety || "",
+                  alternatives:
+                    catalogExercise.alternatives || [],
+                  variations:
+                    catalogExercise.variations || [],
+                  notes: catalogExercise.feel || "",
+                  current_target_weight: "",
+                  planned_weight: "",
+                  current_target_reps:
+                    catalogExercise.reps,
+                  planned_reps:
+                    catalogExercise.reps,
+                  planned_sets:
+                    catalogExercise.sets,
+                  rest_seconds: Number(
+                    String(
+                      catalogExercise.rest || "60"
+                    ).match(/\d+/)?.[0] || 60
+                  ),
+                  set_logs: [],
+                  completed: false,
+                  skipped: false,
                 }
               : exercise
         ),
@@ -1963,12 +2065,12 @@ export default function ActiveWorkoutSessionDrawer({
                     )}
                   >
                     {session.set_active
-                      ? "Complete Set"
+                      ? (isTimedExercise ? "Complete Timed Set" : "Complete Set")
                       : session.rest_active
                       ? `Resting • ${formatSeconds(
                           session.rest_remaining_seconds
                         )}`
-                      : "Start Set"}
+                      : (isTimedExercise ? "Start Timer" : "Start Set")}
                   </button>
 
                   {!session.set_active &&
@@ -2167,7 +2269,7 @@ export default function ActiveWorkoutSessionDrawer({
               </div>
 
               <TrainerNudgeCard
-                nudge={trainerNudge}
+                nudge={session?.rest_active ? null : trainerNudge}
                 audioMode={coachAudioMode}
                 voicePreference={
                   coachVoicePreference
@@ -2224,7 +2326,7 @@ export default function ActiveWorkoutSessionDrawer({
                     >
                       {detailsOpen
                         ? "Hide Details"
-                        : "More Details"}
+                        : "Info: Set and Exercise"}
                     </button>
                   </div>
 
@@ -2411,7 +2513,7 @@ export default function ActiveWorkoutSessionDrawer({
                     }
                     className="h-11 rounded-2xl border border-lime-300/25 bg-lime-300/10 text-sm font-black text-lime-100 disabled:opacity-40"
                   >
-                    Finish
+                    Finish Workout
                   </button>
 
                   <button
@@ -2578,7 +2680,7 @@ export default function ActiveWorkoutSessionDrawer({
                   ? `Rest ${formatSeconds(
                       session.rest_remaining_seconds
                     )}`
-                  : "Start Set"}
+                  : (isTimedExercise ? "Start Timer" : "Start Set")}
               </button>
 
               <button

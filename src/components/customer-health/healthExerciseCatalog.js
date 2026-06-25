@@ -410,6 +410,7 @@ export const HEALTH_EXERCISE_CATALOG = [
     alternatives: ["dead-bug", "incline-plank", "pallof-press"],
     variations: ["side-plank", "long-lever-plank"],
   }),
+  ...HEALTH_EXERCISE_CATALOG_EXPANSION,
 ];
 
 const BY_ID = Object.fromEntries(
@@ -455,8 +456,7 @@ export function trackExerciseLibraryKpi(event, details = {}) {
     const current = JSON.parse(
       localStorage.getItem(EXERCISE_LIBRARY_KPI_KEY) || "[]"
     );
-    const next = Array.isArray(current) ? current : [  ...HEALTH_EXERCISE_CATALOG_EXPANSION,
-];
+    const next = Array.isArray(current) ? current : [];
 
     next.push({
       id: `exercise-kpi-${Date.now()}-${Math.random()
