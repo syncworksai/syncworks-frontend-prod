@@ -608,6 +608,8 @@ export default function HealthDashboard({
   devices,
   onOpen,
   onStartWorkout,
+  onStartAdaptive,
+  onOpenCardio,
   onBuildNextWeek,
   onRepeatLastWeek,
 }) {

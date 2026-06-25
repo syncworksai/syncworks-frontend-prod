@@ -45,6 +45,7 @@ import ActiveWorkoutSessionDrawer from "../components/customer-health/ActiveWork
 import HealthMobileQuickNav from "../components/customer-health/HealthMobileQuickNav";
 import SleepPlannerDrawer from "../components/customer-health/SleepPlannerDrawer";
 import WorkoutHistoryDrawer from "../components/customer-health/WorkoutHistoryDrawer";
+import CardioActivityDrawer from "../components/customer-health/CardioActivityDrawer";
 
 import {
   NutritionDrawer,
@@ -608,6 +609,9 @@ export default function CustomerHealth() {
     activePlannerItem,
     setActivePlannerItem,
   ] = useState(null);
+
+  const [cardioSuggestedPlan, setCardioSuggestedPlan] =
+    useState(null);
 
   const [
     nutritionDraft,
@@ -1844,6 +1848,8 @@ export default function CustomerHealth() {
         "ai-coach-upgrade",
       "nutrition-coach":
         "nutrition-coach",
+      cardio: "cardio-player",
+      "cardio-player": "cardio-player",
     };
 
     setDrawer(routeMap[target] || target || "");
@@ -1906,6 +1912,125 @@ export default function CustomerHealth() {
     setDrawer(
       "active-workout"
     );
+  }
+
+  function startAdaptiveWorkout(
+    plan
+  ) {
+    if (
+      !plan ||
+      !Array.isArray(plan.exercises) ||
+      !plan.exercises.length
+    ) {
+      return;
+    }
+
+    const now = new Date();
+
+    setActivePlannerItem({
+      id: uid("adaptive-workout"),
+      workout_id: "",
+      workout_name:
+        plan.title ||
+        "Adaptive Workout",
+      title:
+        plan.title ||
+        "Adaptive Workout",
+      name:
+        plan.title ||
+        "Adaptive Workout",
+      ymd: todayYmd(),
+      day_label:
+        now.toLocaleDateString(
+          undefined,
+          { weekday: "short" }
+        ),
+      time:
+        now.toTimeString().slice(0, 5),
+      status: "Planned",
+      source: "adaptive_generator",
+      recovery_status:
+        plan.recovery || "",
+      adaptive_focus:
+        plan.focus || "",
+      adaptive_reason:
+        plan.reason || "",
+      exercises:
+        plan.exercises.map(
+          (exercise, index) => ({
+            ...exercise,
+            id:
+              exercise.id ||
+              uid(
+                `adaptive-exercise-${
+                  index + 1
+                }`
+              ),
+            name:
+              exercise.name ||
+              `Exercise ${index + 1}`,
+            sets:
+              exercise.planned_sets ||
+              exercise.sets ||
+              "3",
+            reps:
+              exercise.planned_reps ||
+              exercise.reps ||
+              "10",
+            rest_seconds:
+              Number(
+                exercise.rest_seconds ||
+                60
+              ),
+            notes:
+              exercise.notes ||
+              exercise.feel ||
+              "",
+            source:
+              "adaptive_generator",
+          })
+        ),
+    });
+
+    setDrawer("active-workout");
+  }
+
+  function openCardioPlayer(
+    plan = null
+  ) {
+    setCardioSuggestedPlan(plan);
+    setDrawer("cardio-player");
+  }
+
+  function saveCardioSession(
+    session
+  ) {
+    if (!session) return;
+
+    setHistory((previous) => [
+      session,
+      ...(Array.isArray(previous)
+        ? previous
+        : []),
+    ]);
+
+    setSnapshot((previous) => ({
+      ...previous,
+      workout_completed_today: true,
+      daily_workout_count:
+        Number(
+          previous.daily_workout_count ||
+          0
+        ) + 1,
+      last_workout_stats: session,
+      last_completed_workout:
+        session.workout_name ||
+        session.name ||
+        "Cardio",
+      last_workout_completed_at:
+        session.completed_at ||
+        new Date().toISOString(),
+    }));
   }
 
   const mobileNextSession =
@@ -1983,6 +2108,12 @@ export default function CustomerHealth() {
                 onOpen={handleDashboardOpen}
                 onStartWorkout={
                   startPlannerWorkout
+                }
+                onStartAdaptive={
+                  startAdaptiveWorkout
+                }
+                onOpenCardio={
+                  openCardioPlayer
                 }
                 onBuildNextWeek={
                   handleBuildNextWeek
@@ -2356,6 +2487,20 @@ export default function CustomerHealth() {
             setSnapshot={setSnapshot}
             history={history}
             setHistory={setHistory}
+          />
+
+          <CardioActivityDrawer
+            open={
+              drawer === "cardio-player"
+            }
+            onClose={() => {
+              setDrawer("");
+              setCardioSuggestedPlan(null);
+            }}
+            onSave={saveCardioSession}
+            suggestedPlan={
+              cardioSuggestedPlan
+            }
           />
 
           <WorkoutHistoryDrawer
