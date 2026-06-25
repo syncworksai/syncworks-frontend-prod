@@ -45,6 +45,7 @@ import {
 import TrainerExerciseIntroCard from "./TrainerExerciseIntroCard";
 import CoachVoiceSettingsCard from "./CoachVoiceSettingsCard";
 import TrainerNudgeCard from "./TrainerNudgeCard";
+import WorkoutProgressionCard from "./WorkoutProgressionCard";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -1363,6 +1364,30 @@ export default function ActiveWorkoutSessionDrawer({
     });
   }
 
+  function applyProgressionRecommendation(
+    recommendation
+  ) {
+    if (
+      !recommendation ||
+      !currentExercise ||
+      !session
+    ) {
+      return;
+    }
+
+    patchCurrentTarget({
+      weight:
+        recommendation.weight ??
+        currentExercise.current_target_weight ??
+        "",
+      reps:
+        recommendation.reps ??
+        currentExercise.current_target_reps ??
+        "",
+      source: `progression_${recommendation.action || "coach"}`,
+    });
+  }
+
   function startSet() {
     if (
       !session ||
@@ -1858,6 +1883,17 @@ export default function ActiveWorkoutSessionDrawer({
                     </button>
                   </div>
                 </div>
+              ) : null}
+
+              {!isCompleted && currentExercise ? (
+                <WorkoutProgressionCard
+                  history={history}
+                  exercise={currentExercise}
+                  session={session}
+                  onApply={
+                    applyProgressionRecommendation
+                  }
+                />
               ) : null}
 
               <div
