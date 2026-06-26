@@ -17,6 +17,384 @@ const TARGETS = [
   ["mobility", "Mobility"],
 ];
 
+const HOME_EQUIPMENT = [
+  ["bodyweight", "Floor / Bodyweight"],
+  ["bands", "Resistance Bands"],
+  ["dumbbells", "Dumbbells"],
+  ["kettlebell", "Kettlebell"],
+  ["bench", "Bench"],
+  ["barbell", "Barbell + Rack"],
+  ["cardio", "Cardio Machine"],
+];
+
+const MOBILITY_FOCUS = [
+  ["full-body", "Full Body"],
+  ["shoulders-chest", "Shoulders + Chest"],
+  ["upper-back", "Upper Back"],
+  ["core-back", "Core + Lower Back"],
+  ["hips", "Hips"],
+  ["hamstrings", "Hamstrings"],
+  ["quads-knees", "Quads + Knees"],
+  ["ankles-calves", "Ankles + Calves"],
+  ["yoga", "Recovery Yoga"],
+  ["dynamic", "Dynamic Warm-Up"],
+  ["cooldown", "Cooldown"],
+];
+
+const HOME_EXERCISE_POOL = [
+  {
+    id: "air-squat",
+    name: "Air Squat",
+    target: "legs",
+    equipment_key: "bodyweight",
+    sets: "4",
+    reps: "12-20",
+    primary_muscles: ["Quads", "Glutes"],
+    movement_pattern: "Squat",
+    equipment: "Bodyweight",
+    location: "Home or anywhere",
+  },
+  {
+    id: "reverse-lunge",
+    name: "Reverse Lunge",
+    target: "legs",
+    equipment_key: "bodyweight",
+    sets: "3",
+    reps: "8-12 each",
+    primary_muscles: ["Quads", "Glutes"],
+    movement_pattern: "Lunge",
+    equipment: "Bodyweight",
+    location: "Home or anywhere",
+  },
+  {
+    id: "glute-bridge",
+    name: "Glute Bridge",
+    target: "legs",
+    equipment_key: "bodyweight",
+    sets: "4",
+    reps: "12-20",
+    primary_muscles: ["Glutes", "Hamstrings"],
+    movement_pattern: "Hip extension",
+    equipment: "Floor",
+    location: "Home or anywhere",
+  },
+  {
+    id: "single-leg-glute-bridge",
+    name: "Single-Leg Glute Bridge",
+    target: "legs",
+    equipment_key: "bodyweight",
+    sets: "3",
+    reps: "8-12 each",
+    primary_muscles: ["Glutes", "Hamstrings"],
+    movement_pattern: "Single-leg hip extension",
+    equipment: "Floor",
+    location: "Home or anywhere",
+  },
+  {
+    id: "wall-sit",
+    name: "Wall Sit",
+    target: "legs",
+    equipment_key: "bodyweight",
+    sets: "3",
+    reps: "30-60 sec",
+    primary_muscles: ["Quads", "Glutes"],
+    movement_pattern: "Isometric squat",
+    equipment: "Wall",
+    location: "Home",
+  },
+  {
+    id: "standing-calf-raise",
+    name: "Standing Calf Raise",
+    target: "legs",
+    equipment_key: "bodyweight",
+    sets: "4",
+    reps: "15-25",
+    primary_muscles: ["Calves"],
+    movement_pattern: "Calf raise",
+    equipment: "Bodyweight",
+    location: "Home or anywhere",
+  },
+  {
+    id: "goblet-squat",
+    name: "Goblet Squat",
+    target: "legs",
+    equipment_key: "kettlebell",
+    sets: "4",
+    reps: "8-15",
+    primary_muscles: ["Quads", "Glutes"],
+    movement_pattern: "Squat",
+    equipment: "Kettlebell",
+    location: "Home",
+  },
+  {
+    id: "kettlebell-rdl",
+    name: "Kettlebell Romanian Deadlift",
+    target: "legs",
+    equipment_key: "kettlebell",
+    sets: "4",
+    reps: "8-15",
+    primary_muscles: ["Hamstrings", "Glutes"],
+    movement_pattern: "Hip hinge",
+    equipment: "Kettlebell",
+    location: "Home",
+  },
+  {
+    id: "dumbbell-goblet-squat",
+    name: "Dumbbell Goblet Squat",
+    target: "legs",
+    equipment_key: "dumbbells",
+    sets: "4",
+    reps: "8-15",
+    primary_muscles: ["Quads", "Glutes"],
+    movement_pattern: "Squat",
+    equipment: "Dumbbell",
+    location: "Home",
+  },
+  {
+    id: "dumbbell-rdl",
+    name: "Dumbbell Romanian Deadlift",
+    target: "legs",
+    equipment_key: "dumbbells",
+    sets: "4",
+    reps: "8-15",
+    primary_muscles: ["Hamstrings", "Glutes"],
+    movement_pattern: "Hip hinge",
+    equipment: "Dumbbells",
+    location: "Home",
+  },
+  {
+    id: "barbell-back-squat",
+    name: "Barbell Back Squat",
+    target: "legs",
+    equipment_key: "barbell",
+    sets: "4",
+    reps: "5-10",
+    primary_muscles: ["Quads", "Glutes"],
+    movement_pattern: "Squat",
+    equipment: "Barbell and rack",
+    location: "Home gym",
+  },
+  {
+    id: "push-up-home",
+    name: "Push-Up",
+    target: "push",
+    equipment_key: "bodyweight",
+    sets: "4",
+    reps: "8-20",
+    primary_muscles: ["Chest", "Triceps"],
+    movement_pattern: "Horizontal press",
+    equipment: "Bodyweight",
+    location: "Home or anywhere",
+  },
+  {
+    id: "pike-push-up",
+    name: "Pike Push-Up",
+    target: "push",
+    equipment_key: "bodyweight",
+    sets: "3",
+    reps: "6-15",
+    primary_muscles: ["Shoulders", "Triceps"],
+    movement_pattern: "Vertical press",
+    equipment: "Bodyweight",
+    location: "Home or anywhere",
+  },
+  {
+    id: "floor-press",
+    name: "Dumbbell Floor Press",
+    target: "push",
+    equipment_key: "dumbbells",
+    sets: "4",
+    reps: "8-15",
+    primary_muscles: ["Chest", "Triceps"],
+    movement_pattern: "Horizontal press",
+    equipment: "Dumbbells and floor",
+    location: "Home",
+  },
+  {
+    id: "band-chest-press",
+    name: "Band Chest Press",
+    target: "push",
+    equipment_key: "bands",
+    sets: "3",
+    reps: "12-20",
+    primary_muscles: ["Chest", "Triceps"],
+    movement_pattern: "Horizontal press",
+    equipment: "Resistance band",
+    location: "Home",
+  },
+  {
+    id: "towel-row",
+    name: "Towel Isometric Row",
+    target: "pull",
+    equipment_key: "bodyweight",
+    sets: "4",
+    reps: "20-30 sec",
+    primary_muscles: ["Back", "Biceps"],
+    movement_pattern: "Isometric pull",
+    equipment: "Towel",
+    location: "Home",
+  },
+  {
+    id: "prone-y-raise",
+    name: "Prone Y Raise",
+    target: "pull",
+    equipment_key: "bodyweight",
+    sets: "3",
+    reps: "10-15",
+    primary_muscles: ["Upper Back", "Rear Shoulders"],
+    movement_pattern: "Scapular control",
+    equipment: "Floor",
+    location: "Home or anywhere",
+  },
+  {
+    id: "band-row",
+    name: "Resistance Band Row",
+    target: "pull",
+    equipment_key: "bands",
+    sets: "4",
+    reps: "10-20",
+    primary_muscles: ["Back", "Lats"],
+    movement_pattern: "Horizontal pull",
+    equipment: "Resistance band",
+    location: "Home",
+  },
+  {
+    id: "band-pulldown",
+    name: "Resistance Band Pulldown",
+    target: "pull",
+    equipment_key: "bands",
+    sets: "4",
+    reps: "10-20",
+    primary_muscles: ["Lats", "Upper Back"],
+    movement_pattern: "Vertical pull",
+    equipment: "Resistance band",
+    location: "Home",
+  },
+  {
+    id: "one-arm-dumbbell-row-home",
+    name: "One-Arm Dumbbell Row",
+    target: "pull",
+    equipment_key: "dumbbells",
+    sets: "4",
+    reps: "8-15 each",
+    primary_muscles: ["Lats", "Mid Back"],
+    movement_pattern: "Horizontal pull",
+    equipment: "Dumbbell",
+    location: "Home",
+  },
+  {
+    id: "dead-bug",
+    name: "Dead Bug",
+    target: "core",
+    equipment_key: "bodyweight",
+    sets: "3",
+    reps: "8-12 each",
+    primary_muscles: ["Core"],
+    movement_pattern: "Anti-extension",
+    equipment: "Floor",
+    location: "Home or anywhere",
+  },
+  {
+    id: "front-plank",
+    name: "Front Plank",
+    target: "core",
+    equipment_key: "bodyweight",
+    sets: "3",
+    reps: "30-60 sec",
+    primary_muscles: ["Core"],
+    movement_pattern: "Anti-extension",
+    equipment: "Floor",
+    location: "Home or anywhere",
+  },
+  {
+    id: "side-plank",
+    name: "Side Plank",
+    target: "core",
+    equipment_key: "bodyweight",
+    sets: "3",
+    reps: "20-45 sec each",
+    primary_muscles: ["Obliques", "Core"],
+    movement_pattern: "Anti-lateral flexion",
+    equipment: "Floor",
+    location: "Home or anywhere",
+  },
+  {
+    id: "bird-dog",
+    name: "Bird Dog",
+    target: "core",
+    equipment_key: "bodyweight",
+    sets: "3",
+    reps: "8-12 each",
+    primary_muscles: ["Core", "Lower Back"],
+    movement_pattern: "Spinal stability",
+    equipment: "Floor",
+    location: "Home or anywhere",
+  },
+  {
+    id: "band-pallof-press",
+    name: "Band Pallof Press",
+    target: "core",
+    equipment_key: "bands",
+    sets: "3",
+    reps: "10-15 each",
+    primary_muscles: ["Core", "Obliques"],
+    movement_pattern: "Anti-rotation",
+    equipment: "Resistance band",
+    location: "Home",
+  },
+];
+
+const MOBILITY_POOL = [
+  ["cat-cow", "Cat-Cow", "core-back", "bodyweight"],
+  ["child-pose-reach", "Child's Pose Reach", "upper-back", "bodyweight"],
+  ["thread-needle", "Thread the Needle", "upper-back", "bodyweight"],
+  ["wall-slide", "Wall Slides", "shoulders-chest", "bodyweight"],
+  ["floor-angel", "Floor Angels", "shoulders-chest", "bodyweight"],
+  ["doorway-chest-stretch", "Doorway Chest Stretch", "shoulders-chest", "bodyweight"],
+  ["scapular-push-up", "Scapular Push-Up", "shoulders-chest", "bodyweight"],
+  ["dead-bug-mobility", "Dead Bug", "core-back", "bodyweight"],
+  ["bird-dog-mobility", "Bird Dog", "core-back", "bodyweight"],
+  ["cobra-child-flow", "Cobra to Child's Pose Flow", "core-back", "bodyweight"],
+  ["ninety-ninety", "90/90 Hip Switch", "hips", "bodyweight"],
+  ["hip-flexor-stretch", "Half-Kneeling Hip Flexor Stretch", "hips", "bodyweight"],
+  ["adductor-rockback", "Adductor Rock-Back", "hips", "bodyweight"],
+  ["pigeon-variation", "Pigeon Stretch Variation", "hips", "bodyweight"],
+  ["hamstring-sweep", "Dynamic Hamstring Sweep", "hamstrings", "bodyweight"],
+  ["supine-hamstring", "Supine Hamstring Stretch", "hamstrings", "bodyweight"],
+  ["quad-rockback", "Quad Rock-Back", "quads-knees", "bodyweight"],
+  ["couch-stretch", "Couch Stretch", "quads-knees", "bodyweight"],
+  ["knee-over-toe-rock", "Knee-Over-Toe Rock", "ankles-calves", "bodyweight"],
+  ["calf-wall-stretch", "Wall Calf Stretch", "ankles-calves", "bodyweight"],
+  ["deep-squat-hold", "Deep Squat Hold", "full-body", "bodyweight"],
+  ["world-greatest-stretch", "World's Greatest Stretch", "full-body", "bodyweight"],
+  ["down-dog-flow", "Downward Dog Flow", "yoga", "bodyweight"],
+  ["sun-salutation", "Sun Salutation", "yoga", "bodyweight"],
+  ["walking-lunge-reach", "Walking Lunge with Reach", "dynamic", "bodyweight"],
+  ["inchworm", "Inchworm", "dynamic", "bodyweight"],
+  ["standing-forward-fold", "Standing Forward Fold", "cooldown", "bodyweight"],
+  ["supine-twist", "Supine Spinal Twist", "cooldown", "bodyweight"],
+  ["band-pull-apart-mobility", "Band Pull-Apart", "shoulders-chest", "bands"],
+  ["band-lat-stretch", "Band-Assisted Lat Stretch", "upper-back", "bands"],
+].map(([id, name, focus, equipment_key]) => ({
+  id,
+  name,
+  target: "mobility",
+  mobility_focus: focus,
+  equipment_key,
+  sets: "2",
+  reps:
+    focus === "dynamic"
+      ? "8-12 each"
+      : "30-45 sec",
+  primary_muscles: ["Mobility"],
+  movement_pattern: "Mobility",
+  equipment:
+    equipment_key === "bands"
+      ? "Resistance band"
+      : "Bodyweight",
+  location: "Home or anywhere",
+}));
+
 function baseMode(target) {
   if (target === "hiit" || target === "cardio") {
     return "cardio";
@@ -105,7 +483,87 @@ function uniqueById(exercises) {
   });
 }
 
-function buildStrictTargetPool(target, location) {
+function equipmentAllowed(exercise, equipment = []) {
+  const available = new Set(
+    equipment.length ? equipment : ["bodyweight"]
+  );
+
+  const key = exercise?.equipment_key;
+  if (!key || key === "bodyweight") return true;
+  return available.has(key);
+}
+
+function buildHomeTargetPool(
+  target,
+  equipment,
+  mobilityFocus
+) {
+  if (target === "mobility") {
+    const selectedFocus =
+      mobilityFocus === "full-body"
+        ? [
+            "full-body",
+            "shoulders-chest",
+            "upper-back",
+            "core-back",
+            "hips",
+            "hamstrings",
+            "quads-knees",
+            "ankles-calves",
+          ]
+        : [mobilityFocus];
+
+    return uniqueById(
+      MOBILITY_POOL.filter(
+        (exercise) =>
+          selectedFocus.includes(exercise.mobility_focus) &&
+          equipmentAllowed(exercise, equipment)
+      )
+    );
+  }
+
+  return uniqueById(
+    HOME_EXERCISE_POOL.filter(
+      (exercise) =>
+        exercise.target === target &&
+        equipmentAllowed(exercise, equipment)
+    )
+  );
+}
+
+function buildStrictTargetPool(
+  target,
+  location,
+  equipment,
+  mobilityFocus
+) {
+  if (location === "Home") {
+    return buildHomeTargetPool(
+      target,
+      equipment,
+      mobilityFocus
+    );
+  }
+
+  if (target === "mobility") {
+    const selectedFocus =
+      mobilityFocus === "full-body"
+        ? null
+        : mobilityFocus;
+
+    return uniqueById(
+      MOBILITY_POOL.filter(
+        (exercise) =>
+          (!selectedFocus ||
+            exercise.mobility_focus === selectedFocus) &&
+          (
+            location !== "Outside" ||
+            exercise.equipment_key === "bodyweight"
+          )
+      )
+    );
+  }
+
   return uniqueById(
     HEALTH_EXERCISE_CATALOG.filter(
       (exercise) =>
@@ -143,8 +601,34 @@ export default function PlanTodayWorkoutDrawer({
   );
   const [duration, setDuration] = useState(30);
   const [target, setTarget] = useState("recommended");
+  const [homeEquipment, setHomeEquipment] = useState(
+    Array.isArray(snapshot?.home_equipment) &&
+      snapshot.home_equipment.length
+      ? snapshot.home_equipment
+      : ["bodyweight"]
+  );
+  const [mobilityFocus, setMobilityFocus] =
+    useState("full-body");
   const [allowSoreOverride, setAllowSoreOverride] =
     useState(false);
+
+  function toggleEquipment(value) {
+    setHomeEquipment((previous) => {
+      const current = Array.isArray(previous)
+        ? previous
+        : [];
+
+      if (value === "bodyweight") {
+        return current.includes(value)
+          ? current.filter((item) => item !== value)
+          : [value, ...current];
+      }
+
+      return current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value];
+    });
+  }
 
   const plan = useMemo(() => {
     const generated = buildAdaptiveWorkout({
@@ -171,7 +655,12 @@ export default function PlanTodayWorkoutDrawer({
               locationAllowed(exercise, location)
             )
           )
-        : buildStrictTargetPool(target, location);
+        : buildStrictTargetPool(
+            target,
+            location,
+            homeEquipment,
+            mobilityFocus
+          );
 
     const finalExercises =
       selected.length > 0
@@ -193,6 +682,14 @@ export default function PlanTodayWorkoutDrawer({
       requested_location: location,
       requested_duration_minutes: duration,
       requested_focus: target,
+      requested_home_equipment:
+        location === "Home"
+          ? homeEquipment
+          : [],
+      requested_mobility_focus:
+        target === "mobility"
+          ? mobilityFocus
+          : "",
     };
   }, [
     history,
@@ -201,6 +698,8 @@ export default function PlanTodayWorkoutDrawer({
     location,
     duration,
     target,
+    homeEquipment,
+    mobilityFocus,
     allowSoreOverride,
   ]);
 
@@ -264,6 +763,42 @@ export default function PlanTodayWorkoutDrawer({
             </div>
           </div>
 
+          {location === "Home" ? (
+            <div className="mt-4 rounded-[1.5rem] border border-cyan-300/15 bg-cyan-300/[0.04] p-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">
+                What equipment do you have?
+              </div>
+              <p className="mt-1 text-xs leading-5 text-slate-400">
+                Select everything available. Floor/bodyweight
+                movements remain available unless removed.
+              </p>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {HOME_EQUIPMENT.map(([value, label]) => {
+                  const active =
+                    homeEquipment.includes(value);
+
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() =>
+                        toggleEquipment(value)
+                      }
+                      className={`min-h-11 rounded-2xl border px-3 py-2 text-xs font-black ${
+                        active
+                          ? "border-cyan-300/30 bg-cyan-300/15 text-cyan-100"
+                          : "border-white/10 bg-white/[0.035] text-slate-300"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
           <div className="mt-4">
             <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
               Time available
@@ -308,6 +843,33 @@ export default function PlanTodayWorkoutDrawer({
             </div>
           </div>
 
+          {target === "mobility" ? (
+            <div className="mt-4 rounded-[1.5rem] border border-fuchsia-300/15 bg-fuchsia-300/[0.04] p-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-fuchsia-200">
+                Mobility focus
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {MOBILITY_FOCUS.map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() =>
+                      setMobilityFocus(value)
+                    }
+                    className={`min-h-11 rounded-2xl border px-3 py-2 text-xs font-black ${
+                      mobilityFocus === value
+                        ? "border-fuchsia-300/30 bg-fuchsia-300/15 text-fuchsia-100"
+                        : "border-white/10 bg-white/[0.035] text-slate-300"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div className="mt-5 rounded-[1.5rem] border border-lime-300/20 bg-lime-300/[0.07] p-4">
             <div className="text-[9px] font-black uppercase tracking-[0.16em] text-lime-200">
               Coach Recommendation
@@ -317,6 +879,16 @@ export default function PlanTodayWorkoutDrawer({
             </div>
             <div className="mt-1 text-xs font-bold text-cyan-100">
               {location} | {duration} minutes
+              {location === "Home" && homeEquipment.length
+                ? ` | ${homeEquipment
+                    .map(
+                      (item) =>
+                        HOME_EQUIPMENT.find(
+                          ([value]) => value === item
+                        )?.[1] || item
+                    )
+                    .join(", ")}`
+                : ""}
             </div>
             <div className="mt-1 text-sm leading-6 text-slate-400">
               {plan?.reason ||

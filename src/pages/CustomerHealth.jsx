@@ -2012,6 +2012,20 @@ export default function CustomerHealth() {
         now.toTimeString().slice(0, 5),
       status: "Planned",
       source: "adaptive_generator",
+      requested_location:
+        plan.requested_location || "",
+      requested_duration_minutes:
+        plan.requested_duration_minutes || "",
+      requested_focus:
+        plan.requested_focus || "",
+      requested_home_equipment:
+        Array.isArray(
+          plan.requested_home_equipment
+        )
+          ? plan.requested_home_equipment
+          : [],
+      requested_mobility_focus:
+        plan.requested_mobility_focus || "",
       recovery_status:
         plan.recovery || "",
       adaptive_focus:
@@ -2099,6 +2113,20 @@ export default function CustomerHealth() {
         now.toTimeString().slice(0, 5),
       status: "Planned",
       source: "plan_today",
+      requested_location:
+        plan.requested_location || "",
+      requested_duration_minutes:
+        plan.requested_duration_minutes || "",
+      requested_focus:
+        plan.requested_focus || "",
+      requested_home_equipment:
+        Array.isArray(
+          plan.requested_home_equipment
+        )
+          ? plan.requested_home_equipment
+          : [],
+      requested_mobility_focus:
+        plan.requested_mobility_focus || "",
       recovery_status:
         plan.recovery || "",
       adaptive_focus:
@@ -2140,6 +2168,28 @@ export default function CustomerHealth() {
         plannerItem.id,
       workout:
         plannerItem.workout_name,
+      training_location:
+        plan.requested_location ||
+        previous.training_location ||
+        "",
+      home_equipment:
+        plan.requested_location === "Home"
+          ? (
+              Array.isArray(
+                plan.requested_home_equipment
+              )
+                ? plan.requested_home_equipment
+                : []
+            )
+          : (
+              Array.isArray(previous.home_equipment)
+                ? previous.home_equipment
+                : []
+            ),
+      last_mobility_focus:
+        plan.requested_mobility_focus ||
+        previous.last_mobility_focus ||
+        "",
       week_plan: [
         ...(
           Array.isArray(previous.week_plan)
