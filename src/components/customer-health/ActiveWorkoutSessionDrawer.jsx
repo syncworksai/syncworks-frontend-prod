@@ -453,7 +453,7 @@ function SetCompletionSheet({
           <button
             type="button"
             onClick={saveSet}
-            className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100 shadow-[0_0_30px_rgba(57,255,136,0.14)]"
+            className="health-primary-action h-12 rounded-2xl border text-sm font-black"
           >
             Save Set and Rest
           </button>
@@ -1108,7 +1108,7 @@ function FinishReviewPanel({
           type="button"
           onClick={submitWorkout}
           disabled={saving}
-          className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-50"
+          className="health-primary-action h-12 rounded-2xl border text-sm font-black disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving ? "Saving Workout..." : "Save Workout and View Recap"}
         </button>
@@ -2282,7 +2282,7 @@ export default function ActiveWorkoutSessionDrawer({
                       session.rest_active
                     }
                     className={cx(
-                      "mt-3 h-14 w-full rounded-2xl border text-base font-black transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45",
+                      "health-primary-action mt-3 h-14 w-full rounded-2xl border text-base font-black transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45",
                       session.set_active
                         ? "border-fuchsia-300/30 bg-fuchsia-300/15 text-fuchsia-100"
                         : "border-lime-300/35 bg-lime-300/20 text-lime-100 shadow-[0_0_30px_rgba(57,255,136,0.12)]"
@@ -2314,7 +2314,7 @@ export default function ActiveWorkoutSessionDrawer({
                       onClick={() =>
                         setDetailsOpen((current) => !current)
                       }
-                      className="h-11 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-3 text-xs font-black text-cyan-100"
+                      className="health-secondary-action h-11 rounded-2xl border px-3 text-xs font-black"
                     >
                       Exercise Info
                     </button>
@@ -2325,7 +2325,7 @@ export default function ActiveWorkoutSessionDrawer({
                         setModifyMenuOpen((current) => !current)
                       }
                       disabled={session.set_active || session.rest_active}
-                      className="h-11 rounded-2xl border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 text-xs font-black text-fuchsia-100 disabled:opacity-40"
+                      className="health-secondary-action h-11 rounded-2xl border px-3 text-xs font-black disabled:opacity-40"
                     >
                       Modify Workout
                     </button>
@@ -2334,7 +2334,7 @@ export default function ActiveWorkoutSessionDrawer({
                       type="button"
                       onClick={() => setReviewMode(true)}
                       disabled={session.set_active}
-                      className="h-11 rounded-2xl border border-lime-300/25 bg-lime-300/10 px-3 text-xs font-black text-lime-100 disabled:opacity-40"
+                      className="health-secondary-action h-11 rounded-2xl border px-3 text-xs font-black disabled:opacity-40"
                     >
                       Finish Workout
                     </button>

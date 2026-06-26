@@ -66,7 +66,7 @@ export default function AdaptiveNextWorkoutCard({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="health-segmented-control mt-4 flex flex-wrap gap-1">
         {MODES.map((item) => (
           <button
             key={item.id}
@@ -130,21 +130,21 @@ export default function AdaptiveNextWorkoutCard({
           type="button"
           disabled={!visibleExercises.length}
           onClick={() => onStartAdaptive?.(launchPlan)}
-          className="h-12 rounded-2xl border border-lime-300/35 bg-lime-300/20 px-5 text-sm font-black text-lime-100 shadow-[0_0_30px_rgba(57,255,136,0.12)] disabled:opacity-40"
+          className="health-primary-action h-12 rounded-2xl border px-5 text-sm font-black disabled:opacity-40"
         >
           Start Workout Now
         </button>
         <button
           type="button"
           onClick={() => onOpenCardio?.(launchPlan)}
-          className="h-12 rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-4 text-sm font-black text-fuchsia-100"
+          className="health-secondary-action h-12 rounded-2xl border px-4 text-sm font-black"
         >
           Open Cardio Player
         </button>
         <button
           type="button"
           onClick={() => onOpen?.("library")}
-          className="h-12 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 text-sm font-black text-cyan-100"
+          className="health-secondary-action h-12 rounded-2xl border px-4 text-sm font-black"
         >
           Modify From Library
         </button>
@@ -152,7 +152,7 @@ export default function AdaptiveNextWorkoutCard({
           <button
             type="button"
             onClick={() => setExcludedIds([])}
-            className="h-12 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-black text-white"
+            className="health-secondary-action h-12 rounded-2xl border px-4 text-sm font-black"
           >
             Restore Recommendation
           </button>

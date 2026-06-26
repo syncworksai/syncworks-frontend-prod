@@ -123,7 +123,7 @@ function MetricButton({
       type="button"
       onClick={onClick}
       className={cx(
-        "min-w-0 rounded-2xl border p-3 text-left transition active:scale-[0.99]",
+        "health-secondary-action min-w-0 rounded-2xl border p-3 text-left transition active:scale-[0.99]",
         tones[tone] || tones.slate
       )}
     >
@@ -187,7 +187,7 @@ function QuickAction({
       type="button"
       onClick={onClick}
       className={cx(
-        "rounded-2xl border p-4 text-left transition active:scale-[0.99]",
+        "health-secondary-action rounded-2xl border p-4 text-left transition active:scale-[0.99]",
         tones[tone] || tones.cyan
       )}
     >

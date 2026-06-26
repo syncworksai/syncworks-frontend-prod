@@ -1,0 +1,160 @@
+/* SyncWorks Health interaction system */
+
+.health-ui-polish {
+  --health-blue: 56 189 248;
+  --health-cyan: 34 211 238;
+  --health-indigo: 129 140 248;
+  --health-violet: 167 139 250;
+  --health-success: 74 222 128;
+  --health-warning: 251 191 36;
+  --health-danger: 251 113 133;
+}
+
+.health-ui-polish button {
+  -webkit-tap-highlight-color: transparent;
+  text-rendering: geometricPrecision;
+}
+
+.health-ui-polish button:not([aria-label]) {
+  min-height: 2.5rem;
+  border-radius: 0.9rem !important;
+  font-weight: 800;
+  line-height: 1.1;
+  transition:
+    transform 140ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease;
+}
+
+.health-ui-polish button:not([aria-label]):hover {
+  border-color: rgb(var(--health-blue) / 0.34);
+}
+
+.health-ui-polish button:not([aria-label]):active {
+  transform: scale(0.975);
+}
+
+.health-ui-polish button:focus-visible {
+  outline: 2px solid rgb(var(--health-cyan) / 0.9);
+  outline-offset: 2px;
+}
+
+.health-ui-polish button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.health-ui-polish button[class*="rounded-full"] {
+  border-radius: 9999px !important;
+}
+
+.health-ui-polish button[class*="bg-lime-300"],
+.health-ui-polish button[class*="bg-emerald-300"] {
+  border-color: rgb(var(--health-blue) / 0.42) !important;
+  background:
+    linear-gradient(
+      135deg,
+      rgb(var(--health-blue) / 0.28),
+      rgb(var(--health-cyan) / 0.14)
+    ) !important;
+  color: rgb(224 242 254) !important;
+  box-shadow:
+    0 0 0 1px rgb(var(--health-blue) / 0.08),
+    0 10px 30px rgb(14 165 233 / 0.16);
+}
+
+.health-ui-polish button[class*="bg-cyan-300"] {
+  border-color: rgb(var(--health-cyan) / 0.3) !important;
+  background-color: rgb(var(--health-cyan) / 0.09) !important;
+  color: rgb(207 250 254) !important;
+}
+
+.health-ui-polish button[class*="bg-fuchsia-300"],
+.health-ui-polish button[class*="bg-violet-300"] {
+  border-color: rgb(var(--health-violet) / 0.28) !important;
+  background-color: rgb(var(--health-violet) / 0.09) !important;
+  color: rgb(237 233 254) !important;
+}
+
+.health-ui-polish button[class*="bg-amber-300"] {
+  border-color: rgb(var(--health-warning) / 0.28) !important;
+  background-color: rgb(var(--health-warning) / 0.08) !important;
+}
+
+.health-ui-polish button[class*="bg-rose-300"] {
+  border-color: rgb(var(--health-danger) / 0.3) !important;
+  background-color: rgb(var(--health-danger) / 0.08) !important;
+}
+
+.health-ui-polish button[class*="bg-white/"],
+.health-ui-polish button[class*="bg-black/"] {
+  border-color: rgb(125 211 252 / 0.13) !important;
+  background-color: rgb(15 23 42 / 0.72) !important;
+  color: rgb(226 232 240) !important;
+}
+
+.health-ui-polish select,
+.health-ui-polish input,
+.health-ui-polish textarea {
+  border-radius: 0.85rem;
+}
+
+.health-ui-polish summary {
+  border-radius: 0.85rem;
+}
+
+.health-ui-polish .health-primary-action {
+  min-height: 3.2rem !important;
+  border-color: rgb(var(--health-blue) / 0.5) !important;
+  background:
+    linear-gradient(
+      135deg,
+      rgb(14 165 233 / 0.34),
+      rgb(6 182 212 / 0.18)
+    ) !important;
+  color: rgb(240 249 255) !important;
+  box-shadow:
+    0 0 0 1px rgb(125 211 252 / 0.1),
+    0 14px 36px rgb(14 165 233 / 0.22) !important;
+}
+
+.health-ui-polish .health-secondary-action {
+  border-color: rgb(125 211 252 / 0.18) !important;
+  background-color: rgb(15 23 42 / 0.82) !important;
+  color: rgb(224 242 254) !important;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03);
+}
+
+.health-ui-polish .health-danger-action {
+  border-color: rgb(var(--health-danger) / 0.3) !important;
+  background-color: rgb(var(--health-danger) / 0.08) !important;
+  color: rgb(255 228 230) !important;
+}
+
+.health-ui-polish .health-segmented-control {
+  padding: 0.25rem;
+  border: 1px solid rgb(125 211 252 / 0.12);
+  border-radius: 1rem;
+  background: rgb(2 8 23 / 0.65);
+}
+
+.health-ui-polish .health-segmented-control button {
+  min-height: 2.25rem;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 640px) {
+  .health-ui-polish button:not([aria-label]) {
+    min-height: 2.65rem;
+  }
+
+  .health-ui-polish .health-primary-action {
+    min-height: 3.35rem !important;
+  }
+}

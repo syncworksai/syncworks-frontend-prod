@@ -43,6 +43,7 @@ import AiCoachDrawer from "../components/customer-health/AiCoachDrawer";
 import CoachChatDrawer from "../components/customer-health/CoachChatDrawer";
 import ActiveWorkoutSessionDrawer from "../components/customer-health/ActiveWorkoutSessionDrawer";
 import HealthMobileQuickNav from "../components/customer-health/HealthMobileQuickNav";
+import "../components/customer-health/healthUiPolish.css";
 import { buildAdaptiveWorkout } from "../components/customer-health/healthAdaptiveWorkoutGenerator";
 import SleepPlannerDrawer from "../components/customer-health/SleepPlannerDrawer";
 import WorkoutHistoryDrawer from "../components/customer-health/WorkoutHistoryDrawer";
@@ -2053,7 +2054,7 @@ export default function CustomerHealth() {
     !!syncedSnapshot?.coach_plan_proposal;
 
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-[#020617] pb-24 text-slate-100 lg:pb-0">
+    <div className="health-ui-polish min-h-dvh overflow-x-hidden bg-[#020617] pb-24 text-slate-100 lg:pb-0">
       <div className="pointer-events-none fixed inset-0">
         <div className="absolute inset-0 bg-[#020617]" />
 
