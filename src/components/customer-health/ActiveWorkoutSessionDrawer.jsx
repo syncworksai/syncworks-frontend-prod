@@ -8,6 +8,7 @@ import React, {
 
 import {
   addSetToExercise,
+  advanceSessionTimer,
   applyCoachRecommendationDecision,
   completeActiveSet,
   createWorkoutSessionFromPlannerItem,
@@ -56,8 +57,138 @@ import {
   trackWorkoutAdaptationKpi,
 } from "./healthWorkoutAdaptation";
 
+const ACTIVE_WORKOUT_STORAGE_KEY =
+  "syncworks_health_active_workout_v1";
+
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
+}
+
+function readPersistedWorkout() {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(
+      ACTIVE_WORKOUT_STORAGE_KEY
+    );
+
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !parsed.session ||
+      parsed.session.status !== "active"
+    ) {
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function persistWorkoutSession(session, plannerItem) {
+  if (
+    typeof window === "undefined" ||
+    !session ||
+    session.status !== "active"
+  ) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(
+      ACTIVE_WORKOUT_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        persisted_at: new Date().toISOString(),
+        planner_item_id:
+          plannerItem?.id ||
+          session.planner_item_id ||
+          "",
+        workout_id:
+          plannerItem?.workout_id ||
+          session.workout_id ||
+          "",
+        session,
+      })
+    );
+  } catch {
+    // Local persistence is best effort.
+  }
+}
+
+function clearPersistedWorkout() {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.removeItem(
+      ACTIVE_WORKOUT_STORAGE_KEY
+    );
+  } catch {
+    // Local persistence is best effort.
+  }
+}
+
+function persistedWorkoutMatches(
+  persisted,
+  plannerItem
+) {
+  if (!persisted?.session || !plannerItem) {
+    return false;
+  }
+
+  const plannerId = String(plannerItem.id || "");
+  const workoutId = String(
+    plannerItem.workout_id || plannerItem.id || ""
+  );
+
+  return Boolean(
+    (plannerId &&
+      String(
+        persisted.planner_item_id ||
+          persisted.session.planner_item_id ||
+          ""
+      ) === plannerId) ||
+      (workoutId &&
+        String(
+          persisted.workout_id ||
+            persisted.session.workout_id ||
+            ""
+        ) === workoutId)
+  );
+}
+
+function restorePersistedSession(
+  persisted
+) {
+  const session = persisted?.session;
+
+  if (!session || session.status !== "active") {
+    return null;
+  }
+
+  const persistedAt = new Date(
+    persisted.persisted_at || 0
+  ).getTime();
+
+  if (!Number.isFinite(persistedAt)) {
+    return session;
+  }
+
+  const elapsedSeconds = Math.max(
+    0,
+    Math.floor((Date.now() - persistedAt) / 1000)
+  );
+
+  return advanceSessionTimer(
+    session,
+    elapsedSeconds
+  );
 }
 
 function ScoreSelect({
@@ -1377,33 +1508,72 @@ export default function ActiveWorkoutSessionDrawer({
   const [modifyMenuOpen, setModifyMenuOpen] =
     useState(false);
   const preWorkoutBriefingRef = useRef("");
+  const initializedWorkoutKeyRef = useRef("");
+  const latestSessionRef = useRef(null);
 
   const lastExerciseCueRef = useRef("");
   const lastRestCueRef = useRef("");
   const targetControlsRef = useRef(null);
 
   useEffect(() => {
+    latestSessionRef.current = session;
+  }, [session]);
+
+  useEffect(() => {
     if (!open || !plannerItem) return;
 
-    setSession(
-      createWorkoutSessionFromPlannerItem({
-        plannerItem,
-        workouts,
-      })
+    const workoutKey = String(
+      plannerItem.id ||
+        plannerItem.workout_id ||
+        plannerItem.workout_name ||
+        ""
     );
 
+    if (
+      initializedWorkoutKeyRef.current === workoutKey &&
+      session
+    ) {
+      return;
+    }
+
+    const persisted = readPersistedWorkout();
+    const restored =
+      persistedWorkoutMatches(
+        persisted,
+        plannerItem
+      )
+        ? restorePersistedSession(persisted)
+        : null;
+
+    if (persisted && !restored) {
+      clearPersistedWorkout();
+    }
+
+    setSession(
+      restored ||
+        createWorkoutSessionFromPlannerItem({
+          plannerItem,
+          workouts,
+        })
+    );
+
+    initializedWorkoutKeyRef.current = workoutKey;
     setReviewMode(false);
-    setFinishMessage("");
+    setFinishMessage(
+      restored
+        ? "Active workout restored from this device."
+        : ""
+    );
     setSavingWorkout(false);
     setEditAfterFinish(false);
     setSetCheckInOpen(false);
     setDetailsOpen(false);
     setAdaptationMode("");
-        setModifyMenuOpen(false);
+    setModifyMenuOpen(false);
     preWorkoutBriefingRef.current = "";
     lastExerciseCueRef.current = "";
     lastRestCueRef.current = "";
-  }, [open, plannerItem, workouts]);
+  }, [open, plannerItem, workouts, session]);
 
   useEffect(() => {
     if (
@@ -1425,6 +1595,88 @@ export default function ActiveWorkoutSessionDrawer({
 
     return () => window.clearInterval(timer);
   }, [open, session?.id, session?.status]);
+
+  useEffect(() => {
+    if (!session) return;
+
+    if (session.status === "active") {
+      persistWorkoutSession(
+        session,
+        plannerItem
+      );
+      return;
+    }
+
+    clearPersistedWorkout();
+  }, [session, plannerItem]);
+
+  useEffect(() => {
+    if (!open || !session?.id) {
+      return undefined;
+    }
+
+    let hiddenAt = 0;
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "hidden") {
+        hiddenAt = Date.now();
+
+        persistWorkoutSession(
+          latestSessionRef.current,
+          plannerItem
+        );
+
+        return;
+      }
+
+      if (!hiddenAt) return;
+
+      const elapsedSeconds = Math.max(
+        0,
+        Math.floor((Date.now() - hiddenAt) / 1000)
+      );
+
+      hiddenAt = 0;
+
+      setSession((previous) =>
+        previous
+          ? advanceSessionTimer(
+              previous,
+              elapsedSeconds
+            )
+          : previous
+      );
+    }
+
+    function handlePageHide() {
+      persistWorkoutSession(
+        latestSessionRef.current,
+        plannerItem
+      );
+    }
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange
+    );
+
+    window.addEventListener(
+      "pagehide",
+      handlePageHide
+    );
+
+    return () => {
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange
+      );
+
+      window.removeEventListener(
+        "pagehide",
+        handlePageHide
+      );
+    };
+  }, [open, session?.id, plannerItem]);
 
   useEffect(() => {
     if (!open) stopCoachVoice();
@@ -2181,6 +2433,11 @@ export default function ActiveWorkoutSessionDrawer({
   }
 
   function closeDrawer() {
+    persistWorkoutSession(
+      latestSessionRef.current,
+      plannerItem
+    );
+
     setReviewMode(false);
     setFinishMessage("");
     setSavingWorkout(false);
@@ -2221,6 +2478,8 @@ export default function ActiveWorkoutSessionDrawer({
         history: history || [],
       });
 
+      clearPersistedWorkout();
+      initializedWorkoutKeyRef.current = "";
       setHistory?.(result.nextHistory);
       setSnapshot?.(result.nextSnapshot);
       setSession(result.finishedSession);

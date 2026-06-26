@@ -928,6 +928,84 @@ export function updateSessionTimer(
   return next;
 }
 
+export function advanceSessionTimer(
+  session = {},
+  elapsedSeconds = 0
+) {
+  if (session.status !== "active") {
+    return session;
+  }
+
+  const elapsed = Math.max(
+    0,
+    Math.min(
+      21600,
+      Math.floor(safeNumber(elapsedSeconds, 0))
+    )
+  );
+
+  if (!elapsed) return session;
+
+  const next = {
+    ...session,
+    total_seconds:
+      safeNumber(session.total_seconds) + elapsed,
+  };
+
+  if (session.paused) {
+    next.idle_seconds =
+      safeNumber(session.idle_seconds) + elapsed;
+
+    return next;
+  }
+
+  if (session.set_active) {
+    next.active_seconds =
+      safeNumber(session.active_seconds) + elapsed;
+
+    next.current_set_seconds =
+      safeNumber(session.current_set_seconds) + elapsed;
+
+    return next;
+  }
+
+  if (session.rest_active) {
+    const currentRest =
+      safeNumber(session.current_rest_seconds) + elapsed;
+
+    const cumulativeRest =
+      safeNumber(session.rest_seconds) + elapsed;
+
+    const targetRest = safeNumber(
+      session.rest_target_seconds
+    );
+
+    next.current_rest_seconds = currentRest;
+    next.rest_seconds = cumulativeRest;
+    next.rest_remaining_seconds =
+      targetRest > 0
+        ? Math.max(0, targetRest - currentRest)
+        : 0;
+
+    next.rest_overrun_seconds =
+      targetRest > 0
+        ? Math.max(0, currentRest - targetRest)
+        : 0;
+
+    next.longest_rest_seconds = Math.max(
+      safeNumber(session.longest_rest_seconds),
+      currentRest
+    );
+
+    return next;
+  }
+
+  next.idle_seconds =
+    safeNumber(session.idle_seconds) + elapsed;
+
+  return next;
+}
+
 export function startActiveSet(
   session = {},
   exerciseId
