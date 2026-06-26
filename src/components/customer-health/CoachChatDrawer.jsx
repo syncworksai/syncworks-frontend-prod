@@ -1,6 +1,12 @@
 // src/components/customer-health/CoachChatDrawer.jsx
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
 import {
   addCoachProposalToPlanner,
   clearCoachPlanProposal,
@@ -16,7 +22,7 @@ function cx(...classes) {
 
 function CoachAvatar() {
   return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/30 bg-cyan-300/10 text-sm font-black text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.18)]">
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-300/10 text-[10px] font-black text-cyan-100">
       AI
     </div>
   );
@@ -24,7 +30,7 @@ function CoachAvatar() {
 
 function UserAvatar() {
   return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-emerald-300/30 bg-emerald-300/10 text-sm font-black text-emerald-100">
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-lime-300/30 bg-lime-300/10 text-[10px] font-black text-lime-100">
       ME
     </div>
   );
@@ -32,20 +38,23 @@ function UserAvatar() {
 
 function EmptyPlanCard({ onOpenQuestionnaire }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
-      <div className="text-sm font-black text-white">Coach Plan Builder</div>
-      <p className="mt-2 text-sm leading-6 text-slate-300">
-        Tell the coach your goal, training location, days this week, workout
-        time, pain limits, and how hard you want to be pushed. The local smart
-        coach will build your first plan without using a paid AI API.
+    <div className="rounded-[1.35rem] border border-cyan-300/15 bg-cyan-300/[0.05] p-3 sm:p-4">
+      <div className="text-sm font-black text-white">
+        Start with what you need today
+      </div>
+
+      <p className="mt-1 text-xs leading-5 text-slate-400 sm:text-sm sm:leading-6">
+        Tell the coach your goal, location, available time,
+        sore areas, pain limits, or what you want adjusted.
       </p>
 
-      <div className="mt-4 grid gap-2 text-xs text-slate-400 sm:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-          Example: "I want chest, abs, and athletic strength."
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <div className="rounded-2xl border border-white/10 bg-black/20 p-3 text-xs leading-5 text-slate-300">
+          "Build me a 30-minute gym workout that avoids chest."
         </div>
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-          Example: "Gym, 4 days, 45 minutes, push hard."
+
+        <div className="rounded-2xl border border-white/10 bg-black/20 p-3 text-xs leading-5 text-slate-300">
+          "I am home, low energy, and want abs plus mobility."
         </div>
       </div>
 
@@ -53,9 +62,9 @@ function EmptyPlanCard({ onOpenQuestionnaire }) {
         <button
           type="button"
           onClick={onOpenQuestionnaire}
-          className="mt-4 rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white transition hover:bg-white/15"
+          className="mt-3 h-10 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-xs font-black text-white"
         >
-          Open Questionnaire
+          Update Coach Profile
         </button>
       ) : null}
     </div>
@@ -72,28 +81,31 @@ function PlanProposalCard({
 
   if (!proposal) return null;
 
-  const alreadyAdded = proposal.status === "added_to_planner";
+  const alreadyAdded =
+    proposal.status === "added_to_planner";
 
   return (
-    <div className="rounded-[2rem] border border-emerald-300/20 bg-emerald-300/[0.06] p-4 shadow-[0_0_34px_rgba(16,185,129,0.12)]">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="text-xs font-black uppercase tracking-[0.24em] text-emerald-200">
-            Plan Proposal
+    <div className="rounded-[1.5rem] border border-lime-300/20 bg-lime-300/[0.06] p-3 sm:p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[9px] font-black uppercase tracking-[0.18em] text-lime-200">
+            Coach Proposal
           </div>
-          <h3 className="mt-2 text-lg font-black text-white">
-            Ready for your weekly planner
+
+          <h3 className="mt-1 text-base font-black text-white sm:text-lg">
+            Ready for your planner
           </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-300">
+
+          <p className="mt-1 text-xs leading-5 text-slate-300 sm:text-sm sm:leading-6">
             {proposal.summary}
           </p>
         </div>
 
         <div
           className={cx(
-            "w-fit rounded-full border px-3 py-1 text-xs font-black uppercase tracking-[0.18em]",
+            "shrink-0 rounded-full border px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em]",
             alreadyAdded
-              ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-100"
+              ? "border-lime-300/30 bg-lime-300/10 text-lime-100"
               : "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
           )}
         >
@@ -102,69 +114,67 @@ function PlanProposalCard({
       </div>
 
       {proposal.coach_note ? (
-        <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-slate-300">
+        <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-xs leading-5 text-slate-300">
           {proposal.coach_note}
         </div>
       ) : null}
 
-      <div className="mt-4 space-y-3">
+      <div className="mt-3 space-y-2">
         {workouts.map((workout) => (
           <div
             key={workout.id}
-            className="rounded-3xl border border-white/10 bg-black/20 p-4"
+            className="rounded-2xl border border-white/10 bg-black/20 p-3"
           >
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
-                  {workout.day_label}
-                </div>
-                <div className="mt-1 text-sm font-black text-white">
-                  {workout.title}
-                </div>
-                <div className="mt-1 text-xs text-slate-400">
-                  {workout.focus} | {workout.duration_minutes} min
-                </div>
-              </div>
+            <div className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">
+              {workout.day_label}
             </div>
 
-            <div className="mt-3 grid gap-2">
-              {workout.exercises.slice(0, 7).map((exercise) => (
-                <div
-                  key={exercise.id}
-                  className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="text-sm font-bold text-slate-100">
-                    {exercise.name}
+            <div className="mt-1 text-sm font-black text-white">
+              {workout.title}
+            </div>
+
+            <div className="mt-1 text-[11px] text-slate-400">
+              {workout.focus} | {workout.duration_minutes} min
+            </div>
+
+            <div className="mt-2 space-y-1.5">
+              {workout.exercises
+                .slice(0, 7)
+                .map((exercise) => (
+                  <div
+                    key={exercise.id}
+                    className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2"
+                  >
+                    <div className="min-w-0 truncate text-xs font-bold text-slate-100">
+                      {exercise.name}
+                    </div>
+
+                    <div className="shrink-0 text-[10px] text-slate-400">
+                      {exercise.sets} x {exercise.reps}
+                    </div>
                   </div>
-                  <div className="text-xs text-slate-400">
-                    {exercise.sets} x {exercise.reps}
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         ))}
       </div>
 
-      <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={onAddToPlanner}
           disabled={alreadyAdded}
-          className={cx(
-            "rounded-2xl px-4 py-3 text-sm font-black uppercase tracking-[0.18em] transition",
-            alreadyAdded
-              ? "cursor-not-allowed border border-emerald-300/20 bg-emerald-300/10 text-emerald-100/70"
-              : "border border-emerald-300/30 bg-emerald-300/15 text-emerald-100 hover:bg-emerald-300/20"
-          )}
+          className="h-11 rounded-xl border border-lime-300/30 bg-lime-300/15 px-3 text-xs font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {alreadyAdded ? "Added to Planner" : "Add to Planner"}
+          {alreadyAdded
+            ? "Added to Planner"
+            : "Add to Planner"}
         </button>
 
         <button
           type="button"
           onClick={onRedoPlan}
-          className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-white/15"
+          className="h-11 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-xs font-black text-white"
         >
           Redo Plan
         </button>
@@ -173,9 +183,9 @@ function PlanProposalCard({
           <button
             type="button"
             onClick={onOpenQuestionnaire}
-            className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-3 text-sm font-black uppercase tracking-[0.18em] text-cyan-100 transition hover:bg-cyan-300/15"
+            className="col-span-2 h-10 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 text-xs font-black text-cyan-100"
           >
-            Open Questionnaire
+            Update Coach Profile
           </button>
         ) : null}
       </div>
@@ -189,18 +199,20 @@ function MessageBubble({ message }) {
   return (
     <div
       className={cx(
-        "flex gap-3",
-        isUser ? "justify-end pl-8" : "justify-start pr-8"
+        "flex items-end gap-2",
+        isUser
+          ? "justify-end"
+          : "justify-start"
       )}
     >
       {!isUser ? <CoachAvatar /> : null}
 
       <div
         className={cx(
-          "max-w-[88%] rounded-3xl border px-4 py-3 text-sm leading-6 shadow-xl",
+          "min-w-0 max-w-[82%] whitespace-pre-wrap break-words rounded-2xl border px-3 py-2.5 text-sm leading-5 shadow-lg sm:max-w-[78%] sm:px-4 sm:py-3 sm:leading-6",
           isUser
-            ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-50"
-            : "border-white/10 bg-white/[0.06] text-slate-100"
+            ? "rounded-br-md border-lime-300/20 bg-lime-300/10 text-lime-50"
+            : "rounded-bl-md border-white/10 bg-white/[0.06] text-slate-100"
         )}
       >
         {message.content}
@@ -219,8 +231,15 @@ export default function CoachChatDrawer({
   onOpenQuestionnaire,
 }) {
   const [input, setInput] = useState("");
-  const [localSnapshot, setLocalSnapshot] = useState(snapshot || {});
+  const [localSnapshot, setLocalSnapshot] =
+    useState(snapshot || {});
+  const [headerExpanded, setHeaderExpanded] =
+    useState(false);
+  const [menuOpen, setMenuOpen] =
+    useState(false);
+
   const scrollRef = useRef(null);
+  const previousMessageCountRef = useRef(0);
 
   useEffect(() => {
     const safeSnapshot = snapshot || {};
@@ -232,23 +251,46 @@ export default function CoachChatDrawer({
     });
   }, [snapshot, open]);
 
+  const chat = useMemo(
+    () => normalizeCoachChat(localSnapshot || {}),
+    [localSnapshot]
+  );
+
+  const proposal =
+    localSnapshot?.coach_plan_proposal || null;
+
   useEffect(() => {
     if (!open) return;
 
     const node = scrollRef.current;
     if (!node) return;
 
-    window.requestAnimationFrame(() => {
-      node.scrollTop = node.scrollHeight;
+    const nextCount = chat.length;
+    const previousCount =
+      previousMessageCountRef.current;
+
+    if (
+      previousCount === 0 ||
+      nextCount > previousCount
+    ) {
+      window.requestAnimationFrame(() => {
+        node.scrollTop = node.scrollHeight;
+      });
+    }
+
+    previousMessageCountRef.current =
+      nextCount;
+  }, [open, chat.length, proposal]);
+
+  function jumpToLatest() {
+    const node = scrollRef.current;
+    if (!node) return;
+
+    node.scrollTo({
+      top: node.scrollHeight,
+      behavior: "smooth",
     });
-  }, [open, localSnapshot?.coach_chat?.length, localSnapshot?.coach_plan_proposal]);
-
-  const chat = useMemo(
-    () => normalizeCoachChat(localSnapshot || {}),
-    [localSnapshot]
-  );
-
-  const proposal = localSnapshot?.coach_plan_proposal || null;
+  }
 
   function commitSnapshot(nextSnapshot) {
     setLocalSnapshot(nextSnapshot);
@@ -274,7 +316,10 @@ export default function CoachChatDrawer({
   }
 
   function handleAddToPlanner() {
-    const result = addCoachProposalToPlanner(localSnapshot || {}, proposal);
+    const result = addCoachProposalToPlanner(
+      localSnapshot || {},
+      proposal
+    );
 
     if (result?.snapshot) {
       commitSnapshot(result.snapshot);
@@ -282,19 +327,29 @@ export default function CoachChatDrawer({
   }
 
   function handleRedoPlan() {
-    const nextSnapshot = clearCoachPlanProposal(localSnapshot || {});
+    const nextSnapshot =
+      clearCoachPlanProposal(
+        localSnapshot || {}
+      );
+
     commitSnapshot(nextSnapshot);
     setInput("");
   }
 
   function handleResetChat() {
-    const nextSnapshot = resetCoachChat(localSnapshot || {});
+    const nextSnapshot = resetCoachChat(
+      localSnapshot || {}
+    );
+
     commitSnapshot(nextSnapshot);
     setInput("");
+    setMenuOpen(false);
   }
 
   function handleOpenQuestionnaire() {
-    if (typeof onOpenQuestionnaire === "function") {
+    if (
+      typeof onOpenQuestionnaire === "function"
+    ) {
       onOpenQuestionnaire();
     }
   }
@@ -302,110 +357,188 @@ export default function CoachChatDrawer({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[80] flex justify-end bg-black/70 backdrop-blur-xl">
+    <div className="fixed inset-0 z-[180] flex bg-black/80 backdrop-blur-xl">
       <button
         type="button"
         aria-label="Close coach chat"
         onClick={onClose}
-        className="absolute inset-0 cursor-default"
+        className="absolute inset-0"
       />
 
-      <section className="relative z-[81] flex h-full w-full max-w-3xl flex-col border-l border-white/10 bg-[#06111f] shadow-[-30px_0_80px_rgba(0,0,0,0.45)]">
-        <div className="border-b border-white/10 bg-white/[0.04] px-4 py-4 sm:px-6">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-xs font-black uppercase tracking-[0.28em] text-cyan-200">
-                SyncWorks Health
+      <section className="relative z-[181] ml-auto flex h-[100dvh] w-full max-w-2xl flex-col overflow-hidden border-l border-white/10 bg-[#06111f] shadow-[-30px_0_80px_rgba(0,0,0,0.5)]">
+        <header className="shrink-0 border-b border-white/10 bg-[#071421]/98 px-3 pb-3 pt-[calc(env(safe-area-inset-top)+0.7rem)] backdrop-blur-xl sm:px-5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-3">
+              <CoachAvatar />
+
+              <div className="min-w-0">
+                <div className="truncate text-base font-black text-white sm:text-lg">
+                  AI Fitness Coach
+                </div>
+
+                <div className="text-[10px] font-bold text-slate-400">
+                  Conversation | {chat.length} message
+                  {chat.length === 1 ? "" : "s"}
+                </div>
               </div>
-              <h2 className="mt-1 text-xl font-black text-white sm:text-2xl">
-                AI Fitness Coach
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-300">
-                Phase 7A local smart coach. It asks, builds, proposes, and adds
-                your plan to the weekly planner.
-              </p>
             </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-2xl border border-white/10 bg-white/10 px-3 py-2 text-sm font-black text-white transition hover:bg-white/15"
-            >
-              ✕
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setHeaderExpanded(
+                    (previous) => !previous
+                  )
+                }
+                className="h-9 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-[10px] font-black text-slate-200"
+              >
+                {headerExpanded ? "Less" : "Info"}
+              </button>
+
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-label="Coach chat options"
+                  onClick={() =>
+                    setMenuOpen(
+                      (previous) => !previous
+                    )
+                  }
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-sm font-black text-white"
+                >
+                  ...
+                </button>
+
+                {menuOpen ? (
+                  <div className="absolute right-0 top-11 z-20 w-44 rounded-2xl border border-white/10 bg-[#0b1728] p-2 shadow-2xl">
+                    <button
+                      type="button"
+                      onClick={jumpToLatest}
+                      className="h-10 w-full rounded-xl px-3 text-left text-xs font-black text-slate-100 hover:bg-white/[0.06]"
+                    >
+                      Jump to latest
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleResetChat}
+                      className="h-10 w-full rounded-xl px-3 text-left text-xs font-black text-rose-200 hover:bg-rose-300/10"
+                    >
+                      Reset conversation
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="h-9 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-[10px] font-black text-white"
+              >
+                Close
+              </button>
+            </div>
           </div>
 
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <button
-              type="button"
-              onClick={() =>
-                setInput(
-                  "I want a gym plan this week. My goal is fitness model strength with chest, abs, and athletic performance. I can train 4 days for 45 minutes. Push me hard but protect my hips."
-                )
-              }
-              className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-left text-xs font-bold text-slate-200 transition hover:bg-white/10"
-            >
-              Fill example trainer request
-            </button>
+          {headerExpanded ? (
+            <div className="mt-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.05] p-3">
+              <p className="text-xs leading-5 text-slate-300">
+                Ask for a workout, an adjustment, recovery
+                guidance, exercise alternatives, or help
+                understanding your logged data.
+              </p>
 
-            <button
-              type="button"
-              onClick={handleResetChat}
-              className="rounded-2xl border border-red-300/20 bg-red-300/10 px-3 py-2 text-xs font-black uppercase tracking-[0.18em] text-red-100 transition hover:bg-red-300/15"
-            >
-              Reset Chat
-            </button>
-          </div>
-        </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setInput(
+                    "Build a workout for today using my recent training, soreness, readiness, location, and available time."
+                  )
+                }
+                className="mt-2 h-9 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 text-[10px] font-black text-cyan-100"
+              >
+                Use Today Request
+              </button>
+            </div>
+          ) : null}
+        </header>
 
         <div
           ref={scrollRef}
-          className="flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-6"
+          className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-4 sm:space-y-4 sm:px-5"
         >
-          {!proposal ? (
-            <EmptyPlanCard onOpenQuestionnaire={handleOpenQuestionnaire} />
+          {!proposal && chat.length === 0 ? (
+            <EmptyPlanCard
+              onOpenQuestionnaire={
+                handleOpenQuestionnaire
+              }
+            />
+          ) : null}
+
+          {chat.length > 0 ? (
+            <div className="sticky top-0 z-10 flex items-center justify-between rounded-xl border border-white/10 bg-[#06111f]/92 px-3 py-2 backdrop-blur-lg">
+              <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+                Previous conversation
+              </div>
+
+              <button
+                type="button"
+                onClick={jumpToLatest}
+                className="text-[10px] font-black text-cyan-200"
+              >
+                Latest
+              </button>
+            </div>
           ) : null}
 
           {chat.map((message) => (
-            <MessageBubble key={message.id} message={message} />
+            <MessageBubble
+              key={message.id}
+              message={message}
+            />
           ))}
 
           {proposal ? (
             <PlanProposalCard
               proposal={proposal}
-              onAddToPlanner={handleAddToPlanner}
+              onAddToPlanner={
+                handleAddToPlanner
+              }
               onRedoPlan={handleRedoPlan}
-              onOpenQuestionnaire={handleOpenQuestionnaire}
+              onOpenQuestionnaire={
+                handleOpenQuestionnaire
+              }
             />
           ) : null}
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="border-t border-white/10 bg-white/[0.04] p-4 sm:p-6"
+          className="shrink-0 border-t border-white/10 bg-[#071421]/98 px-3 pb-[calc(env(safe-area-inset-bottom)+0.7rem)] pt-3 backdrop-blur-xl sm:px-5"
         >
-          <div className="rounded-[1.75rem] border border-white/10 bg-black/30 p-2">
+          <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-black/30 p-2">
             <textarea
               value={input}
-              onChange={(event) => setInput(event.target.value)}
-              rows={3}
-              placeholder="Tell your coach your goal, location, days, time, pain limits, and whether to push hard or keep it balanced..."
-              className="min-h-[88px] w-full resize-none rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/40"
+              onChange={(event) =>
+                setInput(event.target.value)
+              }
+              rows={1}
+              placeholder="Ask your coach..."
+              className="max-h-28 min-h-11 flex-1 resize-none rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-base leading-6 text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/40 sm:text-sm"
             />
 
-            <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-xs leading-5 text-slate-500">
-                Local engine only. No paid AI API yet. Saves into Health
-                snapshot cloud sync.
-              </div>
+            <button
+              type="submit"
+              disabled={!input.trim()}
+              className="h-11 shrink-0 rounded-xl border border-cyan-300/30 bg-cyan-300/15 px-4 text-xs font-black text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Send
+            </button>
+          </div>
 
-              <button
-                type="submit"
-                className="rounded-2xl border border-cyan-300/30 bg-cyan-300/15 px-5 py-3 text-sm font-black uppercase tracking-[0.2em] text-cyan-100 shadow-[0_0_30px_rgba(34,211,238,0.12)] transition hover:bg-cyan-300/20"
-              >
-                Send to Coach
-              </button>
-            </div>
+          <div className="mt-2 text-center text-[9px] leading-4 text-slate-600">
+            Conversation is saved with your Health profile.
           </div>
         </form>
       </section>
