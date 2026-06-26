@@ -685,6 +685,301 @@ function buildWeeklyCoachReview({
   };
 }
 
+function workoutName(item = {}) {
+  return String(
+    item?.workout_name ||
+      item?.name ||
+      item?.session?.workout_name ||
+      ""
+  ).trim();
+}
+
+function sessionTotals(item = {}) {
+  const exercises = sessionExercises(item);
+  const setLogs = exercises.flatMap((exercise) =>
+    Array.isArray(exercise?.set_logs)
+      ? exercise.set_logs
+      : []
+  );
+
+  const volume = setLogs.reduce(
+    (sum, setLog) =>
+      sum +
+      safeNumber(
+        setLog?.actual_weight ?? setLog?.weight,
+        0
+      ) *
+        safeNumber(
+          setLog?.actual_reps ?? setLog?.reps,
+          0
+        ),
+    0
+  );
+
+  const rpeValues = setLogs
+    .map((setLog) =>
+      safeNumber(
+        setLog?.rpe ?? setLog?.ease_score,
+        0
+      )
+    )
+    .filter((value) => value > 0);
+
+  const painFlags =
+    setLogs.filter(
+      (setLog) =>
+        safeNumber(setLog?.pain_score, 0) > 0
+    ).length +
+    safeNumber(
+      item?.completion_meta?.pain_flags ??
+        item?.session?.completion_meta?.pain_flags,
+      0
+    );
+
+  const poorFormFlags = setLogs.filter(
+    (setLog) =>
+      String(setLog?.form_quality || "")
+        .toLowerCase()
+        .includes("poor")
+  ).length;
+
+  return {
+    name: workoutName(item) || "Workout",
+    date: workoutDate(item),
+    sets: sessionValue(item, "completed_sets"),
+    activeSeconds: sessionValue(
+      item,
+      "active_seconds"
+    ),
+    totalSeconds: sessionValue(
+      item,
+      "total_seconds"
+    ),
+    volume: Math.round(volume),
+    averageRpe: rpeValues.length
+      ? Math.round(
+          (rpeValues.reduce(
+            (sum, value) => sum + value,
+            0
+          ) /
+            rpeValues.length) *
+            10
+        ) / 10
+      : 0,
+    painFlags,
+    poorFormFlags,
+    exercises,
+  };
+}
+
+function buildWorkoutComparison(history = []) {
+  const sessions = (Array.isArray(history)
+    ? history
+    : []
+  )
+    .map((item) => ({
+      raw: item,
+      date: workoutDate(item),
+      name: workoutName(item),
+    }))
+    .filter((item) => item.date && item.name)
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  if (!sessions.length) {
+    return null;
+  }
+
+  const currentRow = sessions[0];
+  const previousRow = sessions.find(
+    (item, index) =>
+      index > 0 &&
+      item.name.toLowerCase() ===
+        currentRow.name.toLowerCase()
+  );
+
+  const current = sessionTotals(currentRow.raw);
+  const previous = previousRow
+    ? sessionTotals(previousRow.raw)
+    : null;
+
+  if (!previous) {
+    return {
+      current,
+      previous: null,
+      exerciseRows: [],
+      action: "baseline",
+      headline: "Baseline established",
+      explanation:
+        "Complete this workout again to unlock a true last-time versus current comparison.",
+    };
+  }
+
+  const previousByName = new Map(
+    previous.exercises.map((exercise) => [
+      String(exercise?.name || "").toLowerCase(),
+      exercise,
+    ])
+  );
+
+  const exerciseRows = current.exercises
+    .map((exercise) => {
+      const name = String(
+        exercise?.substitute_name ||
+          exercise?.name ||
+          "Exercise"
+      );
+      const prior = previousByName.get(
+        String(exercise?.name || "").toLowerCase()
+      );
+      const currentSets = Array.isArray(
+        exercise?.set_logs
+      )
+        ? exercise.set_logs
+        : [];
+      const previousSets = Array.isArray(
+        prior?.set_logs
+      )
+        ? prior.set_logs
+        : [];
+
+      const bestCurrent = currentSets.reduce(
+        (best, setLog) => {
+          const weight = safeNumber(
+            setLog?.actual_weight ??
+              setLog?.weight,
+            0
+          );
+          const reps = safeNumber(
+            setLog?.actual_reps ?? setLog?.reps,
+            0
+          );
+          const score = weight * Math.max(1, reps);
+          return score > best.score
+            ? { weight, reps, score }
+            : best;
+        },
+        { weight: 0, reps: 0, score: 0 }
+      );
+
+      const bestPrevious = previousSets.reduce(
+        (best, setLog) => {
+          const weight = safeNumber(
+            setLog?.actual_weight ??
+              setLog?.weight,
+            0
+          );
+          const reps = safeNumber(
+            setLog?.actual_reps ?? setLog?.reps,
+            0
+          );
+          const score = weight * Math.max(1, reps);
+          return score > best.score
+            ? { weight, reps, score }
+            : best;
+        },
+        { weight: 0, reps: 0, score: 0 }
+      );
+
+      const improved =
+        bestCurrent.score > bestPrevious.score &&
+        bestPrevious.score > 0;
+
+      return {
+        name,
+        current: bestCurrent,
+        previous: bestPrevious,
+        improved,
+      };
+    })
+    .filter(
+      (row) =>
+        row.current.score > 0 ||
+        row.previous.score > 0
+    )
+    .slice(0, 6);
+
+  const painOrFormRisk =
+    current.painFlags > 0 ||
+    current.poorFormFlags > 0;
+  const volumeDelta =
+    current.volume - previous.volume;
+  const rpeDelta =
+    current.averageRpe - previous.averageRpe;
+  const activeDelta =
+    current.activeSeconds - previous.activeSeconds;
+
+  let action = "maintain";
+  let headline = "Hold steady";
+  let explanation =
+    "Performance was similar. Repeat the targets and focus on cleaner execution.";
+
+  if (painOrFormRisk) {
+    action = "reduce";
+    headline = "Reduce or modify";
+    explanation =
+      "Pain or poor form was reported. Do not progress load until the movement is pain-free and controlled.";
+  } else if (
+    volumeDelta > 0 &&
+    current.averageRpe <= 8.5
+  ) {
+    action = "increase";
+    headline = "Ready to progress";
+    explanation =
+      "You completed more work without excessive effort. Add a small amount of weight, one rep, or better control next time.";
+  } else if (
+    rpeDelta >= 1 ||
+    current.averageRpe >= 9
+  ) {
+    action = "maintain";
+    headline = "Maintain and recover";
+    explanation =
+      "Effort increased. Repeat the current load before adding more demand.";
+  }
+
+  return {
+    current,
+    previous,
+    exerciseRows,
+    action,
+    headline,
+    explanation,
+    deltas: {
+      volume: volumeDelta,
+      sets: current.sets - previous.sets,
+      activeSeconds: activeDelta,
+      rpe:
+        Math.round(rpeDelta * 10) / 10,
+    },
+  };
+}
+
+function DeltaValue({
+  value,
+  suffix = "",
+  invert = false,
+}) {
+  const numeric = safeNumber(value, 0);
+  const positive = invert ? numeric < 0 : numeric > 0;
+  const negative = invert ? numeric > 0 : numeric < 0;
+
+  return (
+    <span
+      className={cx(
+        "font-black",
+        positive
+          ? "text-lime-200"
+          : negative
+          ? "text-rose-200"
+          : "text-slate-300"
+      )}
+    >
+      {numeric > 0 ? "+" : ""}
+      {numeric}
+      {suffix}
+    </span>
+  );
+}
+
 function KpiTile({
   label,
   value,
@@ -751,6 +1046,11 @@ export default function HealthProgressCharts({
     [snapshot, profile, progressLogs]
   );
 
+  const workoutComparison = useMemo(
+    () => buildWorkoutComparison(history),
+    [history]
+  );
+
   const weeklyReview = useMemo(
     () =>
       buildWeeklyCoachReview({
@@ -805,6 +1105,168 @@ export default function HealthProgressCharts({
         >
           Open Full Progress
         </button>
+      </div>
+
+      <div className="mt-4 rounded-[1.35rem] border border-fuchsia-300/20 bg-[linear-gradient(135deg,rgba(232,121,249,0.08),rgba(34,211,238,0.05))] p-3 sm:p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-200">
+              Workout Progression Intelligence
+            </div>
+            <div className="mt-1 text-xl font-black text-white">
+              {workoutComparison
+                ? workoutComparison.headline
+                : "Complete a workout to begin"}
+            </div>
+            <div className="mt-1 text-sm leading-6 text-slate-400">
+              {workoutComparison
+                ? `${workoutComparison.current.name} Â· ${shortDate(
+                    workoutComparison.current.date
+                  )}`
+                : "Your latest matching workout will be compared automatically."}
+            </div>
+          </div>
+
+          {workoutComparison ? (
+            <div
+              className={cx(
+                "rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.12em]",
+                workoutComparison.action === "increase"
+                  ? "border-lime-300/25 bg-lime-300/10 text-lime-100"
+                  : workoutComparison.action === "reduce"
+                  ? "border-rose-300/25 bg-rose-300/10 text-rose-100"
+                  : workoutComparison.action === "baseline"
+                  ? "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
+                  : "border-amber-300/25 bg-amber-300/10 text-amber-100"
+              )}
+            >
+              {workoutComparison.action}
+            </div>
+          ) : null}
+        </div>
+
+        {workoutComparison ? (
+          <>
+            <p className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-slate-300">
+              {workoutComparison.explanation}
+            </p>
+
+            {workoutComparison.previous ? (
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <KpiTile
+                  label="Volume Change"
+                  value={
+                    <DeltaValue
+                      value={
+                        workoutComparison.deltas.volume
+                      }
+                    />
+                  }
+                  detail={`${workoutComparison.current.volume.toLocaleString()} current`}
+                  tone="cyan"
+                />
+                <KpiTile
+                  label="Set Change"
+                  value={
+                    <DeltaValue
+                      value={
+                        workoutComparison.deltas.sets
+                      }
+                    />
+                  }
+                  detail={`${workoutComparison.current.sets} current sets`}
+                  tone="lime"
+                />
+                <KpiTile
+                  label="Active Time"
+                  value={
+                    <DeltaValue
+                      value={Math.round(
+                        workoutComparison.deltas
+                          .activeSeconds / 60
+                      )}
+                      suffix="m"
+                    />
+                  }
+                  detail={`${Math.round(
+                    workoutComparison.current
+                      .activeSeconds / 60
+                  )}m current`}
+                  tone="fuchsia"
+                />
+                <KpiTile
+                  label="RPE Change"
+                  value={
+                    <DeltaValue
+                      value={
+                        workoutComparison.deltas.rpe
+                      }
+                      invert
+                    />
+                  }
+                  detail={`RPE ${
+                    workoutComparison.current
+                      .averageRpe || "â€”"
+                  } current`}
+                  tone="amber"
+                />
+              </div>
+            ) : null}
+
+            {workoutComparison.exerciseRows.length ? (
+              <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+                <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  Exercise-by-Exercise
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {workoutComparison.exerciseRows.map(
+                    (row) => (
+                      <div
+                        key={row.name}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3"
+                      >
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-black text-white">
+                            {row.name}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            Last:{" "}
+                            {row.previous.weight || "BW"} Ã—{" "}
+                            {row.previous.reps || "â€”"}
+                          </div>
+                        </div>
+
+                        <div className="shrink-0 text-right">
+                          <div
+                            className={cx(
+                              "text-sm font-black",
+                              row.improved
+                                ? "text-lime-200"
+                                : "text-cyan-100"
+                            )}
+                          >
+                            {row.current.weight || "BW"} Ã—{" "}
+                            {row.current.reps || "â€”"}
+                          </div>
+                          <div className="mt-1 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">
+                            {row.improved
+                              ? "Improved"
+                              : "Current"}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <div className="mt-3 rounded-2xl border border-dashed border-white/10 bg-black/20 p-5 text-center text-sm leading-6 text-slate-500">
+            Save at least one completed workout to unlock comparison and progression guidance.
+          </div>
+        )}
       </div>
 
       <div className="mt-4 rounded-[1.35rem] border border-lime-300/20 bg-[linear-gradient(135deg,rgba(57,255,136,0.08),rgba(34,211,238,0.05))] p-3 sm:p-4">
