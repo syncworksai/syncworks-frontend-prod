@@ -176,7 +176,7 @@ function locationLine(ticket) {
   const city = String(ticket?.service_city || ticket?.city || "").trim();
   const state = String(ticket?.service_state || ticket?.state || "").trim();
   const zip = String(ticket?.service_zip || "").trim();
-  return [address, [city, state].filter(Boolean).join(", "), zip].filter(Boolean).join(" • ");
+  return [address, [city, state].filter(Boolean).join(", "), zip].filter(Boolean).join(" â€¢ ");
 }
 
 function roleLabel(role) {
@@ -296,13 +296,13 @@ function TicketsHero({ isCustomer, counts, loading, onCreate, onRefresh }) {
             </button>
 
             <SmallBtn tone="slate" className="h-12 rounded-2xl px-5" onClick={onRefresh} disabled={loading}>
-              {loading ? "Refreshing…" : "Refresh"}
+              {loading ? "Refreshingâ€¦" : "Refresh"}
             </SmallBtn>
           </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3 xl:w-[460px]">
-          <BoardStat label="Visible" value={loading ? "…" : counts.total} tone="cyan" />
+          <BoardStat label="Visible" value={loading ? "â€¦" : counts.total} tone="cyan" />
           <BoardStat label="Assigned" value={counts.asg} tone="emerald" />
           <BoardStat label="Marketplace" value={counts.mp} tone="fuchsia" />
         </div>
@@ -334,6 +334,8 @@ function BoardTicketCard({
   const showMpActions = view === "marketplace" && isSboLike && mp && !asg && !locked;
   const p1 = isPriorityOne(ticket);
   const isBusy = String(busyId || "") === String(ticket.id);
+  const workflowPrimary = ticket?.workflow?.primary_action || null;
+  const workflowWaiting = ticket?.workflow?.waiting_on_label || "";
 
   const [assignValue, setAssignValue] = useState("");
   const [statusValue, setStatusValue] = useState(status);
@@ -385,9 +387,22 @@ function BoardTicketCard({
             </div>
 
             <div className="mt-2 text-[11px] text-slate-500">
-              {ticket?.sms_allowed ? "Allows text messaging" : "In-app or phone call"} •{" "}
-              {ticket?.created_at ? new Date(ticket.created_at).toLocaleString() : "—"}
+              {ticket?.sms_allowed ? "Allows text messaging" : "In-app or phone call"} â€¢{" "}
+              {ticket?.created_at ? new Date(ticket.created_at).toLocaleString() : "â€”"}
             </div>
+            {ticket?.workflow ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-cyan-500/20 bg-cyan-500/8 px-3 py-2">
+                <span className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200">
+                  {ticket.workflow.phase_label}
+                </span>
+                <span className="text-[11px] text-slate-300">{workflowWaiting}</span>
+                {workflowPrimary ? (
+                  <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2 py-1 text-[10px] font-bold text-cyan-100">
+                    Next: {workflowPrimary.label}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <div className="flex shrink-0 flex-wrap justify-end gap-2">
@@ -417,10 +432,10 @@ function BoardTicketCard({
                   onChange={(e) => setAssignValue(e.target.value)}
                   disabled={isBusy || archived}
                 >
-                  <option value="">Select employee…</option>
+                  <option value="">Select employeeâ€¦</option>
                   {(members || []).map((m) => (
                     <option key={m.id} value={String(m.id)}>
-                      {displayMemberName(m)} • {roleLabel(m.role)}
+                      {displayMemberName(m)} â€¢ {roleLabel(m.role)}
                     </option>
                   ))}
                 </select>
@@ -431,7 +446,7 @@ function BoardTicketCard({
                   disabled={isBusy || !assignValue || archived}
                   onClick={() => onAssign(ticket.id, assignValue)}
                 >
-                  {isBusy ? "Saving…" : "Assign"}
+                  {isBusy ? "Savingâ€¦" : "Assign"}
                 </SmallBtn>
               </div>
             </div>
@@ -458,7 +473,7 @@ function BoardTicketCard({
                   disabled={isBusy || !statusValue || statusValue === status || archived}
                   onClick={() => onStatusChange(ticket.id, statusValue)}
                 >
-                  {isBusy ? "Updating…" : "Update"}
+                  {isBusy ? "Updatingâ€¦" : "Update"}
                 </SmallBtn>
               </div>
             </div>
@@ -539,7 +554,7 @@ function CompactTicketRow({ ticket, saved, onSavedToggle, onArchiveToggle, isSbo
         <Link to={`/tickets/${ticket.id}`} className="font-black text-cyan-100 hover:text-white">
           {makeTicketCode(ticket)}
         </Link>
-        <div className="mt-1 text-[11px] text-slate-500">{ticket?.created_at ? new Date(ticket.created_at).toLocaleDateString() : "—"}</div>
+        <div className="mt-1 text-[11px] text-slate-500">{ticket?.created_at ? new Date(ticket.created_at).toLocaleDateString() : "â€”"}</div>
       </td>
       <td className="min-w-[260px] px-4 py-3">
         <div className="truncate text-sm font-semibold text-slate-100">{ticket?.category_path || ticket?.category_name || ticket?.title || "Ticket"}</div>
@@ -680,7 +695,7 @@ export default function TicketsBoard() {
 
     try {
       await api.post("/billing/unlock-request/", {
-        message: `Unlock request from TicketsBoard. Business ${bizId || "—"} is locked (${lockReason}). Billing updated / requesting review.`,
+        message: `Unlock request from TicketsBoard. Business ${bizId || "â€”"} is locked (${lockReason}). Billing updated / requesting review.`,
       });
 
       await loadBilling();
@@ -960,7 +975,7 @@ async function onArchiveToggle(ticketId, archived) {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_32%),radial-gradient(circle_at_top_right,rgba(217,70,239,0.14),transparent_34%),radial-gradient(circle_at_bottom,rgba(99,102,241,0.15),transparent_38%)]" />
       </div>
 
-      <ModeBar title="Job Requests" subtitle="SaaS ticket board • assignment • status controls • archive system" />
+      <ModeBar title="Job Requests" subtitle="SaaS ticket board â€¢ assignment â€¢ status controls â€¢ archive system" />
 
       <main className="relative mx-auto max-w-7xl space-y-5 px-4 py-6 pb-28">
         {showViewTabs && locked ? (
@@ -993,7 +1008,7 @@ async function onArchiveToggle(ticketId, archived) {
         ) : null}
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-          <BoardStat label="Visible" value={loading ? "…" : counts.total} tone="cyan" />
+          <BoardStat label="Visible" value={loading ? "â€¦" : counts.total} tone="cyan" />
           <BoardStat label="Assigned" value={counts.asg} tone="emerald" />
           <BoardStat label="Marketplace" value={counts.mp} tone="fuchsia" />
           <BoardStat label="Saved" value={counts.saved} tone="sky" />
@@ -1049,7 +1064,7 @@ async function onArchiveToggle(ticketId, archived) {
                 <FieldLabel>Search</FieldLabel>
                 <input
                   className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-cyan-500/40"
-                  placeholder="Ticket #, category, zip, address, customer…"
+                  placeholder="Ticket #, category, zip, address, customerâ€¦"
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                 />

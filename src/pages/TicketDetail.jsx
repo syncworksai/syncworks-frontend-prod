@@ -16,6 +16,7 @@ import TicketQuickFactsCard from "../components/tickets/TicketQuickFactsCard";
 import TicketCustomerCard from "../components/tickets/TicketCustomerCard";
 import TicketLifecycleCard from "../components/tickets/TicketLifecycleCard";
 import TicketArchiveToolsCard from "../components/tickets/TicketArchiveToolsCard";
+import TicketNextActionCard from "../components/tickets/TicketNextActionCard";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -82,15 +83,15 @@ const STATUS_CHANGE_OPTIONS = [
 ];
 
 function statusLabel(s) {
-  return STATUS_LABELS[upperStatus(s)] || s || "—";
+  return STATUS_LABELS[upperStatus(s)] || s || "Ã¢â‚¬â€";
 }
 
 function fmtPretty(iso) {
-  if (!iso) return "—";
+  if (!iso) return "Ã¢â‚¬â€";
   try {
     return new Date(iso).toLocaleString();
   } catch {
-    return "—";
+    return "Ã¢â‚¬â€";
   }
 }
 
@@ -255,12 +256,12 @@ function humanPaymentPref(ticket, intake) {
   if (t === "CARD") return "Card";
   if (t === "CASH") return "Cash";
   if (t === "OTHER") return "Other";
-  return "—";
+  return "Ã¢â‚¬â€";
 }
 
 function humanContactPref(intake) {
   const v = intake?.lead?.contact_preference || intake?.contact_preference || "";
-  if (!v) return "—";
+  if (!v) return "Ã¢â‚¬â€";
   if (v === "call") return "Call";
   if (v === "text") return "Text";
   if (v === "email") return "Email";
@@ -273,7 +274,7 @@ function humanSmsAllowed(intake) {
   const pref = intake?.lead?.contact_preference || intake?.contact_preference || "";
   if (pref === "text" || pref === "either") return "Yes";
   if (pref === "call" || pref === "email") return "No";
-  return "—";
+  return "Ã¢â‚¬â€";
 }
 
 function bestPhoneFromIntakeOrTicket(intake, ticketPhone) {
@@ -288,7 +289,7 @@ function cityStateFromIntake(intake) {
 }
 
 function workTypeFromTicket(ticket, intake) {
-  return intake?.category_path || ticket?.category_path || ticket?.category_name || "—";
+  return intake?.category_path || ticket?.category_path || ticket?.category_name || "Ã¢â‚¬â€";
 }
 
 function detailSummaryFromTicket(ticket) {
@@ -388,19 +389,19 @@ function AssignedBusinessCardPanel({ ticket, onBookAgain }) {
           <div className="mt-4 grid md:grid-cols-2 gap-2">
             <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
               <div className="text-[11px] text-slate-400">Phone</div>
-              <div className="text-sm font-semibold mt-1">{phone || "—"}</div>
+              <div className="text-sm font-semibold mt-1">{phone || "Ã¢â‚¬â€"}</div>
             </div>
             <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
               <div className="text-[11px] text-slate-400">Email</div>
-              <div className="text-sm font-semibold mt-1">{email || "—"}</div>
+              <div className="text-sm font-semibold mt-1">{email || "Ã¢â‚¬â€"}</div>
             </div>
             <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
               <div className="text-[11px] text-slate-400">Location</div>
-              <div className="text-sm font-semibold mt-1">{location || "—"}</div>
+              <div className="text-sm font-semibold mt-1">{location || "Ã¢â‚¬â€"}</div>
             </div>
             <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
               <div className="text-[11px] text-slate-400">Website</div>
-              <div className="text-sm font-semibold mt-1">{website || "—"}</div>
+              <div className="text-sm font-semibold mt-1">{website || "Ã¢â‚¬â€"}</div>
             </div>
           </div>
 
@@ -548,11 +549,11 @@ function OperationsControlCard({
               disabled={!canAssign || assignBusy}
             >
               <option value="">
-                {availableTeam.length ? "Select team member…" : "No team members found"}
+                {availableTeam.length ? "Select team memberÃ¢â‚¬Â¦" : "No team members found"}
               </option>
               {availableTeam.map((m) => (
                 <option key={m.id} value={String(m.id)}>
-                  {displayMemberName(m)} • {roleLabel(m.role)}
+                  {displayMemberName(m)} Ã¢â‚¬Â¢ {roleLabel(m.role)}
                 </option>
               ))}
             </select>
@@ -563,7 +564,7 @@ function OperationsControlCard({
               disabled={!canAssign || assignBusy || !assignValue}
               className="h-[50px] px-5"
             >
-              {assignBusy ? "Saving…" : "Assign"}
+              {assignBusy ? "SavingÃ¢â‚¬Â¦" : "Assign"}
             </Btn>
           </div>
 
@@ -665,7 +666,7 @@ function OperationsControlCard({
               disabled={manualBusy || !manualStatus || manualStatus === status}
               className="h-[50px] px-5"
             >
-              {manualBusy ? "Updating…" : "Update Status"}
+              {manualBusy ? "UpdatingÃ¢â‚¬Â¦" : "Update Status"}
             </Btn>
           </div>
         </div>
@@ -704,7 +705,7 @@ function CustomerOverviewCard({ ticket, ticketCode, onOpenMessages, onOpenFiles,
       <div className="mt-4 grid md:grid-cols-2 gap-3">
         <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
           <div className="text-[11px] text-slate-400">Ticket #</div>
-          <div className="mt-1 text-sm font-semibold">{ticketCode || "—"}</div>
+          <div className="mt-1 text-sm font-semibold">{ticketCode || "Ã¢â‚¬â€"}</div>
         </div>
         <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
           <div className="text-[11px] text-slate-400">Status</div>
@@ -712,7 +713,7 @@ function CustomerOverviewCard({ ticket, ticketCode, onOpenMessages, onOpenFiles,
         </div>
         <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
           <div className="text-[11px] text-slate-400">Category</div>
-          <div className="mt-1 text-sm font-semibold">{ticket?.category_name || ticket?.category_path || "—"}</div>
+          <div className="mt-1 text-sm font-semibold">{ticket?.category_name || ticket?.category_path || "Ã¢â‚¬â€"}</div>
         </div>
         <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
           <div className="text-[11px] text-slate-400">Routing</div>
@@ -720,11 +721,11 @@ function CustomerOverviewCard({ ticket, ticketCode, onOpenMessages, onOpenFiles,
         </div>
         <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
           <div className="text-[11px] text-slate-400">Service Address</div>
-          <div className="mt-1 text-sm font-semibold">{ticket?.service_address || "—"}</div>
+          <div className="mt-1 text-sm font-semibold">{ticket?.service_address || "Ã¢â‚¬â€"}</div>
         </div>
         <div className="rounded-2xl border border-slate-800 bg-slate-950/30 p-3">
           <div className="text-[11px] text-slate-400">ZIP</div>
-          <div className="mt-1 text-sm font-semibold">{ticket?.service_zip || "—"}</div>
+          <div className="mt-1 text-sm font-semibold">{ticket?.service_zip || "Ã¢â‚¬â€"}</div>
         </div>
       </div>
 
@@ -1083,7 +1084,7 @@ export default function TicketDetail() {
   const smsAllowed = humanSmsAllowed(intake);
   const workType = workTypeFromTicket(ticket, intake);
   const cityState = cityStateFromIntake(intake) || [ticket?.city, ticket?.state].filter(Boolean).join(", ");
-  const priority = intake?.priority || "—";
+  const priority = intake?.priority || "Ã¢â‚¬â€";
 
   const overviewStats = useMemo(() => {
     return {
@@ -1121,7 +1122,7 @@ export default function TicketDetail() {
     const found = (members || []).find(
       (m) => String(m?.user || m?.user_id || m?.user?.id || "") === String(assignedMemberUserId)
     );
-    return found ? `${displayMemberName(found)} • ${roleLabel(found?.role)}` : "";
+    return found ? `${displayMemberName(found)} Ã¢â‚¬Â¢ ${roleLabel(found?.role)}` : "";
   }, [members, assignedMemberUserId]);
 
   const currentRoleLabel = useMemo(() => {
@@ -1155,7 +1156,7 @@ export default function TicketDetail() {
               to={backHref}
               className="inline-flex items-center justify-center h-10 text-xs rounded-2xl px-4 bg-slate-950 border border-slate-800 hover:bg-slate-900"
             >
-              ← Back
+              Ã¢â€ Â Back
             </Link>
 
             {isSboLike && !isCustomer ? (
@@ -1165,7 +1166,7 @@ export default function TicketDetail() {
             ) : null}
 
             <Btn onClick={loadTicket} disabled={loading}>
-              {loading ? "Refreshing…" : "Refresh"}
+              {loading ? "RefreshingÃ¢â‚¬Â¦" : "Refresh"}
             </Btn>
           </div>
         }
@@ -1195,13 +1196,13 @@ export default function TicketDetail() {
                 }}
                 title="Close"
               >
-                ✕
+                Ã¢Å“â€¢
               </button>
             </div>
 
             <textarea
               className="mt-4 w-full min-h-[140px] bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm outline-none focus:border-cyan-500/40"
-              placeholder="Type your note…"
+              placeholder="Type your noteÃ¢â‚¬Â¦"
               value={noteText}
               onChange={(e) => setNoteText(e.target.value)}
               disabled={noteSaving}
@@ -1214,7 +1215,7 @@ export default function TicketDetail() {
                   Cancel
                 </Btn>
                 <Btn tone="cyan" onClick={postQuickNote} disabled={noteSaving || !(noteText || "").trim()}>
-                  {noteSaving ? "Saving…" : "Add Note"}
+                  {noteSaving ? "SavingÃ¢â‚¬Â¦" : "Add Note"}
                 </Btn>
               </div>
             </div>
@@ -1240,6 +1241,26 @@ export default function TicketDetail() {
           assignedName={assignedName}
           detailSummary={detailSummary}
           isCustomer={isCustomer}
+        />
+
+        <TicketNextActionCard
+          workflow={ticket?.workflow}
+          busy={actionBusy || loading}
+          onAction={(action) => {
+            if (!action) return;
+            if (action.tab) {
+              setActiveTab(action.tab);
+              return;
+            }
+            const endpointAction = action.endpoint;
+            if (endpointAction === "decline_marketplace") {
+              declineMarketplace();
+              return;
+            }
+            if (endpointAction) {
+              providerAction(endpointAction);
+            }
+          }}
         />
 
         <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-3">
