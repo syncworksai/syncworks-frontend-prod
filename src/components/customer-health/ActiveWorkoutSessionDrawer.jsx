@@ -834,6 +834,15 @@ function FinishReviewPanel({
 }) {
   const [cooldownChoice, setCooldownChoice] =
     useState("guided");
+  const [energy, setEnergy] = useState("Good");
+  const [difficulty, setDifficulty] =
+    useState("Challenging");
+  const [overallForm, setOverallForm] =
+    useState("Good");
+  const [painAfterWorkout, setPainAfterWorkout] =
+    useState("None");
+  const [painLocation, setPainLocation] =
+    useState("");
   const [notes, setNotes] = useState("");
 
   const exercises = Array.isArray(session?.exercises)
@@ -846,6 +855,21 @@ function FinishReviewPanel({
       exercise.completed
   );
 
+  const skippedExercises = exercises.filter(
+    (exercise) => exercise.skipped
+  );
+
+  const allSetLogs = exercises.flatMap(
+    (exercise) =>
+      (exercise.set_logs || []).map((log) => ({
+        ...log,
+        exercise_name:
+          exercise.substitute_name ||
+          exercise.name ||
+          "Exercise",
+      }))
+  );
+
   const trainedMuscles = Array.from(
     new Set(
       completedExercises.flatMap((exercise) => [
@@ -855,16 +879,76 @@ function FinishReviewPanel({
     )
   ).slice(0, 6);
 
-  const painLogs = exercises.flatMap((exercise) =>
-    (exercise.set_logs || []).filter(
-      (log) => Number(log.pain_score || 0) > 0
-    )
+  const painLogs = allSetLogs.filter(
+    (log) => Number(log.pain_score || 0) > 0
   );
 
-  const highEffortSets = exercises.flatMap((exercise) =>
-    (exercise.set_logs || []).filter(
-      (log) => Number(log.rpe || 0) >= 9
-    )
+  const highEffortSets = allSetLogs.filter(
+    (log) => Number(log.rpe || log.ease_score || 0) >= 9
+  );
+
+  const incompleteSetLogs = allSetLogs.filter((log) => {
+    const reps =
+      log.actual_reps ?? log.reps ?? "";
+    const weight =
+      log.actual_weight ?? log.weight ?? "";
+    const rpe =
+      log.rpe ?? log.ease_score ?? "";
+
+    return (
+      String(reps).trim() === "" ||
+      String(weight).trim() === "" ||
+      String(rpe).trim() === ""
+    );
+  });
+
+  const totalVolume = allSetLogs.reduce(
+    (total, log) => {
+      const weight = Number(
+        log.actual_weight ?? log.weight ?? 0
+      );
+      const reps = Number(
+        log.actual_reps ?? log.reps ?? 0
+      );
+
+      if (
+        !Number.isFinite(weight) ||
+        !Number.isFinite(reps)
+      ) {
+        return total;
+      }
+
+      return total + weight * reps;
+    },
+    0
+  );
+
+  const bestSet = allSetLogs.reduce(
+    (best, log) => {
+      const weight = Number(
+        log.actual_weight ?? log.weight ?? 0
+      );
+      const reps = Number(
+        log.actual_reps ?? log.reps ?? 0
+      );
+      const score =
+        Number.isFinite(weight) &&
+        Number.isFinite(reps)
+          ? weight * reps
+          : 0;
+
+      if (!best || score > best.score) {
+        return {
+          score,
+          weight,
+          reps,
+          exercise_name: log.exercise_name,
+        };
+      }
+
+      return best;
+    },
+    null
   );
 
   const activeRatio =
@@ -877,29 +961,62 @@ function FinishReviewPanel({
       : 0;
 
   const nextRecommendation =
-    painLogs.length > 0
-      ? "Use a lighter load or a pain-free variation next session."
-      : highEffortSets.length > 1
-      ? "Recover well before repeating this intensity."
-      : session?.completed_sets >= 8
-      ? "You handled solid volume. Progress one variable next time."
-      : "Build consistency first, then increase load or reps.";
+    painLogs.length > 0 ||
+    painAfterWorkout !== "None"
+      ? "Reduce load, use a pain-free variation, and prioritize recovery before repeating this session."
+      : highEffortSets.length > 1 ||
+        difficulty === "Max Effort"
+      ? "Keep the next session controlled. Repeat the load or reduce volume before progressing."
+      : overallForm === "Needs Work"
+      ? "Repeat these movements with lighter weight and cleaner technique before adding load."
+      : Number(session?.completed_sets || 0) >= 8
+      ? "You handled solid volume. Progress one variable next time: load, reps, or control."
+      : "Build consistency first, then increase load or reps gradually.";
 
   const cooldownOptions = [
     {
       id: "guided",
       label: "Guided cooldown",
-      detail: "3-5 minutes of breathing, walking, and targeted mobility.",
+      detail:
+        "3-5 minutes of breathing, walking, and targeted mobility.",
     },
     {
       id: "quick",
       label: "Quick reset",
-      detail: "60-90 seconds of breathing and one gentle stretch.",
+      detail:
+        "60-90 seconds of breathing and one gentle stretch.",
     },
     {
       id: "skip",
       label: "Skip cooldown",
       detail: "Save now and continue with your day.",
+    },
+  ];
+
+  const reviewRows = [
+    {
+      label: "Energy",
+      value: energy,
+      setter: setEnergy,
+      options: ["Low", "Good", "High"],
+    },
+    {
+      label: "Difficulty",
+      value: difficulty,
+      setter: setDifficulty,
+      options: ["Easy", "Challenging", "Max Effort"],
+    },
+    {
+      label: "Overall Form",
+      value: overallForm,
+      setter: setOverallForm,
+      options: ["Good", "Fair", "Needs Work"],
+    },
+    {
+      label: "Pain After Workout",
+      value: painAfterWorkout,
+      setter: setPainAfterWorkout,
+      options: ["None", "Mild", "Moderate", "Stop"],
     },
   ];
 
@@ -911,8 +1028,18 @@ function FinishReviewPanel({
       completion_notes: notes.trim(),
       trained_muscles: trainedMuscles,
       active_ratio_percent: activeRatio,
-      pain_flags: painLogs.length,
+      pain_flags:
+        painLogs.length +
+        (painAfterWorkout === "None" ? 0 : 1),
+      pain_after_workout: painAfterWorkout,
+      pain_location: painLocation.trim(),
       high_effort_sets: highEffortSets.length,
+      energy,
+      difficulty,
+      overall_form: overallForm,
+      total_volume: Math.round(totalVolume),
+      skipped_exercises: skippedExercises.length,
+      incomplete_set_logs: incompleteSetLogs.length,
       next_recommendation: nextRecommendation,
     });
   }
@@ -925,8 +1052,13 @@ function FinishReviewPanel({
         </div>
 
         <h3 className="mt-2 text-2xl font-black text-white">
-          Cool down, review, and save
+          Review, recover, and save
         </h3>
+
+        <p className="mt-2 text-sm leading-6 text-amber-50/80">
+          Confirm the workout data and tell the coach how
+          the session felt before it updates your plan.
+        </p>
 
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <StatTile
@@ -936,8 +1068,12 @@ function FinishReviewPanel({
           />
 
           <StatTile
-            label="Total"
-            value={formatSeconds(session.total_seconds)}
+            label="Volume"
+            value={
+              totalVolume > 0
+                ? Math.round(totalVolume).toLocaleString()
+                : "-"
+            }
             tone="cyan"
           />
 
@@ -955,6 +1091,94 @@ function FinishReviewPanel({
         </div>
       </div>
 
+      {(validation?.missing?.length ||
+        incompleteSetLogs.length > 0) ? (
+        <div className="rounded-[2rem] border border-rose-300/25 bg-rose-300/10 p-4">
+          <div className="text-sm font-black text-rose-100">
+            Check before saving
+          </div>
+
+          <div className="mt-2 space-y-2 text-sm leading-6 text-rose-50">
+            {validation?.missing?.map((item) => (
+              <div key={item.id}>{item.label}</div>
+            ))}
+
+            {incompleteSetLogs.length > 0 ? (
+              <div>
+                {incompleteSetLogs.length} logged set
+                {incompleteSetLogs.length === 1
+                  ? ""
+                  : "s"}{" "}
+                are missing reps, weight, or RPE.
+              </div>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            onClick={onBack}
+            disabled={saving}
+            className="mt-3 h-11 w-full rounded-2xl border border-rose-200/20 bg-black/20 text-sm font-black text-rose-50"
+          >
+            Return to Workout and Fix
+          </button>
+        </div>
+      ) : null}
+
+      <div className="rounded-[2rem] border border-cyan-300/20 bg-cyan-300/[0.07] p-4">
+        <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-100">
+          Session Check-In
+        </div>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {reviewRows.map((row) => (
+            <div
+              key={row.label}
+              className="rounded-2xl border border-white/10 bg-black/20 p-3"
+            >
+              <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+                {row.label}
+              </div>
+
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {row.options.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => row.setter(option)}
+                    className={cx(
+                      "min-h-11 rounded-xl border px-2 text-[10px] font-black sm:text-xs",
+                      row.value === option
+                        ? "border-cyan-300/35 bg-cyan-300/12 text-cyan-100"
+                        : "border-white/10 bg-white/[0.03] text-slate-300"
+                    )}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {painAfterWorkout !== "None" ? (
+          <label className="mt-3 block">
+            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-rose-200">
+              Pain location or movement
+            </div>
+
+            <input
+              value={painLocation}
+              onChange={(event) =>
+                setPainLocation(event.target.value)
+              }
+              placeholder="Example: front of right hip during squats"
+              className="mt-2 h-12 w-full rounded-2xl border border-rose-300/20 bg-slate-950 px-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-rose-300/45"
+            />
+          </label>
+        ) : null}
+      </div>
+
       <div className="rounded-[2rem] border border-cyan-300/20 bg-cyan-300/[0.07] p-4">
         <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-100">
           Choose Your Cooldown
@@ -965,7 +1189,9 @@ function FinishReviewPanel({
             <button
               key={option.id}
               type="button"
-              onClick={() => setCooldownChoice(option.id)}
+              onClick={() =>
+                setCooldownChoice(option.id)
+              }
               className={cx(
                 "rounded-2xl border p-3 text-left transition",
                 cooldownChoice === option.id
@@ -986,7 +1212,8 @@ function FinishReviewPanel({
 
         {cooldownChoice === "guided" ? (
           <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-slate-200">
-            Walk slowly and breathe for two minutes. Then use gentle mobility for{" "}
+            Walk slowly and breathe for two minutes.
+            Then use gentle mobility for{" "}
             {trainedMuscles.length
               ? trainedMuscles.join(", ")
               : "the muscles trained today"}
@@ -996,7 +1223,9 @@ function FinishReviewPanel({
 
         {cooldownChoice === "quick" ? (
           <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-slate-200">
-            Take five slow breaths, lower your heart rate, and hold one comfortable stretch for 30 seconds per side.
+            Take five slow breaths, lower your heart
+            rate, and hold one comfortable stretch for
+            30 seconds per side.
           </div>
         ) : null}
       </div>
@@ -1013,10 +1242,20 @@ function FinishReviewPanel({
             </div>
 
             <div className="mt-1 text-sm font-black text-white">
-              {session.completed_sets || 0} sets completed across{" "}
+              {session.completed_sets || 0} sets across{" "}
               {completedExercises.length} exercise
-              {completedExercises.length === 1 ? "" : "s"}.
+              {completedExercises.length === 1
+                ? ""
+                : "s"}
+              .
             </div>
+
+            {bestSet?.score > 0 ? (
+              <div className="mt-2 text-xs leading-5 text-slate-400">
+                Best work set: {bestSet.exercise_name},{" "}
+                {bestSet.weight} x {bestSet.reps}.
+              </div>
+            ) : null}
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
@@ -1030,16 +1269,26 @@ function FinishReviewPanel({
           </div>
         </div>
 
-        {painLogs.length || highEffortSets.length ? (
-          <div className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm leading-6 text-amber-50">
-            {painLogs.length
-              ? `${painLogs.length} set${painLogs.length === 1 ? "" : "s"} included pain feedback. `
-              : ""}
-            {highEffortSets.length
-              ? `${highEffortSets.length} set${highEffortSets.length === 1 ? "" : "s"} reached RPE 9 or higher.`
-              : ""}
-          </div>
-        ) : null}
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <StatTile
+            label="Skipped"
+            value={skippedExercises.length}
+            tone="rose"
+          />
+          <StatTile
+            label="Pain Flags"
+            value={
+              painLogs.length +
+              (painAfterWorkout === "None" ? 0 : 1)
+            }
+            tone="amber"
+          />
+          <StatTile
+            label="RPE 9+"
+            value={highEffortSets.length}
+            tone="purple"
+          />
+        </div>
 
         <label className="mt-3 block">
           <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
@@ -1048,32 +1297,15 @@ function FinishReviewPanel({
 
           <textarea
             value={notes}
-            onChange={(event) => setNotes(event.target.value)}
+            onChange={(event) =>
+              setNotes(event.target.value)
+            }
             rows={3}
             placeholder="Anything the coach should remember for next time?"
             className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-fuchsia-300/40"
           />
         </label>
       </div>
-
-      {validation?.missing?.length ? (
-        <div className="rounded-2xl border border-rose-300/20 bg-rose-300/10 p-3">
-          <div className="text-sm font-black text-rose-100">
-            Before finishing
-          </div>
-
-          <div className="mt-2 space-y-2">
-            {validation.missing.map((item) => (
-              <div
-                key={item.id}
-                className="text-sm leading-6 text-rose-50"
-              >
-                {item.label}
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
 
       {validation?.warnings?.length ? (
         <details className="rounded-2xl border border-white/10 bg-black/20">
@@ -1110,12 +1342,15 @@ function FinishReviewPanel({
           disabled={saving}
           className="health-primary-action h-12 rounded-2xl border text-sm font-black disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {saving ? "Saving Workout..." : "Save Workout and View Recap"}
+          {saving
+            ? "Saving Workout..."
+            : "Save Workout and View Recap"}
         </button>
       </div>
     </div>
   );
 }
+
 
 export default function ActiveWorkoutSessionDrawer({
   open,
