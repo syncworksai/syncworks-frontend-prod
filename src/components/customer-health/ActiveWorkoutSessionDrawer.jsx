@@ -2216,7 +2216,7 @@ export default function ActiveWorkoutSessionDrawer({
               ) : null}
 
               {!isCompleted && currentExercise ? (
-                <div className="rounded-[1.5rem] border border-cyan-300/15 bg-[linear-gradient(135deg,rgba(34,211,238,0.08),rgba(57,255,136,0.06))] p-3 sm:rounded-[2rem] sm:p-4">
+                <div className="rounded-[1.35rem] border border-cyan-300/15 bg-[linear-gradient(135deg,rgba(34,211,238,0.08),rgba(57,255,136,0.06))] p-3 shadow-[0_12px_36px_rgba(0,0,0,0.18)] sm:rounded-[2rem] sm:p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-[9px] font-black uppercase tracking-[0.18em] text-cyan-200">
@@ -2232,14 +2232,11 @@ export default function ActiveWorkoutSessionDrawer({
 
                       <div className="mt-1 text-xs text-slate-400">
                         Set{" "}
-                        {(currentExercise.set_logs || [])
-                          .length + 1}{" "}
-                        of{" "}
-                        {currentExercise.planned_sets ||
-                          "-"}{" "}
-                         | {" "}
-                        {currentExercise.planned_reps ||
-                          "clean reps"}
+                        {(currentExercise.set_logs || []).length + 1}
+                        {" of "}
+                        {currentExercise.planned_sets || "-"}
+                        {" | "}
+                        {currentExercise.planned_reps || "clean reps"}
                       </div>
                     </div>
 
@@ -2290,10 +2287,7 @@ export default function ActiveWorkoutSessionDrawer({
                   >
                     {session.set_active
                       ? (isTimedExercise ? "Complete Timed Set" : "Complete Set")
-                      : session.rest_active
-                      ? `Resting | ${formatSeconds(
-                          session.rest_remaining_seconds
-                        )}`
+                      : session.rest_active ? "Resting"
                       : (isTimedExercise ? "Start Timer" : "Start Set")}
                   </button>
 
@@ -2308,13 +2302,13 @@ export default function ActiveWorkoutSessionDrawer({
               ) : null}
               {!isCompleted && currentExercise ? (
                 <div className="space-y-2">
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                     <button
                       type="button"
                       onClick={() =>
                         setDetailsOpen((current) => !current)
                       }
-                      className="health-secondary-action h-11 rounded-2xl border px-3 text-xs font-black"
+                      className="health-secondary-action h-11 rounded-2xl border px-2 text-[10px] font-black sm:px-3 sm:text-xs"
                     >
                       Exercise Info
                     </button>
@@ -2325,7 +2319,7 @@ export default function ActiveWorkoutSessionDrawer({
                         setModifyMenuOpen((current) => !current)
                       }
                       disabled={session.set_active || session.rest_active}
-                      className="health-secondary-action h-11 rounded-2xl border px-3 text-xs font-black disabled:opacity-40"
+                      className="health-secondary-action h-11 rounded-2xl border px-2 text-[10px] font-black disabled:opacity-40 sm:px-3 sm:text-xs"
                     >
                       Modify Workout
                     </button>
@@ -2334,7 +2328,7 @@ export default function ActiveWorkoutSessionDrawer({
                       type="button"
                       onClick={() => setReviewMode(true)}
                       disabled={session.set_active}
-                      className="health-secondary-action h-11 rounded-2xl border px-3 text-xs font-black disabled:opacity-40"
+                      className="health-secondary-action h-11 rounded-2xl border px-2 text-[10px] font-black disabled:opacity-40 sm:px-3 sm:text-xs"
                     >
                       Finish Workout
                     </button>
