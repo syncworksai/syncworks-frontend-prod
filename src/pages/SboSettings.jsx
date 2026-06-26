@@ -6,6 +6,7 @@ import { useAuth } from "../auth/AuthContext";
 import ModeBar from "../components/ModeBar";
 import BusinessPicker from "../components/BusinessPicker";
 import BusinessDigitalCardPreview from "../components/business/BusinessDigitalCardPreview";
+import BusinessServiceAreasEditor, { normalizeServiceAreas } from "../components/business/BusinessServiceAreasEditor";
 
 const SETTINGS_SECTIONS = [
   { key: "business", label: "Profile" },
@@ -560,6 +561,7 @@ export default function SboSettings() {
   const [radius, setRadius] = useState("25");
   const [businessPresenceMode, setBusinessPresenceMode] = useState("");
   const [acceptsMarketplace, setAcceptsMarketplace] = useState(true);
+  const [serviceAreas, setServiceAreas] = useState([]);
 
   const [selectedServiceIds, setSelectedServiceIds] = useState([]);
 
@@ -690,6 +692,7 @@ export default function SboSettings() {
       setRadius(String(biz?.service_radius_miles ?? biz?.effective_service_radius_miles ?? 25));
       setBusinessPresenceMode(biz?.business_presence_mode || "");
       setAcceptsMarketplace(!!biz?.accepts_marketplace_tickets);
+      setServiceAreas(normalizeServiceAreas(biz?.service_areas));
       setSelectedServiceIds(extractBusinessServiceIds(biz));
 
       setFacebookUrl(biz?.facebook_url || "");
@@ -746,6 +749,7 @@ export default function SboSettings() {
       state: normalizeStateCode(state),
       base_zip: baseZip,
       service_radius_miles: Number(radius || 0),
+      service_areas: serviceAreas,
       business_presence_mode: businessPresenceMode,
       accepts_marketplace_tickets: !!acceptsMarketplace,
       facebook_url: facebookUrl,
@@ -1011,6 +1015,21 @@ export default function SboSettings() {
                   checked={acceptsMarketplace}
                   onChange={setAcceptsMarketplace}
                   hint="If off, this business will not receive new open marketplace jobs."
+                />
+              </div>
+
+              <div className="mt-5 border-t border-slate-800 pt-5">
+                <div className="mb-4">
+                  <div className="text-sm font-black text-white">Expanded Coverage Rules</div>
+                  <div className="mt-1 text-xs text-slate-400">
+                    Prepare this business for regional, multi-state, and nationwide growth.
+                  </div>
+                </div>
+                <BusinessServiceAreasEditor
+                  serviceAreas={serviceAreas}
+                  setServiceAreas={setServiceAreas}
+                  baseZip={baseZip}
+                  radius={radius}
                 />
               </div>
 

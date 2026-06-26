@@ -34,6 +34,7 @@ export default function BusinessDigitalCardPreview({
   state,
   baseZip,
   radius,
+  serviceAreas,
   acceptsMarketplace,
   businessPresenceMode,
   categories,
@@ -175,6 +176,24 @@ export default function BusinessDigitalCardPreview({
               </div>
             </div>
           </div>
+
+          {(serviceAreas || []).filter((area) => area?.active !== false).length ? (
+            <div className="mt-4 rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200">
+                Expanded coverage
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(serviceAreas || [])
+                  .filter((area) => area?.active !== false)
+                  .slice(0, 6)
+                  .map((area) => (
+                    <span key={area.id} className="rounded-full border border-emerald-400/25 px-3 py-1 text-[11px] font-bold text-emerald-100">
+                      {area.name || area.area_type}
+                    </span>
+                  ))}
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-4 flex flex-wrap gap-2">
             {phone ? (
