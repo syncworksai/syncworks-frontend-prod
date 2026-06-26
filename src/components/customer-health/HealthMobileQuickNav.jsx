@@ -5,14 +5,6 @@ function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
-function HomeIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
-      <path d="M3 10.8 12 3l9 7.8v9.2a1 1 0 0 1-1 1h-5.2v-6.2H9.2V21H4a1 1 0 0 1-1-1v-9.2Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function PlanIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
@@ -39,6 +31,16 @@ function InsightsIcon() {
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
       <path d="M5 20V11M12 20V5M19 20v-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       <path d="m4 8 5-4 4 3 7-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function LogIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+      <rect x="5" y="3" width="14" height="18" rx="3" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M9 8h6M9 12h6M9 16h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M16 15v4M14 17h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }
@@ -70,6 +72,7 @@ function NavButton({
 
 export default function HealthMobileQuickNav({
   onOpen,
+  onLog,
   onStartWorkout,
   onStartFallback,
   nextSession,
@@ -89,9 +92,9 @@ export default function HealthMobileQuickNav({
       <div className="mx-auto max-w-md">
         <div className="grid grid-cols-[1fr_1fr_1.15fr_1fr_1fr] items-end gap-1">
           <NavButton
-            label="Home"
-            icon={<HomeIcon />}
-            onClick={() => onOpen?.("home")}
+            label="Insights"
+            icon={<InsightsIcon />}
+            onClick={() => onOpen?.("insights")}
           />
 
           <NavButton
@@ -125,9 +128,9 @@ export default function HealthMobileQuickNav({
           />
 
           <NavButton
-            label="Insights"
-            icon={<InsightsIcon />}
-            onClick={() => onOpen?.("insights")}
+            label="Log"
+            icon={<LogIcon />}
+            onClick={() => onLog?.()}
           />
         </div>
       </div>

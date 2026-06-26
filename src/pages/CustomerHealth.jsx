@@ -2549,6 +2549,7 @@ export default function CustomerHealth() {
 
           <HealthMobileQuickNav
             onOpen={handleDashboardOpen}
+            onLog={() => setQuickLogType("menu")}
             onStartWorkout={
               startPlannerWorkout
             }

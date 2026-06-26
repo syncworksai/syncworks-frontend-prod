@@ -1004,6 +1004,7 @@ function MobileMenuDrawer({
   goMode,
   goFeed,
   goSupport,
+  goLearnMore,
   goProfile,
   goSettings,
   onLogout,
@@ -1242,6 +1243,15 @@ function MobileMenuDrawer({
                 >
                   Support
                 </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    run(goLearnMore)
+                  }
+                  className="rounded-2xl border border-indigo-500/25 bg-indigo-500/10 px-3 py-3 text-sm font-bold text-indigo-100"
+                >
+                  Learn More
+                </button>
 
                 <button
                   type="button"
@@ -1372,6 +1382,10 @@ export default function ModeBar({
     location.pathname || ""
   ).toLowerCase();
 
+  const isHealthRoute =
+    pathname.startsWith("/customer/health") ||
+    pathname.startsWith("/health");
+
   const businesses = useMemo(
     () =>
       normalizeBusinesses(
@@ -1401,6 +1415,10 @@ export default function ModeBar({
 
   const showBusinessCreate =
     useMemo(() => {
+      if (isHealthRoute) {
+        return false;
+      }
+
       return (
         [
           "CUSTOMER",
@@ -1414,6 +1432,7 @@ export default function ModeBar({
     }, [
       mode,
       isPlatformAdmin,
+          isHealthRoute,
     ]);
 
   const investorActive =
@@ -1704,6 +1723,14 @@ export default function ModeBar({
       hasBusinesses,
     ]);
 
+  function goPersonalHome() {
+    nav("/customer");
+  }
+
+  function goLearnMore() {
+    nav("/");
+  }
+
   function goSupport() {
     nav("/support");
   }
@@ -1905,6 +1932,29 @@ export default function ModeBar({
                   <GearIcon className="h-5 w-5" />
                 </button>
               </div>
+              {isHealthRoute ? (
+                <button
+                  type="button"
+                  onClick={goPersonalHome}
+                  title="Back to Personal Home"
+                  className="flex h-11 items-center justify-center gap-2 rounded-2xl border border-sky-500/25 bg-sky-500/10 px-3 text-xs font-black text-sky-100 transition hover:bg-sky-500/16"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M3 10.8 12 3l9 7.8v9.2a1 1 0 0 1-1 1h-5.2v-6.2H9.2V21H4a1 1 0 0 1-1-1v-9.2Z"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span className="hidden sm:inline">Home</span>
+                </button>
+              ) : null}
 
               <button
                 type="button"
@@ -1958,6 +2008,8 @@ export default function ModeBar({
         goMode={goMode}
         goFeed={goFeed}
         goSupport={goSupport}
+
+        goLearnMore={goLearnMore}
         goProfile={goProfile}
         goSettings={goSettings}
         onLogout={onLogout}
