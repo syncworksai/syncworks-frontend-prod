@@ -451,6 +451,281 @@ function LineChart({ data, targetWeight }) {
   );
 }
 
+function startOfCurrentWeekYmd() {
+  const today = new Date();
+  const start = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+  const day = start.getDay();
+  start.setDate(start.getDate() - (day === 0 ? 6 : day - 1));
+
+  const yyyy = start.getFullYear();
+  const mm = String(start.getMonth() + 1).padStart(2, "0");
+  const dd = String(start.getDate()).padStart(2, "0");
+
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function sessionValue(item = {}, key, fallback = 0) {
+  return safeNumber(
+    item?.[key] ??
+      item?.summary?.[key] ??
+      item?.session?.[key],
+    fallback
+  );
+}
+
+function sessionExercises(item = {}) {
+  const exercises =
+    item?.exercises ||
+    item?.session?.exercises ||
+    [];
+
+  return Array.isArray(exercises) ? exercises : [];
+}
+
+function buildWeeklyCoachReview({
+  snapshot,
+  history,
+}) {
+  const weekStart = startOfCurrentWeekYmd();
+  const plan = Array.isArray(snapshot?.week_plan)
+    ? snapshot.week_plan.filter(
+        (item) => !item?.ymd || item.ymd >= weekStart
+      )
+    : [];
+
+  const sessions = (Array.isArray(history) ? history : []).filter(
+    (item) => {
+      const date = workoutDate(item);
+      return date && date >= weekStart;
+    }
+  );
+
+  const planned = plan.filter(
+    (item) => item?.workout_name
+  ).length;
+  const completedPlan = plan.filter(
+    (item) => item?.status === "Completed"
+  ).length;
+  const skipped = plan.filter(
+    (item) => item?.status === "Skipped"
+  ).length;
+  const completed = Math.max(
+    completedPlan,
+    sessions.length
+  );
+  const resolved = completed + skipped;
+  const adherence =
+    planned > 0
+      ? Math.min(
+          100,
+          Math.round((completed / planned) * 100)
+        )
+      : completed > 0
+      ? 100
+      : 0;
+
+  const sets = sessions.reduce(
+    (sum, item) =>
+      sum + sessionValue(item, "completed_sets"),
+    0
+  );
+  const activeSeconds = sessions.reduce(
+    (sum, item) =>
+      sum + sessionValue(item, "active_seconds"),
+    0
+  );
+  const totalSeconds = sessions.reduce(
+    (sum, item) =>
+      sum + sessionValue(item, "total_seconds"),
+    0
+  );
+  const volume = sessions.reduce((total, item) => {
+    return (
+      total +
+      sessionExercises(item).reduce(
+        (exerciseTotal, exercise) =>
+          exerciseTotal +
+          (Array.isArray(exercise?.set_logs)
+            ? exercise.set_logs.reduce(
+                (setTotal, setLog) =>
+                  setTotal +
+                  safeNumber(
+                    setLog?.actual_weight ??
+                      setLog?.weight,
+                    0
+                  ) *
+                    safeNumber(
+                      setLog?.actual_reps ??
+                        setLog?.reps,
+                      0
+                    ),
+                0
+              )
+            : 0),
+        0
+      )
+    );
+  }, 0);
+
+  const rpeValues = sessions.flatMap((item) =>
+    sessionExercises(item).flatMap((exercise) =>
+      (Array.isArray(exercise?.set_logs)
+        ? exercise.set_logs
+        : []
+      )
+        .map((setLog) =>
+          safeNumber(
+            setLog?.rpe ??
+              setLog?.ease_score,
+            0
+          )
+        )
+        .filter((value) => value > 0)
+    )
+  );
+  const averageRpe = rpeValues.length
+    ? Math.round(
+        (rpeValues.reduce(
+          (sum, value) => sum + value,
+          0
+        ) /
+          rpeValues.length) *
+          10
+      ) / 10
+    : 0;
+
+  const muscleCounts = new Map();
+  let painFlags = 0;
+
+  sessions.forEach((item) => {
+    sessionExercises(item).forEach((exercise) => {
+      const trained =
+        (exercise?.set_logs || []).length > 0 ||
+        exercise?.completed;
+
+      if (!trained) return;
+
+      [
+        ...(exercise?.primary_muscles || []),
+        ...(exercise?.secondary_muscles || []),
+      ].forEach((muscle) => {
+        const key = String(muscle || "").trim();
+        if (!key) return;
+        muscleCounts.set(
+          key,
+          (muscleCounts.get(key) || 0) + 1
+        );
+      });
+
+      painFlags += (exercise?.set_logs || []).filter(
+        (setLog) =>
+          safeNumber(setLog?.pain_score, 0) > 0
+      ).length;
+    });
+
+    painFlags +=
+      safeNumber(
+        item?.completion_meta?.pain_flags ??
+          item?.session?.completion_meta?.pain_flags,
+        0
+      );
+  });
+
+  const muscleBalance = Array.from(
+    muscleCounts.entries()
+  )
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6);
+
+  let recommendation =
+    "Complete one focused workout and log every set so your coach can establish a reliable baseline.";
+
+  if (painFlags > 0) {
+    recommendation =
+      "Keep the next session pain-free: reduce load, use controlled ranges, and substitute any movement that reproduces pain.";
+  } else if (skipped >= 2) {
+    recommendation =
+      "Reduce next week's plan to the sessions you can realistically complete, then rebuild consistency before adding volume.";
+  } else if (adherence >= 85 && averageRpe >= 8.5) {
+    recommendation =
+      "Consistency is strong, but effort is high. Hold the current load and improve recovery before progressing.";
+  } else if (adherence >= 85 && sessions.length > 0) {
+    recommendation =
+      "Consistency is strong. Progress one variable next week: add a small amount of weight, one rep, or better control.";
+  } else if (adherence > 0) {
+    recommendation =
+      "Protect the next scheduled workout. Consistency will improve results more than adding extra intensity right now.";
+  }
+
+  return {
+    planned,
+    completed,
+    skipped,
+    resolved,
+    adherence,
+    sets,
+    activeMinutes: Math.round(activeSeconds / 60),
+    totalMinutes: Math.round(totalSeconds / 60),
+    activeRatio:
+      totalSeconds > 0
+        ? Math.round(
+            (activeSeconds / totalSeconds) * 100
+          )
+        : 0,
+    volume: Math.round(volume),
+    averageRpe,
+    painFlags,
+    muscleBalance,
+    recommendation,
+  };
+}
+
+function KpiTile({
+  label,
+  value,
+  detail,
+  tone = "cyan",
+}) {
+  const tones = {
+    cyan:
+      "border-cyan-300/20 bg-cyan-300/[0.07] text-cyan-100",
+    lime:
+      "border-lime-300/20 bg-lime-300/[0.07] text-lime-100",
+    amber:
+      "border-amber-300/20 bg-amber-300/[0.07] text-amber-100",
+    fuchsia:
+      "border-fuchsia-300/20 bg-fuchsia-300/[0.07] text-fuchsia-100",
+    rose:
+      "border-rose-300/20 bg-rose-300/[0.07] text-rose-100",
+  };
+
+  return (
+    <div
+      className={cx(
+        "rounded-2xl border p-3",
+        tones[tone] || tones.cyan
+      )}
+    >
+      <div className="text-[9px] font-black uppercase tracking-[0.14em] opacity-75">
+        {label}
+      </div>
+      <div className="mt-1 text-xl font-black text-white">
+        {value}
+      </div>
+      {detail ? (
+        <div className="mt-1 text-[11px] leading-4 text-slate-400">
+          {detail}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function HealthProgressCharts({
   profile,
   snapshot,
@@ -474,6 +749,15 @@ export default function HealthProgressCharts({
         progressLogs,
       }),
     [snapshot, profile, progressLogs]
+  );
+
+  const weeklyReview = useMemo(
+    () =>
+      buildWeeklyCoachReview({
+        snapshot,
+        history,
+      }),
+    [snapshot, history]
   );
 
   const targetWeight = safeNumber(
@@ -521,6 +805,170 @@ export default function HealthProgressCharts({
         >
           Open Full Progress
         </button>
+      </div>
+
+      <div className="mt-4 rounded-[1.35rem] border border-lime-300/20 bg-[linear-gradient(135deg,rgba(57,255,136,0.08),rgba(34,211,238,0.05))] p-3 sm:p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-lime-200">
+              Weekly Coach Review
+            </div>
+            <div className="mt-1 text-xl font-black text-white">
+              {weeklyReview.adherence}% adherence
+            </div>
+            <div className="mt-1 text-sm leading-6 text-slate-400">
+              {weeklyReview.completed} completed Â·{" "}
+              {weeklyReview.skipped} skipped Â·{" "}
+              {weeklyReview.planned} planned
+            </div>
+          </div>
+
+          <div className="w-full max-w-xs rounded-2xl border border-white/10 bg-black/20 p-3 sm:w-64">
+            <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+              <span>Consistency</span>
+              <span>{weeklyReview.adherence}%</span>
+            </div>
+            <div className="mt-2 h-3 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-lime-400 to-emerald-300 transition-all"
+                style={{
+                  width: `${Math.max(
+                    2,
+                    weeklyReview.adherence
+                  )}%`,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          <KpiTile
+            label="Completed"
+            value={weeklyReview.completed}
+            detail={`${weeklyReview.planned} scheduled`}
+            tone="lime"
+          />
+          <KpiTile
+            label="Training Sets"
+            value={weeklyReview.sets}
+            detail="Logged working data"
+            tone="cyan"
+          />
+          <KpiTile
+            label="Active Time"
+            value={`${weeklyReview.activeMinutes}m`}
+            detail={`${weeklyReview.activeRatio}% of total`}
+            tone="fuchsia"
+          />
+          <KpiTile
+            label="Total Time"
+            value={`${weeklyReview.totalMinutes}m`}
+            detail="Workout duration"
+            tone="amber"
+          />
+          <KpiTile
+            label="Avg RPE"
+            value={
+              weeklyReview.averageRpe || "â€”"
+            }
+            detail="Effort across sets"
+            tone="fuchsia"
+          />
+          <KpiTile
+            label="Volume"
+            value={
+              weeklyReview.volume
+                ? weeklyReview.volume.toLocaleString()
+                : "â€”"
+            }
+            detail="Weight Ã— reps"
+            tone="cyan"
+          />
+        </div>
+
+        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1.25fr]">
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  Muscle Balance
+                </div>
+                <div className="mt-1 text-sm font-black text-white">
+                  Training distribution
+                </div>
+              </div>
+              <div
+                className={cx(
+                  "rounded-full border px-3 py-1 text-[10px] font-black",
+                  weeklyReview.painFlags
+                    ? "border-rose-300/25 bg-rose-300/10 text-rose-100"
+                    : "border-lime-300/25 bg-lime-300/10 text-lime-100"
+                )}
+              >
+                {weeklyReview.painFlags
+                  ? `${weeklyReview.painFlags} pain flag${
+                      weeklyReview.painFlags === 1 ? "" : "s"
+                    }`
+                  : "No pain flags"}
+              </div>
+            </div>
+
+            {weeklyReview.muscleBalance.length ? (
+              <div className="mt-3 space-y-2">
+                {weeklyReview.muscleBalance.map(
+                  (item) => {
+                    const maxCount = Math.max(
+                      1,
+                      ...weeklyReview.muscleBalance.map(
+                        (row) => row.count
+                      )
+                    );
+
+                    return (
+                      <div key={item.name}>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-slate-300">
+                            {item.name}
+                          </span>
+                          <span className="font-black text-cyan-100">
+                            {item.count}
+                          </span>
+                        </div>
+                        <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/10">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-400"
+                            style={{
+                              width: `${
+                                (item.count / maxCount) * 100
+                              }%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+            ) : (
+              <div className="mt-3 rounded-xl border border-dashed border-white/10 p-4 text-center text-xs leading-5 text-slate-500">
+                Complete workouts with exercise muscle data to unlock balance tracking.
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-fuchsia-300/20 bg-fuchsia-300/[0.06] p-4">
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-200">
+              Coach Recommendation
+            </div>
+            <div className="mt-2 text-lg font-black text-white">
+              One priority for next week
+            </div>
+            <p className="mt-2 text-sm leading-6 text-slate-300">
+              {weeklyReview.recommendation}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="mt-4 grid grid-cols-3 gap-2">
