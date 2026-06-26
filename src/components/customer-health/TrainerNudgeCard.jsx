@@ -21,7 +21,7 @@ function formatTargetValue(value) {
     value === undefined ||
     value === ""
   ) {
-    return "—";
+    return "-";
   }
 
   return value;
@@ -58,7 +58,7 @@ function RecommendationTarget({
         </div>
 
         <div className="pb-1 text-xl font-black text-cyan-200">
-          ×
+           x
         </div>
 
         <div className="text-3xl font-black text-white">

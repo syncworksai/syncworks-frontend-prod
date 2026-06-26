@@ -138,7 +138,7 @@ function MetricButton({
       </div>
 
       <div className="mt-1 truncate text-lg font-black text-white">
-        {value || "—"}
+        {value || "-"}
         {value ? suffix : ""}
       </div>
 
@@ -260,7 +260,7 @@ function LogDataMenu({
             </h3>
 
             <p className="mt-1 text-sm leading-6 text-slate-400">
-              Add today’s data or open the detailed logger
+              Add today's data or open the detailed logger
               for a past date.
             </p>
           </div>
@@ -476,7 +476,7 @@ export default function HealthHome({
               }
               className="h-11 rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-4 text-sm font-black text-fuchsia-100"
             >
-              Hear Today’s Brief
+              Hear Today's Brief
             </button>
 
             <button
@@ -491,7 +491,7 @@ export default function HealthHome({
 
         <div className="mt-5 rounded-[1.5rem] border border-lime-300/20 bg-lime-300/[0.07] p-4">
           <div className="text-[10px] font-black uppercase tracking-[0.18em] text-lime-200">
-            Today’s Workout
+            Today's Workout
           </div>
 
           <div className="mt-1 text-2xl font-black text-white">
@@ -519,7 +519,7 @@ export default function HealthHome({
               className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100 shadow-[0_0_28px_rgba(57,255,136,0.12)]"
             >
               {todayWorkout
-                ? "Start Today’s Workout"
+                ? "Start Today's Workout"
                 : "Choose Workout"}
             </button>
 
@@ -669,19 +669,19 @@ export default function HealthHome({
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-200">
-              Today’s Check-In
+              Today's Check-In
             </div>
 
             <div className="mt-1 text-xl font-black text-white">
               {missingItems.length
                 ? `${missingItems.length} useful updates remaining`
-                : "You’re up to date"}
+                : "You're up to date"}
             </div>
 
             <p className="mt-1 text-sm leading-6 text-slate-400">
               {missingItems.length
                 ? "A few quick entries help your coach personalize today without overwhelming you."
-                : "Your coach has enough information to guide today’s plan."}
+                : "Your coach has enough information to guide today's plan."}
             </p>
           </div>
 
@@ -779,7 +779,7 @@ export default function HealthHome({
 
             <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">
               {snapshot?.last_coach_change_reason ||
-                "Complete your profile and log today’s key data. SyncWorks will explain every important adjustment instead of changing your plan silently."}
+                "Complete your profile and log today's key data. SyncWorks will explain every important adjustment instead of changing your plan silently."}
             </p>
           </div>
 

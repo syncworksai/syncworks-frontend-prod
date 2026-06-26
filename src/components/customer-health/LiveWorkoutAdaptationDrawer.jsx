@@ -164,12 +164,12 @@ export default function LiveWorkoutAdaptationDrawer({
                     </div>
 
                     <div className="mt-1 text-xs leading-5 text-slate-400">
-                      {(exercise.primary_muscles || []).join(", ")} •{" "}
+                      {(exercise.primary_muscles || []).join(", ")}  | {" "}
                       {exercise.equipment}
                     </div>
 
                     <div className="mt-2 text-xs font-bold text-cyan-100">
-                      {exercise.sets} sets × {exercise.reps} •{" "}
+                      {exercise.sets} sets x {exercise.reps}  | {" "}
                       {exercise.rest}
                     </div>
                   </div>

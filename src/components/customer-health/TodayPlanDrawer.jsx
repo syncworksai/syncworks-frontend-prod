@@ -85,7 +85,7 @@ export default function TodayPlanDrawer({
     <HealthDrawer
       open={open}
       onClose={onClose}
-      title="Today’s AI Plan"
+      title="Today's AI Plan"
       subtitle="One clear mission built from the questionnaire, readiness, logs, nutrition, steps, and recovery."
     >
       <div className="space-y-4">
@@ -101,7 +101,7 @@ export default function TodayPlanDrawer({
             </div>
 
             <div className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-cyan-100">
-              Today’s Mission
+              Today's Mission
             </div>
 
             <h2 className="mt-2 text-3xl font-black tracking-tight text-white">
@@ -125,7 +125,7 @@ export default function TodayPlanDrawer({
                 <div>
                   <div className="text-lg font-black text-white">{plan.workout.name}</div>
                   <div className="mt-1 text-xs leading-5 text-slate-400">
-                    {plan.workout.focus || "Workout"} • {plan.workout.duration || 30} minutes
+                    {plan.workout.focus || "Workout"} | {plan.workout.duration || 30} minutes
                   </div>
                 </div>
 

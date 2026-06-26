@@ -295,7 +295,7 @@ function buildNutritionTarget(profile = {}, snapshot = {}) {
   if (path.key === "weight-loss") {
     return {
       title: "Nutrition target",
-      target: `${proteinGoal}g protein • ${calorieGoal} calories`,
+      target: `${proteinGoal}g protein | ${calorieGoal} calories`,
       note:
         proteinGap > 30
           ? `Protein is short by about ${proteinGap}g. Fix that before adding extra intensity.`
@@ -306,7 +306,7 @@ function buildNutritionTarget(profile = {}, snapshot = {}) {
   if (path.key === "aesthetic") {
     return {
       title: "Nutrition target",
-      target: `${proteinGoal}g protein • consistent meals`,
+      target: `${proteinGoal}g protein | consistent meals`,
       note:
         proteinGap > 30
           ? `Protein is short by about ${proteinGap}g. Muscle goals need protein consistency.`
@@ -317,7 +317,7 @@ function buildNutritionTarget(profile = {}, snapshot = {}) {
   if (path.key === "strength" || path.key === "athlete") {
     return {
       title: "Fuel target",
-      target: `${proteinGoal}g protein • performance fuel`,
+      target: `${proteinGoal}g protein | performance fuel`,
       note:
         calories && calories < calorieGoal * 0.75
           ? "Calories look low for performance. Do not under-fuel a hard training day."
@@ -500,7 +500,7 @@ export function buildTodayPlan({ profile, snapshot, workouts, history }) {
     "Log energy, soreness, difficulty, and pain",
     logStatus.daysSince >= 3
       ? "Restart without trying to make up missed days"
-      : "Let the coach update the next session from today’s data",
+      : "Let the coach update the next session from today's data",
   ];
 
   return {

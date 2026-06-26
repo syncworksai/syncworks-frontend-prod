@@ -42,10 +42,10 @@ function EmptyPlanCard({ onOpenQuestionnaire }) {
 
       <div className="mt-4 grid gap-2 text-xs text-slate-400 sm:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-          Example: “I want chest, abs, and athletic strength.”
+          Example: "I want chest, abs, and athletic strength."
         </div>
         <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-          Example: “Gym, 4 days, 45 minutes, push hard.”
+          Example: "Gym, 4 days, 45 minutes, push hard."
         </div>
       </div>
 
@@ -122,7 +122,7 @@ function PlanProposalCard({
                   {workout.title}
                 </div>
                 <div className="mt-1 text-xs text-slate-400">
-                  {workout.focus} • {workout.duration_minutes} min
+                  {workout.focus} | {workout.duration_minutes} min
                 </div>
               </div>
             </div>

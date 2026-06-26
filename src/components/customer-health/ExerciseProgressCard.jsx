@@ -74,7 +74,7 @@ export default function ExerciseProgressCard({ metric }) {
               Average Effort
             </div>
             <div className="mt-1 text-lg font-black text-white">
-              {last.average_effort || "—"}
+              {last.average_effort || "-"}
               {last.average_effort ? "/10" : ""}
             </div>
           </div>
@@ -86,7 +86,7 @@ export default function ExerciseProgressCard({ metric }) {
             <div className="mt-1 text-lg font-black text-white">
               {last.average_set_seconds
                 ? formatSeconds(last.average_set_seconds)
-                : "—"}
+                : "-"}
             </div>
           </div>
         </div>
@@ -109,7 +109,7 @@ export default function ExerciseProgressCard({ metric }) {
           <div className="mt-1 text-sm font-black text-white">
             {metric.best_weight
               ? formatKpiNumber(metric.best_weight)
-              : "—"}
+              : "-"}
           </div>
         </div>
 

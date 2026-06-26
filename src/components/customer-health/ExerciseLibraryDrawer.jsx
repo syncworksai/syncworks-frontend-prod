@@ -188,9 +188,9 @@ export default function ExerciseLibraryDrawer({
         ...(exercise.primary_muscles || []),
         ...(exercise.secondary_muscles || []),
       ].join(", "),
-      avoid: (exercise.mistakes || []).join(" • "),
+      avoid: (exercise.mistakes || []).join(" | "),
       sportBenefit: exercise.movement_pattern,
-      suggestion: `${exercise.sets} sets • ${exercise.reps} reps • ${exercise.rest} rest`,
+      suggestion: `${exercise.sets} sets | ${exercise.reps} reps | ${exercise.rest} rest`,
     });
   }
 
@@ -321,7 +321,7 @@ export default function ExerciseLibraryDrawer({
                           {exercise.name}
                         </div>
                         <div className="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">
-                          {exercise.primary_muscles.join(", ")} •{" "}
+                          {exercise.primary_muscles.join(", ")}  | {" "}
                           {exercise.equipment}
                         </div>
                       </button>
@@ -337,7 +337,7 @@ export default function ExerciseLibraryDrawer({
                     </div>
 
                     <div className="mt-2 text-xs font-bold text-cyan-100">
-                      {exercise.sets} sets × {exercise.reps}
+                      {exercise.sets} sets x {exercise.reps}
                     </div>
 
                     <div className="mt-3 grid grid-cols-2 gap-2">

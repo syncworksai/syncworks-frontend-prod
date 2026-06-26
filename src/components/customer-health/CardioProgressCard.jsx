@@ -67,7 +67,7 @@ export default function CardioProgressCard({
           value={
             insights.averageHeartRate
               ? `${insights.averageHeartRate} bpm`
-              : "â€”"
+              : "-"
           }
           detail="Recorded sessions"
         />

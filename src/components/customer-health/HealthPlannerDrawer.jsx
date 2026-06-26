@@ -112,7 +112,7 @@ export default function HealthPlannerDrawer({
           {nextPlanned ? (
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <div className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-emerald-100">
-                Next up: {nextPlanned.day_label} • {nextPlanned.time || "Anytime"} • {nextPlanned.workout_name}
+                Next up: {nextPlanned.day_label} | {nextPlanned.time || "Anytime"} | {nextPlanned.workout_name}
               </div>
 
               <a

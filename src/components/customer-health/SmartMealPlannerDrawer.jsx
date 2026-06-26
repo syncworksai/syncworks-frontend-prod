@@ -465,7 +465,7 @@ export default function SmartMealPlannerDrawer({
           <div>
             <div className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">Best Matches</div>
             <div className="mt-1 text-xl font-black text-white">
-              {visible.length ? "Built around today’s remaining targets" : "No safe matches found"}
+              {visible.length ? "Built around today's remaining targets" : "No safe matches found"}
             </div>
           </div>
 

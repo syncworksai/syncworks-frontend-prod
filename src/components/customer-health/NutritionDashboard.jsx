@@ -118,7 +118,7 @@ function MacroCard({
         </div>
 
         <div className="text-xs font-black text-slate-500">
-          {safeGoal ? `${Math.round(safeGoal)}${suffix}` : "—"}
+          {safeGoal ? `${Math.round(safeGoal)}${suffix}` : "-"}
         </div>
       </div>
 
@@ -354,14 +354,14 @@ export default function NutritionDashboard({
       calorieGoal &&
       totals.calories > calorieGoal
     ) {
-      return "You are over today’s calorie target. Keep the next choice lighter and focus on hydration, vegetables, and lean protein.";
+      return "You are over today's calorie target. Keep the next choice lighter and focus on hydration, vegetables, and lean protein.";
     }
 
     if (
       proteinGoal &&
       totals.protein >= proteinGoal
     ) {
-      return "Protein is on target. Use the rest of today’s calories for a balanced meal that supports recovery.";
+      return "Protein is on target. Use the rest of today's calories for a balanced meal that supports recovery.";
     }
 
     if (proteinGoal) {
@@ -528,7 +528,7 @@ export default function NutritionDashboard({
                 ))
               ) : (
                 <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-slate-500">
-                  Log a meal to begin today’s timeline.
+                  Log a meal to begin today's timeline.
                 </div>
               )}
             </div>

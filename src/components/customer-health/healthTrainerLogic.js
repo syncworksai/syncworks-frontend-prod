@@ -883,7 +883,7 @@ export function buildTrainerNudge({
       priority: "normal",
       title: "Trainer Ready",
       message:
-        "Start your workout and I’ll guide the next set.",
+        "Start your workout and I'll guide the next set.",
       speak: false,
       recommendation: null,
     };

@@ -29,10 +29,10 @@ export function SynopsisDrawer({ open, onClose, snapshot, profile, history }) {
     <HealthDrawer open={open} onClose={onClose} title="Daily Health Synopsis" subtitle="End-of-day recap and next-step recommendation.">
       <div className="space-y-4">
         <div className="rounded-3xl border border-emerald-500/25 bg-emerald-500/10 p-5">
-          <div className="text-sm font-black text-white">Today’s Recap</div>
+          <div className="text-sm font-black text-white">Today's Recap</div>
           <div className="mt-3 space-y-2 text-sm leading-6 text-slate-200">
             <div>Workout: {snapshot.workout || "Not selected"}</div>
-            <div>Training for: {profile.primary_goal || "General fitness"}{profile.sport ? ` • ${profile.sport}` : ""}</div>
+            <div>Training for: {profile.primary_goal || "General fitness"}{profile.sport ? ` | ${profile.sport}` : ""}</div>
             <div>Readiness: {snapshot.readiness}</div>
             <div>Steps: {steps.toLocaleString()} / {stepGoal.toLocaleString()}</div>
             <div>Calories: {calories.toLocaleString()} / {calorieGoal.toLocaleString()}</div>

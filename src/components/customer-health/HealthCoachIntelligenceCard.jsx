@@ -124,7 +124,7 @@ export default function HealthCoachIntelligenceCard({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[0.22em] text-fuchsia-200">
-              Coach Intelligence Â· Last 7 Days
+              Coach Intelligence · Last 7 Days
             </div>
             <h3 className="mt-1 text-xl font-black text-white">
               Training balance and recovery
@@ -165,7 +165,7 @@ export default function HealthCoachIntelligenceCard({
             value={
               intelligence.average_rpe
                 ? intelligence.average_rpe
-                : "â€”"
+                : "-"
             }
             tone="fuchsia"
           />
@@ -213,7 +213,7 @@ export default function HealthCoachIntelligenceCard({
               )}
             >
               <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/70">
-                Recovery Status Â·{" "}
+                Recovery Status ·{" "}
                 {intelligence.recovery.level}
               </div>
               <div className="mt-2 text-lg font-black text-white">

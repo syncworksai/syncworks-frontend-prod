@@ -785,7 +785,7 @@ export default function NutritionCoachDrawer({
       });
 
       setSavedMessage(
-        "Meal saved. Today’s totals have been updated."
+        "Meal saved. Today's totals have been updated."
       );
       setDescription("");
       setEstimate(null);
@@ -881,7 +881,7 @@ export default function NutritionCoachDrawer({
                 )
               }
               rows={3}
-              placeholder="Example: I ate 3 McDonald’s cheeseburgers and a medium fries"
+              placeholder="Example: I ate 3 McDonald's cheeseburgers and a medium fries"
               className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm font-bold leading-5 text-white outline-none placeholder:text-slate-600 focus:border-lime-300/40"
             />
           </label>
@@ -951,7 +951,7 @@ export default function NutritionCoachDrawer({
                       className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2"
                     >
                       <div className="truncate text-xs font-bold text-white sm:text-sm">
-                        {item.quantity} ×{" "}
+                        {item.quantity}  x {" "}
                         {item.label}
                       </div>
 
@@ -1024,7 +1024,7 @@ export default function NutritionCoachDrawer({
 
         <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:mt-5 sm:rounded-[1.5rem] sm:p-4">
           <div className="text-[10px] font-black uppercase tracking-[0.16em] text-fuchsia-200">
-            Today’s Meals
+            Today's Meals
           </div>
 
           {todayMeals.length ? (

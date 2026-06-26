@@ -48,7 +48,7 @@ export default function CoachVoiceSettingsCard({
             Audio + voice preference
           </div>
           <div className="mt-1 text-xs leading-5 text-slate-400">
-            Device/browser voices vary. We’ll choose the closest match available.
+            Device/browser voices vary. We'll choose the closest match available.
           </div>
         </div>
 

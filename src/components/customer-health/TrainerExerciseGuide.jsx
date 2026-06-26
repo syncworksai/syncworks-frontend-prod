@@ -30,7 +30,7 @@ function GuideSection({ title, items }) {
       <ul className="mt-2 space-y-1.5">
         {items.map((item) => (
           <li key={item} className="text-sm leading-6 text-slate-300">
-            • {item}
+            | {item}
           </li>
         ))}
       </ul>

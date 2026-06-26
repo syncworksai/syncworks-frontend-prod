@@ -107,7 +107,7 @@ export function ProgressDrawer({ open, onClose, snapshot, setSnapshot, progressL
           onClick={addProgressLog}
           className="w-full rounded-2xl border border-cyan-500/25 bg-cyan-500/10 px-4 py-3 text-xs font-black text-cyan-100"
         >
-          Log Today’s Progress
+          Log Today's Progress
         </button>
 
         <div className="grid gap-3 md:grid-cols-2">
@@ -119,7 +119,7 @@ export function ProgressDrawer({ open, onClose, snapshot, setSnapshot, progressL
                 <div key={log.id} className="rounded-2xl border border-white/10 bg-slate-950/50 p-3">
                   <div className="text-sm font-black text-white">{prettyDate(log.date)}</div>
                   <div className="mt-1 text-xs leading-5 text-slate-400">
-                    Weight: {log.weight || "—"} • Steps: {safeNumber(log.steps).toLocaleString()} • Protein: {safeNumber(log.protein_today).toLocaleString()}g
+                    Weight: {log.weight || "-"} | Steps: {safeNumber(log.steps).toLocaleString()} | Protein: {safeNumber(log.protein_today).toLocaleString()}g
                   </div>
                   <button
                     type="button"
@@ -143,7 +143,7 @@ export function ProgressDrawer({ open, onClose, snapshot, setSnapshot, progressL
                 <div key={item.id} className="rounded-2xl border border-white/10 bg-slate-950/50 p-3">
                   <div className="text-sm font-black text-white">{item.workout_name}</div>
                   <div className="mt-1 text-xs leading-5 text-slate-400">
-                    {prettyDate(item.date)} • {item.readiness || "Readiness not set"} • Exercises: {Array.isArray(item.exercises) ? item.exercises.length : 0}
+                    {prettyDate(item.date)} | {item.readiness || "Readiness not set"} | Exercises: {Array.isArray(item.exercises) ? item.exercises.length : 0}
                   </div>
                   <button
                     type="button"

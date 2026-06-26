@@ -100,7 +100,7 @@ export default function WorkoutProgressionCard({
                 Avg RPE
               </div>
               <div className="mt-1 text-sm font-black text-white">
-                {previous.averageRpe || "—"}
+                {previous.averageRpe || "-"}
               </div>
             </div>
 
@@ -140,8 +140,8 @@ export default function WorkoutProgressionCard({
           </div>
 
           <div className="mt-1 text-lg font-black text-white">
-            {recommendation.weight || "Bodyweight"} ×{" "}
-            {recommendation.reps || "—"}
+            {recommendation.weight || "Bodyweight"}  x {" "}
+            {recommendation.reps || "-"}
           </div>
         </div>
 

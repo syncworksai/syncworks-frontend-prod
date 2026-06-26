@@ -489,7 +489,7 @@ export default function HealthProfileIntakeDrawer({
                   <FieldLabel>Calculated BMI</FieldLabel>
 
                   <div className="mt-2 text-3xl font-black text-white">
-                    {calculatedBmi || "—"}
+                    {calculatedBmi || "-"}
                   </div>
 
                   <p className="mt-2 text-xs leading-5 text-slate-400">
@@ -806,8 +806,8 @@ export default function HealthProfileIntakeDrawer({
                 </div>
 
                 <p className="mt-2 text-sm leading-6 text-slate-400">
-                  You will be able to say, “I ate three
-                  McDonald’s cheeseburgers,” and SyncWorks can
+                  You will be able to say, "I ate three
+                  McDonald's cheeseburgers," and SyncWorks can
                   look up or estimate calories and macros, show
                   the assumptions, and ask you to confirm before
                   saving the meal.
@@ -834,8 +834,8 @@ export default function HealthProfileIntakeDrawer({
                 <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.07] p-4">
                   <FieldLabel>Starting Point</FieldLabel>
                   <div className="mt-2 text-lg font-black text-white">
-                    {form.weight || "—"} lb →{" "}
-                    {form.target_weight || "—"} lb
+                    {form.weight || "-"} lb →{" "}
+                    {form.target_weight || "-"} lb
                   </div>
                   <div className="mt-1 text-sm text-slate-400">
                     BMI{" "}

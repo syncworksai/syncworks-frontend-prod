@@ -161,7 +161,7 @@ export default function TrainerThumbControls({
             disabled={isCompleted || isSetActive}
           />
 
-          <MiniButton label="Close" icon="×" tone="slate" onClick={onClose} />
+          <MiniButton label="Close" icon=" x " tone="slate" onClick={onClose} />
         </div>
       </div>
     </div>

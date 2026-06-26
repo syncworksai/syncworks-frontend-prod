@@ -86,7 +86,7 @@ export function plannedSleepHours(plan = {}) {
 }
 
 export function formatClock(value = "") {
-  if (!value) return "—";
+  if (!value) return "-";
 
   const { hours, minutes } = splitTime(value);
   const date = new Date();
@@ -131,9 +131,9 @@ export function buildSleepRecommendation({ plan, snapshot = {} }) {
   if (!lastSleep) {
     return {
       tone: "cyan",
-      title: "Log last night’s sleep",
+      title: "Log last night's sleep",
       message:
-        "A quick sleep check-in helps SyncWorks adjust today’s training, steps, nutrition, and recovery priorities.",
+        "A quick sleep check-in helps SyncWorks adjust today's training, steps, nutrition, and recovery priorities.",
       deficit,
       intensity: "unknown",
     };
@@ -157,9 +157,9 @@ export function buildSleepRecommendation({ plan, snapshot = {} }) {
   if (lastSleep < 7) {
     return {
       tone: "amber",
-      title: "Maintain, don’t force",
+      title: "Maintain, don't force",
       message:
-        "Train with clean reps, keep optional volume flexible, and protect tonight’s sleep window.",
+        "Train with clean reps, keep optional volume flexible, and protect tonight's sleep window.",
       deficit,
       intensity: "maintain",
     };
@@ -169,7 +169,7 @@ export function buildSleepRecommendation({ plan, snapshot = {} }) {
     tone: "emerald",
     title: "Recovery supports progression",
     message:
-      "Sleep is supporting today’s plan. Progress only where reps, effort, and pain data also support it.",
+      "Sleep is supporting today's plan. Progress only where reps, effort, and pain data also support it.",
     deficit,
     intensity: "progress",
   };

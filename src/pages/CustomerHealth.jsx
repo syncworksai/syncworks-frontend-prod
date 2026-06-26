@@ -977,10 +977,10 @@ export default function CustomerHealth() {
         nextSession
           ? `${
               nextSession.day_label
-            } • ${
+            } | ${
               nextSession.time ||
               "Anytime"
-            } • ${
+            } | ${
               nextSession.workout_name
             }`
           : "",
@@ -2065,8 +2065,8 @@ export default function CustomerHealth() {
         title="Health"
         subtitle={
           hasHealthAccess
-            ? "Home • daily logging • workouts • coach • insights"
-            : "30 days free • $2.99/month after"
+            ? "Home | daily logging | workouts | coach | insights"
+            : "30 days free | $2.99/month after"
         }
         rightActions={
           <div className="flex items-center gap-2">

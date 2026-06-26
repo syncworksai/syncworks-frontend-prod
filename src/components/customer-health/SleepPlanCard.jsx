@@ -46,7 +46,7 @@ export default function SleepPlanCard({ profile, snapshot, onOpen }) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[0.22em] text-fuchsia-200">
-              Tonight’s Recovery
+              Tonight's Recovery
             </div>
 
             <h2 className="mt-1 text-2xl font-black text-white">
@@ -112,7 +112,7 @@ export default function SleepPlanCard({ profile, snapshot, onOpen }) {
         </div>
 
         <div className="mt-3 text-xs leading-5 text-slate-500">
-          Quiet hours: {formatClock(quiet.starts_at)}–
+          Quiet hours: {formatClock(quiet.starts_at)}-
           {formatClock(quiet.ends_at)}
         </div>
 

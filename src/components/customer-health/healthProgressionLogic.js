@@ -362,7 +362,7 @@ export function formatPreviousSet(setLog = {}) {
     weight > 0
       ? `${weight} lb`
       : "Bodyweight";
-  const reps = setLog.reps || "—";
+  const reps = setLog.reps || "-";
   const rpe = setLog.rpe
     ? ` · RPE ${setLog.rpe}`
     : "";
@@ -370,5 +370,5 @@ export function formatPreviousSet(setLog = {}) {
     ? " · Failure"
     : "";
 
-  return `${load} × ${reps}${rpe}${failure}`;
+  return `${load} x ${reps}${rpe}${failure}`;
 }

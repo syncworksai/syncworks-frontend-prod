@@ -339,7 +339,7 @@ export default function WorkoutHistoryDrawer({
                               {setLog.weight || setLog.weight === 0
                                 ? `${setLog.weight} lb`
                                 : "Bodyweight"}{" "}
-                              × {setLog.reps || "—"}
+                              x {setLog.reps || "-"}
                               {setLog.rpe
                                 ? ` · RPE ${setLog.rpe}`
                                 : ""}

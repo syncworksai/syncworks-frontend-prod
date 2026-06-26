@@ -208,7 +208,7 @@ export function buildHealthAchievements({
   const next = milestones.find((item) => !item.achieved);
 
   let momentumLabel = "Starting";
-  let momentumMessage = "Log today’s workout, steps, or protein to start building momentum.";
+  let momentumMessage = "Log today's workout, steps, or protein to start building momentum.";
 
   if (workoutStreak >= 7) {
     momentumLabel = "On Fire";

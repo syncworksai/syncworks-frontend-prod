@@ -93,7 +93,7 @@ export default function AICoachUpgradeDrawer({
             onClick={startCheckout}
             className="mt-5 h-12 w-full rounded-2xl border border-fuchsia-300/35 bg-gradient-to-r from-fuchsia-400/25 to-cyan-300/20 text-sm font-black text-white shadow-[0_0_30px_rgba(255,59,212,0.14)]"
           >
-            Start AI Coach — $4.99/month
+            Start AI Coach - $4.99/month
           </button>
 
           <div className="mt-3 text-center text-[11px] font-bold leading-5 text-slate-500">

@@ -397,7 +397,7 @@ function buildProgressionForExercise(row, profile = {}, snapshot = {}) {
         recommendation:
           path.short === "Strength"
             ? `Try ${nextWeight} lbs next time if warm-ups feel strong.`
-            : `Try ${nextWeight} lbs or add 1–2 reps per set.`,
+            : `Try ${nextWeight} lbs or add 1-2 reps per set.`,
         reason: "Difficulty was easy and pain was controlled.",
       };
     }
@@ -406,7 +406,7 @@ function buildProgressionForExercise(row, profile = {}, snapshot = {}) {
       name: row.name,
       status: "Increase",
       recommendation: reps
-        ? `Add 1–3 reps per set from ${reps}, or use a slightly harder variation.`
+        ? `Add 1-3 reps per set from ${reps}, or use a slightly harder variation.`
         : "Add reps, time, tempo, or a slightly harder variation.",
       reason: "Difficulty was easy and pain was controlled.",
     };
@@ -477,7 +477,7 @@ function getMissedLogStatus(history = [], profile = {}) {
       daysSince: days,
       message: `Last log was ${days} day${days === 1 ? "" : "s"} ago.`,
       action:
-        "Stay on schedule. Log today’s readiness before deciding whether to push or hold.",
+        "Stay on schedule. Log today's readiness before deciding whether to push or hold.",
     };
   }
 
@@ -487,7 +487,7 @@ function getMissedLogStatus(history = [], profile = {}) {
     daysSince: 0,
     message: "Workout data is current.",
     action:
-      "Use today’s data to decide whether the next session should push, hold, or recover.",
+      "Use today's data to decide whether the next session should push, hold, or recover.",
   };
 }
 
@@ -601,7 +601,7 @@ function buildDailyFocus({ profile, snapshot, history }) {
   }
 
   if (lower(snapshot?.readiness).includes("recovery")) {
-    return "Recovery is the limiter today. Move, walk, stretch, or lift light — do not chase a personal record.";
+    return "Recovery is the limiter today. Move, walk, stretch, or lift light - do not chase a personal record.";
   }
 
   if (proteinGoal && proteinGap > 30) {
@@ -676,7 +676,7 @@ function buildNextActions({ profile, snapshot, history }) {
   }
 
   return [
-    "Complete today’s workout or a short walk.",
+    "Complete today's workout or a short walk.",
     "Log difficulty and pain.",
     "Let the coach adjust the next session from real data.",
   ];

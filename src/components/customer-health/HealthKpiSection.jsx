@@ -134,7 +134,7 @@ export default function HealthKpiSection({
               </h2>
 
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-                These numbers are calculated from your completed sessions—not
+                These numbers are calculated from your completed sessions-not
                 generic fitness averages.
               </p>
             </div>
@@ -211,7 +211,7 @@ export default function HealthKpiSection({
               value={
                 kpis.workout.average_set_seconds
                   ? formatSeconds(kpis.workout.average_set_seconds)
-                  : "—"
+                  : "-"
               }
               tone="fuchsia"
             />
@@ -219,7 +219,7 @@ export default function HealthKpiSection({
 
           <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
             <div className="text-[10px] font-black uppercase tracking-[0.18em] text-lime-300">
-              Today’s Training Direction
+              Today's Training Direction
             </div>
 
             <div className="mt-1 text-lg font-black text-white">

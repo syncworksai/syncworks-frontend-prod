@@ -562,10 +562,10 @@ function SetHistory({
                 }
                 className="h-11 rounded-xl border border-white/10 bg-white/[0.05] text-sm font-black text-white"
               >
-                âˆ’5
+                -5
               </button>
 
-              <input
+<input
                 value={targetWeight}
                 onChange={(event) =>
                   onTargetChange({
@@ -605,17 +605,17 @@ function SetHistory({
                 type="button"
                 onClick={() =>
                   onTargetChange({
-                    weight: targetWeight,
-                    reps: bump(targetReps, -1, 1),
+                    weight: bump(targetWeight, -5, 0),
+                    reps: targetReps,
                     source: "user",
                   })
                 }
                 className="h-11 rounded-xl border border-white/10 bg-white/[0.05] text-sm font-black text-white"
               >
-                âˆ’1
+                -5
               </button>
 
-              <input
+<input
                 value={targetReps}
                 onChange={(event) =>
                   onTargetChange({
@@ -687,24 +687,24 @@ function SetHistory({
                         {log.actual_weight ||
                           log.weight ||
                           "Bodyweight"}{" "}
-                        Ã—{" "}
+                         x {" "}
                         {log.actual_reps ||
                           log.reps ||
-                          "â€”"}
+                          "-"}
                         {log.rpe || log.ease_score
-                          ? ` Â· RPE ${log.rpe || log.ease_score}`
+                          ? ` · RPE ${log.rpe || log.ease_score}`
                           : ""}
                         {log.set_type === "warmup"
-                          ? " Â· Warm-up"
+                          ? " · Warm-up"
                           : ""}
                         {log.reached_failure
-                          ? " Â· Failure"
+                          ? " · Failure"
                           : ""}
                       </div>
                     ) : (
                       <div className="mt-0.5 text-sm text-slate-400">
-                        Goal: {targetWeight || "Bodyweight"} Ã—{" "}
-                        {targetReps || "â€”"}
+                        Goal: {targetWeight || "Bodyweight"}  x {" "}
+                        {targetReps || "-"}
                       </div>
                     )}
                   </div>
@@ -2093,7 +2093,7 @@ export default function ActiveWorkoutSessionDrawer({
               onClick={closeDrawer}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-sm font-black text-white"
             >
-              âœ•
+              X
             </button>
           </div>
 
@@ -2236,8 +2236,8 @@ export default function ActiveWorkoutSessionDrawer({
                           .length + 1}{" "}
                         of{" "}
                         {currentExercise.planned_sets ||
-                          "â€”"}{" "}
-                        â€¢{" "}
+                          "-"}{" "}
+                         | {" "}
                         {currentExercise.planned_reps ||
                           "clean reps"}
                       </div>
@@ -2291,7 +2291,7 @@ export default function ActiveWorkoutSessionDrawer({
                     {session.set_active
                       ? (isTimedExercise ? "Complete Timed Set" : "Complete Set")
                       : session.rest_active
-                      ? `Resting â€¢ ${formatSeconds(
+                      ? `Resting | ${formatSeconds(
                           session.rest_remaining_seconds
                         )}`
                       : (isTimedExercise ? "Start Timer" : "Start Set")}
@@ -2946,7 +2946,7 @@ export default function ActiveWorkoutSessionDrawer({
                 )}
               >
                 {session.set_active
-                  ? `Complete â€¢ ${formatSeconds(
+                  ? `Complete | ${formatSeconds(
                       session.current_set_seconds
                     )}`
                   : session.rest_active

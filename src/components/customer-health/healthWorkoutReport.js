@@ -117,7 +117,7 @@ export function buildWorkoutReport(session = {}) {
   }
   if (failureSets >= 2) {
     nextSteps.push(
-      "Avoid repeated failure sets; leave 1–2 reps in reserve on most working sets."
+      "Avoid repeated failure sets; leave 1-2 reps in reserve on most working sets."
     );
   }
   if (missedTargets) {

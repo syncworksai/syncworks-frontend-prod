@@ -465,7 +465,7 @@ export default function QuestionnaireDrawer({
           <div className="text-sm font-black text-white">Coach Path</div>
           <div className="mt-2 text-2xl font-black text-fuchsia-100">{coachPath}</div>
           <div className="mt-2 text-xs leading-5 text-fuchsia-100/80">
-            This profile now gives the coach enough context to push, hold, protect, or repeat based on the user’s actual goal and daily logs.
+            This profile now gives the coach enough context to push, hold, protect, or repeat based on the user's actual goal and daily logs.
           </div>
         </section>
       </div>

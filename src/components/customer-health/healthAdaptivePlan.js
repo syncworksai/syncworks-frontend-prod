@@ -63,7 +63,7 @@ export function buildAdaptiveDailyPlan({
 
   let trainingTitle = "Train as planned";
   let trainingMessage =
-    "Use today’s exercise recommendations and continue collecting effort and pain data.";
+    "Use today's exercise recommendations and continue collecting effort and pain data.";
 
   if (readiness.status === "Recovery") {
     trainingTitle = "Recovery-first training";
@@ -98,7 +98,7 @@ export function buildAdaptiveDailyPlan({
       message:
         stepsRemaining > 3000
           ? "Use two or three short walks to close the gap."
-          : "A short walk can finish today’s movement target.",
+          : "A short walk can finish today's movement target.",
       tone: "cyan",
     });
   }
@@ -108,7 +108,7 @@ export function buildAdaptiveDailyPlan({
       id: "calories",
       label: `${formatAmount(caloriesRemaining)} calories remaining`,
       message:
-        "Use the calorie target with protein, hydration and training goals—not as an isolated number.",
+        "Use the calorie target with protein, hydration and training goals-not as an isolated number.",
       tone: "amber",
     });
   }
@@ -120,7 +120,7 @@ export function buildAdaptiveDailyPlan({
         (readiness.sleep_goal - readiness.sleep_hours) * 10
       ) / 10} hours below sleep goal`,
       message:
-        "Protect tonight’s sleep block and avoid unnecessary late-day stimulation.",
+        "Protect tonight's sleep block and avoid unnecessary late-day stimulation.",
       tone: "fuchsia",
     });
   }

@@ -181,7 +181,7 @@ export default function HealthQuickLogDrawer({
         title: "Daily Health",
         items: [
           ["weight", "Weight / BMI", "Track weight changes and BMI."],
-          ["steps", "Steps", "Enter today’s or a past day’s steps."],
+          ["steps", "Steps", "Enter today's or a past day's steps."],
           ["sleep", "Sleep", "Log hours slept for recovery guidance."],
           ["readiness", "Readiness / Pain", "Tell the coach how your body feels."],
         ],
@@ -219,7 +219,7 @@ export default function HealthQuickLogDrawer({
               </h3>
 
               <p className="mt-1 text-sm leading-6 text-slate-400">
-                Choose a category, then save today’s data or select a past date.
+                Choose a category, then save today's data or select a past date.
               </p>
             </div>
 
@@ -280,7 +280,7 @@ export default function HealthQuickLogDrawer({
     weight:
       "Add a weight check-in. Your trend graph and BMI estimate will update.",
     steps:
-      "Enter your current daily step total or a past day’s total.",
+      "Enter your current daily step total or a past day's total.",
     water:
       "Add water to today or enter a total for another date.",
     protein:
@@ -400,7 +400,7 @@ export default function HealthQuickLogDrawer({
                   <FieldLabel>Calculated BMI</FieldLabel>
 
                   <div className="mt-2 text-3xl font-black text-white">
-                    {calculatedBmi || "—"}
+                    {calculatedBmi || "-"}
                   </div>
 
                   <div className="mt-1 text-xs leading-5 text-slate-400">
@@ -412,7 +412,7 @@ export default function HealthQuickLogDrawer({
                   <FieldLabel>Goal Weight</FieldLabel>
 
                   <div className="mt-2 text-3xl font-black text-white">
-                    {profile?.target_weight || "—"}
+                    {profile?.target_weight || "-"}
                   </div>
 
                   <div className="mt-1 text-xs text-slate-400">
@@ -529,7 +529,7 @@ export default function HealthQuickLogDrawer({
               </label>
 
               <NumberField
-                label="Pain or soreness (0–10)"
+                label="Pain or soreness (0-10)"
                 value={secondary}
                 onChange={setSecondary}
                 placeholder="0"
@@ -548,7 +548,7 @@ export default function HealthQuickLogDrawer({
                     setNote(event.target.value)
                   }
                   rows={4}
-                  placeholder="Example: 3 McDonald’s cheeseburgers and a medium fries"
+                  placeholder="Example: 3 McDonald's cheeseburgers and a medium fries"
                   className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-slate-950 px-3 py-3 text-sm font-bold leading-6 text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
                 />
               </label>

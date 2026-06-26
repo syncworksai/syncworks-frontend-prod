@@ -58,7 +58,7 @@ export default function SleepCheckInCard({ snapshot, setSnapshot }) {
     }));
 
     setMessage(
-      "Sleep check-in saved. Today’s training and recovery guidance can now adjust."
+      "Sleep check-in saved. Today's training and recovery guidance can now adjust."
     );
   }
 

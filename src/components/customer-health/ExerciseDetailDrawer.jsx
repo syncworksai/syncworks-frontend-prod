@@ -49,7 +49,7 @@ export default function ExerciseDetailDrawer({
       open={open}
       onClose={onClose}
       title={exercise.name}
-      subtitle={`${exercise.primary_muscles.join(", ")} • ${exercise.equipment}`}
+      subtitle={`${exercise.primary_muscles.join(", ")} | ${exercise.equipment}`}
     >
       <div className="space-y-4">
         <div className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-gradient-to-br from-cyan-500/15 via-slate-950 to-fuchsia-500/10">
@@ -134,7 +134,7 @@ export default function ExerciseDetailDrawer({
         <section className="rounded-3xl border border-amber-300/20 bg-amber-300/10 p-4">
           <div className="text-sm font-black text-amber-100">Common mistakes</div>
           <div className="mt-2 text-sm leading-6 text-amber-50/90">
-            {(exercise.mistakes || []).join(" • ")}
+            {(exercise.mistakes || []).join(" | ")}
           </div>
           {exercise.safety ? (
             <div className="mt-3 border-t border-amber-200/10 pt-3 text-sm leading-6 text-amber-100">
@@ -159,7 +159,7 @@ export default function ExerciseDetailDrawer({
                   <div>
                     <div className="text-sm font-black text-white">{item.name}</div>
                     <div className="mt-1 text-xs text-slate-500">
-                      {item.equipment} • {item.primary_muscles.join(", ")}
+                      {item.equipment} | {item.primary_muscles.join(", ")}
                     </div>
                   </div>
                   <span className="text-cyan-200">Swap</span>

@@ -213,7 +213,7 @@ function buildExerciseProgression(exercise, session = {}, profile = {}, snapshot
       return {
         exercise: exercise.name,
         action: "Increase",
-        next_target: `${nextWeight} lbs or add 1–2 reps per set`,
+        next_target: `${nextWeight} lbs or add 1-2 reps per set`,
         reason: "Difficulty was easy and pain was controlled, so progression is safe.",
       };
     }
@@ -221,7 +221,7 @@ function buildExerciseProgression(exercise, session = {}, profile = {}, snapshot
     return {
       exercise: exercise.name,
       action: "Increase",
-      next_target: reps ? `Add 1–3 reps per set from ${reps}` : "Add reps, time, or a harder variation",
+      next_target: reps ? `Add 1-3 reps per set from ${reps}` : "Add reps, time, or a harder variation",
       reason: "Difficulty was easy and pain was controlled.",
     };
   }
@@ -261,7 +261,7 @@ function buildSessionCoachNote({ profile, snapshot, workout, session, progressio
     return `${path.cadence} progression is available. Increase only the easy movements and keep the rest consistent.`;
   }
 
-  return `${path.defaultProgression}. Use this log to shape the next session around the user’s actual readiness, goal, and recovery.`;
+  return `${path.defaultProgression}. Use this log to shape the next session around the user's actual readiness, goal, and recovery.`;
 }
 
 export default function WorkoutStudioDrawer({

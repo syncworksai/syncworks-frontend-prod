@@ -35,7 +35,7 @@ const WEWARD_AFFILIATE_URL =
   "https://wewardapp.go.link/profile?adj_t=1rg2xpwh&userId=22865998";
 
 const QUOTES = [
-  "Consistency beats intensity you can’t repeat.",
+  "Consistency beats intensity you can't repeat.",
   "You do not need a perfect week. You need to win today.",
   "Short workout beats a skipped workout.",
   "Momentum matters more than motivation.",
@@ -245,7 +245,7 @@ function buildGoogleCalendarLink(item) {
 
   params.set(
     "details",
-    `SyncWorks Health Planner • ${
+    `SyncWorks Health Planner | ${
       item.note || "Workout session"
     }`
   );
@@ -317,7 +317,7 @@ function WeekLifecycleCard({
               </span>
               {bounds.hasDates ? (
                 <span className="text-xs font-bold text-slate-400">
-                  {prettyDate(bounds.startYmd)} – {prettyDate(bounds.endYmd)}
+                  {prettyDate(bounds.startYmd)} - {prettyDate(bounds.endYmd)}
                 </span>
               ) : null}
             </div>
@@ -350,13 +350,13 @@ function WeekLifecycleCard({
               </span>
               {expired && bounds.hasDates ? (
                 <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-300">
-                  {prettyDate(bounds.startYmd)} – {prettyDate(bounds.endYmd)}
+                  {prettyDate(bounds.startYmd)} - {prettyDate(bounds.endYmd)}
                 </span>
               ) : null}
             </div>
 
             <h2 className="mt-4 text-2xl font-black tracking-tight text-white sm:text-3xl">
-              {expired ? "Your last plan ended. Let’s build the next week." : "Build a training week that fits your life."}
+              {expired ? "Your last plan ended. Let's build the next week." : "Build a training week that fits your life."}
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-300">
               {expired
@@ -497,8 +497,8 @@ function CoachChatStartCard({ snapshot, onOpen }) {
             </div>
 
             <div className="mt-2 text-sm leading-6 text-slate-200">
-              “Build a four-day plan for strength, athletic performance, and
-              better recovery. Push me, but adjust around pain and sleep.”
+              "Build a four-day plan for strength, athletic performance, and
+              better recovery. Push me, but adjust around pain and sleep."
             </div>
           </div>
         )}
@@ -773,7 +773,7 @@ export default function HealthDashboard({
             <QuickAction
               icon="▶"
               label="Start Workout"
-              detail={nextSession?.workout_name || "Choose or build today’s session"}
+              detail={nextSession?.workout_name || "Choose or build today's session"}
               tone="emerald"
               onClick={() => nextSession ? onStartWorkout?.(nextSession) : onOpen?.("workout")}
             />
@@ -859,7 +859,7 @@ export default function HealthDashboard({
 
                 <div className="min-w-0">
                   <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
-                    Today’s Mission • {localYmd()}
+                    Today's Mission | {localYmd()}
                   </div>
 
                   <h1 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl md:text-4xl">
@@ -917,7 +917,7 @@ export default function HealthDashboard({
                   </div>
 
                   <div className="mt-2 text-base font-black text-white sm:text-lg">
-                    “{QUOTES[quoteIndex]}”
+                    "{QUOTES[quoteIndex]}"
                   </div>
 
                   <div className="mt-2 text-sm leading-6 text-slate-300">
@@ -937,7 +937,7 @@ export default function HealthDashboard({
                       </div>
 
                       <div className="mt-1 text-sm text-slate-300">
-                        {prettyDate(nextSession.ymd)} •{" "}
+                        {prettyDate(nextSession.ymd)}  | {" "}
                         {nextSession.time || "Anytime"}
                       </div>
 
@@ -1004,7 +1004,7 @@ export default function HealthDashboard({
                 />
 
                 <ActionButton
-                  label="Today’s AI Plan"
+                  label="Today's AI Plan"
                   onClick={() => onOpen("today")}
                 />
 
@@ -1073,8 +1073,8 @@ export default function HealthDashboard({
           </div>
 
           <div className="mt-1 text-sm text-slate-400">
-            Every useful input should change today’s
-            recommendation or tomorrow’s plan.
+            Every useful input should change today's
+            recommendation or tomorrow's plan.
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -1118,7 +1118,7 @@ export default function HealthDashboard({
               <div className="mt-2 text-2xl font-black text-white">
                 {currentWeight
                   ? `${currentWeight} lb`
-                  : "—"}
+                  : "-"}
               </div>
             </div>
 
@@ -1130,7 +1130,7 @@ export default function HealthDashboard({
               <div className="mt-2 text-2xl font-black text-white">
                 {targetWeight
                   ? `${targetWeight} lb`
-                  : "—"}
+                  : "-"}
               </div>
             </div>
 
@@ -1180,7 +1180,7 @@ export default function HealthDashboard({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-sm font-black text-white">
-                        {item.day_label} •{" "}
+                        {item.day_label}  | {" "}
                         {prettyDate(item.ymd)}
                       </div>
 
@@ -1188,7 +1188,7 @@ export default function HealthDashboard({
                         {item.workout_name ||
                           "Recovery / open day"}
                         {item.time
-                          ? ` • ${item.time}`
+                          ? ` | ${item.time}`
                           : ""}
                       </div>
 

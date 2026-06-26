@@ -30,7 +30,7 @@ export function createUserMessage(content, extra = {}) {
 
 export function getInitialCoachMessage() {
   return createCoachMessage(
-    "I’m your SyncWorks AI Fitness Coach. Before I build your plan, I need to know what you’re chasing, where you’re training, how many days this week, any pain or limits, and whether you want me to push hard or keep it balanced."
+    "I'm your SyncWorks AI Fitness Coach. Before I build your plan, I need to know what you're chasing, where you're training, how many days this week, any pain or limits, and whether you want me to push hard or keep it balanced."
   );
 }
 
@@ -1102,7 +1102,7 @@ function buildCoachPlanNote(profile, workouts) {
         )}.`
       : "";
 
-  return `Here’s the plan I’d put you on this week. It is built to get you moving, not sitting around thinking about it. Start controlled, track your effort, and we will adjust after the workout data comes in.${pain}${preferred}`;
+  return `Here's the plan I'd put you on this week. It is built to get you moving, not sitting around thinking about it. Start controlled, track your effort, and we will adjust after the workout data comes in.${pain}${preferred}`;
 }
 
 export function buildCoachReplyAfterUserMessage(profile = {}, proposal = null) {
@@ -1110,9 +1110,9 @@ export function buildCoachReplyAfterUserMessage(profile = {}, proposal = null) {
 
   if (missing.length > 0) {
     return createCoachMessage(
-      `Good. I’m building the picture, but I still need: ${missing.join(
+      `Good. I'm building the picture, but I still need: ${missing.join(
         ", "
-      )}. Send that in one message and I’ll build the plan.`
+      )}. Send that in one message and I'll build the plan.`
     );
   }
 
@@ -1157,7 +1157,7 @@ export function runLocalCoachTurn({ snapshot = {}, userText = "" }) {
     return {
       snapshot,
       userMessage: null,
-      coachMessage: createCoachMessage("Send me what you’re chasing first."),
+      coachMessage: createCoachMessage("Send me what you're chasing first."),
       proposal: snapshot.coach_plan_proposal || null,
     };
   }

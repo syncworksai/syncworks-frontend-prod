@@ -149,7 +149,7 @@ export default function AiCoachDrawer({
         </section>
 
         <CoachCard
-          title="Today’s Coaching Focus"
+          title="Today's Coaching Focus"
           subtitle="This is what the coach should care about right now."
           tone="cyan"
         >
@@ -207,7 +207,7 @@ export default function AiCoachDrawer({
                     {report.recommendedWorkout.name}
                   </div>
                   <div className="mt-1 text-xs leading-5 text-slate-400">
-                    {report.recommendedWorkout.focus || "Workout"} •{" "}
+                    {report.recommendedWorkout.focus || "Workout"}  | {" "}
                     {report.recommendedWorkout.duration || 30} minutes
                   </div>
                 </div>

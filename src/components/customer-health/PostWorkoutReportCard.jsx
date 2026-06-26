@@ -111,7 +111,7 @@ export default function PostWorkoutReportCard({ session }) {
                 key={item}
                 className="text-xs font-bold leading-5 text-slate-200"
               >
-                • {item}
+                | {item}
               </div>
             ))}
           </div>
@@ -149,7 +149,7 @@ export default function PostWorkoutReportCard({ session }) {
                     {row.name}
                   </div>
                   <div className="mt-1 text-[10px] font-bold text-slate-400">
-                    {row.completedSets}/{row.plannedSets || "—"} working sets
+                    {row.completedSets}/{row.plannedSets || "-"} working sets
                     {" · "}
                     {Math.round(row.volume).toLocaleString()} lb
                   </div>
