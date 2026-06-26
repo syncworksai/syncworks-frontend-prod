@@ -45,6 +45,11 @@ import ActiveWorkoutSessionDrawer from "../components/customer-health/ActiveWork
 import HealthMobileQuickNav from "../components/customer-health/HealthMobileQuickNav";
 import "../components/customer-health/healthUiPolish.css";
 import { buildAdaptiveWorkout } from "../components/customer-health/healthAdaptiveWorkoutGenerator";
+import {
+  backupHealthHistory,
+  getHealthHistoryBackup,
+  mergeHealthHistory,
+} from "../components/customer-health/healthHistorySync";
 import SleepPlannerDrawer from "../components/customer-health/SleepPlannerDrawer";
 import WorkoutHistoryDrawer from "../components/customer-health/WorkoutHistoryDrawer";
 import CardioActivityDrawer from "../components/customer-health/CardioActivityDrawer";
@@ -724,9 +729,22 @@ export default function CustomerHealth() {
       const saved =
         readJson(HISTORY_KEY, []);
 
-      return Array.isArray(saved)
-        ? saved
-        : [];
+      const backup =
+        getHealthHistoryBackup();
+
+      const recovery =
+        mergeHealthHistory({
+          localHistory:
+            Array.isArray(saved)
+              ? saved
+              : [],
+          cloudHistory:
+            Array.isArray(backup)
+              ? backup
+              : [],
+        });
+
+      return recovery.history;
     }
   );
 
@@ -1056,12 +1074,36 @@ export default function CustomerHealth() {
         skipNextCloudSaveRef.current =
           true;
 
+        const persistedLocalHistory =
+          readJson(HISTORY_KEY, history);
+
+        const backupHistory =
+          getHealthHistoryBackup();
+
+        const localHistory =
+          Array.isArray(persistedLocalHistory) &&
+          persistedLocalHistory.length
+            ? persistedLocalHistory
+            : Array.isArray(history) &&
+              history.length
+            ? history
+            : backupHistory;
+
+        backupHealthHistory(localHistory);
+
+        const historyMerge =
+          mergeHealthHistory({
+            localHistory,
+            cloudHistory:
+              Array.isArray(
+                data?.history_json
+              )
+                ? data.history_json
+                : [],
+          });
+
         const cloudHistory =
-          Array.isArray(
-            data?.history_json
-          )
-            ? data.history_json
-            : history;
+          historyMerge.history;
 
         if (
           hasObjectData(
@@ -1140,13 +1182,28 @@ export default function CustomerHealth() {
           );
         }
 
+        setHistory(cloudHistory);
+
+        writeJson(
+          HISTORY_KEY,
+          cloudHistory
+        );
+
         if (
-          Array.isArray(
-            data?.history_json
-          )
+          historyMerge.report.local_preserved
         ) {
-          setHistory(
-            data.history_json
+          console.info(
+            "Health history recovery preserved local workouts because cloud history was empty.",
+            historyMerge.report
+          );
+        } else if (
+          historyMerge.report.duplicates_merged > 0 ||
+          historyMerge.report.final_count !==
+            historyMerge.report.cloud_count
+        ) {
+          console.info(
+            "Health history recovery merged local and cloud workouts.",
+            historyMerge.report
           );
         }
 
