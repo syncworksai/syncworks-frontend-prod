@@ -68,12 +68,59 @@ function PriorityCard({ priority }) {
   );
 }
 
+const RANGE_OPTIONS = [
+  {
+    id: "week",
+    label: "This Week",
+    detail: "Monday through today",
+  },
+  {
+    id: "30d",
+    label: "30 Days",
+    detail: "Rolling 30-day view",
+  },
+  {
+    id: "all",
+    label: "All Time",
+    detail: "Full workout history",
+  },
+];
+
+function ChangePill({ label, value, suffix = "" }) {
+  const hasValue = value !== null && value !== undefined;
+  const positive = hasValue && value > 0;
+  const negative = hasValue && value < 0;
+
+  return (
+    <div
+      className={cx(
+        "rounded-2xl border px-3 py-2",
+        positive
+          ? "border-lime-300/20 bg-lime-300/10 text-lime-100"
+          : negative
+          ? "border-rose-300/20 bg-rose-300/10 text-rose-100"
+          : "border-white/10 bg-white/[0.035] text-slate-300"
+      )}
+    >
+      <div className="text-[9px] font-black uppercase tracking-[0.14em] opacity-70">
+        {label}
+      </div>
+      <div className="mt-1 text-sm font-black">
+        {!hasValue
+          ? "Need prior week"
+          : `${positive ? "+" : ""}${value}${suffix}`}
+      </div>
+    </div>
+  );
+}
+
 export default function HealthKpiSection({
   history,
   snapshot,
   profile,
 }) {
   const [showAllExercises, setShowAllExercises] = useState(false);
+  const [range, setRange] = useState("week");
 
   const kpis = useMemo(
     () =>
@@ -81,8 +128,9 @@ export default function HealthKpiSection({
         history,
         snapshot,
         profile,
+        range,
       }),
-    [history, snapshot, profile]
+    [history, snapshot, profile, range]
   );
 
   const plan = useMemo(
@@ -98,6 +146,10 @@ export default function HealthKpiSection({
   const visibleExercises = showAllExercises
     ? kpis.exercises
     : kpis.exercises.slice(0, 4);
+
+  const selectedRange =
+    RANGE_OPTIONS.find((option) => option.id === range) ||
+    RANGE_OPTIONS[0];
 
   if (!kpis.workout.session_count) {
     return (
@@ -115,6 +167,28 @@ export default function HealthKpiSection({
           progression, volume, effort, pain frequency, active time, rest
           efficiency and readiness.
         </p>
+
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {RANGE_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => setRange(option.id)}
+              className={cx(
+                "min-h-11 rounded-2xl border px-2 py-2 text-xs font-black transition",
+                range === option.id
+                  ? "border-cyan-300/35 bg-cyan-300/15 text-cyan-50"
+                  : "border-white/10 bg-white/[0.035] text-slate-400"
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-3 text-xs text-slate-500">
+          No completed sessions found for {selectedRange.label.toLowerCase()}.
+        </div>
       </section>
     );
   }
@@ -137,6 +211,28 @@ export default function HealthKpiSection({
                 These numbers are calculated from your completed sessions-not
                 generic fitness averages.
               </p>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {RANGE_OPTIONS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => {
+                      setRange(option.id);
+                      setShowAllExercises(false);
+                    }}
+                    title={option.detail}
+                    className={cx(
+                      "min-h-10 rounded-2xl border px-3 py-2 text-xs font-black transition",
+                      range === option.id
+                        ? "border-cyan-300/35 bg-cyan-300/15 text-cyan-50"
+                        : "border-white/10 bg-white/[0.035] text-slate-400 hover:bg-white/[0.07]"
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div
@@ -149,8 +245,13 @@ export default function HealthKpiSection({
                   : "border-amber-300/25 bg-amber-300/10 text-amber-100"
               )}
             >
-              <div className="text-[9px] font-black uppercase tracking-[0.14em] opacity-75">
-                Readiness
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-[9px] font-black uppercase tracking-[0.14em] opacity-75">
+                  Readiness
+                </div>
+                <span className="rounded-full border border-current/20 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] opacity-80">
+                  {kpis.readiness.confidence}
+                </span>
               </div>
               <div className="mt-1 text-2xl font-black">
                 {plan.readiness.score}/100
@@ -158,6 +259,11 @@ export default function HealthKpiSection({
               <div className="text-xs font-bold">
                 {plan.readiness.status}
               </div>
+              {kpis.readiness.confidence === "Estimated" ? (
+                <div className="mt-1 max-w-36 text-[10px] leading-4 opacity-70">
+                  Add sleep, steps, protein and soreness for a stronger score.
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -186,6 +292,20 @@ export default function HealthKpiSection({
               tone="amber"
             />
           </div>
+
+          {range === "week" ? (
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <ChangePill
+                label="Volume vs Last Week"
+                value={kpis.workout.week_over_week_volume_change}
+                suffix="%"
+              />
+              <ChangePill
+                label="Sessions vs Last Week"
+                value={kpis.workout.week_over_week_session_change}
+              />
+            </div>
+          ) : null}
 
           <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
             <KpiTile

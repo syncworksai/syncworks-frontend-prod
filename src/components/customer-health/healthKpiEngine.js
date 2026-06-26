@@ -432,6 +432,87 @@ export function buildExerciseKpis(history = []) {
     });
 }
 
+function startOfLocalDay(value = new Date()) {
+  const date = value instanceof Date ? new Date(value) : new Date(value);
+
+  if (!Number.isFinite(date.getTime())) {
+    return null;
+  }
+
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate()
+  );
+}
+
+function startOfLocalWeek(value = new Date()) {
+  const day = startOfLocalDay(value);
+
+  if (!day) return null;
+
+  const dayIndex = day.getDay();
+  const mondayOffset = dayIndex === 0 ? -6 : 1 - dayIndex;
+
+  day.setDate(day.getDate() + mondayOffset);
+  return day;
+}
+
+function dateForHistoryItem(item = {}) {
+  const session = sessionFromHistoryItem(item) || {};
+  const raw = completedAtForSession(session, item);
+
+  if (!raw) return null;
+
+  const parsed = new Date(
+    String(raw).includes("T")
+      ? raw
+      : `${raw}T12:00:00`
+  );
+
+  return Number.isFinite(parsed.getTime()) ? parsed : null;
+}
+
+export function filterHealthHistoryByRange(
+  history = [],
+  range = "week",
+  now = new Date()
+) {
+  const rows = Array.isArray(history) ? history : [];
+
+  if (range === "all") {
+    return rows;
+  }
+
+  const end = new Date(now);
+  let start = startOfLocalWeek(now);
+
+  if (range === "30d") {
+    start = startOfLocalDay(now);
+    start.setDate(start.getDate() - 29);
+  }
+
+  if (range === "previous_week") {
+    const currentWeekStart = startOfLocalWeek(now);
+    const previousWeekStart = new Date(currentWeekStart);
+    previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+
+    return rows.filter((item) => {
+      const date = dateForHistoryItem(item);
+      return (
+        date &&
+        date >= previousWeekStart &&
+        date < currentWeekStart
+      );
+    });
+  }
+
+  return rows.filter((item) => {
+    const date = dateForHistoryItem(item);
+    return date && date >= start && date <= end;
+  });
+}
+
 export function buildWorkoutKpis(history = []) {
   const sessions = (Array.isArray(history) ? history : [])
     .map((historyItem) => {
@@ -703,19 +784,84 @@ export function buildHealthKpis({
   history = [],
   snapshot = {},
   profile = {},
+  range = "week",
 }) {
-  const workout = buildWorkoutKpis(history);
-  const exercises = buildExerciseKpis(history);
+  const filteredHistory = filterHealthHistoryByRange(
+    history,
+    range
+  );
+
+  const previousWeekHistory =
+    range === "week"
+      ? filterHealthHistoryByRange(
+          history,
+          "previous_week"
+        )
+      : [];
+
+  const workout = buildWorkoutKpis(filteredHistory);
+  const previousWorkout = buildWorkoutKpis(
+    previousWeekHistory
+  );
+  const exercises = buildExerciseKpis(filteredHistory);
+
+  const volumeChange =
+    previousWorkout.total_volume > 0
+      ? Math.round(
+          ((workout.total_volume -
+            previousWorkout.total_volume) /
+            previousWorkout.total_volume) *
+            100
+        )
+      : null;
+
+  const sessionChange =
+    previousWorkout.session_count > 0
+      ? workout.session_count -
+        previousWorkout.session_count
+      : null;
+
+  workout.previous_week = previousWorkout;
+  workout.week_over_week_volume_change = volumeChange;
+  workout.week_over_week_session_change = sessionChange;
   const readiness = buildReadinessKpi({
     snapshot,
     profile,
     workoutKpis: workout,
   });
 
+  const readinessInputs = {
+    sleep:
+      safeNumber(
+        snapshot.last_sleep_hours || snapshot.sleep_hours,
+        0
+      ) > 0,
+    steps: safeNumber(snapshot.steps, 0) > 0,
+    protein: safeNumber(snapshot.protein_today, 0) > 0,
+    soreness: Boolean(
+      snapshot.soreness_score || snapshot.soreness
+    ),
+  };
+
+  const readinessInputCount = Object.values(
+    readinessInputs
+  ).filter(Boolean).length;
+
   return {
     workout,
     exercises,
-    readiness,
+    readiness: {
+      ...readiness,
+      confidence:
+        readinessInputCount >= 3
+          ? "Measured"
+          : "Estimated",
+      input_count: readinessInputCount,
+      input_total: Object.keys(readinessInputs).length,
+      missing_inputs: Object.entries(readinessInputs)
+        .filter(([, present]) => !present)
+        .map(([key]) => key),
+    },
     generated_at: new Date().toISOString(),
   };
 }
