@@ -10,19 +10,17 @@ function NavButton({
   icon,
   onClick,
   active = false,
-  tone = "default",
+  tone = "blue",
 }) {
   const toneMap = {
-    default:
-      "border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]",
-    emerald:
-      "border-emerald-300/30 bg-emerald-300/15 text-emerald-100 shadow-[0_0_28px_rgba(16,185,129,0.18)]",
+    blue:
+      "border-sky-300/20 bg-sky-400/[0.08] text-sky-100 hover:bg-sky-400/[0.14]",
+    indigo:
+      "border-indigo-300/20 bg-indigo-400/[0.08] text-indigo-100 hover:bg-indigo-400/[0.14]",
     cyan:
-      "border-cyan-300/25 bg-cyan-300/10 text-cyan-100 hover:bg-cyan-300/15",
-    amber:
-      "border-amber-300/25 bg-amber-300/10 text-amber-100 hover:bg-amber-300/15",
-    fuchsia:
-      "border-fuchsia-300/25 bg-fuchsia-300/10 text-fuchsia-100 hover:bg-fuchsia-300/15",
+      "border-cyan-300/20 bg-cyan-400/[0.08] text-cyan-100 hover:bg-cyan-400/[0.14]",
+    violet:
+      "border-violet-300/20 bg-violet-400/[0.08] text-violet-100 hover:bg-violet-400/[0.14]",
   };
 
   return (
@@ -31,8 +29,9 @@ function NavButton({
       onClick={onClick}
       className={cx(
         "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-2 text-[10px] font-black uppercase tracking-[0.12em] transition active:scale-[0.98]",
-        toneMap[tone] || toneMap.default,
-        active && "ring-1 ring-cyan-300/30"
+        toneMap[tone] || toneMap.blue,
+        active &&
+          "ring-1 ring-sky-300/40 shadow-[0_0_22px_rgba(14,165,233,0.18)]"
       )}
     >
       <span className="text-lg leading-none">{icon}</span>
@@ -44,56 +43,69 @@ function NavButton({
 export default function HealthMobileQuickNav({
   onOpen,
   onStartWorkout,
-  onLogData,
+  onStartFallback,
   nextSession,
   hasCoachProposal,
 }) {
+  function startNow() {
+    if (nextSession) {
+      onStartWorkout?.(nextSession);
+      return;
+    }
+
+    onStartFallback?.();
+  }
+
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[70] border-t border-white/10 bg-[#020617]/92 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 shadow-[0_-20px_60px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:hidden">
+    <div className="fixed inset-x-0 bottom-0 z-[70] border-t border-sky-300/15 bg-[#010712]/95 px-3 pb-[calc(env(safe-area-inset-bottom)+0.7rem)] pt-3 shadow-[0_-24px_70px_rgba(0,119,255,0.18)] backdrop-blur-2xl lg:hidden">
       <div className="mx-auto max-w-md">
         <div className="grid grid-cols-5 gap-2">
           <NavButton
-            label="Coach"
-            icon="🤖"
-            tone={hasCoachProposal ? "emerald" : "cyan"}
-            onClick={() => onOpen?.("coach-chat")}
+            label="Home"
+            icon="âŒ‚"
+            tone="blue"
+            onClick={() => onOpen?.("home")}
           />
 
           <NavButton
-            label="Today"
-            icon="⚡"
-            tone="default"
-            onClick={() => onOpen?.("today")}
+            label="Plan"
+            icon="â–¦"
+            tone="indigo"
+            onClick={() => onOpen?.("planner")}
           />
 
           <button
             type="button"
-            onClick={() =>
-              nextSession
-                ? onStartWorkout?.(nextSession)
-                : onOpen?.("planner")
-            }
-            className="relative -mt-5 flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[1.35rem] border border-emerald-300/35 bg-gradient-to-br from-emerald-400/25 to-cyan-400/15 px-2 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-50 shadow-[0_0_34px_rgba(16,185,129,0.28)] transition active:scale-[0.98]"
+            onClick={startNow}
+            className="group relative -mt-8 flex min-w-0 flex-col items-center justify-center rounded-[1.65rem] border border-sky-300/35 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.25),rgba(2,6,23,0.96)_66%)] px-2 pb-2 pt-1 text-[10px] font-black uppercase tracking-[0.16em] text-sky-50 shadow-[0_0_42px_rgba(0,174,255,0.38)] transition active:scale-[0.97]"
           >
-            <span className="absolute -top-1 h-2 w-10 rounded-full bg-emerald-300/80 blur-sm" />
-            <span className="text-2xl leading-none">▶</span>
-            <span className="max-w-full truncate">
-              {nextSession ? "Start" : "Plan"}
+            <span className="pointer-events-none absolute inset-x-3 top-1 h-8 rounded-full bg-sky-300/20 blur-xl" />
+
+            <img
+              src="/health/brand/syncworks-start-logo.png"
+              alt=""
+              aria-hidden="true"
+              className="relative h-14 w-14 object-contain drop-shadow-[0_0_14px_rgba(0,200,255,0.9)] transition group-active:scale-95"
+            />
+
+            <span className="-mt-1 text-sky-100">
+              Start
             </span>
           </button>
 
           <NavButton
-            label="Plan"
-            icon="📅"
-            tone="default"
-            onClick={() => onOpen?.("planner")}
+            label="Coach"
+            icon="âœ¦"
+            tone={hasCoachProposal ? "cyan" : "blue"}
+            active={hasCoachProposal}
+            onClick={() => onOpen?.("coach-chat")}
           />
 
           <NavButton
-            label="Log"
-            icon="✍️"
-            tone="fuchsia"
-            onClick={onLogData}
+            label="Insights"
+            icon="âŒ"
+            tone="violet"
+            onClick={() => onOpen?.("insights")}
           />
         </div>
       </div>

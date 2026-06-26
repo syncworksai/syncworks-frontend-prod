@@ -43,6 +43,7 @@ import AiCoachDrawer from "../components/customer-health/AiCoachDrawer";
 import CoachChatDrawer from "../components/customer-health/CoachChatDrawer";
 import ActiveWorkoutSessionDrawer from "../components/customer-health/ActiveWorkoutSessionDrawer";
 import HealthMobileQuickNav from "../components/customer-health/HealthMobileQuickNav";
+import { buildAdaptiveWorkout } from "../components/customer-health/healthAdaptiveWorkoutGenerator";
 import SleepPlannerDrawer from "../components/customer-health/SleepPlannerDrawer";
 import WorkoutHistoryDrawer from "../components/customer-health/WorkoutHistoryDrawer";
 import CardioActivityDrawer from "../components/customer-health/CardioActivityDrawer";
@@ -1995,6 +1996,16 @@ export default function CustomerHealth() {
     setDrawer("active-workout");
   }
 
+  function startAlwaysReadyWorkout() {
+    const plan = buildAdaptiveWorkout({
+      history,
+      snapshot: syncedSnapshot,
+      profile,
+      mode: "recommended",
+    });
+
+    startAdaptiveWorkout(plan);
+  }
   function openCardioPlayer(
     plan = null
   ) {
@@ -2540,11 +2551,9 @@ export default function CustomerHealth() {
             onStartWorkout={
               startPlannerWorkout
             }
-            onLogData={() => {
-              setHealthView("home");
-              setDrawer("");
-              setQuickLogType("menu");
-            }}
+            onStartFallback={
+              startAlwaysReadyWorkout
+            }
             nextSession={
               mobileNextSession
             }
