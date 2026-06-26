@@ -6,6 +6,73 @@ function text(value) {
   return String(value || "").toLowerCase();
 }
 
+function loggedSoreAreas(snapshot = {}) {
+  const values = [
+    snapshot.sore_areas,
+    snapshot.soreness_areas,
+    snapshot.sore_muscles,
+    snapshot.sore_body_parts,
+    snapshot.pain_area,
+    snapshot.pain_areas,
+    snapshot.readiness_notes,
+    snapshot.notes,
+  ];
+
+  const raw = values
+    .flatMap((value) =>
+      Array.isArray(value) ? value : [value]
+    )
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  const patterns = {
+    Chest: /chest|pec|pector/,
+    Shoulders: /shoulder|delt/,
+    Triceps: /tricep/,
+    Back: /back|lat|trap|rhomboid/,
+    Biceps: /bicep/,
+    Legs: /leg|quad|hamstring|glute|calf|hip/,
+    Core: /core|ab|oblique/,
+  };
+
+  return Object.entries(patterns)
+    .filter(([, pattern]) => pattern.test(raw))
+    .map(([label]) => label);
+}
+
+function exerciseHitsSoreArea(
+  exercise,
+  soreAreas = []
+) {
+  if (!soreAreas.length) return false;
+
+  const haystack = [
+    exercise.name,
+    exercise.category,
+    exercise.movement_pattern,
+    ...(exercise.primary_muscles || []),
+    ...(exercise.secondary_muscles || []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  const patterns = {
+    Chest: /chest|pec|bench|fly|push-up/,
+    Shoulders: /shoulder|delt|overhead press|lateral raise/,
+    Triceps: /tricep|pushdown|press/,
+    Back: /back|lat|row|pulldown|pull-up|trap|rhomboid/,
+    Biceps: /bicep|curl/,
+    Legs: /leg|quad|hamstring|glute|calf|squat|hinge|lunge/,
+    Core: /core|ab|oblique|plank|rotation/,
+  };
+
+  return soreAreas.some(
+    (area) => patterns[area]?.test(haystack)
+  );
+}
+
 function categoryMatches(exercise, focus) {
   const haystack = [
     exercise.name,
@@ -117,10 +184,18 @@ export function buildAdaptiveWorkout({
     focus = "Recovery";
   }
 
+  const soreAreas = loggedSoreAreas(snapshot);
+  const allowSoreOverride =
+    snapshot.allow_sore_muscle_override === true;
+
   const strengthPool = HEALTH_EXERCISE_CATALOG.filter(
     (exercise) =>
       !/mobility|warm-up|recovery/i.test(exercise.category || "") &&
-      !/cardio|hiit/i.test(exercise.category || "")
+      !/cardio|hiit/i.test(exercise.category || "") &&
+      (
+        allowSoreOverride ||
+        !exerciseHitsSoreArea(exercise, soreAreas)
+      )
   );
 
   let strength = [];
@@ -223,5 +298,9 @@ export function buildAdaptiveWorkout({
     intelligence,
     includes_cardio: cardio.length > 0,
     ready_to_start: exercises.length > 0,
+    avoided_sore_areas:
+      allowSoreOverride ? [] : soreAreas,
+    soreness_override_active:
+      allowSoreOverride,
   };
 }

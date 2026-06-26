@@ -27,7 +27,9 @@ import {
 import HealthConfetti from "../components/customer-health/HealthConfetti";
 import TodayPlanDrawer from "../components/customer-health/TodayPlanDrawer";
 import HealthDashboard from "../components/customer-health/HealthDashboard";
+import HealthProgressCharts from "../components/customer-health/HealthProgressCharts";
 import HealthHome from "../components/customer-health/HealthHome";
+import PlanTodayWorkoutDrawer from "../components/customer-health/PlanTodayWorkoutDrawer";
 import HealthProfileIntakeDrawer from "../components/customer-health/HealthProfileIntakeDrawer";
 import HealthQuickLogDrawer from "../components/customer-health/HealthQuickLogDrawer";
 import NutritionCoachDrawer from "../components/customer-health/NutritionCoachDrawer";
@@ -1890,6 +1892,7 @@ export default function CustomerHealth() {
       "workout-history": "workout-history",
       history: "workout-history",
       "build-workout": "workout",
+      "plan-today": "plan-today",
       "train-muscle": "library",
       "muscle-map": "library",
       library: "library",
@@ -2064,6 +2067,114 @@ export default function CustomerHealth() {
 
     startAdaptiveWorkout(plan);
   }
+
+  function planWorkoutForToday(plan) {
+    if (
+      !plan ||
+      !Array.isArray(plan.exercises) ||
+      !plan.exercises.length
+    ) {
+      return;
+    }
+
+    const now = new Date();
+
+    const plannerItem = {
+      id: uid("today-plan"),
+      workout_id: "",
+      workout_name:
+        plan.title || "Adaptive Workout",
+      title:
+        plan.title || "Adaptive Workout",
+      name:
+        plan.title || "Adaptive Workout",
+      ymd: todayYmd(),
+      day_label:
+        now.toLocaleDateString(
+          undefined,
+          { weekday: "short" }
+        ),
+      time:
+        now.toTimeString().slice(0, 5),
+      status: "Planned",
+      source: "plan_today",
+      recovery_status:
+        plan.recovery || "",
+      adaptive_focus:
+        plan.focus || "",
+      adaptive_reason:
+        plan.reason || "",
+      exercises:
+        plan.exercises.map(
+          (exercise, index) => ({
+            ...exercise,
+            id:
+              exercise.id ||
+              uid(
+                `today-exercise-${index + 1}`
+              ),
+            name:
+              exercise.name ||
+              `Exercise ${index + 1}`,
+            sets:
+              exercise.planned_sets ||
+              exercise.sets ||
+              "3",
+            reps:
+              exercise.planned_reps ||
+              exercise.reps ||
+              "10",
+            rest_seconds:
+              Number(
+                exercise.rest_seconds ||
+                60
+              ),
+          })
+        ),
+    };
+
+    setSnapshot((previous) => ({
+      ...previous,
+      today_workout_id:
+        plannerItem.id,
+      workout:
+        plannerItem.workout_name,
+      week_plan: [
+        ...(
+          Array.isArray(previous.week_plan)
+            ? previous.week_plan.filter(
+                (item) =>
+                  !(
+                    item?.ymd === todayYmd() &&
+                    item?.status !== "Completed"
+                  )
+              )
+            : []
+        ),
+        plannerItem,
+      ],
+      updated_at:
+        new Date().toISOString(),
+    }));
+
+    setDrawer("");
+  }
+
+  function planAndStartWorkout(plan) {
+    planWorkoutForToday(plan);
+
+    const now = new Date();
+
+    startAdaptiveWorkout({
+      ...plan,
+      title:
+        plan?.title ||
+        "Adaptive Workout",
+      ymd: todayYmd(),
+      time:
+        now.toTimeString().slice(0, 5),
+    });
+  }
   function openCardioPlayer(
     plan = null
   ) {
@@ -2157,15 +2268,59 @@ export default function CustomerHealth() {
         {hasHealthAccess ? (
           healthView === "insights" ? (
             <div className="space-y-4">
-              <button
-                type="button"
-                onClick={() =>
-                  setHealthView("home")
-                }
-                className="h-11 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 text-sm font-black text-cyan-100"
-              >
-                ← Back to Health Home
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setHealthView("home")
+                  }
+                  className="h-11 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 text-sm font-black text-cyan-100"
+                >
+                  â† Back to Health Home
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setHealthView("dashboard")
+                  }
+                  className="h-11 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-black text-white"
+                >
+                  Open Full Analysis
+                </button>
+              </div>
+
+              <HealthProgressCharts
+                profile={profile}
+                snapshot={syncedSnapshot}
+                history={history}
+                progressLogs={progressLogs}
+                onOpen={handleDashboardOpen}
+              />
+            </div>
+          ) : healthView === "dashboard" ? (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setHealthView("insights")
+                  }
+                  className="h-11 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 text-sm font-black text-cyan-100"
+                >
+                  â† Back to Charts
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setHealthView("home")
+                  }
+                  className="h-11 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-black text-white"
+                >
+                  Health Home
+                </button>
+              </div>
 
               <HealthDashboard
                 profile={profile}
@@ -2192,8 +2347,7 @@ export default function CustomerHealth() {
                 }
               />
             </div>
-          ) : (
-            <HealthHome
+          ) : (            <HealthHome
               profile={profile}
               snapshot={syncedSnapshot}
               history={history}
@@ -2232,6 +2386,25 @@ export default function CustomerHealth() {
 
       {hasHealthAccess ? (
         <>
+          <PlanTodayWorkoutDrawer
+            open={drawer === "plan-today"}
+            onClose={() =>
+              setDrawer("")
+            }
+            profile={profile}
+            snapshot={syncedSnapshot}
+            history={history}
+            onPlan={
+              planWorkoutForToday
+            }
+            onStart={
+              planAndStartWorkout
+            }
+            onOpenFullStudio={() =>
+              setDrawer("workout")
+            }
+          />
+
           <TodayPlanDrawer
             open={drawer === "today"}
             onClose={() =>

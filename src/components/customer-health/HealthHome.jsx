@@ -514,13 +514,13 @@ export default function HealthHome({
               onClick={() =>
                 todayWorkout
                   ? onStartWorkout?.(todayWorkout)
-                  : onOpen?.("workout")
+                  : onOpen?.("plan-today")
               }
               className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100 shadow-[0_0_28px_rgba(57,255,136,0.12)]"
             >
               {todayWorkout
                 ? "Start Today's Workout"
-                : "Choose Workout"}
+                : "Plan Today's Workout"}
             </button>
 
             <button
