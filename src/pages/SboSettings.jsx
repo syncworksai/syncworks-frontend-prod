@@ -5,6 +5,15 @@ import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import ModeBar from "../components/ModeBar";
 import BusinessPicker from "../components/BusinessPicker";
+import BusinessDigitalCardPreview from "../components/business/BusinessDigitalCardPreview";
+
+const SETTINGS_SECTIONS = [
+  { key: "business", label: "Profile" },
+  { key: "marketplace", label: "Coverage" },
+  { key: "services", label: "Offerings" },
+  { key: "card", label: "Digital Card" },
+  { key: "goals", label: "Goals" },
+];
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -598,6 +607,44 @@ export default function SboSettings() {
     return Math.round((completed / checks.length) * 100);
   }, [name, phone, businessEmail, baseZip, state, selectedServiceIds, acceptsMarketplace]);
 
+  const marketplaceMissing = useMemo(() => {
+    const missing = [];
+    if (!name.trim()) missing.push("business name");
+    if (!city.trim()) missing.push("city");
+    if (!normalizeStateCode(state).trim()) missing.push("state");
+    if (!baseZip.trim()) missing.push("ZIP");
+    if (!Number(radius || 0)) missing.push("service radius");
+    if (!selectedServiceIds.length) missing.push("offerings");
+    if (!businessPresenceMode) missing.push("business model");
+    return missing;
+  }, [name, city, state, baseZip, radius, selectedServiceIds, businessPresenceMode]);
+
+  const marketplaceReady =
+    acceptsMarketplace && marketplaceMissing.length === 0;
+
+  const currentSectionIndex = Math.max(
+    0,
+    SETTINGS_SECTIONS.findIndex((item) => item.key === section)
+  );
+
+  function goToSection(nextKey) {
+    setSection(nextKey);
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }
+
+  function previousSection() {
+    const next = SETTINGS_SECTIONS[Math.max(0, currentSectionIndex - 1)];
+    goToSection(next?.key || "business");
+  }
+
+  async function saveAndContinue() {
+    await saveSettings();
+    const next = SETTINGS_SECTIONS[currentSectionIndex + 1];
+    if (next) goToSection(next.key);
+  }
+
   useEffect(() => {
     return () => {
       if (logoPreviewUrl && logoPreviewUrl.startsWith("blob:")) {
@@ -799,8 +846,8 @@ export default function SboSettings() {
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">
       <ModeBar
-        title="SBO Settings"
-        subtitle="Business profile, marketplace routing, services, and setup goals"
+        title="Business Settings"
+        subtitle="Profile, coverage, offerings, digital business card, and marketplace setup"
         rightActions={
           <div className="flex flex-wrap gap-2">
             <BusinessPicker />
@@ -835,18 +882,15 @@ export default function SboSettings() {
 
         <div className="mb-4 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex min-w-max gap-2">
-            <MobileTab active={section === "business"} onClick={() => setSection("business")}>
-              Business
-            </MobileTab>
-            <MobileTab active={section === "marketplace"} onClick={() => setSection("marketplace")}>
-              Marketplace
-            </MobileTab>
-            <MobileTab active={section === "services"} onClick={() => setSection("services")}>
-              Services
-            </MobileTab>
-            <MobileTab active={section === "goals"} onClick={() => setSection("goals")}>
-              Goals
-            </MobileTab>
+            {SETTINGS_SECTIONS.map((item) => (
+              <MobileTab
+                key={item.key}
+                active={section === item.key}
+                onClick={() => goToSection(item.key)}
+              >
+                {item.label}
+              </MobileTab>
+            ))}
           </div>
         </div>
 
@@ -877,7 +921,7 @@ export default function SboSettings() {
             <div className="grid gap-5 xl:grid-cols-[1fr_340px]">
               <Card
                 title="Business Profile"
-                subtitle="Core information customers and SyncWorks use."
+                subtitle="This is the source of truth for your dashboard, tickets, invoices, search results, and digital business card."
               >
                 <div className="grid gap-3 md:grid-cols-2">
                   <Input label="Business Name" value={name} onChange={setName} placeholder="Acme Plumbing" />
@@ -970,8 +1014,32 @@ export default function SboSettings() {
                 />
               </div>
 
-              <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-3 text-xs leading-5 text-slate-400">
-                State names are normalized before save. Example: Alabama saves as AL.
+              <div
+                className={cx(
+                  "mt-4 rounded-3xl border p-4",
+                  marketplaceReady
+                    ? "border-emerald-500/30 bg-emerald-500/10"
+                    : "border-amber-500/30 bg-amber-500/10"
+                )}
+              >
+                <div
+                  className={cx(
+                    "text-sm font-black",
+                    marketplaceReady ? "text-emerald-100" : "text-amber-100"
+                  )}
+                >
+                  {marketplaceReady
+                    ? "Marketplace routing ready"
+                    : "Marketplace setup incomplete"}
+                </div>
+                <div className="mt-1 text-xs leading-5 text-slate-300">
+                  {marketplaceReady
+                    ? `This business can receive matching opportunities within approximately ${radius} miles of ${baseZip}.`
+                    : `Complete: ${marketplaceMissing.join(", ") || "turn on marketplace access"}.`}
+                </div>
+                <div className="mt-2 text-[11px] leading-5 text-slate-500">
+                  Headquarters and service coverage are different concepts. This build keeps the current ZIP-radius matcher; multi-state territories, branches, and national project rules come in the service-area expansion build.
+                </div>
               </div>
             </Card>
           ) : null}
@@ -987,6 +1055,29 @@ export default function SboSettings() {
                 setSelectedServiceIds={setSelectedServiceIds}
               />
             </Card>
+          ) : null}
+
+
+          {section === "card" ? (
+            <BusinessDigitalCardPreview
+              businessId={activeBusinessId}
+              name={name}
+              logoUrl={currentLogoUrl}
+              headline={headline}
+              servicesText={servicesText}
+              phone={phone}
+              businessEmail={businessEmail}
+              website={website}
+              city={city}
+              state={normalizeStateCode(state)}
+              baseZip={baseZip}
+              radius={radius}
+              acceptsMarketplace={acceptsMarketplace}
+              businessPresenceMode={businessPresenceMode}
+              categories={categories}
+              selectedServiceIds={selectedServiceIds}
+              readiness={readiness}
+            />
           ) : null}
 
           {section === "goals" ? (
@@ -1044,10 +1135,38 @@ export default function SboSettings() {
         </div>
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-800 bg-[#020617]/95 px-4 py-3 backdrop-blur-xl md:hidden">
-        <SmallButton tone="cyan" onClick={saveSettings} disabled={saving || loading}>
-          {saving ? "Saving…" : "Save Settings"}
-        </SmallButton>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-800 bg-[#020617]/95 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 shadow-[0_-18px_45px_rgba(0,0,0,0.45)] backdrop-blur-xl md:hidden">
+        <div className="grid grid-cols-[auto_auto_1fr] gap-2">
+          <SmallButton tone="slate" onClick={() => navigate(returnTo)}>
+            Home
+          </SmallButton>
+          <SmallButton
+            tone="slate"
+            onClick={previousSection}
+            disabled={currentSectionIndex === 0}
+          >
+            Back
+          </SmallButton>
+          <SmallButton
+            tone="cyan"
+            onClick={
+              currentSectionIndex === SETTINGS_SECTIONS.length - 1
+                ? saveSettings
+                : saveAndContinue
+            }
+            disabled={saving || loading}
+          >
+            {saving
+              ? "Saving…"
+              : currentSectionIndex === SETTINGS_SECTIONS.length - 1
+              ? "Save Settings"
+              : "Save & Continue"}
+          </SmallButton>
+        </div>
+        <div className="mt-2 text-center text-[11px] text-slate-500">
+          Step {currentSectionIndex + 1} of {SETTINGS_SECTIONS.length} •{" "}
+          {SETTINGS_SECTIONS[currentSectionIndex]?.label}
+        </div>
       </div>
     </div>
   );
