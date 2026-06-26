@@ -1918,6 +1918,158 @@ export default function CustomerHealth() {
     setDrawer(routeMap[target] || target || "");
   }
 
+  function resolveMissedWorkout(
+    workout,
+    action
+  ) {
+    if (!workout?.id || !action) return;
+
+    const resolvedAt =
+      new Date().toISOString();
+
+    if (action === "today") {
+      const todayItem = {
+        ...workout,
+        id: uid("moved-workout"),
+        ymd: todayYmd(),
+        day_label:
+          new Date().toLocaleDateString(
+            undefined,
+            { weekday: "short" }
+          ),
+        time:
+          new Date()
+            .toTimeString()
+            .slice(0, 5),
+        status: "Planned",
+        original_workout_id:
+          workout.id,
+        original_ymd:
+          workout.ymd,
+        moved_to_today_at:
+          resolvedAt,
+      };
+
+      setSnapshot((previous) => ({
+        ...previous,
+        week_plan: [
+          ...(
+            Array.isArray(previous.week_plan)
+              ? previous.week_plan.map((item) =>
+                  item?.id === workout.id
+                    ? {
+                        ...item,
+                        status: "Rescheduled",
+                        rescheduled_at:
+                          resolvedAt,
+                        rescheduled_to:
+                          todayItem.ymd,
+                      }
+                    : item
+                )
+              : []
+          ),
+          todayItem,
+        ],
+        last_workout_resolution: {
+          action: "today",
+          workout_id: workout.id,
+          resolved_at: resolvedAt,
+        },
+        updated_at: resolvedAt,
+      }));
+
+      startPlannerWorkout(todayItem);
+      return;
+    }
+
+    const statusByAction = {
+      completed: "Completed",
+      skipped: "Skipped",
+      reschedule: "Rescheduled",
+    };
+
+    const nextStatus =
+      statusByAction[action];
+
+    if (!nextStatus) return;
+
+    setSnapshot((previous) => {
+      const adherenceEvent = {
+        id: uid("workout-adherence"),
+        workout_id: workout.id,
+        workout_name:
+          workout.workout_name ||
+          workout.name ||
+          "Workout",
+        original_ymd:
+          workout.ymd || "",
+        action,
+        status: nextStatus,
+        created_at: resolvedAt,
+        source:
+          "missed_workout_resolution",
+      };
+
+      return {
+        ...previous,
+        week_plan:
+          Array.isArray(previous.week_plan)
+            ? previous.week_plan.map((item) =>
+                item?.id === workout.id
+                  ? {
+                      ...item,
+                      status: nextStatus,
+                      resolved_at:
+                        resolvedAt,
+                      completed_at:
+                        action === "completed"
+                          ? resolvedAt
+                          : item.completed_at,
+                      skipped_at:
+                        action === "skipped"
+                          ? resolvedAt
+                          : item.skipped_at,
+                      rescheduled_at:
+                        action === "reschedule"
+                          ? resolvedAt
+                          : item.rescheduled_at,
+                    }
+                  : item
+              )
+            : [],
+        workout_adherence_log: [
+          adherenceEvent,
+          ...(
+            Array.isArray(
+              previous.workout_adherence_log
+            )
+              ? previous.workout_adherence_log
+              : []
+          ),
+        ].slice(0, 100),
+        skipped_workout_count:
+          action === "skipped"
+            ? Number(
+                previous.skipped_workout_count ||
+                0
+              ) + 1
+            : Number(
+                previous.skipped_workout_count ||
+                0
+              ),
+        last_workout_resolution:
+          adherenceEvent,
+        updated_at:
+          resolvedAt,
+      };
+    });
+
+    if (action === "reschedule") {
+      setDrawer("planner");
+    }
+  }
+
   function buildCurrentWeek(mode = "adaptive") {
     setSnapshotBase((previous) => {
       const hasCurrentPlan =
@@ -2508,6 +2660,9 @@ export default function CustomerHealth() {
               }
               onQuickLog={(type) =>
                 setQuickLogType(type)
+              }
+              onResolveMissedWorkout={
+                resolveMissedWorkout
               }
             />
           )

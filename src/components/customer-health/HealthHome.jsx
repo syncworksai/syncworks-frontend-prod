@@ -51,6 +51,19 @@ function findTodayWorkout(weekPlan = []) {
   );
 }
 
+function startOfCurrentWeek() {
+  const today = new Date();
+  const start = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+  const day = start.getDay();
+  const distance = day === 0 ? 6 : day - 1;
+  start.setDate(start.getDate() - distance);
+  return start.getTime();
+}
+
 function findMissedWorkout(weekPlan = []) {
   const today = new Date();
   const todayStart = new Date(
@@ -58,13 +71,17 @@ function findMissedWorkout(weekPlan = []) {
     today.getMonth(),
     today.getDate()
   ).getTime();
+  const weekStart = startOfCurrentWeek();
 
   return [...(Array.isArray(weekPlan) ? weekPlan : [])]
     .filter(
       (item) =>
         item?.workout_name &&
-        item?.status !== "Completed" &&
-        item?.status !== "Skipped"
+        ![
+          "Completed",
+          "Skipped",
+          "Rescheduled",
+        ].includes(item?.status)
     )
     .map((item) => ({
       ...item,
@@ -75,9 +92,57 @@ function findMissedWorkout(weekPlan = []) {
     .filter(
       (item) =>
         Number.isFinite(item.dayTime) &&
+        item.dayTime >= weekStart &&
         item.dayTime < todayStart
     )
     .sort((a, b) => b.dayTime - a.dayTime)[0] || null;
+}
+
+function getWeeklyAdherence(weekPlan = []) {
+  const weekStart = startOfCurrentWeek();
+  const items = (Array.isArray(weekPlan) ? weekPlan : [])
+    .map((item) => ({
+      ...item,
+      dayTime: new Date(
+        `${item?.ymd || "2099-01-01"}T12:00:00`
+      ).getTime(),
+    }))
+    .filter(
+      (item) =>
+        item?.workout_name &&
+        Number.isFinite(item.dayTime) &&
+        item.dayTime >= weekStart
+    );
+
+  return {
+    completed: items.filter(
+      (item) => item.status === "Completed"
+    ).length,
+    skipped: items.filter(
+      (item) => item.status === "Skipped"
+    ).length,
+    unresolved: items.filter(
+      (item) =>
+        ![
+          "Completed",
+          "Skipped",
+          "Rescheduled",
+        ].includes(item.status) &&
+        item.dayTime < new Date().setHours(0, 0, 0, 0)
+    ).length,
+  };
+}
+
+function listToSpeech(items = []) {
+  if (!items.length) return "";
+  if (items.length === 1) return items[0];
+  if (items.length === 2) {
+    return `${items[0]} and ${items[1]}`;
+  }
+
+  return `${items.slice(0, -1).join(", ")}, and ${
+    items[items.length - 1]
+  }`;
 }
 
 function MetricButton({
@@ -319,6 +384,7 @@ export default function HealthHome({
   onStartWorkout,
   onShowInsights,
   onQuickLog,
+  onResolveMissedWorkout,
 }) {
   const [logMenuOpen, setLogMenuOpen] =
     useState(false);
@@ -339,8 +405,9 @@ export default function HealthHome({
     const items = [];
 
     if (!snapshot?.steps) items.push("steps");
-    if (!snapshot?.protein_today) items.push("protein");
     if (!snapshot?.water) items.push("water");
+    if (!snapshot?.protein_today) items.push("protein");
+    if (!snapshot?.calories) items.push("calories or meals");
     if (
       !snapshot?.last_sleep_hours &&
       !snapshot?.sleep_hours
@@ -354,6 +421,11 @@ export default function HealthHome({
 
     return items;
   }, [snapshot, profile]);
+
+  const weeklyAdherence = useMemo(
+    () => getWeeklyAdherence(snapshot?.week_plan),
+    [snapshot?.week_plan]
+  );
 
   const coachAudioMode =
     snapshot?.coach_audio_mode ||
@@ -389,21 +461,47 @@ export default function HealthHome({
       : "There is no workout scheduled for today.";
 
     const missingLine = missingItems.length
-      ? `You have ${missingItems.length} important health updates remaining.`
-      : "Your daily health check-in is up to date.";
+      ? `Please log your ${listToSpeech(
+          missingItems
+        )}.`
+      : "Your daily health logging is up to date.";
+
+    const adherenceLine =
+      weeklyAdherence.skipped >= 3
+        ? `You skipped ${weeklyAdherence.skipped} workouts this week. It is time to rebuild momentum with one focused session.`
+        : weeklyAdherence.skipped > 0
+        ? `You have ${weeklyAdherence.skipped} skipped workout${
+            weeklyAdherence.skipped === 1 ? "" : "s"
+          } this week. Let us keep moving forward today.`
+        : weeklyAdherence.completed > 0
+        ? `You have completed ${weeklyAdherence.completed} workout${
+            weeklyAdherence.completed === 1 ? "" : "s"
+          } this week with no skips. Keep building on that consistency.`
+        : "A fresh week is ready. Let us create momentum today.";
+
+    const missedLine = missedWorkout?.workout_name
+      ? `You still need to resolve the missed ${missedWorkout.workout_name} session.`
+      : "";
 
     return [
       greeting,
       sleepLine,
       planLine,
       missingLine,
-    ].join(" ");
+      adherenceLine,
+      missedLine,
+    ]
+      .filter(Boolean)
+      .join(" ");
   }, [
     firstName,
     snapshot?.last_sleep_hours,
     snapshot?.sleep_hours,
     todayWorkout?.workout_name,
-    missingItems.length,
+    missingItems,
+    weeklyAdherence.completed,
+    weeklyAdherence.skipped,
+    missedWorkout?.workout_name,
   ]);
 
   useEffect(() => {
@@ -577,15 +675,14 @@ export default function HealthHome({
             happen next.
           </p>
 
-          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() =>
-                onStartWorkout?.({
-                  ...missedWorkout,
-                  ymd: new Date().toISOString().slice(0, 10),
-                  status: "Planned",
-                })
+                onResolveMissedWorkout?.(
+                  missedWorkout,
+                  "today"
+                )
               }
               className="h-11 rounded-2xl border border-lime-300/25 bg-lime-300/10 text-sm font-black text-lime-100"
             >
@@ -594,18 +691,41 @@ export default function HealthHome({
 
             <button
               type="button"
-              onClick={() => onOpen?.("planner")}
+              onClick={() =>
+                onResolveMissedWorkout?.(
+                  missedWorkout,
+                  "completed"
+                )
+              }
               className="h-11 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 text-sm font-black text-cyan-100"
             >
-              Update Schedule
+              Mark Completed
             </button>
 
             <button
               type="button"
-              onClick={() => onOpen?.("coach-chat")}
+              onClick={() =>
+                onResolveMissedWorkout?.(
+                  missedWorkout,
+                  "skipped"
+                )
+              }
+              className="h-11 rounded-2xl border border-amber-300/25 bg-amber-300/10 text-sm font-black text-amber-100"
+            >
+              Skip Workout
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                onResolveMissedWorkout?.(
+                  missedWorkout,
+                  "reschedule"
+                )
+              }
               className="h-11 rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 text-sm font-black text-fuchsia-100"
             >
-              Ask Coach
+              Reschedule
             </button>
           </div>
         </section>
