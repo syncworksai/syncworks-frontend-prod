@@ -19,6 +19,7 @@ import {
   moveToExercise,
   removeSetFromExercise,
   startActiveSet,
+  startRestTimer,
   stopRestTimer,
   toggleRestTimer,
   toggleSessionPause,
@@ -401,6 +402,8 @@ function SetCompletionSheet({
   open,
   exercise,
   durationSeconds,
+  restActive = false,
+  restRemainingSeconds = 0,
   suggestion,
   onCancel,
   onSave,
@@ -520,8 +523,21 @@ function SetCompletionSheet({
             </div>
           </div>
 
-          <div className="shrink-0 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-xs font-black text-cyan-100">
-            Goal: {targetWeight || "BW"} x {targetReps || "-"}
+          <div className="flex shrink-0 flex-col gap-2">
+            <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-center text-xs font-black text-cyan-100">
+              Goal: {targetWeight || "BW"} x {targetReps || "-"}
+            </div>
+
+            {restActive ? (
+              <div className="rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-center">
+                <div className="text-[8px] font-black uppercase tracking-[0.14em] text-amber-200">
+                  Rest Running
+                </div>
+                <div className="mt-0.5 text-base font-black text-amber-100">
+                  {formatSeconds(restRemainingSeconds)}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -697,7 +713,7 @@ function SetCompletionSheet({
             onClick={saveSet}
             className="health-primary-action h-12 rounded-2xl border text-sm font-black"
           >
-            Save Set and Rest
+            Save Set
           </button>
         </div>
       </section>
@@ -1641,6 +1657,10 @@ export default function ActiveWorkoutSessionDrawer({
     useState(false);
   const [setCheckInOpen, setSetCheckInOpen] =
     useState(false);
+  const [
+    pendingSetDurationSeconds,
+    setPendingSetDurationSeconds,
+  ] = useState(0);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [adaptationMode, setAdaptationMode] =
     useState("");
@@ -1709,6 +1729,7 @@ export default function ActiveWorkoutSessionDrawer({
     setSavingWorkout(false);
     setEditAfterFinish(false);
     setSetCheckInOpen(false);
+    setPendingSetDurationSeconds(0);
     setDetailsOpen(false);
     setAdaptationMode("");
     setModifyMenuOpen(false);
@@ -2337,15 +2358,15 @@ export default function ActiveWorkoutSessionDrawer({
   function requestCompleteSet() {
     if (!session?.set_active || !currentExercise) return;
 
-    if (isTimedExercise) {
-      const seconds = Math.max(
-        1,
-        Number(session.current_set_seconds || 0)
-      );
+    const completedDuration = Math.max(
+      1,
+      Number(session.current_set_seconds || 0)
+    );
 
+    if (isTimedExercise) {
       saveTimedSet({
-        actual_reps: `${seconds} sec`,
-        reps: `${seconds} sec`,
+        actual_reps: `${completedDuration} sec`,
+        reps: `${completedDuration} sec`,
         actual_weight:
           currentExercise.current_target_weight ||
           currentExercise.planned_weight ||
@@ -2369,13 +2390,32 @@ export default function ActiveWorkoutSessionDrawer({
         set_type: "working",
         reached_failure: false,
         timed_set: true,
-        timed_seconds: seconds,
+        timed_seconds: completedDuration,
+        set_duration_seconds: completedDuration,
       });
 
       return;
     }
 
+    setPendingSetDurationSeconds(completedDuration);
+    setSession((previous) =>
+      previous
+        ? startRestTimer(
+            previous,
+            currentExercise.rest_seconds || 60
+          )
+        : previous
+    );
     setSetCheckInOpen(true);
+
+    speakCoachText({
+      text: `Set complete. Rest starts now. Log your weight, reps, and effort while you recover.`,
+      audioMode: coachAudioMode,
+      voicePreference: coachVoicePreference,
+      rate: 1.02,
+      pitch: 1,
+      volume: 1,
+    });
   }
 
   function saveTimedSet(setLog) {
@@ -2383,6 +2423,11 @@ export default function ActiveWorkoutSessionDrawer({
 
     const enrichedSetLog = {
       ...setLog,
+      set_duration_seconds:
+        setLog.set_duration_seconds ||
+        pendingSetDurationSeconds ||
+        session.current_set_seconds ||
+        1,
       target_weight:
         setLog.target_weight ??
         currentExercise.current_target_weight ??
@@ -2403,16 +2448,43 @@ export default function ActiveWorkoutSessionDrawer({
         "",
     };
 
-    const nextSession = completeActiveSet(
+    const restWasAlreadyRunning =
+      session.rest_active;
+    const elapsedRestSeconds = Number(
+      session.current_rest_seconds || 0
+    );
+    const remainingRestSeconds = Number(
+      session.rest_remaining_seconds || 0
+    );
+    const originalRestStartedAt =
+      session.rest_started_at || "";
+
+    let nextSession = completeActiveSet(
       session,
       currentExercise.id,
       enrichedSetLog
     );
 
+    if (restWasAlreadyRunning) {
+      nextSession = {
+        ...nextSession,
+        rest_active: remainingRestSeconds > 0,
+        current_rest_seconds:
+          elapsedRestSeconds,
+        rest_remaining_seconds:
+          remainingRestSeconds,
+        rest_started_at:
+          originalRestStartedAt ||
+          nextSession.rest_started_at,
+      };
+    }
+
     setSession(nextSession);
     setSetCheckInOpen(false);
+    setPendingSetDurationSeconds(0);
 
     const restSeconds =
+      nextSession.rest_remaining_seconds ||
       nextSession.rest_target_seconds ||
       currentExercise.rest_seconds ||
       0;
@@ -2605,6 +2677,7 @@ export default function ActiveWorkoutSessionDrawer({
     setSavingWorkout(false);
     setEditAfterFinish(false);
     setSetCheckInOpen(false);
+    setPendingSetDurationSeconds(0);
     stopCoachVoice();
     onClose?.();
   }
@@ -3651,12 +3724,19 @@ export default function ActiveWorkoutSessionDrawer({
           open={setCheckInOpen}
           exercise={currentExercise}
           durationSeconds={
-            session?.current_set_seconds || 0
+            pendingSetDurationSeconds ||
+            session?.current_set_seconds ||
+            0
+          }
+          restActive={!!session?.rest_active}
+          restRemainingSeconds={
+            session?.rest_remaining_seconds || 0
           }
           suggestion={currentSuggestion}
-          onCancel={() =>
-            setSetCheckInOpen(false)
-          }
+          onCancel={() => {
+            setSetCheckInOpen(false);
+            setPendingSetDurationSeconds(0);
+          }}
           onSave={saveTimedSet}
         />
       </section>
