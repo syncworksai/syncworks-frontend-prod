@@ -43,6 +43,12 @@ import {
   stopCoachVoice,
 } from "./healthCoachVoice";
 
+import {
+  ensureDynamicPreparation,
+  skipWarmup,
+  toggleWarmupItem,
+} from "./healthWarmupCooldown";
+
 import TrainerExerciseIntroCard from "./TrainerExerciseIntroCard";
 import CoachVoiceSettingsCard from "./CoachVoiceSettingsCard";
 import TrainerNudgeCard from "./TrainerNudgeCard";
@@ -188,6 +194,111 @@ function restorePersistedSession(
   return advanceSessionTimer(
     session,
     elapsedSeconds
+  );
+}
+
+function DynamicWarmupCard({
+  plan,
+  onToggle,
+  onSkip,
+}) {
+  if (
+    !plan ||
+    plan.completed ||
+    plan.skipped
+  ) {
+    return null;
+  }
+
+  const completedCount = (plan.items || []).filter(
+    (item) => item.completed
+  ).length;
+
+  return (
+    <section className="rounded-[1.35rem] border border-amber-300/20 bg-[linear-gradient(135deg,rgba(251,191,36,0.10),rgba(34,211,238,0.06))] p-3 shadow-[0_12px_36px_rgba(0,0,0,0.18)] sm:rounded-[2rem] sm:p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-200">
+            Dynamic Preparation
+          </div>
+
+          <h3 className="mt-1 text-lg font-black text-white">
+            {plan.title}
+          </h3>
+
+          <p className="mt-1 text-xs leading-5 text-slate-400">
+            {plan.reason}
+          </p>
+        </div>
+
+        <div className="shrink-0 rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs font-black text-amber-100">
+          {Math.max(
+            1,
+            Math.round(
+              Number(plan.estimated_seconds || 0) / 60
+            )
+          )}{" "}
+          min
+        </div>
+      </div>
+
+      <div className="mt-3 space-y-2">
+        {(plan.items || []).map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onToggle(item.id)}
+            className={cx(
+              "flex w-full items-start gap-3 rounded-2xl border p-3 text-left transition",
+              item.completed
+                ? "border-lime-300/25 bg-lime-300/10"
+                : item.type === "safety"
+                ? "border-rose-300/20 bg-rose-300/[0.07]"
+                : "border-white/10 bg-black/20"
+            )}
+          >
+            <div
+              className={cx(
+                "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-black",
+                item.completed
+                  ? "border-lime-300/40 bg-lime-300/20 text-lime-100"
+                  : "border-white/15 bg-white/[0.04] text-slate-500"
+              )}
+            >
+              {item.completed ? "âœ“" : ""}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-black text-white">
+                {item.label}
+              </div>
+
+              <div className="mt-1 text-xs leading-5 text-slate-400">
+                {item.detail}
+              </div>
+            </div>
+
+            <div className="shrink-0 text-[10px] font-black text-slate-500">
+              {item.seconds}s
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="text-xs font-bold text-slate-400">
+          {completedCount}/{plan.items?.length || 0} complete
+        </div>
+
+        <button
+          type="button"
+          onClick={onSkip}
+          className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-black text-slate-300"
+        >
+          Skip Warm-up
+        </button>
+      </div>
+    </section>
   );
 }
 
@@ -1342,13 +1453,41 @@ function FinishReviewPanel({
         </div>
 
         {cooldownChoice === "guided" ? (
-          <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-slate-200">
-            Walk slowly and breathe for two minutes.
-            Then use gentle mobility for{" "}
-            {trainedMuscles.length
-              ? trainedMuscles.join(", ")
-              : "the muscles trained today"}
-            . Stop any stretch that causes pain.
+          <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+            <div className="text-xs font-black uppercase tracking-[0.16em] text-lime-200">
+              {session.cooldown_plan?.title ||
+                "Guided cooldown"}
+            </div>
+
+            <div className="mt-1 text-xs leading-5 text-slate-400">
+              {session.cooldown_plan?.reason ||
+                "Matched to the muscles trained today."}
+            </div>
+
+            <div className="mt-3 space-y-2">
+              {(session.cooldown_plan?.items || []).map(
+                (item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-xl border border-white/10 bg-white/[0.03] p-3"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-black text-white">
+                        {item.label}
+                      </div>
+
+                      <div className="text-[10px] font-black text-slate-500">
+                        {item.seconds}s
+                      </div>
+                    </div>
+
+                    <div className="mt-1 text-xs leading-5 text-slate-400">
+                      {item.detail}
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
           </div>
         ) : null}
 
@@ -1550,11 +1689,14 @@ export default function ActiveWorkoutSessionDrawer({
     }
 
     setSession(
-      restored ||
-        createWorkoutSessionFromPlannerItem({
-          plannerItem,
-          workouts,
-        })
+      ensureDynamicPreparation(
+        restored ||
+          createWorkoutSessionFromPlannerItem({
+            plannerItem,
+            workouts,
+          }),
+        snapshot || {}
+      )
     );
 
     initializedWorkoutKeyRef.current = workoutKey;
@@ -1573,7 +1715,7 @@ export default function ActiveWorkoutSessionDrawer({
     preWorkoutBriefingRef.current = "";
     lastExerciseCueRef.current = "";
     lastRestCueRef.current = "";
-  }, [open, plannerItem, workouts, session]);
+  }, [open, plannerItem, workouts, session, snapshot]);
 
   useEffect(() => {
     if (
@@ -2143,6 +2285,26 @@ export default function ActiveWorkoutSessionDrawer({
     });
   }
 
+  function togglePreparationItem(itemId) {
+    if (!session || !itemId) return;
+
+    setSession((previous) =>
+      previous
+        ? toggleWarmupItem(previous, itemId)
+        : previous
+    );
+  }
+
+  function skipPreparation() {
+    if (!session) return;
+
+    setSession((previous) =>
+      previous
+        ? skipWarmup(previous)
+        : previous
+    );
+  }
+
   function startSet() {
     if (
       !session ||
@@ -2707,6 +2869,14 @@ export default function ActiveWorkoutSessionDrawer({
                 <div className="rounded-2xl border border-lime-300/25 bg-lime-300/10 p-3 text-sm font-bold text-lime-100">
                   {finishMessage}
                 </div>
+              ) : null}
+
+              {!isCompleted ? (
+                <DynamicWarmupCard
+                  plan={session.warmup_plan}
+                  onToggle={togglePreparationItem}
+                  onSkip={skipPreparation}
+                />
               ) : null}
 
               {!isCompleted && currentExercise ? (
