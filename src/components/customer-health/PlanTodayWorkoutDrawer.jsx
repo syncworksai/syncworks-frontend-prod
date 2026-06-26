@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from "react";
 
 import { buildAdaptiveWorkout } from "./healthAdaptiveWorkoutGenerator";
+import { HEALTH_EXERCISE_CATALOG } from "./healthExerciseCatalog";
 
 const LOCATIONS = ["Gym", "Home", "Outside"];
 const DURATIONS = [15, 30, 45, 60];
@@ -35,6 +36,9 @@ function exerciseText(exercise) {
     exercise?.name,
     exercise?.category,
     exercise?.movement_pattern,
+    exercise?.training_tag,
+    exercise?.equipment,
+    exercise?.location,
     ...(exercise?.primary_muscles || []),
     ...(exercise?.secondary_muscles || []),
   ]
@@ -43,56 +47,71 @@ function exerciseText(exercise) {
     .toLowerCase();
 }
 
+const TARGET_PATTERNS = {
+  push:
+    /chest|pector|tricep|shoulder|front delt|side delt|horizontal press|vertical press|push-up|chest fly/,
+  pull:
+    /lat|back|rhomboid|trap|rear shoulder|rear delt|bicep|vertical pull|horizontal pull|row|pulldown|pull-up|curl/,
+  legs:
+    /quad|hamstring|glute|calf|adductor|abductor|leg|squat|lunge|hinge|deadlift|step-up|lower body/,
+  core:
+    /core|abdom|abs|oblique|plank|crunch|rotation|anti-rotation|leg raise|dead bug|bird dog|mountain climber/,
+  hiit:
+    /hiit|interval|burpee|jump|sprint|mountain climber|high knees|jumping jack|skater|battle rope/,
+  cardio:
+    /cardio|walk|run|treadmill|bike|cycling|elliptical|rower|stair|swim/,
+  mobility:
+    /mobility|stretch|recovery|warm-up|range of motion|foam roll|yoga/,
+};
+
 function matchesTarget(exercise, target) {
-  const value = exerciseText(exercise);
-
-  if (target === "push") {
-    return /chest|shoulder|tricep|push|press/.test(value);
-  }
-
-  if (target === "pull") {
-    return /back|lat|bicep|pull|row/.test(value);
-  }
-
-  if (target === "legs") {
-    return /leg|quad|hamstring|glute|calf|squat|lunge/.test(
-      value
-    );
-  }
-
-  if (target === "core") {
-    return /core|ab|plank|rotation|oblique/.test(value);
-  }
-
-  if (target === "hiit") {
-    return /cardio|hiit|interval|burpee|jump|sprint/.test(
-      value
-    );
-  }
-
-  return true;
+  if (target === "recommended") return true;
+  return TARGET_PATTERNS[target]?.test(exerciseText(exercise)) || false;
 }
 
 function locationAllowed(exercise, location) {
   if (location === "Gym") return true;
 
-  const value = [
-    exercise?.equipment,
-    exercise?.location,
-    exercise?.name,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
+  const value = exerciseText(exercise);
+  const exerciseLocation = String(
+    exercise?.location || ""
+  ).toLowerCase();
 
   if (location === "Home") {
-    return !/machine|cable station|smith machine|rack/.test(
+    if (/gym only/.test(exerciseLocation)) return false;
+
+    return !/machine|cable station|smith machine|pec deck|leg press|lat pulldown station|row station/.test(
       value
     );
   }
 
-  return /bodyweight|band|run|walk|sprint|jump|plank|push-up|lunge|squat/.test(
+  return /anywhere|outside|outdoor|bodyweight|band|run|walk|sprint|jump|plank|push-up|lunge|squat|mobility|stretch/.test(
     value
+  );
+}
+
+function uniqueById(exercises) {
+  const used = new Set();
+
+  return exercises.filter((exercise) => {
+    const key =
+      exercise?.id ||
+      exercise?.slug ||
+      exercise?.name;
+
+    if (!key || used.has(key)) return false;
+    used.add(key);
+    return true;
+  });
+}
+
+function buildStrictTargetPool(target, location) {
+  return uniqueById(
+    HEALTH_EXERCISE_CATALOG.filter(
+      (exercise) =>
+        locationAllowed(exercise, location) &&
+        matchesTarget(exercise, target)
+    )
   );
 }
 
@@ -139,29 +158,27 @@ export default function PlanTodayWorkoutDrawer({
       mode: baseMode(target),
     });
 
-    const original = Array.isArray(generated?.exercises)
+    const generatedExercises = Array.isArray(
+      generated?.exercises
+    )
       ? generated.exercises
       : [];
 
-    const locationFiltered = original.filter((exercise) =>
-      locationAllowed(exercise, location)
-    );
-
-    const targetFiltered =
-      target === "recommended" ||
-      target === "cardio" ||
-      target === "mobility"
-        ? locationFiltered
-        : locationFiltered.filter((exercise) =>
-            matchesTarget(exercise, target)
-          );
-
     const selected =
-      targetFiltered.length >= 3
-        ? targetFiltered
-        : locationFiltered.length
-        ? locationFiltered
-        : original;
+      target === "recommended"
+        ? uniqueById(
+            generatedExercises.filter((exercise) =>
+              locationAllowed(exercise, location)
+            )
+          )
+        : buildStrictTargetPool(target, location);
+
+    const finalExercises =
+      selected.length > 0
+        ? selected
+        : target === "recommended"
+        ? generatedExercises
+        : [];
 
     return {
       ...generated,
@@ -172,7 +189,7 @@ export default function PlanTodayWorkoutDrawer({
               TARGETS.find(([value]) => value === target)?.[1] ||
               "Workout"
             } - ${duration} min`,
-      exercises: trimForDuration(selected, duration),
+      exercises: trimForDuration(finalExercises, duration),
       requested_location: location,
       requested_duration_minutes: duration,
       requested_focus: target,
@@ -312,6 +329,14 @@ export default function PlanTodayWorkoutDrawer({
               </div>
             ) : null}
 
+            {!(plan?.exercises || []).length ? (
+              <div className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
+                No matching exercises are available for this
+                location yet. Choose another location or use
+                Advanced Builder.
+              </div>
+            ) : null}
+
             <div className="mt-3 space-y-2">
               {(plan?.exercises || []).map(
                 (exercise, index) => (
@@ -371,14 +396,16 @@ export default function PlanTodayWorkoutDrawer({
             <button
               type="button"
               onClick={() => onPlan?.(plan)}
-              className="h-12 rounded-2xl border border-cyan-300/30 bg-cyan-300/15 text-sm font-black text-cyan-100"
+              disabled={!(plan?.exercises || []).length}
+              className="h-12 rounded-2xl border border-cyan-300/30 bg-cyan-300/15 text-sm font-black text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Add for Later
             </button>
             <button
               type="button"
               onClick={() => onStart?.(plan)}
-              className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100"
+              disabled={!(plan?.exercises || []).length}
+              className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Continue
             </button>
