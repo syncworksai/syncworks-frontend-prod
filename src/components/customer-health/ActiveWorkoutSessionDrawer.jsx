@@ -405,6 +405,7 @@ function SetCompletionSheet({
   restActive = false,
   restRemainingSeconds = 0,
   suggestion,
+  saving = false,
   onCancel,
   onSave,
 }) {
@@ -711,9 +712,10 @@ function SetCompletionSheet({
           <button
             type="button"
             onClick={saveSet}
-            className="health-primary-action h-12 rounded-2xl border text-sm font-black"
+            disabled={saving}
+            className="health-primary-action h-12 rounded-2xl border text-sm font-black disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Save Set
+            {saving ? "Saving Set..." : "Save Set"}
           </button>
         </div>
       </section>
@@ -1653,6 +1655,8 @@ export default function ActiveWorkoutSessionDrawer({
   const [finishMessage, setFinishMessage] = useState("");
   const [savingWorkout, setSavingWorkout] =
     useState(false);
+  const [savingSet, setSavingSet] =
+    useState(false);
   const [editAfterFinish, setEditAfterFinish] =
     useState(false);
   const [setCheckInOpen, setSetCheckInOpen] =
@@ -1708,7 +1712,7 @@ export default function ActiveWorkoutSessionDrawer({
       clearPersistedWorkout();
     }
 
-    setSession(
+    const initializedSession =
       ensureDynamicPreparation(
         restored ||
           createWorkoutSessionFromPlannerItem({
@@ -1716,20 +1720,30 @@ export default function ActiveWorkoutSessionDrawer({
             workouts,
           }),
         snapshot || {}
-      )
-    );
+      );
+
+    setSession(initializedSession);
 
     initializedWorkoutKeyRef.current = workoutKey;
     setReviewMode(false);
     setFinishMessage(
-      restored
+      restored?.pending_set_logging
+        ? "Workout restored. Finish logging your completed set while rest continues."
+        : restored
         ? "Active workout restored from this device."
         : ""
     );
     setSavingWorkout(false);
+    setSavingSet(false);
     setEditAfterFinish(false);
-    setSetCheckInOpen(false);
-    setPendingSetDurationSeconds(0);
+    setSetCheckInOpen(
+      Boolean(initializedSession?.pending_set_logging)
+    );
+    setPendingSetDurationSeconds(
+      Number(
+        initializedSession?.pending_set_duration_seconds || 0
+      )
+    );
     setDetailsOpen(false);
     setAdaptationMode("");
     setModifyMenuOpen(false);
@@ -2398,14 +2412,20 @@ export default function ActiveWorkoutSessionDrawer({
     }
 
     setPendingSetDurationSeconds(completedDuration);
-    setSession((previous) =>
-      previous
-        ? startRestTimer(
-            previous,
-            currentExercise.rest_seconds || 60
-          )
-        : previous
-    );
+    setSession((previous) => {
+      if (!previous) return previous;
+
+      return {
+        ...startRestTimer(
+          previous,
+          currentExercise.rest_seconds || 60
+        ),
+        pending_set_logging: true,
+        pending_set_exercise_id: currentExercise.id,
+        pending_set_duration_seconds: completedDuration,
+        pending_set_started_at: new Date().toISOString(),
+      };
+    });
     setSetCheckInOpen(true);
 
     speakCoachText({
@@ -2419,7 +2439,11 @@ export default function ActiveWorkoutSessionDrawer({
   }
 
   function saveTimedSet(setLog) {
-    if (!session || !currentExercise) return;
+    if (!session || !currentExercise || savingSet) {
+      return;
+    }
+
+    setSavingSet(true);
 
     const enrichedSetLog = {
       ...setLog,
@@ -2479,9 +2503,48 @@ export default function ActiveWorkoutSessionDrawer({
       };
     }
 
+    const completedExercise =
+      (nextSession.exercises || []).find(
+        (exercise) => exercise.id === currentExercise.id
+      );
+    const exerciseFinished = Boolean(completedExercise?.completed);
+    const currentIndex = Number(
+      nextSession.current_exercise_index || 0
+    );
+    const hasNextExercise =
+      exerciseFinished &&
+      currentIndex < (nextSession.exercises || []).length - 1;
+
+    nextSession = {
+      ...nextSession,
+      pending_set_logging: false,
+      pending_set_exercise_id: "",
+      pending_set_duration_seconds: 0,
+      pending_set_started_at: "",
+      current_exercise_index: hasNextExercise
+        ? currentIndex + 1
+        : currentIndex,
+      last_completed_exercise_name: exerciseFinished
+        ? currentExercise.name
+        : nextSession.last_completed_exercise_name || "",
+    };
+
     setSession(nextSession);
     setSetCheckInOpen(false);
     setPendingSetDurationSeconds(0);
+    setSavingSet(false);
+
+    if (exerciseFinished) {
+      const nextExercise = hasNextExercise
+        ? nextSession.exercises[currentIndex + 1]
+        : null;
+
+      setFinishMessage(
+        nextExercise
+          ? `${currentExercise.name} complete. Next: ${nextExercise.name}.`
+          : `${currentExercise.name} complete. All planned exercises are resolved.`
+      );
+    }
 
     const restSeconds =
       nextSession.rest_remaining_seconds ||
@@ -2497,6 +2560,10 @@ export default function ActiveWorkoutSessionDrawer({
       text:
         pain >= 3
           ? `Set saved. Pain was reported. Reduce the load or adjust the movement. Rest for ${restSeconds} seconds.`
+          : exerciseFinished && hasNextExercise
+          ? `${currentExercise.name} complete. Next is ${nextSession.exercises[currentIndex + 1].name}. You have ${restSeconds} seconds remaining.`
+          : exerciseFinished
+          ? `${currentExercise.name} complete. All planned exercises are resolved.`
           : `Set saved. Rest for ${restSeconds} seconds.`,
       audioMode: coachAudioMode,
       voicePreference: coachVoicePreference,
@@ -2667,10 +2734,20 @@ export default function ActiveWorkoutSessionDrawer({
   }
 
   function closeDrawer() {
-    persistWorkoutSession(
-      latestSessionRef.current,
-      plannerItem
-    );
+    const activeSession = latestSessionRef.current;
+
+    if (
+      activeSession?.pending_set_logging &&
+      typeof window !== "undefined"
+    ) {
+      const shouldLeave = window.confirm(
+        "This completed set has not been saved yet. Leave the workout and finish logging it when you return?"
+      );
+
+      if (!shouldLeave) return;
+    }
+
+    persistWorkoutSession(activeSession, plannerItem);
 
     setReviewMode(false);
     setFinishMessage("");
@@ -2715,8 +2792,61 @@ export default function ActiveWorkoutSessionDrawer({
 
       clearPersistedWorkout();
       initializedWorkoutKeyRef.current = "";
+      const completedAt =
+        result.finishedSession.finished_at ||
+        new Date().toISOString();
+      const completedPlannerId =
+        result.finishedSession.planner_item_id ||
+        plannerItem?.id ||
+        "";
+
+      const nextSnapshot = {
+        ...result.nextSnapshot,
+        workout: "",
+        today_workout_id: "",
+        last_completed_workout_at: completedAt,
+        last_completed_workout_name:
+          result.finishedSession.workout_name || "",
+        week_plan: Array.isArray(result.nextSnapshot?.week_plan)
+          ? result.nextSnapshot.week_plan.map((item) =>
+              item?.id === completedPlannerId ||
+              (
+                item?.ymd === result.finishedSession.ymd &&
+                item?.workout_name === result.finishedSession.workout_name &&
+                item?.status !== "Completed"
+              )
+                ? {
+                    ...item,
+                    status: "Completed",
+                    completed_at: completedAt,
+                    completed_session_id: result.finishedSession.id,
+                  }
+                : item
+            )
+          : [],
+        workout_adherence_log: [
+          {
+            id: `workout-completed-${result.finishedSession.id}`,
+            workout_id: completedPlannerId,
+            workout_name:
+              result.finishedSession.workout_name || "Workout",
+            original_ymd: result.finishedSession.ymd || "",
+            action: "completed",
+            status: "Completed",
+            created_at: completedAt,
+            session_id: result.finishedSession.id,
+            source: "active_workout_completion",
+          },
+          ...(
+            Array.isArray(result.nextSnapshot?.workout_adherence_log)
+              ? result.nextSnapshot.workout_adherence_log
+              : []
+          ),
+        ].slice(0, 100),
+      };
+
       setHistory?.(result.nextHistory);
-      setSnapshot?.(result.nextSnapshot);
+      setSnapshot?.(nextSnapshot);
       setSession(result.finishedSession);
       setReviewMode(false);
       setEditAfterFinish(false);
@@ -3733,9 +3863,21 @@ export default function ActiveWorkoutSessionDrawer({
             session?.rest_remaining_seconds || 0
           }
           suggestion={currentSuggestion}
+          saving={savingSet}
           onCancel={() => {
             setSetCheckInOpen(false);
             setPendingSetDurationSeconds(0);
+            setSession((previous) =>
+              previous
+                ? {
+                    ...previous,
+                    pending_set_logging: false,
+                    pending_set_exercise_id: "",
+                    pending_set_duration_seconds: 0,
+                    pending_set_started_at: "",
+                  }
+                : previous
+            );
           }}
           onSave={saveTimedSet}
         />
