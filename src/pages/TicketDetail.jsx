@@ -17,6 +17,7 @@ import TicketCustomerCard from "../components/tickets/TicketCustomerCard";
 import TicketLifecycleCard from "../components/tickets/TicketLifecycleCard";
 import TicketArchiveToolsCard from "../components/tickets/TicketArchiveToolsCard";
 import TicketNextActionCard from "../components/tickets/TicketNextActionCard";
+import { providerFromTicket, saveProvider } from "../utils/savedProviders";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -334,7 +335,7 @@ function canManageScheduleFromMode(mode) {
   return mode === "SBO" || mode === "PM" || mode === "PROPERTY_MGR";
 }
 
-function AssignedBusinessCardPanel({ ticket, onBookAgain }) {
+function AssignedBusinessCardPanel({ ticket, onBookAgain, onSaveProvider }) {
   const card = assignedBusinessCard(ticket);
   const name = assignedBusinessName(ticket);
   const logoUrl = card?.logo_url || "";
@@ -442,8 +443,11 @@ function AssignedBusinessCardPanel({ ticket, onBookAgain }) {
               </a>
             ) : null}
 
+            <Btn tone="emerald" onClick={onSaveProvider}>
+              Save Provider
+            </Btn>
             <Btn tone="cyan" onClick={onBookAgain}>
-              Book Again
+              New Request
             </Btn>
           </div>
         </>
@@ -535,7 +539,7 @@ function OperationsControlCard({
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
+        <div id="ticket-assignment" className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
           <div className="text-sm font-semibold text-slate-100">Assign Tech / Employee</div>
           <div className="text-[11px] text-slate-400 mt-1">
             Pick who owns the ticket from here.
@@ -989,6 +993,29 @@ export default function TicketDetail() {
     }
   }
 
+  async function closeTicket() {
+    setErr("");
+    setActionBusy(true);
+    try {
+      await api.post(`/tickets/${id}/set-status/`, { status: "CLOSED" });
+      await loadTicket();
+    } catch (e) {
+      setErr(e?.response?.data?.detail || "Failed to close ticket.");
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  function saveAssignedProvider() {
+    const provider = providerFromTicket(ticket);
+    if (!provider) {
+      setErr("This ticket does not have a provider to save yet.");
+      return;
+    }
+    saveProvider(provider);
+    setErr("");
+  }
+
   async function declineMarketplace() {
     setErr("");
     setActionBusy(true);
@@ -1248,6 +1275,19 @@ export default function TicketDetail() {
           busy={actionBusy || loading}
           onAction={(action) => {
             if (!action) return;
+            if (action.key === "ASSIGN_TECHNICIAN") {
+              setActiveTab("overview");
+              window.requestAnimationFrame(() => {
+                document
+                  .getElementById("ticket-assignment")
+                  ?.scrollIntoView({ behavior: "smooth", block: "center" });
+              });
+              return;
+            }
+            if (action.key === "CLOSE_TICKET") {
+              closeTicket();
+              return;
+            }
             if (action.tab) {
               setActiveTab(action.tab);
               return;
@@ -1289,7 +1329,11 @@ export default function TicketDetail() {
                       onOpenFiles={() => setActiveTab("files")}
                       onOpenInvoice={() => setActiveTab("invoice")}
                     />
-                    <AssignedBusinessCardPanel ticket={ticket} onBookAgain={bookAgainWithAssignedBusiness} />
+                    <AssignedBusinessCardPanel
+                      ticket={ticket}
+                      onBookAgain={bookAgainWithAssignedBusiness}
+                      onSaveProvider={saveAssignedProvider}
+                    />
                   </>
                 ) : (
                   <>

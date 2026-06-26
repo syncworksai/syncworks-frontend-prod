@@ -1,6 +1,11 @@
 // src/components/requests/new-request/UniversalTicketCreator.jsx
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import api from "../../../api/client";
+import {
+  readRequestProviderPrefill,
+  readSavedProviders,
+  removeSavedProvider,
+} from "../../../utils/savedProviders";
 
 import RequestStepNav from "../RequestStepNav";
 import RequestDetailsCard from "../RequestDetailsCard";
@@ -82,79 +87,186 @@ function FormAlert({ type = "error", children }) {
   );
 }
 
+
+function RequestRouteChooser({
+  routeMode,
+  setRouteMode,
+  savedProviders,
+  selectedProvider,
+  onSelectProvider,
+  onRemoveProvider,
+}) {
+  return (
+    <section className="rounded-[2rem] border border-slate-800 bg-slate-950/55 p-4 md:p-5">
+      <div className="text-sm font-black text-white">How should SyncWorks route this?</div>
+      <div className="mt-1 text-xs leading-5 text-slate-400">
+        Use the open marketplace or send the request directly to a provider you trust.
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => setRouteMode("MARKETPLACE")}
+          className={cx(
+            "rounded-3xl border p-4 text-left transition",
+            routeMode === "MARKETPLACE"
+              ? "border-cyan-400/40 bg-cyan-500/15 text-cyan-50"
+              : "border-slate-800 bg-slate-950/70 text-slate-200"
+          )}
+        >
+          <div className="text-xl">Marketplace</div>
+          <div className="mt-2 text-sm font-black">Search every category</div>
+          <div className="mt-1 text-xs leading-5 text-slate-400">
+            Services, products, food, bookings, real estate, auto, and more.
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setRouteMode("SAVED_PROVIDER")}
+          className={cx(
+            "rounded-3xl border p-4 text-left transition",
+            routeMode === "SAVED_PROVIDER"
+              ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-50"
+              : "border-slate-800 bg-slate-950/70 text-slate-200"
+          )}
+        >
+          <div className="text-xl">Saved Provider</div>
+          <div className="mt-2 text-sm font-black">Send a direct request</div>
+          <div className="mt-1 text-xs leading-5 text-slate-400">
+            Use a provider saved from a previous ticket or digital business card.
+          </div>
+        </button>
+      </div>
+
+      {routeMode === "SAVED_PROVIDER" ? (
+        <div className="mt-4">
+          {savedProviders.length ? (
+            <div className="grid gap-3">
+              {savedProviders.map((provider) => {
+                const active = Number(selectedProvider?.id) === Number(provider.id);
+                return (
+                  <div
+                    key={provider.id}
+                    className={cx(
+                      "rounded-3xl border p-3 transition",
+                      active
+                        ? "border-emerald-400/40 bg-emerald-500/10"
+                        : "border-slate-800 bg-slate-950/65"
+                    )}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => onSelectProvider(provider)}
+                      className="flex w-full items-center gap-3 text-left"
+                    >
+                      <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
+                        {provider.logo_url ? (
+                          <img src={provider.logo_url} alt={provider.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-xs font-black text-slate-500">BIZ</span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-black text-white">{provider.name}</div>
+                        <div className="mt-1 truncate text-xs text-slate-400">
+                          {[provider.city, provider.state, provider.base_zip].filter(Boolean).join(", ") || "Saved provider"}
+                        </div>
+                      </div>
+                      <span className="text-xs font-black text-emerald-200">
+                        {active ? "Selected" : "Choose"}
+                      </span>
+                    </button>
+                    <div className="mt-2 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => onRemoveProvider(provider.id)}
+                        className="text-[11px] font-semibold text-slate-500 hover:text-rose-300"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-3xl border border-amber-500/25 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
+              No providers are saved yet. Open an assigned ticket and tap Save Provider.
+            </div>
+          )}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function BottomActions({
   step,
-  setStep,
   canContinue,
   selectedService,
+  selectedProvider,
+  routeMode,
   missing,
   submitting,
   canSubmit,
+  navMessage,
+  onHome,
+  onBack,
+  onContinue,
   onSubmit,
 }) {
   const isLast = step === STEPS.length - 1;
 
   return (
-    <div className="sticky bottom-0 z-20 -mx-4 border-t border-slate-800 bg-[#020617]/92 px-4 py-3 backdrop-blur-xl md:static md:mx-0 md:border-none md:bg-transparent md:px-0 md:py-0">
-      <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
-        <button
-          type="button"
-          disabled={step === 0}
-          onClick={() => setStep((s) => Math.max(0, s - 1))}
-          className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
-        >
+    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-800 bg-[#020617]/95 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 shadow-[0_-18px_45px_rgba(0,0,0,0.45)] backdrop-blur-xl md:sticky md:bottom-3 md:rounded-3xl md:border">
+      <div className="mx-auto grid max-w-4xl grid-cols-[auto_auto_1fr] items-center gap-2">
+        <button type="button" onClick={onHome} className="min-h-11 rounded-2xl border border-slate-800 bg-slate-950/80 px-3 text-xs font-black text-slate-300">
+          Home
+        </button>
+        <button type="button" onClick={onBack} disabled={step === 0} className="min-h-11 rounded-2xl border border-slate-800 bg-slate-950/80 px-3 text-xs font-black text-slate-300 disabled:opacity-35">
           Back
         </button>
-
-        <div className="hidden min-w-0 flex-1 text-center text-xs text-slate-500 md:block">
-          {selectedService ? (
-            <>
-              Selected:{" "}
-              <span className="font-semibold text-slate-300">
-                {selectedService.label}
-              </span>
-            </>
-          ) : (
-            "Search and select what the customer needs."
-          )}
-        </div>
-
         {!isLast ? (
-          <button
-            type="button"
-            disabled={!canContinue}
-            onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
-            className={cx(
-              "rounded-2xl border px-5 py-2.5 text-sm font-black transition",
-              canContinue
-                ? "border-cyan-400/40 bg-cyan-500 text-black hover:bg-cyan-400"
-                : "cursor-not-allowed border-slate-800 bg-slate-900/40 text-slate-500"
-            )}
-          >
+          <button type="button" onClick={onContinue} className={cx(
+            "min-h-11 rounded-2xl border px-5 text-sm font-black transition",
+            canContinue
+              ? "border-cyan-400/40 bg-cyan-500 text-black"
+              : "border-amber-500/30 bg-amber-500/10 text-amber-100"
+          )}>
             Continue
           </button>
         ) : (
-          <button
-            type="button"
-            disabled={!canSubmit}
-            onClick={onSubmit}
-            className={cx(
-              "rounded-2xl border px-5 py-2.5 text-sm font-black transition",
-              canSubmit
-                ? "border-cyan-400/40 bg-cyan-500 text-black hover:bg-cyan-400"
-                : "cursor-not-allowed border-slate-800 bg-slate-900/40 text-slate-500"
-            )}
-          >
-            {submitting ? "Creating…" : "Create Ticket"}
+          <button type="button" onClick={onSubmit} disabled={submitting} className={cx(
+            "min-h-11 rounded-2xl border px-5 text-sm font-black transition",
+            canSubmit
+              ? "border-emerald-400/40 bg-emerald-500 text-black"
+              : "border-amber-500/30 bg-amber-500/10 text-amber-100",
+            submitting && "opacity-60"
+          )}>
+            {submitting ? "Creating..." : "Create Ticket"}
           </button>
         )}
       </div>
 
-      {isLast && missing.length ? (
-        <div className="mx-auto mt-2 max-w-4xl text-xs text-slate-500">
-          Missing: {missing.join(", ")}
-        </div>
-      ) : null}
+      <div className="mx-auto mt-2 max-w-4xl">
+        {navMessage ? (
+          <div className="rounded-2xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-100">
+            {navMessage}
+          </div>
+        ) : selectedService ? (
+          <div className="truncate text-center text-[11px] text-slate-500">
+            {routeMode === "SAVED_PROVIDER" && selectedProvider
+              ? `Direct to ${selectedProvider.name} - ${selectedService.label}`
+              : `${selectedService.verticalLabel} - ${selectedService.label}`}
+          </div>
+        ) : null}
+        {isLast && missing.length ? (
+          <div className="mt-1 text-center text-[11px] text-slate-500">
+            Missing: {missing.join(", ")}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -171,6 +283,13 @@ export default function UniversalTicketCreator({
   const isBusinessInternal = mode === MARKETPLACE_MODES.BUSINESS_INTERNAL;
 
   const [step, setStep] = useState(0);
+  const initialProvider = useMemo(() => readRequestProviderPrefill(), []);
+  const [savedProviders, setSavedProviders] = useState(() => readSavedProviders());
+  const [routeMode, setRouteModeState] = useState(
+    initialProvider ? "SAVED_PROVIDER" : "MARKETPLACE"
+  );
+  const [selectedProvider, setSelectedProvider] = useState(initialProvider);
+  const [navMessage, setNavMessage] = useState("");
 
   const [selectedService, setSelectedService] = useState(null);
   const [priority, setPriority] = useState("P3");
@@ -204,6 +323,44 @@ export default function UniversalTicketCreator({
   const [submitting, setSubmitting] = useState(false);
   const [submitErr, setSubmitErr] = useState("");
   const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    function refreshSavedProviders() {
+      setSavedProviders(readSavedProviders());
+    }
+    window.addEventListener("sw:savedProvidersChanged", refreshSavedProviders);
+    return () =>
+      window.removeEventListener("sw:savedProvidersChanged", refreshSavedProviders);
+  }, []);
+
+  function scrollFlowTop() {
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }
+
+  function setRouteMode(nextMode) {
+    setRouteModeState(nextMode);
+    setNavMessage("");
+    if (nextMode === "MARKETPLACE") {
+      setSelectedProvider(null);
+      setMarketplaceAgreement(false);
+    }
+  }
+
+  function chooseProvider(provider) {
+    setSelectedProvider(provider);
+    setMarketplaceAgreement(true);
+    setNavMessage("");
+  }
+
+  function deleteSavedProvider(providerId) {
+    const next = removeSavedProvider(providerId);
+    setSavedProviders(next);
+    if (Number(selectedProvider?.id) === Number(providerId)) {
+      setSelectedProvider(null);
+    }
+  }
 
   const resolvedFulfillmentType = useMemo(
     () => inferFulfillmentType(selectedService, fulfillmentType),
@@ -250,6 +407,7 @@ export default function UniversalTicketCreator({
         customerEmail,
         businessId: business?.id || business?.business_id || "",
         businessName: business?.name || business?.business_name || "",
+        directProvider: routeMode === "SAVED_PROVIDER" ? selectedProvider : null,
       }),
     [
       mode,
@@ -274,6 +432,8 @@ export default function UniversalTicketCreator({
       customerName,
       customerEmail,
       business,
+      routeMode,
+      selectedProvider,
     ]
   );
 
@@ -291,6 +451,7 @@ export default function UniversalTicketCreator({
         neededByDate,
         preferredTimeWindow,
         marketplaceAgreement,
+        directProvider: routeMode === "SAVED_PROVIDER" ? selectedProvider : null,
       }),
     [
       mode,
@@ -304,6 +465,8 @@ export default function UniversalTicketCreator({
       neededByDate,
       preferredTimeWindow,
       marketplaceAgreement,
+      routeMode,
+      selectedProvider,
     ]
   );
 
@@ -319,6 +482,7 @@ export default function UniversalTicketCreator({
     neededByDate,
     preferredTimeWindow,
     marketplaceAgreement,
+    directProvider: routeMode === "SAVED_PROVIDER" ? selectedProvider : null,
     submitting,
   });
 
@@ -354,7 +518,10 @@ export default function UniversalTicketCreator({
   }
 
   function canContinueCurrentStep() {
-    if (step === 0) return !!selectedService;
+    if (step === 0) {
+      if (routeMode === "SAVED_PROVIDER" && !selectedProvider) return false;
+      return !!selectedService;
+    }
     if (step === 1) return !!priority;
     if (step === 2) {
       return (
@@ -371,10 +538,63 @@ export default function UniversalTicketCreator({
     return canSubmit;
   }
 
+  function validationMessageForStep() {
+    if (step === 0) {
+      if (routeMode === "SAVED_PROVIDER" && !selectedProvider) {
+        return "Choose a saved provider before continuing.";
+      }
+      if (!selectedService) {
+        return "Choose a service, product, food option, booking, or other need before continuing.";
+      }
+    }
+    if (step === 1 && !priority) return "Choose the urgency or priority.";
+    if (step === 2) {
+      const fields = [];
+      if (!address.trim()) fields.push("street address");
+      if (!city.trim()) fields.push("city");
+      if (!stateRegion.trim()) fields.push("state");
+      if (!cleanZip || cleanZip.length < 5) fields.push("ZIP");
+      if (!neededByDate) fields.push("needed-by date");
+      if (!preferredTimeWindow.trim()) fields.push("time window");
+      if (fields.length) return `Complete: ${fields.join(", ")}.`;
+    }
+    if (step === 3 && !details.trim()) {
+      return "Add a short description of what you need.";
+    }
+    if (step === 4 && missing.length) {
+      return `Complete: ${missing.join(", ")}.`;
+    }
+    return "";
+  }
+
+  function goToStep(nextStep) {
+    setStep(Math.max(0, Math.min(STEPS.length - 1, nextStep)));
+    setNavMessage("");
+    scrollFlowTop();
+  }
+
   function setGuardedStep(nextStep) {
     if (nextStep <= step || canGoTo(nextStep)) {
-      setStep(nextStep);
+      goToStep(nextStep);
+      return;
     }
+    setNavMessage(validationMessageForStep());
+  }
+
+  function continueFlow() {
+    if (!canContinueCurrentStep()) {
+      setNavMessage(validationMessageForStep());
+      return;
+    }
+    goToStep(step + 1);
+  }
+
+  function backFlow() {
+    if (step > 0) goToStep(step - 1);
+  }
+
+  function homeFlow() {
+    if (typeof onCancel === "function") onCancel();
   }
 
   function handleServiceSelect(service) {
@@ -447,7 +667,7 @@ export default function UniversalTicketCreator({
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">
-      <div className="mx-auto max-w-4xl px-4 py-5 md:py-7">
+      <div className="mx-auto max-w-4xl px-4 py-5 pb-32 md:py-7 md:pb-7">
         <div className="mb-5 rounded-[2rem] border border-slate-800 bg-slate-950/55 p-4 shadow-[0_0_40px_rgba(15,23,42,0.45)] md:p-5">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
@@ -507,13 +727,24 @@ export default function UniversalTicketCreator({
 
         <div className="mt-5 space-y-5 pb-28 md:pb-0">
           {step === 0 ? (
-            <MarketplaceSearchPanel
-              selectedService={selectedService}
-              setSelectedService={handleServiceSelect}
-              mode={mode}
-              allowedServiceKeys={businessServiceKeys}
-              onNext={() => setStep(1)}
-            />
+            <>
+              {!isBusinessInternal ? (
+                <RequestRouteChooser
+                  routeMode={routeMode}
+                  setRouteMode={setRouteMode}
+                  savedProviders={savedProviders}
+                  selectedProvider={selectedProvider}
+                  onSelectProvider={chooseProvider}
+                  onRemoveProvider={deleteSavedProvider}
+                />
+              ) : null}
+              <MarketplaceSearchPanel
+                selectedService={selectedService}
+                setSelectedService={handleServiceSelect}
+                mode={mode}
+                allowedServiceKeys={businessServiceKeys}
+              />
+            </>
           ) : null}
 
           {step === 1 ? (
@@ -586,12 +817,18 @@ export default function UniversalTicketCreator({
                 mode={mode}
               />
 
-              <MarketplaceAgreementCard
-                marketplaceAgreement={marketplaceAgreement}
-                setMarketplaceAgreement={setMarketplaceAgreement}
-                mode={mode}
-                selectedService={selectedService}
-              />
+              {routeMode !== "SAVED_PROVIDER" ? (
+                <MarketplaceAgreementCard
+                  marketplaceAgreement={marketplaceAgreement}
+                  setMarketplaceAgreement={setMarketplaceAgreement}
+                  mode={mode}
+                  selectedService={selectedService}
+                />
+              ) : (
+                <div className="rounded-3xl border border-emerald-500/25 bg-emerald-500/10 p-4 text-sm leading-6 text-emerald-100">
+                  This request will be sent directly to {selectedProvider?.name || "your saved provider"}.
+                </div>
+              )}
             </>
           ) : null}
 
@@ -612,26 +849,34 @@ export default function UniversalTicketCreator({
               paymentPreference={paymentPreference}
               dynamicIntake={structuredIntake.dynamic_intake}
               marketplaceAgreement={marketplaceAgreement}
-              canSubmit={canSubmit}
-              submitting={submitting}
-              onSubmit={handleSubmit}
-              onBack={() => setStep(3)}
+              directProvider={
+                routeMode === "SAVED_PROVIDER" ? selectedProvider : null
+              }
               mode={mode}
             />
           ) : null}
 
-          {step !== 4 ? (
-            <BottomActions
-              step={step}
-              setStep={setStep}
-              canContinue={canContinueCurrentStep()}
-              selectedService={selectedService}
-              missing={missing}
-              submitting={submitting}
-              canSubmit={canSubmit}
-              onSubmit={handleSubmit}
-            />
-          ) : null}
+          <BottomActions
+            step={step}
+            canContinue={canContinueCurrentStep()}
+            selectedService={selectedService}
+            selectedProvider={selectedProvider}
+            routeMode={routeMode}
+            missing={missing}
+            submitting={submitting}
+            canSubmit={canSubmit}
+            navMessage={navMessage}
+            onHome={homeFlow}
+            onBack={backFlow}
+            onContinue={continueFlow}
+            onSubmit={() => {
+              if (!canSubmit) {
+                setNavMessage(validationMessageForStep());
+                return;
+              }
+              handleSubmit();
+            }}
+          />
         </div>
       </div>
     </div>

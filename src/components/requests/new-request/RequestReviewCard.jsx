@@ -61,10 +61,7 @@ export default function RequestReviewCard({
   paymentPreference,
   dynamicIntake,
   marketplaceAgreement,
-  canSubmit,
-  submitting,
-  onSubmit,
-  onBack,
+  directProvider = null,
   mode = "CUSTOMER_MARKETPLACE",
 }) {
   const isBusinessInternal = mode === "BUSINESS_INTERNAL";
@@ -129,6 +126,9 @@ export default function RequestReviewCard({
                 : ""
             }
           />
+          {directProvider ? (
+            <ReviewRow label="Send directly to" value={directProvider.name} />
+          ) : null}
           <ReviewRow label="Priority" value={priority} />
           <ReviewRow label="Fulfillment" value={fulfillmentType} />
           <ReviewRow label="Needed by" value={neededByDate} />
@@ -178,39 +178,12 @@ export default function RequestReviewCard({
         </div>
       </section>
 
-      {!isBusinessInternal && !marketplaceAgreement ? (
+      {!isBusinessInternal && !directProvider && !marketplaceAgreement ? (
         <div className="rounded-3xl border border-amber-500/25 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
           Marketplace agreement must be accepted before submitting.
         </div>
       ) : null}
 
-      <div className="flex items-center justify-between gap-3 pt-2">
-        <button
-          type="button"
-          onClick={onBack}
-          className="rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-900"
-        >
-          Back
-        </button>
-
-        <button
-          type="button"
-          onClick={onSubmit}
-          disabled={!canSubmit}
-          className={cx(
-            "rounded-2xl border px-5 py-3 text-sm font-black transition",
-            canSubmit
-              ? "border-cyan-400/40 bg-cyan-500 text-black hover:bg-cyan-400"
-              : "cursor-not-allowed border-slate-800 bg-slate-900/40 text-slate-500"
-          )}
-        >
-          {submitting
-            ? "Creating Ticket…"
-            : isBusinessInternal
-            ? "Create Business Ticket"
-            : "Create SyncWorks Ticket"}
-        </button>
-      </div>
     </div>
   );
 }

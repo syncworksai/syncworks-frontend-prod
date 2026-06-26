@@ -175,7 +175,7 @@ export default function MarketplaceSearchPanel({
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
             {isBusinessInternal
               ? "Use this when a customer called in, texted, or walked in. Your team should only pick from services your business provides."
-              : "Search like a marketplace. SyncWorks turns the request into a trackable ticket behind the scenes."}
+              : "Search services, products, food, bookings, real estate, auto, and more. SyncWorks turns every need into a trackable ticket."}
           </p>
 
           <div className="mt-5 rounded-3xl border border-slate-800 bg-slate-950/80 p-2 shadow-inner">
@@ -289,7 +289,7 @@ export default function MarketplaceSearchPanel({
                 : "Popular near you"}
             </div>
             <div className="mt-1 text-xs text-slate-400">
-              Pick the closest match. You can add details later.
+              Pick the closest service, product, meal, booking, or request. You can add details next.
             </div>
           </div>
 

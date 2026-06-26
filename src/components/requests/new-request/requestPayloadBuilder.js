@@ -78,6 +78,7 @@ export function buildStructuredIntake({
   customerEmail = "",
   businessId = "",
   businessName = "",
+  directProvider = null,
 }) {
   const cleanZip = normalizeZip(serviceZip);
   const fullServiceAddress = buildFullServiceAddress({
@@ -104,6 +105,8 @@ export function buildStructuredIntake({
     creator_mode: mode,
     route_scope: isBusinessInternal
       ? ROUTE_SCOPES.BUSINESS_ONLY
+      : directProvider?.id
+      ? ROUTE_SCOPES.DIRECT_PROVIDER
       : ROUTE_SCOPES.MARKETPLACE,
 
     marketplace_vertical: selectedService?.verticalKey || "",
@@ -116,8 +119,14 @@ export function buildStructuredIntake({
     ticket_type: selectedService?.ticketType || "SERVICE",
     fulfillment_type: resolvedFulfillmentType,
 
-    business_id: isBusinessInternal ? businessId || "" : "",
-    business_name: isBusinessInternal ? businessName || "" : "",
+    business_id: isBusinessInternal
+      ? businessId || ""
+      : directProvider?.id || "",
+    business_name: isBusinessInternal
+      ? businessName || ""
+      : directProvider?.name || "",
+    direct_provider_id: directProvider?.id || "",
+    direct_provider_name: directProvider?.name || "",
 
     customer_name: customerName || "",
     customer_email: customerEmail || "",
@@ -142,8 +151,9 @@ export function buildStructuredIntake({
     dynamic_intake_type: selectedService?.categoryKey || selectedService?.verticalKey || "",
     dynamic_intake: visibleDynamicIntake,
 
-    marketplace_agreement: isBusinessInternal ? true : !!marketplaceAgreement,
-    is_marketplace: !isBusinessInternal,
+    marketplace_agreement:
+      isBusinessInternal || directProvider?.id ? true : !!marketplaceAgreement,
+    is_marketplace: !isBusinessInternal && !directProvider?.id,
     is_business_internal: isBusinessInternal,
   };
 }
@@ -235,6 +245,8 @@ export function buildServiceRequestPayload({
     service_zip: structuredIntake?.service_zip || "",
     service_radius_miles: 25,
     is_marketplace: !!structuredIntake?.is_marketplace,
+    target_business: structuredIntake?.direct_provider_id || undefined,
+    business_id: structuredIntake?.direct_provider_id || undefined,
   };
 }
 
@@ -250,6 +262,7 @@ export function getMissingSubmitRequirements({
   neededByDate,
   preferredTimeWindow,
   marketplaceAgreement,
+  directProvider = null,
 }) {
   const isBusinessInternal = mode === MARKETPLACE_MODES.BUSINESS_INTERNAL;
   const cleanZip = normalizeZip(serviceZip);
@@ -269,7 +282,7 @@ export function getMissingSubmitRequirements({
 
   if (!String(details || "").trim()) missing.push("description");
 
-  if (!isBusinessInternal && !marketplaceAgreement) {
+  if (!isBusinessInternal && !directProvider?.id && !marketplaceAgreement) {
     missing.push("marketplace agreement");
   }
 
