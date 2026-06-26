@@ -1,4 +1,4 @@
-// src/components/customer-health/ActiveWorkoutSessionDrawer.jsx
+﻿// src/components/customer-health/ActiveWorkoutSessionDrawer.jsx
 import React, {
   useEffect,
   useMemo,
@@ -170,6 +170,7 @@ function SetCompletionSheet({
   const [pain, setPain] = useState("0");
   const [setType, setSetType] = useState("working");
   const [reachedFailure, setReachedFailure] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   useEffect(() => {
     if (!open || !exercise) return;
@@ -193,13 +194,9 @@ function SetCompletionSheet({
     setRpe("7");
     setFormQuality("Good");
     setPain(exercise.pain_score || "0");
-    setSetType(
-      (exercise.set_logs || []).length === 0 &&
-        Number(exercise.planned_sets || 0) > 0
-        ? "working"
-        : "working"
-    );
+    setSetType("working");
     setReachedFailure(false);
+    setAdvancedOpen(false);
   }, [
     open,
     exercise?.id,
@@ -223,6 +220,37 @@ function SetCompletionSheet({
     exercise.planned_reps ||
     "";
 
+  function saveSet() {
+    onSave({
+      actual_reps: reps,
+      actual_weight: weight,
+      reps,
+      weight,
+      target_reps: targetReps,
+      target_weight: targetWeight,
+      planned_reps: exercise.planned_reps || "",
+      planned_weight: exercise.planned_weight || "",
+      rpe,
+      ease_score: rpe,
+      form_quality: formQuality,
+      pain_score: pain,
+      set_type: setType,
+      reached_failure: reachedFailure,
+      adjustment_source:
+        exercise.target_adjustment_source || "",
+      recommendation:
+        exercise.last_recommendation?.recommendation || null,
+      recommendation_accepted:
+        exercise.last_recommendation?.accepted || false,
+      recommendation_overridden:
+        exercise.last_recommendation?.overridden || false,
+      recommendation_decision:
+        exercise.last_recommendation?.decision || "",
+      recommendation_decided_at:
+        exercise.last_recommendation?.decided_at || "",
+    });
+  }
+
   return (
     <div className="fixed inset-0 z-[130] flex items-end justify-center bg-black/80 p-3 backdrop-blur-md sm:items-center">
       <button
@@ -233,47 +261,32 @@ function SetCompletionSheet({
       />
 
       <section className="relative z-[131] max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-[2rem] border border-lime-300/20 bg-[#07111f] p-4 shadow-[0_28px_90px_rgba(0,0,0,0.7)]">
-        <div className="text-[10px] font-black uppercase tracking-[0.22em] text-lime-300">
-          Set Complete
-        </div>
-
-        <div className="mt-1 flex items-end justify-between gap-3">
+        <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="truncate text-2xl font-black text-white">
+            <div className="text-[10px] font-black uppercase tracking-[0.22em] text-lime-300">
+              Set Complete
+            </div>
+
+            <h3 className="mt-1 truncate text-xl font-black text-white">
               {exercise.name}
             </h3>
 
-            <div className="mt-1 text-sm text-slate-400">
-              Set duration: {formatSeconds(durationSeconds)}
+            <div className="mt-1 text-xs text-slate-400">
+              Set {(exercise.set_logs || []).length + 1}
+              {" - "}
+              {formatSeconds(durationSeconds)}
             </div>
           </div>
 
-          <div className="shrink-0 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-sm font-black text-cyan-100">
-            Set {(exercise.set_logs || []).length + 1}
+          <div className="shrink-0 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-xs font-black text-cyan-100">
+            Goal: {targetWeight || "BW"} x {targetReps || "-"}
           </div>
-        </div>
-
-        <div className="mt-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.07] p-3 text-sm text-cyan-50">
-          Target: {targetWeight || "Bodyweight"} × {targetReps || "—"}
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           <label>
             <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-              Actual reps
-            </div>
-
-            <input
-              value={reps}
-              onChange={(event) => setReps(event.target.value)}
-              inputMode="numeric"
-              className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-lg font-black text-white outline-none focus:border-cyan-300/40"
-            />
-          </label>
-
-          <label>
-            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-              Actual weight
+              Weight
             </div>
 
             <input
@@ -281,19 +294,32 @@ function SetCompletionSheet({
               onChange={(event) => setWeight(event.target.value)}
               inputMode="decimal"
               placeholder="Bodyweight"
-              className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-lg font-black text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
+              className="mt-2 h-14 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-center text-xl font-black text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
+            />
+          </label>
+
+          <label>
+            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+              Reps
+            </div>
+
+            <input
+              value={reps}
+              onChange={(event) => setReps(event.target.value)}
+              inputMode="numeric"
+              className="mt-2 h-14 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-center text-xl font-black text-white outline-none focus:border-cyan-300/40"
             />
           </label>
         </div>
 
-        <div className="mt-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-              RPE
+        <div className="mt-4 rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/[0.06] p-3">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-black text-white">
+              Effort
             </div>
 
             <div className="text-sm font-black text-fuchsia-100">
-              {rpe}/10
+              RPE {rpe}/10
             </div>
           </div>
 
@@ -306,159 +332,130 @@ function SetCompletionSheet({
             onChange={(event) => setRpe(event.target.value)}
             className="mt-3 w-full accent-fuchsia-400"
           />
-
-          <div className="mt-1 flex justify-between text-[10px] font-bold text-slate-500">
-            <span>Easy</span>
-            <span>Working</span>
-            <span>Max</span>
-          </div>
         </div>
 
-        <div className="mt-4">
-          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-            Form quality
-          </div>
+        <button
+          type="button"
+          onClick={() => setAdvancedOpen((current) => !current)}
+          className="mt-3 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-xs font-black text-slate-200"
+        >
+          {advancedOpen ? "Hide More Details" : "More Details"}
+        </button>
 
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            {["Good", "Fair", "Poor"].map((option) => (
+        {advancedOpen ? (
+          <div className="mt-3 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                Form quality
+              </div>
+
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {["Good", "Fair", "Poor"].map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setFormQuality(option)}
+                    className={cx(
+                      "rounded-xl border px-2 py-3 text-xs font-black",
+                      formQuality === option
+                        ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
+                        : "border-white/10 bg-white/[0.03] text-slate-300"
+                    )}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                Pain
+              </div>
+
+              <div className="mt-2 grid grid-cols-4 gap-2">
+                {[
+                  ["0", "None"],
+                  ["1", "Mild"],
+                  ["3", "Moderate"],
+                  ["5", "Stop"],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setPain(value)}
+                    className={cx(
+                      "rounded-xl border px-2 py-3 text-[10px] font-black",
+                      pain === value
+                        ? value === "0"
+                          ? "border-lime-300/30 bg-lime-300/10 text-lime-100"
+                          : "border-rose-300/30 bg-rose-300/10 text-rose-100"
+                        : "border-white/10 bg-white/[0.03] text-slate-300"
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
               <button
-                key={option}
                 type="button"
-                onClick={() => setFormQuality(option)}
+                onClick={() =>
+                  setSetType(
+                    setType === "warmup"
+                      ? "working"
+                      : "warmup"
+                  )
+                }
                 className={cx(
-                  "rounded-2xl border px-2 py-3 text-xs font-black transition",
-                  formQuality === option
-                    ? option === "Poor"
-                      ? "border-rose-300/30 bg-rose-300/15 text-rose-100"
-                      : option === "Fair"
-                      ? "border-amber-300/30 bg-amber-300/15 text-amber-100"
-                      : "border-lime-300/30 bg-lime-300/15 text-lime-100"
-                    : "border-white/10 bg-white/[0.04] text-slate-300"
+                  "rounded-xl border px-3 py-3 text-xs font-black",
+                  setType === "warmup"
+                    ? "border-amber-300/30 bg-amber-300/10 text-amber-100"
+                    : "border-white/10 bg-white/[0.03] text-slate-300"
                 )}
               >
-                {option}
+                {setType === "warmup"
+                  ? "Warm-up Set"
+                  : "Working Set"}
               </button>
-            ))}
-          </div>
-        </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              setSetType(
-                setType === "warmup"
-                  ? "working"
-                  : "warmup"
-              )
-            }
-            className={cx(
-              "rounded-2xl border px-3 py-3 text-xs font-black transition",
-              setType === "warmup"
-                ? "border-amber-300/30 bg-amber-300/15 text-amber-100"
-                : "border-white/10 bg-white/[0.04] text-slate-300"
-            )}
-          >
-            {setType === "warmup"
-              ? "Warm-up Set"
-              : "Working Set"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              setReachedFailure(
-                (current) => !current
-              )
-            }
-            className={cx(
-              "rounded-2xl border px-3 py-3 text-xs font-black transition",
-              reachedFailure
-                ? "border-rose-300/30 bg-rose-300/15 text-rose-100"
-                : "border-white/10 bg-white/[0.04] text-slate-300"
-            )}
-          >
-            {reachedFailure
-              ? "Reached Failure"
-              : "Not to Failure"}
-          </button>
-        </div>
-
-        <div className="mt-4">
-          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-            Pain during the set?
-          </div>
-
-          <div className="mt-2 grid grid-cols-4 gap-2">
-            {[
-              ["0", "None"],
-              ["1", "Mild"],
-              ["3", "Moderate"],
-              ["5", "Stop"],
-            ].map(([value, label]) => (
               <button
-                key={value}
                 type="button"
-                onClick={() => setPain(value)}
+                onClick={() =>
+                  setReachedFailure((current) => !current)
+                }
                 className={cx(
-                  "rounded-2xl border px-2 py-3 text-xs font-black transition",
-                  pain === value
-                    ? value === "0"
-                      ? "border-lime-300/30 bg-lime-300/15 text-lime-100"
-                      : "border-rose-300/30 bg-rose-300/15 text-rose-100"
-                    : "border-white/10 bg-white/[0.04] text-slate-300"
+                  "rounded-xl border px-3 py-3 text-xs font-black",
+                  reachedFailure
+                    ? "border-rose-300/30 bg-rose-300/10 text-rose-100"
+                    : "border-white/10 bg-white/[0.03] text-slate-300"
                 )}
               >
-                {label}
+                {reachedFailure
+                  ? "Reached Failure"
+                  : "Not to Failure"}
               </button>
-            ))}
+            </div>
           </div>
-        </div>
+        ) : null}
 
-        <div className="mt-5 grid grid-cols-[0.8fr_1.2fr] gap-2">
+        <div className="mt-4 grid grid-cols-[0.75fr_1.25fr] gap-2">
           <button
             type="button"
             onClick={onCancel}
             className="h-12 rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-black text-slate-200"
           >
-            Continue Set
+            Back
           </button>
 
           <button
             type="button"
-            onClick={() =>
-              onSave({
-                actual_reps: reps,
-                actual_weight: weight,
-                reps,
-                weight,
-                target_reps: targetReps,
-                target_weight: targetWeight,
-                planned_reps: exercise.planned_reps || "",
-                planned_weight: exercise.planned_weight || "",
-                rpe,
-                ease_score: rpe,
-                form_quality: formQuality,
-                pain_score: pain,
-                set_type: setType,
-                reached_failure: reachedFailure,
-                adjustment_source:
-                  exercise.target_adjustment_source || "",
-                recommendation:
-                  exercise.last_recommendation?.recommendation || null,
-                recommendation_accepted:
-                  exercise.last_recommendation?.accepted || false,
-                recommendation_overridden:
-                  exercise.last_recommendation?.overridden || false,
-                recommendation_decision:
-                  exercise.last_recommendation?.decision || "",
-                recommendation_decided_at:
-                  exercise.last_recommendation?.decided_at || "",
-              })
-            }
+            onClick={saveSet}
             className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100 shadow-[0_0_30px_rgba(57,255,136,0.14)]"
           >
-            Save Set + Start Rest
+            Save Set and Rest
           </button>
         </div>
       </section>
@@ -565,7 +562,7 @@ function SetHistory({
                 }
                 className="h-11 rounded-xl border border-white/10 bg-white/[0.05] text-sm font-black text-white"
               >
-                −5
+                âˆ’5
               </button>
 
               <input
@@ -615,7 +612,7 @@ function SetHistory({
                 }
                 className="h-11 rounded-xl border border-white/10 bg-white/[0.05] text-sm font-black text-white"
               >
-                −1
+                âˆ’1
               </button>
 
               <input
@@ -690,24 +687,24 @@ function SetHistory({
                         {log.actual_weight ||
                           log.weight ||
                           "Bodyweight"}{" "}
-                        ×{" "}
+                        Ã—{" "}
                         {log.actual_reps ||
                           log.reps ||
-                          "—"}
+                          "â€”"}
                         {log.rpe || log.ease_score
-                          ? ` · RPE ${log.rpe || log.ease_score}`
+                          ? ` Â· RPE ${log.rpe || log.ease_score}`
                           : ""}
                         {log.set_type === "warmup"
-                          ? " · Warm-up"
+                          ? " Â· Warm-up"
                           : ""}
                         {log.reached_failure
-                          ? " · Failure"
+                          ? " Â· Failure"
                           : ""}
                       </div>
                     ) : (
                       <div className="mt-0.5 text-sm text-slate-400">
-                        Goal: {targetWeight || "Bodyweight"} ×{" "}
-                        {targetReps || "—"}
+                        Goal: {targetWeight || "Bodyweight"} Ã—{" "}
+                        {targetReps || "â€”"}
                       </div>
                     )}
                   </div>
@@ -959,6 +956,8 @@ export default function ActiveWorkoutSessionDrawer({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [adaptationMode, setAdaptationMode] =
     useState("");
+  const [modifyMenuOpen, setModifyMenuOpen] =
+    useState(false);
   const preWorkoutBriefingRef = useRef("");
 
   const lastExerciseCueRef = useRef("");
@@ -981,6 +980,7 @@ export default function ActiveWorkoutSessionDrawer({
     setSetCheckInOpen(false);
     setDetailsOpen(false);
     setAdaptationMode("");
+        setModifyMenuOpen(false);
     preWorkoutBriefingRef.current = "";
     lastExerciseCueRef.current = "";
     lastRestCueRef.current = "";
@@ -1631,6 +1631,7 @@ export default function ActiveWorkoutSessionDrawer({
     }
 
     setAdaptationMode(mode);
+    setModifyMenuOpen(false);
 
     trackWorkoutAdaptationKpi(
       "adaptation_drawer_opened",
@@ -1870,7 +1871,7 @@ export default function ActiveWorkoutSessionDrawer({
               onClick={closeDrawer}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-sm font-black text-white"
             >
-              ✕
+              âœ•
             </button>
           </div>
 
@@ -2012,8 +2013,8 @@ export default function ActiveWorkoutSessionDrawer({
                           .length + 1}{" "}
                         of{" "}
                         {currentExercise.planned_sets ||
-                          "—"}{" "}
-                        •{" "}
+                          "â€”"}{" "}
+                        â€¢{" "}
                         {currentExercise.planned_reps ||
                           "clean reps"}
                       </div>
@@ -2067,7 +2068,7 @@ export default function ActiveWorkoutSessionDrawer({
                     {session.set_active
                       ? (isTimedExercise ? "Complete Timed Set" : "Complete Set")
                       : session.rest_active
-                      ? `Resting • ${formatSeconds(
+                      ? `Resting â€¢ ${formatSeconds(
                           session.rest_remaining_seconds
                         )}`
                       : (isTimedExercise ? "Start Timer" : "Start Set")}
@@ -2082,44 +2083,75 @@ export default function ActiveWorkoutSessionDrawer({
                   ) : null}
                 </div>
               ) : null}
-
               {!isCompleted && currentExercise ? (
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <button
-                    type="button"
-                    onClick={() => openAdaptation("replace")}
-                    disabled={session.set_active || session.rest_active}
-                    className="h-11 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-3 text-xs font-black text-cyan-100 disabled:opacity-40"
-                  >
-                    Swap Exercise
-                  </button>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDetailsOpen((current) => !current)
+                      }
+                      className="h-11 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-3 text-xs font-black text-cyan-100"
+                    >
+                      Exercise Info
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => openAdaptation("variation")}
-                    disabled={session.set_active || session.rest_active}
-                    className="h-11 rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 text-xs font-black text-fuchsia-100 disabled:opacity-40"
-                  >
-                    Add Variation
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setModifyMenuOpen((current) => !current)
+                      }
+                      disabled={session.set_active || session.rest_active}
+                      className="h-11 rounded-2xl border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 text-xs font-black text-fuchsia-100 disabled:opacity-40"
+                    >
+                      Modify Workout
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => openAdaptation("accessory")}
-                    disabled={session.set_active || session.rest_active}
-                    className="h-11 rounded-2xl border border-amber-300/25 bg-amber-300/10 px-3 text-xs font-black text-amber-100 disabled:opacity-40"
-                  >
-                    Add Accessory
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setReviewMode(true)}
+                      disabled={session.set_active}
+                      className="h-11 rounded-2xl border border-lime-300/25 bg-lime-300/10 px-3 text-xs font-black text-lime-100 disabled:opacity-40"
+                    >
+                      Finish Workout
+                    </button>
+                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => openAdaptation("finisher")}
-                    disabled={session.set_active || session.rest_active}
-                    className="h-11 rounded-2xl border border-lime-300/25 bg-lime-300/10 px-3 text-xs font-black text-lime-100 disabled:opacity-40"
-                  >
-                    Keep Training
-                  </button>
+                  {modifyMenuOpen ? (
+                    <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-black/20 p-2 sm:grid-cols-4">
+                      <button
+                        type="button"
+                        onClick={() => openAdaptation("replace")}
+                        className="h-10 rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-xs font-black text-cyan-100"
+                      >
+                        Swap Exercise
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => openAdaptation("variation")}
+                        className="h-10 rounded-xl border border-fuchsia-300/20 bg-fuchsia-300/10 text-xs font-black text-fuchsia-100"
+                      >
+                        Add Variation
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => openAdaptation("accessory")}
+                        className="h-10 rounded-xl border border-amber-300/20 bg-amber-300/10 text-xs font-black text-amber-100"
+                      >
+                        Add Accessory
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => openAdaptation("finisher")}
+                        className="h-10 rounded-xl border border-lime-300/20 bg-lime-300/10 text-xs font-black text-lime-100"
+                      >
+                        Keep Training
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -2329,9 +2361,9 @@ export default function ActiveWorkoutSessionDrawer({
                         : "Info: Set and Exercise"}
                     </button>
                   </div>
-
-                  <div className="mt-3">
-                    <SetHistory
+                  {detailsOpen ? (
+                    <div className="mt-3">
+                      <SetHistory
                       exercise={currentExercise}
                       targetControlsRef={
                         targetControlsRef
@@ -2364,7 +2396,25 @@ export default function ActiveWorkoutSessionDrawer({
                         )
                       }
                     />
-                  </div>
+
+                    </div>
+                  ) : (
+                    <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-3 py-3">
+                      <div>
+                        <div className="text-xs font-black text-white">
+                          {(currentExercise.set_logs || []).length} of {currentExercise.planned_sets || "-"} sets complete
+                        </div>
+
+                        <div className="mt-1 text-[11px] text-slate-500">
+                          Open Exercise Info to adjust targets or review completed sets.
+                        </div>
+                      </div>
+
+                      <div className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-black text-cyan-100">
+                        Set {(currentExercise.set_logs || []).length + 1}
+                      </div>
+                    </div>
+                  )}
 
                   {detailsOpen ? (
                     <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
@@ -2673,7 +2723,7 @@ export default function ActiveWorkoutSessionDrawer({
                 )}
               >
                 {session.set_active
-                  ? `Complete • ${formatSeconds(
+                  ? `Complete â€¢ ${formatSeconds(
                       session.current_set_seconds
                     )}`
                   : session.rest_active
