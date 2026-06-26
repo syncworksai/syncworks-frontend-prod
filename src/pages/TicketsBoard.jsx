@@ -311,6 +311,40 @@ function TicketsHero({ isCustomer, counts, loading, onCreate, onRefresh }) {
   );
 }
 
+function MatchReasonCard({ match }) {
+  if (!match?.matched) return null;
+
+  return (
+    <div className="mt-3 rounded-2xl border border-emerald-500/25 bg-emerald-500/8 p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full border border-emerald-400/30 bg-emerald-500/12 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-emerald-100">
+          Why this matched
+        </span>
+        <span className="text-xs font-black text-white">
+          {match.coverage_name || match.match_label || "Eligible coverage"}
+        </span>
+      </div>
+
+      {match.summary ? (
+        <div className="mt-2 text-xs leading-5 text-slate-300">{match.summary}</div>
+      ) : null}
+
+      {Array.isArray(match.details) && match.details.length ? (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {match.details.slice(0, 4).map((detail) => (
+            <span
+              key={detail}
+              className="rounded-full border border-slate-700 bg-slate-950/65 px-2.5 py-1 text-[10px] font-semibold text-slate-300"
+            >
+              {detail}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function BoardTicketCard({
   ticket,
   members,
@@ -390,6 +424,9 @@ function BoardTicketCard({
               {ticket?.sms_allowed ? "Allows text messaging" : "In-app or phone call"} â€¢{" "}
               {ticket?.created_at ? new Date(ticket.created_at).toLocaleString() : "â€”"}
             </div>
+            {view === "marketplace" && ticket?.marketplace_match ? (
+              <MatchReasonCard match={ticket.marketplace_match} />
+            ) : null}
             {ticket?.workflow ? (
               <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-cyan-500/20 bg-cyan-500/8 px-3 py-2">
                 <span className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200">
@@ -559,6 +596,11 @@ function CompactTicketRow({ ticket, saved, onSavedToggle, onArchiveToggle, isSbo
       <td className="min-w-[260px] px-4 py-3">
         <div className="truncate text-sm font-semibold text-slate-100">{ticket?.category_path || ticket?.category_name || ticket?.title || "Ticket"}</div>
         <div className="mt-1 truncate text-xs text-slate-500">{locationLine(ticket) || "No service location"}</div>
+        {ticket?.marketplace_match?.coverage_name ? (
+          <div className="mt-1 truncate text-[11px] font-semibold text-emerald-300">
+            Matched by: {ticket.marketplace_match.coverage_name}
+          </div>
+        ) : null}
       </td>
       <td className="whitespace-nowrap px-4 py-3">
         <Pill tone={statusTone(status)}>{statusLabel(status)}</Pill>
