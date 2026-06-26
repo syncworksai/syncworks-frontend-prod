@@ -1,4 +1,4 @@
-﻿// src/components/customer-health/ActiveWorkoutSessionDrawer.jsx
+// src/components/customer-health/ActiveWorkoutSessionDrawer.jsx
 import React, {
   useEffect,
   useMemo,
@@ -828,57 +828,236 @@ function SetHistory({
 function FinishReviewPanel({
   validation,
   session,
+  saving = false,
   onBack,
   onSave,
 }) {
+  const [cooldownChoice, setCooldownChoice] =
+    useState("guided");
+  const [notes, setNotes] = useState("");
+
+  const exercises = Array.isArray(session?.exercises)
+    ? session.exercises
+    : [];
+
+  const completedExercises = exercises.filter(
+    (exercise) =>
+      (exercise.set_logs || []).length > 0 ||
+      exercise.completed
+  );
+
+  const trainedMuscles = Array.from(
+    new Set(
+      completedExercises.flatMap((exercise) => [
+        ...(exercise.primary_muscles || []),
+        ...(exercise.secondary_muscles || []),
+      ])
+    )
+  ).slice(0, 6);
+
+  const painLogs = exercises.flatMap((exercise) =>
+    (exercise.set_logs || []).filter(
+      (log) => Number(log.pain_score || 0) > 0
+    )
+  );
+
+  const highEffortSets = exercises.flatMap((exercise) =>
+    (exercise.set_logs || []).filter(
+      (log) => Number(log.rpe || 0) >= 9
+    )
+  );
+
+  const activeRatio =
+    Number(session?.total_seconds || 0) > 0
+      ? Math.round(
+          (Number(session.active_seconds || 0) /
+            Number(session.total_seconds || 1)) *
+            100
+        )
+      : 0;
+
+  const nextRecommendation =
+    painLogs.length > 0
+      ? "Use a lighter load or a pain-free variation next session."
+      : highEffortSets.length > 1
+      ? "Recover well before repeating this intensity."
+      : session?.completed_sets >= 8
+      ? "You handled solid volume. Progress one variable next time."
+      : "Build consistency first, then increase load or reps.";
+
+  const cooldownOptions = [
+    {
+      id: "guided",
+      label: "Guided cooldown",
+      detail: "3-5 minutes of breathing, walking, and targeted mobility.",
+    },
+    {
+      id: "quick",
+      label: "Quick reset",
+      detail: "60-90 seconds of breathing and one gentle stretch.",
+    },
+    {
+      id: "skip",
+      label: "Skip cooldown",
+      detail: "Save now and continue with your day.",
+    },
+  ];
+
+  function submitWorkout() {
+    onSave?.({
+      cooldown_choice: cooldownChoice,
+      cooldown_completed: cooldownChoice !== "skip",
+      cooldown_skipped: cooldownChoice === "skip",
+      completion_notes: notes.trim(),
+      trained_muscles: trainedMuscles,
+      active_ratio_percent: activeRatio,
+      pain_flags: painLogs.length,
+      high_effort_sets: highEffortSets.length,
+      next_recommendation: nextRecommendation,
+    });
+  }
+
   return (
-    <div className="rounded-[2rem] border border-amber-300/25 bg-amber-300/10 p-5">
-      <div className="text-xs font-black uppercase tracking-[0.22em] text-amber-100">
-        Finish Review
-      </div>
-
-      <h3 className="mt-2 text-2xl font-black text-white">
-        Finish, cool down, and save?
-      </h3>
-
-      <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-3">
-        <div className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100">
-          Cooldown guidance
+    <div className="space-y-4">
+      <div className="rounded-[2rem] border border-amber-300/25 bg-amber-300/10 p-4 sm:p-5">
+        <div className="text-xs font-black uppercase tracking-[0.22em] text-amber-100">
+          Finish Workout
         </div>
 
-        <div className="mt-2 text-sm leading-6 text-slate-200">
-          Walk or breathe for two to five minutes. Then use gentle stretches for the muscles trained today. Do not force range of motion or stretch into pain.
+        <h3 className="mt-2 text-2xl font-black text-white">
+          Cool down, review, and save
+        </h3>
+
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <StatTile
+            label="Sets"
+            value={session.completed_sets || 0}
+            tone="emerald"
+          />
+
+          <StatTile
+            label="Total"
+            value={formatSeconds(session.total_seconds)}
+            tone="cyan"
+          />
+
+          <StatTile
+            label="Active"
+            value={formatSeconds(session.active_seconds)}
+            tone="emerald"
+          />
+
+          <StatTile
+            label="Active Ratio"
+            value={`${activeRatio}%`}
+            tone="purple"
+          />
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <StatTile
-          label="Sets"
-          value={session.completed_sets || 0}
-          tone="emerald"
-        />
+      <div className="rounded-[2rem] border border-cyan-300/20 bg-cyan-300/[0.07] p-4">
+        <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-100">
+          Choose Your Cooldown
+        </div>
 
-        <StatTile
-          label="Total"
-          value={formatSeconds(session.total_seconds)}
-          tone="cyan"
-        />
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {cooldownOptions.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => setCooldownChoice(option.id)}
+              className={cx(
+                "rounded-2xl border p-3 text-left transition",
+                cooldownChoice === option.id
+                  ? "border-lime-300/35 bg-lime-300/15"
+                  : "border-white/10 bg-black/20"
+              )}
+            >
+              <div className="text-sm font-black text-white">
+                {option.label}
+              </div>
 
-        <StatTile
-          label="Active"
-          value={formatSeconds(session.active_seconds)}
-          tone="emerald"
-        />
+              <div className="mt-1 text-xs leading-5 text-slate-400">
+                {option.detail}
+              </div>
+            </button>
+          ))}
+        </div>
 
-        <StatTile
-          label="Rest"
-          value={formatSeconds(session.rest_seconds)}
-          tone="amber"
-        />
+        {cooldownChoice === "guided" ? (
+          <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-slate-200">
+            Walk slowly and breathe for two minutes. Then use gentle mobility for{" "}
+            {trainedMuscles.length
+              ? trainedMuscles.join(", ")
+              : "the muscles trained today"}
+            . Stop any stretch that causes pain.
+          </div>
+        ) : null}
+
+        {cooldownChoice === "quick" ? (
+          <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-slate-200">
+            Take five slow breaths, lower your heart rate, and hold one comfortable stretch for 30 seconds per side.
+          </div>
+        ) : null}
+      </div>
+
+      <div className="rounded-[2rem] border border-fuchsia-300/20 bg-fuchsia-300/[0.06] p-4">
+        <div className="text-xs font-black uppercase tracking-[0.18em] text-fuchsia-100">
+          Coach Recap
+        </div>
+
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+            <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+              Performance
+            </div>
+
+            <div className="mt-1 text-sm font-black text-white">
+              {session.completed_sets || 0} sets completed across{" "}
+              {completedExercises.length} exercise
+              {completedExercises.length === 1 ? "" : "s"}.
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+            <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+              Next Move
+            </div>
+
+            <div className="mt-1 text-sm font-black text-white">
+              {nextRecommendation}
+            </div>
+          </div>
+        </div>
+
+        {painLogs.length || highEffortSets.length ? (
+          <div className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm leading-6 text-amber-50">
+            {painLogs.length
+              ? `${painLogs.length} set${painLogs.length === 1 ? "" : "s"} included pain feedback. `
+              : ""}
+            {highEffortSets.length
+              ? `${highEffortSets.length} set${highEffortSets.length === 1 ? "" : "s"} reached RPE 9 or higher.`
+              : ""}
+          </div>
+        ) : null}
+
+        <label className="mt-3 block">
+          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+            Optional workout note
+          </div>
+
+          <textarea
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            rows={3}
+            placeholder="Anything the coach should remember for next time?"
+            className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-fuchsia-300/40"
+          />
+        </label>
       </div>
 
       {validation?.missing?.length ? (
-        <div className="mt-4 rounded-2xl border border-rose-300/20 bg-rose-300/10 p-3">
+        <div className="rounded-2xl border border-rose-300/20 bg-rose-300/10 p-3">
           <div className="text-sm font-black text-rose-100">
             Before finishing
           </div>
@@ -897,12 +1076,12 @@ function FinishReviewPanel({
       ) : null}
 
       {validation?.warnings?.length ? (
-        <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3">
-          <div className="text-sm font-black text-white">
-            Helpful details
-          </div>
+        <details className="rounded-2xl border border-white/10 bg-black/20">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-black text-white">
+            Review helpful details
+          </summary>
 
-          <div className="mt-2 space-y-2">
+          <div className="space-y-2 px-4 pb-4">
             {validation.warnings.map((item) => (
               <div
                 key={item.id}
@@ -912,24 +1091,26 @@ function FinishReviewPanel({
               </div>
             ))}
           </div>
-        </div>
+        </details>
       ) : null}
 
-      <div className="mt-5 grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-[0.75fr_1.25fr] gap-2">
         <button
           type="button"
           onClick={onBack}
-          className="h-12 rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-black text-slate-200"
+          disabled={saving}
+          className="h-12 rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-black text-slate-200 disabled:opacity-40"
         >
           Go Back
         </button>
 
         <button
           type="button"
-          onClick={onSave}
-          className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100"
+          onClick={submitWorkout}
+          disabled={saving}
+          className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Save Workout
+          {saving ? "Saving Workout..." : "Save Workout and View Recap"}
         </button>
       </div>
     </div>
@@ -949,6 +1130,8 @@ export default function ActiveWorkoutSessionDrawer({
   const [session, setSession] = useState(null);
   const [reviewMode, setReviewMode] = useState(false);
   const [finishMessage, setFinishMessage] = useState("");
+  const [savingWorkout, setSavingWorkout] =
+    useState(false);
   const [editAfterFinish, setEditAfterFinish] =
     useState(false);
   const [setCheckInOpen, setSetCheckInOpen] =
@@ -976,6 +1159,7 @@ export default function ActiveWorkoutSessionDrawer({
 
     setReviewMode(false);
     setFinishMessage("");
+    setSavingWorkout(false);
     setEditAfterFinish(false);
     setSetCheckInOpen(false);
     setDetailsOpen(false);
@@ -1764,57 +1948,95 @@ export default function ActiveWorkoutSessionDrawer({
   function closeDrawer() {
     setReviewMode(false);
     setFinishMessage("");
+    setSavingWorkout(false);
     setEditAfterFinish(false);
     setSetCheckInOpen(false);
     stopCoachVoice();
     onClose?.();
   }
 
-  function saveWorkout() {
-    if (!session) return;
+  function saveWorkout(completionMeta = {}) {
+    if (!session || savingWorkout || isCompleted) return;
 
-    const result = finishWorkoutSession({
-      session,
-      snapshot: snapshot || {},
-      history: history || [],
-    });
+    setSavingWorkout(true);
 
-    setHistory?.(result.nextHistory);
-    setSnapshot?.(result.nextSnapshot);
-    setSession(result.finishedSession);
-    setReviewMode(false);
-    setEditAfterFinish(false);
+    try {
+      const sessionToFinish = {
+        ...session,
+        completion_meta: {
+          ...(session.completion_meta || {}),
+          ...completionMeta,
+          completed_review_at: new Date().toISOString(),
+        },
+        cooldown_choice:
+          completionMeta.cooldown_choice || "",
+        cooldown_completed:
+          !!completionMeta.cooldown_completed,
+        cooldown_skipped:
+          !!completionMeta.cooldown_skipped,
+        completion_notes:
+          completionMeta.completion_notes || "",
+        coach_next_recommendation:
+          completionMeta.next_recommendation || "",
+      };
 
-    setFinishMessage(
-      `Workout saved. ${
-        result.summary.completed_sets
-      } sets logged in ${formatSeconds(
-        result.summary.total_seconds
-      )}.`
-    );
+      const result = finishWorkoutSession({
+        session: sessionToFinish,
+        snapshot: snapshot || {},
+        history: history || [],
+      });
 
-    speakCoachText({
-      text: buildPostWorkoutWrapUp(
-        result.finishedSession,
-        result.summary
-      ),
-      audioMode: coachAudioMode,
-      voicePreference: coachVoicePreference,
-      rate: 0.96,
-      pitch: 1,
-      volume: 1,
-    });
+      setHistory?.(result.nextHistory);
+      setSnapshot?.(result.nextSnapshot);
+      setSession(result.finishedSession);
+      setReviewMode(false);
+      setEditAfterFinish(false);
 
-    trackWorkoutAdaptationKpi(
-      "postworkout_wrapup_played",
-      {
-        session_id: result.finishedSession.id,
-        completed_sets: result.summary.completed_sets,
-        total_seconds: result.summary.total_seconds,
-        adaptive_additions:
-          result.finishedSession.adaptive_additions || 0,
-      }
-    );
+      setFinishMessage(
+        `Workout saved. ${
+          result.summary.completed_sets
+        } sets logged in ${formatSeconds(
+          result.summary.total_seconds
+        )}.`
+      );
+
+      speakCoachText({
+        text: `${
+          buildPostWorkoutWrapUp(
+            result.finishedSession,
+            result.summary
+          )
+        } ${
+          completionMeta.next_recommendation || ""
+        }`,
+        audioMode: coachAudioMode,
+        voicePreference: coachVoicePreference,
+        rate: 0.96,
+        pitch: 1,
+        volume: 1,
+      });
+
+      trackWorkoutAdaptationKpi(
+        "postworkout_wrapup_played",
+        {
+          session_id: result.finishedSession.id,
+          completed_sets: result.summary.completed_sets,
+          total_seconds: result.summary.total_seconds,
+          adaptive_additions:
+            result.finishedSession.adaptive_additions || 0,
+          cooldown_choice:
+            completionMeta.cooldown_choice || "",
+          pain_flags:
+            completionMeta.pain_flags || 0,
+          active_ratio_percent:
+            completionMeta.active_ratio_percent || 0,
+        }
+      );
+    } finally {
+      window.setTimeout(() => {
+        setSavingWorkout(false);
+      }, 400);
+    }
   }
 
   function saveEditedWorkout() {
@@ -1981,6 +2203,7 @@ export default function ActiveWorkoutSessionDrawer({
             <FinishReviewPanel
               validation={validation}
               session={session}
+              saving={savingWorkout}
               onBack={() => setReviewMode(false)}
               onSave={saveWorkout}
             />
