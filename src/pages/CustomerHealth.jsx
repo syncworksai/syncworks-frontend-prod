@@ -30,6 +30,7 @@ import HealthDashboard from "../components/customer-health/HealthDashboard";
 import HealthProgressCharts from "../components/customer-health/HealthProgressCharts";
 import HealthHome from "../components/customer-health/HealthHome";
 import PlanTodayWorkoutDrawer from "../components/customer-health/PlanTodayWorkoutDrawer";
+import PreWorkoutCheckInDrawer from "../components/customer-health/PreWorkoutCheckInDrawer";
 import HealthProfileIntakeDrawer from "../components/customer-health/HealthProfileIntakeDrawer";
 import HealthQuickLogDrawer from "../components/customer-health/HealthQuickLogDrawer";
 import NutritionCoachDrawer from "../components/customer-health/NutritionCoachDrawer";
@@ -1972,7 +1973,7 @@ export default function CustomerHealth() {
     );
 
     setDrawer(
-      "active-workout"
+      "pre-workout"
     );
   }
 
@@ -2054,7 +2055,7 @@ export default function CustomerHealth() {
         ),
     });
 
-    setDrawer("active-workout");
+    setDrawer("pre-workout");
   }
 
   function startAlwaysReadyWorkout() {
@@ -2175,6 +2176,103 @@ export default function CustomerHealth() {
         now.toTimeString().slice(0, 5),
     });
   }
+  function confirmPreWorkout(
+    checkIn = {}
+  ) {
+    if (!activePlannerItem) return;
+
+    const soreAreas =
+      Array.isArray(checkIn.sore_areas)
+        ? checkIn.sore_areas
+        : [];
+
+    let nextPlannerItem = {
+      ...activePlannerItem,
+      pre_workout_check_in: {
+        ...checkIn,
+        completed_at:
+          new Date().toISOString(),
+      },
+    };
+
+    const shouldAdjust =
+      checkIn.adjust_workout &&
+      (
+        soreAreas.length > 0 ||
+        checkIn.readiness === "Low" ||
+        checkIn.energy === "Low" ||
+        checkIn.pain === "Moderate"
+      );
+
+    if (shouldAdjust) {
+      const adjustedPlan =
+        buildAdaptiveWorkout({
+          history,
+          snapshot: {
+            ...syncedSnapshot,
+            readiness:
+              checkIn.readiness ||
+              syncedSnapshot.readiness,
+            sore_areas: soreAreas,
+            pain_area: soreAreas.join(" "),
+            pain_score:
+              checkIn.pain === "Moderate"
+                ? 5
+                : checkIn.pain === "Mild"
+                ? 2
+                : 0,
+          },
+          profile,
+          mode:
+            checkIn.readiness === "Low" ||
+            checkIn.energy === "Low"
+              ? "recovery"
+              : "recommended",
+        });
+
+      if (
+        Array.isArray(adjustedPlan.exercises) &&
+        adjustedPlan.exercises.length
+      ) {
+        nextPlannerItem = {
+          ...nextPlannerItem,
+          workout_name:
+            adjustedPlan.title ||
+            nextPlannerItem.workout_name,
+          title:
+            adjustedPlan.title ||
+            nextPlannerItem.title,
+          adaptive_reason:
+            adjustedPlan.reason ||
+            nextPlannerItem.adaptive_reason,
+          exercises:
+            adjustedPlan.exercises,
+          adjusted_before_start: true,
+        };
+      }
+    }
+
+    setSnapshot((previous) => ({
+      ...previous,
+      readiness:
+        checkIn.readiness ||
+        previous.readiness,
+      sore_areas: soreAreas,
+      last_pre_workout_check_in:
+        nextPlannerItem.pre_workout_check_in,
+      updated_at:
+        new Date().toISOString(),
+    }));
+
+    setActivePlannerItem(
+      nextPlannerItem
+    );
+
+    setDrawer(
+      "active-workout"
+    );
+  }
+
   function openCardioPlayer(
     plan = null
   ) {
@@ -2386,6 +2484,25 @@ export default function CustomerHealth() {
 
       {hasHealthAccess ? (
         <>
+          <PreWorkoutCheckInDrawer
+            open={
+              drawer ===
+              "pre-workout"
+            }
+            onClose={() =>
+              setDrawer("")
+            }
+            workout={
+              activePlannerItem
+            }
+            snapshot={
+              syncedSnapshot
+            }
+            onConfirm={
+              confirmPreWorkout
+            }
+          />
+
           <PlanTodayWorkoutDrawer
             open={drawer === "plan-today"}
             onClose={() =>
@@ -2783,8 +2900,8 @@ export default function CustomerHealth() {
             onStartWorkout={
               startPlannerWorkout
             }
-            onStartFallback={
-              startAlwaysReadyWorkout
+            onStartFallback={() =>
+              setDrawer("plan-today")
             }
             nextSession={
               mobileNextSession

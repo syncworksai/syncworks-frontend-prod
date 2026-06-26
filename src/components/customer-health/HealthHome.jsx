@@ -232,9 +232,8 @@ function LogDataMenu({
     {
       title: "Training",
       items: [
-        ["Workout now", "workout"],
-        ["Past workout", "workout"],
-        ["Quick workout / HIIT", "workout"],
+        ["Plan workout with coach", "plan-today"],
+        ["Past workout", "workout-history"],
       ],
     },
   ];
@@ -505,10 +504,10 @@ export default function HealthHome({
                   todayWorkout.note ||
                   "Your coach will guide each set."
                 }`
-              : "Choose a quick workout, saved workout, or ask the coach to build one."}
+              : "Plan with your coach using your location, time, goals, readiness, and recent training."}
           </div>
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
             <button
               type="button"
               onClick={() =>
@@ -520,15 +519,7 @@ export default function HealthHome({
             >
               {todayWorkout
                 ? "Start Today's Workout"
-                : "Plan Today's Workout"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onOpen?.("workout")}
-              className="h-12 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 text-sm font-black text-cyan-100"
-            >
-              Quick Workout / HIIT
+                : "Plan With Coach"}
             </button>
 
             <button
@@ -641,7 +632,7 @@ export default function HealthHome({
           </button>
         </div>
 
-        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
           <QuickAction
             title="Log Data"
             subtitle="Weight, meals, water, steps, sleep, readiness, or a past workout."
@@ -656,12 +647,7 @@ export default function HealthHome({
             onClick={() => onOpen?.("coach-chat")}
           />
 
-          <QuickAction
-            title="Quick Workout"
-            subtitle="Start a home, gym, mobility, cardio, or HIIT session."
-            tone="lime"
-            onClick={() => onOpen?.("workout")}
-          />
+
         </div>
       </section>
 
