@@ -85,6 +85,7 @@ export default function ExerciseLibraryDrawer({
   const [builderName, setBuilderName] = useState("Custom Workout");
   const [builderExercises, setBuilderExercises] = useState([]);
   const [builderMessage, setBuilderMessage] = useState("");
+  const [savedCustomWorkout, setSavedCustomWorkout] = useState(null);
 
   useEffect(() => {
     if (!open) return;
@@ -107,6 +108,7 @@ export default function ExerciseLibraryDrawer({
       );
       setBuilderExercises([]);
       setBuilderMessage("");
+      setSavedCustomWorkout(null);
 
       if (focus === "arms") {
         setSearch("biceps");
@@ -253,7 +255,8 @@ export default function ExerciseLibraryDrawer({
         ...previous,
         normalizeBuilderExercise(exercise),
       ]);
-      setBuilderMessage(`${exercise.name} added.`);
+      setSavedCustomWorkout(null);
+      setBuilderMessage(`${exercise.name} added. Save the updated workout when ready.`);
       return;
     }
 
@@ -270,6 +273,11 @@ export default function ExerciseLibraryDrawer({
     onAddExercise?.(normalizeBuilderExercise(exercise));
   }
 
+  function markBuilderUnsaved() {
+    setSavedCustomWorkout(null);
+    setBuilderMessage("Changes not saved yet.");
+  }
+
   function updateBuilderExercise(builderId, field, value) {
     setBuilderExercises((previous) =>
       previous.map((item) =>
@@ -284,12 +292,14 @@ export default function ExerciseLibraryDrawer({
           : item
       )
     );
+    markBuilderUnsaved();
   }
 
   function removeBuilderExercise(builderId) {
     setBuilderExercises((previous) =>
       previous.filter((item) => item.builder_id !== builderId)
     );
+    markBuilderUnsaved();
   }
 
   function moveBuilderExercise(index, direction) {
@@ -303,6 +313,7 @@ export default function ExerciseLibraryDrawer({
       next.splice(nextIndex, 0, item);
       return next;
     });
+    markBuilderUnsaved();
   }
 
   function buildCustomWorkoutPayload() {
@@ -325,12 +336,20 @@ export default function ExerciseLibraryDrawer({
   }
 
   function saveCustomWorkout() {
+    if (!builderName.trim()) {
+      setBuilderMessage("Enter a workout name before saving.");
+      return;
+    }
+
     if (!builderExercises.length) {
       setBuilderMessage("Add at least one exercise first.");
       return;
     }
-    onSaveCustomWorkout?.(buildCustomWorkoutPayload());
-    setBuilderMessage("Workout saved to My Workouts.");
+
+    const workout = buildCustomWorkoutPayload();
+    onSaveCustomWorkout?.(workout);
+    setSavedCustomWorkout(workout);
+    setBuilderMessage(`${workout.workout_name} saved. Ready to start.`);
   }
 
   function startCustomWorkout() {
@@ -338,7 +357,13 @@ export default function ExerciseLibraryDrawer({
       setBuilderMessage("Add at least one exercise first.");
       return;
     }
-    onStartCustomWorkout?.(buildCustomWorkoutPayload());
+
+    if (!savedCustomWorkout) {
+      setBuilderMessage("Use Save As first so this exact workout is ready to start.");
+      return;
+    }
+
+    onStartCustomWorkout?.(savedCustomWorkout);
   }
 
   function selectAlternative(alternative, original) {
@@ -405,12 +430,18 @@ export default function ExerciseLibraryDrawer({
                 </div>
               </div>
 
-              <input
-                value={builderName}
-                onChange={(event) => setBuilderName(event.target.value)}
-                placeholder="Workout name"
-                className="mt-3 h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-black text-white outline-none focus:border-cyan-300/40"
-              />
+              <label className="mt-3 block text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200">
+                Save As
+                <input
+                  value={builderName}
+                  onChange={(event) => {
+                    setBuilderName(event.target.value);
+                    markBuilderUnsaved();
+                  }}
+                  placeholder="Name your workout"
+                  className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-black normal-case tracking-normal text-white outline-none focus:border-cyan-300/40"
+                />
+              </label>
 
               <div className="mt-3 space-y-2">
                 {builderExercises.map((exercise, index) => (
@@ -496,22 +527,27 @@ export default function ExerciseLibraryDrawer({
                 </div>
               ) : null}
 
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={saveCustomWorkout}
-                  className="h-11 rounded-xl border border-cyan-300/25 bg-cyan-300/10 text-xs font-black text-cyan-100"
-                >
-                  Save to My Workouts
-                </button>
-                <button
-                  type="button"
-                  onClick={startCustomWorkout}
-                  className="h-11 rounded-xl border border-lime-300/30 bg-lime-300/15 text-xs font-black text-lime-100"
-                >
-                  Pre-Workout Instructions
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={saveCustomWorkout}
+                className="mt-3 h-11 w-full rounded-xl border border-cyan-300/25 bg-cyan-300/10 text-xs font-black text-cyan-100"
+              >
+                Save As "{builderName.trim() || "Custom Workout"}"
+              </button>
+
+              {savedCustomWorkout ? (
+                <div className="mt-3 rounded-2xl border border-lime-300/25 bg-lime-300/10 p-3">
+                  <div className="text-[10px] font-black uppercase tracking-[0.16em] text-lime-200">
+                    Workout Saved
+                  </div>
+                  <div className="mt-1 text-sm font-black text-white">
+                    {savedCustomWorkout.workout_name}
+                  </div>
+                  <div className="mt-1 text-xs leading-5 text-slate-400">
+                    {savedCustomWorkout.exercises.length} exercises are locked in and ready for your custom pre-workout check.
+                  </div>
+                </div>
+              ) : null}
             </section>
           ) : null}
           <div className="sticky top-0 z-10 -mx-1 space-y-3 bg-[#07101f]/95 px-1 pb-3 backdrop-blur-xl">
@@ -656,6 +692,32 @@ export default function ExerciseLibraryDrawer({
               </div>
               <div className="mt-2 text-sm text-slate-400">
                 Try a broader muscle, equipment, or movement search.
+              </div>
+            </div>
+          ) : null}
+          {builderMode ? (
+            <div className="sticky bottom-0 z-20 -mx-1 mt-4 border-t border-white/10 bg-[#07101f]/95 px-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
+              <button
+                type="button"
+                onClick={
+                  savedCustomWorkout
+                    ? startCustomWorkout
+                    : saveCustomWorkout
+                }
+                className={`h-14 w-full rounded-2xl border text-sm font-black shadow-[0_0_28px_rgba(57,255,136,0.12)] ${
+                  savedCustomWorkout
+                    ? "border-lime-300/35 bg-lime-300/20 text-lime-100"
+                    : "border-cyan-300/30 bg-cyan-300/15 text-cyan-100"
+                }`}
+              >
+                {savedCustomWorkout
+                  ? "Ready to Start"
+                  : "Save As to Continue"}
+              </button>
+              <div className="mt-1 text-center text-[10px] font-bold text-slate-500">
+                {savedCustomWorkout
+                  ? "Opens pre-workout instructions for this exact custom workout."
+                  : "Name and save this workout before starting."}
               </div>
             </div>
           ) : null}
