@@ -2471,6 +2471,98 @@ export default function CustomerHealth() {
     setDrawer("active-workout");
   }
 
+  function saveCustomWorkout(
+    workout
+  ) {
+    if (
+      !workout ||
+      !Array.isArray(workout.exercises) ||
+      !workout.exercises.length
+    ) {
+      return;
+    }
+
+    const savedWorkout = {
+      ...workout,
+      id: workout.id || uid("custom-workout"),
+      name:
+        workout.name ||
+        workout.workout_name ||
+        "Custom Workout",
+      workout_name:
+        workout.workout_name ||
+        workout.name ||
+        "Custom Workout",
+      source: "custom_builder",
+      saved_at: new Date().toISOString(),
+    };
+
+    setWorkouts((previous) => [
+      savedWorkout,
+      ...(Array.isArray(previous)
+        ? previous.filter((item) => item?.id !== savedWorkout.id)
+        : []),
+    ]);
+  }
+
+  function startCustomWorkout(
+    workout
+  ) {
+    if (
+      !workout ||
+      !Array.isArray(workout.exercises) ||
+      !workout.exercises.length
+    ) {
+      return;
+    }
+
+    saveCustomWorkout(workout);
+
+    const now = new Date();
+    const plannerItem = {
+      ...workout,
+      id: uid("custom-session"),
+      workout_id: workout.id || "",
+      workout_name:
+        workout.workout_name ||
+        workout.name ||
+        "Custom Workout",
+      title:
+        workout.title ||
+        workout.name ||
+        "Custom Workout",
+      name:
+        workout.name ||
+        workout.workout_name ||
+        "Custom Workout",
+      ymd: todayYmd(),
+      day_label: now.toLocaleDateString(undefined, {
+        weekday: "short",
+      }),
+      time: now.toTimeString().slice(0, 5),
+      status: "Planned",
+      source: "custom_builder",
+      exercises: workout.exercises.map((exercise, index) => ({
+        ...exercise,
+        id:
+          exercise.id ||
+          uid(`custom-exercise-${index + 1}`),
+        sets:
+          exercise.planned_sets ||
+          exercise.sets ||
+          "3",
+        reps:
+          exercise.planned_reps ||
+          exercise.reps ||
+          "10",
+        rest_seconds: Number(exercise.rest_seconds || 60),
+        order: index + 1,
+      })),
+    };
+
+    setActivePlannerItem(plannerItem);
+    setDrawer("pre-workout");
+  }
   function openCardioPlayer(
     plan = null
   ) {
@@ -2824,6 +2916,12 @@ export default function CustomerHealth() {
             }
             onAddExercise={
               addExerciseFromLibrary
+            }
+            onSaveCustomWorkout={
+              saveCustomWorkout
+            }
+            onStartCustomWorkout={
+              startCustomWorkout
             }
           />
 

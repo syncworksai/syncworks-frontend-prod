@@ -69,6 +69,8 @@ export default function ExerciseLibraryDrawer({
   open,
   onClose,
   onAddExercise,
+  onSaveCustomWorkout,
+  onStartCustomWorkout,
 }) {
   const [search, setSearch] = useState("");
   const [muscle, setMuscle] = useState("All");
@@ -79,6 +81,10 @@ export default function ExerciseLibraryDrawer({
   const [favorites, setFavorites] = useState(() =>
     readExerciseFavorites()
   );
+  const [builderMode, setBuilderMode] = useState(false);
+  const [builderName, setBuilderName] = useState("Custom Workout");
+  const [builderExercises, setBuilderExercises] = useState([]);
+  const [builderMessage, setBuilderMessage] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -91,6 +97,16 @@ export default function ExerciseLibraryDrawer({
       );
       const intent = raw ? JSON.parse(raw) : null;
       const focus = String(intent?.focus || "").toLowerCase();
+      const isBuilder = intent?.mode === "builder";
+
+      setBuilderMode(isBuilder);
+      setBuilderName(
+        intent?.label
+          ? `${intent.label} Workout`
+          : "Custom Workout"
+      );
+      setBuilderExercises([]);
+      setBuilderMessage("");
 
       if (focus === "arms") {
         setSearch("biceps");
@@ -113,8 +129,12 @@ export default function ExerciseLibraryDrawer({
         setSearch("");
         setMuscle("All");
       }
+
+      window.localStorage.removeItem(
+        "sw_health_library_builder_intent"
+      );
     } catch {
-      // Builder intent is best effort.
+      setBuilderMode(false);
     }
   }, [open]);
 
@@ -196,13 +216,46 @@ export default function ExerciseLibraryDrawer({
     });
   }
 
+  function normalizeBuilderExercise(exercise) {
+    return {
+      ...exercise,
+      builder_id: `${exercise.id}-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 7)}`,
+      sets: String(exercise.sets || "3"),
+      reps: String(exercise.reps || "10"),
+      rest_seconds: Number(
+        exercise.rest_seconds ||
+          String(exercise.rest || "").replace(/[^\d]/g, "") ||
+          60
+      ),
+      group: exercise.primary_muscles?.[0] || "Other",
+      trains: [
+        ...(exercise.primary_muscles || []),
+        ...(exercise.secondary_muscles || []),
+      ].join(", "),
+      avoid: (exercise.mistakes || []).join(" | "),
+      sportBenefit: exercise.movement_pattern,
+    };
+  }
+
   function addExercise(exercise, reason = "exercise") {
     trackExerciseLibraryKpi("exercise_added", {
       exercise_id: exercise.id,
       reason,
       selected_muscle_filter: muscle,
       active_search: search.trim(),
+      builder_mode: builderMode,
     });
+
+    if (builderMode) {
+      setBuilderExercises((previous) => [
+        ...previous,
+        normalizeBuilderExercise(exercise),
+      ]);
+      setBuilderMessage(`${exercise.name} added.`);
+      return;
+    }
 
     speakCoachText({
       text:
@@ -214,17 +267,78 @@ export default function ExerciseLibraryDrawer({
       rate: 0.98,
     });
 
-    onAddExercise?.({
-      ...exercise,
-      group: exercise.primary_muscles[0] || "Other",
-      trains: [
-        ...(exercise.primary_muscles || []),
-        ...(exercise.secondary_muscles || []),
-      ].join(", "),
-      avoid: (exercise.mistakes || []).join(" | "),
-      sportBenefit: exercise.movement_pattern,
-      suggestion: `${exercise.sets} sets | ${exercise.reps} reps | ${exercise.rest} rest`,
+    onAddExercise?.(normalizeBuilderExercise(exercise));
+  }
+
+  function updateBuilderExercise(builderId, field, value) {
+    setBuilderExercises((previous) =>
+      previous.map((item) =>
+        item.builder_id === builderId
+          ? {
+              ...item,
+              [field]:
+                field === "rest_seconds"
+                  ? Math.max(0, Number(value || 0))
+                  : value,
+            }
+          : item
+      )
+    );
+  }
+
+  function removeBuilderExercise(builderId) {
+    setBuilderExercises((previous) =>
+      previous.filter((item) => item.builder_id !== builderId)
+    );
+  }
+
+  function moveBuilderExercise(index, direction) {
+    setBuilderExercises((previous) => {
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= previous.length) {
+        return previous;
+      }
+      const next = [...previous];
+      const [item] = next.splice(index, 1);
+      next.splice(nextIndex, 0, item);
+      return next;
     });
+  }
+
+  function buildCustomWorkoutPayload() {
+    return {
+      id: `custom-workout-${Date.now()}`,
+      name: builderName.trim() || "Custom Workout",
+      title: builderName.trim() || "Custom Workout",
+      workout_name: builderName.trim() || "Custom Workout",
+      source: "custom_builder",
+      created_at: new Date().toISOString(),
+      exercises: builderExercises.map((exercise, index) => ({
+        ...exercise,
+        id: exercise.id || `custom-exercise-${index + 1}`,
+        planned_sets: String(exercise.sets || "3"),
+        planned_reps: String(exercise.reps || "10"),
+        rest_seconds: Number(exercise.rest_seconds || 60),
+        order: index + 1,
+      })),
+    };
+  }
+
+  function saveCustomWorkout() {
+    if (!builderExercises.length) {
+      setBuilderMessage("Add at least one exercise first.");
+      return;
+    }
+    onSaveCustomWorkout?.(buildCustomWorkoutPayload());
+    setBuilderMessage("Workout saved to My Workouts.");
+  }
+
+  function startCustomWorkout() {
+    if (!builderExercises.length) {
+      setBuilderMessage("Add at least one exercise first.");
+      return;
+    }
+    onStartCustomWorkout?.(buildCustomWorkoutPayload());
   }
 
   function selectAlternative(alternative, original) {
@@ -263,15 +377,143 @@ export default function ExerciseLibraryDrawer({
         <div className="space-y-4">
           <div className="rounded-2xl border border-lime-300/20 bg-lime-300/[0.07] p-3">
             <div className="text-[10px] font-black uppercase tracking-[0.16em] text-lime-200">
-              Build Your Own
+              {builderMode ? "Custom Workout Builder" : "Exercise Library"}
             </div>
             <div className="mt-1 text-sm font-black text-white">
-              Add the movements you want today
+              {builderMode
+                ? "Add, organize, and customize today's workout"
+                : "Find the movement you need"}
             </div>
             <div className="mt-1 text-xs leading-5 text-slate-400">
-              Choose arms, abs, strength, mobility, or any combination. Added exercises go into your current workout so the coach can guide sets, rest, effort, form, and pain.
+              {builderMode
+                ? "Choose any combination. Edit sets, reps, and rest below, then save it or continue to Pre-Workout Instructions."
+                : "Search by muscle, equipment, location, or movement pattern."}
             </div>
           </div>
+
+          {builderMode ? (
+            <section className="rounded-[1.5rem] border border-cyan-300/25 bg-cyan-300/[0.06] p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">
+                    Selected Workout
+                  </div>
+                  <div className="mt-1 text-sm font-black text-white">
+                    {builderExercises.length} exercise
+                    {builderExercises.length === 1 ? "" : "s"}
+                  </div>
+                </div>
+              </div>
+
+              <input
+                value={builderName}
+                onChange={(event) => setBuilderName(event.target.value)}
+                placeholder="Workout name"
+                className="mt-3 h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-black text-white outline-none focus:border-cyan-300/40"
+              />
+
+              <div className="mt-3 space-y-2">
+                {builderExercises.map((exercise, index) => (
+                  <div key={exercise.builder_id} className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-black text-white">
+                          {index + 1}. {exercise.name}
+                        </div>
+                        <div className="mt-1 text-[11px] text-slate-500">
+                          {exercise.equipment} | {exercise.location}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeBuilderExercise(exercise.builder_id)}
+                        className="h-8 rounded-lg border border-rose-300/20 bg-rose-300/10 px-2 text-[10px] font-black text-rose-100"
+                      >
+                        Remove
+                      </button>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      <label className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                        Sets
+                        <input
+                          value={exercise.sets}
+                          onChange={(event) => updateBuilderExercise(exercise.builder_id, "sets", event.target.value)}
+                          inputMode="numeric"
+                          className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-slate-950 px-2 text-center text-sm font-black text-white"
+                        />
+                      </label>
+                      <label className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                        Reps
+                        <input
+                          value={exercise.reps}
+                          onChange={(event) => updateBuilderExercise(exercise.builder_id, "reps", event.target.value)}
+                          className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-slate-950 px-2 text-center text-sm font-black text-white"
+                        />
+                      </label>
+                      <label className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                        Rest sec
+                        <input
+                          value={exercise.rest_seconds}
+                          onChange={(event) => updateBuilderExercise(exercise.builder_id, "rest_seconds", event.target.value)}
+                          inputMode="numeric"
+                          className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-slate-950 px-2 text-center text-sm font-black text-white"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        disabled={index === 0}
+                        onClick={() => moveBuilderExercise(index, -1)}
+                        className="h-9 rounded-xl border border-white/10 bg-white/[0.04] text-xs font-black text-white disabled:opacity-30"
+                      >
+                        Move Up
+                      </button>
+                      <button
+                        type="button"
+                        disabled={index === builderExercises.length - 1}
+                        onClick={() => moveBuilderExercise(index, 1)}
+                        className="h-9 rounded-xl border border-white/10 bg-white/[0.04] text-xs font-black text-white disabled:opacity-30"
+                      >
+                        Move Down
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {!builderExercises.length ? (
+                <div className="mt-3 rounded-2xl border border-dashed border-white/15 p-4 text-center text-xs text-slate-500">
+                  Add exercises from the library below.
+                </div>
+              ) : null}
+
+              {builderMessage ? (
+                <div className="mt-3 text-xs font-bold text-lime-200">
+                  {builderMessage}
+                </div>
+              ) : null}
+
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={saveCustomWorkout}
+                  className="h-11 rounded-xl border border-cyan-300/25 bg-cyan-300/10 text-xs font-black text-cyan-100"
+                >
+                  Save to My Workouts
+                </button>
+                <button
+                  type="button"
+                  onClick={startCustomWorkout}
+                  className="h-11 rounded-xl border border-lime-300/30 bg-lime-300/15 text-xs font-black text-lime-100"
+                >
+                  Pre-Workout Instructions
+                </button>
+              </div>
+            </section>
+          ) : null}
           <div className="sticky top-0 z-10 -mx-1 space-y-3 bg-[#07101f]/95 px-1 pb-3 backdrop-blur-xl">
             <div className="grid grid-cols-[1fr_auto] gap-2">
               <input
