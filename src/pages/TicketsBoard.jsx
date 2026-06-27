@@ -5,6 +5,15 @@ import ModeBar from "../components/ModeBar";
 import { useAuth } from "../auth/AuthContext";
 import PriorityBadge, { isPriorityOne, priorityRank } from "../components/tickets/PriorityBadge";
 import TicketMobileActionBar from "../components/tickets/TicketMobileActionBar";
+import MarketplaceOpportunityFilters, {
+  buildMarketplaceFilterOptions,
+  marketplaceCategoryKey,
+  marketplaceCoverageType,
+  marketplaceFitScore,
+  marketplacePriority,
+  marketplaceProjectScope,
+  marketplaceProjectValue,
+} from "../components/tickets/MarketplaceOpportunityFilters";
 
 function cx(...p) {
   return p.filter(Boolean).join(" ");
@@ -41,6 +50,14 @@ const STATUSES = [
   "CANCELLED",
   "CLOSED",
 ];
+
+const DEFAULT_MARKETPLACE_FILTERS = {
+  service: "ALL",
+  coverage: "ALL",
+  scope: "ALL",
+  urgency: "ALL",
+  minimumValue: "0",
+};
 
 const STATUS_CHANGE_OPTIONS = [
   "NEW",
@@ -656,6 +673,9 @@ export default function TicketsBoard() {
   const [source, setSource] = useState("ALL");
   const [assigned, setAssigned] = useState("ALL");
   const [sort, setSort] = useState("NEWEST");
+  const [marketplaceFilters, setMarketplaceFilters] = useState(
+    DEFAULT_MARKETPLACE_FILTERS
+  );
   const [actingId, setActingId] = useState(null);
 
   const [savedIds, setSavedIds] = useState(() => readSavedSet(user?.id || user?.email, mode));
@@ -670,6 +690,7 @@ export default function TicketsBoard() {
 
   useEffect(() => {
     setViewMode(view === "marketplace" ? "queue" : "cards");
+    setSort(view === "marketplace" ? "BEST_FIT" : "NEWEST");
   }, [view]);
 
   function setView(next) {
@@ -917,6 +938,11 @@ async function onArchiveToggle(ticketId, archived) {
     writeSavedSet(user?.id || user?.email, mode, next);
   }
 
+  const marketplaceFilterOptions = useMemo(
+    () => buildMarketplaceFilterOptions(items),
+    [items]
+  );
+
   const filtered = useMemo(() => {
     const text = (q || "").trim().toLowerCase();
     let list = [...(items || [])];
@@ -939,6 +965,25 @@ async function onArchiveToggle(ticketId, archived) {
 
     if (assigned === "ASSIGNED") list = list.filter((t) => isAssigned(t));
     if (assigned === "UNASSIGNED") list = list.filter((t) => !isAssigned(t));
+
+    if (view === "marketplace") {
+      if (marketplaceFilters.service !== "ALL") {
+        list = list.filter((t) => String(marketplaceCategoryKey(t)) === marketplaceFilters.service);
+      }
+      if (marketplaceFilters.coverage !== "ALL") {
+        list = list.filter((t) => marketplaceCoverageType(t) === marketplaceFilters.coverage);
+      }
+      if (marketplaceFilters.scope !== "ALL") {
+        list = list.filter((t) => marketplaceProjectScope(t) === marketplaceFilters.scope);
+      }
+      if (marketplaceFilters.urgency !== "ALL") {
+        list = list.filter((t) => marketplacePriority(t) === marketplaceFilters.urgency);
+      }
+      const minimumValue = Number(marketplaceFilters.minimumValue || 0);
+      if (minimumValue > 0) {
+        list = list.filter((t) => marketplaceProjectValue(t) >= minimumValue);
+      }
+    }
 
     if (text) {
       list = list.filter((t) => {
@@ -971,14 +1016,26 @@ async function onArchiveToggle(ticketId, archived) {
       const db = b?.created_at ? new Date(b.created_at).getTime() : 0;
       const urgency = priorityRank(a) - priorityRank(b);
 
-      if (view === "marketplace" && urgency !== 0) return urgency;
+      if (sort === "BEST_FIT") {
+        const scoreA = marketplaceFitScore(a, savedIds.has(Number(a?.id)));
+        const scoreB = marketplaceFitScore(b, savedIds.has(Number(b?.id)));
+        if (scoreA !== scoreB) return scoreB - scoreA;
+      }
+      if (sort === "VALUE_HIGH") {
+        const valueA = marketplaceProjectValue(a);
+        const valueB = marketplaceProjectValue(b);
+        if (valueA !== valueB) return valueB - valueA;
+      }
       if (sort === "PRIORITY" && urgency !== 0) return urgency;
 
       return sort === "OLDEST" ? da - db : db - da;
     });
 
     return list;
-  }, [items, q, status, source, assigned, sort, view, isCustomer, isSboLike, savedIds]);
+  }, [
+    items, q, status, source, assigned, sort, view,
+    isCustomer, isSboLike, savedIds, marketplaceFilters,
+  ]);
 
   const counts = useMemo(() => {
     const base = items || [];
@@ -1057,6 +1114,17 @@ async function onArchiveToggle(ticketId, archived) {
           <BoardStat label="Archived" value={counts.archived} tone="slate" />
           <BoardStat label="P1 Urgent" value={counts.p1} tone="rose" />
         </div>
+
+        {view === "marketplace" ? (
+          <MarketplaceOpportunityFilters
+            filters={marketplaceFilters}
+            setFilters={setMarketplaceFilters}
+            options={marketplaceFilterOptions}
+            visibleCount={filtered.length}
+            totalCount={(items || []).length}
+            onClear={() => setMarketplaceFilters(DEFAULT_MARKETPLACE_FILTERS)}
+          />
+        ) : null}
 
         <section className="rounded-3xl border border-slate-800/90 bg-slate-950/45 p-4 backdrop-blur-xl">
           <div className="flex flex-col gap-4">
@@ -1165,9 +1233,11 @@ async function onArchiveToggle(ticketId, archived) {
                   value={sort}
                   onChange={(e) => setSort(e.target.value)}
                 >
+                  {view === "marketplace" ? <option value="BEST_FIT">Best Fit</option> : null}
                   <option value="NEWEST">Newest</option>
                   <option value="OLDEST">Oldest</option>
                   <option value="PRIORITY">Priority</option>
+                  {view === "marketplace" ? <option value="VALUE_HIGH">Highest Known Value</option> : null}
                 </select>
 
                 <SmallBtn
@@ -1177,6 +1247,7 @@ async function onArchiveToggle(ticketId, archived) {
                     setSource("ALL");
                     setAssigned("ALL");
                     setSort("NEWEST");
+                    setMarketplaceFilters(DEFAULT_MARKETPLACE_FILTERS);
                   }}
                 >
                   Clear
