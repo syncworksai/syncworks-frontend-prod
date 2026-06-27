@@ -1002,6 +1002,8 @@ function MobileMenuDrawer({
   canPm,
   canGodMode,
   goMode,
+  goInbox,
+  inboxUnreadCount,
   goFeed,
   goSupport,
   goLearnMore,
@@ -1227,6 +1229,21 @@ function MobileMenuDrawer({
                 <button
                   type="button"
                   onClick={() =>
+                    run(goInbox)
+                  }
+                  className="relative rounded-2xl border border-cyan-500/25 bg-cyan-500/10 px-3 py-3 text-sm font-bold text-cyan-100"
+                >
+                  Inbox
+                  {inboxUnreadCount > 0 ? (
+                    <span className="absolute right-2 top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-cyan-300 px-1.5 py-0.5 text-[10px] font-black text-slate-950">
+                      {inboxUnreadCount > 99 ? "99+" : inboxUnreadCount}
+                    </span>
+                  ) : null}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
                     run(goFeed)
                   }
                   className="rounded-2xl border border-fuchsia-500/25 bg-fuchsia-500/10 px-3 py-3 text-sm font-bold text-fuchsia-100"
@@ -1320,6 +1337,11 @@ export default function ModeBar({
     setMobileMenuOpen,
   ] = useState(false);
 
+  const [
+    inboxUnreadCount,
+    setInboxUnreadCount,
+  ] = useState(0);
+
   useEffect(() => {
     const styleId =
       "syncworks-modebar-clean-css";
@@ -1385,6 +1407,95 @@ export default function ModeBar({
   const isHealthRoute =
     pathname.startsWith("/customer/health") ||
     pathname.startsWith("/health");
+
+  const inboxScope =
+    ["SBO", "EMPLOYEE"].includes(mode)
+      ? "BUSINESS"
+      : "PERSONAL";
+
+  const inboxDestination =
+    mode === "SBO"
+      ? "/sbo/inbox"
+      : mode === "EMPLOYEE"
+      ? "/employee/inbox"
+      : "/customer/inbox";
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadInboxUnreadCount() {
+      if (
+        inboxScope === "BUSINESS" &&
+        !getActiveBusinessId?.()
+      ) {
+        if (!cancelled) {
+          setInboxUnreadCount(0);
+        }
+        return;
+      }
+
+      try {
+        const response = await api.get(
+          `/ticket-conversations/?scope=${inboxScope}&archived=false`
+        );
+
+        if (!cancelled) {
+          setInboxUnreadCount(
+            Number(
+              response?.data?.unread_total ||
+                0
+            )
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setInboxUnreadCount(0);
+        }
+      }
+    }
+
+    loadInboxUnreadCount();
+
+    const intervalId =
+      window.setInterval(
+        loadInboxUnreadCount,
+        60000
+      );
+
+    function refreshUnread() {
+      loadInboxUnreadCount();
+    }
+
+    window.addEventListener(
+      "focus",
+      refreshUnread
+    );
+    window.addEventListener(
+      "sw:activeBusinessChanged",
+      refreshUnread
+    );
+    window.addEventListener(
+      "sw:inboxReadStateChanged",
+      refreshUnread
+    );
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener(
+        "focus",
+        refreshUnread
+      );
+      window.removeEventListener(
+        "sw:activeBusinessChanged",
+        refreshUnread
+      );
+      window.removeEventListener(
+        "sw:inboxReadStateChanged",
+        refreshUnread
+      );
+    };
+  }, [inboxScope, mode, location.pathname]);
 
   const businesses = useMemo(
     () =>
@@ -1735,6 +1846,10 @@ export default function ModeBar({
     nav("/support");
   }
 
+  function goInbox() {
+    nav(inboxDestination);
+  }
+
   function goFeed() {
     nav("/newsfeed");
   }
@@ -1958,6 +2073,44 @@ export default function ModeBar({
 
               <button
                 type="button"
+                onClick={goInbox}
+                className="relative flex h-11 items-center justify-center gap-2 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 px-3 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.12)] transition hover:bg-cyan-500/16"
+                title="Open Inbox"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M4 5.5h16v13H4z"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="m5 7 7 5 7-5"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <span className="hidden text-xs font-black sm:inline">
+                  Inbox
+                </span>
+                {inboxUnreadCount > 0 ? (
+                  <span className="absolute -right-2 -top-2 inline-flex min-w-5 items-center justify-center rounded-full border border-slate-950 bg-cyan-300 px-1.5 py-0.5 text-[10px] font-black text-slate-950 shadow-[0_0_16px_rgba(103,232,249,0.65)]">
+                    {inboxUnreadCount > 99
+                      ? "99+"
+                      : inboxUnreadCount}
+                  </span>
+                ) : null}
+              </button>
+
+              <button
+                type="button"
                 onClick={() =>
                   setMobileMenuOpen(
                     true
@@ -2006,6 +2159,10 @@ export default function ModeBar({
         canPm={canPm}
         canGodMode={canGodMode}
         goMode={goMode}
+        goInbox={goInbox}
+        inboxUnreadCount={
+          inboxUnreadCount
+        }
         goFeed={goFeed}
         goSupport={goSupport}
 
