@@ -412,8 +412,10 @@ function SetCompletionSheet({
   const [reps, setReps] = useState("");
   const [weight, setWeight] = useState("");
   const [rpe, setRpe] = useState("7");
+  const [effortLabel, setEffortLabel] = useState("Medium");
   const [formQuality, setFormQuality] = useState("Good");
   const [pain, setPain] = useState("0");
+  const [painArea, setPainArea] = useState("");
   const [setType, setSetType] = useState("working");
   const [reachedFailure, setReachedFailure] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -438,8 +440,10 @@ function SetCompletionSheet({
     );
 
     setRpe("7");
+    setEffortLabel("Medium");
     setFormQuality("Good");
-    setPain(exercise.pain_score || "0");
+    setPain("0");
+    setPainArea("");
     setSetType("working");
     setReachedFailure(false);
     setAdvancedOpen(false);
@@ -478,8 +482,15 @@ function SetCompletionSheet({
       planned_weight: exercise.planned_weight || "",
       rpe,
       ease_score: rpe,
+      effort_label: effortLabel,
       form_quality: formQuality,
+      movement_pain: Number(pain || 0) > 0,
       pain_score: pain,
+      pain_area: Number(pain || 0) > 0 ? painArea : "",
+      pain_context:
+        Number(pain || 0) > 0
+          ? "caused_or_increased_by_movement"
+          : "no_movement_pain",
       set_type: setType,
       reached_failure: reachedFailure,
       adjustment_source:
@@ -572,25 +583,34 @@ function SetCompletionSheet({
         </div>
 
         <div className="mt-4 rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/[0.06] p-3">
-          <div className="flex items-center justify-between">
-            <div className="text-xs font-black text-white">
-              Effort
-            </div>
-
-            <div className="text-sm font-black text-fuchsia-100">
-              RPE {rpe}/10
-            </div>
+          <div className="text-xs font-black text-white">How hard was that set?</div>
+          <div className="mt-1 text-[11px] leading-5 text-slate-400">Choose the answer that best describes how many quality reps you had left.</div>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[
+              ["Easy", "6", "4+ reps left"],
+              ["Medium", "7", "2-3 reps left"],
+              ["Hard", "9", "1 rep left"],
+              ["Max Effort", "10", "No reps left"],
+            ].map(([label, value, detail]) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => {
+                  setEffortLabel(label);
+                  setRpe(value);
+                }}
+                className={cx(
+                  "rounded-xl border px-2 py-3 text-center",
+                  effortLabel === label
+                    ? "border-fuchsia-300/35 bg-fuchsia-300/15 text-fuchsia-100"
+                    : "border-white/10 bg-white/[0.03] text-slate-300"
+                )}
+              >
+                <div className="text-xs font-black">{label}</div>
+                <div className="mt-1 text-[9px] leading-4 opacity-70">{detail}</div>
+              </button>
+            ))}
           </div>
-
-          <input
-            type="range"
-            min="1"
-            max="10"
-            step="1"
-            value={rpe}
-            onChange={(event) => setRpe(event.target.value)}
-            className="mt-3 w-full accent-fuchsia-400"
-          />
         </div>
 
         <button
@@ -607,9 +627,12 @@ function SetCompletionSheet({
               <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
                 Form quality
               </div>
+              <div className="mt-1 text-[11px] leading-5 text-slate-400">
+                Poor form prevents automatic weight increases and helps the coach choose a safer next target.
+              </div>
 
               <div className="mt-2 grid grid-cols-3 gap-2">
-                {["Good", "Fair", "Poor"].map((option) => (
+                {["Good", "Okay", "Poor"].map((option) => (
                   <button
                     key={option}
                     type="button"
@@ -629,12 +652,15 @@ function SetCompletionSheet({
 
             <div>
               <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-                Pain
+                Did this movement cause or increase pain?
+              </div>
+              <div className="mt-1 text-[11px] leading-5 text-slate-400">
+                Do not count unrelated existing pain. Hip pain during a biceps curl only belongs here if the curl position made the hip pain worse.
               </div>
 
               <div className="mt-2 grid grid-cols-4 gap-2">
                 {[
-                  ["0", "None"],
+                  ["0", "No"],
                   ["1", "Mild"],
                   ["3", "Moderate"],
                   ["5", "Stop"],
@@ -642,7 +668,10 @@ function SetCompletionSheet({
                   <button
                     key={value}
                     type="button"
-                    onClick={() => setPain(value)}
+                    onClick={() => {
+                      setPain(value);
+                      if (value === "0") setPainArea("");
+                    }}
                     className={cx(
                       "rounded-xl border px-2 py-3 text-[10px] font-black",
                       pain === value
@@ -656,6 +685,29 @@ function SetCompletionSheet({
                   </button>
                 ))}
               </div>
+
+              {pain !== "0" ? (
+                <div className="mt-3">
+                  <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Where did the movement hurt?</div>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {["Neck", "Shoulder", "Elbow", "Wrist", "Chest", "Upper Back", "Lower Back", "Hip", "Knee", "Ankle", "Other"].map((area) => (
+                      <button
+                        key={area}
+                        type="button"
+                        onClick={() => setPainArea(area)}
+                        className={cx(
+                          "rounded-xl border px-2 py-2.5 text-[10px] font-black",
+                          painArea === area
+                            ? "border-rose-300/30 bg-rose-300/10 text-rose-100"
+                            : "border-white/10 bg-white/[0.03] text-slate-300"
+                        )}
+                      >
+                        {area}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="grid grid-cols-2 gap-2">

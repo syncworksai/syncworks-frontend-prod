@@ -2383,72 +2383,73 @@ export default function CustomerHealth() {
   ) {
     if (!activePlannerItem) return;
 
-    const soreAreas =
-      Array.isArray(checkIn.sore_areas)
-        ? checkIn.sore_areas
-        : [];
+    const soreAreas = Array.isArray(checkIn.sore_areas)
+      ? checkIn.sore_areas
+      : [];
+    const painAreas = Array.isArray(checkIn.preworkout_pain_areas)
+      ? checkIn.preworkout_pain_areas
+      : [];
+    const painSeverity = checkIn.preworkout_pain_severity || "None";
+    const protectedPainAreas = checkIn.avoid_pain_areas ? painAreas : [];
 
     let nextPlannerItem = {
       ...activePlannerItem,
       pre_workout_check_in: {
         ...checkIn,
-        completed_at:
-          new Date().toISOString(),
+        sore_areas: soreAreas,
+        preworkout_pain_areas: painAreas,
+        protected_pain_areas: protectedPainAreas,
+        completed_at: new Date().toISOString(),
       },
     };
 
     const shouldAdjust =
       checkIn.adjust_workout &&
-      (
-        soreAreas.length > 0 ||
+      (soreAreas.length > 0 ||
+        protectedPainAreas.length > 0 ||
         checkIn.readiness === "Low" ||
-        checkIn.energy === "Low" ||
-        checkIn.pain === "Moderate"
-      );
+        checkIn.energy === "Low");
 
     if (shouldAdjust) {
-      const adjustedPlan =
-        buildAdaptiveWorkout({
-          history,
-          snapshot: {
-            ...syncedSnapshot,
-            readiness:
-              checkIn.readiness ||
-              syncedSnapshot.readiness,
-            sore_areas: soreAreas,
-            pain_area: soreAreas.join(" "),
-            pain_score:
-              checkIn.pain === "Moderate"
-                ? 5
-                : checkIn.pain === "Mild"
-                ? 2
-                : 0,
-          },
-          profile,
-          mode:
-            checkIn.readiness === "Low" ||
-            checkIn.energy === "Low"
-              ? "recovery"
-              : "recommended",
-        });
+      const adjustedPlan = buildAdaptiveWorkout({
+        history,
+        snapshot: {
+          ...syncedSnapshot,
+          readiness: checkIn.readiness || syncedSnapshot.readiness,
+          sore_areas: soreAreas,
+          preworkout_pain_areas: painAreas,
+          protected_pain_areas: protectedPainAreas,
+          pain_areas: protectedPainAreas,
+          pain_area: protectedPainAreas.join(" "),
+          preworkout_pain_severity: painSeverity,
+          pain_score:
+            painSeverity === "Severe"
+              ? 7
+              : painSeverity === "Moderate"
+              ? 4
+              : painSeverity === "Mild"
+              ? 2
+              : 0,
+        },
+        profile,
+        mode:
+          checkIn.readiness === "Low" || checkIn.energy === "Low"
+            ? "recovery"
+            : "recommended",
+      });
 
-      if (
-        Array.isArray(adjustedPlan.exercises) &&
-        adjustedPlan.exercises.length
-      ) {
+      if (Array.isArray(adjustedPlan.exercises) && adjustedPlan.exercises.length) {
         nextPlannerItem = {
           ...nextPlannerItem,
-          workout_name:
-            adjustedPlan.title ||
-            nextPlannerItem.workout_name,
-          title:
-            adjustedPlan.title ||
-            nextPlannerItem.title,
+          workout_name: adjustedPlan.title || nextPlannerItem.workout_name,
+          title: adjustedPlan.title || nextPlannerItem.title,
           adaptive_reason:
+            adjustedPlan.positive_alternatives_message ||
             adjustedPlan.reason ||
             nextPlannerItem.adaptive_reason,
-          exercises:
-            adjustedPlan.exercises,
+          can_train_focus: adjustedPlan.can_train_focus || "",
+          protected_pain_areas: protectedPainAreas,
+          exercises: adjustedPlan.exercises,
           adjusted_before_start: true,
         };
       }
@@ -2456,23 +2457,17 @@ export default function CustomerHealth() {
 
     setSnapshot((previous) => ({
       ...previous,
-      readiness:
-        checkIn.readiness ||
-        previous.readiness,
+      readiness: checkIn.readiness || previous.readiness,
       sore_areas: soreAreas,
-      last_pre_workout_check_in:
-        nextPlannerItem.pre_workout_check_in,
-      updated_at:
-        new Date().toISOString(),
+      preworkout_pain_areas: painAreas,
+      protected_pain_areas: protectedPainAreas,
+      preworkout_pain_severity: painSeverity,
+      last_pre_workout_check_in: nextPlannerItem.pre_workout_check_in,
+      updated_at: new Date().toISOString(),
     }));
 
-    setActivePlannerItem(
-      nextPlannerItem
-    );
-
-    setDrawer(
-      "active-workout"
-    );
+    setActivePlannerItem(nextPlannerItem);
+    setDrawer("active-workout");
   }
 
   function openCardioPlayer(

@@ -203,6 +203,17 @@ export default function HealthBodyMapDrawer({
           ))}
         </div>
 
+        <div className="overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-[#030712]">
+          <img
+            src="/health/body-map/full-body-hero.png"
+            alt="Front and back anatomical muscle reference"
+            className="max-h-[520px] w-full object-contain"
+          />
+          <div className="border-t border-white/10 px-3 py-2 text-center text-[10px] font-bold text-slate-500">
+            Muscle reference. Use the interactive map below to filter exercises.
+          </div>
+        </div>
+
         <div className="relative overflow-hidden rounded-[2rem] border border-cyan-400/25 bg-[#030712] p-3 shadow-[0_0_45px_rgba(34,211,238,0.10)]">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(52,223,255,0.10),transparent_42%)]" />
           <div className="relative">

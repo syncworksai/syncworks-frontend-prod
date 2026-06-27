@@ -14,6 +14,8 @@ function loggedSoreAreas(snapshot = {}) {
     snapshot.sore_body_parts,
     snapshot.pain_area,
     snapshot.pain_areas,
+    snapshot.preworkout_pain_areas,
+    snapshot.protected_pain_areas,
     snapshot.readiness_notes,
     snapshot.notes,
   ];
@@ -27,12 +29,23 @@ function loggedSoreAreas(snapshot = {}) {
     .toLowerCase();
 
   const patterns = {
+    Neck: /neck|cervical/,
     Chest: /chest|pec|pector/,
     Shoulders: /shoulder|delt/,
+    Elbows: /elbow/,
+    Wrists: /wrist|forearm/,
     Triceps: /tricep/,
+    "Upper Back": /upper back|lat|trap|rhomboid/,
+    "Lower Back": /lower back|lumbar|spine/,
     Back: /back|lat|trap|rhomboid/,
     Biceps: /bicep/,
-    Legs: /leg|quad|hamstring|glute|calf|hip/,
+    Hips: /hip|glute|hip flexor/,
+    Knees: /knee|patella/,
+    Ankles: /ankle|achilles/,
+    Quads: /quad/,
+    Hamstrings: /hamstring/,
+    Calves: /calf/,
+    Legs: /leg|quad|hamstring|glute|calf|hip|knee|ankle/,
     Core: /core|ab|oblique/,
   };
 
@@ -59,12 +72,23 @@ function exerciseHitsSoreArea(
     .toLowerCase();
 
   const patterns = {
+    Neck: /neck|shrug|upper trap/,
     Chest: /chest|pec|bench|fly|push-up/,
-    Shoulders: /shoulder|delt|overhead press|lateral raise/,
+    Shoulders: /shoulder|delt|overhead press|lateral raise|vertical press/,
+    Elbows: /curl|tricep|pushdown|extension|press/,
+    Wrists: /barbell|dumbbell|curl|press|push-up|plank/,
     Triceps: /tricep|pushdown|press/,
-    Back: /back|lat|row|pulldown|pull-up|trap|rhomboid/,
+    "Upper Back": /upper back|lat|row|pulldown|pull-up|trap|rhomboid/,
+    "Lower Back": /lower back|lumbar|deadlift|hinge|good morning|back extension|bent-over/,
+    Back: /back|lat|row|pulldown|pull-up|trap|rhomboid|deadlift/,
     Biceps: /bicep|curl/,
-    Legs: /leg|quad|hamstring|glute|calf|squat|hinge|lunge/,
+    Hips: /hip|glute|squat|deadlift|hinge|lunge|leg press|step-up|running|stair/,
+    Knees: /knee|squat|lunge|leg press|leg extension|step-up|running|stair|jump/,
+    Ankles: /ankle|calf|running|walking|jump|stair|lunge/,
+    Quads: /quad|squat|lunge|leg press|leg extension/,
+    Hamstrings: /hamstring|deadlift|hinge|leg curl|good morning/,
+    Calves: /calf|running|walking|jump|stair/,
+    Legs: /leg|quad|hamstring|glute|calf|squat|hinge|lunge|deadlift/,
     Core: /core|ab|oblique|plank|rotation/,
   };
 
@@ -244,8 +268,16 @@ export function buildAdaptiveWorkout({
 
   const exercises = selected.map((exercise, index) => {
     const isCardio = /cardio|hiit/i.test(exercise.category || "");
+    const protectedAreas = Array.isArray(snapshot.protected_pain_areas)
+      ? snapshot.protected_pain_areas
+      : [];
     return {
       ...exercise,
+      coach_reason:
+        protectedAreas.length > 0
+          ? `Selected because it supports today's ${focus.toLowerCase()} goal while training around ${protectedAreas.join(", ")}.`
+          : `Selected to support today's ${focus.toLowerCase()} goal.`,
+      available_today: true,
       planned_sets: isCardio
         ? "1"
         : requestedMode === "second-session"
@@ -300,6 +332,15 @@ export function buildAdaptiveWorkout({
     ready_to_start: exercises.length > 0,
     avoided_sore_areas:
       allowSoreOverride ? [] : soreAreas,
+    protected_pain_areas:
+      Array.isArray(snapshot.protected_pain_areas)
+        ? snapshot.protected_pain_areas
+        : [],
+    can_train_focus: focus,
+    positive_alternatives_message:
+      soreAreas.length > 0 && !allowSoreOverride
+        ? `You can still train today. The coach selected ${focus.toLowerCase()} movements that work around ${soreAreas.join(", ")}.`
+        : `You can train the planned ${focus.toLowerCase()} focus today.`,
     soreness_override_active:
       allowSoreOverride,
   };
