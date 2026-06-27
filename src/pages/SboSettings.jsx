@@ -7,6 +7,7 @@ import ModeBar from "../components/ModeBar";
 import BusinessPicker from "../components/BusinessPicker";
 import BusinessDigitalCardPreview from "../components/business/BusinessDigitalCardPreview";
 import BusinessServiceAreasEditor, { normalizeServiceAreas } from "../components/business/BusinessServiceAreasEditor";
+import BusinessServiceOfferingsEditor from "../components/business/BusinessServiceOfferingsEditor";
 
 const SETTINGS_SECTIONS = [
   { key: "business", label: "Profile" },
@@ -564,6 +565,7 @@ export default function SboSettings() {
   const [serviceAreas, setServiceAreas] = useState([]);
 
   const [selectedServiceIds, setSelectedServiceIds] = useState([]);
+  const [detailedServicesEnabled, setDetailedServicesEnabled] = useState(false);
 
   const [baselineRevenue, setBaselineRevenue] = useState("");
   const [targetRevenue, setTargetRevenue] = useState("");
@@ -694,6 +696,7 @@ export default function SboSettings() {
       setAcceptsMarketplace(!!biz?.accepts_marketplace_tickets);
       setServiceAreas(normalizeServiceAreas(biz?.service_areas));
       setSelectedServiceIds(extractBusinessServiceIds(biz));
+      setDetailedServicesEnabled(!!biz?.detailed_services_enabled);
 
       setFacebookUrl(biz?.facebook_url || "");
       setInstagramUrl(biz?.instagram_url || "");
@@ -757,6 +760,7 @@ export default function SboSettings() {
       linkedin_url: linkedinUrl,
       google_business_url: googleBusinessUrl,
       services_offered: selectedServiceIds,
+      detailed_services_enabled: !!detailedServicesEnabled,
     };
   }
 
@@ -1066,12 +1070,14 @@ export default function SboSettings() {
           {section === "services" ? (
             <Card
               title="Services"
-              subtitle="Pick broad service groups for routing and internal ticket creation."
+              subtitle="Start broad, then choose the exact work this business accepts. Ticket matching follows these selections."
             >
-              <ServicesPicker
+              <BusinessServiceOfferingsEditor
                 categories={categories}
                 selectedServiceIds={selectedServiceIds}
                 setSelectedServiceIds={setSelectedServiceIds}
+                detailedServicesEnabled={detailedServicesEnabled}
+                setDetailedServicesEnabled={setDetailedServicesEnabled}
               />
             </Card>
           ) : null}
