@@ -8,11 +8,13 @@ import BusinessPicker from "../components/BusinessPicker";
 import BusinessDigitalCardPreview from "../components/business/BusinessDigitalCardPreview";
 import BusinessServiceAreasEditor, { normalizeServiceAreas } from "../components/business/BusinessServiceAreasEditor";
 import BusinessServiceOfferingsEditor from "../components/business/BusinessServiceOfferingsEditor";
+import BusinessCommunicationAutomation from "../components/business/BusinessCommunicationAutomation";
 
 const SETTINGS_SECTIONS = [
   { key: "business", label: "Profile" },
   { key: "marketplace", label: "Coverage" },
   { key: "services", label: "Offerings" },
+  { key: "communication", label: "Inbox" },
   { key: "card", label: "Digital Card" },
   { key: "goals", label: "Goals" },
 ];
@@ -855,7 +857,7 @@ export default function SboSettings() {
     <div className="min-h-screen bg-[#020617] text-slate-100">
       <ModeBar
         title="Business Settings"
-        subtitle="Profile, coverage, offerings, digital business card, and marketplace setup"
+        subtitle="Profile, coverage, offerings, inbox automation, digital card, and marketplace setup"
         rightActions={
           <div className="flex flex-wrap gap-2">
             <BusinessPicker />
@@ -985,6 +987,10 @@ export default function SboSettings() {
                 </div>
               </Card>
             </div>
+          ) : null}
+
+          {section === "communication" ? (
+            <BusinessCommunicationAutomation businessId={activeBusinessId} />
           ) : null}
 
           {section === "marketplace" ? (
