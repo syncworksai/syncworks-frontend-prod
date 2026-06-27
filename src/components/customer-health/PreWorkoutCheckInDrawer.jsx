@@ -1,5 +1,5 @@
 // src/components/customer-health/PreWorkoutCheckInDrawer.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 const BODY_AREAS = [
   "Neck", "Shoulders", "Chest", "Upper Back", "Lower Back",
@@ -78,15 +78,12 @@ export default function PreWorkoutCheckInDrawer({
   const painSelected = painAreas.length > 0;
   const canBegin = painSeverity !== "Severe" || !avoidPainAreas;
 
-  const coachSummary = useMemo(() => {
-    if (avoidPainAreas && painAreas.length) {
-      return `The coach will build around ${painAreas.join(", ")} and prioritize movements you can do comfortably today.`;
-    }
-    if (soreAreas.length) {
-      return `The coach will reduce unnecessary work for ${soreAreas.join(", ")} while keeping you moving.`;
-    }
-    return "The coach will keep the planned session and adjust intensity from your readiness and energy.";
-  }, [avoidPainAreas, painAreas, soreAreas]);
+  const coachSummary =
+    avoidPainAreas && painAreas.length
+      ? `The coach will build around ${painAreas.join(", ")} and prioritize movements you can do comfortably today.`
+      : soreAreas.length
+      ? `The coach will reduce unnecessary work for ${soreAreas.join(", ")} while keeping you moving.`
+      : "The coach will keep the planned session and adjust intensity from your readiness and energy.";
 
   return (
     <div className="fixed inset-0 z-[170] flex items-end justify-center bg-black/85 p-3 backdrop-blur-md sm:items-center">
