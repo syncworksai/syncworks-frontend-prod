@@ -361,6 +361,15 @@ export default function App() {
         />
 
         <Route
+          path="/customer/inbox"
+          element={
+            <ProtectedRoute>
+              <InboxPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/customer/tickets"
           element={
             <ProtectedRoute>
@@ -397,6 +406,15 @@ export default function App() {
         />
 
         <Route
+          path="/sbo/inbox"
+          element={
+            <ProtectedRoute>
+              <InboxPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/sbo"
           element={
             <ProtectedRoute>
@@ -421,6 +439,15 @@ export default function App() {
               to="/sbo"
               replace
             />
+          }
+        />
+
+        <Route
+          path="/employee/inbox"
+          element={
+            <ProtectedRoute>
+              <InboxPage />
+            </ProtectedRoute>
           }
         />
 
