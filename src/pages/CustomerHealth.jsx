@@ -1896,6 +1896,7 @@ export default function CustomerHealth() {
       "plan-today": "plan-today",
       "train-muscle": "library",
       "muscle-map": "library",
+      "exercise-library": "library",
       library: "library",
       progress: "progress",
       planner: "planner",
