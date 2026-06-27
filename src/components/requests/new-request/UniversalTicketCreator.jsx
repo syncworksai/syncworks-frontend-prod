@@ -12,6 +12,10 @@ import RequestDetailsCard from "../RequestDetailsCard";
 import RequestLocationCard from "../RequestLocationCard";
 
 import MarketplaceSearchPanel from "./MarketplaceSearchPanel";
+import {
+  buildLeafCategoryIndex,
+  attachResolvedCategory,
+} from "./requestCategoryResolver";
 import RequestPriorityCard from "./RequestPriorityCard";
 import RequestScheduleCard from "./RequestScheduleCard";
 import DynamicIntakeCard from "./DynamicIntakeCard";
@@ -291,6 +295,9 @@ export default function UniversalTicketCreator({
   const [selectedProvider, setSelectedProvider] = useState(initialProvider);
   const [navMessage, setNavMessage] = useState("");
 
+  const [serviceCategories, setServiceCategories] = useState([]);
+  const [categoryLoading, setCategoryLoading] = useState(true);
+  const [categoryLoadError, setCategoryLoadError] = useState("");
   const [selectedService, setSelectedService] = useState(null);
   const [priority, setPriority] = useState("P3");
 
@@ -323,6 +330,29 @@ export default function UniversalTicketCreator({
   const [submitting, setSubmitting] = useState(false);
   const [submitErr, setSubmitErr] = useState("");
   const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    setCategoryLoading(true);
+    setCategoryLoadError("");
+    api.get("/service-categories/")
+      .then((response) => {
+        if (!active) return;
+        const data = response?.data;
+        setServiceCategories(
+          Array.isArray(data) ? data : Array.isArray(data?.results) ? data.results : []
+        );
+      })
+      .catch(() => {
+        if (active) setCategoryLoadError("Service categories could not be loaded.");
+      })
+      .finally(() => {
+        if (active) setCategoryLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     function refreshSavedProviders() {
@@ -361,6 +391,11 @@ export default function UniversalTicketCreator({
       setSelectedProvider(null);
     }
   }
+
+  const leafCategoryIndex = useMemo(
+    () => buildLeafCategoryIndex(serviceCategories),
+    [serviceCategories]
+  );
 
   const resolvedFulfillmentType = useMemo(
     () => inferFulfillmentType(selectedService, fulfillmentType),
@@ -488,7 +523,7 @@ export default function UniversalTicketCreator({
 
   function canGoTo(nextStep) {
     if (nextStep <= step) return true;
-    if (nextStep === 1) return !!selectedService;
+    if (nextStep === 1) return !!selectedService && selectedService?.exactCategoryResolved !== false;
     if (nextStep === 2) return !!selectedService && !!priority;
     if (nextStep === 3) {
       return (
@@ -520,7 +555,7 @@ export default function UniversalTicketCreator({
   function canContinueCurrentStep() {
     if (step === 0) {
       if (routeMode === "SAVED_PROVIDER" && !selectedProvider) return false;
-      return !!selectedService;
+      return !!selectedService && selectedService?.exactCategoryResolved !== false;
     }
     if (step === 1) return !!priority;
     if (step === 2) {
@@ -545,6 +580,9 @@ export default function UniversalTicketCreator({
       }
       if (!selectedService) {
         return "Choose a service, product, food option, booking, or other need before continuing.";
+      }
+      if (selectedService?.exactCategoryResolved === false) {
+        return "Choose a more specific service that is available in the live service directory.";
       }
     }
     if (step === 1 && !priority) return "Choose the urgency or priority.";
@@ -598,24 +636,25 @@ export default function UniversalTicketCreator({
   }
 
   function handleServiceSelect(service) {
-    setSelectedService(service);
+    const resolvedService = attachResolvedCategory(service, leafCategoryIndex);
+    setSelectedService(resolvedService);
     setDynamicIntake({});
 
-    const inferred = inferFulfillmentType(service, "");
+    const inferred = inferFulfillmentType(resolvedService, "");
     setFulfillmentType(inferred || FULFILLMENT_TYPES.ONSITE);
 
-    if (service?.ticketType === "FOOD") {
+    if (resolvedService?.ticketType === "FOOD") {
       setPriority("P2");
       setPaymentPreference("card");
       setPreferredTimeWindow("ASAP");
     } else if (
-      service?.ticketType === "REAL_ESTATE" ||
-      service?.ticketType === "BOOKING"
+      resolvedService?.ticketType === "REAL_ESTATE" ||
+      resolvedService?.ticketType === "BOOKING"
     ) {
       setPriority("P4");
       setPaymentPreference("quote_first");
       setPreferredTimeWindow("Flexible");
-    } else if (service?.ticketType === "RETAIL") {
+    } else if (resolvedService?.ticketType === "RETAIL") {
       setPriority("P3");
       setPaymentPreference("quote_first");
     }
@@ -743,6 +782,9 @@ export default function UniversalTicketCreator({
                 setSelectedService={handleServiceSelect}
                 mode={mode}
                 allowedServiceKeys={businessServiceKeys}
+                categoryIndex={leafCategoryIndex}
+                categoryLoading={categoryLoading}
+                categoryLoadError={categoryLoadError}
               />
             </>
           ) : null}

@@ -8,14 +8,17 @@ import {
   searchMarketplaceServices,
   cx,
 } from "./requestMarketplaceCatalog";
+import { attachResolvedCategory } from "./requestCategoryResolver";
 
 function ServiceChip({ service, active, onClick }) {
+  const exact = service?.exactCategoryResolved !== false;
   return (
     <button
       type="button"
-      onClick={() => onClick(service)}
+      onClick={() => exact && onClick(service)}
+      disabled={!exact}
       className={cx(
-        "group rounded-2xl border p-3 text-left transition",
+        "group rounded-2xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-50",
         active
           ? getAccentClasses(service.verticalAccent, true)
           : "border-slate-800 bg-slate-950/65 text-slate-200 hover:border-cyan-500/30 hover:bg-slate-900/70"
@@ -44,7 +47,7 @@ function ServiceChip({ service, active, onClick }) {
               : "border-slate-700 bg-slate-900 text-slate-500 group-hover:text-slate-300"
           )}
         >
-          {active ? "Picked" : "Pick"}
+          {!exact ? "Unavailable" : active ? "Picked" : "Pick"}
         </span>
       </div>
     </button>
@@ -90,6 +93,9 @@ export default function MarketplaceSearchPanel({
   setSelectedService,
   mode = "CUSTOMER_MARKETPLACE",
   allowedServiceKeys = [],
+  categoryIndex = null,
+  categoryLoading = false,
+  categoryLoadError = "",
   onNext = null,
 }) {
   const [query, setQuery] = useState("");
@@ -148,6 +154,11 @@ export default function MarketplaceSearchPanel({
 
     return rows;
   }, [allowedSet, isBusinessInternal, query, selectedVerticalKey]);
+
+  const resolvedRows = useMemo(
+    () => resultRows.map((service) => attachResolvedCategory(service, categoryIndex)),
+    [resultRows, categoryIndex]
+  );
 
   const selectedId = selectedService?.key || "";
 
@@ -239,6 +250,16 @@ export default function MarketplaceSearchPanel({
         </div>
       </section>
 
+      {categoryLoading ? (
+        <div className="rounded-2xl border border-cyan-500/25 bg-cyan-500/10 p-3 text-sm text-cyan-100">
+          Loading the live service directory...
+        </div>
+      ) : categoryLoadError ? (
+        <div className="rounded-2xl border border-rose-500/25 bg-rose-500/10 p-3 text-sm text-rose-100">
+          {categoryLoadError}
+        </div>
+      ) : null}
+
       <section className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4 md:p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -294,13 +315,13 @@ export default function MarketplaceSearchPanel({
           </div>
 
           <div className="rounded-full border border-slate-800 bg-slate-950/70 px-3 py-1 text-[11px] font-black text-slate-300">
-            {resultRows.length} option{resultRows.length === 1 ? "" : "s"}
+            {resolvedRows.length} option{resolvedRows.length === 1 ? "" : "s"}
           </div>
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {resultRows.length ? (
-            resultRows.map((service) => (
+          {resolvedRows.length ? (
+            resolvedRows.map((service) => (
               <ServiceChip
                 key={service.key}
                 service={service}

@@ -230,11 +230,7 @@ export function buildServiceRequestPayload({
   const title = selectedService?.label || "SyncWorks Ticket";
 
   return {
-    category:
-      selectedService?.key ||
-      selectedService?.categoryKey ||
-      selectedService?.verticalKey ||
-      "",
+    category: selectedService?.categoryId || "",
     title,
     description: buildTicketDescription({
       details,
@@ -269,6 +265,7 @@ export function getMissingSubmitRequirements({
   const missing = [];
 
   if (!selectedService) missing.push("service");
+  if (selectedService && !selectedService?.categoryId) missing.push("exact service");
   if (!priority) missing.push("priority");
   if (!neededByDate) missing.push("needed by date");
   if (!String(preferredTimeWindow || "").trim()) {
