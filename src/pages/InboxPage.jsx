@@ -58,6 +58,15 @@ function ThreadCard({ thread, active, onClick }) {
             {thread?.is_unread ? (
               <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-cyan-400" />
             ) : null}
+            {thread?.pinned ? (
+              <span title="Pinned" className="text-xs text-amber-300">PIN</span>
+            ) : null}
+            {thread?.needs_attention ? (
+              <span title={thread?.attention_reason || "Needs attention"} className="text-xs font-black text-rose-300">!</span>
+            ) : null}
+            {thread?.muted ? (
+              <span title="Muted" className="text-[10px] font-black text-slate-500">MUTED</span>
+            ) : null}
             <div className={cx("truncate text-sm text-white", thread?.is_unread ? "font-black" : "font-bold")}>
               {thread?.subject || thread?.ticket_code || "Conversation"}
             </div>
@@ -122,6 +131,7 @@ export default function InboxPage() {
   const [loadingThreads, setLoadingThreads] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
+  const [savingControls, setSavingControls] = useState(false);
   const [error, setError] = useState("");
 
   const selected = useMemo(
@@ -183,6 +193,29 @@ export default function InboxPage() {
         `/ticket-conversations/${threadId}/messages/?scope=${scope}`
       );
       setMessages(safeList(response?.data));
+      const opened = threads.find(
+        (thread) => Number(thread.id) === Number(threadId)
+      );
+      setThreads((current) =>
+        current.map((thread) =>
+          Number(thread.id) === Number(threadId)
+            ? {
+                ...thread,
+                ...(response?.data?.thread || {}),
+                is_unread: false,
+                unread_count: 0,
+              }
+            : thread
+        )
+      );
+      setUnreadTotal((current) =>
+        Math.max(0, current - Number(opened?.unread_count || 0))
+      );
+      window.dispatchEvent(
+        new CustomEvent("sw:inboxReadStateChanged", {
+          detail: { scope, threadId },
+        })
+      );
     } catch (requestError) {
       setError(
         requestError?.response?.data?.detail ||
@@ -206,6 +239,46 @@ export default function InboxPage() {
     loadMessages(selectedId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, scope, activeBusinessId]);
+
+  async function updateControls(patch) {
+    if (!selectedId || savingControls) return;
+
+    setSavingControls(true);
+    setError("");
+
+    try {
+      const response = await api.patch(
+        `/ticket-conversations/${selectedId}/controls/?scope=${scope}`,
+        patch
+      );
+      const updated = response?.data?.thread;
+
+      if (updated) {
+        setThreads((current) =>
+          current
+            .map((thread) =>
+              Number(thread.id) === Number(selectedId)
+                ? { ...thread, ...updated }
+                : thread
+            )
+            .sort((a, b) => {
+              if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+              if (!!a.is_unread !== !!b.is_unread) return a.is_unread ? -1 : 1;
+              return String(b.updated_at || "").localeCompare(
+                String(a.updated_at || "")
+              );
+            })
+        );
+      }
+    } catch (requestError) {
+      setError(
+        requestError?.response?.data?.detail ||
+          "Conversation controls could not be updated."
+      );
+    } finally {
+      setSavingControls(false);
+    }
+  }
 
   async function sendMessage(event) {
     event.preventDefault();
@@ -361,13 +434,78 @@ export default function InboxPage() {
                             : ""}
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/tickets/${selected.id}`)}
-                        className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-xs font-black text-cyan-100"
-                      >
-                        Open Ticket
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={savingControls}
+                          onClick={() =>
+                            updateControls({
+                              pinned: !selected.pinned,
+                            })
+                          }
+                          className={cx(
+                            "rounded-2xl border px-3 py-2 text-xs font-black transition disabled:opacity-50",
+                            selected.pinned
+                              ? "border-amber-400/40 bg-amber-500/15 text-amber-100"
+                              : "border-slate-700 bg-slate-950 text-slate-300"
+                          )}
+                        >
+                          {selected.pinned ? "Pinned" : "Pin"}
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={savingControls}
+                          onClick={() =>
+                            updateControls({
+                              muted: !selected.muted,
+                            })
+                          }
+                          className={cx(
+                            "rounded-2xl border px-3 py-2 text-xs font-black transition disabled:opacity-50",
+                            selected.muted
+                              ? "border-slate-500/40 bg-slate-700/30 text-slate-100"
+                              : "border-slate-700 bg-slate-950 text-slate-300"
+                          )}
+                        >
+                          {selected.muted ? "Muted" : "Mute"}
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={savingControls}
+                          onClick={() =>
+                            updateControls({
+                              needs_attention:
+                                !selected.needs_attention,
+                              attention_reason:
+                                selected.needs_attention
+                                  ? ""
+                                  : "Marked for follow-up",
+                            })
+                          }
+                          className={cx(
+                            "rounded-2xl border px-3 py-2 text-xs font-black transition disabled:opacity-50",
+                            selected.needs_attention
+                              ? "border-rose-400/40 bg-rose-500/15 text-rose-100"
+                              : "border-slate-700 bg-slate-950 text-slate-300"
+                          )}
+                        >
+                          {selected.needs_attention
+                            ? "Needs Follow-up"
+                            : "Flag Follow-up"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(`/tickets/${selected.id}`)
+                          }
+                          className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-xs font-black text-cyan-100"
+                        >
+                          Open Ticket
+                        </button>
+                      </div>
                     </div>
                   </header>
 
