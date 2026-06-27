@@ -82,7 +82,40 @@ export default function ExerciseLibraryDrawer({
 
   useEffect(() => {
     if (!open) return;
+
     trackExerciseLibraryKpi("library_opened");
+
+    try {
+      const raw = window.localStorage.getItem(
+        "sw_health_library_builder_intent"
+      );
+      const intent = raw ? JSON.parse(raw) : null;
+      const focus = String(intent?.focus || "").toLowerCase();
+
+      if (focus === "arms") {
+        setSearch("biceps");
+      } else if (focus === "abs") {
+        setSearch("core");
+      } else if (focus === "push") {
+        setSearch("press");
+      } else if (focus === "pull") {
+        setSearch("row");
+      } else if (focus === "legs") {
+        setSearch("leg");
+      } else if (focus === "mobility") {
+        setSearch("mobility");
+      } else if (focus === "recovery") {
+        setSearch("stretch");
+      } else if (
+        focus === "full-body" ||
+        focus === "custom"
+      ) {
+        setSearch("");
+        setMuscle("All");
+      }
+    } catch {
+      // Builder intent is best effort.
+    }
   }, [open]);
 
   useEffect(() => {
@@ -225,9 +258,20 @@ export default function ExerciseLibraryDrawer({
         open={open}
         onClose={onClose}
         title="Visual Exercise Library"
-        subtitle="Search, tap the body map, swap equipment, and let the coach adapt."
+        subtitle="Search, choose a focus, add exercises, and build a workout the coach can review."
       >
         <div className="space-y-4">
+          <div className="rounded-2xl border border-lime-300/20 bg-lime-300/[0.07] p-3">
+            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-lime-200">
+              Build Your Own
+            </div>
+            <div className="mt-1 text-sm font-black text-white">
+              Add the movements you want today
+            </div>
+            <div className="mt-1 text-xs leading-5 text-slate-400">
+              Choose arms, abs, strength, mobility, or any combination. Added exercises go into your current workout so the coach can guide sets, rest, effort, form, and pain.
+            </div>
+          </div>
           <div className="sticky top-0 z-10 -mx-1 space-y-3 bg-[#07101f]/95 px-1 pb-3 backdrop-blur-xl">
             <div className="grid grid-cols-[1fr_auto] gap-2">
               <input

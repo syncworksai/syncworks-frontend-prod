@@ -388,6 +388,8 @@ export default function HealthHome({
 }) {
   const [logMenuOpen, setLogMenuOpen] =
     useState(false);
+  const [workoutChoiceOpen, setWorkoutChoiceOpen] =
+    useState(false);
 
   const audioPlayedRef = useRef(false);
 
@@ -587,25 +589,34 @@ export default function HealthHome({
         </div>
 
         <div className="mt-5 rounded-[1.5rem] border border-lime-300/20 bg-lime-300/[0.07] p-4">
-          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-lime-200">
-            Today's Workout
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-lime-200">
+                Coach Recommended Workout
+              </div>
+
+              <div className="mt-1 text-2xl font-black text-white">
+                {todayWorkout?.workout_name ||
+                  "Choose how you want to move today"}
+              </div>
+
+              <div className="mt-1 text-sm leading-6 text-slate-400">
+                {todayWorkout
+                  ? `${todayWorkout.time || "Anytime"} - ${
+                      todayWorkout.adaptive_reason ||
+                      todayWorkout.note ||
+                      "Recommended from your recent training balance, readiness, and recovery."
+                    }`
+                  : "Your coach can suggest a session, or you can choose a focus, cardio activity, or build your own workout."}
+              </div>
+            </div>
+
+            <div className="shrink-0 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-xs font-black text-cyan-100">
+              Coach suggests. You decide.
+            </div>
           </div>
 
-          <div className="mt-1 text-2xl font-black text-white">
-            {todayWorkout?.workout_name ||
-              "No workout planned today"}
-          </div>
-
-          <div className="mt-1 text-sm leading-6 text-slate-400">
-            {todayWorkout
-              ? `${todayWorkout.time || "Anytime"} · ${
-                  todayWorkout.note ||
-                  "Your coach will guide each set."
-                }`
-              : "Plan with your coach using your location, time, goals, readiness, and recent training."}
-          </div>
-
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
             <button
               type="button"
               onClick={() =>
@@ -616,8 +627,16 @@ export default function HealthHome({
               className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100 shadow-[0_0_28px_rgba(57,255,136,0.12)]"
             >
               {todayWorkout
-                ? "Start Today's Workout"
-                : "Plan With Coach"}
+                ? "Pre-Workout Instructions"
+                : "Get Coach Suggestion"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setWorkoutChoiceOpen(true)}
+              className="h-12 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 text-sm font-black text-cyan-100"
+            >
+              Choose or Build Workout
             </button>
 
             <button
@@ -631,6 +650,155 @@ export default function HealthHome({
         </div>
       </section>
 
+      {workoutChoiceOpen ? (
+        <div className="fixed inset-0 z-[125] flex items-end justify-center bg-black/80 p-3 backdrop-blur-md sm:items-center">
+          <button
+            type="button"
+            aria-label="Close workout choices"
+            onClick={() => setWorkoutChoiceOpen(false)}
+            className="absolute inset-0"
+          />
+
+          <section className="relative z-[126] max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-[2rem] border border-cyan-300/20 bg-[#07111f] p-4 shadow-[0_28px_90px_rgba(0,0,0,0.72)] sm:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
+                  Choose Today's Movement
+                </div>
+                <h2 className="mt-1 text-2xl font-black text-white">
+                  What do you want to train?
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-slate-400">
+                  Pick a focus, choose cardio, or build your own. The coach can still review and adapt it before you begin.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setWorkoutChoiceOpen(false)}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] font-black text-white"
+              >
+                X
+              </button>
+            </div>
+
+            <div className="mt-5">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-lime-200">
+                Coach-Suggested Focus
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  ["Arms", "arms"],
+                  ["Abs / Core", "abs"],
+                  ["Push", "push"],
+                  ["Pull", "pull"],
+                  ["Legs", "legs"],
+                  ["Full Body", "full-body"],
+                  ["Mobility", "mobility"],
+                  ["Recovery", "recovery"],
+                ].map(([label, focus]) => (
+                  <button
+                    key={focus}
+                    type="button"
+                    onClick={() => {
+                      window.localStorage.setItem(
+                        "sw_health_library_builder_intent",
+                        JSON.stringify({
+                          mode: "builder",
+                          focus,
+                          label,
+                          created_at: new Date().toISOString(),
+                        })
+                      );
+                      setWorkoutChoiceOpen(false);
+                      onOpen?.("exercise-library");
+                    }}
+                    className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-xs font-black text-white"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-200">
+                Cardio Only
+              </div>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {[
+                  ["Treadmill", "treadmill"],
+                  ["Outdoor Walk", "outdoor-walk"],
+                  ["Outdoor Jog", "outdoor-jog"],
+                  ["Outdoor Run", "outdoor-run"],
+                ].map(([label, activity]) => (
+                  <button
+                    key={activity}
+                    type="button"
+                    onClick={() => {
+                      window.localStorage.setItem(
+                        "sw_health_cardio_intent",
+                        JSON.stringify({
+                          activity,
+                          label,
+                          suggested_minutes:
+                            activity === "treadmill" ? 60 : 30,
+                          track_distance: true,
+                          distance_unit: "miles",
+                          created_at: new Date().toISOString(),
+                        })
+                      );
+                      setWorkoutChoiceOpen(false);
+                      onOpen?.("cardio-player");
+                    }}
+                    className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.07] p-4 text-left"
+                  >
+                    <div className="text-sm font-black text-white">
+                      {label}
+                    </div>
+                    <div className="mt-1 text-xs leading-5 text-slate-400">
+                      Track time, distance in miles, pace, and session history.
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => {
+                  window.localStorage.setItem(
+                    "sw_health_library_builder_intent",
+                    JSON.stringify({
+                      mode: "builder",
+                      focus: "custom",
+                      label: "Custom Workout",
+                      created_at: new Date().toISOString(),
+                    })
+                  );
+                  setWorkoutChoiceOpen(false);
+                  onOpen?.("exercise-library");
+                }}
+                className="h-12 rounded-2xl border border-cyan-300/30 bg-cyan-300/15 text-sm font-black text-cyan-100"
+              >
+                Build My Own Workout
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setWorkoutChoiceOpen(false);
+                  onOpen?.("plan-today");
+                }}
+                className="h-12 rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 text-sm font-black text-fuchsia-100"
+              >
+                Ask Coach to Build It
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
       {!intakeComplete ? (
         <section className="rounded-[1.5rem] border border-amber-300/25 bg-amber-300/[0.08] p-4">
           <div className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-200">
