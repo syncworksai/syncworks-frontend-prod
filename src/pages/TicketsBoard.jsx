@@ -328,6 +328,30 @@ function TicketsHero({ isCustomer, counts, loading, onCreate, onRefresh }) {
   );
 }
 
+function OpportunityProfileBadges({ ticket }) {
+  const profile = ticket?.opportunity_profile;
+  if (!profile) return null;
+  const value = Number(profile.estimated_value || 0);
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {profile.project_scope && profile.project_scope !== "UNSPECIFIED" ? (
+        <Pill tone={profile.project_scope === "COMMERCIAL" ? "fuchsia" : "sky"}>
+          {profile.project_scope === "COMMERCIAL" ? "Commercial" : "Residential"}
+        </Pill>
+      ) : null}
+      {value > 0 ? (
+        <Pill tone="emerald">${value.toLocaleString()} known value</Pill>
+      ) : null}
+      {profile.needed_by_date ? (
+        <Pill tone="amber">Needed {profile.needed_by_date}</Pill>
+      ) : null}
+      {profile.preferred_time_window ? (
+        <Pill tone="slate">{profile.preferred_time_window}</Pill>
+      ) : null}
+    </div>
+  );
+}
+
 function MatchReasonCard({ match }) {
   if (!match?.matched) return null;
 
@@ -441,6 +465,9 @@ function BoardTicketCard({
               {ticket?.sms_allowed ? "Allows text messaging" : "In-app or phone call"} â€¢{" "}
               {ticket?.created_at ? new Date(ticket.created_at).toLocaleString() : "â€”"}
             </div>
+            {view === "marketplace" ? (
+              <OpportunityProfileBadges ticket={ticket} />
+            ) : null}
             {view === "marketplace" && ticket?.marketplace_match ? (
               <MatchReasonCard match={ticket.marketplace_match} />
             ) : null}

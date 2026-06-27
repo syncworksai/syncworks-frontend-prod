@@ -28,6 +28,10 @@ export const marketplaceCoverageLabel = (ticket) =>
   "Other coverage";
 
 export function marketplaceProjectScope(ticket) {
+  const normalized = norm(ticket?.opportunity_profile?.project_scope);
+  if (["COMMERCIAL", "RESIDENTIAL", "UNSPECIFIED"].includes(normalized)) {
+    return normalized;
+  }
   const details = Array.isArray(ticket?.marketplace_match?.details)
     ? ticket.marketplace_match.details.join(" ")
     : "";
@@ -46,6 +50,8 @@ export function marketplaceProjectScope(ticket) {
 }
 
 export function marketplaceProjectValue(ticket) {
+  const normalizedValue = Number(ticket?.opportunity_profile?.estimated_value || 0);
+  if (Number.isFinite(normalizedValue) && normalizedValue > 0) return normalizedValue;
   const values = [
     ticket?.project_value,
     ticket?.estimated_value,
@@ -83,7 +89,8 @@ export function marketplaceProjectValue(ticket) {
 
 export const marketplacePriority = (ticket) =>
   upper(
-    ticket?.priority ||
+    ticket?.opportunity_profile?.priority ||
+      ticket?.priority ||
       ticket?.service_request?.priority ||
       ticket?.intake_payload?.priority ||
       "P3"
