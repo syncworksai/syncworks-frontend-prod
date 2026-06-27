@@ -2018,6 +2018,16 @@ export default function ModeBar({
                   <SupportIcon className="h-5 w-5" />
                 </IconButton>
 
+                <button
+                  type="button"
+                  title="Open Learning Center"
+                  aria-label="Open Learning Center"
+                  onClick={() => navigate("/learn")}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-cyan-400/35 bg-cyan-500/10 text-sm font-black text-cyan-100 transition hover:bg-cyan-500/20"
+                >
+                  i
+                </button>
+
                 <NotificationsBell />
 
                 <button

@@ -70,6 +70,7 @@ import EmployeeSettings from "./pages/EmployeeSettings";
 
 import CashFeeInvoices from "./pages/CashFeeInvoices";
 import SettingsHub from "./pages/SettingsHub";
+import LearningCenter from "./pages/LearningCenter";
 
 function EmployeeHome() {
   return (
@@ -175,6 +176,15 @@ export default function App() {
           element={
             <ProtectedRoute>
               <SettingsHub />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/learn"
+          element={
+            <ProtectedRoute>
+              <LearningCenter />
             </ProtectedRoute>
           }
         />
