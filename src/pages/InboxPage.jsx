@@ -54,8 +54,13 @@ function ThreadCard({ thread, active, onClick }) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="truncate text-sm font-black text-white">
-            {thread?.subject || thread?.ticket_code || "Conversation"}
+          <div className="flex items-center gap-2">
+            {thread?.is_unread ? (
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-cyan-400" />
+            ) : null}
+            <div className={cx("truncate text-sm text-white", thread?.is_unread ? "font-black" : "font-bold")}>
+              {thread?.subject || thread?.ticket_code || "Conversation"}
+            </div>
           </div>
           <div className="mt-1 truncate text-xs text-slate-500">
             {thread?.ticket_code} · {thread?.status}
@@ -107,6 +112,7 @@ export default function InboxPage() {
   );
 
   const [threads, setThreads] = useState([]);
+  const [unreadTotal, setUnreadTotal] = useState(0);
   const [selectedId, setSelectedId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [query, setQuery] = useState("");
@@ -144,6 +150,7 @@ export default function InboxPage() {
       const response = await api.get(`/ticket-conversations/?${params.toString()}`);
       const next = safeList(response?.data);
       setThreads(next);
+      setUnreadTotal(Number(response?.data?.unread_total || 0));
 
       const stillExists = next.some(
         (thread) => Number(thread.id) === Number(selectedId)
@@ -256,8 +263,11 @@ export default function InboxPage() {
         <section className="mb-4 rounded-3xl border border-cyan-500/20 bg-gradient-to-r from-cyan-500/8 via-indigo-500/5 to-fuchsia-500/8 p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div className="text-sm font-black text-cyan-100">
-                Automatically organized
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="text-sm font-black text-cyan-100">Automatically organized</div>
+                <span className="rounded-full border border-cyan-400/30 bg-cyan-500/15 px-2 py-1 text-[10px] font-black text-cyan-100">
+                  {unreadTotal} unread
+                </span>
               </div>
               <div className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">
                 Every ticket becomes a conversation automatically. Personal and
