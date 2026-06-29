@@ -949,8 +949,8 @@ function SetHistory({
                 type="button"
                 onClick={() =>
                   onTargetChange({
-                    weight: bump(targetWeight, -5, 0),
-                    reps: targetReps,
+                    weight: targetWeight,
+                    reps: bump(targetReps, -1, 1),
                     source: "user",
                   })
                 }
@@ -3144,7 +3144,7 @@ export default function ActiveWorkoutSessionDrawer({
           ) : null}
         </header>
 
-        <main className="flex-1 overflow-y-auto px-3 py-3 pb-36 sm:px-6 sm:py-5 sm:pb-28">
+        <main className="flex-1 overflow-y-auto px-3 py-3 pb-32 sm:px-6 sm:py-5 sm:pb-32">
           {!session ? (
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 text-sm text-slate-300">
               No active workout selected.
@@ -3574,19 +3574,82 @@ export default function ActiveWorkoutSessionDrawer({
 
                     </div>
                   ) : (
-                    <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-3 py-3">
-                      <div>
-                        <div className="text-xs font-black text-white">
-                          {(currentExercise.set_logs || []).length} of {currentExercise.planned_sets || "-"} sets complete
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-xs font-black text-white">
+                            Set log
+                          </div>
+                          <div className="mt-0.5 text-[10px] text-slate-500">
+                            Tap a completed set to correct reps, weight, or RPE.
+                          </div>
                         </div>
 
-                        <div className="mt-1 text-[11px] text-slate-500">
-                          Open Exercise Info to adjust targets or review completed sets.
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setDetailsOpen(true)}
+                          className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-[10px] font-black text-cyan-100"
+                        >
+                          Edit Sets
+                        </button>
                       </div>
 
-                      <div className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-black text-cyan-100">
-                        Set {(currentExercise.set_logs || []).length + 1}
+                      <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+                        {Array.from(
+                          {
+                            length: Math.max(
+                              Number(currentExercise.planned_sets || 1),
+                              (currentExercise.set_logs || []).length
+                            ),
+                          },
+                          (_, index) => {
+                            const log =
+                              (currentExercise.set_logs || [])[index];
+                            const isCurrent =
+                              !log &&
+                              index ===
+                                (currentExercise.set_logs || []).length;
+                            const reps =
+                              log?.actual_reps ??
+                              log?.reps ??
+                              "";
+                            const weight =
+                              log?.actual_weight ??
+                              log?.weight ??
+                              "";
+
+                            return (
+                              <button
+                                key={log?.id || `set-chip-${index + 1}`}
+                                type="button"
+                                onClick={() =>
+                                  log
+                                    ? setDetailsOpen(true)
+                                    : null
+                                }
+                                className={cx(
+                                  "min-w-[88px] rounded-xl border px-2.5 py-2 text-center transition",
+                                  log
+                                    ? "border-lime-300/25 bg-lime-300/10 text-lime-100"
+                                    : isCurrent
+                                    ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
+                                    : "border-white/10 bg-white/[0.03] text-slate-500"
+                                )}
+                              >
+                                <div className="text-[9px] font-black uppercase tracking-[0.1em] opacity-70">
+                                  Set {index + 1}
+                                </div>
+                                <div className="mt-0.5 whitespace-nowrap text-xs font-black">
+                                  {log
+                                    ? `${reps || "-"}x${weight || "BW"}lb`
+                                    : isCurrent
+                                    ? "Current"
+                                    : "Planned"}
+                                </div>
+                              </button>
+                            );
+                          }
+                        )}
                       </div>
                     </div>
                   )}
@@ -3857,26 +3920,26 @@ export default function ActiveWorkoutSessionDrawer({
         {session &&
         !reviewMode &&
         !isCompleted ? (
-          <div className="absolute inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#020617]/95 px-3 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] pt-2 backdrop-blur-xl sm:hidden">
-            <div className="grid grid-cols-[0.72fr_1.56fr_0.72fr] gap-2">
+          <div className="absolute inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#020617]/96 px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 backdrop-blur-xl">
+            <div className="mx-auto grid max-w-4xl grid-cols-[0.72fr_0.72fr_1.5fr_0.72fr_0.9fr] gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={() =>
-                  moveExercise(
-                    Math.max(
-                      0,
-                      (session.current_exercise_index ||
-                        0) - 1
-                    )
+                  setSession(
+                    toggleSessionPause(session)
                   )
                 }
-                disabled={
-                  (session.current_exercise_index ||
-                    0) === 0
-                }
-                className="h-12 rounded-2xl border border-white/10 bg-white/[0.04] text-xs font-black text-slate-200 disabled:opacity-35"
+                className="h-12 rounded-2xl border border-white/10 bg-white/[0.04] px-1 text-[10px] font-black text-slate-200 sm:text-xs"
               >
-                Prev
+                {session.paused ? "Resume" : "Pause"}
+              </button>
+
+              <button
+                type="button"
+                onClick={replayExerciseCue}
+                className="h-12 rounded-2xl border border-fuchsia-300/20 bg-fuchsia-300/10 px-1 text-[10px] font-black text-fuchsia-100 sm:text-xs"
+              >
+                Replay
               </button>
 
               <button
@@ -3891,21 +3954,23 @@ export default function ActiveWorkoutSessionDrawer({
                   session.rest_active
                 }
                 className={cx(
-                  "h-12 rounded-2xl border text-sm font-black disabled:opacity-45",
+                  "h-12 rounded-2xl border px-1 text-xs font-black disabled:opacity-45 sm:text-sm",
                   session.set_active
                     ? "border-fuchsia-300/30 bg-fuchsia-300/15 text-fuchsia-100"
                     : "border-lime-300/35 bg-lime-300/20 text-lime-100"
                 )}
               >
                 {session.set_active
-                  ? `Complete | ${formatSeconds(
-                      session.current_set_seconds
-                    )}`
+                  ? isTimedExercise
+                    ? "Finish Timer"
+                    : "Finish Set"
                   : session.rest_active
                   ? `Rest ${formatSeconds(
                       session.rest_remaining_seconds
                     )}`
-                  : (isTimedExercise ? "Start Timer" : "Start Set")}
+                  : isTimedExercise
+                  ? "Start Timer"
+                  : "Start Set"}
               </button>
 
               <button
@@ -3914,19 +3979,27 @@ export default function ActiveWorkoutSessionDrawer({
                   moveExercise(
                     Math.min(
                       totalExercises - 1,
-                      (session.current_exercise_index ||
-                        0) + 1
+                      (session.current_exercise_index || 0) + 1
                     )
                   )
                 }
                 disabled={
-                  (session.current_exercise_index ||
-                    0) >=
-                  totalExercises - 1
+                  session.set_active ||
+                  (session.current_exercise_index || 0) >=
+                    totalExercises - 1
                 }
-                className="h-12 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 text-xs font-black text-cyan-100 disabled:opacity-35"
+                className="h-12 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-1 text-[10px] font-black text-cyan-100 disabled:opacity-35 sm:text-xs"
               >
                 Next
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setReviewMode(true)}
+                disabled={session.set_active}
+                className="h-12 rounded-2xl border border-amber-300/25 bg-amber-300/10 px-1 text-[10px] font-black text-amber-100 disabled:opacity-35 sm:text-xs"
+              >
+                Finish
               </button>
             </div>
           </div>
