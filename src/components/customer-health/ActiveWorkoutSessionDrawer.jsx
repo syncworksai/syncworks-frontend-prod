@@ -71,6 +71,19 @@ function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
+function formatLoad(value) {
+  const text = String(value ?? "").trim();
+
+  if (
+    !text ||
+    /^(bw|bodyweight|body weight)$/i.test(text)
+  ) {
+    return "BW";
+  }
+
+  return `${text} lb`;
+}
+
 function readPersistedWorkout() {
   if (typeof window === "undefined") return null;
 
@@ -1872,6 +1885,7 @@ export default function ActiveWorkoutSessionDrawer({
   const preWorkoutBriefingRef = useRef("");
   const initializedWorkoutKeyRef = useRef("");
   const latestSessionRef = useRef(null);
+  const primaryActionLockRef = useRef(false);
 
   const lastExerciseCueRef = useRef("");
   const lastRestCueRef = useRef("");
@@ -1927,9 +1941,11 @@ export default function ActiveWorkoutSessionDrawer({
     setReviewMode(false);
     setFinishMessage(
       restored?.pending_set_logging
-        ? "Workout resumed. Finish logging the completed set while rest continues."
+        ? "Workout restored safely. Your completed set still needs weight, reps, and effort before you continue."
         : restored
-        ? "Workout resumed from your last completed set."
+        ? `Workout restored safely at exercise ${
+            Number(restored.current_exercise_index || 0) + 1
+          } of ${restored.exercises?.length || 0}. Your timers and completed sets were preserved.`
         : ""
     );
     setSavingWorkout(false);
@@ -2585,14 +2601,21 @@ export default function ActiveWorkoutSessionDrawer({
 
   function startSet() {
     if (
+      primaryActionLockRef.current ||
       !session ||
       !currentExercise ||
       isCompleted ||
       session.paused ||
-      session.rest_active
+      session.rest_active ||
+      session.pending_set_logging
     ) {
       return;
     }
+
+    primaryActionLockRef.current = true;
+    window.setTimeout(() => {
+      primaryActionLockRef.current = false;
+    }, 650);
 
     setSession(
       startActiveSet(session, currentExercise.id)
@@ -2613,7 +2636,19 @@ export default function ActiveWorkoutSessionDrawer({
   }
 
   function requestCompleteSet() {
-    if (!session?.set_active || !currentExercise) return;
+    if (
+      primaryActionLockRef.current ||
+      !session?.set_active ||
+      !currentExercise ||
+      savingSet
+    ) {
+      return;
+    }
+
+    primaryActionLockRef.current = true;
+    window.setTimeout(() => {
+      primaryActionLockRef.current = false;
+    }, 650);
 
     const completedDuration = Math.max(
       1,
@@ -3535,9 +3570,10 @@ export default function ActiveWorkoutSessionDrawer({
                       <div className="mt-0.5 text-sm font-black text-lime-100">
                         {currentExercise.current_target_reps ||
                           currentExercise.planned_reps ||
-                          "-"} x {currentExercise.current_target_weight ||
-                          currentExercise.planned_weight ||
-                          "BW"}
+                          "-"} x {formatLoad(
+                          currentExercise.current_target_weight ||
+                            currentExercise.planned_weight
+                        )}
                       </div>
                     </div>
 
@@ -3903,7 +3939,7 @@ export default function ActiveWorkoutSessionDrawer({
                                 </div>
                                 <div className="mt-0.5 whitespace-nowrap text-xs font-black">
                                   {log
-                                    ? `${reps || "-"}x${weight || "BW"}lb`
+                                    ? `${reps || "-"} x ${formatLoad(weight)}`
                                     : isCurrent
                                     ? "Current"
                                     : "Planned"}
@@ -4180,9 +4216,16 @@ export default function ActiveWorkoutSessionDrawer({
         </main>
 
         {session &&
+        warmupReady &&
         !reviewMode &&
         !isCompleted ? (
           <div className="absolute inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#020617]/96 px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 backdrop-blur-xl">
+            {session.pending_set_logging ? (
+              <div className="mx-auto mb-2 max-w-4xl rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-center text-[10px] font-black text-amber-100">
+                Set complete â€” finish logging before starting another set.
+              </div>
+            ) : null}
+
             <div className="mx-auto grid max-w-4xl grid-cols-[0.72fr_0.72fr_1.5fr_0.72fr_0.9fr] gap-1.5 sm:gap-2">
               <button
                 type="button"
@@ -4213,7 +4256,9 @@ export default function ActiveWorkoutSessionDrawer({
                 }
                 disabled={
                   session.paused ||
-                  session.rest_active
+                  session.rest_active ||
+                  session.pending_set_logging ||
+                  savingSet
                 }
                 className={cx(
                   "h-12 rounded-2xl border px-1 text-xs font-black disabled:opacity-45 sm:text-sm",
@@ -4222,7 +4267,9 @@ export default function ActiveWorkoutSessionDrawer({
                     : "border-lime-300/35 bg-lime-300/20 text-lime-100"
                 )}
               >
-                {session.set_active
+                {session.pending_set_logging
+                  ? "Log Set"
+                  : session.set_active
                   ? isTimedExercise
                     ? "Finish Timer"
                     : "Finish Set"
@@ -4247,6 +4294,7 @@ export default function ActiveWorkoutSessionDrawer({
                 }
                 disabled={
                   session.set_active ||
+                  session.pending_set_logging ||
                   (session.current_exercise_index || 0) >=
                     totalExercises - 1
                 }
@@ -4258,7 +4306,11 @@ export default function ActiveWorkoutSessionDrawer({
               <button
                 type="button"
                 onClick={() => setReviewMode(true)}
-                disabled={session.set_active}
+                disabled={
+                  session.set_active ||
+                  session.pending_set_logging ||
+                  savingSet
+                }
                 className="h-12 rounded-2xl border border-amber-300/25 bg-amber-300/10 px-1 text-[10px] font-black text-amber-100 disabled:opacity-35 sm:text-xs"
               >
                 Finish
@@ -4292,17 +4344,8 @@ export default function ActiveWorkoutSessionDrawer({
           saving={savingSet}
           onCancel={() => {
             setSetCheckInOpen(false);
-            setPendingSetDurationSeconds(0);
-            setSession((previous) =>
-              previous
-                ? {
-                    ...previous,
-                    pending_set_logging: false,
-                    pending_set_exercise_id: "",
-                    pending_set_duration_seconds: 0,
-                    pending_set_started_at: "",
-                  }
-                : previous
+            setFinishMessage(
+              "Set logging is still required. Reopen the log before continuing."
             );
           }}
           onSave={saveTimedSet}
