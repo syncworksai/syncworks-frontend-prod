@@ -2124,9 +2124,52 @@ export default function CustomerHealth() {
   ) {
     if (!plannerItem) return;
 
-    setActivePlannerItem(
-      plannerItem
+    const blockedStatuses = [
+      "Completed",
+      "Skipped",
+      "Rescheduled",
+    ];
+
+    if (
+      blockedStatuses.includes(
+        String(plannerItem.status || "")
+      )
+    ) {
+      return;
+    }
+
+    const currentPlannerItem = (
+      Array.isArray(syncedSnapshot?.week_plan)
+        ? syncedSnapshot.week_plan
+        : []
+    ).find(
+      (item) => item?.id === plannerItem.id
     );
+
+    if (
+      currentPlannerItem &&
+      blockedStatuses.includes(
+        String(currentPlannerItem.status || "")
+      )
+    ) {
+      return;
+    }
+
+    setActivePlannerItem({
+      ...plannerItem,
+      ...(currentPlannerItem || {}),
+    });
+
+    setSnapshot((previous) => ({
+      ...previous,
+      today_workout_id: plannerItem.id || "",
+      workout:
+        plannerItem.workout_name ||
+        plannerItem.name ||
+        previous.workout ||
+        "",
+      updated_at: new Date().toISOString(),
+    }));
 
     setDrawer(
       "pre-workout"

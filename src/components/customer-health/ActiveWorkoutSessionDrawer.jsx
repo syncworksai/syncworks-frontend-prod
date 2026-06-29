@@ -3043,30 +3043,69 @@ export default function ActiveWorkoutSessionDrawer({
         plannerItem?.id ||
         "";
 
+      const currentWeekPlan = Array.isArray(
+        result.nextSnapshot?.week_plan
+      )
+        ? result.nextSnapshot.week_plan
+        : Array.isArray(snapshot?.week_plan)
+        ? snapshot.week_plan
+        : [];
+
+      const completedPlannerItem = currentWeekPlan.find(
+        (item) => item?.id === completedPlannerId
+      );
+
+      const nextOpenTodaySession = currentWeekPlan.find(
+        (item) =>
+          item?.id !== completedPlannerId &&
+          item?.ymd === result.finishedSession.ymd &&
+          item?.status !== "Completed" &&
+          item?.status !== "Skipped" &&
+          item?.status !== "Rescheduled"
+      );
+
       const nextSnapshot = {
         ...result.nextSnapshot,
-        workout: "",
-        today_workout_id: "",
+        workout:
+          nextOpenTodaySession?.workout_name || "",
+        today_workout_id:
+          nextOpenTodaySession?.id || "",
         last_completed_workout_at: completedAt,
         last_completed_workout_name:
           result.finishedSession.workout_name || "",
-        week_plan: Array.isArray(result.nextSnapshot?.week_plan)
-          ? result.nextSnapshot.week_plan.map((item) =>
-              item?.id === completedPlannerId ||
-              (
-                item?.ymd === result.finishedSession.ymd &&
-                item?.workout_name === result.finishedSession.workout_name &&
-                item?.status !== "Completed"
-              )
-                ? {
-                    ...item,
-                    status: "Completed",
-                    completed_at: completedAt,
-                    completed_session_id: result.finishedSession.id,
-                  }
-                : item
-            )
-          : [],
+        week_plan: currentWeekPlan.map((item) =>
+          item?.id === completedPlannerId
+            ? {
+                ...item,
+                status: "Completed",
+                completed_at: completedAt,
+                completed_session_id:
+                  result.finishedSession.id,
+                completed_sets:
+                  result.summary.completed_sets || 0,
+                total_seconds:
+                  result.summary.total_seconds || 0,
+                active_seconds:
+                  result.finishedSession.active_seconds || 0,
+                total_volume:
+                  completionMeta.total_volume || 0,
+                pain_flags:
+                  completionMeta.pain_flags || 0,
+                completion_source:
+                  "active_workout_completion",
+                completion_meta: {
+                  ...(item?.completion_meta || {}),
+                  ...(result.finishedSession
+                    .completion_meta || {}),
+                },
+              }
+            : item
+        ),
+        completed_scheduled_workout_count:
+          Number(
+            result.nextSnapshot
+              ?.completed_scheduled_workout_count || 0
+          ) + (completedPlannerItem ? 1 : 0),
         workout_adherence_log: [
           {
             id: `workout-completed-${result.finishedSession.id}`,
@@ -3088,9 +3127,29 @@ export default function ActiveWorkoutSessionDrawer({
         ].slice(0, 100),
       };
 
-      setHistory?.(result.nextHistory);
+      const finishedSession = {
+        ...result.finishedSession,
+        planner_item_id:
+          completedPlannerId ||
+          result.finishedSession.planner_item_id ||
+          "",
+        scheduled_instance_completed:
+          Boolean(completedPlannerItem),
+      };
+
+      const nextHistory = (
+        Array.isArray(result.nextHistory)
+          ? result.nextHistory
+          : []
+      ).map((item) =>
+        item?.id === result.finishedSession.id
+          ? finishedSession
+          : item
+      );
+
+      setHistory?.(nextHistory);
       setSnapshot?.(nextSnapshot);
-      setSession(result.finishedSession);
+      setSession(finishedSession);
       setReviewMode(false);
       setEditAfterFinish(false);
 
@@ -3151,8 +3210,53 @@ export default function ActiveWorkoutSessionDrawer({
         history: history || [],
       });
 
+    const plannerId =
+      result.editedSession?.planner_item_id ||
+      session.planner_item_id ||
+      plannerItem?.id ||
+      "";
+
+    const editedAt = new Date().toISOString();
+
+    const nextSnapshot = {
+      ...result.nextSnapshot,
+      week_plan: (
+        Array.isArray(result.nextSnapshot?.week_plan)
+          ? result.nextSnapshot.week_plan
+          : Array.isArray(snapshot?.week_plan)
+          ? snapshot.week_plan
+          : []
+      ).map((item) =>
+        item?.id === plannerId
+          ? {
+              ...item,
+              status: "Completed",
+              completed_at:
+                item.completed_at ||
+                result.editedSession?.finished_at ||
+                editedAt,
+              completed_session_id:
+                result.editedSession?.id ||
+                item.completed_session_id ||
+                "",
+              completed_sets:
+                result.editedSession?.completed_sets ||
+                0,
+              total_seconds:
+                result.editedSession?.total_seconds ||
+                0,
+              active_seconds:
+                result.editedSession?.active_seconds ||
+                0,
+              edited_after_completion_at: editedAt,
+            }
+          : item
+      ),
+      updated_at: editedAt,
+    };
+
     setHistory?.(result.nextHistory);
-    setSnapshot?.(result.nextSnapshot);
+    setSnapshot?.(nextSnapshot);
     setSession(result.editedSession);
     setEditAfterFinish(false);
     setFinishMessage(
