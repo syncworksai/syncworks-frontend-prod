@@ -2508,21 +2508,17 @@ export default function CustomerHealth() {
     ]);
   }
 
-  function startCustomWorkout(
-    workout
+  function buildCustomPlannerItem(
+    workout,
+    {
+      ymd = todayYmd(),
+      time = new Date().toTimeString().slice(0, 5),
+      plan_control = "coach_assist",
+    } = {}
   ) {
-    if (
-      !workout ||
-      !Array.isArray(workout.exercises) ||
-      !workout.exercises.length
-    ) {
-      return;
-    }
+    const scheduledDate = new Date(`${ymd}T12:00:00`);
 
-    saveCustomWorkout(workout);
-
-    const now = new Date();
-    const plannerItem = {
+    return {
       ...workout,
       id: uid("custom-session"),
       workout_id: workout.id || "",
@@ -2538,13 +2534,20 @@ export default function CustomerHealth() {
         workout.name ||
         workout.workout_name ||
         "Custom Workout",
-      ymd: todayYmd(),
-      day_label: now.toLocaleDateString(undefined, {
-        weekday: "short",
-      }),
-      time: now.toTimeString().slice(0, 5),
+      ymd,
+      day_label: Number.isFinite(scheduledDate.getTime())
+        ? scheduledDate.toLocaleDateString(undefined, {
+            weekday: "short",
+          })
+        : "",
+      time: time || "Anytime",
       status: "Planned",
-      source: "custom_builder",
+      source: "custom_workout",
+      plan_control,
+      coach_can_replace_exercises:
+        plan_control === "adaptive",
+      coach_requires_approval:
+        plan_control !== "adaptive",
       exercises: workout.exercises.map((exercise, index) => ({
         ...exercise,
         id:
@@ -2558,10 +2561,78 @@ export default function CustomerHealth() {
           exercise.planned_reps ||
           exercise.reps ||
           "10",
-        rest_seconds: Number(exercise.rest_seconds || 60),
+        weight:
+          exercise.planned_weight ||
+          exercise.weight ||
+          "",
+        rest_seconds: Number(
+          exercise.rest_seconds ||
+          String(exercise.rest || "").replace(/[^\d]/g, "") ||
+          60
+        ),
         order: index + 1,
       })),
     };
+  }
+
+  function scheduleCustomWorkout(
+    workout,
+    options = {}
+  ) {
+    if (
+      !workout ||
+      !Array.isArray(workout.exercises) ||
+      !workout.exercises.length
+    ) {
+      return;
+    }
+
+    saveCustomWorkout(workout);
+
+    const plannerItem =
+      buildCustomPlannerItem(workout, options);
+
+    setSnapshot((previous) => ({
+      ...previous,
+      workout:
+        plannerItem.ymd === todayYmd()
+          ? plannerItem.workout_name
+          : previous.workout,
+      today_workout_id:
+        plannerItem.ymd === todayYmd()
+          ? plannerItem.id
+          : previous.today_workout_id,
+      week_plan: [
+        ...(Array.isArray(previous.week_plan)
+          ? previous.week_plan
+          : []),
+        plannerItem,
+      ],
+      planned_workouts:
+        Number(previous.planned_workouts || 0) + 1,
+      updated_at: new Date().toISOString(),
+    }));
+  }
+
+  function startCustomWorkout(
+    workout
+  ) {
+    if (
+      !workout ||
+      !Array.isArray(workout.exercises) ||
+      !workout.exercises.length
+    ) {
+      return;
+    }
+
+    saveCustomWorkout(workout);
+
+    const plannerItem =
+      buildCustomPlannerItem(workout, {
+        ymd: todayYmd(),
+        time: new Date().toTimeString().slice(0, 5),
+        plan_control: "coach_assist",
+      });
 
     setActivePlannerItem(plannerItem);
     setDrawer("pre-workout");
@@ -2922,6 +2993,12 @@ export default function CustomerHealth() {
             setWorkouts={setWorkouts}
             history={history}
             setHistory={setHistory}
+            onStartWorkout={
+              startCustomWorkout
+            }
+            onScheduleWorkout={
+              scheduleCustomWorkout
+            }
           />
 
           <ExerciseLibraryDrawer

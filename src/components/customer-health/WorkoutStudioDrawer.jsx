@@ -16,6 +16,29 @@ function safeNumber(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function ymdFromDate(date) {
+  const value = new Date(date);
+  const yyyy = value.getFullYear();
+  const mm = String(value.getMonth() + 1).padStart(2, "0");
+  const dd = String(value.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function tomorrowYmd() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  return ymdFromDate(date);
+}
+
+function defaultScheduleDraft() {
+  const now = new Date();
+  return {
+    ymd: ymdFromDate(now),
+    time: now.toTimeString().slice(0, 5),
+    plan_control: "coach_assist",
+  };
+}
+
 function Field({ label, value, onChange, type = "text", placeholder = "" }) {
   return (
     <label className="block">
@@ -274,7 +297,11 @@ export default function WorkoutStudioDrawer({
   setWorkouts,
   history,
   setHistory,
+  onStartWorkout,
+  onScheduleWorkout,
 }) {
+  const [scheduleDrafts, setScheduleDrafts] = useState({});
+
   const [session, setSession] = useState({
     adaptation_mode: "Auto",
     session_feel: "Good",
@@ -370,15 +397,43 @@ export default function WorkoutStudioDrawer({
     );
   }
 
-  function useToday(workout) {
-    setSnapshot((prev) => ({
-      ...prev,
-      workout: workout.name,
-      today_workout_id: workout.id,
-      time_available: `${workout.duration || 30} minutes`,
-      goal: profile.primary_goal || prev.goal || "General fitness",
-      equipment: profile.preferred_equipment || prev.equipment || "Bodyweight",
+  function getScheduleDraft(workoutId) {
+    return scheduleDrafts[workoutId] || defaultScheduleDraft();
+  }
+
+  function updateScheduleDraft(workoutId, patch) {
+    setScheduleDrafts((previous) => ({
+      ...previous,
+      [workoutId]: {
+        ...(previous[workoutId] || defaultScheduleDraft()),
+        ...patch,
+      },
     }));
+  }
+
+  function useToday(workout) {
+    onScheduleWorkout?.(workout, {
+      ...getScheduleDraft(workout.id),
+      ymd: ymdFromDate(new Date()),
+    });
+  }
+
+  function duplicateWorkout(workout) {
+    const copy = {
+      ...workout,
+      id: uid("w"),
+      name: `${workout.name || "Workout"} Copy`,
+      workout_name: `${workout.workout_name || workout.name || "Workout"} Copy`,
+      status: "Planned",
+      source: "custom_builder",
+      saved_at: new Date().toISOString(),
+      exercises: (workout.exercises || []).map((exercise) => ({
+        ...exercise,
+        id: uid("exercise"),
+      })),
+    };
+
+    setWorkouts((previous) => [copy, ...(Array.isArray(previous) ? previous : [])]);
   }
 
   function completeWorkout(workout) {
@@ -482,7 +537,7 @@ export default function WorkoutStudioDrawer({
       open={open}
       onClose={onClose}
       title="Workout Studio"
-      subtitle="Adaptive workouts for beginners, athletes, busy parents, weight loss, strength, and recovery."
+      subtitle="Build your own workouts, schedule multiple sessions, or let SYNC coach the plan you choose."
     >
       <div className="space-y-5">
         <div className="rounded-3xl border border-fuchsia-500/25 bg-fuchsia-500/10 p-4">
@@ -490,7 +545,13 @@ export default function WorkoutStudioDrawer({
             <div>
               <div className="text-sm font-black text-white">Adaptive Training Path</div>
               <div className="mt-1 text-xs leading-5 text-fuchsia-100/80">
-                This molds the plan day-to-day or week-to-week based on the user, not just a hardcore fitness profile.
+                {userPath.type === "Sport Performance"
+                  ? "Athlete mode balances strength, mobility, practice, competition, and recovery."
+                  : userPath.type === "Weight Loss / Health"
+                  ? "Weight-loss mode prioritizes repeatable strength work, steps, cardio, protein, and consistency."
+                  : userPath.type === "Recovery / Weak Area"
+                  ? "Pain-aware mode keeps the goal intact while controlling range, load, and symptom response."
+                  : "SYNC tailors coaching to the user's actual goal without forcing an athlete-style program."}
               </div>
             </div>
 
@@ -712,6 +773,100 @@ export default function WorkoutStudioDrawer({
               ))}
             </div>
 
+            <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.05] p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div className="text-xs font-black text-white">Schedule this workout</div>
+                  <div className="mt-1 text-[11px] leading-5 text-slate-400">
+                    Add multiple sessions to the same day, schedule ahead, or start immediately.
+                  </div>
+                </div>
+                <Pill tone="cyan">
+                  {(workout.exercises || []).length} exercises
+                </Pill>
+              </div>
+
+              <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_120px_160px]">
+                <label className="block">
+                  <div className="mb-1 text-xs font-semibold text-slate-400">Date</div>
+                  <input
+                    type="date"
+                    value={getScheduleDraft(workout.id).ymd}
+                    onChange={(event) =>
+                      updateScheduleDraft(workout.id, { ymd: event.target.value })
+                    }
+                    className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                  />
+                </label>
+
+                <label className="block">
+                  <div className="mb-1 text-xs font-semibold text-slate-400">Time</div>
+                  <input
+                    type="time"
+                    value={getScheduleDraft(workout.id).time}
+                    onChange={(event) =>
+                      updateScheduleDraft(workout.id, { time: event.target.value })
+                    }
+                    className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                  />
+                </label>
+
+                <SelectField
+                  label="SYNC control"
+                  value={getScheduleDraft(workout.id).plan_control}
+                  onChange={(value) =>
+                    updateScheduleDraft(workout.id, { plan_control: value })
+                  }
+                  options={["locked", "coach_assist", "adaptive"]}
+                />
+              </div>
+
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                <button
+                  type="button"
+                  onClick={() => onStartWorkout?.(workout)}
+                  className="h-11 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-xs font-black text-lime-100"
+                >
+                  Start Now
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => useToday(workout)}
+                  className="h-11 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 text-xs font-black text-emerald-100"
+                >
+                  Add Another Today
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    onScheduleWorkout?.(workout, {
+                      ...getScheduleDraft(workout.id),
+                      ymd: tomorrowYmd(),
+                    })
+                  }
+                  className="h-11 rounded-2xl border border-fuchsia-500/25 bg-fuchsia-500/10 text-xs font-black text-fuchsia-100"
+                >
+                  Schedule Tomorrow
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    onScheduleWorkout?.(workout, getScheduleDraft(workout.id))
+                  }
+                  className="h-11 rounded-2xl border border-cyan-500/25 bg-cyan-500/10 text-xs font-black text-cyan-100"
+                >
+                  Schedule Selected
+                </button>
+              </div>
+
+              <div className="mt-2 text-[10px] leading-4 text-slate-500">
+                Locked preserves the workout. Coach assist adds cues and safety checks. Adaptive allows suggested changes with approval.
+              </div>
+            </div>
+
             <div className="mt-4 flex flex-wrap gap-2">
               <button
                 type="button"
@@ -721,12 +876,13 @@ export default function WorkoutStudioDrawer({
                 + Exercise
               </button>
 
+
               <button
                 type="button"
-                onClick={() => useToday(workout)}
-                className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-100"
+                onClick={() => duplicateWorkout(workout)}
+                className="rounded-2xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs font-black text-amber-100"
               >
-                Use Today
+                Duplicate
               </button>
 
               <button
