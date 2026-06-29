@@ -2407,8 +2407,18 @@ export default function CustomerHealth() {
       },
     };
 
+    const planControl =
+      nextPlannerItem.plan_control ||
+      checkIn.plan_control ||
+      "coach_assist";
+
+    const adjustmentAllowed =
+      planControl === "adaptive" ||
+      (planControl === "coach_assist" &&
+        checkIn.adjust_workout);
+
     const shouldAdjust =
-      checkIn.adjust_workout &&
+      adjustmentAllowed &&
       (soreAreas.length > 0 ||
         protectedPainAreas.length > 0 ||
         checkIn.readiness === "Low" ||
@@ -2466,7 +2476,12 @@ export default function CustomerHealth() {
       preworkout_pain_areas: painAreas,
       protected_pain_areas: protectedPainAreas,
       preworkout_pain_severity: painSeverity,
-      last_pre_workout_check_in: nextPlannerItem.pre_workout_check_in,
+      last_pre_workout_check_in:
+        nextPlannerItem.pre_workout_check_in,
+      active_plan_control:
+        nextPlannerItem.plan_control ||
+        checkIn.plan_control ||
+        "coach_assist",
       updated_at: new Date().toISOString(),
     }));
 
