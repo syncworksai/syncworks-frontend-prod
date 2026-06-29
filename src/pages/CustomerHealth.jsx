@@ -2614,6 +2614,72 @@ export default function CustomerHealth() {
     }));
   }
 
+  function rescheduleScheduledWorkout(
+    sessionId,
+    patch = {}
+  ) {
+    if (!sessionId) return;
+
+    setSnapshot((previous) => ({
+      ...previous,
+      week_plan: (
+        Array.isArray(previous.week_plan)
+          ? previous.week_plan
+          : []
+      ).map((item) =>
+        item?.id === sessionId
+          ? {
+              ...item,
+              ...patch,
+              coach_can_replace_exercises:
+                patch.plan_control === "adaptive",
+              coach_requires_approval:
+                patch.plan_control !== "adaptive",
+              updated_at: new Date().toISOString(),
+            }
+          : item
+      ),
+      updated_at: new Date().toISOString(),
+    }));
+  }
+
+  function removeScheduledWorkout(sessionId) {
+    if (!sessionId) return;
+
+    setSnapshot((previous) => {
+      const nextWeekPlan = (
+        Array.isArray(previous.week_plan)
+          ? previous.week_plan
+          : []
+      ).filter((item) => item?.id !== sessionId);
+
+      const removedWasToday =
+        previous.today_workout_id === sessionId;
+
+      const nextToday = nextWeekPlan.find(
+        (item) =>
+          item?.ymd === todayYmd() &&
+          item?.status !== "Completed"
+      );
+
+      return {
+        ...previous,
+        week_plan: nextWeekPlan,
+        today_workout_id: removedWasToday
+          ? nextToday?.id || ""
+          : previous.today_workout_id,
+        workout: removedWasToday
+          ? nextToday?.workout_name || ""
+          : previous.workout,
+        planned_workouts: Math.max(
+          0,
+          Number(previous.planned_workouts || 0) - 1
+        ),
+        updated_at: new Date().toISOString(),
+      };
+    });
+  }
+
   function startCustomWorkout(
     workout
   ) {
@@ -2998,6 +3064,15 @@ export default function CustomerHealth() {
             }
             onScheduleWorkout={
               scheduleCustomWorkout
+            }
+            onStartScheduledWorkout={
+              startPlannerWorkout
+            }
+            onRescheduleScheduledWorkout={
+              rescheduleScheduledWorkout
+            }
+            onRemoveScheduledWorkout={
+              removeScheduledWorkout
             }
           />
 

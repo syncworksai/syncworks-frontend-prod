@@ -39,6 +39,32 @@ function defaultScheduleDraft() {
   };
 }
 
+function formatScheduleDate(ymd) {
+  if (!ymd) return "Date not set";
+
+  const date = new Date(`${ymd}T12:00:00`);
+
+  if (!Number.isFinite(date.getTime())) {
+    return ymd;
+  }
+
+  return date.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function planControlLabel(value) {
+  const labels = {
+    locked: "Locked",
+    coach_assist: "Coach Assist",
+    adaptive: "Adaptive",
+  };
+
+  return labels[value] || "Coach Assist";
+}
+
 function Field({ label, value, onChange, type = "text", placeholder = "" }) {
   return (
     <label className="block">
@@ -299,9 +325,14 @@ export default function WorkoutStudioDrawer({
   setHistory,
   onStartWorkout,
   onScheduleWorkout,
+  onStartScheduledWorkout,
+  onRescheduleScheduledWorkout,
+  onRemoveScheduledWorkout,
 }) {
   const [scheduleDrafts, setScheduleDrafts] = useState({});
   const [openScheduleId, setOpenScheduleId] = useState("");
+  const [editingSessionId, setEditingSessionId] = useState("");
+  const [sessionEdits, setSessionEdits] = useState({});
 
   const [session, setSession] = useState({
     adaptation_mode: "Auto",
@@ -317,6 +348,70 @@ export default function WorkoutStudioDrawer({
   const userPath = useMemo(() => {
     return inferUserPath(profile, snapshot);
   }, [profile, snapshot]);
+
+  const upcomingSessions = useMemo(() => {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    return (Array.isArray(snapshot?.week_plan)
+      ? snapshot.week_plan
+      : []
+    )
+      .filter((item) => item?.status !== "Completed")
+      .filter((item) => item?.workout_name || item?.name)
+      .map((item) => {
+        const sortTime = new Date(
+          `${item.ymd || "2099-01-01"}T${
+            item.time && item.time !== "Anytime"
+              ? item.time
+              : "23:59"
+          }:00`
+        ).getTime();
+
+        return {
+          ...item,
+          sortTime,
+        };
+      })
+      .filter(
+        (item) =>
+          Number.isFinite(item.sortTime) &&
+          item.sortTime >= startOfToday.getTime()
+      )
+      .sort((a, b) => a.sortTime - b.sortTime);
+  }, [snapshot?.week_plan]);
+
+  function getSessionEdit(session) {
+    return (
+      sessionEdits[session.id] || {
+        ymd: session.ymd || ymdFromDate(new Date()),
+        time:
+          session.time && session.time !== "Anytime"
+            ? session.time
+            : "06:00",
+        plan_control:
+          session.plan_control || "coach_assist",
+      }
+    );
+  }
+
+  function updateSessionEdit(session, patch) {
+    setSessionEdits((previous) => ({
+      ...previous,
+      [session.id]: {
+        ...getSessionEdit(session),
+        ...patch,
+      },
+    }));
+  }
+
+  function saveSessionEdit(session) {
+    onRescheduleScheduledWorkout?.(
+      session.id,
+      getSessionEdit(session)
+    );
+    setEditingSessionId("");
+  }
 
   function addWorkout() {
     setWorkouts((prev) => [
@@ -541,6 +636,202 @@ export default function WorkoutStudioDrawer({
       subtitle="Choose a saved workout, start now, or schedule it for later. Open the studio only when you need to build or edit."
     >
       <div className="space-y-5">
+        <section className="rounded-[2rem] border border-fuchsia-300/20 bg-[radial-gradient(circle_at_top_right,rgba(255,59,212,0.10),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(52,223,255,0.08),transparent_28%),linear-gradient(145deg,#07111f,#040812)] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-200">
+                Training calendar
+              </div>
+              <h2 className="mt-1 text-2xl font-black text-white">
+                Upcoming Workouts
+              </h2>
+              <p className="mt-1 max-w-xl text-xs leading-5 text-slate-400">
+                Scheduled sessions are separate from saved workout templates. Start, reschedule, or remove each session here.
+              </p>
+            </div>
+
+            <Pill tone="fuchsia">
+              {upcomingSessions.length} scheduled
+            </Pill>
+          </div>
+
+          {upcomingSessions.length ? (
+            <div className="mt-4 space-y-3">
+              {upcomingSessions.map((session) => {
+                const editing = editingSessionId === session.id;
+                const edit = getSessionEdit(session);
+
+                return (
+                  <article
+                    key={`scheduled-${session.id}`}
+                    className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap gap-1.5">
+                          <Pill tone="fuchsia">
+                            {formatScheduleDate(session.ymd)}
+                          </Pill>
+                          <Pill tone="cyan">
+                            {session.time || "Anytime"}
+                          </Pill>
+                          <Pill tone="slate">
+                            {planControlLabel(
+                              session.plan_control
+                            )}
+                          </Pill>
+                        </div>
+
+                        <h3 className="mt-3 truncate text-lg font-black text-white">
+                          {session.workout_name ||
+                            session.name ||
+                            "Scheduled Workout"}
+                        </h3>
+
+                        <div className="mt-1 text-[11px] text-slate-500">
+                          {(session.exercises || []).length} exercises
+                          {" Â· "}
+                          {session.source === "custom_workout"
+                            ? "Custom session"
+                            : "Planned session"}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onStartScheduledWorkout?.(session)
+                        }
+                        className="h-11 shrink-0 rounded-2xl border border-lime-300/30 bg-lime-300/15 px-4 text-xs font-black text-lime-100"
+                      >
+                        Start
+                      </button>
+                    </div>
+
+                    {editing ? (
+                      <div className="mt-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.05] p-3">
+                        <div className="grid gap-2 sm:grid-cols-[1fr_120px]">
+                          <input
+                            type="date"
+                            value={edit.ymd}
+                            onChange={(event) =>
+                              updateSessionEdit(session, {
+                                ymd: event.target.value,
+                              })
+                            }
+                            className="h-11 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm text-white outline-none focus:border-cyan-300/40"
+                          />
+
+                          <input
+                            type="time"
+                            value={edit.time}
+                            onChange={(event) =>
+                              updateSessionEdit(session, {
+                                time: event.target.value,
+                              })
+                            }
+                            className="h-11 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm text-white outline-none focus:border-cyan-300/40"
+                          />
+                        </div>
+
+                        <div className="mt-2 grid grid-cols-3 gap-2">
+                          {[
+                            ["locked", "Locked"],
+                            ["coach_assist", "Coach Assist"],
+                            ["adaptive", "Adaptive"],
+                          ].map(([value, label]) => (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() =>
+                                updateSessionEdit(session, {
+                                  plan_control: value,
+                                })
+                              }
+                              className={cx(
+                                "rounded-xl border px-2 py-2 text-[10px] font-black",
+                                edit.plan_control === value
+                                  ? "border-cyan-300/30 bg-cyan-300/15 text-cyan-100"
+                                  : "border-white/10 bg-white/[0.03] text-slate-400"
+                              )}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => saveSessionEdit(session)}
+                            className="h-10 rounded-xl border border-lime-300/25 bg-lime-300/10 text-xs font-black text-lime-100"
+                          >
+                            Save Changes
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingSessionId("")}
+                            className="h-10 rounded-xl border border-white/10 bg-white/[0.04] text-xs font-black text-slate-300"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-3 flex flex-wrap gap-2 border-t border-white/10 pt-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSessionEdits((previous) => ({
+                              ...previous,
+                              [session.id]: {
+                                ymd:
+                                  session.ymd ||
+                                  ymdFromDate(new Date()),
+                                time:
+                                  session.time &&
+                                  session.time !== "Anytime"
+                                    ? session.time
+                                    : "06:00",
+                                plan_control:
+                                  session.plan_control ||
+                                  "coach_assist",
+                              },
+                            }));
+                            setEditingSessionId(session.id);
+                          }}
+                          className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-[10px] font-black text-cyan-100"
+                        >
+                          Reschedule
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onRemoveScheduledWorkout?.(session.id)
+                          }
+                          className="rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-[10px] font-black text-rose-100"
+                        >
+                          Remove Session
+                        </button>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-black/20 p-6 text-center">
+              <div className="text-sm font-black text-white">
+                No upcoming workouts scheduled
+              </div>
+              <div className="mt-1 text-xs text-slate-500">
+                Schedule one from a saved workout below.
+              </div>
+            </div>
+          )}
+        </section>
+
         <section className="rounded-[2rem] border border-cyan-300/20 bg-[radial-gradient(circle_at_top_left,rgba(57,255,136,0.10),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(255,59,212,0.08),transparent_28%),linear-gradient(145deg,#07111f,#040812)] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
