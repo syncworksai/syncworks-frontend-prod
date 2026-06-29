@@ -301,6 +301,7 @@ export default function WorkoutStudioDrawer({
   onScheduleWorkout,
 }) {
   const [scheduleDrafts, setScheduleDrafts] = useState({});
+  const [openScheduleId, setOpenScheduleId] = useState("");
 
   const [session, setSession] = useState({
     adaptation_mode: "Auto",
@@ -536,10 +537,267 @@ export default function WorkoutStudioDrawer({
     <HealthDrawer
       open={open}
       onClose={onClose}
-      title="Workout Studio"
-      subtitle="Build your own workouts, schedule multiple sessions, or let SYNC coach the plan you choose."
+      title="My Workouts"
+      subtitle="Choose a saved workout, start now, or schedule it for later. Open the studio only when you need to build or edit."
     >
       <div className="space-y-5">
+        <section className="rounded-[2rem] border border-cyan-300/20 bg-[radial-gradient(circle_at_top_left,rgba(57,255,136,0.10),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(255,59,212,0.08),transparent_28%),linear-gradient(145deg,#07111f,#040812)] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-lime-300">
+                Saved training
+              </div>
+              <h2 className="mt-1 text-2xl font-black text-white">
+                My Workouts
+              </h2>
+              <p className="mt-1 max-w-xl text-xs leading-5 text-slate-400">
+                Start immediately or place any saved workout on your schedule without opening the editor.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={addWorkout}
+              className="rounded-2xl border border-lime-300/30 bg-lime-300/15 px-4 py-3 text-xs font-black text-lime-100"
+            >
+              + Build New Workout
+            </button>
+          </div>
+
+          {workouts.length ? (
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              {workouts.map((workout) => {
+                const exerciseCount = Array.isArray(workout.exercises)
+                  ? workout.exercises.length
+                  : 0;
+                const setCount = (workout.exercises || []).reduce(
+                  (total, exercise) =>
+                    total + Math.max(0, safeNumber(exercise.sets)),
+                  0
+                );
+                const scheduleOpen = openScheduleId === workout.id;
+                const draft = getScheduleDraft(workout.id);
+
+                return (
+                  <article
+                    key={`hub-${workout.id}`}
+                    className={cx(
+                      "overflow-hidden rounded-[1.6rem] border p-4",
+                      snapshot.today_workout_id === workout.id
+                        ? "border-lime-300/30 bg-lime-300/[0.08]"
+                        : "border-white/10 bg-black/20"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap gap-1.5">
+                          {snapshot.today_workout_id === workout.id ? (
+                            <Pill tone="emerald">Today</Pill>
+                          ) : null}
+                          <Pill tone="cyan">
+                            {workout.focus || "Workout"}
+                          </Pill>
+                          <Pill tone="slate">
+                            {workout.status || "Saved"}
+                          </Pill>
+                        </div>
+
+                        <h3 className="mt-3 truncate text-xl font-black text-white">
+                          {workout.name || "Untitled Workout"}
+                        </h3>
+
+                        <div className="mt-2 flex flex-wrap gap-3 text-[11px] font-bold text-slate-400">
+                          <span>{exerciseCount} exercises</span>
+                          <span>{setCount} sets</span>
+                          <span>{workout.duration || "30"} min</span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenScheduleId(
+                            scheduleOpen ? "" : workout.id
+                          )
+                        }
+                        className="shrink-0 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-[10px] font-black text-cyan-100"
+                      >
+                        {scheduleOpen ? "Close" : "Schedule"}
+                      </button>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-[1.35fr_0.85fr] gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onStartWorkout?.(workout)}
+                        className="h-12 rounded-2xl border border-lime-300/35 bg-lime-300/20 text-sm font-black text-lime-100 shadow-[0_0_28px_rgba(57,255,136,0.10)]"
+                      >
+                        Start Workout Now
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => useToday(workout)}
+                        className="h-12 rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-2 text-xs font-black text-fuchsia-100"
+                      >
+                        Add Today
+                      </button>
+                    </div>
+
+                    {scheduleOpen ? (
+                      <div className="mt-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.05] p-3">
+                        <div className="grid gap-2 sm:grid-cols-[1fr_120px]">
+                          <label className="block">
+                            <div className="mb-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+                              Date
+                            </div>
+                            <input
+                              type="date"
+                              value={draft.ymd}
+                              onChange={(event) =>
+                                updateScheduleDraft(workout.id, {
+                                  ymd: event.target.value,
+                                })
+                              }
+                              className="h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm text-white outline-none focus:border-cyan-300/40"
+                            />
+                          </label>
+
+                          <label className="block">
+                            <div className="mb-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+                              Time
+                            </div>
+                            <input
+                              type="time"
+                              value={draft.time}
+                              onChange={(event) =>
+                                updateScheduleDraft(workout.id, {
+                                  time: event.target.value,
+                                })
+                              }
+                              className="h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm text-white outline-none focus:border-cyan-300/40"
+                            />
+                          </label>
+                        </div>
+
+                        <div className="mt-2 grid grid-cols-3 gap-2">
+                          {[
+                            ["locked", "Locked"],
+                            ["coach_assist", "Coach Assist"],
+                            ["adaptive", "Adaptive"],
+                          ].map(([value, label]) => (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() =>
+                                updateScheduleDraft(workout.id, {
+                                  plan_control: value,
+                                })
+                              }
+                              className={cx(
+                                "rounded-xl border px-2 py-2.5 text-[10px] font-black",
+                                draft.plan_control === value
+                                  ? "border-cyan-300/30 bg-cyan-300/15 text-cyan-100"
+                                  : "border-white/10 bg-white/[0.03] text-slate-400"
+                              )}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onScheduleWorkout?.(workout, {
+                                ...draft,
+                                ymd: tomorrowYmd(),
+                              })
+                            }
+                            className="h-11 rounded-xl border border-fuchsia-300/25 bg-fuchsia-300/10 text-xs font-black text-fuchsia-100"
+                          >
+                            Schedule Tomorrow
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onScheduleWorkout?.(workout, draft)
+                            }
+                            className="h-11 rounded-xl border border-cyan-300/25 bg-cyan-300/10 text-xs font-black text-cyan-100"
+                          >
+                            Schedule Selected
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="mt-3 flex flex-wrap gap-2 border-t border-white/10 pt-3">
+                      <button
+                        type="button"
+                        onClick={() => duplicateWorkout(workout)}
+                        className="rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-[10px] font-black text-amber-100"
+                      >
+                        Duplicate
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const studio = document.getElementById(
+                            `workout-editor-${workout.id}`
+                          );
+                          studio?.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start",
+                          });
+                        }}
+                        className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-black text-slate-200"
+                      >
+                        Edit in Studio
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeWorkout(workout.id)}
+                        className="rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-[10px] font-black text-rose-100"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-black/20 p-6 text-center">
+              <div className="text-sm font-black text-white">
+                No saved workouts yet
+              </div>
+              <div className="mt-1 text-xs text-slate-500">
+                Build one from scratch or add a template below.
+              </div>
+            </div>
+          )}
+        </section>
+
+        <details className="group rounded-[2rem] border border-white/10 bg-white/[0.025]">
+          <summary className="cursor-pointer list-none px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-black text-white">
+                  Workout Builder & Editor
+                </div>
+                <div className="mt-1 text-xs text-slate-500">
+                  Create workouts, change exercises, or review adaptive coaching settings.
+                </div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-black text-slate-300">
+                Open Studio
+              </div>
+            </div>
+          </summary>
+
+          <div className="space-y-5 border-t border-white/10 p-4">
         <div className="rounded-3xl border border-fuchsia-500/25 bg-fuchsia-500/10 p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -665,6 +923,7 @@ export default function WorkoutStudioDrawer({
 
         {workouts.map((workout) => (
           <article
+            id={`workout-editor-${workout.id}`}
             key={workout.id}
             className={
               snapshot.today_workout_id === workout.id
@@ -903,6 +1162,8 @@ export default function WorkoutStudioDrawer({
             </div>
           </article>
         ))}
+          </div>
+        </details>
       </div>
     </HealthDrawer>
   );
