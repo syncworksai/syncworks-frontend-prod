@@ -1,10 +1,9 @@
 // src/components/customer-health/HealthHome.jsx
 import React, {
-  useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
+import { Headphones } from "lucide-react";
 
 import {
   buildExerciseIntroSpeech,
@@ -52,6 +51,45 @@ function findTodayWorkout(weekPlan = []) {
   );
 }
 
+function findNextWorkout(weekPlan = []) {
+  const today = new Date();
+  const todayStart = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  ).getTime();
+
+  return [...(Array.isArray(weekPlan) ? weekPlan : [])]
+    .filter(
+      (item) =>
+        item?.workout_name &&
+        !["Completed", "Skipped"].includes(item?.status)
+    )
+    .map((item) => ({
+      ...item,
+      dayTime: new Date(
+        `${item.ymd || "2099-01-01"}T12:00:00`
+      ).getTime(),
+    }))
+    .filter(
+      (item) =>
+        Number.isFinite(item.dayTime) &&
+        item.dayTime > todayStart
+    )
+    .sort((a, b) => a.dayTime - b.dayTime)[0] || null;
+}
+
+function workoutDateLabel(item) {
+  if (!item?.ymd) return "Upcoming";
+  const date = new Date(`${item.ymd}T12:00:00`);
+  return Number.isFinite(date.getTime())
+    ? date.toLocaleDateString(undefined, {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+      })
+    : "Upcoming";
+}
 function startOfCurrentWeek() {
   const today = new Date();
   const start = new Date(
@@ -393,12 +431,22 @@ export default function HealthHome({
   const [workoutChoiceOpen, setWorkoutChoiceOpen] =
     useState(false);
 
-  const audioPlayedRef = useRef(false);
+  const [audioEnabled, setAudioEnabled] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.localStorage.getItem("syncworks_health_audio_enabled") !== "false";
+  });
 
   const todayWorkout = useMemo(
     () => findTodayWorkout(snapshot?.week_plan),
     [snapshot?.week_plan]
   );
+
+  const nextWorkout = useMemo(
+    () => findNextWorkout(snapshot?.week_plan),
+    [snapshot?.week_plan]
+  );
+
+  const recommendedWorkout = todayWorkout || nextWorkout;
 
   const missedWorkout = useMemo(
     () => findMissedWorkout(snapshot?.week_plan),
@@ -431,11 +479,30 @@ export default function HealthHome({
     [snapshot?.week_plan]
   );
 
-  const coachAudioMode =
+  const configuredCoachAudioMode =
     snapshot?.coach_audio_mode ||
     (snapshot?.audible_trainer_enabled
       ? "essential"
       : "off");
+
+  const coachAudioMode = audioEnabled
+    ? configuredCoachAudioMode === "off"
+      ? "essential"
+      : configuredCoachAudioMode
+    : "off";
+
+  function toggleAudio() {
+    setAudioEnabled((current) => {
+      const next = !current;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(
+          "syncworks_health_audio_enabled",
+          String(next)
+        );
+      }
+      return next;
+    });
+  }
 
   const voicePreference =
     snapshot?.coach_voice_preference || "female";
@@ -508,32 +575,6 @@ export default function HealthHome({
     missedWorkout?.workout_name,
   ]);
 
-  useEffect(() => {
-    if (
-      audioPlayedRef.current ||
-      coachAudioMode === "off" ||
-      snapshot?.last_health_home_brief_ymd ===
-        new Date().toISOString().slice(0, 10)
-    ) {
-      return;
-    }
-
-    audioPlayedRef.current = true;
-
-    speakCoachText({
-      text: dailyBrief,
-      audioMode: coachAudioMode,
-      voicePreference,
-      rate: 1,
-      pitch: 1,
-      volume: 1,
-    });
-  }, [
-    coachAudioMode,
-    voicePreference,
-    dailyBrief,
-    snapshot?.last_health_home_brief_ymd,
-  ]);
 
   const intakeComplete =
     !!profile?.health_intake_completed_at;
@@ -574,6 +615,29 @@ export default function HealthHome({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
+              onClick={toggleAudio}
+              aria-label={audioEnabled ? "Turn coaching audio off" : "Turn coaching audio on"}
+              title={audioEnabled ? "Coaching audio on" : "Coaching audio off"}
+              className={cx(
+                "flex h-11 w-11 items-center justify-center rounded-2xl border",
+                audioEnabled
+                  ? "border-cyan-300/30 bg-cyan-300/12 text-cyan-100"
+                  : "border-white/10 bg-white/[0.04] text-slate-400"
+              )}
+            >
+              <span className="relative flex h-6 w-6 items-center justify-center">
+                <Headphones size={19} />
+                {!audioEnabled ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute h-0.5 w-7 -rotate-45 rounded-full bg-current"
+                  />
+                ) : null}
+              </span>
+            </button>
+
+            <button
+              type="button"
               onClick={() =>
                 speakCoachText({
                   text: dailyBrief,
@@ -610,15 +674,17 @@ export default function HealthHome({
               </div>
 
               <div className="mt-1 text-2xl font-black text-white">
-                {todayWorkout?.workout_name ||
+                {recommendedWorkout?.workout_name ||
                   "Choose how you want to move today"}
               </div>
 
               <div className="mt-1 text-sm leading-6 text-slate-400">
-                {todayWorkout
-                  ? `${todayWorkout.time || "Anytime"} - ${
-                      todayWorkout.adaptive_reason ||
-                      todayWorkout.note ||
+                {recommendedWorkout
+                  ? `${todayWorkout ? "Today" : workoutDateLabel(recommendedWorkout)} - ${
+                      recommendedWorkout.time || "Anytime"
+                    } - ${
+                      recommendedWorkout.adaptive_reason ||
+                      recommendedWorkout.note ||
                       "Recommended from your recent training balance, readiness, and recovery."
                     }`
                   : "Your coach can suggest a session, or you can choose a focus, cardio activity, or build your own workout."}
@@ -634,14 +700,16 @@ export default function HealthHome({
             <button
               type="button"
               onClick={() =>
-                todayWorkout
-                  ? onStartWorkout?.(todayWorkout)
+                recommendedWorkout
+                  ? onStartWorkout?.(recommendedWorkout)
                   : onOpen?.("plan-today")
               }
               className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100 shadow-[0_0_28px_rgba(57,255,136,0.12)]"
             >
               {todayWorkout
                 ? "Review and Start"
+                : nextWorkout
+                ? "Preview or Start Early"
                 : "Build Today's Plan"}
             </button>
 
@@ -664,12 +732,52 @@ export default function HealthHome({
         </div>
       </section>
 
+      <section className="rounded-[1.7rem] border border-cyan-300/20 bg-white/[0.035] p-4 sm:rounded-[2rem] sm:p-5">
+        <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
+          Current Training Mission
+        </div>
+        <div className="mt-2 text-2xl font-black text-white">
+          {profile?.body_goal || profile?.primary_goal || "Build a stronger, healthier body"}
+        </div>
+        <div className="mt-2 text-sm leading-6 text-slate-400">
+          {profile?.goal_detail ||
+            "SYNC will connect each workout, recovery decision, and daily habit to your current goal."}
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {profile?.target_weight ? (
+            <span className="rounded-full border border-lime-300/20 bg-lime-300/10 px-3 py-1.5 text-xs font-black text-lime-100">
+              Target {profile.target_weight} lb
+            </span>
+          ) : null}
+          {profile?.goal_target_date ? (
+            <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1.5 text-xs font-black text-fuchsia-100">
+              Target date {profile.goal_target_date}
+            </span>
+          ) : null}
+          {profile?.sport ? (
+            <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-xs font-black text-amber-100">
+              Training for {profile.sport}
+            </span>
+          ) : null}
+        </div>
+      </section>
       <section className="rounded-[1.7rem] border border-fuchsia-300/20 bg-white/[0.035] p-4 sm:rounded-[2rem] sm:p-5">
+
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-200">Goal Progress</div>
             <div className="mt-1 text-2xl font-black text-white">{goalAnalysis.currentWeight || "-"} â†’ {goalAnalysis.targetWeight || "-"} lb</div>
-            <div className="mt-1 text-sm leading-6 text-slate-400">Target {goalAnalysis.targetDateLabel} Â· Projected {goalAnalysis.projectedDateLabel}</div>
+            <div className="mt-1 text-sm leading-6 text-slate-400">
+              Target {goalAnalysis.targetDateLabel} - Projected {goalAnalysis.projectedDateLabel}
+            </div>
+            <div className="mt-1 text-xs text-slate-500">
+              Projection uses {goalAnalysis.projectionSource}.
+            </div>
+            {goalAnalysis.paceWarning ? (
+              <div className="mt-2 rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs font-bold text-amber-100">
+                {goalAnalysis.paceWarning}
+              </div>
+            ) : null}
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-black text-white">{goalAnalysis.status}</div>
         </div>
