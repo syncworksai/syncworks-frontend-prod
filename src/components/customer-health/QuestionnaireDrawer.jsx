@@ -158,13 +158,13 @@ export default function QuestionnaireDrawer({
     <HealthDrawer
       open={open}
       onClose={onClose}
-      title="AI Coach Questionnaire"
-      subtitle="This is the data the coach uses to tailor workouts, limits, progression, and daily pressure."
+      title="Build Your Coaching Profile"
+      subtitle="Tell SYNC how you want to train, what you are working toward, and what your body needs protected. Update this anytime as your goals change."
     >
       <div className="space-y-5">
         <Section
-          title="Goal Identity"
-          subtitle="The coach needs to know what the user is trying to become."
+          title="Training Direction"
+          subtitle="Define the result you want and the style of training SYNC should emphasize."
           tone="fuchsia"
         >
           <div className="grid gap-3 md:grid-cols-2">
@@ -188,16 +188,16 @@ export default function QuestionnaireDrawer({
             />
 
             <SelectField
-              label="Inspiration goal"
+              label="Training style"
               value={profile.inspiration_goal}
               onChange={(value) => updateProfile({ inspiration_goal: value })}
               options={[
-                "Best version of me",
-                "Fitness model look",
-                "Troy Polamalu athletic style",
-                "James Harrison strength style",
-                "Lean and healthy parent",
-                "Move without pain",
+                "Lean Athletic",
+                "Functional Fitness",
+                "Explosive Athlete",
+                "Strength and Power",
+                "Endurance",
+                "Mobility and Longevity",
                 "Custom",
               ]}
             />
@@ -210,7 +210,7 @@ export default function QuestionnaireDrawer({
             />
 
             <SelectField
-              label="Body goal"
+              label="Physique and performance goal"
               value={profile.body_goal}
               onChange={(value) => updateProfile({ body_goal: value })}
               options={[
@@ -226,11 +226,11 @@ export default function QuestionnaireDrawer({
           </div>
 
           <label className="mt-3 block">
-            <div className="mb-1 text-xs font-semibold text-slate-400">Goal detail</div>
+            <div className="mb-1 text-xs font-semibold text-slate-400">Describe the result you want</div>
             <textarea
               value={profile.goal_detail || ""}
               onChange={(e) => updateProfile({ goal_detail: e.target.value })}
-              placeholder="Example: I want to lose 25 lbs, protect my hips, and look athletic again."
+              placeholder="Example: Lose 12 lb, protect my hips, improve softball speed, and build a lean athletic look."
               rows={3}
               className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400/40"
             />
@@ -238,8 +238,8 @@ export default function QuestionnaireDrawer({
         </Section>
 
         <Section
-          title="Body Data"
-          subtitle="This helps the coach shape calories, protein, steps, workout volume, and progression."
+          title="Body and Performance Data"
+          subtitle="SYNC uses this to shape calories, protein, steps, workout volume, recovery, and progression."
           tone="cyan"
         >
           <div className="grid gap-3 md:grid-cols-3">
@@ -314,8 +314,8 @@ export default function QuestionnaireDrawer({
         </Section>
 
         <Section
-          title="Training Setup"
-          subtitle="This keeps the plan realistic for people with real schedules."
+          title="Training Preferences"
+          subtitle="Set the schedule, equipment, location, and session length SYNC should work around."
           tone="emerald"
         >
           <div className="grid gap-3 md:grid-cols-3">

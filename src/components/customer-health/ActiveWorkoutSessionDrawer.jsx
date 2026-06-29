@@ -141,11 +141,43 @@ function clearPersistedWorkout() {
   }
 }
 
-function persistedWorkoutMatches(
-  persisted,
+function persistedSessionHasProgress(persisted) {
+  const session = persisted?.session;
+
+  if (!session || session.status !== "active") {
+    return false;
+  }
+
+  const completedSets = Number(session.completed_sets || 0);
+  const activeSeconds = Number(session.active_seconds || 0);
+  const pendingSet = Boolean(session.pending_set_logging);
+  const loggedSets = Array.isArray(session.exercises)
+    ? session.exercises.reduce(
+        (total, exercise) =>
+          total +
+          (Array.isArray(exercise?.set_logs)
+            ? exercise.set_logs.length
+            : 0),
+        0
+      )
+    : 0;
+
+  return Boolean(
+    completedSets > 0 ||
+      activeSeconds >= 30 ||
+      pendingSet ||
+      loggedSets > 0
+  );
+}
+
+function persistedWorkoutMatches(  persisted,
   plannerItem
 ) {
-  if (!persisted?.session || !plannerItem) {
+  if (
+    !persisted?.session ||
+    !plannerItem ||
+    !persistedSessionHasProgress(persisted)
+  ) {
     return false;
   }
 
@@ -1780,9 +1812,9 @@ export default function ActiveWorkoutSessionDrawer({
     setReviewMode(false);
     setFinishMessage(
       restored?.pending_set_logging
-        ? "Workout restored. Finish logging your completed set while rest continues."
+        ? "Workout resumed. Finish logging the completed set while rest continues."
         : restored
-        ? "Active workout restored from this device."
+        ? "Workout resumed from your last completed set."
         : ""
     );
     setSavingWorkout(false);
@@ -2032,7 +2064,12 @@ export default function ActiveWorkoutSessionDrawer({
     if (
       !open ||
       !currentExercise ||
-      coachAudioMode === "off"
+      coachAudioMode === "off" ||
+      (
+        session?.warmup_plan &&
+        !session.warmup_plan.completed &&
+        !session.warmup_plan.skipped
+      )
     ) {
       return;
     }
@@ -2063,6 +2100,8 @@ export default function ActiveWorkoutSessionDrawer({
   }, [
     open,
     currentExercise,
+    session?.warmup_plan?.completed,
+    session?.warmup_plan?.skipped,
     coachAudioMode,
     coachVoicePreference,
     session?.id,

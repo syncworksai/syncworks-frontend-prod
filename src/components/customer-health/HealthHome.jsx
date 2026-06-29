@@ -558,13 +558,11 @@ export default function HealthHome({
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">
-              SyncWorks Health Home
+              SYNC Trainer Command Center
             </div>
 
             <h1 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-5xl">
-              {firstName
-                ? `Good morning, ${firstName}`
-                : "Good morning"}
+              {firstName ? `Ready when you are, ${firstName}` : "Ready when you are"}
             </h1>
 
             <p className="mt-2 text-sm leading-6 text-slate-400">
@@ -591,15 +589,15 @@ export default function HealthHome({
               }
               className="h-11 rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-4 text-sm font-black text-fuchsia-100"
             >
-              Hear Today's Brief
+              Coach Me Today
             </button>
 
             <button
               type="button"
-              onClick={onShowInsights}
+              onClick={() => onOpen?.("workout-history")}
               className="h-11 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-black text-slate-100"
             >
-              View Insights
+              Workout History
             </button>
           </div>
         </div>
@@ -608,7 +606,7 @@ export default function HealthHome({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <div className="text-[10px] font-black uppercase tracking-[0.18em] text-lime-200">
-                Coach Recommended Workout
+                SYNC Recommended Plan
               </div>
 
               <div className="mt-1 text-2xl font-black text-white">
@@ -628,7 +626,7 @@ export default function HealthHome({
             </div>
 
             <div className="shrink-0 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-xs font-black text-cyan-100">
-              Coach suggests. You decide.
+              One plan. Your choice. Full guidance.
             </div>
           </div>
 
@@ -643,8 +641,8 @@ export default function HealthHome({
               className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100 shadow-[0_0_28px_rgba(57,255,136,0.12)]"
             >
               {todayWorkout
-                ? "Pre-Workout Instructions"
-                : "Get Coach Suggestion"}
+                ? "Review and Start"
+                : "Build Today's Plan"}
             </button>
 
             <button
@@ -660,7 +658,7 @@ export default function HealthHome({
               onClick={() => onOpen?.("coach-chat")}
               className="h-12 rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 text-sm font-black text-fuchsia-100"
             >
-              Ask Coach
+              Talk to SYNC
             </button>
           </div>
         </div>
