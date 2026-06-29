@@ -56,6 +56,7 @@ import {
 import SleepPlannerDrawer from "../components/customer-health/SleepPlannerDrawer";
 import WorkoutHistoryDrawer from "../components/customer-health/WorkoutHistoryDrawer";
 import CardioActivityDrawer from "../components/customer-health/CardioActivityDrawer";
+import HealthGoalCenterDrawer from "../components/customer-health/HealthGoalCenterDrawer";
 
 import {
   NutritionDrawer,
@@ -1888,6 +1889,8 @@ export default function CustomerHealth() {
     const routeMap = {
       profile: "profile-intake",
       "profile-intake": "profile-intake",
+      goals: "goal-center",
+      "goal-center": "goal-center",
       questionnaire: "questionnaire",
       "my-workouts": "workout",
       "workout-history": "workout-history",
@@ -2739,6 +2742,7 @@ export default function CustomerHealth() {
               profile={profile}
               snapshot={syncedSnapshot}
               history={history}
+              progressLogs={progressLogs}
               onOpen={handleDashboardOpen}
               onStartWorkout={
                 startPlannerWorkout
@@ -2861,6 +2865,19 @@ export default function CustomerHealth() {
             onSave={handleQuickLogSave}
             profile={profile}
             snapshot={syncedSnapshot}
+          />
+
+          <HealthGoalCenterDrawer
+            open={drawer === "goal-center"}
+            onClose={() => setDrawer("")}
+            profile={profile}
+            snapshot={syncedSnapshot}
+            progressLogs={progressLogs}
+            history={history}
+            onSave={({ profile: profilePatch, snapshot: snapshotPatch }) => {
+              setProfile((previous) => ({ ...previous, ...profilePatch }));
+              setSnapshot((previous) => ({ ...previous, ...snapshotPatch }));
+            }}
           />
 
           <HealthProfileIntakeDrawer

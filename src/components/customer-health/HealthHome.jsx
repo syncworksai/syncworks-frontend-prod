@@ -10,6 +10,7 @@ import {
   buildExerciseIntroSpeech,
   speakCoachText,
 } from "./healthCoachVoice";
+import { buildGoalAnalysis } from "./healthGoalEngine";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -380,6 +381,7 @@ export default function HealthHome({
   profile,
   snapshot,
   history,
+  progressLogs,
   onOpen,
   onStartWorkout,
   onShowInsights,
@@ -536,6 +538,20 @@ export default function HealthHome({
   const intakeComplete =
     !!profile?.health_intake_completed_at;
 
+  const goalAnalysis = useMemo(
+    () => buildGoalAnalysis({ profile, snapshot, progressLogs, history }),
+    [profile, snapshot, progressLogs, history]
+  );
+
+  function runGoalAction() {
+    const target = goalAnalysis.todayAction.action;
+    if (target.startsWith("quick:")) {
+      onQuickLog?.(target.replace("quick:", ""));
+      return;
+    }
+    onOpen?.(target);
+  }
+
   return (
     <div className="space-y-4">
       <section className="relative overflow-hidden rounded-[1.7rem] border border-cyan-300/20 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),transparent_34%),radial-gradient(circle_at_top_right,rgba(57,255,136,0.10),transparent_34%),linear-gradient(180deg,rgba(15,23,42,0.92),rgba(2,6,23,0.96))] p-4 shadow-[0_20px_70px_rgba(0,0,0,0.32)] sm:rounded-[2.2rem] sm:p-6">
@@ -646,6 +662,32 @@ export default function HealthHome({
             >
               Ask Coach
             </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-[1.7rem] border border-fuchsia-300/20 bg-white/[0.035] p-4 sm:rounded-[2rem] sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-200">Goal Progress</div>
+            <div className="mt-1 text-2xl font-black text-white">{goalAnalysis.currentWeight || "-"} â†’ {goalAnalysis.targetWeight || "-"} lb</div>
+            <div className="mt-1 text-sm leading-6 text-slate-400">Target {goalAnalysis.targetDateLabel} Â· Projected {goalAnalysis.projectedDateLabel}</div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-black text-white">{goalAnalysis.status}</div>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-3"><div className="text-[9px] font-black uppercase text-slate-500">Remaining</div><div className="mt-1 text-lg font-black text-white">{goalAnalysis.targetWeight ? `${goalAnalysis.remainingWeight.toFixed(1)} lb` : "-"}</div></div>
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-3"><div className="text-[9px] font-black uppercase text-slate-500">Needed pace</div><div className="mt-1 text-lg font-black text-white">{goalAnalysis.requiredWeeklyRate ? `${Math.abs(goalAnalysis.requiredWeeklyRate).toFixed(2)}/wk` : "-"}</div></div>
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-3"><div className="text-[9px] font-black uppercase text-slate-500">BMI now</div><div className="mt-1 text-lg font-black text-white">{goalAnalysis.currentBmi ? goalAnalysis.currentBmi.toFixed(1) : "-"}</div></div>
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-3"><div className="text-[9px] font-black uppercase text-slate-500">Goal BMI</div><div className="mt-1 text-lg font-black text-white">{goalAnalysis.targetBmi ? goalAnalysis.targetBmi.toFixed(1) : "-"}</div></div>
+        </div>
+        <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.07] p-4">
+          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">Today's Best Move</div>
+          <div className="mt-1 text-lg font-black text-white">{goalAnalysis.todayAction.title}</div>
+          <div className="mt-1 text-sm leading-6 text-slate-400">{goalAnalysis.todayAction.detail}</div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <button type="button" onClick={runGoalAction} className="h-11 rounded-xl border border-cyan-300/30 bg-cyan-300/15 text-xs font-black text-cyan-100">{goalAnalysis.todayAction.button}</button>
+            <button type="button" onClick={() => onOpen?.("goal-center")} className="h-11 rounded-xl border border-fuchsia-300/25 bg-fuchsia-300/10 text-xs font-black text-fuchsia-100">View or Adjust Goal</button>
           </div>
         </div>
       </section>
