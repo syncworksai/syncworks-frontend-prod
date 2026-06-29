@@ -3174,6 +3174,42 @@ export default function ActiveWorkoutSessionDrawer({
               ) : null}
 
               {!isCompleted && currentExercise ? (
+                <div
+                  className={cx(
+                    !canEdit &&
+                      "pointer-events-none opacity-60"
+                  )}
+                >
+                  <TrainerExerciseIntroCard
+                    exerciseName={
+                      currentExercise?.substituted &&
+                      currentExercise?.substitute_name
+                        ? currentExercise.substitute_name
+                        : currentExercise?.name
+                    }
+                    onReplayCue={replayExerciseCue}
+                    onFindAlternative={() => {
+                      if (
+                        !session ||
+                        !currentExercise
+                      ) {
+                        return;
+                      }
+
+                      setSession(
+                        markExerciseSubstituted(
+                          session,
+                          currentExercise.id,
+                          currentExercise.substitute_name ||
+                            `Alternative for ${currentExercise.name}`
+                        )
+                      );
+                    }}
+                  />
+                </div>
+              ) : null}
+
+              {!isCompleted && currentExercise ? (
                 <div className="rounded-[1.35rem] border border-cyan-300/15 bg-[linear-gradient(135deg,rgba(34,211,238,0.08),rgba(57,255,136,0.06))] p-3 shadow-[0_12px_36px_rgba(0,0,0,0.18)] sm:rounded-[2rem] sm:p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
@@ -3225,37 +3261,38 @@ export default function ActiveWorkoutSessionDrawer({
                     ) : null}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={
-                      session.set_active
-                        ? requestCompleteSet
-                        : startSet
-                    }
-                    disabled={
-                      session.paused ||
-                      session.rest_active
-                    }
-                    className={cx(
-                      "health-primary-action mt-3 h-14 w-full rounded-2xl border text-base font-black transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45",
-                      session.set_active
-                        ? "border-fuchsia-300/30 bg-fuchsia-300/15 text-fuchsia-100"
-                        : "border-lime-300/35 bg-lime-300/20 text-lime-100 shadow-[0_0_30px_rgba(57,255,136,0.12)]"
-                    )}
-                  >
-                    {session.set_active
-                      ? (isTimedExercise ? "Complete Timed Set" : "Complete Set")
-                      : session.rest_active ? "Resting"
-                      : (isTimedExercise ? "Start Timer" : "Start Set")}
-                  </button>
-
-                  {!session.set_active &&
-                  !session.rest_active ? (
-                    <div className="mt-2 text-center text-[11px] text-slate-500">
-                      Active time begins only after
-                      Start Set is tapped.
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-center">
+                      <div className="text-[8px] font-black uppercase tracking-[0.14em] text-slate-500">
+                        Exercise
+                      </div>
+                      <div className="mt-0.5 text-sm font-black text-white">
+                        {(session.current_exercise_index || 0) + 1}/{totalExercises}
+                      </div>
                     </div>
-                  ) : null}
+
+                    <div className="rounded-2xl border border-lime-300/20 bg-lime-300/10 px-3 py-2 text-center">
+                      <div className="text-[8px] font-black uppercase tracking-[0.14em] text-lime-200">
+                        Target
+                      </div>
+                      <div className="mt-0.5 text-sm font-black text-lime-100">
+                        {currentExercise.current_target_reps ||
+                          currentExercise.planned_reps ||
+                          "-"} x {currentExercise.current_target_weight ||
+                          currentExercise.planned_weight ||
+                          "BW"}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-center">
+                      <div className="text-[8px] font-black uppercase tracking-[0.14em] text-cyan-200">
+                        Completed
+                      </div>
+                      <div className="mt-0.5 text-sm font-black text-cyan-100">
+                        {(currentExercise.set_logs || []).length}/{currentExercise.planned_sets || "-"}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : null}
               {!isCompleted && currentExercise ? (
@@ -3441,39 +3478,7 @@ export default function ActiveWorkoutSessionDrawer({
                 />
               ) : null}
 
-              <div
-                className={cx(
-                  !canEdit &&
-                    "pointer-events-none opacity-60"
-                )}
-              >
-                <TrainerExerciseIntroCard
-                  exerciseName={
-                    currentExercise?.substituted &&
-                    currentExercise?.substitute_name
-                      ? currentExercise.substitute_name
-                      : currentExercise?.name
-                  }
-                  onReplayCue={replayExerciseCue}
-                  onFindAlternative={() => {
-                    if (
-                      !session ||
-                      !currentExercise
-                    ) {
-                      return;
-                    }
 
-                    setSession(
-                      markExerciseSubstituted(
-                        session,
-                        currentExercise.id,
-                        currentExercise.substitute_name ||
-                          `Alternative for ${currentExercise.name}`
-                      )
-                    );
-                  }}
-                />
-              </div>
 
               <TrainerNudgeCard
                 nudge={session?.rest_active ? null : trainerNudge}

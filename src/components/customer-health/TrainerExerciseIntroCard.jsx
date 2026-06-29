@@ -6,40 +6,24 @@ function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
-function InfoPill({ children, tone = "green" }) {
-  const toneMap = {
-    green: "border-lime-300/30 bg-lime-300/10 text-lime-100",
-    cyan: "border-cyan-300/30 bg-cyan-300/10 text-cyan-100",
-    purple: "border-fuchsia-300/30 bg-fuchsia-300/10 text-fuchsia-100",
+function Pill({ children, tone = "cyan" }) {
+  const tones = {
+    cyan: "border-cyan-300/25 bg-cyan-300/10 text-cyan-100",
+    lime: "border-lime-300/25 bg-lime-300/10 text-lime-100",
+    fuchsia:
+      "border-fuchsia-300/25 bg-fuchsia-300/10 text-fuchsia-100",
     slate: "border-white/10 bg-white/[0.04] text-slate-300",
   };
 
   return (
-    <div
+    <span
       className={cx(
-        "rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em]",
-        toneMap[tone] || toneMap.green
+        "inline-flex rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em]",
+        tones[tone] || tones.cyan
       )}
     >
       {children}
-    </div>
-  );
-}
-
-function StepCard({ number, title, cue }) {
-  return (
-    <div className="rounded-3xl border border-cyan-300/15 bg-[#071425] p-3">
-      <div className="flex items-center gap-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-lime-300/30 bg-lime-300/10 text-sm font-black text-lime-100">
-          {String(number).padStart(2, "0")}
-        </div>
-        <div className="text-sm font-black uppercase tracking-[0.12em] text-white">
-          {title}
-        </div>
-      </div>
-
-      <div className="mt-3 text-sm leading-6 text-slate-300">{cue}</div>
-    </div>
+    </span>
   );
 }
 
@@ -54,177 +38,159 @@ export default function TrainerExerciseIntroCard({
   );
 
   const [heroBroken, setHeroBroken] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   function openDemo() {
     if (!knowledge?.demo_url) return;
-    window.open(knowledge.demo_url, "_blank", "noopener,noreferrer");
+
+    window.open(
+      knowledge.demo_url,
+      "_blank",
+      "noopener,noreferrer"
+    );
   }
 
   return (
-    <div className="overflow-hidden rounded-[2rem] border border-cyan-300/15 bg-[radial-gradient(circle_at_top_left,rgba(57,255,136,0.12),transparent_24%),radial-gradient(circle_at_top_right,rgba(255,59,212,0.10),transparent_24%),linear-gradient(180deg,#05101d_0%,#040a14_100%)] shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
-      <div className="border-b border-white/10 px-4 py-4 sm:px-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <div className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-200">
-              Exercise Reminder
-            </div>
-
-            <h3 className="mt-1 text-3xl font-black text-white sm:text-4xl">
-              {knowledge.name}
-            </h3>
-
-            <div className="mt-2 flex flex-wrap gap-2">
-              <InfoPill tone="green">{knowledge.training_tag || "Strength"}</InfoPill>
-              <InfoPill tone="cyan">{knowledge.category || "Compound"}</InfoPill>
-              <InfoPill tone="purple">
-                {knowledge.movement_pattern || "Full Body"}
-              </InfoPill>
-            </div>
-
-            <div className="mt-3 text-sm leading-6 text-slate-300">
-              <span className="font-black text-lime-300">Primary muscles:</span>{" "}
-              {(knowledge.primary_muscles || []).join(", ") || "Full body"}
-            </div>
-
-            <div className="mt-3 rounded-3xl border border-lime-300/20 bg-lime-300/10 p-3 text-sm leading-6 text-lime-50">
-              <span className="font-black">Coach cue:</span>{" "}
-              {knowledge.short_cue}
+    <section className="overflow-hidden rounded-[1.6rem] border border-cyan-300/15 bg-[radial-gradient(circle_at_top_left,rgba(57,255,136,0.12),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(255,59,212,0.10),transparent_28%),linear-gradient(180deg,#07111f_0%,#040812_100%)] shadow-[0_18px_55px_rgba(0,0,0,0.35)]">
+      <div className="relative overflow-hidden">
+        {!heroBroken && knowledge.hero_image ? (
+          <img
+            src={knowledge.hero_image}
+            alt={knowledge.name}
+            onError={() => setHeroBroken(true)}
+            className="h-[220px] w-full object-cover sm:h-[300px]"
+          />
+        ) : (
+          <div className="flex h-[220px] items-center justify-center bg-[radial-gradient(circle_at_center,rgba(57,255,136,0.14),transparent_34%),linear-gradient(135deg,#0b1728,#020617)] px-6 text-center sm:h-[300px]">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
+                Current movement
+              </div>
+              <div className="mt-2 text-3xl font-black text-white">
+                {knowledge.name}
+              </div>
             </div>
           </div>
+        )}
 
-          <div className="shrink-0 rounded-3xl border border-fuchsia-300/15 bg-black/20 p-3 text-xs leading-5 text-slate-400 lg:max-w-[260px]">
-            <div className="font-black uppercase tracking-[0.16em] text-fuchsia-200">
-              Form warning
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#020617] via-[#020617]/82 to-transparent px-4 pb-4 pt-14">
+          <div className="flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-[9px] font-black uppercase tracking-[0.2em] text-lime-300">
+                Movement focus
+              </div>
+              <h3 className="mt-1 truncate text-2xl font-black text-white sm:text-3xl">
+                {knowledge.name}
+              </h3>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <Pill tone="lime">
+                  {knowledge.training_tag || "Strength"}
+                </Pill>
+                <Pill tone="cyan">
+                  {knowledge.movement_pattern || "Full body"}
+                </Pill>
+              </div>
             </div>
-            <div className="mt-2">
-              {knowledge.correction_cue || knowledge.coach_warning}
-            </div>
+
+            <button
+              type="button"
+              onClick={openDemo}
+              disabled={!knowledge?.demo_url}
+              className="shrink-0 rounded-2xl border border-lime-300/30 bg-lime-300/15 px-3 py-2 text-[10px] font-black text-lime-100 disabled:opacity-35"
+            >
+              Watch Demo
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-4 px-4 py-4 lg:grid-cols-[1.2fr_0.8fr] lg:px-5">
-        <div className="overflow-hidden rounded-[1.75rem] border border-cyan-300/15 bg-[#081525]">
-          {!heroBroken && knowledge.hero_image ? (
-            <img
-              src={knowledge.hero_image}
-              alt={knowledge.name}
-              onError={() => setHeroBroken(true)}
-              className="h-[250px] w-full object-cover sm:h-[320px]"
-            />
-          ) : (
-            <div className="flex h-[250px] items-center justify-center bg-[radial-gradient(circle_at_center,rgba(57,255,136,0.10),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(255,59,212,0.12),transparent_25%),linear-gradient(135deg,#07111d,#020617)] text-center sm:h-[320px]">
-              <div className="px-6">
-                <div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">
-                  Add local image anytime
-                </div>
-                <div className="mt-3 text-4xl font-black text-white">
-                  {knowledge.name}
-                </div>
-                <div className="mt-3 text-sm leading-6 text-slate-400">
-                  Save a hero image at:
-                  <div className="mt-2 break-all rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-xs text-slate-300">
-                    {knowledge.hero_image}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="border-t border-white/10 px-4 py-3 text-sm text-slate-300">
-            <span className="font-black text-cyan-100">Feel it here:</span>{" "}
+      <div className="grid gap-2 p-3 sm:grid-cols-[1fr_auto] sm:p-4">
+        <div className="rounded-2xl border border-lime-300/18 bg-lime-300/[0.07] p-3">
+          <div className="text-[9px] font-black uppercase tracking-[0.16em] text-lime-300">
+            Coach cue
+          </div>
+          <div className="mt-1 text-sm font-bold leading-5 text-white">
+            {knowledge.short_cue}
+          </div>
+          <div className="mt-2 text-xs leading-5 text-slate-400">
+            <span className="font-black text-cyan-100">
+              Feel:
+            </span>{" "}
             {knowledge.feel_cue}
           </div>
         </div>
 
-        <div className="space-y-3">
-          <div className="rounded-[1.75rem] border border-lime-300/15 bg-[#071425] p-4">
-            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-lime-300">
-              Muscle focus
-            </div>
-            <div className="mt-3 space-y-2">
-              <div>
-                <div className="text-xs font-black uppercase tracking-[0.12em] text-white">
-                  Primary
-                </div>
-                <div className="mt-1 text-sm leading-6 text-slate-300">
-                  {(knowledge.primary_muscles || []).join(", ")}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-xs font-black uppercase tracking-[0.12em] text-white">
-                  Secondary
-                </div>
-                <div className="mt-1 text-sm leading-6 text-slate-400">
-                  {(knowledge.secondary_muscles || []).join(", ")}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-[1.75rem] border border-fuchsia-300/15 bg-[#071425] p-4">
-            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-200">
-              Pro tip
-            </div>
-            <div className="mt-2 text-sm leading-6 text-slate-200">
-              {knowledge.pro_tip}
-            </div>
-          </div>
-
-          <div className="rounded-[1.75rem] border border-cyan-300/15 bg-[#071425] p-4">
-            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
-              Form focus
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {(knowledge.form_focus || []).map((item) => (
-                <InfoPill key={item} tone="cyan">
-                  {item}
-                </InfoPill>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-3 border-t border-white/10 px-4 py-4 sm:grid-cols-3 lg:px-5">
-        {(knowledge.steps || []).slice(0, 3).map((step, index) => (
-          <StepCard
-            key={`${knowledge.name}_${step.title}_${index}`}
-            number={index + 1}
-            title={step.title}
-            cue={step.cue}
-          />
-        ))}
-      </div>
-
-      <div className="border-t border-white/10 px-4 py-4 lg:px-5">
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-1">
           <button
             type="button"
             onClick={onReplayCue}
-            className="rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-300/20"
+            className="rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 py-2.5 text-[10px] font-black text-fuchsia-100"
           >
-            Replay Cue
+            Replay
           </button>
-
           <button
             type="button"
-            onClick={openDemo}
-            className="rounded-2xl border border-lime-300/25 bg-lime-300/10 px-4 py-3 text-sm font-black text-lime-100 transition hover:bg-lime-300/20"
+            onClick={() => setMoreOpen((current) => !current)}
+            className="rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-3 py-2.5 text-[10px] font-black text-cyan-100"
           >
-            Watch Demo
+            {moreOpen ? "Hide Info" : "More Info"}
           </button>
-
           <button
             type="button"
             onClick={onFindAlternative}
-            className="rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-4 py-3 text-sm font-black text-fuchsia-100 transition hover:bg-fuchsia-300/20"
+            className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[10px] font-black text-slate-200"
           >
-            Find Alternative
+            Swap
           </button>
         </div>
       </div>
-    </div>
+
+      {moreOpen ? (
+        <div className="grid gap-3 border-t border-white/10 p-3 sm:grid-cols-2 sm:p-4">
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+            <div className="text-[9px] font-black uppercase tracking-[0.16em] text-cyan-200">
+              Muscles
+            </div>
+            <div className="mt-2 text-sm leading-5 text-slate-300">
+              {(knowledge.primary_muscles || []).join(", ") ||
+                "Full body"}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+            <div className="text-[9px] font-black uppercase tracking-[0.16em] text-fuchsia-200">
+              Form warning
+            </div>
+            <div className="mt-2 text-sm leading-5 text-slate-300">
+              {knowledge.correction_cue ||
+                knowledge.coach_warning}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-3 sm:col-span-2">
+            <div className="text-[9px] font-black uppercase tracking-[0.16em] text-lime-300">
+              Quick setup
+            </div>
+            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+              {(knowledge.steps || [])
+                .slice(0, 3)
+                .map((step, index) => (
+                  <div
+                    key={`${knowledge.name}-${step.title}-${index}`}
+                    className="rounded-xl border border-white/10 bg-white/[0.03] p-3"
+                  >
+                    <div className="text-[10px] font-black text-white">
+                      {index + 1}. {step.title}
+                    </div>
+                    <div className="mt-1 text-xs leading-5 text-slate-400">
+                      {step.cue}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 }
