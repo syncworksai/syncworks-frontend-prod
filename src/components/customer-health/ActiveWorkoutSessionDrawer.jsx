@@ -234,7 +234,29 @@ function DynamicWarmupCard({
   plan,
   onToggle,
   onSkip,
+  onComplete,
 }) {
+  const [started, setStarted] = useState(false);
+  const [prepSeconds, setPrepSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!prepSeconds) return undefined;
+
+    const timer = window.setInterval(() => {
+      setPrepSeconds((current) => {
+        if (current <= 1) {
+          window.clearInterval(timer);
+          onComplete?.();
+          return 0;
+        }
+
+        return current - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [prepSeconds, onComplete]);
+
   if (
     !plan ||
     plan.completed ||
@@ -243,94 +265,187 @@ function DynamicWarmupCard({
     return null;
   }
 
-  const completedCount = (plan.items || []).filter(
+  const items = Array.isArray(plan.items)
+    ? plan.items
+    : [];
+
+  const completedCount = items.filter(
     (item) => item.completed
   ).length;
 
+  const allComplete =
+    items.length > 0 &&
+    completedCount >= items.length;
+
+  function finishWarmup() {
+    setPrepSeconds(10);
+  }
+
   return (
-    <section className="rounded-[1.35rem] border border-amber-300/20 bg-[linear-gradient(135deg,rgba(251,191,36,0.10),rgba(34,211,238,0.06))] p-3 shadow-[0_12px_36px_rgba(0,0,0,0.18)] sm:rounded-[2rem] sm:p-4">
+    <section className="rounded-[1.5rem] border border-amber-300/25 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_34%),linear-gradient(145deg,#111827,#07111f)] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] sm:rounded-[2rem]">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-200">
-            Dynamic Preparation
+            Dynamic Warmup
           </div>
 
-          <h3 className="mt-1 text-lg font-black text-white">
-            {plan.title}
+          <h3 className="mt-1 text-xl font-black text-white">
+            {prepSeconds > 0
+              ? "Get your equipment ready"
+              : plan.title}
           </h3>
 
           <p className="mt-1 text-xs leading-5 text-slate-400">
-            {plan.reason}
+            {prepSeconds > 0
+              ? "Move to the first station, set your weight, and get into position."
+              : plan.reason}
           </p>
         </div>
 
-        <div className="shrink-0 rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs font-black text-amber-100">
-          {Math.max(
-            1,
-            Math.round(
-              Number(plan.estimated_seconds || 0) / 60
-            )
-          )}{" "}
-          min
+        <div className="shrink-0 rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-center">
+          <div className="text-[8px] font-black uppercase tracking-[0.14em] text-amber-200">
+            {prepSeconds > 0 ? "Starting In" : "Warmup"}
+          </div>
+          <div className="mt-0.5 text-lg font-black text-amber-100">
+            {prepSeconds > 0
+              ? prepSeconds
+              : `${Math.max(
+                  1,
+                  Math.round(
+                    Number(plan.estimated_seconds || 0) / 60
+                  )
+                )} min`}
+          </div>
         </div>
       </div>
 
-      <div className="mt-3 space-y-2">
-        {(plan.items || []).map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onToggle(item.id)}
-            className={cx(
-              "flex w-full items-start gap-3 rounded-2xl border p-3 text-left transition",
-              item.completed
-                ? "border-lime-300/25 bg-lime-300/10"
-                : item.type === "safety"
-                ? "border-rose-300/20 bg-rose-300/[0.07]"
-                : "border-white/10 bg-black/20"
-            )}
-          >
+      {prepSeconds > 0 ? (
+        <div className="mt-4">
+          <div className="h-2 overflow-hidden rounded-full bg-white/10">
             <div
-              className={cx(
-                "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-black",
-                item.completed
-                  ? "border-lime-300/40 bg-lime-300/20 text-lime-100"
-                  : "border-white/15 bg-white/[0.04] text-slate-500"
-              )}
-            >
-              {item.completed ? "âœ“" : ""}
-            </div>
+              className="h-full rounded-full bg-lime-300 transition-all duration-1000"
+              style={{
+                width: `${Math.max(
+                  0,
+                  Math.min(100, ((10 - prepSeconds) / 10) * 100)
+                )}%`,
+              }}
+            />
+          </div>
 
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-black text-white">
-                {item.label}
-              </div>
-
-              <div className="mt-1 text-xs leading-5 text-slate-400">
-                {item.detail}
-              </div>
-            </div>
-
-            <div className="shrink-0 text-[10px] font-black text-slate-500">
-              {item.seconds}s
-            </div>
+          <button
+            type="button"
+            onClick={onComplete}
+            className="mt-3 h-12 w-full rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100"
+          >
+            Start First Exercise Now
           </button>
-        ))}
-      </div>
-
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <div className="text-xs font-bold text-slate-400">
-          {completedCount}/{plan.items?.length || 0} complete
         </div>
+      ) : !started ? (
+        <div className="mt-4 grid grid-cols-[1.3fr_0.7fr] gap-2">
+          <button
+            type="button"
+            onClick={() => setStarted(true)}
+            className="h-12 rounded-2xl border border-amber-300/30 bg-amber-300/15 text-sm font-black text-amber-100"
+          >
+            Start Warmup
+          </button>
 
-        <button
-          type="button"
-          onClick={onSkip}
-          className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-black text-slate-300"
-        >
-          Skip Warm-up
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={onSkip}
+            className="h-12 rounded-2xl border border-white/10 bg-white/[0.04] text-xs font-black text-slate-300"
+          >
+            Skip Warmup
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="mt-4 space-y-2">
+            {items.map((item, index) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onToggle(item.id)}
+                className={cx(
+                  "flex w-full items-start gap-3 rounded-2xl border p-3 text-left transition",
+                  item.completed
+                    ? "border-lime-300/25 bg-lime-300/10"
+                    : item.type === "safety"
+                    ? "border-rose-300/20 bg-rose-300/[0.07]"
+                    : "border-white/10 bg-black/20"
+                )}
+              >
+                <div
+                  className={cx(
+                    "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-black",
+                    item.completed
+                      ? "border-lime-300/40 bg-lime-300/20 text-lime-100"
+                      : "border-white/15 bg-white/[0.04] text-slate-400"
+                  )}
+                >
+                  {item.completed ? "âœ“" : index + 1}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-black text-white">
+                    {item.label}
+                  </div>
+
+                  <div className="mt-1 text-xs leading-5 text-slate-400">
+                    {item.detail}
+                  </div>
+                </div>
+
+                <div className="shrink-0 text-[10px] font-black text-slate-500">
+                  {item.seconds}s
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-4">
+            <div className="mb-2 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+              <span>Warmup progress</span>
+              <span>
+                {completedCount}/{items.length}
+              </span>
+            </div>
+
+            <div className="h-2 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-amber-300 transition-all"
+                style={{
+                  width: `${
+                    items.length
+                      ? (completedCount / items.length) * 100
+                      : 0
+                  }%`,
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-[1.25fr_0.75fr] gap-2">
+            <button
+              type="button"
+              onClick={finishWarmup}
+              disabled={!allComplete}
+              className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Warmup Complete
+            </button>
+
+            <button
+              type="button"
+              onClick={onSkip}
+              className="h-12 rounded-2xl border border-white/10 bg-white/[0.04] text-xs font-black text-slate-300"
+            >
+              Skip
+            </button>
+          </div>
+        </>
+      )}
     </section>
   );
 }
@@ -2016,6 +2131,12 @@ export default function ActiveWorkoutSessionDrawer({
   const isCompleted =
     session?.status === "completed";
 
+  const warmupReady = Boolean(
+    !session?.warmup_plan ||
+      session.warmup_plan.completed ||
+      session.warmup_plan.skipped
+  );
+
   const canEdit =
     !isCompleted || editAfterFinish;
 
@@ -2429,6 +2550,37 @@ export default function ActiveWorkoutSessionDrawer({
         ? skipWarmup(previous)
         : previous
     );
+  }
+
+  function completePreparation() {
+    setSession((previous) => {
+      if (!previous?.warmup_plan) return previous;
+
+      return {
+        ...previous,
+        warmup_plan: {
+          ...previous.warmup_plan,
+          completed: true,
+          skipped: false,
+          completed_at: new Date().toISOString(),
+          items: (previous.warmup_plan.items || []).map(
+            (item) => ({
+              ...item,
+              completed: true,
+            })
+          ),
+        },
+      };
+    });
+
+    speakCoachText({
+      text: "Warmup complete. Get set for the first exercise.",
+      audioMode: coachAudioMode,
+      voicePreference: coachVoicePreference,
+      rate: 1.02,
+      pitch: 1,
+      volume: 1,
+    });
   }
 
   function startSet() {
@@ -3170,10 +3322,11 @@ export default function ActiveWorkoutSessionDrawer({
                   plan={session.warmup_plan}
                   onToggle={togglePreparationItem}
                   onSkip={skipPreparation}
+                  onComplete={completePreparation}
                 />
               ) : null}
 
-              {!isCompleted && currentExercise ? (
+              {!isCompleted && warmupReady && currentExercise ? (
                 <div
                   className={cx(
                     !canEdit &&
@@ -3209,7 +3362,7 @@ export default function ActiveWorkoutSessionDrawer({
                 </div>
               ) : null}
 
-              {!isCompleted && currentExercise ? (
+              {!isCompleted && warmupReady && currentExercise ? (
                 <div className="rounded-[1.35rem] border border-cyan-300/15 bg-[linear-gradient(135deg,rgba(34,211,238,0.08),rgba(57,255,136,0.06))] p-3 shadow-[0_12px_36px_rgba(0,0,0,0.18)] sm:rounded-[2rem] sm:p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
@@ -3295,7 +3448,7 @@ export default function ActiveWorkoutSessionDrawer({
                   </div>
                 </div>
               ) : null}
-              {!isCompleted && currentExercise ? (
+              {!isCompleted && warmupReady && currentExercise ? (
                 <div className="space-y-2">
                   <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                     <button
