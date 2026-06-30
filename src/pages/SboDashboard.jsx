@@ -14,6 +14,7 @@ import SboKpiCharts from "../components/sbo/SboKpiCharts";
 import SboSetupReadiness from "../components/sbo/SboSetupReadiness";
 import SboActionGrid from "../components/sbo/SboActionGrid";
 import SboUtilityCards from "../components/sbo/SboUtilityCards";
+import SboMobileCommandCenter from "../components/sbo/SboMobileCommandCenter";
 
 function safeList(data) {
   if (!data) return [];
@@ -615,9 +616,9 @@ export default function SboDashboard() {
 
   return (
     <DashboardShell
-      title="SBO Dashboard"
+      title="Business Dashboard"
       subtitle="Performance • Job requests • Revenue • Social Media CRM"
-      modeBarTitle="SBO Dashboard"
+      modeBarTitle="Business Dashboard"
       modeBarSubtitle="Performance charts • job requests • revenue • marketplace readiness"
       bottomNavItems={bottomNavItems}
       bottomCenterAction={{
@@ -641,7 +642,7 @@ export default function SboDashboard() {
       <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
         <SidebarNav
           title="Business OS"
-          subtitle={businessName || "SBO Command"}
+          subtitle={businessName || "Business Command"}
           items={sidebarItems}
           footer={
             <div className="rounded-3xl border border-fuchsia-500/20 bg-fuchsia-500/10 p-4">
@@ -669,6 +670,28 @@ export default function SboDashboard() {
             </div>
           ) : null}
 
+          <SboMobileCommandCenter
+            businessName={businessName}
+            loading={loading}
+            tickets={ticketRows}
+            revenueThisMonth={revenueThisMonth}
+            openTickets={openTickets}
+            outstandingInvoices={outstandingInvoices}
+            onRefresh={loadAll}
+            onOpenTicket={(ticketId) =>
+              ticketId ? navigate(`/tickets/${ticketId}`) : navigate("/tickets")
+            }
+            onOpenRequests={() => navigate("/tickets?view=new")}
+            onOpenCalendar={() => navigate("/calendar")}
+            onOpenTeam={() => navigate("/team/invites")}
+            onOpenCustomers={() => navigate("/sbo/customers")}
+            onOpenLeads={() => navigate("/sbo/leads")}
+            onOpenFinance={() => navigate("/sbo/finance")}
+            onOpenSocial={() => navigate("/sbo/growth")}
+            onOpenSettings={() => navigate("/sbo/settings?return=%2Fsbo")}
+          />
+
+          <div className="hidden lg:block">
           <SboCommandHero
             businessName={businessName}
             revenueThisMonth={revenueThisMonth}
@@ -677,8 +700,9 @@ export default function SboDashboard() {
             onOpenSocial={() => navigate("/sbo/growth")}
             onOpenRequests={() => navigate("/tickets?view=new")}
           />
+          </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="hidden gap-4 sm:grid-cols-2 lg:grid xl:grid-cols-4">
             <StatCard
               label="Open Requests"
               value={openTickets}
