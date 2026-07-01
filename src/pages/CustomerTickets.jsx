@@ -193,13 +193,82 @@ function resolveCustomerFriendlyTitle(ticket) {
   return "Service Request";
 }
 
+function statusGroup(status) {
+  const s = String(status || "").toUpperCase();
+  if (["COMPLETED", "CLOSED", "CANCELLED"].includes(s)) return "COMPLETED";
+  if (["INVOICED", "PAID", "PAYMENT_DUE", "OVERDUE"].includes(s)) return "PAYMENT";
+  if (["SCHEDULED", "ACCEPTED", "ASSIGNED", "EN_ROUTE", "ARRIVED"].includes(s)) return "SCHEDULED";
+  return "ACTIVE";
+}
+
+function statusLabel(status) {
+  const s = String(status || "NEW").toUpperCase();
+  const labels = {
+    NEW: "New", OPEN: "Open", ASSIGNED: "Assigned", ACCEPTED: "Accepted",
+    SCHEDULED: "Scheduled", EN_ROUTE: "En route", ARRIVED: "Arrived",
+    IN_PROGRESS: "In progress", COMPLETED: "Completed", INVOICED: "Invoice ready",
+    PAYMENT_DUE: "Payment due", OVERDUE: "Overdue", PAID: "Paid",
+    CLOSED: "Closed", CANCELLED: "Cancelled",
+  };
+  return labels[s] || titleCase(s);
+}
+
 function StatusPill({ status }) {
   const s = String(status || "").toUpperCase();
-  const base = "text-[10px] px-2 py-1 rounded-full border font-semibold ";
-  if (s === "COMPLETED" || s === "PAID") return <span className={base + "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"}>{s}</span>;
-  if (s === "CANCELLED") return <span className={base + "bg-rose-500/10 border-rose-500/30 text-rose-200"}>{s}</span>;
-  return <span className={base + "bg-cyan-500/10 border-cyan-500/30 text-cyan-200"}>{s || "NEW"}</span>;
+  const base = "rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] ";
+  if (["PAID", "COMPLETED", "CLOSED"].includes(s)) {
+    return <span className={base + "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"}>{statusLabel(s)}</span>;
+  }
+  if (["CANCELLED", "OVERDUE"].includes(s)) {
+    return <span className={base + "border-rose-400/30 bg-rose-400/10 text-rose-200"}>{statusLabel(s)}</span>;
+  }
+  if (["INVOICED", "PAYMENT_DUE"].includes(s)) {
+    return <span className={base + "border-amber-400/30 bg-amber-400/10 text-amber-200"}>{statusLabel(s)}</span>;
+  }
+  if (["SCHEDULED", "ASSIGNED", "ACCEPTED", "EN_ROUTE", "ARRIVED"].includes(s)) {
+    return <span className={base + "border-violet-400/30 bg-violet-400/10 text-violet-200"}>{statusLabel(s)}</span>;
+  }
+  return <span className={base + "border-cyan-400/30 bg-cyan-400/10 text-cyan-200"}>{statusLabel(s)}</span>;
 }
+
+function requestSource(ticket) {
+  const intake = extractSyncworksIntake(ticket?.description || ticket?.details || "") || {};
+  const scope = String(intake.route_scope || "").toUpperCase();
+  const creator = String(intake.creator_mode || "").toUpperCase();
+
+  if (creator === "BUSINESS_INTERNAL" || intake.is_business_internal) {
+    return { label: "Business entered", tone: "indigo" };
+  }
+  if (scope === "DIRECT_PROVIDER" || intake.direct_provider_id || ticket?.target_business) {
+    return { label: "Saved business", tone: "emerald" };
+  }
+  if (ticket?.is_marketplace === false) {
+    return { label: "Direct request", tone: "emerald" };
+  }
+  return { label: "Marketplace", tone: "cyan" };
+}
+
+function SourcePill({ ticket }) {
+  const source = requestSource(ticket);
+  const tones = {
+    cyan: "border-cyan-400/25 bg-cyan-400/10 text-cyan-200",
+    emerald: "border-emerald-400/25 bg-emerald-400/10 text-emerald-200",
+    indigo: "border-indigo-400/25 bg-indigo-400/10 text-indigo-200",
+  };
+  return (
+    <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black ${tones[source.tone]}`}>
+      {source.label}
+    </span>
+  );
+}
+
+const FILTERS = [
+  { key: "ALL", label: "All" },
+  { key: "ACTIVE", label: "Active" },
+  { key: "SCHEDULED", label: "Scheduled" },
+  { key: "PAYMENT", label: "Payment" },
+  { key: "COMPLETED", label: "Completed" },
+];
 
 export default function CustomerTickets({ title = "My Orders", embedded = false }) {
   const nav = useNavigate();
@@ -237,7 +306,7 @@ export default function CustomerTickets({ title = "My Orders", embedded = false 
     return list
       .filter((t) => {
         if (st === "ALL") return true;
-        return String(t?.status || "").toUpperCase() === st;
+        return statusGroup(t?.status) === st;
       })
       .filter((t) => {
         if (!qq) return true;
@@ -253,6 +322,15 @@ export default function CustomerTickets({ title = "My Orders", embedded = false 
         return db - da;
       });
   }, [tickets, q, status]);
+
+  const counts = useMemo(() => {
+    const base = { ALL: tickets.length, ACTIVE: 0, SCHEDULED: 0, PAYMENT: 0, COMPLETED: 0 };
+    tickets.forEach((ticket) => {
+      const group = statusGroup(ticket?.status);
+      if (base[group] !== undefined) base[group] += 1;
+    });
+    return base;
+  }, [tickets]);
 
   const wrapperClass = embedded ? "" : "min-h-screen bg-[#020617] text-slate-100";
 
@@ -274,45 +352,53 @@ export default function CustomerTickets({ title = "My Orders", embedded = false 
           </div>
         ) : null}
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-          <div className="flex flex-col md:flex-row md:items-center gap-2 justify-between">
-            <div className="flex gap-2 flex-wrap items-center">
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search title, address, zip, or ticket #"
-                className="w-full md:w-[340px] rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm"
-              />
-
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm"
-              >
-                <option value="ALL">All statuses</option>
-                <option value="NEW">NEW</option>
-                <option value="ASSIGNED">ASSIGNED</option>
-                <option value="ACCEPTED">ACCEPTED</option>
-                <option value="IN_PROGRESS">IN_PROGRESS</option>
-                <option value="COMPLETED">COMPLETED</option>
-                <option value="PAID">PAID</option>
-                <option value="CANCELLED">CANCELLED</option>
-                <option value="CLOSED">CLOSED</option>
-              </select>
-
-              <button
-                onClick={load}
-                className="text-xs rounded-xl px-3 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900"
-              >
-                Refresh
-              </button>
+        <section className="rounded-[2rem] border border-slate-800 bg-slate-950/55 p-4 shadow-[0_0_40px_rgba(15,23,42,0.35)]">
+          <div className="flex items-center gap-2">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-cyan-400/20 bg-cyan-400/10 text-lg">
+              🔎
             </div>
-
-            <div className="text-[11px] text-slate-500">
-              Showing <span className="text-slate-200 font-semibold">{filtered.length}</span>
-            </div>
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search requests, address, ZIP, or ticket #"
+              className="h-11 min-w-0 flex-1 rounded-2xl border border-slate-800 bg-slate-950 px-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/40"
+            />
+            <button
+              onClick={load}
+              className="h-11 shrink-0 rounded-2xl border border-slate-800 bg-slate-950 px-3 text-xs font-black text-slate-300"
+            >
+              Refresh
+            </button>
           </div>
-        </div>
+
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+            {FILTERS.map((filter) => {
+              const active = status === filter.key;
+              return (
+                <button
+                  key={filter.key}
+                  type="button"
+                  onClick={() => setStatus(filter.key)}
+                  className={[
+                    "flex shrink-0 items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-black transition",
+                    active
+                      ? "border-cyan-400/35 bg-cyan-400/15 text-cyan-100"
+                      : "border-slate-800 bg-slate-950 text-slate-400",
+                  ].join(" ")}
+                >
+                  <span>{filter.label}</span>
+                  <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5 text-[10px]">
+                    {counts[filter.key] || 0}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 text-[11px] text-slate-500">
+            Showing <span className="font-black text-slate-200">{filtered.length}</span> request{filtered.length === 1 ? "" : "s"}
+          </div>
+        </section>
 
         {err ? (
           <div className="text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-xl p-3">
@@ -323,7 +409,13 @@ export default function CustomerTickets({ title = "My Orders", embedded = false 
         {loading ? <div className="text-sm text-slate-400">Loading…</div> : null}
 
         {!loading && filtered.length === 0 ? (
-          <div className="text-sm text-slate-400">No orders found.</div>
+          <div className="rounded-[2rem] border border-dashed border-slate-700 bg-slate-950/35 p-8 text-center">
+            <div className="text-3xl">📋</div>
+            <div className="mt-3 text-sm font-black text-white">No matching requests</div>
+            <div className="mt-1 text-xs leading-5 text-slate-500">
+              Try another status tab or clear your search.
+            </div>
+          </div>
         ) : null}
 
         <div className="grid md:grid-cols-2 gap-3">
@@ -331,7 +423,7 @@ export default function CustomerTickets({ title = "My Orders", embedded = false 
             const friendly = resolveCustomerFriendlyTitle(t);
 
             return (
-              <div
+              <article
                 key={t.id}
                 role="button"
                 tabIndex={0}
@@ -339,43 +431,41 @@ export default function CustomerTickets({ title = "My Orders", embedded = false 
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") nav(`/tickets/${t.id}`);
                 }}
-                className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4 cursor-pointer hover:bg-slate-900/35 transition outline-none focus:ring-2 focus:ring-cyan-500/30"
+                className="group cursor-pointer rounded-[1.75rem] border border-slate-800 bg-slate-950/55 p-4 outline-none transition hover:border-cyan-400/25 hover:bg-slate-900/45 focus:ring-2 focus:ring-cyan-500/30"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="font-semibold truncate">
-                      #{t.id} • {friendly}
-                    </div>
-                    <div className="text-xs text-slate-400 mt-1">
-                      {t.service_zip ? `ZIP ${t.service_zip}` : "No ZIP"}
-                      {t.service_address ? ` • ${t.service_address}` : ""}
-                    </div>
-                  </div>
+                <div className="flex flex-wrap items-center gap-2">
                   <StatusPill status={t.status} />
+                  <SourcePill ticket={t} />
                 </div>
 
-                <div className="text-[11px] text-slate-500 mt-3">
-                  Created: {t.created_at ? new Date(t.created_at).toLocaleString() : "—"}
+                <div className="mt-4 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate text-base font-black text-white">{friendly}</div>
+                    <div className="mt-1 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                      Ticket #{t.id}
+                    </div>
+                  </div>
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-slate-800 bg-slate-950 text-slate-500 transition group-hover:border-cyan-400/30 group-hover:text-cyan-200">
+                    →
+                  </div>
                 </div>
 
-                {t.accepted_at ? (
-                  <div className="text-[11px] text-slate-500 mt-1">
-                    Accepted: {new Date(t.accepted_at).toLocaleString()}
+                <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/70 p-3">
+                  <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-600">
+                    Service location
                   </div>
-                ) : null}
+                  <div className="mt-1 line-clamp-2 text-xs leading-5 text-slate-300">
+                    {t.service_address || (t.service_zip ? `ZIP ${t.service_zip}` : "Location pending")}
+                  </div>
+                </div>
 
-                {t.started_at ? (
-                  <div className="text-[11px] text-slate-500 mt-1">
-                    Started: {new Date(t.started_at).toLocaleString()}
-                  </div>
-                ) : null}
-
-                {t.completed_at ? (
-                  <div className="text-[11px] text-slate-500 mt-1">
-                    Completed: {new Date(t.completed_at).toLocaleString()}
-                  </div>
-                ) : null}
-              </div>
+                <div className="mt-3 flex items-center justify-between gap-3 text-[11px] text-slate-500">
+                  <span>
+                    {t.created_at ? new Date(t.created_at).toLocaleDateString() : "Date unavailable"}
+                  </span>
+                  <span className="font-bold text-cyan-200">View request</span>
+                </div>
+              </article>
             );
           })}
         </div>
