@@ -6,6 +6,10 @@ import {
   readSavedProviders,
   removeSavedProvider,
 } from "../../../utils/savedProviders";
+import {
+  readBusinessCustomers,
+  saveBusinessCustomer,
+} from "../../../utils/savedCustomers";
 
 import RequestStepNav from "../RequestStepNav";
 import RequestDetailsCard from "../RequestDetailsCard";
@@ -340,6 +344,8 @@ export default function UniversalTicketCreator({
   const [bestPhone, setBestPhone] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
+  const [savedCustomers, setSavedCustomers] = useState([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [intakeSource, setIntakeSource] = useState("PHONE");
   const [paymentPreference, setPaymentPreference] = useState("quote_first");
   const [contactPreference, setContactPreference] = useState("either");
@@ -383,6 +389,15 @@ export default function UniversalTicketCreator({
       window.removeEventListener("sw:savedProvidersChanged", refreshSavedProviders);
   }, []);
 
+  useEffect(() => {
+    if (!isBusinessInternal) return undefined;
+    const businessId = business?.id || business?.business_id || "";
+    const refresh = () => setSavedCustomers(readBusinessCustomers(businessId));
+    refresh();
+    window.addEventListener("sw:businessCustomersChanged", refresh);
+    return () => window.removeEventListener("sw:businessCustomersChanged", refresh);
+  }, [business, isBusinessInternal]);
+
   function scrollFlowTop() {
     window.requestAnimationFrame(() => {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -412,6 +427,25 @@ export default function UniversalTicketCreator({
     if (Number(selectedProvider?.id) === Number(providerId)) {
       setSelectedProvider(null);
     }
+  }
+
+  function chooseSavedCustomer(customerId) {
+    setSelectedCustomerId(customerId);
+    const customer = savedCustomers.find(
+      (item) => String(item.id) === String(customerId)
+    );
+    if (!customer) return;
+    setCustomerName(customer.name || "");
+    setCustomerEmail(customer.email || "");
+    setBestPhone(customer.phone || "");
+    setAddress(customer.address || "");
+    setUnit(customer.unit || "");
+    setCity(customer.city || "");
+    setStateRegion(customer.state || "");
+    setServiceZip(customer.service_zip || "");
+    setAccessNotes(customer.access_notes || "");
+    setContactPreference(customer.contact_preference || "either");
+    setPaymentPreference(customer.payment_preference || "quote_first");
   }
 
   const leafCategoryIndex = useMemo(
@@ -701,6 +735,29 @@ export default function UniversalTicketCreator({
       const res = await api.post("/service-requests/", payload);
       const createdId = getCreatedId(res.data);
 
+      if (isBusinessInternal) {
+        const businessId = business?.id || business?.business_id || "";
+        const saved = saveBusinessCustomer(businessId, {
+          name: customerName,
+          email: customerEmail,
+          phone: bestPhone,
+          address,
+          unit,
+          city,
+          state: stateRegion,
+          service_zip: serviceZip,
+          access_notes: accessNotes,
+          contact_preference: contactPreference,
+          payment_preference: paymentPreference,
+          last_service: selectedService?.label || "",
+          last_ticket_id: createdId,
+        });
+        if (saved) {
+          setSelectedCustomerId(String(saved.id));
+          setSavedCustomers(readBusinessCustomers(businessId));
+        }
+      }
+
       setSuccess(
         isBusinessInternal
           ? "Business ticket created."
@@ -941,6 +998,9 @@ export default function UniversalTicketCreator({
                 setCustomerName={setCustomerName}
                 customerEmail={customerEmail}
                 setCustomerEmail={setCustomerEmail}
+                savedCustomers={savedCustomers}
+                selectedCustomerId={selectedCustomerId}
+                onSelectSavedCustomer={chooseSavedCustomer}
                 mode={mode}
               />
 

@@ -42,6 +42,9 @@ export default function RequestDetailsCard({
   setCustomerName = null,
   customerEmail = "",
   setCustomerEmail = null,
+  savedCustomers = [],
+  selectedCustomerId = "",
+  onSelectSavedCustomer = null,
   mode = "CUSTOMER_MARKETPLACE",
 }) {
   const isBusinessInternal = mode === "BUSINESS_INTERNAL";
@@ -67,7 +70,30 @@ export default function RequestDetailsCard({
 
       <div className="mt-4 space-y-4">
         {isBusinessInternal ? (
-          <div className="grid gap-3 md:grid-cols-2">
+          <>
+            <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/[0.07] p-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">
+                Repeat customer
+              </div>
+              <select
+                value={selectedCustomerId}
+                onChange={(e) => onSelectSavedCustomer?.(e.target.value)}
+                className="mt-2 w-full rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-cyan-500/50"
+              >
+                <option value="">New customer - enter details below</option>
+                {(savedCustomers || []).map((customer) => (
+                  <option key={customer.id} value={String(customer.id)}>
+                    {customer.name || customer.email || customer.phone}
+                    {customer.phone ? ` • ${customer.phone}` : ""}
+                  </option>
+                ))}
+              </select>
+              <div className="mt-2 text-[11px] leading-5 text-slate-500">
+                Selecting a saved customer prefills contact, location, and preference fields.
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
             <label className="block">
               <span className="text-[11px] font-semibold text-slate-400">
                 Customer name
@@ -92,7 +118,8 @@ export default function RequestDetailsCard({
                 className="mt-1 w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 outline-none transition focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/10"
               />
             </label>
-          </div>
+            </div>
+          </>
         ) : null}
 
         <label className="block">
