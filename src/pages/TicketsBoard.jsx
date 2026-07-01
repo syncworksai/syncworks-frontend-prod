@@ -196,6 +196,66 @@ function locationLine(ticket) {
   return [address, [city, state].filter(Boolean).join(", "), zip].filter(Boolean).join(" â€¢ ");
 }
 
+
+function extractSyncworksIntake(description) {
+  const desc = String(description || "");
+  const marker = "SyncWorks Intake:";
+  const index = desc.lastIndexOf(marker);
+  if (index < 0) return null;
+  const tail = desc.slice(index + marker.length).trim();
+  const start = tail.indexOf("{");
+  const end = tail.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  try {
+    return JSON.parse(tail.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+}
+
+function ticketSourceMeta(ticket) {
+  const intake = extractSyncworksIntake(ticket?.description || ticket?.details || "") || {};
+  const creator = String(intake.creator_mode || "").toUpperCase();
+  const scope = String(intake.route_scope || "").toUpperCase();
+  const source = String(intake.intake_source || "").toUpperCase();
+
+  if (creator === "BUSINESS_INTERNAL" || intake.is_business_internal) {
+    const labels = {
+      PHONE: "Phone call",
+      TEXT: "Text message",
+      EMAIL: "Email",
+      WALK_IN: "Walk-in",
+    };
+    return {
+      label: labels[source] || "Business entered",
+      detail: "Internal customer intake",
+      tone: "sky",
+    };
+  }
+
+  if (scope === "DIRECT_PROVIDER" || intake.direct_provider_id || ticket?.target_business) {
+    return {
+      label: "Saved provider",
+      detail: "Direct customer booking",
+      tone: "emerald",
+    };
+  }
+
+  if (ticket?.is_marketplace) {
+    return {
+      label: "Marketplace",
+      detail: "Open marketplace request",
+      tone: "fuchsia",
+    };
+  }
+
+  return {
+    label: "Direct",
+    detail: "Direct business request",
+    tone: "slate",
+  };
+}
+
 function roleLabel(role) {
   const raw = String(role || "").trim();
   if (!raw) return "Team Member";
@@ -411,6 +471,7 @@ function BoardTicketCard({
   const isBusy = String(busyId || "") === String(ticket.id);
   const workflowPrimary = ticket?.workflow?.primary_action || null;
   const workflowWaiting = ticket?.workflow?.waiting_on_label || "";
+  const sourceMeta = ticketSourceMeta(ticket);
 
   const [assignValue, setAssignValue] = useState("");
   const [statusValue, setStatusValue] = useState(status);
@@ -447,7 +508,7 @@ function BoardTicketCard({
               <PriorityBadge ticket={ticket} />
               {p1 ? <Pill tone="rose">Service Now</Pill> : null}
               <Pill tone={tone}>{statusLabel(status)}</Pill>
-              {mp ? <Pill tone="fuchsia">Marketplace</Pill> : <Pill>Direct</Pill>}
+              <Pill tone={sourceMeta.tone}>{sourceMeta.label}</Pill>
               {asg ? <Pill tone="emerald">Assigned</Pill> : <Pill tone="amber">Unassigned</Pill>}
               {saved ? <Pill tone="cyan">Saved</Pill> : null}
               {archived ? <Pill tone="slate">Archived</Pill> : null}
@@ -462,7 +523,10 @@ function BoardTicketCard({
             </div>
 
             <div className="mt-2 text-[11px] text-slate-500">
-              {ticket?.sms_allowed ? "Allows text messaging" : "In-app or phone call"} â€¢{" "}
+              <span className="rounded-full border border-slate-800 bg-slate-950/65 px-2.5 py-1 font-semibold text-slate-300">
+                {sourceMeta.detail}
+              </span>
+              <span>{ticket?.sms_allowed ? "Allows text messaging" : "In-app or phone call"}</span>
               {ticket?.created_at ? new Date(ticket.created_at).toLocaleString() : "â€”"}
             </div>
             {view === "marketplace" ? (

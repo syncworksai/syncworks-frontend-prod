@@ -340,6 +340,7 @@ export default function UniversalTicketCreator({
   const [bestPhone, setBestPhone] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
+  const [intakeSource, setIntakeSource] = useState("PHONE");
   const [paymentPreference, setPaymentPreference] = useState("quote_first");
   const [contactPreference, setContactPreference] = useState("either");
 
@@ -461,6 +462,7 @@ export default function UniversalTicketCreator({
         marketplaceAgreement,
         customerName,
         customerEmail,
+        intakeSource: isBusinessInternal ? intakeSource : "",
         businessId: business?.id || business?.business_id || "",
         businessName: business?.name || business?.business_name || "",
         directProvider: routeMode === "SAVED_PROVIDER" ? selectedProvider : null,
@@ -487,6 +489,7 @@ export default function UniversalTicketCreator({
       marketplaceAgreement,
       customerName,
       customerEmail,
+      intakeSource,
       business,
       routeMode,
       selectedProvider,
@@ -812,6 +815,45 @@ export default function UniversalTicketCreator({
                     </div>
                   ) : null}
                 </div>
+              ) : null}
+              {isBusinessInternal ? (
+                <section className="rounded-[2rem] border border-indigo-400/20 bg-indigo-500/[0.08] p-4">
+                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-indigo-200">
+                    Request source
+                  </div>
+                  <div className="mt-1 text-sm font-black text-white">
+                    How did this customer contact your business?
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {[
+                      ["PHONE", "Phone call", "☎"],
+                      ["TEXT", "Text message", "✉"],
+                      ["EMAIL", "Email", "@"],
+                      ["WALK_IN", "Walk-in", "⌂"],
+                    ].map(([value, label, icon]) => {
+                      const active = intakeSource === value;
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setIntakeSource(value)}
+                          className={[
+                            "min-h-[64px] rounded-2xl border p-3 text-left transition",
+                            active
+                              ? "border-indigo-300/40 bg-indigo-400/15 text-indigo-50"
+                              : "border-slate-800 bg-slate-950/70 text-slate-400",
+                          ].join(" ")}
+                        >
+                          <div className="text-lg">{icon}</div>
+                          <div className="mt-1 text-xs font-black">{label}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 text-xs leading-5 text-slate-400">
+                    This ticket stays inside {business?.name || business?.business_name || "your business"} and will not be broadcast to the marketplace.
+                  </div>
+                </section>
               ) : null}
               <MarketplaceSearchPanel
                 selectedService={selectedService}

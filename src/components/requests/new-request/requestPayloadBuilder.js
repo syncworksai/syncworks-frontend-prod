@@ -76,6 +76,7 @@ export function buildStructuredIntake({
   marketplaceAgreement,
   customerName = "",
   customerEmail = "",
+  intakeSource = "",
   businessId = "",
   businessName = "",
   directProvider = null,
@@ -130,6 +131,7 @@ export function buildStructuredIntake({
 
     customer_name: customerName || "",
     customer_email: customerEmail || "",
+    intake_source: isBusinessInternal ? String(intakeSource || "PHONE").toUpperCase() : "",
     best_phone: String(bestPhone || "").trim(),
     contact_preference: contactPreference,
     payment_preference: paymentPreference,
@@ -194,6 +196,9 @@ export function buildTicketDescription({
       : "",
     structuredIntake?.customer_email
       ? `Customer email: ${structuredIntake.customer_email}`
+      : "",
+    structuredIntake?.intake_source
+      ? `Intake source: ${structuredIntake.intake_source}`
       : "",
     structuredIntake?.priority ? `Priority: ${structuredIntake.priority}` : "",
     structuredIntake?.needed_by_date
