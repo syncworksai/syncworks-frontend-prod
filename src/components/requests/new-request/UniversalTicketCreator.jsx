@@ -295,6 +295,25 @@ export default function UniversalTicketCreator({
   const [selectedProvider, setSelectedProvider] = useState(initialProvider);
   const [navMessage, setNavMessage] = useState("");
 
+  const directProviderServiceKeys = useMemo(() => {
+    if (routeMode !== "SAVED_PROVIDER" || !selectedProvider) return [];
+    const values =
+      selectedProvider.service_keys ||
+      selectedProvider.serviceKeys ||
+      selectedProvider.services ||
+      selectedProvider.selected_services ||
+      [];
+    return Array.isArray(values)
+      ? values.map((item) => String(item?.key || item?.slug || item?.name || item || "")).filter(Boolean)
+      : [];
+  }, [routeMode, selectedProvider]);
+
+  const visibleServiceKeys = isBusinessInternal
+    ? businessServiceKeys
+    : routeMode === "SAVED_PROVIDER"
+    ? directProviderServiceKeys
+    : [];
+
   const [serviceCategories, setServiceCategories] = useState([]);
   const [categoryLoading, setCategoryLoading] = useState(true);
   const [categoryLoadError, setCategoryLoadError] = useState("");
@@ -380,6 +399,8 @@ export default function UniversalTicketCreator({
 
   function chooseProvider(provider) {
     setSelectedProvider(provider);
+    setSelectedService(null);
+    setDynamicIntake({});
     setMarketplaceAgreement(true);
     setNavMessage("");
   }
@@ -777,11 +798,33 @@ export default function UniversalTicketCreator({
                   onRemoveProvider={deleteSavedProvider}
                 />
               ) : null}
+              {routeMode === "SAVED_PROVIDER" && selectedProvider ? (
+                <div className="rounded-3xl border border-emerald-500/25 bg-emerald-500/10 p-4">
+                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200">
+                    Direct business booking
+                  </div>
+                  <div className="mt-1 text-sm font-black text-white">
+                    Only services offered by {selectedProvider.name} are shown below.
+                  </div>
+                  {!directProviderServiceKeys.length ? (
+                    <div className="mt-2 text-xs leading-5 text-amber-100">
+                      This saved business does not have a structured service list yet. The broader catalog remains available until its Services settings are completed.
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               <MarketplaceSearchPanel
                 selectedService={selectedService}
                 setSelectedService={handleServiceSelect}
                 mode={mode}
-                allowedServiceKeys={businessServiceKeys}
+                allowedServiceKeys={visibleServiceKeys}
+                restrictToAllowedServices={
+                  isBusinessInternal ||
+                  (routeMode === "SAVED_PROVIDER" && directProviderServiceKeys.length > 0)
+                }
+                providerName={
+                  routeMode === "SAVED_PROVIDER" ? selectedProvider?.name || "" : ""
+                }
                 categoryIndex={leafCategoryIndex}
                 categoryLoading={categoryLoading}
                 categoryLoadError={categoryLoadError}

@@ -241,8 +241,14 @@ export function buildServiceRequestPayload({
     service_zip: structuredIntake?.service_zip || "",
     service_radius_miles: 25,
     is_marketplace: !!structuredIntake?.is_marketplace,
-    target_business: structuredIntake?.direct_provider_id || undefined,
-    business_id: structuredIntake?.direct_provider_id || undefined,
+    target_business:
+      structuredIntake?.direct_provider_id ||
+      structuredIntake?.business_id ||
+      undefined,
+    business_id:
+      structuredIntake?.direct_provider_id ||
+      structuredIntake?.business_id ||
+      undefined,
   };
 }
 

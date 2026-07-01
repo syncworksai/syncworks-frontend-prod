@@ -93,6 +93,8 @@ export default function MarketplaceSearchPanel({
   setSelectedService,
   mode = "CUSTOMER_MARKETPLACE",
   allowedServiceKeys = [],
+  restrictToAllowedServices = false,
+  providerName = "",
   categoryIndex = null,
   categoryLoading = false,
   categoryLoadError = "",
@@ -108,7 +110,7 @@ export default function MarketplaceSearchPanel({
   }, [allowedServiceKeys]);
 
   const verticals = useMemo(() => {
-    if (!isBusinessInternal || !allowedSet.size) return MARKETPLACE_CATALOG;
+    if (!restrictToAllowedServices || !allowedSet.size) return MARKETPLACE_CATALOG;
 
     return MARKETPLACE_CATALOG.map((vertical) => {
       const categories = (vertical.categories || [])
@@ -128,7 +130,7 @@ export default function MarketplaceSearchPanel({
 
       return categories.length ? { ...vertical, categories } : null;
     }).filter(Boolean);
-  }, [allowedSet, isBusinessInternal]);
+  }, [allowedSet, restrictToAllowedServices]);
 
   const resultRows = useMemo(() => {
     let rows = [];
@@ -141,7 +143,7 @@ export default function MarketplaceSearchPanel({
       rows = getPopularServices();
     }
 
-    if (isBusinessInternal && allowedSet.size) {
+    if (restrictToAllowedServices && allowedSet.size) {
       rows = rows.filter((service) => {
         return (
           allowedSet.has(service.key) ||
@@ -153,7 +155,7 @@ export default function MarketplaceSearchPanel({
     }
 
     return rows;
-  }, [allowedSet, isBusinessInternal, query, selectedVerticalKey]);
+  }, [allowedSet, query, restrictToAllowedServices, selectedVerticalKey]);
 
   const resolvedRows = useMemo(
     () => resultRows.map((service) => attachResolvedCategory(service, categoryIndex)),
@@ -174,18 +176,26 @@ export default function MarketplaceSearchPanel({
 
         <div className="relative">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100">
-            {isBusinessInternal ? "Business Ticket Creator" : "Local Marketplace"}
+            {isBusinessInternal
+              ? "Business Ticket Creator"
+              : restrictToAllowedServices
+              ? "Direct Business Booking"
+              : "Local Marketplace"}
           </div>
 
           <h1 className="mt-4 text-2xl font-black tracking-tight text-white md:text-4xl">
             {isBusinessInternal
               ? "Create a ticket from your services."
+              : restrictToAllowedServices
+              ? `Book with ${providerName || "this business"}.`
               : "What do you need today?"}
           </h1>
 
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
             {isBusinessInternal
-              ? "Use this when a customer called in, texted, or walked in. Your team should only pick from services your business provides."
+              ? "Use this when a customer called in, texted, emailed, or walked in. This ticket stays inside your business and is never broadcast to the marketplace."
+              : restrictToAllowedServices
+              ? `Choose only from services offered by ${providerName || "this saved business"}. This request goes directly to that business.`
               : "Search services, products, food, bookings, real estate, auto, and more. SyncWorks turns every need into a trackable ticket."}
           </p>
 
@@ -204,6 +214,8 @@ export default function MarketplaceSearchPanel({
                 placeholder={
                   isBusinessInternal
                     ? "Search your services..."
+                    : restrictToAllowedServices
+                    ? `Search ${providerName || "this business"} services...`
                     : "Search plumbing, tutoring, dog grooming, restaurants, real estate..."
                 }
                 className="h-12 min-w-0 flex-1 bg-transparent px-1 text-sm font-semibold text-slate-100 placeholder:text-slate-600 outline-none"
