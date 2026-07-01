@@ -18,6 +18,7 @@ import TicketLifecycleCard from "../components/tickets/TicketLifecycleCard";
 import TicketArchiveToolsCard from "../components/tickets/TicketArchiveToolsCard";
 import TicketNextActionCard from "../components/tickets/TicketNextActionCard";
 import CustomerRequestTracker from "../components/tickets/CustomerRequestTracker";
+import CustomerCompletionReviewCard from "../components/tickets/CustomerCompletionReviewCard";
 import { providerFromTicket, saveProvider } from "../utils/savedProviders";
 
 function cx(...parts) {
@@ -1340,6 +1341,15 @@ export default function TicketDetail() {
                       ticket={ticket}
                       onBookAgain={bookAgainWithAssignedBusiness}
                       onSaveProvider={saveAssignedProvider}
+                    />
+                    <CustomerCompletionReviewCard
+                      ticket={ticket}
+                      ticketId={ticketId}
+                      onBookAgain={bookAgainWithAssignedBusiness}
+                      onOpenMessages={() => setActiveTab("messages")}
+                      onCloseTicket={closeTicket}
+                      onAfterChange={loadTicket}
+                      closeBusy={actionBusy}
                     />
                   </>
                 ) : (
