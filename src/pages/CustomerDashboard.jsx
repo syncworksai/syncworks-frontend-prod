@@ -14,6 +14,7 @@ import TodoList from "../components/TodoList";
 
 import DashboardShell from "../components/dashboard/DashboardShell";
 import GlassCard, { cx } from "../components/dashboard/GlassCard";
+import CustomerMobileHome from "../components/customer/CustomerMobileHome";
 
 const BASE_TABS = [
   { id: "overview", label: "Home" },
@@ -1538,37 +1539,17 @@ export default function CustomerDashboard() {
   }, [feedItems]);
 
   const bottomNavItems = [
-    {
-      label: "Home",
-      icon: "⌂",
-      active: tab === "overview",
-      onClick: () => setTab("overview"),
-    },
-    {
-      label: "Jobs",
-      icon: "▤",
-      active: tab === "orders",
-      onClick: () => setTab("orders"),
-    },
-    {
-      label: "Chat",
-      icon: "💬",
-      active: tab === "inbox",
-      onClick: () => setTab("inbox"),
-    },
-    {
-      label: "Me",
-      icon: "◉",
-      active: false,
-      onClick: () => navigate("/settings"),
-    },
+    { label: "Home", icon: "⌂", active: tab === "overview", onClick: () => setTab("overview") },
+    { label: "Requests", icon: "▤", active: tab === "orders", onClick: () => setTab("orders") },
+    { label: "Calendar", icon: "◷", active: tab === "calendar", onClick: () => setTab("calendar") },
+    { label: "More", icon: "•••", active: false, onClick: () => navigate("/settings") },
   ];
 
   return (
     <DashboardShell
-      title="Customer Home"
-      subtitle="Life, services, payments, schedule, money, and health"
-      modeBarTitle="Customer Home"
+      title="Personal Home"
+      subtitle="Requests • Schedule • Payments • Life"
+      modeBarTitle="Personal Home"
       modeBarSubtitle="Personal Life OS"
       bottomNavItems={bottomNavItems}
       bottomCenterAction={{
@@ -1596,8 +1577,30 @@ export default function CustomerDashboard() {
       }
     >
       <div className="space-y-5 pb-4">
-        <NewsReel />
+        <CustomerMobileHome
+          displayName={displayName}
+          tickets={visibleTickets}
+          invoices={dueInvoiceItems}
+          openCount={metrics.open}
+          totalDue={totalDue}
+          loading={ticketsLoading}
+          error={ticketsErr || ticketActionErr}
+          onRefresh={loadTickets}
+          onNewRequest={() => navigate("/customer/new-request")}
+          onOpenTicket={(id) => navigate(`/tickets/${id}`)}
+          onOpenRequests={() => setTab("orders")}
+          onOpenCalendar={() => setTab("calendar")}
+          onOpenMessages={() => setTab("inbox")}
+          onOpenMoney={openMoney}
+          onOpenHealth={openHealth}
+          onOpenMore={() => navigate("/settings")}
+        />
 
+        <div className="hidden lg:block">
+          <NewsReel />
+        </div>
+
+        <div className="hidden lg:block">
         <CustomerHero
           displayName={displayName}
           openCount={metrics.open}
@@ -1606,11 +1609,14 @@ export default function CustomerDashboard() {
           onOpenMoney={openMoney}
           onOpenHealth={openHealth}
         />
+        </div>
 
-        <DashboardTabs tabs={tabs} activeTab={tab} onChange={handleTabChange} />
+        <div className={tab === "overview" ? "hidden lg:block" : "block"}>
+          <DashboardTabs tabs={tabs} activeTab={tab} onChange={handleTabChange} />
+        </div>
 
         {tab === "overview" ? (
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
+          <div className="hidden gap-5 lg:grid xl:grid-cols-[minmax(0,1fr)_390px]">
             <div className="space-y-5">
               <TodayCard
                 tickets={visibleTickets}
