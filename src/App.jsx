@@ -54,6 +54,7 @@ import PMEmployees from "./pages/PMEmployees";
 import PMPropertyDetail from "./pages/PMPropertyDetail";
 
 import EmployeeInvite from "./pages/EmployeeInvite";
+import EmployeeTechnicianDashboard from "./pages/EmployeeTechnicianDashboard";
 
 import TenantDashboard from "./pages/TenantDashboard";
 import TenantAcceptInvite from "./pages/TenantAcceptInvite";
@@ -71,45 +72,6 @@ import EmployeeSettings from "./pages/EmployeeSettings";
 import CashFeeInvoices from "./pages/CashFeeInvoices";
 import SettingsHub from "./pages/SettingsHub";
 import LearningCenter from "./pages/LearningCenter";
-
-function EmployeeHome() {
-  return (
-    <ProtectedRoute>
-      <div className="min-h-screen bg-[#020617] p-6 text-slate-100">
-        <h1 className="text-xl font-semibold">
-          Employee Dashboard
-        </h1>
-
-        <p className="mt-2 text-slate-400">
-          Your access is based on permissions set by your manager.
-        </p>
-
-        <div className="mt-6 flex flex-wrap gap-3">
-          <a
-            href="/customer"
-            className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-950/60 px-4 text-slate-200 hover:bg-slate-900/40"
-          >
-            Go to Personal
-          </a>
-
-          <a
-            href="/employee/settings"
-            className="inline-flex h-10 items-center justify-center rounded-xl border border-cyan-500/35 bg-cyan-500/10 px-4 text-cyan-200 hover:bg-cyan-500/15"
-          >
-            Employee Settings
-          </a>
-
-          <a
-            href="/connect"
-            className="inline-flex h-10 items-center justify-center rounded-xl border border-emerald-500/35 bg-emerald-500/10 px-4 text-emerald-200 hover:bg-emerald-500/15"
-          >
-            Connect with Code
-          </a>
-        </div>
-      </div>
-    </ProtectedRoute>
-  );
-}
 
 export default function App() {
   return (
@@ -463,7 +425,11 @@ export default function App() {
 
         <Route
           path="/employee"
-          element={<EmployeeHome />}
+          element={
+            <ProtectedRoute>
+              <EmployeeTechnicianDashboard />
+            </ProtectedRoute>
+          }
         />
 
         <Route
