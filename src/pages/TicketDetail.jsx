@@ -17,6 +17,7 @@ import TicketCustomerCard from "../components/tickets/TicketCustomerCard";
 import TicketLifecycleCard from "../components/tickets/TicketLifecycleCard";
 import TicketArchiveToolsCard from "../components/tickets/TicketArchiveToolsCard";
 import TicketNextActionCard from "../components/tickets/TicketNextActionCard";
+import CustomerRequestTracker from "../components/tickets/CustomerRequestTracker";
 import { providerFromTicket, saveProvider } from "../utils/savedProviders";
 
 function cx(...parts) {
@@ -1322,6 +1323,12 @@ export default function TicketDetail() {
               <div className="space-y-4">
                 {isCustomer ? (
                   <>
+                    <CustomerRequestTracker
+                      ticket={ticket}
+                      onOpenMessages={() => setActiveTab("messages")}
+                      onOpenFiles={() => setActiveTab("files")}
+                      onOpenInvoice={() => setActiveTab("invoice")}
+                    />
                     <CustomerOverviewCard
                       ticket={ticket}
                       ticketCode={ticketCode}
