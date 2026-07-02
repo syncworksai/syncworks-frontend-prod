@@ -112,7 +112,12 @@ function initials(value) {
     .join("");
 }
 
-function LeadDrawer({ lead, onClose, onOpenGrowth }) {
+function LeadDrawer({
+  lead,
+  onClose,
+  onOpenGrowth,
+  onPrepareFollowUp,
+}) {
   if (!lead) return null;
 
   const phone = lead?.phone || lead?.phone_number || lead?.contact_phone || "";
@@ -208,14 +213,248 @@ function LeadDrawer({ lead, onClose, onOpenGrowth }) {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onOpenGrowth}
-          className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-fuchsia-500 via-violet-600 to-cyan-500 px-5 text-sm font-black text-white"
-        >
-          <Sparkles aria-hidden="true" className="h-5 w-5" />
-          Open Social Media workspace
-        </button>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => onPrepareFollowUp?.(lead)}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 text-sm font-black text-white"
+          >
+            <MessageSquareText aria-hidden="true" className="h-5 w-5" />
+            Prepare follow-up
+          </button>
+
+          <button
+            type="button"
+            onClick={onOpenGrowth}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-fuchsia-500 via-violet-600 to-cyan-500 px-5 text-sm font-black text-white"
+          >
+            <Sparkles aria-hidden="true" className="h-5 w-5" />
+            Social workspace
+          </button>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function FollowUpDrawer({ lead, onClose }) {
+  const email = lead?.email || lead?.contact_email || "";
+  const phone = lead?.phone || lead?.phone_number || lead?.contact_phone || "";
+  const firstName = String(nameOf(lead)).split(/\s+/)[0] || "there";
+
+  const [channel, setChannel] = useState(email ? "EMAIL" : "SMS");
+  const [subject, setSubject] = useState("Following up from SyncWorks");
+  const [message, setMessage] = useState(
+    `Hi ${firstName},\n\nI wanted to follow up and see how we can help with your request. Let me know what questions you have or when you would like to discuss next steps.\n\nThank you.`
+  );
+  const [approved, setApproved] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  if (!lead) return null;
+
+  const destination = channel === "EMAIL" ? email : phone;
+  const canOpen = Boolean(destination && message.trim() && approved);
+
+  function saveDraft() {
+    const key = "syncworks_lead_followup_drafts_v1";
+    let current = [];
+
+    try {
+      const parsed = JSON.parse(localStorage.getItem(key) || "[]");
+      current = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      current = [];
+    }
+
+    const draft = {
+      id: Date.now(),
+      leadId: lead?.id || null,
+      leadName: nameOf(lead),
+      channel,
+      destination,
+      subject: channel === "EMAIL" ? subject.trim() : "",
+      message: message.trim(),
+      status: "PREPARED",
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      localStorage.setItem(
+        key,
+        JSON.stringify([draft, ...current].slice(0, 50))
+      );
+    } catch {
+      // Draft persistence is optional.
+    }
+
+    setSaved(true);
+  }
+
+  function openClient() {
+    if (!canOpen) return;
+
+    saveDraft();
+
+    if (channel === "EMAIL") {
+      window.location.href = `mailto:${email}?subject=${encodeURIComponent(
+        subject.trim()
+      )}&body=${encodeURIComponent(message.trim())}`;
+      return;
+    }
+
+    window.location.href = `sms:${phone}?body=${encodeURIComponent(
+      message.trim()
+    )}`;
+  }
+
+  return (
+    <div className="fixed inset-0 z-[160]">
+      <div
+        className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      <aside className="absolute inset-x-0 bottom-0 max-h-[94vh] overflow-y-auto rounded-t-[2rem] border border-cyan-400/25 bg-slate-950 p-5 shadow-2xl md:inset-y-4 md:left-auto md:right-4 md:w-[500px] md:rounded-[2rem]">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
+              SYNC prepared outreach
+            </div>
+            <h2 className="mt-2 text-xl font-black text-white">
+              Follow up with {nameOf(lead)}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-400">
+              Review every detail. SYNC will not send anything automatically.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-slate-700 bg-slate-900 text-slate-300"
+          >
+            <X aria-hidden="true" className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setChannel("EMAIL");
+              setApproved(false);
+            }}
+            disabled={!email}
+            className={`min-h-12 rounded-2xl border px-4 text-sm font-black disabled:cursor-not-allowed disabled:opacity-40 ${
+              channel === "EMAIL"
+                ? "border-cyan-400/40 bg-cyan-500/15 text-cyan-100"
+                : "border-slate-800 bg-slate-900/60 text-slate-300"
+            }`}
+          >
+            Email
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setChannel("SMS");
+              setApproved(false);
+            }}
+            disabled={!phone}
+            className={`min-h-12 rounded-2xl border px-4 text-sm font-black disabled:cursor-not-allowed disabled:opacity-40 ${
+              channel === "SMS"
+                ? "border-cyan-400/40 bg-cyan-500/15 text-cyan-100"
+                : "border-slate-800 bg-slate-900/60 text-slate-300"
+            }`}
+          >
+            Text
+          </button>
+        </div>
+
+        <div className="mt-4 rounded-3xl border border-slate-800 bg-slate-900/55 p-4">
+          <div className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+            Destination
+          </div>
+          <div className="mt-2 break-all text-sm font-bold text-white">
+            {destination || `No ${channel.toLowerCase()} destination available`}
+          </div>
+        </div>
+
+        {channel === "EMAIL" ? (
+          <label className="mt-4 block">
+            <span className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+              Subject
+            </span>
+            <input
+              value={subject}
+              onChange={(event) => {
+                setSubject(event.target.value);
+                setApproved(false);
+              }}
+              className="mt-2 min-h-12 w-full rounded-2xl border border-slate-800 bg-slate-900/65 px-4 text-sm text-white outline-none focus:border-cyan-400/40"
+            />
+          </label>
+        ) : null}
+
+        <label className="mt-4 block">
+          <span className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+            Message
+          </span>
+          <textarea
+            value={message}
+            onChange={(event) => {
+              setMessage(event.target.value);
+              setApproved(false);
+              setSaved(false);
+            }}
+            rows={9}
+            className="mt-2 w-full resize-none rounded-3xl border border-slate-800 bg-slate-900/65 p-4 text-sm leading-6 text-white outline-none focus:border-cyan-400/40"
+          />
+        </label>
+
+        <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-3xl border border-amber-400/25 bg-amber-500/[0.08] p-4">
+          <input
+            type="checkbox"
+            checked={approved}
+            onChange={(event) => setApproved(event.target.checked)}
+            className="mt-1 h-4 w-4 accent-cyan-400"
+          />
+          <span>
+            <span className="block text-sm font-black text-amber-100">
+              I reviewed and approve this outreach
+            </span>
+            <span className="mt-1 block text-xs leading-5 text-slate-400">
+              The next step opens your device’s email or text application. You
+              still control the final Send button.
+            </span>
+          </span>
+        </label>
+
+        {saved ? (
+          <div className="mt-3 rounded-2xl border border-emerald-400/25 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+            Prepared draft saved to this device.
+          </div>
+        ) : null}
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={saveDraft}
+            disabled={!message.trim()}
+            className="min-h-12 rounded-2xl border border-slate-700 bg-slate-900 px-5 text-sm font-black text-slate-200 disabled:opacity-40"
+          >
+            Save prepared draft
+          </button>
+
+          <button
+            type="button"
+            onClick={openClient}
+            disabled={!canOpen}
+            className="min-h-12 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Approve and open {channel === "EMAIL" ? "email" : "text"}
+          </button>
+        </div>
       </aside>
     </div>
   );
@@ -226,6 +465,7 @@ export default function SboLeads() {
 
   const [leads, setLeads] = useState([]);
   const [selectedLead, setSelectedLead] = useState(null);
+  const [followUpLead, setFollowUpLead] = useState(null);
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
@@ -565,6 +805,15 @@ export default function SboLeads() {
         lead={selectedLead}
         onClose={() => setSelectedLead(null)}
         onOpenGrowth={() => navigate("/sbo/growth")}
+        onPrepareFollowUp={(lead) => {
+          setSelectedLead(null);
+          setFollowUpLead(lead);
+        }}
+      />
+
+      <FollowUpDrawer
+        lead={followUpLead}
+        onClose={() => setFollowUpLead(null)}
       />
     </DashboardShell>
   );
