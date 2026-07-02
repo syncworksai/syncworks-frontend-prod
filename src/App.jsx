@@ -76,6 +76,7 @@ import SettingsHub from "./pages/SettingsHub";
 import LearningCenter from "./pages/LearningCenter";
 import SyncAssistant from "./pages/SyncAssistant";
 import SyncHistory from "./pages/SyncHistory";
+import SyncVoiceDemo from "./pages/SyncVoiceDemo";
 
 export default function App() {
   return (
@@ -142,6 +143,15 @@ export default function App() {
           element={
             <ProtectedRoute>
               <SyncHistory />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/sync/voice"
+          element={
+            <ProtectedRoute>
+              <SyncVoiceDemo />
             </ProtectedRoute>
           }
         />

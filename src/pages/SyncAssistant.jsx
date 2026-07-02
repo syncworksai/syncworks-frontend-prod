@@ -413,6 +413,16 @@ export default function SyncAssistant() {
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={() => navigate("/sync/voice")}
+              className="grid h-11 w-11 place-items-center rounded-2xl border border-cyan-400/35 bg-cyan-500/15 text-cyan-100"
+              aria-label="Open SYNC Voice"
+              title="SYNC Voice"
+            >
+              <Mic aria-hidden="true" className="h-5 w-5" />
+            </button>
+
+            <button
+              type="button"
               onClick={() => navigate("/sync/history")}
               className="grid h-11 w-11 place-items-center rounded-2xl border border-slate-700 bg-slate-950 text-slate-200"
               aria-label="Open SYNC history"
