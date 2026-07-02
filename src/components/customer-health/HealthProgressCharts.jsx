@@ -1120,7 +1120,7 @@ export default function HealthProgressCharts({
             </div>
             <div className="mt-1 text-sm leading-6 text-slate-400">
               {workoutComparison
-                ? `${workoutComparison.current.name} Â· ${shortDate(
+                ? `${workoutComparison.current.name} · ${shortDate(
                     workoutComparison.current.date
                   )}`
                 : "Your latest matching workout will be compared automatically."}
@@ -1232,7 +1232,7 @@ export default function HealthProgressCharts({
                           </div>
                           <div className="mt-1 text-xs text-slate-500">
                             Last:{" "}
-                            {row.previous.weight || "BW"} Ã—{" "}
+                            {row.previous.weight || "BW"} ×{" "}
                             {row.previous.reps || "â€”"}
                           </div>
                         </div>
@@ -1246,7 +1246,7 @@ export default function HealthProgressCharts({
                                 : "text-cyan-100"
                             )}
                           >
-                            {row.current.weight || "BW"} Ã—{" "}
+                            {row.current.weight || "BW"} ×{" "}
                             {row.current.reps || "â€”"}
                           </div>
                           <div className="mt-1 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">
@@ -1279,8 +1279,8 @@ export default function HealthProgressCharts({
               {weeklyReview.adherence}% adherence
             </div>
             <div className="mt-1 text-sm leading-6 text-slate-400">
-              {weeklyReview.completed} completed Â·{" "}
-              {weeklyReview.skipped} skipped Â·{" "}
+              {weeklyReview.completed} completed ·{" "}
+              {weeklyReview.skipped} skipped ·{" "}
               {weeklyReview.planned} planned
             </div>
           </div>
@@ -1344,7 +1344,7 @@ export default function HealthProgressCharts({
                 ? weeklyReview.volume.toLocaleString()
                 : "â€”"
             }
-            detail="Weight Ã— reps"
+            detail="Weight × reps"
             tone="cyan"
           />
         </div>

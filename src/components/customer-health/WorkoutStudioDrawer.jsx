@@ -690,7 +690,7 @@ export default function WorkoutStudioDrawer({
 
                         <div className="mt-1 text-[11px] text-slate-500">
                           {(session.exercises || []).length} exercises
-                          {" Â· "}
+                          {" · "}
                           {session.source === "custom_workout"
                             ? "Custom session"
                             : "Planned session"}

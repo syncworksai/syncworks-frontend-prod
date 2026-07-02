@@ -1018,7 +1018,7 @@ export default function WorkoutHistoryDrawer({
                                     <div className="flex items-center justify-between gap-3">
                                       <div className="text-xs font-black text-slate-400">
                                         Set{" "}
-                                        {setLog.number} Â·{" "}
+                                        {setLog.number} ·{" "}
                                         {setLog.type}
                                       </div>
 
@@ -1050,7 +1050,7 @@ export default function WorkoutHistoryDrawer({
                                       x{" "}
                                       {setLog.reps || "-"}
                                       {setLog.rpe
-                                        ? ` Â· RPE ${setLog.rpe}`
+                                        ? ` · RPE ${setLog.rpe}`
                                         : ""}
                                     </div>
 

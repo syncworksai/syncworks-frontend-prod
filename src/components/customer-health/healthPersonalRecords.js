@@ -65,7 +65,7 @@ function recordDetail({
   const gain = percentageGain(current, previous);
 
   return gain > 0
-    ? `Previous best ${Math.round(previous)} ${unit} Â· +${gain}%`
+    ? `Previous best ${Math.round(previous)} ${unit} · +${gain}%`
     : `Previous best ${Math.round(previous)} ${unit}`;
 }
 
@@ -285,7 +285,7 @@ export function buildPersonalRecords({
       records.push({
         id: "reps-at-weight",
         label: "Rep-at-Weight PR",
-        value: `${currentTopWeightSet.weight} lb Ã— ${currentTopWeightSet.reps}`,
+        value: `${currentTopWeightSet.weight} lb × ${currentTopWeightSet.reps}`,
         gain_percent: percentageGain(
           currentTopWeightSet.reps,
           previousRepsAtWeight

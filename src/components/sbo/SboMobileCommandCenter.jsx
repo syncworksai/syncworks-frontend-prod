@@ -1,4 +1,15 @@
 import React, { useMemo } from "react";
+import {
+  CalendarDays,
+  DollarSign,
+  Settings,
+  Megaphone,
+  Plus,
+  RefreshCw,
+  Target,
+  Users,
+  UserRound,
+} from "lucide-react";
 
 function list(value) {
   return Array.isArray(value) ? value : [];
@@ -74,7 +85,7 @@ function MobileMetric({ label, value, hint, tone = "cyan", onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`min-h-[104px] rounded-3xl border p-4 text-left shadow-lg backdrop-blur-xl ${tones[tone]}`}
+      className={`min-h-[104px] rounded-3xl border p-4 text-left shadow-lg backdrop-blur-xl transition active:scale-[0.99] ${tones[tone]}`}
     >
       <div className="text-[11px] font-black uppercase tracking-[0.18em] opacity-80">
         {label}
@@ -92,16 +103,16 @@ function QuickAction({ icon, label, hint, onClick, primary = false }) {
       onClick={onClick}
       className={
         primary
-          ? "flex min-h-[78px] items-center gap-3 rounded-3xl border border-cyan-300/35 bg-gradient-to-r from-cyan-500 to-blue-600 p-4 text-left shadow-[0_0_28px_rgba(34,211,238,0.22)]"
-          : "flex min-h-[78px] items-center gap-3 rounded-3xl border border-slate-700/80 bg-slate-950/70 p-4 text-left"
+          ? "flex min-h-[86px] items-center gap-3 rounded-3xl border border-cyan-300/35 bg-gradient-to-r from-cyan-500 to-blue-600 p-4 text-left shadow-[0_0_28px_rgba(34,211,238,0.22)] transition active:scale-[0.99]"
+          : "flex min-h-[86px] items-center gap-3 rounded-3xl border border-slate-700/80 bg-slate-950/70 p-4 text-left transition hover:border-cyan-400/25 active:scale-[0.99]"
       }
     >
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-white/15 bg-white/10 text-xl">
-        {icon}
+      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white/15 bg-white/10">
+        {React.createElement(icon, { "aria-hidden": true, className: "h-6 w-6", strokeWidth: 2 })}
       </span>
       <span className="min-w-0">
         <span className="block text-sm font-black text-white">{label}</span>
-        <span className="mt-0.5 block text-xs text-slate-300">{hint}</span>
+        <span className="mt-0.5 block text-xs leading-5 text-slate-300">{hint}</span>
       </span>
     </button>
   );
@@ -116,7 +127,7 @@ function TicketRow({ ticket, onOpen }) {
     <button
       type="button"
       onClick={() => onOpen(ticket?.id)}
-      className="w-full rounded-3xl border border-slate-800 bg-slate-950/65 p-4 text-left"
+      className="w-full rounded-3xl border border-slate-800 bg-slate-950/65 p-4 text-left transition hover:border-cyan-400/25 active:scale-[0.995]"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -222,6 +233,8 @@ export default function SboMobileCommandCenter({
     [rows]
   );
 
+  const loadingValue = loading ? "..." : null;
+
   return (
     <section className="space-y-4 lg:hidden">
       <div className="relative overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-950/80 p-5 shadow-[0_0_60px_rgba(34,211,238,0.10)]">
@@ -245,37 +258,37 @@ export default function SboMobileCommandCenter({
             <button
               type="button"
               onClick={onRefresh}
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-slate-700 bg-slate-900/80 text-lg text-slate-200"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-slate-700 bg-slate-900/80 text-slate-200 transition hover:border-cyan-400/30 active:scale-95"
               aria-label="Refresh dashboard"
             >
-              â†»
+              <RefreshCw aria-hidden="true" className="h-5 w-5" />
             </button>
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-3">
             <MobileMetric
               label="Open"
-              value={loading ? "â€¦" : openTickets}
+              value={loadingValue ?? openTickets}
               hint="Requests in pipeline"
               onClick={onOpenRequests}
             />
             <MobileMetric
               label="Active"
-              value={loading ? "â€¦" : activeJobs}
+              value={loadingValue ?? activeJobs}
               hint="Accepted through in progress"
               tone="violet"
               onClick={onOpenRequests}
             />
             <MobileMetric
               label="Unassigned"
-              value={loading ? "â€¦" : unassignedJobs}
+              value={loadingValue ?? unassignedJobs}
               hint="Needs a team member"
               tone="amber"
               onClick={onOpenTeam}
             />
             <MobileMetric
               label="Collected"
-              value={loading ? "â€¦" : money(revenueThisMonth)}
+              value={loadingValue ?? money(revenueThisMonth)}
               hint={`${outstandingInvoices || 0} invoice(s) due`}
               tone="emerald"
               onClick={onOpenFinance}
@@ -285,28 +298,59 @@ export default function SboMobileCommandCenter({
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <QuickAction icon="+" label="New request" hint="Create or log work" onClick={onOpenRequests} primary />
-        <QuickAction icon="â—·" label="Schedule" hint="Jobs and meetings" onClick={onOpenCalendar} />
-        <QuickAction icon="ðŸ‘¥" label="Team" hint="Assign technicians" onClick={onOpenTeam} />
-        <QuickAction icon="â—Ž" label="Leads" hint="Follow up and close" onClick={onOpenLeads} />
+        <QuickAction
+          icon={Plus}
+          label="New request"
+          hint="Create or log work"
+          onClick={onOpenRequests}
+          primary
+        />
+        <QuickAction
+          icon={CalendarDays}
+          label="Schedule"
+          hint="Jobs and meetings"
+          onClick={onOpenCalendar}
+        />
+        <QuickAction
+          icon={Users}
+          label="Team"
+          hint="Assign technicians"
+          onClick={onOpenTeam}
+        />
+        <QuickAction
+          icon={Target}
+          label="Leads"
+          hint="Follow up and close"
+          onClick={onOpenLeads}
+        />
       </div>
 
       <div className="rounded-[2rem] border border-amber-400/20 bg-slate-950/75 p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="text-sm font-black text-white">Needs attention</div>
-            <div className="mt-1 text-xs text-slate-400">New, unassigned, quote, and invoice work.</div>
+            <div className="mt-1 text-xs text-slate-400">
+              New, unassigned, quote, and invoice work.
+            </div>
           </div>
-          <button type="button" onClick={onOpenRequests} className="rounded-2xl border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-xs font-black text-amber-200">
+          <button
+            type="button"
+            onClick={onOpenRequests}
+            className="rounded-2xl border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-xs font-black text-amber-200"
+          >
             View all
           </button>
         </div>
 
         <div className="mt-4 space-y-3">
           {attentionRows.length ? (
-            attentionRows.map((ticket) => <TicketRow key={ticket.id} ticket={ticket} onOpen={onOpenTicket} />)
+            attentionRows.map((ticket) => (
+              <TicketRow key={ticket.id} ticket={ticket} onOpen={onOpenTicket} />
+            ))
           ) : (
-            <div className="rounded-3xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-400">Nothing urgent right now.</div>
+            <div className="rounded-3xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-400">
+              Nothing urgent right now.
+            </div>
           )}
         </div>
       </div>
@@ -315,27 +359,57 @@ export default function SboMobileCommandCenter({
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="text-sm font-black text-white">Today</div>
-            <div className="mt-1 text-xs text-slate-400">Scheduled jobs for the current business.</div>
+            <div className="mt-1 text-xs text-slate-400">
+              Scheduled jobs for the current business.
+            </div>
           </div>
-          <button type="button" onClick={onOpenCalendar} className="rounded-2xl border border-violet-400/25 bg-violet-400/10 px-3 py-2 text-xs font-black text-violet-200">
+          <button
+            type="button"
+            onClick={onOpenCalendar}
+            className="rounded-2xl border border-violet-400/25 bg-violet-400/10 px-3 py-2 text-xs font-black text-violet-200"
+          >
             Calendar
           </button>
         </div>
 
         <div className="mt-4 space-y-3">
           {todayRows.length ? (
-            todayRows.map((ticket) => <TicketRow key={ticket.id} ticket={ticket} onOpen={onOpenTicket} />)
+            todayRows.map((ticket) => (
+              <TicketRow key={ticket.id} ticket={ticket} onOpen={onOpenTicket} />
+            ))
           ) : (
-            <div className="rounded-3xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-400">No jobs scheduled for today.</div>
+            <div className="rounded-3xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-400">
+              No jobs scheduled for today.
+            </div>
           )}
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 pb-2">
-        <QuickAction icon="â—‰" label="Customers" hint="History and requests" onClick={onOpenCustomers} />
-        <QuickAction icon="$" label="Finance" hint="Invoices and money" onClick={onOpenFinance} />
-        <QuickAction icon="âœ¦" label="Social" hint="Content and campaigns" onClick={onOpenSocial} />
-        <QuickAction icon="âš™" label="Settings" hint="Business controls" onClick={onOpenSettings} />
+        <QuickAction
+          icon={UserRound}
+          label="Customers"
+          hint="History and requests"
+          onClick={onOpenCustomers}
+        />
+        <QuickAction
+          icon={DollarSign}
+          label="Finance"
+          hint="Invoices and money"
+          onClick={onOpenFinance}
+        />
+        <QuickAction
+          icon={Megaphone}
+          label="Social"
+          hint="Content and campaigns"
+          onClick={onOpenSocial}
+        />
+        <QuickAction
+          icon={Settings}
+          label="Settings"
+          hint="Business controls"
+          onClick={onOpenSettings}
+        />
       </div>
     </section>
   );
