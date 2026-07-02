@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { buildSyncLiveBriefing } from "../lib/syncLiveBriefing";
 
 const SETTINGS_KEY = "syncworks_sync_voice_settings_v1";
 const HISTORY_KEY = "syncworks_sync_history_v1";
@@ -208,6 +209,7 @@ export default function SyncAssistant() {
   const [listening, setListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(true);
   const [notice, setNotice] = useState("");
+  const [preparing, setPreparing] = useState(false);
 
   const returnTo = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -325,26 +327,64 @@ export default function SyncAssistant() {
     recognition.start();
   }
 
-  function prepareRequest(rawValue = input) {
+  async function prepareRequest(rawValue = input) {
     const value = String(rawValue || "").trim();
     if (!value) {
       setNotice("Enter or speak a request first.");
       return;
     }
 
-    const result = classifyCommand(value);
-    const prepared = {
-      id: Date.now(),
-      request: value,
-      ...result,
-      status: "prepared",
-      createdAt: new Date().toISOString(),
-    };
+    setPreparing(true);
+    setNotice("SYNC is reading current workspace data...");
 
-    setDraft(prepared);
-    setHistory((current) => [prepared, ...current].slice(0, 12));
-    setNotice("Action card prepared. No external action has been taken.");
-    speak(`${result.title}. ${result.summary}`);
+    const fallback = classifyCommand(value);
+
+    try {
+      const liveResult = await buildSyncLiveBriefing(value);
+      const prepared = {
+        id: Date.now(),
+        request: value,
+        ...fallback,
+        ...liveResult,
+        status: "prepared",
+        createdAt: new Date().toISOString(),
+      };
+
+      setDraft(prepared);
+      setHistory((current) => [prepared, ...current].slice(0, 12));
+      setNotice(
+        liveResult.partial
+          ? "Live briefing prepared from the available workspace data."
+          : "Live briefing prepared. No external action has been taken."
+      );
+      speak(
+        `${prepared.title}. ${prepared.summary} ${
+          prepared.speech || ""
+        }`.trim()
+      );
+    } catch {
+      const prepared = {
+        id: Date.now(),
+        request: value,
+        ...fallback,
+        live: false,
+        bullets: [
+          "Live workspace data was unavailable.",
+          "No external action was taken.",
+        ],
+        status: "prepared",
+        createdAt: new Date().toISOString(),
+      };
+
+      setDraft(prepared);
+      setHistory((current) => [prepared, ...current].slice(0, 12));
+      setNotice(
+        "SYNC prepared a fallback action card because live data was unavailable."
+      );
+      speak(`${prepared.title}. ${prepared.summary}`);
+    } finally {
+      setPreparing(false);
+    }
   }
 
   return (
@@ -439,10 +479,18 @@ export default function SyncAssistant() {
                   <button
                     type="button"
                     onClick={() => prepareRequest()}
-                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 px-5 text-sm font-black text-white"
+                    disabled={preparing}
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 px-5 text-sm font-black text-white disabled:opacity-50"
                   >
-                    <Sparkles aria-hidden="true" className="h-5 w-5" />
-                    Prepare action
+                    {preparing ? (
+                      <LoaderCircle
+                        aria-hidden="true"
+                        className="h-5 w-5 animate-spin"
+                      />
+                    ) : (
+                      <Sparkles aria-hidden="true" className="h-5 w-5" />
+                    )}
+                    {preparing ? "Reading workspace..." : "Prepare live briefing"}
                   </button>
                 </div>
               </div>
@@ -640,13 +688,51 @@ export default function SyncAssistant() {
               </div>
 
               <div className="mt-3 rounded-3xl border border-violet-400/20 bg-violet-400/10 p-4">
-                <div className="text-sm font-black text-violet-100">
-                  {draft.area}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-sm font-black text-violet-100">
+                    {draft.area}
+                  </div>
+                  {draft.live ? (
+                    <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-emerald-200">
+                      Live workspace data
+                    </span>
+                  ) : null}
                 </div>
                 <div className="mt-2 text-sm leading-6 text-slate-300">
                   {draft.summary}
                 </div>
+
+                {Array.isArray(draft.bullets) && draft.bullets.length ? (
+                  <div className="mt-4 space-y-2">
+                    {draft.bullets.map((bullet) => (
+                      <div
+                        key={bullet}
+                        className="flex items-start gap-2 text-sm leading-6 text-slate-300"
+                      >
+                        <CheckCircle2
+                          aria-hidden="true"
+                          className="mt-1 h-4 w-4 shrink-0 text-cyan-300"
+                        />
+                        <span>{bullet}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
+
+              {draft.route ? (
+                <button
+                  type="button"
+                  onClick={() => navigate(draft.route)}
+                  className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/30 bg-cyan-500/15 px-4 text-sm font-black text-cyan-100"
+                >
+                  {draft.actionLabel || "Open workspace"}
+                  <ChevronRight
+                    aria-hidden="true"
+                    className="h-4 w-4"
+                  />
+                </button>
+              ) : null}
 
               <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
                 <CheckCircle2
@@ -661,7 +747,7 @@ export default function SyncAssistant() {
                 onClick={() => {
                   setDraft(null);
                   setNotice(
-                    "Saved as a prepared request. Backend tool execution will be added in the next SYNC phase."
+                    "Saved as a read-only SYNC briefing. No external action was taken."
                   );
                 }}
                 className="mt-5 min-h-12 w-full rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 px-5 text-sm font-black text-white"
