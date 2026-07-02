@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 
 import ProtectedRoute from "./components/ProtectedRoute";
+import SyncAssistantLauncher from "./components/sync/SyncAssistantLauncher";
 import PlatformRoute from "./components/PlatformRoute";
 
 import Login from "./pages/Login";
@@ -73,6 +74,7 @@ import EmployeeSettings from "./pages/EmployeeSettings";
 import CashFeeInvoices from "./pages/CashFeeInvoices";
 import SettingsHub from "./pages/SettingsHub";
 import LearningCenter from "./pages/LearningCenter";
+import SyncAssistant from "./pages/SyncAssistant";
 
 export default function App() {
   return (
@@ -121,6 +123,15 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Support />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/sync"
+          element={
+            <ProtectedRoute>
+              <SyncAssistant />
             </ProtectedRoute>
           }
         />
@@ -627,6 +638,7 @@ export default function App() {
           }
         />
       </Routes>
+      <SyncAssistantLauncher />
     </div>
   );
 }
