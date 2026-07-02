@@ -460,6 +460,7 @@ export default function SboDashboard() {
   const [kpiRows, setKpiRows] = useState([]);
   const [ticketRows, setTicketRows] = useState([]);
   const [billingStatus, setBillingStatus] = useState(null);
+  const [catalogRows, setCatalogRows] = useState([]);
   const [localBaseline, setLocalBaseline] = useState({});
 
   const activeBusiness = useMemo(() => {
@@ -482,15 +483,26 @@ export default function SboDashboard() {
     setErr("");
 
     try {
-      const [kpiRes, ticketsRes, billingRes] = await Promise.allSettled([
-        api.get("/kpis/business/", { params: { days: 30 } }),
-        api.get("/tickets/"),
-        api.get("/billing/status/"),
-      ]);
+      const [kpiRes, ticketsRes, billingRes, catalogRes] =
+        await Promise.allSettled([
+          api.get("/kpis/business/", { params: { days: 30 } }),
+          api.get("/tickets/"),
+          api.get("/billing/status/"),
+          api.get("/service-catalog/", { params: { active_only: true } }),
+        ]);
 
       setKpiRows(kpiRes.status === "fulfilled" ? safeList(kpiRes.value?.data) : []);
       setTicketRows(ticketsRes.status === "fulfilled" ? safeList(ticketsRes.value?.data) : []);
-      setBillingStatus(billingRes.status === "fulfilled" ? billingRes.value?.data || null : null);
+      setBillingStatus(
+        billingRes.status === "fulfilled"
+          ? billingRes.value?.data || null
+          : null
+      );
+      setCatalogRows(
+        catalogRes.status === "fulfilled"
+          ? safeList(catalogRes.value?.data)
+          : []
+      );
 
       try {
         const saved = JSON.parse(localStorage.getItem(baselineKey(activeBusinessId)) || "{}");
@@ -565,9 +577,16 @@ export default function SboDashboard() {
     const baseZip = String(biz?.base_zip || "").trim();
     const radius = Number(biz?.service_radius_miles ?? biz?.effective_service_radius_miles ?? 0);
     const acceptsMarketplace = !!biz?.accepts_marketplace_tickets;
-    const businessPresenceMode = String(biz?.business_presence_mode || "").trim();
-    const stripeConnected = !!billingStatus?.stripe_setup_complete;
-    const catalogReady = false;
+    const businessPresenceMode = String(
+      biz?.business_presence_mode || ""
+    ).trim();
+    const stripeConnected = !!(
+      billingStatus?.stripe_setup_complete ||
+      billingStatus?.stripe_connected ||
+      billingStatus?.connect_onboarding_complete ||
+      billingStatus?.charges_enabled
+    );
+    const catalogReady = catalogRows.length > 0;
 
     return {
       hasServices: servicesOffered.length > 0,
@@ -579,8 +598,10 @@ export default function SboDashboard() {
       servicesCount: servicesOffered.length,
       baseZip,
       radius,
+      isOnline: businessPresenceMode === "online",
+      catalogCount: catalogRows.length,
     };
-  }, [activeBusiness, billingStatus]);
+  }, [activeBusiness, billingStatus, catalogRows]);
 
   function openSettingsSection(section, extra = "") {
     const qs = new URLSearchParams();
@@ -691,6 +712,16 @@ export default function SboDashboard() {
             onOpenSettings={() => navigate("/sbo/settings?return=%2Fsbo")}
           />
 
+          <SboSetupReadiness
+            loading={loading}
+            setupState={setupState}
+            onOpenServices={() => openSettingsSection("services")}
+            onOpenCoverage={() => openSettingsSection("marketplace")}
+            onOpenMarketplace={() => openSettingsSection("marketplace")}
+            onOpenPayments={() => navigate("/sbo/finance?section=payments")}
+            onOpenCatalog={() => navigate("/sbo/catalog")}
+          />
+
           <div className="hidden lg:block">
           <SboCommandHero
             businessName={businessName}
@@ -780,13 +811,6 @@ export default function SboDashboard() {
             </div>
 
             <div className="space-y-5">
-              <SboSetupReadiness
-                loading={loading}
-                setupState={setupState}
-                onOpenSetup={() => navigate("/sbo/settings?return=%2Fsbo&setup=1")}
-                onOpenCatalog={() => navigate("/sbo/catalog")}
-              />
-
               <UpcomingScheduleCard
                 tickets={ticketRows}
                 onOpenCalendar={() => navigate("/calendar")}
