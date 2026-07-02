@@ -75,6 +75,7 @@ import CashFeeInvoices from "./pages/CashFeeInvoices";
 import SettingsHub from "./pages/SettingsHub";
 import LearningCenter from "./pages/LearningCenter";
 import SyncAssistant from "./pages/SyncAssistant";
+import SyncHistory from "./pages/SyncHistory";
 
 export default function App() {
   return (
@@ -132,6 +133,15 @@ export default function App() {
           element={
             <ProtectedRoute>
               <SyncAssistant />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/sync/history"
+          element={
+            <ProtectedRoute>
+              <SyncHistory />
             </ProtectedRoute>
           }
         />
