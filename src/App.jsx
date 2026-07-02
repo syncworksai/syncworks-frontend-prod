@@ -34,6 +34,7 @@ import SboCustomers from "./pages/sbo/SboCustomers";
 import SboLeads from "./pages/sbo/SboLeads";
 import SboReports from "./pages/sbo/SboReports";
 import SboFinance from "./pages/sbo/SboFinance";
+import SboPartners from "./pages/sbo/SboPartners";
 
 import PlatformDashboard from "./pages/PlatformDashboard";
 import PlatformSupportRequests from "./pages/platform/PlatformSupportRequests";
@@ -219,6 +220,15 @@ export default function App() {
           element={
             <ProtectedRoute>
               <SboFinance />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/sbo/partners"
+          element={
+            <ProtectedRoute>
+              <SboPartners />
             </ProtectedRoute>
           }
         />

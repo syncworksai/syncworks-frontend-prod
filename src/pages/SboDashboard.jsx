@@ -621,6 +621,7 @@ export default function SboDashboard() {
     { label: "Customers", icon: "◉", onClick: () => navigate("/sbo/customers") },
     { label: "Leads", icon: "◎", onClick: () => navigate("/sbo/leads") },
     { label: "Employees", icon: "👥", onClick: () => navigate("/team/invites") },
+    { label: "Partners", icon: "◇", onClick: () => navigate("/sbo/partners") },
     { label: "Product Settings", icon: "⚙", onClick: () => navigate("/sbo/catalog") },
     { label: "Finance", icon: "$", onClick: () => navigate("/sbo/finance") },
     { label: "Social Media", icon: "✦", onClick: () => navigate("/sbo/growth") },
