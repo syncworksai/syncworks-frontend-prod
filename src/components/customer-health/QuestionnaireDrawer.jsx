@@ -252,6 +252,7 @@ export default function QuestionnaireDrawer({
   setProfile,
   snapshot,
   setSnapshot,
+  onBuildPlan,
 }) {
   const safeProfile = profile || {};
 
@@ -333,6 +334,24 @@ export default function QuestionnaireDrawer({
           completed_at: completedAt,
         })
       );
+    }
+
+    if (typeof onBuildPlan === "function") {
+      onBuildPlan({
+        ...safeProfile,
+        ai_plan_intake_completed_at:
+          completedAt,
+        training_path: "ai_designed",
+        preferred_start_time:
+          safeProfile.preferred_start_time ||
+          safeProfile.preferred_time ||
+          "08:00",
+        preferred_time:
+          safeProfile.preferred_start_time ||
+          safeProfile.preferred_time ||
+          "08:00",
+      });
+      return;
     }
 
     onClose?.();

@@ -48,6 +48,7 @@ import ActiveWorkoutSessionDrawer from "../components/customer-health/ActiveWork
 import HealthMobileQuickNav from "../components/customer-health/HealthMobileQuickNav";
 import "../components/customer-health/healthUiPolish.css";
 import { buildAdaptiveWorkout } from "../components/customer-health/healthAdaptiveWorkoutGenerator";
+import { buildAiWeeklyPlan } from "../components/customer-health/healthAiWeeklyPlan";
 import {
   backupHealthHistory,
   getHealthHistoryBackup,
@@ -2111,6 +2112,104 @@ export default function CustomerHealth() {
     setDrawer("planner");
   }
 
+  function handleBuildAiWeeklyPlan(
+    intakeProfile = profile
+  ) {
+    const result = buildAiWeeklyPlan({
+      profile: intakeProfile,
+      snapshot: syncedSnapshot,
+    });
+
+    if (!result.week_plan.length) {
+      return;
+    }
+
+    setWorkouts((previous) => {
+      const safePrevious = Array.isArray(previous)
+        ? previous
+        : [];
+
+      const retained = safePrevious.filter(
+        (item) =>
+          item?.source !== "ai_weekly_plan" ||
+          item?.ai_plan_id ===
+            result.id
+      );
+
+      return [
+        ...result.templates,
+        ...retained.filter(
+          (item) =>
+            !result.templates.some(
+              (template) =>
+                template.id === item?.id
+            )
+        ),
+      ];
+    });
+
+    setSnapshot((previous) => {
+      const existingPlan = Array.isArray(
+        previous.week_plan
+      )
+        ? previous.week_plan
+        : [];
+
+      const preserved = existingPlan.filter(
+        (item) =>
+          item?.status === "Completed" ||
+          item?.source !== "ai_weekly_plan"
+      );
+
+      return {
+        ...previous,
+        week_plan: [
+          ...preserved,
+          ...result.week_plan,
+        ].sort((left, right) =>
+          `${left?.ymd || ""}T${
+            left?.time || "23:59"
+          }`.localeCompare(
+            `${right?.ymd || ""}T${
+              right?.time || "23:59"
+            }`
+          )
+        ),
+        workout:
+          result.first_session?.workout_name ||
+          previous.workout ||
+          "",
+        today_workout_id:
+          result.first_session?.id || "",
+        preferred_workout_time:
+          result.preferred_time,
+        planned_workouts:
+          preserved.filter(
+            (item) =>
+              item?.workout_name &&
+              item?.status !== "Completed"
+          ).length +
+          result.week_plan.length,
+        ai_plan_ready: true,
+        ai_plan_id: result.id,
+        ai_plan_generated_at:
+          result.generated_at,
+        ai_plan_summary: result.summary,
+        last_coach_change_title:
+          "Your AI training plan is scheduled",
+        last_coach_change_reason:
+          `${result.summary.total_sessions} sessions were built around your ${result.primary_goal.toLowerCase()} goal and scheduled at ${result.preferred_time}.`,
+        updated_at:
+          new Date().toISOString(),
+      };
+    });
+
+    setActivePlannerItem(
+      result.first_session
+    );
+    setDrawer("planner");
+  }
+
   function handleBuildNextWeek() {
     buildCurrentWeek("adaptive");
   }
@@ -3101,6 +3200,9 @@ export default function CustomerHealth() {
             setProfile={setProfile}
             snapshot={snapshot}
             setSnapshot={setSnapshot}
+            onBuildPlan={
+              handleBuildAiWeeklyPlan
+            }
           />
 
           <WorkoutStudioDrawer
