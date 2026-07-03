@@ -1,4 +1,6 @@
 import React, { useMemo } from "react";
+import { ArrowUpRight, Mic, RefreshCw } from "lucide-react";
+import "./CustomerMobileHome.css";
 
 const list = (value) => (Array.isArray(value) ? value : []);
 const upper = (value) => String(value || "NEW").toUpperCase();
@@ -78,15 +80,11 @@ function Action({ icon, label, hint, onClick, primary = false }) {
     <button
       type="button"
       onClick={onClick}
-      className={
-        primary
-          ? "flex min-h-[82px] items-center gap-3 rounded-3xl border border-cyan-300/35 bg-gradient-to-r from-cyan-500 to-blue-600 p-4 text-left shadow-[0_0_30px_rgba(34,211,238,0.22)]"
-          : "flex min-h-[82px] items-center gap-3 rounded-3xl border border-slate-800 bg-slate-950/75 p-4 text-left"
-      }
+      className={`customer-mobile-action flex min-h-[82px] items-center gap-3 rounded-3xl p-4 text-left ${
+        primary ? "customer-mobile-action--primary" : ""
+      }`}
     >
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-white/15 bg-white/10 text-xl">
-        {icon}
-      </span>
+      <span className="customer-mobile-action-icon text-xl">{icon}</span>
       <span className="min-w-0">
         <span className="block text-sm font-black text-white">{label}</span>
         <span className="mt-0.5 block text-xs text-slate-300">{hint}</span>
@@ -100,7 +98,7 @@ function RequestCard({ ticket, onOpen }) {
     <button
       type="button"
       onClick={() => onOpen(ticket.id)}
-      className="w-full rounded-3xl border border-slate-800 bg-slate-950/70 p-4 text-left"
+      className="customer-mobile-request-card w-full rounded-3xl border p-4 text-left"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -174,14 +172,14 @@ export default function CustomerMobileHome({
     : 0;
 
   return (
-    <section className="space-y-4 lg:hidden">
-      <div className="relative overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-950/80 p-5 shadow-[0_0_60px_rgba(34,211,238,0.10)]">
+    <section className="customer-mobile-cockpit space-y-4 lg:hidden">
+      <div className="customer-mobile-hero p-5">
         <div className="absolute -right-20 -top-24 h-60 w-60 rounded-full bg-cyan-400/15 blur-3xl" />
         <div className="relative">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-200">
-                Personal home
+              <div className="customer-mobile-brand">
+                Personal command center
               </div>
               <h1 className="mt-2 text-3xl font-black tracking-tight text-white">
                 Hey {displayName}
@@ -193,10 +191,10 @@ export default function CustomerMobileHome({
             <button
               type="button"
               onClick={onRefresh}
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-slate-700 bg-slate-900/80 text-lg text-slate-200"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-cyan-400/25 bg-cyan-500/10 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.10)]"
               aria-label="Refresh home"
             >
-              ↻
+              <RefreshCw aria-hidden="true" className="h-5 w-5" />
             </button>
           </div>
 
@@ -204,7 +202,7 @@ export default function CustomerMobileHome({
             <button
               type="button"
               onClick={onOpenRequests}
-              className="rounded-3xl border border-cyan-400/20 bg-cyan-400/10 p-4 text-left"
+              className="customer-mobile-stat rounded-3xl border border-cyan-400/25 p-4 text-left text-cyan-200"
             >
               <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
                 Open requests
@@ -218,7 +216,7 @@ export default function CustomerMobileHome({
             <button
               type="button"
               onClick={onOpenMoney}
-              className="rounded-3xl border border-amber-400/20 bg-amber-400/10 p-4 text-left"
+              className="customer-mobile-stat rounded-3xl border border-amber-400/25 p-4 text-left text-amber-200"
             >
               <div className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-200">
                 Due now
@@ -310,7 +308,7 @@ export default function CustomerMobileHome({
         </button>
       ) : null}
 
-      <div className="rounded-[2rem] border border-slate-800 bg-slate-950/75 p-4">
+      <div className="customer-mobile-panel rounded-[2rem] p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="text-lg font-black text-white">Active requests</div>
@@ -347,6 +345,26 @@ export default function CustomerMobileHome({
           )}
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={() => window.location.assign("/sync/voice")}
+        className="customer-mobile-sync-dock text-left"
+        aria-label="Open SYNC Voice"
+      >
+        <span className="customer-mobile-sync-orb">
+          <Mic aria-hidden="true" className="h-6 w-6" />
+        </span>
+        <span className="min-w-0">
+          <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
+            SYNC Voice
+          </span>
+          <span className="mt-1 block truncate text-sm font-bold text-white">
+            Ask anything. Handle life faster.
+          </span>
+        </span>
+        <ArrowUpRight aria-hidden="true" className="h-5 w-5 text-violet-200" />
+      </button>
 
       <div className="grid grid-cols-2 gap-3 pb-2">
         <Action icon="$" label="Money" hint="Bills and budgeting" onClick={onOpenMoney} />
