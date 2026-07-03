@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import ModeBar from "../components/ModeBar";
 import { useAuth } from "../auth/AuthContext";
+import { MobileNavSettings } from "../components/navigation/RoleAwareMobileNav";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -191,15 +192,19 @@ export default function SettingsHub() {
     const fullName = `${String(u.first_name || "").trim()} ${String(u.last_name || "").trim()}`
       .trim();
 
-    setPerson((p) => ({
-      ...p,
-      name: fullName || u.name || u.username || "",
-      email: u.email || "",
-      phone: u.phone || u.phone_number || "",
-      address: u.address || "",
-      profilePicUrl: "",
-      allowSmsFromSbos: true,
-    }));
+    const frameId = window.requestAnimationFrame(() => {
+      setPerson((p) => ({
+        ...p,
+        name: fullName || u.name || u.username || "",
+        email: u.email || "",
+        phone: u.phone || u.phone_number || "",
+        address: u.address || "",
+        profilePicUrl: "",
+        allowSmsFromSbos: true,
+      }));
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
   }, [user]);
 
   function toastOk(s) {
@@ -209,10 +214,6 @@ export default function SettingsHub() {
 
   function goUpgrade() {
     nav(`/upgrade?return=${encodeURIComponent(returnTo)}`);
-  }
-
-  function goConnect() {
-    nav(`/connect?return=${encodeURIComponent(returnTo)}`);
   }
 
   function openModule(key) {
@@ -241,7 +242,8 @@ export default function SettingsHub() {
 
   const tabs = [
     { key: "ACCOUNT", label: "Account", icon: "👤" },
-    { key: "CUSTOMER", label: "Customer", icon: "🧾" },
+    { key: "NAVIGATION", label: "Navigation", icon: "🧭" },
+    { key: "CUSTOMER", label: "Personal", icon: "🧾" },
     { key: "MODULES", label: "Modules", icon: "🧩" },
   ];
 
@@ -308,6 +310,10 @@ export default function SettingsHub() {
           <div className="text-sm text-emerald-200 bg-emerald-900/10 border border-emerald-800 rounded-2xl p-3">
             {msg}
           </div>
+        ) : null}
+
+        {tab === "NAVIGATION" ? (
+          <MobileNavSettings />
         ) : null}
 
         {tab === "ACCOUNT" ? (

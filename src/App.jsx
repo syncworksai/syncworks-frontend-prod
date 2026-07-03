@@ -8,6 +8,7 @@ import {
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import SyncAssistantLauncher from "./components/sync/SyncAssistantLauncher";
+import RoleAwareMobileNav from "./components/navigation/RoleAwareMobileNav";
 import PlatformRoute from "./components/PlatformRoute";
 
 import Login from "./pages/Login";
@@ -659,6 +660,7 @@ export default function App() {
         />
       </Routes>
       <SyncAssistantLauncher />
+      <RoleAwareMobileNav />
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import React from "react";
 import ModeBar from "../ModeBar";
-import BottomMobileNav from "./BottomMobileNav";
 import { cx } from "./GlassCard";
 
 export default function DashboardShell({
@@ -10,8 +9,6 @@ export default function DashboardShell({
   modeBarSubtitle,
   rightActions,
   children,
-  bottomNavItems,
-  bottomCenterAction,
   maxWidth = "max-w-7xl",
   className = "",
 }) {
@@ -39,7 +36,6 @@ export default function DashboardShell({
         {children}
       </main>
 
-      <BottomMobileNav items={bottomNavItems} centerAction={bottomCenterAction} />
     </div>
   );
 }
