@@ -202,6 +202,8 @@ export default function RoleAwareMobileNav() {
 
   const hidden = useMemo(() => {
     if (!navMode) return true;
+    const isTicketDetailRoute = /^\/tickets\/[^/]+\/?$/.test(pathname);
+    if (isTicketDetailRoute) return true;
     return [
       "/login",
       "/register",
