@@ -221,19 +221,28 @@ const SyncVoiceVisualizer = memo(function SyncVoiceVisualizer({
         {transcript || responseText ? (
           <div className="sync-voice-text-panel">
             {transcript ? (
-              <div className="text-sm leading-6 text-slate-300">
-                <strong>You:</strong> {transcript}
+              <div className="sync-voice-message sync-voice-message--user">
+                <span className="sync-voice-message-dot" aria-hidden="true" />
+                <div>
+                  <div className="sync-voice-message-label">You</div>
+                  <div className="sync-voice-message-copy">{transcript}</div>
+                </div>
               </div>
             ) : null}
             {responseText ? (
-              <div className="mt-2 text-sm leading-6 text-slate-300">
-                <strong>SYNC:</strong> {responseText}
+              <div className="sync-voice-message sync-voice-message--sync">
+                <span className="sync-voice-message-dot" aria-hidden="true" />
+                <div>
+                  <div className="sync-voice-message-label">SYNC</div>
+                  <div className="sync-voice-message-copy">{responseText}</div>
+                </div>
               </div>
             ) : null}
           </div>
         ) : null}
 
-        <div className="sync-voice-controls">
+        <div className="sync-voice-controls-dock">
+          <div className="sync-voice-controls">
           <button
             type="button"
             className="sync-voice-control"
@@ -280,6 +289,12 @@ const SyncVoiceVisualizer = memo(function SyncVoiceVisualizer({
           >
             <PhoneOff aria-hidden="true" className="h-5 w-5" />
           </button>
+          </div>
+          <div className="sync-voice-control-labels" aria-hidden="true">
+            <span>{muted ? "Unmute" : "Mute"}</span>
+            <span>{normalizedStatus === "listening" ? "Stop" : "Talk"}</span>
+            <span>End</span>
+          </div>
         </div>
       </div>
     </section>

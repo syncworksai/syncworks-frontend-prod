@@ -73,6 +73,8 @@ export default function SyncVoiceDemo() {
   const recognitionRef = useRef(null);
   const transcriptRef = useRef("");
   const sessionEndedRef = useRef(false);
+  const requestIdRef = useRef(0);
+  const processingRef = useRef(false);
 
   const [status, setStatus] = useState("idle");
   const [muted, setMuted] = useState(false);
@@ -158,11 +160,17 @@ export default function SyncVoiceDemo() {
   async function prepareVoiceRequest(rawValue) {
     const value = String(rawValue || "").trim();
 
+    if (processingRef.current) return;
+
     if (!value) {
       setNotice("SYNC did not receive a request. Try again or type it.");
       setStatus("error");
       return;
     }
+
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    processingRef.current = true;
 
     setStatus("thinking");
     setNotice("SYNC is reading your current workspace...");
@@ -170,6 +178,7 @@ export default function SyncVoiceDemo() {
 
     try {
       const result = await buildSyncLiveBriefing(value);
+      if (requestIdRef.current !== requestId || sessionEndedRef.current) return;
       const response = responseFromBriefing(result);
 
       setResponseText(response);
@@ -180,16 +189,24 @@ export default function SyncVoiceDemo() {
       );
       speakResponse(response);
     } catch {
+      if (requestIdRef.current !== requestId || sessionEndedRef.current) return;
+
       const fallback =
         "I could not reach all live workspace data, but your request was captured. Open the main SYNC page to continue with a reviewable action card.";
 
       setResponseText(fallback);
       setNotice("Live workspace data was unavailable.");
       speakResponse(fallback);
+    } finally {
+      if (requestIdRef.current === requestId) {
+        processingRef.current = false;
+      }
     }
   }
 
   function startRecognition() {
+    if (processingRef.current || recognitionRef.current) return;
+
     sessionEndedRef.current = false;
     setNotice("");
     setResponseText("");
@@ -271,6 +288,8 @@ export default function SyncVoiceDemo() {
   }
 
   function resetSession() {
+    requestIdRef.current += 1;
+    processingRef.current = false;
     sessionEndedRef.current = false;
     recognitionRef.current?.abort?.();
     recognitionRef.current = null;
@@ -284,6 +303,8 @@ export default function SyncVoiceDemo() {
   }
 
   function endSession() {
+    requestIdRef.current += 1;
+    processingRef.current = false;
     sessionEndedRef.current = true;
     recognitionRef.current?.abort?.();
     recognitionRef.current = null;
