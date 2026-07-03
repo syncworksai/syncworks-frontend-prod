@@ -175,7 +175,7 @@ export default function HealthMobileQuickNav({
 
             <span className="mt-0.5 max-w-[112px] truncate text-[8px] font-bold normal-case tracking-normal text-emerald-100/75">
               {workoutName}
-              {workoutTime ? ` Â· ${workoutTime}` : ""}
+              {workoutTime ? ` \u00B7 ${workoutTime}` : ""}
             </span>
           </button>
 

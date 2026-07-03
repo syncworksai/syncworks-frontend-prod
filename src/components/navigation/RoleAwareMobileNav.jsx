@@ -202,9 +202,15 @@ export default function RoleAwareMobileNav() {
 
   const hidden = useMemo(() => {
     if (!navMode) return true;
-    return ["/login", "/register", "/upgrade", "/connect", "/sync/voice"].some((prefix) =>
-      pathname.startsWith(prefix)
-    );
+    return [
+      "/login",
+      "/register",
+      "/upgrade",
+      "/connect",
+      "/sync/voice",
+      "/customer/health",
+      "/health",
+    ].some((prefix) => pathname.startsWith(prefix));
   }, [navMode, pathname]);
 
   useEffect(() => {
