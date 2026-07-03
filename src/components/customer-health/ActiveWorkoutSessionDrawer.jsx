@@ -50,6 +50,11 @@ import {
   toggleWarmupItem,
 } from "./healthWarmupCooldown";
 
+import {
+  hydrateSessionWithExerciseMemory,
+  persistSessionExerciseMemory,
+} from "./healthExerciseMemory";
+
 import TrainerExerciseIntroCard from "./TrainerExerciseIntroCard";
 import CoachVoiceSettingsCard from "./CoachVoiceSettingsCard";
 import TrainerNudgeCard from "./TrainerNudgeCard";
@@ -980,6 +985,65 @@ function SetHistory({
 
   return (
     <div className="space-y-3">
+      {exercise?.previous_performance ? (
+        <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.07] p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
+                Previous Exercise Memory
+              </div>
+
+              <div className="mt-1 text-xs text-slate-400">
+                From {exercise.previous_performance.last_workout_name || "a previous workout"}
+                {exercise.previous_performance.last_performed_at
+                  ? ` Â· ${new Date(
+                      exercise.previous_performance.last_performed_at
+                    ).toLocaleDateString()}`
+                  : ""}
+              </div>
+            </div>
+
+            {exercise.previous_performance.average_rpe ? (
+              <div className="rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1 text-[9px] font-black text-fuchsia-100">
+                Avg RPE {exercise.previous_performance.average_rpe}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(exercise.previous_performance.last_sets || [])
+              .filter((set) => set.set_type !== "warmup")
+              .slice(0, 5)
+              .map((set, index) => (
+                <div
+                  key={set.id || index}
+                  className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-black text-white"
+                >
+                  {set.weight || "BW"} x {set.reps || "-"}
+                  {set.rpe ? ` Â· RPE ${set.rpe}` : ""}
+                </div>
+              ))}
+          </div>
+
+          {exercise?.memory_recommendation ? (
+            <div className="mt-3 rounded-xl border border-lime-300/20 bg-lime-300/10 p-3">
+              <div className="text-[9px] font-black uppercase tracking-[0.15em] text-lime-200">
+                SYNC Starting Target
+              </div>
+
+              <div className="mt-1 text-sm font-black text-white">
+                {exercise.memory_recommendation.weight || "BW"} x{" "}
+                {exercise.memory_recommendation.reps || "-"}
+              </div>
+
+              <div className="mt-1 text-[11px] leading-5 text-lime-50/75">
+                {exercise.memory_recommendation.reason}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       <div
         ref={targetControlsRef}
         className="rounded-2xl border border-fuchsia-300/20 bg-fuchsia-300/[0.07] p-3"
@@ -1926,14 +1990,17 @@ export default function ActiveWorkoutSessionDrawer({
     }
 
     const initializedSession =
-      ensureDynamicPreparation(
-        restored ||
-          createWorkoutSessionFromPlannerItem({
-            plannerItem,
-            workouts,
-          }),
-        snapshot || {}
-      );
+      hydrateSessionWithExerciseMemory({
+        session: ensureDynamicPreparation(
+          restored ||
+            createWorkoutSessionFromPlannerItem({
+              plannerItem,
+              workouts,
+            }),
+          snapshot || {}
+        ),
+        history,
+      });
 
     setSession(initializedSession);
 
@@ -1991,6 +2058,11 @@ export default function ActiveWorkoutSessionDrawer({
   useEffect(() => {
     if (!session) return;
 
+    persistSessionExerciseMemory(
+      session,
+      history
+    );
+
     if (session.status === "active") {
       persistWorkoutSession(
         session,
@@ -2000,7 +2072,7 @@ export default function ActiveWorkoutSessionDrawer({
     }
 
     clearPersistedWorkout();
-  }, [session, plannerItem]);
+  }, [session, plannerItem, history]);
 
   useEffect(() => {
     if (!open || !session?.id) {
