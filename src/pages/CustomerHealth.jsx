@@ -3162,6 +3162,15 @@ export default function CustomerHealth() {
             snapshot={syncedSnapshot}
             setSnapshot={setSnapshot}
             workouts={workouts}
+            onStartWorkout={
+              startPlannerWorkout
+            }
+            onOpenMyWorkouts={() =>
+              setDrawer("workout")
+            }
+            onEditTrainingProfile={() =>
+              setDrawer("questionnaire")
+            }
           />
 
           <HealthQuickLogDrawer

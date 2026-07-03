@@ -1,6 +1,6 @@
 // src/components/customer-health/HealthPlannerDrawer.jsx
 import React from "react";
-import { prettyDate } from "./healthStorage";
+import { prettyDate, uid } from "./healthStorage";
 
 function buildGoogleCalendarLink(item) {
   if (!item?.ymd || !item?.workout_name) return "#";
@@ -28,6 +28,24 @@ function buildGoogleCalendarLink(item) {
   params.set("dates", `${fmt(start)}/${fmt(end)}`);
 
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+function addDaysYmd(ymd, days) {
+  const date = new Date(`${ymd}T12:00:00`);
+
+  if (!Number.isFinite(date.getTime())) {
+    return ymd;
+  }
+
+  date.setDate(date.getDate() + days);
+
+  const year = date.getFullYear();
+  const month = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 function DrawerShell({ open, onClose, children }) {
@@ -67,6 +85,9 @@ export default function HealthPlannerDrawer({
   snapshot,
   setSnapshot,
   workouts,
+  onStartWorkout,
+  onOpenMyWorkouts,
+  onEditTrainingProfile,
 }) {
   const weekPlan = Array.isArray(snapshot?.week_plan) ? snapshot.week_plan : [];
 
@@ -95,18 +116,148 @@ export default function HealthPlannerDrawer({
     }));
   }
 
-  const nextPlanned = weekPlan.find(
-    (item) => item?.workout_name && item?.status !== "Completed"
+  const activeSessions = weekPlan.filter(
+    (item) =>
+      item?.workout_name &&
+      !["Completed", "Skipped", "Rescheduled"].includes(
+        String(item?.status || "")
+      )
   );
+
+  const completedCount = weekPlan.filter(
+    (item) => item?.status === "Completed"
+  ).length;
+
+  const nextPlanned = activeSessions[0];
+
+  function repeatPlanNextWeek() {
+    if (!activeSessions.length) return;
+
+    const createdAt = new Date().toISOString();
+    const existingKeys = new Set(
+      weekPlan.map(
+        (item) =>
+          `${item?.ymd || ""}|${
+            item?.time || ""
+          }|${item?.workout_id || item?.workout_name || ""}`
+      )
+    );
+
+    const duplicates = activeSessions
+      .map((item) => {
+        const nextYmd = addDaysYmd(
+          item.ymd,
+          7
+        );
+
+        const key = `${nextYmd}|${
+          item?.time || ""
+        }|${item?.workout_id || item?.workout_name || ""}`;
+
+        if (existingKeys.has(key)) {
+          return null;
+        }
+
+        existingKeys.add(key);
+
+        return {
+          ...item,
+          id: uid("repeated-session"),
+          ymd: nextYmd,
+          status: "Planned",
+          completed_at: undefined,
+          skipped_at: undefined,
+          resolved_at: undefined,
+          rescheduled_at: undefined,
+          repeated_from_id: item.id,
+          repeated_at: createdAt,
+          source:
+            item.source ||
+            "planner_repeat",
+        };
+      })
+      .filter(Boolean);
+
+    if (!duplicates.length) return;
+
+    setSnapshot((previous) => ({
+      ...previous,
+      week_plan: [
+        ...(
+          Array.isArray(previous.week_plan)
+            ? previous.week_plan
+            : []
+        ),
+        ...duplicates,
+      ].sort((left, right) =>
+        `${left?.ymd || ""}T${
+          left?.time || "23:59"
+        }`.localeCompare(
+          `${right?.ymd || ""}T${
+            right?.time || "23:59"
+          }`
+        )
+      ),
+      planned_workouts:
+        Number(previous.planned_workouts || 0) +
+        duplicates.length,
+      last_coach_change_title:
+        "Next week is scheduled",
+      last_coach_change_reason:
+        `${duplicates.length} sessions were repeated into next week at the same times.`,
+      updated_at: createdAt,
+    }));
+  }
 
   return (
     <DrawerShell open={open} onClose={onClose}>
       <div className="space-y-4">
         <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4">
-          <div className="text-sm font-black text-white">Planner tips</div>
-          <div className="mt-2 text-sm leading-6 text-emerald-100/90">
-            Give users a clear weekly plan, a time to train, and an easy way to add the next session to calendar.
-            This is what makes them come back to the app daily.
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-sm font-black text-white">
+                Your Training Schedule
+              </div>
+              <div className="mt-2 text-sm leading-6 text-emerald-100/90">
+                Start the next session, adjust any day, repeat the plan into next week, or open the full workout studio.
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <div className="rounded-full border border-white/10 bg-black/15 px-3 py-1.5 text-xs font-black text-white">
+                {activeSessions.length} upcoming
+              </div>
+              <div className="rounded-full border border-white/10 bg-black/15 px-3 py-1.5 text-xs font-black text-white">
+                {completedCount} completed
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            <button
+              type="button"
+              onClick={repeatPlanNextWeek}
+              disabled={!activeSessions.length}
+              className="h-11 rounded-2xl border border-lime-300/30 bg-lime-300/15 px-3 text-sm font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Repeat Next Week
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenMyWorkouts}
+              className="h-11 rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-3 text-sm font-black text-cyan-100"
+            >
+              Open My Workouts
+            </button>
+
+            <button
+              type="button"
+              onClick={onEditTrainingProfile}
+              className="h-11 rounded-2xl border border-fuchsia-400/30 bg-fuchsia-500/10 px-3 text-sm font-black text-fuchsia-100"
+            >
+              Edit Training Profile
+            </button>
           </div>
 
           {nextPlanned ? (
@@ -218,6 +369,20 @@ export default function HealthPlannerDrawer({
                   <div className="rounded-full border border-fuchsia-500/20 bg-fuchsia-500/10 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-fuchsia-100">
                     {item.workout_name}
                   </div>
+
+                  {!["Completed", "Skipped", "Rescheduled"].includes(
+                    String(item.status || "")
+                  ) ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onStartWorkout?.(item)
+                      }
+                      className="inline-flex h-9 items-center justify-center rounded-xl border border-lime-300/30 bg-lime-300/15 px-3 text-xs font-black text-lime-100"
+                    >
+                      Start Workout
+                    </button>
+                  ) : null}
 
                   <a
                     href={buildGoogleCalendarLink(item)}
