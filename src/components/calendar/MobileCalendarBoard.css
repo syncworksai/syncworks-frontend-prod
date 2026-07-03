@@ -1,11 +1,14 @@
 .sw-mobile-cal {
+  position: relative;
+  min-height: 34rem;
   border: 1px solid rgba(56, 189, 248, 0.2);
   border-radius: 1.75rem;
-  padding: 1rem;
+  padding: 1rem 1rem 5.4rem;
   background:
     radial-gradient(circle at 85% 0%, rgba(56, 189, 248, 0.14), transparent 28%),
     linear-gradient(180deg, rgba(7, 16, 36, 0.97), rgba(2, 6, 23, 0.94));
   box-shadow: 0 24px 70px rgba(2, 6, 23, 0.58);
+  overflow: hidden;
 }
 
 .sw-mobile-cal-top,
@@ -54,6 +57,7 @@
   color: #fff;
   font-size: 0.75rem;
   font-weight: 900;
+  box-shadow: 0 0 26px rgba(34, 211, 238, 0.14);
 }
 
 .sw-mobile-cal-add svg,
@@ -91,6 +95,7 @@
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 0.25rem;
   margin-top: 0.85rem;
+  touch-action: pan-y;
 }
 
 .sw-mobile-cal-week button {
@@ -108,6 +113,11 @@
 .sw-mobile-cal-week button.active {
   border-color: rgba(103, 232, 249, 0.44);
   background: linear-gradient(180deg, rgba(8, 145, 178, 0.25), rgba(79, 70, 229, 0.16));
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.1);
+}
+
+.sw-mobile-cal-week button.is-today:not(.active) {
+  border-color: rgba(52, 211, 153, 0.22);
 }
 
 .sw-mobile-cal-week span {
@@ -141,29 +151,66 @@
 
 .sw-mobile-cal-date > div {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 0.45rem;
   color: #fff;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
+}
+
+.sw-mobile-cal-date strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sw-mobile-cal-date svg {
+  flex: none;
   color: #67e8f9;
 }
 
 .sw-mobile-cal-date > span {
+  flex: none;
   color: #64748b;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
+}
+
+.sw-mobile-cal-now {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+  color: #fb7185;
+  font-size: 0.6rem;
+}
+
+.sw-mobile-cal-now > span {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 12px currentColor;
+}
+
+.sw-mobile-cal-now > i {
+  position: absolute;
+  left: 0;
+  bottom: -0.35rem;
+  max-width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, #fb7185, transparent);
 }
 
 .sw-mobile-cal-agenda {
   display: grid;
   gap: 0.7rem;
-  margin-top: 0.8rem;
+  margin-top: 0.85rem;
 }
 
 .sw-mobile-cal-event {
   position: relative;
+  width: 100%;
   align-items: stretch;
   gap: 0.7rem;
   overflow: hidden;
@@ -171,6 +218,7 @@
   border-radius: 1.2rem;
   padding: 0.85rem;
   background: rgba(2, 6, 23, 0.74);
+  text-align: left;
 }
 
 .sw-mobile-cal-event::before {
@@ -181,8 +229,29 @@
   background: #22d3ee;
 }
 
-.sw-mobile-cal-event.life::before {
+.sw-mobile-cal-event.life::before,
+.sw-mobile-cal-event.category-personal::before {
   background: #e879f9;
+}
+
+.sw-mobile-cal-event.category-family::before {
+  background: #a78bfa;
+}
+
+.sw-mobile-cal-event.category-health::before {
+  background: #34d399;
+}
+
+.sw-mobile-cal-event.category-appointment::before {
+  background: #60a5fa;
+}
+
+.sw-mobile-cal-event.category-bill::before {
+  background: #fbbf24;
+}
+
+.sw-mobile-cal-event.category-service::before {
+  background: #22d3ee;
 }
 
 .sw-mobile-cal-event .time {
@@ -240,29 +309,10 @@
   width: 0.75rem;
 }
 
-.sw-mobile-cal-event .actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.sw-mobile-cal-event .actions button {
-  display: grid;
-  width: 2rem;
-  height: 2rem;
-  place-items: center;
-  border: 1px solid rgba(71, 85, 105, 0.68);
-  border-radius: 0.7rem;
-  background: rgba(15, 23, 42, 0.74);
-  color: #cbd5e1;
-}
-
-.sw-mobile-cal-event .actions button:last-child {
-  color: #fda4af;
-}
-
-.sw-mobile-cal-event .actions svg {
-  width: 0.85rem;
+.sw-mobile-cal-event .event-chevron {
+  width: 0.9rem;
+  flex: none;
+  color: #475569;
 }
 
 .sw-mobile-cal-empty {
@@ -294,6 +344,49 @@
   text-align: center;
 }
 
+.sw-mobile-cal-fab {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 4;
+  display: grid;
+  width: 3.7rem;
+  height: 3.7rem;
+  place-items: center;
+  border: 1px solid rgba(103, 232, 249, 0.48);
+  border-radius: 1.2rem;
+  background: linear-gradient(135deg, #0891b2, #4f46e5 62%, #c026d3);
+  color: #fff;
+  box-shadow: 0 16px 38px rgba(8, 145, 178, 0.3), 0 0 30px rgba(129, 140, 248, 0.16);
+}
+
+.sw-mobile-cal-fab svg {
+  width: 1.3rem;
+}
+
+.sw-mobile-cal-toast {
+  position: fixed;
+  top: calc(1rem + env(safe-area-inset-top));
+  left: 50%;
+  z-index: 110;
+  display: flex;
+  transform: translateX(-50%);
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  border-radius: 999px;
+  padding: 0.65rem 0.9rem;
+  background: rgba(6, 78, 59, 0.94);
+  color: #d1fae5;
+  font-size: 0.72rem;
+  font-weight: 900;
+  box-shadow: 0 16px 40px rgba(2, 6, 23, 0.5);
+}
+
+.sw-mobile-cal-toast svg {
+  width: 1rem;
+}
+
 .sw-mobile-cal-overlay {
   position: fixed;
   inset: 0;
@@ -313,6 +406,11 @@
   border-radius: 1.75rem 1.75rem 0 0;
   padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
   background: linear-gradient(180deg, #081126, #020617);
+  box-shadow: 0 -24px 80px rgba(2, 6, 23, 0.82);
+}
+
+.sw-mobile-cal-drawer.confirm {
+  max-height: none;
 }
 
 .sw-mobile-cal-drawer header > button {
@@ -341,7 +439,7 @@
   grid-column: 1 / -1;
 }
 
-.sw-mobile-cal-form label span {
+.sw-mobile-cal-form label > span {
   display: block;
   margin-bottom: 0.3rem;
   color: #94a3b8;
@@ -362,28 +460,169 @@
   outline: none;
 }
 
+.sw-mobile-cal-form input:disabled,
+.sw-mobile-cal-form select:disabled {
+  opacity: 0.45;
+}
+
+.sw-mobile-cal-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid rgba(71, 85, 105, 0.6);
+  border-radius: 0.9rem;
+  padding: 0.7rem 0.8rem;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.sw-mobile-cal-toggle input {
+  width: 1rem;
+  height: 1rem;
+}
+
+.sw-mobile-cal-toggle span {
+  margin: 0 !important;
+  color: #e2e8f0 !important;
+}
+
 .sw-mobile-cal-drawer-actions {
   gap: 0.75rem;
   margin-top: 1rem;
 }
 
-.sw-mobile-cal-drawer-actions button {
+.sw-mobile-cal-drawer-actions button,
+.sw-mobile-cal-detail-actions button,
+.sw-mobile-cal-confirm button {
   min-height: 2.8rem;
+  border: 1px solid rgba(71, 85, 105, 0.7);
   border-radius: 0.95rem;
   padding: 0 1rem;
+  background: rgba(15, 23, 42, 0.72);
+  color: #e2e8f0;
   font-size: 0.75rem;
   font-weight: 900;
 }
 
 .sw-mobile-cal-drawer-actions .primary {
   margin-left: auto;
-  border: 1px solid rgba(103, 232, 249, 0.42);
+  border-color: rgba(103, 232, 249, 0.42);
   background: linear-gradient(135deg, #0891b2, #4f46e5);
   color: #fff;
 }
 
-.sw-mobile-cal-drawer-actions .danger {
-  border: 1px solid rgba(244, 63, 94, 0.28);
+.sw-mobile-cal-drawer-actions .danger,
+.sw-mobile-cal-detail-actions .danger,
+.sw-mobile-cal-confirm .danger {
+  border-color: rgba(244, 63, 94, 0.28);
   background: rgba(244, 63, 94, 0.1);
   color: #fda4af;
+}
+
+.sw-mobile-cal-detail {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.sw-mobile-cal-detail-badge {
+  justify-self: start;
+  border: 1px solid rgba(232, 121, 249, 0.25);
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  background: rgba(192, 38, 211, 0.1);
+  color: #f0abfc;
+  font-size: 0.62rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.sw-mobile-cal-detail-badge.ticket {
+  border-color: rgba(34, 211, 238, 0.25);
+  background: rgba(8, 145, 178, 0.1);
+  color: #a5f3fc;
+}
+
+.sw-mobile-cal-detail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border: 1px solid rgba(71, 85, 105, 0.58);
+  border-radius: 1rem;
+  padding: 0.85rem;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.sw-mobile-cal-detail-row svg {
+  width: 1rem;
+  flex: none;
+  color: #67e8f9;
+}
+
+.sw-mobile-cal-detail-row span,
+.sw-mobile-cal-detail-row strong {
+  display: block;
+}
+
+.sw-mobile-cal-detail-row span {
+  color: #64748b;
+  font-size: 0.62rem;
+}
+
+.sw-mobile-cal-detail-row strong {
+  margin-top: 0.15rem;
+  color: #f8fafc;
+  font-size: 0.78rem;
+}
+
+.sw-mobile-cal-detail-notes {
+  border: 1px solid rgba(71, 85, 105, 0.58);
+  border-radius: 1rem;
+  padding: 0.85rem;
+  background: rgba(15, 23, 42, 0.5);
+  color: #94a3b8;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.sw-mobile-cal-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.sw-mobile-cal-detail-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.sw-mobile-cal-detail-actions svg {
+  width: 0.95rem;
+}
+
+.sw-mobile-cal-confirm {
+  margin-top: 1rem;
+}
+
+.sw-mobile-cal-confirm p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.sw-mobile-cal-confirm > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sw-mobile-cal * {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
 }

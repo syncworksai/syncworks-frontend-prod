@@ -1,9 +1,12 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   CalendarDays,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock3,
+  ExternalLink,
   MapPin,
   Pencil,
   Plus,
@@ -94,20 +97,33 @@ function ticketTitle(ticket) {
   );
 }
 
-function timeLabel(value) {
+function timeLabel(value, allDay = false) {
+  if (allDay) return "All day";
   return new Date(value).toLocaleTimeString(undefined, {
     hour: "numeric",
     minute: "2-digit",
   });
 }
 
-function Drawer({ open, title, onClose, children }) {
+function dateLabel(value) {
+  return new Date(value).toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function categoryClass(category) {
+  return String(category || "Personal").toLowerCase().replace(/[^a-z]+/g, "-");
+}
+
+function Drawer({ open, title, onClose, children, className = "" }) {
   if (!open) return null;
 
   return (
     <div className="sw-mobile-cal-overlay" onMouseDown={onClose}>
       <section
-        className="sw-mobile-cal-drawer"
+        className={`sw-mobile-cal-drawer ${className}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -129,14 +145,22 @@ function Drawer({ open, title, onClose, children }) {
 }
 
 export default function MobileCalendarBoard() {
+  const navigate = useNavigate();
   const today = useMemo(() => new Date(), []);
+  const touchStartX = useRef(null);
+  const toastTimer = useRef(null);
+
   const [weekStart, setWeekStart] = useState(() => startOfWeek(today));
   const [selectedDate, setSelectedDate] = useState(() => ymd(today));
   const [tickets, setTickets] = useState([]);
   const [lifeEvents, setLifeEvents] = useState(readEvents);
   const [loading, setLoading] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [detailEvent, setDetailEvent] = useState(null);
   const [editingId, setEditingId] = useState("");
+  const [deleteId, setDeleteId] = useState("");
+  const [toast, setToast] = useState("");
+  const [now, setNow] = useState(() => new Date());
   const [draft, setDraft] = useState({
     title: "",
     category: "Personal",
@@ -145,6 +169,7 @@ export default function MobileCalendarBoard() {
     duration_minutes: "60",
     location: "",
     notes: "",
+    all_day: false,
   });
 
   useEffect(() => {
@@ -172,6 +197,23 @@ export default function MobileCalendarBoard() {
     writeEvents(lifeEvents);
   }, [lifeEvents]);
 
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(new Date()), 60000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    };
+  }, []);
+
+  function showToast(message) {
+    setToast(message);
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(""), 2200);
+  }
+
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)),
     [weekStart]
@@ -191,14 +233,17 @@ export default function MobileCalendarBoard() {
           start,
           end: new Date(start.getTime() + 60 * 60 * 1000),
           location: ticket.service_address || "",
+          notes: ticket.description || "",
           sourceId: ticket.id,
+          allDay: false,
+          category: "Service",
         };
       })
       .filter(Boolean);
 
     const personalEvents = lifeEvents
       .map((item) => {
-        const start = localDateTime(item.date, item.time);
+        const start = localDateTime(item.date, item.all_day ? "09:00" : item.time);
         if (!start) return null;
 
         return {
@@ -211,14 +256,18 @@ export default function MobileCalendarBoard() {
             start.getTime() + Math.max(15, Number(item.duration_minutes || 60)) * 60 * 1000
           ),
           location: item.location || "",
+          notes: item.notes || "",
           sourceId: item.id,
+          allDay: Boolean(item.all_day),
+          category: item.category || "Personal",
         };
       })
       .filter(Boolean);
 
-    return [...serviceEvents, ...personalEvents].sort(
-      (a, b) => new Date(a.start) - new Date(b.start)
-    );
+    return [...serviceEvents, ...personalEvents].sort((a, b) => {
+      if (a.allDay !== b.allDay) return a.allDay ? -1 : 1;
+      return new Date(a.start) - new Date(b.start);
+    });
   }, [lifeEvents, tickets]);
 
   const counts = useMemo(() => {
@@ -234,6 +283,12 @@ export default function MobileCalendarBoard() {
     [events, selectedDate]
   );
 
+  const nowMarkerPercent = useMemo(() => {
+    if (selectedDate !== ymd(now)) return null;
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    return Math.max(0, Math.min(100, (minutes / 1440) * 100));
+  }, [now, selectedDate]);
+
   function openCreate(date = selectedDate) {
     setEditingId("");
     setDraft({
@@ -244,14 +299,16 @@ export default function MobileCalendarBoard() {
       duration_minutes: "60",
       location: "",
       notes: "",
+      all_day: false,
     });
-    setDrawerOpen(true);
+    setComposerOpen(true);
   }
 
   function openEdit(event) {
     const source = lifeEvents.find((item) => item.id === event.sourceId);
     if (!source) return;
 
+    setDetailEvent(null);
     setEditingId(source.id);
     setDraft({
       title: source.title || "",
@@ -261,8 +318,9 @@ export default function MobileCalendarBoard() {
       duration_minutes: String(source.duration_minutes || 60),
       location: source.location || "",
       notes: source.notes || "",
+      all_day: Boolean(source.all_day),
     });
-    setDrawerOpen(true);
+    setComposerOpen(true);
   }
 
   function saveEvent() {
@@ -277,6 +335,7 @@ export default function MobileCalendarBoard() {
             : item
         )
       );
+      showToast("Event updated");
     } else {
       setLifeEvents((current) => [
         {
@@ -290,15 +349,25 @@ export default function MobileCalendarBoard() {
         },
         ...current,
       ]);
+      showToast("Event added");
     }
 
     setSelectedDate(draft.date);
-    setDrawerOpen(false);
+    setWeekStart(startOfWeek(new Date(`${draft.date}T12:00:00`)));
+    setComposerOpen(false);
   }
 
-  function deleteEvent(id) {
-    setLifeEvents((current) => current.filter((item) => item.id !== id));
-    setDrawerOpen(false);
+  function requestDelete(id) {
+    setDeleteId(id);
+  }
+
+  function confirmDelete() {
+    if (!deleteId) return;
+    setLifeEvents((current) => current.filter((item) => item.id !== deleteId));
+    setDeleteId("");
+    setComposerOpen(false);
+    setDetailEvent(null);
+    showToast("Event deleted");
   }
 
   function moveEvent(id, date) {
@@ -308,10 +377,38 @@ export default function MobileCalendarBoard() {
       )
     );
     setSelectedDate(date);
+    showToast("Event moved");
+  }
+
+  function shiftWeek(amount) {
+    setWeekStart((current) => addDays(current, amount * 7));
+  }
+
+  function handleTouchStart(event) {
+    touchStartX.current = event.touches?.[0]?.clientX ?? null;
+  }
+
+  function handleTouchEnd(event) {
+    if (touchStartX.current == null) return;
+    const endX = event.changedTouches?.[0]?.clientX;
+    if (endX == null) return;
+
+    const distance = endX - touchStartX.current;
+    if (Math.abs(distance) > 55) {
+      shiftWeek(distance < 0 ? 1 : -1);
+    }
+    touchStartX.current = null;
   }
 
   return (
     <section className="sw-mobile-cal md:hidden">
+      {toast ? (
+        <div className="sw-mobile-cal-toast" role="status">
+          <CheckCircle2 aria-hidden="true" />
+          {toast}
+        </div>
+      ) : null}
+
       <div className="sw-mobile-cal-top">
         <div>
           <span>Life schedule</span>
@@ -330,11 +427,7 @@ export default function MobileCalendarBoard() {
       </div>
 
       <div className="sw-mobile-cal-nav">
-        <button
-          type="button"
-          onClick={() => setWeekStart((current) => addDays(current, -7))}
-          aria-label="Previous week"
-        >
+        <button type="button" onClick={() => shiftWeek(-1)} aria-label="Previous week">
           <ChevronLeft aria-hidden="true" />
         </button>
         <button
@@ -347,25 +440,26 @@ export default function MobileCalendarBoard() {
         >
           Today
         </button>
-        <button
-          type="button"
-          onClick={() => setWeekStart((current) => addDays(current, 7))}
-          aria-label="Next week"
-        >
+        <button type="button" onClick={() => shiftWeek(1)} aria-label="Next week">
           <ChevronRight aria-hidden="true" />
         </button>
       </div>
 
-      <div className="sw-mobile-cal-week">
+      <div
+        className="sw-mobile-cal-week"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {weekDays.map((day) => {
           const key = ymd(day);
           const active = key === selectedDate;
+          const isToday = key === ymd(today);
 
           return (
             <button
               key={key}
               type="button"
-              className={active ? "active" : ""}
+              className={`${active ? "active" : ""} ${isToday ? "is-today" : ""}`}
               onClick={() => setSelectedDate(key)}
               onDragOver={(event) => event.preventDefault()}
               onDrop={(event) => {
@@ -384,31 +478,39 @@ export default function MobileCalendarBoard() {
       <div className="sw-mobile-cal-date">
         <div>
           <CalendarDays aria-hidden="true" />
-          <strong>
-            {new Date(`${selectedDate}T12:00:00`).toLocaleDateString(undefined, {
-              weekday: "long",
-              month: "short",
-              day: "numeric",
-            })}
-          </strong>
+          <strong>{dateLabel(`${selectedDate}T12:00:00`)}</strong>
         </div>
         <span>{loading ? "Loading…" : `${selectedEvents.length} scheduled`}</span>
       </div>
 
+      {nowMarkerPercent != null ? (
+        <div className="sw-mobile-cal-now" aria-label={`Current time ${timeLabel(now)}`}>
+          <span />
+          <strong>{timeLabel(now)}</strong>
+          <i style={{ width: `${nowMarkerPercent}%` }} />
+        </div>
+      ) : null}
+
       <div className="sw-mobile-cal-agenda">
         {selectedEvents.length ? (
           selectedEvents.map((event) => (
-            <article
+            <button
               key={event.id}
-              className={`sw-mobile-cal-event ${event.type}`}
+              type="button"
+              className={`sw-mobile-cal-event ${event.type} category-${categoryClass(
+                event.category
+              )}`}
               draggable={event.type === "life"}
-              onDragStart={(dragEvent) =>
-                dragEvent.dataTransfer.setData("text/plain", event.sourceId)
-              }
+              onClick={() => setDetailEvent(event)}
+              onDragStart={(dragEvent) => {
+                if (event.type === "life") {
+                  dragEvent.dataTransfer.setData("text/plain", event.sourceId);
+                }
+              }}
             >
               <div className="time">
-                <strong>{timeLabel(event.start)}</strong>
-                <span>{timeLabel(event.end)}</span>
+                <strong>{timeLabel(event.start, event.allDay)}</strong>
+                {!event.allDay ? <span>{timeLabel(event.end)}</span> : null}
               </div>
 
               <div className="body">
@@ -424,43 +526,119 @@ export default function MobileCalendarBoard() {
 
                 <div className="meta">
                   <Clock3 aria-hidden="true" />
-                  {Math.round((new Date(event.end) - new Date(event.start)) / 60000)} min
+                  {event.allDay
+                    ? "All-day event"
+                    : `${Math.round(
+                        (new Date(event.end) - new Date(event.start)) / 60000
+                      )} min`}
                 </div>
               </div>
 
-              {event.type === "life" ? (
-                <div className="actions">
-                  <button type="button" onClick={() => openEdit(event)} aria-label="Edit">
-                    <Pencil aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => deleteEvent(event.sourceId)}
-                    aria-label="Delete"
-                  >
-                    <Trash2 aria-hidden="true" />
-                  </button>
-                </div>
-              ) : null}
-            </article>
+              <ChevronRight className="event-chevron" aria-hidden="true" />
+            </button>
           ))
         ) : (
           <button type="button" className="sw-mobile-cal-empty" onClick={() => openCreate()}>
             <Plus aria-hidden="true" />
             <strong>Nothing scheduled</strong>
-            <span>Tap to add an event.</span>
+            <span>Tap to add an event for this day.</span>
           </button>
         )}
       </div>
 
       <p className="sw-mobile-cal-hint">
-        Drag personal events to another day on desktop. Tap Edit to reschedule on mobile.
+        Swipe the week strip to change weeks. Tap an event for details.
       </p>
 
+      <button
+        type="button"
+        className="sw-mobile-cal-fab"
+        onClick={() => openCreate()}
+        aria-label="Add calendar event"
+      >
+        <Plus aria-hidden="true" />
+      </button>
+
       <Drawer
-        open={drawerOpen}
+        open={Boolean(detailEvent)}
+        title={detailEvent?.title || "Event details"}
+        onClose={() => setDetailEvent(null)}
+        className="detail"
+      >
+        {detailEvent ? (
+          <div className="sw-mobile-cal-detail">
+            <div className={`sw-mobile-cal-detail-badge ${detailEvent.type}`}>
+              {detailEvent.subtitle}
+            </div>
+
+            <div className="sw-mobile-cal-detail-row">
+              <CalendarDays aria-hidden="true" />
+              <div>
+                <span>Date</span>
+                <strong>{dateLabel(detailEvent.start)}</strong>
+              </div>
+            </div>
+
+            <div className="sw-mobile-cal-detail-row">
+              <Clock3 aria-hidden="true" />
+              <div>
+                <span>Time</span>
+                <strong>
+                  {detailEvent.allDay
+                    ? "All day"
+                    : `${timeLabel(detailEvent.start)} – ${timeLabel(detailEvent.end)}`}
+                </strong>
+              </div>
+            </div>
+
+            {detailEvent.location ? (
+              <div className="sw-mobile-cal-detail-row">
+                <MapPin aria-hidden="true" />
+                <div>
+                  <span>Location</span>
+                  <strong>{detailEvent.location}</strong>
+                </div>
+              </div>
+            ) : null}
+
+            {detailEvent.notes ? (
+              <div className="sw-mobile-cal-detail-notes">{detailEvent.notes}</div>
+            ) : null}
+
+            <div className="sw-mobile-cal-detail-actions">
+              {detailEvent.type === "life" ? (
+                <>
+                  <button type="button" onClick={() => openEdit(detailEvent)}>
+                    <Pencil aria-hidden="true" />
+                    Edit / move
+                  </button>
+                  <button
+                    type="button"
+                    className="danger"
+                    onClick={() => requestDelete(detailEvent.sourceId)}
+                  >
+                    <Trash2 aria-hidden="true" />
+                    Delete
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/tickets/${detailEvent.sourceId}`)}
+                >
+                  <ExternalLink aria-hidden="true" />
+                  Open request
+                </button>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </Drawer>
+
+      <Drawer
+        open={composerOpen}
         title={editingId ? "Edit event" : "Add event"}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() => setComposerOpen(false)}
       >
         <div className="sw-mobile-cal-form">
           <label className="wide">
@@ -473,6 +651,17 @@ export default function MobileCalendarBoard() {
               }
               placeholder="Appointment, practice, bill…"
             />
+          </label>
+
+          <label className="sw-mobile-cal-toggle wide">
+            <input
+              type="checkbox"
+              checked={draft.all_day}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, all_day: event.target.checked }))
+              }
+            />
+            <span>All-day event</span>
           </label>
 
           <label>
@@ -491,6 +680,7 @@ export default function MobileCalendarBoard() {
             <input
               type="time"
               value={draft.time}
+              disabled={draft.all_day}
               onChange={(event) =>
                 setDraft((current) => ({ ...current, time: event.target.value }))
               }
@@ -501,6 +691,7 @@ export default function MobileCalendarBoard() {
             <span>Duration</span>
             <select
               value={draft.duration_minutes}
+              disabled={draft.all_day}
               onChange={(event) =>
                 setDraft((current) => ({
                   ...current,
@@ -551,13 +742,14 @@ export default function MobileCalendarBoard() {
               onChange={(event) =>
                 setDraft((current) => ({ ...current, notes: event.target.value }))
               }
+              placeholder="Optional details"
             />
           </label>
         </div>
 
         <div className="sw-mobile-cal-drawer-actions">
           {editingId ? (
-            <button type="button" className="danger" onClick={() => deleteEvent(editingId)}>
+            <button type="button" className="danger" onClick={() => requestDelete(editingId)}>
               Delete
             </button>
           ) : (
@@ -567,6 +759,25 @@ export default function MobileCalendarBoard() {
           <button type="button" className="primary" onClick={saveEvent}>
             {editingId ? "Save changes" : "Add event"}
           </button>
+        </div>
+      </Drawer>
+
+      <Drawer
+        open={Boolean(deleteId)}
+        title="Delete event?"
+        onClose={() => setDeleteId("")}
+        className="confirm"
+      >
+        <div className="sw-mobile-cal-confirm">
+          <p>This event will be removed from your Personal calendar.</p>
+          <div>
+            <button type="button" onClick={() => setDeleteId("")}>
+              Cancel
+            </button>
+            <button type="button" className="danger" onClick={confirmDelete}>
+              Delete event
+            </button>
+          </div>
         </div>
       </Drawer>
     </section>
