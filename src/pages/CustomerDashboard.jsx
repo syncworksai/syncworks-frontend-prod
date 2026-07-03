@@ -6,6 +6,7 @@ import { useAuth } from "../auth/AuthContext";
 
 import AddToCalendarButton from "../components/AddToCalendarButton";
 import CalendarAgenda from "../components/CalendarAgenda";
+import MobileCalendarBoard from "../components/calendar/MobileCalendarBoard";
 import CustomerTickets from "../components/CustomerTickets";
 import InboxPanel from "../components/Inbox/InboxPanel";
 import NewsReel from "../components/NewsReel";
@@ -1210,7 +1211,14 @@ function CompactScheduleCard({ tickets, onOpenTicket, onOpenCalendar }) {
 }
 
 function FullCalendarPanel() {
-  return <CalendarAgenda modeLabel="Life Schedule" showComposer />;
+  return (
+    <>
+      <MobileCalendarBoard />
+      <div className="hidden md:block">
+        <CalendarAgenda modeLabel="Life Schedule" showComposer />
+      </div>
+    </>
+  );
 }
 
 function DealsCard({ items, onOpenFeedItem, onViewFeed }) {
