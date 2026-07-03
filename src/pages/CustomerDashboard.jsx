@@ -1406,6 +1406,12 @@ export default function CustomerDashboard() {
   }
 
   useEffect(() => {
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }, [tab]);
+
+  useEffect(() => {
     setArchivedIds(readArchivedSet(user));
   }, [user?.id, user?.email]);
 
@@ -1539,10 +1545,30 @@ export default function CustomerDashboard() {
   }, [feedItems]);
 
   const bottomNavItems = [
-    { label: "Home", icon: "⌂", active: tab === "overview", onClick: () => setTab("overview") },
-    { label: "Requests", icon: "▤", active: tab === "orders", onClick: () => setTab("orders") },
-    { label: "Calendar", icon: "◷", active: tab === "calendar", onClick: () => setTab("calendar") },
-    { label: "More", icon: "•••", active: false, onClick: () => navigate("/settings") },
+    {
+      label: "Home",
+      icon: "⌂",
+      active: tab === "overview",
+      onClick: () => handleTabChange("overview"),
+    },
+    {
+      label: "Requests",
+      icon: "▤",
+      active: tab === "orders",
+      onClick: () => handleTabChange("orders"),
+    },
+    {
+      label: "Calendar",
+      icon: "◷",
+      active: tab === "calendar",
+      onClick: () => handleTabChange("calendar"),
+    },
+    {
+      label: "More",
+      icon: "•••",
+      active: false,
+      onClick: () => navigate("/settings"),
+    },
   ];
 
   return (
@@ -1577,24 +1603,26 @@ export default function CustomerDashboard() {
       }
     >
       <div className="space-y-5 pb-4">
-        <CustomerMobileHome
-          displayName={displayName}
-          tickets={visibleTickets}
-          invoices={dueInvoiceItems}
-          openCount={metrics.open}
-          totalDue={totalDue}
-          loading={ticketsLoading}
-          error={ticketsErr || ticketActionErr}
-          onRefresh={loadTickets}
-          onNewRequest={() => navigate("/customer/new-request")}
-          onOpenTicket={(id) => navigate(`/tickets/${id}`)}
-          onOpenRequests={() => setTab("orders")}
-          onOpenCalendar={() => setTab("calendar")}
-          onOpenMessages={() => setTab("inbox")}
-          onOpenMoney={openMoney}
-          onOpenHealth={openHealth}
-          onOpenMore={() => navigate("/settings")}
-        />
+        {tab === "overview" ? (
+          <CustomerMobileHome
+            displayName={displayName}
+            tickets={visibleTickets}
+            invoices={dueInvoiceItems}
+            openCount={metrics.open}
+            totalDue={totalDue}
+            loading={ticketsLoading}
+            error={ticketsErr || ticketActionErr}
+            onRefresh={loadTickets}
+            onNewRequest={() => navigate("/customer/new-request")}
+            onOpenTicket={(id) => navigate(`/tickets/${id}`)}
+            onOpenRequests={() => handleTabChange("orders")}
+            onOpenCalendar={() => handleTabChange("calendar")}
+            onOpenMessages={() => handleTabChange("inbox")}
+            onOpenMoney={openMoney}
+            onOpenHealth={openHealth}
+            onOpenMore={() => navigate("/settings")}
+          />
+        ) : null}
 
         <div className="hidden lg:block">
           <NewsReel />
