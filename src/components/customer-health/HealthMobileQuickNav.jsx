@@ -5,11 +5,29 @@ function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
+function HomeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+      <path d="m4 11 8-7 8 7" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6.5 10.5V20h11v-9.5M10 20v-5h4v5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function PlanIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
       <rect x="3" y="5" width="18" height="16" rx="3" stroke="currentColor" strokeWidth="1.8" />
       <path d="M7 3v4M17 3v4M3 9h18M7 13h3M14 13h3M7 17h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ProgressIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+      <path d="M5 20V11M12 20V5M19 20v-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="m4 8 5-4 4 3 7-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -26,25 +44,6 @@ function CoachIcon() {
   );
 }
 
-function InsightsIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
-      <path d="M5 20V11M12 20V5M19 20v-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="m4 8 5-4 4 3 7-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function LogIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
-      <rect x="5" y="3" width="14" height="18" rx="3" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M9 8h6M9 12h6M9 16h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M16 15v4M14 17h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function NavButton({
   label,
   icon,
@@ -56,27 +55,59 @@ function NavButton({
       type="button"
       onClick={onClick}
       className={cx(
-        "flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[9px] font-black uppercase tracking-[0.08em] text-slate-400 transition active:scale-[0.97]",
+        "flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[9px] font-black uppercase tracking-[0.08em] transition active:scale-[0.96]",
         active
-          ? "bg-sky-400/10 text-sky-100"
-          : "hover:bg-white/[0.04] hover:text-sky-100"
+          ? "bg-emerald-400/10 text-emerald-100"
+          : "text-slate-400 hover:bg-white/[0.04] hover:text-emerald-100"
       )}
     >
-      <span className="flex h-7 w-7 items-center justify-center rounded-xl border border-sky-300/15 bg-sky-400/[0.06] text-sky-200">
+      <span
+        className={cx(
+          "flex h-8 w-8 items-center justify-center rounded-xl border",
+          active
+            ? "border-emerald-300/30 bg-emerald-400/10 text-emerald-100"
+            : "border-cyan-300/15 bg-cyan-400/[0.06] text-cyan-200"
+        )}
+      >
         {icon}
       </span>
-      <span className="w-full truncate text-center">{label}</span>
+
+      <span className="w-full truncate text-center">
+        {label}
+      </span>
     </button>
   );
 }
 
+function formatTime(value) {
+  if (!value || value === "Anytime") {
+    return "Anytime";
+  }
+
+  const [hourValue, minuteValue] = String(value)
+    .split(":")
+    .map(Number);
+
+  if (!Number.isFinite(hourValue)) {
+    return value;
+  }
+
+  const suffix = hourValue >= 12 ? "PM" : "AM";
+  const hour = hourValue % 12 || 12;
+  const minute = String(
+    Number.isFinite(minuteValue) ? minuteValue : 0
+  ).padStart(2, "0");
+
+  return `${hour}:${minute} ${suffix}`;
+}
+
 export default function HealthMobileQuickNav({
   onOpen,
-  onLog,
   onStartWorkout,
   onStartFallback,
   nextSession,
   hasCoachProposal,
+  activeView = "home",
 }) {
   function startNow() {
     if (nextSession) {
@@ -87,14 +118,27 @@ export default function HealthMobileQuickNav({
     onStartFallback?.();
   }
 
+  const workoutName =
+    nextSession?.workout_name ||
+    nextSession?.name ||
+    "Plan Today";
+
+  const workoutTime = nextSession?.time
+    ? formatTime(nextSession.time)
+    : "";
+
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[70] border-t border-sky-300/15 bg-[#020817]/96 px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 shadow-[0_-16px_45px_rgba(0,145,255,0.16)] backdrop-blur-2xl lg:hidden">
+    <div
+      data-syncworks-module-nav="health"
+      className="fixed inset-x-0 bottom-0 z-[75] border-t border-emerald-300/20 bg-[#020817]/97 px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 shadow-[0_-18px_55px_rgba(52,211,153,0.18)] backdrop-blur-2xl lg:hidden"
+    >
       <div className="mx-auto max-w-md">
-        <div className="grid grid-cols-[1fr_1fr_1.15fr_1fr_1fr] items-end gap-1">
+        <div className="grid grid-cols-[1fr_1fr_1.45fr_1fr_1fr] items-end gap-1">
           <NavButton
-            label="Insights"
-            icon={<InsightsIcon />}
-            onClick={() => onOpen?.("insights")}
+            label="Health"
+            icon={<HomeIcon />}
+            active={activeView === "home"}
+            onClick={() => onOpen?.("home")}
           />
 
           <NavButton
@@ -106,31 +150,50 @@ export default function HealthMobileQuickNav({
           <button
             type="button"
             onClick={startNow}
-            className="group relative -mt-6 flex min-w-0 flex-col items-center justify-end rounded-[1.45rem] border border-sky-300/30 bg-[linear-gradient(180deg,rgba(14,165,233,0.18),rgba(2,8,23,0.98))] px-1 pb-2 pt-1 text-[9px] font-black uppercase tracking-[0.12em] text-sky-100 shadow-[0_0_28px_rgba(0,174,255,0.24)] transition active:scale-[0.96]"
+            aria-label={
+              nextSession
+                ? `Start ${workoutName}`
+                : "Plan and start a workout"
+            }
+            className="group relative -mt-10 flex min-w-0 flex-col items-center justify-end rounded-[1.8rem] border border-emerald-300/35 bg-[linear-gradient(180deg,rgba(16,185,129,0.24),rgba(2,8,23,0.99))] px-1 pb-2.5 pt-1 text-center text-[9px] font-black uppercase tracking-[0.08em] text-emerald-50 shadow-[0_0_38px_rgba(57,255,136,0.30)] transition active:scale-[0.95]"
           >
-            <span className="absolute inset-x-2 top-1 h-10 rounded-full bg-sky-300/15 blur-xl" />
+            <span className="pointer-events-none absolute left-1/2 top-1 h-20 w-20 -translate-x-1/2 animate-ping rounded-full border border-emerald-300/20 opacity-40" />
+            <span className="pointer-events-none absolute left-1/2 top-2 h-16 w-16 -translate-x-1/2 rounded-full bg-emerald-300/20 blur-2xl transition group-hover:bg-cyan-300/25" />
 
-            <img
-              src="/health/brand/syncworks-start-logo.png"
-              alt=""
-              aria-hidden="true"
-              className="relative h-12 w-12 object-contain drop-shadow-[0_0_10px_rgba(0,200,255,0.8)]"
-            />
+            <span className="relative flex h-[76px] w-[76px] items-center justify-center rounded-full border border-cyan-200/35 bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.24),transparent_22%),linear-gradient(145deg,rgba(34,211,238,0.22),rgba(57,255,136,0.24),rgba(139,92,246,0.24))] shadow-[0_0_14px_rgba(34,211,238,0.85),0_0_30px_rgba(57,255,136,0.42)]">
+              <img
+                src="/health/brand/syncworks-start-logo.png"
+                alt=""
+                aria-hidden="true"
+                className="h-[68px] w-[68px] object-contain drop-shadow-[0_0_14px_rgba(255,255,255,0.75)]"
+              />
+            </span>
 
-            <span className="-mt-0.5">Start</span>
+            <span className="mt-1 text-[10px] tracking-[0.1em]">
+              Start Workout
+            </span>
+
+            <span className="mt-0.5 max-w-[112px] truncate text-[8px] font-bold normal-case tracking-normal text-emerald-100/75">
+              {workoutName}
+              {workoutTime ? ` Â· ${workoutTime}` : ""}
+            </span>
           </button>
 
           <NavButton
-            label="Coach"
-            icon={<CoachIcon />}
-            active={hasCoachProposal}
-            onClick={() => onOpen?.("coach-chat")}
+            label="Progress"
+            icon={<ProgressIcon />}
+            active={
+              activeView === "insights" ||
+              activeView === "dashboard"
+            }
+            onClick={() => onOpen?.("insights")}
           />
 
           <NavButton
-            label="Log"
-            icon={<LogIcon />}
-            onClick={() => onLog?.()}
+            label="SYNC"
+            icon={<CoachIcon />}
+            active={hasCoachProposal}
+            onClick={() => onOpen?.("coach-chat")}
           />
         </div>
       </div>

@@ -780,6 +780,20 @@ export default function CustomerHealth() {
   );
 
   useEffect(() => {
+    document.body.dataset.syncworksModule =
+      "health";
+
+    return () => {
+      if (
+        document.body.dataset.syncworksModule ===
+        "health"
+      ) {
+        delete document.body.dataset.syncworksModule;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (
       !hasHealthAccess ||
       intakePromptedRef.current ||
@@ -2965,7 +2979,7 @@ export default function CustomerHealth() {
               }
               className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs hover:bg-slate-900"
             >
-              Back
+              Personal Home
             </button>
           </div>
         }
@@ -3575,6 +3589,7 @@ export default function CustomerHealth() {
             hasCoachProposal={
               hasCoachProposal
             }
+            activeView={healthView}
           />
         </>
       ) : null}
