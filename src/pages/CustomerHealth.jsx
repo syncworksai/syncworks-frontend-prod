@@ -2115,99 +2115,128 @@ export default function CustomerHealth() {
   function handleBuildAiWeeklyPlan(
     intakeProfile = profile
   ) {
-    const result = buildAiWeeklyPlan({
-      profile: intakeProfile,
-      snapshot: syncedSnapshot,
-    });
+    // Close the outgoing intake first so its backdrop/close event
+    // cannot overwrite the planner transition on mobile.
+    setDrawer("");
 
-    if (!result.week_plan.length) {
-      return;
-    }
+    try {
+      const result = buildAiWeeklyPlan({
+        profile: intakeProfile,
+        snapshot: syncedSnapshot,
+      });
 
-    setWorkouts((previous) => {
-      const safePrevious = Array.isArray(previous)
-        ? previous
-        : [];
+      if (!result.week_plan.length) {
+        window.setTimeout(
+          () => setDrawer("planner"),
+          0
+        );
+        return false;
+      }
 
-      const retained = safePrevious.filter(
-        (item) =>
-          item?.source !== "ai_weekly_plan" ||
-          item?.ai_plan_id ===
-            result.id
-      );
+      setWorkouts((previous) => {
+        const safePrevious = Array.isArray(previous)
+          ? previous
+          : [];
 
-      return [
-        ...result.templates,
-        ...retained.filter(
+        const retained = safePrevious.filter(
           (item) =>
-            !result.templates.some(
-              (template) =>
-                template.id === item?.id
+            item?.source !== "ai_weekly_plan"
+        );
+
+        return [
+          ...result.templates,
+          ...retained.filter(
+            (item) =>
+              !result.templates.some(
+                (template) =>
+                  template.id === item?.id
+              )
+          ),
+        ];
+      });
+
+      setSnapshot((previous) => {
+        const existingPlan = Array.isArray(
+          previous.week_plan
+        )
+          ? previous.week_plan
+          : [];
+
+        const preserved = existingPlan.filter(
+          (item) =>
+            item?.status === "Completed" ||
+            item?.source !== "ai_weekly_plan"
+        );
+
+        return {
+          ...previous,
+          week_plan: [
+            ...preserved,
+            ...result.week_plan,
+          ].sort((left, right) =>
+            `${left?.ymd || ""}T${
+              left?.time || "23:59"
+            }`.localeCompare(
+              `${right?.ymd || ""}T${
+                right?.time || "23:59"
+              }`
             )
-        ),
-      ];
-    });
+          ),
+          workout:
+            result.first_session?.workout_name ||
+            previous.workout ||
+            "",
+          today_workout_id:
+            result.first_session?.id || "",
+          preferred_workout_time:
+            result.preferred_time,
+          planned_workouts:
+            preserved.filter(
+              (item) =>
+                item?.workout_name &&
+                item?.status !== "Completed"
+            ).length +
+            result.week_plan.length,
+          ai_plan_ready: true,
+          ai_plan_id: result.id,
+          ai_plan_generated_at:
+            result.generated_at,
+          ai_plan_summary: result.summary,
+          last_coach_change_title:
+            "Your AI training plan is scheduled",
+          last_coach_change_reason:
+            `${result.summary.total_sessions} sessions were built around your ${result.primary_goal.toLowerCase()} goal and scheduled at ${result.preferred_time}.`,
+          updated_at:
+            new Date().toISOString(),
+        };
+      });
 
-    setSnapshot((previous) => {
-      const existingPlan = Array.isArray(
-        previous.week_plan
-      )
-        ? previous.week_plan
-        : [];
-
-      const preserved = existingPlan.filter(
-        (item) =>
-          item?.status === "Completed" ||
-          item?.source !== "ai_weekly_plan"
+      setActivePlannerItem(
+        result.first_session
       );
 
-      return {
-        ...previous,
-        week_plan: [
-          ...preserved,
-          ...result.week_plan,
-        ].sort((left, right) =>
-          `${left?.ymd || ""}T${
-            left?.time || "23:59"
-          }`.localeCompare(
-            `${right?.ymd || ""}T${
-              right?.time || "23:59"
-            }`
-          )
-        ),
-        workout:
-          result.first_session?.workout_name ||
-          previous.workout ||
-          "",
-        today_workout_id:
-          result.first_session?.id || "",
-        preferred_workout_time:
-          result.preferred_time,
-        planned_workouts:
-          preserved.filter(
-            (item) =>
-              item?.workout_name &&
-              item?.status !== "Completed"
-          ).length +
-          result.week_plan.length,
-        ai_plan_ready: true,
-        ai_plan_id: result.id,
-        ai_plan_generated_at:
-          result.generated_at,
-        ai_plan_summary: result.summary,
-        last_coach_change_title:
-          "Your AI training plan is scheduled",
-        last_coach_change_reason:
-          `${result.summary.total_sessions} sessions were built around your ${result.primary_goal.toLowerCase()} goal and scheduled at ${result.preferred_time}.`,
-        updated_at:
-          new Date().toISOString(),
-      };
-    });
+      // Open after React has unmounted the intake drawer.
+      window.setTimeout(
+        () => setDrawer("planner"),
+        0
+      );
 
-    setActivePlannerItem(
-      result.first_session
-    );
-    setDrawer("planner");
+      return true;
+    } catch (error) {
+      console.error(
+        "Failed to build AI weekly plan",
+        error
+      );
+
+      // Still take the user to the planner instead of leaving
+      // them stranded in a closed intake.
+      window.setTimeout(
+        () => setDrawer("planner"),
+        0
+      );
+
+      return false;
+    }
   }
 
   function handleBuildNextWeek() {
