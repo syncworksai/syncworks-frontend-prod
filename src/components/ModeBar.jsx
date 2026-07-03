@@ -1530,21 +1530,8 @@ export default function ModeBar({
         return false;
       }
 
-      return (
-        [
-          "CUSTOMER",
-          "SBO",
-          "EMPLOYEE",
-          "PM",
-          "PLATFORM",
-        ].includes(mode) ||
-        isPlatformAdmin
-      );
-    }, [
-      mode,
-      isPlatformAdmin,
-          isHealthRoute,
-    ]);
+      return mode === "CUSTOMER";
+    }, [mode, isHealthRoute]);
 
   const investorActive =
     pathname.startsWith(
@@ -2022,7 +2009,7 @@ export default function ModeBar({
                   type="button"
                   title="Open Learning Center"
                   aria-label="Open Learning Center"
-                  onClick={() => navigate("/learn")}
+                  onClick={() => nav("/learn")}
                   className="flex h-10 w-10 items-center justify-center rounded-full border border-cyan-400/35 bg-cyan-500/10 text-sm font-black text-cyan-100 transition hover:bg-cyan-500/20"
                 >
                   i
