@@ -718,7 +718,7 @@ export default function HealthHome({
               onClick={() => setWorkoutChoiceOpen(true)}
               className="h-12 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 text-sm font-black text-cyan-100"
             >
-              Choose or Build Workout
+              Choose Your Training Path
             </button>
 
             <button
@@ -802,22 +802,22 @@ export default function HealthHome({
         <div className="fixed inset-0 z-[125] flex items-end justify-center bg-black/80 p-3 backdrop-blur-md sm:items-center">
           <button
             type="button"
-            aria-label="Close workout choices"
+            aria-label="Close training path choices"
             onClick={() => setWorkoutChoiceOpen(false)}
             className="absolute inset-0"
           />
 
-          <section className="relative z-[126] max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-[2rem] border border-cyan-300/20 bg-[#07111f] p-4 shadow-[0_28px_90px_rgba(0,0,0,0.72)] sm:p-5">
+          <section className="relative z-[126] max-h-[92dvh] w-full max-w-3xl overflow-y-auto rounded-[2rem] border border-cyan-300/20 bg-[#07111f] p-4 shadow-[0_28px_90px_rgba(0,0,0,0.72)] sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
-                  Choose Today's Movement
+                  Your Training. Your Choice.
                 </div>
-                <h2 className="mt-1 text-2xl font-black text-white">
-                  What do you want to train?
+                <h2 className="mt-1 text-2xl font-black text-white sm:text-3xl">
+                  How do you want to train?
                 </h2>
-                <p className="mt-1 text-sm leading-6 text-slate-400">
-                  Pick a focus, choose cardio, or build your own. The coach can still review and adapt it before you begin.
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+                  Let SYNC design and schedule the full plan, or build your own workouts while the AI coach tracks, guides, and progresses you.
                 </p>
               </div>
 
@@ -830,92 +830,69 @@ export default function HealthHome({
               </button>
             </div>
 
-            <div className="mt-5">
-              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-lime-200">
-                Coach-Suggested Focus
-              </div>
-              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {[
-                  ["Arms", "arms"],
-                  ["Abs / Core", "abs"],
-                  ["Push", "push"],
-                  ["Pull", "pull"],
-                  ["Legs", "legs"],
-                  ["Full Body", "full-body"],
-                  ["Mobility", "mobility"],
-                  ["Recovery", "recovery"],
-                ].map(([label, focus]) => (
-                  <button
-                    key={focus}
-                    type="button"
-                    onClick={() => {
-                      window.localStorage.setItem(
-                        "sw_health_library_builder_intent",
-                        JSON.stringify({
-                          mode: "builder",
-                          focus,
-                          label,
-                          created_at: new Date().toISOString(),
-                        })
-                      );
-                      setWorkoutChoiceOpen(false);
-                      onOpen?.("exercise-library");
-                    }}
-                    className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-xs font-black text-white"
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-5">
-              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-200">
-                Cardio Only
-              </div>
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                {[
-                  ["Treadmill", "treadmill"],
-                  ["Outdoor Walk", "outdoor-walk"],
-                  ["Outdoor Jog", "outdoor-jog"],
-                  ["Outdoor Run", "outdoor-run"],
-                ].map(([label, activity]) => (
-                  <button
-                    key={activity}
-                    type="button"
-                    onClick={() => {
-                      window.localStorage.setItem(
-                        "sw_health_cardio_intent",
-                        JSON.stringify({
-                          activity,
-                          label,
-                          suggested_minutes:
-                            activity === "treadmill" ? 60 : 30,
-                          track_distance: true,
-                          distance_unit: "miles",
-                          created_at: new Date().toISOString(),
-                        })
-                      );
-                      setWorkoutChoiceOpen(false);
-                      onOpen?.("cardio-player");
-                    }}
-                    className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.07] p-4 text-left"
-                  >
-                    <div className="text-sm font-black text-white">
-                      {label}
-                    </div>
-                    <div className="mt-1 text-xs leading-5 text-slate-400">
-                      Track time, distance in miles, pace, and session history.
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-5 grid gap-2 sm:grid-cols-2">
+            <div className="mt-5 grid gap-3 lg:grid-cols-2">
               <button
                 type="button"
                 onClick={() => {
+                  window.localStorage.setItem(
+                    "sw_health_training_path",
+                    JSON.stringify({
+                      mode: "ai_designed",
+                      created_at: new Date().toISOString(),
+                    })
+                  );
+                  setWorkoutChoiceOpen(false);
+                  onOpen?.("questionnaire");
+                }}
+                className="group rounded-[1.6rem] border border-lime-300/30 bg-[radial-gradient(circle_at_top_left,rgba(57,255,136,0.18),transparent_42%),linear-gradient(145deg,rgba(20,83,45,0.38),rgba(2,6,23,0.92))] p-5 text-left shadow-[0_18px_45px_rgba(0,0,0,0.28)] transition hover:border-lime-300/50"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="rounded-full border border-lime-300/25 bg-lime-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-lime-100">
+                    Recommended
+                  </div>
+                  <div className="text-2xl">âœ¦</div>
+                </div>
+
+                <div className="mt-4 text-2xl font-black text-white">
+                  Have AI Coach Design My Plan
+                </div>
+
+                <p className="mt-2 text-sm leading-6 text-slate-300">
+                  Tell SYNC your goals, experience, schedule, equipment, nutrition, cardio preferences, injuries, and preferred workout time. The coach builds and schedules the plan for you.
+                </p>
+
+                <div className="mt-4 space-y-2">
+                  {[
+                    "Strength, cardio, mobility, stretching, and recovery",
+                    "Exact workout days and preferred start time",
+                    "Nutrition, weight, sets, reps, and progress connected",
+                    "Automatic adjustments as your body and performance change",
+                  ].map((item) => (
+                    <div
+                      key={item}
+                      className="flex items-start gap-2 text-xs leading-5 text-lime-50/90"
+                    >
+                      <span className="mt-0.5 text-lime-300">âœ“</span>
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-5 flex h-12 items-center justify-center rounded-2xl border border-lime-300/35 bg-lime-300/18 text-sm font-black text-lime-100">
+                  Build My Personalized Plan
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  window.localStorage.setItem(
+                    "sw_health_training_path",
+                    JSON.stringify({
+                      mode: "self_directed",
+                      created_at: new Date().toISOString(),
+                    })
+                  );
                   window.localStorage.setItem(
                     "sw_health_library_builder_intent",
                     JSON.stringify({
@@ -928,20 +905,87 @@ export default function HealthHome({
                   setWorkoutChoiceOpen(false);
                   onOpen?.("exercise-library");
                 }}
-                className="h-12 rounded-2xl border border-cyan-300/30 bg-cyan-300/15 text-sm font-black text-cyan-100"
+                className="group rounded-[1.6rem] border border-cyan-300/25 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_42%),linear-gradient(145deg,rgba(8,47,73,0.42),rgba(2,6,23,0.92))] p-5 text-left shadow-[0_18px_45px_rgba(0,0,0,0.28)] transition hover:border-cyan-300/45"
               >
-                Build My Own Workout
+                <div className="flex items-center justify-between gap-3">
+                  <div className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100">
+                    Full Control
+                  </div>
+                  <div className="text-2xl">ï¼‹</div>
+                </div>
+
+                <div className="mt-4 text-2xl font-black text-white">
+                  Build My Own + Follow With AI Coach
+                </div>
+
+                <p className="mt-2 text-sm leading-6 text-slate-300">
+                  Choose your exercises, sets, reps, weights, cardio, and schedule. SYNC stays with you as the tracker, training partner, and progression coach.
+                </p>
+
+                <div className="mt-4 space-y-2">
+                  {[
+                    "Create gym, home, travel, or sport-specific workouts",
+                    "Duplicate, edit, schedule, and reuse every workout",
+                    "AI recommendations for weight, sets, reps, and recovery",
+                    "Beginner guidance or advanced hard-training control",
+                  ].map((item) => (
+                    <div
+                      key={item}
+                      className="flex items-start gap-2 text-xs leading-5 text-cyan-50/90"
+                    >
+                      <span className="mt-0.5 text-cyan-300">âœ“</span>
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-5 flex h-12 items-center justify-center rounded-2xl border border-cyan-300/35 bg-cyan-300/15 text-sm font-black text-cyan-100">
+                  Open Workout Builder
+                </div>
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-[1.4rem] border border-fuchsia-300/20 bg-fuchsia-300/[0.06] p-4">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-fuchsia-200">
+                AI Coaching Is Included Either Way
+              </div>
+              <div className="mt-2 text-sm leading-6 text-slate-300">
+                SYNC uses your nutrition, body weight, completed sets, reps, cardio, recovery, pain, and progress to help move you toward your goal. Beginners get more guidance. Experienced lifters, bodybuilders, and athletes get more control and harder progression.
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setWorkoutChoiceOpen(false);
+                  onOpen?.("cardio-player");
+                }}
+                className="h-11 rounded-2xl border border-amber-300/20 bg-amber-300/10 text-xs font-black text-amber-100"
+              >
+                Start Cardio Now
               </button>
 
               <button
                 type="button"
                 onClick={() => {
                   setWorkoutChoiceOpen(false);
-                  onOpen?.("plan-today");
+                  onOpen?.("workout");
                 }}
-                className="h-12 rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 text-sm font-black text-fuchsia-100"
+                className="h-11 rounded-2xl border border-white/10 bg-white/[0.04] text-xs font-black text-slate-200"
               >
-                Ask Coach to Build It
+                View My Workouts
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setWorkoutChoiceOpen(false);
+                  onOpen?.("coach-chat");
+                }}
+                className="h-11 rounded-2xl border border-fuchsia-300/20 bg-fuchsia-300/10 text-xs font-black text-fuchsia-100"
+              >
+                Ask SYNC First
               </button>
             </div>
           </section>
