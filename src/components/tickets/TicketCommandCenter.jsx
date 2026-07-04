@@ -22,8 +22,8 @@ function workflowStepLabel(status) {
   if (normalized === "ON_SITE") return "Start";
   if (normalized === "IN_PROGRESS") return "Complete";
   if (normalized === "APPROVED") return "Start or Complete";
-  if (["COMPLETED", "PAID", "CLOSED"].includes(normalized)) return "Complete";
-  if (normalized === "CANCELLED") return "Cancelled";
+  if (["COMPLETED", "PAID", "CLOSED"].includes(normalized)) return "View records";
+  if (normalized === "CANCELLED") return "View records";
   return "Review ticket";
 }
 

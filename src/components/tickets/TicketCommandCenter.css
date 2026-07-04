@@ -487,3 +487,23 @@
 .sw-ticket-drawer[role="dialog"] {
   overscroll-behavior: contain;
 }
+@media (max-height: 640px) and (max-width: 1023px) {
+  .sw-ticket-drawer {
+    max-height: 92dvh;
+  }
+
+  .sw-ticket-drawer-header {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .sw-ticket-drawer-section {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .sw-ticket-pulse {
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+}

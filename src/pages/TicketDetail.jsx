@@ -1173,7 +1173,7 @@ export default function TicketDetail() {
 
   function navigateTicketSection(sectionKey) {
     const routes = {
-      contact: ["overview", ""],
+      contact: ["overview", isCustomer ? "ticket-provider-contact" : "ticket-customer-contact"],
       assignment: ["overview", "ticket-assignment"],
       schedule: ["overview", "ticket-workflow-actions"],
       workflow: ["overview", canStatusChange ? "ticket-status-change" : "ticket-workflow-actions"],
@@ -1181,8 +1181,8 @@ export default function TicketDetail() {
       files: ["files", ""],
       quote: ["quote", ""],
       invoice: ["invoice", ""],
-      marketplace: ["overview", ""],
-      archive: ["overview", ""],
+      marketplace: ["overview", "ticket-marketplace-details"],
+      archive: ["overview", "ticket-archive-records"],
     };
 
     const route = routes[sectionKey] || ["overview", ""];
@@ -1371,11 +1371,13 @@ export default function TicketDetail() {
                       onOpenFiles={() => setActiveTab("files")}
                       onOpenInvoice={() => setActiveTab("invoice")}
                     />
-                    <AssignedBusinessCardPanel
-                      ticket={ticket}
-                      onBookAgain={bookAgainWithAssignedBusiness}
-                      onSaveProvider={saveAssignedProvider}
-                    />
+                    <div id="ticket-provider-contact" className="scroll-mt-28">
+                      <AssignedBusinessCardPanel
+                        ticket={ticket}
+                        onBookAgain={bookAgainWithAssignedBusiness}
+                        onSaveProvider={saveAssignedProvider}
+                      />
+                    </div>
                     <CustomerCompletionReviewCard
                       ticket={ticket}
                       ticketId={ticketId}
@@ -1417,27 +1419,29 @@ export default function TicketDetail() {
                       assignedMemberDisplay={assignedMemberDisplay}
                       currentRoleLabel={currentRoleLabel}
                     />
-
-                    <TicketQuickFactsCard
-                      paymentPref={paymentPref}
-                      contactPref={contactPref}
-                      bestPhone={bestPhone}
-                      smsAllowed={smsAllowed}
-                      categoryPath={workType}
-                      priority={priority}
-                      zip={ticket?.service_zip || intake?.routing?.service_zip || ""}
-                      cityState={cityState}
-                      isMarketplace={isMarketplace}
-                    />
-
-                    <TicketCustomerCard
-                      customerName={customerName}
-                      customerEmail={customerEmail}
-                      customerPhone={bestPhone}
-                      serviceAddress={ticket?.service_address || intake?.routing?.service_address || ""}
-                      detailSummary={detailSummary}
-                      onOpenMessages={() => setActiveTab("messages")}
-                    />
+                    <div id="ticket-marketplace-details" className="scroll-mt-28">
+                      <TicketQuickFactsCard
+                        paymentPref={paymentPref}
+                        contactPref={contactPref}
+                        bestPhone={bestPhone}
+                        smsAllowed={smsAllowed}
+                        categoryPath={workType}
+                        priority={priority}
+                        zip={ticket?.service_zip || intake?.routing?.service_zip || ""}
+                        cityState={cityState}
+                        isMarketplace={isMarketplace}
+                      />
+                    </div>
+                    <div id="ticket-customer-contact" className="scroll-mt-28">
+                      <TicketCustomerCard
+                        customerName={customerName}
+                        customerEmail={customerEmail}
+                        customerPhone={bestPhone}
+                        serviceAddress={ticket?.service_address || intake?.routing?.service_address || ""}
+                        detailSummary={detailSummary}
+                        onOpenMessages={() => setActiveTab("messages")}
+                      />
+                    </div>
 
                     <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
                       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -1470,13 +1474,14 @@ export default function TicketDetail() {
                     </div>
 
                     <TicketLifecycleCard ticket={ticket} />
-
-                    <TicketArchiveToolsCard
-                      ticket={ticket}
-                      ticketCode={ticketCode}
-                      onExport={exportTicketJson}
-                      onAfterChange={loadTicket}
-                    />
+                    <div id="ticket-archive-records" className="scroll-mt-28">
+                      <TicketArchiveToolsCard
+                        ticket={ticket}
+                        ticketCode={ticketCode}
+                        onExport={exportTicketJson}
+                        onAfterChange={loadTicket}
+                      />
+                    </div>
                   </>
                 )}
               </div>
@@ -1566,7 +1571,13 @@ export default function TicketDetail() {
         onInvoice={() => openTicketSection("invoice")}
         onFiles={() => openTicketSection("files")}
         onNavigate={navigateTicketSection}
-        onOpenNextStep={() => navigateTicketSection("workflow")}
+        onOpenNextStep={() =>
+          navigateTicketSection(
+            ["COMPLETED", "PAID", "CLOSED", "CANCELLED"].includes(status)
+              ? "archive"
+              : "workflow"
+          )
+        }
       /></div>
   );
 }
