@@ -10,6 +10,7 @@ import {
 } from "./healthCoachVoice";
 import { buildGoalAnalysis } from "./healthGoalEngine";
 import DailyMetricProgressCard from "./DailyMetricProgressCard";
+import HealthVoiceSettingsDrawer from "./HealthVoiceSettingsDrawer";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -431,6 +432,8 @@ export default function HealthHome({
     useState(false);
   const [workoutChoiceOpen, setWorkoutChoiceOpen] =
     useState(false);
+  const [voiceSettingsOpen, setVoiceSettingsOpen] =
+    useState(false);
 
   const [audioEnabled, setAudioEnabled] = useState(() => {
     if (typeof window === "undefined") return true;
@@ -492,17 +495,17 @@ export default function HealthHome({
       : configuredCoachAudioMode
     : "off";
 
-  function toggleAudio() {
-    setAudioEnabled((current) => {
-      const next = !current;
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(
-          "syncworks_health_audio_enabled",
-          String(next)
-        );
-      }
-      return next;
-    });
+  function updateAudioEnabled(nextValue) {
+    const next = Boolean(nextValue);
+
+    setAudioEnabled(next);
+
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        "syncworks_health_audio_enabled",
+        String(next)
+      );
+    }
   }
 
   const voicePreference =
@@ -616,9 +619,9 @@ export default function HealthHome({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={toggleAudio}
-              aria-label={audioEnabled ? "Turn coaching audio off" : "Turn coaching audio on"}
-              title={audioEnabled ? "Coaching audio on" : "Coaching audio off"}
+              onClick={() => setVoiceSettingsOpen(true)}
+              aria-label="Open coaching voice settings"
+              title="Coaching voice settings"
               className={cx(
                 "flex h-11 w-11 items-center justify-center rounded-2xl border",
                 audioEnabled
@@ -798,6 +801,13 @@ export default function HealthHome({
           </div>
         </div>
       </section>
+
+      <HealthVoiceSettingsDrawer
+        open={voiceSettingsOpen}
+        onClose={() => setVoiceSettingsOpen(false)}
+        audioEnabled={audioEnabled}
+        onAudioEnabledChange={updateAudioEnabled}
+      />
 
       {workoutChoiceOpen ? (
         <div className="fixed inset-0 z-[125] flex items-end justify-center bg-black/80 p-3 backdrop-blur-md sm:items-center">
