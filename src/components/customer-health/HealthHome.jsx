@@ -6,10 +6,10 @@ import React, {
 import { Headphones } from "lucide-react";
 
 import {
-  buildExerciseIntroSpeech,
   speakCoachText,
 } from "./healthCoachVoice";
 import { buildGoalAnalysis } from "./healthGoalEngine";
+import DailyMetricProgressCard from "./DailyMetricProgressCard";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -1090,6 +1090,12 @@ export default function HealthHome({
           </div>
         </section>
       ) : null}
+
+      <DailyMetricProgressCard
+        snapshot={snapshot}
+        onQuickLog={onQuickLog}
+        onShowInsights={onShowInsights}
+      />
 
       <section className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

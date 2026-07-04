@@ -46,6 +46,10 @@ import AiCoachDrawer from "../components/customer-health/AiCoachDrawer";
 import CoachChatDrawer from "../components/customer-health/CoachChatDrawer";
 import ActiveWorkoutSessionDrawer from "../components/customer-health/ActiveWorkoutSessionDrawer";
 import HealthMobileQuickNav from "../components/customer-health/HealthMobileQuickNav";
+import {
+  buildDailyMetricIntelligence,
+  mergeDailyMetricEntry,
+} from "../components/customer-health/healthDailyMetricIntelligence";
 import "../components/customer-health/healthUiPolish.css";
 import { buildAdaptiveWorkout } from "../components/customer-health/healthAdaptiveWorkoutGenerator";
 import { buildAiWeeklyPlan } from "../components/customer-health/healthAiWeeklyPlan";
@@ -1880,6 +1884,42 @@ export default function CustomerHealth() {
           next.last_meal_description =
             entry?.note || previous?.last_meal_description || "";
         }
+
+        next.daily_history =
+          mergeDailyMetricEntry(
+            previous?.daily_history,
+            logEntry,
+            next
+          );
+
+        next.daily_metric_intelligence =
+          buildDailyMetricIntelligence({
+            snapshot: next,
+          });
+
+        next.last_daily_metric_update_at =
+          createdAt;
+
+        return next;
+      });
+    } else {
+      setSnapshot((previous) => {
+        const next = {
+          ...previous,
+          daily_history:
+            mergeDailyMetricEntry(
+              previous?.daily_history,
+              logEntry,
+              previous
+            ),
+          last_daily_metric_update_at:
+            createdAt,
+        };
+
+        next.daily_metric_intelligence =
+          buildDailyMetricIntelligence({
+            snapshot: next,
+          });
 
         return next;
       });
