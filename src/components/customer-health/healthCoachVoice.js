@@ -47,6 +47,9 @@ let activeAudioUrl = "";
 let activeVoiceRequest = null;
 let voiceOptionsPromise = null;
 
+const SILENT_AUDIO_DATA_URL =
+  "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+
 function getSynth() {
   if (typeof window === "undefined") return null;
   if (!("speechSynthesis" in window)) return null;
@@ -121,7 +124,8 @@ export function canUseSpeechSynthesis() {
 function releaseActiveAudio() {
   if (activeAudio) {
     activeAudio.pause();
-    activeAudio.src = "";
+    activeAudio.removeAttribute("src");
+    activeAudio.load();
     activeAudio = null;
   }
 
@@ -132,6 +136,36 @@ function releaseActiveAudio() {
     URL.revokeObjectURL(activeAudioUrl);
     activeAudioUrl = "";
   }
+}
+
+function primeCoachAudioPlayback(volume = 1) {
+  if (typeof Audio === "undefined") return null;
+
+  releaseActiveAudio();
+
+  const audio = new Audio();
+  audio.preload = "auto";
+  audio.playsInline = true;
+  audio.volume = Math.max(
+    0,
+    Math.min(1, Number(volume) || 1)
+  );
+  audio.src = SILENT_AUDIO_DATA_URL;
+
+  activeAudio = audio;
+
+  const unlockPromise = audio.play();
+
+  if (
+    unlockPromise &&
+    typeof unlockPromise.catch === "function"
+  ) {
+    unlockPromise.catch(() => {
+      // The real playback attempt below will still run.
+    });
+  }
+
+  return audio;
 }
 
 export function stopCoachVoice() {
@@ -291,6 +325,9 @@ async function playElevenLabsSpeech({
 }) {
   if (cancelFirst) stopCoachVoice();
 
+  const playbackAudio =
+    primeCoachAudioPlayback(volume);
+
   activeVoiceRequest = new AbortController();
 
   try {
@@ -303,39 +340,58 @@ async function playElevenLabsSpeech({
     });
 
     activeVoiceRequest = null;
-    releaseActiveAudio();
+
+    if (
+      activeAudioUrl &&
+      typeof URL !== "undefined"
+    ) {
+      URL.revokeObjectURL(activeAudioUrl);
+      activeAudioUrl = "";
+    }
 
     activeAudioUrl = URL.createObjectURL(
       result.blob
     );
 
-    activeAudio = new Audio(activeAudioUrl);
-    activeAudio.volume = Math.max(
+    const audio =
+      playbackAudio || new Audio();
+
+    activeAudio = audio;
+    audio.pause();
+    audio.src = activeAudioUrl;
+    audio.preload = "auto";
+    audio.playsInline = true;
+    audio.volume = Math.max(
       0,
       Math.min(1, Number(volume) || 1)
     );
 
-    activeAudio.addEventListener(
+    audio.addEventListener(
       "ended",
       releaseActiveAudio,
       { once: true }
     );
 
-    activeAudio.addEventListener(
+    audio.addEventListener(
       "error",
       releaseActiveAudio,
       { once: true }
     );
 
-    await activeAudio.play();
+    audio.load();
+    await audio.play();
     return true;
   } catch (error) {
     activeVoiceRequest = null;
 
-    if (error?.name === "CanceledError") {
+    if (
+      error?.name === "CanceledError" ||
+      error?.name === "AbortError"
+    ) {
       return false;
     }
 
+    releaseActiveAudio();
     throw error;
   }
 }
