@@ -418,3 +418,48 @@
     font-size: 8px;
   }
 }
+.sw-ticket-pulse-action {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.sw-ticket-pulse-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.sw-ticket-pulse-open {
+  flex: 0 0 auto;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: rgba(168, 85, 247, 0.12);
+  color: rgb(233 213 255);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sw-ticket-pulse-action:hover .sw-ticket-pulse-open,
+.sw-ticket-pulse-action:focus-visible .sw-ticket-pulse-open {
+  border-color: rgba(34, 211, 238, 0.42);
+  background: rgba(34, 211, 238, 0.12);
+  color: rgb(207 250 254);
+}
+
+.sw-ticket-pulse-action:focus-visible {
+  outline: 2px solid rgba(34, 211, 238, 0.55);
+  outline-offset: 4px;
+  border-radius: 12px;
+}

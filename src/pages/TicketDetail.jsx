@@ -1550,7 +1550,8 @@ export default function TicketDetail() {
         isMarketplace={isMarketplace}
         ticketCode={ticketCode}
         ticketStatus={ticket?.status}
-        assignedName={assignedName}        customerPhone={bestPhone}
+        assignedName={assignedName}
+        customerPhone={bestPhone}
         providerPhone={providerPhone}
         canAssign={canAssign}
         canSchedule={canSchedule}
@@ -1565,6 +1566,7 @@ export default function TicketDetail() {
         onInvoice={() => openTicketSection("invoice")}
         onFiles={() => openTicketSection("files")}
         onNavigate={navigateTicketSection}
+        onOpenNextStep={() => navigateTicketSection("workflow")}
       /></div>
   );
 }

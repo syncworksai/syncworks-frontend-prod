@@ -112,6 +112,7 @@ export default function TicketCommandCenter({
   onInvoice,
   onFiles,
   onNavigate,
+  onOpenNextStep,
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const phoneHref = useMemo(
@@ -256,14 +257,24 @@ export default function TicketCommandCenter({
       </nav>
 
       <div className="sw-ticket-pulse lg:hidden" aria-label="Ticket status summary">
-        <div className="sw-ticket-pulse-main">
-          <span className="sw-ticket-pulse-code">{ticketCode || "Ticket"}</span>
-          <span className="sw-ticket-pulse-status">{pulseStatus}</span>
-        </div>
-        <div className="sw-ticket-pulse-meta">
-          <span>{assignedName ? `Assigned: ${assignedName}` : "Unassigned"}</span>
-          <span>Next: {pulseNextStep}</span>
-        </div>
+        <button
+          type="button"
+          className="sw-ticket-pulse-action"
+          onClick={onOpenNextStep}
+          aria-label={`Open next ticket step: ${pulseNextStep}`}
+        >
+          <span className="sw-ticket-pulse-copy">
+            <span className="sw-ticket-pulse-main">
+              <span className="sw-ticket-pulse-code">{ticketCode || "Ticket"}</span>
+              <span className="sw-ticket-pulse-status">{pulseStatus}</span>
+            </span>
+            <span className="sw-ticket-pulse-meta">
+              <span>{assignedName ? `Assigned: ${assignedName}` : "Unassigned"}</span>
+              <span>Next: {pulseNextStep}</span>
+            </span>
+          </span>
+          <span className="sw-ticket-pulse-open">Open</span>
+        </button>
       </div>
 
       {drawerOpen ? (
