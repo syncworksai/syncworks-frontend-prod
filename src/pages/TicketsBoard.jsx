@@ -873,6 +873,97 @@ function BoardTicketCard({
   );
 }
 
+function TicketBoardSkeleton({ viewMode }) {
+  if (viewMode === "table") {
+    return (
+      <div className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-950/45">
+        <div className="space-y-1 p-4">
+          {[0, 1, 2, 3].map((row) => (
+            <div
+              key={row}
+              className="grid grid-cols-[110px_1fr_100px] gap-3 rounded-2xl border border-slate-800/70 bg-slate-950/55 p-3"
+            >
+              <div className="h-4 animate-pulse rounded bg-slate-800" />
+              <div className="h-4 animate-pulse rounded bg-slate-800" />
+              <div className="h-4 animate-pulse rounded bg-slate-800" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cx(viewMode === "queue" ? "grid gap-4 xl:grid-cols-2" : "space-y-3")}>
+      {[0, 1, 2].map((card) => (
+        <div
+          key={card}
+          className="rounded-3xl border border-slate-800 bg-slate-950/45 p-5"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1 space-y-3">
+              <div className="h-4 w-28 animate-pulse rounded bg-slate-800" />
+              <div className="h-5 w-3/4 animate-pulse rounded bg-slate-800" />
+              <div className="h-4 w-1/2 animate-pulse rounded bg-slate-800" />
+            </div>
+            <div className="h-9 w-20 animate-pulse rounded-xl bg-slate-800" />
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="h-16 animate-pulse rounded-2xl bg-slate-900" />
+            <div className="h-16 animate-pulse rounded-2xl bg-slate-900" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TicketBoardEmptyState({ filtered, items, view, onClear, onCreate }) {
+  const hasTickets = (items || []).length > 0;
+  const filteredOut = hasTickets && filtered.length === 0;
+
+  const titles = {
+    archived: "No archived tickets",
+    saved: "No saved tickets",
+    marketplace: "No marketplace opportunities",
+    my: "No assigned tickets",
+    direct: "No direct tickets",
+    active: "No active tickets",
+  };
+
+  const descriptions = {
+    archived: "Archived work will appear here when you move tickets out of the active board.",
+    saved: "Save important tickets to build a personal follow-up list.",
+    marketplace: "New matching opportunities will appear here when they are available.",
+    my: "Tickets assigned to you or your team will appear here.",
+    direct: "Direct customer requests will appear here.",
+    active: "Create a new request to start the workflow.",
+  };
+
+  return (
+    <div className="rounded-3xl border border-dashed border-slate-700 bg-slate-950/45 p-8 text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-500/25 bg-cyan-500/10 text-xl text-cyan-200">
+        {filteredOut ? "âŒ•" : "+"}
+      </div>
+      <div className="mt-4 text-lg font-black text-slate-100">
+        {filteredOut ? "No tickets match these filters" : titles[view] || "No tickets yet"}
+      </div>
+      <div className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-400">
+        {filteredOut
+          ? "Clear the active search and filters to return to the full board."
+          : descriptions[view] || "Tickets will appear here as they are created."}
+      </div>
+      <div className="mt-5 flex flex-wrap justify-center gap-2">
+        {filteredOut ? (
+          <SmallBtn tone="cyan" onClick={onClear}>Clear filters</SmallBtn>
+        ) : view === "active" || view === "direct" ? (
+          <SmallBtn tone="cyan" onClick={onCreate}>Create request</SmallBtn>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function CompactTicketRow({ ticket, saved, onSavedToggle, onArchiveToggle, isSboLike, busy }) {
   const status = String(ticket?.status || "NEW").toUpperCase();
   const mp = isMarketplace(ticket);
@@ -942,6 +1033,7 @@ export default function TicketsBoard() {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [notice, setNotice] = useState("");
   const [billing, setBilling] = useState(null);
 
   const [q, setQ] = useState("");
@@ -1103,6 +1195,7 @@ export default function TicketsBoard() {
 
     try {
       await api.post(`/tickets/${ticketId}/${action}/`, {});
+      setNotice(`Ticket action completed: ${String(action).replaceAll("-", " ")}.`);
       await load();
     } catch (e) {
       const lock = parseLockError(e);
@@ -1127,6 +1220,7 @@ export default function TicketsBoard() {
       await api.post(`/tickets/${ticketId}/assign_member/`, {
         business_member_id: Number(memberId),
       });
+      setNotice("Employee assigned successfully.");
       await load();
     } catch (e) {
       setErr(e?.response?.data?.detail || "Failed to assign employee");
@@ -1143,6 +1237,7 @@ export default function TicketsBoard() {
       await api.post(`/tickets/${ticketId}/set-status/`, {
         status: nextStatus,
       });
+      setNotice(`Status updated to ${statusLabel(nextStatus)}.`);
       await load();
     } catch (e) {
       setErr(e?.response?.data?.detail || "Failed to update status");
@@ -1213,6 +1308,7 @@ async function onArchiveToggle(ticketId, archived) {
 
     setSavedIds(next);
     writeSavedSet(user?.id || user?.email, mode, next);
+    setNotice(next.has(id) ? "Ticket saved." : "Ticket removed from saved.");
   }
 
   const marketplaceFilterOptions = useMemo(
@@ -1394,7 +1490,36 @@ async function onArchiveToggle(ticketId, archived) {
         <TicketsHero isCustomer={isCustomer} counts={counts} loading={loading} onCreate={goCreate} onRefresh={load} />
 
         {err ? (
-          <div className="rounded-2xl border border-red-800 bg-red-900/20 p-3 text-sm text-red-300">{err}</div>
+          <div
+            role="alert"
+            className="rounded-2xl border border-red-500/35 bg-red-500/10 p-4"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-black text-red-100">Ticket board needs attention</div>
+                <div className="mt-1 text-sm text-red-200/90">{err}</div>
+              </div>
+              <SmallBtn tone="rose" onClick={load}>Retry</SmallBtn>
+            </div>
+          </div>
+        ) : null}
+
+        {notice ? (
+          <div
+            role="status"
+            className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="text-sm font-semibold text-emerald-100">{notice}</div>
+              <button
+                type="button"
+                onClick={() => setNotice("")}
+                className="text-[10px] font-black uppercase tracking-[0.12em] text-emerald-200"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
         ) : null}
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
@@ -1600,7 +1725,11 @@ async function onArchiveToggle(ticketId, archived) {
           </div>
         </section>
 
-        {viewMode === "table" ? (
+        {loading ? (
+
+          <TicketBoardSkeleton viewMode={viewMode} />
+
+        ) : viewMode === "table" ? (
           <div className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-950/45">
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
@@ -1617,7 +1746,22 @@ async function onArchiveToggle(ticketId, archived) {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-10 text-slate-400">No tickets match your filters.</td>
+                      <td colSpan={6} className="px-4 py-6">
+                        <TicketBoardEmptyState
+                          filtered={filtered}
+                          items={items}
+                          view={view}
+                          onClear={() => {
+                            setQ("");
+                            setStatus("ALL");
+                            setSource("ALL");
+                            setAssigned("ALL");
+                            setFocus("ALL");
+                            setMarketplaceFilters(DEFAULT_MARKETPLACE_FILTERS);
+                          }}
+                          onCreate={goCreate}
+                        />
+                      </td>
                     </tr>
                   ) : (
                     filtered.map((ticket) => (
@@ -1639,9 +1783,20 @@ async function onArchiveToggle(ticketId, archived) {
         ) : (
           <div className={cx(viewMode === "queue" ? "grid gap-4 xl:grid-cols-2" : "space-y-3")}>
             {filtered.length === 0 ? (
-              <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-8 text-slate-400">
-                No tickets match your filters.
-              </div>
+              <TicketBoardEmptyState
+                filtered={filtered}
+                items={items}
+                view={view}
+                onClear={() => {
+                  setQ("");
+                  setStatus("ALL");
+                  setSource("ALL");
+                  setAssigned("ALL");
+                  setFocus("ALL");
+                  setMarketplaceFilters(DEFAULT_MARKETPLACE_FILTERS);
+                }}
+                onCreate={goCreate}
+              />
             ) : (
               filtered.map((ticket) => (
                 <BoardTicketCard
