@@ -767,7 +767,7 @@ export default function HealthHome({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-200">Goal Progress</div>
-            <div className="mt-1 text-2xl font-black text-white">{goalAnalysis.currentWeight || "-"} â†’ {goalAnalysis.targetWeight || "-"} lb</div>
+            <div className="mt-1 text-2xl font-black text-white">{goalAnalysis.currentWeight || "-"} to {goalAnalysis.targetWeight || "-"} lb</div>
             <div className="mt-1 text-sm leading-6 text-slate-400">
               Target {goalAnalysis.targetDateLabel} - Projected {goalAnalysis.projectedDateLabel}
             </div>
@@ -851,7 +851,9 @@ export default function HealthHome({
                   <div className="rounded-full border border-lime-300/25 bg-lime-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-lime-100">
                     Recommended
                   </div>
-                  <div className="text-2xl">âœ¦</div>
+                  <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-cyan-100">
+                    AI
+                  </div>
                 </div>
 
                 <div className="mt-4 text-2xl font-black text-white">

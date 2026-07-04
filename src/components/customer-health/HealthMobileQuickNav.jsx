@@ -133,7 +133,7 @@ export default function HealthMobileQuickNav({
       className="fixed inset-x-0 bottom-0 z-[75] border-t border-emerald-300/20 bg-[#020817]/97 px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 shadow-[0_-18px_55px_rgba(52,211,153,0.18)] backdrop-blur-2xl lg:hidden"
     >
       <div className="mx-auto max-w-md">
-        <div className="grid grid-cols-[1fr_1fr_1.45fr_1fr_1fr] items-end gap-1">
+        <div className="grid grid-cols-5 items-stretch gap-1">
           <NavButton
             label="Health"
             icon={<HomeIcon />}
@@ -155,25 +155,24 @@ export default function HealthMobileQuickNav({
                 ? `Start ${workoutName}`
                 : "Plan and start a workout"
             }
-            className="group relative -mt-10 flex min-w-0 flex-col items-center justify-end rounded-[1.8rem] border border-emerald-300/35 bg-[linear-gradient(180deg,rgba(16,185,129,0.24),rgba(2,8,23,0.99))] px-1 pb-2.5 pt-1 text-center text-[9px] font-black uppercase tracking-[0.08em] text-emerald-50 shadow-[0_0_38px_rgba(57,255,136,0.30)] transition active:scale-[0.95]"
+            className="group relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-emerald-300/30 bg-[linear-gradient(180deg,rgba(16,185,129,0.16),rgba(2,8,23,0.96))] px-1 py-2 text-center text-[9px] font-black uppercase tracking-[0.08em] text-emerald-50 shadow-[0_0_20px_rgba(57,255,136,0.22)] transition active:scale-[0.96]"
           >
-            <span className="pointer-events-none absolute left-1/2 top-1 h-20 w-20 -translate-x-1/2 animate-ping rounded-full border border-emerald-300/20 opacity-40" />
-            <span className="pointer-events-none absolute left-1/2 top-2 h-16 w-16 -translate-x-1/2 rounded-full bg-emerald-300/20 blur-2xl transition group-hover:bg-cyan-300/25" />
+            <span className="pointer-events-none absolute left-1/2 top-2 h-11 w-11 -translate-x-1/2 rounded-full bg-emerald-300/18 blur-xl transition group-hover:bg-cyan-300/22" />
 
-            <span className="relative flex h-[76px] w-[76px] items-center justify-center rounded-full border border-cyan-200/35 bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.24),transparent_22%),linear-gradient(145deg,rgba(34,211,238,0.22),rgba(57,255,136,0.24),rgba(139,92,246,0.24))] shadow-[0_0_14px_rgba(34,211,238,0.85),0_0_30px_rgba(57,255,136,0.42)]">
+            <span className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-200/35 bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.20),transparent_24%),linear-gradient(145deg,rgba(34,211,238,0.20),rgba(57,255,136,0.22),rgba(139,92,246,0.22))] shadow-[0_0_10px_rgba(34,211,238,0.62),0_0_18px_rgba(57,255,136,0.30)]">
               <img
                 src="/health/brand/syncworks-start-logo.png"
                 alt=""
                 aria-hidden="true"
-                className="h-[68px] w-[68px] object-contain drop-shadow-[0_0_14px_rgba(255,255,255,0.75)]"
+                className="h-8 w-8 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.62)]"
               />
             </span>
 
-            <span className="mt-1 text-[10px] tracking-[0.1em]">
-              Start Workout
+            <span className="w-full truncate text-center">
+              Start
             </span>
 
-            <span className="mt-0.5 max-w-[112px] truncate text-[8px] font-bold normal-case tracking-normal text-emerald-100/75">
+            <span className="max-w-full truncate text-[7px] font-bold normal-case tracking-normal text-emerald-100/70">
               {workoutName}
               {workoutTime ? ` \u00B7 ${workoutTime}` : ""}
             </span>

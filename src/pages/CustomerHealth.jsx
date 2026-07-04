@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 
 import ModeBar from "../components/ModeBar";
 import { useAuth } from "../auth/AuthContext";
@@ -3113,9 +3114,10 @@ export default function CustomerHealth() {
                   onClick={() =>
                     setHealthView("home")
                   }
-                  className="h-11 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 text-sm font-black text-cyan-100"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 text-sm font-black text-cyan-100"
                 >
-                  â† Back to Health Home
+                  <ArrowLeft size={17} />
+                  Back to Health Home
                 </button>
 
                 <button
@@ -3145,9 +3147,10 @@ export default function CustomerHealth() {
                   onClick={() =>
                     setHealthView("insights")
                   }
-                  className="h-11 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 text-sm font-black text-cyan-100"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 text-sm font-black text-cyan-100"
                 >
-                  â† Back to Charts
+                  <ArrowLeft size={17} />
+                  Back to Charts
                 </button>
 
                 <button

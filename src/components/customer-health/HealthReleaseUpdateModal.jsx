@@ -109,7 +109,7 @@ export default function HealthReleaseUpdateModal({
           </div>
 
           <div className="mt-2 text-sm font-black leading-6 text-white">
-            Log activity â†’ update progress â†’ adapt the next decision â†’ explain why
+            Log activity, update progress, adapt the next decision, and explain why.
           </div>
         </div>
 
