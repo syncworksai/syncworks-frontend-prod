@@ -55,6 +55,11 @@ import {
   persistSessionExerciseMemory,
 } from "./healthExerciseMemory";
 
+import {
+  buildImmediateSetCoachMessage,
+  buildLiveTrainingSummary,
+} from "./healthTrainingConnectivity";
+
 import TrainerExerciseIntroCard from "./TrainerExerciseIntroCard";
 import CoachVoiceSettingsCard from "./CoachVoiceSettingsCard";
 import TrainerNudgeCard from "./TrainerNudgeCard";
@@ -2879,6 +2884,55 @@ export default function ActiveWorkoutSessionDrawer({
         : nextSession.last_completed_exercise_name || "",
     };
 
+    persistWorkoutSession(
+      nextSession,
+      plannerItem
+    );
+
+    persistSessionExerciseMemory(
+      nextSession,
+      history
+    );
+
+    const liveTrainingSummary =
+      buildLiveTrainingSummary(
+        nextSession
+      );
+
+    setSnapshot?.((previous) => ({
+      ...previous,
+      live_training_session:
+        liveTrainingSummary,
+      live_working_sets:
+        liveTrainingSummary.completed_sets,
+      live_focus_balance:
+        liveTrainingSummary.focus_balance,
+      last_set_saved_at:
+        new Date().toISOString(),
+      updated_at:
+        new Date().toISOString(),
+    }));
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent(
+          "syncworks:health-set-saved",
+          {
+            detail: {
+              session_id:
+                nextSession.id || "",
+              exercise_id:
+                currentExercise.id || "",
+              completed_sets:
+                liveTrainingSummary.completed_sets,
+              focus_balance:
+                liveTrainingSummary.focus_balance,
+            },
+          }
+        )
+      );
+    }
+
     setSession(nextSession);
     setSetCheckInOpen(false);
     setPendingSetDurationSeconds(0);
@@ -2902,23 +2956,36 @@ export default function ActiveWorkoutSessionDrawer({
       currentExercise.rest_seconds ||
       0;
 
-    const pain = Number(
-      enrichedSetLog.pain_score || 0
-    );
+    const nextSetSuggestion =
+      completedExercise
+        ? buildNextSetSuggestion(
+            completedExercise,
+            nextSession
+          )
+        : {};
 
     speakCoachText({
       text:
-        pain >= 3
-          ? `Set saved. Pain was reported. Reduce the load or adjust the movement. Rest for ${restSeconds} seconds.`
-          : exerciseFinished && hasNextExercise
-          ? `${currentExercise.name} complete. Next is ${nextSession.exercises[currentIndex + 1].name}. You have ${restSeconds} seconds remaining.`
-          : exerciseFinished
-          ? `${currentExercise.name} complete. All planned exercises are resolved.`
-          : `Set saved. Rest for ${restSeconds} seconds.`,
+        buildImmediateSetCoachMessage({
+          exercise:
+            currentExercise,
+          savedSet:
+            enrichedSetLog,
+          suggestion:
+            nextSetSuggestion,
+          restSeconds,
+          exerciseFinished,
+          nextExerciseName:
+            hasNextExercise
+              ? nextSession.exercises[
+                  currentIndex + 1
+                ]?.name || ""
+              : "",
+        }),
       audioMode: coachAudioMode,
       voicePreference: coachVoicePreference,
-      rate: 1.02,
-      pitch: 1,
+      rate: 1.04,
+      pitch: 1.02,
       volume: 1,
     });
   }

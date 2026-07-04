@@ -1,6 +1,12 @@
 // src/components/customer-health/HealthProgressCharts.jsx
 import React, { useMemo, useState } from "react";
 
+import {
+  buildFocusBalance,
+  countWorkingSets,
+  mergeLiveTrainingWithHistory,
+} from "./healthTrainingConnectivity";
+
 function safeNumber(value, fallback = 0) {
   const parsed = Number(
     String(value ?? "").replace(/[^\d.-]/g, "")
@@ -469,12 +475,21 @@ function startOfCurrentWeekYmd() {
 }
 
 function sessionValue(item = {}, key, fallback = 0) {
-  return safeNumber(
+  const stored = safeNumber(
     item?.[key] ??
       item?.summary?.[key] ??
       item?.session?.[key],
     fallback
   );
+
+  if (
+    key === "completed_sets" &&
+    stored <= 0
+  ) {
+    return countWorkingSets(item);
+  }
+
+  return stored;
 }
 
 function sessionExercises(item = {}) {
@@ -599,9 +614,29 @@ function buildWeeklyCoachReview({
     : 0;
 
   const muscleCounts = new Map();
+  const focusBalance = {
+    Push: 0,
+    Pull: 0,
+    Legs: 0,
+    Core: 0,
+  };
   let painFlags = 0;
 
   sessions.forEach((item) => {
+    const sessionFocus =
+      item?.focus_balance ||
+      item?.session?.focus_balance ||
+      buildFocusBalance(item);
+
+    Object.keys(focusBalance).forEach(
+      (key) => {
+        focusBalance[key] += safeNumber(
+          sessionFocus?.[key],
+          0
+        );
+      }
+    );
+
     sessionExercises(item).forEach((exercise) => {
       const trained =
         (exercise?.set_logs || []).length > 0 ||
@@ -681,6 +716,13 @@ function buildWeeklyCoachReview({
     averageRpe,
     painFlags,
     muscleBalance,
+    focusBalance:
+      Object.entries(focusBalance).map(
+        ([name, count]) => ({
+          name,
+          count,
+        })
+      ),
     recommendation,
   };
 }
@@ -1031,9 +1073,25 @@ export default function HealthProgressCharts({
   const [workoutMetric, setWorkoutMetric] =
     useState("workouts");
 
+  const connectedHistory = useMemo(
+    () =>
+      mergeLiveTrainingWithHistory(
+        history,
+        snapshot?.live_training_session
+      ),
+    [
+      history,
+      snapshot?.live_training_session,
+    ]
+  );
+
   const workoutData = useMemo(
-    () => buildWorkoutTrend(history, 7),
-    [history]
+    () =>
+      buildWorkoutTrend(
+        connectedHistory,
+        7
+      ),
+    [connectedHistory]
   );
 
   const weightData = useMemo(
@@ -1047,17 +1105,21 @@ export default function HealthProgressCharts({
   );
 
   const workoutComparison = useMemo(
-    () => buildWorkoutComparison(history),
-    [history]
+    () =>
+      buildWorkoutComparison(
+        connectedHistory
+      ),
+    [connectedHistory]
   );
 
   const weeklyReview = useMemo(
     () =>
       buildWeeklyCoachReview({
         snapshot,
-        history,
+        history:
+          connectedHistory,
       }),
-    [snapshot, history]
+    [snapshot, connectedHistory]
   );
 
   const targetWeight = safeNumber(
@@ -1376,13 +1438,15 @@ export default function HealthProgressCharts({
               </div>
             </div>
 
-            {weeklyReview.muscleBalance.length ? (
+            {weeklyReview.focusBalance.some(
+              (item) => item.count > 0
+            ) ? (
               <div className="mt-3 space-y-2">
-                {weeklyReview.muscleBalance.map(
+                {weeklyReview.focusBalance.map(
                   (item) => {
                     const maxCount = Math.max(
                       1,
-                      ...weeklyReview.muscleBalance.map(
+                      ...weeklyReview.focusBalance.map(
                         (row) => row.count
                       )
                     );
@@ -1414,7 +1478,7 @@ export default function HealthProgressCharts({
               </div>
             ) : (
               <div className="mt-3 rounded-xl border border-dashed border-white/10 p-4 text-center text-xs leading-5 text-slate-500">
-                Complete workouts with exercise muscle data to unlock balance tracking.
+                Save working sets to unlock Push, Pull, Legs, and Core balance tracking.
               </div>
             )}
           </div>
