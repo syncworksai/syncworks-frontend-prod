@@ -57,8 +57,18 @@ function DrawerAction({ icon, label, description, onClick, disabled = false }) {
   );
 }
 
+function SectionButton({ label, description, onClick }) {
+  return (
+    <button type="button" className="sw-ticket-section-button" onClick={onClick}>
+      <strong>{label}</strong>
+      <small>{description}</small>
+    </button>
+  );
+}
+
 export default function TicketCommandCenter({
   isCustomer = false,
+  isMarketplace = false,
   customerPhone = "",
   providerPhone = "",
   canAssign = false,
@@ -73,12 +83,92 @@ export default function TicketCommandCenter({
   onComplete,
   onInvoice,
   onFiles,
+  onNavigate,
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const phoneHref = useMemo(
     () => safeTelHref(isCustomer ? providerPhone : customerPhone),
     [customerPhone, isCustomer, providerPhone]
   );
+
+  const sectionItems = useMemo(() => {
+    if (isCustomer) {
+      return [
+        { key: "contact", label: "Provider", description: "Provider and request details" },
+        { key: "notes", label: "Activity", description: "Messages and updates" },
+        { key: "files", label: "Photos & files", description: "Attachments and uploads" },
+        { key: "invoice", label: "Invoice", description: "Payment and invoice status" },
+      ];
+    }
+
+    const items = [
+      { key: "contact", label: "Customer", description: "Contact and service details" },
+    ];
+
+    if (canAssign) {
+      items.push({
+        key: "assignment",
+        label: "Assignment",
+        description: "Technician or team member",
+      });
+    }
+
+    if (canSchedule) {
+      items.push({
+        key: "schedule",
+        label: "Schedule",
+        description: "Timing and arrival flow",
+      });
+    }
+
+    items.push(
+      {
+        key: "workflow",
+        label: "Status & workflow",
+        description: "Progress and lifecycle",
+      },
+      {
+        key: "notes",
+        label: "Notes & activity",
+        description: "Work chat and updates",
+      },
+      {
+        key: "files",
+        label: "Photos & files",
+        description: "Attachments and uploads",
+      }
+    );
+
+    if (!isMarketplace) {
+      items.push({
+        key: "quote",
+        label: "Quote",
+        description: "Estimate and approval",
+      });
+    }
+
+    items.push({
+      key: "invoice",
+      label: "Invoice & payment",
+      description: "Billing tools and status",
+    });
+
+    if (isMarketplace) {
+      items.push({
+        key: "marketplace",
+        label: "Marketplace",
+        description: "Partner and routing details",
+      });
+    }
+
+    items.push({
+      key: "archive",
+      label: "Archive & export",
+      description: "Closeout and records",
+    });
+
+    return items;
+  }, [canAssign, canSchedule, isCustomer, isMarketplace]);
 
   useEffect(() => {
     if (!drawerOpen) return undefined;
@@ -111,11 +201,7 @@ export default function TicketCommandCenter({
     <>
       <nav className="sw-ticket-command-center lg:hidden" aria-label="Ticket actions">
         <div className="sw-ticket-command-grid">
-          <CommandButton
-            icon={MessageSquareText}
-            label="Message"
-            onClick={onMessage}
-          />
+          <CommandButton icon={MessageSquareText} label="Message" onClick={onMessage} />
           <CommandButton
             icon={Phone}
             label={phoneHref ? "Call" : "No Phone"}
@@ -128,16 +214,8 @@ export default function TicketCommandCenter({
             onClick={() => setDrawerOpen(true)}
             active={drawerOpen}
           />
-          <CommandButton
-            icon={ReceiptText}
-            label="Invoice"
-            onClick={onInvoice}
-          />
-          <CommandButton
-            icon={FileText}
-            label="Files"
-            onClick={onFiles}
-          />
+          <CommandButton icon={ReceiptText} label="Invoice" onClick={onInvoice} />
+          <CommandButton icon={FileText} label="Files" onClick={onFiles} />
         </div>
       </nav>
 
@@ -181,76 +259,101 @@ export default function TicketCommandCenter({
               </div>
             ) : null}
 
-            <div className="sw-ticket-drawer-actions">
-              <DrawerAction
-                icon={MessageSquareText}
-                label={isCustomer ? "Message provider" : "Message customer"}
-                description="Open the ticket conversation."
-                onClick={() => run(onMessage)}
-              />
-              <DrawerAction
-                icon={Phone}
-                label={phoneHref ? (isCustomer ? "Call provider" : "Call customer") : "No phone available"}
-                description={phoneHref ? "Use the supplied phone number." : "A valid number was not supplied."}
-                onClick={() => run(callNow)}
-                disabled={!phoneHref}
-              />
+            <div className="sw-ticket-drawer-section">
+              <div className="sw-ticket-drawer-section-heading">
+                <span>Jump to section</span>
+                <small>Move around this ticket without scrolling through everything.</small>
+              </div>
 
-              {isCustomer ? null : (
-                <>
-                  <DrawerAction
-                    icon={MessageSquareText}
-                    label="Add quick note"
-                    description="Save a short update to the ticket."
-                    onClick={() => run(onQuickNote)}
+              <div className="sw-ticket-section-grid">
+                {sectionItems.map((item) => (
+                  <SectionButton
+                    key={item.key}
+                    label={item.label}
+                    description={item.description}
+                    onClick={() => run(() => onNavigate?.(item.key))}
                   />
-                  {canAssign ? (
-                    <DrawerAction
-                      icon={UserRoundCheck}
-                      label="Assign technician"
-                      description="Open the existing team assignment controls."
-                      onClick={() => run(onAssign)}
-                    />
-                  ) : null}
-                  {canSchedule ? (
-                    <DrawerAction
-                      icon={CalendarDays}
-                      label="Schedule"
-                      description="Use the current ticket workflow action."
-                      onClick={() => run(onSchedule)}
-                    />
-                  ) : null}
-                  {canStatusChange ? (
-                    <DrawerAction
-                      icon={MoreHorizontal}
-                      label="Update status"
-                      description="Open the existing authorized status controls."
-                      onClick={() => run(onUpdateStatus)}
-                    />
-                  ) : null}
-                  {canComplete ? (
-                    <DrawerAction
-                      icon={CheckCircle2}
-                      label="Complete work"
-                      description="Use the existing completion permission and endpoint."
-                      onClick={() => run(onComplete)}
-                    />
-                  ) : null}
-                </>
-              )}
+                ))}
+              </div>
+            </div>
 
-              <DrawerAction
-                icon={ReceiptText}
-                label="Open invoice"
-                description={isCustomer ? "Review the latest invoice." : "Open invoice tools."}
-                onClick={() => run(onInvoice)}
-              />
-              <DrawerAction
-                icon={FileText}
-                label="Open files"
-                description="View or upload ticket attachments."
-                onClick={() => run(onFiles)}
-              />
+            <div className="sw-ticket-drawer-section">
+              <div className="sw-ticket-drawer-section-heading">
+                <span>Quick actions</span>
+                <small>Use existing role-aware ticket controls.</small>
+              </div>
+
+              <div className="sw-ticket-drawer-actions">
+                <DrawerAction
+                  icon={MessageSquareText}
+                  label={isCustomer ? "Message provider" : "Message customer"}
+                  description="Open the ticket conversation."
+                  onClick={() => run(onMessage)}
+                />
+                <DrawerAction
+                  icon={Phone}
+                  label={phoneHref ? (isCustomer ? "Call provider" : "Call customer") : "No phone available"}
+                  description={phoneHref ? "Use the supplied phone number." : "A valid number was not supplied."}
+                  onClick={() => run(callNow)}
+                  disabled={!phoneHref}
+                />
+
+                {isCustomer ? null : (
+                  <>
+                    <DrawerAction
+                      icon={MessageSquareText}
+                      label="Add quick note"
+                      description="Save a short update to the ticket."
+                      onClick={() => run(onQuickNote)}
+                    />
+                    {canAssign ? (
+                      <DrawerAction
+                        icon={UserRoundCheck}
+                        label="Assign technician"
+                        description="Open the existing team assignment controls."
+                        onClick={() => run(onAssign)}
+                      />
+                    ) : null}
+                    {canSchedule ? (
+                      <DrawerAction
+                        icon={CalendarDays}
+                        label="Schedule"
+                        description="Use the current ticket workflow action."
+                        onClick={() => run(onSchedule)}
+                      />
+                    ) : null}
+                    {canStatusChange ? (
+                      <DrawerAction
+                        icon={MoreHorizontal}
+                        label="Update status"
+                        description="Open the existing authorized status controls."
+                        onClick={() => run(onUpdateStatus)}
+                      />
+                    ) : null}
+                    {canComplete ? (
+                      <DrawerAction
+                        icon={CheckCircle2}
+                        label="Complete work"
+                        description="Use the existing completion permission and endpoint."
+                        onClick={() => run(onComplete)}
+                      />
+                    ) : null}
+                  </>
+                )}
+
+                <DrawerAction
+                  icon={ReceiptText}
+                  label="Open invoice"
+                  description={isCustomer ? "Review the latest invoice." : "Open invoice tools."}
+                  onClick={() => run(onInvoice)}
+                />
+                <DrawerAction
+                  icon={FileText}
+                  label="Open files"
+                  description="View or upload ticket attachments."
+                  onClick={() => run(onFiles)}
+                />
+              </div>
             </div>
           </section>
         </div>

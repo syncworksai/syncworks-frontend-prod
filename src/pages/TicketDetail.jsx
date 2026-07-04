@@ -583,7 +583,7 @@ function OperationsControlCard({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
+        <div id="ticket-workflow-actions" className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
           <div className="text-sm font-semibold text-slate-100">Guided Actions</div>
           <div className="text-[11px] text-slate-400 mt-1">
             Fastest way to move the ticket in the right order.
@@ -1171,6 +1171,23 @@ export default function TicketDetail() {
     });
   }
 
+  function navigateTicketSection(sectionKey) {
+    const routes = {
+      contact: ["overview", ""],
+      assignment: ["overview", "ticket-assignment"],
+      schedule: ["overview", "ticket-workflow-actions"],
+      workflow: ["overview", canStatusChange ? "ticket-status-change" : "ticket-workflow-actions"],
+      notes: [isCustomer ? "messages" : "work", ""],
+      files: ["files", ""],
+      quote: ["quote", ""],
+      invoice: ["invoice", ""],
+      marketplace: ["overview", ""],
+      archive: ["overview", ""],
+    };
+
+    const route = routes[sectionKey] || ["overview", ""];
+    openTicketSection(route[0], route[1]);
+  }
   const currentRoleLabel = useMemo(() => {
     if (isOwner) return "Owner access: assign, guide workflow, and override when needed.";
     if (currentMember) return `${roleLabel(currentMember.role)} access`;
@@ -1530,6 +1547,7 @@ export default function TicketDetail() {
 
       <TicketCommandCenter
         isCustomer={isCustomer}
+        isMarketplace={isMarketplace}
         customerPhone={bestPhone}
         providerPhone={providerPhone}
         canAssign={canAssign}
@@ -1544,6 +1562,7 @@ export default function TicketDetail() {
         onComplete={() => providerAction("complete")}
         onInvoice={() => openTicketSection("invoice")}
         onFiles={() => openTicketSection("files")}
+        onNavigate={navigateTicketSection}
       /></div>
   );
 }
