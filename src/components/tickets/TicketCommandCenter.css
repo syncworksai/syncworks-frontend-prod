@@ -463,3 +463,27 @@
   outline-offset: 4px;
   border-radius: 12px;
 }
+.sw-ticket-command-button:focus-visible,
+.sw-ticket-drawer-close:focus-visible,
+.sw-ticket-drawer-action:focus-visible,
+.sw-ticket-section-button:focus-visible {
+  outline: 2px solid rgba(34, 211, 238, 0.72);
+  outline-offset: 2px;
+}
+
+.sw-ticket-drawer-action:focus-visible,
+.sw-ticket-section-button:focus-visible {
+  border-color: rgba(34, 211, 238, 0.5);
+  background:
+    linear-gradient(145deg, rgba(34, 211, 238, 0.12), rgba(168, 85, 247, 0.1)),
+    rgba(15, 23, 42, 0.98);
+}
+
+.sw-ticket-drawer-close:focus-visible {
+  border-color: rgba(34, 211, 238, 0.5);
+  color: rgb(207 250 254);
+}
+
+.sw-ticket-drawer[role="dialog"] {
+  overscroll-behavior: contain;
+}

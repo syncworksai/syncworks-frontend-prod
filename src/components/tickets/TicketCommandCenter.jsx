@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays,
   CheckCircle2,
@@ -48,9 +48,10 @@ function safeTelHref(value) {
   return `tel:${hasLeadingPlus ? "+" : ""}${digits}`;
 }
 
-function CommandButton({ icon, label, onClick, disabled = false, active = false }) {
+function CommandButton({ icon, label, onClick, disabled = false, active = false, buttonRef = null }) {
   return (
     <button
+      ref={buttonRef}
       type="button"
       className={`sw-ticket-command-button ${active ? "is-active" : ""}`}
       onClick={onClick}
@@ -115,6 +116,8 @@ export default function TicketCommandCenter({
   onOpenNextStep,
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const drawerRef = useRef(null);
+  const actionTriggerRef = useRef(null);
   const phoneHref = useMemo(
     () => safeTelHref(isCustomer ? providerPhone : customerPhone),
     [customerPhone, isCustomer, providerPhone]
@@ -210,17 +213,60 @@ export default function TicketCommandCenter({
   useEffect(() => {
     if (!drawerOpen) return undefined;
 
-    function onKeyDown(event) {
-      if (event.key === "Escape") setDrawerOpen(false);
+    const drawer = drawerRef.current;
+    const focusableSelector = [
+      'button:not([disabled])',
+      '[href]',
+      'input:not([disabled])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(",");
+
+    function focusableElements() {
+      return Array.from(drawer?.querySelectorAll(focusableSelector) || []);
     }
 
+    function onKeyDown(event) {
+      if (event.key === "Escape") {
+        setDrawerOpen(false);
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const elements = focusableElements();
+      if (!elements.length) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    const triggerElement = actionTriggerRef.current;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKeyDown);
 
+    window.requestAnimationFrame(() => {
+      const elements = focusableElements();
+      elements[0]?.focus();
+    });
+
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
+      window.requestAnimationFrame(() => triggerElement?.focus());
     };
   }, [drawerOpen]);
 
@@ -250,6 +296,7 @@ export default function TicketCommandCenter({
             label="Actions"
             onClick={() => setDrawerOpen(true)}
             active={drawerOpen}
+            buttonRef={actionTriggerRef}
           />
           <CommandButton icon={ReceiptText} label="Invoice" onClick={onInvoice} />
           <CommandButton icon={FileText} label="Files" onClick={onFiles} />
@@ -287,6 +334,7 @@ export default function TicketCommandCenter({
           />
 
           <section
+            ref={drawerRef}
             className="sw-ticket-drawer"
             role="dialog"
             aria-modal="true"
