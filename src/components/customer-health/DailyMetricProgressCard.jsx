@@ -59,6 +59,7 @@ export default function DailyMetricProgressCard({
   snapshot,
   onQuickLog,
   onShowInsights,
+  onEditGoals,
 }) {
   const intelligence = useMemo(
     () =>
@@ -86,12 +87,22 @@ export default function DailyMetricProgressCard({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-lime-300/20 bg-lime-300/10 px-4 py-3 text-center">
-          <div className="text-[9px] font-black uppercase tracking-[0.14em] text-lime-200">
-            Daily Score
-          </div>
-          <div className="mt-1 text-2xl font-black text-white">
-            {intelligence.daily_score}%
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onEditGoals}
+            className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-xs font-black text-slate-200"
+          >
+            Edit Goals
+          </button>
+
+          <div className="rounded-2xl border border-lime-300/20 bg-lime-300/10 px-4 py-3 text-center">
+            <div className="text-[9px] font-black uppercase tracking-[0.14em] text-lime-200">
+              Daily Score
+            </div>
+            <div className="mt-1 text-2xl font-black text-white">
+              {intelligence.daily_score}%
+            </div>
           </div>
         </div>
       </div>

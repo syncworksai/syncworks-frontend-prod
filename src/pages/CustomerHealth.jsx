@@ -49,6 +49,7 @@ import HealthMobileQuickNav from "../components/customer-health/HealthMobileQuic
 import HealthReleaseUpdateModal, {
   HEALTH_RELEASE_UPDATE_ID,
 } from "../components/customer-health/HealthReleaseUpdateModal";
+import DailyHealthGoalsDrawer from "../components/customer-health/DailyHealthGoalsDrawer";
 import {
   buildDailyMetricIntelligence,
   mergeDailyMetricEntry,
@@ -3203,6 +3204,9 @@ export default function CustomerHealth() {
               onResolveMissedWorkout={
                 resolveMissedWorkout
               }
+              onEditDailyGoals={() =>
+                setDrawer("daily-goals")
+              }
             />
           )
         ) : (
@@ -3473,6 +3477,17 @@ export default function CustomerHealth() {
               );
             }}
             setProfile={setProfile}
+          />
+
+          <DailyHealthGoalsDrawer
+            open={
+              drawer === "daily-goals"
+            }
+            onClose={() =>
+              setDrawer("")
+            }
+            snapshot={syncedSnapshot}
+            setSnapshot={setSnapshot}
           />
 
           <NutritionGoalsDrawer

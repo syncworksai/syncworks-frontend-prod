@@ -425,6 +425,7 @@ export default function HealthHome({
   onShowInsights,
   onQuickLog,
   onResolveMissedWorkout,
+  onEditDailyGoals,
 }) {
   const [logMenuOpen, setLogMenuOpen] =
     useState(false);
@@ -1095,6 +1096,7 @@ export default function HealthHome({
         snapshot={snapshot}
         onQuickLog={onQuickLog}
         onShowInsights={onShowInsights}
+        onEditGoals={onEditDailyGoals}
       />
 
       <section className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
