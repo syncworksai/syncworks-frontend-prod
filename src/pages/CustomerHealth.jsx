@@ -2137,6 +2137,7 @@ export default function CustomerHealth() {
       const result = buildAiWeeklyPlan({
         profile: intakeProfile,
         snapshot: syncedSnapshot,
+        history,
       });
 
       if (!result.week_plan.length) {

@@ -1,6 +1,7 @@
 // src/components/customer-health/healthAiWeeklyPlan.js
 import { HEALTH_EXERCISE_CATALOG } from "./healthExerciseCatalog";
 import { uid } from "./healthStorage";
+import { buildCoachIntelligence } from "./healthCoachIntelligence";
 
 const DAY_INDEX = {
   Sun: 0,
@@ -295,7 +296,25 @@ function mobilityExercises(profile) {
   }));
 }
 
-function strengthDefinition(index, total, profile) {
+function focusPattern(focus) {
+  const patterns = {
+    Push: /chest|shoulder|tricep|press|push/,
+    Pull: /back|lat|bicep|row|pull|curl/,
+    Legs: /leg|quad|hamstring|glute|calf|squat|lunge|hinge/,
+    Core: /core|abs|oblique|plank|rotation|carry/,
+  };
+
+  return patterns[focus] || /squat|press|row|pull|hinge|core/;
+}
+
+function strengthDefinition(index, total, profile, preferredFocus = "") {
+  if (preferredFocus) {
+    return {
+      title: `${preferredFocus} Priority`,
+      focus: preferredFocus,
+      pattern: focusPattern(preferredFocus),
+    };
+  }
   const goal = text(profile.primary_goal);
   const athletic = goal.includes("athletic") || !!profile.sport;
   const bodybuilding =
@@ -426,7 +445,37 @@ function buildSessionQueue(profile, availableCount) {
 export function buildAiWeeklyPlan({
   profile = {},
   snapshot = {},
+  history = [],
 } = {}) {
+  const liveSession = snapshot?.live_training_session;
+  const connectedHistory =
+    liveSession?.session_id &&
+    !history.some(
+      (item) =>
+        String(
+          item?.id ||
+            item?.session_id ||
+            item?.session?.id ||
+            ""
+        ) === String(liveSession.session_id)
+    )
+      ? [liveSession, ...history]
+      : history;
+
+  const intelligence = buildCoachIntelligence({
+    history: connectedHistory,
+    days: 7,
+  });
+
+  const balanceOrder = ["Push", "Pull", "Legs", "Core"].sort(
+    (left, right) =>
+      numberValue(
+        intelligence.balance?.[left.toLowerCase()]
+      ) -
+      numberValue(
+        intelligence.balance?.[right.toLowerCase()]
+      )
+  );
   const preferredTime = cleanTime(
     profile.preferred_start_time ||
       profile.preferred_time ||
@@ -492,10 +541,19 @@ export function buildAiWeeklyPlan({
       focus = "Mobility";
       exercises = mobilityExercises(profile);
     } else {
+      const preferredFocus =
+        balanceOrder[
+          (item.strengthIndex || 0) %
+            balanceOrder.length
+        ];
+
       const definition = strengthDefinition(
         item.strengthIndex || 0,
         strengthTotal,
-        profile
+        profile,
+        intelligence.sessions > 0
+          ? preferredFocus
+          : ""
       );
 
       title = definition.title;
@@ -545,7 +603,16 @@ export function buildAiWeeklyPlan({
       day_label: dayLabel,
       time: preferredTime,
       status: "Planned",
-      note: `AI-designed ${focus.toLowerCase()} session for ${profile.primary_goal || "your goal"}.`,
+      note:
+        intelligence.sessions > 0
+          ? `${intelligence.next_focus?.reason || "Balanced from your last seven days of working sets"}`
+          : `AI-designed ${focus.toLowerCase()} session for ${profile.primary_goal || "your goal"}.`,
+      adaptive_reason:
+        intelligence.sessions > 0
+          ? `${focus} was prioritized from your last seven days of logged working sets.`
+          : "",
+      recent_training_balance:
+        intelligence.balance,
       plan_control: "adaptive",
       source: "ai_weekly_plan",
       ai_plan_id: planId,
@@ -580,6 +647,12 @@ export function buildAiWeeklyPlan({
         (item) => item.focus === "Mobility"
       ).length,
       total_sessions: weekPlan.length,
+      recent_training_balance:
+        intelligence.balance,
+      recommended_first_focus:
+        intelligence.next_focus?.focus || "",
+      balance_reason:
+        intelligence.next_focus?.reason || "",
     },
   };
 }

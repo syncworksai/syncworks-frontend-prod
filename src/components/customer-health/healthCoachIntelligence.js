@@ -147,9 +147,14 @@ function recommendNextFocus(balance, recovery) {
   }
 
   const tracked = ["push", "pull", "legs", "core"];
-  const lowest = [...tracked].sort(
+  const ordered = [...tracked].sort(
     (a, b) => safeNumber(balance[a]) - safeNumber(balance[b])
-  )[0];
+  );
+  const lowest = ordered[0];
+  const highest = ordered[ordered.length - 1];
+  const spread =
+    safeNumber(balance[highest]) -
+    safeNumber(balance[lowest]);
 
   const labels = {
     push: "Push",
@@ -160,7 +165,13 @@ function recommendNextFocus(balance, recovery) {
 
   return {
     focus: labels[lowest] || "Balanced full body",
-    reason: `${labels[lowest] || "This area"} has the lowest working-set exposure over the last seven days.`,
+    reason:
+      spread >= 4
+        ? `${labels[highest]} is already ${spread} working sets ahead of ${labels[lowest]}. The next recommendation shifts to ${labels[lowest]} to restore balance.`
+        : `${labels[lowest] || "This area"} has the lowest working-set exposure over the last seven days.`,
+    protected_focus:
+      spread >= 4 ? labels[highest] : "",
+    balance_spread: spread,
   };
 }
 
@@ -198,10 +209,37 @@ export function buildCoachIntelligence({
   const rpeValues = [];
 
   sessions.forEach((session) => {
-    summary.total_seconds += safeNumber(session.total_seconds);
-    summary.active_seconds += safeNumber(session.active_seconds);
-    summary.rest_seconds += safeNumber(session.rest_seconds);
-    summary.idle_seconds += safeNumber(session.idle_seconds);
+    summary.total_seconds += safeNumber(
+      session.total_seconds ?? session?.session?.total_seconds
+    );
+    summary.active_seconds += safeNumber(
+      session.active_seconds ?? session?.session?.active_seconds
+    );
+    summary.rest_seconds += safeNumber(
+      session.rest_seconds ?? session?.session?.rest_seconds
+    );
+    summary.idle_seconds += safeNumber(
+      session.idle_seconds ?? session?.session?.idle_seconds
+    );
+
+    const storedBalance =
+      session.focus_balance ||
+      session?.session?.focus_balance;
+
+    if (storedBalance && typeof storedBalance === "object") {
+      summary.balance.push += safeNumber(
+        storedBalance.Push ?? storedBalance.push
+      );
+      summary.balance.pull += safeNumber(
+        storedBalance.Pull ?? storedBalance.pull
+      );
+      summary.balance.legs += safeNumber(
+        storedBalance.Legs ?? storedBalance.legs
+      );
+      summary.balance.core += safeNumber(
+        storedBalance.Core ?? storedBalance.core
+      );
+    }
     summary.swaps += safeNumber(
       session.swap_count ??
         session.adaptation_summary?.swaps ??
@@ -215,6 +253,8 @@ export function buildCoachIntelligence({
 
     const exercises = Array.isArray(session.exercises)
       ? session.exercises
+      : Array.isArray(session?.session?.exercises)
+      ? session.session.exercises
       : [];
 
     exercises.forEach((exercise) => {
@@ -223,7 +263,9 @@ export function buildCoachIntelligence({
       const plannedSets = safeNumber(exercise.planned_sets);
       const workingLogs = logs.filter(isWorkingSet);
 
-      summary.balance[bucket] += workingLogs.length;
+      if (!storedBalance) {
+        summary.balance[bucket] += workingLogs.length;
+      }
       summary.working_sets += workingLogs.length;
       summary.warmup_sets += logs.length - workingLogs.length;
       summary.extra_sets += Math.max(0, workingLogs.length - plannedSets);

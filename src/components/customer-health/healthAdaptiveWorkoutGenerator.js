@@ -182,7 +182,25 @@ export function buildAdaptiveWorkout({
   profile = {},
   mode = "recommended",
 } = {}) {
-  const intelligence = buildCoachIntelligence({ history, days: 7 });
+  const liveSession = snapshot?.live_training_session;
+  const connectedHistory =
+    liveSession?.session_id &&
+    !history.some(
+      (item) =>
+        String(
+          item?.id ||
+            item?.session_id ||
+            item?.session?.id ||
+            ""
+        ) === String(liveSession.session_id)
+    )
+      ? [liveSession, ...history]
+      : history;
+
+  const intelligence = buildCoachIntelligence({
+    history: connectedHistory,
+    days: 7,
+  });
   const requestedMode = normalizeMode(mode);
   const recovery = intelligence.recovery?.level || "Ready";
   const nextFocus = intelligence.next_focus?.focus || "Balanced full body";
@@ -203,7 +221,10 @@ export function buildAdaptiveWorkout({
   else if (requestedMode === "second-session") {
     focus = recovery === "Recovery" ? "Mobility" : "Core";
   } else if (requestedMode === "strength") {
-    focus = nextFocus === "Balanced full body" ? "Push" : nextFocus;
+    focus =
+      nextFocus === "Balanced full body"
+        ? "Full body"
+        : nextFocus;
   } else if (recovery === "Recovery") {
     focus = "Recovery";
   }
@@ -326,6 +347,17 @@ export function buildAdaptiveWorkout({
         ? "A cardio session is always available when you want to move."
         : intelligence.next_focus?.reason ||
           "Built from your recent training balance.",
+    balance_protection:
+      intelligence.next_focus?.protected_focus
+        ? {
+            protected_focus:
+              intelligence.next_focus.protected_focus,
+            recommended_focus:
+              intelligence.next_focus.focus,
+            spread:
+              intelligence.next_focus.balance_spread || 0,
+          }
+        : null,
     exercises,
     intelligence,
     includes_cardio: cardio.length > 0,
