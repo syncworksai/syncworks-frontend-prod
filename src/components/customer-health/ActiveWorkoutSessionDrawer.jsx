@@ -996,7 +996,7 @@ function SetHistory({
               <div className="mt-1 text-xs text-slate-400">
                 From {exercise.previous_performance.last_workout_name || "a previous workout"}
                 {exercise.previous_performance.last_performed_at
-                  ? ` Â· ${new Date(
+                  ? ` | ${new Date(
                       exercise.previous_performance.last_performed_at
                     ).toLocaleDateString()}`
                   : ""}
@@ -1020,7 +1020,7 @@ function SetHistory({
                   className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-black text-white"
                 >
                   {set.weight || "BW"} x {set.reps || "-"}
-                  {set.rpe ? ` Â· RPE ${set.rpe}` : ""}
+                  {set.rpe ? ` | RPE ${set.rpe}` : ""}
                 </div>
               ))}
           </div>
