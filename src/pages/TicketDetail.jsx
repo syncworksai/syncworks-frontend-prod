@@ -1197,7 +1197,7 @@ export default function TicketDetail() {
   }, [currentMember, isOwner, mode]);
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 pb-28 lg:pb-10">
+    <div className="min-h-screen bg-[#020617] text-slate-100 pb-44 lg:pb-10">
       <ModeBar
         title={
           <div className="leading-tight">
@@ -1548,7 +1548,9 @@ export default function TicketDetail() {
       <TicketCommandCenter
         isCustomer={isCustomer}
         isMarketplace={isMarketplace}
-        customerPhone={bestPhone}
+        ticketCode={ticketCode}
+        ticketStatus={ticket?.status}
+        assignedName={assignedName}        customerPhone={bestPhone}
         providerPhone={providerPhone}
         canAssign={canAssign}
         canSchedule={canSchedule}

@@ -12,6 +12,31 @@ import {
 } from "lucide-react";
 import "./TicketCommandCenter.css";
 
+function workflowStepLabel(status) {
+  const normalized = String(status || "").trim().toUpperCase();
+
+  if (["NEW", "ASSIGNED"].includes(normalized)) return "Accept";
+  if (normalized === "ACCEPTED") return "Schedule";
+  if (normalized === "SCHEDULED") return "En Route";
+  if (normalized === "EN_ROUTE") return "On Site";
+  if (normalized === "ON_SITE") return "Start";
+  if (normalized === "IN_PROGRESS") return "Complete";
+  if (normalized === "APPROVED") return "Start or Complete";
+  if (["COMPLETED", "PAID", "CLOSED"].includes(normalized)) return "Complete";
+  if (normalized === "CANCELLED") return "Cancelled";
+  return "Review ticket";
+}
+
+function compactStatusLabel(status) {
+  const normalized = String(status || "").trim();
+  if (!normalized) return "Unknown";
+
+  return normalized
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
 function safeTelHref(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -69,6 +94,9 @@ function SectionButton({ label, description, onClick }) {
 export default function TicketCommandCenter({
   isCustomer = false,
   isMarketplace = false,
+  ticketCode = "Ticket",
+  ticketStatus = "UNKNOWN",
+  assignedName = "",
   customerPhone = "",
   providerPhone = "",
   canAssign = false,
@@ -91,6 +119,14 @@ export default function TicketCommandCenter({
     [customerPhone, isCustomer, providerPhone]
   );
 
+  const pulseStatus = useMemo(
+    () => compactStatusLabel(ticketStatus),
+    [ticketStatus]
+  );
+  const pulseNextStep = useMemo(
+    () => workflowStepLabel(ticketStatus),
+    [ticketStatus]
+  );
   const sectionItems = useMemo(() => {
     if (isCustomer) {
       return [
@@ -218,6 +254,17 @@ export default function TicketCommandCenter({
           <CommandButton icon={FileText} label="Files" onClick={onFiles} />
         </div>
       </nav>
+
+      <div className="sw-ticket-pulse lg:hidden" aria-label="Ticket status summary">
+        <div className="sw-ticket-pulse-main">
+          <span className="sw-ticket-pulse-code">{ticketCode || "Ticket"}</span>
+          <span className="sw-ticket-pulse-status">{pulseStatus}</span>
+        </div>
+        <div className="sw-ticket-pulse-meta">
+          <span>{assignedName ? `Assigned: ${assignedName}` : "Unassigned"}</span>
+          <span>Next: {pulseNextStep}</span>
+        </div>
+      </div>
 
       {drawerOpen ? (
         <div className="sw-ticket-drawer-layer lg:hidden" role="presentation">
