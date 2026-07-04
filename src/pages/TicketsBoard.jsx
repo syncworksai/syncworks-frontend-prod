@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/client";
@@ -58,6 +59,57 @@ const DEFAULT_MARKETPLACE_FILTERS = {
   urgency: "ALL",
   minimumValue: "0",
 };
+
+const BOARD_FOCUS_OPTIONS = [
+  ["ALL", "All work"],
+  ["ATTENTION", "Needs attention"],
+  ["UNASSIGNED", "Unassigned"],
+  ["SCHEDULING", "Needs scheduling"],
+  ["ACTIVE", "In progress"],
+  ["PAYMENT", "Awaiting payment"],
+];
+
+function hasScheduledTime(ticket) {
+  return !!(
+    ticket?.scheduled_start ||
+    ticket?.scheduled_at ||
+    ticket?.scheduled_for ||
+    ticket?.schedule_start ||
+    ticket?.appointment_at
+  );
+}
+
+function matchesBoardFocus(ticket, focus) {
+  const status = String(ticket?.status || "").toUpperCase();
+
+  if (focus === "UNASSIGNED") return !isAssigned(ticket);
+
+  if (focus === "SCHEDULING") {
+    return (
+      ["NEW", "ASSIGNED", "ACCEPTED"].includes(status) &&
+      !hasScheduledTime(ticket)
+    );
+  }
+
+  if (focus === "ACTIVE") {
+    return ["SCHEDULED", "EN_ROUTE", "ON_SITE", "IN_PROGRESS"].includes(status);
+  }
+
+  if (focus === "PAYMENT") {
+    return ["AWAITING_APPROVAL", "INVOICED"].includes(status);
+  }
+
+  if (focus === "ATTENTION") {
+    return (
+      isPriorityOne(ticket) ||
+      !isAssigned(ticket) ||
+      (["NEW", "ASSIGNED", "ACCEPTED"].includes(status) && !hasScheduledTime(ticket)) ||
+      ["AWAITING_APPROVAL", "INVOICED"].includes(status)
+    );
+  }
+
+  return true;
+}
 
 const STATUS_CHANGE_OPTIONS = [
   "NEW",
@@ -763,6 +815,7 @@ export default function TicketsBoard() {
   const [status, setStatus] = useState("ALL");
   const [source, setSource] = useState("ALL");
   const [assigned, setAssigned] = useState("ALL");
+  const [focus, setFocus] = useState("ALL");
   const [sort, setSort] = useState("NEWEST");
   const [marketplaceFilters, setMarketplaceFilters] = useState(
     DEFAULT_MARKETPLACE_FILTERS
@@ -1057,6 +1110,10 @@ async function onArchiveToggle(ticketId, archived) {
     if (assigned === "ASSIGNED") list = list.filter((t) => isAssigned(t));
     if (assigned === "UNASSIGNED") list = list.filter((t) => !isAssigned(t));
 
+    if (focus !== "ALL") {
+      list = list.filter((t) => matchesBoardFocus(t, focus));
+    }
+
     if (view === "marketplace") {
       if (marketplaceFilters.service !== "ALL") {
         list = list.filter((t) => String(marketplaceCategoryKey(t)) === marketplaceFilters.service);
@@ -1124,7 +1181,7 @@ async function onArchiveToggle(ticketId, archived) {
 
     return list;
   }, [
-    items, q, status, source, assigned, sort, view,
+    items, q, status, source, assigned, focus, sort, view,
     isCustomer, isSboLike, savedIds, marketplaceFilters,
   ]);
 
@@ -1139,6 +1196,16 @@ async function onArchiveToggle(ticketId, archived) {
 
     return { total, mp, asg, archived, saved, p1 };
   }, [items, filtered.length, savedIds]);
+
+  const focusCounts = useMemo(() => {
+    const base = (items || []).filter((ticket) => !isArchived(ticket));
+    return BOARD_FOCUS_OPTIONS.reduce((acc, [key]) => {
+      acc[key] = key === "ALL"
+        ? base.length
+        : base.filter((ticket) => matchesBoardFocus(ticket, key)).length;
+      return acc;
+    }, {});
+  }, [items]);
 
   const showViewTabs = !isCustomer && isSboLike;
   const marketplaceDisabled = showViewTabs && locked;
@@ -1260,6 +1327,57 @@ async function onArchiveToggle(ticketId, archived) {
               </div>
             </div>
 
+
+            <div className="sticky top-2 z-20 -mx-1 rounded-2xl border border-cyan-500/15 bg-slate-950/92 p-2 shadow-[0_12px_35px_rgba(2,6,23,0.45)] backdrop-blur-xl md:static md:mx-0 md:border-slate-800 md:bg-slate-950/45 md:shadow-none">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">
+                    Quick focus
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    Surface tickets that need action now.
+                  </div>
+                </div>
+                {focus !== "ALL" ? (
+                  <button
+                    type="button"
+                    className="text-[10px] font-black uppercase tracking-[0.12em] text-cyan-300"
+                    onClick={() => setFocus("ALL")}
+                  >
+                    Reset
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {BOARD_FOCUS_OPTIONS.map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setFocus(key)}
+                    className={cx(
+                      "inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border px-3 text-[11px] font-bold transition",
+                      focus === key
+                        ? "border-cyan-400/45 bg-cyan-500/15 text-cyan-100 shadow-[0_0_22px_rgba(34,211,238,0.12)]"
+                        : "border-slate-800 bg-slate-950/60 text-slate-300 hover:border-slate-700 hover:bg-slate-900"
+                    )}
+                  >
+                    <span>{label}</span>
+                    <span
+                      className={cx(
+                        "rounded-full px-2 py-0.5 text-[9px] font-black",
+                        focus === key
+                          ? "bg-cyan-400/15 text-cyan-100"
+                          : "bg-slate-800 text-slate-400"
+                      )}
+                    >
+                      {focusCounts[key] || 0}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid gap-3 md:grid-cols-5">
               <div className="md:col-span-2">
                 <FieldLabel>Search</FieldLabel>
@@ -1337,6 +1455,7 @@ async function onArchiveToggle(ticketId, archived) {
                     setStatus("ALL");
                     setSource("ALL");
                     setAssigned("ALL");
+                    setFocus("ALL");
                     setSort("NEWEST");
                     setMarketplaceFilters(DEFAULT_MARKETPLACE_FILTERS);
                   }}
