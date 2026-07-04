@@ -46,6 +46,9 @@ import AiCoachDrawer from "../components/customer-health/AiCoachDrawer";
 import CoachChatDrawer from "../components/customer-health/CoachChatDrawer";
 import ActiveWorkoutSessionDrawer from "../components/customer-health/ActiveWorkoutSessionDrawer";
 import HealthMobileQuickNav from "../components/customer-health/HealthMobileQuickNav";
+import HealthReleaseUpdateModal, {
+  HEALTH_RELEASE_UPDATE_ID,
+} from "../components/customer-health/HealthReleaseUpdateModal";
 import {
   buildDailyMetricIntelligence,
   mergeDailyMetricEntry,
@@ -622,6 +625,11 @@ export default function CustomerHealth() {
     useState(null);
 
   const [
+    releaseUpdateOpen,
+    setReleaseUpdateOpen,
+  ] = useState(false);
+
+  const [
     activePlannerItem,
     setActivePlannerItem,
   ] = useState(null);
@@ -796,6 +804,67 @@ export default function CustomerHealth() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (
+      !hasHealthAccess ||
+      !cloudLoaded ||
+      drawer ||
+      !profile?.health_intake_completed_at
+    ) {
+      return;
+    }
+
+    const storageKey =
+      `syncworks_health_release_seen_${HEALTH_RELEASE_UPDATE_ID}`;
+
+    let alreadySeen = false;
+
+    try {
+      alreadySeen =
+        window.localStorage.getItem(
+          storageKey
+        ) === "true";
+    } catch {
+      alreadySeen = false;
+    }
+
+    if (!alreadySeen) {
+      const timer = window.setTimeout(
+        () => setReleaseUpdateOpen(true),
+        450
+      );
+
+      return () =>
+        window.clearTimeout(timer);
+    }
+  }, [
+    hasHealthAccess,
+    cloudLoaded,
+    drawer,
+    profile?.health_intake_completed_at,
+  ]);
+
+  function dismissReleaseUpdate() {
+    const storageKey =
+      `syncworks_health_release_seen_${HEALTH_RELEASE_UPDATE_ID}`;
+
+    try {
+      window.localStorage.setItem(
+        storageKey,
+        "true"
+      );
+    } catch {
+      // Keep dismissal functional even when storage is unavailable.
+    }
+
+    setReleaseUpdateOpen(false);
+  }
+
+  function openReleaseInsights() {
+    dismissReleaseUpdate();
+    setHealthView("insights");
+  }
 
   useEffect(() => {
     if (
@@ -3634,6 +3703,17 @@ export default function CustomerHealth() {
           />
         </>
       ) : null}
+
+      <HealthReleaseUpdateModal
+        open={
+          hasHealthAccess &&
+          releaseUpdateOpen
+        }
+        onClose={dismissReleaseUpdate}
+        onOpenInsights={
+          openReleaseInsights
+        }
+      />
 
       <HealthConfetti
         active={!!celebration}
