@@ -440,6 +440,88 @@ function TicketsHero({ isCustomer, counts, loading, onCreate, onRefresh }) {
   );
 }
 
+function unreadTicketCount(ticket) {
+  const candidates = [
+    ticket?.unread_count,
+    ticket?.unread_messages,
+    ticket?.unread_message_count,
+    ticket?.messages_unread,
+    ticket?.conversation?.unread_count,
+  ];
+
+  for (const value of candidates) {
+    const count = Number(value || 0);
+    if (Number.isFinite(count) && count > 0) return count;
+  }
+
+  return 0;
+}
+
+function ticketAttentionSignals(ticket) {
+  const status = String(ticket?.status || "").toUpperCase();
+  const signals = [];
+  const unread = unreadTicketCount(ticket);
+
+  if (unread > 0) {
+    signals.push({
+      key: "unread",
+      label: unread === 1 ? "1 unread message" : `${unread} unread messages`,
+      tone: "cyan",
+    });
+  }
+
+  if (!isAssigned(ticket) && !["COMPLETED", "PAID", "CANCELLED", "CLOSED"].includes(status)) {
+    signals.push({ key: "unassigned", label: "Needs assignment", tone: "amber" });
+  }
+
+  if (["NEW", "ASSIGNED", "ACCEPTED"].includes(status) && !hasScheduledTime(ticket)) {
+    signals.push({ key: "schedule", label: "Needs scheduling", tone: "amber" });
+  }
+
+  if (status === "AWAITING_APPROVAL") {
+    signals.push({ key: "approval", label: "Awaiting approval", tone: "fuchsia" });
+  }
+
+  if (status === "INVOICED") {
+    signals.push({ key: "payment", label: "Awaiting payment", tone: "emerald" });
+  }
+
+  if (isPriorityOne(ticket)) {
+    signals.push({ key: "priority", label: "Urgent service", tone: "rose" });
+  }
+
+  return signals;
+}
+
+function AttentionSignalStrip({ ticket }) {
+  const signals = ticketAttentionSignals(ticket);
+  if (!signals.length) return null;
+
+  const tones = {
+    cyan: "border-cyan-500/25 bg-cyan-500/10 text-cyan-100",
+    amber: "border-amber-500/25 bg-amber-500/10 text-amber-100",
+    fuchsia: "border-fuchsia-500/25 bg-fuchsia-500/10 text-fuchsia-100",
+    emerald: "border-emerald-500/25 bg-emerald-500/10 text-emerald-100",
+    rose: "border-rose-500/30 bg-rose-500/10 text-rose-100",
+  };
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {signals.map((signal) => (
+        <span
+          key={signal.key}
+          className={cx(
+            "inline-flex min-h-8 items-center rounded-full border px-3 text-[10px] font-black uppercase tracking-[0.1em]",
+            tones[signal.tone] || tones.cyan
+          )}
+        >
+          {signal.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function OpportunityProfileBadges({ ticket }) {
   const profile = ticket?.opportunity_profile;
   if (!profile) return null;
@@ -581,6 +663,7 @@ function BoardTicketCard({
               <span>{ticket?.sms_allowed ? "Allows text messaging" : "In-app or phone call"}</span>
               {ticket?.created_at ? new Date(ticket.created_at).toLocaleString() : "â€”"}
             </div>
+                        <AttentionSignalStrip ticket={ticket} />
             {view === "marketplace" ? (
               <OpportunityProfileBadges ticket={ticket} />
             ) : null}
@@ -602,7 +685,7 @@ function BoardTicketCard({
             ) : null}
           </div>
 
-          <div className="flex shrink-0 flex-wrap justify-end gap-2">
+          <div className="hidden shrink-0 flex-wrap justify-end gap-2 md:flex">
             <SmallBtn tone={saved ? "cyan" : "slate"} onClick={() => onSavedToggle(ticket.id)}>
               {saved ? "Unsave" : "Save"}
             </SmallBtn>
@@ -677,7 +760,57 @@ function BoardTicketCard({
           </div>
         ) : null}
 
+        <div className="mt-4 grid grid-cols-[1fr_auto] gap-2 md:hidden">
+
+
+          <Link
+
+
+            to={`/tickets/${ticket.id}`}
+
+
+            className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-cyan-400/35 bg-gradient-to-r from-cyan-500/20 to-blue-500/15 px-4 text-sm font-black text-cyan-50 shadow-[0_0_26px_rgba(34,211,238,0.12)]"
+
+
+          >
+
+
+            Open Ticket
+
+
+          </Link>
+
+
+          <SmallBtn
+
+
+            tone={saved ? "cyan" : "slate"}
+
+
+            className="h-12 rounded-2xl px-4"
+
+
+            onClick={() => onSavedToggle(ticket.id)}
+
+
+          >
+
+
+            {saved ? "Saved" : "Save"}
+
+
+          </SmallBtn>
+
+
+        </div>
+
+
+
+
+
         {!archived ? (
+
+
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {showMpActions ? (
               <>
