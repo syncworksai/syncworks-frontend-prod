@@ -1113,8 +1113,8 @@ export default function SboSettings() {
 
           {section === "goals" ? (
             <Card
-              title="God Mode CRM Snapshot"
-              subtitle="These values are saved locally now. Later we’ll add backend fields so God Mode can score account adoption."
+              title="Business Growth Snapshot"
+              subtitle="Optional planning data saved locally only for now; these fields are not backend-persisted."
             >
               <div className="grid gap-3 md:grid-cols-2">
                 <Input
@@ -1157,9 +1157,7 @@ export default function SboSettings() {
               </div>
 
               <div className="mt-4 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs leading-5 text-amber-100">
-                Backend CRM fields should be added later so God Mode can report on
-                majority-use vs partial-use businesses. For now this snapshot saves
-                locally and does not block the setup flow.
+                This snapshot is optional planning data only. It stays local for now and does not change the saved business profile.
               </div>
             </Card>
           ) : null}
