@@ -1,4 +1,4 @@
-// src/components/customer-health/HealthMobileQuickNav.jsx
+﻿// src/components/customer-health/HealthMobileQuickNav.jsx
 import React from "react";
 
 function cx(...parts) {
@@ -109,14 +109,6 @@ export default function HealthMobileQuickNav({
   hasCoachProposal,
   activeView = "home",
 }) {
-  function startNow() {
-    if (nextSession) {
-      onStartWorkout?.(nextSession);
-      return;
-    }
-
-    onStartFallback?.();
-  }
 
   const workoutName =
     nextSession?.workout_name ||
@@ -149,12 +141,8 @@ export default function HealthMobileQuickNav({
 
           <button
             type="button"
-            onClick={startNow}
-            aria-label={
-              nextSession
-                ? `Start ${workoutName}`
-                : "Plan and start a workout"
-            }
+            onClick={() => onOpen?.("quick-log")}
+            aria-label="Open health quick log"
             className="group relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-emerald-300/30 bg-[linear-gradient(180deg,rgba(16,185,129,0.16),rgba(2,8,23,0.96))] px-1 py-2 text-center text-[9px] font-black uppercase tracking-[0.08em] text-emerald-50 shadow-[0_0_20px_rgba(57,255,136,0.22)] transition active:scale-[0.96]"
           >
             <span className="pointer-events-none absolute left-1/2 top-2 h-11 w-11 -translate-x-1/2 rounded-full bg-emerald-300/18 blur-xl transition group-hover:bg-cyan-300/22" />
@@ -169,12 +157,11 @@ export default function HealthMobileQuickNav({
             </span>
 
             <span className="w-full truncate text-center">
-              Start
+              Log
             </span>
 
             <span className="max-w-full truncate text-[7px] font-bold normal-case tracking-normal text-emerald-100/70">
-              {workoutName}
-              {workoutTime ? ` \u00B7 ${workoutTime}` : ""}
+              Meal · Weight · Steps
             </span>
           </button>
 

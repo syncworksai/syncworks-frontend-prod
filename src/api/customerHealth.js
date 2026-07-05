@@ -1,4 +1,4 @@
-import api from "./client";
+﻿import api from "./client";
 
 export async function getCustomerHealthProfile() {
   const response = await api.get(
@@ -70,4 +70,25 @@ export async function createHealthCoachSpeech({
       response.headers?.["x-syncworks-voice-name"] ||
       "SYNC Fitness Coach",
   };
+}
+
+export async function getHealthAiStatus() {
+  const response = await api.get(
+    "/customer-health/ai/status/"
+  );
+
+  return response.data;
+}
+
+export async function redeemHealthAiPromo(code) {
+  const response = await api.post(
+    "/customer-health/ai/redeem-promo/",
+    {
+      code: String(code || "")
+        .trim()
+        .toUpperCase(),
+    }
+  );
+
+  return response.data;
 }
