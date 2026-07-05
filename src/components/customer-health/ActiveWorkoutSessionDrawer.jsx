@@ -7,7 +7,6 @@ import React, {
 } from "react";
 
 import {
-  addSetToExercise,
   advanceSessionTimer,
   applyCoachRecommendationDecision,
   completeActiveSet,
@@ -43,6 +42,19 @@ import {
   speakCoachText,
   stopCoachVoice,
 } from "./healthCoachVoice";
+
+import {
+  buildExerciseAddedPhrase,
+  buildExerciseSwapPhrase,
+  buildNaturalExerciseIntroPhrase,
+  buildRestCuePhrase,
+  buildRestStartPhrase,
+  buildSetStartPhrase,
+  buildWarmupCompletePhrase,
+  buildWorkoutCompletionPhrase,
+  buildWorkoutWelcomePhrase,
+  getWorkoutCoachDelivery,
+} from "./healthCoachPhrases";
 
 import {
   ensureDynamicPreparation,
@@ -593,6 +605,9 @@ function SetCompletionSheet({
   useEffect(() => {
     if (!open || !exercise) return;
 
+    // This drawer intentionally resets its temporary form state
+    // whenever a different set check-in opens.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setReps(
       exercise.current_target_reps ||
         suggestion?.target_reps ||
@@ -2249,12 +2264,20 @@ export default function ActiveWorkoutSessionDrawer({
     }
 
     speakCoachText({
-      text: buildPreWorkoutBriefing(session),
+      text: [
+        buildWorkoutWelcomePhrase(session),
+        buildPreWorkoutBriefing(session),
+      ]
+        .filter(Boolean)
+        .join(" "),
       audioMode: coachAudioMode,
       voicePreference: coachVoicePreference,
       rate: 0.98,
       pitch: 1,
       volume: 1,
+      ...getWorkoutCoachDelivery(
+        "workout_welcome"
+      ),
     });
 
     trackWorkoutAdaptationKpi(
@@ -2302,12 +2325,23 @@ export default function ActiveWorkoutSessionDrawer({
       getExerciseKnowledge(exerciseName);
 
     speakCoachText({
-      text: buildExerciseIntroSpeech(knowledge),
+      text: [
+        buildNaturalExerciseIntroPhrase({
+          exercise: currentExercise,
+          knowledge,
+        }),
+        buildExerciseIntroSpeech(knowledge),
+      ]
+        .filter(Boolean)
+        .join(" "),
       audioMode: coachAudioMode,
       voicePreference: coachVoicePreference,
       rate: 1.02,
       pitch: 1,
       volume: 1,
+      ...getWorkoutCoachDelivery(
+        "exercise_intro"
+      ),
     });
 
     lastExerciseCueRef.current = key;
@@ -2340,10 +2374,13 @@ export default function ActiveWorkoutSessionDrawer({
 
     let message = "";
 
-    if (target > 30 && remaining === 30) {
-      message = "Thirty seconds remaining.";
-    } else if (remaining === 10) {
-      message = "Ten seconds remaining.";
+    if (
+      (target > 30 && remaining === 30) ||
+      remaining === 10
+    ) {
+      message = buildRestCuePhrase({
+        remaining,
+      });
     } else if (target > 0 && remaining === 0) {
       const completedSets =
         currentExercise?.set_logs?.length || 0;
@@ -2366,9 +2403,12 @@ export default function ActiveWorkoutSessionDrawer({
             ]
           : null;
 
-      message = nextExercise
-        ? `Rest complete. Move to ${nextExercise.name} and tap start set.`
-        : "Rest complete. Reset your position and tap start set.";
+      message = buildRestCuePhrase({
+        remaining,
+        nextExerciseName:
+          nextExercise?.name || "",
+        exerciseFinished,
+      });
     }
 
     if (!message) return;
@@ -2384,6 +2424,11 @@ export default function ActiveWorkoutSessionDrawer({
       rate: 1.02,
       pitch: 1,
       volume: 1,
+      ...getWorkoutCoachDelivery(
+        remaining === 0
+          ? "rest_ending"
+          : "rest_halfway"
+      ),
     });
 
     lastRestCueRef.current = key;
@@ -2573,34 +2618,6 @@ export default function ActiveWorkoutSessionDrawer({
     );
   }
 
-  function copyPreviousSetTarget() {
-    if (!currentExercise) return;
-
-    const logs = Array.isArray(
-      currentExercise.set_logs
-    )
-      ? currentExercise.set_logs
-      : [];
-
-    const previous = logs[logs.length - 1];
-
-    if (!previous) return;
-
-    patchCurrentTarget({
-      weight:
-        previous.actual_weight ??
-        previous.weight ??
-        currentExercise.current_target_weight ??
-        "",
-      reps:
-        previous.actual_reps ??
-        previous.reps ??
-        currentExercise.current_target_reps ??
-        "",
-      source: "copied_previous_set",
-    });
-  }
-
   function applyProgressionRecommendation(
     recommendation
   ) {
@@ -2667,12 +2684,15 @@ export default function ActiveWorkoutSessionDrawer({
     });
 
     speakCoachText({
-      text: "Warmup complete. Get set for the first exercise.",
+      text: buildWarmupCompletePhrase(),
       audioMode: coachAudioMode,
       voicePreference: coachVoicePreference,
       rate: 1.02,
       pitch: 1,
       volume: 1,
+      ...getWorkoutCoachDelivery(
+        "set_countdown"
+      ),
     });
   }
 
@@ -2701,14 +2721,19 @@ export default function ActiveWorkoutSessionDrawer({
     setSetCheckInOpen(false);
 
     speakCoachText({
-      text: `Set ${
-        (currentExercise.set_logs || []).length + 1
-      }. Start.`,
+      text: buildSetStartPhrase({
+        setNumber:
+          (currentExercise.set_logs || []).length + 1,
+        exercise: currentExercise,
+      }),
       audioMode: coachAudioMode,
       voicePreference: coachVoicePreference,
       rate: 1.04,
       pitch: 1,
       volume: 1,
+      ...getWorkoutCoachDelivery(
+        "set_countdown"
+      ),
     });
   }
 
@@ -2784,12 +2809,18 @@ export default function ActiveWorkoutSessionDrawer({
     setSetCheckInOpen(true);
 
     speakCoachText({
-      text: `Set complete. Rest starts now. Log your weight, reps, and effort while you recover.`,
+      text: buildRestStartPhrase({
+        restSeconds:
+          currentExercise.rest_seconds || 60,
+      }),
       audioMode: coachAudioMode,
       voicePreference: coachVoicePreference,
       rate: 1.02,
       pitch: 1,
       volume: 1,
+      ...getWorkoutCoachDelivery(
+        "rest_started"
+      ),
     });
   }
 
@@ -2987,6 +3018,14 @@ export default function ActiveWorkoutSessionDrawer({
       rate: 1.04,
       pitch: 1.02,
       volume: 1,
+      ...getWorkoutCoachDelivery(
+        "set_completed",
+        {
+          exerciseFinished,
+          important:
+            Number(enrichedSetLog.pain_score || 0) > 0,
+        }
+      ),
     });
   }
 
@@ -3096,10 +3135,16 @@ export default function ActiveWorkoutSessionDrawer({
       }));
 
       speakCoachText({
-        text: `${currentExercise.name} has been replaced with ${catalogExercise.name}. This keeps the workout moving while I track the substitution.`,
+        text: buildExerciseSwapPhrase({
+          previousName: currentExercise.name,
+          nextName: catalogExercise.name,
+        }),
         audioMode: coachAudioMode,
         voicePreference: coachVoicePreference,
         rate: 0.98,
+        ...getWorkoutCoachDelivery(
+          "exercise_swap"
+        ),
       });
     } else {
       const addedExercise = buildAdaptiveExercise(
@@ -3140,10 +3185,16 @@ export default function ActiveWorkoutSessionDrawer({
           : "extra exercise";
 
       speakCoachText({
-        text: `${catalogExercise.name} added as a ${label}. I will track the extra volume and use it in future coaching.`,
+        text: buildExerciseAddedPhrase({
+          name: catalogExercise.name,
+          label,
+        }),
         audioMode: coachAudioMode,
         voicePreference: coachVoicePreference,
         rate: 0.98,
+        ...getWorkoutCoachDelivery(
+          "exercise_swap"
+        ),
       });
     }
 
@@ -3336,19 +3387,23 @@ export default function ActiveWorkoutSessionDrawer({
       );
 
       speakCoachText({
-        text: `${
-          buildPostWorkoutWrapUp(
+        text: buildWorkoutCompletionPhrase({
+          wrapUp: buildPostWorkoutWrapUp(
             result.finishedSession,
             result.summary
-          )
-        } ${
-          completionMeta.next_recommendation || ""
-        }`,
+          ),
+          recommendation:
+            completionMeta.next_recommendation ||
+            "",
+        }),
         audioMode: coachAudioMode,
         voicePreference: coachVoicePreference,
         rate: 0.96,
         pitch: 1,
         volume: 1,
+        ...getWorkoutCoachDelivery(
+          "workout_completed"
+        ),
       });
 
       trackWorkoutAdaptationKpi(
