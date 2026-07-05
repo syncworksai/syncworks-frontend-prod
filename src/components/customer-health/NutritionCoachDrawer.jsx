@@ -793,6 +793,8 @@ export default function NutritionCoachDrawer({
       setProtein("");
       setCarbs("");
       setFat("");
+      setFiber("");
+      setSugar("");
     } finally {
       setSaving(false);
     }
@@ -845,7 +847,7 @@ export default function NutritionCoachDrawer({
               onClick={onClose}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-sm font-black text-white"
             >
-              ✕
+              âœ•
             </button>
           </div>
         </div>
@@ -886,7 +888,7 @@ export default function NutritionCoachDrawer({
             />
           </label>
 
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <label className="block sm:w-48">
               <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
                 Date
@@ -901,6 +903,14 @@ export default function NutritionCoachDrawer({
                 className="mt-2 h-10 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-xs font-black text-white outline-none focus:border-cyan-300/40"
               />
             </label>
+            <button
+              type="button"
+              onClick={startManualEntry}
+              className="mt-auto h-10 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-xs font-black text-white"
+            >
+              Manual Log
+            </button>
+
 
             <button
               type="button"
@@ -912,7 +922,7 @@ export default function NutritionCoachDrawer({
               className="mt-auto h-10 flex-1 rounded-xl border border-lime-300/30 bg-lime-300/15 px-4 text-xs font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {analyzing
-                ? "Analyzing Meal…"
+                ? "Analyzing Mealâ€¦"
                 : "Analyze With AI"}
             </button>
           </div>
@@ -956,7 +966,7 @@ export default function NutritionCoachDrawer({
                       </div>
 
                       <div className="whitespace-nowrap text-[10px] font-black text-slate-400 sm:text-xs">
-                        {item.calories} cal ·{" "}
+                        {item.calories} cal Â·{" "}
                         {item.protein}g protein
                       </div>
                     </div>
@@ -969,7 +979,7 @@ export default function NutritionCoachDrawer({
               {estimate.note}
             </p>
 
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:grid-cols-4 sm:gap-3">
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:grid-cols-3 sm:gap-3">
               <MacroInput
                 label="Calories"
                 value={calories}
@@ -997,6 +1007,20 @@ export default function NutritionCoachDrawer({
                 onChange={setFat}
                 suffix="g"
               />
+
+              <MacroInput
+                label="Fiber"
+                value={fiber}
+                onChange={setFiber}
+                suffix="g"
+              />
+
+              <MacroInput
+                label="Sugar"
+                value={sugar}
+                onChange={setSugar}
+                suffix="g"
+              />
             </div>
 
             <button
@@ -1010,7 +1034,7 @@ export default function NutritionCoachDrawer({
               className="mt-3 h-11 w-full rounded-xl border border-lime-300/30 bg-gradient-to-r from-lime-300/20 to-cyan-300/15 text-xs font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-40 sm:mt-4 sm:h-12 sm:rounded-2xl sm:text-sm"
             >
               {saving
-                ? "Saving Meal…"
+                ? "Saving Mealâ€¦"
                 : "Confirm and Save Meal"}
             </button>
           </div>
@@ -1046,15 +1070,15 @@ export default function NutritionCoachDrawer({
                         meal.value,
                       0
                     )}{" "}
-                    cal ·{" "}
+                    cal Â·{" "}
                     {safeNumber(
                       meal.protein ||
                         meal.secondary,
                       0
                     )}
-                    g protein ·{" "}
+                    g protein Â·{" "}
                     {safeNumber(meal.carbs, 0)}
-                    g carbs ·{" "}
+                    g carbs Â·{" "}
                     {safeNumber(meal.fat, 0)}
                     g fat
                   </div>

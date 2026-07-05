@@ -1,16 +1,20 @@
 // src/components/customer-health/AICoachUpgradeDrawer.jsx
-import React from "react";
+import React, { useState } from "react";
+
+import {
+  redeemHealthAiPromo,
+} from "../../api/customerHealth";
 
 const AI_COACH_CHECKOUT_URL =
-  "https://buy.stripe.com/5kQfZh4ae2YD3qF8cP2Nq0j";
+  import.meta.env.VITE_HEALTH_AI_CHECKOUT_URL || "";
 
 const FEATURES = [
+  "OpenAI-powered Fitness Coach conversations",
   "AI meal analysis for restaurant and homemade food",
-  "Personalized macro and nutrition guidance",
-  "What should I eat next? recommendations",
-  "Adaptive workout and recovery coaching",
-  "Faster logging with editable AI estimates",
-  "Future barcode and meal-photo recognition",
+  "Personalized macros, recovery, and nutrition guidance",
+  "Adaptive recommendations validated by SyncWorks rules",
+  "Editable calories, protein, carbs, fat, fiber, and sugar",
+  "Manual workout and nutrition logging stays free",
 ];
 
 export default function AICoachUpgradeDrawer({
@@ -18,12 +22,52 @@ export default function AICoachUpgradeDrawer({
   onClose,
   onContinueFree,
 }) {
+  const [promoCode, setPromoCode] = useState("");
+  const [promoStatus, setPromoStatus] = useState("");
+  const [redeeming, setRedeeming] = useState(false);
+
   if (!open) return null;
 
   function startCheckout() {
-    window.location.assign(
-      AI_COACH_CHECKOUT_URL
-    );
+    if (!AI_COACH_CHECKOUT_URL) {
+      setPromoStatus(
+        "Secure $9.99 checkout is being connected. Manual Health remains free."
+      );
+      return;
+    }
+
+    window.location.assign(AI_COACH_CHECKOUT_URL);
+  }
+
+  async function redeemPromo() {
+    const clean = promoCode.trim();
+
+    if (!clean || redeeming) return;
+
+    setRedeeming(true);
+    setPromoStatus("");
+
+    try {
+      const result = await redeemHealthAiPromo(clean);
+
+      setPromoStatus(
+        result?.message ||
+          "Promotional AI access has been applied."
+      );
+      setPromoCode("");
+
+      window.setTimeout(() => {
+        onClose?.();
+        window.location.reload();
+      }, 900);
+    } catch (error) {
+      setPromoStatus(
+        error?.response?.data?.detail ||
+          "That promotional code could not be applied."
+      );
+    } finally {
+      setRedeeming(false);
+    }
   }
 
   return (
@@ -36,14 +80,14 @@ export default function AICoachUpgradeDrawer({
       />
 
       <section className="relative z-[151] h-[100dvh] w-full max-w-xl overflow-y-auto border border-fuchsia-300/25 bg-[radial-gradient(circle_at_top_left,rgba(255,59,212,0.12),transparent_30%),radial-gradient(circle_at_top_right,rgba(52,223,255,0.10),transparent_30%),linear-gradient(180deg,#08111f,#030712)] p-4 pb-24 shadow-[0_28px_90px_rgba(0,0,0,0.78)] sm:h-auto sm:max-h-[92vh] sm:rounded-[2rem] sm:p-6">
-        <div className="sticky top-0 z-10 -mx-4 -mt-4 flex items-start justify-between gap-3 border-b border-white/10 bg-[#08111f]/95 px-4 py-3 backdrop-blur-xl sm:static sm:mx-0 sm:mt-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+        <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[0.22em] text-fuchsia-200">
-              SyncWorks AI Coach
+              Fitness + Nutrition AI
             </div>
 
             <h2 className="mt-1 text-2xl font-black leading-tight text-white sm:text-3xl">
-              Upgrade your daily coaching
+              Add AI to your Health plan
             </h2>
           </div>
 
@@ -59,7 +103,7 @@ export default function AICoachUpgradeDrawer({
         <div className="mt-5 rounded-[1.6rem] border border-fuchsia-300/25 bg-gradient-to-br from-fuchsia-300/12 to-cyan-300/8 p-5">
           <div className="flex items-end gap-2">
             <div className="text-4xl font-black text-white">
-              $4.99
+              $9.99
             </div>
 
             <div className="pb-1 text-sm font-black text-slate-400">
@@ -68,14 +112,14 @@ export default function AICoachUpgradeDrawer({
           </div>
 
           <p className="mt-2 text-sm leading-6 text-slate-300">
-            Unlock AI-powered nutrition and coaching while keeping the rest of SyncWorks Health available.
+            Unlock OpenAI-powered Fitness Coach conversations and fast AI nutrition analysis.
           </p>
 
           <div className="mt-5 space-y-2.5">
             {FEATURES.map((feature) => (
               <div
                 key={feature}
-                className="flex items-start gap-3 rounded-xl border border-white/8 bg-black/20 px-3 py-2.5"
+                className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5"
               >
                 <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-lime-300/15 text-xs font-black text-lime-200">
                   ✓
@@ -91,23 +135,51 @@ export default function AICoachUpgradeDrawer({
           <button
             type="button"
             onClick={startCheckout}
-            className="mt-5 h-12 w-full rounded-2xl border border-fuchsia-300/35 bg-gradient-to-r from-fuchsia-400/25 to-cyan-300/20 text-sm font-black text-white shadow-[0_0_30px_rgba(255,59,212,0.14)]"
+            className="mt-5 h-12 w-full rounded-2xl border border-fuchsia-300/35 bg-gradient-to-r from-fuchsia-400/25 to-cyan-300/20 text-sm font-black text-white"
           >
-            Start AI Coach - $4.99/month
+            Upgrade to Fitness + Nutrition AI
           </button>
+        </div>
 
-          <div className="mt-3 text-center text-[11px] font-bold leading-5 text-slate-500">
-            Secure checkout through Stripe. Cancel anytime.
+        <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.06] p-4">
+          <div className="text-[10px] font-black uppercase tracking-[0.15em] text-cyan-200">
+            Have a promotional code?
           </div>
+
+          <div className="mt-3 flex gap-2">
+            <input
+              value={promoCode}
+              onChange={(event) =>
+                setPromoCode(event.target.value)
+              }
+              placeholder="Enter code"
+              className="h-11 min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-black uppercase text-white outline-none"
+            />
+
+            <button
+              type="button"
+              disabled={!promoCode.trim() || redeeming}
+              onClick={redeemPromo}
+              className="h-11 rounded-xl border border-cyan-300/30 bg-cyan-300/15 px-4 text-xs font-black text-cyan-100 disabled:opacity-40"
+            >
+              {redeeming ? "Applying…" : "Apply"}
+            </button>
+          </div>
+
+          {promoStatus ? (
+            <div className="mt-3 text-xs font-bold leading-5 text-slate-300">
+              {promoStatus}
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-          <div className="text-[10px] font-black uppercase tracking-[0.15em] text-cyan-200">
-            Keep using Health for free
+          <div className="text-[10px] font-black uppercase tracking-[0.15em] text-lime-200">
+            Free Health remains available
           </div>
 
           <p className="mt-2 text-sm leading-6 text-slate-400">
-            Workouts, manual nutrition logging, progress tracking, macros, and planning remain available while AI Coach is an optional upgrade.
+            Manual workouts, manual meal logging, progress tracking, macros, and planning remain free.
           </p>
 
           <button
@@ -117,10 +189,6 @@ export default function AICoachUpgradeDrawer({
           >
             Continue With Free Health
           </button>
-        </div>
-
-        <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-4 text-[11px] leading-5 text-slate-400">
-          Payment currently opens Stripe checkout. Account activation and subscription verification will be connected in the next backend phase.
         </div>
       </section>
     </div>

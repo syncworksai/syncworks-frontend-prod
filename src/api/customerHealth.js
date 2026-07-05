@@ -92,3 +92,25 @@ export async function redeemHealthAiPromo(code) {
 
   return response.data;
 }
+
+
+export async function createHealthCoachTurn({
+  userText,
+  profile,
+  snapshot,
+  history,
+}) {
+  const response = await api.post(
+    "/customer-health/coach/chat/",
+    {
+      user_text: String(userText || "").trim(),
+      profile: profile || {},
+      snapshot: snapshot || {},
+      history: Array.isArray(history)
+        ? history.slice(-12)
+        : [],
+    }
+  );
+
+  return response.data;
+}

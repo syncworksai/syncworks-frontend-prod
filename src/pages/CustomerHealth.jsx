@@ -1870,6 +1870,8 @@ export default function CustomerHealth() {
       logEntry.protein = secondaryValue;
       logEntry.carbs = Number(entry?.carbs || 0);
       logEntry.fat = Number(entry?.fat || 0);
+      logEntry.fiber = Number(entry?.fiber || 0);
+      logEntry.sugar = Number(entry?.sugar || 0);
       logEntry.estimate_items = Array.isArray(
         entry?.estimate_items
       )
@@ -1952,6 +1954,12 @@ export default function CustomerHealth() {
           next.fat_today =
             Number(previous?.fat_today || 0) +
             Number(entry?.fat || 0);
+          next.fiber_today =
+            Number(previous?.fiber_today || 0) +
+            Number(entry?.fiber || 0);
+          next.sugar_today =
+            Number(previous?.sugar_today || 0) +
+            Number(entry?.sugar || 0);
           next.last_meal_description =
             entry?.note || previous?.last_meal_description || "";
         }

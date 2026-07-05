@@ -7,6 +7,8 @@ import React, {
   useState,
 } from "react";
 
+import { createHealthCoachTurn } from "../../api/customerHealth";
+
 import {
   addCoachProposalToPlanner,
   clearCoachPlanProposal,
@@ -237,6 +239,10 @@ export default function CoachChatDrawer({
     useState(false);
   const [menuOpen, setMenuOpen] =
     useState(false);
+  const [sending, setSending] =
+    useState(false);
+  const [providerNote, setProviderNote] =
+    useState("");
 
   const scrollRef = useRef(null);
   const previousMessageCountRef = useRef(0);
@@ -300,19 +306,91 @@ export default function CoachChatDrawer({
     }
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     const clean = input.trim();
-    if (!clean) return;
+    if (!clean || sending) return;
 
-    const result = runLocalCoachTurn({
+    setSending(true);
+    setProviderNote("");
+
+    // Always run SyncWorks deterministic logic first. It remains the
+    // validator for proposals, pain guardrails, and planner changes.
+    const localResult = runLocalCoachTurn({
       snapshot: localSnapshot || {},
       userText: clean,
     });
 
-    commitSnapshot(result.snapshot);
+    commitSnapshot(localResult.snapshot);
     setInput("");
+
+    try {
+      const ai = await createHealthCoachTurn({
+        userText: clean,
+        profile:
+          localSnapshot?.profile ||
+          localSnapshot?.health_profile ||
+          {},
+        snapshot: localSnapshot || {},
+        history:
+          localSnapshot?.history ||
+          localSnapshot?.recent_history ||
+          [],
+      });
+
+      const reply = String(ai?.reply || "").trim();
+
+      if (reply) {
+        const nextChat = normalizeCoachChat(
+          localResult.snapshot || {}
+        );
+
+        const lastAssistantIndex = [...nextChat]
+          .map((message) => message?.role)
+          .lastIndexOf("assistant");
+
+        if (lastAssistantIndex >= 0) {
+          nextChat[lastAssistantIndex] = {
+            ...nextChat[lastAssistantIndex],
+            content: reply,
+            provider: ai?.provider || "openai",
+            model: ai?.model || "",
+          };
+        } else {
+          nextChat.push({
+            id: `coach-ai-${Date.now()}`,
+            role: "assistant",
+            content: reply,
+            created_at: new Date().toISOString(),
+            provider: ai?.provider || "openai",
+            model: ai?.model || "",
+          });
+        }
+
+        commitSnapshot({
+          ...localResult.snapshot,
+          coach_chat: nextChat,
+          coach_last_provider:
+            ai?.provider || "openai",
+          coach_last_model: ai?.model || "",
+        });
+
+        setProviderNote("OpenAI response · SyncWorks validated");
+      }
+    } catch (error) {
+      if (error?.response?.status === 402) {
+        setProviderNote(
+          "AI upgrade required. Local SyncWorks coaching was used."
+        );
+      } else {
+        setProviderNote(
+          "OpenAI was unavailable. Local SyncWorks coaching was used."
+        );
+      }
+    } finally {
+      setSending(false);
+    }
   }
 
   function handleAddToPlanner() {
@@ -530,15 +608,16 @@ export default function CoachChatDrawer({
 
             <button
               type="submit"
-              disabled={!input.trim()}
+              disabled={!input.trim() || sending}
               className="h-11 shrink-0 rounded-xl border border-cyan-300/30 bg-cyan-300/15 px-4 text-xs font-black text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Send
+              {sending ? "Thinking…" : "Send"}
             </button>
           </div>
 
           <div className="mt-2 text-center text-[9px] leading-4 text-slate-600">
-            Conversation is saved with your Health profile.
+            {providerNote ||
+              "Conversation is saved with your Health profile."}
           </div>
         </form>
       </section>
