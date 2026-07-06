@@ -72,6 +72,7 @@ const DEVELOPER_AGENT_TASK_LABELS = {
   "god-mode-developer-agent-panel-001": "God Mode Developer Agent panel",
   "business-setup-ui-001": "Business setup UI",
   "developer-agent-smoke-test-001": "Developer Agent smoke test",
+  "agent-control-center-foundation-001": "Agent Control Center foundation",
 };
 
 function getDeveloperAgentError(error, fallback) {
