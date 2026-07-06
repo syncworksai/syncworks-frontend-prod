@@ -419,7 +419,7 @@ function DynamicWarmupCard({
                       : "border-white/15 bg-white/[0.04] text-slate-400"
                   )}
                 >
-                  {item.completed ? "âœ“" : index + 1}
+                  {item.completed ? "Ã¢Å“â€œ" : index + 1}
                 </div>
 
                 <div className="min-w-0 flex-1">
@@ -1025,7 +1025,7 @@ function SetHistory({
 
             {exercise.previous_performance.average_rpe ? (
               <div className="rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1 text-[9px] font-black text-fuchsia-100">
-                Avg RPE {exercise.previous_performance.average_rpe}
+                Avg Effort {exercise.previous_performance.average_rpe}
               </div>
             ) : null}
           </div>
@@ -1040,7 +1040,7 @@ function SetHistory({
                   className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-black text-white"
                 >
                   {set.weight || "BW"} x {set.reps || "-"}
-                  {set.rpe ? ` | RPE ${set.rpe}` : ""}
+                  {set.rpe ? ` | Effort ${set.rpe}` : ""}
                 </div>
               ))}
           </div>
@@ -1167,9 +1167,7 @@ function SetHistory({
                   })
                 }
                 className="h-11 rounded-xl border border-white/10 bg-white/[0.05] text-sm font-black text-white"
-              >
-                -5
-              </button>
+              >-1</button>
 
 <input
                 value={targetReps}
@@ -1248,13 +1246,13 @@ function SetHistory({
                           log.reps ||
                           "-"}
                         {log.rpe || log.ease_score
-                          ? ` · RPE ${log.rpe || log.ease_score}`
+                          ? ` Â· Effort ${log.rpe || log.ease_score}`
                           : ""}
                         {log.set_type === "warmup"
-                          ? " · Warm-up"
+                          ? " Â· Warm-up"
                           : ""}
                         {log.reached_failure
-                          ? " · Failure"
+                          ? " Â· Failure"
                           : ""}
                       </div>
                     ) : (
@@ -1317,8 +1315,8 @@ function SetHistory({
                         event.target.value
                       )
                     }
-                    aria-label={`Set ${setNumber} RPE`}
-                    placeholder="RPE"
+                    aria-label={`Set ${setNumber} effort score`}
+                    placeholder="Effort"
                     className="h-10 min-w-0 rounded-xl border border-white/10 bg-slate-950 px-2 text-sm font-bold text-white outline-none"
                   />
 
@@ -1594,6 +1592,8 @@ function FinishReviewPanel({
       difficulty,
       overall_form: overallForm,
       total_volume: Math.round(totalVolume),
+      session_score:
+        buildWorkoutModeMetrics(session).score,
       skipped_exercises: skippedExercises.length,
       incomplete_set_logs: incompleteSetLogs.length,
       next_recommendation: nextRecommendation,
@@ -1644,6 +1644,14 @@ function FinishReviewPanel({
             value={`${activeRatio}%`}
             tone="purple"
           />
+
+          <StatTile
+            label="Session Score"
+            value={
+              buildWorkoutModeMetrics(session).score
+            }
+            tone="amber"
+          />
         </div>
       </div>
 
@@ -1665,7 +1673,7 @@ function FinishReviewPanel({
                 {incompleteSetLogs.length === 1
                   ? ""
                   : "s"}{" "}
-                are missing reps, weight, or RPE.
+                are missing reps, weight, or Effort.
               </div>
             ) : null}
           </div>
@@ -1868,7 +1876,7 @@ function FinishReviewPanel({
             tone="amber"
           />
           <StatTile
-            label="RPE 9+"
+            label="Effort 9+"
             value={highEffortSets.length}
             tone="purple"
           />
@@ -1932,6 +1940,291 @@ function FinishReviewPanel({
         </button>
       </div>
     </div>
+  );
+}
+
+
+function numericWorkoutValue(value) {
+  const parsed = Number(
+    String(value ?? "").replace(/[^\d.-]/g, "")
+  );
+
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function buildWorkoutModeMetrics(session) {
+  const exercises = Array.isArray(session?.exercises)
+    ? session.exercises
+    : [];
+
+  const allLogs = exercises.flatMap((exercise) =>
+    (exercise?.set_logs || []).map((log) => ({
+      ...log,
+      exercise_name:
+        exercise?.substitute_name ||
+        exercise?.name ||
+        "Exercise",
+    }))
+  );
+
+  const plannedSets = exercises.reduce(
+    (total, exercise) =>
+      total +
+      Math.max(
+        Number(exercise?.planned_sets || 0),
+        (exercise?.set_logs || []).length
+      ),
+    0
+  );
+
+  const completedSets = allLogs.length;
+
+  const completedVolume = allLogs.reduce(
+    (total, log) =>
+      total +
+      numericWorkoutValue(
+        log?.actual_weight ?? log?.weight
+      ) *
+        numericWorkoutValue(
+          log?.actual_reps ?? log?.reps
+        ),
+    0
+  );
+
+  const plannedVolume = exercises.reduce(
+    (total, exercise) => {
+      const sets = Math.max(
+        0,
+        Number(exercise?.planned_sets || 0)
+      );
+      const reps = numericWorkoutValue(
+        exercise?.current_target_reps ||
+          exercise?.planned_reps
+      );
+      const weight = numericWorkoutValue(
+        exercise?.current_target_weight ||
+          exercise?.planned_weight
+      );
+
+      return total + sets * reps * weight;
+    },
+    0
+  );
+
+  const completedExercises = exercises.filter(
+    (exercise) =>
+      exercise?.completed ||
+      (exercise?.set_logs || []).length >=
+        Number(exercise?.planned_sets || 1)
+  ).length;
+
+  const setProgress = plannedSets
+    ? Math.round((completedSets / plannedSets) * 100)
+    : 0;
+
+  const exerciseProgress = exercises.length
+    ? Math.round(
+        (completedExercises / exercises.length) * 100
+      )
+    : 0;
+
+  const progressPercent = Math.max(
+    setProgress,
+    exerciseProgress
+  );
+
+  const effortScores = allLogs
+    .map((log) =>
+      numericWorkoutValue(
+        log?.rpe || log?.ease_score
+      )
+    )
+    .filter((value) => value > 0);
+
+  const averageEffort = effortScores.length
+    ? effortScores.reduce(
+        (total, value) => total + value,
+        0
+      ) / effortScores.length
+    : 0;
+
+  const painFlags = allLogs.filter(
+    (log) => numericWorkoutValue(log?.pain_score) > 0
+  ).length;
+
+  const activeRatio =
+    numericWorkoutValue(session?.total_seconds) > 0
+      ? Math.min(
+          100,
+          Math.round(
+            (numericWorkoutValue(
+              session?.active_seconds
+            ) /
+              numericWorkoutValue(
+                session?.total_seconds
+              )) *
+              100
+          )
+        )
+      : 0;
+
+  const score = Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round(
+        progressPercent * 0.55 +
+          activeRatio * 0.25 +
+          (averageEffort
+            ? Math.min(100, averageEffort * 10)
+            : 70) *
+            0.2 -
+          painFlags * 3
+      )
+    )
+  );
+
+  return {
+    plannedSets,
+    completedSets,
+    completedVolume: Math.round(completedVolume),
+    plannedVolume: Math.round(plannedVolume),
+    progressPercent: Math.min(100, progressPercent),
+    activeRatio,
+    score,
+  };
+}
+
+function getRestMotivation(metrics, session) {
+  if (!session?.rest_active) return "";
+
+  const setNumber = Number(metrics?.completedSets || 0);
+
+  if (metrics?.progressPercent >= 80) {
+    return "Strong finish. Stay controlled and complete the plan clean.";
+  }
+
+  if (setNumber > 0 && setNumber % 4 === 0) {
+    return `You have completed ${setNumber} sets. Reset your breathing and keep the next set sharp.`;
+  }
+
+  if (metrics?.completedVolume > 0) {
+    return `You have moved ${metrics.completedVolume.toLocaleString()} pounds so far. Recover now, then earn the next set.`;
+  }
+
+  return "Use the rest. Breathe, reset your position, and prepare for the next set.";
+}
+
+function WorkoutCommandCenter({
+  session,
+  currentExercise,
+}) {
+  const metrics = useMemo(
+    () => buildWorkoutModeMetrics(session),
+    [session]
+  );
+
+  const motivation = getRestMotivation(
+    metrics,
+    session
+  );
+
+  const isCardio = /cardio|run|walk|bike|cycle|rower|elliptical|stair|treadmill/i.test(
+    [
+      session?.workout_name,
+      currentExercise?.name,
+      currentExercise?.category,
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+
+  return (
+    <section className="rounded-[1.5rem] border border-emerald-300/20 bg-[radial-gradient(circle_at_top_left,rgba(57,255,136,0.11),transparent_34%),linear-gradient(145deg,rgba(4,8,18,0.96),rgba(7,17,31,0.96))] p-3 shadow-[0_18px_55px_rgba(0,0,0,0.32)] sm:rounded-[2rem] sm:p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-200">
+            Workout Mode
+          </div>
+
+          <h3 className="mt-1 text-lg font-black text-white">
+            {isCardio
+              ? "Cardio progress"
+              : "Session command center"}
+          </h3>
+        </div>
+
+        <div className="rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 py-2 text-center">
+          <div className="text-[8px] font-black uppercase tracking-[0.14em] text-fuchsia-200">
+            Score
+          </div>
+          <div className="text-xl font-black text-fuchsia-100">
+            {metrics.score}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <MobileStat
+          label="Progress"
+          value={`${metrics.progressPercent}%`}
+          tone="emerald"
+        />
+
+        <MobileStat
+          label={isCardio ? "Completed" : "Sets"}
+          value={
+            isCardio
+              ? formatSeconds(
+                  session?.active_seconds || 0
+                )
+              : `${metrics.completedSets}/${metrics.plannedSets || "-"}`
+          }
+          tone="cyan"
+        />
+
+        <MobileStat
+          label={isCardio ? "Total Time" : "Volume"}
+          value={
+            isCardio
+              ? formatSeconds(
+                  session?.total_seconds || 0
+                )
+              : metrics.completedVolume > 0
+              ? metrics.completedVolume.toLocaleString()
+              : "-"
+          }
+          tone="purple"
+        />
+
+        <MobileStat
+          label={isCardio ? "Active Ratio" : "Volume Goal"}
+          value={
+            isCardio
+              ? `${metrics.activeRatio}%`
+              : metrics.plannedVolume > 0
+              ? metrics.plannedVolume.toLocaleString()
+              : "-"
+          }
+          tone="amber"
+        />
+      </div>
+
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-emerald-300 via-cyan-300 to-fuchsia-300 transition-all duration-500"
+          style={{
+            width: `${metrics.progressPercent}%`,
+          }}
+        />
+      </div>
+
+      {motivation ? (
+        <div className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] px-3 py-2.5 text-xs font-bold leading-5 text-amber-50">
+          {motivation}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -3651,6 +3944,13 @@ export default function ActiveWorkoutSessionDrawer({
               ) : null}
 
               {!isCompleted ? (
+                <WorkoutCommandCenter
+                  session={session}
+                  currentExercise={currentExercise}
+                />
+              ) : null}
+
+              {!isCompleted ? (
                 <DynamicWarmupCard
                   plan={session.warmup_plan}
                   onToggle={togglePreparationItem}
@@ -4073,7 +4373,7 @@ export default function ActiveWorkoutSessionDrawer({
                             Set log
                           </div>
                           <div className="mt-0.5 text-[10px] text-slate-500">
-                            Tap a completed set to correct reps, weight, or RPE.
+                            Tap a completed set to correct reps, weight, or effort.
                           </div>
                         </div>
 
@@ -4416,7 +4716,7 @@ export default function ActiveWorkoutSessionDrawer({
           <div className="absolute inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#020617]/96 px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 backdrop-blur-xl">
             {session.pending_set_logging ? (
               <div className="mx-auto mb-2 max-w-4xl rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-center text-[10px] font-black text-amber-100">
-                Set complete â€” finish logging before starting another set.
+                Set complete Ã¢â‚¬â€ finish logging before starting another set.
               </div>
             ) : null}
 
