@@ -38,6 +38,82 @@ function UserAvatar() {
   );
 }
 
+function SyncLaunchCard({
+  snapshot,
+  onStartWorkout,
+  onBuildWorkout,
+  onOpenNutrition,
+  onOpenLog,
+}) {
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12
+      ? "Good morning"
+      : hour < 18
+      ? "Good afternoon"
+      : "Good evening";
+
+  const plannedName =
+    snapshot?.workout ||
+    snapshot?.next_session?.workout_name ||
+    snapshot?.next_session_name ||
+    "";
+
+  const hasReadiness =
+    Boolean(snapshot?.readiness) ||
+    Boolean(snapshot?.last_daily_metric_update_at);
+
+  return (
+    <div className="rounded-[1.5rem] border border-cyan-300/20 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.10),transparent_34%),linear-gradient(180deg,rgba(15,23,42,0.92),rgba(2,8,23,0.94))] p-4">
+      <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
+        SYNC Health
+      </div>
+      <h3 className="mt-1 text-xl font-black text-white">
+        {greeting}. What are we doing today?
+      </h3>
+      <p className="mt-2 text-sm leading-6 text-slate-300">
+        {plannedName
+          ? `${plannedName} is ready. ${
+              hasReadiness
+                ? "Your latest check-in is available."
+                : "We should check readiness and pain before starting."
+            }`
+          : "There is no active workout selected. I can build one, open nutrition, or help log todayâ€™s data."}
+      </p>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={plannedName ? onStartWorkout : onBuildWorkout}
+          className="min-h-12 rounded-2xl border border-lime-300/30 bg-lime-300/12 px-3 text-xs font-black text-lime-100"
+        >
+          {plannedName ? "Start Workout" : "Build Workout"}
+        </button>
+        <button
+          type="button"
+          onClick={onOpenNutrition}
+          className="min-h-12 rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 text-xs font-black text-fuchsia-100"
+        >
+          Log Nutrition
+        </button>
+        <button
+          type="button"
+          onClick={onOpenLog}
+          className="min-h-11 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-3 text-xs font-black text-cyan-100"
+        >
+          Daily Check-In
+        </button>
+        <button
+          type="button"
+          onClick={onBuildWorkout}
+          className="min-h-11 rounded-2xl border border-white/10 bg-white/[0.05] px-3 text-xs font-black text-white"
+        >
+          Quick Plan
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function EmptyPlanCard({ onOpenQuestionnaire }) {
   return (
     <div className="rounded-[1.35rem] border border-cyan-300/15 bg-cyan-300/[0.05] p-3 sm:p-4">
@@ -231,6 +307,11 @@ export default function CoachChatDrawer({
   snapshot,
   setSnapshot,
   onOpenQuestionnaire,
+  onStartWorkout,
+  onBuildWorkout,
+  onOpenNutrition,
+  onOpenLog,
+  onOpenUpgrade,
 }) {
   const [input, setInput] = useState("");
   const [localSnapshot, setLocalSnapshot] =
@@ -376,13 +457,14 @@ export default function CoachChatDrawer({
           coach_last_model: ai?.model || "",
         });
 
-        setProviderNote("OpenAI response · SyncWorks validated");
+        setProviderNote("OpenAI response Â· SyncWorks validated");
       }
     } catch (error) {
       if (error?.response?.status === 402) {
         setProviderNote(
-          "AI upgrade required. Local SyncWorks coaching was used."
+          "Fitness + Nutrition AI is required for conversational coaching."
         );
+        onOpenUpgrade?.();
       } else {
         setProviderNote(
           "OpenAI was unavailable. Local SyncWorks coaching was used."
@@ -546,6 +628,14 @@ export default function CoachChatDrawer({
           ref={scrollRef}
           className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-4 sm:space-y-4 sm:px-5"
         >
+          <SyncLaunchCard
+            snapshot={localSnapshot}
+            onStartWorkout={onStartWorkout}
+            onBuildWorkout={onBuildWorkout}
+            onOpenNutrition={onOpenNutrition}
+            onOpenLog={onOpenLog}
+          />
+
           {!proposal && chat.length === 0 ? (
             <EmptyPlanCard
               onOpenQuestionnaire={
@@ -611,7 +701,7 @@ export default function CoachChatDrawer({
               disabled={!input.trim() || sending}
               className="h-11 shrink-0 rounded-xl border border-cyan-300/30 bg-cyan-300/15 px-4 text-xs font-black text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {sending ? "Thinking…" : "Send"}
+              {sending ? "Thinkingâ€¦" : "Send"}
             </button>
           </div>
 

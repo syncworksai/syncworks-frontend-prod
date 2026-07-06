@@ -1,4 +1,4 @@
-﻿// src/components/customer-health/HealthMobileQuickNav.jsx
+// src/components/customer-health/HealthMobileQuickNav.jsx
 import React from "react";
 
 function cx(...parts) {
@@ -32,24 +32,16 @@ function ProgressIcon() {
   );
 }
 
-function CoachIcon() {
+function LogIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
-      <path d="M12 3v3M8 4.5l1.5 2M16 4.5l-1.5 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <rect x="4" y="7" width="16" height="13" rx="4" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="9" cy="13" r="1" fill="currentColor" />
-      <circle cx="15" cy="13" r="1" fill="currentColor" />
-      <path d="M9 17h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M5 4h14v16H5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }
 
-function NavButton({
-  label,
-  icon,
-  onClick,
-  active = false,
-}) {
+function NavButton({ label, icon, onClick, active = false }) {
   return (
     <button
       type="button"
@@ -61,64 +53,24 @@ function NavButton({
           : "text-slate-400 hover:bg-white/[0.04] hover:text-emerald-100"
       )}
     >
-      <span
-        className={cx(
-          "flex h-8 w-8 items-center justify-center rounded-xl border",
-          active
-            ? "border-emerald-300/30 bg-emerald-400/10 text-emerald-100"
-            : "border-cyan-300/15 bg-cyan-400/[0.06] text-cyan-200"
-        )}
-      >
+      <span className={cx(
+        "flex h-8 w-8 items-center justify-center rounded-xl border",
+        active
+          ? "border-emerald-300/30 bg-emerald-400/10 text-emerald-100"
+          : "border-cyan-300/15 bg-cyan-400/[0.06] text-cyan-200"
+      )}>
         {icon}
       </span>
-
-      <span className="w-full truncate text-center">
-        {label}
-      </span>
+      <span className="w-full truncate text-center">{label}</span>
     </button>
   );
 }
 
-function formatTime(value) {
-  if (!value || value === "Anytime") {
-    return "Anytime";
-  }
-
-  const [hourValue, minuteValue] = String(value)
-    .split(":")
-    .map(Number);
-
-  if (!Number.isFinite(hourValue)) {
-    return value;
-  }
-
-  const suffix = hourValue >= 12 ? "PM" : "AM";
-  const hour = hourValue % 12 || 12;
-  const minute = String(
-    Number.isFinite(minuteValue) ? minuteValue : 0
-  ).padStart(2, "0");
-
-  return `${hour}:${minute} ${suffix}`;
-}
-
 export default function HealthMobileQuickNav({
   onOpen,
-  onStartWorkout,
-  onStartFallback,
-  nextSession,
   hasCoachProposal,
   activeView = "home",
 }) {
-
-  const workoutName =
-    nextSession?.workout_name ||
-    nextSession?.name ||
-    "Plan Today";
-
-  const workoutTime = nextSession?.time
-    ? formatTime(nextSession.time)
-    : "";
-
   return (
     <div
       data-syncworks-module-nav="health"
@@ -132,54 +84,42 @@ export default function HealthMobileQuickNav({
             active={activeView === "home"}
             onClick={() => onOpen?.("home")}
           />
-
           <NavButton
             label="Plan"
             icon={<PlanIcon />}
             onClick={() => onOpen?.("planner")}
           />
-
           <button
             type="button"
-            onClick={() => onOpen?.("quick-log")}
-            aria-label="Open health quick log"
+            onClick={() => onOpen?.("coach-chat")}
+            aria-label="Open SYNC Health assistant"
             className="group relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-emerald-300/30 bg-[linear-gradient(180deg,rgba(16,185,129,0.16),rgba(2,8,23,0.96))] px-1 py-2 text-center text-[9px] font-black uppercase tracking-[0.08em] text-emerald-50 shadow-[0_0_20px_rgba(57,255,136,0.22)] transition active:scale-[0.96]"
           >
             <span className="pointer-events-none absolute left-1/2 top-2 h-11 w-11 -translate-x-1/2 rounded-full bg-emerald-300/18 blur-xl transition group-hover:bg-cyan-300/22" />
-
-            <span className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-200/35 bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.20),transparent_24%),linear-gradient(145deg,rgba(34,211,238,0.20),rgba(57,255,136,0.22),rgba(139,92,246,0.22))] shadow-[0_0_10px_rgba(34,211,238,0.62),0_0_18px_rgba(57,255,136,0.30)]">
+            <span className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-200/35 bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.20),transparent_24%),linear-gradient(145deg,rgba(34,211,238,0.20),rgba(57,255,136,0.22),rgba(139,92,246,0.22))] shadow-[0_0_10px_rgba(34,211,238,0.62),0_0_18px_rgba(57,255,136,0.30)]">
               <img
                 src="/health/brand/syncworks-start-logo.png"
                 alt=""
                 aria-hidden="true"
-                className="h-8 w-8 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.62)]"
+                className="h-9 w-9 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.62)]"
               />
             </span>
-
-            <span className="w-full truncate text-center">
-              Log
-            </span>
-
+            <span className="w-full truncate text-center">SYNC</span>
             <span className="max-w-full truncate text-[7px] font-bold normal-case tracking-normal text-emerald-100/70">
-              Meal · Weight · Steps
+              Talk Â· Train Â· Log
             </span>
           </button>
-
           <NavButton
             label="Progress"
             icon={<ProgressIcon />}
-            active={
-              activeView === "insights" ||
-              activeView === "dashboard"
-            }
+            active={activeView === "insights" || activeView === "dashboard"}
             onClick={() => onOpen?.("insights")}
           />
-
           <NavButton
-            label="SYNC"
-            icon={<CoachIcon />}
+            label="Log"
+            icon={<LogIcon />}
             active={hasCoachProposal}
-            onClick={() => onOpen?.("coach-chat")}
+            onClick={() => onOpen?.("quick-log")}
           />
         </div>
       </div>

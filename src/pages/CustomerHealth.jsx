@@ -2008,6 +2008,19 @@ export default function CustomerHealth() {
   }
 
   function handleDashboardOpen(target) {
+    if (target === "quick-log") {
+      setDrawer("");
+      setQuickLogType("menu");
+      return;
+    }
+
+    if (target === "nutrition-coach") {
+      setQuickLogType("");
+      setNutritionDraft(null);
+      setDrawer("nutrition-coach");
+      return;
+    }
+
     if (target === "home") {
       setHealthView("home");
       setDrawer("");
@@ -3326,7 +3339,7 @@ export default function CustomerHealth() {
                 setQuickLogType("");
                 setNutritionDraft(null);
                 setDrawer(
-                  "nutrition-dashboard"
+                  "nutrition-coach"
                 );
                 return;
               }
@@ -3643,6 +3656,29 @@ export default function CustomerHealth() {
             setSnapshot={setSnapshot}
             onOpenQuestionnaire={
               openQuestionnaireFromCoach
+            }
+            onStartWorkout={() => {
+              if (mobileNextSession) {
+                startPlannerWorkout(
+                  mobileNextSession
+                );
+              } else {
+                setDrawer("plan-today");
+              }
+            }}
+            onBuildWorkout={() =>
+              setDrawer("plan-today")
+            }
+            onOpenNutrition={() => {
+              setNutritionDraft(null);
+              setDrawer("nutrition-coach");
+            }}
+            onOpenLog={() => {
+              setDrawer("");
+              setQuickLogType("menu");
+            }}
+            onOpenUpgrade={() =>
+              setDrawer("ai-coach-upgrade")
             }
           />
 

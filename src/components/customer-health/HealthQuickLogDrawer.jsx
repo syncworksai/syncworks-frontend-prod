@@ -189,8 +189,7 @@ export default function HealthQuickLogDrawer({
       {
         title: "Nutrition",
         items: [
-          ["nutrition-coach", "Nutrition Coach", "Describe a meal, review estimated calories and macros, then confirm before saving."],
-          ["meal", "Manual Meal", "Describe what you ate and add nutrition you already know."],
+          ["nutrition-coach", "Meal / Nutrition", "Describe food naturally, analyze with AI, reuse a saved meal, or enter macros manually."],
           ["protein", "Protein", "Quick-add protein grams."],
           ["calories", "Calories", "Quick-add calorie intake."],
           ["water", "Water", "Quick-add hydration."],
@@ -228,7 +227,7 @@ export default function HealthQuickLogDrawer({
               onClick={onClose}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] font-black text-white"
             >
-              ✕
+              âœ•
             </button>
           </div>
 
@@ -367,7 +366,7 @@ export default function HealthQuickLogDrawer({
             onClick={onClose}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] font-black text-white"
           >
-            ✕
+            âœ•
           </button>
         </div>
 
@@ -611,7 +610,7 @@ export default function HealthQuickLogDrawer({
             disabled={!canSave || saving}
             className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {saving ? "Saving…" : "Save Entry"}
+            {saving ? "Savingâ€¦" : "Save Entry"}
           </button>
         </div>
       </section>
