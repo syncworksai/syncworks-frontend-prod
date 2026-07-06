@@ -532,6 +532,284 @@ function CoachChatStartCard({ snapshot, onOpen }) {
   );
 }
 
+function buildDailyAccountabilityLoop({
+  snapshot,
+  profile,
+  weekPlan,
+  history,
+}) {
+  const now = new Date();
+  const hour = now.getHours();
+  const quietStart = safeNumber(
+    profile?.quiet_hours_start ??
+      snapshot?.quiet_hours_start ??
+      21
+  );
+  const quietEnd = safeNumber(
+    profile?.quiet_hours_end ??
+      snapshot?.quiet_hours_end ??
+      7
+  );
+
+  const quiet =
+    quietStart > quietEnd
+      ? hour >= quietStart || hour < quietEnd
+      : hour >= quietStart && hour < quietEnd;
+
+  const steps = safeNumber(snapshot?.steps || 0);
+  const stepGoal = safeNumber(snapshot?.step_goal || 8000);
+  const protein = safeNumber(snapshot?.protein_today || 0);
+  const proteinGoal = safeNumber(snapshot?.protein_goal || 150);
+  const calories = safeNumber(snapshot?.calories || 0);
+  const calorieGoal = safeNumber(snapshot?.calorie_goal || 2200);
+  const water = safeNumber(snapshot?.water || 0);
+  const waterGoal = safeNumber(snapshot?.water_goal || 100);
+  const workoutsThisWeek = countWorkoutsThisWeek(history);
+  const trainingGoal = Math.max(
+    1,
+    safeNumber(profile?.training_days || 3)
+  );
+
+  const today = localYmd();
+  const todayPlan = (Array.isArray(weekPlan) ? weekPlan : []).find(
+    (item) =>
+      item?.ymd === today &&
+      item?.workout_name &&
+      item?.status !== "Completed" &&
+      item?.status !== "Rest Day"
+  );
+
+  const tasks = [];
+
+  if (todayPlan) {
+    tasks.push({
+      id: "workout",
+      label: "Finish today's workout",
+      detail: todayPlan.workout_name,
+      tone: "emerald",
+      action: "Start",
+      open: "workout",
+      priority: 1,
+    });
+  } else if (workoutsThisWeek < trainingGoal) {
+    tasks.push({
+      id: "planner",
+      label: "Protect the next training slot",
+      detail: `${workoutsThisWeek}/${trainingGoal} weekly workouts complete`,
+      tone: "cyan",
+      action: "Plan",
+      open: "planner",
+      priority: 2,
+    });
+  }
+
+  if (proteinGoal > 0 && protein < proteinGoal) {
+    tasks.push({
+      id: "protein",
+      label: "Protein still open",
+      detail: `${Math.max(0, proteinGoal - protein)}g remaining today`,
+      tone: "fuchsia",
+      action: "Log meal",
+      open: "nutrition-coach",
+      priority: 3,
+    });
+  }
+
+  if (stepGoal > 0 && steps < stepGoal) {
+    tasks.push({
+      id: "steps",
+      label: "Steps need attention",
+      detail: `${Math.max(0, stepGoal - steps).toLocaleString()} steps left`,
+      tone: "amber",
+      action: "Log steps",
+      open: "steps",
+      priority: 4,
+    });
+  }
+
+  if (waterGoal > 0 && water < waterGoal * 0.75) {
+    tasks.push({
+      id: "water",
+      label: "Hydration check",
+      detail: `${Math.max(0, waterGoal - water)} oz remaining`,
+      tone: "cyan",
+      action: "Log",
+      open: "quick-log",
+      priority: 5,
+    });
+  }
+
+  if (calorieGoal > 0 && calories <= 0 && hour >= 12) {
+    tasks.push({
+      id: "meal",
+      label: "Meal log missing",
+      detail: "No calories logged yet today",
+      tone: "fuchsia",
+      action: "Log food",
+      open: "nutrition-coach",
+      priority: 6,
+    });
+  }
+
+  const recoveryFlag =
+    snapshot?.readiness === "Recovery" ||
+    snapshot?.sleep_quality === "Poor" ||
+    safeNumber(snapshot?.pain_score || 0) >= 3;
+
+  if (recoveryFlag) {
+    tasks.push({
+      id: "recovery",
+      label: "Recovery guardrail",
+      detail: "Keep intensity controlled and pain-free",
+      tone: "amber",
+      action: "Ask SYNC",
+      open: "coach-chat",
+      priority: 0,
+    });
+  }
+
+  const sortedTasks = tasks
+    .sort((left, right) => left.priority - right.priority)
+    .slice(0, 4);
+
+  const message = quiet
+    ? "Quiet hours are active. SYNC will keep nudges soft and avoid aggressive reminders."
+    : sortedTasks.length
+    ? "SYNC found the next actions that keep today from slipping."
+    : "Daily loop is clean. Maintain momentum and keep logging the basics.";
+
+  return {
+    quiet,
+    quietLabel: `${quietStart}:00-${quietEnd}:00`,
+    tasks: sortedTasks,
+    message,
+  };
+}
+
+function DailyAccountabilityLoopCard({
+  snapshot,
+  profile,
+  weekPlan,
+  history,
+  onOpen,
+  onStartWorkout,
+}) {
+  const loop = buildDailyAccountabilityLoop({
+    snapshot,
+    profile,
+    weekPlan,
+    history,
+  });
+
+  const toneMap = {
+    cyan: "border-cyan-300/20 bg-cyan-300/[0.08] text-cyan-100",
+    emerald:
+      "border-emerald-300/20 bg-emerald-300/[0.08] text-emerald-100",
+    fuchsia:
+      "border-fuchsia-300/20 bg-fuchsia-300/[0.08] text-fuchsia-100",
+    amber:
+      "border-amber-300/20 bg-amber-300/[0.08] text-amber-100",
+  };
+
+  function runTask(task) {
+    if (task.id === "workout" && onStartWorkout) {
+      const today = localYmd();
+      const planned = (Array.isArray(weekPlan) ? weekPlan : []).find(
+        (item) =>
+          item?.ymd === today &&
+          item?.workout_name &&
+          item?.status !== "Completed"
+      );
+
+      if (planned) {
+        onStartWorkout(planned);
+        return;
+      }
+    }
+
+    onOpen?.(task.open);
+  }
+
+  return (
+    <Card className="relative overflow-hidden border-lime-400/20 bg-[radial-gradient(circle_at_top_left,rgba(57,255,136,0.12),transparent_32%),radial-gradient(circle_at_top_right,rgba(52,223,255,0.1),transparent_30%),linear-gradient(135deg,rgba(4,8,18,0.98),rgba(7,17,31,0.98))]">
+      <div className="pointer-events-none absolute right-0 top-0 h-28 w-28 rounded-full bg-lime-400/10 blur-3xl" />
+      <div className="relative flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[0.22em] text-lime-200">
+            SYNC Daily Accountability
+          </div>
+
+          <h3 className="mt-1 text-xl font-black text-white">
+            Today's follow-up loop
+          </h3>
+
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">
+            {loop.message}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+          <div className="rounded-2xl border border-lime-300/20 bg-lime-300/10 px-3 py-2 text-center text-lime-100">
+            <div className="text-[8px] font-black uppercase tracking-wider opacity-75">
+              Open Items
+            </div>
+            <div className="mt-1 text-lg font-black">
+              {loop.tasks.length}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-center text-cyan-100">
+            <div className="text-[8px] font-black uppercase tracking-wider opacity-75">
+              Quiet
+            </div>
+            <div className="mt-1 text-lg font-black">
+              {loop.quiet ? "On" : "Off"}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        {(loop.tasks.length
+          ? loop.tasks
+          : [
+              {
+                id: "clean",
+                label: "Daily loop clean",
+                detail: "No urgent gaps found right now.",
+                tone: "emerald",
+                action: "Open SYNC",
+                open: "coach-chat",
+              },
+            ]
+        ).map((task) => (
+          <button
+            key={task.id}
+            type="button"
+            onClick={() => runTask(task)}
+            className={`rounded-2xl border p-3 text-left transition hover:scale-[1.01] active:scale-[0.99] ${
+              toneMap[task.tone] || toneMap.cyan
+            }`}
+          >
+            <div className="text-sm font-black text-white">
+              {task.label}
+            </div>
+            <div className="mt-1 min-h-[2.25rem] text-xs font-bold leading-5 text-slate-300">
+              {task.detail}
+            </div>
+            <div className="mt-3 inline-flex rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-white">
+              {task.action}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div className="relative mt-3 rounded-2xl border border-white/10 bg-black/20 p-3 text-xs font-bold leading-5 text-slate-400">
+        Quiet-hour window: {loop.quietLabel}. Browser push notifications are not enabled yet; this card creates the in-app reminder logic now so backend/push can attach to it later.
+      </div>
+    </Card>
+  );
+}
 function LastWorkoutStatsCard({ stats }) {
   if (!stats) return null;
 
@@ -727,7 +1005,15 @@ export default function HealthDashboard({
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      <AdaptiveNextWorkoutCard
+            <DailyAccountabilityLoopCard
+        snapshot={snapshot}
+        profile={profile}
+        weekPlan={weekPlan}
+        history={history}
+        onOpen={onOpen}
+        onStartWorkout={onStartWorkout}
+      />
+<AdaptiveNextWorkoutCard
         history={history}
         snapshot={snapshot}
         profile={profile}
@@ -771,42 +1057,42 @@ export default function HealthDashboard({
 
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
             <QuickAction
-              icon="▶"
+              icon="â–¶"
               label="Start Workout"
               detail={nextSession?.workout_name || "Choose or build today's session"}
               tone="emerald"
               onClick={() => nextSession ? onStartWorkout?.(nextSession) : onOpen?.("workout")}
             />
             <QuickAction
-              icon="＋"
+              icon="ï¼‹"
               label="Build Workout"
               detail="Create and save your own sets"
               tone="cyan"
               onClick={() => onOpen?.("workout")}
             />
             <QuickAction
-              icon="🦵"
+              icon="ðŸ¦µ"
               label="Train a Muscle"
               detail="Browse legs, chest, back, arms, and more"
               tone="fuchsia"
               onClick={() => onOpen?.("library")}
             />
             <QuickAction
-              icon="⌕"
+              icon="âŒ•"
               label="Exercise Library"
               detail="Search movements and form guidance"
               tone="violet"
               onClick={() => onOpen?.("library")}
             />
             <QuickAction
-              icon="↗"
+              icon="â†—"
               label="Progress"
               detail="Weight, workouts, strength, and trends"
               tone="amber"
               onClick={() => onOpen?.("progress")}
             />
             <QuickAction
-              icon="◎"
+              icon="â—Ž"
               label="Profile"
               detail="Height, weight, goals, limits, equipment"
               tone="cyan"
@@ -854,7 +1140,7 @@ export default function HealthDashboard({
 
               <div className="mt-4 flex items-start gap-3 sm:items-center sm:gap-4">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl border border-cyan-400/25 bg-cyan-500/10 text-2xl sm:h-16 sm:w-16 sm:text-3xl">
-                  🏋️
+                  ðŸ‹ï¸
                 </div>
 
                 <div className="min-w-0">
