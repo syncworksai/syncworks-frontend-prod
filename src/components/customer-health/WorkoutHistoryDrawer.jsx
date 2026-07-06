@@ -171,6 +171,289 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+
+function buildTrainingArchiveInsights(records = []) {
+  const safeRecords = Array.isArray(records)
+    ? records
+    : [];
+
+  const recent = safeRecords.slice(0, 14);
+  const last7 = safeRecords.filter((record) => {
+    const time = new Date(record.completedAt).getTime();
+    return (
+      Number.isFinite(time) &&
+      Date.now() - time <= 7 * 86400000
+    );
+  });
+
+  const previous7 = safeRecords.filter((record) => {
+    const time = new Date(record.completedAt).getTime();
+    return (
+      Number.isFinite(time) &&
+      Date.now() - time > 7 * 86400000 &&
+      Date.now() - time <= 14 * 86400000
+    );
+  });
+
+  const sum = (rows, field) =>
+    rows.reduce((total, row) => total + num(row[field]), 0);
+
+  const recentVolume = sum(last7, "volume");
+  const previousVolume = sum(previous7, "volume");
+  const recentSets = sum(last7, "workingSets");
+  const recentPain = sum(last7, "painFlags");
+  const recentMinutes = Math.round(sum(last7, "activeSeconds") / 60);
+
+  const scoreValues = last7
+    .map((record) =>
+      num(
+        record.session?.completion_meta?.session_score ??
+          record.session?.session_score
+      )
+    )
+    .filter((value) => value > 0);
+
+  const averageScore = scoreValues.length
+    ? Math.round(
+        scoreValues.reduce((total, value) => total + value, 0) /
+          scoreValues.length
+      )
+    : 0;
+
+  const volumeTrend =
+    previousVolume > 0
+      ? Math.round(
+          ((recentVolume - previousVolume) / previousVolume) * 100
+        )
+      : recentVolume > 0
+      ? 100
+      : 0;
+
+  const byDay = new Map();
+
+  last7.forEach((record) => {
+    const key = String(record.completedAt || "").slice(0, 10);
+    if (!key) return;
+
+    const existing = byDay.get(key) || {
+      ymd: key,
+      workouts: 0,
+      volume: 0,
+      sets: 0,
+    };
+
+    existing.workouts += 1;
+    existing.volume += num(record.volume);
+    existing.sets += num(record.workingSets);
+    byDay.set(key, existing);
+  });
+
+  const dayBars = Array.from({ length: 7 }).map((_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - index));
+    const ymd = date.toISOString().slice(0, 10);
+    const row = byDay.get(ymd) || {
+      ymd,
+      workouts: 0,
+      volume: 0,
+      sets: 0,
+    };
+
+    return {
+      ...row,
+      label: date.toLocaleDateString(undefined, {
+        weekday: "short",
+      }),
+    };
+  });
+
+  const maxVolume = Math.max(
+    1,
+    ...dayBars.map((day) => num(day.volume))
+  );
+
+  const learned = [];
+
+  if (recent.length) {
+    learned.push(
+      `SYNC has ${recent.length} recent saved sessions to learn from.`
+    );
+  }
+
+  if (recentVolume > 0) {
+    learned.push(
+      `Last 7 days volume: ${Math.round(recentVolume).toLocaleString()} lb.`
+    );
+  }
+
+  if (volumeTrend > 0 && previousVolume > 0) {
+    learned.push(`Volume is up ${volumeTrend}% versus the prior week.`);
+  } else if (volumeTrend < 0 && previousVolume > 0) {
+    learned.push(
+      `Volume is down ${Math.abs(volumeTrend)}% versus the prior week.`
+    );
+  }
+
+  if (recentPain > 0) {
+    learned.push(
+      `${recentPain} pain/form flags need safer exercise choices.`
+    );
+  } else if (recentSets > 0) {
+    learned.push("No pain flags in the last 7 days.");
+  }
+
+  let recommendation =
+    "Complete and save a few workouts so SYNC can build a reliable trend.";
+
+  if (recentPain > 0) {
+    recommendation =
+      "Next phase: protect joints. Repeat loads, slow the tempo, and swap anything that causes pain.";
+  } else if (averageScore >= 85 && volumeTrend >= 0) {
+    recommendation =
+      "Next phase: progress one variable. Add a small amount of weight, one rep, or cleaner tempo.";
+  } else if (recent.length >= 3 && volumeTrend < -20) {
+    recommendation =
+      "Next phase: rebuild consistency. Keep workouts shorter and protect the next scheduled session.";
+  } else if (recent.length >= 2) {
+    recommendation =
+      "Next phase: keep logging. SYNC has enough history to start improving targets exercise by exercise.";
+  }
+
+  return {
+    recentCount: recent.length,
+    workouts7: last7.length,
+    recentVolume: Math.round(recentVolume),
+    previousVolume: Math.round(previousVolume),
+    volumeTrend,
+    recentSets,
+    recentMinutes,
+    recentPain,
+    averageScore,
+    dayBars,
+    maxVolume,
+    learned,
+    recommendation,
+  };
+}
+
+function TrainingArchiveInsights({ records }) {
+  const insights = buildTrainingArchiveInsights(records);
+
+  return (
+    <section className="mb-4 rounded-[2rem] border border-cyan-300/15 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.1),transparent_34%),radial-gradient(circle_at_top_right,rgba(255,59,212,0.08),transparent_30%),linear-gradient(135deg,rgba(4,8,18,0.98),rgba(7,17,31,0.98))] p-4 shadow-[0_18px_55px_rgba(0,0,0,0.28)]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
+            SYNC Training Intelligence
+          </div>
+          <h3 className="mt-1 text-xl font-black text-white">
+            Last 7-14 day learning loop
+          </h3>
+          <p className="mt-1 text-sm leading-6 text-slate-400">
+            Recent sessions, volume trend, pain flags, and what SYNC should learn next.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-4 py-3 text-center">
+          <div className="text-[8px] font-black uppercase tracking-wider text-fuchsia-200">
+            Avg Score
+          </div>
+          <div className="mt-1 text-2xl font-black text-fuchsia-100">
+            {insights.averageScore || "-"}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+        <Stat label="Workouts" value={insights.workouts7} tone="cyan" />
+        <Stat label="Sets" value={insights.recentSets} tone="fuchsia" />
+        <Stat label="Active Min" value={insights.recentMinutes} tone="lime" />
+        <Stat
+          label="Volume"
+          value={insights.recentVolume.toLocaleString()}
+          tone="cyan"
+        />
+        <Stat
+          label="Pain Flags"
+          value={insights.recentPain}
+          tone={insights.recentPain ? "rose" : "lime"}
+        />
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+            7-Day Volume Trend
+          </div>
+          <Chip tone={insights.volumeTrend >= 0 ? "lime" : "amber"}>
+            {insights.previousVolume
+              ? `${insights.volumeTrend >= 0 ? "+" : ""}${insights.volumeTrend}%`
+              : "Baseline"}
+          </Chip>
+        </div>
+
+        <div className="flex h-28 items-end gap-2">
+          {insights.dayBars.map((day) => {
+            const height = Math.max(
+              day.volume > 0 ? 8 : 2,
+              Math.round((day.volume / insights.maxVolume) * 100)
+            );
+
+            return (
+              <div
+                key={day.ymd}
+                className="flex min-w-0 flex-1 flex-col items-center justify-end gap-2"
+              >
+                <div className="text-[9px] font-black text-cyan-100">
+                  {day.volume ? Math.round(day.volume / 1000) + "k" : ""}
+                </div>
+                <div className="flex h-20 w-full items-end justify-center">
+                  <div
+                    className="w-full max-w-8 rounded-t-xl bg-gradient-to-t from-cyan-500 via-blue-500 to-fuchsia-400 shadow-[0_0_18px_rgba(34,211,238,0.16)]"
+                    style={{ height: `${height}%` }}
+                  />
+                </div>
+                <div className="truncate text-[9px] font-black uppercase text-slate-500">
+                  {day.label}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <div className="rounded-2xl border border-lime-300/15 bg-lime-300/[0.06] p-3">
+          <div className="text-[9px] font-black uppercase tracking-[0.16em] text-lime-200">
+            What SYNC Learned
+          </div>
+          <div className="mt-2 space-y-1.5">
+            {(insights.learned.length
+              ? insights.learned
+              : ["Save workouts to unlock training intelligence."]
+            ).map((item) => (
+              <div
+                key={item}
+                className="text-xs font-bold leading-5 text-slate-200"
+              >
+                + {item}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-amber-300/15 bg-amber-300/[0.06] p-3">
+          <div className="text-[9px] font-black uppercase tracking-[0.16em] text-amber-200">
+            Next Coach Move
+          </div>
+          <div className="mt-2 text-xs font-bold leading-5 text-slate-200">
+            {insights.recommendation}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 function recalcSession(session) {
   const exercises = Array.isArray(session?.exercises)
     ? session.exercises
@@ -771,7 +1054,9 @@ export default function WorkoutHistoryDrawer({
             </div>
           ) : null}
 
-          {!filtered.length ? (
+
+          <TrainingArchiveInsights records={records} />
+{!filtered.length ? (
             <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 text-center">
               <div className="text-xl font-black text-white">
                 No completed workouts found
@@ -1018,7 +1303,7 @@ export default function WorkoutHistoryDrawer({
                                     <div className="flex items-center justify-between gap-3">
                                       <div className="text-xs font-black text-slate-400">
                                         Set{" "}
-                                        {setLog.number} ·{" "}
+                                        {setLog.number} Â·{" "}
                                         {setLog.type}
                                       </div>
 
@@ -1050,7 +1335,7 @@ export default function WorkoutHistoryDrawer({
                                       x{" "}
                                       {setLog.reps || "-"}
                                       {setLog.rpe
-                                        ? ` · RPE ${setLog.rpe}`
+                                        ? ` Â· RPE ${setLog.rpe}`
                                         : ""}
                                     </div>
 
