@@ -106,7 +106,7 @@ export default function HealthMobileQuickNav({
             </span>
             <span className="w-full truncate text-center">SYNC</span>
             <span className="max-w-full truncate text-[7px] font-bold normal-case tracking-normal text-emerald-100/70">
-              Talk Â· Train Â· Log
+              Talk / Train / Log
             </span>
           </button>
           <NavButton

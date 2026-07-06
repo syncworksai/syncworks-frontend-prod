@@ -3222,9 +3222,19 @@ export default function CustomerHealth() {
               onShowInsights={() =>
                 setHealthView("insights")
               }
-              onQuickLog={(type) =>
-                setQuickLogType(type)
-              }
+              onQuickLog={(type) => {
+                if (
+                  type === "meal" ||
+                  type === "nutrition-coach"
+                ) {
+                  setQuickLogType("");
+                  setNutritionDraft(null);
+                  setDrawer("nutrition-coach");
+                  return;
+                }
+
+                setQuickLogType(type);
+              }}
               onResolveMissedWorkout={
                 resolveMissedWorkout
               }

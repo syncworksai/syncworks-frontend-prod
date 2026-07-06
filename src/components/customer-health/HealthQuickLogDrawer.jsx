@@ -120,7 +120,12 @@ export default function HealthQuickLogDrawer({
   useEffect(() => {
     if (!open) return;
 
-    setDate(todayYmd());
+
+    if (type === "meal") {
+      onChooseType?.("nutrition-coach");
+      return;
+    }
+setDate(todayYmd());
     setNote("");
     setSaving(false);
     setSecondary("");
@@ -153,7 +158,7 @@ export default function HealthQuickLogDrawer({
     } else {
       setValue("");
     }
-  }, [open, type, profile, snapshot]);
+  }, [open, type, profile, snapshot, onChooseType]);
 
   const calculatedBmi = useMemo(
     () =>
@@ -173,7 +178,7 @@ export default function HealthQuickLogDrawer({
   );
 
 
-  if (!open) return null;
+  if (!open || type === "meal") return null;
 
   if (type === "menu") {
     const groups = [
@@ -227,7 +232,7 @@ export default function HealthQuickLogDrawer({
               onClick={onClose}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] font-black text-white"
             >
-              âœ•
+              ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¢
             </button>
           </div>
 
@@ -366,7 +371,7 @@ export default function HealthQuickLogDrawer({
             onClick={onClose}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] font-black text-white"
           >
-            âœ•
+            ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¢
           </button>
         </div>
 
@@ -610,7 +615,7 @@ export default function HealthQuickLogDrawer({
             disabled={!canSave || saving}
             className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {saving ? "Savingâ€¦" : "Save Entry"}
+            {saving ? "SavingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦" : "Save Entry"}
           </button>
         </div>
       </section>
