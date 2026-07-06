@@ -73,6 +73,7 @@ const DEVELOPER_AGENT_TASK_LABELS = {
   "business-setup-ui-001": "Business setup UI",
   "developer-agent-smoke-test-001": "Developer Agent smoke test",
   "agent-control-center-foundation-001": "Agent Control Center foundation",
+  "agent-control-center-foundation-002": "Agent Control Center foundation v2",
 };
 
 function getDeveloperAgentError(error, fallback) {
