@@ -419,7 +419,7 @@ function DynamicWarmupCard({
                       : "border-white/15 bg-white/[0.04] text-slate-400"
                   )}
                 >
-                  {item.completed ? "Ã¢Å“â€œ" : index + 1}
+                  {item.completed ? "ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“" : index + 1}
                 </div>
 
                 <div className="min-w-0 flex-1">
@@ -1246,13 +1246,13 @@ function SetHistory({
                           log.reps ||
                           "-"}
                         {log.rpe || log.ease_score
-                          ? ` Â· Effort ${log.rpe || log.ease_score}`
+                          ? ` Ã‚Â· Effort ${log.rpe || log.ease_score}`
                           : ""}
                         {log.set_type === "warmup"
-                          ? " Â· Warm-up"
+                          ? " Ã‚Â· Warm-up"
                           : ""}
                         {log.reached_failure
-                          ? " Â· Failure"
+                          ? " Ã‚Â· Failure"
                           : ""}
                       </div>
                     ) : (
@@ -2229,6 +2229,79 @@ function WorkoutCommandCenter({
 }
 
 
+function WorkoutVoiceCommandCard({
+  listening,
+  transcript,
+  error,
+  onListen,
+  onStop,
+}) {
+  return (
+    <section className="rounded-[1.5rem] border border-cyan-300/20 bg-cyan-300/[0.06] p-3 sm:rounded-[2rem] sm:p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-200">
+            Hands-Free SYNC
+          </div>
+
+          <h3 className="mt-1 text-lg font-black text-white">
+            Controlled listening window
+          </h3>
+
+          <p className="mt-1 text-xs leading-5 text-slate-400">
+            Tap Listen, say one command, then SYNC stops listening automatically.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={listening ? onStop : onListen}
+          className={`shrink-0 rounded-2xl border px-4 py-3 text-xs font-black ${
+            listening
+              ? "border-rose-300/30 bg-rose-300/12 text-rose-100"
+              : "border-lime-300/30 bg-lime-300/15 text-lime-100"
+          }`}
+        >
+          {listening ? "Stop" : "Listen"}
+        </button>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {[
+          "start set",
+          "finish set",
+          "pause",
+          "repeat cue",
+          "exercise info",
+          "finish workout",
+          "stop rest",
+          "modify workout",
+        ].map((command) => (
+          <div
+            key={command}
+            className="rounded-xl border border-white/10 bg-black/20 px-2 py-2 text-center text-[10px] font-black text-slate-300"
+          >
+            {command}
+          </div>
+        ))}
+      </div>
+
+      {transcript ? (
+        <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-bold leading-5 text-slate-200">
+          Heard: {transcript}
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="mt-3 rounded-2xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs font-bold leading-5 text-amber-100">
+          {error}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+
 export default function ActiveWorkoutSessionDrawer({
   open,
   onClose,
@@ -2259,10 +2332,18 @@ export default function ActiveWorkoutSessionDrawer({
     useState("");
   const [modifyMenuOpen, setModifyMenuOpen] =
     useState(false);
+  const [voiceListening, setVoiceListening] =
+    useState(false);
+  const [voiceTranscript, setVoiceTranscript] =
+    useState("");
+  const [voiceError, setVoiceError] =
+    useState("");
   const preWorkoutBriefingRef = useRef("");
   const initializedWorkoutKeyRef = useRef("");
   const latestSessionRef = useRef(null);
   const primaryActionLockRef = useRef(false);
+  const voiceRecognitionRef = useRef(null);
+  const voiceListenTimeoutRef = useRef(null);
 
   const lastExerciseCueRef = useRef("");
   const lastRestCueRef = useRef("");
@@ -2460,6 +2541,22 @@ export default function ActiveWorkoutSessionDrawer({
 
     return () => stopCoachVoice();
   }, [open]);
+
+  useEffect(() => {
+    return () => {
+      if (voiceListenTimeoutRef.current) {
+        window.clearTimeout(
+          voiceListenTimeoutRef.current
+        );
+      }
+
+      try {
+        voiceRecognitionRef.current?.stop?.();
+      } catch {
+        // Speech recognition cleanup is best effort.
+      }
+    };
+  }, []);
 
   const currentExercise = useMemo(() => {
     if (!Array.isArray(session?.exercises)) return null;
@@ -2808,6 +2905,221 @@ export default function ActiveWorkoutSessionDrawer({
       pitch: 1,
       volume: 1,
     });
+  }
+
+  function finishVoiceListening() {
+    if (voiceListenTimeoutRef.current) {
+      window.clearTimeout(
+        voiceListenTimeoutRef.current
+      );
+      voiceListenTimeoutRef.current = null;
+    }
+
+    setVoiceListening(false);
+
+    try {
+      voiceRecognitionRef.current?.stop?.();
+    } catch {
+      // Speech recognition stop is best effort.
+    }
+  }
+
+  function executeWorkoutVoiceCommand(rawCommand) {
+    const command = String(rawCommand || "")
+      .toLowerCase()
+      .trim();
+
+    setVoiceTranscript(command);
+
+    if (!command) {
+      setVoiceError("No command was heard. Try again.");
+      return;
+    }
+
+    if (
+      command.includes("start") &&
+      (command.includes("set") ||
+        command.includes("exercise"))
+    ) {
+      startSet();
+      setVoiceError("");
+      return;
+    }
+
+    if (
+      (command.includes("finish") ||
+        command.includes("done") ||
+        command.includes("complete")) &&
+      command.includes("set")
+    ) {
+      requestCompleteSet();
+      setVoiceError("");
+      return;
+    }
+
+    if (
+      command.includes("pause") ||
+      command.includes("hold workout")
+    ) {
+      if (session && !session.paused) {
+        setSession(toggleSessionPause(session));
+      }
+      setVoiceError("");
+      return;
+    }
+
+    if (
+      command.includes("resume") ||
+      command.includes("continue workout")
+    ) {
+      if (session && session.paused) {
+        setSession(toggleSessionPause(session));
+      }
+      setVoiceError("");
+      return;
+    }
+
+    if (
+      command.includes("stop rest") ||
+      command.includes("end rest") ||
+      command.includes("skip rest")
+    ) {
+      if (session?.rest_active) {
+        setSession(stopRestTimer(session));
+      }
+      setVoiceError("");
+      return;
+    }
+
+    if (
+      command.includes("repeat") ||
+      command.includes("cue") ||
+      command.includes("say again")
+    ) {
+      replayExerciseCue();
+      setVoiceError("");
+      return;
+    }
+
+    if (
+      command.includes("info") ||
+      command.includes("form") ||
+      command.includes("explain")
+    ) {
+      setDetailsOpen(true);
+      replayExerciseCue();
+      setVoiceError("");
+      return;
+    }
+
+    if (
+      command.includes("modify") ||
+      command.includes("swap") ||
+      command.includes("change exercise")
+    ) {
+      if (!session?.set_active && !session?.rest_active) {
+        setModifyMenuOpen(true);
+      }
+      setVoiceError("");
+      return;
+    }
+
+    if (
+      command.includes("skip warmup") ||
+      command.includes("skip warm up")
+    ) {
+      skipPreparation();
+      setVoiceError("");
+      return;
+    }
+
+    if (
+      command.includes("warmup complete") ||
+      command.includes("warm up complete")
+    ) {
+      completePreparation();
+      setVoiceError("");
+      return;
+    }
+
+    if (
+      command.includes("finish workout") ||
+      command.includes("end workout") ||
+      command.includes("complete workout")
+    ) {
+      if (!session?.set_active) {
+        setReviewMode(true);
+      }
+      setVoiceError("");
+      return;
+    }
+
+    setVoiceError(
+      "Command not recognized. Try start set, finish set, pause, repeat cue, exercise info, stop rest, or finish workout."
+    );
+  }
+
+  function startVoiceListening() {
+    if (typeof window === "undefined") return;
+
+    const SpeechRecognition =
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setVoiceError(
+        "Voice commands are not supported in this browser yet. Chrome on Android or desktop Chrome works best."
+      );
+      return;
+    }
+
+    finishVoiceListening();
+    setVoiceError("");
+    setVoiceTranscript("");
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (event) => {
+      const transcript =
+        event?.results?.[0]?.[0]?.transcript || "";
+
+      finishVoiceListening();
+      executeWorkoutVoiceCommand(transcript);
+    };
+
+    recognition.onerror = (event) => {
+      finishVoiceListening();
+      setVoiceError(
+        event?.error === "not-allowed"
+          ? "Microphone permission was blocked. Allow mic access and try again."
+          : "Voice command was interrupted. Tap Listen and try again."
+      );
+    };
+
+    recognition.onend = () => {
+      setVoiceListening(false);
+    };
+
+    voiceRecognitionRef.current = recognition;
+    setVoiceListening(true);
+
+    try {
+      recognition.start();
+
+      voiceListenTimeoutRef.current =
+        window.setTimeout(() => {
+          finishVoiceListening();
+        }, 8000);
+    } catch {
+      finishVoiceListening();
+      setVoiceError(
+        "Voice command could not start. Try tapping Listen again."
+      );
+    }
   }
 
   function useCoachRecommendation(
@@ -3950,6 +4262,16 @@ export default function ActiveWorkoutSessionDrawer({
                 />
               ) : null}
 
+              {!isCompleted && warmupReady ? (
+                <WorkoutVoiceCommandCard
+                  listening={voiceListening}
+                  transcript={voiceTranscript}
+                  error={voiceError}
+                  onListen={startVoiceListening}
+                  onStop={finishVoiceListening}
+                />
+              ) : null}
+
               {!isCompleted ? (
                 <DynamicWarmupCard
                   plan={session.warmup_plan}
@@ -4716,7 +5038,7 @@ export default function ActiveWorkoutSessionDrawer({
           <div className="absolute inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#020617]/96 px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 backdrop-blur-xl">
             {session.pending_set_logging ? (
               <div className="mx-auto mb-2 max-w-4xl rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-center text-[10px] font-black text-amber-100">
-                Set complete Ã¢â‚¬â€ finish logging before starting another set.
+                Set complete ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â finish logging before starting another set.
               </div>
             ) : null}
 
