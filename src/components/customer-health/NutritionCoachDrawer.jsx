@@ -443,6 +443,10 @@ export default function NutritionCoachDrawer({
     useState("");
   const [fat, setFat] =
     useState("");
+  const [fiber, setFiber] =
+    useState("");
+  const [sugar, setSugar] =
+    useState("");
   const [saving, setSaving] =
     useState(false);
   const [analyzing, setAnalyzing] =
@@ -492,6 +496,18 @@ export default function NutritionCoachDrawer({
             ""
         )
       );
+      setFiber(
+        String(
+          safeNumber(initialMeal.fiber, 0) ||
+            ""
+        )
+      );
+      setSugar(
+        String(
+          safeNumber(initialMeal.sugar, 0) ||
+            ""
+        )
+      );
       setEstimate({
         items:
           Array.isArray(
@@ -514,6 +530,14 @@ export default function NutritionCoachDrawer({
           0
         ),
         fat: safeNumber(initialMeal.fat, 0),
+        fiber: safeNumber(
+          initialMeal.fiber,
+          0
+        ),
+        sugar: safeNumber(
+          initialMeal.sugar,
+          0
+        ),
         confidence:
           initialMeal.estimate_confidence ||
           "manual",
@@ -563,6 +587,25 @@ export default function NutritionCoachDrawer({
     );
 
   if (!open) return null;
+
+  function startManualEntry() {
+    setAnalysisError("");
+    setSavedMessage("");
+
+    setEstimate({
+      items: [],
+      calories: safeNumber(calories, 0),
+      protein: safeNumber(protein, 0),
+      carbs: safeNumber(carbs, 0),
+      fat: safeNumber(fat, 0),
+      fiber: safeNumber(fiber, 0),
+      sugar: safeNumber(sugar, 0),
+      confidence: "manual",
+      note:
+        "Manual entry mode. Enter the nutrition values you know, then confirm and save.",
+      provider: "manual",
+    });
+  }
 
   async function runEstimate() {
     if (!description.trim() || analyzing) {
@@ -711,6 +754,16 @@ export default function NutritionCoachDrawer({
           ? String(next.fat)
           : ""
       );
+      setFiber(
+        next.fiber
+          ? String(next.fiber)
+          : ""
+      );
+      setSugar(
+        next.sugar
+          ? String(next.sugar)
+          : ""
+      );
     } catch (error) {
       const fallback =
         estimateMeal(description);
@@ -742,6 +795,8 @@ export default function NutritionCoachDrawer({
           ? String(fallback.fat)
           : ""
       );
+      setFiber("");
+      setSugar("");
 
       setAnalysisError(
         error?.response?.data?.detail ||
@@ -847,7 +902,7 @@ export default function NutritionCoachDrawer({
               onClick={onClose}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-sm font-black text-white"
             >
-              âœ•
+              Ã¢Å“â€¢
             </button>
           </div>
         </div>
@@ -922,7 +977,7 @@ export default function NutritionCoachDrawer({
               className="mt-auto h-10 flex-1 rounded-xl border border-lime-300/30 bg-lime-300/15 px-4 text-xs font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {analyzing
-                ? "Analyzing Mealâ€¦"
+                ? "Analyzing MealÃ¢â‚¬Â¦"
                 : "Analyze With AI"}
             </button>
           </div>
@@ -966,7 +1021,7 @@ export default function NutritionCoachDrawer({
                       </div>
 
                       <div className="whitespace-nowrap text-[10px] font-black text-slate-400 sm:text-xs">
-                        {item.calories} cal Â·{" "}
+                        {item.calories} cal Ã‚/{" "}
                         {item.protein}g protein
                       </div>
                     </div>
@@ -1034,7 +1089,7 @@ export default function NutritionCoachDrawer({
               className="mt-3 h-11 w-full rounded-xl border border-lime-300/30 bg-gradient-to-r from-lime-300/20 to-cyan-300/15 text-xs font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-40 sm:mt-4 sm:h-12 sm:rounded-2xl sm:text-sm"
             >
               {saving
-                ? "Saving Mealâ€¦"
+                ? "Saving MealÃ¢â‚¬Â¦"
                 : "Confirm and Save Meal"}
             </button>
           </div>
@@ -1070,15 +1125,15 @@ export default function NutritionCoachDrawer({
                         meal.value,
                       0
                     )}{" "}
-                    cal Â·{" "}
+                    cal Ã‚/{" "}
                     {safeNumber(
                       meal.protein ||
                         meal.secondary,
                       0
                     )}
-                    g protein Â·{" "}
+                    g protein Ã‚/{" "}
                     {safeNumber(meal.carbs, 0)}
-                    g carbs Â·{" "}
+                    g carbs Ã‚/{" "}
                     {safeNumber(meal.fat, 0)}
                     g fat
                   </div>
