@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import ModeBar from "../components/ModeBar";
+import api from "../api/client";
 
 import PlatformTabs from "../components/platform/PlatformTabs";
 import PlatformOverviewTab from "../components/platform/PlatformOverviewTab";
@@ -66,6 +67,16 @@ const TASK_CATALOG = [
   "Validate billing and payment lock states",
 ];
 
+const DEVELOPER_AGENT_TASK_LABELS = {
+  "business-growth-backend-persistence-001": "Business Growth backend persistence",
+  "god-mode-developer-agent-panel-001": "God Mode Developer Agent panel",
+  "business-setup-ui-001": "Business setup UI",
+};
+
+function getDeveloperAgentError(error, fallback) {
+  return error?.response?.data?.detail || error?.message || fallback;
+}
+
 function makeInitialModules() {
   return MODULES.reduce((acc, module) => {
     acc[module] = { status: "NOT_STARTED", reason: "" };
@@ -109,11 +120,66 @@ function DeveloperAgentPanel() {
   const [state, setState] = useState(() => loadState());
   const [newTask, setNewTask] = useState(TASK_CATALOG[0]);
   const [findingDraft, setFindingDraft] = useState({ module: MODULES[0], summary: "", status: "OPEN", reason: "" });
+  const [agentStatus, setAgentStatus] = useState(null);
+  const [agentLoading, setAgentLoading] = useState(true);
+  const [agentRefreshing, setAgentRefreshing] = useState(false);
+  const [agentError, setAgentError] = useState("");
+  const [selectedApprovedTask, setSelectedApprovedTask] = useState("");
+  const [dispatchingTask, setDispatchingTask] = useState("");
+  const [dispatchMessage, setDispatchMessage] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
+
+  const loadAgentStatus = async ({ quiet = false } = {}) => {
+    if (quiet) setAgentRefreshing(true);
+    else setAgentLoading(true);
+    setAgentError("");
+
+    try {
+      const response = await api.get("/platform/developer-agent/status/");
+      const payload = response?.data || {};
+      const taskIds = Object.keys(payload.approved_tasks || {});
+      setAgentStatus(payload);
+      setSelectedApprovedTask((current) =>
+        current && taskIds.includes(current) ? current : taskIds[0] || ""
+      );
+    } catch (error) {
+      setAgentError(getDeveloperAgentError(error, "Unable to load Developer Agent status."));
+    } finally {
+      setAgentLoading(false);
+      setAgentRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAgentStatus();
+  }, []);
+
+  const liveRunActive = Boolean(
+    agentStatus?.recent_runs?.some((run) => ["queued", "in_progress"].includes(run?.status))
+  );
+
+  const dispatchApprovedTask = async () => {
+    if (!selectedApprovedTask || dispatchingTask || liveRunActive || !agentStatus?.configured) return;
+
+    setDispatchingTask(selectedApprovedTask);
+    setDispatchMessage("");
+    setAgentError("");
+
+    try {
+      await api.post("/platform/developer-agent/run/", { task_id: selectedApprovedTask });
+      setDispatchMessage(`Accepted: ${DEVELOPER_AGENT_TASK_LABELS[selectedApprovedTask] || selectedApprovedTask}`);
+      await loadAgentStatus({ quiet: true });
+      window.setTimeout(() => loadAgentStatus({ quiet: true }), 2500);
+    } catch (error) {
+      setAgentError(getDeveloperAgentError(error, "Unable to start the approved task."));
+    } finally {
+      setDispatchingTask("");
+    }
+  };
 
   const auditComplete = useMemo(() => {
     const moduleComplete = MODULES.every((module) => {
@@ -204,7 +270,7 @@ function DeveloperAgentPanel() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-2xl font-semibold text-cyan-100">Developer Agent</h2>
-            <p className="text-sm text-slate-400">Simulation-only audit workspace for Phase 1 review and triage.</p>
+            <p className="text-sm text-slate-400">Live approved-task dispatcher with a separate manual audit workspace.</p>
           </div>
           <button
             type="button"
@@ -214,7 +280,7 @@ function DeveloperAgentPanel() {
             Reset Demo State
           </button>
         </div>
-        <div className="mt-3 text-sm text-amber-300">Simulation only. No real system changes, API calls, billing actions, secrets, or auth mutations.</div>
+        <div className="mt-3 text-sm text-amber-300">Live tasks remain branch-only and draft-PR-only. No automatic merge, deployment, billing action, migration, or secret exposure.</div>
         <div className="mt-4 grid gap-3 md:grid-cols-4">
           <Stat label="Project" value={state.project} />
           <Stat label="Modules" value={`${completedModules}/20`} />
@@ -222,6 +288,60 @@ function DeveloperAgentPanel() {
           <Stat label="Audit Complete" value={auditComplete ? "100%" : "0%"} />
         </div>
         <div className="mt-3 text-xs text-slate-500">GitHub Actions: <a className="text-cyan-300 underline" href="https://github.com/syncworksai/Syncworks-developer-agent/actions" target="_blank" rel="noreferrer">https://github.com/syncworksai/Syncworks-developer-agent/actions</a></div>
+      </div>
+
+      <div className="rounded-2xl border border-cyan-500/25 bg-slate-950/70 p-5 space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold text-cyan-100">Live Approved Task Dispatcher</h3>
+            <p className="text-sm text-slate-400">Runs the fixed backend allowlist through GitHub Actions. The browser never receives the GitHub token.</p>
+          </div>
+          <button type="button" onClick={() => loadAgentStatus({ quiet: true })} disabled={agentLoading || agentRefreshing} className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
+            {agentRefreshing ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
+
+        {agentError ? <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{agentError}</div> : null}
+        {dispatchMessage ? <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">{dispatchMessage}</div> : null}
+
+        <div className="grid gap-3 md:grid-cols-4">
+          <Stat label="Backend" value={agentLoading ? "Loading..." : agentStatus?.configured ? "Configured" : "Not configured"} />
+          <Stat label="Repository" value={agentStatus?.repository || "—"} />
+          <Stat label="Workflow" value={agentStatus?.workflow || "—"} />
+          <Stat label="Live Run" value={liveRunActive ? "In progress" : "Idle"} />
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+          <select value={selectedApprovedTask} onChange={(event) => setSelectedApprovedTask(event.target.value)} disabled={agentLoading || !agentStatus?.configured || liveRunActive || Boolean(dispatchingTask)} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-50">
+            {Object.keys(agentStatus?.approved_tasks || {}).length === 0 ? <option value="">No approved tasks available</option> : Object.keys(agentStatus.approved_tasks).map((taskId) => <option key={taskId} value={taskId}>{DEVELOPER_AGENT_TASK_LABELS[taskId] || taskId}</option>)}
+          </select>
+          <button type="button" onClick={dispatchApprovedTask} disabled={agentLoading || !agentStatus?.configured || !selectedApprovedTask || liveRunActive || Boolean(dispatchingTask)} className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50">
+            {dispatchingTask ? "Starting..." : liveRunActive ? "Run in progress" : "Run approved task"}
+          </button>
+        </div>
+
+        <div className="grid gap-2 text-xs text-slate-400 md:grid-cols-5">
+          <div>Branch only: {agentStatus?.safety_flags?.branch_only ? "Yes" : "—"}</div>
+          <div>Draft PR only: {agentStatus?.safety_flags?.draft_pr_only ? "Yes" : "—"}</div>
+          <div>Auto merge: {agentStatus?.safety_flags?.auto_merge ? "Enabled" : "Disabled"}</div>
+          <div>Auto deploy: {agentStatus?.safety_flags?.auto_deploy ? "Enabled" : "Disabled"}</div>
+          <div>Production migrations: {agentStatus?.safety_flags?.production_migrations ? "Enabled" : "Disabled"}</div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-slate-200">Recent GitHub Actions runs</div>
+          {agentLoading ? <div className="text-sm text-slate-500">Loading live runs...</div> : null}
+          {!agentLoading && (agentStatus?.recent_runs || []).length === 0 ? <div className="text-sm text-slate-500">No recent workflow_dispatch runs found.</div> : null}
+          {(agentStatus?.recent_runs || []).map((run) => (
+            <a key={run.id} href={run.html_url} target="_blank" rel="noreferrer" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 p-3 hover:border-cyan-500/40 hover:bg-slate-900/60">
+              <div>
+                <div className="font-medium text-slate-200">Run #{run.id}</div>
+                <div className="text-xs text-slate-500">{run.head_branch || agentStatus?.ref || "main"} · {run.created_at || "Unknown time"}</div>
+              </div>
+              <div className="text-sm text-cyan-300">{run.status || "unknown"}{run.conclusion ? ` · ${run.conclusion}` : ""}</div>
+            </a>
+          ))}
+        </div>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
@@ -265,7 +385,7 @@ function DeveloperAgentPanel() {
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 space-y-4">
-          <h3 className="text-lg font-semibold">Approved Task Catalog</h3>
+          <h3 className="text-lg font-semibold">Manual Audit Task Queue</h3>
           <div className="flex gap-2">
             <select value={newTask} onChange={(e) => setNewTask(e.target.value)} className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2">
               {TASK_CATALOG.map((task) => <option key={task} value={task}>{task}</option>)}
