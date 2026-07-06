@@ -342,47 +342,93 @@ export function mergeSessionIntoExerciseMemory(memory, session) {
 
 function getRecommendation(memory) {
   const lastSet = memory?.last_set;
+  const bestSet = memory?.best_set;
   const weight = safeNumber(lastSet?.weight);
   const reps = safeNumber(lastSet?.reps);
+  const bestWeight = safeNumber(bestSet?.weight);
+  const bestReps = safeNumber(bestSet?.reps);
   const averageRpe = safeNumber(memory?.average_rpe);
+  const previousSets = Array.isArray(memory?.last_sets)
+    ? memory.last_sets.filter((set) => set?.set_type !== "warmup")
+    : [];
 
   if (!lastSet) return null;
 
-  if (memory.pain_flag || memory.poor_form) {
+  const completedSetCount = previousSets.length;
+  const painOrForm = Boolean(memory.pain_flag || memory.poor_form);
+  const hitFailure = previousSets.some((set) => !!set.reached_failure);
+  const cleanSession = !painOrForm && !hitFailure;
+  const bestVolume = bestWeight * Math.max(bestReps, 1);
+  const lastVolume = weight * Math.max(reps, 1);
+  const performanceNote =
+    bestVolume > 0 && lastVolume >= bestVolume
+      ? "Matched or beat the best recent working set."
+      : bestVolume > 0
+      ? "Previous session finished below the best recent set."
+      : "Previous working set is ready to carry forward.";
+
+  if (painOrForm) {
     return {
-      weight: lastSet.weight,
+      weight: weight > 0 ? String(Math.max(0, weight - 5)) : lastSet.weight,
       reps: lastSet.reps,
       action: "protect",
+      confidence: "high",
+      warning:
+        "Pain or form was flagged last time. SYNC should protect the joints first.",
+      note:
+        "Reduce load slightly or choose an alternative if pain returns.",
       reason:
         "Previous pain or form feedback was recorded. Start conservatively and confirm pain-free movement.",
+      previous_sets: completedSetCount,
+      previous_effort: averageRpe || "",
+      performance_note: performanceNote,
     };
   }
 
-  if (averageRpe > 0 && averageRpe <= 7.5) {
-    return {
-      weight:
-        weight > 0
-          ? String(
-              Math.max(
-                weight + 5,
-                Math.round((weight * 1.025) / 5) * 5
-              )
+  if (averageRpe > 0 && averageRpe <= 7.5 && cleanSession) {
+    const nextWeight =
+      weight > 0
+        ? String(
+            Math.max(
+              weight + 5,
+              Math.round((weight * 1.025) / 5) * 5
             )
-          : lastSet.weight,
+          )
+        : lastSet.weight;
+
+    return {
+      weight: nextWeight,
       reps: lastSet.reps,
       action: "progress",
+      confidence: "medium",
+      warning: "",
+      note:
+        "Previous effort was controlled. Add a small jump if warmups feel clean.",
       reason:
         "The previous working sets were controlled, so a small progression is available.",
+      previous_sets: completedSetCount,
+      previous_effort: averageRpe || "",
+      performance_note: performanceNote,
     };
   }
 
-  if (averageRpe >= 9) {
+  if (averageRpe >= 9 || hitFailure) {
     return {
       weight: lastSet.weight,
-      reps: reps > 1 ? String(reps - 1) : lastSet.reps,
+      reps: reps > 1 ? String(reps) : lastSet.reps,
       action: "hold",
+      confidence: "high",
+      warning:
+        hitFailure
+          ? "Failure was recorded last time. Do not increase load yet."
+          : "Previous effort was very high. Earn the same target cleaner first.",
+      note:
+        "Repeat the target and aim for better control before progressing.",
       reason:
         "The previous effort was very high. Repeat or slightly reduce the target before adding load.",
+      previous_sets: completedSetCount,
+      previous_effort: averageRpe || "",
+      performance_note: performanceNote,
     };
   }
 
@@ -390,8 +436,15 @@ function getRecommendation(memory) {
     weight: lastSet.weight,
     reps: lastSet.reps,
     action: "repeat",
+    confidence: "medium",
+    warning: "",
+    note:
+      "Repeat the previous target and make the reps cleaner before adding load.",
     reason:
       "Repeat the previous working target and improve consistency before progressing.",
+    previous_sets: completedSetCount,
+    previous_effort: averageRpe || "",
+    performance_note: performanceNote,
   };
 }
 
@@ -452,6 +505,17 @@ export function hydrateSessionWithExerciseMemory({ session, history }) {
           !hasCurrentLogs &&
           !cleanText(currentWeight) &&
           !cleanText(currentReps),
+        memory_action: recommendation?.action || "",
+        memory_confidence: recommendation?.confidence || "",
+        memory_warning: recommendation?.warning || "",
+        memory_note: recommendation?.note || "",
+        memory_reason: recommendation?.reason || "",
+        memory_previous_sets:
+          recommendation?.previous_sets ?? "",
+        memory_previous_effort:
+          recommendation?.previous_effort ?? "",
+        memory_performance_note:
+          recommendation?.performance_note || "",
       };
     }),
   };

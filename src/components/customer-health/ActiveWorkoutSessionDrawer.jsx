@@ -419,7 +419,7 @@ function DynamicWarmupCard({
                       : "border-white/15 bg-white/[0.04] text-slate-400"
                   )}
                 >
-                  {item.completed ? "ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“" : index + 1}
+                  {item.completed ? "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ" : index + 1}
                 </div>
 
                 <div className="min-w-0 flex-1">
@@ -1246,13 +1246,13 @@ function SetHistory({
                           log.reps ||
                           "-"}
                         {log.rpe || log.ease_score
-                          ? ` Ã‚Â· Effort ${log.rpe || log.ease_score}`
+                          ? ` Ãƒâ€šÃ‚Â· Effort ${log.rpe || log.ease_score}`
                           : ""}
                         {log.set_type === "warmup"
-                          ? " Ã‚Â· Warm-up"
+                          ? " Ãƒâ€šÃ‚Â· Warm-up"
                           : ""}
                         {log.reached_failure
-                          ? " Ã‚Â· Failure"
+                          ? " Ãƒâ€šÃ‚Â· Failure"
                           : ""}
                       </div>
                     ) : (
@@ -2295,6 +2295,135 @@ function WorkoutVoiceCommandCard({
       {error ? (
         <div className="mt-3 rounded-2xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs font-bold leading-5 text-amber-100">
           {error}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+
+function ExerciseMemoryCarryForwardCard({ exercise }) {
+  const previous = exercise?.previous_performance;
+  const recommendation = exercise?.memory_recommendation;
+
+  if (!previous && !recommendation) return null;
+
+  const action =
+    exercise?.memory_action ||
+    recommendation?.action ||
+    "repeat";
+
+  const actionLabel =
+    action === "progress"
+      ? "Progress"
+      : action === "protect"
+      ? "Protect"
+      : action === "hold"
+      ? "Hold"
+      : "Repeat";
+
+  const tone =
+    action === "progress"
+      ? "border-lime-300/20 bg-lime-300/[0.08] text-lime-100"
+      : action === "protect"
+      ? "border-rose-300/20 bg-rose-300/[0.08] text-rose-100"
+      : action === "hold"
+      ? "border-amber-300/20 bg-amber-300/[0.08] text-amber-100"
+      : "border-cyan-300/20 bg-cyan-300/[0.08] text-cyan-100";
+
+  const previousSet = previous?.last_set || {};
+  const targetWeight =
+    recommendation?.weight ||
+    exercise?.current_target_weight ||
+    exercise?.planned_weight ||
+    "";
+  const targetReps =
+    recommendation?.reps ||
+    exercise?.current_target_reps ||
+    exercise?.planned_reps ||
+    "";
+
+  return (
+    <section className="rounded-[1.35rem] border border-fuchsia-300/15 bg-[radial-gradient(circle_at_top_left,rgba(255,59,212,0.1),transparent_34%),linear-gradient(135deg,rgba(8,13,26,0.96),rgba(6,16,30,0.96))] p-3 sm:rounded-[2rem] sm:p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-fuchsia-200">
+            Workout Memory
+          </div>
+
+          <h3 className="mt-1 text-base font-black text-white">
+            Last session carry-forward
+          </h3>
+
+          <p className="mt-1 text-xs leading-5 text-slate-400">
+            SYNC is using your previous logged sets to choose the safest next target.
+          </p>
+        </div>
+
+        <div
+          className={`shrink-0 rounded-2xl border px-3 py-2 text-center ${tone}`}
+        >
+          <div className="text-[8px] font-black uppercase tracking-wider opacity-80">
+            Move
+          </div>
+          <div className="mt-0.5 text-sm font-black">
+            {actionLabel}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-center">
+          <div className="text-[8px] font-black uppercase tracking-[0.14em] text-slate-500">
+            Last
+          </div>
+          <div className="mt-0.5 text-xs font-black text-white">
+            {previousSet?.reps || "-"} x{" "}
+            {formatLoad(previousSet?.weight)}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-center">
+          <div className="text-[8px] font-black uppercase tracking-[0.14em] text-cyan-200">
+            Next
+          </div>
+          <div className="mt-0.5 text-xs font-black text-cyan-100">
+            {targetReps || "-"} x {formatLoad(targetWeight)}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-2 text-center">
+          <div className="text-[8px] font-black uppercase tracking-[0.14em] text-fuchsia-200">
+            Effort
+          </div>
+          <div className="mt-0.5 text-xs font-black text-fuchsia-100">
+            {exercise?.memory_previous_effort ||
+              previous?.average_rpe ||
+              "-"}
+          </div>
+        </div>
+      </div>
+
+      {exercise?.memory_warning ||
+      recommendation?.warning ? (
+        <div className="mt-3 rounded-2xl border border-rose-300/20 bg-rose-300/[0.08] px-3 py-2 text-xs font-bold leading-5 text-rose-100">
+          {exercise?.memory_warning ||
+            recommendation?.warning}
+        </div>
+      ) : null}
+
+      <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-bold leading-5 text-slate-200">
+        {exercise?.memory_note ||
+          recommendation?.note ||
+          recommendation?.reason ||
+          "Repeat the last logged target until the movement is clean."}
+      </div>
+
+      {exercise?.memory_performance_note ||
+      recommendation?.performance_note ? (
+        <div className="mt-2 text-[11px] font-bold leading-5 text-slate-500">
+          {exercise?.memory_performance_note ||
+            recommendation?.performance_note}
         </div>
       ) : null}
     </section>
@@ -4318,6 +4447,12 @@ export default function ActiveWorkoutSessionDrawer({
               ) : null}
 
               {!isCompleted && warmupReady && currentExercise ? (
+                <ExerciseMemoryCarryForwardCard
+                  exercise={currentExercise}
+                />
+              ) : null}
+
+              {!isCompleted && warmupReady && currentExercise ? (
                 <div className="rounded-[1.35rem] border border-cyan-300/15 bg-[linear-gradient(135deg,rgba(34,211,238,0.08),rgba(57,255,136,0.06))] p-3 shadow-[0_12px_36px_rgba(0,0,0,0.18)] sm:rounded-[2rem] sm:p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
@@ -5038,7 +5173,7 @@ export default function ActiveWorkoutSessionDrawer({
           <div className="absolute inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#020617]/96 px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 backdrop-blur-xl">
             {session.pending_set_logging ? (
               <div className="mx-auto mb-2 max-w-4xl rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-center text-[10px] font-black text-amber-100">
-                Set complete ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â finish logging before starting another set.
+                Set complete ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â finish logging before starting another set.
               </div>
             ) : null}
 
