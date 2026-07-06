@@ -71,6 +71,7 @@ const DEVELOPER_AGENT_TASK_LABELS = {
   "business-growth-backend-persistence-001": "Business Growth backend persistence",
   "god-mode-developer-agent-panel-001": "God Mode Developer Agent panel",
   "business-setup-ui-001": "Business setup UI",
+  "developer-agent-smoke-test-001": "Developer Agent smoke test",
 };
 
 function getDeveloperAgentError(error, fallback) {
