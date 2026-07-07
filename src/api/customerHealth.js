@@ -1,4 +1,4 @@
-﻿import api from "./client";
+import api from "./client";
 
 export async function getCustomerHealthProfile() {
   const response = await api.get(
@@ -109,6 +109,24 @@ export async function createHealthCoachTurn({
       history: Array.isArray(history)
         ? history.slice(-12)
         : [],
+    }
+  );
+
+  return response.data;
+}
+
+export async function submitHealthBetaFeedback(payload = {}) {
+  const response = await api.post(
+    "/customer-health/beta-feedback/",
+    {
+      client_feedback_id: payload.id || payload.client_feedback_id || "",
+      area: payload.area || "General",
+      severity: payload.severity || "Medium",
+      message: String(payload.message || "").trim(),
+      source: payload.source || "health_web_beta",
+      page_path: payload.page_path || "",
+      runtime_json: payload.runtime || payload.runtime_json || {},
+      extra_json: payload.extra_json || {},
     }
   );
 
