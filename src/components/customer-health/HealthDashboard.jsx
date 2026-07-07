@@ -986,6 +986,164 @@ function MuscleTrainingSelectorCard({ onOpen }) {
     </Card>
   );
 }
+function HealthLaunchReadinessCard({
+  snapshot,
+  profile,
+  weekPlan,
+  history,
+  progressLogs,
+  onOpen,
+  onStartWorkout,
+}) {
+  const planReady = Array.isArray(weekPlan) && weekPlan.length > 0;
+  const hasProfile =
+    !!profile?.primary_goal ||
+    !!profile?.inspiration_goal ||
+    !!snapshot?.goal;
+  const hasWorkoutHistory =
+    Array.isArray(history) && history.length > 0;
+  const hasProgressLogs =
+    Array.isArray(progressLogs) && progressLogs.length > 0;
+
+  const nextSession = nextPlannedSession(weekPlan);
+  const checks = [
+    {
+      label: "Profile",
+      done: hasProfile,
+      detail: hasProfile
+        ? "Goal data is ready."
+        : "Add goals, limits, and equipment.",
+      action: "Profile",
+      open: "questionnaire",
+    },
+    {
+      label: "Week Plan",
+      done: planReady,
+      detail: planReady
+        ? `${weekPlan.length} day plan loaded.`
+        : "Build a week so SYNC can guide you.",
+      action: "Planner",
+      open: "planner",
+    },
+    {
+      label: "Workout Memory",
+      done: hasWorkoutHistory,
+      detail: hasWorkoutHistory
+        ? `${history.length} saved sessions.`
+        : "Finish one workout to unlock memory.",
+      action: "Start",
+      open: "workout",
+    },
+    {
+      label: "Progress Data",
+      done: hasProgressLogs,
+      detail: hasProgressLogs
+        ? `${progressLogs.length} progress logs.`
+        : "Log weight, steps, nutrition, or water.",
+      action: "Log",
+      open: "quick-log",
+    },
+  ];
+
+  const completeCount = checks.filter((item) => item.done).length;
+  const launchScore = Math.round((completeCount / checks.length) * 100);
+  const primaryAction = nextSession
+    ? "Start Today's Workout"
+    : planReady
+    ? "Open Planner"
+    : "Build My Week";
+
+  function runPrimaryAction() {
+    if (nextSession && typeof onStartWorkout === "function") {
+      onStartWorkout(nextSession);
+      return;
+    }
+
+    onOpen?.(planReady ? "planner" : "coach-chat");
+  }
+
+  function runCheck(item) {
+    if (item.label === "Workout Memory" && nextSession && onStartWorkout) {
+      onStartWorkout(nextSession);
+      return;
+    }
+
+    onOpen?.(item.open);
+  }
+
+  return (
+    <Card className="relative overflow-hidden border-cyan-300/25 bg-[linear-gradient(135deg,rgba(34,211,238,0.12),rgba(3,7,18,0.95),rgba(57,255,136,0.08))] p-3 sm:p-4">
+      <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-cyan-400/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-20 left-10 h-48 w-48 rounded-full bg-lime-400/10 blur-3xl" />
+
+      <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-lime-300/25 bg-lime-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-lime-100">
+              Beta Launch Check
+            </span>
+            <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-100">
+              {launchScore}% ready
+            </span>
+          </div>
+
+          <h2 className="mt-2 text-xl font-black text-white sm:text-2xl">
+            Health is ready for today's next move
+          </h2>
+
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">
+            A cleaner launch view for beta users: finish setup, start training, log the basics, and let SYNC learn from real data.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+          <ActionButton
+            label={primaryAction}
+            tone="emerald"
+            onClick={runPrimaryAction}
+            className="w-full sm:w-auto"
+          />
+          <ActionButton
+            label="Ask SYNC"
+            tone="fuchsia"
+            onClick={() => onOpen?.("coach-chat")}
+            className="w-full sm:w-auto"
+          />
+        </div>
+      </div>
+
+      <div className="relative mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        {checks.map((item) => (
+          <button
+            key={item.label}
+            type="button"
+            onClick={() => runCheck(item)}
+            className={`rounded-2xl border p-3 text-left transition active:scale-[0.99] ${
+              item.done
+                ? "border-lime-300/20 bg-lime-300/[0.07] text-lime-100"
+                : "border-amber-300/20 bg-amber-300/[0.07] text-amber-100"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs font-black uppercase tracking-[0.14em]">
+                {item.label}
+              </div>
+              <div className="rounded-full border border-white/10 bg-black/25 px-2 py-1 text-[9px] font-black uppercase text-white">
+                {item.done ? "Ready" : "Needs input"}
+              </div>
+            </div>
+            <div className="mt-2 min-h-[2.4rem] text-xs font-bold leading-5 text-slate-300">
+              {item.detail}
+            </div>
+            <div className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-white">
+              {item.action} →
+            </div>
+          </button>
+        ))}
+      </div>
+    </Card>
+  );
+}
 function LastWorkoutStatsCard({ stats }) {
   if (!stats) return null;
 
@@ -1181,7 +1339,16 @@ export default function HealthDashboard({
 
   return (
     <div className="space-y-4 sm:space-y-5">
-            <DailyAccountabilityLoopCard
+                  <HealthLaunchReadinessCard
+        snapshot={snapshot}
+        profile={profile}
+        weekPlan={weekPlan}
+        history={history}
+        progressLogs={progressLogs}
+        onOpen={onOpen}
+        onStartWorkout={onStartWorkout}
+      />
+<DailyAccountabilityLoopCard
         snapshot={snapshot}
         profile={profile}
         weekPlan={weekPlan}
@@ -1236,42 +1403,42 @@ export default function HealthDashboard({
 
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
             <QuickAction
-              icon="Ã¢â€“Â¶"
+              icon="ÃƒÂ¢Ã¢â‚¬â€œÃ‚Â¶"
               label="Start Workout"
               detail={nextSession?.workout_name || "Choose or build today's session"}
               tone="emerald"
               onClick={() => nextSession ? onStartWorkout?.(nextSession) : onOpen?.("workout")}
             />
             <QuickAction
-              icon="Ã¯Â¼â€¹"
+              icon="ÃƒÂ¯Ã‚Â¼Ã¢â‚¬Â¹"
               label="Build Workout"
               detail="Create and save your own sets"
               tone="cyan"
               onClick={() => onOpen?.("workout")}
             />
             <QuickAction
-              icon="Ã°Å¸Â¦Âµ"
+              icon="ÃƒÂ°Ã…Â¸Ã‚Â¦Ã‚Âµ"
               label="Train a Muscle"
               detail="Browse legs, chest, back, arms, and more"
               tone="fuchsia"
               onClick={() => onOpen?.("library")}
             />
             <QuickAction
-              icon="Ã¢Å’â€¢"
+              icon="ÃƒÂ¢Ã…â€™Ã¢â‚¬Â¢"
               label="Exercise Library"
               detail="Search movements and form guidance"
               tone="violet"
               onClick={() => onOpen?.("library")}
             />
             <QuickAction
-              icon="Ã¢â€ â€”"
+              icon="ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â€"
               label="Progress"
               detail="Weight, workouts, strength, and trends"
               tone="amber"
               onClick={() => onOpen?.("progress")}
             />
             <QuickAction
-              icon="Ã¢â€”Å½"
+              icon="ÃƒÂ¢Ã¢â‚¬â€Ã…Â½"
               label="Profile"
               detail="Height, weight, goals, limits, equipment"
               tone="cyan"
@@ -1319,7 +1486,7 @@ export default function HealthDashboard({
 
               <div className="mt-4 flex items-start gap-3 sm:items-center sm:gap-4">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl border border-cyan-400/25 bg-cyan-500/10 text-2xl sm:h-16 sm:w-16 sm:text-3xl">
-                  Ã°Å¸Ââ€¹Ã¯Â¸Â
+                  ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Â¹ÃƒÂ¯Ã‚Â¸Ã‚Â
                 </div>
 
                 <div className="min-w-0">
