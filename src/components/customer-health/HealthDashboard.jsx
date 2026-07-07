@@ -810,6 +810,182 @@ function DailyAccountabilityLoopCard({
     </Card>
   );
 }
+function MuscleTrainingSelectorCard({ onOpen }) {
+  const [selectedArea, setSelectedArea] = useState("Chest");
+
+  const areas = [
+    { id: "Chest", side: "Front", x: "50%", y: "25%", tone: "rose", search: "chest", label: "Chest", detail: "Bench, fly, push-up" },
+    { id: "Shoulders", side: "Front", x: "50%", y: "17%", tone: "amber", search: "shoulder", label: "Shoulders", detail: "Press, raise, stability" },
+    { id: "Abs", side: "Front", x: "50%", y: "39%", tone: "cyan", search: "core", label: "Core / Abs", detail: "Brace, plank, control" },
+    { id: "Quads", side: "Front", x: "50%", y: "64%", tone: "fuchsia", search: "leg", label: "Quads", detail: "Squat, leg press" },
+    { id: "Hip Flexors", side: "Front", x: "50%", y: "50%", tone: "emerald", search: "hip", label: "Hips", detail: "Mobility, stability" },
+    { id: "Lats", side: "Back", x: "50%", y: "31%", tone: "emerald", search: "lat", label: "Lats / Back", detail: "Pulldown, rows" },
+    { id: "Traps", side: "Back", x: "50%", y: "18%", tone: "rose", search: "trap", label: "Traps", detail: "Shrug, posture" },
+    { id: "Triceps", side: "Back", x: "50%", y: "28%", tone: "violet", search: "triceps", label: "Triceps", detail: "Pushdown, extension" },
+    { id: "Glutes", side: "Back", x: "50%", y: "51%", tone: "amber", search: "glute", label: "Glutes", detail: "Bridge, hinge" },
+    { id: "Hamstrings", side: "Back", x: "50%", y: "66%", tone: "fuchsia", search: "hamstring", label: "Hamstrings", detail: "Curl, RDL" },
+  ];
+
+  const selected = areas.find((area) => area.id === selectedArea) || areas[0];
+  const frontAreas = areas.filter((area) => area.side === "Front");
+  const backAreas = areas.filter((area) => area.side === "Back");
+
+  function openLibrary(mode = "filter") {
+    try {
+      window.localStorage.setItem(
+        "sw_health_library_builder_intent",
+        JSON.stringify({
+          mode: mode === "builder" ? "builder" : "filter",
+          focus: selected.search,
+          label: selected.label,
+          muscle: selected.id,
+          source: "dashboard_body_map",
+          created_at: new Date().toISOString(),
+        })
+      );
+    } catch {
+      // The library can still open without saved intent.
+    }
+
+    onOpen?.("library");
+  }
+
+  function Marker({ area }) {
+    const active = selected.id === area.id;
+    const colorMap = {
+      cyan: "border-cyan-300/70 bg-cyan-300/25 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.28)]",
+      emerald: "border-emerald-300/70 bg-emerald-300/25 text-emerald-100 shadow-[0_0_24px_rgba(57,255,136,0.24)]",
+      fuchsia: "border-fuchsia-300/70 bg-fuchsia-300/25 text-fuchsia-100 shadow-[0_0_24px_rgba(255,59,212,0.24)]",
+      amber: "border-amber-300/70 bg-amber-300/25 text-amber-100 shadow-[0_0_24px_rgba(255,200,87,0.22)]",
+      rose: "border-rose-300/70 bg-rose-300/25 text-rose-100 shadow-[0_0_24px_rgba(255,94,125,0.24)]",
+      violet: "border-violet-300/70 bg-violet-300/25 text-violet-100 shadow-[0_0_24px_rgba(139,92,255,0.24)]",
+    };
+
+    return (
+      <button
+        type="button"
+        onClick={() => setSelectedArea(area.id)}
+        className={`absolute flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border text-[10px] font-black transition hover:scale-110 ${active ? colorMap[area.tone] || colorMap.cyan : "border-white/15 bg-white/[0.08] text-slate-300"}`}
+        style={{ left: area.x, top: area.y }}
+        aria-label={`Select ${area.label}`}
+      >
+        +
+      </button>
+    );
+  }
+
+  function BodyPanel({ title, children, points }) {
+    return (
+      <div className="relative min-h-[360px] overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(52,223,255,0.10),transparent_36%),linear-gradient(180deg,rgba(3,7,18,0.96),rgba(8,13,26,0.96))] p-3">
+        <div className="mb-2 text-center text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
+          {title}
+        </div>
+        <div className="relative mx-auto h-[315px] max-w-[170px]">
+          {children}
+          {points.map((area) => (
+            <Marker key={area.id} area={area} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Card className="relative overflow-hidden border-fuchsia-400/20 bg-[radial-gradient(circle_at_top_left,rgba(255,59,212,0.12),transparent_32%),radial-gradient(circle_at_top_right,rgba(57,255,136,0.10),transparent_30%),linear-gradient(135deg,rgba(4,8,18,0.98),rgba(7,17,31,0.98))]">
+      <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-fuchsia-500/10 blur-3xl" />
+      <div className="relative flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[0.22em] text-fuchsia-200">
+            SYNC Muscle Map
+          </div>
+          <h3 className="mt-1 text-xl font-black text-white">
+            Train by body part
+          </h3>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">
+            Pick a muscle area, then jump straight into exercise suggestions or build a focused workout.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-lime-300/20 bg-lime-300/10 px-4 py-3 text-lime-100">
+          <div className="text-[8px] font-black uppercase tracking-wider opacity-75">
+            Selected
+          </div>
+          <div className="mt-1 text-lg font-black">
+            {selected.label}
+          </div>
+        </div>
+      </div>
+
+      <div className="relative mt-4 grid gap-3 lg:grid-cols-[0.9fr_0.9fr_1.2fr]">
+        <BodyPanel title="Front" points={frontAreas}>
+          <div className="absolute left-1/2 top-2 h-12 w-12 -translate-x-1/2 rounded-full border border-cyan-300/35 bg-slate-950" />
+          <div className="absolute left-1/2 top-16 h-32 w-24 -translate-x-1/2 rounded-[45%] border border-cyan-300/30 bg-cyan-300/[0.07]" />
+          <div className="absolute left-7 top-20 h-28 w-8 rotate-12 rounded-full border border-cyan-300/25 bg-cyan-300/[0.05]" />
+          <div className="absolute right-7 top-20 h-28 w-8 -rotate-12 rounded-full border border-cyan-300/25 bg-cyan-300/[0.05]" />
+          <div className="absolute left-[54px] top-48 h-32 w-9 rotate-3 rounded-full border border-cyan-300/25 bg-cyan-300/[0.05]" />
+          <div className="absolute right-[54px] top-48 h-32 w-9 -rotate-3 rounded-full border border-cyan-300/25 bg-cyan-300/[0.05]" />
+        </BodyPanel>
+
+        <BodyPanel title="Back" points={backAreas}>
+          <div className="absolute left-1/2 top-2 h-12 w-12 -translate-x-1/2 rounded-full border border-fuchsia-300/35 bg-slate-950" />
+          <div className="absolute left-1/2 top-16 h-32 w-24 -translate-x-1/2 rounded-[45%] border border-fuchsia-300/30 bg-fuchsia-300/[0.07]" />
+          <div className="absolute left-7 top-20 h-28 w-8 rotate-12 rounded-full border border-fuchsia-300/25 bg-fuchsia-300/[0.05]" />
+          <div className="absolute right-7 top-20 h-28 w-8 -rotate-12 rounded-full border border-fuchsia-300/25 bg-fuchsia-300/[0.05]" />
+          <div className="absolute left-[54px] top-48 h-32 w-9 rotate-3 rounded-full border border-fuchsia-300/25 bg-fuchsia-300/[0.05]" />
+          <div className="absolute right-[54px] top-48 h-32 w-9 -rotate-3 rounded-full border border-fuchsia-300/25 bg-fuchsia-300/[0.05]" />
+        </BodyPanel>
+
+        <div className="rounded-[2rem] border border-white/10 bg-black/20 p-4">
+          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
+            Focus Area
+          </div>
+          <h4 className="mt-2 text-2xl font-black text-white">
+            {selected.label}
+          </h4>
+          <p className="mt-2 text-sm font-bold leading-6 text-slate-300">
+            {selected.detail}
+          </p>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            {areas.map((area) => (
+              <button
+                key={area.id}
+                type="button"
+                onClick={() => setSelectedArea(area.id)}
+                className={`rounded-2xl border px-3 py-2 text-left text-xs font-black transition ${selected.id === area.id ? "border-cyan-300/35 bg-cyan-300/10 text-cyan-100" : "border-white/10 bg-white/[0.03] text-slate-300"}`}
+              >
+                {area.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <ActionButton
+              label="Show Exercises"
+              tone="cyan"
+              onClick={() => openLibrary("filter")}
+              className="w-full"
+            />
+            <ActionButton
+              label="Build This Workout"
+              tone="fuchsia"
+              onClick={() => openLibrary("builder")}
+              className="w-full"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onOpen?.("library")}
+            className="mt-2 h-11 w-full rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-black text-slate-200"
+          >
+            Open Full Muscle Map
+          </button>
+        </div>
+      </div>
+    </Card>
+  );
+}
 function LastWorkoutStatsCard({ stats }) {
   if (!stats) return null;
 
@@ -1013,6 +1189,9 @@ export default function HealthDashboard({
         onOpen={onOpen}
         onStartWorkout={onStartWorkout}
       />
+      <MuscleTrainingSelectorCard
+        onOpen={onOpen}
+      />
 <AdaptiveNextWorkoutCard
         history={history}
         snapshot={snapshot}
@@ -1057,42 +1236,42 @@ export default function HealthDashboard({
 
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
             <QuickAction
-              icon="â–¶"
+              icon="Ã¢â€“Â¶"
               label="Start Workout"
               detail={nextSession?.workout_name || "Choose or build today's session"}
               tone="emerald"
               onClick={() => nextSession ? onStartWorkout?.(nextSession) : onOpen?.("workout")}
             />
             <QuickAction
-              icon="ï¼‹"
+              icon="Ã¯Â¼â€¹"
               label="Build Workout"
               detail="Create and save your own sets"
               tone="cyan"
               onClick={() => onOpen?.("workout")}
             />
             <QuickAction
-              icon="ðŸ¦µ"
+              icon="Ã°Å¸Â¦Âµ"
               label="Train a Muscle"
               detail="Browse legs, chest, back, arms, and more"
               tone="fuchsia"
               onClick={() => onOpen?.("library")}
             />
             <QuickAction
-              icon="âŒ•"
+              icon="Ã¢Å’â€¢"
               label="Exercise Library"
               detail="Search movements and form guidance"
               tone="violet"
               onClick={() => onOpen?.("library")}
             />
             <QuickAction
-              icon="â†—"
+              icon="Ã¢â€ â€”"
               label="Progress"
               detail="Weight, workouts, strength, and trends"
               tone="amber"
               onClick={() => onOpen?.("progress")}
             />
             <QuickAction
-              icon="â—Ž"
+              icon="Ã¢â€”Å½"
               label="Profile"
               detail="Height, weight, goals, limits, equipment"
               tone="cyan"
@@ -1140,7 +1319,7 @@ export default function HealthDashboard({
 
               <div className="mt-4 flex items-start gap-3 sm:items-center sm:gap-4">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl border border-cyan-400/25 bg-cyan-500/10 text-2xl sm:h-16 sm:w-16 sm:text-3xl">
-                  ðŸ‹ï¸
+                  Ã°Å¸Ââ€¹Ã¯Â¸Â
                 </div>
 
                 <div className="min-w-0">
