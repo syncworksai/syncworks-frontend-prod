@@ -25,6 +25,7 @@ const TABS = [
   { id: "news", label: "News Reel" },
   { id: "broadcasts", label: "Broadcasts" },
   { id: "affiliates", label: "Affiliates" },
+  { id: "health_launch_lock", label: "Health Launch Lock" },
   { id: "developer_agent", label: "Developer Agent" },
 ];
 
@@ -117,6 +118,407 @@ function loadState() {
   } catch {
     return makeInitialState();
   }
+}
+
+
+const HEALTH_LAUNCH_LOCK_STORAGE_KEY =
+  "syncworks_health_launch_lock_v1";
+
+const HEALTH_LAUNCH_LOCK_ITEMS = [
+  {
+    id: "render_backend_deployed",
+    group: "Deploy",
+    title: "Render backend deployed",
+    detail: "Backend main branch deployed successfully after E18/E20.",
+  },
+  {
+    id: "vercel_frontend_deployed",
+    group: "Deploy",
+    title: "Vercel frontend deployed",
+    detail: "Frontend main branch deployed successfully after E19/E20/E21.",
+  },
+  {
+    id: "production_migration_applied",
+    group: "Deploy",
+    title: "Production Health migration applied",
+    detail: "customer_health.0002 migration exists in production database.",
+  },
+  {
+    id: "health_feedback_submit",
+    group: "Feedback",
+    title: "Health beta feedback submits",
+    detail: "Health Dashboard → Beta Feedback saves to backend and local queue.",
+  },
+  {
+    id: "god_mode_feedback_loads",
+    group: "Feedback",
+    title: "God Mode feedback inbox loads",
+    detail: "God Mode → Health Feedback shows submitted tester reports.",
+  },
+  {
+    id: "god_mode_status_actions",
+    group: "Feedback",
+    title: "Feedback status actions work",
+    detail: "Mark open, reviewed, and closed all update correctly.",
+  },
+  {
+    id: "mobile_health_nav",
+    group: "Mobile",
+    title: "Mobile Health navigation verified",
+    detail: "Health, Plan, SYNC, Progress, and Log actions work on phone width.",
+  },
+  {
+    id: "active_workout_flow",
+    group: "Workout",
+    title: "Active workout flow verified",
+    detail: "Start workout, active timer, set logging, rest timer, and finish flow work.",
+  },
+  {
+    id: "workout_memory",
+    group: "Workout",
+    title: "Workout memory verified",
+    detail: "Last workout data and next-session recommendations display correctly.",
+  },
+  {
+    id: "nutrition_ai_manual",
+    group: "AI",
+    title: "Nutrition manual and AI flow verified",
+    detail: "Manual logging works free; AI estimate flow gates and saves correctly.",
+  },
+  {
+    id: "sync_chat",
+    group: "AI",
+    title: "SYNC coach chat verified",
+    detail: "SYNC answers with profile/history context and handles upgrade states.",
+  },
+  {
+    id: "voice_controls",
+    group: "AI",
+    title: "Voice controls verified",
+    detail: "Audio toggle, voice options, and speech fallback do not block workouts.",
+  },
+  {
+    id: "auth_session_mobile",
+    group: "Auth",
+    title: "Mobile session stability checked",
+    detail: "Switch apps / inactive browser does not immediately kick user to login.",
+  },
+  {
+    id: "console_build_clean",
+    group: "QA",
+    title: "Build and console smoke checked",
+    detail: "npm run build passes; no Health launch-blocking runtime errors found.",
+  },
+  {
+    id: "beta_tester_signoff",
+    group: "QA",
+    title: "Beta tester signoff captured",
+    detail: "At least one real tester completes workout + feedback loop.",
+  },
+  {
+    id: "rollback_ready",
+    group: "Launch",
+    title: "Rollback plan ready",
+    detail: "Last stable backend and frontend commits are known before launch.",
+  },
+];
+
+function makeInitialHealthLaunchLockState() {
+  return HEALTH_LAUNCH_LOCK_ITEMS.reduce((acc, item) => {
+    acc[item.id] = {
+      status: "PENDING",
+      note: "",
+      updatedAt: "",
+    };
+    return acc;
+  }, {});
+}
+
+function loadHealthLaunchLockState() {
+  if (typeof window === "undefined") {
+    return makeInitialHealthLaunchLockState();
+  }
+
+  try {
+    const raw = window.localStorage.getItem(
+      HEALTH_LAUNCH_LOCK_STORAGE_KEY
+    );
+
+    if (!raw) {
+      return makeInitialHealthLaunchLockState();
+    }
+
+    const parsed = JSON.parse(raw);
+
+    return {
+      ...makeInitialHealthLaunchLockState(),
+      ...(parsed || {}),
+    };
+  } catch {
+    return makeInitialHealthLaunchLockState();
+  }
+}
+
+function getLaunchStatusClass(status) {
+  if (status === "PASSED") {
+    return "border-emerald-300/30 bg-emerald-300/10 text-emerald-100";
+  }
+
+  if (status === "BLOCKED") {
+    return "border-rose-300/30 bg-rose-300/10 text-rose-100";
+  }
+
+  if (status === "WAIVED") {
+    return "border-amber-300/30 bg-amber-300/10 text-amber-100";
+  }
+
+  return "border-slate-700 bg-slate-900 text-slate-300";
+}
+
+function HealthLaunchLockPanel() {
+  const [state, setState] = useState(() => loadHealthLaunchLockState());
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    window.localStorage.setItem(
+      HEALTH_LAUNCH_LOCK_STORAGE_KEY,
+      JSON.stringify(state)
+    );
+  }, [state]);
+
+  const counts = useMemo(() => {
+    return HEALTH_LAUNCH_LOCK_ITEMS.reduce(
+      (acc, item) => {
+        const status = state[item.id]?.status || "PENDING";
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      },
+      { PASSED: 0, BLOCKED: 0, WAIVED: 0, PENDING: 0 }
+    );
+  }, [state]);
+
+  const launchReady =
+    counts.BLOCKED === 0 &&
+    counts.PENDING === 0 &&
+    HEALTH_LAUNCH_LOCK_ITEMS.length > 0;
+
+  const completionPercent = Math.round(
+    ((counts.PASSED + counts.WAIVED) /
+      HEALTH_LAUNCH_LOCK_ITEMS.length) *
+      100
+  );
+
+  const groups = useMemo(() => {
+    return HEALTH_LAUNCH_LOCK_ITEMS.reduce((acc, item) => {
+      if (!acc[item.group]) acc[item.group] = [];
+      acc[item.group].push(item);
+      return acc;
+    }, {});
+  }, []);
+
+  function updateItem(itemId, patch) {
+    setState((current) => ({
+      ...current,
+      [itemId]: {
+        ...(current[itemId] || {}),
+        ...patch,
+        updatedAt: new Date().toISOString(),
+      },
+    }));
+  }
+
+  function resetLaunchLock() {
+    setState(makeInitialHealthLaunchLockState());
+    setCopied(false);
+  }
+
+  async function copyLaunchReport() {
+    const report = {
+      module: "SyncWorks Health",
+      launch_ready: launchReady,
+      completion_percent: completionPercent,
+      counts,
+      generated_at: new Date().toISOString(),
+      items: HEALTH_LAUNCH_LOCK_ITEMS.map((item) => ({
+        ...item,
+        ...(state[item.id] || {}),
+      })),
+    };
+
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify(report, null, 2)
+      );
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <section className="space-y-5">
+      <div className="relative overflow-hidden rounded-2xl border border-cyan-400/20 bg-slate-950/80 p-5">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-60 w-60 rounded-full bg-cyan-400/10 blur-3xl" />
+        <div className="pointer-events-none absolute -left-20 bottom-0 h-60 w-60 rounded-full bg-fuchsia-400/10 blur-3xl" />
+
+        <div className="relative flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div>
+            <div className="text-xs font-black uppercase tracking-[0.24em] text-cyan-200">
+              SyncWorks Health
+            </div>
+            <h2 className="mt-1 text-2xl font-black text-white">
+              Production Launch Lock Checklist
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+              Final God Mode signoff board for Health before calling the beta complete and moving the module toward production-ready.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={copyLaunchReport}
+              className="rounded-xl border border-cyan-300/25 bg-cyan-300/10 px-4 py-2 text-sm font-black text-cyan-100 transition hover:bg-cyan-300/20"
+            >
+              {copied ? "Copied" : "Copy Launch Report"}
+            </button>
+
+            <button
+              type="button"
+              onClick={resetLaunchLock}
+              className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-black text-slate-200 transition hover:bg-slate-800"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <div className="relative mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          <Stat
+            label="Launch Lock"
+            value={launchReady ? "READY" : "NOT READY"}
+          />
+          <Stat label="Complete" value={`${completionPercent}%`} />
+          <Stat label="Passed" value={String(counts.PASSED || 0)} />
+          <Stat label="Waived" value={String(counts.WAIVED || 0)} />
+          <Stat label="Pending" value={String(counts.PENDING || 0)} />
+          <Stat label="Blocked" value={String(counts.BLOCKED || 0)} />
+        </div>
+
+        <div
+          className={`relative mt-4 rounded-2xl border p-4 text-sm font-bold leading-6 ${
+            launchReady
+              ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-100"
+              : "border-amber-300/30 bg-amber-300/10 text-amber-100"
+          }`}
+        >
+          {launchReady
+            ? "Health launch lock is clear. Beta can be considered complete after live tester confirmation."
+            : "Health is not production-locked yet. Clear every pending or blocked item before final signoff."}
+        </div>
+      </div>
+
+      {Object.entries(groups).map(([groupName, items]) => (
+        <div
+          key={groupName}
+          className="rounded-2xl border border-slate-800 bg-slate-950/75 p-4"
+        >
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-black text-cyan-100">
+                {groupName}
+              </h3>
+              <p className="text-sm text-slate-500">
+                Mark each item only after testing the live production path.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3">
+            {items.map((item) => {
+              const itemState = state[item.id] || {};
+              const status = itemState.status || "PENDING";
+
+              return (
+                <article
+                  key={item.id}
+                  className="rounded-2xl border border-slate-800 bg-black/20 p-4"
+                >
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`rounded-full border px-2 py-1 text-[11px] font-black ${getLaunchStatusClass(status)}`}
+                        >
+                          {status}
+                        </span>
+                        <span className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                          {item.group}
+                        </span>
+                      </div>
+
+                      <h4 className="mt-3 text-base font-black text-white">
+                        {item.title}
+                      </h4>
+                      <p className="mt-1 text-sm leading-6 text-slate-400">
+                        {item.detail}
+                      </p>
+
+                      <textarea
+                        value={itemState.note || ""}
+                        onChange={(event) =>
+                          updateItem(item.id, {
+                            note: event.target.value,
+                          })
+                        }
+                        placeholder="Optional signoff note, blocker reason, tester name, or deploy detail..."
+                        rows={2}
+                        className="mt-3 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-300/40"
+                      />
+
+                      {itemState.updatedAt ? (
+                        <div className="mt-2 text-xs text-slate-500">
+                          Updated {new Date(itemState.updatedAt).toLocaleString()}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="grid min-w-[220px] gap-2">
+                      {["PASSED", "BLOCKED", "WAIVED", "PENDING"].map(
+                        (statusOption) => (
+                          <button
+                            key={statusOption}
+                            type="button"
+                            onClick={() =>
+                              updateItem(item.id, {
+                                status: statusOption,
+                              })
+                            }
+                            className={`rounded-xl border px-3 py-2 text-xs font-black transition ${getLaunchStatusClass(
+                              statusOption
+                            )} ${
+                              status === statusOption
+                                ? "ring-2 ring-cyan-300/30"
+                                : "hover:border-cyan-300/40"
+                            }`}
+                          >
+                            Mark {statusOption.toLowerCase()}
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
 }
 
 function DeveloperAgentPanel() {
@@ -358,8 +760,8 @@ function DeveloperAgentPanel() {
 
         <div className="grid gap-3 md:grid-cols-4">
           <Stat label="Backend" value={agentLoading ? "Loading..." : agentStatus?.configured ? "Configured" : "Not configured"} />
-          <Stat label="Repository" value={agentStatus?.repository || "Ã¢â‚¬â€"} />
-          <Stat label="Workflow" value={agentStatus?.workflow || "Ã¢â‚¬â€"} />
+          <Stat label="Repository" value={agentStatus?.repository || "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"} />
+          <Stat label="Workflow" value={agentStatus?.workflow || "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"} />
           <Stat label="Live Run" value={liveRunActive ? "In progress" : "Idle"} />
         </div>
 
@@ -373,8 +775,8 @@ function DeveloperAgentPanel() {
         </div>
 
         <div className="grid gap-2 text-xs text-slate-400 md:grid-cols-5">
-          <div>Branch only: {agentStatus?.safety_flags?.branch_only ? "Yes" : "Ã¢â‚¬â€"}</div>
-          <div>Draft PR only: {agentStatus?.safety_flags?.draft_pr_only ? "Yes" : "Ã¢â‚¬â€"}</div>
+          <div>Branch only: {agentStatus?.safety_flags?.branch_only ? "Yes" : "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"}</div>
+          <div>Draft PR only: {agentStatus?.safety_flags?.draft_pr_only ? "Yes" : "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"}</div>
           <div>Auto merge: {agentStatus?.safety_flags?.auto_merge ? "Enabled" : "Disabled"}</div>
           <div>Auto deploy: {agentStatus?.safety_flags?.auto_deploy ? "Enabled" : "Disabled"}</div>
           <div>Production migrations: {agentStatus?.safety_flags?.production_migrations ? "Enabled" : "Disabled"}</div>
@@ -388,9 +790,9 @@ function DeveloperAgentPanel() {
             <a key={run.id} href={run.html_url} target="_blank" rel="noreferrer" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 p-3 hover:border-cyan-500/40 hover:bg-slate-900/60">
               <div>
                 <div className="font-medium text-slate-200">{runTaskLabels[String(run.id)]?.label || "Task not captured"}</div>
-                <div className="text-xs text-slate-500">Run #{run.id} Ã‚Â· {run.head_branch || agentStatus?.ref || "main"} Ã‚Â· {run.created_at || "Unknown time"}</div>
+                <div className="text-xs text-slate-500">Run #{run.id} Ãƒâ€šÃ‚Â· {run.head_branch || agentStatus?.ref || "main"} Ãƒâ€šÃ‚Â· {run.created_at || "Unknown time"}</div>
               </div>
-              <div className="text-sm text-cyan-300">{run.status || "unknown"}{run.conclusion ? ` Ã‚Â· ${run.conclusion}` : ""}</div>
+              <div className="text-sm text-cyan-300">{run.status || "unknown"}{run.conclusion ? ` Ãƒâ€šÃ‚Â· ${run.conclusion}` : ""}</div>
             </a>
           ))}
         </div>
@@ -454,8 +856,8 @@ function DeveloperAgentPanel() {
                     <div className="text-xs text-slate-500">Status: {task.status}</div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <button type="button" onClick={() => advanceQueueTask(task.id, "RUNNING")} className="rounded border border-slate-700 px-2 py-1 text-xs">pending Ã¢â€ â€™ running</button>
-                    <button type="button" onClick={() => advanceQueueTask(task.id, "COMPLETED")} className="rounded border border-slate-700 px-2 py-1 text-xs">running Ã¢â€ â€™ completed</button>
+                    <button type="button" onClick={() => advanceQueueTask(task.id, "RUNNING")} className="rounded border border-slate-700 px-2 py-1 text-xs">pending ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ running</button>
+                    <button type="button" onClick={() => advanceQueueTask(task.id, "COMPLETED")} className="rounded border border-slate-700 px-2 py-1 text-xs">running ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ completed</button>
                     <button type="button" onClick={() => advanceQueueTask(task.id, "FAILED")} className="rounded border border-slate-700 px-2 py-1 text-xs">explicit failure</button>
                     <button type="button" onClick={() => advanceQueueTask(task.id, "BLOCKED")} className="rounded border border-slate-700 px-2 py-1 text-xs">explicit blocked</button>
                   </div>
@@ -526,7 +928,7 @@ export default function PlatformDashboard() {
 
       <ModeBar
         title="SyncWorks Admin"
-        subtitle="Platform console Ã¢â‚¬â€ performance, billing locks, ads, broadcasts, and support triage."
+        subtitle="Platform console ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â performance, billing locks, ads, broadcasts, and support triage."
       />
 
       <main className="relative max-w-7xl mx-auto px-4 py-6 space-y-5">
@@ -542,6 +944,7 @@ export default function PlatformDashboard() {
         {tab === "news" ? <NewsReelManager /> : null}
         {tab === "broadcasts" ? <BroadcastsManager /> : null}
         {tab === "affiliates" ? <GodModeAffiliates /> : null}
+        {tab === "health_launch_lock" ? <HealthLaunchLockPanel /> : null}
         {tab === "developer_agent" ? <DeveloperAgentPanel /> : null}
       </main>
     </div>
