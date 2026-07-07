@@ -1065,6 +1065,210 @@ function MuscleTrainingSelectorCard({ onOpen }) {
     </Card>
   );
 }
+function HealthProductionQaPanel({
+  snapshot,
+  profile,
+  weekPlan,
+  history,
+  progressLogs,
+  devices,
+  onOpen,
+}) {
+  function canReadLocalStorage() {
+    try {
+      if (typeof window === "undefined" || !window.localStorage) {
+        return false;
+      }
+
+      const key = "sw_health_prod_qa_check";
+      window.localStorage.setItem(key, "ok");
+      const value = window.localStorage.getItem(key);
+      window.localStorage.removeItem(key);
+      return value === "ok";
+    } catch {
+      return false;
+    }
+  }
+
+  function countArray(value) {
+    return Array.isArray(value) ? value.length : 0;
+  }
+
+  const localStorageOk = canReadLocalStorage();
+  const historyCount = countArray(history);
+  const weekPlanCount = countArray(weekPlan);
+  const progressCount = countArray(progressLogs);
+  const deviceCount = countArray(devices);
+  const nutritionCount =
+    countArray(snapshot?.nutrition_logs) +
+    countArray(snapshot?.meal_logs) +
+    countArray(snapshot?.meals);
+
+  const profileReady =
+    !!profile?.primary_goal ||
+    !!profile?.inspiration_goal ||
+    !!snapshot?.goal;
+
+  const systems = [
+    {
+      label: "Local storage",
+      ok: localStorageOk,
+      detail: localStorageOk ? "Readable and writable." : "Browser storage blocked.",
+      action: "SYNC",
+      open: "coach-chat",
+    },
+    {
+      label: "Profile state",
+      ok: profileReady,
+      detail: profileReady ? "Goal/profile data present." : "Profile needs goal data.",
+      action: "Profile",
+      open: "questionnaire",
+    },
+    {
+      label: "Week plan",
+      ok: weekPlanCount > 0,
+      detail: weekPlanCount > 0 ? `${weekPlanCount} plan items loaded.` : "No weekly plan loaded.",
+      action: "Planner",
+      open: "planner",
+    },
+    {
+      label: "Workout memory",
+      ok: historyCount > 0,
+      detail: historyCount > 0 ? `${historyCount} saved sessions.` : "Finish one workout to seed memory.",
+      action: "History",
+      open: "workout-history",
+    },
+    {
+      label: "Nutrition logs",
+      ok: nutritionCount > 0 || !!snapshot?.protein_today || !!snapshot?.calories,
+      detail:
+        nutritionCount > 0
+          ? `${nutritionCount} meal logs visible.`
+          : "No meal logs visible yet.",
+      action: "Log Meal",
+      open: "nutrition-coach",
+    },
+    {
+      label: "Progress logs",
+      ok: progressCount > 0,
+      detail: progressCount > 0 ? `${progressCount} progress logs.` : "No progress check-ins yet.",
+      action: "Quick Log",
+      open: "quick-log",
+    },
+    {
+      label: "Device sync",
+      ok: deviceCount > 0 || !!snapshot?.steps,
+      detail:
+        deviceCount > 0
+          ? `${deviceCount} device record(s).`
+          : snapshot?.steps
+          ? "Step data visible."
+          : "Device connection optional for beta.",
+      action: "Progress",
+      open: "progress",
+      optional: true,
+    },
+    {
+      label: "Card recovery",
+      ok: true,
+      detail: "Dashboard card safety net is active.",
+      action: "SYNC",
+      open: "coach-chat",
+    },
+    {
+      label: "SYNC actions",
+      ok: typeof onOpen === "function",
+      detail:
+        typeof onOpen === "function"
+          ? "Dashboard actions are wired."
+          : "Open handlers missing.",
+      action: "Ask SYNC",
+      open: "coach-chat",
+    },
+  ];
+
+  const requiredSystems = systems.filter((item) => !item.optional);
+  const passed = requiredSystems.filter((item) => item.ok).length;
+  const qaScore = Math.round((passed / requiredSystems.length) * 100);
+  const needsAttention = systems.filter((item) => !item.ok && !item.optional);
+
+  return (
+    <Card className="relative overflow-hidden border-emerald-300/20 bg-[linear-gradient(135deg,rgba(57,255,136,0.08),rgba(3,7,18,0.92),rgba(52,223,255,0.07))]">
+      <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-emerald-400/10 blur-3xl" />
+
+      <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[0.22em] text-emerald-200">
+            Production QA
+          </div>
+
+          <h3 className="mt-1 text-xl font-black text-white">
+            Health systems check
+          </h3>
+
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">
+            Use this before beta invites. Green means the dashboard can read the data it needs.
+          </p>
+        </div>
+
+        <div className="rounded-3xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-center">
+          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-100">
+            QA Score
+          </div>
+          <div className="mt-1 text-3xl font-black text-white">
+            {qaScore}%
+          </div>
+          <div className="mt-1 text-[11px] font-bold text-slate-300">
+            {passed}/{requiredSystems.length} required passing
+          </div>
+        </div>
+      </div>
+
+      <div className="relative mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        {systems.map((item) => (
+          <button
+            key={item.label}
+            type="button"
+            onClick={() => onOpen?.(item.open)}
+            className={cx(
+              "rounded-2xl border p-3 text-left transition active:scale-[0.99]",
+              item.ok
+                ? "border-emerald-300/20 bg-emerald-300/[0.07] hover:bg-emerald-300/[0.11]"
+                : item.optional
+                ? "border-amber-300/20 bg-amber-300/[0.07] hover:bg-amber-300/[0.11]"
+                : "border-rose-300/25 bg-rose-300/[0.07] hover:bg-rose-300/[0.11]"
+            )}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-black text-white">
+                  {item.ok ? "PASS" : item.optional ? "OPTIONAL" : "FIX"} | {item.label}
+                </div>
+                <div className="mt-1 text-xs font-bold leading-5 text-slate-400">
+                  {item.detail}
+                </div>
+              </div>
+
+              <div className="shrink-0 rounded-xl border border-white/10 bg-black/20 px-2 py-1 text-[10px] font-black text-slate-200">
+                {item.action}
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {needsAttention.length > 0 ? (
+        <div className="relative mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[0.07] p-3 text-sm leading-6 text-amber-100">
+          Next fix: {needsAttention[0].label}. Tap that QA row to jump to the right Health tool.
+        </div>
+      ) : (
+        <div className="relative mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.07] p-3 text-sm leading-6 text-emerald-100">
+          Required systems look beta-ready. Keep testing real workouts, meals, and progress logs before public launch.
+        </div>
+      )}
+    </Card>
+  );
+}
 function HealthBetaCleanlinessNote({ onOpen }) {
   return (
     <Card className="border-white/10 bg-white/[0.025] p-3 sm:hidden">
@@ -1242,7 +1446,7 @@ function HealthLaunchReadinessCard({
               {item.detail}
             </div>
             <div className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-white">
-              {item.action} Ã¢â€ â€™
+              {item.action} ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢
             </div>
           </button>
         ))}
@@ -1447,27 +1651,44 @@ export default function HealthDashboard({
     <div className="space-y-4 sm:space-y-5">
       <HealthCardErrorBoundary name="Launch Checklist" onOpen={onOpen}>
         <HealthLaunchReadinessCard
-        snapshot={snapshot}
-        profile={profile}
-        weekPlan={weekPlan}
-        history={history}
-        progressLogs={progressLogs}
-        onOpen={onOpen}
-        onStartWorkout={onStartWorkout}
+          snapshot={snapshot}
+          profile={profile}
+          weekPlan={weekPlan}
+          history={history}
+          progressLogs={progressLogs}
+          onOpen={onOpen}
+          onStartWorkout={onStartWorkout}
         />
       </HealthCardErrorBoundary>
       <HealthCardErrorBoundary name="Mobile Beta Note" onOpen={onOpen}>
         <HealthBetaCleanlinessNote
-        onOpen={onOpen}
-      /><DailyAccountabilityLoopCard
-        snapshot={snapshot}
-        profile={profile}
-        weekPlan={weekPlan}
-        history={history}
-        onOpen={onOpen}
-        onStartWorkout={onStartWorkout}
+          onOpen={onOpen}
         />
       </HealthCardErrorBoundary>
+
+      <HealthCardErrorBoundary name="Production QA" onOpen={onOpen}>
+        <HealthProductionQaPanel
+          snapshot={snapshot}
+          profile={profile}
+          weekPlan={weekPlan}
+          history={history}
+          progressLogs={progressLogs}
+          devices={devices}
+          onOpen={onOpen}
+        />
+      </HealthCardErrorBoundary>
+
+      <HealthCardErrorBoundary name="Daily Accountability" onOpen={onOpen}>
+        <DailyAccountabilityLoopCard
+          snapshot={snapshot}
+          profile={profile}
+          weekPlan={weekPlan}
+          history={history}
+          onOpen={onOpen}
+          onStartWorkout={onStartWorkout}
+        />
+      </HealthCardErrorBoundary>
+
       <HealthCardErrorBoundary name="Muscle Map" onOpen={onOpen}>
         <MuscleTrainingSelectorCard
         onOpen={onOpen}
