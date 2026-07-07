@@ -10,6 +10,16 @@ export const HISTORY_KEY = "sw_customer_health_history_v1";
 export const PROGRESS_KEY = "sw_customer_health_progress_v1";
 export const DEVICE_KEY = "sw_customer_health_devices_v1";
 
+export const HEALTH_STORAGE_KEYS = {
+  snapshot: SNAPSHOT_KEY,
+  workouts: WORKOUTS_KEY,
+  profile: PROFILE_KEY,
+  history: HISTORY_KEY,
+  progress: PROGRESS_KEY,
+  devices: DEVICE_KEY,
+};
+
+
 export function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
@@ -48,6 +58,110 @@ export function writeJson(key, value) {
   }
 }
 
+export function safeJsonMeta(key) {
+  const meta = {
+    key,
+    exists: false,
+    readable: false,
+    validJson: false,
+    bytes: 0,
+    itemCount: 0,
+    type: "missing",
+    error: "",
+  };
+
+  try {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return {
+        ...meta,
+        error: "localStorage unavailable",
+      };
+    }
+
+    const raw = window.localStorage.getItem(key);
+    meta.exists = raw !== null;
+    meta.bytes = raw ? raw.length : 0;
+
+    if (!raw) {
+      return meta;
+    }
+
+    meta.readable = true;
+
+    const parsed = JSON.parse(raw);
+    meta.validJson = true;
+    meta.type = Array.isArray(parsed) ? "array" : typeof parsed;
+
+    if (Array.isArray(parsed)) {
+      meta.itemCount = parsed.length;
+    } else if (parsed && typeof parsed === "object") {
+      meta.itemCount = Object.keys(parsed).length;
+    }
+
+    return meta;
+  } catch (error) {
+    return {
+      ...meta,
+      exists: true,
+      readable: true,
+      error: error?.message || "Unable to read storage item",
+    };
+  }
+}
+
+export function runHealthStorageDiagnostics() {
+  const result = {
+    ok: false,
+    canWrite: false,
+    checkedAt: new Date().toISOString(),
+    keys: [],
+    totalBytes: 0,
+    badKeys: [],
+    missingKeys: [],
+    error: "",
+  };
+
+  try {
+    if (typeof window === "undefined" || !window.localStorage) {
+      result.badKeys.push("localStorage");
+      result.error = "localStorage unavailable";
+      return result;
+    }
+
+    const probeKey = "sw_health_storage_probe_v1";
+    window.localStorage.setItem(probeKey, "ok");
+    result.canWrite = window.localStorage.getItem(probeKey) === "ok";
+    window.localStorage.removeItem(probeKey);
+
+    result.keys = Object.entries(HEALTH_STORAGE_KEYS).map(([name, key]) => ({
+      name,
+      ...safeJsonMeta(key),
+    }));
+
+    result.totalBytes = result.keys.reduce(
+      (sum, item) => sum + safeNumber(item.bytes),
+      0
+    );
+
+    result.badKeys = result.keys
+      .filter((item) => item.exists && !item.validJson)
+      .map((item) => item.name);
+
+    result.missingKeys = result.keys
+      .filter((item) => !item.exists)
+      .map((item) => item.name);
+
+    result.ok = result.canWrite && result.badKeys.length === 0;
+
+    return result;
+  } catch (error) {
+    return {
+      ...result,
+      badKeys: ["diagnostics"],
+      error: error?.message || "Storage diagnostics failed",
+    };
+  }
+}
 export function todayYmd() {
   const d = new Date();
   const yyyy = d.getFullYear();

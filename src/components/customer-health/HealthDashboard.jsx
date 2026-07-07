@@ -14,6 +14,7 @@ import {
   cx,
   prettyDate,
   readinessSuggestion,
+  runHealthStorageDiagnostics,
   safeNumber,
 } from "./healthStorage";
 
@@ -1074,27 +1075,13 @@ function HealthProductionQaPanel({
   devices,
   onOpen,
 }) {
-  function canReadLocalStorage() {
-    try {
-      if (typeof window === "undefined" || !window.localStorage) {
-        return false;
-      }
-
-      const key = "sw_health_prod_qa_check";
-      window.localStorage.setItem(key, "ok");
-      const value = window.localStorage.getItem(key);
-      window.localStorage.removeItem(key);
-      return value === "ok";
-    } catch {
-      return false;
-    }
-  }
+  const storageDiagnostics = runHealthStorageDiagnostics();
 
   function countArray(value) {
     return Array.isArray(value) ? value.length : 0;
   }
 
-  const localStorageOk = canReadLocalStorage();
+  const localStorageOk = !!storageDiagnostics?.ok;
   const historyCount = countArray(history);
   const weekPlanCount = countArray(weekPlan);
   const progressCount = countArray(progressLogs);
@@ -1113,11 +1100,20 @@ function HealthProductionQaPanel({
     {
       label: "Local storage",
       ok: localStorageOk,
-      detail: localStorageOk ? "Readable and writable." : "Browser storage blocked.",
+      detail: localStorageOk ? `Readable, writable, ${storageDiagnostics.totalBytes || 0} bytes tracked.` : `Storage issue: ${(storageDiagnostics.badKeys || []).join(", ") || storageDiagnostics.error || "Browser storage blocked."}`,
       action: "SYNC",
       open: "coach-chat",
     },
     {
+      label: "Storage integrity",
+      ok: (storageDiagnostics?.badKeys || []).length === 0,
+      detail:
+        (storageDiagnostics?.badKeys || []).length === 0
+          ? `${(storageDiagnostics?.missingKeys || []).length} empty storage buckets, no corrupted JSON.`
+          : `Corrupted: ${(storageDiagnostics?.badKeys || []).join(", ")}`,
+      action: "SYNC",
+      open: "coach-chat",
+    },    {
       label: "Profile state",
       ok: profileReady,
       detail: profileReady ? "Goal/profile data present." : "Profile needs goal data.",
@@ -1257,6 +1253,51 @@ function HealthProductionQaPanel({
         ))}
       </div>
 
+
+      <div className="relative mt-4 rounded-2xl border border-white/10 bg-black/20 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
+              Storage Audit Details
+            </div>
+            <div className="mt-1 text-xs font-bold text-slate-400">
+              {storageDiagnostics?.canWrite ? "Write test passed." : "Write test failed."} Checked {storageDiagnostics?.checkedAt ? new Date(storageDiagnostics.checkedAt).toLocaleTimeString() : "now"}.
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-xs font-black text-cyan-100">
+            {storageDiagnostics?.totalBytes || 0} bytes
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {(storageDiagnostics?.keys || []).map((item) => (
+            <div
+              key={item.name}
+              className={cx(
+                "rounded-2xl border p-3",
+                item.exists && !item.validJson
+                  ? "border-rose-300/25 bg-rose-300/[0.07]"
+                  : item.exists
+                  ? "border-emerald-300/15 bg-emerald-300/[0.04]"
+                  : "border-white/10 bg-white/[0.025]"
+              )}
+            >
+              <div className="text-xs font-black uppercase tracking-[0.14em] text-white">
+                {item.name}
+              </div>
+              <div className="mt-1 text-[11px] font-bold leading-5 text-slate-400">
+                {item.exists ? `${item.type} | ${item.itemCount} items | ${item.bytes} bytes` : "Not created yet"}
+              </div>
+              {item.error ? (
+                <div className="mt-1 text-[11px] font-bold text-rose-200">
+                  {item.error}
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </div>
       {needsAttention.length > 0 ? (
         <div className="relative mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[0.07] p-3 text-sm leading-6 text-amber-100">
           Next fix: {needsAttention[0].label}. Tap that QA row to jump to the right Health tool.
@@ -1446,7 +1487,7 @@ function HealthLaunchReadinessCard({
               {item.detail}
             </div>
             <div className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-white">
-              {item.action} ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢
+              {item.action} ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢
             </div>
           </button>
         ))}
