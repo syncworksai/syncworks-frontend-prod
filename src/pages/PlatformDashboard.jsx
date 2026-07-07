@@ -26,6 +26,7 @@ const TABS = [
   { id: "broadcasts", label: "Broadcasts" },
   { id: "affiliates", label: "Affiliates" },
   { id: "health_launch_lock", label: "Health Launch Lock" },
+  { id: "health_smoke_test", label: "Health Smoke Test" },
   { id: "developer_agent", label: "Developer Agent" },
 ];
 
@@ -147,13 +148,13 @@ const HEALTH_LAUNCH_LOCK_ITEMS = [
     id: "health_feedback_submit",
     group: "Feedback",
     title: "Health beta feedback submits",
-    detail: "Health Dashboard → Beta Feedback saves to backend and local queue.",
+    detail: "Health Dashboard â†’ Beta Feedback saves to backend and local queue.",
   },
   {
     id: "god_mode_feedback_loads",
     group: "Feedback",
     title: "God Mode feedback inbox loads",
-    detail: "God Mode → Health Feedback shows submitted tester reports.",
+    detail: "God Mode â†’ Health Feedback shows submitted tester reports.",
   },
   {
     id: "god_mode_status_actions",
@@ -521,6 +522,506 @@ function HealthLaunchLockPanel() {
   );
 }
 
+
+const HEALTH_SMOKE_TEST_STORAGE_KEY =
+  "syncworks_health_smoke_test_v1";
+
+const HEALTH_SMOKE_TESTS = [
+  {
+    id: "homepage_loads",
+    group: "Load",
+    title: "Health dashboard loads cleanly",
+    steps: "Open Health Dashboard on production. Hard refresh. Confirm no blank page, loading loop, or crash fallback.",
+    expected: "Dashboard loads in a usable state with main cards visible.",
+  },
+  {
+    id: "mobile_layout_scan",
+    group: "Mobile UI",
+    title: "Mobile layout scan",
+    steps: "Open on phone width. Scroll top to bottom. Look for clipped cards, horizontal overflow, cramped text, or hidden buttons.",
+    expected: "No broken spacing. Buttons are thumb-friendly and text is readable.",
+  },
+  {
+    id: "fonts_buttons_visual",
+    group: "Mobile UI",
+    title: "Fonts, buttons, and premium feel",
+    steps: "Review Health Dashboard, active workout, SYNC, Log, and God Mode Health screens.",
+    expected: "Fonts feel consistent, buttons are obvious, labels are not too tiny, and styling feels premium.",
+  },
+  {
+    id: "bottom_nav",
+    group: "Mobile UI",
+    title: "Bottom Health nav works",
+    steps: "Tap Health, Plan, SYNC, Progress, and Log from the mobile bottom nav.",
+    expected: "Each tap opens the expected view without overlap or dead buttons.",
+  },
+  {
+    id: "sync_button",
+    group: "Mobile UI",
+    title: "Center SYNC button works",
+    steps: "Tap the center SYNC/S button from Health.",
+    expected: "SYNC chat opens and is usable on mobile.",
+  },
+  {
+    id: "feedback_submit",
+    group: "Feedback",
+    title: "Submit beta feedback",
+    steps: "Health Dashboard → Beta Feedback. Submit a low-severity test message.",
+    expected: "Shows sent to backend and saved locally. No local-only error unless backend deploy/migration is missing.",
+  },
+  {
+    id: "feedback_inbox",
+    group: "Feedback",
+    title: "God Mode feedback inbox receives report",
+    steps: "God Mode → Health Feedback. Refresh after submitting feedback.",
+    expected: "The report appears with area, severity, status, user, runtime, and page path.",
+  },
+  {
+    id: "feedback_actions",
+    group: "Feedback",
+    title: "Feedback status actions work",
+    steps: "Mark a test report reviewed, closed, then open again.",
+    expected: "Status updates immediately and counts adjust correctly.",
+  },
+  {
+    id: "launch_lock",
+    group: "Feedback",
+    title: "Launch lock checklist works",
+    steps: "God Mode → Health Launch Lock. Mark one item passed, one blocked, one waived. Copy report.",
+    expected: "Score and counts update. Copy Launch Report works.",
+  },
+  {
+    id: "start_workout",
+    group: "Workout",
+    title: "Start workout flow",
+    steps: "Start a workout from Health. Open active workout mode.",
+    expected: "Workout opens with current exercise, timer, set controls, and safe exit controls.",
+  },
+  {
+    id: "set_logging",
+    group: "Workout",
+    title: "Set logging and rest timer",
+    steps: "Finish a set. Log reps/weight/effort during rest. Let rest timer run.",
+    expected: "Set saves, rest timer works, and next set/exercise remains clear.",
+  },
+  {
+    id: "finish_workout",
+    group: "Workout",
+    title: "Finish workout recap",
+    steps: "Finish a short workout.",
+    expected: "Post-workout recap appears and workout history/memory updates.",
+  },
+  {
+    id: "history_memory",
+    group: "Workout",
+    title: "Workout memory carry-forward",
+    steps: "Open next workout recommendation/history after a completed session.",
+    expected: "Last session data and next move recommendations display correctly.",
+  },
+  {
+    id: "nutrition_manual",
+    group: "Nutrition",
+    title: "Manual nutrition logging",
+    steps: "Log a meal manually without requesting AI.",
+    expected: "Meal saves and does not require AI access.",
+  },
+  {
+    id: "nutrition_ai",
+    group: "Nutrition",
+    title: "Nutrition AI estimate",
+    steps: "Describe a meal and request an AI estimate using an account with AI access.",
+    expected: "Estimate returns, can be confirmed/saved, and errors are understandable if provider is unavailable.",
+  },
+  {
+    id: "sync_chat",
+    group: "AI Coach",
+    title: "SYNC coach chat",
+    steps: "Ask SYNC a workout/nutrition question from Health.",
+    expected: "Response is concise, contextual, and does not break if profile/history is sparse.",
+  },
+  {
+    id: "voice_audio",
+    group: "AI Coach",
+    title: "Voice/audio controls",
+    steps: "Toggle audio on/off and try a coach voice prompt if available.",
+    expected: "Audio does not block the workout. Fallback is clear if voice provider is unavailable.",
+  },
+  {
+    id: "auth_app_switch",
+    group: "Auth",
+    title: "Mobile app switch/session check",
+    steps: "Open Health on phone, switch apps for 1–2 minutes, return.",
+    expected: "User is not immediately kicked to login during normal app switching.",
+  },
+  {
+    id: "refresh_recovery",
+    group: "Auth",
+    title: "Refresh recovery",
+    steps: "Hard refresh Health and God Mode pages.",
+    expected: "Pages recover cleanly and do not lose critical persisted local state unexpectedly.",
+  },
+  {
+    id: "console_errors",
+    group: "QA",
+    title: "Console/runtime smoke check",
+    steps: "Open browser dev tools during Health/God Mode testing.",
+    expected: "No Health launch-blocking console errors. Non-blocking Vite chunk warnings are acceptable.",
+  },
+];
+
+function makeInitialHealthSmokeState() {
+  return HEALTH_SMOKE_TESTS.reduce((acc, item) => {
+    acc[item.id] = {
+      result: "UNTESTED",
+      issue: "",
+      updatedAt: "",
+    };
+    return acc;
+  }, {});
+}
+
+function loadHealthSmokeState() {
+  if (typeof window === "undefined") {
+    return makeInitialHealthSmokeState();
+  }
+
+  try {
+    const raw = window.localStorage.getItem(
+      HEALTH_SMOKE_TEST_STORAGE_KEY
+    );
+
+    if (!raw) {
+      return makeInitialHealthSmokeState();
+    }
+
+    const parsed = JSON.parse(raw);
+
+    return {
+      ...makeInitialHealthSmokeState(),
+      ...(parsed || {}),
+    };
+  } catch {
+    return makeInitialHealthSmokeState();
+  }
+}
+
+function getSmokeResultClass(result) {
+  if (result === "PASS") {
+    return "border-emerald-300/30 bg-emerald-300/10 text-emerald-100";
+  }
+
+  if (result === "FAIL") {
+    return "border-rose-300/30 bg-rose-300/10 text-rose-100";
+  }
+
+  if (result === "NEEDS_POLISH") {
+    return "border-amber-300/30 bg-amber-300/10 text-amber-100";
+  }
+
+  return "border-slate-700 bg-slate-900 text-slate-300";
+}
+
+function HealthSmokeTestPanel() {
+  const [state, setState] = useState(() => loadHealthSmokeState());
+  const [copied, setCopied] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState("ALL");
+  const [selectedResult, setSelectedResult] = useState("ALL");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    window.localStorage.setItem(
+      HEALTH_SMOKE_TEST_STORAGE_KEY,
+      JSON.stringify(state)
+    );
+  }, [state]);
+
+  const groups = useMemo(() => {
+    return Array.from(new Set(HEALTH_SMOKE_TESTS.map((item) => item.group)));
+  }, []);
+
+  const counts = useMemo(() => {
+    return HEALTH_SMOKE_TESTS.reduce(
+      (acc, item) => {
+        const result = state[item.id]?.result || "UNTESTED";
+        acc[result] = (acc[result] || 0) + 1;
+        return acc;
+      },
+      { PASS: 0, FAIL: 0, NEEDS_POLISH: 0, UNTESTED: 0 }
+    );
+  }, [state]);
+
+  const filteredTests = useMemo(() => {
+    return HEALTH_SMOKE_TESTS.filter((item) => {
+      const result = state[item.id]?.result || "UNTESTED";
+      const groupOk = selectedGroup === "ALL" || item.group === selectedGroup;
+      const resultOk = selectedResult === "ALL" || result === selectedResult;
+
+      return groupOk && resultOk;
+    });
+  }, [selectedGroup, selectedResult, state]);
+
+  const smokePassed =
+    counts.FAIL === 0 &&
+    counts.NEEDS_POLISH === 0 &&
+    counts.UNTESTED === 0;
+
+  const betaReady =
+    counts.FAIL === 0 &&
+    counts.UNTESTED === 0;
+
+  const completionPercent = Math.round(
+    ((counts.PASS + counts.NEEDS_POLISH) / HEALTH_SMOKE_TESTS.length) * 100
+  );
+
+  function updateSmokeItem(itemId, patch) {
+    setState((current) => ({
+      ...current,
+      [itemId]: {
+        ...(current[itemId] || {}),
+        ...patch,
+        updatedAt: new Date().toISOString(),
+      },
+    }));
+  }
+
+  function resetSmokeTest() {
+    setState(makeInitialHealthSmokeState());
+    setCopied(false);
+  }
+
+  async function copySmokeReport() {
+    const report = {
+      module: "SyncWorks Health",
+      report_type: "production_smoke_test",
+      beta_ready: betaReady,
+      production_smoke_passed: smokePassed,
+      completion_percent: completionPercent,
+      counts,
+      generated_at: new Date().toISOString(),
+      items: HEALTH_SMOKE_TESTS.map((item) => ({
+        ...item,
+        ...(state[item.id] || {}),
+      })),
+    };
+
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify(report, null, 2)
+      );
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <section className="space-y-5">
+      <div className="relative overflow-hidden rounded-2xl border border-fuchsia-400/20 bg-slate-950/80 p-5">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-60 w-60 rounded-full bg-fuchsia-400/10 blur-3xl" />
+        <div className="pointer-events-none absolute -left-20 bottom-0 h-60 w-60 rounded-full bg-cyan-400/10 blur-3xl" />
+
+        <div className="relative flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div>
+            <div className="text-xs font-black uppercase tracking-[0.24em] text-fuchsia-200">
+              SyncWorks Health
+            </div>
+            <h2 className="mt-1 text-2xl font-black text-white">
+              Production Smoke Test
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+              A final launch test runner for buttons, fonts, mobile spacing, workout flow, AI flow, feedback loop, auth/session behavior, and visual polish.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={copySmokeReport}
+              className="rounded-xl border border-cyan-300/25 bg-cyan-300/10 px-4 py-2 text-sm font-black text-cyan-100 transition hover:bg-cyan-300/20"
+            >
+              {copied ? "Copied" : "Copy Smoke Report"}
+            </button>
+
+            <button
+              type="button"
+              onClick={resetSmokeTest}
+              className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-black text-slate-200 transition hover:bg-slate-800"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <div className="relative mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          <Stat
+            label="Smoke Test"
+            value={smokePassed ? "PASS" : betaReady ? "BETA OK" : "OPEN"}
+          />
+          <Stat label="Complete" value={`${completionPercent}%`} />
+          <Stat label="Pass" value={String(counts.PASS || 0)} />
+          <Stat label="Polish" value={String(counts.NEEDS_POLISH || 0)} />
+          <Stat label="Fail" value={String(counts.FAIL || 0)} />
+          <Stat label="Untested" value={String(counts.UNTESTED || 0)} />
+        </div>
+
+        <div
+          className={`relative mt-4 rounded-2xl border p-4 text-sm font-bold leading-6 ${
+            smokePassed
+              ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-100"
+              : betaReady
+              ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
+              : "border-amber-300/30 bg-amber-300/10 text-amber-100"
+          }`}
+        >
+          {smokePassed
+            ? "Production smoke test passed. Health is ready for go-live signoff."
+            : betaReady
+            ? "Beta is clear, but there are polish items before calling production perfect."
+            : "Smoke test is still open. Clear failures and untested items before go-live."}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-800 bg-slate-950/75 p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-cyan-100">
+              Filters
+            </h3>
+            <p className="text-sm text-slate-500">
+              Use Needs Polish for font, spacing, button, or visual-quality issues that are not hard blockers.
+            </p>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <select
+              value={selectedGroup}
+              onChange={(event) => setSelectedGroup(event.target.value)}
+              className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="ALL">All groups</option>
+              {groups.map((group) => (
+                <option key={group} value={group}>
+                  {group}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={selectedResult}
+              onChange={(event) => setSelectedResult(event.target.value)}
+              className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="ALL">All results</option>
+              <option value="UNTESTED">Untested</option>
+              <option value="PASS">Pass</option>
+              <option value="NEEDS_POLISH">Needs polish</option>
+              <option value="FAIL">Fail</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-3">
+        {filteredTests.map((item) => {
+          const itemState = state[item.id] || {};
+          const result = itemState.result || "UNTESTED";
+
+          return (
+            <article
+              key={item.id}
+              className="rounded-2xl border border-slate-800 bg-slate-950/75 p-4"
+            >
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`rounded-full border px-2 py-1 text-[11px] font-black ${getSmokeResultClass(result)}`}
+                    >
+                      {result}
+                    </span>
+                    <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-1 text-[11px] font-black text-cyan-100">
+                      {item.group}
+                    </span>
+                  </div>
+
+                  <h4 className="mt-3 text-base font-black text-white">
+                    {item.title}
+                  </h4>
+
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <div className="rounded-xl border border-slate-800 bg-black/20 p-3">
+                      <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                        Steps
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-slate-300">
+                        {item.steps}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-800 bg-black/20 p-3">
+                      <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                        Expected
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-slate-300">
+                        {item.expected}
+                      </p>
+                    </div>
+                  </div>
+
+                  <textarea
+                    value={itemState.issue || ""}
+                    onChange={(event) =>
+                      updateSmokeItem(item.id, {
+                        issue: event.target.value,
+                      })
+                    }
+                    placeholder="Issue note, font/button/layout concern, device used, tester feedback, or fix needed..."
+                    rows={2}
+                    className="mt-3 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-fuchsia-300/40"
+                  />
+
+                  {itemState.updatedAt ? (
+                    <div className="mt-2 text-xs text-slate-500">
+                      Updated {new Date(itemState.updatedAt).toLocaleString()}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="grid min-w-[220px] gap-2">
+                  {["PASS", "NEEDS_POLISH", "FAIL", "UNTESTED"].map(
+                    (resultOption) => (
+                      <button
+                        key={resultOption}
+                        type="button"
+                        onClick={() =>
+                          updateSmokeItem(item.id, {
+                            result: resultOption,
+                          })
+                        }
+                        className={`rounded-xl border px-3 py-2 text-xs font-black transition ${getSmokeResultClass(
+                          resultOption
+                        )} ${
+                          result === resultOption
+                            ? "ring-2 ring-fuchsia-300/30"
+                            : "hover:border-fuchsia-300/40"
+                        }`}
+                      >
+                        Mark {resultOption.toLowerCase().replace("_", " ")}
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function DeveloperAgentPanel() {
   const [state, setState] = useState(() => loadState());
   const [newTask, setNewTask] = useState(TASK_CATALOG[0]);
@@ -760,8 +1261,8 @@ function DeveloperAgentPanel() {
 
         <div className="grid gap-3 md:grid-cols-4">
           <Stat label="Backend" value={agentLoading ? "Loading..." : agentStatus?.configured ? "Configured" : "Not configured"} />
-          <Stat label="Repository" value={agentStatus?.repository || "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"} />
-          <Stat label="Workflow" value={agentStatus?.workflow || "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"} />
+          <Stat label="Repository" value={agentStatus?.repository || "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â"} />
+          <Stat label="Workflow" value={agentStatus?.workflow || "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â"} />
           <Stat label="Live Run" value={liveRunActive ? "In progress" : "Idle"} />
         </div>
 
@@ -775,8 +1276,8 @@ function DeveloperAgentPanel() {
         </div>
 
         <div className="grid gap-2 text-xs text-slate-400 md:grid-cols-5">
-          <div>Branch only: {agentStatus?.safety_flags?.branch_only ? "Yes" : "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"}</div>
-          <div>Draft PR only: {agentStatus?.safety_flags?.draft_pr_only ? "Yes" : "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"}</div>
+          <div>Branch only: {agentStatus?.safety_flags?.branch_only ? "Yes" : "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â"}</div>
+          <div>Draft PR only: {agentStatus?.safety_flags?.draft_pr_only ? "Yes" : "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â"}</div>
           <div>Auto merge: {agentStatus?.safety_flags?.auto_merge ? "Enabled" : "Disabled"}</div>
           <div>Auto deploy: {agentStatus?.safety_flags?.auto_deploy ? "Enabled" : "Disabled"}</div>
           <div>Production migrations: {agentStatus?.safety_flags?.production_migrations ? "Enabled" : "Disabled"}</div>
@@ -790,9 +1291,9 @@ function DeveloperAgentPanel() {
             <a key={run.id} href={run.html_url} target="_blank" rel="noreferrer" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 p-3 hover:border-cyan-500/40 hover:bg-slate-900/60">
               <div>
                 <div className="font-medium text-slate-200">{runTaskLabels[String(run.id)]?.label || "Task not captured"}</div>
-                <div className="text-xs text-slate-500">Run #{run.id} Ãƒâ€šÃ‚Â· {run.head_branch || agentStatus?.ref || "main"} Ãƒâ€šÃ‚Â· {run.created_at || "Unknown time"}</div>
+                <div className="text-xs text-slate-500">Run #{run.id} ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {run.head_branch || agentStatus?.ref || "main"} ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {run.created_at || "Unknown time"}</div>
               </div>
-              <div className="text-sm text-cyan-300">{run.status || "unknown"}{run.conclusion ? ` Ãƒâ€šÃ‚Â· ${run.conclusion}` : ""}</div>
+              <div className="text-sm text-cyan-300">{run.status || "unknown"}{run.conclusion ? ` ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ${run.conclusion}` : ""}</div>
             </a>
           ))}
         </div>
@@ -856,8 +1357,8 @@ function DeveloperAgentPanel() {
                     <div className="text-xs text-slate-500">Status: {task.status}</div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <button type="button" onClick={() => advanceQueueTask(task.id, "RUNNING")} className="rounded border border-slate-700 px-2 py-1 text-xs">pending ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ running</button>
-                    <button type="button" onClick={() => advanceQueueTask(task.id, "COMPLETED")} className="rounded border border-slate-700 px-2 py-1 text-xs">running ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ completed</button>
+                    <button type="button" onClick={() => advanceQueueTask(task.id, "RUNNING")} className="rounded border border-slate-700 px-2 py-1 text-xs">pending ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ running</button>
+                    <button type="button" onClick={() => advanceQueueTask(task.id, "COMPLETED")} className="rounded border border-slate-700 px-2 py-1 text-xs">running ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ completed</button>
                     <button type="button" onClick={() => advanceQueueTask(task.id, "FAILED")} className="rounded border border-slate-700 px-2 py-1 text-xs">explicit failure</button>
                     <button type="button" onClick={() => advanceQueueTask(task.id, "BLOCKED")} className="rounded border border-slate-700 px-2 py-1 text-xs">explicit blocked</button>
                   </div>
@@ -928,7 +1429,7 @@ export default function PlatformDashboard() {
 
       <ModeBar
         title="SyncWorks Admin"
-        subtitle="Platform console ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â performance, billing locks, ads, broadcasts, and support triage."
+        subtitle="Platform console ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â performance, billing locks, ads, broadcasts, and support triage."
       />
 
       <main className="relative max-w-7xl mx-auto px-4 py-6 space-y-5">
@@ -945,6 +1446,7 @@ export default function PlatformDashboard() {
         {tab === "broadcasts" ? <BroadcastsManager /> : null}
         {tab === "affiliates" ? <GodModeAffiliates /> : null}
         {tab === "health_launch_lock" ? <HealthLaunchLockPanel /> : null}
+        {tab === "health_smoke_test" ? <HealthSmokeTestPanel /> : null}
         {tab === "developer_agent" ? <DeveloperAgentPanel /> : null}
       </main>
     </div>
