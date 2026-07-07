@@ -986,6 +986,33 @@ function MuscleTrainingSelectorCard({ onOpen }) {
     </Card>
   );
 }
+function HealthBetaCleanlinessNote({ onOpen }) {
+  return (
+    <Card className="border-white/10 bg-white/[0.025] p-3 sm:hidden">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
+            Mobile Beta View
+          </div>
+          <div className="mt-1 text-sm font-black text-white">
+            Start simple: workout, meal, steps, or SYNC.
+          </div>
+          <div className="mt-1 text-xs leading-5 text-slate-400">
+            Advanced cards stay lower on the page so testers can move faster.
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onOpen?.("coach-chat")}
+          className="shrink-0 rounded-2xl border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-2 text-xs font-black text-fuchsia-100"
+        >
+          SYNC
+        </button>
+      </div>
+    </Card>
+  );
+}
 function HealthLaunchReadinessCard({
   snapshot,
   profile,
@@ -1136,7 +1163,7 @@ function HealthLaunchReadinessCard({
               {item.detail}
             </div>
             <div className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-white">
-              {item.action} →
+              {item.action} â†’
             </div>
           </button>
         ))}
@@ -1339,7 +1366,7 @@ export default function HealthDashboard({
 
   return (
     <div className="space-y-4 sm:space-y-5">
-                  <HealthLaunchReadinessCard
+      <HealthLaunchReadinessCard
         snapshot={snapshot}
         profile={profile}
         weekPlan={weekPlan}
@@ -1348,7 +1375,11 @@ export default function HealthDashboard({
         onOpen={onOpen}
         onStartWorkout={onStartWorkout}
       />
-<DailyAccountabilityLoopCard
+
+
+      <HealthBetaCleanlinessNote
+        onOpen={onOpen}
+      /><DailyAccountabilityLoopCard
         snapshot={snapshot}
         profile={profile}
         weekPlan={weekPlan}
@@ -1356,10 +1387,12 @@ export default function HealthDashboard({
         onOpen={onOpen}
         onStartWorkout={onStartWorkout}
       />
+
       <MuscleTrainingSelectorCard
         onOpen={onOpen}
       />
-<AdaptiveNextWorkoutCard
+
+      <AdaptiveNextWorkoutCard
         history={history}
         snapshot={snapshot}
         profile={profile}
@@ -1388,7 +1421,7 @@ export default function HealthDashboard({
         onRepeatLastWeek={onRepeatLastWeek}
       />
 
-      <Card className="relative overflow-hidden border-blue-400/20 bg-[#050b18]">
+      <Card className="relative hidden overflow-hidden border-blue-400/20 bg-[#050b18] lg:block">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/70 to-transparent" />
         <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-blue-500/15 blur-3xl" />
         <div className="relative">
@@ -1403,42 +1436,42 @@ export default function HealthDashboard({
 
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
             <QuickAction
-              icon="ÃƒÂ¢Ã¢â‚¬â€œÃ‚Â¶"
+              icon="GO"
               label="Start Workout"
               detail={nextSession?.workout_name || "Choose or build today's session"}
               tone="emerald"
               onClick={() => nextSession ? onStartWorkout?.(nextSession) : onOpen?.("workout")}
             />
             <QuickAction
-              icon="ÃƒÂ¯Ã‚Â¼Ã¢â‚¬Â¹"
+              icon="+"
               label="Build Workout"
               detail="Create and save your own sets"
               tone="cyan"
               onClick={() => onOpen?.("workout")}
             />
             <QuickAction
-              icon="ÃƒÂ°Ã…Â¸Ã‚Â¦Ã‚Âµ"
+              icon="BODY"
               label="Train a Muscle"
               detail="Browse legs, chest, back, arms, and more"
               tone="fuchsia"
               onClick={() => onOpen?.("library")}
             />
             <QuickAction
-              icon="ÃƒÂ¢Ã…â€™Ã¢â‚¬Â¢"
+              icon="LIB"
               label="Exercise Library"
               detail="Search movements and form guidance"
               tone="violet"
               onClick={() => onOpen?.("library")}
             />
             <QuickAction
-              icon="ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â€"
+              icon="PR"
               label="Progress"
               detail="Weight, workouts, strength, and trends"
               tone="amber"
               onClick={() => onOpen?.("progress")}
             />
             <QuickAction
-              icon="ÃƒÂ¢Ã¢â‚¬â€Ã…Â½"
+              icon="ID"
               label="Profile"
               detail="Height, weight, goals, limits, equipment"
               tone="cyan"
@@ -1486,8 +1519,7 @@ export default function HealthDashboard({
 
               <div className="mt-4 flex items-start gap-3 sm:items-center sm:gap-4">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl border border-cyan-400/25 bg-cyan-500/10 text-2xl sm:h-16 sm:w-16 sm:text-3xl">
-                  ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Â¹ÃƒÂ¯Ã‚Â¸Ã‚Â
-                </div>
+                  SW</div>
 
                 <div className="min-w-0">
                   <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
