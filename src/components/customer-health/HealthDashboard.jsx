@@ -64,6 +64,85 @@ function Card({ className = "", children }) {
   );
 }
 
+class HealthCardErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      message: "",
+    };
+  }
+
+  static getDerivedStateFromError(error) {
+    return {
+      hasError: true,
+      message: error?.message || "Something went wrong in this Health card.",
+    };
+  }
+
+  componentDidCatch(error, info) {
+    try {
+      console.error("[SyncWorks Health card error]", {
+        card: this.props.name,
+        error,
+        info,
+      });
+    } catch {
+      // Keep the app running even if console logging is unavailable.
+    }
+  }
+
+  reset = () => {
+    this.setState({
+      hasError: false,
+      message: "",
+    });
+  };
+
+  render() {
+    if (!this.state.hasError) {
+      return this.props.children;
+    }
+
+    return (
+      <Card className="border-rose-300/25 bg-rose-300/[0.06]">
+        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-200">
+          Health Card Recovery
+        </div>
+
+        <div className="mt-2 text-lg font-black text-white">
+          {this.props.name || "This section"} needs a refresh
+        </div>
+
+        <div className="mt-2 text-sm leading-6 text-slate-300">
+          SYNC caught a card-level issue before it could blank the whole Health dashboard.
+        </div>
+
+        <div className="mt-2 rounded-2xl border border-white/10 bg-black/20 p-3 text-xs font-bold leading-5 text-slate-400">
+          {this.state.message}
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={this.reset}
+            className="h-10 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-3 text-xs font-black text-cyan-100"
+          >
+            Retry Card
+          </button>
+
+          <button
+            type="button"
+            onClick={() => this.props.onOpen?.("coach-chat")}
+            className="h-10 rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 text-xs font-black text-fuchsia-100"
+          >
+            Ask SYNC
+          </button>
+        </div>
+      </Card>
+    );
+  }
+}
 function StatPill({ label, value, tone = "cyan" }) {
   const toneMap = {
     cyan:
@@ -1163,7 +1242,7 @@ function HealthLaunchReadinessCard({
               {item.detail}
             </div>
             <div className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-white">
-              {item.action} â†’
+              {item.action} Ã¢â€ â€™
             </div>
           </button>
         ))}
@@ -1366,7 +1445,8 @@ export default function HealthDashboard({
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      <HealthLaunchReadinessCard
+      <HealthCardErrorBoundary name="Launch Checklist" onOpen={onOpen}>
+        <HealthLaunchReadinessCard
         snapshot={snapshot}
         profile={profile}
         weekPlan={weekPlan}
@@ -1374,10 +1454,10 @@ export default function HealthDashboard({
         progressLogs={progressLogs}
         onOpen={onOpen}
         onStartWorkout={onStartWorkout}
-      />
-
-
-      <HealthBetaCleanlinessNote
+        />
+      </HealthCardErrorBoundary>
+      <HealthCardErrorBoundary name="Mobile Beta Note" onOpen={onOpen}>
+        <HealthBetaCleanlinessNote
         onOpen={onOpen}
       /><DailyAccountabilityLoopCard
         snapshot={snapshot}
@@ -1386,33 +1466,37 @@ export default function HealthDashboard({
         history={history}
         onOpen={onOpen}
         onStartWorkout={onStartWorkout}
-      />
-
-      <MuscleTrainingSelectorCard
+        />
+      </HealthCardErrorBoundary>
+      <HealthCardErrorBoundary name="Muscle Map" onOpen={onOpen}>
+        <MuscleTrainingSelectorCard
         onOpen={onOpen}
-      />
-
-      <AdaptiveNextWorkoutCard
+        />
+      </HealthCardErrorBoundary>
+      <HealthCardErrorBoundary name="Adaptive Workout" onOpen={onOpen}>
+        <AdaptiveNextWorkoutCard
         history={history}
         snapshot={snapshot}
         profile={profile}
         onOpen={onOpen}
-      />
-
-      <CardioProgressCard
+        />
+      </HealthCardErrorBoundary>
+      <HealthCardErrorBoundary name="Cardio Progress" onOpen={onOpen}>
+        <CardioProgressCard
         history={history}
         onOpenCardio={onOpenCardio}
         onOpenHistory={() =>
           onOpen?.("workout-history")
         }
-      />
-
-      <HealthCoachIntelligenceCard
+        />
+      </HealthCardErrorBoundary>
+      <HealthCardErrorBoundary name="Coach Intelligence" onOpen={onOpen}>
+        <HealthCoachIntelligenceCard
         history={history}
         snapshot={snapshot}
         onOpen={onOpen}
-      />
-
+        />
+      </HealthCardErrorBoundary>
       <WeekLifecycleCard
         weekPlan={weekPlan}
         history={history}
@@ -1486,12 +1570,16 @@ export default function HealthDashboard({
         onOpen={onOpen}
       />
 
-      <SleepPlanCard
+      <HealthCardErrorBoundary name="Sleep Planner" onOpen={onOpen}>
+
+        <SleepPlanCard
         profile={profile}
         snapshot={snapshot}
         onOpen={onOpen}
-      />
 
+        />
+
+      </HealthCardErrorBoundary>
       <Card className="relative overflow-hidden border-cyan-500/25 bg-gradient-to-br from-cyan-500/10 via-slate-950/60 to-fuchsia-500/10">
         <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-cyan-500/15 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 left-1/4 h-64 w-64 rounded-full bg-fuchsia-500/15 blur-3xl" />
@@ -1700,32 +1788,39 @@ export default function HealthDashboard({
         </div>
       </Card>
 
-      <LastWorkoutStatsCard
+      <HealthCardErrorBoundary name="Last Workout Stats" onOpen={onOpen}>
+
+        <LastWorkoutStatsCard
         stats={snapshot?.last_workout_stats}
-      />
 
-      <HealthProgressCharts
+        />
+
+      </HealthCardErrorBoundary>
+      <HealthCardErrorBoundary name="Progress Charts" onOpen={onOpen}>
+        <HealthProgressCharts
         profile={profile}
         snapshot={snapshot}
         history={history}
         progressLogs={progressLogs}
         onOpen={onOpen}
-      />
-
-      <HealthKpiSection
+        />
+      </HealthCardErrorBoundary>
+      <HealthCardErrorBoundary name="Health KPIs" onOpen={onOpen}>
+        <HealthKpiSection
         history={history}
         snapshot={snapshot}
         profile={profile}
-      />
-
-      <HealthMomentumCard
+        />
+      </HealthCardErrorBoundary>
+      <HealthCardErrorBoundary name="Momentum" onOpen={onOpen}>
+        <HealthMomentumCard
         profile={profile}
         snapshot={snapshot}
         history={history}
         progressLogs={progressLogs}
         onOpen={onOpen}
-      />
-
+        />
+      </HealthCardErrorBoundary>
       <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
         <Card>
           <div className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
