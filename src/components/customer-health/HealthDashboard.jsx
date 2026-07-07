@@ -15,6 +15,7 @@ import {
   prettyDate,
   readinessSuggestion,
   runHealthStorageDiagnostics,
+  runHealthWebRuntimeDiagnostics,
   safeNumber,
 } from "./healthStorage";
 
@@ -1076,6 +1077,7 @@ function HealthProductionQaPanel({
   onOpen,
 }) {
   const storageDiagnostics = runHealthStorageDiagnostics();
+  const runtimeDiagnostics = runHealthWebRuntimeDiagnostics();
 
   function countArray(value) {
     return Array.isArray(value) ? value.length : 0;
@@ -1113,6 +1115,26 @@ function HealthProductionQaPanel({
           : `Corrupted: ${(storageDiagnostics?.badKeys || []).join(", ")}`,
       action: "SYNC",
       open: "coach-chat",
+    },    {
+      label: "Web beta runtime",
+      ok: !!runtimeDiagnostics?.ok,
+      detail:
+        runtimeDiagnostics?.ok
+          ? `${runtimeDiagnostics.host} is online and secure.`
+          : `Runtime issue: ${(runtimeDiagnostics?.issues || []).join(", ") || "Needs review."}`,
+      action: "SYNC",
+      open: "coach-chat",
+    },
+    {
+      label: "Browser visibility",
+      ok: runtimeDiagnostics?.visibility === "visible",
+      detail:
+        runtimeDiagnostics?.visibility === "visible"
+          ? "Health page is active in the browser."
+          : `Current state: ${runtimeDiagnostics?.visibility || "unknown"}.`,
+      action: "SYNC",
+      open: "coach-chat",
+      optional: true,
     },    {
       label: "Profile state",
       ok: profileReady,
@@ -1203,7 +1225,7 @@ function HealthProductionQaPanel({
           </h3>
 
           <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">
-            Use this before beta invites. Green means the dashboard can read the data it needs.
+            Use this before web beta invites. Green means the dashboard can read the data it needs in the browser.
           </p>
         </div>
 
@@ -1297,6 +1319,56 @@ function HealthProductionQaPanel({
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="relative mt-4 rounded-2xl border border-blue-300/15 bg-blue-300/[0.045] p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-200">
+              Web Beta Runtime Details
+            </div>
+            <div className="mt-1 text-xs font-bold text-slate-400">
+              Browser website check for beta testing before App Store work.
+            </div>
+          </div>
+
+          <div className={cx(
+            "rounded-2xl border px-3 py-2 text-xs font-black",
+            runtimeDiagnostics?.ok
+              ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100"
+              : "border-amber-300/20 bg-amber-300/10 text-amber-100"
+          )}>
+            {runtimeDiagnostics?.ok ? "WEB OK" : "REVIEW"}
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            ["Host", runtimeDiagnostics?.host || "unknown"],
+            ["Protocol", runtimeDiagnostics?.protocol || "unknown"],
+            ["Online", runtimeDiagnostics?.online ? "yes" : "no"],
+            ["Secure", runtimeDiagnostics?.secureContext ? "yes" : "no"],
+            ["Visibility", runtimeDiagnostics?.visibility || "unknown"],
+            ["Viewport", `${runtimeDiagnostics?.viewport?.width || 0} x ${runtimeDiagnostics?.viewport?.height || 0}`],
+            ["Timezone", runtimeDiagnostics?.timezone || "unknown"],
+            ["Language", runtimeDiagnostics?.language || "unknown"],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-2xl border border-white/10 bg-black/20 p-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+                {label}
+              </div>
+              <div className="mt-1 break-words text-xs font-black text-white">
+                {value}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {(runtimeDiagnostics?.issues || []).length > 0 ? (
+          <div className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-300/[0.07] p-3 text-xs font-bold leading-5 text-amber-100">
+            {(runtimeDiagnostics?.issues || []).join(" | ")}
+          </div>
+        ) : null}
       </div>
       {needsAttention.length > 0 ? (
         <div className="relative mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[0.07] p-3 text-sm leading-6 text-amber-100">
@@ -1487,7 +1559,7 @@ function HealthLaunchReadinessCard({
               {item.detail}
             </div>
             <div className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-white">
-              {item.action} ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢
+              {item.action} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢
             </div>
           </button>
         ))}

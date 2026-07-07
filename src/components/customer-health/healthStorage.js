@@ -162,6 +162,91 @@ export function runHealthStorageDiagnostics() {
     };
   }
 }
+export function runHealthWebRuntimeDiagnostics() {
+  const result = {
+    ok: false,
+    checkedAt: new Date().toISOString(),
+    online: true,
+    visibility: "visible",
+    secureContext: false,
+    protocol: "",
+    host: "",
+    path: "",
+    isLocalhost: false,
+    isProductionHost: false,
+    userAgent: "",
+    language: "",
+    timezone: "",
+    viewport: {
+      width: 0,
+      height: 0,
+    },
+    issues: [],
+  };
+
+  try {
+    if (typeof window === "undefined") {
+      return {
+        ...result,
+        online: false,
+        issues: ["Window unavailable"],
+      };
+    }
+
+    const location = window.location || {};
+    const navigatorInfo = window.navigator || {};
+    const documentInfo = window.document || {};
+
+    result.online = navigatorInfo.onLine !== false;
+    result.visibility = documentInfo.visibilityState || "visible";
+    result.secureContext =
+      window.isSecureContext === true ||
+      location.protocol === "https:" ||
+      location.hostname === "localhost";
+    result.protocol = location.protocol || "";
+    result.host = location.host || "";
+    result.path = `${location.pathname || ""}${location.search || ""}`;
+    result.isLocalhost =
+      location.hostname === "localhost" ||
+      location.hostname === "127.0.0.1";
+    result.isProductionHost =
+      String(location.hostname || "").includes("syncworks") ||
+      String(location.hostname || "").includes("vercel.app");
+    result.userAgent = navigatorInfo.userAgent || "";
+    result.language = navigatorInfo.language || "";
+    result.timezone =
+      Intl.DateTimeFormat?.().resolvedOptions?.().timeZone || "";
+    result.viewport = {
+      width: window.innerWidth || 0,
+      height: window.innerHeight || 0,
+    };
+
+    if (!result.online) {
+      result.issues.push("Browser reports offline");
+    }
+
+    if (!result.secureContext) {
+      result.issues.push("Not running in a secure HTTPS context");
+    }
+
+    if (!result.host) {
+      result.issues.push("Host unavailable");
+    }
+
+    result.ok =
+      result.online &&
+      result.secureContext &&
+      !!result.host &&
+      result.issues.length === 0;
+
+    return result;
+  } catch (error) {
+    return {
+      ...result,
+      issues: [error?.message || "Runtime diagnostics failed"],
+    };
+  }
+}
 export function todayYmd() {
   const d = new Date();
   const yyyy = d.getFullYear();
