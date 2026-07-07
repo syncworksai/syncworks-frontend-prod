@@ -358,8 +358,8 @@ function DeveloperAgentPanel() {
 
         <div className="grid gap-3 md:grid-cols-4">
           <Stat label="Backend" value={agentLoading ? "Loading..." : agentStatus?.configured ? "Configured" : "Not configured"} />
-          <Stat label="Repository" value={agentStatus?.repository || "â€”"} />
-          <Stat label="Workflow" value={agentStatus?.workflow || "â€”"} />
+          <Stat label="Repository" value={agentStatus?.repository || "Ã¢â‚¬â€"} />
+          <Stat label="Workflow" value={agentStatus?.workflow || "Ã¢â‚¬â€"} />
           <Stat label="Live Run" value={liveRunActive ? "In progress" : "Idle"} />
         </div>
 
@@ -373,8 +373,8 @@ function DeveloperAgentPanel() {
         </div>
 
         <div className="grid gap-2 text-xs text-slate-400 md:grid-cols-5">
-          <div>Branch only: {agentStatus?.safety_flags?.branch_only ? "Yes" : "â€”"}</div>
-          <div>Draft PR only: {agentStatus?.safety_flags?.draft_pr_only ? "Yes" : "â€”"}</div>
+          <div>Branch only: {agentStatus?.safety_flags?.branch_only ? "Yes" : "Ã¢â‚¬â€"}</div>
+          <div>Draft PR only: {agentStatus?.safety_flags?.draft_pr_only ? "Yes" : "Ã¢â‚¬â€"}</div>
           <div>Auto merge: {agentStatus?.safety_flags?.auto_merge ? "Enabled" : "Disabled"}</div>
           <div>Auto deploy: {agentStatus?.safety_flags?.auto_deploy ? "Enabled" : "Disabled"}</div>
           <div>Production migrations: {agentStatus?.safety_flags?.production_migrations ? "Enabled" : "Disabled"}</div>
@@ -388,9 +388,9 @@ function DeveloperAgentPanel() {
             <a key={run.id} href={run.html_url} target="_blank" rel="noreferrer" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 p-3 hover:border-cyan-500/40 hover:bg-slate-900/60">
               <div>
                 <div className="font-medium text-slate-200">{runTaskLabels[String(run.id)]?.label || "Task not captured"}</div>
-                <div className="text-xs text-slate-500">Run #{run.id} Â· {run.head_branch || agentStatus?.ref || "main"} Â· {run.created_at || "Unknown time"}</div>
+                <div className="text-xs text-slate-500">Run #{run.id} Ã‚Â· {run.head_branch || agentStatus?.ref || "main"} Ã‚Â· {run.created_at || "Unknown time"}</div>
               </div>
-              <div className="text-sm text-cyan-300">{run.status || "unknown"}{run.conclusion ? ` Â· ${run.conclusion}` : ""}</div>
+              <div className="text-sm text-cyan-300">{run.status || "unknown"}{run.conclusion ? ` Ã‚Â· ${run.conclusion}` : ""}</div>
             </a>
           ))}
         </div>
@@ -454,8 +454,8 @@ function DeveloperAgentPanel() {
                     <div className="text-xs text-slate-500">Status: {task.status}</div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <button type="button" onClick={() => advanceQueueTask(task.id, "RUNNING")} className="rounded border border-slate-700 px-2 py-1 text-xs">pending â†’ running</button>
-                    <button type="button" onClick={() => advanceQueueTask(task.id, "COMPLETED")} className="rounded border border-slate-700 px-2 py-1 text-xs">running â†’ completed</button>
+                    <button type="button" onClick={() => advanceQueueTask(task.id, "RUNNING")} className="rounded border border-slate-700 px-2 py-1 text-xs">pending Ã¢â€ â€™ running</button>
+                    <button type="button" onClick={() => advanceQueueTask(task.id, "COMPLETED")} className="rounded border border-slate-700 px-2 py-1 text-xs">running Ã¢â€ â€™ completed</button>
                     <button type="button" onClick={() => advanceQueueTask(task.id, "FAILED")} className="rounded border border-slate-700 px-2 py-1 text-xs">explicit failure</button>
                     <button type="button" onClick={() => advanceQueueTask(task.id, "BLOCKED")} className="rounded border border-slate-700 px-2 py-1 text-xs">explicit blocked</button>
                   </div>
@@ -526,7 +526,7 @@ export default function PlatformDashboard() {
 
       <ModeBar
         title="SyncWorks Admin"
-        subtitle="Platform console â€” performance, billing locks, ads, broadcasts, and support triage."
+        subtitle="Platform console Ã¢â‚¬â€ performance, billing locks, ads, broadcasts, and support triage."
       />
 
       <main className="relative max-w-7xl mx-auto px-4 py-6 space-y-5">

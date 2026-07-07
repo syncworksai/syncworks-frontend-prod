@@ -132,3 +132,25 @@ export async function submitHealthBetaFeedback(payload = {}) {
 
   return response.data;
 }
+
+export async function getHealthGodModeBetaFeedback() {
+  const response = await api.get(
+    "/customer-health/god-mode/beta-feedback/"
+  );
+
+  return response.data;
+}
+
+export async function updateHealthGodModeFeedbackStatus(
+  feedbackId,
+  status
+) {
+  const response = await api.patch(
+    `/customer-health/god-mode/beta-feedback/${feedbackId}/`,
+    {
+      status: String(status || "").trim().toUpperCase(),
+    }
+  );
+
+  return response.data;
+}
