@@ -9,6 +9,7 @@ export const PROFILE_KEY = "sw_customer_health_profile_v1";
 export const HISTORY_KEY = "sw_customer_health_history_v1";
 export const PROGRESS_KEY = "sw_customer_health_progress_v1";
 export const DEVICE_KEY = "sw_customer_health_devices_v1";
+export const HEALTH_BETA_FEEDBACK_KEY = "sw_customer_health_beta_feedback_v1";
 
 export const HEALTH_STORAGE_KEYS = {
   snapshot: SNAPSHOT_KEY,
@@ -17,6 +18,7 @@ export const HEALTH_STORAGE_KEYS = {
   history: HISTORY_KEY,
   progress: PROGRESS_KEY,
   devices: DEVICE_KEY,
+  beta_feedback: HEALTH_BETA_FEEDBACK_KEY,
 };
 
 
@@ -58,6 +60,41 @@ export function writeJson(key, value) {
   }
 }
 
+export function readHealthBetaFeedback() {
+  return readJson(HEALTH_BETA_FEEDBACK_KEY, []);
+}
+
+export function writeHealthBetaFeedback(items = []) {
+  writeJson(HEALTH_BETA_FEEDBACK_KEY, Array.isArray(items) ? items : []);
+}
+
+export function appendHealthBetaFeedback(entry = {}) {
+  const existing = readHealthBetaFeedback();
+  const next = [
+    {
+      id: uid("health-feedback"),
+      created_at: new Date().toISOString(),
+      status: "OPEN",
+      area: "General",
+      severity: "Medium",
+      message: "",
+      page_path:
+        typeof window !== "undefined"
+          ? `${window.location?.pathname || ""}${window.location?.search || ""}`
+          : "",
+      runtime: {},
+      ...entry,
+    },
+    ...existing,
+  ].slice(0, 100);
+
+  writeHealthBetaFeedback(next);
+  return next;
+}
+
+export function clearHealthBetaFeedback() {
+  writeHealthBetaFeedback([]);
+}
 export function safeJsonMeta(key) {
   const meta = {
     key,

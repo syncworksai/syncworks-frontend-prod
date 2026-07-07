@@ -12,8 +12,11 @@ import CardioProgressCard from "./CardioProgressCard";
 import {
   clampPercent,
   cx,
+  appendHealthBetaFeedback,
+  clearHealthBetaFeedback,
   prettyDate,
   readinessSuggestion,
+  readHealthBetaFeedback,
   runHealthStorageDiagnostics,
   runHealthWebRuntimeDiagnostics,
   safeNumber,
@@ -1067,6 +1070,219 @@ function MuscleTrainingSelectorCard({ onOpen }) {
     </Card>
   );
 }
+function HealthBetaFeedbackPanel({ runtimeDiagnostics, onFeedbackChange }) {
+  const [area, setArea] = useState("Workout");
+  const [severity, setSeverity] = useState("Medium");
+  const [message, setMessage] = useState("");
+  const [items, setItems] = useState(() => readHealthBetaFeedback());
+  const [copied, setCopied] = useState(false);
+
+  function refresh(nextItems) {
+    setItems(nextItems);
+    onFeedbackChange?.(nextItems);
+  }
+
+  function submitFeedback() {
+    const trimmed = message.trim();
+
+    if (!trimmed) {
+      return;
+    }
+
+    const next = appendHealthBetaFeedback({
+      area,
+      severity,
+      message: trimmed,
+      runtime: {
+        host: runtimeDiagnostics?.host || "",
+        protocol: runtimeDiagnostics?.protocol || "",
+        online: !!runtimeDiagnostics?.online,
+        secure: !!runtimeDiagnostics?.secureContext,
+        visibility: runtimeDiagnostics?.visibility || "",
+        viewport: runtimeDiagnostics?.viewport || {},
+        timezone: runtimeDiagnostics?.timezone || "",
+        language: runtimeDiagnostics?.language || "",
+      },
+    });
+
+    setMessage("");
+    refresh(next);
+  }
+
+  async function copyFeedback() {
+    const payload = JSON.stringify(items, null, 2);
+
+    try {
+      await navigator.clipboard.writeText(payload);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  function clearFeedback() {
+    const confirmed =
+      typeof window === "undefined"
+        ? true
+        : window.confirm("Clear all locally saved Health beta feedback on this browser?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    clearHealthBetaFeedback();
+    refresh([]);
+  }
+
+  return (
+    <Card className="relative overflow-hidden border-fuchsia-300/20 bg-[linear-gradient(135deg,rgba(255,59,212,0.08),rgba(3,7,18,0.92),rgba(52,223,255,0.06))]">
+      <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-fuchsia-400/10 blur-3xl" />
+
+      <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[0.22em] text-fuchsia-200">
+            Beta Feedback
+          </div>
+          <h3 className="mt-1 text-xl font-black text-white">
+            Report Health issue
+          </h3>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">
+            Saves feedback locally in this browser for now. Next production step is sending this to God Mode / backend.
+          </p>
+        </div>
+
+        <div className="rounded-3xl border border-fuchsia-300/20 bg-fuchsia-300/10 px-4 py-3 text-center">
+          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-fuchsia-100">
+            Saved
+          </div>
+          <div className="mt-1 text-3xl font-black text-white">
+            {items.length}
+          </div>
+          <div className="mt-1 text-[11px] font-bold text-slate-300">
+            local reports
+          </div>
+        </div>
+      </div>
+
+      <div className="relative mt-4 grid gap-3 lg:grid-cols-[0.8fr_0.8fr_2fr_auto]">
+        <label className="block">
+          <span className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+            Area
+          </span>
+          <select
+            value={area}
+            onChange={(event) => setArea(event.target.value)}
+            className="mt-2 h-11 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-3 text-sm font-bold text-white outline-none"
+          >
+            <option>Workout</option>
+            <option>SYNC Coach</option>
+            <option>Nutrition</option>
+            <option>Progress</option>
+            <option>Planner</option>
+            <option>Mobile Layout</option>
+            <option>Login / Session</option>
+            <option>Other</option>
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+            Severity
+          </span>
+          <select
+            value={severity}
+            onChange={(event) => setSeverity(event.target.value)}
+            className="mt-2 h-11 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-3 text-sm font-bold text-white outline-none"
+          >
+            <option>Low</option>
+            <option>Medium</option>
+            <option>High</option>
+            <option>Blocking</option>
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+            What happened?
+          </span>
+          <textarea
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+            rows={3}
+            placeholder="Example: Started workout, tapped Finish Set, rest timer did not start..."
+            className="mt-2 min-h-[88px] w-full resize-y rounded-2xl border border-white/10 bg-slate-950/80 px-3 py-3 text-sm font-bold leading-5 text-white outline-none placeholder:text-slate-600"
+          />
+        </label>
+
+        <div className="flex flex-col justify-end gap-2">
+          <button
+            type="button"
+            onClick={submitFeedback}
+            disabled={!message.trim()}
+            className="h-11 rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-4 text-sm font-black text-fuchsia-100 transition hover:bg-fuchsia-300/20 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Save
+          </button>
+
+          <button
+            type="button"
+            onClick={copyFeedback}
+            disabled={items.length === 0}
+            className="h-11 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 text-sm font-black text-cyan-100 transition hover:bg-cyan-300/20 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
+      </div>
+
+      {items.length > 0 ? (
+        <div className="relative mt-4 rounded-2xl border border-white/10 bg-black/20 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
+                Local Feedback Queue
+              </div>
+              <div className="mt-1 text-xs font-bold text-slate-400">
+                Stored on this browser only until backend capture is connected.
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={clearFeedback}
+              className="rounded-2xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 text-xs font-black text-rose-100"
+            >
+              Clear
+            </button>
+          </div>
+
+          <div className="mt-3 grid gap-2">
+            {items.slice(0, 5).map((item) => (
+              <div key={item.id} className="rounded-2xl border border-white/10 bg-white/[0.025] p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-2 py-1 text-[10px] font-black text-fuchsia-100">
+                    {item.area}
+                  </span>
+                  <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2 py-1 text-[10px] font-black text-amber-100">
+                    {item.severity}
+                  </span>
+                  <span className="text-[11px] font-bold text-slate-500">
+                    {new Date(item.created_at).toLocaleString()}
+                  </span>
+                </div>
+
+                <div className="mt-2 text-sm font-bold leading-6 text-slate-200">
+                  {item.message}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </Card>
+  );
+}
 function HealthProductionQaPanel({
   snapshot,
   profile,
@@ -1074,6 +1290,7 @@ function HealthProductionQaPanel({
   history,
   progressLogs,
   devices,
+  feedbackCount = 0,
   onOpen,
 }) {
   const storageDiagnostics = runHealthStorageDiagnostics();
@@ -1194,6 +1411,16 @@ function HealthProductionQaPanel({
       open: "coach-chat",
     },
     {
+      label: "Beta feedback",
+      ok: feedbackCount > 0,
+      detail:
+        feedbackCount > 0
+          ? `${feedbackCount} local feedback report(s) saved.`
+          : "No beta feedback saved yet.",
+      action: "Feedback",
+      open: "coach-chat",
+      optional: true,
+    },    {
       label: "SYNC actions",
       ok: typeof onOpen === "function",
       detail:
@@ -1559,7 +1786,7 @@ function HealthLaunchReadinessCard({
               {item.detail}
             </div>
             <div className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-white">
-              {item.action} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢
+              {item.action} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢
             </div>
           </button>
         ))}
@@ -1650,6 +1877,7 @@ export default function HealthDashboard({
   onRepeatLastWeek,
 }) {
   const [quoteIndex, setQuoteIndex] = useState(0);
+  const [feedbackCount, setFeedbackCount] = useState(() => readHealthBetaFeedback().length);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -1787,7 +2015,14 @@ export default function HealthDashboard({
           history={history}
           progressLogs={progressLogs}
           devices={devices}
+          feedbackCount={feedbackCount}
           onOpen={onOpen}
+        />
+      </HealthCardErrorBoundary>
+      <HealthCardErrorBoundary name="Beta Feedback" onOpen={onOpen}>
+        <HealthBetaFeedbackPanel
+          runtimeDiagnostics={runHealthWebRuntimeDiagnostics()}
+          onFeedbackChange={(items) => setFeedbackCount(Array.isArray(items) ? items.length : 0)}
         />
       </HealthCardErrorBoundary>
 
