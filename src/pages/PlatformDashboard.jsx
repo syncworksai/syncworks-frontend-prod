@@ -130,6 +130,16 @@ function DeveloperAgentPanel() {
   const [selectedApprovedTask, setSelectedApprovedTask] = useState("");
   const [dispatchingTask, setDispatchingTask] = useState("");
   const [dispatchMessage, setDispatchMessage] = useState("");
+  const [runTaskLabels, setRunTaskLabels] = useState(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      return JSON.parse(
+        window.localStorage.getItem("sw_developer_agent_run_labels") || "{}"
+      );
+    } catch {
+      return {};
+    }
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -161,9 +171,35 @@ function DeveloperAgentPanel() {
     loadAgentStatus();
   }, []);
 
+  const persistRunTaskLabels = (nextLabels) => {
+    setRunTaskLabels(nextLabels);
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        "sw_developer_agent_run_labels",
+        JSON.stringify(nextLabels)
+      );
+    } catch {
+      // Local run labels are a convenience only.
+    }
+  };
+
   const liveRunActive = Boolean(
     agentStatus?.recent_runs?.some((run) => ["queued", "in_progress"].includes(run?.status))
   );
+
+  const rememberLatestRunTask = (taskId, statusPayload) => {
+    const run = statusPayload?.recent_runs?.[0];
+    if (!run?.id || !taskId) return;
+
+    persistRunTaskLabels({
+      ...runTaskLabels,
+      [String(run.id)]: {
+        task_id: taskId,
+        label: DEVELOPER_AGENT_TASK_LABELS[taskId] || taskId,
+      },
+    });
+  };
 
   const dispatchApprovedTask = async () => {
     if (!selectedApprovedTask || dispatchingTask || liveRunActive || !agentStatus?.configured) return;
@@ -175,8 +211,21 @@ function DeveloperAgentPanel() {
     try {
       await api.post("/platform/developer-agent/run/", { task_id: selectedApprovedTask });
       setDispatchMessage(`Accepted: ${DEVELOPER_AGENT_TASK_LABELS[selectedApprovedTask] || selectedApprovedTask}`);
-      await loadAgentStatus({ quiet: true });
-      window.setTimeout(() => loadAgentStatus({ quiet: true }), 2500);
+      const firstRefresh = await api.get("/platform/developer-agent/status/");
+      const firstPayload = firstRefresh?.data || {};
+      setAgentStatus(firstPayload);
+      rememberLatestRunTask(selectedApprovedTask, firstPayload);
+
+      window.setTimeout(async () => {
+        try {
+          const delayedRefresh = await api.get("/platform/developer-agent/status/");
+          const delayedPayload = delayedRefresh?.data || {};
+          setAgentStatus(delayedPayload);
+          rememberLatestRunTask(selectedApprovedTask, delayedPayload);
+        } catch {
+          // Manual refresh still works if this delayed refresh fails.
+        }
+      }, 2500);
     } catch (error) {
       setAgentError(getDeveloperAgentError(error, "Unable to start the approved task."));
     } finally {
@@ -338,8 +387,8 @@ function DeveloperAgentPanel() {
           {(agentStatus?.recent_runs || []).map((run) => (
             <a key={run.id} href={run.html_url} target="_blank" rel="noreferrer" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 p-3 hover:border-cyan-500/40 hover:bg-slate-900/60">
               <div>
-                <div className="font-medium text-slate-200">Run #{run.id}</div>
-                <div className="text-xs text-slate-500">{run.head_branch || agentStatus?.ref || "main"} · {run.created_at || "Unknown time"}</div>
+                <div className="font-medium text-slate-200">{runTaskLabels[String(run.id)]?.label || "Task not captured"}</div>
+                <div className="text-xs text-slate-500">Run #{run.id} · {run.head_branch || agentStatus?.ref || "main"} · {run.created_at || "Unknown time"}</div>
               </div>
               <div className="text-sm text-cyan-300">{run.status || "unknown"}{run.conclusion ? ` · ${run.conclusion}` : ""}</div>
             </a>
