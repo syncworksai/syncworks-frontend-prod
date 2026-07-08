@@ -79,7 +79,25 @@ const DEVELOPER_AGENT_TASK_LABELS = {
 };
 
 function getDeveloperAgentError(error, fallback) {
-  return error?.response?.data?.detail || error?.message || fallback;
+  return cleanDisplayText(error?.response?.data?.detail || error?.message || fallback, fallback);
+}
+
+function cleanDisplayText(value, fallback = "-") {
+  if (value === null || value === undefined || value === "") return fallback;
+
+  const text = String(value)
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/[\u2192]/g, "->")
+    .replace(/[\u00B7]/g, "-")
+    .replace(/[\uFFFD]/g, "")
+    .trim();
+
+  if (!text) return fallback;
+  if (/[ÃÂ]/.test(text)) return fallback;
+
+  return text.replace(/[^\x20-\x7E]/g, " ").replace(/\s+/g, " ").trim() || fallback;
 }
 
 function makeInitialModules() {
@@ -148,13 +166,13 @@ const HEALTH_LAUNCH_LOCK_ITEMS = [
     id: "health_feedback_submit",
     group: "Feedback",
     title: "Health beta feedback submits",
-    detail: "Health Dashboard Ã¢â€ â€™ Beta Feedback saves to backend and local queue.",
+    detail: "Health Dashboard -> Beta Feedback saves to backend and local queue.",
   },
   {
     id: "god_mode_feedback_loads",
     group: "Feedback",
     title: "God Mode feedback inbox loads",
-    detail: "God Mode Ã¢â€ â€™ Health Feedback shows submitted tester reports.",
+    detail: "God Mode -> Health Feedback shows submitted tester reports.",
   },
   {
     id: "god_mode_status_actions",
@@ -567,14 +585,14 @@ const HEALTH_SMOKE_TESTS = [
     id: "feedback_submit",
     group: "Feedback",
     title: "Submit beta feedback",
-    steps: "Health Dashboard → Beta Feedback. Submit a low-severity test message.",
+    steps: "Health Dashboard -> Beta Feedback. Submit a low-severity test message.",
     expected: "Shows sent to backend and saved locally. No local-only error unless backend deploy/migration is missing.",
   },
   {
     id: "feedback_inbox",
     group: "Feedback",
     title: "God Mode feedback inbox receives report",
-    steps: "God Mode → Health Feedback. Refresh after submitting feedback.",
+    steps: "God Mode -> Health Feedback. Refresh after submitting feedback.",
     expected: "The report appears with area, severity, status, user, runtime, and page path.",
   },
   {
@@ -588,7 +606,7 @@ const HEALTH_SMOKE_TESTS = [
     id: "launch_lock",
     group: "Feedback",
     title: "Launch lock checklist works",
-    steps: "God Mode → Health Launch Lock. Mark one item passed, one blocked, one waived. Copy report.",
+    steps: "God Mode -> Health Launch Lock. Mark one item passed, one blocked, one waived. Copy report.",
     expected: "Score and counts update. Copy Launch Report works.",
   },
   {
@@ -651,7 +669,7 @@ const HEALTH_SMOKE_TESTS = [
     id: "auth_app_switch",
     group: "Auth",
     title: "Mobile app switch/session check",
-    steps: "Open Health on phone, switch apps for 1–2 minutes, return.",
+    steps: "Open Health on phone, switch apps for 1-2 minutes, return.",
     expected: "User is not immediately kicked to login during normal app switching.",
   },
   {
@@ -1038,7 +1056,7 @@ function DeveloperAgentPanel() {
     if (typeof window === "undefined") return {};
     try {
       return JSON.parse(
-        window.localStorage.getItem("sw_developer_agent_run_labels") || "{}"
+        window.localStorage.getItem("sw_developer_agent_run_labels_ascii_v1") || "{}"
       );
     } catch {
       return {};
@@ -1080,7 +1098,7 @@ function DeveloperAgentPanel() {
     if (typeof window === "undefined") return;
     try {
       window.localStorage.setItem(
-        "sw_developer_agent_run_labels",
+        "sw_developer_agent_run_labels_ascii_v1",
         JSON.stringify(nextLabels)
       );
     } catch {
@@ -1114,7 +1132,7 @@ function DeveloperAgentPanel() {
 
     try {
       await api.post("/platform/developer-agent/run/", { task_id: selectedApprovedTask });
-      setDispatchMessage(`Accepted: ${DEVELOPER_AGENT_TASK_LABELS[selectedApprovedTask] || selectedApprovedTask}`);
+      setDispatchMessage(`Accepted: ${cleanDisplayText(DEVELOPER_AGENT_TASK_LABELS[selectedApprovedTask] || selectedApprovedTask)}`);
       const firstRefresh = await api.get("/platform/developer-agent/status/");
       const firstPayload = firstRefresh?.data || {};
       setAgentStatus(firstPayload);
@@ -1262,8 +1280,8 @@ function DeveloperAgentPanel() {
 
         <div className="grid gap-3 md:grid-cols-4">
           <Stat label="Backend" value={agentLoading ? "Loading..." : agentStatus?.configured ? "Configured" : "Not configured"} />
-          <Stat label="Repository" value={agentStatus?.repository || "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â"} />
-          <Stat label="Workflow" value={agentStatus?.workflow || "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â"} />
+          <Stat label="Repository" value={cleanDisplayText(agentStatus?.repository)} />
+          <Stat label="Workflow" value={cleanDisplayText(agentStatus?.workflow)} />
           <Stat label="Live Run" value={liveRunActive ? "In progress" : "Idle"} />
         </div>
 
@@ -1277,8 +1295,8 @@ function DeveloperAgentPanel() {
         </div>
 
         <div className="grid gap-2 text-xs text-slate-400 md:grid-cols-5">
-          <div>Branch only: {agentStatus?.safety_flags?.branch_only ? "Yes" : "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â"}</div>
-          <div>Draft PR only: {agentStatus?.safety_flags?.draft_pr_only ? "Yes" : "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â"}</div>
+          <div>Branch only: {agentStatus?.safety_flags?.branch_only ? "Yes" : "-"}</div>
+          <div>Draft PR only: {agentStatus?.safety_flags?.draft_pr_only ? "Yes" : "-"}</div>
           <div>Auto merge: {agentStatus?.safety_flags?.auto_merge ? "Enabled" : "Disabled"}</div>
           <div>Auto deploy: {agentStatus?.safety_flags?.auto_deploy ? "Enabled" : "Disabled"}</div>
           <div>Production migrations: {agentStatus?.safety_flags?.production_migrations ? "Enabled" : "Disabled"}</div>
@@ -1291,10 +1309,10 @@ function DeveloperAgentPanel() {
           {(agentStatus?.recent_runs || []).map((run) => (
             <a key={run.id} href={run.html_url} target="_blank" rel="noreferrer" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 p-3 hover:border-cyan-500/40 hover:bg-slate-900/60">
               <div>
-                <div className="font-medium text-slate-200">{runTaskLabels[String(run.id)]?.label || "Task not captured"}</div>
-                <div className="text-xs text-slate-500">Run #{run.id} ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {run.head_branch || agentStatus?.ref || "main"} ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {run.created_at || "Unknown time"}</div>
+                <div className="font-medium text-slate-200">{cleanDisplayText(runTaskLabels[String(run.id)]?.label, "Task not captured")}</div>
+                <div className="text-xs text-slate-500">Run #{cleanDisplayText(run.id)} - {cleanDisplayText(run.head_branch || agentStatus?.ref, "main")} - {cleanDisplayText(run.created_at, "Unknown time")}</div>
               </div>
-              <div className="text-sm text-cyan-300">{run.status || "unknown"}{run.conclusion ? ` ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ${run.conclusion}` : ""}</div>
+              <div className="text-sm text-cyan-300">{cleanDisplayText(run.status, "unknown")}{run.conclusion ? ` - ${cleanDisplayText(run.conclusion)}` : ""}</div>
             </a>
           ))}
         </div>
@@ -1358,8 +1376,8 @@ function DeveloperAgentPanel() {
                     <div className="text-xs text-slate-500">Status: {task.status}</div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <button type="button" onClick={() => advanceQueueTask(task.id, "RUNNING")} className="rounded border border-slate-700 px-2 py-1 text-xs">pending ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ running</button>
-                    <button type="button" onClick={() => advanceQueueTask(task.id, "COMPLETED")} className="rounded border border-slate-700 px-2 py-1 text-xs">running ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ completed</button>
+                    <button type="button" onClick={() => advanceQueueTask(task.id, "RUNNING")} className="rounded border border-slate-700 px-2 py-1 text-xs">pending to running</button>
+                    <button type="button" onClick={() => advanceQueueTask(task.id, "COMPLETED")} className="rounded border border-slate-700 px-2 py-1 text-xs">running to completed</button>
                     <button type="button" onClick={() => advanceQueueTask(task.id, "FAILED")} className="rounded border border-slate-700 px-2 py-1 text-xs">explicit failure</button>
                     <button type="button" onClick={() => advanceQueueTask(task.id, "BLOCKED")} className="rounded border border-slate-700 px-2 py-1 text-xs">explicit blocked</button>
                   </div>
@@ -1430,7 +1448,7 @@ export default function PlatformDashboard() {
 
       <ModeBar
         title="SyncWorks Admin"
-        subtitle="Platform console ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â performance, billing locks, ads, broadcasts, and support triage."
+        subtitle="Platform console - performance, billing locks, ads, broadcasts, and support triage."
       />
 
       <main className="relative max-w-7xl mx-auto px-4 py-6 space-y-5">
