@@ -232,7 +232,7 @@ setDate(todayYmd());
               onClick={onClose}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] font-black text-white"
             >
-              ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¢
+              ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢
             </button>
           </div>
 
@@ -371,7 +371,7 @@ setDate(todayYmd());
             onClick={onClose}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] font-black text-white"
           >
-            ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¢
+            ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢
           </button>
         </div>
 
@@ -615,7 +615,7 @@ setDate(todayYmd());
             disabled={!canSave || saving}
             className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {saving ? "SavingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦" : "Save Entry"}
+            {saving ? "SavingÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦" : "Save Entry"}
           </button>
         </div>
       </section>

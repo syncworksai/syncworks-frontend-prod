@@ -419,7 +419,7 @@ function DynamicWarmupCard({
                       : "border-white/15 bg-white/[0.04] text-slate-400"
                   )}
                 >
-                  {item.completed ? "ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ" : index + 1}
+                  {item.completed ? "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“" : index + 1}
                 </div>
 
                 <div className="min-w-0 flex-1">
@@ -913,7 +913,7 @@ function SetCompletionSheet({
                 )}
               >
                 {setType === "warmup"
-                  ? "Warm-up Set"
+                  ? "Warm-Up Set"
                   : "Working Set"}
               </button>
 
@@ -1246,13 +1246,13 @@ function SetHistory({
                           log.reps ||
                           "-"}
                         {log.rpe || log.ease_score
-                          ? ` Ãƒâ€šÃ‚Â· Effort ${log.rpe || log.ease_score}`
+                          ? ` ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Effort ${log.rpe || log.ease_score}`
                           : ""}
                         {log.set_type === "warmup"
-                          ? " Ãƒâ€šÃ‚Â· Warm-up"
+                          ? " ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Warm-up"
                           : ""}
                         {log.reached_failure
-                          ? " Ãƒâ€šÃ‚Â· Failure"
+                          ? " ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Failure"
                           : ""}
                       </div>
                     ) : (
@@ -5173,7 +5173,7 @@ export default function ActiveWorkoutSessionDrawer({
           <div className="absolute inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#020617]/96 px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 backdrop-blur-xl">
             {session.pending_set_logging ? (
               <div className="mx-auto mb-2 max-w-4xl rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-center text-[10px] font-black text-amber-100">
-                Set complete ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â finish logging before starting another set.
+                Set complete ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â finish logging before starting another set.
               </div>
             ) : null}
 

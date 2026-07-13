@@ -374,7 +374,7 @@ function LogDataMenu({
             onClick={onClose}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] font-black text-white"
           >
-            ✕
+            âœ•
           </button>
         </div>
 
@@ -611,7 +611,7 @@ export default function HealthHome({
             </h1>
 
             <p className="mt-2 text-sm leading-6 text-slate-400">
-              {todayLabel()} · Readiness{" "}
+              {todayLabel()} Â· Readiness{" "}
               {snapshot?.readiness || "not logged"}
             </p>
           </div>
@@ -885,7 +885,7 @@ export default function HealthHome({
                       key={item}
                       className="flex items-start gap-2 text-xs leading-5 text-lime-50/90"
                     >
-                      <span className="mt-0.5 text-lime-300">âœ“</span>
+                      <span className="mt-0.5 text-lime-300">Ã¢Å“â€œ</span>
                       <span>{item}</span>
                     </div>
                   ))}
@@ -924,7 +924,7 @@ export default function HealthHome({
                   <div className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100">
                     Full Control
                   </div>
-                  <div className="text-2xl">ï¼‹</div>
+                  <div className="text-2xl">Ã¯Â¼â€¹</div>
                 </div>
 
                 <div className="mt-4 text-2xl font-black text-white">
@@ -946,7 +946,7 @@ export default function HealthHome({
                       key={item}
                       className="flex items-start gap-2 text-xs leading-5 text-cyan-50/90"
                     >
-                      <span className="mt-0.5 text-cyan-300">âœ“</span>
+                      <span className="mt-0.5 text-cyan-300">Ã¢Å“â€œ</span>
                       <span>{item}</span>
                     </div>
                   ))}
