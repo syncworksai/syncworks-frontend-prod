@@ -1,4 +1,4 @@
-// src/pages/CustomerHealth.jsx
+﻿// src/pages/CustomerHealth.jsx
 import React, {
   useEffect,
   useMemo,
@@ -56,6 +56,7 @@ import {
   mergeDailyMetricEntry,
 } from "../components/customer-health/healthDailyMetricIntelligence";
 import "../components/customer-health/healthUiPolish.css";
+import "../components/customer-health/healthObsidianElectric.css";
 import { buildAdaptiveWorkout } from "../components/customer-health/healthAdaptiveWorkoutGenerator";
 import { buildAiWeeklyPlan } from "../components/customer-health/healthAiWeeklyPlan";
 import {
@@ -3800,4 +3801,5 @@ export default function CustomerHealth() {
     </div>
   );
 }
+
 

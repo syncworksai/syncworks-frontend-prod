@@ -1,0 +1,289 @@
+﻿/*
+ * SyncWorks Health - Obsidian Electric
+ * Phase 1 visual foundation.
+ *
+ * Purpose:
+ * - Convert Health from cyan/purple glass UI to satin-black, graphite,
+ *   and true electric green.
+ * - Improve mobile containment, wrapping, tap targets, and readability.
+ * - Preserve current Health logic, routes, drawers, and stored data.
+ */
+
+:root {
+  --sw-health-bg: #020403;
+  --sw-health-bg-soft: #050806;
+  --sw-health-surface: #080d0a;
+  --sw-health-surface-2: #0d1410;
+  --sw-health-surface-3: #141b17;
+  --sw-health-graphite: #1a211d;
+
+  --sw-health-green: #00f56a;
+  --sw-health-green-bright: #2cff82;
+  --sw-health-green-deep: #00a947;
+  --sw-health-green-muted: #70e99e;
+
+  --sw-health-text: #f4f8f5;
+  --sw-health-muted: #8f9d95;
+  --sw-health-faint: #647069;
+
+  --sw-health-border: rgba(120, 255, 170, 0.16);
+  --sw-health-border-strong: rgba(0, 245, 106, 0.42);
+  --sw-health-glow: rgba(0, 245, 106, 0.22);
+  --sw-health-glow-strong: rgba(0, 245, 106, 0.36);
+
+  --sw-health-warning: #ffb347;
+  --sw-health-danger: #ff5668;
+}
+
+/* Health page atmosphere */
+.health-obsidian-electric,
+.health-obsidian-electric main,
+.health-obsidian-electric [role="main"] {
+  color: var(--sw-health-text);
+}
+
+.health-obsidian-electric {
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(0, 245, 106, 0.09), transparent 24rem),
+    radial-gradient(circle at 8% 44%, rgba(0, 169, 71, 0.06), transparent 22rem),
+    linear-gradient(180deg, #010302 0%, #030604 45%, #010201 100%);
+  isolation: isolate;
+  overflow-x: clip;
+}
+
+.health-obsidian-electric::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  opacity: 0.18;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.014) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: linear-gradient(to bottom, black, transparent 80%);
+}
+
+/* Universal mobile containment */
+.health-obsidian-electric *,
+.health-obsidian-electric *::before,
+.health-obsidian-electric *::after {
+  box-sizing: border-box;
+}
+
+.health-obsidian-electric :where(section, article, div, button, a, p, span, h1, h2, h3, h4, input, textarea, select) {
+  min-width: 0;
+}
+
+.health-obsidian-electric :where(p, span, h1, h2, h3, h4, button, a, label) {
+  overflow-wrap: anywhere;
+}
+
+.health-obsidian-electric img,
+.health-obsidian-electric video,
+.health-obsidian-electric canvas,
+.health-obsidian-electric svg {
+  max-width: 100%;
+}
+
+/* Satin graphite cards */
+.health-obsidian-electric :where(section, article)[class*="rounded-"] {
+  position: relative;
+  border-color: var(--sw-health-border) !important;
+  background:
+    linear-gradient(145deg, rgba(18, 27, 22, 0.96), rgba(5, 9, 7, 0.98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.035),
+    0 18px 50px rgba(0,0,0,0.32);
+}
+
+.health-obsidian-electric :where(section, article)[class*="rounded-"]::after {
+  position: absolute;
+  top: 0;
+  right: 1.15rem;
+  width: 3.5rem;
+  height: 1px;
+  pointer-events: none;
+  content: "";
+  background: linear-gradient(90deg, transparent, var(--sw-health-green), transparent);
+  opacity: 0.58;
+  filter: drop-shadow(0 0 7px var(--sw-health-green));
+}
+
+/* Re-map old decorative color utilities into one controlled system */
+.health-obsidian-electric [class*="text-cyan-"],
+.health-obsidian-electric [class*="text-emerald-"],
+.health-obsidian-electric [class*="text-lime-"],
+.health-obsidian-electric [class*="text-fuchsia-"],
+.health-obsidian-electric [class*="text-violet-"],
+.health-obsidian-electric [class*="text-purple-"] {
+  color: var(--sw-health-green-muted) !important;
+}
+
+.health-obsidian-electric [class*="border-cyan-"],
+.health-obsidian-electric [class*="border-emerald-"],
+.health-obsidian-electric [class*="border-lime-"],
+.health-obsidian-electric [class*="border-fuchsia-"],
+.health-obsidian-electric [class*="border-violet-"],
+.health-obsidian-electric [class*="border-purple-"] {
+  border-color: var(--sw-health-border-strong) !important;
+}
+
+.health-obsidian-electric [class*="bg-cyan-"],
+.health-obsidian-electric [class*="bg-emerald-"],
+.health-obsidian-electric [class*="bg-lime-"],
+.health-obsidian-electric [class*="bg-fuchsia-"],
+.health-obsidian-electric [class*="bg-violet-"],
+.health-obsidian-electric [class*="bg-purple-"] {
+  background-color: rgba(0, 245, 106, 0.09) !important;
+}
+
+/* True electric-green primary buttons */
+.health-obsidian-electric button[class*="bg-gradient"],
+.health-obsidian-electric a[class*="bg-gradient"],
+.health-obsidian-electric button[class*="from-cyan"],
+.health-obsidian-electric button[class*="from-emerald"],
+.health-obsidian-electric button[class*="from-lime"] {
+  border: 1px solid rgba(44, 255, 130, 0.52) !important;
+  color: #021408 !important;
+  background: linear-gradient(135deg, #2cff82 0%, #00f56a 52%, #00b84c 100%) !important;
+  box-shadow:
+    0 0 0 1px rgba(0,245,106,0.12),
+    0 10px 28px rgba(0,245,106,0.20),
+    inset 0 1px 0 rgba(255,255,255,0.35) !important;
+  text-shadow: none !important;
+}
+
+.health-obsidian-electric button[class*="bg-gradient"]:active,
+.health-obsidian-electric a[class*="bg-gradient"]:active {
+  transform: translateY(1px) scale(0.99);
+  box-shadow:
+    0 0 0 1px rgba(0,245,106,0.12),
+    0 5px 18px rgba(0,245,106,0.16) !important;
+}
+
+/* Secondary buttons */
+.health-obsidian-electric button:not([class*="bg-gradient"]) {
+  border-color: rgba(125, 156, 137, 0.22);
+}
+
+.health-obsidian-electric button:not([class*="bg-gradient"]):hover {
+  border-color: rgba(0,245,106,0.38);
+}
+
+/* Inputs */
+.health-obsidian-electric :where(input, textarea, select) {
+  max-width: 100%;
+  color: var(--sw-health-text);
+  border-color: rgba(116, 145, 127, 0.28) !important;
+  background: rgba(1, 4, 2, 0.74) !important;
+  box-shadow: inset 0 1px 8px rgba(0,0,0,0.28);
+}
+
+.health-obsidian-electric :where(input, textarea, select):focus {
+  border-color: var(--sw-health-green) !important;
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(0,245,106,0.12),
+    inset 0 1px 8px rgba(0,0,0,0.28);
+}
+
+/* Metrics and progress */
+.health-obsidian-electric [class*="bg-gradient-to-r"] {
+  background-image: linear-gradient(90deg, var(--sw-health-green-deep), var(--sw-health-green-bright)) !important;
+  box-shadow: 0 0 14px rgba(0,245,106,0.28);
+}
+
+.health-obsidian-electric [class*="ring-cyan"],
+.health-obsidian-electric [class*="ring-emerald"],
+.health-obsidian-electric [class*="ring-lime"] {
+  --tw-ring-color: rgba(0,245,106,0.38) !important;
+}
+
+/* Typography */
+.health-obsidian-electric h1,
+.health-obsidian-electric h2,
+.health-obsidian-electric h3 {
+  letter-spacing: -0.025em;
+}
+
+.health-obsidian-electric [class*="tracking-["] {
+  letter-spacing: 0.16em;
+}
+
+/* Prevent the exact line-item overflow seen in Nutrition */
+.health-obsidian-electric :where(li, [role="listitem"]) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.health-obsidian-electric :where(li, [role="listitem"]) > * {
+  min-width: 0;
+}
+
+.health-obsidian-electric :where(.flex, [class*="flex"]) > :where(p, div, span) {
+  min-width: 0;
+}
+
+/* Drawers / modal surfaces */
+.health-obsidian-electric [class*="fixed"][class*="inset-0"] {
+  max-width: 100vw;
+}
+
+.health-obsidian-electric [class*="fixed"][class*="bottom-0"],
+.health-obsidian-electric [class*="fixed"][class*="inset-y-0"] {
+  border-color: var(--sw-health-border) !important;
+}
+
+/* Mobile bottom controls: darker, tighter, more instrument-like */
+@media (max-width: 767px) {
+  .health-obsidian-electric {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .health-obsidian-electric :where(button, a) {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .health-obsidian-electric button {
+    min-height: 44px;
+  }
+
+  .health-obsidian-electric [class*="sticky"][class*="bottom-"],
+  .health-obsidian-electric [class*="fixed"][class*="bottom-"] {
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .health-obsidian-electric [class*="grid-cols-4"] {
+    gap: 0.55rem;
+  }
+
+  .health-obsidian-electric [class*="text-5xl"] {
+    font-size: clamp(2rem, 10vw, 3rem);
+    line-height: 1;
+  }
+
+  .health-obsidian-electric [class*="text-4xl"] {
+    font-size: clamp(1.75rem, 8vw, 2.4rem);
+  }
+
+  .health-obsidian-electric [class*="px-6"] {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Respect reduced-motion users */
+@media (prefers-reduced-motion: reduce) {
+  .health-obsidian-electric *,
+  .health-obsidian-electric *::before,
+  .health-obsidian-electric *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
