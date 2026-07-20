@@ -20,6 +20,22 @@ function CoachIcon() {
   );
 }
 
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  );
+}
+
+function ArrowIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 12h14M14 7l5 5-5 5" />
+    </svg>
+  );
+}
+
 function BrandMark({ compact = false }) {
   return (
     <span className={`relative flex shrink-0 items-center justify-center rounded-2xl border border-emerald-300/35 bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.10),transparent_28%),linear-gradient(145deg,#132019,#020403)] font-black italic text-emerald-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_0_24px_rgba(0,245,106,0.18)] ${compact ? "h-10 w-10 text-xl" : "h-11 w-11 text-2xl"}`}>
@@ -52,7 +68,7 @@ const MENU_GROUPS = [
     ],
   },
   {
-    title: "Coach & Setup",
+    title: "Coach and Setup",
     items: [
       ["SYNC Coach", "coach-chat"],
       ["Health Profile", "profile-intake"],
@@ -77,13 +93,12 @@ export default function HealthAppHeader({
     try {
       const completed = window.localStorage.getItem(TOUR_KEY) === "true";
       if (!completed) {
-        // Mark it immediately so routine remounts, refreshes, or logins do not reopen it.
         window.localStorage.setItem(TOUR_KEY, "true");
         setHelpMode("tour");
         setHelpOpen(true);
       }
     } catch {
-      // If storage is unavailable, do not force an automatic popup repeatedly.
+      // Storage may be unavailable.
     }
   }, [hasHealthAccess]);
 
@@ -139,8 +154,8 @@ export default function HealthAppHeader({
               <MenuIcon />
             </button>
 
-            <button type="button" onClick={onExit} aria-label="Exit Health and return to Personal Home" title="Back to SyncWorks" className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.035] text-2xl font-light leading-none text-slate-200 hover:border-emerald-300/35 hover:text-white">
-              Ã—
+            <button type="button" onClick={onExit} aria-label="Exit Health and return to Personal Home" title="Back to SyncWorks" className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.035] text-slate-200 hover:border-emerald-300/35 hover:text-white">
+              <CloseIcon />
             </button>
           </div>
         </div>
@@ -177,7 +192,7 @@ export default function HealthAppHeader({
 
             <button type="button" onClick={onExit} className="mt-2 flex h-12 w-full items-center justify-between rounded-xl border border-white/10 bg-black/35 px-4 text-sm font-black text-slate-200 hover:border-emerald-300/30 hover:text-white">
               <span>Back to SyncWorks</span>
-              <span aria-hidden="true">â†’</span>
+              <ArrowIcon />
             </button>
           </div>
         ) : null}

@@ -88,7 +88,11 @@ const TOUR_STEPS = [
 ];
 
 function CloseIcon() {
-  return <span aria-hidden="true" className="text-2xl leading-none">Ã—</span>;
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  );
 }
 
 export default function HealthHelpCenter({ open, onClose, initialMode = "help" }) {
@@ -123,6 +127,7 @@ export default function HealthHelpCenter({ open, onClose, initialMode = "help" }
               {mode === "tour" ? "Quick Start Tour" : "Help Center"}
             </h2>
           </div>
+
           <button type="button" onClick={onClose} aria-label="Close help" className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-slate-200 hover:border-emerald-300/35 hover:text-white">
             <CloseIcon />
           </button>
@@ -148,10 +153,11 @@ export default function HealthHelpCenter({ open, onClose, initialMode = "help" }
 
               <div className="mt-7 flex items-center justify-between gap-3">
                 <button type="button" onClick={() => setTourIndex((current) => Math.max(0, current - 1))} disabled={tourIndex === 0} className="h-12 rounded-2xl border border-white/10 bg-white/[0.03] px-5 text-sm font-black text-slate-200 disabled:cursor-not-allowed disabled:opacity-35">Back</button>
+
                 {tourIndex < TOUR_STEPS.length - 1 ? (
-                  <button type="button" onClick={() => setTourIndex((current) => Math.min(TOUR_STEPS.length - 1, current + 1))} className="h-12 rounded-2xl border border-emerald-300/50 bg-emerald-400 px-6 text-sm font-black text-[#021408] shadow-[0_0_28px_rgba(0,245,106,0.22)]">Next</button>
+                  <button type="button" onClick={() => setTourIndex((current) => Math.min(TOUR_STEPS.length - 1, current + 1))} className="h-12 rounded-2xl border border-emerald-300/50 bg-emerald-400 px-6 text-sm font-black text-black shadow-[0_0_28px_rgba(0,245,106,0.22)]">Next</button>
                 ) : (
-                  <button type="button" onClick={onClose} className="h-12 rounded-2xl border border-emerald-300/50 bg-emerald-400 px-6 text-sm font-black text-[#021408] shadow-[0_0_28px_rgba(0,245,106,0.22)]">Enter Health</button>
+                  <button type="button" onClick={onClose} className="h-12 rounded-2xl border border-emerald-300/50 bg-emerald-400 px-6 text-sm font-black text-black shadow-[0_0_28px_rgba(0,245,106,0.22)]">Enter Health</button>
                 )}
               </div>
             </div>
@@ -175,6 +181,7 @@ export default function HealthHelpCenter({ open, onClose, initialMode = "help" }
                       <span className="mt-1 text-xl text-emerald-300 transition group-open:rotate-45">+</span>
                     </div>
                   </summary>
+
                   <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
                     {section.items.map((item, index) => (
                       <div key={index} className="flex gap-3 text-sm leading-6 text-slate-300">
