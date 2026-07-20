@@ -28,7 +28,7 @@ import {
 import TodayPlanDrawer from "../components/customer-health/TodayPlanDrawer";
 import HealthDashboard from "../components/customer-health/HealthDashboard";
 import HealthProgressCharts from "../components/customer-health/HealthProgressCharts";
-import HealthHome from "../components/customer-health/HealthHome";
+import HealthPremiumHome from "../components/customer-health/HealthPremiumHome";
 import PlanTodayWorkoutDrawer from "../components/customer-health/PlanTodayWorkoutDrawer";
 import PreWorkoutCheckInDrawer from "../components/customer-health/PreWorkoutCheckInDrawer";
 import HealthProfileIntakeDrawer from "../components/customer-health/HealthProfileIntakeDrawer";
@@ -3189,7 +3189,7 @@ export default function CustomerHealth() {
                 }
               />
             </div>
-          ) : (            <HealthHome
+          ) : (            <HealthPremiumHome
               profile={profile}
               snapshot={syncedSnapshot}
               history={history}
