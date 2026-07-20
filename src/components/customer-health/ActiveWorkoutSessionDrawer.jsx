@@ -317,7 +317,7 @@ function DynamicWarmupCard({
   }
 
   return (
-    <section className="rounded-[1.5rem] border border-amber-300/25 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_34%),linear-gradient(145deg,#111827,#07111f)] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] sm:rounded-[2rem]">
+    <section className="rounded-[1.5rem] border border-amber-300/25 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_34%),linear-gradient(145deg,#0d130f,#040705)] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] sm:rounded-[2rem]">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-200">
@@ -371,7 +371,7 @@ function DynamicWarmupCard({
           <button
             type="button"
             onClick={onComplete}
-            className="mt-3 h-12 w-full rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100"
+            className="mt-3 h-12 w-full rounded-2xl border border-emerald-300/55 bg-emerald-400 text-sm font-black text-black shadow-[0_0_28px_rgba(0,245,106,0.20)]"
           >
             Start First Exercise Now
           </button>
@@ -419,7 +419,7 @@ function DynamicWarmupCard({
                       : "border-white/15 bg-white/[0.04] text-slate-400"
                   )}
                 >
-                  {item.completed ? "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“" : index + 1}
+                  {item.completed ? "Done" : index + 1}
                 </div>
 
                 <div className="min-w-0 flex-1">
@@ -466,7 +466,7 @@ function DynamicWarmupCard({
               type="button"
               onClick={finishWarmup}
               disabled={!allComplete}
-              className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="h-12 rounded-2xl border border-emerald-300/55 bg-emerald-400 text-sm font-black text-black shadow-[0_0_28px_rgba(0,245,106,0.20)] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Warmup Complete
             </button>
@@ -500,7 +500,7 @@ function ScoreSelect({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm font-bold text-white outline-none focus:border-cyan-300/40"
+        className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm font-bold text-white outline-none focus:border-emerald-300/40"
       >
         <option value="">Select</option>
 
@@ -516,7 +516,7 @@ function ScoreSelect({
 
 function StatTile({ label, value, tone = "cyan" }) {
   const tones = {
-    cyan: "border-cyan-300/20 bg-cyan-300/10 text-cyan-100",
+    cyan: "border-emerald-300/20 bg-emerald-300/10 text-emerald-100",
     emerald:
       "border-lime-300/20 bg-lime-300/10 text-lime-100",
     amber:
@@ -553,7 +553,7 @@ function MobileStat({
   tone = "cyan",
 }) {
   const tones = {
-    cyan: "border-cyan-300/20 bg-cyan-300/10 text-cyan-100",
+    cyan: "border-emerald-300/20 bg-emerald-300/10 text-emerald-100",
     emerald:
       "border-lime-300/20 bg-lime-300/10 text-lime-100",
     amber:
@@ -702,7 +702,7 @@ function SetCompletionSheet({
         className="absolute inset-0"
       />
 
-      <section className="relative z-[131] max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-[2rem] border border-lime-300/20 bg-[#07111f] p-4 shadow-[0_28px_90px_rgba(0,0,0,0.7)]">
+      <section className="relative z-[131] max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-[2rem] border border-lime-300/20 bg-[#040705] p-4 shadow-[0_28px_90px_rgba(0,0,0,0.7)]">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="text-[10px] font-black uppercase tracking-[0.22em] text-lime-300">
@@ -721,7 +721,7 @@ function SetCompletionSheet({
           </div>
 
           <div className="flex shrink-0 flex-col gap-2">
-            <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-center text-xs font-black text-cyan-100">
+            <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-center text-xs font-black text-emerald-100">
               Goal: {targetWeight || "BW"} x {targetReps || "-"}
             </div>
 
@@ -749,7 +749,7 @@ function SetCompletionSheet({
               onChange={(event) => setWeight(event.target.value)}
               inputMode="decimal"
               placeholder="Bodyweight"
-              className="mt-2 h-14 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-center text-xl font-black text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
+              className="mt-2 h-14 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-center text-xl font-black text-white outline-none placeholder:text-slate-600 focus:border-emerald-300/40"
             />
           </label>
 
@@ -762,7 +762,7 @@ function SetCompletionSheet({
               value={reps}
               onChange={(event) => setReps(event.target.value)}
               inputMode="numeric"
-              className="mt-2 h-14 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-center text-xl font-black text-white outline-none focus:border-cyan-300/40"
+              className="mt-2 h-14 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-center text-xl font-black text-white outline-none focus:border-emerald-300/40"
             />
           </label>
         </div>
@@ -825,7 +825,7 @@ function SetCompletionSheet({
                     className={cx(
                       "rounded-xl border px-2 py-3 text-xs font-black",
                       formQuality === option
-                        ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
+                        ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-100"
                         : "border-white/10 bg-white/[0.03] text-slate-300"
                     )}
                   >
@@ -1006,10 +1006,10 @@ function SetHistory({
   return (
     <div className="space-y-3">
       {exercise?.previous_performance ? (
-        <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.07] p-3">
+        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.07] p-3">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200">
                 Previous Exercise Memory
               </div>
 
@@ -1084,7 +1084,7 @@ function SetHistory({
               <button
                 type="button"
                 onClick={onCopyPrevious}
-                className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-[10px] font-black text-cyan-100"
+                className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-[10px] font-black text-emerald-100"
               >
                 Copy Last Set
               </button>
@@ -1212,7 +1212,7 @@ function SetHistory({
                 log
                   ? "border-lime-300/20 bg-lime-300/[0.07]"
                   : isCurrent
-                  ? "border-cyan-300/30 bg-cyan-300/[0.09] shadow-[0_0_28px_rgba(34,211,238,0.08)]"
+                  ? "border-emerald-300/30 bg-emerald-300/[0.09] shadow-[0_0_28px_rgba(0,245,106,0.08)]"
                   : "border-white/10 bg-white/[0.025]"
               )}
             >
@@ -1224,7 +1224,7 @@ function SetHistory({
                       log
                         ? "border-lime-300/25 bg-lime-300/10 text-lime-100"
                         : isCurrent
-                        ? "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
+                        ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100"
                         : "border-white/10 bg-white/[0.04] text-slate-400"
                     )}
                   >
@@ -1270,7 +1270,7 @@ function SetHistory({
                     log
                       ? "border-lime-300/20 bg-lime-300/10 text-lime-100"
                       : isCurrent
-                      ? "border-cyan-300/20 bg-cyan-300/10 text-cyan-100"
+                      ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100"
                       : "border-white/10 bg-white/[0.04] text-slate-500"
                   )}
                 >
@@ -1689,8 +1689,8 @@ function FinishReviewPanel({
         </div>
       ) : null}
 
-      <div className="rounded-[2rem] border border-cyan-300/20 bg-cyan-300/[0.07] p-4">
-        <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-100">
+      <div className="rounded-[2rem] border border-emerald-300/20 bg-emerald-300/[0.07] p-4">
+        <div className="text-xs font-black uppercase tracking-[0.18em] text-emerald-100">
           Session Check-In
         </div>
 
@@ -1713,7 +1713,7 @@ function FinishReviewPanel({
                     className={cx(
                       "min-h-11 rounded-xl border px-2 text-[10px] font-black sm:text-xs",
                       row.value === option
-                        ? "border-cyan-300/35 bg-cyan-300/12 text-cyan-100"
+                        ? "border-emerald-300/35 bg-emerald-300/12 text-emerald-100"
                         : "border-white/10 bg-white/[0.03] text-slate-300"
                     )}
                   >
@@ -1743,8 +1743,8 @@ function FinishReviewPanel({
         ) : null}
       </div>
 
-      <div className="rounded-[2rem] border border-cyan-300/20 bg-cyan-300/[0.07] p-4">
-        <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-100">
+      <div className="rounded-[2rem] border border-emerald-300/20 bg-emerald-300/[0.07] p-4">
+        <div className="text-xs font-black uppercase tracking-[0.18em] text-emerald-100">
           Choose Your Cooldown
         </div>
 
@@ -2237,10 +2237,10 @@ function WorkoutVoiceCommandCard({
   onStop,
 }) {
   return (
-    <section className="rounded-[1.5rem] border border-cyan-300/20 bg-cyan-300/[0.06] p-3 sm:rounded-[2rem] sm:p-4">
+    <section className="rounded-[1.5rem] border border-emerald-300/20 bg-emerald-300/[0.06] p-3 sm:rounded-[2rem] sm:p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-200">
+          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-200">
             Hands-Free SYNC
           </div>
 
@@ -2329,7 +2329,7 @@ function ExerciseMemoryCarryForwardCard({ exercise }) {
       ? "border-rose-300/20 bg-rose-300/[0.08] text-rose-100"
       : action === "hold"
       ? "border-amber-300/20 bg-amber-300/[0.08] text-amber-100"
-      : "border-cyan-300/20 bg-cyan-300/[0.08] text-cyan-100";
+      : "border-emerald-300/20 bg-emerald-300/[0.08] text-emerald-100";
 
   const previousSet = previous?.last_set || {};
   const targetWeight =
@@ -2383,11 +2383,11 @@ function ExerciseMemoryCarryForwardCard({ exercise }) {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-center">
-          <div className="text-[8px] font-black uppercase tracking-[0.14em] text-cyan-200">
+        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-center">
+          <div className="text-[8px] font-black uppercase tracking-[0.14em] text-emerald-200">
             Next
           </div>
-          <div className="mt-0.5 text-xs font-black text-cyan-100">
+          <div className="mt-0.5 text-xs font-black text-emerald-100">
             {targetReps || "-"} x {formatLoad(targetWeight)}
           </div>
         </div>
@@ -4238,7 +4238,7 @@ export default function ActiveWorkoutSessionDrawer({
         className="absolute inset-0"
       />
 
-      <section className="relative z-[91] flex h-full w-full max-w-6xl flex-col overflow-hidden border-l border-cyan-300/10 bg-[radial-gradient(circle_at_top_left,rgba(57,255,136,0.09),transparent_18%),radial-gradient(circle_at_top_right,rgba(255,59,212,0.07),transparent_20%),linear-gradient(180deg,#040812_0%,#07111f_100%)] shadow-[-30px_0_80px_rgba(0,0,0,0.6)]">
+      <section className="relative z-[91] flex h-full w-full max-w-6xl flex-col overflow-hidden border-l border-emerald-300/10 bg-[radial-gradient(circle_at_top_left,rgba(57,255,136,0.09),transparent_18%),radial-gradient(circle_at_top_right,rgba(255,59,212,0.07),transparent_20%),linear-gradient(180deg,#040812_0%,#040705_100%)] shadow-[-30px_0_80px_rgba(0,0,0,0.6)]">
         <header className="sticky top-0 z-30 border-b border-white/10 bg-[#040812]/95 px-3 py-3 backdrop-blur-xl sm:px-6 sm:py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -4453,10 +4453,10 @@ export default function ActiveWorkoutSessionDrawer({
               ) : null}
 
               {!isCompleted && warmupReady && currentExercise ? (
-                <div className="rounded-[1.35rem] border border-cyan-300/15 bg-[linear-gradient(135deg,rgba(34,211,238,0.08),rgba(57,255,136,0.06))] p-3 shadow-[0_12px_36px_rgba(0,0,0,0.18)] sm:rounded-[2rem] sm:p-4">
+                <div className="rounded-[1.35rem] border border-emerald-300/15 bg-[linear-gradient(135deg,rgba(0,245,106,0.08),rgba(57,255,136,0.06))] p-3 shadow-[0_12px_36px_rgba(0,0,0,0.18)] sm:rounded-[2rem] sm:p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-[9px] font-black uppercase tracking-[0.18em] text-cyan-200">
+                      <div className="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-200">
                         Current Exercise
                       </div>
 
@@ -4528,11 +4528,11 @@ export default function ActiveWorkoutSessionDrawer({
                       </div>
                     </div>
 
-                    <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-center">
-                      <div className="text-[8px] font-black uppercase tracking-[0.14em] text-cyan-200">
+                    <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-center">
+                      <div className="text-[8px] font-black uppercase tracking-[0.14em] text-emerald-200">
                         Completed
                       </div>
-                      <div className="mt-0.5 text-sm font-black text-cyan-100">
+                      <div className="mt-0.5 text-sm font-black text-emerald-100">
                         {(currentExercise.set_logs || []).length}/{currentExercise.planned_sets || "-"}
                       </div>
                     </div>
@@ -4578,7 +4578,7 @@ export default function ActiveWorkoutSessionDrawer({
                       <button
                         type="button"
                         onClick={() => openAdaptation("replace")}
-                        className="h-10 rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-xs font-black text-cyan-100"
+                        className="h-10 rounded-xl border border-emerald-300/20 bg-emerald-300/10 text-xs font-black text-emerald-100"
                       >
                         Swap Exercise
                       </button>
@@ -4625,7 +4625,7 @@ export default function ActiveWorkoutSessionDrawer({
                           "w-[155px] rounded-2xl border px-3 py-3 text-left transition",
                           index ===
                             session.current_exercise_index
-                            ? "border-cyan-300/30 bg-cyan-300/10"
+                            ? "border-emerald-300/30 bg-emerald-300/10"
                             : "border-white/10 bg-white/[0.03]"
                         )}
                       >
@@ -4661,8 +4661,8 @@ export default function ActiveWorkoutSessionDrawer({
               ) : null}
 
               {isCompleted ? (
-                <div className="rounded-2xl border border-cyan-300/25 bg-cyan-300/10 p-4">
-                  <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-100">
+                <div className="rounded-2xl border border-emerald-300/25 bg-emerald-300/10 p-4">
+                  <div className="text-xs font-black uppercase tracking-[0.18em] text-emerald-100">
                     Workout Completed
                   </div>
 
@@ -4762,7 +4762,7 @@ export default function ActiveWorkoutSessionDrawer({
                 <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3 sm:rounded-[2rem] sm:p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
+                      <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200">
                         Live Set Board
                       </div>
 
@@ -4837,7 +4837,7 @@ export default function ActiveWorkoutSessionDrawer({
                         <button
                           type="button"
                           onClick={() => setDetailsOpen(true)}
-                          className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-[10px] font-black text-cyan-100"
+                          className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-[10px] font-black text-emerald-100"
                         >
                           Edit Sets
                         </button>
@@ -4881,7 +4881,7 @@ export default function ActiveWorkoutSessionDrawer({
                                   log
                                     ? "border-lime-300/25 bg-lime-300/10 text-lime-100"
                                     : isCurrent
-                                    ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
+                                    ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-100"
                                     : "border-white/10 bg-white/[0.03] text-slate-500"
                                 )}
                               >
@@ -5031,7 +5031,7 @@ export default function ActiveWorkoutSessionDrawer({
                       "h-11 rounded-2xl border text-sm font-black disabled:opacity-40",
                       session.rest_active
                         ? "border-amber-300/25 bg-amber-300/10 text-amber-100"
-                        : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
+                        : "border-emerald-300/25 bg-emerald-300/10 text-emerald-100"
                     )}
                   >
                     {session.rest_active
@@ -5249,7 +5249,7 @@ export default function ActiveWorkoutSessionDrawer({
                   (session.current_exercise_index || 0) >=
                     totalExercises - 1
                 }
-                className="h-12 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-1 text-[10px] font-black text-cyan-100 disabled:opacity-35 sm:text-xs"
+                className="h-12 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-1 text-[10px] font-black text-emerald-100 disabled:opacity-35 sm:text-xs"
               >
                 Next
               </button>
