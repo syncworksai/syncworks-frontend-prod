@@ -25,7 +25,6 @@ import {
   ensureCurrentHealthWeek,
 } from "../components/customer-health/healthDailyLifecycle";
 
-import HealthConfetti from "../components/customer-health/HealthConfetti";
 import TodayPlanDrawer from "../components/customer-health/TodayPlanDrawer";
 import HealthDashboard from "../components/customer-health/HealthDashboard";
 import HealthProgressCharts from "../components/customer-health/HealthProgressCharts";
@@ -3764,17 +3763,6 @@ export default function CustomerHealth() {
         onClose={dismissReleaseUpdate}
         onOpenInsights={
           openReleaseInsights
-        }
-      />
-
-      <HealthConfetti
-        active={!!celebration}
-        title={celebration?.title}
-        subtitle={
-          celebration?.subtitle
-        }
-        onDone={() =>
-          setCelebration(null)
         }
       />
     </div>

@@ -20,6 +20,47 @@ function CoachIcon() {
   );
 }
 
+function BrandMark({ compact = false }) {
+  return (
+    <span className={`relative flex shrink-0 items-center justify-center rounded-2xl border border-emerald-300/35 bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.10),transparent_28%),linear-gradient(145deg,#132019,#020403)] font-black italic text-emerald-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_0_24px_rgba(0,245,106,0.18)] ${compact ? "h-10 w-10 text-xl" : "h-11 w-11 text-2xl"}`}>
+      S
+      <span className="absolute bottom-1.5 h-px w-5 bg-emerald-300 shadow-[0_0_8px_rgba(0,245,106,0.8)]" />
+    </span>
+  );
+}
+
+const MENU_GROUPS = [
+  {
+    title: "Train",
+    items: [
+      ["Health Home", "home"],
+      ["Today's Plan", "planner"],
+      ["Build Workout", "plan-today"],
+      ["Exercise Library", "exercise-library"],
+      ["Workout History", "workout-history"],
+      ["Cardio / HIIT", "cardio-player"],
+    ],
+  },
+  {
+    title: "Track",
+    items: [
+      ["Quick Log", "quick-log"],
+      ["Nutrition", "nutrition-dashboard"],
+      ["Progress", "insights"],
+      ["Sleep Planner", "sleep"],
+      ["Daily Goals", "daily-goals"],
+    ],
+  },
+  {
+    title: "Coach & Setup",
+    items: [
+      ["SYNC Coach", "coach-chat"],
+      ["Health Profile", "profile-intake"],
+      ["Devices", "devices"],
+    ],
+  },
+];
+
 export default function HealthAppHeader({
   hasHealthAccess,
   syncStatus = "local",
@@ -31,30 +72,34 @@ export default function HealthAppHeader({
   const [helpMode, setHelpMode] = useState("help");
 
   useEffect(() => {
-    if (!hasHealthAccess) return;
+    if (!hasHealthAccess || typeof window === "undefined") return;
+
     try {
-      if (window.localStorage.getItem(TOUR_KEY) !== "true") {
+      const completed = window.localStorage.getItem(TOUR_KEY) === "true";
+      if (!completed) {
+        // Mark it immediately so routine remounts, refreshes, or logins do not reopen it.
+        window.localStorage.setItem(TOUR_KEY, "true");
         setHelpMode("tour");
         setHelpOpen(true);
       }
     } catch {
-      // Local storage can be unavailable in private browsing.
+      // If storage is unavailable, do not force an automatic popup repeatedly.
     }
   }, [hasHealthAccess]);
 
   function closeHelp() {
     setHelpOpen(false);
-    try {
-      window.localStorage.setItem(TOUR_KEY, "true");
-    } catch {
-      // Keep onboarding usable even when persistence is unavailable.
-    }
   }
 
   function launchHelp(mode = "help") {
     setMenuOpen(false);
     setHelpMode(mode);
     setHelpOpen(true);
+  }
+
+  function navigate(target) {
+    setMenuOpen(false);
+    onOpen?.(target);
   }
 
   const syncCopy = {
@@ -67,12 +112,10 @@ export default function HealthAppHeader({
 
   return (
     <>
-      <header className="sticky top-0 z-[90] border-b border-emerald-300/15 bg-[#020403]/95 backdrop-blur-2xl">
-        <div className="mx-auto flex min-h-[74px] max-w-7xl items-center justify-between gap-3 px-3 py-3 sm:px-5">
-          <button type="button" onClick={() => onOpen?.("home")} className="group flex min-w-0 items-center gap-3 text-left">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-emerald-300/30 bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.14),transparent_28%),linear-gradient(145deg,rgba(0,245,106,0.18),rgba(3,8,5,0.98))] shadow-[0_0_22px_rgba(0,245,106,0.16)]">
-              <img src="/health/brand/syncworks-start-logo.png" alt="" className="h-9 w-9 object-contain" />
-            </span>
+      <header className="sticky top-0 z-[90] border-b border-emerald-300/15 bg-[#020403]/96 backdrop-blur-2xl">
+        <div className="mx-auto flex min-h-[72px] max-w-7xl items-center justify-between gap-3 px-3 py-3 sm:px-5">
+          <button type="button" onClick={() => navigate("home")} className="group flex min-w-0 items-center gap-3 text-left">
+            <BrandMark />
             <span className="min-w-0">
               <span className="block truncate text-[12px] font-black uppercase tracking-[0.24em] text-emerald-300">SYNCWORKS</span>
               <span className="block truncate text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">FITNESS COACH</span>
@@ -81,13 +124,13 @@ export default function HealthAppHeader({
 
           <div className="flex shrink-0 items-center gap-2">
             {hasHealthAccess ? (
-              <button type="button" onClick={() => onOpen?.("coach-chat")} className="hidden h-11 items-center gap-2 rounded-2xl border border-emerald-300/40 bg-emerald-300/[0.07] px-4 text-xs font-black uppercase tracking-[0.12em] text-emerald-100 shadow-[0_0_22px_rgba(0,245,106,0.12)] sm:inline-flex">
+              <button type="button" onClick={() => navigate("coach-chat")} className="hidden h-11 items-center gap-2 rounded-2xl border border-emerald-300/35 bg-emerald-300/[0.06] px-4 text-xs font-black uppercase tracking-[0.12em] text-emerald-100 shadow-[0_0_22px_rgba(0,245,106,0.10)] sm:inline-flex">
                 <CoachIcon /> AI Coach
               </button>
             ) : null}
 
             {hasHealthAccess ? (
-              <span className={`hidden rounded-xl border px-2.5 py-2 text-[9px] font-black uppercase tracking-[0.12em] md:inline-flex ${syncStatus === "error" ? "border-rose-400/25 bg-rose-400/10 text-rose-200" : "border-emerald-300/20 bg-emerald-300/[0.05] text-emerald-200"}`}>
+              <span className={`hidden rounded-xl border px-2.5 py-2 text-[9px] font-black uppercase tracking-[0.12em] md:inline-flex ${syncStatus === "error" ? "border-rose-400/25 bg-rose-400/10 text-rose-200" : "border-white/10 bg-white/[0.03] text-slate-300"}`}>
                 {syncCopy[syncStatus] || "LOCAL"}
               </span>
             ) : null}
@@ -103,22 +146,36 @@ export default function HealthAppHeader({
         </div>
 
         {menuOpen ? (
-          <div className="absolute right-3 top-[68px] w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-[1.5rem] border border-emerald-300/20 bg-[#080d0a]/98 p-2 shadow-[0_28px_80px_rgba(0,0,0,0.58),0_0_40px_rgba(0,245,106,0.10)] backdrop-blur-2xl sm:right-5">
-            <div className="px-3 pb-2 pt-3">
-              <div className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-300">HEALTH MENU</div>
-              <div className="mt-1 text-sm text-slate-400">Navigate Health or return to SyncWorks.</div>
+          <div className="absolute right-3 top-[68px] max-h-[calc(100dvh-86px)] w-[min(25rem,calc(100vw-1.5rem))] overflow-y-auto rounded-[1.5rem] border border-emerald-300/20 bg-[#080d0a]/98 p-3 shadow-[0_28px_80px_rgba(0,0,0,0.62),0_0_40px_rgba(0,245,106,0.09)] backdrop-blur-2xl sm:right-5">
+            <div className="flex items-center gap-3 px-2 pb-3 pt-1">
+              <BrandMark compact />
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-300">HEALTH MENU</div>
+                <div className="mt-1 text-xs text-slate-400">Everything in your fitness app.</div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => { setMenuOpen(false); onOpen?.("home"); }} className="h-12 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-left text-sm font-black text-white hover:border-emerald-300/30">Health Home</button>
-              <button type="button" onClick={() => { setMenuOpen(false); onOpen?.("planner"); }} className="h-12 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-left text-sm font-black text-white hover:border-emerald-300/30">Workouts</button>
-              <button type="button" onClick={() => { setMenuOpen(false); onOpen?.("insights"); }} className="h-12 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-left text-sm font-black text-white hover:border-emerald-300/30">Progress</button>
-              <button type="button" onClick={() => { setMenuOpen(false); onOpen?.("coach-chat"); }} className="h-12 rounded-xl border border-emerald-300/25 bg-emerald-300/[0.06] px-3 text-left text-sm font-black text-emerald-100">SYNC Coach</button>
-              <button type="button" onClick={() => launchHelp("help")} className="h-12 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-left text-sm font-black text-white hover:border-emerald-300/30">Help Center</button>
-              <button type="button" onClick={() => launchHelp("tour")} className="h-12 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-left text-sm font-black text-white hover:border-emerald-300/30">Replay Tour</button>
+            <div className="space-y-4">
+              {MENU_GROUPS.map((group) => (
+                <section key={group.title} className="rounded-2xl border border-white/[0.07] bg-black/20 p-2">
+                  <div className="px-2 pb-2 pt-1 text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">{group.title}</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {group.items.map(([label, target]) => (
+                      <button key={target} type="button" onClick={() => navigate(target)} className={`min-h-11 rounded-xl border px-3 py-2.5 text-left text-xs font-black ${target === "coach-chat" ? "border-emerald-300/30 bg-emerald-300/[0.07] text-emerald-100" : "border-white/10 bg-white/[0.025] text-white hover:border-emerald-300/30"}`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              ))}
             </div>
 
-            <button type="button" onClick={onExit} className="mt-2 flex h-12 w-full items-center justify-between rounded-xl border border-white/10 bg-black/30 px-4 text-sm font-black text-slate-200 hover:border-emerald-300/30 hover:text-white">
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => launchHelp("help")} className="h-11 rounded-xl border border-white/10 bg-white/[0.025] px-3 text-left text-xs font-black text-white hover:border-emerald-300/30">Help Center</button>
+              <button type="button" onClick={() => launchHelp("tour")} className="h-11 rounded-xl border border-white/10 bg-white/[0.025] px-3 text-left text-xs font-black text-white hover:border-emerald-300/30">Replay Tour</button>
+            </div>
+
+            <button type="button" onClick={onExit} className="mt-2 flex h-12 w-full items-center justify-between rounded-xl border border-white/10 bg-black/35 px-4 text-sm font-black text-slate-200 hover:border-emerald-300/30 hover:text-white">
               <span>Back to SyncWorks</span>
               <span aria-hidden="true">â†’</span>
             </button>
