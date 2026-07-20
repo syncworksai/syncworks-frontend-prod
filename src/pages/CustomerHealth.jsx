@@ -1,4 +1,4 @@
-﻿// src/pages/CustomerHealth.jsx
+// src/pages/CustomerHealth.jsx
 import React, {
   useEffect,
   useMemo,
@@ -3084,7 +3084,7 @@ export default function CustomerHealth() {
     !!syncedSnapshot?.coach_plan_proposal;
 
   return (
-    <div className="health-ui-polish min-h-dvh overflow-x-hidden bg-[#020617] pb-24 text-slate-100 lg:pb-0">
+    <div className="health-ui-polish health-obsidian-electric min-h-dvh overflow-x-hidden bg-[#020617] pb-24 text-slate-100 lg:pb-0">
       <div className="pointer-events-none fixed inset-0">
         <div className="absolute inset-0 bg-[#020617]" />
 
@@ -3801,5 +3801,3 @@ export default function CustomerHealth() {
     </div>
   );
 }
-
-
