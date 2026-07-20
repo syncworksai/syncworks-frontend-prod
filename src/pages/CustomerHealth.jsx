@@ -8,7 +8,7 @@ import React, {
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
-import ModeBar from "../components/ModeBar";
+import HealthAppHeader from "../components/customer-health/HealthAppHeader";
 import { useAuth } from "../auth/AuthContext";
 
 import {
@@ -3091,32 +3091,11 @@ export default function CustomerHealth() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,0.12),transparent_30%),radial-gradient(circle_at_top_right,rgba(34,211,238,0.10),transparent_32%),radial-gradient(circle_at_bottom,rgba(99,102,241,0.12),transparent_38%)]" />
       </div>
 
-      <ModeBar
-        title="Health"
-        subtitle={
-          hasHealthAccess
-            ? "Home | daily logging | workouts | coach | insights"
-            : "30 days free | $2.99/month after"
-        }
-        rightActions={
-          <div className="flex items-center gap-2">
-            {hasHealthAccess ? (
-              <SyncStatusPill
-                status={syncStatus}
-              />
-            ) : null}
-
-            <button
-              type="button"
-              onClick={() =>
-                nav("/customer")
-              }
-              className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs hover:bg-slate-900"
-            >
-              Personal Home
-            </button>
-          </div>
-        }
+      <HealthAppHeader
+        hasHealthAccess={hasHealthAccess}
+        syncStatus={syncStatus}
+        onExit={() => nav("/customer")}
+        onOpen={handleDashboardOpen}
       />
 
       <main
