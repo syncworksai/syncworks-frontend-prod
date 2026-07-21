@@ -2267,6 +2267,130 @@ function WorkoutCommandCenter({
 }
 
 
+
+function playWorkoutCountdownBeep(step = 3) {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const context = new AudioContext();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.value = step === 1 ? 1040 : step === 2 ? 920 : 820;
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.18, context.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.13);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.14);
+    window.setTimeout(() => context.close?.(), 250);
+  } catch {
+    // Countdown audio is best effort.
+  }
+}
+
+function AskSyncCoachSheet({
+  open,
+  listening,
+  transcript,
+  error,
+  messages,
+  draft,
+  audioEnabled,
+  autoStart,
+  onDraftChange,
+  onSend,
+  onListen,
+  onClose,
+  onToggleAudio,
+  onToggleAutoStart,
+}) {
+  if (!open) return null;
+
+  const prompts = [
+    "Should I increase the weight?",
+    "My shoulder feels tight",
+    "Swap this exercise",
+    "Why did you choose 10 reps?",
+    "I only have 30 minutes",
+    "I feel stronger today",
+    "Make the rest shorter",
+    "What should I focus on this set?",
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[190] flex items-end justify-center bg-black/80 p-2 backdrop-blur-md sm:items-center">
+      <button type="button" aria-label="Close Ask SYNC" onClick={onClose} className="absolute inset-0" />
+      <section className="relative z-[191] max-h-[88dvh] w-full max-w-lg overflow-hidden rounded-[1.75rem] border border-[#39ff88]/35 bg-[#030604] shadow-[0_0_44px_rgba(57,255,136,0.18),0_26px_90px_rgba(0,0,0,0.72)]">
+        <div className="flex items-center justify-between border-b border-[#39ff88]/15 px-4 py-3">
+          <div>
+            <div className="text-[9px] font-black uppercase tracking-[0.22em] text-[#65ff9a]">Live Session Intelligence</div>
+            <div className="mt-0.5 text-lg font-black text-white">Ask SYNC</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={onToggleAudio} aria-label={audioEnabled ? "Mute coach audio" : "Enable coach audio"} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/50 text-lg text-white">
+              {audioEnabled ? "🔊" : "🔇"}
+            </button>
+            <button type="button" onClick={onClose} aria-label="Close" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/50 text-lg text-white">×</button>
+          </div>
+        </div>
+
+        <div className="max-h-[50dvh] space-y-3 overflow-y-auto px-4 py-3">
+          <div className="flex flex-wrap gap-2">
+            {prompts.map((prompt) => (
+              <button key={prompt} type="button" onClick={() => onSend(prompt)} className="rounded-full border border-[#39ff88]/18 bg-[#39ff88]/[0.06] px-3 py-2 text-[10px] font-bold text-[#b8ffd1]">
+                {prompt}
+              </button>
+            ))}
+          </div>
+
+          {(messages || []).map((message) => (
+            <div key={message.id} className={message.role === "user" ? "ml-8 rounded-2xl border border-white/10 bg-white/[0.05] px-3 py-2 text-sm text-white" : "mr-8 rounded-2xl border border-[#39ff88]/20 bg-[#39ff88]/[0.07] px-3 py-2 text-sm leading-6 text-[#dfffea]"}>
+              {message.text}
+            </div>
+          ))}
+
+          {transcript ? <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs text-slate-300">Heard: {transcript}</div> : null}
+          {error ? <div className="rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs text-amber-100">{error}</div> : null}
+        </div>
+
+        <div className="border-t border-white/10 p-3">
+          <div className="mb-2 flex items-center justify-between rounded-xl border border-white/10 bg-black/30 px-3 py-2">
+            <div>
+              <div className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">Automatic Set Start</div>
+              <div className="text-xs font-bold text-white">3-second beep countdown</div>
+            </div>
+            <button type="button" onClick={onToggleAutoStart} className={autoStart ? "rounded-full border border-[#39ff88]/40 bg-[#39ff88]/15 px-3 py-1.5 text-[10px] font-black text-[#8affb4]" : "rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-black text-slate-400"}>
+              {autoStart ? "ON" : "OFF"}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-[44px_1fr_54px] gap-2">
+            <button type="button" onClick={onListen} aria-label="Speak to SYNC" className={listening ? "flex h-11 items-center justify-center rounded-xl border border-rose-300/35 bg-rose-300/12 text-lg" : "flex h-11 items-center justify-center rounded-xl border border-[#39ff88]/35 bg-[#39ff88]/10 text-lg"}>
+              {listening ? "■" : "🎙️"}
+            </button>
+            <input
+              value={draft}
+              onChange={(event) => onDraftChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  onSend(draft);
+                }
+              }}
+              placeholder="Ask about this set..."
+              className="h-11 min-w-0 rounded-xl border border-white/10 bg-black/55 px-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-[#39ff88]/40"
+            />
+            <button type="button" onClick={() => onSend(draft)} aria-label="Send" className="h-11 rounded-xl border border-[#65ff9a]/55 bg-[#39ff88] text-lg font-black text-black">↑</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function WorkoutVoiceCommandCard({
   listening,
   transcript,
@@ -2344,7 +2468,21 @@ function ExerciseMemoryCarryForwardCard({ exercise }) {
   const previous = exercise?.previous_performance;
   const recommendation = exercise?.memory_recommendation;
 
-  if (!previous && !recommendation) return null;
+  if (!previous && !recommendation) {
+    return (
+      <section className="rounded-[1.35rem] border border-[#39ff88]/20 bg-[#39ff88]/[0.06] p-3 sm:rounded-[2rem] sm:p-4">
+        <div className="text-[9px] font-black uppercase tracking-[0.2em] text-[#65ff9a]">
+          New Exercise Baseline
+        </div>
+        <h3 className="mt-1 text-base font-black text-white">
+          Create a safe starting point
+        </h3>
+        <p className="mt-2 text-xs leading-5 text-slate-300">
+          Choose a comfortable working weight and complete two or three quality sets around effort 6 to 8. This is not a max-out test. SYNC will save your weight, reps, effort, form, and pain feedback for the next session.
+        </p>
+      </section>
+    );
+  }
 
   const action =
     exercise?.memory_action ||
@@ -2507,6 +2645,11 @@ export default function ActiveWorkoutSessionDrawer({
     useState("");
   const [voiceError, setVoiceError] =
     useState("");
+  const [askSyncOpen, setAskSyncOpen] = useState(false);
+  const [askSyncDraft, setAskSyncDraft] = useState("");
+  const [askSyncMessages, setAskSyncMessages] = useState([]);
+  const [countdownSeconds, setCountdownSeconds] = useState(0);
+  const countdownTimerRef = useRef([]);
   const preWorkoutBriefingRef = useRef("");
   const initializedWorkoutKeyRef = useRef("");
   const latestSessionRef = useRef(null);
@@ -3013,6 +3156,141 @@ export default function ActiveWorkoutSessionDrawer({
     coachVoicePreference,
   ]);
 
+
+  const autoStartSets =
+    snapshot?.auto_start_active_set !== false;
+
+  function toggleCoachAudio() {
+    if (coachAudioMode === "off") {
+      patchCoachSettings({ audioMode: "essential" });
+      return;
+    }
+    stopCoachVoice();
+    patchCoachSettings({ audioMode: "off" });
+  }
+
+  function toggleAutoStartSets() {
+    setSnapshot?.((previous) => ({
+      ...previous,
+      auto_start_active_set:
+        previous?.auto_start_active_set === false,
+      updated_at: new Date().toISOString(),
+    }));
+  }
+
+  function coachReplyForQuestion(rawQuestion) {
+    const question = String(rawQuestion || "").toLowerCase().trim();
+    const exerciseName = currentExercise?.substitute_name || currentExercise?.name || "this exercise";
+    const currentWeight = Number(currentExercise?.current_target_weight || currentExercise?.planned_weight || 0);
+    const currentReps = Number(currentExercise?.current_target_reps || currentExercise?.planned_reps || 0);
+    const previous = currentExercise?.previous_performance || null;
+    const recommendation = currentExercise?.memory_recommendation || null;
+
+    if (question.includes("should i increase") || question.includes("increase the weight") || question.includes("feel stronger")) {
+      if (recommendation?.weight) {
+        return `Your logged history supports ${recommendation.weight} pounds for ${recommendation.reps || currentReps || "the planned reps"}. ${recommendation.reason || "Use the increase only if your warm-up and form feel clean."}`;
+      }
+      if (currentWeight > 0) {
+        return `You do not have enough clean history for an automatic jump yet. Complete this set at ${currentWeight} pounds around effort 7. If form stays clean, add 5 pounds next set.`;
+      }
+      return "Use a comfortable working load around effort 6 to 8. This is a baseline set, not a max-out attempt.";
+    }
+
+    if (question.includes("shoulder") && (question.includes("tight") || question.includes("hurt") || question.includes("pain"))) {
+      return `Stop before forcing the next rep. Recheck your shoulder position and range of motion. If tightness remains, use Swap Exercise for a pain-free variation of ${exerciseName}. Do not train through sharp pain.`;
+    }
+
+    if (question.includes("swap") || question.includes("change exercise")) {
+      if (!session?.set_active && !session?.rest_active) {
+        setAdaptationMode("replace");
+        setAskSyncOpen(false);
+        return `Opening exercise alternatives for ${exerciseName}.`;
+      }
+      return "Finish the active set or rest period first, then I can open exercise alternatives.";
+    }
+
+    if (question.includes("why") && question.includes("rep")) {
+      return `The ${currentReps || "planned"}-rep target balances useful training volume with controlled form. SYNC will adjust it using completed reps, effort, pain feedback, and your previous ${exerciseName} history.`;
+    }
+
+    if (question.includes("30 minutes") || question.includes("short on time") || question.includes("less time")) {
+      return "Keep the main working exercises, shorten rest by 15 to 20 seconds, and skip optional accessories. I will prioritize the highest-value sets first.";
+    }
+
+    if (question.includes("shorter") && question.includes("rest")) {
+      const nextRest = Math.max(30, Number(currentExercise?.rest_seconds || 60) - 15);
+      patchExercise("rest_seconds", nextRest);
+      return `Rest for ${nextRest} seconds after this exercise. I reduced it by 15 seconds while keeping enough recovery for quality reps.`;
+    }
+
+    if (question.includes("focus") || question.includes("cue") || question.includes("form")) {
+      const cue =
+        currentExercise?.form_cue ||
+        currentExercise?.tempo_instruction ||
+        currentExercise?.grip_instruction ||
+        currentExercise?.notes ||
+        getExerciseKnowledge(exerciseName)?.feel ||
+        "Use controlled form, stable joints, and stop one to two reps before technique breaks down.";
+      return `Focus on this: ${cue}`;
+    }
+
+    if (question.includes("baseline") || (!previous && question.includes("new exercise"))) {
+      return `You have not logged ${exerciseName} before. Choose a comfortable working weight and complete two or three quality working sets around effort 6 to 8. This is not a max test. SYNC will save the weight, reps, effort, form, and pain feedback to create your starting baseline.`;
+    }
+
+    return `I am tracking ${exerciseName}, your target, completed sets, effort, rest, and exercise history. Ask whether to increase weight, shorten rest, swap the exercise, explain the rep target, or give you a form cue.`;
+  }
+
+  function submitAskSync(rawQuestion) {
+    const question = String(rawQuestion || "").trim();
+    if (!question) return;
+    const reply = coachReplyForQuestion(question);
+    const stamp = Date.now();
+
+    setAskSyncMessages((previous) => [
+      ...previous,
+      { id: `ask-user-${stamp}`, role: "user", text: question },
+      { id: `ask-sync-${stamp}`, role: "assistant", text: reply },
+    ]);
+    setAskSyncDraft("");
+    setVoiceError("");
+
+    if (coachAudioMode !== "off") {
+      stopCoachVoice();
+      speakCoachText({
+        text: reply,
+        audioMode: "essential",
+        voicePreference: coachVoicePreference,
+        rate: 1.02,
+        pitch: 1,
+        volume: 1,
+      });
+    }
+  }
+
+  function isCoachQuestion(command) {
+    return [
+      "should i increase",
+      "should i add weight",
+      "should i go heavier",
+      "my shoulder",
+      "swap this exercise",
+      "change this exercise",
+      "why did you choose",
+      "why ten reps",
+      "why 10 reps",
+      "i only have",
+      "short on time",
+      "i feel stronger",
+      "make the rest shorter",
+      "shorter rest",
+      "what should i focus",
+      "form cue",
+      "build a baseline",
+      "new exercise",
+    ].some((phrase) => command.includes(phrase));
+  }
+
   function patchCoachSettings(patch = {}) {
     if (typeof setSnapshot !== "function") return;
 
@@ -3106,6 +3384,12 @@ export default function ActiveWorkoutSessionDrawer({
 
     if (!command) {
       setVoiceError("No command was heard. Try again.");
+      return;
+    }
+
+    if (isCoachQuestion(command)) {
+      setAskSyncOpen(true);
+      submitAskSync(command);
       return;
     }
 
@@ -3482,37 +3766,59 @@ export default function ActiveWorkoutSessionDrawer({
       isCompleted ||
       session.paused ||
       session.rest_active ||
-      session.pending_set_logging
+      session.pending_set_logging ||
+      countdownSeconds > 0
     ) {
       return;
     }
 
+    const beginSet = () => {
+      const activeSession = latestSessionRef.current;
+      if (!activeSession || !currentExercise) return;
+
+      setCountdownSeconds(0);
+      setSession(startActiveSet(activeSession, currentExercise.id));
+      setSetCheckInOpen(false);
+
+      if (coachAudioMode !== "off") {
+        stopCoachVoice();
+        speakCoachText({
+          text: `Set ${(currentExercise.set_logs || []).length + 1}. Go.`,
+          audioMode: "essential",
+          voicePreference: coachVoicePreference,
+          rate: 1.04,
+          pitch: 1,
+          volume: 1,
+        });
+      }
+    };
+
     primaryActionLockRef.current = true;
     window.setTimeout(() => {
       primaryActionLockRef.current = false;
-    }, 650);
+    }, autoStartSets ? 3800 : 700);
 
-    setSession(
-      startActiveSet(session, currentExercise.id)
-    );
+    countdownTimerRef.current.forEach((timer) => window.clearTimeout(timer));
+    countdownTimerRef.current = [];
 
-    setSetCheckInOpen(false);
+    if (!autoStartSets) {
+      beginSet();
+      return;
+    }
 
-    speakCoachText({
-      text: buildSetStartPhrase({
-        setNumber:
-          (currentExercise.set_logs || []).length + 1,
-        exercise: currentExercise,
-      }),
-      audioMode: coachAudioMode,
-      voicePreference: coachVoicePreference,
-      rate: 1.04,
-      pitch: 1,
-      volume: 1,
-      ...getWorkoutCoachDelivery(
-        "set_countdown"
-      ),
+    setCountdownSeconds(3);
+    playWorkoutCountdownBeep(3);
+
+    [2, 1].forEach((step, index) => {
+      const timer = window.setTimeout(() => {
+        setCountdownSeconds(step);
+        playWorkoutCountdownBeep(step);
+      }, (index + 1) * 1000);
+      countdownTimerRef.current.push(timer);
     });
+
+    const startTimer = window.setTimeout(beginSet, 3000);
+    countdownTimerRef.current.push(startTimer);
   }
 
   function requestCompleteSet() {
@@ -5483,6 +5789,70 @@ export default function ActiveWorkoutSessionDrawer({
             </section>
           </div>
         ) : null}
+
+
+        {!isCompleted && currentExercise ? (
+          <div className="fixed bottom-[calc(70px+env(safe-area-inset-bottom))] left-1/2 z-[145] w-[calc(100%-1rem)] max-w-md -translate-x-1/2 rounded-[1.4rem] border border-[#39ff88]/25 bg-[#020403]/96 p-2 shadow-[0_0_30px_rgba(57,255,136,0.12),0_18px_50px_rgba(0,0,0,0.62)] backdrop-blur-xl lg:bottom-4">
+            {countdownSeconds > 0 ? (
+              <div className="mb-2 flex h-16 items-center justify-center rounded-2xl border border-[#65ff9a]/45 bg-[#39ff88]/10 text-4xl font-black text-[#8affb4]">
+                {countdownSeconds}
+              </div>
+            ) : null}
+
+            <div className="grid grid-cols-[44px_1fr_44px_44px] gap-2">
+              <button type="button" onClick={() => setSession(toggleSessionPause(session))} aria-label={session?.paused ? "Resume workout" : "Pause workout"} className="flex h-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-lg text-white">
+                {session?.paused ? "▶" : "⏸"}
+              </button>
+
+              <button
+                type="button"
+                onClick={session?.set_active ? requestCompleteSet : startSet}
+                disabled={session?.paused || session?.rest_active || session?.pending_set_logging || savingSet || countdownSeconds > 0}
+                className="h-11 rounded-xl border border-[#65ff9a]/70 bg-[#39ff88] px-3 text-sm font-black uppercase tracking-[0.08em] text-black shadow-[0_0_18px_rgba(57,255,136,0.32)] disabled:opacity-45"
+              >
+                {countdownSeconds > 0
+                  ? `Starting ${countdownSeconds}`
+                  : session?.set_active
+                  ? "✓ Finish Set"
+                  : session?.rest_active
+                  ? `Rest ${formatSeconds(session.rest_remaining_seconds)}`
+                  : "▶ Start Set"}
+              </button>
+
+              <button type="button" onClick={toggleCoachAudio} aria-label={coachAudioMode === "off" ? "Enable coach audio" : "Mute coach audio"} className="flex h-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-lg text-white">
+                {coachAudioMode === "off" ? "🔇" : "🔊"}
+              </button>
+
+              <button type="button" onClick={() => setAskSyncOpen(true)} aria-label="Ask SYNC" className="flex h-11 items-center justify-center rounded-xl border border-[#39ff88]/35 bg-[#39ff88]/10 text-lg">
+                ✦
+              </button>
+            </div>
+
+            <div className="mt-1 text-center text-[9px] font-black uppercase tracking-[0.13em] text-slate-500">
+              Pause · Set Control · Audio · Ask SYNC
+            </div>
+          </div>
+        ) : null}
+
+        <AskSyncCoachSheet
+          open={askSyncOpen}
+          listening={voiceListening}
+          transcript={voiceTranscript}
+          error={voiceError}
+          messages={askSyncMessages}
+          draft={askSyncDraft}
+          audioEnabled={coachAudioMode !== "off"}
+          autoStart={autoStartSets}
+          onDraftChange={setAskSyncDraft}
+          onSend={submitAskSync}
+          onListen={startVoiceListening}
+          onClose={() => {
+            finishVoiceListening();
+            setAskSyncOpen(false);
+          }}
+          onToggleAudio={toggleCoachAudio}
+          onToggleAutoStart={toggleAutoStartSets}
+        />
 
         <LiveWorkoutAdaptationDrawer
           open={!!adaptationMode}
