@@ -1,6 +1,11 @@
 // src/components/customer-health/healthAdaptiveWorkoutGenerator.js
 import { HEALTH_EXERCISE_CATALOG } from "./healthExerciseCatalog";
 import { buildCoachIntelligence } from "./healthCoachIntelligence";
+import {
+  buildExerciseVariation,
+  buildWorkoutWarmup,
+  normalizeWorkoutFocus,
+} from "./healthWorkoutExperience";
 
 function text(value) {
   return String(value || "").toLowerCase();
@@ -136,6 +141,12 @@ function selectUnique(list, count, used = new Set()) {
 
 function normalizeMode(mode = "recommended") {
   const value = text(mode);
+  const explicitFocus = normalizeWorkoutFocus(value);
+
+  if (explicitFocus === "Pull") return "pull";
+  if (explicitFocus === "Push") return "push";
+  if (explicitFocus === "Legs") return "legs";
+  if (explicitFocus === "Core") return "core";
   if (value.includes("recovery")) return "recovery";
   if (value.includes("mobility")) return "mobility";
   if (value.includes("cardio")) return "cardio";
@@ -215,7 +226,11 @@ export function buildAdaptiveWorkout({
   const used = new Set();
   let focus = nextFocus;
 
-  if (requestedMode === "recovery") focus = "Recovery";
+  if (requestedMode === "pull") focus = "Pull";
+  else if (requestedMode === "push") focus = "Push";
+  else if (requestedMode === "legs") focus = "Legs";
+  else if (requestedMode === "core") focus = "Core";
+  else if (requestedMode === "recovery") focus = "Recovery";
   else if (requestedMode === "mobility") focus = "Mobility";
   else if (requestedMode === "cardio") focus = "Cardio";
   else if (requestedMode === "second-session") {
@@ -287,7 +302,16 @@ export function buildAdaptiveWorkout({
   }
   if (!selected.length) selected = selectUnique(HEALTH_EXERCISE_CATALOG, 4, used);
 
-  const exercises = selected.map((exercise, index) => {
+  const experienceLevel =
+    profile.experience_level ||
+    snapshot.experience_level ||
+    "Beginner";
+  const coachingStyle =
+    profile.coaching_style ||
+    snapshot.coaching_style ||
+    "Beginner Friendly";
+
+  const workingExercises = selected.map((exercise, index) => {
     const isCardio = /cardio|hiit/i.test(exercise.category || "");
     const protectedAreas = Array.isArray(snapshot.protected_pain_areas)
       ? snapshot.protected_pain_areas
@@ -315,8 +339,27 @@ export function buildAdaptiveWorkout({
         ? 90
         : 75,
       order: index + 1,
+      ...buildExerciseVariation({
+        exercise,
+        focus,
+        experienceLevel,
+        coachingStyle,
+      }),
     };
   });
+
+  const warmup = buildWorkoutWarmup({
+    focus,
+    experienceLevel,
+  });
+
+  const exercises = [
+    ...warmup,
+    ...workingExercises.map((exercise, index) => ({
+      ...exercise,
+      order: warmup.length + index + 1,
+    })),
+  ];
 
   const titleByMode = {
     recovery: "Light recovery session",
@@ -326,6 +369,10 @@ export function buildAdaptiveWorkout({
       recovery === "Recovery"
         ? "Second session: mobility reset"
         : "Second session: short accessory workout",
+    pull: "Pull workout",
+    push: "Push workout",
+    legs: "Leg workout",
+    core: "Core workout",
     strength: `${focus} strength workout`,
   };
 

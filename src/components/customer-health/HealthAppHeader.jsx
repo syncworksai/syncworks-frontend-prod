@@ -68,10 +68,10 @@ const MENU_GROUPS = [
     ],
   },
   {
-    title: "Coach and Setup",
+    title: "Coach and Profile",
     items: [
       ["SYNC Coach", "coach-chat"],
-      ["Health Profile", "profile-intake"],
+      ["Build Your Profile", "profile-intake"],
       ["Devices", "devices"],
     ],
   },

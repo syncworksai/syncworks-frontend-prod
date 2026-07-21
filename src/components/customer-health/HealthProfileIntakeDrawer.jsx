@@ -197,6 +197,16 @@ export default function HealthProfileIntakeDrawer({
       primary_goal:
         profile?.primary_goal ||
         "General fitness",
+      experience_level:
+        profile?.experience_level ||
+        "Beginner",
+      coaching_style:
+        profile?.coaching_style ||
+        "Beginner Friendly",
+      coach_audio_mode:
+        profile?.coach_audio_mode ||
+        snapshot?.coach_audio_mode ||
+        "music_friendly",
       activity_level:
         profile?.activity_level ||
         "Moderate",
@@ -312,6 +322,15 @@ export default function HealthProfileIntakeDrawer({
       last_profile_update_at:
         completedAt,
       health_profile_ready: true,
+      experience_level:
+        form.experience_level || "Beginner",
+      coaching_style:
+        form.coaching_style || "Beginner Friendly",
+      coach_audio_mode:
+        form.coach_audio_mode || "music_friendly",
+      audible_trainer_enabled:
+        (form.coach_audio_mode || "music_friendly") !==
+        "music_friendly",
     }));
 
     onClose?.();
@@ -331,11 +350,11 @@ export default function HealthProfileIntakeDrawer({
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">
-                One-Time Health Profile
+                Build Your Health Profile
               </div>
 
               <h2 className="mt-1 text-2xl font-black text-white sm:text-3xl">
-                Give your coach a safe starting point
+                Build the coach around you
               </h2>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
@@ -500,6 +519,54 @@ export default function HealthProfileIntakeDrawer({
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
+                <SelectField
+                  label="Training experience"
+                  value={
+                    form.experience_level || "Beginner"
+                  }
+                  onChange={(value) =>
+                    patch("experience_level", value)
+                  }
+                  options={[
+                    "Beginner",
+                    "Intermediate",
+                    "Advanced / Competitive",
+                  ]}
+                />
+
+                <SelectField
+                  label="Coaching style"
+                  value={
+                    form.coaching_style ||
+                    "Beginner Friendly"
+                  }
+                  onChange={(value) =>
+                    patch("coaching_style", value)
+                  }
+                  options={[
+                    "Beginner Friendly",
+                    "Balanced",
+                    "Hardcore",
+                    "Athletic Performance",
+                  ]}
+                />
+
+                <SelectField
+                  label="Coach audio"
+                  value={
+                    form.coach_audio_mode ||
+                    "music_friendly"
+                  }
+                  onChange={(value) =>
+                    patch("coach_audio_mode", value)
+                  }
+                  options={[
+                    "music_friendly",
+                    "essential",
+                    "full",
+                  ]}
+                />
+
                 <SelectField
                   label="Activity level"
                   value={
