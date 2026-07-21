@@ -31,6 +31,7 @@ import HealthProgressCharts from "../components/customer-health/HealthProgressCh
 import HealthPremiumHome from "../components/customer-health/HealthPremiumHome";
 import PlanTodayWorkoutDrawer from "../components/customer-health/PlanTodayWorkoutDrawer";
 import PreWorkoutCheckInDrawer from "../components/customer-health/PreWorkoutCheckInDrawer";
+import WorkoutLocationCheckInDrawer from "../components/customer-health/WorkoutLocationCheckInDrawer";
 import HealthProfileIntakeDrawer from "../components/customer-health/HealthProfileIntakeDrawer";
 import HealthQuickLogDrawer from "../components/customer-health/HealthQuickLogDrawer";
 import NutritionCoachDrawer from "../components/customer-health/NutritionCoachDrawer";
@@ -2548,7 +2549,7 @@ export default function CustomerHealth() {
         ),
     });
 
-    setDrawer("pre-workout");
+    setDrawer("workout-location");
   }
 
   function startAlwaysReadyWorkout() {
@@ -3039,7 +3040,7 @@ export default function CustomerHealth() {
       });
 
     setActivePlannerItem(plannerItem);
-    setDrawer("pre-workout");
+    setDrawer("workout-location");
   }
   function openCardioPlayer(
     plan = null
@@ -3250,6 +3251,67 @@ export default function CustomerHealth() {
 
       {hasHealthAccess ? (
         <>
+          <WorkoutLocationCheckInDrawer
+            open={
+              drawer ===
+              "workout-location"
+            }
+            workout={
+              activePlannerItem
+            }
+            onClose={() =>
+              setDrawer("")
+            }
+            onConfirm={(location) => {
+              const selectedAt =
+                new Date().toISOString();
+
+              setActivePlannerItem((previous) =>
+                previous
+                  ? {
+                      ...previous,
+                      workout_location_id:
+                        location?.id || "",
+                      workout_location_name:
+                        location?.name || "",
+                      workout_location_type:
+                        location?.type || "",
+                      workout_equipment:
+                        Array.isArray(
+                          location?.equipment
+                        )
+                          ? location.equipment
+                          : [],
+                      workout_location_selected_at:
+                        selectedAt,
+                    }
+                  : previous
+              );
+
+              setSnapshot((previous) => ({
+                ...previous,
+                training_location:
+                  location?.name ||
+                  previous.training_location ||
+                  "",
+                equipment:
+                  Array.isArray(
+                    location?.equipment
+                  ) &&
+                  location.equipment.length
+                    ? location.equipment.join(", ")
+                    : previous.equipment,
+                last_workout_location_id:
+                  location?.id || "",
+                last_workout_location_name:
+                  location?.name || "",
+                updated_at: selectedAt,
+              }));
+
+              setDrawer("pre-workout");
+            }}
+          />
+
           <PreWorkoutCheckInDrawer
             open={
               drawer ===
