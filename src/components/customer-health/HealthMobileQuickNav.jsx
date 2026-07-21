@@ -25,7 +25,15 @@ function NavButton({ label, icon, onClick, active = false }) {
   );
 }
 
-export default function HealthMobileQuickNav({ onOpen, hasCoachProposal, activeView = "home" }) {
+export default function HealthMobileQuickNav({
+  onOpen,
+  onStartWorkout,
+  onStartFallback,
+  onResetWorkout,
+  nextSession,
+  hasCoachProposal,
+  activeView = "home",
+}) {
   return (
     <div data-syncworks-module-nav="health" className="fixed inset-x-0 bottom-0 z-[75] border-t border-emerald-300/18 bg-[#020403]/97 px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 shadow-[0_-18px_55px_rgba(0,245,106,0.10)] backdrop-blur-2xl lg:hidden">
       <div className="mx-auto max-w-md">
@@ -33,15 +41,46 @@ export default function HealthMobileQuickNav({ onOpen, hasCoachProposal, activeV
           <NavButton label="Home" icon={<Icon type="home" />} active={activeView === "home"} onClick={() => onOpen?.("home")} />
           <NavButton label="Workouts" icon={<Icon type="plan" />} active={activeView === "planner"} onClick={() => onOpen?.("planner")} />
 
-          <button type="button" onClick={() => onOpen?.("coach-chat")} aria-label="Open SYNC Health assistant" className="group relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-emerald-300/35 bg-[linear-gradient(180deg,rgba(0,245,106,0.10),rgba(2,4,3,0.98))] px-1 py-2 text-center text-[9px] font-black uppercase tracking-[0.08em] text-emerald-100 shadow-[0_0_22px_rgba(0,245,106,0.16)] transition active:scale-[0.96]">
-            <span className="pointer-events-none absolute left-1/2 top-2 h-11 w-11 -translate-x-1/2 rounded-full bg-emerald-300/12 blur-xl" />
-            <span className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-300/40 bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.09),transparent_28%),linear-gradient(145deg,#142019,#020403)] text-xl font-black italic text-emerald-300 shadow-[0_0_18px_rgba(0,245,106,0.22)]">
-              S
-              <span className="absolute bottom-1 h-px w-5 bg-emerald-300 shadow-[0_0_7px_rgba(0,245,106,0.8)]" />
-            </span>
-            <span className="w-full truncate text-center">SYNC</span>
-            <span className="max-w-full truncate text-[7px] font-bold normal-case tracking-normal text-slate-500">Coach</span>
-          </button>
+          <div className="relative min-w-0">
+            <button
+              type="button"
+              onClick={() => {
+                if (nextSession) {
+                  onStartWorkout?.(nextSession);
+                  return;
+                }
+
+                onStartFallback?.();
+              }}
+              aria-label="Start Health workout"
+              className="group relative flex h-full w-full min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-lime-300/55 bg-[radial-gradient(circle_at_50%_30%,rgba(112,255,61,0.18),transparent_48%),linear-gradient(180deg,rgba(112,255,61,0.10),rgba(2,4,3,0.98))] px-1 py-2 text-center text-[9px] font-black uppercase tracking-[0.08em] text-lime-100 shadow-[0_0_30px_rgba(112,255,61,0.24)] transition active:scale-[0.96]"
+            >
+              <span className="pointer-events-none absolute left-1/2 top-1 h-14 w-14 -translate-x-1/2 animate-pulse rounded-full bg-lime-300/20 blur-2xl" />
+              <span className="relative flex h-11 w-11 items-center justify-center rounded-full border border-lime-300/70 bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.16),transparent_30%),linear-gradient(145deg,#172218,#020403)] text-xl font-black italic text-lime-300 shadow-[0_0_26px_rgba(112,255,61,0.58),inset_0_0_18px_rgba(112,255,61,0.10)]">
+                S
+                <span className="absolute bottom-2 h-px w-5 bg-lime-300 shadow-[0_0_9px_rgba(112,255,61,0.95)]" />
+              </span>
+              <span className="w-full truncate text-center">Start Workout</span>
+              <span className="max-w-full truncate text-[7px] font-bold normal-case tracking-normal text-slate-400">
+                {nextSession?.workout_name ||
+                  nextSession?.name ||
+                  "Build today's plan"}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onResetWorkout?.();
+              }}
+              aria-label="Start workout over"
+              title="Start workout over"
+              className="absolute -right-1 -top-1 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/15 bg-[#080b09] text-sm font-black text-white shadow-[0_0_16px_rgba(112,255,61,0.20)] active:scale-95"
+            >
+              â†»
+            </button>
+          </div>
 
           <NavButton label="Progress" icon={<Icon type="progress" />} active={activeView === "insights" || activeView === "dashboard"} onClick={() => onOpen?.("insights")} />
           <NavButton label="Log" icon={<Icon type="log" />} active={hasCoachProposal} onClick={() => onOpen?.("quick-log")} />

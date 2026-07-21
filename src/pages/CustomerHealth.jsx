@@ -2454,7 +2454,7 @@ export default function CustomerHealth() {
     }));
 
     setDrawer(
-      "pre-workout"
+      "workout-location"
     );
   }
 
@@ -3079,6 +3079,42 @@ export default function CustomerHealth() {
         session.completed_at ||
         new Date().toISOString(),
     }));
+  }
+
+  function restartWorkoutFlow() {
+    const confirmed = window.confirm(
+      "Start this workout over from the beginning? This clears only the unfinished active workout, timers, BPM, and current location selection. Saved gyms, profile, history, nutrition, and completed workouts stay intact."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      window.localStorage.removeItem(
+        "syncworks_health_active_workout_v1"
+      );
+      window.localStorage.removeItem(
+        "syncworks_health_current_bpm"
+      );
+    } catch {
+      // Keep the reset usable when storage is unavailable.
+    }
+
+    const nextSession = findNextPlanned(
+      syncedSnapshot.week_plan
+    );
+
+    setDrawer("");
+    setActivePlannerItem(null);
+
+    window.setTimeout(() => {
+      if (nextSession) {
+        setActivePlannerItem(nextSession);
+        setDrawer("workout-location");
+        return;
+      }
+
+      setDrawer("plan-today");
+    }, 0);
   }
 
   const mobileNextSession =
@@ -3827,6 +3863,9 @@ export default function CustomerHealth() {
             }
             onStartFallback={() =>
               setDrawer("plan-today")
+            }
+            onResetWorkout={
+              restartWorkoutFlow
             }
             nextSession={
               mobileNextSession
