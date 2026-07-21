@@ -164,10 +164,13 @@ export default function WorkoutFocusLaunchDrawer({
     if (!open || !started) return undefined;
 
     if (countdown <= 0) {
-      const timer = window.setTimeout(
-        () => onBegin?.(),
-        450
-      );
+      const timer = window.setTimeout(() => {
+        stopCoachVoice();
+        onBegin?.({
+          launch_briefing_completed_at:
+            new Date().toISOString(),
+        });
+      }, 450);
 
       return () => window.clearTimeout(timer);
     }
@@ -212,7 +215,6 @@ export default function WorkoutFocusLaunchDrawer({
       cancelFirst: true,
       eventType: "preworkout_briefing",
       browserFallback: true,
-      provider: "browser",
     });
 
     window.setTimeout(

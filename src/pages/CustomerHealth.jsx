@@ -3360,9 +3360,17 @@ export default function CustomerHealth() {
             onCancel={() =>
               setDrawer("")
             }
-            onBegin={() =>
-              setDrawer("active-workout")
-            }
+            onBegin={(launchMeta = {}) => {
+              setActivePlannerItem((previous) =>
+                previous
+                  ? {
+                      ...previous,
+                      ...launchMeta,
+                    }
+                  : previous
+              );
+              setDrawer("active-workout");
+            }}
           />
 
           <PreWorkoutCheckInDrawer

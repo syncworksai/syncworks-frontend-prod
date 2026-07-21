@@ -993,52 +993,6 @@ function SetCompletionSheet({
             {saving ? "Saving Set..." : "Save Set"}
           </button>
         </div>
-        {changeWorkoutOpen ? (
-          <div className="fixed inset-0 z-[160] flex items-end justify-center bg-black/80 p-3 backdrop-blur-md sm:items-center">
-            <button
-              type="button"
-              aria-label="Cancel changing workout"
-              onClick={() => setChangeWorkoutOpen(false)}
-              className="absolute inset-0"
-            />
-
-            <section className="relative z-[161] w-full max-w-lg rounded-[2rem] border border-rose-300/25 bg-[#080b09] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.65)] sm:p-5">
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-200">
-                Change Workout
-              </div>
-
-              <h3 className="mt-2 text-2xl font-black text-white">
-                Choose a different workout?
-              </h3>
-
-              <p className="mt-2 text-sm leading-6 text-slate-400">
-                This will discard the current unfinished session and return you to Health so you can select Push, Pull, Legs, Cardio, recovery, or another saved workout.
-              </p>
-
-              <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] p-3 text-xs font-bold leading-5 text-amber-100">
-                Completed sets in this unfinished session will not be added to workout history. Use Finish Workout when you want to preserve logged work.
-              </div>
-
-              <div className="mt-4 grid grid-cols-[0.85fr_1.15fr] gap-2">
-                <button
-                  type="button"
-                  onClick={() => setChangeWorkoutOpen(false)}
-                  className="h-12 rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-black text-white"
-                >
-                  Keep Current
-                </button>
-
-                <button
-                  type="button"
-                  onClick={confirmChangeWorkout}
-                  className="h-12 rounded-2xl border border-rose-300/30 bg-rose-300/15 text-sm font-black text-rose-100"
-                >
-                  Discard and Change
-                </button>
-              </div>
-            </section>
-          </div>
-        ) : null}
       </section>
     </div>
   );
@@ -2859,6 +2813,7 @@ export default function ActiveWorkoutSessionDrawer({
     if (
       !open ||
       !session ||
+      plannerItem?.launch_briefing_completed_at ||
       coachAudioMode === "off"
     ) {
       return;
@@ -2900,6 +2855,7 @@ export default function ActiveWorkoutSessionDrawer({
   }, [
     open,
     session?.id,
+    plannerItem?.launch_briefing_completed_at,
     coachAudioMode,
     coachVoicePreference,
   ]);
@@ -4728,7 +4684,7 @@ export default function ActiveWorkoutSessionDrawer({
               ) : null}
               {!isCompleted && warmupReady && currentExercise ? (
                 <div className="space-y-2">
-                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                  <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
                     <button
                       type="button"
                       onClick={() =>
@@ -4737,6 +4693,22 @@ export default function ActiveWorkoutSessionDrawer({
                       className="health-secondary-action h-11 rounded-2xl border px-2 text-[10px] font-black sm:px-3 sm:text-xs"
                     >
                       Exercise Info
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDetailsOpen(true);
+                        window.setTimeout(() => {
+                          targetControlsRef.current?.scrollIntoView({
+                            behavior: "smooth",
+                            block: "center",
+                          });
+                        }, 60);
+                      }}
+                      className="health-secondary-action h-11 rounded-2xl border px-1 text-[9px] font-black sm:px-3 sm:text-xs"
+                    >
+                      Adjust Set
                     </button>
 
                     <button
@@ -5462,6 +5434,53 @@ export default function ActiveWorkoutSessionDrawer({
                 Finish
               </button>
             </div>
+          </div>
+        ) : null}
+
+        {changeWorkoutOpen ? (
+          <div className="fixed inset-0 z-[160] flex items-end justify-center bg-black/80 p-3 backdrop-blur-md sm:items-center">
+            <button
+              type="button"
+              aria-label="Cancel changing workout"
+              onClick={() => setChangeWorkoutOpen(false)}
+              className="absolute inset-0"
+            />
+
+            <section className="relative z-[161] w-full max-w-lg rounded-[2rem] border border-rose-300/25 bg-[#080b09] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.65)] sm:p-5">
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-200">
+                Change Workout
+              </div>
+
+              <h3 className="mt-2 text-2xl font-black text-white">
+                Choose a different workout?
+              </h3>
+
+              <p className="mt-2 text-sm leading-6 text-slate-400">
+                This will discard the current unfinished session and return you to Health so you can select Push, Pull, Legs, Cardio, recovery, or another saved workout.
+              </p>
+
+              <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] p-3 text-xs font-bold leading-5 text-amber-100">
+                Completed sets in this unfinished session will not be added to workout history. Use Finish Workout when you want to preserve logged work.
+              </div>
+
+              <div className="mt-4 grid grid-cols-[0.85fr_1.15fr] gap-2">
+                <button
+                  type="button"
+                  onClick={() => setChangeWorkoutOpen(false)}
+                  className="h-12 rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-black text-white"
+                >
+                  Keep Current
+                </button>
+
+                <button
+                  type="button"
+                  onClick={confirmChangeWorkout}
+                  className="h-12 rounded-2xl border border-rose-300/30 bg-rose-300/15 text-sm font-black text-rose-100"
+                >
+                  Discard and Change
+                </button>
+              </div>
+            </section>
           </div>
         ) : null}
 
