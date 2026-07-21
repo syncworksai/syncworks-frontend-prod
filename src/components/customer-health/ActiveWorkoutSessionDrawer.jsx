@@ -80,6 +80,7 @@ import PersonalRecordsCard from "./PersonalRecordsCard";
 import PostWorkoutReportCard from "./PostWorkoutReportCard";
 import LiveWorkoutAdaptationDrawer from "./LiveWorkoutAdaptationDrawer";
 import AdaptiveCoachProposalCard from "./AdaptiveCoachProposalCard";
+import WorkoutFocusCompactPanel from "./WorkoutFocusCompactPanel";
 import {
   buildAdaptiveExercise,
   buildPostWorkoutWrapUp,
@@ -4399,61 +4400,34 @@ export default function ActiveWorkoutSessionDrawer({
                 </div>
               ) : null}
 
-              {!isCompleted ? (
-                <>
-                  <section className="rounded-[1.5rem] border border-emerald-300/20 bg-black/30 p-3 sm:p-4">
-                    <div className="mb-2 text-[8px] font-black uppercase tracking-[0.18em] text-emerald-300">
-                      FOCUS CONTROLS
-                    </div>
-                    <div className="grid grid-cols-4 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setDetailsOpen((current) => !current)}
-                        className="h-11 rounded-xl border border-white/10 bg-white/[0.04] text-[10px] font-black text-white sm:text-xs"
-                      >
-                        Logs
-                      </button>
-                      <button
-                        type="button"
-                        onClick={voiceListening ? finishVoiceListening : startVoiceListening}
-                        className="h-11 rounded-xl border border-emerald-300/25 bg-emerald-300/10 text-[10px] font-black text-emerald-100 sm:text-xs"
-                      >
-                        {voiceListening ? "Stop Coach" : "Coach"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setModifyMenuOpen((current) => !current)}
-                        disabled={session?.set_active}
-                        className="h-11 rounded-xl border border-amber-300/25 bg-amber-300/10 text-[10px] font-black text-amber-100 disabled:opacity-40 sm:text-xs"
-                      >
-                        Modify
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setReviewMode(true)}
-                        disabled={session?.set_active}
-                        className="h-11 rounded-xl border border-white/10 bg-white/[0.04] text-[10px] font-black text-white disabled:opacity-40 sm:text-xs"
-                      >
-                        Finish
-                      </button>
-                    </div>
-                  </section>
-
-                  <WorkoutCommandCenter
-                    session={session}
-                    currentExercise={currentExercise}
-                  />
-                </>
+              {!isCompleted && warmupReady && currentExercise ? (
+                <WorkoutFocusCompactPanel
+                  session={session}
+                  currentExercise={currentExercise}
+                  formatSeconds={formatSeconds}
+                  onModify={() =>
+                    setModifyMenuOpen((current) => !current)
+                  }
+                  onFinish={() => setReviewMode(true)}
+                  onReplay={replayExerciseCue}
+                />
               ) : null}
 
               {!isCompleted && warmupReady ? (
-                <WorkoutVoiceCommandCard
-                  listening={voiceListening}
-                  transcript={voiceTranscript}
-                  error={voiceError}
-                  onListen={startVoiceListening}
-                  onStop={finishVoiceListening}
-                />
+                <details className="rounded-2xl border border-white/10 bg-white/[0.025]">
+                  <summary className="cursor-pointer px-4 py-3 text-xs font-black text-white">
+                    Voice Commands
+                  </summary>
+                  <div className="px-3 pb-3">
+                    <WorkoutVoiceCommandCard
+                      listening={voiceListening}
+                      transcript={voiceTranscript}
+                      error={voiceError}
+                      onListen={startVoiceListening}
+                      onStop={finishVoiceListening}
+                    />
+                  </div>
+                </details>
               ) : null}
 
               {!isCompleted ? (
