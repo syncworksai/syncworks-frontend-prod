@@ -1,5 +1,7 @@
 // src/components/customer-health/HealthPremiumHome.jsx
 import React, { useMemo } from "react";
+import HealthDailyCoachStatusCard from "./HealthDailyCoachStatusCard";
+import HealthGoalProgressCard from "./HealthGoalProgressCard";
 
 function safeNumber(value, fallback = 0) {
   const parsed = Number(
@@ -741,6 +743,20 @@ export default function HealthPremiumHome({
           compact
         />
       </div>
+
+      <HealthGoalProgressCard
+        profile={profile}
+        snapshot={snapshot}
+        history={history}
+        onOpen={onOpen}
+      />
+
+      <HealthDailyCoachStatusCard
+        profile={profile}
+        snapshot={snapshot}
+        onQuickLog={onQuickLog}
+        onOpen={onOpen}
+      />
 
       <button
         type="button"

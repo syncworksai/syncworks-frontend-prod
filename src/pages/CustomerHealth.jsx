@@ -31,6 +31,8 @@ import HealthProgressCharts from "../components/customer-health/HealthProgressCh
 import HealthPremiumHome from "../components/customer-health/HealthPremiumHome";
 import PlanTodayWorkoutDrawer from "../components/customer-health/PlanTodayWorkoutDrawer";
 import PreWorkoutCheckInDrawer from "../components/customer-health/PreWorkoutCheckInDrawer";
+import WorkoutLocationCheckInDrawer from "../components/customer-health/WorkoutLocationCheckInDrawer";
+import WorkoutFocusLaunchDrawer from "../components/customer-health/WorkoutFocusLaunchDrawer";
 import HealthProfileIntakeDrawer from "../components/customer-health/HealthProfileIntakeDrawer";
 import HealthQuickLogDrawer from "../components/customer-health/HealthQuickLogDrawer";
 import NutritionCoachDrawer from "../components/customer-health/NutritionCoachDrawer";
@@ -57,6 +59,7 @@ import {
 import "../components/customer-health/healthUiPolish.css";
 import "../components/customer-health/healthObsidianElectric.css";
 import { buildAdaptiveWorkout } from "../components/customer-health/healthAdaptiveWorkoutGenerator";
+import { ensureHealthCoachingContext } from "../components/customer-health/healthCoachingContext";
 import { buildAiWeeklyPlan } from "../components/customer-health/healthAiWeeklyPlan";
 import {
   backupHealthHistory,
@@ -792,6 +795,10 @@ export default function CustomerHealth() {
         : defaultDevices();
     }
   );
+
+  useEffect(() => {
+    ensureHealthCoachingContext(profile);
+  }, [profile]);
 
   useEffect(() => {
     document.body.dataset.syncworksModule =
@@ -2543,7 +2550,7 @@ export default function CustomerHealth() {
         ),
     });
 
-    setDrawer("pre-workout");
+    setDrawer("workout-location");
   }
 
   function startAlwaysReadyWorkout() {
@@ -2804,7 +2811,7 @@ export default function CustomerHealth() {
     }));
 
     setActivePlannerItem(nextPlannerItem);
-    setDrawer("active-workout");
+    setDrawer("workout-focus-launch");
   }
 
   function saveCustomWorkout(
@@ -3034,7 +3041,7 @@ export default function CustomerHealth() {
       });
 
     setActivePlannerItem(plannerItem);
-    setDrawer("pre-workout");
+    setDrawer("workout-location");
   }
   function openCardioPlayer(
     plan = null
@@ -3245,6 +3252,83 @@ export default function CustomerHealth() {
 
       {hasHealthAccess ? (
         <>
+          <WorkoutLocationCheckInDrawer
+            open={
+              drawer ===
+              "workout-location"
+            }
+            workout={
+              activePlannerItem
+            }
+            onClose={() =>
+              setDrawer("")
+            }
+            onConfirm={(location) => {
+              const selectedAt =
+                new Date().toISOString();
+
+              setActivePlannerItem((previous) =>
+                previous
+                  ? {
+                      ...previous,
+                      workout_location_id:
+                        location?.id || "",
+                      workout_location_name:
+                        location?.name || "",
+                      workout_location_type:
+                        location?.type || "",
+                      workout_equipment:
+                        Array.isArray(
+                          location?.equipment
+                        )
+                          ? location.equipment
+                          : [],
+                      workout_location_selected_at:
+                        selectedAt,
+                    }
+                  : previous
+              );
+
+              setSnapshot((previous) => ({
+                ...previous,
+                training_location:
+                  location?.name ||
+                  previous.training_location ||
+                  "",
+                equipment:
+                  Array.isArray(
+                    location?.equipment
+                  ) &&
+                  location.equipment.length
+                    ? location.equipment.join(", ")
+                    : previous.equipment,
+                last_workout_location_id:
+                  location?.id || "",
+                last_workout_location_name:
+                  location?.name || "",
+                updated_at: selectedAt,
+              }));
+
+              setDrawer("pre-workout");
+            }}
+          />
+
+          <WorkoutFocusLaunchDrawer
+            open={
+              drawer ===
+              "workout-focus-launch"
+            }
+            workout={
+              activePlannerItem
+            }
+            onCancel={() =>
+              setDrawer("")
+            }
+            onBegin={() =>
+              setDrawer("active-workout")
+            }
+          />
+
           <PreWorkoutCheckInDrawer
             open={
               drawer ===

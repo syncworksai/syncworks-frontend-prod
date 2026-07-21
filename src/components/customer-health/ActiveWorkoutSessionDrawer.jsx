@@ -79,6 +79,8 @@ import WorkoutProgressionCard from "./WorkoutProgressionCard";
 import PersonalRecordsCard from "./PersonalRecordsCard";
 import PostWorkoutReportCard from "./PostWorkoutReportCard";
 import LiveWorkoutAdaptationDrawer from "./LiveWorkoutAdaptationDrawer";
+import AdaptiveCoachProposalCard from "./AdaptiveCoachProposalCard";
+import WorkoutFocusCompactPanel from "./WorkoutFocusCompactPanel";
 import {
   buildAdaptiveExercise,
   buildPostWorkoutWrapUp,
@@ -4230,20 +4232,13 @@ export default function ActiveWorkoutSessionDrawer({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] flex justify-end bg-black/80 backdrop-blur-xl">
-      <button
-        type="button"
-        aria-label="Close active workout"
-        onClick={closeDrawer}
-        className="absolute inset-0"
-      />
-
-      <section className="relative z-[91] flex h-full w-full max-w-6xl flex-col overflow-hidden border-l border-emerald-300/10 bg-[radial-gradient(circle_at_top_left,rgba(57,255,136,0.09),transparent_18%),radial-gradient(circle_at_top_right,rgba(255,59,212,0.07),transparent_20%),linear-gradient(180deg,#040812_0%,#040705_100%)] shadow-[-30px_0_80px_rgba(0,0,0,0.6)]">
-        <header className="sticky top-0 z-30 border-b border-white/10 bg-[#040812]/95 px-3 py-3 backdrop-blur-xl sm:px-6 sm:py-4">
+    <div className="fixed inset-0 z-[90] bg-[#020403]">
+<section className="relative z-[91] flex h-[100dvh] w-full flex-col overflow-hidden bg-[radial-gradient(circle_at_50%_-10%,rgba(0,245,106,0.12),transparent_30%),linear-gradient(180deg,#050806_0%,#020403_100%)]">
+        <header className="sticky top-0 z-30 border-b border-emerald-300/15 bg-[#030604]/97 px-3 py-3 backdrop-blur-xl sm:px-6 sm:py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="text-[9px] font-black uppercase tracking-[0.24em] text-emerald-200 sm:text-xs">
-                SyncWorks Trainer Loop
+                SYNC WORKOUT FOCUS MODE
               </div>
 
               <h2 className="mt-1 truncate text-xl font-black text-white sm:text-4xl">
@@ -4251,19 +4246,40 @@ export default function ActiveWorkoutSessionDrawer({
                   "Active Workout"}
               </h2>
 
-              <p className="mt-2 hidden text-sm leading-6 text-slate-300 sm:block">
-                Active time only runs while a set is
-                being performed.
-              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-emerald-100">
+                  {plannerItem?.workout_location_name ||
+                    plannerItem?.location_name ||
+                    session?.workout_location_name ||
+                    session?.location_name ||
+                    "Workout location"}
+                </span>
+                <span className="hidden text-xs font-bold text-slate-400 sm:inline">
+                  Dashboard hidden until you finish or exit.
+                </span>
+              </div>
             </div>
 
-            <button
-              type="button"
-              onClick={closeDrawer}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-sm font-black text-white"
-            >
-              X
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              {!isCompleted ? (
+                <button
+                  type="button"
+                  onClick={() => setModifyMenuOpen((current) => !current)}
+                  disabled={session?.set_active}
+                  className="hidden h-10 rounded-2xl border border-emerald-300/25 bg-emerald-300/10 px-4 text-xs font-black text-emerald-100 disabled:opacity-40 sm:block"
+                >
+                  Modify
+                </button>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={closeDrawer}
+                className="h-10 rounded-2xl border border-white/10 bg-white/[0.06] px-4 text-xs font-black text-white"
+              >
+                Exit Focus
+              </button>
+            </div>
           </div>
 
           {session ? (
@@ -4363,7 +4379,7 @@ export default function ActiveWorkoutSessionDrawer({
           ) : null}
         </header>
 
-        <main className="flex-1 overflow-y-auto px-3 py-3 pb-32 sm:px-6 sm:py-5 sm:pb-32">
+        <main className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto px-3 py-3 pb-36 sm:px-6 sm:py-5 sm:pb-36">
           {!session ? (
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 text-sm text-slate-300">
               No active workout selected.
@@ -4384,21 +4400,34 @@ export default function ActiveWorkoutSessionDrawer({
                 </div>
               ) : null}
 
-              {!isCompleted ? (
-                <WorkoutCommandCenter
+              {!isCompleted && warmupReady && currentExercise ? (
+                <WorkoutFocusCompactPanel
                   session={session}
                   currentExercise={currentExercise}
+                  formatSeconds={formatSeconds}
+                  onModify={() =>
+                    setModifyMenuOpen((current) => !current)
+                  }
+                  onFinish={() => setReviewMode(true)}
+                  onReplay={replayExerciseCue}
                 />
               ) : null}
 
               {!isCompleted && warmupReady ? (
-                <WorkoutVoiceCommandCard
-                  listening={voiceListening}
-                  transcript={voiceTranscript}
-                  error={voiceError}
-                  onListen={startVoiceListening}
-                  onStop={finishVoiceListening}
-                />
+                <details className="rounded-2xl border border-white/10 bg-white/[0.025]">
+                  <summary className="cursor-pointer px-4 py-3 text-xs font-black text-white">
+                    Voice Commands
+                  </summary>
+                  <div className="px-3 pb-3">
+                    <WorkoutVoiceCommandCard
+                      listening={voiceListening}
+                      transcript={voiceTranscript}
+                      error={voiceError}
+                      onListen={startVoiceListening}
+                      onStop={finishVoiceListening}
+                    />
+                  </div>
+                </details>
               ) : null}
 
               {!isCompleted ? (
@@ -4449,6 +4478,19 @@ export default function ActiveWorkoutSessionDrawer({
               {!isCompleted && warmupReady && currentExercise ? (
                 <ExerciseMemoryCarryForwardCard
                   exercise={currentExercise}
+                />
+              ) : null}
+
+              {!isCompleted && warmupReady && currentExercise ? (
+                <AdaptiveCoachProposalCard
+                  exercise={currentExercise}
+                  audioMode={coachAudioMode}
+                  voicePreference={
+                    coachVoicePreference
+                  }
+                  onApply={
+                    applyProgressionRecommendation
+                  }
                 />
               ) : null}
 
