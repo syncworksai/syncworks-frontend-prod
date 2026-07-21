@@ -993,6 +993,52 @@ function SetCompletionSheet({
             {saving ? "Saving Set..." : "Save Set"}
           </button>
         </div>
+        {changeWorkoutOpen ? (
+          <div className="fixed inset-0 z-[160] flex items-end justify-center bg-black/80 p-3 backdrop-blur-md sm:items-center">
+            <button
+              type="button"
+              aria-label="Cancel changing workout"
+              onClick={() => setChangeWorkoutOpen(false)}
+              className="absolute inset-0"
+            />
+
+            <section className="relative z-[161] w-full max-w-lg rounded-[2rem] border border-rose-300/25 bg-[#080b09] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.65)] sm:p-5">
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-200">
+                Change Workout
+              </div>
+
+              <h3 className="mt-2 text-2xl font-black text-white">
+                Choose a different workout?
+              </h3>
+
+              <p className="mt-2 text-sm leading-6 text-slate-400">
+                This will discard the current unfinished session and return you to Health so you can select Push, Pull, Legs, Cardio, recovery, or another saved workout.
+              </p>
+
+              <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] p-3 text-xs font-bold leading-5 text-amber-100">
+                Completed sets in this unfinished session will not be added to workout history. Use Finish Workout when you want to preserve logged work.
+              </div>
+
+              <div className="mt-4 grid grid-cols-[0.85fr_1.15fr] gap-2">
+                <button
+                  type="button"
+                  onClick={() => setChangeWorkoutOpen(false)}
+                  className="h-12 rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-black text-white"
+                >
+                  Keep Current
+                </button>
+
+                <button
+                  type="button"
+                  onClick={confirmChangeWorkout}
+                  className="h-12 rounded-2xl border border-rose-300/30 bg-rose-300/15 text-sm font-black text-rose-100"
+                >
+                  Discard and Change
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
       </section>
     </div>
   );
@@ -2499,6 +2545,8 @@ export default function ActiveWorkoutSessionDrawer({
     useState("");
   const [modifyMenuOpen, setModifyMenuOpen] =
     useState(false);
+  const [changeWorkoutOpen, setChangeWorkoutOpen] =
+    useState(false);
   const [voiceListening, setVoiceListening] =
     useState(false);
   const [voiceTranscript, setVoiceTranscript] =
@@ -3975,6 +4023,65 @@ export default function ActiveWorkoutSessionDrawer({
     setAdaptationMode("");
   }
 
+  function requestChangeWorkout() {
+    if (
+      session?.set_active ||
+      session?.rest_active ||
+      session?.pending_set_logging
+    ) {
+      setFinishMessage(
+        "Finish or save the current set before changing workouts."
+      );
+      return;
+    }
+
+    setModifyMenuOpen(false);
+    setChangeWorkoutOpen(true);
+  }
+
+  function confirmChangeWorkout() {
+    const activeSession = latestSessionRef.current;
+
+    if (
+      activeSession?.set_active ||
+      activeSession?.rest_active ||
+      activeSession?.pending_set_logging
+    ) {
+      setChangeWorkoutOpen(false);
+      setFinishMessage(
+        "Finish or save the current set before changing workouts."
+      );
+      return;
+    }
+
+    clearPersistedWorkout();
+    initializedWorkoutKeyRef.current = "";
+    latestSessionRef.current = null;
+    preWorkoutBriefingRef.current = "";
+    lastExerciseCueRef.current = "";
+    lastRestCueRef.current = "";
+
+    setSnapshot?.((previous) => ({
+      ...previous,
+      live_training_session: null,
+      live_working_sets: 0,
+      live_focus_balance: {},
+      active_workout_changed_at:
+        new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
+
+    stopCoachVoice();
+    setSession(null);
+    setReviewMode(false);
+    setFinishMessage("");
+    setSetCheckInOpen(false);
+    setPendingSetDurationSeconds(0);
+    setModifyMenuOpen(false);
+    setChangeWorkoutOpen(false);
+    onClose?.();
+  }
+
   function closeDrawer() {
     const activeSession = latestSessionRef.current;
 
@@ -4685,6 +4792,14 @@ export default function ActiveWorkoutSessionDrawer({
                         className="h-10 rounded-xl border border-lime-300/20 bg-lime-300/10 text-xs font-black text-lime-100"
                       >
                         Keep Training
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={requestChangeWorkout}
+                        className="col-span-2 h-11 rounded-xl border border-rose-300/25 bg-rose-300/10 text-xs font-black text-rose-100 sm:col-span-4"
+                      >
+                        Change Entire Workout
                       </button>
                     </div>
                   ) : null}
