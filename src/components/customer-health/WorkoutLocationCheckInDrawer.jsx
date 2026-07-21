@@ -13,8 +13,8 @@ const QUICK_LOCATIONS = [
     id: "home",
     name: "Home",
     type: "home",
-    equipment: ["Bodyweight"],
-    description: "Use your saved home equipment and floor space.",
+    equipment: ["Bodyweight", "Floor space"],
+    description: "Use your saved home equipment and available floor space.",
   },
   {
     id: "bodyweight",
@@ -27,7 +27,7 @@ const QUICK_LOCATIONS = [
     id: "hotel",
     name: "Hotel Gym",
     type: "hotel",
-    equipment: ["Dumbbells", "Cardio"],
+    equipment: ["Dumbbells", "Cardio machine", "Cable station"],
     description: "Use a compact travel-friendly workout.",
   },
   {
@@ -35,7 +35,103 @@ const QUICK_LOCATIONS = [
     name: "Outdoors",
     type: "outdoors",
     equipment: ["Bodyweight", "Open space"],
-    description: "Use running, walking, bodyweight, and portable equipment.",
+    description: "Use walking, running, bodyweight, and portable equipment.",
+  },
+];
+
+const EQUIPMENT_GROUPS = [
+  {
+    id: "free-weights",
+    label: "Free Weights",
+    items: [
+      "Dumbbells",
+      "Barbells",
+      "Weight plates",
+      "Kettlebells",
+      "EZ curl bar",
+      "Trap bar",
+      "Adjustable bench",
+      "Flat bench",
+      "Squat rack",
+      "Power rack",
+      "Smith machine",
+    ],
+  },
+  {
+    id: "cables",
+    label: "Cables",
+    items: [
+      "Cable station",
+      "Functional trainer",
+      "Lat pulldown",
+      "Seated cable row",
+      "Cable crossover",
+      "Rope attachment",
+      "Straight bar attachment",
+      "Ankle straps",
+    ],
+  },
+  {
+    id: "machines",
+    label: "Strength Machines",
+    items: [
+      "Chest press",
+      "Shoulder press",
+      "Leg press",
+      "Hack squat",
+      "Leg extension",
+      "Leg curl",
+      "Calf raise",
+      "Pec deck",
+      "Assisted pull-up",
+      "Back extension",
+      "Ab machine",
+      "Hip abductor/adductor",
+    ],
+  },
+  {
+    id: "cardio",
+    label: "Cardio",
+    items: [
+      "Treadmill",
+      "Elliptical",
+      "Stationary bike",
+      "Spin bike",
+      "Rowing machine",
+      "Stair climber",
+      "Ski erg",
+      "Air bike",
+      "Indoor track",
+    ],
+  },
+  {
+    id: "mobility",
+    label: "Mobility & Recovery",
+    items: [
+      "Stretching table",
+      "Exercise mats",
+      "Foam rollers",
+      "Resistance bands",
+      "Mini bands",
+      "Yoga blocks",
+      "Massage gun",
+      "Mobility sticks",
+    ],
+  },
+  {
+    id: "functional",
+    label: "Functional Training",
+    items: [
+      "Pull-up bar",
+      "Dip station",
+      "Battle ropes",
+      "Sled",
+      "Plyo boxes",
+      "Medicine balls",
+      "TRX / suspension trainer",
+      "Sandbags",
+      "Open turf",
+    ],
   },
 ];
 
@@ -59,8 +155,8 @@ function LocationCard({ location, active, onClick }) {
       onClick={onClick}
       className={`w-full rounded-[1.35rem] border p-4 text-left transition active:scale-[0.99] ${
         active
-          ? "border-emerald-300/55 bg-emerald-300/[0.10] shadow-[0_0_28px_rgba(0,245,106,0.12)]"
-          : "border-white/10 bg-white/[0.035] hover:border-emerald-300/25"
+          ? "border-lime-300/60 bg-lime-300/[0.10] shadow-[0_0_28px_rgba(112,255,61,0.16)]"
+          : "border-white/10 bg-white/[0.035] hover:border-lime-300/25"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -78,7 +174,7 @@ function LocationCard({ location, active, onClick }) {
         <div
           className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
             active
-              ? "border-emerald-300 bg-emerald-400 text-black"
+              ? "border-lime-300 bg-lime-300 text-black"
               : "border-white/15 text-transparent"
           }`}
         >
@@ -97,8 +193,64 @@ function LocationCard({ location, active, onClick }) {
               {item}
             </span>
           ))}
+        {equipment.length > 6 ? (
+          <span className="rounded-full border border-lime-300/20 bg-lime-300/[0.06] px-2.5 py-1 text-[9px] font-black text-lime-200">
+            +{equipment.length - 6} more
+          </span>
+        ) : null}
       </div>
     </button>
+  );
+}
+
+function EquipmentChecklist({ selected, onToggle }) {
+  return (
+    <div className="space-y-3">
+      {EQUIPMENT_GROUPS.map((group) => (
+        <details
+          key={group.id}
+          open={group.id === "free-weights" || group.id === "machines"}
+          className="overflow-hidden rounded-[1.25rem] border border-white/10 bg-black/25"
+        >
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+            <span className="text-sm font-black text-white">{group.label}</span>
+            <span className="rounded-full border border-lime-300/20 bg-lime-300/[0.06] px-2 py-1 text-[9px] font-black text-lime-200">
+              {group.items.filter((item) => selected.includes(item)).length} selected
+            </span>
+          </summary>
+
+          <div className="grid gap-2 border-t border-white/8 p-3 sm:grid-cols-2">
+            {group.items.map((item) => {
+              const active = selected.includes(item);
+
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => onToggle(item)}
+                  className={`flex min-h-11 items-center gap-3 rounded-xl border px-3 py-2 text-left transition ${
+                    active
+                      ? "border-lime-300/50 bg-lime-300/[0.10] text-lime-100"
+                      : "border-white/10 bg-white/[0.025] text-slate-300"
+                  }`}
+                >
+                  <span
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-[10px] font-black ${
+                      active
+                        ? "border-lime-300 bg-lime-300 text-black"
+                        : "border-white/20 text-transparent"
+                    }`}
+                  >
+                    âœ“
+                  </span>
+                  <span className="text-xs font-bold">{item}</span>
+                </button>
+              );
+            })}
+          </div>
+        </details>
+      ))}
+    </div>
   );
 }
 
@@ -112,19 +264,16 @@ export default function WorkoutLocationCheckInDrawer({
   const [selectedId, setSelectedId] = useState("");
   const [showAddGym, setShowAddGym] = useState(false);
   const [gymName, setGymName] = useState("");
-  const [equipmentText, setEquipmentText] = useState("");
+  const [selectedEquipment, setSelectedEquipment] = useState([]);
   const [dumbbellMax, setDumbbellMax] = useState("");
+  const [notes, setNotes] = useState("");
 
   const allLocations = useMemo(() => {
-    const savedIds = new Set(
-      savedGyms.map((gym) => String(gym?.id || ""))
-    );
+    const savedIds = new Set(savedGyms.map((gym) => String(gym?.id || "")));
 
     return [
       ...savedGyms,
-      ...QUICK_LOCATIONS.filter(
-        (location) => !savedIds.has(location.id)
-      ),
+      ...QUICK_LOCATIONS.filter((location) => !savedIds.has(location.id)),
     ];
   }, [savedGyms]);
 
@@ -133,6 +282,14 @@ export default function WorkoutLocationCheckInDrawer({
   const selected = allLocations.find(
     (location) => String(location?.id || "") === selectedId
   );
+
+  function toggleEquipment(item) {
+    setSelectedEquipment((previous) =>
+      previous.includes(item)
+        ? previous.filter((entry) => entry !== item)
+        : [...previous, item]
+    );
+  }
 
   function addGym() {
     const cleanName = gymName.trim();
@@ -143,11 +300,13 @@ export default function WorkoutLocationCheckInDrawer({
       name: cleanName,
       type: "gym",
       active: true,
-      equipment: normalizeEquipment(equipmentText),
+      equipment: selectedEquipment,
       dumbbell_max_lb: dumbbellMax.trim(),
-      notes: dumbbellMax.trim()
-        ? `Dumbbells up to ${dumbbellMax.trim()} lb`
-        : "",
+      notes:
+        notes.trim() ||
+        (dumbbellMax.trim()
+          ? `Dumbbells up to ${dumbbellMax.trim()} lb`
+          : ""),
       created_at: new Date().toISOString(),
       last_used_at: "",
     };
@@ -158,8 +317,9 @@ export default function WorkoutLocationCheckInDrawer({
     setSelectedId(gym.id);
     setShowAddGym(false);
     setGymName("");
-    setEquipmentText("");
+    setSelectedEquipment([]);
     setDumbbellMax("");
+    setNotes("");
   }
 
   function continueWorkout() {
@@ -174,9 +334,7 @@ export default function WorkoutLocationCheckInDrawer({
     };
 
     const nextGyms = savedGyms.map((gym) =>
-      gym?.id === location.id
-        ? { ...gym, last_used_at: now }
-        : gym
+      gym?.id === location.id ? { ...gym, last_used_at: now } : gym
     );
 
     writeSavedGyms(nextGyms);
@@ -210,11 +368,11 @@ export default function WorkoutLocationCheckInDrawer({
         className="absolute inset-0"
       />
 
-      <section className="relative z-[146] flex max-h-[94vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] border border-emerald-300/25 bg-[#040705] shadow-[0_30px_100px_rgba(0,0,0,0.78)]">
+      <section className="relative z-[146] flex max-h-[95vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] border border-lime-300/25 bg-[#040705] shadow-[0_30px_100px_rgba(0,0,0,0.78)]">
         <header className="border-b border-white/10 p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-emerald-300">
+              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-lime-300">
                 Workout Location Check-In
               </div>
               <h2 className="mt-2 text-3xl font-black tracking-tight text-white">
@@ -251,45 +409,61 @@ export default function WorkoutLocationCheckInDrawer({
           <button
             type="button"
             onClick={() => setShowAddGym((current) => !current)}
-            className="mt-4 h-12 w-full rounded-2xl border border-dashed border-emerald-300/30 bg-emerald-300/[0.05] text-sm font-black text-emerald-100"
+            className="mt-4 h-12 w-full rounded-2xl border border-dashed border-lime-300/35 bg-lime-300/[0.06] text-sm font-black text-lime-100"
           >
-            {showAddGym ? "Cancel New Gym" : "Add or Save Another Gym"}
+            {showAddGym ? "Cancel Gym Setup" : "Build and Save a Gym"}
           </button>
 
           {showAddGym ? (
-            <div className="mt-3 rounded-[1.35rem] border border-white/10 bg-white/[0.035] p-4">
-              <div className="text-sm font-black text-white">
-                Save this gym
+            <div className="mt-3 rounded-[1.5rem] border border-lime-300/20 bg-white/[0.035] p-4">
+              <div className="text-lg font-black text-white">Build your gym</div>
+              <div className="mt-1 text-xs leading-5 text-slate-400">
+                Tap the equipment available here. SYNC will use this list for
+                substitutions and future workouts.
               </div>
 
               <input
                 value={gymName}
                 onChange={(event) => setGymName(event.target.value)}
-                placeholder="Gym name, such as YMCA or Hotel Fitness Center"
-                className="mt-3 h-12 w-full rounded-2xl border border-white/10 bg-black/35 px-4 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-emerald-300/45"
+                placeholder="Gym name, such as YMCA, Planet Fitness, or Home Gym"
+                className="mt-4 h-12 w-full rounded-2xl border border-white/10 bg-black/35 px-4 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-lime-300/45"
               />
 
-              <textarea
-                value={equipmentText}
-                onChange={(event) => setEquipmentText(event.target.value)}
-                placeholder="Equipment, separated by commas: barbell, squat rack, cables, leg press..."
-                rows={3}
-                className="mt-3 w-full rounded-2xl border border-white/10 bg-black/35 p-4 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-emerald-300/45"
-              />
+              <div className="mt-4">
+                <EquipmentChecklist
+                  selected={selectedEquipment}
+                  onToggle={toggleEquipment}
+                />
+              </div>
 
-              <input
-                value={dumbbellMax}
-                onChange={(event) => setDumbbellMax(event.target.value)}
-                inputMode="decimal"
-                placeholder="Maximum dumbbell weight in pounds"
-                className="mt-3 h-12 w-full rounded-2xl border border-white/10 bg-black/35 px-4 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-emerald-300/45"
-              />
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <input
+                  value={dumbbellMax}
+                  onChange={(event) => setDumbbellMax(event.target.value)}
+                  inputMode="decimal"
+                  placeholder="Max dumbbell weight (lb)"
+                  className="h-12 w-full rounded-2xl border border-white/10 bg-black/35 px-4 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-lime-300/45"
+                />
+
+                <input
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                  placeholder="Optional notes"
+                  className="h-12 w-full rounded-2xl border border-white/10 bg-black/35 px-4 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-lime-300/45"
+                />
+              </div>
+
+              <div className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-slate-400">
+                {selectedEquipment.length
+                  ? `${selectedEquipment.length} equipment items selected`
+                  : "No equipment selected yet"}
+              </div>
 
               <button
                 type="button"
                 onClick={addGym}
                 disabled={!gymName.trim()}
-                className="mt-3 h-12 w-full rounded-2xl bg-emerald-400 text-sm font-black text-black disabled:cursor-not-allowed disabled:opacity-40"
+                className="mt-3 h-13 w-full rounded-2xl bg-lime-300 px-4 py-3 text-sm font-black text-black shadow-[0_0_26px_rgba(112,255,61,0.20)] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Save and Select Gym
               </button>
@@ -297,20 +471,19 @@ export default function WorkoutLocationCheckInDrawer({
           ) : null}
         </div>
 
-        <footer className="border-t border-white/10 bg-black/45 p-4">
+        <footer className="border-t border-white/10 bg-black/55 p-4">
           <button
             type="button"
             disabled={!selected}
             onClick={continueWorkout}
-            className="h-14 w-full rounded-2xl border border-emerald-300/60 bg-emerald-400 text-base font-black uppercase tracking-[0.1em] text-black shadow-[0_0_30px_rgba(0,245,106,0.20)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-14 w-full rounded-2xl border border-lime-300/70 bg-lime-300 text-base font-black uppercase tracking-[0.1em] text-black shadow-[0_0_34px_rgba(112,255,61,0.24)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             Adapt and Continue
           </button>
 
           <div className="mt-2 text-center text-[10px] font-bold leading-4 text-slate-500">
-            You can change locations every session. Performance is recorded
-            with the location used so lighter hotel or home loads are not
-            treated as lost progress.
+            Locations are saved for future sessions. You can change locations
+            every workout without losing progress.
           </div>
         </footer>
       </section>

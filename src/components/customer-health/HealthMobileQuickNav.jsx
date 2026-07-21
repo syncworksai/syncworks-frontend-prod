@@ -1,6 +1,8 @@
 // src/components/customer-health/HealthMobileQuickNav.jsx
 import React from "react";
 
+const HEALTH_GLOW_LOGO = "/health/syncworks-health-s-glow.png";
+
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
@@ -35,7 +37,7 @@ export default function HealthMobileQuickNav({
   activeView = "home",
 }) {
   return (
-    <div data-syncworks-module-nav="health" className="fixed inset-x-0 bottom-0 z-[75] border-t border-emerald-300/18 bg-[#020403]/97 px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 shadow-[0_-18px_55px_rgba(0,245,106,0.10)] backdrop-blur-2xl lg:hidden">
+    <div data-syncworks-module-nav="health" className="fixed inset-x-0 bottom-0 z-[75] border-t border-lime-300/20 bg-[#020403]/97 px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 shadow-[0_-18px_55px_rgba(112,255,61,0.12)] backdrop-blur-2xl lg:hidden">
       <div className="mx-auto max-w-md">
         <div className="grid grid-cols-5 items-stretch gap-1">
           <NavButton label="Home" icon={<Icon type="home" />} active={activeView === "home"} onClick={() => onOpen?.("home")} />
@@ -53,12 +55,15 @@ export default function HealthMobileQuickNav({
                 onStartFallback?.();
               }}
               aria-label="Start Health workout"
-              className="group relative flex h-full w-full min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-lime-300/55 bg-[radial-gradient(circle_at_50%_30%,rgba(112,255,61,0.18),transparent_48%),linear-gradient(180deg,rgba(112,255,61,0.10),rgba(2,4,3,0.98))] px-1 py-2 text-center text-[9px] font-black uppercase tracking-[0.08em] text-lime-100 shadow-[0_0_30px_rgba(112,255,61,0.24)] transition active:scale-[0.96]"
+              className="group relative flex h-full w-full min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-lime-300/45 bg-[radial-gradient(circle_at_50%_32%,rgba(112,255,61,0.16),transparent_48%),linear-gradient(180deg,rgba(112,255,61,0.08),rgba(2,4,3,0.98))] px-1 py-1.5 text-center text-[9px] font-black uppercase tracking-[0.08em] text-lime-100 shadow-[0_0_32px_rgba(112,255,61,0.25)] transition active:scale-[0.96]"
             >
-              <span className="pointer-events-none absolute left-1/2 top-1 h-14 w-14 -translate-x-1/2 animate-pulse rounded-full bg-lime-300/20 blur-2xl" />
-              <span className="relative flex h-11 w-11 items-center justify-center rounded-full border border-lime-300/70 bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.16),transparent_30%),linear-gradient(145deg,#172218,#020403)] text-xl font-black italic text-lime-300 shadow-[0_0_26px_rgba(112,255,61,0.58),inset_0_0_18px_rgba(112,255,61,0.10)]">
-                S
-                <span className="absolute bottom-2 h-px w-5 bg-lime-300 shadow-[0_0_9px_rgba(112,255,61,0.95)]" />
+              <span className="pointer-events-none absolute left-1/2 top-0 h-16 w-16 -translate-x-1/2 animate-pulse rounded-full bg-lime-300/20 blur-2xl" />
+              <span className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-lime-300/60 bg-black shadow-[0_0_28px_rgba(112,255,61,0.65),inset_0_0_18px_rgba(112,255,61,0.10)]">
+                <img
+                  src={HEALTH_GLOW_LOGO}
+                  alt=""
+                  className="h-full w-full scale-[1.55] object-cover object-center"
+                />
               </span>
               <span className="w-full truncate text-center">Start Workout</span>
               <span className="max-w-full truncate text-[7px] font-bold normal-case tracking-normal text-slate-400">
@@ -76,7 +81,7 @@ export default function HealthMobileQuickNav({
               }}
               aria-label="Start workout over"
               title="Start workout over"
-              className="absolute -right-1 -top-1 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/15 bg-[#080b09] text-sm font-black text-white shadow-[0_0_16px_rgba(112,255,61,0.20)] active:scale-95"
+              className="absolute -right-1 -top-1 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/15 bg-[#080b09] text-sm font-black text-white shadow-[0_0_16px_rgba(112,255,61,0.24)] active:scale-95"
             >
               â†»
             </button>
