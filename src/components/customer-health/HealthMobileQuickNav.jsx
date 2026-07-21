@@ -41,7 +41,7 @@ export default function HealthMobileQuickNav({
       <div className="mx-auto max-w-md">
         <div className="grid grid-cols-5 items-stretch gap-1">
           <NavButton label="Home" icon={<Icon type="home" />} active={activeView === "home"} onClick={() => onOpen?.("home")} />
-          <NavButton label="Workouts" icon={<Icon type="plan" />} active={activeView === "planner"} onClick={() => onOpen?.("planner")} />
+          <NavButton label="Calendar" icon={<Icon type="plan" />} active={activeView === "planner"} onClick={() => onOpen?.("planner")} />
 
           <div className="relative min-w-0">
             <button
@@ -83,7 +83,7 @@ export default function HealthMobileQuickNav({
               title="Start workout over"
               className="absolute -right-1 -top-1 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/15 bg-[#080b09] text-sm font-black text-white shadow-[0_0_16px_rgba(112,255,61,0.24)] active:scale-95"
             >
-              â†»
+              ↻
             </button>
           </div>
 
