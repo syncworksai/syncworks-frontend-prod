@@ -212,11 +212,12 @@ export default function WorkoutFocusLaunchDrawer({
       cancelFirst: true,
       eventType: "preworkout_briefing",
       browserFallback: true,
+      provider: "browser",
     });
 
     window.setTimeout(
       () => setBriefingStatus("played"),
-      1200
+      600
     );
   }
 

@@ -1,82 +1,63 @@
 // src/components/customer-health/HealthPlannerDrawer.jsx
-import React from "react";
-import { prettyDate, uid } from "./healthStorage";
+import React, { useMemo, useState } from "react";
+import { todayYmd, uid } from "./healthStorage";
 
-function buildGoogleCalendarLink(item) {
-  if (!item?.ymd || !item?.workout_name) return "#";
-
-  const start = new Date(`${item.ymd}T${item.time || "09:00"}:00`);
-  const end = new Date(start.getTime() + 60 * 60 * 1000);
-
-  function fmt(d) {
-    const pad = (n) => String(n).padStart(2, "0");
-    return (
-      `${d.getUTCFullYear()}` +
-      `${pad(d.getUTCMonth() + 1)}` +
-      `${pad(d.getUTCDate())}` +
-      `T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`
-    );
-  }
-
-  const params = new URLSearchParams();
-  params.set("action", "TEMPLATE");
-  params.set("text", item.workout_name);
-  params.set(
-    "details",
-    `SyncWorks Health workout planner\nStatus: ${item.status || "Planned"}\nNote: ${item.note || ""}`
-  );
-  params.set("dates", `${fmt(start)}/${fmt(end)}`);
-
-  return `https://calendar.google.com/calendar/render?${params.toString()}`;
-}
-
-function addDaysYmd(ymd, days) {
-  const date = new Date(`${ymd}T12:00:00`);
-
-  if (!Number.isFinite(date.getTime())) {
-    return ymd;
-  }
-
-  date.setDate(date.getDate() + days);
-
+function ymd(date) {
   const year = date.getFullYear();
-  const month = String(
-    date.getMonth() + 1
-  ).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
-
   return `${year}-${month}-${day}`;
 }
 
-function DrawerShell({ open, onClose, children }) {
-  if (!open) return null;
+function parseYmd(value) {
+  const date = new Date(`${value || ""}T12:00:00`);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
 
-  return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/75 backdrop-blur-sm md:items-center">
-      <div className="relative max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-t-3xl border border-cyan-500/20 bg-[#020617] shadow-[0_22px_80px_rgba(0,0,0,0.45)] md:rounded-3xl">
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-          <div>
-            <div className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200">
-              Workout Planner
-            </div>
-            <div className="mt-1 text-lg font-black text-white">
-              Plan the week and add sessions to calendar
-            </div>
-          </div>
+function monthTitle(date) {
+  return date.toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
+}
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-white/[0.08]"
-          >
-            Close
-          </button>
-        </div>
+function dayLabel(value) {
+  const date = parseYmd(value);
+  return date
+    ? date.toLocaleDateString(undefined, { weekday: "short" })
+    : "";
+}
 
-        <div className="max-h-[calc(92vh-76px)] overflow-y-auto p-5">{children}</div>
-      </div>
-    </div>
-  );
+function statusTone(status) {
+  if (status === "Completed") {
+    return "border-lime-300/30 bg-lime-300/12 text-lime-100";
+  }
+
+  if (status === "Skipped" || status === "Rescheduled") {
+    return "border-amber-300/25 bg-amber-300/10 text-amber-100";
+  }
+
+  return "border-emerald-300/25 bg-emerald-300/10 text-emerald-100";
+}
+
+function calendarCells(monthDate) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const first = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const leading = first.getDay();
+  const cells = [];
+
+  for (let index = 0; index < leading; index += 1) {
+    cells.push(null);
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    cells.push(new Date(year, month, day));
+  }
+
+  while (cells.length % 7 !== 0) cells.push(null);
+  return cells;
 }
 
 export default function HealthPlannerDrawer({
@@ -85,319 +66,513 @@ export default function HealthPlannerDrawer({
   snapshot,
   setSnapshot,
   workouts,
+  history = [],
   onStartWorkout,
   onOpenMyWorkouts,
   onEditTrainingProfile,
 }) {
-  const weekPlan = Array.isArray(snapshot?.week_plan) ? snapshot.week_plan : [];
+  const now = new Date();
+  const [visibleMonth, setVisibleMonth] = useState(
+    () => new Date(now.getFullYear(), now.getMonth(), 1)
+  );
+  const [selectedYmd, setSelectedYmd] = useState(todayYmd());
 
-  function updateRow(index, updater) {
-    setSnapshot((prev) => {
-      const rows = Array.isArray(prev.week_plan) ? [...prev.week_plan] : [];
-      const current = rows[index] || {};
-      rows[index] = typeof updater === "function" ? updater(current) : current;
+  const plan = Array.isArray(snapshot?.week_plan)
+    ? snapshot.week_plan
+    : [];
 
-      return {
-        ...prev,
-        week_plan: rows,
-      };
+  const completedHistory = Array.isArray(history) ? history : [];
+
+  const entriesByDate = useMemo(() => {
+    const map = new Map();
+
+    function add(dateKey, entry) {
+      if (!dateKey) return;
+      const current = map.get(dateKey) || [];
+      current.push(entry);
+      map.set(dateKey, current);
+    }
+
+    plan.forEach((item) => {
+      if (!item?.workout_name || !item?.ymd) return;
+      add(item.ymd, {
+        ...item,
+        calendar_source: "plan",
+      });
     });
-  }
 
-  function handleWorkoutChange(index, workoutId) {
-    const selected = workouts.find((w) => w.id === workoutId);
+    completedHistory.forEach((item) => {
+      const dateKey =
+        item?.ymd ||
+        String(
+          item?.finished_at ||
+          item?.completed_at ||
+          item?.created_at ||
+          ""
+        ).slice(0, 10);
 
-    updateRow(index, (current) => ({
-      ...current,
-      workout_id: selected?.id || "",
-      workout_name: selected?.name || "",
-      status: selected ? current.status === "Completed" ? "Completed" : "Planned" : "Rest Day",
-      note: selected ? current.note || "Planned session" : "Recovery / open day",
-    }));
-  }
+      if (!dateKey) return;
 
-  const activeSessions = weekPlan.filter(
+      const alreadyPlanned = (map.get(dateKey) || []).some(
+        (planned) =>
+          planned?.completed_session_id === item?.id ||
+          (planned?.status === "Completed" &&
+            planned?.workout_name ===
+              (item?.workout_name || item?.name))
+      );
+
+      if (alreadyPlanned) return;
+
+      add(dateKey, {
+        id: item?.id || uid("history-calendar"),
+        ymd: dateKey,
+        workout_name:
+          item?.workout_name || item?.name || "Completed Workout",
+        status: "Completed",
+        calendar_source: "history",
+        completed_at:
+          item?.finished_at ||
+          item?.completed_at ||
+          item?.created_at ||
+          "",
+      });
+    });
+
+    for (const entries of map.values()) {
+      entries.sort((left, right) =>
+        String(left?.time || "23:59").localeCompare(
+          String(right?.time || "23:59")
+        )
+      );
+    }
+
+    return map;
+  }, [plan, completedHistory]);
+
+  const selectedEntries =
+    entriesByDate.get(selectedYmd) || [];
+
+  const todayEntries =
+    entriesByDate.get(todayYmd()) || [];
+
+  const todayPlanned = todayEntries.find(
     (item) =>
-      item?.workout_name &&
+      item?.calendar_source === "plan" &&
       !["Completed", "Skipped", "Rescheduled"].includes(
         String(item?.status || "")
       )
   );
 
-  const completedCount = weekPlan.filter(
-    (item) => item?.status === "Completed"
-  ).length;
+  function moveMonth(amount) {
+    setVisibleMonth(
+      (current) =>
+        new Date(
+          current.getFullYear(),
+          current.getMonth() + amount,
+          1
+        )
+    );
+  }
 
-  const nextPlanned = activeSessions[0];
+  function goToday() {
+    const current = new Date();
+    setVisibleMonth(
+      new Date(current.getFullYear(), current.getMonth(), 1)
+    );
+    setSelectedYmd(todayYmd());
+  }
 
-  function repeatPlanNextWeek() {
-    if (!activeSessions.length) return;
+  function updatePlan(updater) {
+    setSnapshot((previous) => {
+      const currentPlan = Array.isArray(previous?.week_plan)
+        ? previous.week_plan
+        : [];
 
-    const createdAt = new Date().toISOString();
-    const existingKeys = new Set(
-      weekPlan.map(
+      const nextPlan = updater(currentPlan);
+
+      const nextToday = nextPlan.find(
         (item) =>
-          `${item?.ymd || ""}|${
-            item?.time || ""
-          }|${item?.workout_id || item?.workout_name || ""}`
+          item?.ymd === todayYmd() &&
+          item?.workout_name &&
+          !["Completed", "Skipped", "Rescheduled"].includes(
+            String(item?.status || "")
+          )
+      );
+
+      return {
+        ...previous,
+        week_plan: nextPlan.sort((left, right) =>
+          `${left?.ymd || ""}T${left?.time || "23:59"}`.localeCompare(
+            `${right?.ymd || ""}T${right?.time || "23:59"}`
+          )
+        ),
+        today_workout_id: nextToday?.id || "",
+        workout: nextToday?.workout_name || "",
+        updated_at: new Date().toISOString(),
+      };
+    });
+  }
+
+  function moveToToday(item) {
+    if (!item?.id || item?.calendar_source !== "plan") return;
+
+    updatePlan((currentPlan) =>
+      currentPlan.map((entry) =>
+        entry?.id === item.id
+          ? {
+              ...entry,
+              original_ymd: entry.original_ymd || entry.ymd,
+              ymd: todayYmd(),
+              day_label: dayLabel(todayYmd()),
+              status: "Planned",
+              moved_to_today_at: new Date().toISOString(),
+            }
+          : entry
       )
     );
 
-    const duplicates = activeSessions
-      .map((item) => {
-        const nextYmd = addDaysYmd(
-          item.ymd,
-          7
-        );
-
-        const key = `${nextYmd}|${
-          item?.time || ""
-        }|${item?.workout_id || item?.workout_name || ""}`;
-
-        if (existingKeys.has(key)) {
-          return null;
-        }
-
-        existingKeys.add(key);
-
-        return {
-          ...item,
-          id: uid("repeated-session"),
-          ymd: nextYmd,
-          status: "Planned",
-          completed_at: undefined,
-          skipped_at: undefined,
-          resolved_at: undefined,
-          rescheduled_at: undefined,
-          repeated_from_id: item.id,
-          repeated_at: createdAt,
-          source:
-            item.source ||
-            "planner_repeat",
-        };
-      })
-      .filter(Boolean);
-
-    if (!duplicates.length) return;
-
-    setSnapshot((previous) => ({
-      ...previous,
-      week_plan: [
-        ...(
-          Array.isArray(previous.week_plan)
-            ? previous.week_plan
-            : []
-        ),
-        ...duplicates,
-      ].sort((left, right) =>
-        `${left?.ymd || ""}T${
-          left?.time || "23:59"
-        }`.localeCompare(
-          `${right?.ymd || ""}T${
-            right?.time || "23:59"
-          }`
-        )
-      ),
-      planned_workouts:
-        Number(previous.planned_workouts || 0) +
-        duplicates.length,
-      last_coach_change_title:
-        "Next week is scheduled",
-      last_coach_change_reason:
-        `${duplicates.length} sessions were repeated into next week at the same times.`,
-      updated_at: createdAt,
-    }));
+    setSelectedYmd(todayYmd());
   }
 
+  function swapWithToday(item) {
+    if (
+      !item?.id ||
+      item?.calendar_source !== "plan" ||
+      !todayPlanned?.id ||
+      todayPlanned.id === item.id
+    ) {
+      moveToToday(item);
+      return;
+    }
+
+    const selectedDate = item.ymd;
+
+    updatePlan((currentPlan) =>
+      currentPlan.map((entry) => {
+        if (entry?.id === item.id) {
+          return {
+            ...entry,
+            ymd: todayYmd(),
+            day_label: dayLabel(todayYmd()),
+            swapped_at: new Date().toISOString(),
+            swapped_with_id: todayPlanned.id,
+            status: "Planned",
+          };
+        }
+
+        if (entry?.id === todayPlanned.id) {
+          return {
+            ...entry,
+            ymd: selectedDate,
+            day_label: dayLabel(selectedDate),
+            swapped_at: new Date().toISOString(),
+            swapped_with_id: item.id,
+            status: "Planned",
+          };
+        }
+
+        return entry;
+      })
+    );
+
+    setSelectedYmd(todayYmd());
+  }
+
+  function chooseWorkoutForDay(workoutId) {
+    const workout = (Array.isArray(workouts) ? workouts : []).find(
+      (item) => item?.id === workoutId
+    );
+
+    if (!workout) return;
+
+    const plannerItem = {
+      id: uid("calendar-workout"),
+      workout_id: workout.id,
+      workout_name:
+        workout.workout_name || workout.name || "Workout",
+      name: workout.name || workout.workout_name || "Workout",
+      ymd: selectedYmd,
+      day_label: dayLabel(selectedYmd),
+      time: "18:00",
+      status: "Planned",
+      source: "month_calendar",
+      exercises: Array.isArray(workout.exercises)
+        ? workout.exercises
+        : [],
+    };
+
+    updatePlan((currentPlan) => [...currentPlan, plannerItem]);
+  }
+
+  if (!open) return null;
+
+  const cells = calendarCells(visibleMonth);
+
   return (
-    <DrawerShell open={open} onClose={onClose}>
-      <div className="space-y-4">
-        <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="fixed inset-0 z-[90] bg-[#020403] text-white">
+      <section className="flex h-[100dvh] w-full flex-col overflow-hidden bg-[radial-gradient(circle_at_top,rgba(112,255,61,0.12),transparent_30%),linear-gradient(180deg,#050806,#020403)]">
+        <header className="border-b border-lime-300/15 bg-[#030604]/96 px-3 py-3 backdrop-blur-xl sm:px-5">
+          <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
             <div>
-              <div className="text-sm font-black text-white">
-                Your Training Schedule
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-lime-300">
+                Workout Calendar
               </div>
-              <div className="mt-2 text-sm leading-6 text-emerald-100/90">
-                Start the next session, adjust any day, repeat the plan into next week, or open the full workout studio.
-              </div>
+              <h2 className="mt-1 text-xl font-black text-white sm:text-3xl">
+                {monthTitle(visibleMonth)}
+              </h2>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <div className="rounded-full border border-white/10 bg-black/15 px-3 py-1.5 text-xs font-black text-white">
-                {activeSessions.length} upcoming
-              </div>
-              <div className="rounded-full border border-white/10 bg-black/15 px-3 py-1.5 text-xs font-black text-white">
-                {completedCount} completed
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-2 sm:grid-cols-3">
             <button
               type="button"
-              onClick={repeatPlanNextWeek}
-              disabled={!activeSessions.length}
-              className="h-11 rounded-2xl border border-lime-300/30 bg-lime-300/15 px-3 text-sm font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={onClose}
+              className="h-10 rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white"
             >
-              Repeat Next Week
-            </button>
-
-            <button
-              type="button"
-              onClick={onOpenMyWorkouts}
-              className="h-11 rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-3 text-sm font-black text-cyan-100"
-            >
-              Open My Workouts
-            </button>
-
-            <button
-              type="button"
-              onClick={onEditTrainingProfile}
-              className="h-11 rounded-2xl border border-fuchsia-400/30 bg-fuchsia-500/10 px-3 text-sm font-black text-fuchsia-100"
-            >
-              Edit Training Profile
+              Close
             </button>
           </div>
 
-          {nextPlanned ? (
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <div className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-emerald-100">
-                Next up: {nextPlanned.day_label} | {nextPlanned.time || "Anytime"} | {nextPlanned.workout_name}
-              </div>
-
-              <a
-                href={buildGoogleCalendarLink(nextPlanned)}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-4 text-sm font-black text-cyan-100 hover:bg-cyan-500/20"
-              >
-                Add Next Workout to Calendar
-              </a>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="grid gap-4">
-          {weekPlan.map((item, index) => (
-            <div
-              key={item.id || index}
-              className="rounded-3xl border border-white/10 bg-white/[0.03] p-4"
+          <div className="mx-auto mt-3 grid max-w-5xl grid-cols-[1fr_auto_1fr] gap-2">
+            <button
+              type="button"
+              onClick={() => moveMonth(-1)}
+              className="h-10 rounded-xl border border-white/10 bg-white/[0.04] text-xs font-black text-slate-200"
             >
-              <div className="grid gap-4 lg:grid-cols-[160px_1fr_110px_140px]">
-                <div>
-                  <div className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                    {item.day_label}
-                  </div>
-                  <div className="mt-1 text-lg font-black text-white">
-                    {prettyDate(item.ymd)}
-                  </div>
+              Previous
+            </button>
+
+            <button
+              type="button"
+              onClick={goToday}
+              className="h-10 rounded-xl border border-lime-300/30 bg-lime-300/12 px-4 text-xs font-black text-lime-100"
+            >
+              Today
+            </button>
+
+            <button
+              type="button"
+              onClick={() => moveMonth(1)}
+              className="h-10 rounded-xl border border-white/10 bg-white/[0.04] text-xs font-black text-slate-200"
+            >
+              Next
+            </button>
+          </div>
+        </header>
+
+        <main className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto px-2 py-3 pb-28 sm:px-5">
+          <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-black uppercase tracking-[0.12em] text-slate-500">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+              (label) => (
+                <div key={label} className="py-1">
+                  {label}
                 </div>
+              )
+            )}
+          </div>
 
-                <div>
-                  <label className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
-                    Workout
-                  </label>
-                  <select
-                    value={item.workout_id || ""}
-                    onChange={(e) => handleWorkoutChange(index, e.target.value)}
-                    className="mt-2 h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-3 text-sm text-white outline-none"
-                  >
-                    <option value="">Rest Day / Open Day</option>
-                    {workouts.map((workout) => (
-                      <option key={workout.id} value={workout.id}>
-                        {workout.name}
-                      </option>
+          <div className="grid grid-cols-7 gap-1">
+            {cells.map((date, index) => {
+              if (!date) {
+                return (
+                  <div
+                    key={`blank-${index}`}
+                    className="min-h-[74px] rounded-xl border border-transparent"
+                  />
+                );
+              }
+
+              const dateKey = ymd(date);
+              const entries = entriesByDate.get(dateKey) || [];
+              const selected = dateKey === selectedYmd;
+              const isToday = dateKey === todayYmd();
+
+              return (
+                <button
+                  key={dateKey}
+                  type="button"
+                  onClick={() => setSelectedYmd(dateKey)}
+                  className={`min-h-[74px] overflow-hidden rounded-xl border p-1.5 text-left transition ${
+                    selected
+                      ? "border-lime-300/45 bg-lime-300/12"
+                      : isToday
+                      ? "border-emerald-300/30 bg-emerald-300/[0.08]"
+                      : "border-white/10 bg-white/[0.025]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-white">
+                      {date.getDate()}
+                    </span>
+                    {isToday ? (
+                      <span className="h-1.5 w-1.5 rounded-full bg-lime-300 shadow-[0_0_10px_rgba(112,255,61,0.8)]" />
+                    ) : null}
+                  </div>
+
+                  <div className="mt-1 space-y-1">
+                    {entries.slice(0, 2).map((entry) => (
+                      <div
+                        key={entry.id}
+                        className={`truncate rounded-md border px-1 py-0.5 text-[7px] font-black ${statusTone(
+                          entry.status
+                        )}`}
+                      >
+                        {entry.workout_name}
+                      </div>
                     ))}
-                  </select>
 
-                  <input
-                    type="text"
-                    value={item.note || ""}
-                    onChange={(e) =>
-                      updateRow(index, (current) => ({
-                        ...current,
-                        note: e.target.value,
-                      }))
-                    }
-                    placeholder="Optional note"
-                    className="mt-2 h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-3 text-sm text-white outline-none"
-                  />
+                    {entries.length > 2 ? (
+                      <div className="text-[7px] font-black text-slate-500">
+                        +{entries.length - 2} more
+                      </div>
+                    ) : null}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <section className="mt-4 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-3 sm:p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[9px] font-black uppercase tracking-[0.18em] text-lime-300">
+                  Selected Day
                 </div>
-
-                <div>
-                  <label className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
-                    Time
-                  </label>
-                  <input
-                    type="time"
-                    value={item.time || ""}
-                    onChange={(e) =>
-                      updateRow(index, (current) => ({
-                        ...current,
-                        time: e.target.value,
-                      }))
-                    }
-                    className="mt-2 h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-3 text-sm text-white outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-black uppercase tracking-[0.15em] text-slate-400">
-                    Status
-                  </label>
-                  <select
-                    value={item.status || "Planned"}
-                    onChange={(e) =>
-                      updateRow(index, (current) => ({
-                        ...current,
-                        status: e.target.value,
-                      }))
-                    }
-                    className="mt-2 h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-3 text-sm text-white outline-none"
-                  >
-                    <option value="Planned">Planned</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Skipped">Skipped</option>
-                    <option value="Rest Day">Rest Day</option>
-                  </select>
+                <div className="mt-1 text-lg font-black text-white">
+                  {parseYmd(selectedYmd)?.toLocaleDateString(undefined, {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                  })}
                 </div>
               </div>
 
-              {item.workout_name ? (
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <div className="rounded-full border border-fuchsia-500/20 bg-fuchsia-500/10 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-fuchsia-100">
-                    {item.workout_name}
-                  </div>
+              <div className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-[9px] font-black text-slate-300">
+                {selectedEntries.length} workout
+                {selectedEntries.length === 1 ? "" : "s"}
+              </div>
+            </div>
 
-                  {!["Completed", "Skipped", "Rescheduled"].includes(
+            <div className="mt-3 space-y-2">
+              {selectedEntries.map((item) => {
+                const canStart =
+                  item.calendar_source === "plan" &&
+                  !["Completed", "Skipped", "Rescheduled"].includes(
                     String(item.status || "")
-                  ) ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onStartWorkout?.(item)
-                      }
-                      className="inline-flex h-9 items-center justify-center rounded-xl border border-lime-300/30 bg-lime-300/15 px-3 text-xs font-black text-lime-100"
-                    >
-                      Start Workout
-                    </button>
-                  ) : null}
+                  );
 
-                  <a
-                    href={buildGoogleCalendarLink(item)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs font-semibold text-cyan-200 underline underline-offset-4 hover:text-cyan-100"
+                return (
+                  <article
+                    key={item.id}
+                    className="rounded-2xl border border-white/10 bg-black/25 p-3"
                   >
-                    Add this day to Google Calendar
-                  </a>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-black text-white">
+                          {item.workout_name}
+                        </div>
+                        <div className="mt-1 text-[10px] font-bold text-slate-500">
+                          {item.time || "Anytime"} ·{" "}
+                          {item.status || "Planned"}
+                        </div>
+                      </div>
+
+                      <span
+                        className={`shrink-0 rounded-full border px-2 py-1 text-[8px] font-black ${statusTone(
+                          item.status
+                        )}`}
+                      >
+                        {item.status || "Planned"}
+                      </span>
+                    </div>
+
+                    {canStart ? (
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onStartWorkout?.(item)}
+                          className="h-10 rounded-xl border border-lime-300/30 bg-lime-300/15 text-xs font-black text-lime-100"
+                        >
+                          Start This Workout
+                        </button>
+
+                        {item.ymd !== todayYmd() ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              todayPlanned
+                                ? swapWithToday(item)
+                                : moveToToday(item)
+                            }
+                            className="h-10 rounded-xl border border-emerald-300/25 bg-emerald-300/10 text-xs font-black text-emerald-100"
+                          >
+                            {todayPlanned
+                              ? "Swap With Today"
+                              : "Move To Today"}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={onOpenMyWorkouts}
+                            className="h-10 rounded-xl border border-white/10 bg-white/[0.04] text-xs font-black text-slate-200"
+                          >
+                            Change Workout
+                          </button>
+                        )}
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
+
+              {!selectedEntries.length ? (
+                <div className="rounded-2xl border border-dashed border-white/15 bg-black/15 p-4 text-center">
+                  <div className="text-sm font-black text-white">
+                    No workout scheduled
+                  </div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    Choose a saved workout for this day.
+                  </div>
                 </div>
               ) : null}
             </div>
-          ))}
-        </div>
-      </div>
-    </DrawerShell>
+
+            <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+              <select
+                defaultValue=""
+                onChange={(event) => {
+                  chooseWorkoutForDay(event.target.value);
+                  event.target.value = "";
+                }}
+                className="h-11 rounded-xl border border-white/10 bg-[#050806] px-3 text-xs font-black text-white outline-none"
+              >
+                <option value="">Add saved workout...</option>
+                {(Array.isArray(workouts) ? workouts : []).map(
+                  (workout) => (
+                    <option key={workout.id} value={workout.id}>
+                      {workout.name || workout.workout_name}
+                    </option>
+                  )
+                )}
+              </select>
+
+              <button
+                type="button"
+                onClick={onOpenMyWorkouts}
+                className="h-11 rounded-xl border border-white/10 bg-white/[0.04] px-4 text-xs font-black text-white"
+              >
+                My Workouts
+              </button>
+
+              <button
+                type="button"
+                onClick={onEditTrainingProfile}
+                className="h-11 rounded-xl border border-white/10 bg-white/[0.04] px-4 text-xs font-black text-white"
+              >
+                Training Profile
+              </button>
+            </div>
+          </section>
+        </main>
+      </section>
+    </div>
   );
 }
