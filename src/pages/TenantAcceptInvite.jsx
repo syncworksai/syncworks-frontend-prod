@@ -36,7 +36,7 @@ export default function TenantAcceptInvite() {
     setBusy(true);
     try {
       const res = await api.post("/tenant/invites/accept/", { code: trimmed });
-      setMsg("Invite accepted! Loading your tenant portal…");
+      setMsg("Invite accepted! Loading your tenant portal...");
 
       // Give backend a moment to commit/link, then navigate
       setTimeout(() => nav("/tenant"), 400);
@@ -50,13 +50,13 @@ export default function TenantAcceptInvite() {
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100">
+    <div className="min-h-screen bg-black text-slate-100">
       <ModeBar />
       <div className="mx-auto max-w-xl px-4 py-10">
-        <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-6">
-          <div className="text-2xl font-bold">Accept Tenant Invite</div>
+        <div className="rounded-[32px] border border-blue-500/25 bg-[#050b13]/95 p-6 shadow-[0_0_80px_rgba(21,151,255,0.12)]">
+          <div className="text-xs font-bold uppercase tracking-[0.22em] text-blue-400">SYNCWORKS PROPERTY MANAGEMENT</div><div className="mt-2 text-3xl font-bold text-white">Join Your Property</div>
           <div className="text-slate-400 mt-2">
-            Enter the invite code your Property Manager sent you (or use the link in the email).
+            Enter the secure code from your PM company to connect your account to the correct property, unit, lease, and tenant record.
           </div>
 
           <div className="mt-6">
@@ -64,8 +64,8 @@ export default function TenantAcceptInvite() {
             <input
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="e.g. SW-TENANT-XXXX"
-              className="mt-2 w-full rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-slate-100 outline-none focus:ring-2 focus:ring-slate-700"
+              placeholder="OCEANVIEW-4B7X"
+              className="mt-2 w-full rounded-2xl border border-blue-500/25 bg-black/35 px-4 py-3 font-semibold tracking-[0.12em] text-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
 
@@ -83,7 +83,7 @@ export default function TenantAcceptInvite() {
 
           <div className="mt-6 flex items-center gap-2">
             <Button onClick={accept} disabled={busy}>
-              {busy ? "Accepting…" : "Accept Invite"}
+              {busy ? "Accepting..." : "Accept Invite"}
             </Button>
             <Button variant="secondary" onClick={() => nav("/tenant")} disabled={busy}>
               Back
@@ -91,7 +91,7 @@ export default function TenantAcceptInvite() {
           </div>
 
           <div className="mt-6 text-xs text-slate-500">
-            If this keeps failing, confirm you’re logged into the same email address that received the invite.
+            If this keeps failing, confirm you're logged into the same email address that received the invite.
           </div>
         </div>
       </div>

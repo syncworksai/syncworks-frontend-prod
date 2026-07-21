@@ -7,7 +7,7 @@ import Button from "../components/ui/Button";
 
 function Card({ title, subtitle, right, children }) {
   return (
-    <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
+    <div className="rounded-[28px] border border-blue-500/20 bg-[#07111f]/90 p-5 shadow-[0_18px_70px_rgba(0,89,255,0.09)] backdrop-blur-xl">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-lg font-semibold text-slate-100">{title}</div>
@@ -22,7 +22,7 @@ function Card({ title, subtitle, right, children }) {
 
 function Pill({ children }) {
   return (
-    <span className="inline-flex items-center rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 text-xs text-slate-300">
+    <span className="inline-flex items-center rounded-full border border-blue-500/25 bg-blue-500/10 px-3 py-1 text-xs text-blue-200">
       {children}
     </span>
   );
@@ -35,7 +35,7 @@ function money(v) {
 }
 
 function fmtDate(s) {
-  if (!s) return "—";
+  if (!s) return "â€”";
   try {
     const d = new Date(s);
     return d.toLocaleDateString();
@@ -90,7 +90,7 @@ export default function TenantDashboard() {
 
   useEffect(() => {
     loadAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, []);
 
   async function handlePay(charge) {
@@ -115,15 +115,15 @@ export default function TenantDashboard() {
     "No tenant profile is linked to this account yet.";
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100">
+    <div className="min-h-screen bg-black text-slate-100">
       <ModeBar />
 
       <div className="mx-auto max-w-6xl px-4 py-6">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
-            <div className="text-2xl font-bold">Tenant Portal</div>
+            <div className="text-xs font-bold uppercase tracking-[0.22em] text-blue-400">SYNCWORKS PROPERTY MANAGEMENT</div><div className="mt-2 text-3xl font-bold text-white">Welcome Home</div>
             <div className="text-slate-400 mt-1">
-              Pay rent, track documents, and send service requests — fast.
+              Pay rent, request maintenance, message management, and access your property in one place.
             </div>
           </div>
 
@@ -142,11 +142,11 @@ export default function TenantDashboard() {
 
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card
-            title="Rent status"
+            title="Rent & Balance"
             subtitle={linked ? "Your current balance and due date" : "Link your tenant profile to unlock rent + docs"}
           >
             {loading ? (
-              <div className="text-slate-400">Loading…</div>
+              <div className="text-slate-400">Loading...</div>
             ) : linked ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -173,14 +173,14 @@ export default function TenantDashboard() {
                 <div className="flex items-center gap-2">
                   <Button onClick={() => nav("/tenant/accept")}>Accept Invite</Button>
                   <Button variant="secondary" onClick={loadAll}>
-                    I already accepted — Refresh
+                    I already accepted â€” Refresh
                   </Button>
                 </div>
               </div>
             )}
           </Card>
 
-          <Card title="Documents" subtitle="Lease + addendums + notices + receipts">
+          <Card title="Messages & Documents" subtitle="Lease, notices, receipts, and management conversations">
             <div className="text-slate-400 text-sm">
               Coming next: signed docs, upload requests, and searchable history.
             </div>
@@ -194,9 +194,9 @@ export default function TenantDashboard() {
             </div>
           </Card>
 
-          <Card title="Service Requests" subtitle="Maintenance + issues + updates">
+          <Card title="Maintenance Requests" subtitle="Maintenance + issues + updates">
             <div className="text-slate-400 text-sm">
-              Coming next: create a request, attach photos, and track status in real time.
+              Create a request, attach photos, and track status through the connected SyncWorks ticket flow.
             </div>
             <div className="mt-4 flex items-center gap-2">
               <Button variant="secondary" disabled>
@@ -215,12 +215,12 @@ export default function TenantDashboard() {
             subtitle="Pay in seconds, see history, download receipts"
             right={
               <div className="flex items-center gap-2">
-                <Pill>Stripe ready ✅</Pill>
+                <Pill>Stripe ready</Pill>
               </div>
             }
           >
             {loading ? (
-              <div className="text-slate-400">Loading charges…</div>
+              <div className="text-slate-400">Loading charges...</div>
             ) : charges.length === 0 ? (
               <div className="text-slate-400">
                 No charges yet. (If you just accepted your tenant invite, hit Refresh.)
@@ -246,7 +246,7 @@ export default function TenantDashboard() {
                       return (
                         <tr key={c.id} className="border-t border-slate-900/80">
                           <td className="py-3">
-                            {fmtDate(c.period_start)} – {fmtDate(c.period_end)}
+                            {fmtDate(c.period_start)} â€“ {fmtDate(c.period_end)}
                             <div className="text-xs text-slate-500 mt-1">Charge #{c.id}</div>
                           </td>
                           <td className="py-3">{fmtDate(c.due_date)}</td>
@@ -254,7 +254,7 @@ export default function TenantDashboard() {
                           <td className="py-3">{money(c.paid_total)}</td>
                           <td className="py-3">{money(c.balance_due)}</td>
                           <td className="py-3">
-                            <Pill>{statusTxt || "—"}</Pill>
+                            <Pill>{statusTxt || "â€”"}</Pill>
                           </td>
                           <td className="py-3 text-right">
                             {isPaid ? (

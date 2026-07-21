@@ -15,7 +15,7 @@ function Card({ title, subtitle, right, children, className = "" }) {
   return (
     <div
       className={cx(
-        "rounded-[28px] border border-slate-800/80 bg-slate-950/50 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.02)]",
+        "rounded-[28px] border border-blue-500/20 bg-[#07111f]/90 backdrop-blur-xl shadow-[0_18px_80px_rgba(0,89,255,0.10)]",
         className
       )}
     >
@@ -75,7 +75,7 @@ function MetricCard({
   hint,
 }) {
   return (
-    <div className="rounded-3xl border border-slate-800 bg-slate-950/60 p-5">
+    <div className="rounded-3xl border border-blue-500/20 bg-[#07111f]/95 p-5 shadow-[0_0_32px_rgba(21,151,255,0.06)]">
       <div className="flex items-center justify-between gap-3">
         <div className="text-xs uppercase tracking-[0.18em] text-slate-500">
           {label}
@@ -112,7 +112,7 @@ function PropertyRow({ property, onOpen }) {
   return (
     <button
       onClick={() => onOpen(property)}
-      className="group w-full rounded-3xl border border-slate-800 bg-slate-950/50 p-4 text-left transition hover:border-cyan-500/30 hover:bg-slate-900/50"
+      className="group w-full rounded-3xl border border-blue-500/15 bg-black/25 p-4 text-left transition hover:border-blue-400/45 hover:bg-blue-500/[0.06] hover:shadow-[0_0_28px_rgba(21,151,255,0.08)]"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -163,7 +163,7 @@ function WorkOrderRow({ wo }) {
       : "slate";
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4">
+    <div className="rounded-2xl border border-blue-500/15 bg-black/25 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="truncate text-sm font-semibold text-slate-100">
@@ -257,15 +257,15 @@ export default function PropertyManagerDashboard() {
   }, [properties, workOrders]);
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100">
+    <div className="min-h-screen bg-black text-slate-100">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute left-[-10%] top-[-20%] h-[420px] w-[420px] rounded-full bg-cyan-500/10 blur-3xl" />
-        <div className="absolute bottom-[-20%] right-[-10%] h-[420px] w-[420px] rounded-full bg-indigo-500/10 blur-3xl" />
+        <div className="absolute left-[-10%] top-[-20%] h-[420px] w-[420px] rounded-full bg-blue-600/15 blur-[120px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] h-[420px] w-[420px] rounded-full bg-cyan-500/10 blur-[140px]" />
       </div>
 
       <ModeBar
         title="Property Management"
-        subtitle="Properties • Units • Tenants • Work Orders"
+        subtitle="One platform. Every property. Total control."
         rightActions={
           <div className="flex gap-2 flex-wrap">
             <Button
@@ -296,7 +296,7 @@ export default function PropertyManagerDashboard() {
       <main className="relative z-10 mx-auto max-w-7xl px-4 py-6 space-y-6">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <MetricCard
-            label="Properties"
+            label="Total Properties"
             value={stats.total}
             tone="cyan"
             hint="Portfolio total"
@@ -326,7 +326,7 @@ export default function PropertyManagerDashboard() {
 
         <div className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
           <Card
-            title="Portfolio"
+            title="Property Portfolio"
             subtitle="Open a property to manage units, leases, tenants, and documents."
             right={<Pill tone="cyan">{properties.length} total</Pill>}
           >
@@ -388,7 +388,7 @@ export default function PropertyManagerDashboard() {
 
             <Card
               title="Quick Actions"
-              subtitle="Fast PM operations"
+              subtitle="Tenants, maintenance, messages, calendar, and documents"
             >
               <div className="grid gap-3">
                 <Button
