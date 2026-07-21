@@ -1,6 +1,11 @@
 // src/components/customer-health/WorkoutFocusLaunchDrawer.jsx
 import React, { useEffect, useMemo, useState } from "react";
 
+import {
+  speakCoachText,
+  stopCoachVoice,
+} from "./healthCoachVoice";
+
 function safeNumber(value, fallback = 0) {
   const parsed = Number(
     String(value ?? "").replace(/[^\d.-]/g, "")
@@ -12,6 +17,7 @@ function workoutTotals(workout) {
   const exercises = Array.isArray(workout?.exercises)
     ? workout.exercises
     : [];
+
   const sets = exercises.reduce(
     (total, exercise) =>
       total +
@@ -41,6 +47,58 @@ function formatCountdown(value) {
   return `00:${String(Math.max(0, value)).padStart(2, "0")}`;
 }
 
+function workoutName(workout) {
+  return (
+    workout?.workout_name ||
+    workout?.title ||
+    workout?.name ||
+    "today's workout"
+  );
+}
+
+function firstExerciseName(workout) {
+  const first = Array.isArray(workout?.exercises)
+    ? workout.exercises[0]
+    : null;
+
+  return (
+    first?.name ||
+    first?.exercise_name ||
+    "your first exercise"
+  );
+}
+
+function buildBriefing({
+  workout,
+  totals,
+  location,
+  energy,
+  adjustment,
+}) {
+  const focus =
+    workout?.adaptive_focus ||
+    workout?.requested_focus ||
+    workout?.focus ||
+    "";
+
+  return [
+    `Here is the update for ${workoutName(workout)}.`,
+    `${totals.exercises} exercises, ${totals.sets} total sets, and about ${totals.duration} minutes.`,
+    focus ? `Today's focus is ${focus}.` : "",
+    `You are training at ${location}.`,
+    `We will begin with ${firstExerciseName(workout)}.`,
+    energy
+      ? `You reported your energy as ${energy.toLowerCase()}.`
+      : "",
+    adjustment && adjustment !== "No changes"
+      ? `I noted this change: ${adjustment}.`
+      : "",
+    "Use the countdown to get your equipment ready. Stay controlled and adjust any load that does not feel right.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 export default function WorkoutFocusLaunchDrawer({
   open,
   workout,
@@ -49,8 +107,13 @@ export default function WorkoutFocusLaunchDrawer({
 }) {
   const [countdown, setCountdown] = useState(15);
   const [started, setStarted] = useState(false);
+  const [energy, setEnergy] = useState("");
+  const [adjustment, setAdjustment] = useState("No changes");
+  const [briefingStatus, setBriefingStatus] = useState("");
+
   const [bpm, setBpm] = useState(() => {
     if (typeof window === "undefined") return 0;
+
     return safeNumber(
       window.localStorage.getItem(
         "syncworks_health_current_bpm"
@@ -64,16 +127,37 @@ export default function WorkoutFocusLaunchDrawer({
     [workout]
   );
 
+  const location =
+    workout?.workout_location_name ||
+    workout?.requested_location ||
+    "your selected location";
+
+  const briefing = useMemo(
+    () =>
+      buildBriefing({
+        workout,
+        totals,
+        location,
+        energy,
+        adjustment,
+      }),
+    [workout, totals, location, energy, adjustment]
+  );
+
   useEffect(() => {
     if (!open) {
       setCountdown(15);
       setStarted(false);
+      setBriefingStatus("");
+      stopCoachVoice();
       return undefined;
     }
 
     setCountdown(15);
     setStarted(false);
-    return undefined;
+    setBriefingStatus("");
+
+    return () => stopCoachVoice();
   }, [open, workout?.id]);
 
   useEffect(() => {
@@ -84,6 +168,7 @@ export default function WorkoutFocusLaunchDrawer({
         () => onBegin?.(),
         450
       );
+
       return () => window.clearTimeout(timer);
     }
 
@@ -103,6 +188,7 @@ export default function WorkoutFocusLaunchDrawer({
       0,
       Math.min(240, safeNumber(value, 0))
     );
+
     setBpm(next);
 
     if (typeof window !== "undefined") {
@@ -113,35 +199,54 @@ export default function WorkoutFocusLaunchDrawer({
     }
   }
 
+  function playBriefing() {
+    setBriefingStatus("playing");
+
+    speakCoachText({
+      text: briefing,
+      audioMode: "essential",
+      voicePreference: "female",
+      rate: 0.98,
+      pitch: 1,
+      volume: 1,
+      cancelFirst: true,
+      eventType: "preworkout_briefing",
+      browserFallback: true,
+    });
+
+    window.setTimeout(
+      () => setBriefingStatus("played"),
+      1200
+    );
+  }
+
+  function startCountdown() {
+    if (started) return;
+
+    setStarted(true);
+    playBriefing();
+  }
+
   if (!open) return null;
 
-  const currentExercise = Array.isArray(
-    workout?.exercises
-  )
-    ? workout.exercises[0]
-    : null;
-
-  const location =
-    workout?.workout_location_name ||
-    workout?.requested_location ||
-    "Selected location";
-
   const progress = started
-    ? Math.max(0, Math.min(100, (countdown / 15) * 100))
+    ? Math.max(
+        0,
+        Math.min(100, (countdown / 15) * 100)
+      )
     : 100;
 
   return (
     <div className="fixed inset-0 z-[155] overflow-y-auto bg-[#020403] text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_34%,rgba(87,255,61,0.17),transparent_28%),linear-gradient(180deg,#060906_0%,#010201_72%)]" />
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(87,255,61,0.18),transparent_30%),linear-gradient(180deg,#060906_0%,#010201_72%)]" />
 
       <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col px-4 pb-6 pt-5 sm:px-6">
         <header className="flex items-start justify-between gap-3">
           <div>
             <div className="text-2xl font-black uppercase tracking-tight text-white">
-              {workout?.workout_name ||
-                workout?.title ||
-                "Workout"}
+              {workoutName(workout)}
             </div>
+
             <div className="mt-1 text-xs font-black text-lime-300">
               {location}
             </div>
@@ -157,10 +262,11 @@ export default function WorkoutFocusLaunchDrawer({
           </button>
         </header>
 
-        <main className="flex flex-1 flex-col justify-center py-6">
-          <div className="relative mx-auto flex h-72 w-72 items-center justify-center sm:h-80 sm:w-80">
+        <main className="flex flex-1 flex-col justify-center py-5">
+          <div className="relative mx-auto flex h-64 w-64 items-center justify-center sm:h-80 sm:w-80">
             <div className="absolute inset-0 rounded-full bg-lime-300/[0.03] blur-2xl" />
             <div className="absolute inset-2 rounded-full border border-lime-300/20 shadow-[0_0_70px_rgba(112,255,61,0.22),inset_0_0_55px_rgba(112,255,61,0.08)]" />
+
             <div
               className="absolute inset-6 rounded-full"
               style={{
@@ -169,52 +275,58 @@ export default function WorkoutFocusLaunchDrawer({
                   "0 0 34px rgba(112,255,61,0.34)",
               }}
             />
+
             <div className="absolute inset-[2.15rem] rounded-full bg-[#030604] shadow-[inset_0_0_42px_rgba(0,0,0,0.95)]" />
             <div className="absolute inset-[3.1rem] rounded-full border border-lime-300/15" />
 
             <div className="relative text-center">
               <div className="text-[10px] font-black uppercase tracking-[0.22em] text-lime-300">
-                {started ? "Get Ready" : "Focus Countdown"}
+                {started
+                  ? "Coach Briefing Playing"
+                  : "Pre-Workout Briefing"}
               </div>
+
               <div className="mt-2 text-6xl font-black tabular-nums tracking-[-0.06em] text-white sm:text-7xl">
                 {started
                   ? formatCountdown(countdown)
                   : "00:15"}
               </div>
-              <div className="mt-3 flex justify-center gap-1.5">
-                {Array.from({ length: 8 }).map(
-                  (_, index) => (
-                    <span
-                      key={index}
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        started &&
-                        index <
-                          Math.ceil(
-                            ((15 - countdown) / 15) * 8
-                          )
-                          ? "bg-lime-300"
-                          : "bg-white/15"
-                      }`}
-                    />
-                  )
-                )}
+
+              <div className="mt-3 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+                {briefingStatus === "playing"
+                  ? "Audio starting"
+                  : briefingStatus === "played"
+                  ? "Audio active"
+                  : "Tap start to hear today's plan"}
               </div>
             </div>
           </div>
 
-          <section className="mx-auto mt-6 w-full max-w-xl rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-4">
-            <div className="text-[9px] font-black uppercase tracking-[0.18em] text-lime-300">
-              SYNC Coach
+          <section className="mx-auto mt-5 w-full max-w-xl rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[9px] font-black uppercase tracking-[0.18em] text-lime-300">
+                  SYNC Coach Update
+                </div>
+
+                <div className="mt-2 text-lg font-black text-white">
+                  {firstExerciseName(workout)}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={playBriefing}
+                className="shrink-0 rounded-xl border border-lime-300/30 bg-lime-300/[0.08] px-3 py-2 text-[10px] font-black text-lime-100"
+              >
+                Replay Audio
+              </button>
             </div>
-            <div className="mt-2 text-lg font-black text-white">
-              {currentExercise?.name ||
-                currentExercise?.exercise_name ||
-                "First exercise ready"}
-            </div>
+
             <p className="mt-2 text-sm leading-6 text-slate-300">
               {totals.exercises} exercises, {totals.sets} sets,
-              about {totals.duration} minutes. Get your
-              equipment ready and lock in.
+              about {totals.duration} minutes. Confirm anything
+              that changed before the timer starts.
             </p>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
@@ -222,6 +334,7 @@ export default function WorkoutFocusLaunchDrawer({
                 <span className="block text-[9px] font-black uppercase tracking-[0.15em] text-slate-500">
                   Current BPM
                 </span>
+
                 <input
                   type="number"
                   min="0"
@@ -236,22 +349,60 @@ export default function WorkoutFocusLaunchDrawer({
                 />
               </label>
 
-              <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
-                <div className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-500">
-                  Estimated Time
-                </div>
-                <div className="mt-1 text-2xl font-black text-white">
-                  {totals.duration} min
-                </div>
+              <label className="rounded-2xl border border-white/10 bg-black/30 p-3">
+                <span className="block text-[9px] font-black uppercase tracking-[0.15em] text-slate-500">
+                  Energy
+                </span>
+
+                <select
+                  value={energy}
+                  onChange={(event) =>
+                    setEnergy(event.target.value)
+                  }
+                  className="mt-1 w-full border-0 bg-transparent p-0 text-base font-black text-white outline-none"
+                >
+                  <option value="">Not logged</option>
+                  <option value="Low">Low</option>
+                  <option value="Normal">Normal</option>
+                  <option value="High">High</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="mt-3">
+              <div className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-500">
+                Any change before we begin?
+              </div>
+
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  "No changes",
+                  "Short on time",
+                  "Equipment changed",
+                  "Pain or soreness",
+                ].map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setAdjustment(option)}
+                    className={`min-h-11 rounded-xl border px-2 text-[10px] font-black ${
+                      adjustment === option
+                        ? "border-lime-300/45 bg-lime-300/[0.10] text-lime-100"
+                        : "border-white/10 bg-white/[0.03] text-slate-300"
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
               </div>
             </div>
           </section>
         </main>
 
-        <footer className="sticky bottom-0 rounded-[1.5rem] border border-white/10 bg-black/85 p-3 backdrop-blur-xl">
+        <footer className="sticky bottom-0 rounded-[1.5rem] border border-white/10 bg-black/90 p-3 backdrop-blur-xl">
           <button
             type="button"
-            onClick={() => setStarted(true)}
+            onClick={startCountdown}
             disabled={started}
             className="h-16 w-full rounded-2xl border border-lime-300/60 bg-lime-300 text-base font-black uppercase tracking-[0.12em] text-black shadow-[0_0_34px_rgba(112,255,61,0.28)] disabled:cursor-wait disabled:opacity-85"
           >
@@ -259,7 +410,7 @@ export default function WorkoutFocusLaunchDrawer({
               ? countdown > 0
                 ? `Starting in ${countdown}`
                 : "Enter Workout"
-              : "Start 15 Second Countdown"}
+              : "Play Briefing and Start"}
           </button>
         </footer>
       </div>

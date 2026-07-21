@@ -95,6 +95,42 @@ function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
+function hasBrokenEncoding(value) {
+  return /[\u00c2\u00c3\u00c6\u0192\u2122\ufffd]/.test(
+    String(value ?? "")
+  );
+}
+
+function cleanLegacyWorkoutText(value, fallback = "") {
+  const text = String(value ?? "").trim();
+
+  if (!text) return fallback;
+  if (hasBrokenEncoding(text)) return fallback;
+
+  return text;
+}
+
+function sanitizeLegacyWorkoutData(value) {
+  if (Array.isArray(value)) {
+    return value.map(sanitizeLegacyWorkoutData);
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        sanitizeLegacyWorkoutData(item),
+      ])
+    );
+  }
+
+  if (typeof value === "string") {
+    return cleanLegacyWorkoutText(value, "");
+  }
+
+  return value;
+}
+
 function formatLoad(value) {
   const text = String(value ?? "").trim();
 
@@ -932,7 +968,7 @@ function SetCompletionSheet({
                 )}
               >
                 {reachedFailure
-                  ? "Reached Failure"
+                  ? " | Failure"
                   : "Not to Failure"}
               </button>
             </div>
@@ -1248,13 +1284,13 @@ function SetHistory({
                           log.reps ||
                           "-"}
                         {log.rpe || log.ease_score
-                          ? ` ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Effort ${log.rpe || log.ease_score}`
+                          ? ` | Effort ${log.rpe || log.ease_score}`
                           : ""}
                         {log.set_type === "warmup"
-                          ? " ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Warm-up"
+                          ? " | Warm-up"
                           : ""}
                         {log.reached_failure
-                          ? " ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Failure"
+                          ? " | Failure"
                           : ""}
                       </div>
                     ) : (
@@ -1341,7 +1377,7 @@ function SetHistory({
                     )}
                   >
                     {log.set_type === "warmup"
-                      ? "Warm-up"
+                      ? " | Warm-up"
                       : "Working"}
                   </button>
 
@@ -2527,7 +2563,9 @@ export default function ActiveWorkoutSessionDrawer({
         history,
       });
 
-    setSession(initializedSession);
+    setSession(
+      sanitizeLegacyWorkoutData(initializedSession)
+    );
 
     initializedWorkoutKeyRef.current = workoutKey;
     setReviewMode(false);
