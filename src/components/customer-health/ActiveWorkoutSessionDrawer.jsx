@@ -79,6 +79,7 @@ import WorkoutProgressionCard from "./WorkoutProgressionCard";
 import PersonalRecordsCard from "./PersonalRecordsCard";
 import PostWorkoutReportCard from "./PostWorkoutReportCard";
 import LiveWorkoutAdaptationDrawer from "./LiveWorkoutAdaptationDrawer";
+import AdaptiveCoachProposalCard from "./AdaptiveCoachProposalCard";
 import {
   buildAdaptiveExercise,
   buildPostWorkoutWrapUp,
@@ -4449,6 +4450,19 @@ export default function ActiveWorkoutSessionDrawer({
               {!isCompleted && warmupReady && currentExercise ? (
                 <ExerciseMemoryCarryForwardCard
                   exercise={currentExercise}
+                />
+              ) : null}
+
+              {!isCompleted && warmupReady && currentExercise ? (
+                <AdaptiveCoachProposalCard
+                  exercise={currentExercise}
+                  audioMode={coachAudioMode}
+                  voicePreference={
+                    coachVoicePreference
+                  }
+                  onApply={
+                    applyProgressionRecommendation
+                  }
                 />
               ) : null}
 
