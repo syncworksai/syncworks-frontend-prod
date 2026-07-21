@@ -57,6 +57,7 @@ import {
 import "../components/customer-health/healthUiPolish.css";
 import "../components/customer-health/healthObsidianElectric.css";
 import { buildAdaptiveWorkout } from "../components/customer-health/healthAdaptiveWorkoutGenerator";
+import { ensureHealthCoachingContext } from "../components/customer-health/healthCoachingContext";
 import { buildAiWeeklyPlan } from "../components/customer-health/healthAiWeeklyPlan";
 import {
   backupHealthHistory,
@@ -792,6 +793,10 @@ export default function CustomerHealth() {
         : defaultDevices();
     }
   );
+
+  useEffect(() => {
+    ensureHealthCoachingContext(profile);
+  }, [profile]);
 
   useEffect(() => {
     document.body.dataset.syncworksModule =
