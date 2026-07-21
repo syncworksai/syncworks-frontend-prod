@@ -4231,20 +4231,13 @@ export default function ActiveWorkoutSessionDrawer({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] flex justify-end bg-black/80 backdrop-blur-xl">
-      <button
-        type="button"
-        aria-label="Close active workout"
-        onClick={closeDrawer}
-        className="absolute inset-0"
-      />
-
-      <section className="relative z-[91] flex h-full w-full max-w-6xl flex-col overflow-hidden border-l border-emerald-300/10 bg-[radial-gradient(circle_at_top_left,rgba(57,255,136,0.09),transparent_18%),radial-gradient(circle_at_top_right,rgba(255,59,212,0.07),transparent_20%),linear-gradient(180deg,#040812_0%,#040705_100%)] shadow-[-30px_0_80px_rgba(0,0,0,0.6)]">
-        <header className="sticky top-0 z-30 border-b border-white/10 bg-[#040812]/95 px-3 py-3 backdrop-blur-xl sm:px-6 sm:py-4">
+    <div className="fixed inset-0 z-[90] bg-[#020403]">
+<section className="relative z-[91] flex h-[100dvh] w-full flex-col overflow-hidden bg-[radial-gradient(circle_at_50%_-10%,rgba(0,245,106,0.12),transparent_30%),linear-gradient(180deg,#050806_0%,#020403_100%)]">
+        <header className="sticky top-0 z-30 border-b border-emerald-300/15 bg-[#030604]/97 px-3 py-3 backdrop-blur-xl sm:px-6 sm:py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="text-[9px] font-black uppercase tracking-[0.24em] text-emerald-200 sm:text-xs">
-                SyncWorks Trainer Loop
+                SYNC WORKOUT FOCUS MODE
               </div>
 
               <h2 className="mt-1 truncate text-xl font-black text-white sm:text-4xl">
@@ -4252,19 +4245,40 @@ export default function ActiveWorkoutSessionDrawer({
                   "Active Workout"}
               </h2>
 
-              <p className="mt-2 hidden text-sm leading-6 text-slate-300 sm:block">
-                Active time only runs while a set is
-                being performed.
-              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-emerald-100">
+                  {plannerItem?.workout_location_name ||
+                    plannerItem?.location_name ||
+                    session?.workout_location_name ||
+                    session?.location_name ||
+                    "Workout location"}
+                </span>
+                <span className="hidden text-xs font-bold text-slate-400 sm:inline">
+                  Dashboard hidden until you finish or exit.
+                </span>
+              </div>
             </div>
 
-            <button
-              type="button"
-              onClick={closeDrawer}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-sm font-black text-white"
-            >
-              X
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              {!isCompleted ? (
+                <button
+                  type="button"
+                  onClick={() => setModifyMenuOpen((current) => !current)}
+                  disabled={session?.set_active}
+                  className="hidden h-10 rounded-2xl border border-emerald-300/25 bg-emerald-300/10 px-4 text-xs font-black text-emerald-100 disabled:opacity-40 sm:block"
+                >
+                  Modify
+                </button>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={closeDrawer}
+                className="h-10 rounded-2xl border border-white/10 bg-white/[0.06] px-4 text-xs font-black text-white"
+              >
+                Exit Focus
+              </button>
+            </div>
           </div>
 
           {session ? (
@@ -4364,7 +4378,7 @@ export default function ActiveWorkoutSessionDrawer({
           ) : null}
         </header>
 
-        <main className="flex-1 overflow-y-auto px-3 py-3 pb-32 sm:px-6 sm:py-5 sm:pb-32">
+        <main className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto px-3 py-3 pb-36 sm:px-6 sm:py-5 sm:pb-36">
           {!session ? (
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 text-sm text-slate-300">
               No active workout selected.
@@ -4386,10 +4400,50 @@ export default function ActiveWorkoutSessionDrawer({
               ) : null}
 
               {!isCompleted ? (
-                <WorkoutCommandCenter
-                  session={session}
-                  currentExercise={currentExercise}
-                />
+                <>
+                  <section className="rounded-[1.5rem] border border-emerald-300/20 bg-black/30 p-3 sm:p-4">
+                    <div className="mb-2 text-[8px] font-black uppercase tracking-[0.18em] text-emerald-300">
+                      FOCUS CONTROLS
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDetailsOpen((current) => !current)}
+                        className="h-11 rounded-xl border border-white/10 bg-white/[0.04] text-[10px] font-black text-white sm:text-xs"
+                      >
+                        Logs
+                      </button>
+                      <button
+                        type="button"
+                        onClick={voiceListening ? finishVoiceListening : startVoiceListening}
+                        className="h-11 rounded-xl border border-emerald-300/25 bg-emerald-300/10 text-[10px] font-black text-emerald-100 sm:text-xs"
+                      >
+                        {voiceListening ? "Stop Coach" : "Coach"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setModifyMenuOpen((current) => !current)}
+                        disabled={session?.set_active}
+                        className="h-11 rounded-xl border border-amber-300/25 bg-amber-300/10 text-[10px] font-black text-amber-100 disabled:opacity-40 sm:text-xs"
+                      >
+                        Modify
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setReviewMode(true)}
+                        disabled={session?.set_active}
+                        className="h-11 rounded-xl border border-white/10 bg-white/[0.04] text-[10px] font-black text-white disabled:opacity-40 sm:text-xs"
+                      >
+                        Finish
+                      </button>
+                    </div>
+                  </section>
+
+                  <WorkoutCommandCenter
+                    session={session}
+                    currentExercise={currentExercise}
+                  />
+                </>
               ) : null}
 
               {!isCompleted && warmupReady ? (
