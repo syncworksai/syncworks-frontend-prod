@@ -287,3 +287,80 @@
     transition-duration: 0.01ms !important;
   }
 }
+/* Build 16: darker mobile surfaces, brighter electric rims, compact nav */
+.health-obsidian-electric {
+  --sw-health-green: #39ff88;
+  --sw-health-green-bright: #75ffa4;
+  --sw-health-green-muted: #65ff9a;
+  --sw-health-border: rgba(57, 255, 136, 0.22);
+  --sw-health-border-strong: rgba(57, 255, 136, 0.58);
+  --sw-health-glow: rgba(57, 255, 136, 0.26);
+  --sw-health-glow-strong: rgba(57, 255, 136, 0.5);
+  background:
+    radial-gradient(circle at 88% 4%, rgba(57,255,136,0.065), transparent 19rem),
+    linear-gradient(180deg, #010201 0%, #020403 52%, #000100 100%);
+}
+
+.health-obsidian-electric :where(section, article)[class*="rounded-"] {
+  border-color: rgba(57,255,136,0.24) !important;
+  background:
+    linear-gradient(150deg, rgba(5,9,7,0.985), rgba(1,3,2,0.995)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.025),
+    0 0 0 1px rgba(57,255,136,0.025),
+    0 12px 34px rgba(0,0,0,0.46) !important;
+}
+
+.health-obsidian-electric :where(section, article)[class*="rounded-"]::after {
+  opacity: 0.82;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(101,255,154,0.95),
+    transparent
+  );
+  filter:
+    drop-shadow(0 0 5px rgba(57,255,136,0.9))
+    drop-shadow(0 0 12px rgba(57,255,136,0.38));
+}
+
+.health-obsidian-electric .health-workout-start-button {
+  border-color: rgba(117,255,164,0.95) !important;
+  color: #001c09 !important;
+  background:
+    linear-gradient(180deg, #8affb4 0%, #39ff88 48%, #00e963 100%) !important;
+  box-shadow:
+    0 0 0 1px rgba(117,255,164,0.24),
+    0 0 22px rgba(57,255,136,0.56),
+    0 12px 30px rgba(0,245,106,0.23),
+    inset 0 1px 0 rgba(255,255,255,0.58) !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.12) !important;
+}
+
+.health-obsidian-electric .health-workout-start-button:active {
+  background:
+    linear-gradient(180deg, #72ffa5 0%, #28ef78 100%) !important;
+  box-shadow:
+    0 0 16px rgba(57,255,136,0.42),
+    inset 0 1px 0 rgba(255,255,255,0.35) !important;
+}
+
+@media (max-width: 767px) {
+  .health-obsidian-electric {
+    padding-bottom: calc(70px + env(safe-area-inset-bottom));
+  }
+
+  .health-obsidian-electric
+    [data-syncworks-module-nav="health"]
+    button {
+    min-height: 0;
+    font-family:
+      Inter,
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+  }
+}

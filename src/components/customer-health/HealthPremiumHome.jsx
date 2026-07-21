@@ -573,7 +573,7 @@ export default function HealthPremiumHome({
                   "plan-today"
                 )
           }
-          className="mt-6 flex h-14 w-full items-center justify-center gap-3 rounded-2xl border border-emerald-300/60 bg-emerald-400 text-base font-black uppercase tracking-[0.12em] text-black shadow-[0_0_32px_rgba(0,245,106,0.22)]"
+          className="health-workout-start-button mt-6 flex h-14 w-full items-center justify-center gap-3 rounded-2xl border text-base font-black uppercase tracking-[0.12em]"
         >
           {workout
             ? "Start Workout"
