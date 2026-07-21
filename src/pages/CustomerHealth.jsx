@@ -32,6 +32,7 @@ import HealthPremiumHome from "../components/customer-health/HealthPremiumHome";
 import PlanTodayWorkoutDrawer from "../components/customer-health/PlanTodayWorkoutDrawer";
 import PreWorkoutCheckInDrawer from "../components/customer-health/PreWorkoutCheckInDrawer";
 import WorkoutLocationCheckInDrawer from "../components/customer-health/WorkoutLocationCheckInDrawer";
+import WorkoutFocusLaunchDrawer from "../components/customer-health/WorkoutFocusLaunchDrawer";
 import HealthProfileIntakeDrawer from "../components/customer-health/HealthProfileIntakeDrawer";
 import HealthQuickLogDrawer from "../components/customer-health/HealthQuickLogDrawer";
 import NutritionCoachDrawer from "../components/customer-health/NutritionCoachDrawer";
@@ -2810,7 +2811,7 @@ export default function CustomerHealth() {
     }));
 
     setActivePlannerItem(nextPlannerItem);
-    setDrawer("active-workout");
+    setDrawer("workout-focus-launch");
   }
 
   function saveCustomWorkout(
@@ -3310,6 +3311,22 @@ export default function CustomerHealth() {
 
               setDrawer("pre-workout");
             }}
+          />
+
+          <WorkoutFocusLaunchDrawer
+            open={
+              drawer ===
+              "workout-focus-launch"
+            }
+            workout={
+              activePlannerItem
+            }
+            onCancel={() =>
+              setDrawer("")
+            }
+            onBegin={() =>
+              setDrawer("active-workout")
+            }
           />
 
           <PreWorkoutCheckInDrawer
