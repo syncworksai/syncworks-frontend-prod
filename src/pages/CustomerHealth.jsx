@@ -2829,6 +2829,51 @@ export default function CustomerHealth() {
 
     let nextPlannerItem = {
       ...activePlannerItem,
+      original_workout_name:
+        activePlannerItem.original_workout_name ||
+        activePlannerItem.workout_name ||
+        activePlannerItem.title ||
+        activePlannerItem.name ||
+        "",
+      planned_date:
+        activePlannerItem.planned_date ||
+        activePlannerItem.ymd ||
+        "",
+      scientific_title:
+        checkIn.scientific_title ||
+        activePlannerItem.scientific_title ||
+        activePlannerItem.workout_name ||
+        "",
+      training_category:
+        checkIn.training_category ||
+        activePlannerItem.training_category ||
+        "",
+      body_region:
+        checkIn.body_region ||
+        activePlannerItem.body_region ||
+        "",
+      movement_pattern:
+        checkIn.movement_pattern ||
+        activePlannerItem.movement_pattern ||
+        "",
+      primary_muscles:
+        Array.isArray(checkIn.primary_muscles)
+          ? checkIn.primary_muscles
+          : activePlannerItem.primary_muscles || [],
+      secondary_muscles:
+        Array.isArray(checkIn.secondary_muscles)
+          ? checkIn.secondary_muscles
+          : activePlannerItem.secondary_muscles || [],
+      multiple_sessions_today:
+        Boolean(checkIn.multiple_sessions_today),
+      session_number:
+        Math.max(1, Number(checkIn.session_number || 1)),
+      available_minutes:
+        Number(
+          checkIn.available_minutes ||
+            activePlannerItem.requested_duration_minutes ||
+            45
+        ),
       pre_workout_check_in: {
         ...checkIn,
         sore_areas: soreAreas,
@@ -2913,6 +2958,22 @@ export default function CustomerHealth() {
         nextPlannerItem.plan_control ||
         checkIn.plan_control ||
         "coach_assist",
+      multiple_sessions_today:
+        nextPlannerItem.multiple_sessions_today,
+      current_session_number:
+        nextPlannerItem.session_number,
+      next_session_number:
+        nextPlannerItem.multiple_sessions_today
+          ? nextPlannerItem.session_number + 1
+          : 1,
+      available_minutes:
+        nextPlannerItem.available_minutes,
+      current_training_category:
+        nextPlannerItem.training_category,
+      current_body_region:
+        nextPlannerItem.body_region,
+      current_movement_pattern:
+        nextPlannerItem.movement_pattern,
       updated_at: new Date().toISOString(),
     }));
 
