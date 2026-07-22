@@ -2,9 +2,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 
 import {
-  speakCoachText,
-  stopCoachVoice,
-} from "./healthCoachVoice";
+  playWorkoutCoachMessage,
+  stopWorkoutCoachAudio,
+  unlockWorkoutCoachAudio,
+} from "./healthWorkoutAudioController";
 
 function safeNumber(value, fallback = 0) {
   const parsed = Number(
@@ -149,7 +150,7 @@ export default function WorkoutFocusLaunchDrawer({
       setCountdown(15);
       setStarted(false);
       setBriefingStatus("");
-      stopCoachVoice();
+      stopWorkoutCoachAudio();
       return undefined;
     }
 
@@ -157,7 +158,7 @@ export default function WorkoutFocusLaunchDrawer({
     setStarted(false);
     setBriefingStatus("");
 
-    return () => stopCoachVoice();
+    return () => stopWorkoutCoachAudio();
   }, [open, workout?.id]);
 
   useEffect(() => {
@@ -165,7 +166,7 @@ export default function WorkoutFocusLaunchDrawer({
 
     if (countdown <= 0) {
       const timer = window.setTimeout(() => {
-        stopCoachVoice();
+        stopWorkoutCoachAudio();
         onBegin?.({
           launch_briefing_completed_at:
             new Date().toISOString(),
@@ -202,11 +203,16 @@ export default function WorkoutFocusLaunchDrawer({
     }
   }
 
-  function playBriefing() {
+  function playBriefing({ replay = false } = {}) {
+    unlockWorkoutCoachAudio();
     setBriefingStatus("playing");
 
-    speakCoachText({
+    playWorkoutCoachMessage({
+      id: `${workout?.id || workoutName(workout)}:preworkout-brief`,
       text: briefing,
+      priority: "high",
+      playOnce: !replay,
+      replace: true,
       audioMode: "essential",
       voicePreference: "female",
       rate: 0.98,
@@ -214,7 +220,7 @@ export default function WorkoutFocusLaunchDrawer({
       volume: 1,
       cancelFirst: true,
       eventType: "preworkout_briefing",
-      browserFallback: true,
+      browserFallback: false,
     });
 
     window.setTimeout(
@@ -227,7 +233,7 @@ export default function WorkoutFocusLaunchDrawer({
     if (started) return;
 
     setStarted(true);
-    playBriefing();
+    playBriefing({ replay: false });
   }
 
   if (!open) return null;
@@ -319,7 +325,7 @@ export default function WorkoutFocusLaunchDrawer({
 
               <button
                 type="button"
-                onClick={playBriefing}
+                onClick={() => playBriefing({ replay: true })}
                 className="shrink-0 rounded-xl border border-lime-300/30 bg-lime-300/[0.08] px-3 py-2 text-[10px] font-black text-lime-100"
               >
                 Replay Audio
