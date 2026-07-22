@@ -1,5 +1,5 @@
 // src/components/customer-health/HealthPremiumHome.jsx
-import React, { useMemo } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import HealthDailyCoachStatusCard from "./HealthDailyCoachStatusCard";
 import HealthGoalProgressCard from "./HealthGoalProgressCard";
 
@@ -317,7 +317,13 @@ export default function HealthPremiumHome({
   onShowInsights,
   onQuickLog,
   onEditDailyGoals,
+  onCoachUpdate,
 }) {
+  const [coachDraft, setCoachDraft] = useState("");
+  const [coachMessages, setCoachMessages] = useState([]);
+  const [coachListening, setCoachListening] = useState(false);
+  const [coachError, setCoachError] = useState("");
+  const recognitionRef = useRef(null);
   const todayWorkout = useMemo(
     () =>
       findTodayWorkout(
@@ -411,6 +417,136 @@ export default function HealthPremiumHome({
       ? "Your recent training history is ready for SYNC to review. Use Progress to see trends and your next best move."
       : "Complete your first guided workout to unlock strength, consistency, volume, and recovery insights.";
 
+  function buildHomeCoachReply(message) {
+    const command = String(message || "").trim();
+    const lower = command.toLowerCase();
+    const patch = {};
+    const confirmations = [];
+
+    if (
+      lower.includes("home") ||
+      lower.includes("no equipment") ||
+      lower.includes("bodyweight")
+    ) {
+      patch.training_location = "Home";
+      patch.equipment = lower.includes("dumbbell")
+        ? "Dumbbells, Bodyweight, Floor"
+        : "Bodyweight, Floor, No Equipment";
+      patch.available_equipment = lower.includes("dumbbell")
+        ? ["Dumbbells", "Bodyweight", "Floor"]
+        : ["Bodyweight", "Floor", "No Equipment"];
+      confirmations.push(
+        lower.includes("dumbbell")
+          ? "I will use home-friendly dumbbell and bodyweight movements."
+          : "I will remove barbells and machines and use bodyweight or floor movements."
+      );
+    }
+
+    if (lower.includes("machines busy")) {
+      patch.equipment = "Free weights, Dumbbells, Floor";
+      patch.available_equipment = ["Free weights", "Dumbbells", "Floor"];
+      confirmations.push("I will avoid machine-only exercises.");
+    }
+
+    if (lower.includes("floor only")) {
+      patch.equipment = "Floor, Bodyweight, Bands";
+      patch.available_equipment = ["Floor", "Bodyweight", "Bands"];
+      confirmations.push("I will build the session around floor, bodyweight, and band work.");
+    }
+
+    const minuteMatch = lower.match(/(d{1,3})s*(minute|min)/);
+    if (minuteMatch) {
+      patch.available_minutes = Number(minuteMatch[1]);
+      patch.requested_duration_minutes = Number(minuteMatch[1]);
+      confirmations.push(`I will prioritize the highest-value work for ${minuteMatch[1]} minutes.`);
+    }
+
+    if (
+      lower.includes("later today") ||
+      lower.includes("again later") ||
+      lower.includes("split workout")
+    ) {
+      patch.multiple_sessions_today = true;
+      patch.save_remaining_work_for_later = true;
+      confirmations.push("I will treat today as a split training day and preserve remaining work.");
+    }
+
+    if (lower.includes("pain") || lower.includes("sore")) {
+      patch.readiness_notes = command;
+      confirmations.push("I will protect the affected area and avoid movements that worsen symptoms.");
+    }
+
+    onCoachUpdate?.(patch);
+
+    return confirmations.length
+      ? confirmations.join(" ")
+      : "Tell me where you are training, what equipment is available, how much time you have, or whether you may train again later. I will adapt today's workout before you start.";
+  }
+
+  function submitCoachMessage(rawMessage) {
+    const message = String(rawMessage || "").trim();
+    if (!message) return;
+
+    const reply = buildHomeCoachReply(message);
+    const stamp = Date.now();
+
+    setCoachMessages((previous) => [
+      ...previous,
+      { id: `user-${stamp}`, role: "user", text: message },
+      { id: `sync-${stamp}`, role: "assistant", text: reply },
+    ]);
+
+    setCoachDraft("");
+    setCoachError("");
+  }
+
+  function startCoachListening() {
+    if (typeof window === "undefined") return;
+
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setCoachError("Voice input is not supported in this browser.");
+      return;
+    }
+
+    try {
+      recognitionRef.current?.stop?.();
+    } catch {
+      // Best-effort cleanup.
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event) => {
+      const transcript = event?.results?.[0]?.[0]?.transcript || "";
+      setCoachListening(false);
+      submitCoachMessage(transcript);
+    };
+
+    recognition.onerror = () => {
+      setCoachListening(false);
+      setCoachError("Voice input was interrupted. Tap the microphone and try again.");
+    };
+
+    recognition.onend = () => setCoachListening(false);
+
+    recognitionRef.current = recognition;
+    setCoachListening(true);
+    setCoachError("");
+
+    try {
+      recognition.start();
+    } catch {
+      setCoachListening(false);
+      setCoachError("Voice input could not start.");
+    }
+  }
+
   return (
     <div className="space-y-4">
       <section className="relative overflow-hidden rounded-[2rem] border border-emerald-300/18 bg-[radial-gradient(circle_at_88%_20%,rgba(0,245,106,0.14),transparent_28%),linear-gradient(145deg,#0d130f,#020403)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.42)] sm:p-7">
@@ -452,6 +588,100 @@ export default function HealthPremiumHome({
               View Progress
             </button>
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-[1.75rem] border border-emerald-300/25 bg-[linear-gradient(145deg,rgba(8,16,11,0.98),rgba(2,5,3,0.99))] p-4 shadow-[0_0_32px_rgba(57,255,136,0.08)]">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-300">
+              Ask SYNC
+            </div>
+            <div className="mt-1 text-lg font-black text-white">
+              Adapt today before you train
+            </div>
+            <div className="mt-1 text-xs leading-5 text-slate-400">
+              Speak or type what changed: home workout, machines busy, 25 minutes, pain, or training again later.
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={startCoachListening}
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-lg ${
+              coachListening
+                ? "border-rose-300/40 bg-rose-300/10"
+                : "border-emerald-300/40 bg-emerald-300/10"
+            }`}
+            aria-label="Speak to SYNC"
+          >
+            {coachListening ? "■" : "🎙️"}
+          </button>
+        </div>
+
+        {coachMessages.length ? (
+          <div className="mt-3 max-h-52 space-y-2 overflow-y-auto rounded-2xl border border-white/10 bg-black/25 p-3">
+            {coachMessages.slice(-6).map((message) => (
+              <div
+                key={message.id}
+                className={
+                  message.role === "user"
+                    ? "ml-8 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs text-white"
+                    : "mr-8 rounded-xl border border-emerald-300/20 bg-emerald-300/[0.07] px-3 py-2 text-xs leading-5 text-emerald-50"
+                }
+              >
+                {message.text}
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {coachError ? (
+          <div className="mt-3 rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs text-amber-100">
+            {coachError}
+          </div>
+        ) : null}
+
+        <div className="mt-3 grid grid-cols-[1fr_52px] gap-2">
+          <input
+            value={coachDraft}
+            onChange={(event) => setCoachDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                submitCoachMessage(coachDraft);
+              }
+            }}
+            placeholder="Example: I am home with no equipment and have 30 minutes"
+            className="h-12 min-w-0 rounded-2xl border border-white/10 bg-black/40 px-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-emerald-300/40"
+          />
+
+          <button
+            type="button"
+            onClick={() => submitCoachMessage(coachDraft)}
+            className="h-12 rounded-2xl border border-emerald-300/55 bg-emerald-300 text-lg font-black text-black"
+            aria-label="Send to SYNC"
+          >
+            ↑
+          </button>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {[
+            "Home, no equipment",
+            "Machines busy",
+            "I have 25 minutes",
+            "I may train again later",
+          ].map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              onClick={() => submitCoachMessage(prompt)}
+              className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-[10px] font-black text-slate-300"
+            >
+              {prompt}
+            </button>
+          ))}
         </div>
       </section>
 
