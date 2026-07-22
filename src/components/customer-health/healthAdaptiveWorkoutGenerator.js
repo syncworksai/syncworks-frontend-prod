@@ -126,6 +126,70 @@ function categoryMatches(exercise, focus) {
   return patterns[focus]?.test(haystack) || false;
 }
 
+function equipmentText(snapshot = {}) {
+  return [
+    snapshot.equipment,
+    snapshot.available_equipment,
+    snapshot.workout_equipment,
+    snapshot.training_location,
+    snapshot.last_workout_location_name,
+  ]
+    .flatMap((value) => (Array.isArray(value) ? value : [value]))
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function exerciseFitsEquipment(exercise, snapshot = {}) {
+  const available = equipmentText(snapshot);
+  if (!available) return true;
+
+  const homeMode =
+    /home|floor only|no equipment|bodyweight/.test(available);
+  const machineUnavailable =
+    /machines busy|free weights only|floor only|no equipment/.test(available);
+  const floorOnly = /floor only/.test(available);
+  const hasBarbell = /barbell|rack|squat rack/.test(available);
+  const hasDumbbells = /dumbbell|free weight/.test(available);
+  const hasBands = /band/.test(available);
+
+  const required = [
+    exercise?.equipment,
+    exercise?.location,
+    exercise?.name,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (
+    homeMode &&
+    /barbell|squat rack|smith machine|leg press|cable|machine|pulldown|hack squat/.test(required)
+  ) {
+    return false;
+  }
+
+  if (
+    machineUnavailable &&
+    /machine|cable|leg press|pulldown|smith|hack squat/.test(required)
+  ) {
+    return false;
+  }
+
+  if (
+    floorOnly &&
+    !/bodyweight|floor|mat|band|mobility|stretch|plank|push-up|sit-up|glute bridge|lunge|squat/.test(required)
+  ) {
+    return false;
+  }
+
+  if (/barbell/.test(required) && !hasBarbell && homeMode) return false;
+  if (/dumbbell/.test(required) && !hasDumbbells && homeMode) return false;
+  if (/band/.test(required) && !hasBands && floorOnly) return false;
+
+  return true;
+}
+
 function selectUnique(list, count, used = new Set()) {
   const selected = [];
 
@@ -169,6 +233,7 @@ function buildFallbackExercises({ recovery, mode, used }) {
   );
 
   const cardioPool = HEALTH_EXERCISE_CATALOG.filter((exercise) =>
+    exerciseFitsEquipment(exercise, snapshot) &&
     /cardio|hiit|walk|bike|elliptical|row|stair/i.test(
       `${exercise.category} ${exercise.name}`
     )
@@ -250,6 +315,7 @@ export function buildAdaptiveWorkout({
 
   const strengthPool = HEALTH_EXERCISE_CATALOG.filter(
     (exercise) =>
+      exerciseFitsEquipment(exercise, snapshot) &&
       !/mobility|warm-up|recovery/i.test(exercise.category || "") &&
       !/cardio|hiit/i.test(exercise.category || "") &&
       (
@@ -300,7 +366,15 @@ export function buildAdaptiveWorkout({
       used,
     });
   }
-  if (!selected.length) selected = selectUnique(HEALTH_EXERCISE_CATALOG, 4, used);
+  if (!selected.length) {
+    selected = selectUnique(
+      HEALTH_EXERCISE_CATALOG.filter((exercise) =>
+        exerciseFitsEquipment(exercise, snapshot)
+      ),
+      4,
+      used
+    );
+  }
 
   const experienceLevel =
     profile.experience_level ||

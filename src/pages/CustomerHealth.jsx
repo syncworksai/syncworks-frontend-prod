@@ -3263,6 +3263,40 @@ export default function CustomerHealth() {
               onEditDailyGoals={() =>
                 setDrawer("daily-goals")
               }
+              onCoachUpdate={(patch = {}) => {
+                const updatedAt = new Date().toISOString();
+
+                setSnapshot((previous) => ({
+                  ...previous,
+                  ...patch,
+                  updated_at: updatedAt,
+                }));
+
+                setActivePlannerItem((previous) =>
+                  previous
+                    ? {
+                        ...previous,
+                        workout_location_name:
+                          patch.training_location ||
+                          previous.workout_location_name ||
+                          "",
+                        workout_equipment:
+                          Array.isArray(patch.available_equipment)
+                            ? patch.available_equipment
+                            : previous.workout_equipment || [],
+                        requested_duration_minutes:
+                          patch.requested_duration_minutes ||
+                          previous.requested_duration_minutes ||
+                          "",
+                        multiple_sessions_today:
+                          patch.multiple_sessions_today ??
+                          previous.multiple_sessions_today ??
+                          false,
+                        adaptive_context_updated_at: updatedAt,
+                      }
+                    : previous
+                );
+              }}
             />
           )
         ) : (
