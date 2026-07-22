@@ -39,9 +39,11 @@ import { getExerciseKnowledge } from "./healthExerciseKnowledge";
 
 import {
   buildExerciseIntroSpeech,
-  speakCoachText,
-  stopCoachVoice,
 } from "./healthCoachVoice";
+import {
+  playWorkoutCoachMessage,
+  stopWorkoutCoachAudio,
+} from "./healthWorkoutAudioController";
 
 import {
   buildExerciseAddedPhrase,
@@ -2851,9 +2853,9 @@ export default function ActiveWorkoutSessionDrawer({
   }, [open, session?.id, plannerItem]);
 
   useEffect(() => {
-    if (!open) stopCoachVoice();
+    if (!open) stopWorkoutCoachAudio();
 
-    return () => stopCoachVoice();
+    return () => stopWorkoutCoachAudio();
   }, [open]);
 
   useEffect(() => {
@@ -2968,7 +2970,7 @@ export default function ActiveWorkoutSessionDrawer({
       return;
     }
 
-    speakCoachText({
+    playWorkoutCoachMessage({
       text: [
         buildWorkoutWelcomePhrase(session),
         buildPreWorkoutBriefing(session),
@@ -3030,7 +3032,7 @@ export default function ActiveWorkoutSessionDrawer({
     const knowledge =
       getExerciseKnowledge(exerciseName);
 
-    speakCoachText({
+    playWorkoutCoachMessage({
       text: [
         buildNaturalExerciseIntroPhrase({
           exercise: currentExercise,
@@ -3123,7 +3125,7 @@ export default function ActiveWorkoutSessionDrawer({
 
     if (lastRestCueRef.current === key) return;
 
-    speakCoachText({
+    playWorkoutCoachMessage({
       text: message,
       audioMode: coachAudioMode,
       voicePreference: coachVoicePreference,
@@ -3165,7 +3167,7 @@ export default function ActiveWorkoutSessionDrawer({
       patchCoachSettings({ audioMode: "essential" });
       return;
     }
-    stopCoachVoice();
+    stopWorkoutCoachAudio();
     patchCoachSettings({ audioMode: "off" });
   }
 
@@ -3256,8 +3258,8 @@ export default function ActiveWorkoutSessionDrawer({
     setVoiceError("");
 
     if (coachAudioMode !== "off") {
-      stopCoachVoice();
-      speakCoachText({
+      stopWorkoutCoachAudio();
+      playWorkoutCoachMessage({
         text: reply,
         audioMode: "essential",
         voicePreference: coachVoicePreference,
@@ -3328,7 +3330,7 @@ export default function ActiveWorkoutSessionDrawer({
         ? currentExercise.substitute_name
         : currentExercise.name;
 
-    speakCoachText({
+    playWorkoutCoachMessage({
       text: buildExerciseIntroSpeech(
         getExerciseKnowledge(exerciseName)
       ),
@@ -3343,7 +3345,7 @@ export default function ActiveWorkoutSessionDrawer({
   function replayNudge() {
     if (!trainerNudge) return;
 
-    speakCoachText({
+    playWorkoutCoachMessage({
       text: [
         trainerNudge.title,
         trainerNudge.message,
@@ -3745,7 +3747,7 @@ export default function ActiveWorkoutSessionDrawer({
       };
     });
 
-    speakCoachText({
+    playWorkoutCoachMessage({
       text: buildWarmupCompletePhrase(),
       audioMode: coachAudioMode,
       voicePreference: coachVoicePreference,
@@ -3781,9 +3783,12 @@ export default function ActiveWorkoutSessionDrawer({
       setSetCheckInOpen(false);
 
       if (coachAudioMode !== "off") {
-        stopCoachVoice();
-        speakCoachText({
+        stopWorkoutCoachAudio();
+        playWorkoutCoachMessage({
+          id: `${session?.id || "workout"}:set-start:${currentExercise.id}:${(currentExercise.set_logs || []).length + 1}`,
           text: `Set ${(currentExercise.set_logs || []).length + 1}. Go.`,
+          priority: "high",
+          replace: true,
           audioMode: "essential",
           voicePreference: coachVoicePreference,
           rate: 1.04,
@@ -3892,7 +3897,7 @@ export default function ActiveWorkoutSessionDrawer({
     });
     setSetCheckInOpen(true);
 
-    speakCoachText({
+    playWorkoutCoachMessage({
       text: buildRestStartPhrase({
         restSeconds:
           currentExercise.rest_seconds || 60,
@@ -4079,7 +4084,7 @@ export default function ActiveWorkoutSessionDrawer({
           )
         : {};
 
-    speakCoachText({
+    playWorkoutCoachMessage({
       text:
         buildImmediateSetCoachMessage({
           exercise:
@@ -4218,7 +4223,7 @@ export default function ActiveWorkoutSessionDrawer({
         ),
       }));
 
-      speakCoachText({
+      playWorkoutCoachMessage({
         text: buildExerciseSwapPhrase({
           previousName: currentExercise.name,
           nextName: catalogExercise.name,
@@ -4268,7 +4273,7 @@ export default function ActiveWorkoutSessionDrawer({
           ? "accessory"
           : "extra exercise";
 
-      speakCoachText({
+      playWorkoutCoachMessage({
         text: buildExerciseAddedPhrase({
           name: catalogExercise.name,
           label,
@@ -4333,7 +4338,7 @@ export default function ActiveWorkoutSessionDrawer({
       updated_at: new Date().toISOString(),
     }));
 
-    stopCoachVoice();
+    stopWorkoutCoachAudio();
     setSession(null);
     setReviewMode(false);
     setFinishMessage("");
@@ -4366,13 +4371,20 @@ export default function ActiveWorkoutSessionDrawer({
     setEditAfterFinish(false);
     setSetCheckInOpen(false);
     setPendingSetDurationSeconds(0);
-    stopCoachVoice();
+    stopWorkoutCoachAudio();
     onClose?.();
   }
 
   function saveWorkout(completionMeta = {}) {
     if (!session || savingWorkout || isCompleted) return;
 
+    countdownTimerRef.current.forEach((timer) =>
+      window.clearTimeout(timer)
+    );
+    countdownTimerRef.current = [];
+    setCountdownSeconds(0);
+    finishVoiceListening();
+    stopWorkoutCoachAudio();
     setSavingWorkout(true);
 
     try {
@@ -4529,7 +4541,11 @@ export default function ActiveWorkoutSessionDrawer({
         )}.`
       );
 
-      speakCoachText({
+      playWorkoutCoachMessage({
+        id: `${result.finishedSession.id}:workout-debrief`,
+        priority: "high",
+        playOnce: true,
+        replace: true,
         text: buildWorkoutCompletionPhrase({
           wrapUp: buildPostWorkoutWrapUp(
             result.finishedSession,
@@ -4786,7 +4802,7 @@ export default function ActiveWorkoutSessionDrawer({
           ) : null}
         </header>
 
-        <main className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto px-3 py-3 pb-36 sm:px-6 sm:py-5 sm:pb-36">
+        <main className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto px-3 py-3 pb-[calc(12rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-5 sm:pb-40">
           {!session ? (
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 text-sm text-slate-300">
               No active workout selected.
@@ -5848,6 +5864,7 @@ export default function ActiveWorkoutSessionDrawer({
           onListen={startVoiceListening}
           onClose={() => {
             finishVoiceListening();
+            stopWorkoutCoachAudio();
             setAskSyncOpen(false);
           }}
           onToggleAudio={toggleCoachAudio}
