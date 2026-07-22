@@ -236,12 +236,27 @@ function buildHomeSyncBriefing({
     snapshot?.workout ||
     "";
 
+  const sorenessNotes = String(
+    snapshot?.readiness_notes || snapshot?.soreness_notes || ""
+  ).trim();
+
+  const sorenessAreas = Array.isArray(snapshot?.soreness_areas)
+    ? snapshot.soreness_areas.join(", ")
+    : String(snapshot?.soreness_areas || "").trim();
+
+  const sorenessSentence =
+    sorenessNotes || sorenessAreas
+      ? " You reported soreness" +
+        (sorenessAreas ? " in " + sorenessAreas : "") +
+        ". I will review completed sessions before recommending another workout for the same area."
+      : "";
+
   const workoutSentence =
     !snapshot?.workout_completed_today &&
     workoutName
-      ? " You have not logged " +
+      ? " Today's proposed workout is " +
         workoutName +
-        " yet. Would you like to proceed with your workout?"
+        ". We should confirm what it trains, why it was selected, your available time, and whether you plan multiple sessions before starting."
       : " What can I help you improve today?";
 
   const status =
@@ -256,6 +271,7 @@ function buildHomeSyncBriefing({
     (name ? ", " + name : "") +
     ". " +
     status +
+    sorenessSentence +
     workoutSentence
   );
 }

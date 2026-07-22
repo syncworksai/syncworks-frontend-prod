@@ -491,6 +491,29 @@ export default function HealthPremiumHome({
       ? "Your recent training history is ready for SYNC to review. Use Progress to see trends and your next best move."
       : "Complete your first guided workout to unlock strength, consistency, volume, and recovery insights.";
 
+  function openUnifiedSync({ speak = true } = {}) {
+    onOpen?.("coach-chat");
+    if (!speak) return;
+    window.setTimeout(() => {
+      try {
+        stopCoachVoice();
+        speakCoachText({
+          text: dailyCoachBriefing,
+          audioMode: "essential",
+          voicePreference: "australian",
+          rate: 0.96,
+          pitch: 1,
+          volume: 1,
+          cancelFirst: true,
+          eventType: "health_home_unified_sync",
+          browserFallback: true,
+        });
+      } catch (error) {
+        console.warn("Unable to play the SYNC daily update:", error);
+      }
+    }, 80);
+  }
+
   function buildHomeCoachReply(message) {
     const command = String(message || "").trim();
     const lower = command.toLowerCase();
@@ -558,6 +581,21 @@ export default function HealthPremiumHome({
         : "Sleep has not been logged yet. Log last night's sleep so I can adjust readiness and training recommendations.";
     }
 
+    if (lower.includes("measurement")) {
+      window.setTimeout(() => onOpen?.("profile-intake"), 120);
+      return "I am opening your measurements and health profile. You can record inches or centimeters and pounds or kilograms.";
+    }
+
+    if (
+      lower.includes("more than once") ||
+      lower.includes("multiple workout") ||
+      lower.includes("multiple session")
+    ) {
+      patch.multiple_sessions_today = true;
+      patch.session_count_planned = Math.max(2, Number(snapshot?.session_count_planned || 0));
+      confirmations.push("I will treat today as a multi-session training day and evaluate each session separately.");
+    }
+
     if (
       lower.includes("goal") ||
       lower.includes("progress") ||
@@ -615,8 +653,23 @@ export default function HealthPremiumHome({
     }
 
     if (lower.includes("pain") || lower.includes("sore")) {
+      const sorenessAreas = [];
+      if (/(leg|quad|hamstring|calf|glute|hip)/.test(lower)) sorenessAreas.push("Lower Body");
+      if (/(chest|shoulder|tricep|bicep|arm|back|lat)/.test(lower)) sorenessAreas.push("Upper Body");
+      if (/(core|ab|lower back|midsection)/.test(lower)) sorenessAreas.push("Core");
       patch.readiness_notes = command;
-      confirmations.push("I will protect the affected area and avoid movements that worsen symptoms.");
+      patch.soreness_areas = sorenessAreas.length ? sorenessAreas : ["Unspecified"];
+      patch.soreness_severity =
+        lower.includes("very") || lower.includes("severe")
+          ? "High"
+          : lower.includes("little") || lower.includes("mild")
+          ? "Low"
+          : "Moderate";
+      patch.requires_workout_review = true;
+      patch.auto_start_blocked = true;
+      confirmations.push(
+        "I recorded the soreness and paused automatic workout start. SYNC should review the affected muscles, yesterday's completed work, and today's plan before you begin."
+      );
     }
 
     onCoachUpdate?.(patch);
@@ -645,13 +698,13 @@ export default function HealthPremiumHome({
     speakCoachText({
       text: reply,
       audioMode: "essential",
-      voicePreference: "female",
+      voicePreference: "australian",
       rate: 0.98,
       pitch: 1,
       volume: 1,
       cancelFirst: true,
       eventType: "health_home_coach",
-      browserFallback: false,
+      browserFallback: true,
     });
   }
 
@@ -709,7 +762,7 @@ export default function HealthPremiumHome({
 
         <div className="relative max-w-2xl">
           <div className="text-[10px] font-black uppercase tracking-[0.28em] text-emerald-300">
-            SYNC FITNESS COACH
+            HEALTH SYNC
           </div>
 
           <h1 className="mt-4 text-4xl font-black uppercase leading-[0.95] tracking-[-0.04em] text-white sm:text-6xl">
@@ -728,7 +781,7 @@ export default function HealthPremiumHome({
             <button
               type="button"
               onClick={() =>
-                onOpen?.("coach-chat")
+                openUnifiedSync({ speak: true })
               }
               className="h-12 rounded-2xl border border-emerald-300/45 bg-emerald-300/[0.08] px-5 text-sm font-black text-emerald-100 shadow-[0_0_28px_rgba(0,245,106,0.15)]"
             >
@@ -813,22 +866,9 @@ export default function HealthPremiumHome({
 
           <button
             type="button"
-            onClick={() => {
-              stopCoachVoice();
-
-              speakCoachText({
-                text: dailyCoachBriefing,
-                audioMode: "essential",
-                voicePreference: "female",
-                rate: 0.98,
-                pitch: 1,
-                volume: 1,
-                cancelFirst: true,
-                eventType:
-                  "health_home_daily_update",
-                browserFallback: false,
-              });
-            }}
+            onClick={() =>
+                openUnifiedSync({ speak: true })
+              }
             className="mt-2 h-10 w-full rounded-xl border border-emerald-300/25 bg-black/25 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-100"
           >
             Open SYNC for Full Update
@@ -887,7 +927,9 @@ export default function HealthPremiumHome({
             "Build me a meal plan",
             "How is my protein?",
             "Am I on track?",
-            "I am sore today",
+            "My legs are sore after yesterday",
+            "Update my measurements",
+            "I may train more than once today",
             "Home, no equipment",
             "I have 25 minutes",
           ].map((prompt) => (

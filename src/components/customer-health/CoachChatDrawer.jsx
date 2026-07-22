@@ -625,6 +625,23 @@ export default function CoachChatDrawer({
 
               <button
                 type="button"
+                onClick={() => {
+                  try {
+                    window.localStorage.setItem("sw_health_audio_style_v1", "trainer");
+                  } catch {
+                    // Best effort.
+                  }
+                  setInput(
+                    "Use aggressive trainer mode. Be direct, explain movement setup, muscles worked, and the reason for each exercise."
+                  );
+                }}
+                className="h-9 rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 text-[9px] font-black text-rose-100"
+              >
+                Aggressive Trainer
+              </button>
+
+              <button
+                type="button"
                 onClick={() =>
                   setHeaderExpanded(
                     (previous) => !previous
@@ -683,9 +700,9 @@ export default function CoachChatDrawer({
           {headerExpanded ? (
             <div className="mt-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.05] p-3">
               <p className="text-xs leading-5 text-slate-300">
-                Ask for a workout, an adjustment, recovery
-                guidance, exercise alternatives, or help
-                understanding your logged data.
+                Ask about today's workout, soreness, recovery,
+                nutrition, measurements, multiple sessions,
+                or why the plan selected a specific muscle group.
               </p>
 
               <button
@@ -780,17 +797,38 @@ export default function CoachChatDrawer({
             </button>
 
           </div>
-
-
-
-          <SyncLaunchCard
-
-            snapshot={localSnapshot}
-            onStartWorkout={onStartWorkout}
-            onBuildWorkout={onBuildWorkout}
-            onOpenNutrition={onOpenNutrition}
-            onOpenLog={onOpenLog}
-          />
+          <section className="rounded-[1.5rem] border border-cyan-300/20 bg-cyan-300/[0.05] p-4">
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
+              Pre-Workout Decision
+            </div>
+            <div className="mt-2 text-lg font-black text-white">Review before starting</div>
+            <div className="mt-1 text-xs leading-5 text-slate-400">
+              SYNC should compare today's scheduled workout with completed sessions, soreness, pain, sleep, equipment, and available time before opening the workout player.
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {[
+                "Review today's workout and explain why",
+                "My legs are sore after yesterday",
+                "I may train more than once today",
+                "I need to update my measurements",
+              ].map((prompt) => (
+                <button key={prompt} type="button" onClick={() => setInput(prompt)}
+                  className="min-h-12 rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-left text-[10px] font-black leading-4 text-white">
+                  {prompt}
+                </button>
+              ))}
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button type="button" onClick={onBuildWorkout}
+                className="h-11 rounded-xl border border-cyan-300/25 bg-cyan-300/10 text-xs font-black text-cyan-100">
+                Adjust Plan
+              </button>
+              <button type="button" onClick={onOpenNutrition}
+                className="h-11 rounded-xl border border-emerald-300/25 bg-emerald-300/10 text-xs font-black text-emerald-100">
+                Nutrition
+              </button>
+            </div>
+          </section>
 
           {!proposal && chat.length === 0 ? (
             <EmptyPlanCard
