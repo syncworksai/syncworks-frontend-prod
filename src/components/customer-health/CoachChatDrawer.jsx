@@ -310,6 +310,8 @@ export default function CoachChatDrawer({
   onClose,
   snapshot,
   setSnapshot,
+  profile,
+  initialBriefing = "",
   onOpenQuestionnaire,
   onStartWorkout,
   onBuildWorkout,
@@ -328,6 +330,20 @@ export default function CoachChatDrawer({
     useState(false);
   const [providerNote, setProviderNote] =
     useState("");
+  const [audioEnabled, setAudioEnabled] =
+    useState(() => {
+      try {
+        return (
+          window.localStorage.getItem(
+            "sw_health_home_sync_audio_v1"
+          ) !== "off"
+        );
+      } catch {
+        return true;
+      }
+    });
+  const [summaryExpanded, setSummaryExpanded] =
+    useState(false);
 
   const scrollRef = useRef(null);
   const previousMessageCountRef = useRef(0);
