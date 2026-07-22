@@ -73,6 +73,10 @@ import SleepPlannerDrawer from "../components/customer-health/SleepPlannerDrawer
 import WorkoutHistoryDrawer from "../components/customer-health/WorkoutHistoryDrawer";
 import CardioActivityDrawer from "../components/customer-health/CardioActivityDrawer";
 import HealthGoalCenterDrawer from "../components/customer-health/HealthGoalCenterDrawer";
+import {
+  speakCoachText,
+  stopCoachVoice,
+} from "../components/customer-health/healthCoachVoice";
 
 import {
   NutritionDrawer,
@@ -171,6 +175,89 @@ function getApiErrorMessage(
   }
 
   return fallback;
+}
+
+function buildHomeSyncBriefing({
+  profile = {},
+  snapshot = {},
+  workout = null,
+}) {
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12
+      ? "Good morning"
+      : hour < 18
+      ? "Good afternoon"
+      : "Good evening";
+
+  const name = String(
+    profile?.first_name ||
+      profile?.name ||
+      ""
+  ).trim();
+
+  const protein = Number(
+    snapshot?.protein_today ||
+      snapshot?.protein ||
+      0
+  );
+  const proteinGoal = Number(
+    snapshot?.protein_goal ||
+      profile?.protein_goal ||
+      136
+  );
+  const proteinRemaining = Math.max(
+    0,
+    proteinGoal - protein
+  );
+
+  const sleep = Number(
+    snapshot?.last_sleep_hours ||
+      snapshot?.sleep_hours ||
+      0
+  );
+
+  const needs = [];
+  if (!sleep) needs.push("sleep");
+
+  if (proteinRemaining > 0) {
+    needs.push(
+      String(proteinRemaining) +
+        " grams of protein"
+    );
+  }
+
+  if (!Number(snapshot?.meals_logged_today || 0)) {
+    needs.push("meals");
+  }
+
+  const workoutName =
+    workout?.workout_name ||
+    snapshot?.workout ||
+    "";
+
+  const workoutSentence =
+    !snapshot?.workout_completed_today &&
+    workoutName
+      ? " You have not logged " +
+        workoutName +
+        " yet. Would you like to proceed with your workout?"
+      : " What can I help you improve today?";
+
+  const status =
+    needs.length
+      ? "Your plan is still recoverable, but we need to address " +
+        needs.join(", ") +
+        "."
+      : "Your plan is on track.";
+
+  return (
+    greeting +
+    (name ? ", " + name : "") +
+    ". " +
+    status +
+    workoutSentence
+  );
 }
 
 function findNextPlanned(weekPlan = []) {
@@ -3873,6 +3960,12 @@ export default function CustomerHealth() {
             }
             snapshot={syncedSnapshot}
             setSnapshot={setSnapshot}
+            profile={profile}
+            initialBriefing={buildHomeSyncBriefing({
+              profile,
+              snapshot: syncedSnapshot,
+              workout: mobileNextSession,
+            })}
             onOpenQuestionnaire={
               openQuestionnaireFromCoach
             }
@@ -3969,6 +4062,41 @@ export default function CustomerHealth() {
             onOpen={handleDashboardOpen}
             onLog={() => setQuickLogType("menu")}
             onOpenSync={() => {
+              const briefing =
+                buildHomeSyncBriefing({
+                  profile,
+                  snapshot: syncedSnapshot,
+                  workout: mobileNextSession,
+                });
+
+              let audioEnabled = true;
+
+              try {
+                audioEnabled =
+                  window.localStorage.getItem(
+                    "sw_health_home_sync_audio_v1"
+                  ) !== "off";
+              } catch {
+                audioEnabled = true;
+              }
+
+              if (audioEnabled) {
+                stopCoachVoice();
+
+                speakCoachText({
+                  text: briefing,
+                  audioMode: "essential",
+                  voicePreference: "australian",
+                  rate: 0.96,
+                  pitch: 1,
+                  volume: 1,
+                  cancelFirst: true,
+                  eventType:
+                    "health_home_sync_briefing",
+                  browserFallback: true,
+                });
+              }
+
               setHealthView("home");
               setDrawer("coach-chat");
             }}

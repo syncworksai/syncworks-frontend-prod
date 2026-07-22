@@ -780,7 +780,10 @@ export default function HealthPremiumHome({
           </div>
 
           <div className="mt-2 text-sm leading-6 text-emerald-50">
-            {dailyCoachBriefing}
+            {String(dailyCoachBriefing || "")
+              .split(".")
+              .slice(0, 2)
+              .join(".") + "."}
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-2">
@@ -828,7 +831,7 @@ export default function HealthPremiumHome({
             }}
             className="mt-2 h-10 w-full rounded-xl border border-emerald-300/25 bg-black/25 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-100"
           >
-            Hear Daily Update
+            Open SYNC for Full Update
           </button>
         </div>
 
