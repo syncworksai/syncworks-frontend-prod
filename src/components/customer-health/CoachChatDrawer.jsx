@@ -17,6 +17,10 @@ import {
   resetCoachChat,
   runLocalCoachTurn,
 } from "./healthCoachChat";
+import {
+  speakCoachText,
+  stopCoachVoice,
+} from "./healthCoachVoice";
 
 function cx(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -78,7 +82,7 @@ function SyncLaunchCard({
                 ? "Your latest check-in is available."
                 : "We should check readiness and pain before starting."
             }`
-          : "There is no active workout selected. I can build one, open nutrition, or help log todayâ€™s data."}
+          : "There is no active workout selected. I can build one, open nutrition, or help log todayÃ¢â‚¬â„¢s data."}
       </p>
       <div className="mt-4 grid grid-cols-2 gap-2">
         <button
@@ -369,6 +373,43 @@ export default function CoachChatDrawer({
       nextCount;
   }, [open, chat.length, proposal]);
 
+  function replayDailyBriefing() {
+    const text = String(initialBriefing || "").trim();
+    if (!text || !audioEnabled) return;
+
+    stopCoachVoice();
+
+    speakCoachText({
+      text,
+      audioMode: "essential",
+      voicePreference: "australian",
+      rate: 0.96,
+      pitch: 1,
+      volume: 1,
+      cancelFirst: true,
+      eventType: "health_home_sync_replay",
+      browserFallback: true,
+    });
+  }
+
+  function toggleAudio() {
+    const next = !audioEnabled;
+    setAudioEnabled(next);
+
+    try {
+      window.localStorage.setItem(
+        "sw_health_home_sync_audio_v1",
+        next ? "on" : "off"
+      );
+    } catch {
+      // Preference persistence is best effort.
+    }
+
+    if (!next) {
+      stopCoachVoice();
+    }
+  }
+
   function jumpToLatest() {
     const node = scrollRef.current;
     if (!node) return;
@@ -457,7 +498,21 @@ export default function CoachChatDrawer({
           coach_last_model: ai?.model || "",
         });
 
-        setProviderNote("OpenAI response Â· SyncWorks validated");
+        if (audioEnabled) {
+          speakCoachText({
+            text: reply,
+            audioMode: "essential",
+            voicePreference: "australian",
+            rate: 0.96,
+            pitch: 1,
+            volume: 1,
+            cancelFirst: true,
+            eventType: "health_home_sync_reply",
+            browserFallback: true,
+          });
+        }
+
+        setProviderNote("OpenAI response Ã‚Â· SyncWorks validated");
       }
     } catch (error) {
       if (error?.response?.status === 402) {
@@ -533,17 +588,25 @@ export default function CoachChatDrawer({
 
               <div className="min-w-0">
                 <div className="truncate text-base font-black text-white sm:text-lg">
-                  AI Fitness Coach
+                  SYNC Health Assistant
                 </div>
 
                 <div className="text-[10px] font-bold text-slate-400">
-                  Conversation | {chat.length} message
+                  Voice-first daily coach | {chat.length} message
                   {chat.length === 1 ? "" : "s"}
                 </div>
               </div>
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleAudio}
+                className="h-9 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-3 text-[10px] font-black text-emerald-100"
+              >
+                {audioEnabled ? "Audio On" : "Audio Off"}
+              </button>
+
               <button
                 type="button"
                 onClick={() =>
@@ -553,7 +616,7 @@ export default function CoachChatDrawer({
                 }
                 className="h-9 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-[10px] font-black text-slate-200"
               >
-                {headerExpanded ? "Less" : "Info"}
+                {headerExpanded ? "Less" : "More"}
               </button>
 
               <div className="relative">
@@ -628,7 +691,84 @@ export default function CoachChatDrawer({
           ref={scrollRef}
           className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-4 sm:space-y-4 sm:px-5"
         >
+          <div className="rounded-[1.5rem] border border-emerald-300/20 bg-[linear-gradient(145deg,rgba(8,23,15,0.96),rgba(2,9,6,0.98))] p-4">
+
+            <div className="flex items-start justify-between gap-3">
+
+              <div className="min-w-0">
+
+                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">
+
+                  SYNC Daily Briefing
+
+                </div>
+
+                <div className="mt-2 text-sm leading-6 text-emerald-50">
+
+                  {summaryExpanded
+
+                    ? initialBriefing
+
+                    : String(initialBriefing || "")
+
+                        .split(".")
+
+                        .slice(0, 2)
+
+                        .join(".") + "."}
+
+                </div>
+
+              </div>
+
+              <button
+
+                type="button"
+
+                onClick={replayDailyBriefing}
+
+                disabled={!audioEnabled}
+
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-300/10 text-lg disabled:opacity-35"
+
+                aria-label="Replay daily briefing"
+
+              >
+
+                â–¶
+
+              </button>
+
+            </div>
+
+            <button
+
+              type="button"
+
+              onClick={() =>
+
+                setSummaryExpanded(
+
+                  (previous) => !previous
+
+                )
+
+              }
+
+              className="mt-3 h-10 w-full rounded-xl border border-white/10 bg-white/[0.04] text-[10px] font-black uppercase tracking-[0.14em] text-white"
+
+            >
+
+              {summaryExpanded ? "Show Less" : "More"}
+
+            </button>
+
+          </div>
+
+
+
           <SyncLaunchCard
+
             snapshot={localSnapshot}
             onStartWorkout={onStartWorkout}
             onBuildWorkout={onBuildWorkout}
@@ -701,7 +841,7 @@ export default function CoachChatDrawer({
               disabled={!input.trim() || sending}
               className="h-11 shrink-0 rounded-xl border border-cyan-300/30 bg-cyan-300/15 px-4 text-xs font-black text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {sending ? "Thinkingâ€¦" : "Send"}
+              {sending ? "ThinkingÃ¢â‚¬Â¦" : "Send"}
             </button>
           </div>
 

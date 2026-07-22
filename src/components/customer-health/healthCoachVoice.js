@@ -14,6 +14,15 @@ const DEFAULT_VOICE_PREFERENCES = {
   browserFallback: true,
 };
 
+const AUSTRALIAN_HINTS = [
+  "en-au",
+  "australia",
+  "australian",
+  "karen",
+  "lee",
+  "matilda",
+];
+
 const FEMALE_HINTS = [
   "female",
   "woman",
@@ -197,9 +206,24 @@ function scoreVoice(voice, preference = "auto") {
   let score = 0;
 
   if (haystack.includes("en-us")) score += 8;
+  if (haystack.includes("en-au")) score += 12;
   if (haystack.includes("en-gb")) score += 5;
   if (haystack.includes("english")) score += 4;
   if (voice?.localService) score += 2;
+
+  if (preference === "australian") {
+    if (
+      AUSTRALIAN_HINTS.some((hint) =>
+        haystack.includes(hint)
+      )
+    ) {
+      score += 30;
+    }
+
+    if (!haystack.includes("en-au")) {
+      score -= 4;
+    }
+  }
 
   if (preference === "female") {
     if (
