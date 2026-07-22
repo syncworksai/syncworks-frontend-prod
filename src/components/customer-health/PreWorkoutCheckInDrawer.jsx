@@ -1,5 +1,6 @@
 // src/components/customer-health/PreWorkoutCheckInDrawer.jsx
 import React, { useEffect, useMemo, useState } from "react";
+import { classifyWorkout } from "./healthTrainingClassification";
 
 const BODY_AREAS = [
   "Neck",
@@ -130,6 +131,11 @@ export default function PreWorkoutCheckInDrawer({
     ? workout.exercises.length
     : 0;
 
+  const workoutClassification = useMemo(
+    () => classifyWorkout(workout || {}),
+    [workout]
+  );
+
   const planControl =
     workout?.plan_control || "coach_assist";
 
@@ -187,6 +193,32 @@ export default function PreWorkoutCheckInDrawer({
       avoid_pain_areas: avoidPainAreas,
       adjust_workout: effectiveAdjust,
       plan_control: planControl,
+      scientific_title:
+        workoutClassification.scientific_title,
+      training_category:
+        workoutClassification.training_category,
+      body_region:
+        workoutClassification.body_region,
+      movement_pattern:
+        workoutClassification.movement_pattern,
+      primary_muscles:
+        workoutClassification.primary_muscles,
+      secondary_muscles:
+        workoutClassification.secondary_muscles,
+      multiple_sessions_today:
+        Boolean(snapshot?.multiple_sessions_today),
+      session_number:
+        Math.max(
+          1,
+          Number(snapshot?.next_session_number || 1)
+        ),
+      available_minutes:
+        Number(
+          workout?.requested_duration_minutes ||
+            workout?.duration_minutes ||
+            snapshot?.available_minutes ||
+            45
+        ),
       ...overrides,
     });
   }
@@ -227,6 +259,23 @@ export default function PreWorkoutCheckInDrawer({
             >
               X
             </button>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.06] p-4">
+            <div className="text-[9px] font-black uppercase tracking-[0.18em] text-cyan-200">
+              Scientific focus
+            </div>
+            <div className="mt-2 text-lg font-black text-white">
+              {workoutClassification.scientific_title}
+            </div>
+            <div className="mt-1 text-xs text-slate-400">
+              {workoutClassification.body_region} · {workoutClassification.movement_pattern}
+            </div>
+            {workoutClassification.primary_muscles?.length ? (
+              <div className="mt-2 text-xs leading-5 text-slate-300">
+                Primary: {workoutClassification.primary_muscles.join(", ")}
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">

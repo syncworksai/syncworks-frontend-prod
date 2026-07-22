@@ -1,6 +1,10 @@
 // src/components/customer-health/healthWorkoutSession.js
 
 import { buildExercisesForWorkoutName } from "./healthExerciseKnowledge";
+import {
+  classifyWorkout,
+  ymdFromIso,
+} from "./healthTrainingClassification";
 
 function nowIso() {
   return new Date().toISOString();
@@ -743,6 +747,12 @@ export function createWorkoutSessionFromPlannerItem({
       workouts
     );
 
+  const workoutClassification =
+    classifyWorkout({
+      ...safePlannerItem,
+      exercises,
+    });
+
   return {
     id: uid("session"),
 
@@ -759,6 +769,66 @@ export function createWorkoutSessionFromPlannerItem({
       safePlannerItem.title ||
       safePlannerItem.name ||
       "Active Workout",
+
+    original_workout_name:
+      safePlannerItem.original_workout_name ||
+      safePlannerItem.workout_name ||
+      safePlannerItem.title ||
+      safePlannerItem.name ||
+      "Active Workout",
+
+    scientific_title:
+      safePlannerItem.scientific_title ||
+      workoutClassification.scientific_title,
+
+    training_category:
+      safePlannerItem.training_category ||
+      workoutClassification.training_category,
+
+    body_region:
+      safePlannerItem.body_region ||
+      workoutClassification.body_region,
+
+    movement_pattern:
+      safePlannerItem.movement_pattern ||
+      workoutClassification.movement_pattern,
+
+    primary_muscles:
+      Array.isArray(safePlannerItem.primary_muscles)
+        ? safePlannerItem.primary_muscles
+        : workoutClassification.primary_muscles,
+
+    secondary_muscles:
+      Array.isArray(safePlannerItem.secondary_muscles)
+        ? safePlannerItem.secondary_muscles
+        : workoutClassification.secondary_muscles,
+
+    planned_date:
+      safePlannerItem.planned_date ||
+      safePlannerItem.ymd ||
+      "",
+
+    session_number:
+      Math.max(
+        1,
+        Number(
+          safePlannerItem.session_number ||
+            safePlannerItem.session_number_for_day ||
+            1
+        )
+      ),
+
+    multiple_sessions_today:
+      Boolean(
+        safePlannerItem.multiple_sessions_today
+      ),
+
+    available_minutes:
+      Number(
+        safePlannerItem.available_minutes ||
+          safePlannerItem.requested_duration_minutes ||
+          0
+      ),
 
     day_label:
       safePlannerItem.day_label || "",
@@ -2455,6 +2525,12 @@ function updatePlannerItemStatus(
 
             completed_at:
               nowIso(),
+
+            actual_completion_date:
+              ymdFromIso(nowIso()),
+
+            completed_on_date:
+              ymdFromIso(nowIso()),
           }
         : item
   );
@@ -2484,6 +2560,18 @@ export function finishWorkoutSession({
 
       review_acknowledged:
         true,
+
+      actual_completion_date:
+        session.actual_completion_date ||
+        ymdFromIso(
+          session.finished_at ||
+            new Date().toISOString()
+        ),
+
+      planned_date:
+        session.planned_date ||
+        session.ymd ||
+        "",
     });
 
   const summary =
@@ -2501,8 +2589,40 @@ export function finishWorkoutSession({
       "active_workout_session",
 
     ymd:
+      finishedSession.actual_completion_date ||
+      ymdFromIso(finishedSession.finished_at),
+
+    planned_date:
+      finishedSession.planned_date ||
       finishedSession.ymd ||
       "",
+
+    actual_completion_date:
+      finishedSession.actual_completion_date ||
+      ymdFromIso(finishedSession.finished_at),
+
+    session_number:
+      finishedSession.session_number || 1,
+
+    scientific_title:
+      finishedSession.scientific_title ||
+      finishedSession.workout_name ||
+      "Workout",
+
+    training_category:
+      finishedSession.training_category || "",
+
+    body_region:
+      finishedSession.body_region || "",
+
+    movement_pattern:
+      finishedSession.movement_pattern || "",
+
+    primary_muscles:
+      finishedSession.primary_muscles || [],
+
+    secondary_muscles:
+      finishedSession.secondary_muscles || [],
 
     workout_name:
       finishedSession.workout_name ||
