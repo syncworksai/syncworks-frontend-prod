@@ -63,22 +63,11 @@ function NavButton({ label, icon, onClick, active = false }) {
 
 export default function HealthMobileQuickNav({
   onOpen,
-  onStartWorkout,
-  onStartFallback,
-  onResetWorkout,
+  onOpenSync,
   nextSession,
   hasCoachProposal,
   activeView = "home",
 }) {
-  function startWorkout() {
-    if (nextSession) {
-      onStartWorkout?.(nextSession);
-      return;
-    }
-
-    onStartFallback?.();
-  }
-
   return (
     <div
       data-syncworks-module-nav="health"
@@ -103,9 +92,9 @@ export default function HealthMobileQuickNav({
           <div className="relative flex h-full items-center justify-center">
             <button
               type="button"
-              onClick={startWorkout}
-              aria-label={`Start workout${nextSession?.workout_name ? `: ${nextSession.workout_name}` : ""}`}
-              title={nextSession?.workout_name || "Start Workout"}
+              onClick={() => onOpenSync?.()}
+              aria-label="Open SYNC health assistant"
+              title="Open SYNC"
               className="relative flex h-[58px] w-[58px] items-center justify-center rounded-full border border-[#65ff9a]/75 bg-black shadow-[0_0_0_3px_rgba(57,255,136,0.08),0_0_28px_rgba(57,255,136,0.5),inset_0_0_18px_rgba(57,255,136,0.12)] transition active:scale-[0.94]"
             >
               <span className="absolute inset-1 animate-pulse rounded-full bg-[#39ff88]/10 blur-md" />
@@ -116,18 +105,9 @@ export default function HealthMobileQuickNav({
               />
             </button>
 
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onResetWorkout?.();
-              }}
-              aria-label="Start workout over"
-              title="Start workout over"
-              className="absolute right-[2px] top-[1px] z-10 flex h-6 w-6 items-center justify-center rounded-full border border-white/15 bg-[#050806] text-xs font-black text-white shadow-[0_0_12px_rgba(57,255,136,0.25)] active:scale-95"
-            >
-              ↻
-            </button>
+            <span className="pointer-events-none absolute -bottom-1 rounded-full border border-[#39ff88]/25 bg-[#010302]/95 px-2 py-0.5 text-[7px] font-black uppercase tracking-[0.16em] text-[#65ff9a]">
+              SYNC
+            </span>
           </div>
 
           <NavButton

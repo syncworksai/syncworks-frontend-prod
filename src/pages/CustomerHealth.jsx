@@ -3968,15 +3968,10 @@ export default function CustomerHealth() {
           <HealthMobileQuickNav
             onOpen={handleDashboardOpen}
             onLog={() => setQuickLogType("menu")}
-            onStartWorkout={
-              startPlannerWorkout
-            }
-            onStartFallback={() =>
-              setDrawer("plan-today")
-            }
-            onResetWorkout={
-              restartWorkoutFlow
-            }
+            onOpenSync={() => {
+              setHealthView("home");
+              setDrawer("coach-chat");
+            }}
             nextSession={
               mobileNextSession
             }
