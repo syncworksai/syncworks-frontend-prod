@@ -4069,36 +4069,45 @@ export default function CustomerHealth() {
                   workout: mobileNextSession,
                 });
 
-              let audioEnabled = true;
-
-              try {
-                audioEnabled =
-                  window.localStorage.getItem(
-                    "sw_health_home_sync_audio_v1"
-                  ) !== "off";
-              } catch {
-                audioEnabled = true;
-              }
-
-              if (audioEnabled) {
-                stopCoachVoice();
-
-                speakCoachText({
-                  text: briefing,
-                  audioMode: "essential",
-                  voicePreference: "australian",
-                  rate: 0.96,
-                  pitch: 1,
-                  volume: 1,
-                  cancelFirst: true,
-                  eventType:
-                    "health_home_sync_briefing",
-                  browserFallback: true,
-                });
-              }
-
               setHealthView("home");
               setDrawer("coach-chat");
+
+              window.setTimeout(() => {
+                let audioEnabled = true;
+
+                try {
+                  audioEnabled =
+                    window.localStorage.getItem(
+                      "sw_health_home_sync_audio_v1"
+                    ) !== "off";
+                } catch {
+                  audioEnabled = true;
+                }
+
+                if (!audioEnabled) return;
+
+                try {
+                  stopCoachVoice();
+
+                  speakCoachText({
+                    text: briefing,
+                    audioMode: "essential",
+                    voicePreference: "australian",
+                    rate: 0.96,
+                    pitch: 1,
+                    volume: 1,
+                    cancelFirst: true,
+                    eventType:
+                      "health_home_sync_briefing",
+                    browserFallback: true,
+                  });
+                } catch (error) {
+                  console.warn(
+                    "SYNC briefing playback failed:",
+                    error
+                  );
+                }
+              }, 80);
             }}
             nextSession={
               mobileNextSession
