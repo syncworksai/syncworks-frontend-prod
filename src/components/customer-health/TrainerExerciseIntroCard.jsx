@@ -41,10 +41,19 @@ export default function TrainerExerciseIntroCard({
   const [moreOpen, setMoreOpen] = useState(false);
 
   function openDemo() {
-    if (!knowledge?.demo_url) return;
+    const curatedUrl = String(
+      knowledge?.demo_url || knowledge?.youtube_url || ""
+    ).trim();
+
+    const fallbackUrl =
+      "https://www.youtube.com/results?search_query=" +
+      encodeURIComponent(
+        String(knowledge?.name || exerciseName || "exercise") +
+          " proper form tutorial"
+      );
 
     window.open(
-      knowledge.demo_url,
+      curatedUrl || fallbackUrl,
       "_blank",
       "noopener,noreferrer"
     );
@@ -95,8 +104,7 @@ export default function TrainerExerciseIntroCard({
             <button
               type="button"
               onClick={openDemo}
-              disabled={!knowledge?.demo_url}
-              className="shrink-0 rounded-2xl border border-lime-300/30 bg-lime-300/15 px-3 py-2 text-[10px] font-black text-lime-100 disabled:opacity-35"
+              className="shrink-0 rounded-2xl border border-lime-300/30 bg-lime-300/15 px-3 py-2 text-[10px] font-black text-lime-100"
             >
               Watch Demo
             </button>
