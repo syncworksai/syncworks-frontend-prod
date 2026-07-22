@@ -219,7 +219,12 @@ function normalizeMode(mode = "recommended") {
   return "recommended";
 }
 
-function buildFallbackExercises({ recovery, mode, used }) {
+function buildFallbackExercises({
+  recovery,
+  mode,
+  used,
+  snapshot = {},
+}) {
   const mobilityPool = HEALTH_EXERCISE_CATALOG.filter((exercise) =>
     /mobility|warm-up|stretch|recovery/i.test(
       `${exercise.category} ${exercise.name} ${exercise.movement_pattern}`
@@ -250,6 +255,139 @@ function buildFallbackExercises({ recovery, mode, used }) {
   }
 
   return selectUnique(HEALTH_EXERCISE_CATALOG, 5, used);
+}
+
+function inferExerciseFocus(exercise = {}) {
+  return (
+    ["Push", "Pull", "Legs", "Core", "Cardio", "Mobility"].find(
+      (focus) => categoryMatches(exercise, focus)
+    ) || ""
+  );
+}
+
+function copyExercisePlan(original = {}, replacement = {}, index = 0) {
+  return {
+    ...replacement,
+    planned_sets:
+      original.planned_sets ||
+      original.sets ||
+      replacement.planned_sets ||
+      replacement.sets ||
+      "3",
+    planned_reps:
+      original.planned_reps ||
+      original.reps ||
+      replacement.planned_reps ||
+      replacement.reps ||
+      "8-12",
+    rest_seconds:
+      original.rest_seconds ??
+      replacement.rest_seconds ??
+      75,
+    order: original.order || index + 1,
+    available_today: true,
+    equipment_substitution: true,
+    substituted_from_exercise_id:
+      original.id || original.exercise_id || "",
+    substituted_from_exercise_name:
+      original.name || original.exercise_name || "",
+    coach_reason:
+      `Replaced ${original.name || original.exercise_name || "the planned movement"} because it does not match today's available equipment.`,
+  };
+}
+
+export function adaptWorkoutToAvailableEquipment(
+  workout = {},
+  snapshot = {}
+) {
+  const exercises = Array.isArray(workout?.exercises)
+    ? workout.exercises
+    : [];
+
+  if (!exercises.length || !equipmentText(snapshot)) {
+    return workout;
+  }
+
+  const used = new Set();
+  const substitutions = [];
+
+  const adaptedExercises = exercises
+    .map((exercise, index) => {
+      if (exerciseFitsEquipment(exercise, snapshot)) {
+        if (exercise?.id) used.add(exercise.id);
+        return exercise;
+      }
+
+      const exerciseFocus = inferExerciseFocus(exercise);
+      const workoutFocus =
+        normalizeWorkoutFocus(
+          workout?.adaptive_focus ||
+            workout?.requested_focus ||
+            workout?.focus ||
+            workout?.workout_name ||
+            workout?.name ||
+            ""
+        ) || exerciseFocus;
+
+      const availablePool = HEALTH_EXERCISE_CATALOG.filter(
+        (candidate) =>
+          exerciseFitsEquipment(candidate, snapshot) &&
+          !used.has(candidate.id)
+      );
+
+      const replacement =
+        availablePool.find(
+          (candidate) =>
+            exerciseFocus &&
+            categoryMatches(candidate, exerciseFocus)
+        ) ||
+        availablePool.find(
+          (candidate) =>
+            workoutFocus &&
+            categoryMatches(candidate, workoutFocus)
+        ) ||
+        availablePool.find((candidate) =>
+          /bodyweight|floor|mat|no equipment/i.test(
+            `${candidate.equipment || ""} ${candidate.location || ""}`
+          )
+        ) ||
+        availablePool[0];
+
+      if (!replacement) {
+        substitutions.push({
+          from: exercise.name || exercise.exercise_name || "Exercise",
+          to: "",
+          status: "removed",
+        });
+        return null;
+      }
+
+      used.add(replacement.id);
+      substitutions.push({
+        from: exercise.name || exercise.exercise_name || "Exercise",
+        to: replacement.name || "Equipment-friendly alternative",
+        status: "replaced",
+      });
+
+      return copyExercisePlan(exercise, replacement, index);
+    })
+    .filter(Boolean)
+    .map((exercise, index) => ({
+      ...exercise,
+      order: index + 1,
+    }));
+
+  return {
+    ...workout,
+    exercises: adaptedExercises,
+    equipment_adapted: substitutions.length > 0,
+    equipment_adapted_at:
+      substitutions.length > 0
+        ? new Date().toISOString()
+        : workout.equipment_adapted_at || "",
+    equipment_substitutions: substitutions,
+    workout_equipment_context: equipmentText(snapshot),
+  };
 }
 
 export function buildAdaptiveWorkout({
@@ -327,7 +465,12 @@ export function buildAdaptiveWorkout({
   let strength = [];
 
   if (focus === "Recovery" || focus === "Mobility") {
-    strength = buildFallbackExercises({ recovery, mode: requestedMode, used });
+    strength = buildFallbackExercises({
+      recovery,
+      mode: requestedMode,
+      used,
+      snapshot,
+    });
   } else if (focus !== "Cardio") {
     const targetCount = requestedMode === "second-session" ? 3 : 4;
     strength = selectUnique(
@@ -364,6 +507,7 @@ export function buildAdaptiveWorkout({
       recovery,
       mode: requestedMode === "recommended" ? "recovery" : requestedMode,
       used,
+      snapshot,
     });
   }
   if (!selected.length) {

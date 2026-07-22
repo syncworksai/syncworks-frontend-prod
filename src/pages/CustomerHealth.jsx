@@ -58,7 +58,10 @@ import {
 } from "../components/customer-health/healthDailyMetricIntelligence";
 import "../components/customer-health/healthUiPolish.css";
 import "../components/customer-health/healthObsidianElectric.css";
-import { buildAdaptiveWorkout } from "../components/customer-health/healthAdaptiveWorkoutGenerator";
+import {
+  adaptWorkoutToAvailableEquipment,
+  buildAdaptiveWorkout,
+} from "../components/customer-health/healthAdaptiveWorkoutGenerator";
 import { ensureHealthCoachingContext } from "../components/customer-health/healthCoachingContext";
 import { buildAiWeeklyPlan } from "../components/customer-health/healthAiWeeklyPlan";
 import {
@@ -3266,36 +3269,62 @@ export default function CustomerHealth() {
               onCoachUpdate={(patch = {}) => {
                 const updatedAt = new Date().toISOString();
 
-                setSnapshot((previous) => ({
-                  ...previous,
-                  ...patch,
-                  updated_at: updatedAt,
-                }));
+                setSnapshot((previous) => {
+                  const nextContext = {
+                    ...previous,
+                    ...patch,
+                    updated_at: updatedAt,
+                  };
 
-                setActivePlannerItem((previous) =>
-                  previous
-                    ? {
-                        ...previous,
-                        workout_location_name:
-                          patch.training_location ||
-                          previous.workout_location_name ||
-                          "",
-                        workout_equipment:
-                          Array.isArray(patch.available_equipment)
-                            ? patch.available_equipment
-                            : previous.workout_equipment || [],
-                        requested_duration_minutes:
-                          patch.requested_duration_minutes ||
-                          previous.requested_duration_minutes ||
-                          "",
-                        multiple_sessions_today:
-                          patch.multiple_sessions_today ??
-                          previous.multiple_sessions_today ??
-                          false,
-                        adaptive_context_updated_at: updatedAt,
-                      }
-                    : previous
-                );
+                  return {
+                    ...nextContext,
+                    week_plan: Array.isArray(previous.week_plan)
+                      ? previous.week_plan.map((item) =>
+                          item?.status === "Completed"
+                            ? item
+                            : adaptWorkoutToAvailableEquipment(
+                                item,
+                                nextContext
+                              )
+                        )
+                      : previous.week_plan,
+                  };
+                });
+
+                setActivePlannerItem((previous) => {
+                  if (!previous) return previous;
+
+                  const nextContext = {
+                    ...syncedSnapshot,
+                    ...patch,
+                    workout_equipment:
+                      Array.isArray(patch.available_equipment)
+                        ? patch.available_equipment
+                        : previous.workout_equipment || [],
+                  };
+
+                  return adaptWorkoutToAvailableEquipment(
+                    {
+                      ...previous,
+                      workout_location_name:
+                        patch.training_location ||
+                        previous.workout_location_name ||
+                        "",
+                      workout_equipment:
+                        nextContext.workout_equipment,
+                      requested_duration_minutes:
+                        patch.requested_duration_minutes ||
+                        previous.requested_duration_minutes ||
+                        "",
+                      multiple_sessions_today:
+                        patch.multiple_sessions_today ??
+                        previous.multiple_sessions_today ??
+                        false,
+                      adaptive_context_updated_at: updatedAt,
+                    },
+                    nextContext
+                  );
+                });
               }}
             />
           )
@@ -3337,47 +3366,86 @@ export default function CustomerHealth() {
               const selectedAt =
                 new Date().toISOString();
 
-              setActivePlannerItem((previous) =>
-                previous
-                  ? {
-                      ...previous,
-                      workout_location_id:
-                        location?.id || "",
-                      workout_location_name:
-                        location?.name || "",
-                      workout_location_type:
-                        location?.type || "",
-                      workout_equipment:
-                        Array.isArray(
-                          location?.equipment
-                        )
-                          ? location.equipment
-                          : [],
-                      workout_location_selected_at:
-                        selectedAt,
-                    }
-                  : previous
-              );
+              setActivePlannerItem((previous) => {
+                if (!previous) return previous;
 
-              setSnapshot((previous) => ({
-                ...previous,
-                training_location:
-                  location?.name ||
-                  previous.training_location ||
-                  "",
-                equipment:
-                  Array.isArray(
-                    location?.equipment
-                  ) &&
-                  location.equipment.length
-                    ? location.equipment.join(", ")
-                    : previous.equipment,
-                last_workout_location_id:
-                  location?.id || "",
-                last_workout_location_name:
-                  location?.name || "",
-                updated_at: selectedAt,
-              }));
+                const locationEquipment =
+                  Array.isArray(location?.equipment)
+                    ? location.equipment
+                    : [];
+
+                const equipmentContext = {
+                  ...syncedSnapshot,
+                  training_location:
+                    location?.name ||
+                    syncedSnapshot.training_location ||
+                    "",
+                  last_workout_location_name:
+                    location?.name || "",
+                  workout_equipment: locationEquipment,
+                  available_equipment: locationEquipment,
+                  equipment: locationEquipment.join(", "),
+                };
+
+                return adaptWorkoutToAvailableEquipment(
+                  {
+                    ...previous,
+                    workout_location_id:
+                      location?.id || "",
+                    workout_location_name:
+                      location?.name || "",
+                    workout_location_type:
+                      location?.type || "",
+                    workout_equipment:
+                      locationEquipment,
+                    workout_location_selected_at:
+                      selectedAt,
+                  },
+                  equipmentContext
+                );
+              });
+
+              setSnapshot((previous) => {
+                const locationEquipment =
+                  Array.isArray(location?.equipment)
+                    ? location.equipment
+                    : [];
+
+                const nextContext = {
+                  ...previous,
+                  training_location:
+                    location?.name ||
+                    previous.training_location ||
+                    "",
+                  equipment:
+                    locationEquipment.length
+                      ? locationEquipment.join(", ")
+                      : previous.equipment,
+                  available_equipment:
+                    locationEquipment,
+                  workout_equipment:
+                    locationEquipment,
+                  last_workout_location_id:
+                    location?.id || "",
+                  last_workout_location_name:
+                    location?.name || "",
+                  updated_at: selectedAt,
+                };
+
+                return {
+                  ...nextContext,
+                  week_plan: Array.isArray(previous.week_plan)
+                    ? previous.week_plan.map((item) =>
+                        item?.status === "Completed"
+                          ? item
+                          : adaptWorkoutToAvailableEquipment(
+                              item,
+                              nextContext
+                            )
+                      )
+                    : previous.week_plan,
+                };
+              });
 
               setDrawer("pre-workout");
             }}
