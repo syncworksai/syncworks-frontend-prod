@@ -2,6 +2,10 @@
 import React, { useMemo, useRef, useState } from "react";
 import HealthDailyCoachStatusCard from "./HealthDailyCoachStatusCard";
 import HealthGoalProgressCard from "./HealthGoalProgressCard";
+import {
+  speakCoachText,
+  stopCoachVoice,
+} from "./healthCoachVoice";
 
 function safeNumber(value, fallback = 0) {
   const parsed = Number(
@@ -11,6 +15,67 @@ function safeNumber(value, fallback = 0) {
   return Number.isFinite(parsed)
     ? parsed
     : fallback;
+}
+
+function daypartGreeting() {
+  const hour = new Date().getHours();
+
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+
+  return "Good evening";
+}
+
+function buildDailyCoachBriefing({
+  name,
+  snapshot,
+  workout,
+  proteinRemaining,
+  sleep,
+  sleepGoal,
+}) {
+  const needs = [];
+  const loggedMeals =
+    Number(snapshot?.meals_logged_today || 0);
+
+  if (!sleep) {
+    needs.push("sleep");
+  }
+
+  if (proteinRemaining > 0) {
+    needs.push(String(proteinRemaining) + " grams of protein");
+  }
+
+  if (!loggedMeals) {
+    needs.push("meals");
+  }
+
+  if (!snapshot?.workout_completed_today && workout) {
+    needs.push("today's workout");
+  }
+
+  const planStatus =
+    needs.length === 0
+      ? "Your plan is on track."
+      : "Your plan is still recoverable, but we need to address " +
+        needs.join(", ") +
+        ".";
+
+  const workoutPrompt =
+    !snapshot?.workout_completed_today && workout
+      ? "You have not logged today's workout yet. Do you want to proceed with " +
+        (workout.workout_name || "your workout") +
+        "?"
+      : "What can I help you improve today?";
+
+  return (
+    daypartGreeting() +
+    (name ? ", " + name : "") +
+    ". " +
+    planStatus +
+    " " +
+    workoutPrompt
+  );
 }
 
 function todayYmd() {
@@ -412,6 +477,15 @@ export default function HealthPremiumHome({
       ? rawDuration
       : 45;
 
+  const dailyCoachBriefing = buildDailyCoachBriefing({
+    name,
+    snapshot,
+    workout,
+    proteinRemaining,
+    sleep,
+    sleepGoal,
+  });
+
   const insight =
     history?.length
       ? "Your recent training history is ready for SYNC to review. Use Progress to see trends and your next best move."
@@ -422,6 +496,75 @@ export default function HealthPremiumHome({
     const lower = command.toLowerCase();
     const patch = {};
     const confirmations = [];
+
+    if (
+      lower === "yes" ||
+      lower.includes("start workout") ||
+      lower.includes("proceed with workout")
+    ) {
+      if (workout) {
+        window.setTimeout(
+          () => onStartWorkout?.(workout),
+          150
+        );
+
+        return (
+          "Perfect. I am opening " +
+          (workout.workout_name || "today's workout") +
+          " now."
+        );
+      }
+
+      onOpen?.("plan-today");
+
+      return "You do not have a workout scheduled, so I am opening the workout builder.";
+    }
+
+    if (
+      lower === "no" ||
+      lower.includes("not yet") ||
+      lower.includes("skip workout")
+    ) {
+      return "No problem. Tell me what you need instead: recovery help, soreness adjustments, a meal plan, nutrition guidance, goals, or a shorter workout later.";
+    }
+
+    if (
+      lower.includes("meal plan") ||
+      lower.includes("nutrition plan")
+    ) {
+      window.setTimeout(
+        () => onQuickLog?.("nutrition-coach"),
+        150
+      );
+
+      return "I am opening the nutrition coach so we can build the right meal plan around your goals and what you have available.";
+    }
+
+    if (lower.includes("protein")) {
+      return proteinRemaining > 0
+        ? "You have about " +
+            proteinRemaining +
+            " grams of protein remaining today. I can help you build meals around that target."
+        : "You have reached today's protein target. Keep the rest of your meals balanced and recovery-focused.";
+    }
+
+    if (lower.includes("sleep")) {
+      return sleep
+        ? "You logged " +
+            sleep +
+            " hours against a " +
+            sleepGoal +
+            "-hour goal. I can help adjust recovery or tonight's sleep plan."
+        : "Sleep has not been logged yet. Log last night's sleep so I can adjust readiness and training recommendations.";
+    }
+
+    if (
+      lower.includes("goal") ||
+      lower.includes("progress") ||
+      lower.includes("on track")
+    ) {
+      return dailyCoachBriefing;
+    }
 
     if (
       lower.includes("home") ||
@@ -498,6 +641,18 @@ export default function HealthPremiumHome({
 
     setCoachDraft("");
     setCoachError("");
+
+    speakCoachText({
+      text: reply,
+      audioMode: "essential",
+      voicePreference: "female",
+      rate: 0.98,
+      pitch: 1,
+      volume: 1,
+      cancelFirst: true,
+      eventType: "health_home_coach",
+      browserFallback: false,
+    });
   }
 
   function startCoachListening() {
@@ -598,10 +753,10 @@ export default function HealthPremiumHome({
               Ask SYNC
             </div>
             <div className="mt-1 text-lg font-black text-white">
-              Adapt today before you train
+              Your daily health command center
             </div>
             <div className="mt-1 text-xs leading-5 text-slate-400">
-              Speak or type what changed: home workout, machines busy, 25 minutes, pain, or training again later.
+              Talk to SYNC about workouts, nutrition, protein, sleep, soreness, recovery, goals, and today's plan.
             </div>
           </div>
 
@@ -616,6 +771,64 @@ export default function HealthPremiumHome({
             aria-label="Speak to SYNC"
           >
             {coachListening ? "■" : "🎙️"}
+          </button>
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.06] p-3">
+          <div className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-300">
+            SYNC Daily Update
+          </div>
+
+          <div className="mt-2 text-sm leading-6 text-emerald-50">
+            {dailyCoachBriefing}
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                submitCoachMessage(
+                  "Yes, start workout"
+                )
+              }
+              className="h-11 rounded-xl border border-emerald-300/45 bg-emerald-300 text-xs font-black text-black disabled:opacity-40"
+              disabled={!workout}
+            >
+              Yes, Proceed
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                submitCoachMessage("No, not yet")
+              }
+              className="h-11 rounded-xl border border-white/10 bg-white/[0.04] text-xs font-black text-white"
+            >
+              Not Yet
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              stopCoachVoice();
+
+              speakCoachText({
+                text: dailyCoachBriefing,
+                audioMode: "essential",
+                voicePreference: "female",
+                rate: 0.98,
+                pitch: 1,
+                volume: 1,
+                cancelFirst: true,
+                eventType:
+                  "health_home_daily_update",
+                browserFallback: false,
+              });
+            }}
+            className="mt-2 h-10 w-full rounded-xl border border-emerald-300/25 bg-black/25 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-100"
+          >
+            Hear Daily Update
           </button>
         </div>
 
@@ -668,10 +881,12 @@ export default function HealthPremiumHome({
 
         <div className="mt-3 flex flex-wrap gap-2">
           {[
+            "Build me a meal plan",
+            "How is my protein?",
+            "Am I on track?",
+            "I am sore today",
             "Home, no equipment",
-            "Machines busy",
             "I have 25 minutes",
-            "I may train again later",
           ].map((prompt) => (
             <button
               key={prompt}
@@ -973,6 +1188,56 @@ export default function HealthPremiumHome({
           compact
         />
       </div>
+
+      <section className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(145deg,rgba(16,22,18,0.97),rgba(4,7,5,0.98))] p-5">
+        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-300">
+          Recommended Resources
+        </div>
+
+        <div className="mt-1 text-xs leading-5 text-slate-500">
+          SYNC may earn a commission when you use these partner links. Recommendations should still match your goals and preferences.
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <a
+            href="https://wewardapp.go.link/profile?adj_t=1rg2xpwh&userId=22865998"
+            target="_blank"
+            rel="noreferrer sponsored"
+            className="rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.06] p-4"
+          >
+            <div className="text-sm font-black text-white">
+              WeWard
+            </div>
+
+            <div className="mt-1 text-xs leading-5 text-slate-400">
+              Optional step-tracking partner for users who want added walking motivation and rewards.
+            </div>
+
+            <div className="mt-3 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-300">
+              View Partner App
+            </div>
+          </a>
+
+          <a
+            href="https://www.seeqsupply.com/JACOB78279"
+            target="_blank"
+            rel="noreferrer sponsored"
+            className="rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.06] p-4"
+          >
+            <div className="text-sm font-black text-white">
+              SEEQ Protein
+            </div>
+
+            <div className="mt-1 text-xs leading-5 text-slate-400">
+              SYNC's current clear-protein partner for users looking for another way to reach daily protein targets.
+            </div>
+
+            <div className="mt-3 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-300">
+              Shop Partner
+            </div>
+          </a>
+        </div>
+      </section>
 
       <HealthGoalProgressCard
         profile={profile}
