@@ -3,6 +3,12 @@ import {
   speakCoachText,
   stopCoachVoice,
 } from "./healthCoachVoice";
+import {
+  announceCoachAudioState,
+  buildPremiumCoachDelivery,
+  normalizeWorkoutAudioMode,
+  shouldPlayCoachEvent,
+} from "./healthPremiumAudio";
 
 const PRIORITY = { low: 1, normal: 2, high: 3, critical: 4 };
 const PLAY_ONCE_EVENTS = new Set([
@@ -66,7 +72,12 @@ function wasRecentlyRequested(id) {
 
 function finishCurrent() {
   clearCurrentTimer();
+  const finishedId = currentMessage?.id || "";
   currentMessage = null;
+  announceCoachAudioState({
+    status: "idle",
+    id: finishedId,
+  });
   playNext();
 }
 
@@ -89,6 +100,15 @@ function playNext() {
 
   currentMessage = next;
   markRecent(next.id);
+
+  announceCoachAudioState({
+    status: "speaking",
+    id: next.id,
+    eventType: next.options.eventType || "coach_message",
+    audioMode: next.options.audioMode || "basic",
+    focusMode: Boolean(next.options.focusMode),
+    musicCompatible: next.options.musicCompatible !== false,
+  });
 
   const started = speakCoachText({
     ...next.options,
@@ -147,9 +167,27 @@ export function playWorkoutCoachMessage({
   ...options
 } = {}) {
   const clean = cleanText(text);
-  if (!clean || options.audioMode === "off") return false;
-
   const eventType = options.eventType || "coach_message";
+  const normalizedAudioMode = normalizeWorkoutAudioMode(
+    options.audioMode
+  );
+
+  if (
+    !clean ||
+    !shouldPlayCoachEvent({
+      audioMode: normalizedAudioMode,
+      eventType,
+      priority,
+    })
+  ) {
+    return false;
+  }
+
+  const premiumDelivery = buildPremiumCoachDelivery({
+    audioMode: normalizedAudioMode,
+    eventType,
+    priority,
+  });
   const messageId =
     cleanText(id) || `${eventType}:${hashText(clean)}`;
   const shouldPlayOnce =
@@ -171,7 +209,12 @@ export function playWorkoutCoachMessage({
     priority: normalizedPriority,
     playOnce: shouldPlayOnce,
     sequence: sequence += 1,
-    options,
+    options: {
+      ...options,
+      ...premiumDelivery,
+      audioMode: normalizedAudioMode,
+      eventType,
+    },
   };
 
   const shouldInterrupt =
@@ -198,6 +241,7 @@ export function stopWorkoutCoachAudio({
   queue = [];
   currentMessage = null;
   stopCoachVoice();
+  announceCoachAudioState({ status: "idle", id: "" });
 
   if (clearPlayed) {
     playedCoachMessageIds.clear();

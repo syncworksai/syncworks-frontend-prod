@@ -211,7 +211,11 @@ function scoreVoice(voice, preference = "auto") {
   if (haystack.includes("english")) score += 4;
   if (voice?.localService) score += 2;
 
-  if (preference === "australian") {
+  const wantsAustralian = preference.includes("australian");
+  const wantsFemale = preference.includes("female");
+  const wantsMale = preference.includes("male");
+
+  if (wantsAustralian) {
     if (
       AUSTRALIAN_HINTS.some((hint) =>
         haystack.includes(hint)
@@ -225,7 +229,7 @@ function scoreVoice(voice, preference = "auto") {
     }
   }
 
-  if (preference === "female") {
+  if (wantsFemale) {
     if (
       FEMALE_HINTS.some((hint) =>
         haystack.includes(hint)
@@ -243,7 +247,7 @@ function scoreVoice(voice, preference = "auto") {
     }
   }
 
-  if (preference === "male") {
+  if (wantsMale) {
     if (
       MALE_HINTS.some((hint) =>
         haystack.includes(hint)
