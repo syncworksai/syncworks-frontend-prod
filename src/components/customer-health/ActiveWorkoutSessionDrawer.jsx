@@ -83,6 +83,7 @@ import PostWorkoutReportCard from "./PostWorkoutReportCard";
 import LiveWorkoutAdaptationDrawer from "./LiveWorkoutAdaptationDrawer";
 import AdaptiveCoachProposalCard from "./AdaptiveCoachProposalCard";
 import WorkoutFocusCompactPanel from "./WorkoutFocusCompactPanel";
+import MissionModeProgressCard from "./MissionModeProgressCard";
 import MultiModeExerciseTimer from "./MultiModeExerciseTimer";
 import {
   buildAdaptiveExercise,
@@ -4837,16 +4838,27 @@ export default function ActiveWorkoutSessionDrawer({
               ) : null}
 
               {!isCompleted && warmupReady && currentExercise ? (
-                <WorkoutFocusCompactPanel
-                  session={session}
-                  currentExercise={currentExercise}
-                  formatSeconds={formatSeconds}
-                  onModify={() =>
-                    setModifyMenuOpen((current) => !current)
-                  }
-                  onFinish={() => setReviewMode(true)}
-                  onReplay={replayExerciseCue}
-                />
+                <>
+                  <MissionModeProgressCard
+                    session={session}
+                    onModify={() =>
+                      setModifyMenuOpen((current) => !current)
+                    }
+                    onFinish={() => setReviewMode(true)}
+                    onReplay={replayExerciseCue}
+                  />
+
+                  <WorkoutFocusCompactPanel
+                    session={session}
+                    currentExercise={currentExercise}
+                    formatSeconds={formatSeconds}
+                    onModify={() =>
+                      setModifyMenuOpen((current) => !current)
+                    }
+                    onFinish={() => setReviewMode(true)}
+                    onReplay={replayExerciseCue}
+                  />
+                </>
               ) : null}
 
               {!isCompleted && warmupReady ? (
