@@ -94,7 +94,7 @@ function buildBriefing({
     adjustment && adjustment !== "No changes"
       ? `I noted this change: ${adjustment}.`
       : "",
-    "Use the countdown to get your equipment ready. Stay controlled and adjust any load that does not feel right.",
+    "Enter Focus Mode when ready. Exercise timers will appear only when the movement requires them.",
   ]
     .filter(Boolean)
     .join(" ");
@@ -106,7 +106,7 @@ export default function WorkoutFocusLaunchDrawer({
   onCancel,
   onBegin,
 }) {
-  const [countdown, setCountdown] = useState(15);
+  const [countdown, setCountdown] = useState(0);
   const [started, setStarted] = useState(false);
   const [energy, setEnergy] = useState("");
   const [adjustment, setAdjustment] = useState("No changes");
@@ -147,14 +147,14 @@ export default function WorkoutFocusLaunchDrawer({
 
   useEffect(() => {
     if (!open) {
-      setCountdown(15);
+      setCountdown(0);
       setStarted(false);
       setBriefingStatus("");
       stopWorkoutCoachAudio();
       return undefined;
     }
 
-    setCountdown(15);
+    setCountdown(0);
     setStarted(false);
     setBriefingStatus("");
 
@@ -164,28 +164,17 @@ export default function WorkoutFocusLaunchDrawer({
   useEffect(() => {
     if (!open || !started) return undefined;
 
-    if (countdown <= 0) {
-      const timer = window.setTimeout(() => {
-        stopWorkoutCoachAudio();
-        onBegin?.({
-          launch_briefing_completed_at:
-            new Date().toISOString(),
-        });
-      }, 450);
-
-      return () => window.clearTimeout(timer);
-    }
-
-    const timer = window.setTimeout(
-      () =>
-        setCountdown((value) =>
-          Math.max(0, value - 1)
-        ),
-      1000
-    );
+    const timer = window.setTimeout(() => {
+      stopWorkoutCoachAudio();
+      onBegin?.({
+        launch_briefing_completed_at:
+          new Date().toISOString(),
+        launch_mode: "immediate_mission",
+      });
+    }, 120);
 
     return () => window.clearTimeout(timer);
-  }, [countdown, open, started, onBegin]);
+  }, [open, started, onBegin]);
 
   function updateBpm(value) {
     const next = Math.max(
@@ -231,19 +220,16 @@ export default function WorkoutFocusLaunchDrawer({
 
   function startCountdown() {
     if (started) return;
-
     setStarted(true);
-    playBriefing({ replay: false });
+  }
+
+  function playMissionBriefing() {
+    playBriefing({ replay: true });
   }
 
   if (!open) return null;
 
-  const progress = started
-    ? Math.max(
-        0,
-        Math.min(100, (countdown / 15) * 100)
-      )
-    : 100;
+  const progress = 100;
 
   return (
     <div className="fixed inset-0 z-[155] overflow-y-auto bg-[#020403] text-white">
@@ -291,14 +277,14 @@ export default function WorkoutFocusLaunchDrawer({
             <div className="relative text-center">
               <div className="text-[10px] font-black uppercase tracking-[0.22em] text-lime-300">
                 {started
-                  ? "Coach Briefing Playing"
-                  : "Pre-Workout Briefing"}
+                  ? "Entering Focus Mode"
+                  : "Mission Briefing"}
               </div>
 
               <div className="mt-2 text-6xl font-black tabular-nums tracking-[-0.06em] text-white sm:text-7xl">
                 {started
                   ? formatCountdown(countdown)
-                  : "00:15"}
+                  : "READY"}
               </div>
 
               <div className="mt-3 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
@@ -315,7 +301,7 @@ export default function WorkoutFocusLaunchDrawer({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-[9px] font-black uppercase tracking-[0.18em] text-lime-300">
-                  SYNC Coach Update
+                  SYNC Mission Briefing
                 </div>
 
                 <div className="mt-2 text-lg font-black text-white">
@@ -409,6 +395,15 @@ export default function WorkoutFocusLaunchDrawer({
         </main>
 
         <footer className="sticky bottom-0 rounded-[1.5rem] border border-white/10 bg-black/90 p-3 backdrop-blur-xl">
+          <button
+            type="button"
+            onClick={playMissionBriefing}
+            disabled={started}
+            className="mb-2 h-11 w-full rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 text-xs font-black text-cyan-100 disabled:opacity-40"
+          >
+            Hear SYNC Briefing
+          </button>
+
           <button
             type="button"
             onClick={startCountdown}

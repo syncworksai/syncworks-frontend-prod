@@ -4062,7 +4062,24 @@ export default function CustomerHealth() {
               setNutritionDraft(null);
               setDrawer("nutrition-coach");
             }}
-            onOpenLog={() => {
+            onOpenLog={(target = "menu") => {
+              if (target === "profile") {
+                setDrawer("profile-intake");
+                return;
+              }
+              if (target === "goals") {
+                setDrawer("goal-center");
+                return;
+              }
+              if (target === "calendar") {
+                setDrawer("planner");
+                return;
+              }
+              if (target === "gym") {
+                setDrawer("questionnaire");
+                return;
+              }
+
               setDrawer("");
               setQuickLogType("menu");
             }}
@@ -4087,6 +4104,34 @@ export default function CustomerHealth() {
             setSnapshot={setSnapshot}
             history={history}
             setHistory={setHistory}
+            onWorkoutComplete={({ summary, session }) => {
+              const completedAt = new Date().toISOString();
+
+              setSnapshot((previous) => ({
+                ...previous,
+                workout_completed_today: true,
+                last_mission_complete: {
+                  workout_name:
+                    session?.scientific_title ||
+                    session?.workout_name ||
+                    "Workout",
+                  completed_sets:
+                    summary?.completed_sets || 0,
+                  total_volume:
+                    summary?.total_set_volume || 0,
+                  active_seconds:
+                    summary?.active_seconds || 0,
+                  completed_at: completedAt,
+                },
+                next_plan_ready: true,
+                next_plan_generated_at: completedAt,
+                updated_at: completedAt,
+              }));
+
+              setActivePlannerItem(null);
+              setHealthView("home");
+              setDrawer("");
+            }}
           />
 
           <CardioActivityDrawer
@@ -4149,42 +4194,7 @@ export default function CustomerHealth() {
               setHealthView("home");
               setDrawer("coach-chat");
 
-              window.setTimeout(() => {
-                let audioEnabled = true;
-
-                try {
-                  audioEnabled =
-                    window.localStorage.getItem(
-                      "sw_health_home_sync_audio_v1"
-                    ) !== "off";
-                } catch {
-                  audioEnabled = true;
-                }
-
-                if (!audioEnabled) return;
-
-                try {
-                  stopCoachVoice();
-
-                  speakCoachText({
-                    text: briefing,
-                    audioMode: "essential",
-                    voicePreference: "australian",
-                    rate: 0.96,
-                    pitch: 1,
-                    volume: 1,
-                    cancelFirst: true,
-                    eventType:
-                      "health_home_sync_briefing",
-                    browserFallback: true,
-                  });
-                } catch (error) {
-                  console.warn(
-                    "SYNC briefing playback failed:",
-                    error
-                  );
-                }
-              }, 80);
+              stopCoachVoice();
             }}
             nextSession={
               mobileNextSession
