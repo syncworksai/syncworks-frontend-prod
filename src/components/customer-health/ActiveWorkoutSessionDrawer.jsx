@@ -83,6 +83,7 @@ import PostWorkoutReportCard from "./PostWorkoutReportCard";
 import LiveWorkoutAdaptationDrawer from "./LiveWorkoutAdaptationDrawer";
 import AdaptiveCoachProposalCard from "./AdaptiveCoachProposalCard";
 import WorkoutFocusCompactPanel from "./WorkoutFocusCompactPanel";
+import MultiModeExerciseTimer from "./MultiModeExerciseTimer";
 import {
   buildAdaptiveExercise,
   buildPostWorkoutWrapUp,
@@ -4881,6 +4882,10 @@ export default function ActiveWorkoutSessionDrawer({
                       "pointer-events-none opacity-60"
                   )}
                 >
+                  <MultiModeExerciseTimer
+                    exercise={currentExercise}
+                  />
+
                   <TrainerExerciseIntroCard
                     exerciseName={
                       currentExercise?.substituted &&
