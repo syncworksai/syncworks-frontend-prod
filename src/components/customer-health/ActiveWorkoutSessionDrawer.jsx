@@ -4888,6 +4888,7 @@ export default function ActiveWorkoutSessionDrawer({
                         ? currentExercise.substitute_name
                         : currentExercise?.name
                     }
+                    exercise={currentExercise}
                     onReplayCue={replayExerciseCue}
                     onFindAlternative={() => {
                       if (
@@ -4944,13 +4945,14 @@ export default function ActiveWorkoutSessionDrawer({
                           : currentExercise.name}
                       </div>
 
-                      <div className="mt-1 text-xs text-slate-400">
-                        Set{" "}
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                        <span>Set{" "}
                         {(currentExercise.set_logs || []).length + 1}
                         {" of "}
                         {currentExercise.planned_sets || "-"}
                         {" | "}
-                        {currentExercise.planned_reps || "clean reps"}
+                        {currentExercise.planned_reps || "clean reps"}</span>
+                        <span className="rounded-full border border-lime-300/20 bg-lime-300/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-lime-200">{currentExercise.workout_stage || "Training"}</span>
                       </div>
                     </div>
 

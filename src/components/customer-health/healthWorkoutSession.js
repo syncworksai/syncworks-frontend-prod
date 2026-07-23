@@ -5,6 +5,7 @@ import {
   classifyWorkout,
   ymdFromIso,
 } from "./healthTrainingClassification";
+import { enrichWorkoutExercises } from "./healthWorkoutStructure";
 
 function nowIso() {
   return new Date().toISOString();
@@ -354,6 +355,23 @@ function normalizeExercise(
 
     notes:
       exercise.notes || "",
+
+    workout_stage:
+      exercise.workout_stage || exercise.stage || "Secondary Strength",
+    tracking_type:
+      exercise.tracking_type || "reps_load",
+    exercise_purpose:
+      exercise.exercise_purpose || exercise.purpose || "",
+    order_reason:
+      exercise.order_reason || "",
+    sequence_index:
+      Number(exercise.sequence_index ?? index),
+    sequence_total:
+      Number(exercise.sequence_total || 0),
+    primary_muscles:
+      Array.isArray(exercise.primary_muscles) ? exercise.primary_muscles : [],
+    secondary_muscles:
+      Array.isArray(exercise.secondary_muscles) ? exercise.secondary_muscles : [],
 
     completed:
       Boolean(exercise.completed),
@@ -742,9 +760,11 @@ export function createWorkoutSessionFromPlannerItem({
     plannerItem || {};
 
   const exercises =
-    getExercisesForPlannerItem(
-      safePlannerItem,
-      workouts
+    enrichWorkoutExercises(
+      getExercisesForPlannerItem(
+        safePlannerItem,
+        workouts
+      )
     );
 
   const workoutClassification =
