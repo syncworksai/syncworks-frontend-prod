@@ -2618,6 +2618,7 @@ export default function ActiveWorkoutSessionDrawer({
   setSnapshot,
   history,
   setHistory,
+  onWorkoutComplete,
 }) {
   const [session, setSession] = useState(null);
   const [reviewMode, setReviewMode] = useState(false);
@@ -4564,6 +4565,17 @@ export default function ActiveWorkoutSessionDrawer({
           "workout_completed"
         ),
       });
+
+      window.setTimeout(() => {
+        onWorkoutComplete?.({
+          session: finishedSession,
+          summary: result.summary,
+          nextSnapshot,
+          nextHistory,
+          next_recommendation:
+            completionMeta.next_recommendation || "",
+        });
+      }, 3600);
 
       trackWorkoutAdaptationKpi(
         "postworkout_wrapup_played",

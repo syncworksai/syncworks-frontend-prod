@@ -28,8 +28,8 @@ function cx(...classes) {
 
 function CoachAvatar() {
   return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-300/10 text-[10px] font-black text-cyan-100">
-      AI
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-lime-300/35 bg-lime-300/10 text-[10px] font-black text-lime-100 shadow-[0_0_18px_rgba(57,255,136,0.22)]">
+      S
     </div>
   );
 }
@@ -126,7 +126,7 @@ function EmptyPlanCard({ onOpenQuestionnaire }) {
       </div>
 
       <p className="mt-1 text-xs leading-5 text-slate-400 sm:text-sm sm:leading-6">
-        Tell the coach your goal, location, available time,
+        Tell SYNC your goal, location, available time,
         sore areas, pain limits, or what you want adjusted.
       </p>
 
@@ -146,7 +146,7 @@ function EmptyPlanCard({ onOpenQuestionnaire }) {
           onClick={onOpenQuestionnaire}
           className="mt-3 h-10 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-xs font-black text-white"
         >
-          Update Coach Profile
+          Build Your Profile
         </button>
       ) : null}
     </div>
@@ -171,7 +171,7 @@ function PlanProposalCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[9px] font-black uppercase tracking-[0.18em] text-lime-200">
-            Coach Proposal
+            SYNC Plan Proposal
           </div>
 
           <h3 className="mt-1 text-base font-black text-white sm:text-lg">
@@ -267,7 +267,7 @@ function PlanProposalCard({
             onClick={onOpenQuestionnaire}
             className="col-span-2 h-10 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 text-xs font-black text-cyan-100"
           >
-            Update Coach Profile
+            Build Your Profile
           </button>
         ) : null}
       </div>
