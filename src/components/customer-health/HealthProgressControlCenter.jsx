@@ -1,10 +1,14 @@
 // src/components/customer-health/HealthProgressControlCenter.jsx
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   buildPlanControlOptions,
   buildProgressSummary,
   simulateTrainingProgram,
 } from "./healthProgressSimulation";
+import {
+  runHealthPlanControl,
+  updateHealthSimulationPreferences,
+} from "../../api/healthProfiles";
 
 function Metric({ label, value, detail }) {
   return (
@@ -31,6 +35,12 @@ export default function HealthProgressControlCenter({
   const [expanded, setExpanded] = useState(false);
   const [simulationWeeks, setSimulationWeeks] = useState(8);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [controlBusy, setControlBusy] = useState("");
+  const [controlMessage, setControlMessage] = useState("");
+  const [controlError, setControlError] = useState("");
+  const [simulationSaving, setSimulationSaving] =
+    useState(false);
+  const simulationSaveTimerRef = useRef(null);
 
   const summary = useMemo(
     () => buildProgressSummary({ history, snapshot }),
@@ -60,20 +70,78 @@ export default function HealthProgressControlCenter({
     [history, snapshot?.week_plan]
   );
 
-  function runControl(control) {
-    if (!control.enabled) return;
+  async function runControl(control) {
+    if (!control.enabled || controlBusy) return;
 
     if (control.id === "reset" && !confirmReset) {
       setConfirmReset(true);
+      setControlMessage(
+        "Reset requires one more confirmation."
+      );
       return;
     }
 
-    onOpen?.(control.route, {
-      preserveWeights: control.id === "restart-keep",
-      confirmed: control.id === "reset",
-    });
-    setConfirmReset(false);
+    const actionMap = {
+      review: "review",
+      rebuild: "rebuild",
+      "restart-keep": "restart_keep_weights",
+      reset: "reset",
+    };
+    const action = actionMap[control.id];
+
+    setControlBusy(control.id);
+    setControlError("");
+    setControlMessage("");
+
+    try {
+      await runHealthPlanControl({
+        action,
+        confirmed: control.id === "reset",
+      });
+
+      setControlMessage(
+        control.id === "restart-keep"
+          ? "Restart request saved. Previous working weights will be preserved."
+          : control.id === "reset"
+          ? "Reset request confirmed and saved."
+          : "Plan request saved."
+      );
+
+      onOpen?.(control.route, {
+        preserveWeights: control.id === "restart-keep",
+        confirmed: control.id === "reset",
+        persisted: true,
+      });
+      setConfirmReset(false);
+    } catch (error) {
+      if (
+        control.id === "reset" &&
+        Number(error?.status) === 409
+      ) {
+        setConfirmReset(true);
+        setControlMessage(
+          "The server requires explicit reset confirmation. Tap Confirm Reset again."
+        );
+      } else {
+        setControlError(
+          error?.networkLike
+            ? "The server is temporarily unavailable. No destructive plan change was applied."
+            : error?.message ||
+                "The plan request could not be saved."
+        );
+      }
+    } finally {
+      setControlBusy("");
+    }
   }
+
+  useEffect(() => {
+    return () => {
+      window.clearTimeout(
+        simulationSaveTimerRef.current
+      );
+    };
+  }, []);
 
   return (
     <section className="rounded-[1.75rem] border border-cyan-300/20 bg-[linear-gradient(145deg,rgba(4,12,18,0.98),rgba(2,5,8,0.99))] p-4 shadow-[0_0_34px_rgba(52,223,255,0.07)]">
@@ -138,9 +206,42 @@ export default function HealthProgressControlCenter({
 
                 <select
                   value={simulationWeeks}
-                  onChange={(event) =>
-                    setSimulationWeeks(Number(event.target.value))
-                  }
+                  onChange={(event) => {
+                    const weeks = Number(event.target.value);
+                    setSimulationWeeks(weeks);
+                    setSimulationSaving(true);
+                    setControlError("");
+
+                    window.clearTimeout(
+                      simulationSaveTimerRef.current
+                    );
+                    simulationSaveTimerRef.current =
+                      window.setTimeout(async () => {
+                        try {
+                          await updateHealthSimulationPreferences({
+                            weeks,
+                            expected_adherence:
+                              simulation.expectedAdherence,
+                            planned_sessions:
+                              simulation.plannedSessions,
+                            baseline_volume:
+                              simulation.baselineVolume,
+                          });
+                          setControlMessage(
+                            "Simulation preferences saved."
+                          );
+                        } catch (error) {
+                          setControlError(
+                            error?.networkLike
+                              ? "Simulation changed locally, but server sync is unavailable."
+                              : error?.message ||
+                                  "Simulation preferences could not be saved."
+                          );
+                        } finally {
+                          setSimulationSaving(false);
+                        }
+                      }, 350);
+                  }}
                   className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs font-black text-white"
                 >
                   <option value={4}>4 weeks</option>
@@ -208,7 +309,9 @@ export default function HealthProgressControlCenter({
                   <button
                     key={control.id}
                     type="button"
-                    disabled={!control.enabled}
+                    disabled={
+                      !control.enabled || Boolean(controlBusy)
+                    }
                     onClick={() => runControl(control)}
                     className={`rounded-2xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-35 ${
                       control.destructive
@@ -223,7 +326,10 @@ export default function HealthProgressControlCenter({
                           : "text-white"
                       }`}
                     >
-                      {control.id === "reset" && confirmReset
+                      {controlBusy === control.id
+                        ? "Saving..."
+                        : control.id === "reset" &&
+                          confirmReset
                         ? "Confirm Reset"
                         : control.label}
                     </div>
@@ -235,6 +341,24 @@ export default function HealthProgressControlCenter({
                   </button>
                 ))}
               </div>
+
+              {simulationSaving ? (
+                <div className="mt-3 text-[10px] font-bold text-cyan-100">
+                  Saving simulation preferences...
+                </div>
+              ) : null}
+
+              {controlMessage ? (
+                <div className="mt-3 rounded-xl border border-lime-300/20 bg-lime-300/[0.06] p-3 text-[10px] font-bold leading-4 text-lime-100">
+                  {controlMessage}
+                </div>
+              ) : null}
+
+              {controlError ? (
+                <div className="mt-3 rounded-xl border border-rose-300/20 bg-rose-300/[0.06] p-3 text-[10px] font-bold leading-4 text-rose-100">
+                  {controlError}
+                </div>
+              ) : null}
 
               <button
                 type="button"

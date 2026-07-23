@@ -1,5 +1,5 @@
 // src/components/customer-health/HealthAthleteProfileCard.jsx
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   SPORT_OPTIONS,
   buildAgeAwareGuidance,
@@ -8,6 +8,10 @@ import {
   calculateAge,
   normalizeMeasurements,
 } from "./healthAthleteProfile";
+import {
+  getHealthAthleteProfile,
+  updateHealthAthleteProfile,
+} from "../../api/healthProfiles";
 
 function Field({ label, children }) {
   return (
@@ -35,6 +39,10 @@ export default function HealthAthleteProfileCard({
 
   const [expanded, setExpanded] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const mountedRef = useRef(true);
   const [dateOfBirth, setDateOfBirth] = useState(
     profile?.date_of_birth || snapshot?.date_of_birth || ""
   );
@@ -52,6 +60,59 @@ export default function HealthAthleteProfileCard({
   const [measurements, setMeasurements] = useState(
     existingMeasurements
   );
+
+  useEffect(() => {
+    mountedRef.current = true;
+
+    async function loadServerProfile() {
+      setLoadingProfile(true);
+      setProfileError("");
+
+      try {
+        const serverProfile =
+          await getHealthAthleteProfile();
+
+        if (!mountedRef.current || !serverProfile) return;
+
+        setDateOfBirth(serverProfile.date_of_birth || "");
+        setSport(
+          serverProfile.primary_sport || "General Fitness"
+        );
+        setTrainingExperience(
+          serverProfile.training_experience || "beginner"
+        );
+        setMeasurements(
+          normalizeMeasurements(
+            serverProfile.measurements || {}
+          )
+        );
+
+        onCoachUpdate?.({
+          ...serverProfile,
+          athlete_profile_source: "server",
+        });
+      } catch (error) {
+        if (!mountedRef.current) return;
+
+        setProfileError(
+          error?.networkLike
+            ? "Server profile is temporarily unavailable. Local Health data is still available."
+            : error?.message ||
+                "Unable to load the saved athlete profile."
+        );
+      } finally {
+        if (mountedRef.current) {
+          setLoadingProfile(false);
+        }
+      }
+    }
+
+    loadServerProfile();
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [onCoachUpdate]);
 
   const age = calculateAge(dateOfBirth);
 
@@ -77,17 +138,55 @@ export default function HealthAthleteProfileCard({
     }));
   }
 
-  function saveProfile() {
-    const patch = buildAthleteProfilePatch({
+  async function saveProfile() {
+    if (savingProfile) return;
+
+    const localPatch = buildAthleteProfilePatch({
       dateOfBirth,
       sport,
       trainingExperience,
       measurements,
     });
 
-    onCoachUpdate?.(patch);
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 2400);
+    const apiPatch = {
+      date_of_birth: dateOfBirth || null,
+      primary_sport: sport,
+      training_experience: trainingExperience,
+      measurements,
+      requires_plan_review: true,
+    };
+
+    setSavingProfile(true);
+    setProfileError("");
+    onCoachUpdate?.(localPatch);
+
+    try {
+      const serverProfile =
+        await updateHealthAthleteProfile(apiPatch);
+
+      if (!mountedRef.current) return;
+
+      onCoachUpdate?.({
+        ...localPatch,
+        ...serverProfile,
+        athlete_profile_source: "server",
+      });
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2400);
+    } catch (error) {
+      if (!mountedRef.current) return;
+
+      setProfileError(
+        error?.networkLike
+          ? "Saved locally. Server sync will need to be retried when the connection returns."
+          : error?.message ||
+              "The profile could not be saved to the server."
+      );
+    } finally {
+      if (mountedRef.current) {
+        setSavingProfile(false);
+      }
+    }
   }
 
   return (
@@ -110,7 +209,11 @@ export default function HealthAthleteProfileCard({
           onClick={() => setExpanded((value) => !value)}
           className="shrink-0 rounded-xl border border-lime-300/25 bg-lime-300/10 px-3 py-2 text-[10px] font-black text-lime-100"
         >
-          {expanded ? "Close" : "Edit"}
+          {loadingProfile
+            ? "Loading"
+            : expanded
+            ? "Close"
+            : "Edit"}
         </button>
       </div>
 
@@ -311,9 +414,12 @@ export default function HealthAthleteProfileCard({
             <button
               type="button"
               onClick={saveProfile}
+              disabled={savingProfile || loadingProfile}
               className="h-12 rounded-xl border border-lime-300/35 bg-lime-300/12 text-sm font-black text-lime-100"
             >
-              {saved
+              {savingProfile
+                ? "Saving..."
+                : saved
                 ? "Profile Saved"
                 : "Save Athlete Profile"}
             </button>
@@ -326,6 +432,12 @@ export default function HealthAthleteProfileCard({
               Open Full Health Profile
             </button>
           </div>
+
+          {profileError ? (
+            <div className="rounded-xl border border-amber-300/20 bg-amber-300/[0.06] p-3 text-[10px] font-bold leading-4 text-amber-100">
+              {profileError}
+            </div>
+          ) : null}
 
           <div className="text-[10px] leading-4 text-slate-500">
             Measurements are for personal progress tracking. They are not a diagnosis, body-composition scan, or medical assessment.
