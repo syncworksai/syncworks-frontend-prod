@@ -2,6 +2,11 @@
 import React, { useMemo, useRef, useState } from "react";
 import HealthDailyCoachStatusCard from "./HealthDailyCoachStatusCard";
 import HealthGoalProgressCard from "./HealthGoalProgressCard";
+import RecoveryReadinessCard from "./RecoveryReadinessCard";
+import {
+  adaptWorkoutForRecovery,
+  buildRecoveryAnalysis,
+} from "./healthRecoveryEngine";
 import {
   speakCoachText,
   stopCoachVoice,
@@ -405,8 +410,23 @@ export default function HealthPremiumHome({
     [snapshot?.week_plan]
   );
 
-  const workout =
-    todayWorkout || nextWorkout;
+  const recoveryAnalysis = useMemo(
+    () =>
+      buildRecoveryAnalysis({
+        history,
+        snapshot,
+      }),
+    [history, snapshot]
+  );
+
+  const workout = useMemo(
+    () =>
+      adaptWorkoutForRecovery(
+        todayWorkout || nextWorkout,
+        recoveryAnalysis
+      ),
+    [todayWorkout, nextWorkout, recoveryAnalysis]
+  );
 
   const readiness =
     readinessValue(snapshot);
@@ -1289,6 +1309,13 @@ export default function HealthPremiumHome({
         snapshot={snapshot}
         history={history}
         onOpen={onOpen}
+      />
+
+      <RecoveryReadinessCard
+        history={history}
+        snapshot={snapshot}
+        workout={workout}
+        onReviewPlan={() => onOpen?.("planner")}
       />
 
       <HealthDailyCoachStatusCard
