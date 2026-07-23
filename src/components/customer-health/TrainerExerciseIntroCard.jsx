@@ -29,6 +29,7 @@ function Pill({ children, tone = "cyan" }) {
 
 export default function TrainerExerciseIntroCard({
   exerciseName,
+  exercise,
   onReplayCue,
   onFindAlternative,
 }) {
@@ -39,6 +40,10 @@ export default function TrainerExerciseIntroCard({
 
   const [heroBroken, setHeroBroken] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [whyOpen, setWhyOpen] = useState(false);
+  const stage = exercise?.workout_stage || exercise?.stage || knowledge?.training_tag || "Training";
+  const purpose = exercise?.exercise_purpose || exercise?.purpose || knowledge?.purpose || knowledge?.short_cue || "Build the movement quality and training capacity needed for today\'s goal.";
+  const orderReason = exercise?.order_reason || "This movement is positioned here to support the workout\'s main objective while managing fatigue.";
 
   function openDemo() {
     const curatedUrl = String(
@@ -93,7 +98,7 @@ export default function TrainerExerciseIntroCard({
               </h3>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <Pill tone="lime">
-                  {knowledge.training_tag || "Strength"}
+                  {stage}
                 </Pill>
                 <Pill tone="cyan">
                   {knowledge.movement_pattern || "Full body"}
@@ -128,13 +133,20 @@ export default function TrainerExerciseIntroCard({
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-1">
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-1">
           <button
             type="button"
             onClick={onReplayCue}
             className="rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 py-2.5 text-[10px] font-black text-fuchsia-100"
           >
             Replay
+          </button>
+          <button
+            type="button"
+            onClick={() => setWhyOpen((current) => !current)}
+            className="rounded-2xl border border-lime-300/25 bg-lime-300/10 px-3 py-2.5 text-[10px] font-black text-lime-100"
+          >
+            {whyOpen ? "Hide Why" : "Why?"}
           </button>
           <button
             type="button"
@@ -152,6 +164,13 @@ export default function TrainerExerciseIntroCard({
           </button>
         </div>
       </div>
+
+      {whyOpen ? (
+        <div className="grid gap-3 border-t border-lime-300/15 bg-lime-300/[0.04] p-3 sm:grid-cols-2 sm:p-4">
+          <div className="rounded-2xl border border-lime-300/20 bg-black/20 p-3"><div className="text-[9px] font-black uppercase tracking-[0.16em] text-lime-300">Why this exercise?</div><div className="mt-2 text-sm leading-6 text-slate-200">{purpose}</div></div>
+          <div className="rounded-2xl border border-cyan-300/20 bg-black/20 p-3"><div className="text-[9px] font-black uppercase tracking-[0.16em] text-cyan-200">Why now?</div><div className="mt-2 text-sm leading-6 text-slate-200">{orderReason}</div></div>
+        </div>
+      ) : null}
 
       {moreOpen ? (
         <div className="grid gap-3 border-t border-white/10 p-3 sm:grid-cols-2 sm:p-4">
