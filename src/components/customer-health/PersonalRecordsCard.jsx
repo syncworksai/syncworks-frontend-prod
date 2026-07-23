@@ -5,6 +5,7 @@ import {
   buildLastTimeComparison,
   buildPersonalRecords,
 } from "./healthPersonalRecords";
+import { buildNextRecordTargets } from "./healthExerciseEducation";
 
 function signed(value) {
   const number = Number(value || 0);
@@ -32,6 +33,7 @@ export default function PersonalRecordsCard({
   });
 
   const hasCurrentSets = result.current?.workingSets > 0;
+  const nextTargets = buildNextRecordTargets(result);
 
   return (
     <section className="rounded-[1.5rem] border border-fuchsia-300/20 bg-[linear-gradient(135deg,rgba(255,59,212,0.08),rgba(139,92,246,0.07))] p-3 sm:rounded-[2rem] sm:p-4">
@@ -205,6 +207,33 @@ export default function PersonalRecordsCard({
           Last-time comparison appears after this exercise has at least one saved workout.
         </div>
       )}
+
+      <div className="mt-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.05] p-3">
+        <div className="text-[9px] font-black uppercase tracking-[0.16em] text-cyan-200">
+          Next Record Targets
+        </div>
+        <div className="mt-1 text-xs leading-5 text-slate-400">
+          Progress one target at a time. These are planning targets, not instructions to max out.
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {nextTargets.map((target) => (
+            <div
+              key={target.id}
+              className="rounded-xl border border-white/10 bg-black/20 p-3"
+            >
+              <div className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-500">
+                {target.label}
+              </div>
+              <div className="mt-1 text-sm font-black text-white">
+                {target.value}
+              </div>
+              <div className="mt-1 text-[10px] leading-4 text-slate-400">
+                {target.detail}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="mt-3 text-[10px] leading-4 text-slate-500">
         Warm-up sets are excluded from PR and volume calculations.

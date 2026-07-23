@@ -1,6 +1,7 @@
 // src/components/customer-health/TrainerExerciseIntroCard.jsx
 import React, { useMemo, useState } from "react";
 import { getExerciseKnowledge } from "./healthExerciseKnowledge";
+import { buildExerciseEducation } from "./healthExerciseEducation";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -41,9 +42,14 @@ export default function TrainerExerciseIntroCard({
   const [heroBroken, setHeroBroken] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [whyOpen, setWhyOpen] = useState(false);
+  const [educationTab, setEducationTab] = useState("setup");
   const stage = exercise?.workout_stage || exercise?.stage || knowledge?.training_tag || "Training";
   const purpose = exercise?.exercise_purpose || exercise?.purpose || knowledge?.purpose || knowledge?.short_cue || "Build the movement quality and training capacity needed for today\'s goal.";
   const orderReason = exercise?.order_reason || "This movement is positioned here to support the workout\'s main objective while managing fatigue.";
+  const education = useMemo(
+    () => buildExerciseEducation({ knowledge, exercise }),
+    [knowledge, exercise]
+  );
 
   function openDemo() {
     const curatedUrl = String(
@@ -173,49 +179,99 @@ export default function TrainerExerciseIntroCard({
       ) : null}
 
       {moreOpen ? (
-        <div className="grid gap-3 border-t border-white/10 p-3 sm:grid-cols-2 sm:p-4">
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-            <div className="text-[9px] font-black uppercase tracking-[0.16em] text-cyan-200">
-              Muscles
-            </div>
-            <div className="mt-2 text-sm leading-5 text-slate-300">
-              {(knowledge.primary_muscles || []).join(", ") ||
-                "Full body"}
-            </div>
+        <div className="border-t border-white/10 p-3 sm:p-4">
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {[
+              ["setup", "Setup"],
+              ["execution", "Execution"],
+              ["muscles", "Muscles"],
+              ["mistakes", "Mistakes"],
+              ["progress", "Progress"],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setEducationTab(value)}
+                className={cx(
+                  "shrink-0 rounded-full border px-3 py-2 text-[10px] font-black",
+                  educationTab === value
+                    ? "border-lime-300/35 bg-lime-300/15 text-lime-100"
+                    : "border-white/10 bg-white/[0.03] text-slate-400"
+                )}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-            <div className="text-[9px] font-black uppercase tracking-[0.16em] text-fuchsia-200">
-              Form warning
-            </div>
-            <div className="mt-2 text-sm leading-5 text-slate-300">
-              {knowledge.correction_cue ||
-                knowledge.coach_warning}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-3 sm:col-span-2">
-            <div className="text-[9px] font-black uppercase tracking-[0.16em] text-lime-300">
-              Quick setup
-            </div>
-            <div className="mt-2 grid gap-2 sm:grid-cols-3">
-              {(knowledge.steps || [])
-                .slice(0, 3)
-                .map((step, index) => (
-                  <div
-                    key={`${knowledge.name}-${step.title}-${index}`}
-                    className="rounded-xl border border-white/10 bg-white/[0.03] p-3"
-                  >
-                    <div className="text-[10px] font-black text-white">
-                      {index + 1}. {step.title}
-                    </div>
-                    <div className="mt-1 text-xs leading-5 text-slate-400">
-                      {step.cue}
-                    </div>
+          {educationTab === "setup" || educationTab === "execution" ? (
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {education[educationTab].map((step, index) => (
+                <div
+                  key={step.id}
+                  className="rounded-2xl border border-white/10 bg-black/20 p-3"
+                >
+                  <div className="text-[10px] font-black text-white">
+                    {index + 1}. {step.title}
                   </div>
-                ))}
+                  <div className="mt-1 text-xs leading-5 text-slate-400">
+                    {step.cue}
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+          ) : null}
+
+          {educationTab === "muscles" ? (
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.06] p-3">
+                <div className="text-[9px] font-black uppercase tracking-[0.16em] text-cyan-200">Primary muscles</div>
+                <div className="mt-2 text-sm leading-6 text-slate-200">
+                  {education.primaryMuscles.join(", ") || "Full-body movement"}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-lime-300/20 bg-lime-300/[0.06] p-3">
+                <div className="text-[9px] font-black uppercase tracking-[0.16em] text-lime-200">What to feel</div>
+                <div className="mt-2 text-sm leading-6 text-slate-200">
+                  {education.feel}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {educationTab === "mistakes" ? (
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-fuchsia-300/20 bg-fuchsia-300/[0.06] p-3">
+                <div className="text-[9px] font-black uppercase tracking-[0.16em] text-fuchsia-200">Common mistake</div>
+                <div className="mt-2 text-sm leading-6 text-slate-200">
+                  {education.commonMistake}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-rose-300/20 bg-rose-300/[0.06] p-3">
+                <div className="text-[9px] font-black uppercase tracking-[0.16em] text-rose-200">Safety rule</div>
+                <div className="mt-2 text-sm leading-6 text-slate-200">
+                  {education.safety}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {educationTab === "progress" ? (
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-3">
+                <div className="text-[9px] font-black uppercase tracking-[0.16em] text-amber-200">Make it easier</div>
+                <div className="mt-2 text-sm leading-6 text-slate-200">
+                  {education.regression}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-lime-300/20 bg-lime-300/[0.06] p-3">
+                <div className="text-[9px] font-black uppercase tracking-[0.16em] text-lime-200">Make it harder</div>
+                <div className="mt-2 text-sm leading-6 text-slate-200">
+                  {education.progression}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </section>
