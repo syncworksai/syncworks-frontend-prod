@@ -38,14 +38,10 @@ function ChoiceButton({
   tone = "cyan",
 }) {
   const activeClasses = {
-    cyan:
-      "border-cyan-300/35 bg-cyan-300/15 text-cyan-100",
-    lime:
-      "border-lime-300/35 bg-lime-300/15 text-lime-100",
-    amber:
-      "border-amber-300/35 bg-amber-300/15 text-amber-100",
-    rose:
-      "border-rose-300/35 bg-rose-300/15 text-rose-100",
+    cyan: "border-cyan-300/35 bg-cyan-300/15 text-cyan-100",
+    lime: "border-lime-300/35 bg-lime-300/15 text-lime-100",
+    amber: "border-amber-300/35 bg-amber-300/15 text-amber-100",
+    rose: "border-rose-300/35 bg-rose-300/15 text-rose-100",
   };
 
   return (
@@ -74,6 +70,38 @@ function controlLabel(value) {
   return labels[value] || "Coach Assist";
 }
 
+function revisionReasonText({
+  readiness,
+  energy,
+  soreAreas,
+  painAreas,
+  painSeverity,
+}) {
+  const reasons = [];
+
+  if (readiness === "Low") {
+    reasons.push("Readiness is low, so intensity and working volume may be reduced.");
+  }
+
+  if (energy === "Low") {
+    reasons.push("Energy is low, so the session may use fewer demanding movements and longer rest.");
+  }
+
+  if (soreAreas.length) {
+    reasons.push(
+      `Soreness reported in ${soreAreas.join(", ")}, so repeated loading of those areas may be reduced.`
+    );
+  }
+
+  if (painAreas.length) {
+    reasons.push(
+      `${painSeverity} pain reported in ${painAreas.join(", ")}, so painful patterns will be avoided.`
+    );
+  }
+
+  return reasons;
+}
+
 export default function PreWorkoutCheckInDrawer({
   open,
   onClose,
@@ -87,14 +115,11 @@ export default function PreWorkoutCheckInDrawer({
   const [energy, setEnergy] = useState("Good");
   const [soreAreas, setSoreAreas] = useState([]);
   const [painAreas, setPainAreas] = useState([]);
-  const [painSeverity, setPainSeverity] =
-    useState("None");
-  const [avoidPainAreas, setAvoidPainAreas] =
-    useState(true);
-  const [adjustWorkout, setAdjustWorkout] =
-    useState(true);
-  const [bodyStatusOpen, setBodyStatusOpen] =
-    useState(false);
+  const [painSeverity, setPainSeverity] = useState("None");
+  const [avoidPainAreas, setAvoidPainAreas] = useState(true);
+  const [adjustWorkout, setAdjustWorkout] = useState(true);
+  const [bodyStatusOpen, setBodyStatusOpen] = useState(false);
+  const [revisionOpen, setRevisionOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -115,10 +140,9 @@ export default function PreWorkoutCheckInDrawer({
       snapshot?.preworkout_pain_severity || "None"
     );
     setAvoidPainAreas(true);
-    setAdjustWorkout(
-      workout?.plan_control !== "locked"
-    );
+    setAdjustWorkout(workout?.plan_control !== "locked");
     setBodyStatusOpen(false);
+    setRevisionOpen(false);
   }, [open, snapshot, workout]);
 
   const title =
@@ -136,12 +160,9 @@ export default function PreWorkoutCheckInDrawer({
     [workout]
   );
 
-  const planControl =
-    workout?.plan_control || "coach_assist";
-
+  const planControl = workout?.plan_control || "coach_assist";
   const painSelected = painAreas.length > 0;
-  const canBegin =
-    painSeverity !== "Severe" || !avoidPainAreas;
+  const canBegin = painSeverity !== "Severe" || !avoidPainAreas;
 
   const effectiveAdjust =
     planControl === "locked"
@@ -150,34 +171,36 @@ export default function PreWorkoutCheckInDrawer({
       ? true
       : adjustWorkout;
 
+  const revisionReasons = useMemo(
+    () =>
+      revisionReasonText({
+        readiness,
+        energy,
+        soreAreas,
+        painAreas,
+        painSeverity,
+      }),
+    [readiness, energy, soreAreas, painAreas, painSeverity]
+  );
+
+  const aiRevisedPlan =
+    effectiveAdjust && revisionReasons.length > 0;
+
   const coachSummary = useMemo(() => {
     if (planControl === "locked") {
-      return "SYNC will preserve the saved workout and provide cues without replacing exercises.";
+      return "The saved workout will remain unchanged. SYNC will provide coaching cues only.";
     }
 
-    if (avoidPainAreas && painAreas.length) {
-      return `SYNC will train around ${painAreas.join(
-        ", "
-      )} and protect painful areas.`;
-    }
-
-    if (soreAreas.length) {
-      return `SYNC will account for ${soreAreas.join(
-        ", "
-      )} while keeping the session moving.`;
+    if (aiRevisedPlan) {
+      return "AI revised the plan using today's readiness, energy, soreness, and pain inputs.";
     }
 
     if (planControl === "adaptive") {
-      return "SYNC may adjust exercise choice, load, volume, or rest using todayâ€™s readiness.";
+      return "The plan is adaptive, but no revision is needed from the inputs entered so far.";
     }
 
-    return "SYNC will keep the plan and offer coaching or suggested changes when useful.";
-  }, [
-    planControl,
-    avoidPainAreas,
-    painAreas,
-    soreAreas,
-  ]);
+    return "The original workout remains in place. Suggested changes can still be made during the session.";
+  }, [planControl, aiRevisedPlan]);
 
   if (!open || !workout) return null;
 
@@ -193,32 +216,32 @@ export default function PreWorkoutCheckInDrawer({
       avoid_pain_areas: avoidPainAreas,
       adjust_workout: effectiveAdjust,
       plan_control: planControl,
+      ai_revised_plan: aiRevisedPlan,
+      ai_revision_reasons: revisionReasons,
       scientific_title:
         workoutClassification.scientific_title,
       training_category:
         workoutClassification.training_category,
-      body_region:
-        workoutClassification.body_region,
+      body_region: workoutClassification.body_region,
       movement_pattern:
         workoutClassification.movement_pattern,
       primary_muscles:
         workoutClassification.primary_muscles,
       secondary_muscles:
         workoutClassification.secondary_muscles,
-      multiple_sessions_today:
-        Boolean(snapshot?.multiple_sessions_today),
-      session_number:
-        Math.max(
-          1,
-          Number(snapshot?.next_session_number || 1)
-        ),
-      available_minutes:
-        Number(
-          workout?.requested_duration_minutes ||
-            workout?.duration_minutes ||
-            snapshot?.available_minutes ||
-            45
-        ),
+      multiple_sessions_today: Boolean(
+        snapshot?.multiple_sessions_today
+      ),
+      session_number: Math.max(
+        1,
+        Number(snapshot?.next_session_number || 1)
+      ),
+      available_minutes: Number(
+        workout?.requested_duration_minutes ||
+          workout?.duration_minutes ||
+          snapshot?.available_minutes ||
+          45
+      ),
       ...overrides,
     });
   }
@@ -328,7 +351,7 @@ export default function PreWorkoutCheckInDrawer({
                 Soreness or pain today?
               </span>
               <span className="mt-0.5 block text-[11px] text-slate-500">
-                Optional â€” open only when your body needs an adjustment.
+                Optional — open only when your body needs an adjustment.
               </span>
             </span>
             <span className="text-xs font-black text-cyan-200">
@@ -394,9 +417,7 @@ export default function PreWorkoutCheckInDrawer({
                         <ChoiceButton
                           key={item}
                           active={painSeverity === item}
-                          onClick={() =>
-                            setPainSeverity(item)
-                          }
+                          onClick={() => setPainSeverity(item)}
                           tone="rose"
                         >
                           {item}
@@ -409,9 +430,7 @@ export default function PreWorkoutCheckInDrawer({
                         type="checkbox"
                         checked={avoidPainAreas}
                         onChange={(event) =>
-                          setAvoidPainAreas(
-                            event.target.checked
-                          )
+                          setAvoidPainAreas(event.target.checked)
                         }
                         className="mt-1"
                       />
@@ -451,13 +470,68 @@ export default function PreWorkoutCheckInDrawer({
             </label>
           ) : null}
 
-          <div className="mt-3 rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.06] p-3">
-            <div className="text-[9px] font-black uppercase tracking-[0.16em] text-cyan-200">
-              SYNC plan
-            </div>
-            <p className="mt-1 text-xs leading-5 text-slate-300">
-              {coachSummary}
-            </p>
+          <div className="mt-3 overflow-hidden rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.06]">
+            <button
+              type="button"
+              onClick={() =>
+                setRevisionOpen((current) => !current)
+              }
+              className="flex w-full items-center justify-between gap-3 p-3 text-left"
+            >
+              <span>
+                <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-cyan-200">
+                  {aiRevisedPlan ? "AI revised plan" : "Plan status"}
+                </span>
+                <span className="mt-1 block text-xs leading-5 text-slate-300">
+                  {coachSummary}
+                </span>
+              </span>
+              <span className="shrink-0 text-xs font-black text-cyan-100">
+                {revisionOpen ? "Hide" : "View"}
+              </span>
+            </button>
+
+            {revisionOpen ? (
+              <div className="border-t border-cyan-300/15 px-3 pb-3 pt-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                    <div className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">
+                      Your inputs
+                    </div>
+                    <div className="mt-2 space-y-1 text-[11px] leading-4 text-slate-300">
+                      <div>Readiness: {readiness}</div>
+                      <div>Energy: {energy}</div>
+                      <div>
+                        Soreness: {soreAreas.length ? soreAreas.join(", ") : "None"}
+                      </div>
+                      <div>
+                        Pain: {painAreas.length ? `${painSeverity} — ${painAreas.join(", ")}` : "None"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-lime-300/15 bg-lime-300/[0.04] p-3">
+                    <div className="text-[9px] font-black uppercase tracking-[0.14em] text-lime-200">
+                      What changed and why
+                    </div>
+                    {aiRevisedPlan ? (
+                      <div className="mt-2 space-y-2 text-[11px] leading-4 text-slate-300">
+                        {revisionReasons.map((reason) => (
+                          <div key={reason}>• {reason}</div>
+                        ))}
+                        <div>
+                          • SYNC may revise exercise choice, load, set count, or rest while preserving the workout's intended training focus.
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-2 text-[11px] leading-4 text-slate-300">
+                        No revision was triggered. The original workout remains scheduled.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {!canBegin ? (
@@ -480,6 +554,8 @@ export default function PreWorkoutCheckInDrawer({
                   preworkout_pain_severity: "None",
                   adjust_workout:
                     planControl === "adaptive",
+                  ai_revised_plan: false,
+                  ai_revision_reasons: [],
                   quick_start: true,
                 })
               }
@@ -494,7 +570,7 @@ export default function PreWorkoutCheckInDrawer({
               onClick={() => submit()}
               className="h-12 rounded-2xl border border-lime-300/30 bg-lime-300/15 text-sm font-black text-lime-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Start Workout
+              {aiRevisedPlan ? "Start Revised Workout" : "Start Workout"}
             </button>
           </div>
         </div>
