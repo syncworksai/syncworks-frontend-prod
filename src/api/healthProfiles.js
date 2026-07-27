@@ -3,6 +3,12 @@ import api, {
   getApiErrorStatus,
   isNetworkLikeError,
 } from "./client";
+import {
+  enqueueHealthProfileSync,
+  getPendingHealthProfileSyncs,
+  removeHealthProfileSync,
+  updateHealthProfileSync,
+} from "./healthProfileSyncQueue";
 
 function responseData(response) {
   return response?.data ?? response ?? null;
@@ -36,7 +42,7 @@ export async function getHealthAthleteProfile() {
   }
 }
 
-export async function updateHealthAthleteProfile(patch) {
+export async function updateHealthAthleteProfile(patch, { queueOnFailure = true } = {}) {
   try {
     const response = await api.patch(
       "/health/profile/",
@@ -44,10 +50,15 @@ export async function updateHealthAthleteProfile(patch) {
     );
     return responseData(response);
   } catch (error) {
-    throw normalizedError(
+    const normalized = normalizedError(
       error,
       "Unable to save the athlete profile."
     );
+    if (queueOnFailure && normalized.networkLike) {
+      enqueueHealthProfileSync("profile", patch);
+      normalized.queued = true;
+    }
+    throw normalized;
   }
 }
 
@@ -70,7 +81,8 @@ export async function runHealthPlanControl({
 }
 
 export async function updateHealthSimulationPreferences(
-  simulationPreferences
+  simulationPreferences,
+  { queueOnFailure = true } = {}
 ) {
   try {
     const response = await api.patch(
@@ -81,9 +93,51 @@ export async function updateHealthSimulationPreferences(
     );
     return responseData(response);
   } catch (error) {
-    throw normalizedError(
+    const normalized = normalizedError(
       error,
       "Unable to save simulation preferences."
     );
+    if (queueOnFailure && normalized.networkLike) {
+      enqueueHealthProfileSync(
+        "simulation",
+        simulationPreferences
+      );
+      normalized.queued = true;
+    }
+    throw normalized;
   }
+}
+
+
+export async function flushHealthProfileSyncQueue() {
+  const results = [];
+
+  for (const item of getPendingHealthProfileSyncs()) {
+    try {
+      if (item.type === "profile") {
+        await updateHealthAthleteProfile(item.payload, {
+          queueOnFailure: false,
+        });
+      } else if (item.type === "simulation") {
+        await updateHealthSimulationPreferences(
+          item.payload,
+          { queueOnFailure: false }
+        );
+      }
+
+      removeHealthProfileSync(item.id);
+      results.push({ id: item.id, status: "synced" });
+    } catch (error) {
+      updateHealthProfileSync({
+        ...item,
+        attempts: Number(item.attempts || 0) + 1,
+        lastAttemptAt: new Date().toISOString(),
+        lastError: error?.message || "Sync failed.",
+      });
+      results.push({ id: item.id, status: "failed" });
+      if (error?.networkLike) break;
+    }
+  }
+
+  return results;
 }

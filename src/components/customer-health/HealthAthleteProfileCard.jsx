@@ -9,9 +9,14 @@ import {
   normalizeMeasurements,
 } from "./healthAthleteProfile";
 import {
+  flushHealthProfileSyncQueue,
   getHealthAthleteProfile,
   updateHealthAthleteProfile,
 } from "../../api/healthProfiles";
+import {
+  getPendingHealthProfileSyncs,
+  subscribeHealthProfileSync,
+} from "../../api/healthProfileSyncQueue";
 
 function Field({ label, children }) {
   return (
@@ -42,6 +47,10 @@ export default function HealthAthleteProfileCard({
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState("");
+  const [pendingSyncCount, setPendingSyncCount] = useState(
+    () => getPendingHealthProfileSyncs().length
+  );
+  const [syncingPending, setSyncingPending] = useState(false);
   const mountedRef = useRef(true);
   const [dateOfBirth, setDateOfBirth] = useState(
     profile?.date_of_birth || snapshot?.date_of_birth || ""
@@ -114,6 +123,37 @@ export default function HealthAthleteProfileCard({
     };
   }, [onCoachUpdate]);
 
+  useEffect(() => {
+    const unsubscribe = subscribeHealthProfileSync((detail) => {
+      setPendingSyncCount(Number(detail?.pendingCount || 0));
+    });
+
+    const handleOnline = () => retryPendingSync();
+    window.addEventListener("online", handleOnline);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener("online", handleOnline);
+    };
+  }, []);
+
+  async function retryPendingSync() {
+    if (syncingPending) return;
+    setSyncingPending(true);
+    setProfileError("");
+
+    try {
+      await flushHealthProfileSyncQueue();
+      setPendingSyncCount(getPendingHealthProfileSyncs().length);
+    } catch (error) {
+      setProfileError(
+        error?.message || "Pending Health changes could not be synced."
+      );
+    } finally {
+      setSyncingPending(false);
+    }
+  }
+
   const age = calculateAge(dateOfBirth);
 
   const guidance = useMemo(
@@ -177,10 +217,15 @@ export default function HealthAthleteProfileCard({
       if (!mountedRef.current) return;
 
       setProfileError(
-        error?.networkLike
+        error?.queued
+          ? "Saved locally and queued for automatic server sync."
+          : error?.networkLike
           ? "Saved locally. Server sync will need to be retried when the connection returns."
           : error?.message ||
               "The profile could not be saved to the server."
+      );
+      setPendingSyncCount(
+        getPendingHealthProfileSyncs().length
       );
     } finally {
       if (mountedRef.current) {
@@ -436,6 +481,23 @@ export default function HealthAthleteProfileCard({
           {profileError ? (
             <div className="rounded-xl border border-amber-300/20 bg-amber-300/[0.06] p-3 text-[10px] font-bold leading-4 text-amber-100">
               {profileError}
+            </div>
+          ) : null}
+
+          {pendingSyncCount > 0 ? (
+            <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/[0.06] p-3">
+              <div className="text-[10px] font-bold leading-4 text-cyan-100">
+                {pendingSyncCount} Health change
+                {pendingSyncCount === 1 ? "" : "s"} waiting to sync.
+              </div>
+              <button
+                type="button"
+                onClick={retryPendingSync}
+                disabled={syncingPending}
+                className="mt-2 h-10 w-full rounded-xl border border-cyan-300/30 bg-cyan-300/10 text-xs font-black text-cyan-100 disabled:opacity-50"
+              >
+                {syncingPending ? "Syncing..." : "Retry Pending Sync"}
+              </button>
             </div>
           ) : null}
 
