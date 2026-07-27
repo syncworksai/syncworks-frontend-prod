@@ -6,3 +6,4 @@ build/
 .vercel/
 *.log
 .vercel
+_syncworks_backups/
