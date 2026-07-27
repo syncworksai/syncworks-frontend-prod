@@ -5,6 +5,7 @@ import HealthGoalProgressCard from "./HealthGoalProgressCard";
 import RecoveryReadinessCard from "./RecoveryReadinessCard";
 import HealthProgressControlCenter from "./HealthProgressControlCenter";
 import HealthAthleteProfileCard from "./HealthAthleteProfileCard";
+import HealthApiDiagnosticsCard from "./HealthApiDiagnosticsCard";
 import {
   adaptWorkoutForRecovery,
   buildRecoveryAnalysis,
@@ -834,6 +835,8 @@ export default function HealthPremiumHome({
         onCoachUpdate={onCoachUpdate}
         onOpen={onOpen}
       />
+
+      <HealthApiDiagnosticsCard />
 
       <section className="rounded-[1.75rem] border border-emerald-300/25 bg-[linear-gradient(145deg,rgba(8,16,11,0.98),rgba(2,5,3,0.99))] p-4 shadow-[0_0_32px_rgba(57,255,136,0.08)]">
         <div className="flex items-start justify-between gap-3">
