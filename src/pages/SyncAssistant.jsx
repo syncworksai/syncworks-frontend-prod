@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getActiveBusinessId } from "../api/client";
+import SyncActionStudio from "../components/sync/SyncActionStudio";
 import {
   getSyncAiErrorMessage,
   getSyncAiStatus,
@@ -343,8 +344,8 @@ export default function SyncAssistant() {
                 What should SYNC help with?
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-                SYNC uses authenticated Personal or Business context. This phase is
-                read-only and cannot send, charge, assign, schedule, or change records.
+                SYNC uses authenticated Personal or Business context. SYNC can prepare reviewable drafts using current context. It still cannot
+                send, charge, assign, schedule, or change records.
               </p>
             </div>
 
@@ -482,6 +483,12 @@ export default function SyncAssistant() {
           </div>
         </section>
 
+        <SyncActionStudio
+          workspace={workspace}
+          disabled={sending || !status.enabled || !status.configured}
+          onNotice={setNotice}
+        />
+
         <section className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-4">
             <ShieldCheck className="h-5 w-5 text-emerald-200" />
@@ -499,9 +506,9 @@ export default function SyncAssistant() {
           </div>
           <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-4">
             <CheckCircle2 className="h-5 w-5 text-violet-200" />
-            <div className="mt-3 font-black text-white">Read-only</div>
+            <div className="mt-3 font-black text-white">Draft-and-confirm</div>
             <div className="mt-1 text-sm leading-6 text-slate-400">
-              No operational action occurs without a future approved tool.
+              SYNC prepares editable drafts, but execution remains disabled.
             </div>
           </div>
         </section>
