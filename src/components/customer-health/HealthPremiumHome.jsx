@@ -1,5 +1,11 @@
 // src/components/customer-health/HealthPremiumHome.jsx
-import React, { useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import HealthDailyCoachStatusCard from "./HealthDailyCoachStatusCard";
 import HealthGoalProgressCard from "./HealthGoalProgressCard";
 import RecoveryReadinessCard from "./RecoveryReadinessCard";
@@ -81,11 +87,10 @@ function findUnfinishedWorkout(snapshot) {
   );
   if (direct) return direct;
 
-  const plan = Array.isArray(snapshot?.week_plan)
+  return (Array.isArray(snapshot?.week_plan)
     ? snapshot.week_plan
-    : [];
-
-  return plan.find(
+    : []
+  ).find(
     (item) =>
       item?.workout_name &&
       ["In Progress", "Started", "Incomplete"].includes(
@@ -185,27 +190,32 @@ export default function HealthPremiumHome({
   const [showDetails, setShowDetails] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
   const [audioStatus, setAudioStatus] = useState("");
+  const coachUpdateRef = useRef(onCoachUpdate);
+
+  useEffect(() => {
+    coachUpdateRef.current = onCoachUpdate;
+  }, [onCoachUpdate]);
+
+  const stableCoachUpdate = useCallback((patch) => {
+    coachUpdateRef.current?.(patch);
+  }, []);
 
   const unfinishedWorkout = useMemo(
     () => findUnfinishedWorkout(snapshot),
     [snapshot]
   );
-
   const todayWorkout = useMemo(
     () => findTodayWorkout(snapshot?.week_plan),
     [snapshot?.week_plan]
   );
-
   const nextWorkout = useMemo(
     () => findNextWorkout(snapshot?.week_plan),
     [snapshot?.week_plan]
   );
-
   const recoveryAnalysis = useMemo(
     () => buildRecoveryAnalysis({ history, snapshot }),
     [history, snapshot]
   );
-
   const plannedWorkout = useMemo(
     () =>
       adaptWorkoutForRecovery(
@@ -218,18 +228,15 @@ export default function HealthPremiumHome({
   const workout = unfinishedWorkout || plannedWorkout;
   const isResume = Boolean(unfinishedWorkout);
   const name = firstName(profile);
-
   const exerciseCount = Array.isArray(workout?.exercises)
     ? workout.exercises.length
     : safeNumber(workout?.exercise_count, 0);
-
   const completedExercises = safeNumber(
     workout?.completed_exercises ||
       workout?.exercise_index ||
       workout?.current_exercise_index,
     0
   );
-
   const duration = safeNumber(
     workout?.duration_minutes ||
       workout?.requested_duration_minutes,
@@ -278,15 +285,16 @@ export default function HealthPremiumHome({
     onOpen?.("plan-today");
   }
 
-  async function handleSync() {
+  function handleSync() {
     setSyncOpen((value) => !value);
     setAudioStatus("Playing briefing...");
 
     try {
       stopCoachVoice();
-      await speakCoachText({
+      const started = speakCoachText({
         text: briefing,
         audioMode: "essential",
+        provider: "browser",
         voicePreference: "australian",
         rate: 0.96,
         pitch: 1,
@@ -295,7 +303,11 @@ export default function HealthPremiumHome({
         eventType: "health_home_action_first_sync",
         browserFallback: true,
       });
-      setAudioStatus("Briefing played");
+      setAudioStatus(
+        started
+          ? "Briefing playing"
+          : "Audio unavailable on this device"
+      );
     } catch (error) {
       console.warn("Unable to play the SYNC briefing:", error);
       setAudioStatus("Audio blocked. Tap SYNC again.");
@@ -339,14 +351,18 @@ export default function HealthPremiumHome({
         ) : null}
       </section>
 
-      <section className={`relative overflow-hidden rounded-[1.85rem] border p-4 shadow-[0_20px_60px_rgba(0,0,0,0.38)] ${
-        isResume
-          ? "border-amber-300/30 bg-[linear-gradient(145deg,rgba(28,20,5,0.97),rgba(7,5,2,0.99))]"
-          : "border-emerald-300/25 bg-[linear-gradient(145deg,rgba(8,18,11,0.98),rgba(2,5,3,0.99))]"
-      }`}>
-        <div className={`text-[9px] font-black uppercase tracking-[0.18em] ${
-          isResume ? "text-amber-200" : "text-emerald-300"
-        }`}>
+      <section
+        className={`relative overflow-hidden rounded-[1.85rem] border p-4 shadow-[0_20px_60px_rgba(0,0,0,0.38)] ${
+          isResume
+            ? "border-amber-300/30 bg-[linear-gradient(145deg,rgba(28,20,5,0.97),rgba(7,5,2,0.99))]"
+            : "border-emerald-300/25 bg-[linear-gradient(145deg,rgba(8,18,11,0.98),rgba(2,5,3,0.99))]"
+        }`}
+      >
+        <div
+          className={`text-[9px] font-black uppercase tracking-[0.18em] ${
+            isResume ? "text-amber-200" : "text-emerald-300"
+          }`}
+        >
           {isResume ? "Workout Not Finished" : "Today's Workout"}
         </div>
 
@@ -437,7 +453,6 @@ export default function HealthPremiumHome({
             onQuickLog={onQuickLog}
             onEditDailyGoals={onEditDailyGoals}
           />
-
           <RecoveryReadinessCard
             snapshot={snapshot}
             history={history}
@@ -445,7 +460,6 @@ export default function HealthPremiumHome({
             onOpen={onOpen}
             onQuickLog={onQuickLog}
           />
-
           <HealthGoalProgressCard
             profile={profile}
             snapshot={snapshot}
@@ -453,18 +467,16 @@ export default function HealthPremiumHome({
             onOpen={onOpen}
             onShowInsights={onShowInsights}
           />
-
           <HealthProgressControlCenter
             history={history}
             snapshot={snapshot}
             onOpen={onOpen}
             onShowInsights={onShowInsights}
           />
-
           <HealthAthleteProfileCard
             profile={profile}
             snapshot={snapshot}
-            onCoachUpdate={onCoachUpdate}
+            onCoachUpdate={stableCoachUpdate}
             onOpen={onOpen}
           />
         </div>
