@@ -7,6 +7,7 @@ const HIDDEN_PREFIXES = [
   "/register",
   "/employee/invite",
   "/accept-invite",
+  "/customer",
 ];
 
 export default function SyncAssistantLauncher() {
