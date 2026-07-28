@@ -7,19 +7,21 @@ import BusinessProfileEditController from "./components/business/BusinessProfile
 import { PMNavigationMenu } from "./components/pm/PMHeader";
 import App from "./App";
 import PMPropertyCreate from "./pages/PMPropertyCreate";
+import PMTenants from "./pages/PMTenants";
 import "./index.css";
 
 function RoutedApplication() {
   const location = useLocation();
   const pathname = location.pathname.replace(/\/+$/, "") || "/";
   const isCreateProperty = pathname === "/pm/properties/new";
-  const hasNativePmHeader = pathname === "/pm" || pathname === "/pm/settings" || isCreateProperty;
+  const isTenantCenter = pathname === "/pm/tenants";
+  const hasNativePmHeader = pathname === "/pm" || pathname === "/pm/settings" || isCreateProperty || isTenantCenter;
   const showPmNavigationDock = pathname.startsWith("/pm/") && !hasNativePmHeader;
 
-  if (isCreateProperty) {
+  if (isCreateProperty || isTenantCenter) {
     return (
       <ProtectedRoute>
-        <PMPropertyCreate />
+        {isCreateProperty ? <PMPropertyCreate /> : <PMTenants />}
       </ProtectedRoute>
     );
   }
