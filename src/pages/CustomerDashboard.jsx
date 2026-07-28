@@ -16,6 +16,7 @@ import TodoList from "../components/TodoList";
 import DashboardShell from "../components/dashboard/DashboardShell";
 import GlassCard, { cx } from "../components/dashboard/GlassCard";
 import CustomerMobileHome from "../components/customer/CustomerMobileHome";
+import CustomerAudioSummaryDrawer from "../components/sync/CustomerAudioSummaryDrawer";
 
 const BASE_TABS = [
   { id: "overview", label: "Home" },
@@ -489,6 +490,7 @@ function CustomerHero({
   onNewRequest,
   onOpenMoney,
   onOpenHealth,
+  onOpenAudioSummary,
 }) {
   return (
     <section className="relative overflow-hidden rounded-[1.65rem] border border-white/10 bg-slate-950/65 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.28)] md:rounded-[2rem] md:p-6">
@@ -530,6 +532,10 @@ function CustomerHero({
 
           <MiniActionButton tone="emerald" onClick={onOpenHealth}>
             Health
+          </MiniActionButton>
+
+          <MiniActionButton tone="indigo" onClick={onOpenAudioSummary}>
+            Audio Summary
           </MiniActionButton>
 
           <MiniActionButton tone="slate" onClick={onOpenMoney}>
@@ -1387,6 +1393,7 @@ export default function CustomerDashboard() {
   const [archivedIds, setArchivedIds] = useState(() => readArchivedSet(user));
   const [ticketActionErr, setTicketActionErr] = useState("");
   const [feedItems, setFeedItems] = useState([]);
+  const [audioSummaryOpen, setAudioSummaryOpen] = useState(false);
 
   const displayName =
     user?.first_name || user?.firstName || user?.username || user?.email || "there";
@@ -1628,6 +1635,7 @@ export default function CustomerDashboard() {
             onOpenMessages={() => handleTabChange("inbox")}
             onOpenMoney={openMoney}
             onOpenHealth={openHealth}
+            onOpenAudioSummary={() => setAudioSummaryOpen(true)}
             onOpenMore={() => navigate("/settings")}
           />
         ) : null}
@@ -1765,6 +1773,11 @@ export default function CustomerDashboard() {
           />
         ) : null}
       </div>
+      <CustomerAudioSummaryDrawer
+        open={audioSummaryOpen}
+        onClose={() => setAudioSummaryOpen(false)}
+        displayName={displayName}
+      />
     </DashboardShell>
   );
 }

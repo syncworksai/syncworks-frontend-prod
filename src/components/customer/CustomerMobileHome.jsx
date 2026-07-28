@@ -137,6 +137,7 @@ export default function CustomerMobileHome({
   onOpenMessages,
   onOpenMoney,
   onOpenHealth,
+  onOpenAudioSummary,
   onOpenMore,
 }) {
   const active = useMemo(
@@ -229,6 +230,35 @@ export default function CustomerMobileHome({
           </div>
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={onOpenAudioSummary}
+        className="relative w-full overflow-hidden rounded-[2rem] border border-cyan-400/30 bg-slate-950 p-0 text-left shadow-[0_0_40px_rgba(34,211,238,0.10)]"
+      >
+        <img
+          src="/sync/sync-voice-panel.webp"
+          alt=""
+          className="h-32 w-full object-cover opacity-75"
+        />
+        <span className="absolute inset-0 bg-[linear-gradient(to_right,rgba(2,6,23,.98),rgba(2,6,23,.38))]" />
+        <span className="absolute inset-0 flex items-center gap-4 p-5">
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full border border-cyan-300/35 bg-cyan-500/15 text-cyan-100 shadow-[0_0_30px_rgba(34,211,238,.22)]">
+            <Mic aria-hidden="true" className="h-6 w-6" />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
+              Personal SYNC
+            </span>
+            <span className="mt-1 block text-lg font-black text-white">
+              View summary · audio only
+            </span>
+            <span className="mt-1 block text-xs text-slate-300">
+              Profile, requests, schedule, Health, Money, and next actions.
+            </span>
+          </span>
+        </span>
+      </button>
 
       {error ? (
         <div className="rounded-3xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200">
