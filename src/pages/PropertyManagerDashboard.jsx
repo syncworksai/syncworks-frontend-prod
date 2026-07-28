@@ -1,425 +1,146 @@
-// src/pages/PropertyManagerDashboard.jsx
-
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import api from "../api/client";
 import Button from "../components/ui/Button";
-import ModeBar from "../components/ModeBar";
+import PMHeader from "../components/pm/PMHeader";
 
-function cx(...classes) {
-  return classes.filter(Boolean).join(" ");
-}
-
-function Card({ title, subtitle, right, children, className = "" }) {
-  return (
-    <div
-      className={cx(
-        "rounded-[28px] border border-blue-500/20 bg-[#07111f]/90 backdrop-blur-xl shadow-[0_18px_80px_rgba(0,89,255,0.10)]",
-        className
-      )}
-    >
-      <div className="flex items-start justify-between gap-4 border-b border-slate-800/70 px-5 py-4">
-        <div className="min-w-0">
-          <div className="truncate text-sm font-semibold tracking-wide text-slate-100">
-            {title}
-          </div>
-
-          {subtitle ? (
-            <div className="mt-1 text-xs text-slate-500">
-              {subtitle}
-            </div>
-          ) : null}
-        </div>
-
-        {right ? <div className="shrink-0">{right}</div> : null}
-      </div>
-
-      <div className="p-5">{children}</div>
-    </div>
-  );
-}
-
-function Pill({ children, tone = "slate" }) {
-  const map = {
-    slate:
-      "border-slate-700 bg-slate-900/70 text-slate-300",
-    cyan:
-      "border-cyan-500/30 bg-cyan-500/10 text-cyan-200",
-    emerald:
-      "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
-    amber:
-      "border-amber-500/30 bg-amber-500/10 text-amber-200",
-    rose:
-      "border-rose-500/30 bg-rose-500/10 text-rose-200",
-    indigo:
-      "border-indigo-500/30 bg-indigo-500/10 text-indigo-200",
+function Metric({ label, value, hint, tone = "cyan" }) {
+  const tones = {
+    cyan: "border-cyan-500/30 text-cyan-200",
+    emerald: "border-emerald-500/30 text-emerald-200",
+    rose: "border-rose-500/30 text-rose-200",
+    amber: "border-amber-500/30 text-amber-200",
   };
-
   return (
-    <span
-      className={cx(
-        "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium",
-        map[tone] || map.slate
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
-function MetricCard({
-  label,
-  value,
-  tone = "cyan",
-  hint,
-}) {
-  return (
-    <div className="rounded-3xl border border-blue-500/20 bg-[#07111f]/95 p-5 shadow-[0_0_32px_rgba(21,151,255,0.06)]">
+    <div className="rounded-[28px] border border-blue-500/20 bg-[#07111f]/95 p-5">
       <div className="flex items-center justify-between gap-3">
-        <div className="text-xs uppercase tracking-[0.18em] text-slate-500">
-          {label}
-        </div>
-
-        <Pill tone={tone}>LIVE</Pill>
+        <div className="text-xs uppercase tracking-[0.18em] text-slate-500">{label}</div>
+        <span className={`rounded-full border bg-black/20 px-2.5 py-1 text-[10px] font-bold ${tones[tone]}`}>LIVE</span>
       </div>
-
-      <div className="mt-4 text-3xl font-semibold tracking-tight text-white">
-        {value}
-      </div>
-
-      {hint ? (
-        <div className="mt-2 text-xs text-slate-500">
-          {hint}
-        </div>
-      ) : null}
+      <div className="mt-4 text-3xl font-semibold text-white">{value}</div>
+      <div className="mt-2 text-xs text-slate-500">{hint}</div>
     </div>
   );
 }
 
-function PropertyRow({ property, onOpen }) {
-  const status = String(property?.status || "HEALTHY").toUpperCase();
-
-  const tone =
-    status === "HEALTHY"
-      ? "emerald"
-      : status === "WATCH"
-      ? "amber"
-      : status === "AT_RISK"
-      ? "rose"
-      : "slate";
-
+function Panel({ title, subtitle, children, action }) {
   return (
-    <button
-      onClick={() => onOpen(property)}
-      className="group w-full rounded-3xl border border-blue-500/15 bg-black/25 p-4 text-left transition hover:border-blue-400/45 hover:bg-blue-500/[0.06] hover:shadow-[0_0_28px_rgba(21,151,255,0.08)]"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="truncate text-sm font-semibold text-slate-100">
-            {property?.name || "Unnamed Property"}
-          </div>
-
-          <div className="mt-1 truncate text-xs text-slate-500">
-            {[property?.address, property?.city, property?.state]
-              .filter(Boolean)
-              .join(", ") || "No address"}
-          </div>
+    <section className="rounded-[28px] border border-blue-500/20 bg-[#07111f]/90">
+      <div className="flex items-start justify-between gap-3 border-b border-slate-800/70 px-5 py-4">
+        <div>
+          <h2 className="text-sm font-semibold text-white">{title}</h2>
+          {subtitle ? <p className="mt-1 text-xs text-slate-500">{subtitle}</p> : null}
         </div>
-
-        <Pill tone={tone}>{status}</Pill>
+        {action}
       </div>
-
-      <div className="mt-4 flex items-center gap-2 flex-wrap">
-        <Pill tone="indigo">
-          {property?.property_type || "HOME"}
-        </Pill>
-
-        <Pill tone="cyan">
-          {property?.units_count ?? 0} units
-        </Pill>
-
-        <Pill tone="amber">
-          {property?.occupancy_rate != null
-            ? `${Math.round(property.occupancy_rate * 100)}% occupied`
-            : "No occupancy"}
-        </Pill>
-      </div>
-    </button>
-  );
-}
-
-function WorkOrderRow({ wo }) {
-  const priority =
-    String(wo?.priority || "P3").toUpperCase();
-
-  const tone =
-    priority === "P1"
-      ? "rose"
-      : priority === "P2"
-      ? "amber"
-      : priority === "P3"
-      ? "cyan"
-      : "slate";
-
-  return (
-    <div className="rounded-2xl border border-blue-500/15 bg-black/25 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="truncate text-sm font-semibold text-slate-100">
-            {wo?.title || "Work Order"}
-          </div>
-
-          <div className="mt-1 text-xs text-slate-500">
-            {wo?.property_name || "Property"} •{" "}
-            {wo?.unit_label || "Unit"}
-          </div>
-        </div>
-
-        <Pill tone={tone}>{priority}</Pill>
-      </div>
-
-      <div className="mt-3 text-xs text-slate-400">
-        {wo?.status || "OPEN"}
-      </div>
-    </div>
+      <div className="p-5">{children}</div>
+    </section>
   );
 }
 
 export default function PropertyManagerDashboard() {
   const nav = useNavigate();
-
   const [loading, setLoading] = useState(true);
-
   const [properties, setProperties] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
+  const [workspace, setWorkspace] = useState(null);
 
   async function loadDashboard() {
     setLoading(true);
+    const [propertiesResult, workOrdersResult, workspaceResult] = await Promise.allSettled([
+      api.get("/pm/properties/"),
+      api.get("/pm/work-orders/"),
+      api.get("/pm-hub/workspaces/current/"),
+    ]);
 
-    try {
-      const [pRes, woRes] = await Promise.allSettled([
-        api.get("/pm/properties/"),
-        api.get("/pm/work-orders/"),
-      ]);
-
-      if (pRes.status === "fulfilled") {
-        const data = pRes.value.data;
-
-        setProperties(
-          Array.isArray(data?.results)
-            ? data.results
-            : Array.isArray(data)
-            ? data
-            : []
-        );
-      }
-
-      if (woRes.status === "fulfilled") {
-        const data = woRes.value.data;
-
-        setWorkOrders(
-          Array.isArray(data?.results)
-            ? data.results
-            : Array.isArray(data)
-            ? data
-            : []
-        );
-      }
-    } finally {
-      setLoading(false);
+    if (propertiesResult.status === "fulfilled") {
+      const data = propertiesResult.value.data;
+      setProperties(Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : []);
     }
+    if (workOrdersResult.status === "fulfilled") {
+      const data = workOrdersResult.value.data;
+      setWorkOrders(Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : []);
+    }
+    if (workspaceResult.status === "fulfilled") setWorkspace(workspaceResult.value.data);
+    setLoading(false);
   }
 
-  useEffect(() => {
-    loadDashboard();
-  }, []);
+  useEffect(() => { loadDashboard(); }, []);
 
-  const stats = useMemo(() => {
-    const total = properties.length;
-
-    const occupied = properties.filter(
-      (p) => Number(p?.occupancy_rate || 0) >= 0.9
-    ).length;
-
-    const risk = properties.filter(
-      (p) =>
-        String(p?.status || "")
-          .toUpperCase() === "AT_RISK"
-    ).length;
-
-    return {
-      total,
-      occupied,
-      risk,
-      workOrders: workOrders.length,
-    };
-  }, [properties, workOrders]);
+  const stats = useMemo(() => ({
+    total: properties.length,
+    occupied: properties.filter((item) => Number(item?.occupancy_rate || 0) >= 0.9).length,
+    risk: properties.filter((item) => String(item?.status || "").toUpperCase() === "AT_RISK").length,
+    workOrders: workOrders.length,
+  }), [properties, workOrders]);
 
   return (
     <div className="min-h-screen bg-black text-slate-100">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute left-[-10%] top-[-20%] h-[420px] w-[420px] rounded-full bg-blue-600/15 blur-[120px]" />
-        <div className="absolute bottom-[-20%] right-[-10%] h-[420px] w-[420px] rounded-full bg-cyan-500/10 blur-[140px]" />
-      </div>
-
-      <ModeBar
-        title="Property Management"
-        subtitle="One platform. Every property. Total control."
-        rightActions={
-          <div className="flex gap-2 flex-wrap">
-            <Button
-              tone="slate"
-              onClick={loadDashboard}
-              disabled={loading}
-            >
-              Refresh
-            </Button>
-
-            <Button
-              tone="slate"
-              onClick={() => nav("/pm/employees")}
-            >
-              Team
-            </Button>
-
-            <Button
-              tone="cyan"
-              onClick={() => nav("/pm/properties/new")}
-            >
-              Add Property
-            </Button>
-          </div>
+      <PMHeader
+        title={workspace?.name || "Property Management"}
+        subtitle="Portfolio operations, tenants, maintenance, and scheduling"
+        actions={
+          <>
+            <Button tone="slate" onClick={loadDashboard} disabled={loading}>Refresh</Button>
+            <Button tone="cyan" onClick={() => nav("/pm/properties/new")}>Add Property</Button>
+          </>
         }
       />
 
-      <main className="relative z-10 mx-auto max-w-7xl px-4 py-6 space-y-6">
+      <main className="relative z-10 mx-auto max-w-7xl space-y-6 px-4 pb-[calc(13rem+env(safe-area-inset-bottom))] pt-6">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <MetricCard
-            label="Total Properties"
-            value={stats.total}
-            tone="cyan"
-            hint="Portfolio total"
-          />
-
-          <MetricCard
-            label="Healthy Occupancy"
-            value={stats.occupied}
-            tone="emerald"
-            hint="90%+ occupied"
-          />
-
-          <MetricCard
-            label="At Risk"
-            value={stats.risk}
-            tone="rose"
-            hint="Needs attention"
-          />
-
-          <MetricCard
-            label="Work Orders"
-            value={stats.workOrders}
-            tone="amber"
-            hint="Active tickets"
-          />
+          <Metric label="Total Properties" value={stats.total} hint="Portfolio total" />
+          <Metric label="Healthy Occupancy" value={stats.occupied} hint="90%+ occupied" tone="emerald" />
+          <Metric label="At Risk" value={stats.risk} hint="Needs attention" tone="rose" />
+          <Metric label="Work Orders" value={stats.workOrders} hint="Active requests" tone="amber" />
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
-          <Card
-            title="Property Portfolio"
-            subtitle="Open a property to manage units, leases, tenants, and documents."
-            right={<Pill tone="cyan">{properties.length} total</Pill>}
-          >
-            {loading ? (
-              <div className="text-sm text-slate-500">
-                Loading properties...
-              </div>
-            ) : properties.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-slate-800 bg-slate-950/40 p-10 text-center">
-                <div className="text-sm text-slate-400">
-                  No properties found yet.
-                </div>
-
-                <div className="mt-4">
-                  <Button
-                    tone="cyan"
-                    onClick={() => nav("/pm/properties/new")}
-                  >
-                    Create First Property
-                  </Button>
-                </div>
-              </div>
-            ) : (
+          <Panel title="Property Portfolio" subtitle="Open a property to manage units, leases, tenants, and documents.">
+            {loading ? <div className="text-sm text-slate-500">Loading properties...</div> : properties.length ? (
               <div className="grid gap-3">
                 {properties.map((property) => (
-                  <PropertyRow
-                    key={property.id}
-                    property={property}
-                    onOpen={(p) =>
-                      nav(`/pm/properties/${p.id}`)
-                    }
-                  />
+                  <button key={property.id} type="button" onClick={() => nav(`/pm/properties/${property.id}`)} className="w-full rounded-3xl border border-blue-500/15 bg-black/25 p-4 text-left transition hover:border-cyan-400/40">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-white">{property.name || "Unnamed Property"}</div>
+                        <div className="mt-1 truncate text-xs text-slate-500">{[property.address, property.city, property.state].filter(Boolean).join(", ") || "Address not entered"}</div>
+                      </div>
+                      <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] text-emerald-200">{String(property.status || "HEALTHY").replaceAll("_", " ")}</span>
+                    </div>
+                  </button>
                 ))}
               </div>
+            ) : (
+              <div className="rounded-3xl border border-dashed border-slate-800 bg-black/20 p-8 text-center">
+                <div className="text-sm text-slate-400">No properties have been added.</div>
+                <div className="mt-4"><Button tone="cyan" onClick={() => nav("/pm/properties/new")}>Create First Property</Button></div>
+              </div>
             )}
-          </Card>
+          </Panel>
 
           <div className="space-y-6">
-            <Card
-              title="Work Orders"
-              subtitle="Priority queue"
-              right={<Pill tone="amber">LIVE</Pill>}
-            >
-              {workOrders.length === 0 ? (
-                <div className="text-sm text-slate-500">
-                  No active work orders.
-                </div>
-              ) : (
+            <Panel title="Operations" subtitle="Direct access to daily Property Management tools.">
+              <div className="grid gap-3">
+                <Button tone="cyan" onClick={() => nav("/pm/properties/new")}>Add Property</Button>
+                <Button tone="slate" onClick={() => nav("/pm/settings")}>Portfolio Settings</Button>
+                <Button tone="slate" onClick={() => nav("/pm/employees")}>Team</Button>
+                <Button tone="slate" onClick={() => nav("/pm/calendar")}>Schedule</Button>
+              </div>
+            </Panel>
+
+            <Panel title="Work Orders" subtitle="Current maintenance queue.">
+              {workOrders.length ? (
                 <div className="space-y-3">
-                  {workOrders.slice(0, 6).map((wo) => (
-                    <WorkOrderRow
-                      key={wo.id}
-                      wo={wo}
-                    />
+                  {workOrders.slice(0, 6).map((item) => (
+                    <div key={item.id} className="rounded-2xl border border-slate-800 bg-black/25 p-4">
+                      <div className="text-sm font-semibold text-white">{item.title || "Work Order"}</div>
+                      <div className="mt-1 text-xs text-slate-500">{item.property_name || "Property"} · {item.status || "OPEN"}</div>
+                    </div>
                   ))}
                 </div>
-              )}
-            </Card>
-
-            <Card
-              title="Quick Actions"
-              subtitle="Tenants, maintenance, messages, calendar, and documents"
-            >
-              <div className="grid gap-3">
-                <Button
-                  tone="slate"
-                  onClick={() => nav("/pm/units")}
-                >
-                  Manage Units
-                </Button>
-
-                <Button
-                  tone="slate"
-                  onClick={() => nav("/pm/tenants")}
-                >
-                  Tenant Center
-                </Button>
-
-                <Button
-                  tone="slate"
-                  onClick={() => nav("/pm/workorders")}
-                >
-                  Work Orders
-                </Button>
-
-                <Button
-                  tone="slate"
-                  onClick={() => nav("/pm/docs")}
-                >
-                  Documents
-                </Button>
-              </div>
-            </Card>
+              ) : <div className="text-sm text-slate-500">No active work orders.</div>}
+            </Panel>
           </div>
         </div>
       </main>
