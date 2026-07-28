@@ -8,6 +8,7 @@ import { PMNavigationMenu } from "./components/pm/PMHeader";
 import App from "./App";
 import PMPropertyCreate from "./pages/PMPropertyCreate";
 import PMTenants from "./pages/PMTenants";
+import PMProjects from "./pages/PMProjects";
 import "./index.css";
 
 function RoutedApplication() {
@@ -15,13 +16,14 @@ function RoutedApplication() {
   const pathname = location.pathname.replace(/\/+$/, "") || "/";
   const isCreateProperty = pathname === "/pm/properties/new";
   const isTenantCenter = pathname === "/pm/tenants";
-  const hasNativePmHeader = pathname === "/pm" || pathname === "/pm/settings" || isCreateProperty || isTenantCenter;
+  const isProjectCenter = pathname === "/pm/projects";
+  const hasNativePmHeader = pathname === "/pm" || pathname === "/pm/settings" || isCreateProperty || isTenantCenter || isProjectCenter;
   const showPmNavigationDock = pathname.startsWith("/pm/") && !hasNativePmHeader;
 
-  if (isCreateProperty || isTenantCenter) {
+  if (isCreateProperty || isTenantCenter || isProjectCenter) {
     return (
       <ProtectedRoute>
-        {isCreateProperty ? <PMPropertyCreate /> : <PMTenants />}
+        {isCreateProperty ? <PMPropertyCreate /> : isTenantCenter ? <PMTenants /> : <PMProjects />}
       </ProtectedRoute>
     );
   }
