@@ -23,6 +23,7 @@ const PANEL_IMAGE = "/sync/sync-voice-panel.webp";
 const LIFE_EVENTS_KEY = "sw_customer_life_schedule_v1";
 const MONEY_SNAPSHOT_KEY = "sw_customer_money_snapshot_v1";
 const HEALTH_SNAPSHOT_KEY = "sw_customer_health_snapshot_v1";
+const MAX_CONTEXT_CHARS = 2400;
 
 const CATEGORY_DEFINITIONS = [
   ["attention", "Immediate attention"],
@@ -35,25 +36,10 @@ const CATEGORY_DEFINITIONS = [
   ["next", "Recommended next actions"],
 ];
 
-const BRIEFING_PROMPT = `
-Create my complete spoken Personal SYNC briefing. Do not give me a placeholder such as "I am pulling your items now." Give the actual briefing in this response.
-
-Review every authenticated source available to you: Personal profile, requests and tickets, approvals, schedule, unread or actionable items, Connections invitations, event payments, finance, businesses, employee work, To-Do, Health, workout, nutrition and recovery.
-
-I am also providing device-side Personal context below. Use it when relevant, but never invent facts.
-
-Return plain text using these exact section markers, in this exact order:
-[ATTENTION]
-[CALENDAR]
-[CONNECTIONS]
-[MONEY]
-[BUSINESS]
-[TODO]
-[HEALTH]
-[NEXT]
-
-Under each marker, speak naturally in complete sentences. Say "Nothing requiring attention" only when that section is truly empty. Include specific names, dates, times and amounts when available. Keep the entire briefing useful for listening while driving or exercising. Do not use markdown tables.
-`;
+const BRIEFING_PROMPT = `Create my complete spoken Personal SYNC briefing now. Do not return a placeholder or say you are still gathering data.
+Review the authenticated sources available to you plus the compact device context below. Never invent facts.
+Return plain text with these exact markers in order: [ATTENTION] [CALENDAR] [CONNECTIONS] [MONEY] [BUSINESS] [TODO] [HEALTH] [NEXT].
+Keep each section under 55 spoken words. Include names, dates, times and amounts when available. Say "Nothing requiring attention" for an empty section. No markdown tables.`;
 
 function safeRead(key, fallback) {
   try {
@@ -62,6 +48,41 @@ function safeRead(key, fallback) {
   } catch {
     return fallback;
   }
+}
+
+function clip(value, max = 120) {
+  const text = String(value ?? "").replace(/\s+/g, " ").trim();
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+function compactEvent(item) {
+  return {
+    title: clip(item?.title || item?.name || "Event", 90),
+    date: item?.date || item?.due_date || item?.start || "",
+    time: item?.time || "",
+    category: clip(item?.category || item?.type || "", 40),
+    location: clip(item?.location || "", 90),
+    status: clip(item?.status || "", 30),
+  };
+}
+
+function compactTodo(item) {
+  return {
+    title: clip(item?.title || "Task", 90),
+    due: item?.due_date || item?.date || "",
+    status: clip(item?.status || "TODO", 24),
+    priority: clip(item?.priority || "", 16),
+  };
+}
+
+function compactSnapshot(value, allowedKeys) {
+  if (!value || typeof value !== "object") return null;
+  return allowedKeys.reduce((result, key) => {
+    if (value[key] !== undefined && value[key] !== null && value[key] !== "") {
+      result[key] = typeof value[key] === "string" ? clip(value[key], 120) : value[key];
+    }
+    return result;
+  }, {});
 }
 
 function buildDeviceContext() {
@@ -74,13 +95,21 @@ function buildDeviceContext() {
     return Array.isArray(value) ? value : [];
   });
 
-  return {
+  const context = {
     generated_at: new Date().toISOString(),
-    personal_calendar_events: Array.isArray(calendar) ? calendar.slice(0, 60) : [],
-    personal_todos: todos.filter((item) => !item?.archived).slice(0, 60),
-    money_snapshot: money,
-    health_snapshot: health,
+    calendar: (Array.isArray(calendar) ? calendar : []).slice(0, 12).map(compactEvent),
+    todos: todos.filter((item) => !item?.archived).slice(0, 12).map(compactTodo),
+    money: compactSnapshot(money, ["mortgage_label", "mortgage_amount", "mortgage_due_date", "covered_percent", "top_priority"]),
+    health: compactSnapshot(health, ["workout", "readiness", "time_available", "equipment", "protein_remaining", "calories_remaining", "notes"]),
   };
+
+  let serialized = JSON.stringify(context);
+  if (serialized.length > MAX_CONTEXT_CHARS) {
+    context.calendar = context.calendar.slice(0, 6);
+    context.todos = context.todos.slice(0, 6);
+    serialized = JSON.stringify(context);
+  }
+  return serialized.slice(0, MAX_CONTEXT_CHARS);
 }
 
 function parseSections(text) {
@@ -99,9 +128,7 @@ function parseSections(text) {
   };
 
   const matches = [...raw.matchAll(/\[(ATTENTION|CALENDAR|CONNECTIONS|MONEY|BUSINESS|TODO|HEALTH|NEXT)\]/gi)];
-  if (!matches.length) {
-    return [{ key: "attention", label: "Complete briefing", text: raw }];
-  }
+  if (!matches.length) return [{ key: "attention", label: "Complete briefing", text: raw }];
 
   const byKey = new Map();
   matches.forEach((match, index) => {
@@ -153,12 +180,8 @@ export default function CustomerAudioSummaryDrawer({ open, onClose, displayName 
   const speaking = status === "speaking";
   const current = sections[activeIndex] || null;
 
-  useEffect(() => {
-    sectionsRef.current = sections;
-  }, [sections]);
-  useEffect(() => {
-    indexRef.current = activeIndex;
-  }, [activeIndex]);
+  useEffect(() => { sectionsRef.current = sections; }, [sections]);
+  useEffect(() => { indexRef.current = activeIndex; }, [activeIndex]);
 
   const cleanupObjectUrl = useCallback(() => {
     if (objectUrlRef.current) {
@@ -177,60 +200,56 @@ export default function CustomerAudioSummaryDrawer({ open, onClose, displayName 
     setStatus((value) => (value === "loading" ? value : "ready"));
   }, []);
 
-  const playSection = useCallback(
-    async (index, options = {}) => {
-      const available = sectionsRef.current;
-      const section = available[index];
-      if (!section?.text) return;
+  const playSection = useCallback(async (index, options = {}) => {
+    const section = sectionsRef.current[index];
+    if (!section?.text) return;
 
-      stopAudio();
-      cleanupObjectUrl();
-      setActiveIndex(index);
-      setNotice("");
-      setUsingFallback(false);
+    stopAudio();
+    cleanupObjectUrl();
+    setActiveIndex(index);
+    setNotice("");
+    setUsingFallback(false);
 
-      const spoken = `${section.label}. ${section.text}`;
-      try {
-        const blob = await synthesizeSyncSpeech(spoken);
-        if (!(blob instanceof Blob) || blob.size < 100) throw new Error("Invalid voice response");
-        const normalizedBlob = blob.type ? blob : new Blob([blob], { type: "audio/mpeg" });
-        const url = URL.createObjectURL(normalizedBlob);
-        objectUrlRef.current = url;
-        const audio = new Audio(url);
-        audio.preload = "auto";
-        audioRef.current = audio;
-        audio.onplay = () => setStatus("speaking");
-        audio.onerror = () => {
-          setUsingFallback(true);
-          setNotice("Premium SYNC voice failed on this device. The phone voice is being used until the Render voice configuration is corrected.");
-          browserSpeak(spoken, {
-            onStart: () => setStatus("speaking"),
-            onEnd: () => {
-              setStatus("ready");
-              if (options.autoAdvance !== false && index + 1 < sectionsRef.current.length) playSection(index + 1, options);
-            },
-          });
-        };
-        audio.onended = () => {
-          setStatus("ready");
-          if (options.autoAdvance !== false && index + 1 < sectionsRef.current.length) playSection(index + 1, options);
-        };
-        await audio.play();
-      } catch {
+    const spoken = `${section.label}. ${section.text}`.slice(0, 1800);
+    try {
+      const blob = await synthesizeSyncSpeech(spoken);
+      if (!(blob instanceof Blob) || blob.size < 100) throw new Error("Invalid voice response");
+      const normalizedBlob = blob.type ? blob : new Blob([blob], { type: "audio/mpeg" });
+      const url = URL.createObjectURL(normalizedBlob);
+      objectUrlRef.current = url;
+      const audio = new Audio(url);
+      audio.preload = "auto";
+      audioRef.current = audio;
+      audio.onplay = () => setStatus("speaking");
+      audio.onerror = () => {
         setUsingFallback(true);
-        setNotice("ElevenLabs is unavailable or not fully configured on Render. Using the device voice temporarily.");
-        const started = browserSpeak(spoken, {
+        setNotice("Premium SYNC voice failed on this device. The phone voice is being used temporarily.");
+        browserSpeak(spoken, {
           onStart: () => setStatus("speaking"),
           onEnd: () => {
             setStatus("ready");
             if (options.autoAdvance !== false && index + 1 < sectionsRef.current.length) playSection(index + 1, options);
           },
         });
-        setStatus(started ? "speaking" : "ready");
-      }
-    },
-    [cleanupObjectUrl, stopAudio]
-  );
+      };
+      audio.onended = () => {
+        setStatus("ready");
+        if (options.autoAdvance !== false && index + 1 < sectionsRef.current.length) playSection(index + 1, options);
+      };
+      await audio.play();
+    } catch {
+      setUsingFallback(true);
+      setNotice("ElevenLabs is unavailable or not fully configured on Render. Using the device voice temporarily.");
+      const started = browserSpeak(spoken, {
+        onStart: () => setStatus("speaking"),
+        onEnd: () => {
+          setStatus("ready");
+          if (options.autoAdvance !== false && index + 1 < sectionsRef.current.length) playSection(index + 1, options);
+        },
+      });
+      setStatus(started ? "speaking" : "ready");
+    }
+  }, [cleanupObjectUrl, stopAudio]);
 
   const loadSummary = useCallback(async () => {
     setStatus("loading");
@@ -239,11 +258,9 @@ export default function CustomerAudioSummaryDrawer({ open, onClose, displayName 
     stopAudio();
 
     try {
-      const context = buildDeviceContext();
-      const result = await sendSyncAiMessage({
-        workspace: "personal",
-        message: `${BRIEFING_PROMPT}\nDEVICE CONTEXT JSON:\n${JSON.stringify(context)}`,
-      });
+      const compactContext = buildDeviceContext();
+      const message = `${BRIEFING_PROMPT}\nDEVICE CONTEXT:${compactContext}`;
+      const result = await sendSyncAiMessage({ workspace: "personal", message });
       const parsed = parseSections(result?.message);
       if (!parsed.length) throw new Error("SYNC returned no briefing.");
       sectionsRef.current = parsed;
@@ -253,7 +270,8 @@ export default function CustomerAudioSummaryDrawer({ open, onClose, displayName 
       window.setTimeout(() => playSection(0, { autoAdvance: true }), 0);
     } catch (error) {
       setStatus("error");
-      setNotice(getSyncAiErrorMessage(error));
+      const message = getSyncAiErrorMessage(error);
+      setNotice(/too long/i.test(message) ? "SYNC could not fit the briefing into one request. Tap refresh to retry the compact briefing." : message);
     }
   }, [playSection, stopAudio]);
 
@@ -262,37 +280,32 @@ export default function CustomerAudioSummaryDrawer({ open, onClose, displayName 
     playSection(next, { autoAdvance: true });
   }, [playSection]);
 
-  const repeatCurrent = useCallback(() => {
-    playSection(indexRef.current, { autoAdvance: false });
-  }, [playSection]);
+  const repeatCurrent = useCallback(() => playSection(indexRef.current, { autoAdvance: false }), [playSection]);
 
-  const handleVoiceCommand = useCallback(
-    (transcript) => {
-      const command = String(transcript || "").toLowerCase();
-      if (/stop|pause|quiet/.test(command)) return stopAudio();
-      if (/start over|begin again|from the beginning/.test(command)) return playSection(0, { autoAdvance: true });
-      if (/repeat/.test(command) && !/(business|health|workout|nutrition|calendar|money|payment|task|to-?do|connection)/.test(command)) return repeatCurrent();
-      if (/continue|next|go on/.test(command)) return playNext();
+  const handleVoiceCommand = useCallback((transcript) => {
+    const command = String(transcript || "").toLowerCase();
+    if (/stop|pause|quiet/.test(command)) return stopAudio();
+    if (/start over|begin again|from the beginning/.test(command)) return playSection(0, { autoAdvance: true });
+    if (/repeat/.test(command) && !/(business|health|workout|nutrition|calendar|money|payment|task|to-?do|connection)/.test(command)) return repeatCurrent();
+    if (/continue|next|go on/.test(command)) return playNext();
 
-      const targets = [
-        [/calendar|schedule|travel/, "calendar"],
-        [/connection|invite|social|group/, "connections"],
-        [/money|finance|payment|invoice/, "money"],
-        [/business|employee|work/, "business"],
-        [/task|to-?do/, "todo"],
-        [/health|workout|nutrition|recovery/, "health"],
-        [/attention|urgent/, "attention"],
-        [/next action|recommend/, "next"],
-      ];
-      const found = targets.find(([pattern]) => pattern.test(command));
-      if (found) {
-        const index = sectionsRef.current.findIndex((section) => section.key === found[1]);
-        if (index >= 0) return playSection(index, { autoAdvance: false });
-      }
-      setNotice(`I heard “${transcript}.” Say continue, repeat, stop, or name Calendar, Business, Money, To-Do, or Health.`);
-    },
-    [playNext, playSection, repeatCurrent, stopAudio]
-  );
+    const targets = [
+      [/calendar|schedule|travel/, "calendar"],
+      [/connection|invite|social|group/, "connections"],
+      [/money|finance|payment|invoice/, "money"],
+      [/business|employee|work/, "business"],
+      [/task|to-?do/, "todo"],
+      [/health|workout|nutrition|recovery/, "health"],
+      [/attention|urgent/, "attention"],
+      [/next action|recommend/, "next"],
+    ];
+    const found = targets.find(([pattern]) => pattern.test(command));
+    if (found) {
+      const index = sectionsRef.current.findIndex((section) => section.key === found[1]);
+      if (index >= 0) return playSection(index, { autoAdvance: false });
+    }
+    setNotice(`I heard “${transcript}.” Say continue, repeat, stop, or name Calendar, Business, Money, To-Do, or Health.`);
+  }, [playNext, playSection, repeatCurrent, stopAudio]);
 
   const toggleListening = useCallback(() => {
     if (listening && recognitionRef.current) {
@@ -329,14 +342,11 @@ export default function CustomerAudioSummaryDrawer({ open, onClose, displayName 
     loadSummary();
   }, [open]);
 
-  useEffect(
-    () => () => {
-      stopAudio();
-      cleanupObjectUrl();
-      recognitionRef.current?.stop?.();
-    },
-    [cleanupObjectUrl, stopAudio]
-  );
+  useEffect(() => () => {
+    stopAudio();
+    cleanupObjectUrl();
+    recognitionRef.current?.stop?.();
+  }, [cleanupObjectUrl, stopAudio]);
 
   const progress = useMemo(() => (sections.length ? `${activeIndex + 1} of ${sections.length}` : ""), [activeIndex, sections.length]);
   if (!open) return null;
