@@ -59,6 +59,13 @@ function errorMessage(err, fallback) {
   return fallback;
 }
 
+function normalizeWebsite(value) {
+  const cleaned = String(value || "").trim();
+  if (!cleaned || cleaned === "https://" || cleaned === "http://") return "";
+  if (/^https?:\/\//i.test(cleaned)) return cleaned;
+  return `https://${cleaned}`;
+}
+
 function Field({ label, children }) {
   return <label className="block space-y-1.5"><span className="text-xs font-medium text-slate-300">{label}</span>{children}</label>;
 }
@@ -125,6 +132,7 @@ export default function PmSettings() {
     setError("");
     setMessage("");
     const payload = Object.fromEntries(Object.keys(emptyWorkspace).map((key) => [key, String(workspace[key] || "").trim()]));
+    payload.website = normalizeWebsite(payload.website);
     try {
       const response = creatingNew
         ? await api.post("/pm-hub/workspaces/", payload)
@@ -172,7 +180,7 @@ export default function PmSettings() {
               <Field label="Tenant communications email"><input disabled={locked} type="email" className={inputClass} value={workspace.tenant_email} onChange={(e) => update("tenant_email", e.target.value)} /></Field>
               <Field label="Reply-to email"><input disabled={locked} type="email" className={inputClass} value={workspace.reply_to_email} onChange={(e) => update("reply_to_email", e.target.value)} /></Field>
               <Field label="Phone"><input disabled={locked} className={inputClass} value={workspace.phone} onChange={(e) => update("phone", e.target.value)} /></Field>
-              <Field label="Website"><input disabled={locked} className={inputClass} value={workspace.website} onChange={(e) => update("website", e.target.value)} placeholder="https://" /></Field>
+              <Field label="Website (optional)"><input disabled={locked} inputMode="url" className={inputClass} value={workspace.website} onChange={(e) => update("website", e.target.value)} placeholder="example.com" /></Field>
               <div className="sm:col-span-2"><Field label="Office address"><input disabled={locked} className={inputClass} value={workspace.office_address} onChange={(e) => update("office_address", e.target.value)} /></Field></div>
               <div className="sm:col-span-2"><Field label="Email signature"><textarea disabled={locked} rows={4} className={inputClass} value={workspace.email_signature} onChange={(e) => update("email_signature", e.target.value)} /></Field></div>
             </div>
