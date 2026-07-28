@@ -1,18 +1,59 @@
 // src/components/business/BusinessServiceOfferingsEditor.jsx
 import React, { useMemo, useState } from "react";
 
-const list = (v) => Array.isArray(v) ? v : Array.isArray(v?.results) ? v.results : [];
+const list = (v) => (Array.isArray(v) ? v : Array.isArray(v?.results) ? v.results : []);
 const idOf = (c) => {
   const n = Number(c?.id ?? c?.pk ?? c?.value);
   return Number.isFinite(n) && n > 0 ? n : null;
 };
 const parentOf = (c) => {
-  const raw = c?.parent_id ?? c?.parent ?? c?.parentId;
+  const raw =
+    c?.parent_id ??
+    c?.parent ??
+    c?.parentId ??
+    c?.parent_category_id ??
+    c?.parent_category ??
+    c?.parentCategory ??
+    null;
+
   return raw && typeof raw === "object" ? idOf(raw) : Number(raw) || null;
 };
 const nameOf = (c) => String(c?.name || c?.label || c?.title || "Service").trim();
-const keyOf = (c) => String(c?.key || c?.slug || c?.name || "").toLowerCase();
+const keyOf = (c) => String(c?.key || c?.slug || c?.code || c?.name || "").toLowerCase();
 const cx = (...v) => v.filter(Boolean).join(" ");
+
+function flattenCategories(value) {
+  const roots = list(value);
+  const flattened = [];
+  const seen = new Set();
+
+  function visit(category, inheritedParentId = null) {
+    if (!category || typeof category !== "object") return;
+
+    const id = idOf(category);
+    const normalized =
+      inheritedParentId && !parentOf(category)
+        ? { ...category, parent_id: inheritedParentId }
+        : category;
+
+    if (!id || !seen.has(id)) {
+      if (id) seen.add(id);
+      flattened.push(normalized);
+    }
+
+    const children = [
+      ...list(category?.children),
+      ...list(category?.subcategories),
+      ...list(category?.sub_categories),
+      ...list(category?.items),
+    ];
+
+    children.forEach((child) => visit(child, id || inheritedParentId));
+  }
+
+  roots.forEach((category) => visit(category));
+  return flattened;
+}
 
 function iconFor(value) {
   const t = String(value || "").toLowerCase();
@@ -28,7 +69,7 @@ function iconFor(value) {
 }
 
 function makeGroups(categories) {
-  const active = list(categories).filter((c) => c?.is_active !== false);
+  const active = flattenCategories(categories).filter((c) => c?.is_active !== false && c?.active !== false);
   const byId = new Map(active.map((c) => [idOf(c), c]).filter(([id]) => id));
   const children = new Map();
 
@@ -40,25 +81,45 @@ function makeGroups(categories) {
 
   function leaves(id, seen = new Set()) {
     if (!id || seen.has(id)) return [];
-    seen.add(id);
+    const nextSeen = new Set(seen);
+    nextSeen.add(id);
     const direct = children.get(id) || [];
     if (!direct.length) return byId.get(id) ? [byId.get(id)] : [];
-    return direct.flatMap((c) => leaves(idOf(c), seen));
+    return direct.flatMap((c) => leaves(idOf(c), nextSeen));
   }
 
   let groups = active.filter((c) => idOf(c) && (children.get(idOf(c)) || []).length);
   const roots = groups.filter((c) => !parentOf(c));
   if (roots.length) groups = roots;
 
-  return groups
+  const built = groups
     .map((g) => ({
       id: idOf(g),
       name: nameOf(g),
       key: keyOf(g),
-      leaves: leaves(idOf(g)).filter((c) => idOf(c) !== idOf(g)).sort((a, b) => nameOf(a).localeCompare(nameOf(b))),
+      leaves: leaves(idOf(g))
+        .filter((c) => idOf(c) !== idOf(g))
+        .sort((a, b) => nameOf(a).localeCompare(nameOf(b))),
     }))
     .filter((g) => g.id && g.leaves.length)
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  if (built.length) return built;
+
+  const standalone = active
+    .filter((category) => idOf(category))
+    .sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
+
+  return standalone.length
+    ? [
+        {
+          id: "all-services",
+          name: "Available services",
+          key: "services",
+          leaves: standalone,
+        },
+      ]
+    : [];
 }
 
 export default function BusinessServiceOfferingsEditor({
@@ -98,7 +159,7 @@ export default function BusinessServiceOfferingsEditor({
   function convertLegacy(extraToggleId = null) {
     const next = new Set();
     groups.forEach((g) => {
-      if (selected.has(g.id)) g.leaves.forEach((leaf) => next.add(idOf(leaf)));
+      if (selected.has(Number(g.id))) g.leaves.forEach((leaf) => next.add(idOf(leaf)));
     });
     [...selected].forEach((id) => {
       if (leafIds.has(id)) next.add(id);
@@ -134,7 +195,7 @@ export default function BusinessServiceOfferingsEditor({
     const all = ids.length && ids.every((id) => selected.has(id));
     setSelectedServiceIds((current) => {
       const next = new Set((current || []).map(Number).filter(Boolean));
-      ids.forEach((id) => all ? next.delete(id) : next.add(id));
+      ids.forEach((id) => (all ? next.delete(id) : next.add(id)));
       return [...next];
     });
   }
@@ -149,12 +210,14 @@ export default function BusinessServiceOfferingsEditor({
 
   return (
     <div className="space-y-4">
-      <div className={cx(
-        "rounded-3xl border p-4",
-        detailedServicesEnabled
-          ? "border-emerald-500/30 bg-emerald-500/10"
-          : "border-amber-500/30 bg-amber-500/10"
-      )}>
+      <div
+        className={cx(
+          "rounded-3xl border p-4",
+          detailedServicesEnabled
+            ? "border-emerald-500/30 bg-emerald-500/10"
+            : "border-amber-500/30 bg-amber-500/10"
+        )}
+      >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="text-sm font-black text-white">
@@ -167,7 +230,11 @@ export default function BusinessServiceOfferingsEditor({
             </div>
           </div>
           {!detailedServicesEnabled ? (
-            <button type="button" onClick={() => convertLegacy()} className="rounded-2xl bg-amber-400 px-4 py-2 text-xs font-black text-black">
+            <button
+              type="button"
+              onClick={() => convertLegacy()}
+              className="rounded-2xl bg-amber-400 px-4 py-2 text-xs font-black text-black"
+            >
               Customize Exact Services
             </button>
           ) : (
@@ -187,69 +254,104 @@ export default function BusinessServiceOfferingsEditor({
         />
       </div>
 
-      <div className="space-y-3">
-        {visible.map((group) => {
-          const ids = group.leaves.map(idOf).filter(Boolean);
-          const count = ids.filter((id) => selected.has(id)).length;
-          const legacy = !detailedServicesEnabled && selected.has(group.id);
-          const all = detailedServicesEnabled && ids.length > 0 && count === ids.length;
-          const expanded = open.has(group.id) || query.trim();
+      {groups.length === 0 ? (
+        <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+          No service options were returned by the service-category API. Refresh the page; if this remains empty, the backend category data needs attention.
+        </div>
+      ) : visible.length === 0 ? (
+        <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-4 text-sm text-slate-300">
+          <div className="font-bold text-white">No services match “{query.trim()}”.</div>
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            className="mt-3 rounded-2xl border border-cyan-400/35 bg-cyan-500/10 px-4 py-2 text-xs font-black text-cyan-100"
+          >
+            Show all services
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {visible.map((group) => {
+            const ids = group.leaves.map(idOf).filter(Boolean);
+            const count = ids.filter((id) => selected.has(id)).length;
+            const legacy = !detailedServicesEnabled && selected.has(Number(group.id));
+            const all = detailedServicesEnabled && ids.length > 0 && count === ids.length;
+            const expanded = open.has(group.id) || Boolean(query.trim());
 
-          return (
-            <section key={group.id} className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-950/55">
-              <div className="flex flex-wrap items-center gap-3 p-4">
-                <button type="button" onClick={() => toggleOpen(group.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                  <span className="text-2xl">{iconFor(`${group.key} ${group.name}`)}</span>
-                  <span>
-                    <span className="block text-sm font-black text-white">{group.name}</span>
-                    <span className="mt-1 block text-xs text-slate-500">
-                      {detailedServicesEnabled
-                        ? `${count} of ${ids.length} services enabled`
-                        : legacy ? `All ${ids.length} sub-services included` : `${ids.length} sub-services`}
+            return (
+              <section key={group.id} className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-950/55">
+                <div className="flex flex-wrap items-center gap-3 p-4">
+                  <button
+                    type="button"
+                    onClick={() => toggleOpen(group.id)}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  >
+                    <span className="text-2xl">{iconFor(`${group.key} ${group.name}`)}</span>
+                    <span>
+                      <span className="block text-sm font-black text-white">{group.name}</span>
+                      <span className="mt-1 block text-xs text-slate-500">
+                        {detailedServicesEnabled
+                          ? `${count} of ${ids.length} services enabled`
+                          : legacy
+                            ? `All ${ids.length} sub-services included`
+                            : `${ids.length} sub-services`}
+                      </span>
                     </span>
-                  </span>
-                </button>
-                <button type="button" onClick={() => toggleGroup(group)} className="rounded-2xl border border-fuchsia-400/30 px-3 py-2 text-xs font-black text-fuchsia-100">
-                  {all || legacy ? "Clear Group" : "Select All"}
-                </button>
-                <button type="button" onClick={() => toggleOpen(group.id)} className="rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-300">
-                  {expanded ? "Hide" : "Choose Services"}
-                </button>
-              </div>
-
-              {expanded ? (
-                <div className="grid gap-2 border-t border-slate-800 p-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {group.leaves.map((leaf) => {
-                    const id = idOf(leaf);
-                    const active = detailedServicesEnabled ? selected.has(id) : legacy;
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() => toggleLeaf(id)}
-                        className={cx(
-                          "flex min-h-12 items-center justify-between gap-3 rounded-2xl border px-3 py-3 text-left",
-                          active
-                            ? "border-emerald-400/40 bg-emerald-500/12 text-emerald-50"
-                            : "border-slate-800 bg-slate-950/75 text-slate-300"
-                        )}
-                      >
-                        <span className="text-sm font-semibold">{nameOf(leaf)}</span>
-                        <span className={cx(
-                          "rounded-full border px-2 py-1 text-[10px] font-black",
-                          active ? "border-emerald-300 bg-emerald-400 text-black" : "border-slate-700 text-slate-500"
-                        )}>
-                          {active ? "YES" : "NO"}
-                        </span>
-                      </button>
-                    );
-                  })}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group)}
+                    className="rounded-2xl border border-fuchsia-400/30 px-3 py-2 text-xs font-black text-fuchsia-100"
+                  >
+                    {all || legacy ? "Clear Group" : "Select All"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleOpen(group.id)}
+                    className="rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-300"
+                  >
+                    {expanded ? "Hide" : "Choose Services"}
+                  </button>
                 </div>
-              ) : null}
-            </section>
-          );
-        })}
-      </div>
+
+                {expanded ? (
+                  <div className="grid gap-2 border-t border-slate-800 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {group.leaves.map((leaf) => {
+                      const id = idOf(leaf);
+                      const active = detailedServicesEnabled ? selected.has(id) : legacy;
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => toggleLeaf(id)}
+                          className={cx(
+                            "flex min-h-12 items-center justify-between gap-3 rounded-2xl border px-3 py-3 text-left",
+                            active
+                              ? "border-emerald-400/40 bg-emerald-500/12 text-emerald-50"
+                              : "border-slate-800 bg-slate-950/75 text-slate-300"
+                          )}
+                        >
+                          <span className="text-sm font-semibold">{nameOf(leaf)}</span>
+                          <span
+                            className={cx(
+                              "rounded-full border px-2 py-1 text-[10px] font-black",
+                              active
+                                ? "border-emerald-300 bg-emerald-400 text-black"
+                                : "border-slate-700 text-slate-500"
+                            )}
+                          >
+                            {active ? "YES" : "NO"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </section>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
