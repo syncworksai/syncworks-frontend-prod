@@ -4,14 +4,19 @@ import { BrowserRouter, useLocation } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import BusinessProfileEditController from "./components/business/BusinessProfileEditController";
+import { PMNavigationMenu } from "./components/pm/PMHeader";
 import App from "./App";
 import PMPropertyCreate from "./pages/PMPropertyCreate";
 import "./index.css";
 
 function RoutedApplication() {
   const location = useLocation();
+  const pathname = location.pathname.replace(/\/+$/, "") || "/";
+  const isCreateProperty = pathname === "/pm/properties/new";
+  const hasNativePmHeader = pathname === "/pm" || pathname === "/pm/settings" || isCreateProperty;
+  const showPmNavigationDock = pathname.startsWith("/pm/") && !hasNativePmHeader;
 
-  if (location.pathname.replace(/\/+$/, "") === "/pm/properties/new") {
+  if (isCreateProperty) {
     return (
       <ProtectedRoute>
         <PMPropertyCreate />
@@ -23,6 +28,11 @@ function RoutedApplication() {
     <>
       <App />
       <BusinessProfileEditController />
+      {showPmNavigationDock ? (
+        <div className="fixed right-4 top-4 z-[85] rounded-2xl border border-cyan-500/20 bg-[#07111f]/95 p-1 shadow-2xl backdrop-blur-xl">
+          <PMNavigationMenu compact />
+        </div>
+      ) : null}
     </>
   );
 }
