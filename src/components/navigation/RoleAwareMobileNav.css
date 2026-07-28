@@ -7,8 +7,10 @@
 .sw-role-mobile-nav-grid .icon i{position:absolute;right:-.72rem;top:-.55rem;display:grid;min-width:1rem;height:1rem;place-items:center;border-radius:999px;padding:0 .2rem;background:#22d3ee;color:#020617;font-size:.48rem;font-style:normal;box-shadow:0 0 14px rgba(34,211,238,.55)}
 .sw-role-mobile-nav-center{transform:translateY(-.86rem);color:#dbeafe!important}
 .sw-role-mobile-nav-center-orb{position:relative;display:grid;width:4.35rem;height:4.35rem;place-items:center;overflow:hidden;border:1px solid rgba(103,232,249,.5);border-radius:1.5rem;background:radial-gradient(circle,rgba(34,211,238,.24),rgba(79,70,229,.22) 56%,rgba(2,6,23,.92));box-shadow:0 0 20px rgba(34,211,238,.46),0 0 46px rgba(99,102,241,.28);animation:swNavOrbPulse 2.5s ease-in-out infinite}
+.sw-role-mobile-nav-center.is-sync .sw-role-mobile-nav-center-orb{width:4.55rem;height:4.55rem;border-radius:999px;border:1px solid rgba(125,211,252,.62);background:radial-gradient(circle at 35% 28%,rgba(125,211,252,.46),rgba(30,41,59,.9) 28%,rgba(15,23,42,.98) 62%,rgba(2,6,23,1));box-shadow:inset 0 0 0 5px rgba(14,165,233,.08),inset 0 0 22px rgba(56,189,248,.2),0 0 0 6px rgba(14,165,233,.08),0 0 22px rgba(56,189,248,.62),0 0 54px rgba(99,102,241,.34)}
 .sw-role-mobile-nav-center-orb:after{content:"";position:absolute;inset:-40% -80%;transform:rotate(18deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.42),transparent);animation:swNavShine 3.4s linear infinite}
 .sw-role-mobile-nav-center-orb img{position:relative;z-index:1;width:3.55rem;height:3.55rem;object-fit:contain;transform:scale(1.06);filter:drop-shadow(0 0 10px rgba(34,211,238,.92)) drop-shadow(0 0 20px rgba(129,140,248,.5))}
+.sw-role-mobile-nav-center-orb strong{position:relative;z-index:1;font-size:2.25rem;font-weight:1000;line-height:1;background:linear-gradient(145deg,#67e8f9 10%,#3b82f6 48%,#8b5cf6 88%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 15px rgba(56,189,248,.42);filter:drop-shadow(0 0 9px rgba(56,189,248,.95)) drop-shadow(0 0 18px rgba(99,102,241,.62))}
 @keyframes swNavOrbPulse{0%,100%{transform:translateY(0) scale(1);box-shadow:0 0 18px rgba(34,211,238,.36),0 0 42px rgba(99,102,241,.2)}50%{transform:translateY(-2px) scale(1.04);box-shadow:0 0 28px rgba(34,211,238,.58),0 0 56px rgba(217,70,239,.24)}}
 @keyframes swNavShine{0%{transform:translateX(-55%) rotate(18deg)}100%{transform:translateX(55%) rotate(18deg)}}
 .sw-nav-settings-card{border:1px solid rgba(56,189,248,.22);border-radius:1.75rem;padding:1rem;background:radial-gradient(circle at 90% 0%,rgba(34,211,238,.12),transparent 32%),rgba(2,6,23,.62)}
@@ -21,7 +23,10 @@
 .sw-nav-settings-preview{display:grid;grid-template-columns:1fr 1fr 1.18fr 1fr 1fr;align-items:end;gap:.2rem;margin-top:1rem;border:1px solid rgba(71,85,105,.55);border-radius:1.25rem;padding:.65rem;background:rgba(15,23,42,.54)}
 .sw-nav-settings-preview-item,.sw-nav-settings-center-preview{display:flex;min-width:0;flex-direction:column;align-items:center;gap:.25rem;color:#94a3b8;font-size:.56rem;font-weight:900;text-align:center}
 .sw-nav-settings-preview-item svg{width:1rem}
+.sw-nav-settings-center-orb{display:grid;width:3.2rem;height:3.2rem;place-items:center;border-radius:1rem;background:rgba(15,23,42,.9)}
+.sw-nav-settings-center-preview.sync .sw-nav-settings-center-orb{border-radius:999px;border:1px solid rgba(103,232,249,.45);background:radial-gradient(circle at 35% 28%,rgba(125,211,252,.4),rgba(15,23,42,.96) 58%);box-shadow:0 0 18px rgba(34,211,238,.35)}
 .sw-nav-settings-center-preview img{width:3.2rem;height:3.2rem;object-fit:contain;transform:scale(1.04);filter:drop-shadow(0 0 14px rgba(34,211,238,.72))}
+.sw-nav-settings-center-preview strong{font-size:1.7rem;background:linear-gradient(145deg,#67e8f9,#3b82f6,#8b5cf6);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 8px rgba(34,211,238,.7))}
 .sw-nav-settings-grid{display:grid;gap:.7rem;margin-top:1rem}
 .sw-nav-settings-grid label span{display:block;margin-bottom:.25rem;color:#94a3b8;font-size:.65rem;font-weight:800}
 .sw-nav-settings-grid select{width:100%;border:1px solid rgba(71,85,105,.7);border-radius:.9rem;background:rgba(2,6,23,.8);padding:.7rem .75rem;color:#fff;font-size:.76rem}
