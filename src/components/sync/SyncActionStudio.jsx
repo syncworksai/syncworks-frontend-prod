@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   CalendarClock,
   CheckCircle2,
@@ -6,12 +6,15 @@ import {
   LoaderCircle,
   Mail,
   MessageSquareText,
+  Send,
   ShieldCheck,
   X,
 } from "lucide-react";
 
 import {
+  executeSyncTicketReply,
   getSyncAiErrorMessage,
+  listSyncReplyTickets,
   prepareSyncActionDraft,
 } from "../../api/syncAi";
 
@@ -19,7 +22,7 @@ const ACTIONS = [
   {
     id: "ticket_reply",
     title: "Draft ticket reply",
-    description: "Prepare an editable customer or provider reply.",
+    description: "Prepare, edit, confirm, and post to an exact ticket.",
     icon: MessageSquareText,
     workspace: "any",
     placeholder:
@@ -45,6 +48,20 @@ const ACTIONS = [
   },
 ];
 
+function titleOf(ticket) {
+  return (
+    ticket?.work_title ||
+    ticket?.title ||
+    ticket?.service_request?.title ||
+    ticket?.category_label ||
+    `Ticket #${ticket?.id || "unknown"}`
+  );
+}
+
+function codeOf(ticket) {
+  return ticket?.ticket_code || `#${ticket?.id || "—"}`;
+}
+
 export default function SyncActionStudio({
   workspace = "personal",
   disabled = false,
@@ -61,11 +78,49 @@ export default function SyncActionStudio({
   const [selectedType, setSelectedType] = useState(availableActions[0]?.id || "");
   const [instruction, setInstruction] = useState("");
   const [draft, setDraft] = useState(null);
+  const [editedDraft, setEditedDraft] = useState("");
   const [preparing, setPreparing] = useState(false);
+  const [tickets, setTickets] = useState([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [ticketId, setTicketId] = useState("");
+  const [confirmChecked, setConfirmChecked] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [posted, setPosted] = useState(null);
 
   const selected =
     availableActions.find((action) => action.id === selectedType) ||
     availableActions[0];
+
+  useEffect(() => {
+    if (!availableActions.some((action) => action.id === selectedType)) {
+      setSelectedType(availableActions[0]?.id || "");
+      setDraft(null);
+      setPosted(null);
+    }
+  }, [availableActions, selectedType]);
+
+  useEffect(() => {
+    setTickets([]);
+    setTicketId("");
+    setConfirmChecked(false);
+    setPosted(null);
+  }, [workspace]);
+
+  async function loadTickets() {
+    if (ticketsLoading) return;
+    setTicketsLoading(true);
+    try {
+      const rows = await listSyncReplyTickets();
+      setTickets(rows);
+      if (!rows.length) {
+        onNotice?.("No visible active tickets are available for this workspace.");
+      }
+    } catch (error) {
+      onNotice?.(getSyncAiErrorMessage(error));
+    } finally {
+      setTicketsLoading(false);
+    }
+  }
 
   async function prepareDraft() {
     const cleaned = String(instruction || "").trim();
@@ -75,6 +130,7 @@ export default function SyncActionStudio({
     }
 
     setPreparing(true);
+    setPosted(null);
     onNotice?.(`SYNC is preparing a ${selected.title.toLowerCase()}...`);
 
     try {
@@ -84,7 +140,13 @@ export default function SyncActionStudio({
         workspace,
       });
       setDraft(result);
+      setEditedDraft(result.draft || "");
+      setConfirmChecked(false);
+      setTicketId("");
       onNotice?.("Draft prepared for review. Nothing was sent or changed.");
+      if (selected.id === "ticket_reply") {
+        await loadTickets();
+      }
     } catch (error) {
       onNotice?.(getSyncAiErrorMessage(error));
     } finally {
@@ -93,12 +155,46 @@ export default function SyncActionStudio({
   }
 
   async function copyDraft() {
-    if (!draft?.draft) return;
+    if (!editedDraft) return;
     try {
-      await navigator.clipboard.writeText(draft.draft);
+      await navigator.clipboard.writeText(editedDraft);
       onNotice?.("Draft copied. Review it before using it.");
     } catch {
       onNotice?.("Copy was unavailable. Select the draft text manually.");
+    }
+  }
+
+  async function postTicketReply() {
+    const cleaned = String(editedDraft || "").trim();
+    if (!ticketId) {
+      onNotice?.("Select the exact ticket that should receive this reply.");
+      return;
+    }
+    if (!cleaned) {
+      onNotice?.("The final reply cannot be empty.");
+      return;
+    }
+    if (!confirmChecked) {
+      onNotice?.("Confirm that the ticket and final reply are correct.");
+      return;
+    }
+
+    setPosting(true);
+    onNotice?.("Posting the confirmed reply to the selected ticket...");
+
+    try {
+      const result = await executeSyncTicketReply({
+        ticketId,
+        body: cleaned,
+        workspace,
+        confirmed: true,
+      });
+      setPosted(result);
+      onNotice?.("Reply posted successfully and recorded in the ticket conversation.");
+    } catch (error) {
+      onNotice?.(getSyncAiErrorMessage(error));
+    } finally {
+      setPosting(false);
     }
   }
 
@@ -111,12 +207,12 @@ export default function SyncActionStudio({
             <h2 className="font-black text-white">SYNC Draft Studio</h2>
           </div>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-            Prepare reviewable replies and proposals using the active {workspace} context.
-            SYNC cannot send or apply them in this phase.
+            Prepare reviewable content using the active {workspace} context. Ticket
+            replies can be posted only after exact-ticket selection and final confirmation.
           </p>
         </div>
         <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-amber-200">
-          Review required
+          Confirmation required
         </span>
       </div>
 
@@ -131,6 +227,8 @@ export default function SyncActionStudio({
               onClick={() => {
                 setSelectedType(action.id);
                 setDraft(null);
+                setPosted(null);
+                setConfirmChecked(false);
               }}
               className={`rounded-2xl border p-4 text-left ${
                 active
@@ -174,11 +272,11 @@ export default function SyncActionStudio({
 
       {draft ? (
         <div className="fixed inset-0 z-[160] flex items-end justify-center bg-black/75 backdrop-blur-sm sm:items-center sm:p-4">
-          <div className="max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-t-[2rem] border border-violet-400/25 bg-slate-950 p-5 sm:rounded-[2rem] md:p-6">
+          <div className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-[2rem] border border-violet-400/25 bg-slate-950 p-5 sm:rounded-[2rem] md:p-6">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-200">
-                  Prepared · not sent
+                  {posted ? "Executed successfully" : "Prepared for review"}
                 </div>
                 <h3 className="mt-2 text-xl font-black text-white">
                   {draft.title || selected?.title}
@@ -194,22 +292,113 @@ export default function SyncActionStudio({
               </button>
             </div>
 
-            <div className="mt-5 whitespace-pre-wrap rounded-3xl border border-slate-800 bg-slate-900/70 p-4 text-sm leading-7 text-slate-200">
-              {draft.draft}
-            </div>
+            <label className="mt-5 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+              Final editable text
+            </label>
+            <textarea
+              value={editedDraft}
+              onChange={(event) => {
+                setEditedDraft(event.target.value);
+                setConfirmChecked(false);
+              }}
+              rows={8}
+              maxLength={6000}
+              disabled={Boolean(posted)}
+              className="mt-2 w-full resize-y rounded-3xl border border-slate-800 bg-slate-900/70 p-4 text-sm leading-7 text-slate-200 outline-none disabled:opacity-70"
+            />
 
-            <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
-              <ShieldCheck className="h-4 w-4 text-emerald-300" />
-              Review required. No message or schedule change was executed.
-            </div>
+            {selected?.id === "ticket_reply" && !posted ? (
+              <div className="mt-4 space-y-4 rounded-3xl border border-cyan-400/20 bg-cyan-500/8 p-4">
+                <div>
+                  <label className="text-xs font-black uppercase tracking-[0.14em] text-cyan-200">
+                    Exact destination ticket
+                  </label>
+                  <div className="mt-2 flex gap-2">
+                    <select
+                      value={ticketId}
+                      onChange={(event) => {
+                        setTicketId(event.target.value);
+                        setConfirmChecked(false);
+                      }}
+                      className="min-h-12 flex-1 rounded-2xl border border-slate-700 bg-slate-950 px-3 text-sm text-white"
+                    >
+                      <option value="">
+                        {ticketsLoading
+                          ? "Loading tickets..."
+                          : "Select a ticket"}
+                      </option>
+                      {tickets.map((ticket) => (
+                        <option key={ticket.id} value={ticket.id}>
+                          {codeOf(ticket)} · {titleOf(ticket)} · {ticket.status || "OPEN"}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={loadTickets}
+                      disabled={ticketsLoading}
+                      className="min-h-12 rounded-2xl border border-slate-700 bg-slate-900 px-4 text-xs font-black text-slate-200 disabled:opacity-50"
+                    >
+                      Refresh
+                    </button>
+                  </div>
+                </div>
+
+                <label className="flex items-start gap-3 rounded-2xl border border-amber-400/20 bg-amber-500/8 p-3 text-sm leading-6 text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={confirmChecked}
+                    onChange={(event) => setConfirmChecked(event.target.checked)}
+                    className="mt-1 h-4 w-4"
+                  />
+                  <span>
+                    I reviewed the selected ticket and final message. Post this reply
+                    to that ticket conversation now.
+                  </span>
+                </label>
+
+                <button
+                  type="button"
+                  onClick={postTicketReply}
+                  disabled={posting || !ticketId || !confirmChecked || !editedDraft.trim()}
+                  className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 via-cyan-600 to-blue-600 px-5 text-sm font-black text-white disabled:opacity-45"
+                >
+                  {posting ? (
+                    <LoaderCircle className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Send className="h-5 w-5" />
+                  )}
+                  {posting ? "Posting confirmed reply..." : "Post confirmed ticket reply"}
+                </button>
+              </div>
+            ) : null}
+
+            {posted ? (
+              <div className="mt-4 rounded-3xl border border-emerald-400/25 bg-emerald-500/10 p-4">
+                <div className="flex items-center gap-2 font-black text-emerald-100">
+                  <CheckCircle2 className="h-5 w-5" />
+                  Reply posted
+                </div>
+                <div className="mt-2 text-sm leading-6 text-slate-300">
+                  Ticket #{posted.ticket_id} · Message #{posted.ticket_message_id}
+                </div>
+              </div>
+            ) : null}
+
+            {selected?.id !== "ticket_reply" ? (
+              <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
+                <ShieldCheck className="h-4 w-4 text-emerald-300" />
+                This draft type remains copy-only. No external action is available.
+              </div>
+            ) : null}
 
             <button
               type="button"
               onClick={copyDraft}
-              className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 via-blue-600 to-cyan-500 px-5 text-sm font-black text-white"
+              className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-violet-400/30 bg-violet-500/12 px-5 text-sm font-black text-violet-100"
             >
               <ClipboardCopy className="h-5 w-5" />
-              Copy editable draft
+              Copy final text
             </button>
           </div>
         </div>
