@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, useLocation } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import BusinessProfileEditController from "./components/business/BusinessProfileEditController";
 import App from "./App";
 import PMPropertyCreate from "./pages/PMPropertyCreate";
 import "./index.css";
@@ -18,7 +19,12 @@ function RoutedApplication() {
     );
   }
 
-  return <App />;
+  return (
+    <>
+      <App />
+      <BusinessProfileEditController />
+    </>
+  );
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(
