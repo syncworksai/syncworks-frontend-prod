@@ -11,44 +11,36 @@ import PMProperties from "./pages/PMProperties";
 import PMTenants from "./pages/PMTenants";
 import PMProjects from "./pages/PMProjects";
 import PMWorkOrders from "./pages/PMWorkOrders";
+import PMLeasing from "./pages/PMLeasing";
+import PMPayments from "./pages/PMPayments";
 import "./index.css";
 
 function RoutedApplication() {
   const location = useLocation();
   const pathname = location.pathname.replace(/\/+$/, "") || "/";
-  const isCreateProperty = pathname === "/pm/properties/new";
-  const isProperties = pathname === "/pm/properties";
-  const isTenantCenter = pathname === "/pm/tenants";
-  const isProjectCenter = pathname === "/pm/projects";
-  const isWorkOrders = pathname === "/pm/work-orders";
+  const directPages = {
+    "/pm/properties/new": <PMPropertyCreate />,
+    "/pm/properties": <PMProperties />,
+    "/pm/tenants": <PMTenants />,
+    "/pm/projects": <PMProjects />,
+    "/pm/work-orders": <PMWorkOrders />,
+    "/pm/leasing": <PMLeasing />,
+    "/pm/payments": <PMPayments />,
+  };
   const isPmDashboard = pathname === "/pm";
   const isPmRoute = isPmDashboard || pathname.startsWith("/pm/");
-  const isDirectPmPage = isCreateProperty || isProperties || isTenantCenter || isProjectCenter || isWorkOrders;
+  const directPage = directPages[pathname];
 
-  const routedContent = isDirectPmPage ? (
-    <ProtectedRoute>
-      {isCreateProperty ? <PMPropertyCreate /> : isProperties ? <PMProperties /> : isTenantCenter ? <PMTenants /> : isProjectCenter ? <PMProjects /> : <PMWorkOrders />}
-    </ProtectedRoute>
+  const routedContent = directPage ? (
+    <ProtectedRoute>{directPage}</ProtectedRoute>
   ) : (
-    <>
-      <App />
-      <BusinessProfileEditController />
-    </>
+    <><App /><BusinessProfileEditController /></>
   );
 
-  if (isPmRoute && !isPmDashboard) {
-    return <PMShell>{routedContent}</PMShell>;
-  }
-
+  if (isPmRoute && !isPmDashboard) return <PMShell>{routedContent}</PMShell>;
   return routedContent;
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <RoutedApplication />
-      </AuthProvider>
-    </BrowserRouter>
-  </React.StrictMode>
+  <React.StrictMode><BrowserRouter><AuthProvider><RoutedApplication /></AuthProvider></BrowserRouter></React.StrictMode>
 );
