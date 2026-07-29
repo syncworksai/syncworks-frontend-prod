@@ -16,7 +16,34 @@ function list(data) {
 }
 
 function messageFrom(err, fallback) {
-  return err?.response?.data?.detail || fallback;
+  const data = err?.response?.data;
+  if (typeof data?.detail === "string") return data.detail;
+  if (data && typeof data === "object") {
+    const messages = Object.entries(data).flatMap(([field, value]) => {
+      const values = Array.isArray(value) ? value : [value];
+      return values.filter(Boolean).map((item) => `${field.replaceAll("_", " ")}: ${typeof item === "string" ? item : JSON.stringify(item)}`);
+    });
+    if (messages.length) return messages.join(" · ");
+  }
+  return fallback;
+}
+
+function normalizedTenantPayload(tenant, workspaceId) {
+  return {
+    ...tenant,
+    workspace_id: workspaceId,
+    first_name: tenant.first_name.trim(),
+    last_name: tenant.last_name.trim(),
+    email: tenant.email.trim().toLowerCase(),
+    phone: tenant.phone.trim(),
+    property_name: tenant.property_name.trim(),
+    unit_label: tenant.unit_label.trim(),
+    notes: tenant.notes.trim(),
+    move_in_date: tenant.move_in_date || null,
+    lease_start: tenant.lease_start || null,
+    lease_end: tenant.lease_end || null,
+    monthly_rent: tenant.monthly_rent === "" ? null : tenant.monthly_rent,
+  };
 }
 
 export default function PMTenants() {
@@ -56,7 +83,7 @@ export default function PMTenants() {
     setMessage("");
     try {
       const headers = { "X-PM-Workspace-ID": String(workspace.id) };
-      const response = await api.post("/pm-hub/tenants/", { ...tenant, workspace_id: workspace.id, monthly_rent: tenant.monthly_rent || null }, { headers });
+      const response = await api.post("/pm-hub/tenants/", normalizedTenantPayload(tenant, workspace.id), { headers });
       if (sendInvite) await api.post(`/pm-hub/tenants/${response.data.id}/send-invite/`, { mode: "TENANT_ONBOARDING" }, { headers });
       setTenant(emptyTenant);
       setMessage(sendInvite ? "Tenant saved and onboarding invitation sent." : "Tenant saved.");
@@ -98,7 +125,7 @@ export default function PMTenants() {
                 <Field label="Lease end"><input type="date" className={inputClass} value={tenant.lease_end} onChange={(e) => setTenant((p) => ({ ...p, lease_end: e.target.value }))} /></Field>
                 <div className="sm:col-span-2"><Field label="Notes"><textarea rows={3} className={inputClass} value={tenant.notes} onChange={(e) => setTenant((p) => ({ ...p, notes: e.target.value }))} /></Field></div>
               </div>
-              <div className="mt-5 grid gap-2 sm:grid-cols-2"><Button tone="slate" onClick={() => createTenant(false)} disabled={saving}>Save Tenant</Button><Button tone="cyan" onClick={() => createTenant(true)} disabled={saving}>{saving ? "Saving..." : "Save & Send Onboarding"}</Button></div>
+              <div className="mt-5 grid gap-2 sm:grid-cols-2"><Button tone="slate" onClick={() => createTenant(false)} disabled={saving}>{saving ? "Saving..." : "Save Tenant"}</Button><Button tone="cyan" onClick={() => createTenant(true)} disabled={saving}>{saving ? "Saving..." : "Save & Send Onboarding"}</Button></div>
             </section>
 
             <section className="rounded-[28px] border border-blue-500/20 bg-[#07111f]/90 p-4 sm:p-5">
