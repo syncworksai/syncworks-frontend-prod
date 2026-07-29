@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import PMHeader from "../components/pm/PMHeader";
@@ -6,137 +6,55 @@ import Button from "../components/ui/Button";
 
 const inputClass = "min-h-11 w-full rounded-2xl border border-slate-700 bg-black/35 px-3.5 py-2.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-400/15";
 const emptyTenant = { first_name: "", last_name: "", email: "", phone: "", property_name: "", unit_label: "", move_in_date: "", lease_start: "", lease_end: "", monthly_rent: "", notes: "" };
-
-function Field({ label, children }) {
-  return <label className="block space-y-1.5"><span className="text-xs font-medium text-slate-300">{label}</span>{children}</label>;
-}
-
-function list(data) {
-  return Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
-}
-
-function messageFrom(err, fallback) {
-  const data = err?.response?.data;
-  if (typeof data?.detail === "string") return data.detail;
-  if (data && typeof data === "object") {
-    const messages = Object.entries(data).flatMap(([field, value]) => {
-      const values = Array.isArray(value) ? value : [value];
-      return values.filter(Boolean).map((item) => `${field.replaceAll("_", " ")}: ${typeof item === "string" ? item : JSON.stringify(item)}`);
-    });
-    if (messages.length) return messages.join(" · ");
-  }
-  return fallback;
-}
-
-function normalizedTenantPayload(tenant, workspaceId) {
-  return {
-    ...tenant,
-    workspace_id: workspaceId,
-    first_name: tenant.first_name.trim(),
-    last_name: tenant.last_name.trim(),
-    email: tenant.email.trim().toLowerCase(),
-    phone: tenant.phone.trim(),
-    property_name: tenant.property_name.trim(),
-    unit_label: tenant.unit_label.trim(),
-    notes: tenant.notes.trim(),
-    move_in_date: tenant.move_in_date || null,
-    lease_start: tenant.lease_start || null,
-    lease_end: tenant.lease_end || null,
-    monthly_rent: tenant.monthly_rent === "" ? null : tenant.monthly_rent,
-  };
-}
+const emptyLease = { term: "TWELVE_MONTH", unit: "", converts_to_month_to_month: true, security_deposit: "", section8: false, housing_authority: "", tenant_portion: "", assistance_portion: "" };
+function Field({ label, children }) { return <label className="block space-y-1.5"><span className="text-xs font-medium text-slate-300">{label}</span>{children}</label>; }
+const list = (data) => Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
+function messageFrom(err, fallback) { const data = err?.response?.data; if (typeof data?.detail === "string") return data.detail; if (data && typeof data === "object") return Object.entries(data).flatMap(([field,value]) => (Array.isArray(value)?value:[value]).filter(Boolean).map((item)=>`${field.replaceAll("_"," ")}: ${typeof item === "string" ? item : JSON.stringify(item)}`)).join(" · ") || fallback; return fallback; }
+function normalizedTenantPayload(tenant, workspaceId) { return { ...tenant, workspace_id: workspaceId, first_name: tenant.first_name.trim(), last_name: tenant.last_name.trim(), email: tenant.email.trim().toLowerCase(), phone: tenant.phone.trim(), property_name: tenant.property_name.trim(), unit_label: tenant.unit_label.trim(), notes: tenant.notes.trim(), move_in_date: tenant.move_in_date || null, lease_start: tenant.lease_start || null, lease_end: tenant.lease_end || null, monthly_rent: tenant.monthly_rent === "" ? null : tenant.monthly_rent }; }
+function addMonthsMinusDay(value, months) { if (!value) return ""; const d = new Date(`${value}T12:00:00`); const original = d.getDate(); d.setDate(1); d.setMonth(d.getMonth()+months); const last = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(); d.setDate(Math.min(original,last)); d.setDate(d.getDate()-1); return d.toISOString().slice(0,10); }
 
 export default function PMTenants() {
   const nav = useNavigate();
   const [workspace, setWorkspace] = useState(null);
   const [tenant, setTenant] = useState(emptyTenant);
+  const [lease, setLease] = useState(emptyLease);
   const [tenants, setTenants] = useState([]);
+  const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  async function load() {
-    setLoading(true);
-    setError("");
-    try {
-      const workspaceResponse = await api.get("/pm-hub/workspaces/current/");
-      const current = workspaceResponse.data;
-      setWorkspace(current);
-      const response = await api.get("/pm-hub/tenants/", { headers: { "X-PM-Workspace-ID": String(current.id) } });
-      setTenants(list(response.data));
-    } catch (err) {
-      if (err?.response?.status === 404) setError("Set up your portfolio before adding a tenant.");
-      else setError(messageFrom(err, "Could not load tenants."));
-    } finally {
-      setLoading(false);
-    }
-  }
+  async function load() { setLoading(true); setError(""); try { const ws = await api.get("/pm-hub/workspaces/current/"); setWorkspace(ws.data); const headers={"X-PM-Workspace-ID":String(ws.data.id)}; const [t,u]=await Promise.all([api.get("/pm-hub/tenants/",{headers}),api.get("/pm-hub/units/?available_only=true",{headers})]); setTenants(list(t.data)); setUnits(list(u.data)); } catch(err){ if(err?.response?.status===404)setError("Set up your portfolio before adding a tenant."); else setError(messageFrom(err,"Could not load tenants.")); } finally { setLoading(false); } }
+  useEffect(()=>{load();},[]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(()=>{ if(lease.term==="SIX_MONTH") setTenant((p)=>({...p,lease_end:addMonthsMinusDay(p.lease_start,6)})); else if(lease.term==="TWELVE_MONTH") setTenant((p)=>({...p,lease_end:addMonthsMinusDay(p.lease_start,12)})); else if(lease.term==="MONTH_TO_MONTH") setTenant((p)=>({...p,lease_end:""})); },[lease.term,tenant.lease_start]);
+  const selectedUnit = useMemo(()=>units.find((u)=>String(u.id)===String(lease.unit)),[units,lease.unit]);
+  useEffect(()=>{ if(selectedUnit) setTenant((p)=>({...p,property_name:selectedUnit.property_name,unit_label:selectedUnit.label,monthly_rent:p.monthly_rent||selectedUnit.market_rent||""})); },[selectedUnit]);
 
   async function createTenant(sendInvite) {
-    if (!workspace?.id) return nav("/pm/settings");
-    if (!tenant.first_name.trim() || !tenant.email.trim()) return setError("Tenant first name and email are required.");
-    setSaving(true);
-    setError("");
-    setMessage("");
-    try {
-      const headers = { "X-PM-Workspace-ID": String(workspace.id) };
-      const response = await api.post("/pm-hub/tenants/", normalizedTenantPayload(tenant, workspace.id), { headers });
-      if (sendInvite) await api.post(`/pm-hub/tenants/${response.data.id}/send-invite/`, { mode: "TENANT_ONBOARDING" }, { headers });
-      setTenant(emptyTenant);
-      setMessage(sendInvite ? "Tenant saved and onboarding invitation sent." : "Tenant saved.");
-      await load();
-    } catch (err) {
-      setError(messageFrom(err, "Could not save the tenant."));
-    } finally {
-      setSaving(false);
-    }
-  }
+    if(!workspace?.id)return nav("/pm/settings"); if(!tenant.first_name.trim()||!tenant.email.trim())return setError("Tenant first name and email are required.");
+    setSaving(true); setError(""); setMessage("");
+    try { const headers={"X-PM-Workspace-ID":String(workspace.id)}; const response=await api.post("/pm-hub/tenants/",normalizedTenantPayload(tenant,workspace.id),{headers});
+      if(tenant.lease_start&&tenant.monthly_rent){ await api.post("/pm-hub/leases/",{workspace_id:workspace.id,tenant:response.data.id,unit:lease.unit||null,term:lease.term,start_date:tenant.lease_start,end_date:tenant.lease_end||null,monthly_rent:tenant.monthly_rent,security_deposit:lease.security_deposit||null,converts_to_month_to_month:lease.converts_to_month_to_month,section8:lease.section8,housing_authority:lease.housing_authority,tenant_portion:lease.tenant_portion||null,assistance_portion:lease.assistance_portion||null,status:"ACTIVE"},{headers}); }
+      if(sendInvite)await api.post(`/pm-hub/tenants/${response.data.id}/send-invite/`,{mode:"TENANT_ONBOARDING"},{headers});
+      setTenant(emptyTenant); setLease(emptyLease); setMessage(sendInvite?"Tenant, lease, and onboarding invitation saved.":"Tenant and lease saved."); await load();
+    } catch(err){setError(messageFrom(err,"Could not save the tenant."));} finally{setSaving(false);} }
 
-  return (
-    <div className="min-h-screen bg-black text-slate-100">
-      <PMHeader title={workspace?.name || "Tenant Center"} subtitle="Tenant records, leases, and onboarding" />
-      <main className="relative z-10 mx-auto max-w-5xl space-y-4 px-4 pb-[calc(13rem+env(safe-area-inset-bottom))] pt-5">
-        <section className="rounded-[28px] border border-cyan-400/20 bg-[#07111f]/95 p-4 sm:p-5">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Tenant Center</div>
-          <h1 className="mt-2 text-xl font-semibold text-white">Create and manage tenant records.</h1>
-          <p className="mt-2 text-sm text-slate-400">Tenant onboarding is kept separate from portfolio settings.</p>
-        </section>
-
-        {error ? <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-100">{error}</div> : null}
-        {message ? <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">{message}</div> : null}
-
-        {!workspace?.id && !loading ? <Button tone="cyan" onClick={() => nav("/pm/settings")}>Set Up Portfolio</Button> : (
-          <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-            <section className="rounded-[28px] border border-blue-500/20 bg-[#07111f]/90 p-4 sm:p-5">
-              <h2 className="text-lg font-semibold text-white">Create tenant</h2>
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <Field label="First name"><input className={inputClass} value={tenant.first_name} onChange={(e) => setTenant((p) => ({ ...p, first_name: e.target.value }))} /></Field>
-                <Field label="Last name"><input className={inputClass} value={tenant.last_name} onChange={(e) => setTenant((p) => ({ ...p, last_name: e.target.value }))} /></Field>
-                <Field label="Email"><input type="email" className={inputClass} value={tenant.email} onChange={(e) => setTenant((p) => ({ ...p, email: e.target.value }))} /></Field>
-                <Field label="Phone"><input className={inputClass} value={tenant.phone} onChange={(e) => setTenant((p) => ({ ...p, phone: e.target.value }))} /></Field>
-                <Field label="Property"><input className={inputClass} value={tenant.property_name} onChange={(e) => setTenant((p) => ({ ...p, property_name: e.target.value }))} /></Field>
-                <Field label="Unit"><input className={inputClass} value={tenant.unit_label} onChange={(e) => setTenant((p) => ({ ...p, unit_label: e.target.value }))} /></Field>
-                <Field label="Move-in date"><input type="date" className={inputClass} value={tenant.move_in_date} onChange={(e) => setTenant((p) => ({ ...p, move_in_date: e.target.value }))} /></Field>
-                <Field label="Monthly rent"><input inputMode="decimal" className={inputClass} value={tenant.monthly_rent} onChange={(e) => setTenant((p) => ({ ...p, monthly_rent: e.target.value }))} /></Field>
-                <Field label="Lease start"><input type="date" className={inputClass} value={tenant.lease_start} onChange={(e) => setTenant((p) => ({ ...p, lease_start: e.target.value }))} /></Field>
-                <Field label="Lease end"><input type="date" className={inputClass} value={tenant.lease_end} onChange={(e) => setTenant((p) => ({ ...p, lease_end: e.target.value }))} /></Field>
-                <div className="sm:col-span-2"><Field label="Notes"><textarea rows={3} className={inputClass} value={tenant.notes} onChange={(e) => setTenant((p) => ({ ...p, notes: e.target.value }))} /></Field></div>
-              </div>
-              <div className="mt-5 grid gap-2 sm:grid-cols-2"><Button tone="slate" onClick={() => createTenant(false)} disabled={saving}>{saving ? "Saving..." : "Save Tenant"}</Button><Button tone="cyan" onClick={() => createTenant(true)} disabled={saving}>{saving ? "Saving..." : "Save & Send Onboarding"}</Button></div>
-            </section>
-
-            <section className="rounded-[28px] border border-blue-500/20 bg-[#07111f]/90 p-4 sm:p-5">
-              <div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-white">Tenant directory</h2><span className="text-xs text-cyan-300">{tenants.length} total</span></div>
-              <div className="mt-4 space-y-3">
-                {loading ? <div className="text-sm text-slate-500">Loading tenants...</div> : tenants.length ? tenants.map((item) => <article key={item.id} className="rounded-2xl border border-slate-800 bg-black/25 p-4"><div className="font-semibold text-white">{item.full_name || [item.first_name, item.last_name].filter(Boolean).join(" ")}</div><div className="mt-1 text-xs text-slate-400">{item.email}</div><div className="mt-1 text-xs text-slate-500">{[item.property_name, item.unit_label].filter(Boolean).join(" · ") || "Property not assigned"}</div></article>) : <div className="rounded-2xl border border-dashed border-slate-700 p-5 text-sm text-slate-500">No tenants added yet.</div>}
-              </div>
-            </section>
-          </div>
-        )}
-      </main>
-    </div>
-  );
+  return <div className="min-h-screen bg-black text-slate-100"><PMHeader title={workspace?.name||"Tenant Center"} subtitle="Tenant records, leases, and onboarding" /><main className="relative z-10 mx-auto max-w-6xl space-y-4 px-4 pb-[calc(13rem+env(safe-area-inset-bottom))] pt-5">
+    <section className="rounded-[28px] border border-cyan-400/20 bg-[#07111f]/95 p-4 sm:p-5"><div className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Tenant Center</div><h1 className="mt-2 text-xl font-semibold text-white">Create tenant, assign an available unit, and generate the lease dates.</h1><p className="mt-2 text-sm text-slate-400">Choose month-to-month, 6 month, 12 month, or custom. Fixed terms can automatically convert to month-to-month after expiration.</p></section>
+    {error?<div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-100">{error}</div>:null}{message?<div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">{message}</div>:null}
+    {!workspace?.id&&!loading?<Button tone="cyan" onClick={()=>nav("/pm/settings")}>Set Up Portfolio</Button>:<div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]"><section className="rounded-[28px] border border-blue-500/20 bg-[#07111f]/90 p-4 sm:p-5"><h2 className="text-lg font-semibold text-white">Create tenant</h2><div className="mt-5 grid gap-4 sm:grid-cols-2">
+      <Field label="First name"><input className={inputClass} value={tenant.first_name} onChange={(e)=>setTenant({...tenant,first_name:e.target.value})}/></Field><Field label="Last name"><input className={inputClass} value={tenant.last_name} onChange={(e)=>setTenant({...tenant,last_name:e.target.value})}/></Field><Field label="Email"><input type="email" className={inputClass} value={tenant.email} onChange={(e)=>setTenant({...tenant,email:e.target.value})}/></Field><Field label="Phone"><input className={inputClass} value={tenant.phone} onChange={(e)=>setTenant({...tenant,phone:e.target.value})}/></Field>
+      <Field label="Available property / unit"><select className={inputClass} value={lease.unit} onChange={(e)=>setLease({...lease,unit:e.target.value})}><option value="">Manual property assignment</option>{units.filter((u)=>!lease.section8||u.accepts_section8).map((u)=><option key={u.id} value={u.id}>{u.display_name} · {u.availability.replaceAll("_"," ")} · ${u.market_rent||"—"}</option>)}</select></Field><Field label="Move-in date"><input type="date" className={inputClass} value={tenant.move_in_date} onChange={(e)=>setTenant({...tenant,move_in_date:e.target.value})}/></Field>
+      {!lease.unit?<><Field label="Property"><input className={inputClass} value={tenant.property_name} onChange={(e)=>setTenant({...tenant,property_name:e.target.value})}/></Field><Field label="Unit"><input className={inputClass} value={tenant.unit_label} onChange={(e)=>setTenant({...tenant,unit_label:e.target.value})}/></Field></>:null}
+      <Field label="Lease term"><select className={inputClass} value={lease.term} onChange={(e)=>setLease({...lease,term:e.target.value})}><option value="MONTH_TO_MONTH">Month to month</option><option value="SIX_MONTH">6 month</option><option value="TWELVE_MONTH">12 month</option><option value="CUSTOM">Custom end date</option></select></Field><Field label="Lease start"><input type="date" className={inputClass} value={tenant.lease_start} onChange={(e)=>setTenant({...tenant,lease_start:e.target.value})}/></Field>
+      {lease.term!=="MONTH_TO_MONTH"?<Field label="Lease end"><input type="date" disabled={lease.term!=="CUSTOM"} className={inputClass} value={tenant.lease_end} onChange={(e)=>setTenant({...tenant,lease_end:e.target.value})}/></Field>:<div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4 text-sm text-cyan-100">No fixed end date for month-to-month.</div>}
+      <Field label="Monthly rent"><input inputMode="decimal" className={inputClass} value={tenant.monthly_rent} onChange={(e)=>setTenant({...tenant,monthly_rent:e.target.value})}/></Field><Field label="Security deposit"><input inputMode="decimal" className={inputClass} value={lease.security_deposit} onChange={(e)=>setLease({...lease,security_deposit:e.target.value})}/></Field>
+      {lease.term!=="MONTH_TO_MONTH"?<label className="flex items-center gap-3 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4"><input type="checkbox" checked={lease.converts_to_month_to_month} onChange={(e)=>setLease({...lease,converts_to_month_to_month:e.target.checked})}/><span className="text-sm font-bold">Convert to month-to-month after lease end</span></label>:null}
+      <label className="flex items-center gap-3 rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/5 p-4"><input type="checkbox" checked={lease.section8} onChange={(e)=>setLease({...lease,section8:e.target.checked})}/><span className="text-sm font-bold">Section 8 / housing assistance</span></label>
+      {lease.section8?<><Field label="Housing authority"><input className={inputClass} value={lease.housing_authority} onChange={(e)=>setLease({...lease,housing_authority:e.target.value})}/></Field><Field label="Tenant portion"><input inputMode="decimal" className={inputClass} value={lease.tenant_portion} onChange={(e)=>setLease({...lease,tenant_portion:e.target.value})}/></Field><Field label="Housing authority portion"><input inputMode="decimal" className={inputClass} value={lease.assistance_portion} onChange={(e)=>setLease({...lease,assistance_portion:e.target.value})}/></Field></>:null}
+      <div className="sm:col-span-2"><Field label="Notes"><textarea rows={3} className={inputClass} value={tenant.notes} onChange={(e)=>setTenant({...tenant,notes:e.target.value})}/></Field></div></div><div className="mt-5 grid gap-2 sm:grid-cols-2"><Button tone="slate" onClick={()=>createTenant(false)} disabled={saving}>{saving?"Saving...":"Save Tenant"}</Button><Button tone="cyan" onClick={()=>createTenant(true)} disabled={saving}>{saving?"Saving...":"Save & Send Onboarding"}</Button></div></section>
+      <section className="rounded-[28px] border border-blue-500/20 bg-[#07111f]/90 p-4 sm:p-5"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-white">Tenant directory</h2><span className="text-xs text-cyan-300">{tenants.length} total</span></div><div className="mt-4 space-y-3">{loading?<div className="text-sm text-slate-500">Loading tenants...</div>:tenants.length?tenants.map((item)=><article key={item.id} className="rounded-2xl border border-slate-800 bg-black/25 p-4"><div className="flex items-start justify-between gap-3"><div><div className="font-semibold text-white">{item.full_name}</div><div className="mt-1 text-xs text-slate-400">{item.email}</div><div className="mt-1 text-xs text-slate-500">{[item.property_name,item.unit_label].filter(Boolean).join(" · ")||"Property not assigned"}</div><div className="mt-2 text-xs text-cyan-300">{item.active_lease?`${item.active_lease.term.replaceAll("_"," ")} · ${item.active_lease.start_date}${item.active_lease.end_date?` to ${item.active_lease.end_date}`:""}`:"No lease created"}</div></div><div className={`font-black ${Number(item.balance)>0?"text-rose-300":"text-emerald-300"}`}>${Number(item.balance||0).toFixed(2)}</div></div></article>):<div className="rounded-2xl border border-dashed border-slate-700 p-5 text-sm text-slate-500">No tenants added yet.</div>}</div></section></div>}
+  </main></div>;
 }
