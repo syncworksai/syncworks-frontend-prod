@@ -1,5 +1,6 @@
 // src/components/business/BusinessDigitalCardPreview.jsx
 import React, { useMemo, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -19,6 +20,19 @@ function serviceNames(categories, selectedServiceIds) {
     .map((cat) => String(cat?.name || cat?.label || cat?.title || "").trim())
     .filter(Boolean)
     .slice(0, 8);
+}
+
+function escapeVCard(value) {
+  return String(value || "")
+    .replaceAll("\\", "\\\\")
+    .replaceAll(";", "\\;")
+    .replaceAll(",", "\\,")
+    .replaceAll("\n", "\\n");
+}
+
+function businessConnectCode(businessId) {
+  const raw = String(businessId || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  return raw ? `SWB-${raw.padStart(6, "0")}` : "SWB-PENDING";
 }
 
 export default function BusinessDigitalCardPreview({
@@ -42,6 +56,7 @@ export default function BusinessDigitalCardPreview({
   readiness,
 }) {
   const [copied, setCopied] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   const selectedNames = useMemo(
     () => serviceNames(categories, selectedServiceIds),
@@ -50,6 +65,7 @@ export default function BusinessDigitalCardPreview({
 
   const location = [city, state, baseZip].filter(Boolean).join(", ");
   const webHref = normalizeWebsite(website);
+  const connectCode = useMemo(() => businessConnectCode(businessId), [businessId]);
 
   const shareText = useMemo(() => {
     const lines = [
@@ -62,8 +78,9 @@ export default function BusinessDigitalCardPreview({
       businessEmail ? `Email: ${businessEmail}` : "",
       website ? `Website: ${website}` : "",
       businessId ? `SyncWorks Business ID: ${businessId}` : "",
+      `SyncWorks Connect Code: ${connectCode}`,
     ];
-    return lines.filter(Boolean).join("\\n");
+    return lines.filter(Boolean).join("\n");
   }, [
     name,
     headline,
@@ -76,7 +93,27 @@ export default function BusinessDigitalCardPreview({
     businessEmail,
     website,
     businessId,
+    connectCode,
   ]);
+
+  const vCardValue = useMemo(() => {
+    const addressParts = [city, state, baseZip].filter(Boolean).map(escapeVCard).join(";");
+    return [
+      "BEGIN:VCARD",
+      "VERSION:3.0",
+      `FN:${escapeVCard(name || "SyncWorks Business")}`,
+      `ORG:${escapeVCard(name || "SyncWorks Business")}`,
+      headline ? `TITLE:${escapeVCard(headline)}` : "",
+      phone ? `TEL;TYPE=WORK,VOICE:${escapeVCard(phone)}` : "",
+      businessEmail ? `EMAIL;TYPE=WORK:${escapeVCard(businessEmail)}` : "",
+      webHref ? `URL:${escapeVCard(webHref)}` : "",
+      addressParts ? `ADR;TYPE=WORK:;;;${addressParts};;` : "",
+      `NOTE:${escapeVCard(`SyncWorks Connect Code: ${connectCode}`)}`,
+      "END:VCARD",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }, [name, headline, phone, businessEmail, webHref, city, state, baseZip, connectCode]);
 
   async function copyCard() {
     try {
@@ -86,6 +123,32 @@ export default function BusinessDigitalCardPreview({
     } catch {
       setCopied(false);
     }
+  }
+
+  async function copyConnectCode() {
+    try {
+      await navigator.clipboard.writeText(connectCode);
+      setCodeCopied(true);
+      window.setTimeout(() => setCodeCopied(false), 1800);
+    } catch {
+      setCodeCopied(false);
+    }
+  }
+
+  function downloadQr() {
+    const svg = document.getElementById(`business-card-qr-${businessId || "pending"}`);
+    if (!svg) return;
+
+    const markup = new XMLSerializer().serializeToString(svg);
+    const blob = new Blob([markup], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${String(name || "syncworks-business").trim().replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-qr.svg`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -233,12 +296,66 @@ export default function BusinessDigitalCardPreview({
         </div>
       </section>
 
+      <section className="rounded-3xl border border-cyan-500/25 bg-slate-950/60 p-4 md:p-5">
+        <div className="grid gap-5 md:grid-cols-[220px_minmax(0,1fr)] md:items-center">
+          <div className="mx-auto rounded-3xl bg-white p-4 shadow-[0_0_40px_rgba(34,211,238,0.18)]">
+            <QRCodeSVG
+              id={`business-card-qr-${businessId || "pending"}`}
+              value={vCardValue}
+              size={188}
+              level="M"
+              includeMargin
+              title={`Add ${name || "this business"} to contacts`}
+            />
+          </div>
+
+          <div>
+            <div className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-200">
+              Scan to add this business
+            </div>
+            <h3 className="mt-2 text-xl font-black text-white">QR contact card</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-300">
+              A customer can scan this QR code with a phone camera and save the business contact information directly.
+            </p>
+
+            <div className="mt-4 rounded-2xl border border-fuchsia-400/25 bg-fuchsia-500/10 p-4">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-200">
+                SyncWorks Connect Code
+              </div>
+              <div className="mt-2 break-all font-mono text-2xl font-black tracking-[0.16em] text-white">
+                {connectCode}
+              </div>
+              <div className="mt-2 text-xs leading-5 text-slate-400">
+                This code is unique to Business ID {businessId || "pending"}. It can be shared verbally or copied when a QR scan is not practical.
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={copyConnectCode}
+                className="min-h-11 rounded-2xl border border-cyan-400/30 bg-cyan-500/12 px-4 text-sm font-black text-cyan-100"
+              >
+                {codeCopied ? "Code Copied" : "Copy Connect Code"}
+              </button>
+              <button
+                type="button"
+                onClick={downloadQr}
+                className="min-h-11 rounded-2xl border border-slate-700 bg-slate-950/70 px-4 text-sm font-black text-slate-200"
+              >
+                Save QR Image
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="rounded-3xl border border-slate-800 bg-slate-950/50 p-4 md:p-5">
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="text-sm font-black text-white">Card readiness</div>
             <div className="mt-1 text-xs leading-5 text-slate-400">
-              This preview updates from Business Settings and will later power the public profile, QR card, search result, connections, and Request Service button.
+              This preview, QR contact card, and Connect Code update from the saved Business profile. A future backend connection flow can use the same Business ID for in-app customer connections.
             </div>
           </div>
           <div className="text-2xl font-black text-cyan-100">{readiness}%</div>
