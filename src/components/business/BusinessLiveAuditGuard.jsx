@@ -26,16 +26,14 @@ function buttonByText(root, label) {
   );
 }
 
-function ticketCardFromButton(button) {
-  let current = button?.parentElement;
-  while (current && current !== document.body) {
-    const text = cleanText(current.textContent);
-    if (/\b(?:DT|MP)-\d{6}\b/.test(text) && text.includes("Archive") && text.includes("Open")) {
-      return current;
-    }
-    current = current.parentElement;
-  }
-  return null;
+function findManagementPanels(card) {
+  return [...card.querySelectorAll("select")]
+    .map((select) => select.closest("div.rounded-2xl"))
+    .filter((panel, index, panels) => {
+      if (!panel || panels.indexOf(panel) !== index) return false;
+      const text = cleanText(panel.textContent);
+      return text.includes("Assign Employee") || text.includes("Status Change");
+    });
 }
 
 function addQuickAction(bar, label, tone, onClick) {
@@ -48,55 +46,58 @@ function addQuickAction(bar, label, tone, onClick) {
 }
 
 function optimizeTicketCards() {
-  const archiveButtons = [...document.querySelectorAll("button")].filter(
-    (button) => cleanText(button.textContent).trim() === "Archive"
+  const cards = [...document.querySelectorAll("article")].filter((article) =>
+    /\b(?:DT|MP)-\d{6}\b/.test(cleanText(article.textContent))
   );
 
-  archiveButtons.forEach((archiveButton) => {
-    const card = ticketCardFromButton(archiveButton);
-    if (!card || card.dataset.swCompactTicket === "true") return;
+  cards.forEach((card) => {
+    const archiveButton = buttonByText(card, "Archive");
+    const restoreButton = buttonByText(card, "Restore");
+    const openLink = [...card.querySelectorAll("a")].find((link) =>
+      ["open", "open ticket"].includes(cleanText(link.textContent).trim().toLowerCase())
+    );
 
-    card.dataset.swCompactTicket = "true";
+    if (!archiveButton && !restoreButton && !openLink) return;
+
     card.classList.add("sw-ticket-card-compact");
-
-    const text = cleanText(card.textContent);
-    const statusArea = [...card.querySelectorAll("div")].find((node) => {
-      const own = cleanText(node.textContent);
-      return own.includes("Assign Employee") && own.includes("Status Change");
+    const managementPanels = findManagementPanels(card);
+    managementPanels.forEach((panel) => {
+      panel.classList.add("sw-ticket-management-panel");
+      panel.hidden = true;
     });
 
-    if (statusArea) {
-      statusArea.classList.add("sw-ticket-management-panel");
-      statusArea.hidden = true;
+    if (!card.querySelector(":scope .sw-ticket-quick-bar")) {
+      const quickBar = document.createElement("div");
+      quickBar.className = "sw-ticket-quick-bar";
+
+      addQuickAction(quickBar, "Open", "cyan", () => openLink?.click());
+      addQuickAction(quickBar, "Message", "slate", () => openLink?.click());
+      addQuickAction(quickBar, "Request payment", "amber", () => openLink?.click());
+
+      if (managementPanels.length) {
+        addQuickAction(quickBar, "Manage", "fuchsia", () => {
+          const willOpen = managementPanels.some((panel) => panel.hidden);
+          managementPanels.forEach((panel) => {
+            panel.hidden = !willOpen;
+          });
+          card.classList.toggle("sw-ticket-card-expanded", willOpen);
+          const manageButton = [...quickBar.querySelectorAll("button")].find(
+            (button) => cleanText(button.textContent).trim() === "Manage" || cleanText(button.textContent).trim() === "Done"
+          );
+          if (manageButton) manageButton.textContent = willOpen ? "Done" : "Manage";
+        });
+      }
+
+      const relativeRoot = card.querySelector(":scope > div.relative") || card.firstElementChild || card;
+      relativeRoot.appendChild(quickBar);
     }
 
-    const quickBar = document.createElement("div");
-    quickBar.className = "sw-ticket-quick-bar";
-
-    const openButton = buttonByText(card, "Open");
-    addQuickAction(quickBar, "Open", "cyan", () => openButton?.click());
-    addQuickAction(quickBar, "Message", "slate", () => {
-      if (openButton) openButton.click();
-    });
-    addQuickAction(quickBar, "Request payment", "amber", () => {
-      if (openButton) openButton.click();
-    });
-
-    if (statusArea) {
-      addQuickAction(quickBar, "Manage", "fuchsia", () => {
-        statusArea.hidden = !statusArea.hidden;
-        card.classList.toggle("sw-ticket-card-expanded", !statusArea.hidden);
-      });
-    }
-
-    const actionHost = archiveButton.parentElement || card;
-    actionHost.parentElement?.insertBefore(quickBar, actionHost.nextSibling);
-
-    if (/\bCLOSED\b/i.test(text) && !card.dataset.swArchiveQueued) {
+    const visibleText = cleanText(card.textContent);
+    if (/\bClosed\b/i.test(visibleText) && archiveButton && !card.dataset.swArchiveQueued) {
       card.dataset.swArchiveQueued = "true";
       window.setTimeout(() => {
         if (document.body.contains(archiveButton)) archiveButton.click();
-      }, 250);
+      }, 350);
     }
   });
 }
@@ -131,25 +132,28 @@ function updateTextNodes(root) {
 }
 
 function installTicketStyles() {
-  if (document.getElementById("sw-ticket-workspace-styles")) return;
-  const style = document.createElement("style");
-  style.id = "sw-ticket-workspace-styles";
+  let style = document.getElementById("sw-ticket-workspace-styles");
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "sw-ticket-workspace-styles";
+    document.head.appendChild(style);
+  }
+
   style.textContent = `
-    .sw-ticket-card-compact { padding: 1rem !important; border-radius: 1.25rem !important; }
+    .sw-ticket-card-compact { padding: .85rem !important; border-radius: 1.15rem !important; }
     .sw-ticket-card-compact:not(.sw-ticket-card-expanded) { min-height: 0 !important; }
     .sw-ticket-card-compact .sw-ticket-management-panel[hidden] { display: none !important; }
-    .sw-ticket-quick-bar { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.75rem; padding-top:.75rem; border-top:1px solid rgba(71,85,105,.35); }
+    .sw-ticket-card-compact .sw-ticket-quick-bar { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.7rem; padding-top:.7rem; border-top:1px solid rgba(71,85,105,.35); }
     .sw-ticket-quick-action { min-height:2.25rem; border-radius:.75rem; border:1px solid rgba(71,85,105,.65); padding:0 .8rem; font-size:.72rem; font-weight:800; }
     .sw-ticket-quick-action--cyan { color:#cffafe; background:rgba(6,182,212,.12); border-color:rgba(34,211,238,.35); }
     .sw-ticket-quick-action--amber { color:#fef3c7; background:rgba(245,158,11,.12); border-color:rgba(251,191,36,.35); }
     .sw-ticket-quick-action--fuchsia { color:#fae8ff; background:rgba(217,70,239,.12); border-color:rgba(232,121,249,.35); }
     .sw-ticket-quick-action--slate { color:#e2e8f0; background:rgba(15,23,42,.7); }
     @media (min-width: 768px) {
-      .sw-ticket-card-compact { padding: 1.1rem 1.25rem !important; }
-      .sw-ticket-quick-bar { justify-content:flex-end; }
+      .sw-ticket-card-compact { padding: 1rem 1.15rem !important; }
+      .sw-ticket-card-compact .sw-ticket-quick-bar { justify-content:flex-end; }
     }
   `;
-  document.head.appendChild(style);
 }
 
 export default function BusinessLiveAuditGuard() {
