@@ -4,6 +4,7 @@ import { BrowserRouter, useLocation } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import BusinessProfileEditController from "./components/business/BusinessProfileEditController";
+import BusinessSettingsLoadGuard from "./components/business/BusinessSettingsLoadGuard";
 import PMShell from "./components/pm/PMShell";
 import App from "./App";
 import PMPropertyCreate from "./pages/PMPropertyCreate";
@@ -34,7 +35,11 @@ function RoutedApplication() {
   const routedContent = directPage ? (
     <ProtectedRoute>{directPage}</ProtectedRoute>
   ) : (
-    <><App /><BusinessProfileEditController /></>
+    <>
+      <App />
+      <BusinessProfileEditController />
+      <BusinessSettingsLoadGuard />
+    </>
   );
 
   if (isPmRoute && !isPmDashboard) return <PMShell>{routedContent}</PMShell>;
@@ -42,5 +47,11 @@ function RoutedApplication() {
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode><BrowserRouter><AuthProvider><RoutedApplication /></AuthProvider></BrowserRouter></React.StrictMode>
+  <React.StrictMode>
+    <BrowserRouter>
+      <AuthProvider>
+        <RoutedApplication />
+      </AuthProvider>
+    </BrowserRouter>
+  </React.StrictMode>
 );
