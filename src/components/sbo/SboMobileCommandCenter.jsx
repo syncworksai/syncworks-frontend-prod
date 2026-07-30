@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import {
   CalendarDays,
+  ContactRound,
   DollarSign,
   Settings,
   Megaphone,
@@ -235,6 +236,10 @@ export default function SboMobileCommandCenter({
 
   const loadingValue = loading ? "..." : null;
 
+  function openBusinessCard() {
+    window.location.assign("/sbo/settings?return=%2Fsbo&section=card");
+  }
+
   return (
     <section className="space-y-4 lg:hidden">
       <div className="relative overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-950/80 p-5 shadow-[0_0_60px_rgba(34,211,238,0.10)]">
@@ -306,6 +311,12 @@ export default function SboMobileCommandCenter({
           primary
         />
         <QuickAction
+          icon={ContactRound}
+          label="Business card"
+          hint="QR, contact, and Connect Code"
+          onClick={openBusinessCard}
+        />
+        <QuickAction
           icon={CalendarDays}
           label="Schedule"
           hint="Jobs and meetings"
@@ -322,6 +333,12 @@ export default function SboMobileCommandCenter({
           label="Leads"
           hint="Follow up and close"
           onClick={onOpenLeads}
+        />
+        <QuickAction
+          icon={UserRound}
+          label="Customers"
+          hint="History and requests"
+          onClick={onOpenCustomers}
         />
       </div>
 
@@ -386,12 +403,6 @@ export default function SboMobileCommandCenter({
       </div>
 
       <div className="grid grid-cols-2 gap-3 pb-2">
-        <QuickAction
-          icon={UserRound}
-          label="Customers"
-          hint="History and requests"
-          onClick={onOpenCustomers}
-        />
         <QuickAction
           icon={DollarSign}
           label="Finance"
