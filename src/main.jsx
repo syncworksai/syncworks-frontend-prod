@@ -5,6 +5,7 @@ import { AuthProvider } from "./auth/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import BusinessProfileEditController from "./components/business/BusinessProfileEditController";
 import BusinessSettingsLoadGuard from "./components/business/BusinessSettingsLoadGuard";
+import BusinessLiveAuditGuard from "./components/business/BusinessLiveAuditGuard";
 import PMShell from "./components/pm/PMShell";
 import App from "./App";
 import PMPropertyCreate from "./pages/PMPropertyCreate";
@@ -39,6 +40,7 @@ function RoutedApplication() {
       <App />
       <BusinessProfileEditController />
       <BusinessSettingsLoadGuard />
+      <BusinessLiveAuditGuard />
     </>
   );
 
