@@ -2,7 +2,7 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import GodModeDashboard from "../pages/GodModeDashboard";
+import GodModeOperationsDashboard from "../pages/GodModeOperationsDashboard";
 
 export default function PlatformRoute({ children }) {
   const {
@@ -43,7 +43,7 @@ export default function PlatformRoute({ children }) {
     !new URLSearchParams(location.search).has("tab");
 
   if (isGodModeHome) {
-    return <GodModeDashboard />;
+    return <GodModeOperationsDashboard />;
   }
 
   return children;
