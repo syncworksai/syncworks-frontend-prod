@@ -1,7 +1,8 @@
 // src/components/PlatformRoute.jsx
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import GodModeDashboard from "../pages/GodModeDashboard";
 
 export default function PlatformRoute({ children }) {
   const {
@@ -9,6 +10,7 @@ export default function PlatformRoute({ children }) {
     isAuthed,
     isPlatformAdmin,
   } = useAuth();
+  const location = useLocation();
 
   if (booting) {
     return (
@@ -34,6 +36,14 @@ export default function PlatformRoute({ children }) {
         replace
       />
     );
+  }
+
+  const isGodModeHome =
+    location.pathname === "/platform" &&
+    !new URLSearchParams(location.search).has("tab");
+
+  if (isGodModeHome) {
+    return <GodModeDashboard />;
   }
 
   return children;
