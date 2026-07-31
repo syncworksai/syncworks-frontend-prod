@@ -12,6 +12,7 @@ const DEFAULT_VOICE_PREFERENCES = {
   voiceKey: "sync_fitness_coach",
   energy: "high_energy",
   browserFallback: true,
+  browserVoicePreference: "australian female",
 };
 
 const AUSTRALIAN_HINTS = [
@@ -283,7 +284,7 @@ export function pickCoachVoice(
       voices.find((voice) =>
         String(voice?.lang || "")
           .toLowerCase()
-          .includes("en-us")
+          .includes("en-au")
       ) ||
       voices.find((voice) =>
         String(voice?.lang || "")
@@ -456,11 +457,15 @@ export function speakCoachText({
   const allowBrowserFallback =
     browserFallback ??
     preferences.browserFallback;
+  const fallbackVoicePreference =
+    voicePreference === "auto"
+      ? preferences.browserVoicePreference || "australian female"
+      : voicePreference;
 
   if (selectedProvider !== "elevenlabs") {
     return speakWithBrowser({
       text: cleanText,
-      voicePreference,
+      voicePreference: fallbackVoicePreference,
       rate,
       pitch,
       volume,
@@ -478,14 +483,14 @@ export function speakCoachText({
   }).catch((error) => {
     console.warn(
       "ElevenLabs coach voice unavailable; " +
-        "using browser fallback.",
+        "using Australian female browser fallback.",
       error
     );
 
     if (allowBrowserFallback) {
       speakWithBrowser({
         text: cleanText,
-        voicePreference,
+        voicePreference: fallbackVoicePreference,
         rate,
         pitch,
         volume,
@@ -508,6 +513,7 @@ export function previewHealthCoachVoice({
     eventType: "voice_preview",
     energy,
     voiceKey,
+    voicePreference: "australian female",
     cancelFirst: true,
   });
 }
