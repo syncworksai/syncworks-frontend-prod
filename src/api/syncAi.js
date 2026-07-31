@@ -25,6 +25,16 @@ export async function getSyncAiStatus() {
   return response?.data || {};
 }
 
+export async function getSyncRoleAwareBriefing() {
+  const response = await api.get("/sync-ai/briefing/");
+  return response?.data || {};
+}
+
+export async function getSyncGodModeBriefing() {
+  const response = await api.get("/sync-ai/briefing/god-mode/");
+  return response?.data || {};
+}
+
 export async function sendSyncAiMessage({ message, workspace = "personal" }) {
   const normalizedWorkspace = normalizeWorkspace(workspace);
   requireBusiness(normalizedWorkspace);
@@ -101,16 +111,15 @@ export function getSyncAiErrorMessage(error) {
   const detail = String(error?.response?.data?.detail || "").trim();
 
   if (status === 400) return detail || "Review the SYNC request and try again.";
-  if (status === 403) return detail || "You do not have access to that SYNC action.";
-  if (status === 404) return detail || "The selected ticket could not be found.";
-  if (status === 429) {
-    return "SYNC is receiving too many requests. Try again shortly.";
-  }
+  if (status === 401) return "Your session expired. Sign in again, then reopen the SYNC briefing.";
+  if (status === 403) return detail || "You do not have access to that SYNC report.";
+  if (status === 404) return detail || "The SYNC briefing endpoint is not available on the current backend deployment.";
+  if (status === 429) return "SYNC is receiving too many requests. Try again shortly.";
   if (status === 502 || status === 503) {
-    return detail || "SYNC is temporarily unavailable. Please try again.";
+    return detail || "SYNC is temporarily unavailable while the backend is starting or redeploying.";
   }
   if (!error?.response) {
-    return "SYNC could not reach the server. Check your connection and try again.";
+    return "SYNC could not contact the backend. The server may be waking up, redeploying, or blocked by the current session.";
   }
-  return detail || "SYNC could not complete that request.";
+  return detail || `SYNC could not complete that request${status ? ` (HTTP ${status})` : ""}.`;
 }

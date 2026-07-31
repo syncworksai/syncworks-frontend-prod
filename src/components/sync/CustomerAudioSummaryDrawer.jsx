@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronRight,
+  ExternalLink,
   LoaderCircle,
   Mic,
   Pause,
@@ -14,142 +15,22 @@ import {
 
 import {
   getSyncAiErrorMessage,
+  getSyncRoleAwareBriefing,
   getSyncVoiceStatus,
-  sendSyncAiMessage,
   synthesizeSyncSpeech,
 } from "../../api/syncAi";
 
 const PANEL_IMAGE = "/sync/sync-voice-panel.webp";
-const LIFE_EVENTS_KEY = "sw_customer_life_schedule_v1";
-const MONEY_SNAPSHOT_KEY = "sw_customer_money_snapshot_v1";
-const HEALTH_SNAPSHOT_KEY = "sw_customer_health_snapshot_v1";
-const MAX_CONTEXT_CHARS = 2400;
-
-const CATEGORY_DEFINITIONS = [
-  ["attention", "Immediate attention"],
-  ["calendar", "Calendar and travel"],
-  ["connections", "Connections and invitations"],
-  ["money", "Payments and finance"],
-  ["business", "Business and work"],
-  ["todo", "To-Do"],
-  ["health", "Health, workout and nutrition"],
-  ["next", "Recommended next actions"],
-];
-
-const BRIEFING_PROMPT = `Create my complete spoken Personal SYNC briefing now. Do not return a placeholder or say you are still gathering data.
-Review the authenticated sources available to you plus the compact device context below. Never invent facts.
-Return plain text with these exact markers in order: [ATTENTION] [CALENDAR] [CONNECTIONS] [MONEY] [BUSINESS] [TODO] [HEALTH] [NEXT].
-Keep each section under 55 spoken words. Include names, dates, times and amounts when available. Say "Nothing requiring attention" for an empty section. No markdown tables.`;
-
-function safeRead(key, fallback) {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(key) || "null");
-    return parsed ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function clip(value, max = 120) {
-  const text = String(value ?? "").replace(/\s+/g, " ").trim();
-  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
-}
-
-function compactEvent(item) {
-  return {
-    title: clip(item?.title || item?.name || "Event", 90),
-    date: item?.date || item?.due_date || item?.start || "",
-    time: item?.time || "",
-    category: clip(item?.category || item?.type || "", 40),
-    location: clip(item?.location || "", 90),
-    status: clip(item?.status || "", 30),
-  };
-}
-
-function compactTodo(item) {
-  return {
-    title: clip(item?.title || "Task", 90),
-    due: item?.due_date || item?.date || "",
-    status: clip(item?.status || "TODO", 24),
-    priority: clip(item?.priority || "", 16),
-  };
-}
-
-function compactSnapshot(value, allowedKeys) {
-  if (!value || typeof value !== "object") return null;
-  return allowedKeys.reduce((result, key) => {
-    if (value[key] !== undefined && value[key] !== null && value[key] !== "") {
-      result[key] = typeof value[key] === "string" ? clip(value[key], 120) : value[key];
-    }
-    return result;
-  }, {});
-}
-
-function buildDeviceContext() {
-  const calendar = safeRead(LIFE_EVENTS_KEY, []);
-  const money = safeRead(MONEY_SNAPSHOT_KEY, null);
-  const health = safeRead(HEALTH_SNAPSHOT_KEY, null);
-  const todoKeys = Object.keys(localStorage).filter((key) => key.startsWith("sw_planner_drag_v2_customer_"));
-  const todos = todoKeys.flatMap((key) => {
-    const value = safeRead(key, []);
-    return Array.isArray(value) ? value : [];
-  });
-
-  const context = {
-    generated_at: new Date().toISOString(),
-    calendar: (Array.isArray(calendar) ? calendar : []).slice(0, 12).map(compactEvent),
-    todos: todos.filter((item) => !item?.archived).slice(0, 12).map(compactTodo),
-    money: compactSnapshot(money, ["mortgage_label", "mortgage_amount", "mortgage_due_date", "covered_percent", "top_priority"]),
-    health: compactSnapshot(health, ["workout", "readiness", "time_available", "equipment", "protein_remaining", "calories_remaining", "notes"]),
-  };
-
-  let serialized = JSON.stringify(context);
-  if (serialized.length > MAX_CONTEXT_CHARS) {
-    context.calendar = context.calendar.slice(0, 6);
-    context.todos = context.todos.slice(0, 6);
-    serialized = JSON.stringify(context);
-  }
-  return serialized.slice(0, MAX_CONTEXT_CHARS);
-}
-
-function parseSections(text) {
-  const raw = String(text || "").trim();
-  if (!raw) return [];
-
-  const markerMap = {
-    ATTENTION: "attention",
-    CALENDAR: "calendar",
-    CONNECTIONS: "connections",
-    MONEY: "money",
-    BUSINESS: "business",
-    TODO: "todo",
-    HEALTH: "health",
-    NEXT: "next",
-  };
-
-  const matches = [...raw.matchAll(/\[(ATTENTION|CALENDAR|CONNECTIONS|MONEY|BUSINESS|TODO|HEALTH|NEXT)\]/gi)];
-  if (!matches.length) return [{ key: "attention", label: "Complete briefing", text: raw }];
-
-  const byKey = new Map();
-  matches.forEach((match, index) => {
-    const start = (match.index || 0) + match[0].length;
-    const end = index + 1 < matches.length ? matches[index + 1].index : raw.length;
-    const key = markerMap[String(match[1]).toUpperCase()];
-    const value = raw.slice(start, end).trim();
-    if (key && value) byKey.set(key, value);
-  });
-
-  return CATEGORY_DEFINITIONS.map(([key, label]) => ({ key, label, text: byKey.get(key) || "" })).filter(
-    (section) => section.text
-  );
-}
 
 function browserSpeak(text, callbacks = {}) {
   if (!window.speechSynthesis || !text) return false;
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   const voices = window.speechSynthesis.getVoices?.() || [];
-  const preferred = voices.find((voice) => /daniel|alex|guy|google us english/i.test(voice.name || "")) || voices.find((voice) => String(voice.lang || "").toLowerCase().startsWith("en-us")) || voices[0];
+  const preferred =
+    voices.find((voice) => /daniel|alex|guy|google us english/i.test(voice.name || "")) ||
+    voices.find((voice) => String(voice.lang || "").toLowerCase().startsWith("en-us")) ||
+    voices[0];
   if (preferred) utterance.voice = preferred;
   utterance.lang = preferred?.lang || "en-US";
   utterance.rate = 0.96;
@@ -161,6 +42,61 @@ function browserSpeak(text, callbacks = {}) {
   return true;
 }
 
+function normalizeSections(payload) {
+  return (Array.isArray(payload?.sections) ? payload.sections : [])
+    .filter((section) => section?.summary)
+    .map((section) => ({
+      key: String(section.id || section.title || Math.random()),
+      label: String(section.title || "SYNC update"),
+      text: String(section.summary || ""),
+      priority: String(section.priority || "normal"),
+      count: section.count,
+      change: section.change_since_last_brief,
+      detailsUrl: String(section.details_url || ""),
+      actions: Array.isArray(section.actions) ? section.actions : [],
+      items: Array.isArray(section.items) ? section.items : [],
+    }));
+}
+
+function briefingIntro(payload, displayName) {
+  const name = displayName || "there";
+  const total = Number(payload?.total_updates || 0);
+  const urgent = Number(payload?.high_priority_count || 0);
+  const pieces = [
+    `Good day, ${name}.`,
+    total
+      ? `Since your last briefing, you have ${total} updates across SyncWorks.`
+      : "There are no newly recorded updates since your last briefing.",
+  ];
+  if (urgent) pieces.push(`${urgent} sections need your attention.`);
+  if (payload?.partial_success) {
+    pieces.push("Some areas could not be loaded, but the available briefing is ready.");
+  }
+  return pieces.join(" ");
+}
+
+function destinationForCommand(command, sections) {
+  const normalized = String(command || "").toLowerCase();
+  const exact = sections.find((section) =>
+    normalized.includes(section.label.toLowerCase())
+  );
+  if (exact?.detailsUrl) return exact.detailsUrl;
+
+  const targets = [
+    [/god mode|platform report|syncworks report/, "god_mode"],
+    [/stripe|payment setup/, "god_mode"],
+    [/calendar|schedule|appointment/, "calendar"],
+    [/affiliate|commission/, "affiliate"],
+    [/personal request|my request/, "personal_requests"],
+  ];
+  for (const [pattern, key] of targets) {
+    if (!pattern.test(normalized)) continue;
+    const section = sections.find((item) => item.key === key || item.key.startsWith(key));
+    if (section?.detailsUrl) return section.detailsUrl;
+  }
+  return "";
+}
+
 export default function CustomerAudioSummaryDrawer({ open, onClose, displayName = "" }) {
   const audioRef = useRef(null);
   const objectUrlRef = useRef("");
@@ -168,6 +104,7 @@ export default function CustomerAudioSummaryDrawer({ open, onClose, displayName 
   const sectionsRef = useRef([]);
   const indexRef = useRef(0);
 
+  const [briefing, setBriefing] = useState(null);
   const [sections, setSections] = useState([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [status, setStatus] = useState("idle");
@@ -180,8 +117,13 @@ export default function CustomerAudioSummaryDrawer({ open, onClose, displayName 
   const speaking = status === "speaking";
   const current = sections[activeIndex] || null;
 
-  useEffect(() => { sectionsRef.current = sections; }, [sections]);
-  useEffect(() => { indexRef.current = activeIndex; }, [activeIndex]);
+  useEffect(() => {
+    sectionsRef.current = sections;
+  }, [sections]);
+
+  useEffect(() => {
+    indexRef.current = activeIndex;
+  }, [activeIndex]);
 
   const cleanupObjectUrl = useCallback(() => {
     if (objectUrlRef.current) {
@@ -200,112 +142,130 @@ export default function CustomerAudioSummaryDrawer({ open, onClose, displayName 
     setStatus((value) => (value === "loading" ? value : "ready"));
   }, []);
 
-  const playSection = useCallback(async (index, options = {}) => {
-    const section = sectionsRef.current[index];
-    if (!section?.text) return;
-
+  const playText = useCallback(async (text, onEnd) => {
+    const spoken = String(text || "").trim().slice(0, 1800);
+    if (!spoken) return;
     stopAudio();
     cleanupObjectUrl();
-    setActiveIndex(index);
-    setNotice("");
     setUsingFallback(false);
 
-    const spoken = `${section.label}. ${section.text}`.slice(0, 1800);
     try {
       const blob = await synthesizeSyncSpeech(spoken);
       if (!(blob instanceof Blob) || blob.size < 100) throw new Error("Invalid voice response");
-      const normalizedBlob = blob.type ? blob : new Blob([blob], { type: "audio/mpeg" });
-      const url = URL.createObjectURL(normalizedBlob);
+      const url = URL.createObjectURL(blob.type ? blob : new Blob([blob], { type: "audio/mpeg" }));
       objectUrlRef.current = url;
       const audio = new Audio(url);
-      audio.preload = "auto";
       audioRef.current = audio;
       audio.onplay = () => setStatus("speaking");
+      audio.onended = () => {
+        setStatus("ready");
+        onEnd?.();
+      };
       audio.onerror = () => {
         setUsingFallback(true);
-        setNotice("Premium SYNC voice failed on this device. The phone voice is being used temporarily.");
         browserSpeak(spoken, {
           onStart: () => setStatus("speaking"),
           onEnd: () => {
             setStatus("ready");
-            if (options.autoAdvance !== false && index + 1 < sectionsRef.current.length) playSection(index + 1, options);
+            onEnd?.();
           },
         });
-      };
-      audio.onended = () => {
-        setStatus("ready");
-        if (options.autoAdvance !== false && index + 1 < sectionsRef.current.length) playSection(index + 1, options);
       };
       await audio.play();
     } catch {
       setUsingFallback(true);
-      setNotice("ElevenLabs is unavailable or not fully configured on Render. Using the device voice temporarily.");
       const started = browserSpeak(spoken, {
         onStart: () => setStatus("speaking"),
         onEnd: () => {
           setStatus("ready");
-          if (options.autoAdvance !== false && index + 1 < sectionsRef.current.length) playSection(index + 1, options);
+          onEnd?.();
         },
       });
       setStatus(started ? "speaking" : "ready");
     }
   }, [cleanupObjectUrl, stopAudio]);
 
+  const playSection = useCallback(async (index, options = {}) => {
+    const section = sectionsRef.current[index];
+    if (!section?.text) return;
+    setActiveIndex(index);
+    setNotice("");
+    await playText(`${section.label}. ${section.text}`, () => {
+      if (options.autoAdvance !== false && index + 1 < sectionsRef.current.length) {
+        playSection(index + 1, options);
+      }
+    });
+  }, [playText]);
+
   const loadSummary = useCallback(async () => {
     setStatus("loading");
     setNotice("");
+    setBriefing(null);
     setSections([]);
     stopAudio();
 
     try {
-      const compactContext = buildDeviceContext();
-      const message = `${BRIEFING_PROMPT}\nDEVICE CONTEXT:${compactContext}`;
-      const result = await sendSyncAiMessage({ workspace: "personal", message });
-      const parsed = parseSections(result?.message);
-      if (!parsed.length) throw new Error("SYNC returned no briefing.");
-      sectionsRef.current = parsed;
+      const payload = await getSyncRoleAwareBriefing();
+      const parsed = normalizeSections(payload);
+      if (!parsed.length) throw new Error("SYNC returned no briefing sections.");
+      setBriefing(payload);
       setSections(parsed);
+      sectionsRef.current = parsed;
       setActiveIndex(0);
       setStatus("ready");
-      window.setTimeout(() => playSection(0, { autoAdvance: true }), 0);
+      const intro = briefingIntro(payload, displayName);
+      window.setTimeout(() => {
+        playText(intro, () => playSection(0, { autoAdvance: true }));
+      }, 0);
     } catch (error) {
       setStatus("error");
-      const message = getSyncAiErrorMessage(error);
-      setNotice(/too long/i.test(message) ? "SYNC could not fit the briefing into one request. Tap refresh to retry the compact briefing." : message);
+      setNotice(getSyncAiErrorMessage(error));
     }
-  }, [playSection, stopAudio]);
+  }, [displayName, playSection, playText, stopAudio]);
 
   const playNext = useCallback(() => {
     const next = Math.min(indexRef.current + 1, sectionsRef.current.length - 1);
     playSection(next, { autoAdvance: true });
   }, [playSection]);
 
-  const repeatCurrent = useCallback(() => playSection(indexRef.current, { autoAdvance: false }), [playSection]);
+  const repeatCurrent = useCallback(() => {
+    playSection(indexRef.current, { autoAdvance: false });
+  }, [playSection]);
 
   const handleVoiceCommand = useCallback((transcript) => {
     const command = String(transcript || "").toLowerCase();
     if (/stop|pause|quiet/.test(command)) return stopAudio();
-    if (/start over|begin again|from the beginning/.test(command)) return playSection(0, { autoAdvance: true });
-    if (/repeat/.test(command) && !/(business|health|workout|nutrition|calendar|money|payment|task|to-?do|connection)/.test(command)) return repeatCurrent();
-    if (/continue|next|go on/.test(command)) return playNext();
-
-    const targets = [
-      [/calendar|schedule|travel/, "calendar"],
-      [/connection|invite|social|group/, "connections"],
-      [/money|finance|payment|invoice/, "money"],
-      [/business|employee|work/, "business"],
-      [/task|to-?do/, "todo"],
-      [/health|workout|nutrition|recovery/, "health"],
-      [/attention|urgent/, "attention"],
-      [/next action|recommend/, "next"],
-    ];
-    const found = targets.find(([pattern]) => pattern.test(command));
-    if (found) {
-      const index = sectionsRef.current.findIndex((section) => section.key === found[1]);
-      if (index >= 0) return playSection(index, { autoAdvance: false });
+    if (/start over|from the beginning/.test(command)) {
+      return playText(briefingIntro(briefing, displayName), () =>
+        playSection(0, { autoAdvance: true })
+      );
     }
-    setNotice(`I heard “${transcript}.” Say continue, repeat, stop, or name Calendar, Business, Money, To-Do, or Health.`);
-  }, [playNext, playSection, repeatCurrent, stopAudio]);
+    if (/repeat/.test(command) && !/god mode|business|calendar|affiliate|stripe/.test(command)) {
+      return repeatCurrent();
+    }
+    if (/continue|next|go on/.test(command)) return playNext();
+    if (/take me|open|show me|view/.test(command)) {
+      const destination = destinationForCommand(command, sectionsRef.current);
+      if (destination) {
+        stopAudio();
+        window.location.assign(destination);
+        return;
+      }
+    }
+
+    const target = sectionsRef.current.find((section) => {
+      const label = section.label.toLowerCase();
+      return command.includes(label) ||
+        (section.key === "god_mode" && /god mode|platform report/.test(command)) ||
+        (section.key.startsWith("business_") && command.includes(label));
+    });
+    if (target) {
+      const index = sectionsRef.current.indexOf(target);
+      return playSection(index, { autoAdvance: false });
+    }
+
+    setNotice(`I heard “${transcript}.” Say continue, repeat, stop, read my God Mode report, name a business, or say take me to a report.`);
+  }, [briefing, displayName, playNext, playSection, playText, repeatCurrent, stopAudio]);
 
   const toggleListening = useCallback(() => {
     if (listening && recognitionRef.current) {
@@ -314,7 +274,7 @@ export default function CustomerAudioSummaryDrawer({ open, onClose, displayName 
     }
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Recognition) {
-      setNotice("Voice commands are not supported by this browser. Use the category and playback buttons instead.");
+      setNotice("Voice commands are not supported by this browser. Use the report buttons instead.");
       return;
     }
     const recognition = new Recognition();
@@ -324,7 +284,8 @@ export default function CustomerAudioSummaryDrawer({ open, onClose, displayName 
     recognition.onstart = () => setListening(true);
     recognition.onend = () => setListening(false);
     recognition.onerror = () => setListening(false);
-    recognition.onresult = (event) => handleVoiceCommand(event.results?.[0]?.[0]?.transcript || "");
+    recognition.onresult = (event) =>
+      handleVoiceCommand(event.results?.[0]?.[0]?.transcript || "");
     recognitionRef.current = recognition;
     recognition.start();
   }, [handleVoiceCommand, listening]);
@@ -337,7 +298,7 @@ export default function CustomerAudioSummaryDrawer({ open, onClose, displayName 
       return;
     }
     getSyncVoiceStatus()
-      .then((value) => setVoiceConfigured(Boolean(value?.configured ?? value?.available ?? value?.enabled)))
+      .then((value) => setVoiceConfigured(Boolean(value?.configured)))
       .catch(() => setVoiceConfigured(false));
     loadSummary();
   }, [open]);
@@ -348,50 +309,180 @@ export default function CustomerAudioSummaryDrawer({ open, onClose, displayName 
     recognitionRef.current?.stop?.();
   }, [cleanupObjectUrl, stopAudio]);
 
-  const progress = useMemo(() => (sections.length ? `${activeIndex + 1} of ${sections.length}` : ""), [activeIndex, sections.length]);
+  const progress = useMemo(
+    () => (sections.length ? `${activeIndex + 1} of ${sections.length}` : ""),
+    [activeIndex, sections.length]
+  );
+
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[190] flex items-end justify-center bg-black/80 backdrop-blur-sm">
-      <section className="max-h-[94dvh] w-full max-w-3xl overflow-y-auto rounded-t-[2rem] border border-cyan-400/25 bg-[#020617] shadow-[0_-20px_100px_rgba(34,211,238,.18)]">
+      <section className="max-h-[94dvh] w-full max-w-4xl overflow-y-auto rounded-t-[2rem] border border-cyan-400/25 bg-[#020617] shadow-[0_-20px_100px_rgba(34,211,238,.18)]">
         <div className="relative h-44 overflow-hidden rounded-t-[2rem] border-b border-cyan-400/15 sm:h-52">
-          <img src={PANEL_IMAGE} alt="SYNC audio briefing" className="h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(2,6,23,1),rgba(2,6,23,.08))]" />
-          <button type="button" onClick={() => { stopAudio(); onClose?.(); }} className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-2xl border border-slate-700 bg-slate-950/85 text-slate-200" aria-label="Close SYNC briefing"><X className="h-5 w-5" /></button>
+          <img src={PANEL_IMAGE} alt="SYNC complete briefing" className="h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(2,6,23,1),rgba(2,6,23,.12))]" />
+          <button
+            type="button"
+            onClick={() => {
+              stopAudio();
+              onClose?.();
+            }}
+            className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-2xl border border-slate-700 bg-slate-950/80 text-slate-200"
+            aria-label="Close briefing"
+          >
+            <X className="h-5 w-5" />
+          </button>
           <div className="absolute inset-x-5 bottom-5">
-            <div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">Personal SYNC · complete briefing</div>
-            <h2 className="mt-2 text-2xl font-black text-white">{displayName ? `Good day, ${displayName}` : "Good day"}</h2>
-            <p className="mt-1 text-sm text-slate-300">Every available attention category, played in sequence.</p>
+            <div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">
+              Role-aware SYNC · complete briefing
+            </div>
+            <h2 className="mt-2 text-2xl font-black text-white">
+              Good day, {displayName || "there"}
+            </h2>
+            <p className="mt-1 text-sm text-slate-300">
+              Every authorized area of SyncWorks, summarized with direct routes to details.
+            </p>
           </div>
         </div>
 
-        <div className="p-4 sm:p-6">
-          <div className="flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[.13em]">
-            <span className={`rounded-full border px-3 py-1 ${usingFallback ? "border-amber-400/25 bg-amber-500/10 text-amber-100" : "border-cyan-400/25 bg-cyan-500/10 text-cyan-100"}`}>{usingFallback ? "Device voice fallback" : "ElevenLabs SYNC voice"}</span>
-            <span className="rounded-full border border-violet-400/25 bg-violet-500/10 px-3 py-1 text-violet-100">{loading ? "Building" : speaking ? "Speaking" : status === "error" ? "Needs attention" : "Ready"}</span>
-            {voiceConfigured === false ? <span className="rounded-full border border-rose-400/25 bg-rose-500/10 px-3 py-1 text-rose-100">Render voice not configured</span> : null}
+        <div className="p-5 md:p-6">
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full border border-cyan-400/25 bg-cyan-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100">
+              ElevenLabs SYNC voice
+            </span>
+            <span className="rounded-full border border-violet-400/25 bg-violet-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-violet-100">
+              {briefing?.total_updates || 0} updates
+            </span>
+            {briefing?.high_priority_count ? (
+              <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-amber-100">
+                {briefing.high_priority_count} need attention
+              </span>
+            ) : null}
+            {voiceConfigured === false ? (
+              <span className="rounded-full border border-rose-400/25 bg-rose-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-rose-100">
+                Device voice fallback
+              </span>
+            ) : null}
           </div>
 
-          <div className="mt-5 rounded-3xl border border-cyan-400/15 bg-cyan-500/[.05] p-4">
-            {loading ? <div className="flex items-center gap-3"><LoaderCircle className="h-6 w-6 animate-spin text-cyan-200" /><div><div className="font-black text-white">SYNC is assembling the full briefing</div><div className="text-sm text-slate-400">Checking every available category now.</div></div></div> : current ? <><div className="flex items-center justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">Now playing · {progress}</div><div className="mt-1 text-lg font-black text-white">{current.label}</div></div><Volume2 className={`h-7 w-7 text-cyan-200 ${speaking ? "animate-pulse" : ""}`} /></div><p className="mt-3 line-clamp-4 text-sm leading-6 text-slate-300">{current.text}</p></> : <div className="text-sm text-slate-400">No briefing loaded.</div>}
+          <div className="mt-5 rounded-3xl border border-cyan-400/20 bg-cyan-500/[0.06] p-4">
+            {loading ? (
+              <div className="flex items-center gap-3 text-cyan-100">
+                <LoaderCircle className="h-5 w-5 animate-spin" />
+                <span className="font-black">Building your role-aware briefing…</span>
+              </div>
+            ) : current ? (
+              <>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-xs font-black uppercase tracking-[0.16em] text-cyan-200">
+                    {current.label}
+                  </div>
+                  <div className="text-xs text-slate-500">{progress}</div>
+                </div>
+                <div className="mt-3 text-sm leading-7 text-slate-200">{current.text}</div>
+                {current.detailsUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => window.location.assign(current.detailsUrl)}
+                    className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-sm font-black text-cyan-100"
+                  >
+                    View details <ExternalLink className="h-4 w-4" />
+                  </button>
+                ) : null}
+              </>
+            ) : (
+              <div className="text-slate-400">No briefing loaded.</div>
+            )}
           </div>
 
-          {notice ? <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 p-3 text-sm leading-6 text-amber-100">{notice}</div> : null}
+          {notice ? (
+            <div className="mt-4 rounded-2xl border border-amber-400/25 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
+              {notice}
+            </div>
+          ) : null}
 
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-            {sections.map((section, index) => <button key={section.key} type="button" onClick={() => playSection(index, { autoAdvance: false })} className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black ${index === activeIndex ? "border-cyan-300/40 bg-cyan-500/15 text-cyan-100" : "border-white/10 bg-white/[.04] text-slate-300"}`}>{section.label}</button>)}
-          </div>
+          {sections.length ? (
+            <div className="mt-5 grid gap-2 sm:grid-cols-2">
+              {sections.map((section, index) => (
+                <button
+                  key={section.key}
+                  type="button"
+                  onClick={() => playSection(index, { autoAdvance: false })}
+                  className={`rounded-2xl border p-4 text-left ${
+                    index === activeIndex
+                      ? "border-cyan-400/40 bg-cyan-500/10"
+                      : "border-slate-800 bg-slate-950/70"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-black text-white">{section.label}</span>
+                    <ChevronRight className="h-4 w-4 text-slate-500" />
+                  </div>
+                  <div className="mt-2 line-clamp-2 text-xs leading-5 text-slate-400">
+                    {section.text}
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : null}
 
           <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
-            <button type="button" onClick={() => current && playSection(activeIndex, { autoAdvance: true })} disabled={!current || loading} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-3 text-sm font-black text-cyan-100 disabled:opacity-40"><Play className="h-4 w-4" />Play all</button>
-            <button type="button" onClick={repeatCurrent} disabled={!current || loading} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-violet-400/25 bg-violet-500/10 px-3 text-sm font-black text-violet-100 disabled:opacity-40"><Repeat2 className="h-4 w-4" />Repeat</button>
-            <button type="button" onClick={playNext} disabled={!current || activeIndex >= sections.length - 1} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-slate-700 bg-slate-900 px-3 text-sm font-black text-slate-100 disabled:opacity-40">Next<ChevronRight className="h-4 w-4" /></button>
-            <button type="button" onClick={stopAudio} disabled={!speaking} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-slate-700 bg-slate-900 px-3 text-sm font-black text-slate-100 disabled:opacity-40"><Pause className="h-4 w-4" />Stop</button>
-            <button type="button" onClick={toggleListening} className={`col-span-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-3 text-sm font-black text-white sm:col-span-1 ${listening ? "bg-rose-600" : "bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600"}`}><Mic className="h-4 w-4" />{listening ? "Listening" : "Command"}</button>
+            <button
+              type="button"
+              onClick={() => playText(briefingIntro(briefing, displayName), () => playSection(0, { autoAdvance: true }))}
+              disabled={!sections.length || loading}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-3 text-sm font-black text-cyan-100 disabled:opacity-40"
+            >
+              <Play className="h-4 w-4" /> Play all
+            </button>
+            <button
+              type="button"
+              onClick={repeatCurrent}
+              disabled={!current || loading}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-violet-400/25 bg-violet-500/10 px-3 text-sm font-black text-violet-100 disabled:opacity-40"
+            >
+              <Repeat2 className="h-4 w-4" /> Repeat
+            </button>
+            <button
+              type="button"
+              onClick={playNext}
+              disabled={!current || loading}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-slate-700 bg-slate-900 px-3 text-sm font-black text-slate-100 disabled:opacity-40"
+            >
+              Next <ChevronRight className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={stopAudio}
+              disabled={!speaking}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-slate-700 bg-slate-900 px-3 text-sm font-black text-slate-100 disabled:opacity-40"
+            >
+              <Pause className="h-4 w-4" /> Stop
+            </button>
+            <button
+              type="button"
+              onClick={toggleListening}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 px-3 text-sm font-black text-white"
+            >
+              <Mic className="h-4 w-4" /> {listening ? "Listening" : "Command"}
+            </button>
           </div>
 
-          <button type="button" onClick={loadSummary} disabled={loading} className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[.04] text-sm font-black text-slate-200 disabled:opacity-40"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />Refresh every category</button>
-          <div className="mt-4 flex items-center justify-center gap-2 text-center text-[11px] text-slate-500"><Sparkles className="h-3.5 w-3.5 text-cyan-300" />Say “continue,” “repeat,” “repeat Business,” “repeat Health,” “start over,” or “stop.”</div>
+          <button
+            type="button"
+            onClick={loadSummary}
+            disabled={loading}
+            className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/80 px-4 text-sm font-black text-slate-100 disabled:opacity-40"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Retry role-aware briefing
+          </button>
+
+          <div className="mt-4 flex items-center justify-center gap-2 text-center text-[11px] text-slate-500">
+            {usingFallback ? <Volume2 className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5 text-cyan-300" />}
+            Say continue, repeat, stop, read my God Mode report, name a business, or take me to a report.
+          </div>
         </div>
       </section>
     </div>
