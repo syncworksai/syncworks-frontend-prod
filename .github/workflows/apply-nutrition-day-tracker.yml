@@ -184,3 +184,5 @@ jobs:
           git add src/components/customer-health/NutritionCoachDrawer.jsx .github/workflows/apply-nutrition-day-tracker.yml
           git commit -m "Add meal-by-meal nutrition tracking"
           git push origin health-nutrition-day-tracker
+
+# Trigger refresh
