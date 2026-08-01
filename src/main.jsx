@@ -7,6 +7,7 @@ import BusinessProfileEditController from "./components/business/BusinessProfile
 import BusinessSettingsLoadGuard from "./components/business/BusinessSettingsLoadGuard";
 import BusinessLiveAuditGuard from "./components/business/BusinessLiveAuditGuard";
 import PMShell from "./components/pm/PMShell";
+import NutritionCoachGlobalAssist from "./components/customer-health/NutritionCoachGlobalAssist";
 import App from "./App";
 import PMPropertyCreate from "./pages/PMPropertyCreate";
 import PMProperties from "./pages/PMProperties";
@@ -41,6 +42,7 @@ function RoutedApplication() {
       <BusinessProfileEditController />
       <BusinessSettingsLoadGuard />
       <BusinessLiveAuditGuard />
+      <NutritionCoachGlobalAssist />
     </>
   );
 
