@@ -1,0 +1,186 @@
+name: Apply Nutrition Day Tracker
+
+on:
+  push:
+    branches:
+      - health-nutrition-day-tracker
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: health-nutrition-day-tracker
+          fetch-depth: 0
+
+      - name: Build meal-by-meal nutrition tracker
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/components/customer-health/NutritionCoachDrawer.jsx')
+          text = path.read_text(encoding='utf-8')
+
+          text = text.replace(
+            '  const [date, setDate] =\n    useState(todayYmd());',
+            '  const [date, setDate] =\n    useState(todayYmd());\n  const [mealType, setMealType] =\n    useState("breakfast");\n  const [mealGuideOpen, setMealGuideOpen] =\n    useState(true);'
+          )
+          text = text.replace(
+            '      setDate(initialMeal.ymd || todayYmd());',
+            '      setDate(initialMeal.ymd || todayYmd());\n      setMealType(initialMeal.meal_type || "breakfast");'
+          )
+          text = text.replace(
+            '    setDate(todayYmd());\n    setEstimate(null);',
+            '    setDate(todayYmd());\n    setMealType("breakfast");\n    setEstimate(null);'
+          )
+          text = text.replace('          meal_type: "",', '          meal_type: mealType,')
+          text = text.replace(
+            '        type: "meal",\n        ymd: date,',
+            '        type: "meal",\n        meal_type: mealType,\n        ymd: date,'
+          )
+
+          for old, new in [
+            ('Ã¢Å“â€¢', 'Close'),
+            ('Analyzing MealÃ¢â‚¬Â¦', 'Analyzing Meal...'),
+            ('Saving MealÃ¢â‚¬Â¦', 'Saving Meal...'),
+            (' cal Ã‚/{" "}', ' cal ·{" "}'),
+            ('g protein Ã‚/{" "}', 'g protein ·{" "}'),
+            ('g carbs Ã‚/{" "}', 'g carbs ·{" "}'),
+          ]:
+              text = text.replace(old, new)
+
+          anchor = '''        <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3">
+          <ProgressBar'''
+          insert = '''        <div className="mt-3 rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.06] p-3 sm:mt-5 sm:rounded-[1.5rem] sm:p-4">
+          <button
+            type="button"
+            onClick={() => setMealGuideOpen((current) => !current)}
+            className="flex w-full items-center justify-between gap-3 text-left"
+          >
+            <span>
+              <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
+                Track the day as it happens
+              </span>
+              <span className="mt-1 block text-sm font-black text-white">
+                Choose breakfast, lunch, dinner, or snack
+              </span>
+            </span>
+            <span className="text-xs font-black text-cyan-100">
+              {mealGuideOpen ? "Hide" : "View"}
+            </span>
+          </button>
+
+          {mealGuideOpen ? (
+            <div className="mt-3">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  ["breakfast", "Breakfast"],
+                  ["lunch", "Lunch"],
+                  ["dinner", "Dinner"],
+                  ["snack", "Snack"],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setMealType(value)}
+                    className={`h-11 rounded-xl border text-xs font-black ${
+                      mealType === value
+                        ? "border-lime-300/40 bg-lime-300/15 text-lime-100"
+                        : "border-white/10 bg-black/20 text-slate-400"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
+                <div className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">
+                  SYNC recommendation for {mealType}
+                </div>
+                <div className="mt-1 text-xs leading-5 text-slate-300">
+                  {mealType === "breakfast"
+                    ? "Start with protein, fiber, and fluids so hunger and energy stay controlled through the morning."
+                    : mealType === "lunch"
+                    ? "Build around lean protein, produce, and enough carbohydrates to support the rest of your day."
+                    : mealType === "dinner"
+                    ? "Close remaining protein and calorie gaps while keeping the meal aligned with recovery and tomorrow's training."
+                    : "Use a snack to solve a specific gap: protein, workout fuel, hydration, or hunger control."}
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3">
+          <ProgressBar'''
+          if anchor not in text:
+              raise SystemExit('progress anchor not found')
+          text = text.replace(anchor, insert, 1)
+
+          text = text.replace(
+            '''            <textarea
+              value={description}''',
+            '''            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="rounded-full border border-lime-300/25 bg-lime-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.13em] text-lime-100">
+                {mealType}
+              </span>
+              <span className="text-[10px] font-bold text-slate-500">
+                Add meals throughout the day
+              </span>
+            </div>
+
+            <textarea
+              value={description}''',
+            1
+          )
+
+          text = text.replace(
+            '''                  <div className="text-xs font-black text-white">
+                    {meal.description ||''',
+            '''                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-xs font-black text-white">
+                    {meal.description ||''',
+            1
+          )
+          text = text.replace(
+            '''                      "Meal"}
+                  </div>
+
+                  <div className="mt-1 text-xs font-bold text-slate-400">''',
+            '''                      "Meal"}
+                    </div>
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-slate-400">
+                      {meal.meal_type || "meal"}
+                    </span>
+                  </div>
+
+                  <div className="mt-1 text-xs font-bold text-slate-400">''',
+            1
+          )
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Verify build
+        shell: bash
+        run: |
+          rm .github/workflows/apply-nutrition-day-tracker.yml
+          npm ci
+          npm run build
+          git diff --check
+
+      - name: Commit verified nutrition tracker
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/customer-health/NutritionCoachDrawer.jsx .github/workflows/apply-nutrition-day-tracker.yml
+          git commit -m "Add meal-by-meal nutrition tracking"
+          git push origin health-nutrition-day-tracker
