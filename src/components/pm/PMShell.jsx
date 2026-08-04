@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../../api/client";
+import PMPropertyPaperworkDock from "./PMPropertyPaperworkDock";
 
 const navItems = [
   ["Dashboard", "/pm", "home"], ["Projects", "/pm/projects", "folder"], ["Properties", "/pm/properties", "building"], ["Leasing", "/pm/leasing", "leasing"], ["Tenants", "/pm/tenants", "users"], ["Payments", "/pm/payments", "money"], ["Work Orders", "/pm/work-orders", "wrench"], ["Schedule", "/pm/calendar", "calendar"], ["Team", "/pm/employees", "team"], ["Settings", "/pm/settings", "settings"],
@@ -78,6 +79,6 @@ export default function PMShell({ children }) {
       {!isPropertyProfile ? <><button type="button" onClick={() => nav("/pm/properties/new")} className="hidden min-h-11 rounded-2xl bg-cyan-400 px-5 text-sm font-black text-slate-950 shadow-[0_0_24px_rgba(34,211,238,0.18)] sm:inline-flex sm:items-center">+ Add Property</button><button type="button" onClick={() => nav("/pm/tenants")} className="hidden min-h-11 rounded-2xl border border-fuchsia-400/35 bg-fuchsia-500/15 px-5 text-sm font-black text-fuchsia-100 sm:inline-flex sm:items-center">+ Add Tenant</button></> : <button type="button" onClick={() => nav("/pm/properties")} className="hidden min-h-11 rounded-2xl border border-cyan-400/25 bg-cyan-500/10 px-5 text-sm font-black text-cyan-100 sm:inline-flex sm:items-center">← All Properties</button>}
     </div></header>
     {menuOpen ? <><button type="button" aria-label="Close navigation" onClick={() => setMenuOpen(false)} className="fixed inset-0 z-[70] bg-black/75 xl:hidden" /><aside className="fixed inset-y-0 left-0 z-[80] w-[min(88vw,320px)] border-r border-cyan-400/25 bg-[#040a15] xl:hidden"><Sidebar /></aside></> : null}
-    <div className="xl:ml-[220px]"><section className="border-b border-cyan-500/10 bg-gradient-to-r from-cyan-500/5 via-transparent to-fuchsia-500/5 px-4 py-5 sm:px-6"><div className="mx-auto max-w-[1500px]"><div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">Portfolio Operations</div><h1 className="mt-2 text-2xl font-black text-white sm:text-3xl">{title}</h1><p className="mt-2 max-w-3xl text-sm text-slate-400">{subtitle}</p></div></section><div className="pm-command-content mx-auto max-w-[1500px] pb-[calc(8rem+env(safe-area-inset-bottom))]">{children}</div></div>
+    <div className="xl:ml-[220px]"><section className="border-b border-cyan-500/10 bg-gradient-to-r from-cyan-500/5 via-transparent to-fuchsia-500/5 px-4 py-5 sm:px-6"><div className="mx-auto max-w-[1500px]"><div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">Portfolio Operations</div><h1 className="mt-2 text-2xl font-black text-white sm:text-3xl">{title}</h1><p className="mt-2 max-w-3xl text-sm text-slate-400">{subtitle}</p></div></section><div className="pm-command-content mx-auto max-w-[1500px] pb-[calc(8rem+env(safe-area-inset-bottom))]">{children}{isPropertyProfile ? <PMPropertyPaperworkDock /> : null}</div></div>
   </div>;
 }
