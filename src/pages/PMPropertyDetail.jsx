@@ -114,7 +114,7 @@ export default function PMPropertyDetail() {
     ["Add Ledger Entry", () => nav(`/pm/payments?property=${propertyId}`), "dark"],
     ["Create Work Order", () => nav(`/pm/work-orders?property=${propertyId}`), "dark"],
     ["Create Project", () => nav(`/pm/projects?property=${propertyId}&create=1`), "purple"],
-    ["Send Document Packet", () => nav(`/pm/tenants?property=${propertyId}&documents=1`), "purple"],
+    ["Build Lease", () => nav(`/pm/properties/${propertyId}/lease-builder`), "purple"],
   ];
 
   if (loading) return <main className="px-4 py-10 sm:px-6"><div className="rounded-[28px] border border-cyan-500/15 bg-[#07111f] p-10 text-center text-sm text-slate-500">Loading property command center...</div></main>;
@@ -174,7 +174,7 @@ export default function PMPropertyDetail() {
       {projects.length ? <div className="space-y-3">{projects.map((project) => <article key={project.id} className="rounded-2xl border border-slate-800 bg-black/25 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="font-black text-white">{project.title}</div><div className="mt-1 text-xs text-slate-500">Target: {dateText(project.target_date)} · Budget: {money(project.budget_amount)}</div></div><Pill value={project.status} /></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" style={{ width: `${Math.min(100, Number(project.progress_percent || 0))}%` }} /></div></article>)}</div> : <div className="rounded-2xl border border-dashed border-slate-700 p-8 text-center text-sm text-slate-500">No projects are linked to this property.</div>}
     </Panel> : null}
 
-    {tab === "documents" ? <Panel title="Documents & Signatures" subtitle="Leases, renewals, Section 8 packets, inspections, and e-signature status." action={<ActionButton tone="purple" onClick={() => nav(`/pm/tenants?property=${propertyId}&documents=1`)}>Create Packet</ActionButton>}>
+    {tab === "documents" ? <Panel title="Documents & Signatures" subtitle="Leases, renewals, Section 8 packets, inspections, and e-signature status." action={<div className="flex flex-wrap gap-2"><ActionButton tone="cyan" onClick={() => nav(`/pm/properties/${propertyId}/lease-builder`)}>Build Lease</ActionButton><ActionButton tone="purple" onClick={() => nav(`/pm/tenants?property=${propertyId}&documents=1`)}>Create Packet</ActionButton></div>}>
       {documents.length ? <div className="space-y-3">{documents.map((packet) => <article key={packet.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-black/25 p-4"><div><div className="font-black text-white">{packet.template_name || packet.packet_type || "Document Packet"}</div><div className="mt-1 text-xs text-slate-500">{packet.state || property.state} · {packet.housing_authority || "Standard"} · Version {packet.template_version || "1"}</div></div><Pill value={packet.status} /></article>)}</div> : <div className="rounded-2xl border border-dashed border-slate-700 p-8 text-center text-sm text-slate-500">No document packets are linked to this property.</div>}
     </Panel> : null}
 
