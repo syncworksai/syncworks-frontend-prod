@@ -35,7 +35,6 @@ export default function GlobalModeBar() {
 
   const hidden = ["/login", "/register", "/employee/invite", "/accept-invite"].some((path) => location.pathname.startsWith(path));
   const modes = useMemo(() => Object.entries(MODE_ROUTES).filter(([key]) => availableModes?.[key]), [availableModes]);
-  const activeMode = modes.find(([key, item]) => mode === key || location.pathname === item.to || location.pathname.startsWith(`${item.to}/`));
 
   useEffect(() => setOpen(false), [location.pathname, location.search]);
   useEffect(() => {
@@ -61,11 +60,9 @@ export default function GlobalModeBar() {
   return (
     <div ref={rootRef} className="sticky top-0 z-[120] border-b border-cyan-400/15 bg-[#020617]/98 px-3 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.38)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-[1900px] items-center justify-between gap-3">
-        <Link to="/customer" className="flex min-w-0 items-center gap-3">
+        <Link to="/customer" className="flex min-w-0 items-center gap-3" aria-label="Open SyncWorks home">
+          <img src="/brands/syncworks new logo.jpg" alt="SyncWorks" className="h-10 w-10 rounded-xl border border-cyan-400/20 object-cover shadow-[0_0_22px_rgba(34,211,238,0.16)]" />
           <span className="text-sm font-black tracking-[0.18em] text-white">SYNCWORKS</span>
-          <span className="hidden truncate rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200 sm:inline-flex">
-            {activeMode?.[1]?.label || "App Navigation"}
-          </span>
         </Link>
 
         <button type="button" onClick={() => setOpen((value) => !value)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-3 text-sm font-black text-cyan-100" aria-label="Open SyncWorks app navigation" aria-expanded={open}>
