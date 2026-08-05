@@ -1,21 +1,32 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../../api/client";
-import PMPropertyPaperworkDock from "./PMPropertyPaperworkDock";
 
 const navItems = [
-  ["Dashboard", "/pm", "home"], ["Messages", "/pm/settings?view=messages", "messages"], ["Make Ready", "/pm/settings?view=make-ready", "wrench"], ["Projects", "/pm/projects", "folder"], ["Properties", "/pm/properties", "building"], ["Leasing", "/pm/leasing", "leasing"], ["Tenants", "/pm/tenants", "users"], ["Payments", "/pm/payments", "money"], ["Work Orders", "/pm/work-orders", "wrench"], ["Schedule", "/pm/calendar", "calendar"], ["Team", "/pm/employees", "team"], ["Settings", "/pm/settings", "settings"],
+  ["Dashboard", "/pm", "home"],
+  ["Messages", "/pm/settings?view=messages", "messages"],
+  ["Make Ready", "/pm/settings?view=make-ready", "wrench"],
+  ["Projects", "/pm/projects", "folder"],
+  ["Properties", "/pm/properties", "building"],
+  ["Leasing", "/pm/leasing", "leasing"],
+  ["Tenants", "/pm/tenants", "users"],
+  ["Payments", "/pm/payments", "money"],
+  ["Work Orders", "/pm/work-orders", "wrench"],
+  ["Schedule", "/pm/calendar", "calendar"],
+  ["Team", "/pm/employees", "team"],
+  ["Settings", "/pm/settings", "settings"],
 ];
 
 const pageMeta = {
+  "/pm": ["Portfolio Command Center", "Real-time oversight of properties, projects, maintenance, tenants, and operational health."],
   "/pm/projects": ["Project Center", "Track progress, deadlines, budgets, vendors, blockers, and approvals."],
   "/pm/properties": ["Property Portfolio", "Manage properties, units, occupancy, leases, and records."],
   "/pm/properties/new": ["Add Property", "Create a property record inside the active portfolio."],
-  "/pm/leasing": ["Leasing Pipeline", "Manage marketplace leads, applications, showings, Section 8 needs, available units, and onboarding."],
+  "/pm/leasing": ["Leasing Pipeline", "Manage prospects, applications, showings, Section 8 needs, available units, and onboarding."],
   "/pm/tenants": ["Tenant Center", "Manage tenant records, lease terms, onboarding, and communication."],
-  "/pm/payments": ["Payments & Ledger", "Record charges, payments, credits, adjustments, balances, and historical tenant ledgers."],
+  "/pm/payments": ["Payments & Ledger", "Record charges, payments, credits, adjustments, balances, and tenant ledgers."],
   "/pm/work-orders": ["Work Orders", "Prioritize maintenance requests and operational follow-through."],
-  "/pm/calendar": ["Property Schedule", "Coordinate projects, inspections, maintenance, showings, and portfolio events."],
+  "/pm/calendar": ["Property Schedule", "Coordinate projects, inspections, maintenance, showings, and events."],
   "/pm/employees": ["PM Team", "Manage employees, assignments, access, and responsibility."],
   "/pm/settings": ["Portfolio Settings", "Control portfolio identity, communication, and operating preferences."],
 };
@@ -38,11 +49,11 @@ function Icon({ name }) {
 }
 
 function activeFor(pathname, search, path) {
-  const currentView = new URLSearchParams(search).get("view");
+  const view = new URLSearchParams(search).get("view");
   if (path === "/pm") return pathname === "/pm";
-  if (path.includes("view=messages")) return pathname === "/pm/settings" && currentView === "messages";
-  if (path.includes("view=make-ready")) return pathname === "/pm/settings" && currentView === "make-ready";
-  if (path === "/pm/settings") return pathname === "/pm/settings" && !["messages", "make-ready"].includes(currentView);
+  if (path.includes("view=messages")) return pathname === "/pm/settings" && view === "messages";
+  if (path.includes("view=make-ready")) return pathname === "/pm/settings" && view === "make-ready";
+  if (path === "/pm/settings") return pathname === "/pm/settings" && !["messages", "make-ready"].includes(view);
   if (path === "/pm/properties") return pathname.startsWith("/pm/properties");
   return pathname === path || pathname.startsWith(`${path}/`);
 }
@@ -53,10 +64,9 @@ export default function PMShell({ children }) {
   const pathname = location.pathname.replace(/\/+$/, "") || "/";
   const [menuOpen, setMenuOpen] = useState(false);
   const [workspaceName, setWorkspaceName] = useState("Property Management");
-  const isPropertyProfile = /^\/pm\/properties\/\d+$/.test(pathname);
-  const currentView = new URLSearchParams(location.search).get("view");
-  const isMessages = pathname === "/pm/settings" && currentView === "messages";
-  const isMakeReady = pathname === "/pm/settings" && currentView === "make-ready";
+  const propertyProfile = /^\/pm\/properties\/\d+$/.test(pathname);
+  const view = new URLSearchParams(location.search).get("view");
+  const specialView = pathname === "/pm/settings" && ["messages", "make-ready"].includes(view);
 
   useEffect(() => {
     let alive = true;
@@ -66,19 +76,26 @@ export default function PMShell({ children }) {
   useEffect(() => setMenuOpen(false), [pathname, location.search]);
 
   const [title, subtitle] = useMemo(() => {
-    if (isMessages) return ["PM Messages", "Tenant, investor, maintenance, internal, collections, and tenant lifecycle records."];
-    if (isMakeReady) return ["Make-Ready Command Center", "Assign vacant-property work, track blockers, costs, final inspection, and listing readiness."];
-    if (isPropertyProfile) return ["Property Command Center", "Property-scoped operations, tenants, ledger, maintenance, projects, documents, and reports."];
+    if (view === "messages") return ["PM Messages", "Tenant, investor, maintenance, internal, collections, and lifecycle records."];
+    if (view === "make-ready") return ["Make-Ready Command Center", "Assign vacant-property work, track blockers, approvals, inspection, and listing readiness."];
+    if (propertyProfile) return ["Property Command Center", "Property health, occupants, maintenance, projects, messages, documents, and reporting."];
     return pageMeta[pathname] || ["Property Management", "Portfolio operations and command-center tools."];
-  }, [pathname, isPropertyProfile, isMessages, isMakeReady]);
+  }, [pathname, propertyProfile, view]);
 
   const Sidebar = () => <div className="flex h-full flex-col">
-    <button type="button" onClick={() => nav("/pm")} className="flex items-center gap-3 border-b border-cyan-500/15 px-5 py-5 text-left"><img src="/brands/syncworks new logo.jpg" alt="SyncWorks" className="h-11 w-11 rounded-2xl border border-cyan-400/20 object-cover shadow-[0_0_28px_rgba(34,211,238,0.16)]" /><div><div className="font-black tracking-wide text-white">SyncWorks</div><div className="mt-1 text-[9px] font-black uppercase tracking-[0.22em] text-cyan-300">Property Manager</div></div></button>
-    <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 py-5">{navItems.map(([label, path, icon]) => { const active = activeFor(pathname, location.search, path); return <button key={path} type="button" onClick={() => nav(path)} className={`flex min-h-12 w-full items-center gap-3 rounded-2xl border px-3.5 text-left text-sm font-semibold transition ${active ? "border-cyan-400/45 bg-gradient-to-r from-fuchsia-500/15 to-cyan-500/15 text-white shadow-[0_0_26px_rgba(34,211,238,0.12)]" : "border-transparent text-slate-400 hover:border-cyan-500/15 hover:bg-cyan-500/5 hover:text-cyan-100"}`}><span className={`flex h-8 w-8 items-center justify-center rounded-xl border ${active ? "border-cyan-300/35 bg-cyan-500/10 text-cyan-200" : "border-slate-700 text-slate-400"}`}><Icon name={icon} /></span>{label}</button>; })}</nav>
+    <button type="button" onClick={() => nav("/pm")} className="flex items-center gap-3 border-b border-cyan-500/15 px-5 py-5 text-left">
+      <img src="/brands/syncworks new logo.jpg" alt="SyncWorks" className="h-11 w-11 rounded-2xl border border-cyan-400/20 object-cover shadow-[0_0_28px_rgba(34,211,238,0.16)]" />
+      <div><div className="font-black tracking-wide text-white">SyncWorks</div><div className="mt-1 text-[9px] font-black uppercase tracking-[0.22em] text-cyan-300">Property Manager</div></div>
+    </button>
+    <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 py-5">{navItems.map(([label, path, icon]) => {
+      const active = activeFor(pathname, location.search, path);
+      return <button key={path} type="button" onClick={() => nav(path)} className={`flex min-h-12 w-full items-center gap-3 rounded-2xl border px-3.5 text-left text-sm font-semibold transition ${active ? "border-cyan-400/45 bg-gradient-to-r from-fuchsia-500/15 to-cyan-500/15 text-white shadow-[0_0_26px_rgba(34,211,238,0.12)]" : "border-transparent text-slate-400 hover:border-cyan-500/15 hover:bg-cyan-500/5 hover:text-cyan-100"}`}>
+        <span className={`flex h-8 w-8 items-center justify-center rounded-xl border ${active ? "border-cyan-300/35 bg-cyan-500/10 text-cyan-200" : "border-slate-700 text-slate-400"}`}><Icon name={icon} /></span>{label}
+      </button>;
+    })}</nav>
     <div className="m-3 rounded-2xl border border-fuchsia-500/20 bg-gradient-to-br from-cyan-500/5 to-fuchsia-500/10 p-4"><div className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Current Portfolio</div><div className="mt-2 truncate text-sm font-bold text-white">{workspaceName}</div></div>
   </div>;
 
-  const specialView = isMessages || isMakeReady;
   return <div data-pm-command-shell className="min-h-screen bg-[#020611] text-slate-100">
     <style>{`.pm-command-content > div > header{display:none!important}.pm-command-content>div{min-height:auto!important;background:transparent!important}.pm-command-content main{max-width:none!important}`}</style>
     <aside className="fixed inset-y-0 left-0 z-50 hidden w-[220px] border-r border-cyan-500/15 bg-[#040a15]/98 xl:block"><Sidebar /></aside>
@@ -87,9 +104,9 @@ export default function PMShell({ children }) {
       <div className="min-w-0 flex-1 xl:hidden"><div className="truncate text-sm font-black text-white">{title}</div><div className="mt-0.5 truncate text-[10px] text-cyan-300">{workspaceName}</div></div>
       <div className="hidden min-w-56 rounded-2xl border border-cyan-500/15 bg-[#07111f] px-4 py-3 xl:block"><div className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Current Portfolio</div><div className="mt-1 truncate text-sm font-bold text-white">{workspaceName}</div></div>
       <div className="hidden flex-1 items-center gap-3 rounded-2xl border border-slate-700/70 bg-[#07111f]/85 px-4 py-3 text-sm text-slate-500 md:flex"><span className="text-cyan-300">⌕</span>Search properties, projects, tenants, prospects...</div>
-      {!isPropertyProfile && !specialView ? <><button type="button" onClick={() => nav("/pm/properties/new")} className="hidden min-h-11 rounded-2xl bg-cyan-400 px-5 text-sm font-black text-slate-950 shadow-[0_0_24px_rgba(34,211,238,0.18)] sm:inline-flex sm:items-center">+ Add Property</button><button type="button" onClick={() => nav("/pm/tenants")} className="hidden min-h-11 rounded-2xl border border-fuchsia-400/35 bg-fuchsia-500/15 px-5 text-sm font-black text-fuchsia-100 sm:inline-flex sm:items-center">+ Add Tenant</button></> : isPropertyProfile ? <button type="button" onClick={() => nav("/pm/properties")} className="hidden min-h-11 rounded-2xl border border-cyan-400/25 bg-cyan-500/10 px-5 text-sm font-black text-cyan-100 sm:inline-flex sm:items-center">← All Properties</button> : <button type="button" onClick={() => nav("/pm")} className="hidden min-h-11 rounded-2xl border border-cyan-400/25 bg-cyan-500/10 px-5 text-sm font-black text-cyan-100 sm:inline-flex sm:items-center">← Dashboard</button>}
+      {!propertyProfile && !specialView ? <><button type="button" onClick={() => nav("/pm/properties/new")} className="hidden min-h-11 rounded-2xl bg-cyan-400 px-5 text-sm font-black text-slate-950 sm:inline-flex sm:items-center">+ Add Property</button><button type="button" onClick={() => nav("/pm/tenants")} className="hidden min-h-11 rounded-2xl border border-fuchsia-400/35 bg-fuchsia-500/15 px-5 text-sm font-black text-fuchsia-100 sm:inline-flex sm:items-center">+ Add Tenant</button></> : propertyProfile ? <button type="button" onClick={() => nav("/pm/properties")} className="hidden min-h-11 rounded-2xl border border-cyan-400/25 bg-cyan-500/10 px-5 text-sm font-black text-cyan-100 sm:inline-flex sm:items-center">← All Properties</button> : <button type="button" onClick={() => nav("/pm")} className="hidden min-h-11 rounded-2xl border border-cyan-400/25 bg-cyan-500/10 px-5 text-sm font-black text-cyan-100 sm:inline-flex sm:items-center">← Dashboard</button>}
     </div></header>
     {menuOpen ? <><button type="button" aria-label="Close navigation" onClick={() => setMenuOpen(false)} className="fixed inset-0 z-[70] bg-black/75 xl:hidden" /><aside className="fixed inset-y-0 left-0 z-[80] w-[min(88vw,320px)] border-r border-cyan-400/25 bg-[#040a15] xl:hidden"><Sidebar /></aside></> : null}
-    <div className="xl:ml-[220px]"><section className="border-b border-cyan-500/10 bg-gradient-to-r from-cyan-500/5 via-transparent to-fuchsia-500/5 px-4 py-5 sm:px-6"><div className="mx-auto max-w-[1500px]"><div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">Portfolio Operations</div><h1 className="mt-2 text-2xl font-black text-white sm:text-3xl">{title}</h1><p className="mt-2 max-w-3xl text-sm text-slate-400">{subtitle}</p></div></section><div className="pm-command-content mx-auto max-w-[1500px] pb-[calc(8rem+env(safe-area-inset-bottom))]">{children}{isPropertyProfile ? <PMPropertyPaperworkDock /> : null}</div></div>
+    <div className="xl:ml-[220px]"><section className="border-b border-cyan-500/10 bg-gradient-to-r from-cyan-500/5 via-transparent to-fuchsia-500/5 px-4 py-5 sm:px-6"><div className="mx-auto max-w-[1500px]"><div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">Portfolio Operations</div><h1 className="mt-2 text-2xl font-black text-white sm:text-3xl">{title}</h1><p className="mt-2 max-w-3xl text-sm text-slate-400">{subtitle}</p></div></section><div className="pm-command-content mx-auto max-w-[1500px] pb-[calc(8rem+env(safe-area-inset-bottom))]">{children}</div></div>
   </div>;
 }
