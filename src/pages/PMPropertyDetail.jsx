@@ -106,7 +106,7 @@ export default function PMPropertyDetail() {
     { label: "Lease document uploaded", done: false, onClick: () => setTab("documents") },
     { label: "Security deposit recorded", done: propertyLedger.some((item) => String(item.category).includes("DEPOSIT")), onClick: () => setTab("ledger") },
     { label: "Move-in inspection completed", done: false, onClick: () => setTab("documents") },
-    { label: "Keys and access documented", done: Boolean(property.notes), onClick: () => setTab("overview") },
+    { label: "Keys and access documented", done: Boolean(property?.notes), onClick: () => setTab("overview") },
     { label: "Welcome / move-in message sent", done: false, onClick: () => setTab("messages") },
   ];
 
