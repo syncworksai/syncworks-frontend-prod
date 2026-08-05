@@ -4,7 +4,7 @@ import api from "../../api/client";
 import PMPropertyPaperworkDock from "./PMPropertyPaperworkDock";
 
 const navItems = [
-  ["Dashboard", "/pm", "home"], ["Messages", "/pm/settings?view=messages", "messages"], ["Projects", "/pm/projects", "folder"], ["Properties", "/pm/properties", "building"], ["Leasing", "/pm/leasing", "leasing"], ["Tenants", "/pm/tenants", "users"], ["Payments", "/pm/payments", "money"], ["Work Orders", "/pm/work-orders", "wrench"], ["Schedule", "/pm/calendar", "calendar"], ["Team", "/pm/employees", "team"], ["Settings", "/pm/settings", "settings"],
+  ["Dashboard", "/pm", "home"], ["Messages", "/pm/settings?view=messages", "messages"], ["Make Ready", "/pm/settings?view=make-ready", "wrench"], ["Projects", "/pm/projects", "folder"], ["Properties", "/pm/properties", "building"], ["Leasing", "/pm/leasing", "leasing"], ["Tenants", "/pm/tenants", "users"], ["Payments", "/pm/payments", "money"], ["Work Orders", "/pm/work-orders", "wrench"], ["Schedule", "/pm/calendar", "calendar"], ["Team", "/pm/employees", "team"], ["Settings", "/pm/settings", "settings"],
 ];
 
 const pageMeta = {
@@ -38,9 +38,11 @@ function Icon({ name }) {
 }
 
 function activeFor(pathname, search, path) {
+  const currentView = new URLSearchParams(search).get("view");
   if (path === "/pm") return pathname === "/pm";
-  if (path.includes("view=messages")) return pathname === "/pm/settings" && new URLSearchParams(search).get("view") === "messages";
-  if (path === "/pm/settings") return pathname === "/pm/settings" && new URLSearchParams(search).get("view") !== "messages";
+  if (path.includes("view=messages")) return pathname === "/pm/settings" && currentView === "messages";
+  if (path.includes("view=make-ready")) return pathname === "/pm/settings" && currentView === "make-ready";
+  if (path === "/pm/settings") return pathname === "/pm/settings" && !["messages", "make-ready"].includes(currentView);
   if (path === "/pm/properties") return pathname.startsWith("/pm/properties");
   return pathname === path || pathname.startsWith(`${path}/`);
 }
@@ -52,7 +54,9 @@ export default function PMShell({ children }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [workspaceName, setWorkspaceName] = useState("Property Management");
   const isPropertyProfile = /^\/pm\/properties\/\d+$/.test(pathname);
-  const isMessages = pathname === "/pm/settings" && new URLSearchParams(location.search).get("view") === "messages";
+  const currentView = new URLSearchParams(location.search).get("view");
+  const isMessages = pathname === "/pm/settings" && currentView === "messages";
+  const isMakeReady = pathname === "/pm/settings" && currentView === "make-ready";
 
   useEffect(() => {
     let alive = true;
@@ -63,9 +67,10 @@ export default function PMShell({ children }) {
 
   const [title, subtitle] = useMemo(() => {
     if (isMessages) return ["PM Messages", "Tenant, investor, maintenance, internal, collections, and tenant lifecycle records."];
+    if (isMakeReady) return ["Make-Ready Command Center", "Assign vacant-property work, track blockers, costs, final inspection, and listing readiness."];
     if (isPropertyProfile) return ["Property Command Center", "Property-scoped operations, tenants, ledger, maintenance, projects, documents, and reports."];
     return pageMeta[pathname] || ["Property Management", "Portfolio operations and command-center tools."];
-  }, [pathname, isPropertyProfile, isMessages]);
+  }, [pathname, isPropertyProfile, isMessages, isMakeReady]);
 
   const Sidebar = () => <div className="flex h-full flex-col">
     <button type="button" onClick={() => nav("/pm")} className="flex items-center gap-3 border-b border-cyan-500/15 px-5 py-5 text-left"><img src="/brands/syncworks new logo.jpg" alt="SyncWorks" className="h-11 w-11 rounded-2xl border border-cyan-400/20 object-cover shadow-[0_0_28px_rgba(34,211,238,0.16)]" /><div><div className="font-black tracking-wide text-white">SyncWorks</div><div className="mt-1 text-[9px] font-black uppercase tracking-[0.22em] text-cyan-300">Property Manager</div></div></button>
@@ -73,6 +78,7 @@ export default function PMShell({ children }) {
     <div className="m-3 rounded-2xl border border-fuchsia-500/20 bg-gradient-to-br from-cyan-500/5 to-fuchsia-500/10 p-4"><div className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Current Portfolio</div><div className="mt-2 truncate text-sm font-bold text-white">{workspaceName}</div></div>
   </div>;
 
+  const specialView = isMessages || isMakeReady;
   return <div data-pm-command-shell className="min-h-screen bg-[#020611] text-slate-100">
     <style>{`.pm-command-content > div > header{display:none!important}.pm-command-content>div{min-height:auto!important;background:transparent!important}.pm-command-content main{max-width:none!important}`}</style>
     <aside className="fixed inset-y-0 left-0 z-50 hidden w-[220px] border-r border-cyan-500/15 bg-[#040a15]/98 xl:block"><Sidebar /></aside>
@@ -81,7 +87,7 @@ export default function PMShell({ children }) {
       <div className="min-w-0 flex-1 xl:hidden"><div className="truncate text-sm font-black text-white">{title}</div><div className="mt-0.5 truncate text-[10px] text-cyan-300">{workspaceName}</div></div>
       <div className="hidden min-w-56 rounded-2xl border border-cyan-500/15 bg-[#07111f] px-4 py-3 xl:block"><div className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Current Portfolio</div><div className="mt-1 truncate text-sm font-bold text-white">{workspaceName}</div></div>
       <div className="hidden flex-1 items-center gap-3 rounded-2xl border border-slate-700/70 bg-[#07111f]/85 px-4 py-3 text-sm text-slate-500 md:flex"><span className="text-cyan-300">⌕</span>Search properties, projects, tenants, prospects...</div>
-      {!isPropertyProfile && !isMessages ? <><button type="button" onClick={() => nav("/pm/properties/new")} className="hidden min-h-11 rounded-2xl bg-cyan-400 px-5 text-sm font-black text-slate-950 shadow-[0_0_24px_rgba(34,211,238,0.18)] sm:inline-flex sm:items-center">+ Add Property</button><button type="button" onClick={() => nav("/pm/tenants")} className="hidden min-h-11 rounded-2xl border border-fuchsia-400/35 bg-fuchsia-500/15 px-5 text-sm font-black text-fuchsia-100 sm:inline-flex sm:items-center">+ Add Tenant</button></> : isPropertyProfile ? <button type="button" onClick={() => nav("/pm/properties")} className="hidden min-h-11 rounded-2xl border border-cyan-400/25 bg-cyan-500/10 px-5 text-sm font-black text-cyan-100 sm:inline-flex sm:items-center">← All Properties</button> : <button type="button" onClick={() => nav("/pm")} className="hidden min-h-11 rounded-2xl border border-cyan-400/25 bg-cyan-500/10 px-5 text-sm font-black text-cyan-100 sm:inline-flex sm:items-center">← Dashboard</button>}
+      {!isPropertyProfile && !specialView ? <><button type="button" onClick={() => nav("/pm/properties/new")} className="hidden min-h-11 rounded-2xl bg-cyan-400 px-5 text-sm font-black text-slate-950 shadow-[0_0_24px_rgba(34,211,238,0.18)] sm:inline-flex sm:items-center">+ Add Property</button><button type="button" onClick={() => nav("/pm/tenants")} className="hidden min-h-11 rounded-2xl border border-fuchsia-400/35 bg-fuchsia-500/15 px-5 text-sm font-black text-fuchsia-100 sm:inline-flex sm:items-center">+ Add Tenant</button></> : isPropertyProfile ? <button type="button" onClick={() => nav("/pm/properties")} className="hidden min-h-11 rounded-2xl border border-cyan-400/25 bg-cyan-500/10 px-5 text-sm font-black text-cyan-100 sm:inline-flex sm:items-center">← All Properties</button> : <button type="button" onClick={() => nav("/pm")} className="hidden min-h-11 rounded-2xl border border-cyan-400/25 bg-cyan-500/10 px-5 text-sm font-black text-cyan-100 sm:inline-flex sm:items-center">← Dashboard</button>}
     </div></header>
     {menuOpen ? <><button type="button" aria-label="Close navigation" onClick={() => setMenuOpen(false)} className="fixed inset-0 z-[70] bg-black/75 xl:hidden" /><aside className="fixed inset-y-0 left-0 z-[80] w-[min(88vw,320px)] border-r border-cyan-400/25 bg-[#040a15] xl:hidden"><Sidebar /></aside></> : null}
     <div className="xl:ml-[220px]"><section className="border-b border-cyan-500/10 bg-gradient-to-r from-cyan-500/5 via-transparent to-fuchsia-500/5 px-4 py-5 sm:px-6"><div className="mx-auto max-w-[1500px]"><div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">Portfolio Operations</div><h1 className="mt-2 text-2xl font-black text-white sm:text-3xl">{title}</h1><p className="mt-2 max-w-3xl text-sm text-slate-400">{subtitle}</p></div></section><div className="pm-command-content mx-auto max-w-[1500px] pb-[calc(8rem+env(safe-area-inset-bottom))]">{children}{isPropertyProfile ? <PMPropertyPaperworkDock /> : null}</div></div>
