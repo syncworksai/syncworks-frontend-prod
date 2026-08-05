@@ -7,5 +7,7 @@ import LegacyUpgrade from "./Upgrade.jsx";
 export default function UpgradeRouter() {
   const location = useLocation();
   const params = new URLSearchParams(location.search || "");
-  return params.get("product") === "jarvis" ? <JarvisSetup /> : <LegacyUpgrade />;
+  return React.createElement(
+    params.get("product") === "jarvis" ? JarvisSetup : LegacyUpgrade
+  );
 }
