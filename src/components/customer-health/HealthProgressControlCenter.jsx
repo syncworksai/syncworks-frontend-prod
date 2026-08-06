@@ -40,6 +40,9 @@ export default function HealthProgressControlCenter({
   const [controlError, setControlError] = useState("");
   const [simulationSaving, setSimulationSaving] =
     useState(false);
+  const profileVersion = Number(
+    snapshot?.profile_version || 0
+  );
   const simulationSaveTimerRef = useRef(null);
 
   const summary = useMemo(
@@ -97,6 +100,8 @@ export default function HealthProgressControlCenter({
       await runHealthPlanControl({
         action,
         confirmed: control.id === "reset",
+        expectedProfileVersion:
+          profileVersion || null,
       });
 
       setControlMessage(
@@ -116,11 +121,20 @@ export default function HealthProgressControlCenter({
     } catch (error) {
       if (
         control.id === "reset" &&
-        Number(error?.status) === 409
+        Number(error?.status) === 409 &&
+        error?.payload?.confirmation_required
       ) {
         setConfirmReset(true);
         setControlMessage(
           "The server requires explicit reset confirmation. Tap Confirm Reset again."
+        );
+      } else if (
+        Number(error?.status) === 409 &&
+        error?.payload?.code ===
+          "profile_version_conflict"
+      ) {
+        setControlError(
+          "This plan changed in another session. Reload Health before applying another plan action."
         );
       } else {
         setControlError(
@@ -218,15 +232,21 @@ export default function HealthProgressControlCenter({
                     simulationSaveTimerRef.current =
                       window.setTimeout(async () => {
                         try {
-                          await updateHealthSimulationPreferences({
-                            weeks,
-                            expected_adherence:
-                              simulation.expectedAdherence,
-                            planned_sessions:
-                              simulation.plannedSessions,
-                            baseline_volume:
-                              simulation.baselineVolume,
-                          });
+                          await updateHealthSimulationPreferences(
+                            {
+                              weeks,
+                              expected_adherence:
+                                simulation.expectedAdherence,
+                              planned_sessions:
+                                simulation.plannedSessions,
+                              baseline_volume:
+                                simulation.baselineVolume,
+                            },
+                            {
+                              expectedProfileVersion:
+                                profileVersion || null,
+                            }
+                          );
                           setControlMessage(
                             "Simulation preferences saved."
                           );
