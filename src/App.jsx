@@ -19,6 +19,7 @@ import CustomerNewRequest from "./pages/CustomerNewRequest";
 import CustomerSettings from "./pages/CustomerSettings";
 import CustomerFinance from "./pages/CustomerFinance";
 import CustomerHealth from "./pages/CustomerHealth";
+import CustomerEdge from "./pages/CustomerEdge";
 import CustomerTickets from "./pages/CustomerTickets";
 import CustomerFavorites from "./pages/CustomerFavorites";
 import CustomerBusinessCards from "./pages/CustomerBusinessCards";
@@ -83,581 +84,80 @@ export default function App() {
   return (
     <div className="sw-autoglow">
       <Routes>
-        <Route
-          path="/login"
-          element={<Login />}
-        />
-
-        <Route
-          path="/register"
-          element={<Register />}
-        />
-
-        <Route
-          path="/employee/invite"
-          element={<EmployeeInvite />}
-        />
-
-        <Route
-          path="/accept-invite"
-          element={<EmployeeInvite />}
-        />
-
-        <Route
-          path="/platform"
-          element={
-            <PlatformRoute>
-              <PlatformDashboard />
-            </PlatformRoute>
-          }
-        />
-
-        <Route
-          path="/platform/support"
-          element={
-            <PlatformRoute>
-              <PlatformSupportRequests />
-            </PlatformRoute>
-          }
-        />
-
-        <Route
-          path="/support"
-          element={
-            <ProtectedRoute>
-              <Support />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/sync"
-          element={
-            <ProtectedRoute>
-              <SyncAssistant />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/sync/history"
-          element={
-            <ProtectedRoute>
-              <SyncHistory />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/sync/voice"
-          element={
-            <ProtectedRoute>
-              <SyncVoiceDemo />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/newsfeed"
-          element={
-            <ProtectedRoute>
-              <Newsfeed />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <SettingsHub />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/learn"
-          element={
-            <ProtectedRoute>
-              <LearningCenter />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/sbo/settings"
-          element={
-            <ProtectedRoute>
-              <SboSettings />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/sbo/catalog"
-          element={
-            <ProtectedRoute>
-              <SboCatalog />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/sbo/growth"
-          element={
-            <ProtectedRoute>
-              <SboGrowth />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/sbo/new-ticket"
-          element={
-            <ProtectedRoute>
-              <BusinessInternalTicketCreator />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/sbo/customers"
-          element={
-            <ProtectedRoute>
-              <SboCustomers />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/sbo/leads"
-          element={
-            <ProtectedRoute>
-              <SboLeads />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/sbo/reports"
-          element={
-            <ProtectedRoute>
-              <SboReports />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/sbo/finance"
-          element={
-            <ProtectedRoute>
-              <SboFinance />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/sbo/partners"
-          element={
-            <ProtectedRoute>
-              <SboPartners />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/pm/settings"
-          element={
-            <ProtectedRoute>
-              <PmSettings />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/tenant/settings"
-          element={
-            <ProtectedRoute>
-              <TenantSettings />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/investor/settings"
-          element={
-            <ProtectedRoute>
-              <InvestorSettings />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/employee/settings"
-          element={
-            <ProtectedRoute>
-              <EmployeeSettings />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/billing/cash-fee-invoices"
-          element={
-            <ProtectedRoute>
-              <CashFeeInvoices />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/sales/*"
-          element={
-            <Navigate
-              to="/customer"
-              replace
-            />
-          }
-        />
-
-        <Route
-          path="/customer"
-          element={
-            <ProtectedRoute>
-              <CustomerDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/customer/affiliate"
-          element={
-            <ProtectedRoute>
-              <AffiliateDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/customer/favorites"
-          element={
-            <ProtectedRoute>
-              <CustomerFavorites />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/customer/business-cards"
-          element={
-            <ProtectedRoute>
-              <CustomerBusinessCards />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/customer/business-cards/:favoriteId"
-          element={
-            <ProtectedRoute>
-              <CustomerBusinessCardDetail />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/customer/new-request"
-          element={
-            <ProtectedRoute>
-              <CustomerNewRequest />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/customer/inbox"
-          element={
-            <ProtectedRoute>
-              <InboxPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/customer/tickets"
-          element={
-            <ProtectedRoute>
-              <CustomerTickets />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/customer/settings"
-          element={
-            <ProtectedRoute>
-              <CustomerSettings />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/customer/finance"
-          element={
-            <ProtectedRoute>
-              <CustomerFinance />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/customer/health"
-          element={
-            <ProtectedRoute>
-              <CustomerHealth />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/sbo/inbox"
-          element={
-            <ProtectedRoute>
-              <InboxPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/sbo"
-          element={
-            <ProtectedRoute>
-              <SboDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/sbo/metrics/zip"
-          element={
-            <ProtectedRoute>
-              <SboZipLeaderboard />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/dashboard"
-          element={
-            <Navigate
-              to="/sbo"
-              replace
-            />
-          }
-        />
-
-        <Route
-          path="/employee/inbox"
-          element={
-            <ProtectedRoute>
-              <InboxPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/employee"
-          element={
-            <ProtectedRoute>
-              <EmployeeTechnicianDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/pm"
-          element={
-            <ProtectedRoute>
-              <PropertyManagerDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/pm/calendar"
-          element={
-            <ProtectedRoute>
-              <PropertyManagerCalendar />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/pm/employees"
-          element={
-            <ProtectedRoute>
-              <PMEmployees />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/pm/properties/:propertyId"
-          element={
-            <ProtectedRoute>
-              <PMPropertyDetail />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/tenant"
-          element={
-            <ProtectedRoute>
-              <TenantDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/tenant/accept"
-          element={
-            <ProtectedRoute>
-              <TenantAcceptInvite />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/investor"
-          element={
-            <ProtectedRoute>
-              <InvestorDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/investor/accept"
-          element={
-            <ProtectedRoute>
-              <InvestorAcceptInvite />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/tickets"
-          element={
-            <ProtectedRoute>
-              <TicketsBoard />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/tickets/new"
-          element={
-            <ProtectedRoute>
-              <Navigate
-                to="/customer/new-request"
-                replace
-              />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/tickets/:id"
-          element={
-            <ProtectedRoute>
-              <TicketDetail />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/calendar"
-          element={
-            <ProtectedRoute>
-              <CalendarPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/inbox"
-          element={
-            <ProtectedRoute>
-              <InboxPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <UserProfile />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/upgrade"
-          element={
-            <ProtectedRoute>
-              <Upgrade />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/connect"
-          element={
-            <ProtectedRoute>
-              <Connect />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/team/invites"
-          element={
-            <ProtectedRoute>
-              <TeamInvites />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/team"
-          element={
-            <ProtectedRoute>
-              <TeamInvites />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/"
-          element={
-            <Navigate
-              to="/login"
-              replace
-            />
-          }
-        />
-
-        <Route
-          path="*"
-          element={
-            <Navigate
-              to="/login"
-              replace
-            />
-          }
-        />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/employee/invite" element={<EmployeeInvite />} />
+        <Route path="/accept-invite" element={<EmployeeInvite />} />
+
+        <Route path="/platform" element={<PlatformRoute><PlatformDashboard /></PlatformRoute>} />
+        <Route path="/platform/support" element={<PlatformRoute><PlatformSupportRequests /></PlatformRoute>} />
+        <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
+        <Route path="/sync" element={<ProtectedRoute><SyncAssistant /></ProtectedRoute>} />
+        <Route path="/sync/history" element={<ProtectedRoute><SyncHistory /></ProtectedRoute>} />
+        <Route path="/sync/voice" element={<ProtectedRoute><SyncVoiceDemo /></ProtectedRoute>} />
+        <Route path="/newsfeed" element={<ProtectedRoute><Newsfeed /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><SettingsHub /></ProtectedRoute>} />
+        <Route path="/learn" element={<ProtectedRoute><LearningCenter /></ProtectedRoute>} />
+
+        <Route path="/sbo/settings" element={<ProtectedRoute><SboSettings /></ProtectedRoute>} />
+        <Route path="/sbo/catalog" element={<ProtectedRoute><SboCatalog /></ProtectedRoute>} />
+        <Route path="/sbo/growth" element={<ProtectedRoute><SboGrowth /></ProtectedRoute>} />
+        <Route path="/sbo/new-ticket" element={<ProtectedRoute><BusinessInternalTicketCreator /></ProtectedRoute>} />
+        <Route path="/sbo/customers" element={<ProtectedRoute><SboCustomers /></ProtectedRoute>} />
+        <Route path="/sbo/leads" element={<ProtectedRoute><SboLeads /></ProtectedRoute>} />
+        <Route path="/sbo/reports" element={<ProtectedRoute><SboReports /></ProtectedRoute>} />
+        <Route path="/sbo/finance" element={<ProtectedRoute><SboFinance /></ProtectedRoute>} />
+        <Route path="/sbo/partners" element={<ProtectedRoute><SboPartners /></ProtectedRoute>} />
+
+        <Route path="/pm/settings" element={<ProtectedRoute><PmSettings /></ProtectedRoute>} />
+        <Route path="/tenant/settings" element={<ProtectedRoute><TenantSettings /></ProtectedRoute>} />
+        <Route path="/investor/settings" element={<ProtectedRoute><InvestorSettings /></ProtectedRoute>} />
+        <Route path="/employee/settings" element={<ProtectedRoute><EmployeeSettings /></ProtectedRoute>} />
+        <Route path="/billing/cash-fee-invoices" element={<ProtectedRoute><CashFeeInvoices /></ProtectedRoute>} />
+
+        <Route path="/sales/*" element={<Navigate to="/customer" replace />} />
+        <Route path="/customer" element={<ProtectedRoute><CustomerDashboard /></ProtectedRoute>} />
+        <Route path="/customer/affiliate" element={<ProtectedRoute><AffiliateDashboard /></ProtectedRoute>} />
+        <Route path="/customer/favorites" element={<ProtectedRoute><CustomerFavorites /></ProtectedRoute>} />
+        <Route path="/customer/business-cards" element={<ProtectedRoute><CustomerBusinessCards /></ProtectedRoute>} />
+        <Route path="/customer/business-cards/:favoriteId" element={<ProtectedRoute><CustomerBusinessCardDetail /></ProtectedRoute>} />
+        <Route path="/customer/new-request" element={<ProtectedRoute><CustomerNewRequest /></ProtectedRoute>} />
+        <Route path="/customer/inbox" element={<ProtectedRoute><InboxPage /></ProtectedRoute>} />
+        <Route path="/customer/tickets" element={<ProtectedRoute><CustomerTickets /></ProtectedRoute>} />
+        <Route path="/customer/settings" element={<ProtectedRoute><CustomerSettings /></ProtectedRoute>} />
+        <Route path="/customer/finance" element={<ProtectedRoute><CustomerFinance /></ProtectedRoute>} />
+        <Route path="/customer/health" element={<ProtectedRoute><CustomerHealth /></ProtectedRoute>} />
+        <Route path="/customer/edge" element={<ProtectedRoute><CustomerEdge /></ProtectedRoute>} />
+
+        <Route path="/sbo/inbox" element={<ProtectedRoute><InboxPage /></ProtectedRoute>} />
+        <Route path="/sbo" element={<ProtectedRoute><SboDashboard /></ProtectedRoute>} />
+        <Route path="/sbo/metrics/zip" element={<ProtectedRoute><SboZipLeaderboard /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<Navigate to="/sbo" replace />} />
+
+        <Route path="/employee/inbox" element={<ProtectedRoute><InboxPage /></ProtectedRoute>} />
+        <Route path="/employee" element={<ProtectedRoute><EmployeeTechnicianDashboard /></ProtectedRoute>} />
+        <Route path="/pm" element={<ProtectedRoute><PropertyManagerDashboard /></ProtectedRoute>} />
+        <Route path="/pm/calendar" element={<ProtectedRoute><PropertyManagerCalendar /></ProtectedRoute>} />
+        <Route path="/pm/employees" element={<ProtectedRoute><PMEmployees /></ProtectedRoute>} />
+        <Route path="/pm/properties/:propertyId" element={<ProtectedRoute><PMPropertyDetail /></ProtectedRoute>} />
+        <Route path="/tenant" element={<ProtectedRoute><TenantDashboard /></ProtectedRoute>} />
+        <Route path="/tenant/accept" element={<ProtectedRoute><TenantAcceptInvite /></ProtectedRoute>} />
+        <Route path="/investor" element={<ProtectedRoute><InvestorDashboard /></ProtectedRoute>} />
+        <Route path="/investor/accept" element={<ProtectedRoute><InvestorAcceptInvite /></ProtectedRoute>} />
+
+        <Route path="/tickets" element={<ProtectedRoute><TicketsBoard /></ProtectedRoute>} />
+        <Route path="/tickets/new" element={<ProtectedRoute><Navigate to="/customer/new-request" replace /></ProtectedRoute>} />
+        <Route path="/tickets/:id" element={<ProtectedRoute><TicketDetail /></ProtectedRoute>} />
+        <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
+        <Route path="/inbox" element={<ProtectedRoute><InboxPage /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+        <Route path="/upgrade" element={<ProtectedRoute><Upgrade /></ProtectedRoute>} />
+        <Route path="/connect" element={<ProtectedRoute><Connect /></ProtectedRoute>} />
+        <Route path="/team/invites" element={<ProtectedRoute><TeamInvites /></ProtectedRoute>} />
+        <Route path="/team" element={<ProtectedRoute><TeamInvites /></ProtectedRoute>} />
+
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
       <SyncAssistantLauncher />
       <RoleAwareMobileNav />
