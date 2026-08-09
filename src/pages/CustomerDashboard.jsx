@@ -114,6 +114,7 @@ export default function CustomerDashboard() {
     [Wrench, "Request Service", "Schedule help through a connection or Marketplace.", "/customer/new-request", null, "cyan"],
     [Dumbbell, "Health", "Workout, nutrition, readiness and recovery.", "/customer/health", null, "emerald"],
     [CircleDollarSign, "Money", "Payments, budgets, invoices and financial plans.", "/customer/finance", dueInvoices.length ? `${dueInvoices.length} due` : null, "amber"],
+    [Search, "EDGE", "Live sports prediction-market value, signals and paper trading.", "/customer/edge", "beta", "emerald"],
     [MessageSquare, "Messages", "Conversations and items that need a response.", "/customer/inbox", null, "violet"],
     [CheckSquare2, "To-Do", "Personal, family, event and work tasks.", "/customer/todo", null, "cyan"],
     [ShoppingBag, "Shop", "Local businesses, food, products and services.", "/customer/deals", null, "amber"],
