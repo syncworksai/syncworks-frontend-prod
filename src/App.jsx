@@ -19,6 +19,7 @@ import CustomerNewRequest from "./pages/CustomerNewRequest";
 import CustomerSettings from "./pages/CustomerSettings";
 import CustomerFinance from "./pages/CustomerFinance";
 import CustomerHealth from "./pages/CustomerHealth";
+import CustomerEdge from "./pages/CustomerEdge";
 import CustomerTickets from "./pages/CustomerTickets";
 import CustomerFavorites from "./pages/CustomerFavorites";
 import CustomerBusinessCards from "./pages/CustomerBusinessCards";
@@ -415,6 +416,15 @@ export default function App() {
           element={
             <ProtectedRoute>
               <CustomerHealth />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/customer/edge"
+          element={
+            <ProtectedRoute>
+              <CustomerEdge />
             </ProtectedRoute>
           }
         />
