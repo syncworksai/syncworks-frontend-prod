@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
-  Baseball,
   Gauge,
   LockKeyhole,
   RefreshCw,
@@ -261,7 +260,7 @@ export default function CustomerEdge() {
               <div className="flex items-center gap-3"><Gauge className="h-5 w-5 text-cyan-300" /><h2 className="text-lg font-black text-white">Live engine stages</h2></div>
               <div className="mt-4 space-y-3 text-xs leading-5 text-slate-400">
                 <div className="flex gap-3"><Wifi className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" /><span>Exchange bid/ask and order-book stream.</span></div>
-                <div className="flex gap-3"><Baseball className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" /><span>Score, inning/clock, outs/possession and game state.</span></div>
+                <div className="flex gap-3"><Activity className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" /><span>Score, inning/clock, outs/possession and game state.</span></div>
                 <div className="flex gap-3"><Activity className="mt-0.5 h-4 w-4 shrink-0 text-violet-300" /><span>Recalculate fair value and remaining edge after every material change.</span></div>
                 <div className="flex gap-3"><RefreshCw className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" /><span>Paper entry/exit automation first, then verified live execution.</span></div>
               </div>
