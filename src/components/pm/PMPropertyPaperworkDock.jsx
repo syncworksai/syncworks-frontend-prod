@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import api from "../../api/client";
+import PMDocumentBuilder from "./PMDocumentBuilder";
 import PMPropertyPaperwork from "./PMPropertyPaperwork";
 
 const list = (data) => Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
@@ -38,5 +39,9 @@ export default function PMPropertyPaperworkDock() {
   }, [propertyId]);
 
   if (!propertyId || !workspace || !property) return null;
-  return <section className="px-4 pb-8 sm:px-6"><div className="mb-4 mt-3"><div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">Property Paperwork Profile</div><h2 className="mt-2 text-2xl font-black text-white">Documents, forms, and readiness</h2><p className="mt-2 text-sm text-slate-400">Upload the actual documents used for this property and track missing lease, owner, inspection, Section 8, deposit, and reporting paperwork.</p></div><PMPropertyPaperwork workspace={workspace} property={property} tenants={tenants} /></section>;
+  return <section className="px-4 pb-8 sm:px-6">
+    <div className="mb-4 mt-3"><div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">Property Paperwork Profile</div><h2 className="mt-2 text-2xl font-black text-white">Documents, forms, and readiness</h2><p className="mt-2 text-sm text-slate-400">Build documents from saved data, upload the company’s actual paperwork, and track missing lease, owner, inspection, Section 8, deposit, and reporting records.</p></div>
+    <PMDocumentBuilder workspace={workspace} property={property} tenants={tenants} />
+    <PMPropertyPaperwork workspace={workspace} property={property} tenants={tenants} />
+  </section>;
 }
