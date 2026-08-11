@@ -110,7 +110,7 @@ export default function CustomerDashboard() {
 
   const actions = [
     [CalendarDays, "Calendar", "Events, schedules and calendar connections.", "/calendar", null, "cyan"],
-    [Network, "Connections", "People, businesses, groups and invitations.", "/connect", null, "violet"],
+    [Network, "SyncWorks Social", "Friends, groups, events, shared fees and invitations.", "/connect", "new", "violet"],
     [Wrench, "Request Service", "Schedule help through a connection or Marketplace.", "/customer/new-request", null, "cyan"],
     [Dumbbell, "Health", "Workout, nutrition, readiness and recovery.", "/customer/health", null, "emerald"],
     [CircleDollarSign, "Money", "Payments, budgets, invoices and financial plans.", "/customer/finance", dueInvoices.length ? `${dueInvoices.length} due` : null, "amber"],
@@ -151,6 +151,16 @@ export default function CustomerDashboard() {
           </div>
         </section>
 
+        <PromoCard
+          icon={Network}
+          eyebrow="New • SyncWorks Social"
+          title="Your people, groups, events and shared costs — connected."
+          body="Add friends, build teams or clubs, organize tournaments, book clubs, church or school events, neighborhood activities and trips, collect each person's share, and keep accepted events synced to the calendar when organizers change the details."
+          action="Explore SyncWorks Social"
+          onClick={() => nav("/connect")}
+          tone="violet"
+        />
+
         <section className="rounded-[1.75rem] border border-white/10 bg-slate-950/55 p-5">
           <div className="flex items-center justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-amber-200">Immediate actions</div><h2 className="mt-1 text-xl font-black text-white">Needs your attention</h2></div><span className="rounded-full border border-white/10 bg-white/[.04] px-3 py-1 text-xs font-black text-slate-300">{attentionCount}</span></div>
           <div className="mt-4 space-y-3">
@@ -168,7 +178,7 @@ export default function CustomerDashboard() {
         </div>
 
         <section className="rounded-[1.75rem] border border-white/10 bg-white/[.025] p-5">
-          <div className="flex items-start gap-3"><Stethoscope className="mt-1 h-5 w-5 text-emerald-300" /><div><div className="font-black text-white">Connected routine</div><p className="mt-1 text-sm leading-6 text-slate-400">Calendar, Connections, work, payments, To-Do and Health remain separate sources, while SYNC combines their attention items into one Personal briefing. Health keeps its electric-green identity.</p></div></div>
+          <div className="flex items-start gap-3"><Stethoscope className="mt-1 h-5 w-5 text-emerald-300" /><div><div className="font-black text-white">Connected routine</div><p className="mt-1 text-sm leading-6 text-slate-400">Calendar, SyncWorks Social, work, payments, To-Do and Health remain separate sources, while SYNC combines their attention items into one Personal briefing. Health keeps its electric-green identity.</p></div></div>
         </section>
       </main>
 
