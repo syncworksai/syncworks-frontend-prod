@@ -16,6 +16,7 @@ import PMProjects from "./pages/PMProjects";
 import PMWorkOrders from "./pages/PMWorkOrders";
 import PMLeasing from "./pages/PMLeasing";
 import PMPayments from "./pages/PMPayments";
+import SocialRoom from "./pages/SocialRoom";
 import "./index.css";
 
 function RoutedApplication() {
@@ -29,6 +30,7 @@ function RoutedApplication() {
     "/pm/work-orders": <PMWorkOrders />,
     "/pm/leasing": <PMLeasing />,
     "/pm/payments": <PMPayments />,
+    "/connect/chat": <SocialRoom />,
   };
   const isPmDashboard = pathname === "/pm";
   const isPmRoute = isPmDashboard || pathname.startsWith("/pm/");
