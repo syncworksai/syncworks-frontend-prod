@@ -7,6 +7,7 @@ import BusinessProfileEditController from "./components/business/BusinessProfile
 import BusinessSettingsLoadGuard from "./components/business/BusinessSettingsLoadGuard";
 import BusinessLiveAuditGuard from "./components/business/BusinessLiveAuditGuard";
 import PMShell from "./components/pm/PMShell";
+import PMTenantEditOverlay from "./components/pm/PMTenantEditOverlay";
 import NutritionCoachGlobalAssist from "./components/customer-health/NutritionCoachGlobalAssist";
 import App from "./App";
 import PMPropertyCreate from "./pages/PMPropertyCreate";
@@ -46,7 +47,7 @@ function RoutedApplication() {
     </>
   );
 
-  if (isPmRoute && !isPmDashboard) return <PMShell>{routedContent}</PMShell>;
+  if (isPmRoute && !isPmDashboard) return <PMShell>{routedContent}<PMTenantEditOverlay /></PMShell>;
   return routedContent;
 }
 
