@@ -13,9 +13,10 @@ const defaults = {
   deposit_received: "0.00", deposit_held: "0.00", deposit_applied: "0.00", deposit_notes: "", collections_recipient_name: "",
   collections_recipient_email: "", collections_notes: "",
 };
+const today = new Date().toISOString().slice(0, 10);
 
 function Field({ label, children }) { return <label className="block"><span className="mb-1.5 block text-xs font-semibold text-slate-300">{label}</span>{children}</label>; }
-function errorText(err, fallback) { return err?.response?.data?.detail || err?.message || fallback; }
+function errorText(err, fallback) { const data = err?.response?.data; if (data?.detail) return data.detail; if (data && typeof data === "object") return Object.values(data).flat().join(" · ") || fallback; return err?.message || fallback; }
 
 export default function PMCollectionsAndLeaseRules({ workspace, tenantId, onRefresh }) {
   const [profile, setProfile] = useState(defaults);
@@ -23,8 +24,11 @@ export default function PMCollectionsAndLeaseRules({ workspace, tenantId, onRefr
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [depositForm, setDepositForm] = useState({ amount: "", applied_to: "BALANCE", entry_date: today, memo: "" });
 
   const headers = useMemo(() => workspace ? { "X-PM-Workspace-ID": String(workspace.id) } : {}, [workspace]);
+  const depositApplied = Number(profile.deposit_applied || 0) > 0;
+  const depositRemaining = Math.max(Number(profile.deposit_held || 0), 0);
 
   async function load() {
     if (!workspace || !tenantId) return;
@@ -35,7 +39,7 @@ export default function PMCollectionsAndLeaseRules({ workspace, tenantId, onRefr
     } catch (err) { setError(errorText(err, "Could not load lease-specific billing rules.")); }
   }
 
-  useEffect(() => { setPreview(null); load(); }, [workspace?.id, tenantId]);
+  useEffect(() => { setPreview(null); setDepositForm({ amount: "", applied_to: "BALANCE", entry_date: today, memo: "" }); load(); }, [workspace?.id, tenantId]);
 
   async function save() {
     if (!tenantId) return setError("Choose a tenant first.");
@@ -46,6 +50,28 @@ export default function PMCollectionsAndLeaseRules({ workspace, tenantId, onRefr
       setMessage("Lease-specific billing and collections settings saved.");
       onRefresh?.();
     } catch (err) { setError(errorText(err, "Could not save lease settings.")); }
+    finally { setBusy(false); }
+  }
+
+  async function applyDeposit() {
+    if (!tenantId) return setError("Choose a tenant first.");
+    if (!depositForm.amount || Number(depositForm.amount) <= 0) return setError("Enter the amount to apply.");
+    setBusy(true); setError(""); setMessage("");
+    try {
+      const response = await api.post(`/pm-hub/billing/tenants/${tenantId}/apply-deposit/`, { ...depositForm, workspace_id: workspace.id }, { headers });
+      const deposit = response.data?.deposit || {};
+      setProfile((current) => ({
+        ...current,
+        deposit_required: deposit.deposit_required ?? current.deposit_required,
+        deposit_received: deposit.deposit_received ?? current.deposit_received,
+        deposit_held: deposit.deposit_held ?? current.deposit_held,
+        deposit_applied: deposit.deposit_applied ?? current.deposit_applied,
+        deposit_notes: deposit.deposit_notes ?? current.deposit_notes,
+      }));
+      setDepositForm({ amount: "", applied_to: "BALANCE", entry_date: today, memo: "" });
+      setMessage(response.data?.detail || "Deposit application recorded.");
+      onRefresh?.();
+    } catch (err) { setError(errorText(err, "Could not apply the deposit.")); }
     finally { setBusy(false); }
   }
 
@@ -97,7 +123,7 @@ export default function PMCollectionsAndLeaseRules({ workspace, tenantId, onRefr
   if (!tenantId) return <section className="rounded-[28px] border border-fuchsia-500/20 bg-[#07111f]/95 p-5 text-sm text-slate-400">Choose a tenant account to configure lease-specific fees, payment arrangements, deposits, and collections export.</section>;
 
   return <section className="space-y-5 rounded-[28px] border border-fuchsia-500/20 bg-[#07111f]/95 p-5">
-    <div><div className="text-[10px] font-black uppercase tracking-[.18em] text-fuchsia-300">Lease rules & collections</div><h2 className="mt-2 text-xl font-black">Adjust each lease without changing company-wide rules.</h2><p className="mt-1 text-sm text-slate-400">Multiple late-fee checkpoints, daily fees, payment arrangements, deposit accounting, eviction/collections controls, and a collections-ready statement.</p></div>
+    <div><div className="text-[10px] font-black uppercase tracking-[.18em] text-fuchsia-300">Lease rules & collections</div><h2 className="mt-2 text-xl font-black">Adjust each lease without changing company-wide rules.</h2><p className="mt-1 text-sm text-slate-400">Multiple late-fee checkpoints, payment arrangements, deposit accounting, eviction/collections controls, and a collections-ready statement.</p></div>
     {error ? <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-100">{error}</div> : null}
     {message ? <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-100">{message}</div> : null}
 
@@ -105,7 +131,12 @@ export default function PMCollectionsAndLeaseRules({ workspace, tenantId, onRefr
 
     <div className="grid gap-4 lg:grid-cols-4"><label className="flex items-center gap-3 rounded-2xl border border-slate-800 p-3 text-sm"><input type="checkbox" checked={profile.payment_arrangement_enabled} onChange={(e) => setProfile({ ...profile, payment_arrangement_enabled: e.target.checked })} />Temporary payment arrangement</label><Field label="Arrangement amount"><input className={inputClass} inputMode="decimal" value={profile.payment_arrangement_amount} onChange={(e) => setProfile({ ...profile, payment_arrangement_amount: e.target.value })} /></Field><Field label="Arrangement starts"><input type="date" className={inputClass} value={profile.payment_arrangement_start} onChange={(e) => setProfile({ ...profile, payment_arrangement_start: e.target.value })} /></Field><Field label="Arrangement ends"><input type="date" className={inputClass} value={profile.payment_arrangement_end} onChange={(e) => setProfile({ ...profile, payment_arrangement_end: e.target.value })} /></Field></div>
 
-    <div className="grid gap-4 lg:grid-cols-4"><Field label="Deposit required"><input className={inputClass} inputMode="decimal" value={profile.deposit_required} onChange={(e) => setProfile({ ...profile, deposit_required: e.target.value })} /></Field><Field label="Deposit received"><input className={inputClass} inputMode="decimal" value={profile.deposit_received} onChange={(e) => setProfile({ ...profile, deposit_received: e.target.value })} /></Field><Field label="Deposit currently held"><input className={inputClass} inputMode="decimal" value={profile.deposit_held} onChange={(e) => setProfile({ ...profile, deposit_held: e.target.value })} /></Field><Field label="Deposit applied"><input className={inputClass} inputMode="decimal" value={profile.deposit_applied} onChange={(e) => setProfile({ ...profile, deposit_applied: e.target.value })} /></Field></div>
+    <div className="rounded-3xl border border-amber-400/20 bg-amber-400/[.04] p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-amber-300">Security deposit</div><h3 className="mt-1 text-lg font-black text-white">Deposit custody & application</h3><p className="mt-1 text-xs text-slate-400">See immediately whether any deposit has been used. Applying it creates a ledger credit and reduces the amount still held.</p></div><span className={`rounded-full border px-3 py-1 text-xs font-black ${depositApplied ? "border-amber-400/40 bg-amber-400/10 text-amber-200" : "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"}`}>{depositApplied ? "DEPOSIT APPLIED" : "NOT APPLIED"}</span></div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{[["Required", profile.deposit_required], ["Received", profile.deposit_received], ["Still Held", profile.deposit_held], ["Applied to Balance", profile.deposit_applied], ["Remaining", depositRemaining]].map(([label, value]) => <div key={label} className="rounded-2xl border border-slate-800 bg-black/20 p-3"><div className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</div><div className="mt-1 text-lg font-black text-white">{money(value)}</div></div>)}</div>
+      <div className="mt-4 grid gap-3 lg:grid-cols-4"><Field label="Deposit required"><input className={inputClass} inputMode="decimal" value={profile.deposit_required} onChange={(e) => setProfile({ ...profile, deposit_required: e.target.value })} /></Field><Field label="Deposit received"><input className={inputClass} inputMode="decimal" value={profile.deposit_received} onChange={(e) => setProfile({ ...profile, deposit_received: e.target.value })} /></Field><Field label="Deposit currently held"><input className={inputClass} inputMode="decimal" value={profile.deposit_held} onChange={(e) => setProfile({ ...profile, deposit_held: e.target.value })} /></Field><Field label="Deposit notes"><input className={inputClass} value={profile.deposit_notes || ""} onChange={(e) => setProfile({ ...profile, deposit_notes: e.target.value })} /></Field></div>
+      <div className="mt-4 border-t border-amber-400/10 pt-4"><div className="mb-3 text-sm font-black text-white">Apply deposit to tenant balance</div><div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4"><Field label="Amount to apply"><input className={inputClass} inputMode="decimal" value={depositForm.amount} onChange={(e) => setDepositForm({ ...depositForm, amount: e.target.value })} placeholder={money(profile.deposit_held)} /></Field><Field label="Apply toward"><select className={inputClass} value={depositForm.applied_to} onChange={(e) => setDepositForm({ ...depositForm, applied_to: e.target.value })}><option value="BALANCE">General balance</option><option value="RENT">Rent</option><option value="DAMAGE">Damages</option><option value="LATE_FEE">Late fees</option><option value="UTILITY">Utilities</option><option value="OTHER">Other</option></select></Field><Field label="Application date"><input type="date" className={inputClass} value={depositForm.entry_date} onChange={(e) => setDepositForm({ ...depositForm, entry_date: e.target.value })} /></Field><Field label="Reason / memo"><input className={inputClass} value={depositForm.memo} onChange={(e) => setDepositForm({ ...depositForm, memo: e.target.value })} placeholder="Example: Applied to unpaid rent" /></Field></div><div className="mt-3 flex flex-wrap gap-2"><Button tone="cyan" onClick={applyDeposit} disabled={busy || depositRemaining <= 0}>{busy ? "Working..." : "Apply Deposit & Create Credit"}</Button><span className="self-center text-xs text-slate-500">This is recorded as a ledger credit and remains auditable.</span></div></div>
+    </div>
 
     <div className="grid gap-4 lg:grid-cols-4"><Field label="Collections status"><select className={inputClass} value={profile.collection_status} onChange={(e) => setProfile({ ...profile, collection_status: e.target.value })}><option value="NONE">Not in collections</option><option value="PREPARING">Preparing ledger</option><option value="SENT">Sent to collections</option><option value="LEGAL">Legal / eviction</option></select></Field><Field label="Collections start date"><input type="date" className={inputClass} value={profile.collection_start_date} onChange={(e) => setProfile({ ...profile, collection_start_date: e.target.value })} /></Field><Field label="Monthly late-fee cap"><input className={inputClass} inputMode="decimal" value={profile.collection_monthly_late_fee_cap} onChange={(e) => setProfile({ ...profile, collection_monthly_late_fee_cap: e.target.value })} /></Field><Field label="Move-out date"><input type="date" className={inputClass} value={profile.move_out_date} onChange={(e) => setProfile({ ...profile, move_out_date: e.target.value })} /></Field></div>
     <div className="grid gap-3 md:grid-cols-3"><label className="flex items-center gap-3 rounded-2xl border border-slate-800 p-3 text-sm"><input type="checkbox" checked={profile.prorate_final_month} onChange={(e) => setProfile({ ...profile, prorate_final_month: e.target.checked })} />Prorate final month to move-out</label><label className="flex items-center gap-3 rounded-2xl border border-slate-800 p-3 text-sm"><input type="checkbox" checked={profile.eviction_filed} onChange={(e) => setProfile({ ...profile, eviction_filed: e.target.checked })} />Eviction filed</label><Field label="Eviction filed date"><input type="date" className={inputClass} value={profile.eviction_filed_date} onChange={(e) => setProfile({ ...profile, eviction_filed_date: e.target.value })} /></Field></div>
