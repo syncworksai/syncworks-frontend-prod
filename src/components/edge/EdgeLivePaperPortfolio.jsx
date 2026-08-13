@@ -5,6 +5,7 @@ import api from "../../api/client";
 
 const BANKROLL_CENTS = 10000;
 const POLL_MS = 15000;
+const STATUS_MS = 30000;
 
 function money(cents) {
   const value = Number(cents || 0) / 100;
@@ -33,8 +34,15 @@ function actionLabel(candidate) {
   return "TAKE SIGNAL";
 }
 
+function formatTime(value) {
+  if (!value) return "Waiting for first server check";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Waiting for first server check" : date.toLocaleString();
+}
+
 export default function EdgeLivePaperPortfolio() {
   const [portfolio, setPortfolio] = useState(null);
+  const [serverStatus, setServerStatus] = useState(null);
   const [running, setRunning] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -49,6 +57,16 @@ export default function EdgeLivePaperPortfolio() {
       return response.data;
     } catch {
       setError("Live paper portfolio is temporarily unavailable.");
+      return null;
+    }
+  }
+
+  async function refreshServerStatus() {
+    try {
+      const response = await api.get("/edge/portfolio/server/status/");
+      setServerStatus(response.data);
+      return response.data;
+    } catch {
       return null;
     }
   }
@@ -73,7 +91,7 @@ export default function EdgeLivePaperPortfolio() {
       } else {
         setLastAction("No qualified entry this tick. EDGE stayed out.");
       }
-      await refresh();
+      await Promise.all([refresh(), refreshServerStatus()]);
     } catch {
       setError("Paper tick failed. No simulated trade was placed.");
     } finally {
@@ -83,6 +101,9 @@ export default function EdgeLivePaperPortfolio() {
 
   useEffect(() => {
     refresh();
+    refreshServerStatus();
+    const statusTimer = window.setInterval(refreshServerStatus, STATUS_MS);
+    return () => window.clearInterval(statusTimer);
   }, []);
 
   useEffect(() => {
@@ -99,6 +120,9 @@ export default function EdgeLivePaperPortfolio() {
   const realizedCents = Number(risk.realized_pnl_cents || 0);
   const equityCents = BANKROLL_CENTS + realizedCents;
   const returnPct = (realizedCents / BANKROLL_CENTS) * 100;
+  const hedges = serverStatus?.current_hedges || [];
+  const hedgeHistory = serverStatus?.hedge_history || [];
+  const bestHedge = hedges[0] || hedgeHistory[0] || null;
   const strongest = useMemo(
     () => [...candidates].sort((a, b) => Number(b.model_edge_pct || 0) - Number(a.model_edge_pct || 0))[0],
     [candidates],
@@ -114,21 +138,25 @@ export default function EdgeLivePaperPortfolio() {
             </div>
             <h2 className="mt-2 text-2xl font-black text-white">Watch EDGE prove itself in real time.</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-              Paper money only. EDGE scans the live board, enters only when a strategy qualifies, records why it acted, and tracks the result against a fixed $100 test bankroll.
+              Paper money only. EDGE now keeps testing on the server when this page is closed, records entries/exits, and separately tracks opposite-side hedge opportunities.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`rounded-full border px-3 py-2 text-xs font-black ${running ? "border-emerald-300/30 bg-emerald-500/10 text-emerald-100" : "border-white/10 bg-white/[.04] text-slate-400"}`}>
-              {running ? "● LIVE SIM RUNNING" : "SIM PAUSED"}
+            <span className="rounded-full border border-emerald-300/30 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-100">● BACKGROUND RUNNER ON</span>
+            <span className={`rounded-full border px-3 py-2 text-xs font-black ${running ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100" : "border-white/10 bg-white/[.04] text-slate-400"}`}>
+              {running ? "PAGE FAST-POLL ON" : "PAGE FAST-POLL PAUSED"}
             </span>
             <button type="button" onClick={() => setRunning((value) => !value)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[.04] px-3 text-xs font-black text-slate-200">
               {running ? <Square className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-              {running ? "Pause" : "Start"}
+              {running ? "Pause page" : "Fast poll"}
             </button>
             <button type="button" disabled={busy} onClick={() => paperTick(false)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-500/10 px-3 text-xs font-black text-cyan-100 disabled:opacity-50">
               <RefreshCw className={`h-3.5 w-3.5 ${busy ? "animate-spin" : ""}`} /> Run now
             </button>
           </div>
+        </div>
+        <div className="mt-4 rounded-2xl border border-emerald-400/15 bg-black/20 p-3 text-xs text-slate-300">
+          Last background server check: <span className="font-black text-emerald-200">{formatTime(serverStatus?.last_server_tick_at)}</span>. Closing SyncWorks does not stop the server runner.
         </div>
         {error ? <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/[.06] p-3 text-xs text-rose-100">{error}</div> : null}
       </div>
@@ -150,7 +178,7 @@ export default function EdgeLivePaperPortfolio() {
                 <div className="text-[10px] font-black uppercase tracking-[.16em] text-emerald-200">What EDGE is doing</div>
                 <div className="mt-2 text-lg font-black text-white">{lastAction}</div>
                 <p className="mt-2 text-xs leading-5 text-slate-400">
-                  {lastTick ? `Last simulation check ${lastTick.toLocaleTimeString()}.` : "Waiting for the first simulation check."} The simulator cannot send a live-money order.
+                  {lastTick ? `Last page-side simulation check ${lastTick.toLocaleTimeString()}.` : "Page-side fast polling has not fired yet."} Background testing continues independently.
                 </p>
               </div>
             </div>
@@ -167,6 +195,28 @@ export default function EdgeLivePaperPortfolio() {
               </>
             ) : <div className="mt-2 text-sm text-slate-400">No qualifying A/B portfolio candidate right now. Staying out is a valid action.</div>}
           </div>
+        </div>
+
+        <div className={`rounded-[1.5rem] border p-4 sm:p-5 ${bestHedge?.state === "LOCK_PROFIT" ? "border-emerald-300/30 bg-emerald-500/[.06]" : "border-violet-300/20 bg-violet-500/[.04]"}`}>
+          <div className="text-[10px] font-black uppercase tracking-[.16em] text-violet-200">Hedge Lab • matched contracts</div>
+          <h3 className="mt-1 text-lg font-black text-white">Can the opposite side remove the loss?</h3>
+          {bestHedge ? (
+            <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr]">
+              <div>
+                <div className={`text-xl font-black ${bestHedge.state === "LOCK_PROFIT" ? "text-emerald-300" : "text-amber-200"}`}>{bestHedge.state === "LOCK_PROFIT" ? "LOCK PROFIT FOUND" : "NEAR HEDGE"}</div>
+                <div className="mt-2 text-sm font-black text-white">{bestHedge.matchup} • add {bestHedge.opposite_side}</div>
+                <div className="mt-1 text-xs leading-5 text-slate-400">Primary {bestHedge.primary_entry_cents}¢ + opposite {bestHedge.opposite_entry_cents}¢ = {bestHedge.pair_cost_cents_per_contract}¢ per matched pair.</div>
+                <p className="mt-2 text-xs leading-5 text-slate-400">{bestHedge.why}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <PaperMetric label="Opposite cost" value={money(bestHedge.hedge_cost_cents)} detail={`Match ${bestHedge.contracts} contracts`} />
+                <PaperMetric label="Locked P/L" value={money(bestHedge.locked_profit_cents)} detail={`${pct(bestHedge.locked_roi_pct)} on paired cost`} valueClass={Number(bestHedge.locked_profit_cents) > 0 ? "text-emerald-300" : "text-amber-200"} />
+              </div>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm leading-6 text-slate-400">No hedge window has qualified yet. EDGE only calls it a lock when matched contract quantities can cover both outcomes after simulated entry friction.</p>
+          )}
+          <div className="mt-3 text-xs leading-5 text-slate-500">Important: two equal $1 bets do not automatically lock profit. The opposite leg must be sized to the number of contracts already owned.</div>
         </div>
 
         <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4 sm:p-5">
@@ -191,7 +241,7 @@ export default function EdgeLivePaperPortfolio() {
         </div>
 
         <div className="text-xs leading-5 text-slate-500">
-          Current portfolio automation uses the live Strategy A/B engine already in EDGE. This is intentionally a forward paper test; stronger E-family rules can be added to the same ledger as their live adapter is finalized.
+          Current live execution is still paper-only. Strategy A/B provides the primary forward test, while Hedge Lab records a separate matched-contract outcome for comparison. E-family integration remains the next strategy adapter.
         </div>
       </div>
     </section>
