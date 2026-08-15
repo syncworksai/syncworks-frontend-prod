@@ -1,786 +1,715 @@
 // src/pages/CustomerFinance.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Banknote,
+  Bot,
+  Building2,
+  CalendarClock,
+  CreditCard,
+  Landmark,
+  Plus,
+  RefreshCw,
+  ShieldCheck,
+  Sparkles,
+  Target,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
+  X,
+} from "lucide-react";
 
-import ModeBar from "../components/ModeBar";
+import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import ModeBar from "../components/ModeBar";
 
 const STRIPE_FINANCE_CHECKOUT_URL = "https://buy.stripe.com/6oU00jgX07eT3qFgJl2Nq0c";
 const FINANCE_LOGO_URL = "/brands/finance.jpg";
+const FINANCE_API = "/personal-finance";
 
-const SNAPSHOT_KEY = "sw_customer_money_snapshot_v1";
-const BILLS_KEY = "sw_customer_finance_bills_v1";
-
-function cx(...parts) {
-  return parts.filter(Boolean).join(" ");
-}
+const EMPTY_MANUAL = {
+  type: "BILL",
+  name: "",
+  amount: "",
+  category: "HOUSING",
+  due_date: "",
+  balance: "",
+  minimum_payment: "",
+  apr: "",
+  payoff_target_date: "",
+  account_kind: "CHECKING",
+  credit_limit: "",
+  target_amount: "",
+  target_date: "",
+};
 
 function money(value) {
-  const n = Number(value || 0);
-
-  return n.toLocaleString(undefined, {
+  const amount = Number(value || 0);
+  return amount.toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
   });
 }
 
-function safeNumber(value) {
-  const n = Number(value || 0);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function readJson(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-
-    const parsed = JSON.parse(raw);
-    return parsed ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeJson(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // no-op
-  }
-}
-
-function prettyDate(value) {
+function dateLabel(value) {
   if (!value) return "Not set";
-
-  const d = new Date(`${value}T00:00:00`);
-  if (!Number.isFinite(d.getTime())) return value;
-
-  return d.toLocaleDateString(undefined, {
+  const date = new Date(`${value}T00:00:00`);
+  if (!Number.isFinite(date.getTime())) return String(value);
+  return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
 }
 
-function daysUntil(value) {
-  if (!value) return null;
-
-  const due = new Date(`${value}T00:00:00`);
-  if (!Number.isFinite(due.getTime())) return null;
-
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-
-  return Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+function listFrom(value) {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.results)) return value.results;
+  return [];
 }
 
-function coverageTone(percent) {
-  if (percent >= 100) return "emerald";
-  if (percent >= 75) return "cyan";
-  if (percent >= 40) return "amber";
-  return "rose";
-}
-
-function Card({ title, subtitle, right, children, tone = "slate", className = "" }) {
+function MetricCard({ label, value, detail, tone = "cyan" }) {
   const tones = {
-    cyan: "border-cyan-400/20 bg-cyan-500/10",
-    amber: "border-amber-400/20 bg-amber-500/10",
-    emerald: "border-emerald-400/20 bg-emerald-500/10",
-    fuchsia: "border-fuchsia-400/20 bg-fuchsia-500/10",
-    indigo: "border-indigo-400/20 bg-indigo-500/10",
-    rose: "border-rose-400/20 bg-rose-500/10",
-    slate: "border-white/10 bg-white/[0.03]",
+    cyan: "border-cyan-400/20 from-cyan-500/[.10]",
+    emerald: "border-emerald-400/20 from-emerald-500/[.10]",
+    amber: "border-amber-400/20 from-amber-500/[.10]",
+    rose: "border-rose-400/20 from-rose-500/[.10]",
+    violet: "border-violet-400/20 from-violet-500/[.10]",
   };
 
   return (
-    <section
-      className={cx(
-        "rounded-[1.65rem] border p-4 shadow-[0_18px_60px_rgba(0,0,0,0.24)]",
-        tones[tone] || tones.slate,
-        className
-      )}
-    >
-      {(title || subtitle || right) && (
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            {title ? <h3 className="text-base font-black text-white">{title}</h3> : null}
-            {subtitle ? <p className="mt-1 text-xs leading-5 text-slate-400">{subtitle}</p> : null}
-          </div>
+    <div className={`rounded-[1.5rem] border bg-gradient-to-br ${tones[tone] || tones.cyan} to-transparent p-4`}>
+      <div className="text-[10px] font-black uppercase tracking-[.16em] text-slate-400">{label}</div>
+      <div className="mt-2 text-2xl font-black text-white">{value}</div>
+      <div className="mt-1 text-xs leading-5 text-slate-400">{detail}</div>
+    </div>
+  );
+}
 
-          {right ? <div className="shrink-0">{right}</div> : null}
+function Panel({ title, subtitle, right, children }) {
+  return (
+    <section className="rounded-[1.75rem] border border-white/10 bg-slate-950/55 p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-base font-black text-white">{title}</h2>
+          {subtitle ? <p className="mt-1 text-xs leading-5 text-slate-400">{subtitle}</p> : null}
         </div>
-      )}
-
-      {children}
+        {right ? <div className="shrink-0">{right}</div> : null}
+      </div>
+      <div className="mt-4">{children}</div>
     </section>
   );
 }
 
-function Pill({ children, tone = "slate" }) {
-  const tones = {
-    cyan: "border-cyan-500/25 bg-cyan-500/10 text-cyan-200",
-    amber: "border-amber-500/25 bg-amber-500/10 text-amber-200",
-    emerald: "border-emerald-500/25 bg-emerald-500/10 text-emerald-200",
-    fuchsia: "border-fuchsia-500/25 bg-fuchsia-500/10 text-fuchsia-200",
-    indigo: "border-indigo-500/25 bg-indigo-500/10 text-indigo-200",
-    rose: "border-rose-500/25 bg-rose-500/10 text-rose-200",
-    slate: "border-white/10 bg-white/[0.04] text-slate-300",
-  };
-
+function EmptyState({ children }) {
   return (
-    <span
-      className={cx(
-        "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em]",
-        tones[tone] || tones.slate
-      )}
-    >
+    <div className="rounded-2xl border border-dashed border-white/10 p-4 text-sm leading-6 text-slate-500">
       {children}
-    </span>
+    </div>
   );
 }
 
-function Field({ label, value, onChange, type = "text", placeholder = "", prefix = "" }) {
+function Progress({ value, tone = "emerald" }) {
+  const width = Math.max(0, Math.min(100, Number(value || 0)));
+  const fill = tone === "cyan" ? "bg-cyan-400" : "bg-emerald-400";
   return (
-    <label className="block">
-      <div className="mb-1 text-xs font-semibold text-slate-400">{label}</div>
+    <div className="h-2 overflow-hidden rounded-full bg-white/[.05]">
+      <div className={`h-full rounded-full ${fill}`} style={{ width: `${width}%` }} />
+    </div>
+  );
+}
 
-      <div className="relative">
-        {prefix ? (
-          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-500">
-            {prefix}
-          </span>
-        ) : null}
-
-        <input
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className={cx(
-            "h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-400/40",
-            prefix && "pl-8"
+function AccountRow({ account }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[.025] p-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/[.04]">
+          {account.kind === "CREDIT_CARD" ? (
+            <CreditCard className="h-5 w-5 text-amber-200" />
+          ) : (
+            <Banknote className="h-5 w-5 text-cyan-200" />
           )}
-        />
+        </div>
+        <div className="min-w-0">
+          <div className="truncate text-sm font-black text-white">{account.name}</div>
+          <div className="mt-0.5 text-[11px] text-slate-500">
+            {String(account.kind || "OTHER").replaceAll("_", " ")}
+            {account.mask ? ` •••• ${account.mask}` : ""}
+            {account.is_manual ? " • manual" : " • connected"}
+          </div>
+        </div>
       </div>
-    </label>
+      <div className="text-right">
+        <div className="font-black text-white">{money(account.current_balance)}</div>
+        {account.credit_limit ? (
+          <div className="text-[10px] text-slate-500">limit {money(account.credit_limit)}</div>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
-function SelectField({ label, value, onChange, options }) {
+function LiabilityRow({ item }) {
   return (
-    <label className="block">
-      <div className="mb-1 text-xs font-semibold text-slate-400">{label}</div>
-
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40"
-      >
-        {options.map((option) => (
-          <option key={option}>{option}</option>
-        ))}
-      </select>
-    </label>
+    <div className="rounded-2xl border border-white/10 bg-white/[.025] p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-black text-white">{item.name}</div>
+          <div className="mt-1 text-[11px] text-slate-500">
+            {String(item.kind || "OTHER").replaceAll("_", " ")}
+            {item.apr ? ` • ${item.apr}% APR` : ""}
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="font-black text-rose-100">{money(item.outstanding_balance)}</div>
+          <div className="text-[10px] text-slate-500">min {money(item.minimum_payment)}</div>
+        </div>
+      </div>
+      {item.next_payment_date ? (
+        <div className="mt-2 text-xs text-slate-400">
+          Next payment {dateLabel(item.next_payment_date)} • {money(item.next_payment_amount || item.minimum_payment)}
+        </div>
+      ) : null}
+      {item.payoff_target_date ? (
+        <div className="mt-1 text-xs text-cyan-200">Payoff target {dateLabel(item.payoff_target_date)}</div>
+      ) : null}
+    </div>
   );
 }
 
-function ProgressBar({ percent, tone = "cyan" }) {
-  const fill =
-    tone === "emerald"
-      ? "bg-emerald-400"
-      : tone === "amber"
-      ? "bg-amber-400"
-      : tone === "rose"
-      ? "bg-rose-400"
-      : "bg-cyan-400";
+function GoalRow({ goal }) {
+  const target = Number(goal.target_amount || 0);
+  const current = Number(goal.current_amount || 0);
+  const progress = target > 0 ? (current / target) * 100 : 0;
 
   return (
-    <div className="h-2.5 overflow-hidden rounded-full bg-slate-950/70">
-      <div
-        className={cx("h-full rounded-full transition-all", fill)}
-        style={{ width: `${Math.max(0, Math.min(100, percent || 0))}%` }}
-      />
+    <div className="rounded-2xl border border-white/10 p-3">
+      <div className="flex justify-between gap-3">
+        <div>
+          <div className="text-sm font-black text-white">{goal.name}</div>
+          <div className="mt-1 text-[11px] text-slate-500">
+            {goal.target_date ? `Target ${dateLabel(goal.target_date)}` : String(goal.kind || "GOAL").replaceAll("_", " ")}
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="font-black text-emerald-100">{money(current)}</div>
+          <div className="text-[10px] text-slate-500">of {money(target)}</div>
+        </div>
+      </div>
+      <div className="mt-3"><Progress value={progress} /></div>
     </div>
   );
 }
 
 function FinanceSignupScreen({ onBack }) {
   return (
-    <div className="space-y-5">
-      <section className="relative overflow-hidden rounded-[1.85rem] border border-cyan-400/25 bg-slate-950/70 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.32)] md:p-7">
-        <div className="pointer-events-none absolute -right-28 -top-28 h-80 w-80 rounded-full bg-amber-500/14 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-28 left-1/4 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl" />
-        <div className="pointer-events-none absolute right-1/4 top-1/3 h-72 w-72 rounded-full bg-fuchsia-500/10 blur-3xl" />
-
-        <div className="relative">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
-              <div className="flex items-center gap-3">
-                <img
-                  src={FINANCE_LOGO_URL}
-                  alt="Money Hub"
-                  className="h-16 w-16 rounded-2xl border border-amber-400/25 object-cover"
-                />
-
-                <div>
-                  <div className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-200">
-                    SyncWorks Money
-                  </div>
-                  <h1 className="mt-1 text-3xl font-black tracking-tight text-white md:text-5xl">
-                    Money Hub
-                  </h1>
-                </div>
-              </div>
-
-              <p className="mt-5 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
-                Track bills, due dates, payment readiness, required expenses, subscriptions, and monthly priorities from one clean dashboard.
-              </p>
-
-              <div className="mt-5 flex flex-wrap gap-2">
-                <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-emerald-100">
-                  30 days free
-                </span>
-
-                <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-cyan-100">
-                  $2.99/month after
-                </span>
-
-                <span className="rounded-full border border-fuchsia-500/25 bg-fuchsia-500/10 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-fuchsia-100">
-                  Cancel anytime
-                </span>
-              </div>
-            </div>
-
-            <div className="w-full shrink-0 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 lg:w-[360px]">
-              <div className="text-sm font-black uppercase tracking-[0.16em] text-slate-400">
-                Plan
-              </div>
-
-              <div className="mt-3 flex items-end gap-2">
-                <div className="text-5xl font-black text-white">$2.99</div>
-                <div className="pb-2 text-sm font-semibold text-slate-400">/ month</div>
-              </div>
-
-              <div className="mt-2 text-sm text-emerald-200">
-                First 30 days free.
-              </div>
-
-              <a
-                href={STRIPE_FINANCE_CHECKOUT_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-5 inline-flex h-12 w-full items-center justify-center rounded-2xl border border-amber-300/40 bg-gradient-to-r from-amber-500 to-cyan-500 px-5 text-sm font-black text-white shadow-[0_0_34px_rgba(245,158,11,0.24)] transition hover:brightness-110"
-              >
-                Start Free Trial
-              </a>
-
-              <button
-                type="button"
-                onClick={onBack}
-                className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-5 text-sm font-black text-slate-100 transition hover:bg-white/[0.08]"
-              >
-                Back to Dashboard
-              </button>
-
-              <div className="mt-4 text-xs leading-5 text-slate-500">
-                After checkout, access is unlocked by your backend entitlement. Log out/in or refresh if you just purchased.
-              </div>
+    <section className="relative overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-950/70 p-5 sm:p-7">
+      <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl" />
+      <div className="relative grid gap-6 lg:grid-cols-[1fr_340px]">
+        <div>
+          <div className="flex items-center gap-3">
+            <img src={FINANCE_LOGO_URL} alt="SyncWorks Finance" className="h-16 w-16 rounded-2xl border border-cyan-400/20 object-cover" />
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-200">SyncWorks Finance</div>
+              <h1 className="mt-1 text-3xl font-black text-white sm:text-5xl">Your financial command center.</h1>
             </div>
           </div>
+          <p className="mt-5 max-w-3xl text-sm leading-6 text-slate-300 sm:text-base">
+            Connect supported banks and credit cards, add anything that cannot connect manually, then see cash, bills, mortgages, debt, spending and goals in one place. SYNC Assist uses the same financial picture.
+          </p>
         </div>
-      </section>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
-          <div className="text-sm font-black text-white">Bill command center</div>
-          <div className="mt-2 text-sm leading-6 text-slate-400">
-            Track mortgage, rent, auto, utilities, subscriptions, due days, paid status, and readiness.
+        <div className="rounded-[1.5rem] border border-white/10 bg-white/[.04] p-5">
+          <div className="text-xs font-black uppercase tracking-[.16em] text-slate-400">Personal Finance</div>
+          <div className="mt-3 flex items-end gap-2">
+            <span className="text-5xl font-black text-white">$2.99</span>
+            <span className="pb-2 text-sm text-slate-400">/month</span>
           </div>
-        </div>
-
-        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
-          <div className="text-sm font-black text-white">Monthly coverage</div>
-          <div className="mt-2 text-sm leading-6 text-slate-400">
-            See what percentage of required bills are covered and what still needs attention.
-          </div>
-        </div>
-
-        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
-          <div className="text-sm font-black text-white">Life Schedule sync</div>
-          <div className="mt-2 text-sm leading-6 text-slate-400">
-            Main payment due dates can feed the customer Life Schedule and dashboard snapshot.
-          </div>
+          <div className="mt-2 text-sm font-bold text-emerald-200">30 days free</div>
+          <a href={STRIPE_FINANCE_CHECKOUT_URL} target="_blank" rel="noreferrer" className="mt-5 flex min-h-12 items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 px-4 text-sm font-black text-white">
+            Start free trial
+          </a>
+          <button type="button" onClick={onBack} className="mt-3 min-h-11 w-full rounded-2xl border border-white/10 bg-white/[.03] text-sm font-black text-slate-200">
+            Back to Personal
+          </button>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
+
+function loadPlaidScript() {
+  if (window.Plaid) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector('script[data-syncworks-plaid="true"]');
+    if (existing) {
+      existing.addEventListener("load", resolve, { once: true });
+      existing.addEventListener("error", reject, { once: true });
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://cdn.plaid.com/link/v2/stable/link-initialize.js";
+    script.async = true;
+    script.dataset.syncworksPlaid = "true";
+    script.onload = resolve;
+    script.onerror = reject;
+    document.body.appendChild(script);
+  });
+}
+
+function ManualField({ label, children, wide = false }) {
+  return (
+    <label className={wide ? "sm:col-span-2" : ""}>
+      <span className="text-xs font-bold text-slate-400">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+const inputClass = "mt-1 h-11 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-sm text-white outline-none focus:border-cyan-400/40";
 
 export default function CustomerFinance() {
   const nav = useNavigate();
   const { moduleAccess, isGod } = useAuth();
+  const hasFinanceAccess = Boolean(
+    isGod || moduleAccess?.finance || moduleAccess?.money || moduleAccess?.customer_finance || moduleAccess?.customerFinance
+  );
 
-  const hasFinanceAccess =
-    !!isGod ||
-    !!moduleAccess?.finance ||
-    !!moduleAccess?.money ||
-    !!moduleAccess?.customer_finance ||
-    !!moduleAccess?.customerFinance;
+  const [dashboard, setDashboard] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [error, setError] = useState("");
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manual, setManual] = useState(EMPTY_MANUAL);
+  const [savingManual, setSavingManual] = useState(false);
 
-  const [form, setForm] = useState(() => {
-    const saved = readJson(SNAPSHOT_KEY, null);
-
-    return {
-      monthly_bills: saved?.monthly_bills ?? "",
-      covered_amount: saved?.covered_amount ?? "",
-      mortgage_label: saved?.mortgage_label ?? "Mortgage / Rent",
-      mortgage_amount: saved?.mortgage_amount ?? "",
-      mortgage_due_date: saved?.mortgage_due_date ?? "",
-      emergency_buffer: saved?.emergency_buffer ?? "",
-      top_priority: saved?.top_priority ?? "",
-      spending_status: saved?.spending_status ?? "Normal",
-    };
-  });
-
-  const [bills, setBills] = useState(() => {
-    const saved = readJson(BILLS_KEY, null);
-
-    if (Array.isArray(saved) && saved.length) return saved;
-
-    return [
-      { id: "bill-mortgage", name: "Mortgage / Rent", amount: "", due_day: "1", status: "Planned" },
-      { id: "bill-auto", name: "Auto / Insurance", amount: "", due_day: "10", status: "Planned" },
-      { id: "bill-utilities", name: "Utilities", amount: "", due_day: "15", status: "Planned" },
-    ];
-  });
-
-  const monthlyBills = safeNumber(form.monthly_bills);
-  const coveredAmount = safeNumber(form.covered_amount);
-  const emergencyBuffer = safeNumber(form.emergency_buffer);
-  const coveredPercent =
-    monthlyBills > 0 ? Math.min(100, Math.round((coveredAmount / monthlyBills) * 100)) : 0;
-  const remaining = Math.max(0, monthlyBills - coveredAmount);
-  const mainPaymentAmount = safeNumber(form.mortgage_amount);
-  const mainPaymentDays = daysUntil(form.mortgage_due_date);
-  const billTotal = bills.reduce((sum, bill) => sum + safeNumber(bill.amount), 0);
-  const readyBills = bills.filter((bill) => bill.status === "Ready" || bill.status === "Paid").length;
-  const paidBills = bills.filter((bill) => bill.status === "Paid").length;
-  const coverage = coverageTone(coveredPercent);
-
-  const readinessLabel =
-    coveredPercent >= 100
-      ? "Covered"
-      : coveredPercent >= 75
-      ? "Close"
-      : coveredPercent >= 40
-      ? "Watch"
-      : "Needs Attention";
-
-  const nextAction =
-    coveredPercent >= 100
-      ? "Your required monthly bills are covered. Keep tracking paid status and upcoming due dates."
-      : remaining > 0
-      ? `You still need ${money(remaining)} to fully cover this month. Prioritize required bills first.`
-      : "Add your monthly bills and covered amount to activate your money snapshot.";
-
-  const snapshot = useMemo(() => {
-    return {
-      monthly_bills: monthlyBills,
-      covered_amount: coveredAmount,
-      covered_percent: coveredPercent,
-      mortgage_label: form.mortgage_label,
-      mortgage_amount: mainPaymentAmount,
-      mortgage_due_date: form.mortgage_due_date,
-      emergency_buffer: emergencyBuffer,
-      top_priority: form.top_priority,
-      spending_status: form.spending_status,
-      bill_count: bills.length,
-      ready_bill_count: readyBills,
-      paid_bill_count: paidBills,
-      updated_at: new Date().toISOString(),
-    };
-  }, [
-    monthlyBills,
-    coveredAmount,
-    coveredPercent,
-    form,
-    mainPaymentAmount,
-    emergencyBuffer,
-    bills.length,
-    readyBills,
-    paidBills,
-  ]);
+  const loadFinance = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [summaryResult, txResult] = await Promise.allSettled([
+        api.get(`${FINANCE_API}/dashboard/`),
+        api.get(`${FINANCE_API}/transactions/`),
+      ]);
+      if (summaryResult.status !== "fulfilled") throw summaryResult.reason;
+      setDashboard(summaryResult.value?.data || {});
+      setTransactions(txResult.status === "fulfilled" ? listFrom(txResult.value?.data).slice(0, 10) : []);
+    } catch (err) {
+      setError(err?.response?.data?.detail || err?.message || "Finance could not load yet.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    writeJson(SNAPSHOT_KEY, snapshot);
-  }, [snapshot]);
+    if (hasFinanceAccess) loadFinance();
+  }, [hasFinanceAccess]);
 
-  useEffect(() => {
-    writeJson(BILLS_KEY, bills);
-  }, [bills]);
+  const connectBank = async () => {
+    setSyncing(true);
+    setError("");
+    try {
+      await loadPlaidScript();
+      const tokenResponse = await api.post(`${FINANCE_API}/connections/plaid/link-token/`, {});
+      const token = tokenResponse?.data?.link_token;
+      if (!token || !window.Plaid) throw new Error("Bank connection is not configured yet.");
 
-  function updateBill(id, patch) {
-    setBills((prev) =>
-      prev.map((bill) => {
-        if (bill.id !== id) return bill;
-        return { ...bill, ...patch };
-      })
+      const handler = window.Plaid.create({
+        token,
+        onSuccess: async (publicToken, metadata) => {
+          try {
+            await api.post(`${FINANCE_API}/connections/plaid/exchange/`, {
+              public_token: publicToken,
+              institution: metadata?.institution || {},
+            });
+            await loadFinance();
+          } catch (err) {
+            setError(err?.response?.data?.detail || "The institution connected, but SyncWorks could not finish importing it.");
+          } finally {
+            setSyncing(false);
+          }
+        },
+        onExit: () => setSyncing(false),
+      });
+      handler.open();
+    } catch (err) {
+      setError(err?.response?.data?.detail || err?.message || "Bank connection is unavailable.");
+      setSyncing(false);
+    }
+  };
+
+  const syncAll = async () => {
+    const connections = dashboard?.connections || [];
+    if (!connections.length) {
+      await loadFinance();
+      return;
+    }
+    setSyncing(true);
+    setError("");
+    try {
+      const active = connections.filter((item) => item.status === "ACTIVE");
+      await Promise.all(active.map((item) => api.post(`${FINANCE_API}/connections/${item.id}/sync/`, {})));
+      await loadFinance();
+    } catch (err) {
+      setError(err?.response?.data?.detail || "One or more institutions need attention.");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const saveManual = async () => {
+    if (!manual.name.trim()) {
+      setError("Give this financial item a name first.");
+      return;
+    }
+
+    setSavingManual(true);
+    setError("");
+    try {
+      if (manual.type === "ACCOUNT") {
+        await api.post(`${FINANCE_API}/accounts/`, {
+          name: manual.name,
+          kind: manual.account_kind,
+          current_balance: manual.balance || null,
+          credit_limit: manual.credit_limit || null,
+          is_manual: true,
+        });
+      } else if (manual.type === "DEBT") {
+        await api.post(`${FINANCE_API}/liabilities/`, {
+          name: manual.name,
+          kind: manual.account_kind,
+          outstanding_balance: manual.balance || null,
+          minimum_payment: manual.minimum_payment || null,
+          next_payment_amount: manual.minimum_payment || null,
+          next_payment_date: manual.due_date || null,
+          apr: manual.apr || null,
+          payoff_target_date: manual.payoff_target_date || null,
+          is_manual: true,
+        });
+      } else if (manual.type === "GOAL") {
+        await api.post(`${FINANCE_API}/goals/`, {
+          name: manual.name,
+          kind: "SAVINGS",
+          target_amount: manual.target_amount || null,
+          current_amount: manual.balance || 0,
+          target_date: manual.target_date || null,
+          active: true,
+        });
+      } else {
+        await api.post(`${FINANCE_API}/obligations/`, {
+          name: manual.name,
+          category: manual.category,
+          expected_amount: manual.amount || null,
+          next_due_date: manual.due_date || null,
+          recurring: true,
+          cadence: "MONTHLY",
+          active: true,
+          is_manual: true,
+        });
+      }
+
+      setManual(EMPTY_MANUAL);
+      setManualOpen(false);
+      await loadFinance();
+    } catch (err) {
+      setError(err?.response?.data?.detail || "SyncWorks could not save that financial item.");
+    } finally {
+      setSavingManual(false);
+    }
+  };
+
+  const net = dashboard?.net_position || {};
+  const month = dashboard?.this_month || {};
+  const credit = dashboard?.credit || {};
+  const upcoming = dashboard?.next_30_days || {};
+  const accounts = dashboard?.accounts || [];
+  const liabilities = dashboard?.liabilities || [];
+  const goals = dashboard?.goals || [];
+  const spending = dashboard?.spending_by_category || [];
+  const connections = dashboard?.connections || [];
+  const availableAfterBills = Number(net.cash || 0) - Number(upcoming.total_due || 0);
+
+  const upcomingItems = useMemo(() => {
+    const bills = (upcoming.obligations || []).map((item) => ({
+      id: `bill-${item.id}`,
+      name: item.name,
+      amount: item.expected_amount,
+      date: item.next_due_date,
+      type: item.category,
+    }));
+    const debt = (upcoming.liabilities || []).map((item) => ({
+      id: `debt-${item.id}`,
+      name: item.name,
+      amount: item.next_payment_amount || item.minimum_payment,
+      date: item.next_payment_date,
+      type: item.kind,
+    }));
+    return [...bills, ...debt].sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+  }, [upcoming.obligations, upcoming.liabilities]);
+
+  const attention = useMemo(() => {
+    const items = [];
+    if (Number(upcoming.total_due || 0) > Number(net.cash || 0)) {
+      items.push("Upcoming 30-day obligations are greater than available cash.");
+    }
+    if (Number(credit.utilization_percent || 0) >= 30) {
+      items.push(`Credit utilization is ${Number(credit.utilization_percent).toFixed(1)}%.`);
+    }
+    if (Number(month.cash_flow || 0) < 0) {
+      items.push("This month's recorded spending is currently ahead of recorded income.");
+    }
+    if (connections.some((item) => item.status === "NEEDS_ATTENTION")) {
+      items.push("A connected institution needs attention.");
+    }
+    return items;
+  }, [credit.utilization_percent, month.cash_flow, net.cash, upcoming.total_due, connections]);
+
+  if (!hasFinanceAccess) {
+    return (
+      <div className="min-h-screen bg-[#030712] text-white">
+        <ModeBar />
+        <main className="mx-auto max-w-7xl px-3 pb-24 pt-5 sm:px-5">
+          <FinanceSignupScreen onBack={() => nav("/customer/dashboard")} />
+        </main>
+      </div>
     );
   }
 
-  function addBill() {
-    setBills((prev) => [
-      ...prev,
-      {
-        id: `bill-${Date.now()}`,
-        name: "New Bill",
-        amount: "",
-        due_day: "",
-        status: "Planned",
-      },
-    ]);
-  }
-
-  function removeBill(id) {
-    setBills((prev) => prev.filter((bill) => bill.id !== id));
-  }
-
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-[#020617] text-slate-100">
-      <div className="pointer-events-none fixed inset-0">
-        <div className="absolute inset-0 bg-[#020617]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.12),transparent_30%),radial-gradient(circle_at_top_right,rgba(34,211,238,0.10),transparent_32%),radial-gradient(circle_at_bottom,rgba(99,102,241,0.12),transparent_38%)]" />
-      </div>
-
-      <ModeBar
-        title="Money"
-        subtitle={
-          hasFinanceAccess
-            ? "Bills • coverage • payments • monthly systems"
-            : "30 days free • $2.99/month after"
-        }
-        rightActions={
-          <button
-            type="button"
-            onClick={() => nav("/customer")}
-            className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs hover:bg-slate-900"
-          >
-            Back
-          </button>
-        }
-      />
-
-      <main
-        className={cx(
-          "relative mx-auto px-3 pb-12 pt-4 sm:px-5",
-          hasFinanceAccess ? "max-w-6xl" : "max-w-5xl"
-        )}
-      >
-        {!hasFinanceAccess ? (
-          <FinanceSignupScreen onBack={() => nav("/customer")} />
-        ) : (
-          <div className="space-y-5">
-            <section className="relative overflow-hidden rounded-[1.65rem] border border-white/10 bg-slate-950/65 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.28)] md:p-6">
-              <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-amber-500/12 blur-3xl" />
-              <div className="pointer-events-none absolute -bottom-28 left-1/4 h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl" />
-
-              <div className="relative">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-200/90">
-                      SyncWorks Money
-                    </div>
-
-                    <h1 className="mt-2 text-2xl font-black tracking-tight text-white md:text-4xl">
-                      Monthly money command center
-                    </h1>
-
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                      Keep required bills, due dates, coverage, and priorities organized before the month gets noisy.
-                    </p>
-                  </div>
-
-                  <Pill tone={coverage}>{readinessLabel}</Pill>
+    <div className="min-h-screen bg-[#030712] text-white">
+      <ModeBar />
+      <main className="mx-auto w-full max-w-7xl space-y-4 px-3 pb-28 pt-4 sm:px-5 lg:px-8">
+        <section className="relative overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_85%_15%,rgba(34,211,238,.13),transparent_28%),radial-gradient(circle_at_65%_80%,rgba(139,92,246,.12),transparent_32%),linear-gradient(145deg,#07111f,#020617)] p-5 sm:p-7">
+          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <button type="button" onClick={() => nav("/customer/dashboard")} className="mb-4 inline-flex items-center gap-2 text-xs font-black text-slate-400">
+                <ArrowLeft className="h-4 w-4" /> Personal
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="grid h-12 w-12 place-items-center rounded-2xl border border-cyan-400/20 bg-cyan-500/10">
+                  <Landmark className="h-6 w-6 text-cyan-200" />
                 </div>
-
-                <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                  <Card tone="amber" className="shadow-none">
-                    <div className="text-[11px] font-black uppercase tracking-[0.16em] text-amber-200">
-                      Monthly Bills
-                    </div>
-                    <div className="mt-2 text-3xl font-black text-white">{money(monthlyBills)}</div>
-                    <div className="mt-1 text-xs text-slate-400">{bills.length} tracked bills</div>
-                  </Card>
-
-                  <Card tone="cyan" className="shadow-none">
-                    <div className="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-200">
-                      Covered
-                    </div>
-                    <div className="mt-2 text-3xl font-black text-white">{money(coveredAmount)}</div>
-                    <div className="mt-3">
-                      <ProgressBar percent={coveredPercent} tone={coverage} />
-                    </div>
-                    <div className="mt-1 text-xs text-slate-400">{coveredPercent}% ready</div>
-                  </Card>
-
-                  <Card tone={remaining > 0 ? "fuchsia" : "emerald"} className="shadow-none">
-                    <div className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-300">
-                      Remaining
-                    </div>
-                    <div className="mt-2 text-3xl font-black text-white">{money(remaining)}</div>
-                    <div className="mt-1 text-xs text-slate-400">
-                      Buffer: {money(emergencyBuffer)}
-                    </div>
-                  </Card>
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-200">Personal Finance</div>
+                  <h1 className="text-2xl font-black sm:text-4xl">Financial Command Center</h1>
                 </div>
               </div>
-            </section>
-
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
-              <div className="space-y-5">
-                <Card
-                  title="Monthly Snapshot"
-                  subtitle="Updates your customer dashboard and Life Schedule automatically."
-                  tone="cyan"
-                  right={<Pill tone="cyan">Synced</Pill>}
-                >
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Field
-                      label="Total monthly bills"
-                      value={form.monthly_bills}
-                      onChange={(value) => setForm((p) => ({ ...p, monthly_bills: value }))}
-                      type="number"
-                      prefix="$"
-                      placeholder="3500"
-                    />
-
-                    <Field
-                      label="Amount covered / ready"
-                      value={form.covered_amount}
-                      onChange={(value) => setForm((p) => ({ ...p, covered_amount: value }))}
-                      type="number"
-                      prefix="$"
-                      placeholder="2200"
-                    />
-
-                    <Field
-                      label="Main payment label"
-                      value={form.mortgage_label}
-                      onChange={(value) => setForm((p) => ({ ...p, mortgage_label: value }))}
-                      placeholder="Mortgage / Rent"
-                    />
-
-                    <Field
-                      label="Main payment amount"
-                      value={form.mortgage_amount}
-                      onChange={(value) => setForm((p) => ({ ...p, mortgage_amount: value }))}
-                      type="number"
-                      prefix="$"
-                      placeholder="1850"
-                    />
-
-                    <Field
-                      label="Main payment due date"
-                      value={form.mortgage_due_date}
-                      onChange={(value) => setForm((p) => ({ ...p, mortgage_due_date: value }))}
-                      type="date"
-                    />
-
-                    <Field
-                      label="Emergency buffer"
-                      value={form.emergency_buffer}
-                      onChange={(value) => setForm((p) => ({ ...p, emergency_buffer: value }))}
-                      type="number"
-                      prefix="$"
-                      placeholder="1000"
-                    />
-
-                    <SelectField
-                      label="Spending status"
-                      value={form.spending_status}
-                      onChange={(value) => setForm((p) => ({ ...p, spending_status: value }))}
-                      options={["Normal", "Tight", "Hold Spending", "Extra Available"]}
-                    />
-                  </div>
-
-                  <label className="mt-3 block">
-                    <div className="mb-1 text-xs font-semibold text-slate-400">
-                      Top money priority
-                    </div>
-
-                    <textarea
-                      value={form.top_priority}
-                      onChange={(e) => setForm((p) => ({ ...p, top_priority: e.target.value }))}
-                      placeholder="Example: cover mortgage first, then utilities, then reduce credit card balance."
-                      rows={3}
-                      className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-400/40"
-                    />
-                  </label>
-                </Card>
-
-                <Card
-                  title="Bill List"
-                  subtitle="Track recurring bills, due days, readiness, and paid status."
-                  tone="amber"
-                  right={
-                    <button
-                      type="button"
-                      onClick={addBill}
-                      className="rounded-2xl border border-amber-400/25 bg-amber-500/12 px-3 py-2 text-xs font-black text-amber-100 hover:bg-amber-500/18"
-                    >
-                      + Bill
-                    </button>
-                  }
-                >
-                  <div className="space-y-3">
-                    {bills.map((bill) => (
-                      <div
-                        key={bill.id}
-                        className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
-                      >
-                        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_140px_110px]">
-                          <Field
-                            label="Bill"
-                            value={bill.name}
-                            onChange={(value) => updateBill(bill.id, { name: value })}
-                            placeholder="Power bill"
-                          />
-
-                          <Field
-                            label="Amount"
-                            value={bill.amount}
-                            onChange={(value) => updateBill(bill.id, { amount: value })}
-                            type="number"
-                            prefix="$"
-                            placeholder="150"
-                          />
-
-                          <Field
-                            label="Due day"
-                            value={bill.due_day}
-                            onChange={(value) => updateBill(bill.id, { due_day: value })}
-                            type="number"
-                            placeholder="15"
-                          />
-                        </div>
-
-                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                          <select
-                            value={bill.status}
-                            onChange={(e) => updateBill(bill.id, { status: e.target.value })}
-                            className="h-10 rounded-2xl border border-white/10 bg-slate-950/70 px-3 text-xs font-semibold text-slate-200 outline-none"
-                          >
-                            <option>Planned</option>
-                            <option>Ready</option>
-                            <option>Paid</option>
-                            <option>Watch</option>
-                          </select>
-
-                          <button
-                            type="button"
-                            onClick={() => removeBill(bill.id)}
-                            className="h-10 rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3 text-xs font-black text-rose-100 hover:bg-rose-500/15"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                      <div className="text-xs text-slate-400">Bill list total</div>
-                      <div className="mt-1 text-xl font-black text-white">{money(billTotal)}</div>
-                    </div>
-
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                      <div className="text-xs text-slate-400">Ready / paid</div>
-                      <div className="mt-1 text-xl font-black text-white">
-                        {readyBills}/{bills.length}
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                      <div className="text-xs text-slate-400">Paid</div>
-                      <div className="mt-1 text-xl font-black text-white">{paidBills}</div>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-
-              <div className="space-y-5">
-                <Card title="Required Payment" subtitle="Your most important recurring payment." tone="indigo">
-                  <div className="rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-4">
-                    <div className="text-[11px] font-black uppercase tracking-[0.16em] text-indigo-200">
-                      {form.mortgage_label || "Mortgage / Rent"}
-                    </div>
-
-                    <div className="mt-2 text-3xl font-black text-white">
-                      {money(mainPaymentAmount)}
-                    </div>
-
-                    <div className="mt-2 text-sm text-slate-300">
-                      Due {prettyDate(form.mortgage_due_date)}
-                    </div>
-
-                    {mainPaymentDays != null ? (
-                      <div
-                        className={cx(
-                          "mt-3 rounded-2xl border px-3 py-2 text-xs font-black",
-                          mainPaymentDays < 0
-                            ? "border-rose-500/25 bg-rose-500/10 text-rose-100"
-                            : mainPaymentDays <= 3
-                            ? "border-amber-500/25 bg-amber-500/10 text-amber-100"
-                            : "border-emerald-500/25 bg-emerald-500/10 text-emerald-100"
-                        )}
-                      >
-                        {mainPaymentDays < 0
-                          ? `${Math.abs(mainPaymentDays)} day(s) overdue`
-                          : mainPaymentDays === 0
-                          ? "Due today"
-                          : `${mainPaymentDays} day(s) away`}
-                      </div>
-                    ) : null}
-                  </div>
-                </Card>
-
-                <Card title="Money Priority" subtitle="Clear next action." tone={coverage}>
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                    <div className="text-sm font-black text-white">{readinessLabel}</div>
-                    <div className="mt-2 text-sm leading-6 text-slate-400">{nextAction}</div>
-                  </div>
-
-                  {form.top_priority ? (
-                    <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                      <div className="text-xs text-slate-400">Your priority</div>
-                      <div className="mt-1 text-sm leading-6 text-slate-200">{form.top_priority}</div>
-                    </div>
-                  ) : null}
-                </Card>
-
-                <Card title="Systems" subtitle="Simple operating rules." tone="slate">
-                  <div className="space-y-3">
-                    {[
-                      "Cover required payments before optional spending.",
-                      "Review upcoming due dates once per week.",
-                      "Mark bills Ready before they are paid.",
-                      "Use Watch for anything that could create pressure.",
-                    ].map((item, index) => (
-                      <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                        <div className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">
-                          Rule {index + 1}
-                        </div>
-                        <div className="mt-1 text-sm leading-6 text-slate-300">{item}</div>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              </div>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
+                One view for banks, cards, mortgages, loans, bills, utilities, spending and goals. Connect what you can. Add what you cannot. SYNC Assist reads the same financial picture.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={connectBank} disabled={syncing} className="min-h-11 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 text-sm font-black text-white disabled:opacity-50">
+                <Building2 className="mr-2 inline h-4 w-4" /> {syncing ? "Connecting…" : "Connect institution"}
+              </button>
+              <button type="button" onClick={() => setManualOpen(true)} className="min-h-11 rounded-2xl border border-white/10 bg-white/[.04] px-4 text-sm font-black">
+                <Plus className="mr-2 inline h-4 w-4" /> Add manually
+              </button>
+              <button type="button" onClick={syncAll} disabled={syncing || loading} className="min-h-11 rounded-2xl border border-white/10 bg-white/[.04] px-4 text-sm font-black text-slate-300">
+                <RefreshCw className={`mr-2 inline h-4 w-4 ${syncing ? "animate-spin" : ""}`} /> Refresh
+              </button>
             </div>
           </div>
-        )}
+        </section>
+
+        {error ? (
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-400/20 bg-amber-500/[.08] p-4 text-sm text-amber-100">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        ) : null}
+
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <MetricCard label="Available cash" value={money(net.cash)} detail={`${accounts.filter((a) => ["CHECKING", "SAVINGS"].includes(a.kind)).length} cash accounts`} />
+          <MetricCard label="Due next 30 days" value={money(upcoming.total_due)} detail="Bills + debt payments" tone="amber" />
+          <MetricCard label="After scheduled bills" value={money(availableAfterBills)} detail="Cash less known 30-day obligations" tone={availableAfterBills >= 0 ? "emerald" : "rose"} />
+          <MetricCard label="Total debt" value={money(net.debt)} detail={`${liabilities.length} tracked liabilities`} tone="rose" />
+          <MetricCard label="Month cash flow" value={money(month.cash_flow)} detail={`${money(month.income)} in • ${money(month.spending)} out`} tone={Number(month.cash_flow || 0) >= 0 ? "emerald" : "rose"} />
+        </div>
+
+        <Panel
+          title="SYNC Assist financial briefing"
+          subtitle="Automatic attention items from the same data used by your Finance dashboard."
+          right={<div className="grid h-10 w-10 place-items-center rounded-2xl border border-violet-400/20 bg-violet-500/10"><Bot className="h-5 w-5 text-violet-200" /></div>}
+        >
+          {attention.length ? (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {attention.map((item) => (
+                <div key={item} className="rounded-2xl border border-amber-400/15 bg-amber-500/[.05] p-3 text-sm text-slate-300">{item}</div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 rounded-2xl border border-emerald-400/15 bg-emerald-500/[.05] p-4 text-sm text-emerald-100">
+              <ShieldCheck className="h-5 w-5" /> No major finance alerts are visible from the data SyncWorks currently has.
+            </div>
+          )}
+          <button type="button" onClick={() => nav("/sync")} className="mt-3 min-h-10 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 text-xs font-black text-violet-100">
+            <Sparkles className="mr-2 inline h-4 w-4" /> Ask SYNC Assist about my finances
+          </button>
+        </Panel>
+
+        <div className="grid gap-4 xl:grid-cols-[1.1fr_.9fr]">
+          <Panel title="Accounts" subtitle="Connected and manually tracked cash, cards and other accounts." right={<span className="text-xs font-black text-slate-400">{accounts.length} total</span>}>
+            {accounts.length ? <div className="space-y-2">{accounts.map((account) => <AccountRow key={account.id} account={account} />)}</div> : <EmptyState>No financial accounts yet. Connect an institution or add one manually.</EmptyState>}
+          </Panel>
+          <Panel title="Credit & debt" subtitle="Balances, minimums, APR and payoff targets." right={credit.utilization_percent != null ? <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-black text-slate-300">{credit.utilization_percent}% utilization</span> : null}>
+            {liabilities.length ? <div className="space-y-2">{liabilities.slice(0, 8).map((item) => <LiabilityRow key={item.id} item={item} />)}</div> : <EmptyState>Add credit cards, mortgages, auto loans, student loans or other debt to build a complete payoff picture.</EmptyState>}
+          </Panel>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-2">
+          <Panel title="Upcoming obligations" subtitle="Bills, utilities, housing and debt payments due in the next 30 days." right={<CalendarClock className="h-5 w-5 text-amber-200" />}>
+            {upcomingItems.length ? (
+              <div className="space-y-2">
+                {upcomingItems.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 p-3">
+                    <div>
+                      <div className="text-sm font-black text-white">{item.name}</div>
+                      <div className="mt-1 text-[11px] text-slate-500">{String(item.type || "OTHER").replaceAll("_", " ")} • {dateLabel(item.date)}</div>
+                    </div>
+                    <div className="font-black text-amber-100">{money(item.amount)}</div>
+                  </div>
+                ))}
+              </div>
+            ) : <EmptyState>No known obligations are due in the next 30 days.</EmptyState>}
+          </Panel>
+
+          <Panel title="Spending habits" subtitle="Top recorded spending categories for the current month." right={Number(month.spending || 0) > 0 ? <TrendingDown className="h-5 w-5 text-cyan-200" /> : null}>
+            {spending.length ? (
+              <div className="space-y-3">
+                {spending.map((item) => {
+                  const total = Number(item.total || 0);
+                  const pct = Number(month.spending || 0) > 0 ? (total / Number(month.spending)) * 100 : 0;
+                  return (
+                    <div key={item.category_primary || "Other"}>
+                      <div className="mb-1 flex justify-between gap-3 text-xs">
+                        <span className="font-bold text-slate-300">{item.category_primary || "Other"}</span>
+                        <span className="font-black text-white">{money(total)}</span>
+                      </div>
+                      <Progress value={pct} tone="cyan" />
+                    </div>
+                  );
+                })}
+              </div>
+            ) : <EmptyState>Spending patterns will appear as transactions are connected or imported.</EmptyState>}
+          </Panel>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-2">
+          <Panel title="Goals & payoff plan" subtitle="Savings targets and debt-payoff milestones." right={<Target className="h-5 w-5 text-emerald-200" />}>
+            {goals.length ? <div className="space-y-2">{goals.map((goal) => <GoalRow key={goal.id} goal={goal} />)}</div> : <EmptyState>Add an emergency fund, savings goal or payoff target.</EmptyState>}
+          </Panel>
+
+          <Panel title="Recent activity" subtitle="Latest imported financial transactions." right={Number(month.cash_flow || 0) >= 0 ? <TrendingUp className="h-5 w-5 text-emerald-200" /> : <TrendingDown className="h-5 w-5 text-rose-200" />}>
+            {transactions.length ? (
+              <div className="space-y-2">
+                {transactions.map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 p-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-black text-white">{tx.merchant_name || tx.description || "Transaction"}</div>
+                      <div className="mt-1 text-[11px] text-slate-500">{dateLabel(tx.date)} • {tx.category_primary || "Uncategorized"}</div>
+                    </div>
+                    <div className={`font-black ${tx.is_income ? "text-emerald-200" : "text-white"}`}>
+                      {tx.is_income ? "+" : "-"}{money(Math.abs(Number(tx.amount || 0)))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : <EmptyState>Connect a bank or card to begin building your transaction history.</EmptyState>}
+          </Panel>
+        </div>
+
+        <Panel title="Connections & automation" subtitle="Connected data and manual records feed one financial intelligence layer." right={<Wallet className="h-5 w-5 text-cyan-200" />}>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricCard label="Institutions" value={connections.length} detail="Bank/card connections" />
+            <MetricCard label="Manual coverage" value={accounts.filter((a) => a.is_manual).length + liabilities.filter((a) => a.is_manual).length} detail="Items outside providers" tone="violet" />
+            <MetricCard label="Last refresh" value={dashboard?.last_synced_at ? new Date(dashboard.last_synced_at).toLocaleDateString() : "Not yet"} detail="Connected data timestamp" tone="amber" />
+            <MetricCard label="Automation" value="SYNC" detail="Bills → spending → payoff → briefing" tone="emerald" />
+          </div>
+        </Panel>
       </main>
+
+      {manualOpen ? (
+        <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 sm:items-center sm:p-4">
+          <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-[2rem] border border-white/10 bg-[#07111f] p-5 sm:rounded-[2rem]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">Manual financial record</div>
+                <h2 className="mt-1 text-xl font-black text-white">Add what cannot connect</h2>
+              </div>
+              <button type="button" onClick={() => setManualOpen(false)} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10"><X className="h-5 w-5" /></button>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <ManualField label="Type" wide>
+                <select value={manual.type} onChange={(e) => setManual({ ...manual, type: e.target.value })} className={inputClass}>
+                  <option value="BILL">Bill / utility</option>
+                  <option value="ACCOUNT">Bank / card account</option>
+                  <option value="DEBT">Debt / mortgage / loan</option>
+                  <option value="GOAL">Savings goal</option>
+                </select>
+              </ManualField>
+
+              <ManualField label="Name" wide>
+                <input value={manual.name} onChange={(e) => setManual({ ...manual, name: e.target.value })} placeholder="Mortgage, Alabama Power, Visa…" className={inputClass} />
+              </ManualField>
+
+              {manual.type === "BILL" ? (
+                <>
+                  <ManualField label="Expected payment"><input type="number" value={manual.amount} onChange={(e) => setManual({ ...manual, amount: e.target.value })} className={inputClass} /></ManualField>
+                  <ManualField label="Next due date"><input type="date" value={manual.due_date} onChange={(e) => setManual({ ...manual, due_date: e.target.value })} className={inputClass} /></ManualField>
+                  <ManualField label="Category" wide>
+                    <select value={manual.category} onChange={(e) => setManual({ ...manual, category: e.target.value })} className={inputClass}>
+                      {["HOUSING", "UTILITIES", "INSURANCE", "TRANSPORTATION", "SUBSCRIPTIONS", "DEBT", "CHILDCARE", "HEALTH", "TAX", "OTHER"].map((value) => <option key={value}>{value}</option>)}
+                    </select>
+                  </ManualField>
+                </>
+              ) : null}
+
+              {manual.type === "ACCOUNT" ? (
+                <>
+                  <ManualField label="Account type">
+                    <select value={manual.account_kind} onChange={(e) => setManual({ ...manual, account_kind: e.target.value })} className={inputClass}>
+                      {["CHECKING", "SAVINGS", "CREDIT_CARD", "INVESTMENT", "OTHER"].map((value) => <option key={value}>{value}</option>)}
+                    </select>
+                  </ManualField>
+                  <ManualField label="Current balance"><input type="number" value={manual.balance} onChange={(e) => setManual({ ...manual, balance: e.target.value })} className={inputClass} /></ManualField>
+                  {manual.account_kind === "CREDIT_CARD" ? <ManualField label="Credit limit" wide><input type="number" value={manual.credit_limit} onChange={(e) => setManual({ ...manual, credit_limit: e.target.value })} className={inputClass} /></ManualField> : null}
+                </>
+              ) : null}
+
+              {manual.type === "DEBT" ? (
+                <>
+                  <ManualField label="Debt type">
+                    <select value={manual.account_kind} onChange={(e) => setManual({ ...manual, account_kind: e.target.value })} className={inputClass}>
+                      {["MORTGAGE", "CREDIT_CARD", "AUTO_LOAN", "STUDENT_LOAN", "PERSONAL_LOAN", "OTHER"].map((value) => <option key={value}>{value}</option>)}
+                    </select>
+                  </ManualField>
+                  <ManualField label="Outstanding balance"><input type="number" value={manual.balance} onChange={(e) => setManual({ ...manual, balance: e.target.value })} className={inputClass} /></ManualField>
+                  <ManualField label="Minimum / payment"><input type="number" value={manual.minimum_payment} onChange={(e) => setManual({ ...manual, minimum_payment: e.target.value })} className={inputClass} /></ManualField>
+                  <ManualField label="Next payment date"><input type="date" value={manual.due_date} onChange={(e) => setManual({ ...manual, due_date: e.target.value })} className={inputClass} /></ManualField>
+                  <ManualField label="APR %"><input type="number" step="0.01" value={manual.apr} onChange={(e) => setManual({ ...manual, apr: e.target.value })} className={inputClass} /></ManualField>
+                  <ManualField label="Payoff target"><input type="date" value={manual.payoff_target_date} onChange={(e) => setManual({ ...manual, payoff_target_date: e.target.value })} className={inputClass} /></ManualField>
+                </>
+              ) : null}
+
+              {manual.type === "GOAL" ? (
+                <>
+                  <ManualField label="Current saved"><input type="number" value={manual.balance} onChange={(e) => setManual({ ...manual, balance: e.target.value })} className={inputClass} /></ManualField>
+                  <ManualField label="Target amount"><input type="number" value={manual.target_amount} onChange={(e) => setManual({ ...manual, target_amount: e.target.value })} className={inputClass} /></ManualField>
+                  <ManualField label="Target date" wide><input type="date" value={manual.target_date} onChange={(e) => setManual({ ...manual, target_date: e.target.value })} className={inputClass} /></ManualField>
+                </>
+              ) : null}
+            </div>
+
+            <button type="button" disabled={savingManual} onClick={saveManual} className="mt-5 min-h-12 w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-sm font-black disabled:opacity-50">
+              {savingManual ? "Saving…" : "Save to Finance"}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
