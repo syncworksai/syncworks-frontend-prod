@@ -22,14 +22,11 @@ jobs:
         shell: bash
         run: |
           set +e
-          npm run build 2>&1 | tee /tmp/syncworks-build.log
-          code=${PIPESTATUS[0]}
+          npm run build > /tmp/syncworks-build.log 2>&1
+          code=$?
+          cat /tmp/syncworks-build.log
           if [ "$code" -ne 0 ]; then
-            tail -n 40 /tmp/syncworks-build.log | while IFS= read -r line; do
-              safe=${line//'%'/'%25'}
-              safe=${safe//$'\r'/'%0D'}
-              safe=${safe//$'\n'/'%0A'}
-              echo "::error::$safe"
-            done
+            message=$(tail -n 80 /tmp/syncworks-build.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g' | cut -c1-7000)
+            echo "::error title=Frontend build failed::$message"
             exit "$code"
           fi
