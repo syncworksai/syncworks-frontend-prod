@@ -14,40 +14,27 @@ function Tile({ title, desc, badge, tone = "cyan", onClick, disabled }) {
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`text-left rounded-3xl border p-5 transition ${
-        toneMap[tone] || toneMap.cyan
-      } ${disabled ? "opacity-80 cursor-not-allowed" : "hover:scale-[1.01]"}`}
+      className={`text-left rounded-3xl border p-5 transition ${toneMap[tone] || toneMap.cyan} ${disabled ? "opacity-80 cursor-not-allowed" : "hover:scale-[1.01]"}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="text-lg font-black">{title}</div>
-        {badge ? (
-          <span className="rounded-full border border-white/15 bg-white/5 px-2 py-1 text-[10px] font-semibold">
-            {badge}
-          </span>
-        ) : null}
+        {badge ? <span className="rounded-full border border-white/15 bg-white/5 px-2 py-1 text-[10px] font-semibold">{badge}</span> : null}
       </div>
-
       <div className="mt-2 text-sm opacity-80 leading-relaxed">{desc}</div>
     </button>
   );
 }
 
-export default function CustomerAppTiles({
-  onFinance,
-  onFitness,
-  onLocalBusinesses,
-  onNewsfeed,
-}) {
+export default function CustomerAppTiles({ onFinance, onFitness, onLocalBusinesses, onNewsfeed }) {
   return (
     <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
       <Tile
         title="Finance"
-        desc="Bills, payments, receipts, and personal cashflow tools."
-        badge="Coming Soon"
+        desc="Banks, cards, bills, mortgages, spending, debt, budgets and goals in one command center."
+        badge="Finance Hub"
         tone="cyan"
         onClick={onFinance}
       />
-
       <Tile
         title="Fitness"
         desc="Habits, workouts, goals, and daily accountability."
@@ -55,7 +42,6 @@ export default function CustomerAppTiles({
         tone="emerald"
         onClick={onFitness}
       />
-
       <Tile
         title="Local Businesses"
         desc="Find providers near you and save favorites to Business Cards."
@@ -63,7 +49,6 @@ export default function CustomerAppTiles({
         tone="fuchsia"
         onClick={onLocalBusinesses}
       />
-
       <Tile
         title="Featured Offers"
         desc="Platform-approved promotions and sponsored local offers."
