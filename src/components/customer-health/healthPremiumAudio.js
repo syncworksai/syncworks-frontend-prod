@@ -55,6 +55,20 @@ const TRAINER_ONLY_EVENTS = new Set([
   "mid_set_motivation",
 ]);
 
+export const ELEVENLABS_PREMIUM_EVENTS = new Set([
+  "workout_welcome",
+  "preworkout_briefing",
+  "exercise_intro",
+  "exercise_swap",
+  "exercise_added",
+  "pain_warning",
+  "safety_warning",
+  "workout_completed",
+  "workout_debrief",
+  "recovery_day",
+  "voice_preview",
+]);
+
 export function normalizeWorkoutAudioMode(value) {
   const mode = String(value || "basic").toLowerCase();
 
@@ -104,7 +118,7 @@ export function buildPremiumCoachDelivery({
     audioMode: profile.id,
     eventType,
     priority,
-    energy: trainerMode ? "high_energy" : "controlled",
+    energy: trainerMode ? "high_energy" : "balanced",
     rate: trainerMode ? 1.02 : 1,
     pitch: trainerMode ? 0.98 : 1,
     volume: 1,
@@ -112,6 +126,12 @@ export function buildPremiumCoachDelivery({
     musicCompatible: profile.allows_music,
     detailed: trainerMode,
   };
+}
+
+export function shouldUseElevenLabs(eventType) {
+  return ELEVENLABS_PREMIUM_EVENTS.has(
+    String(eventType || "").toLowerCase()
+  );
 }
 
 export function announceCoachAudioState(detail = {}) {
