@@ -3722,11 +3722,25 @@ export default function ActiveWorkoutSessionDrawer({
   function skipPreparation() {
     if (!session) return;
 
-    setSession((previous) =>
-      previous
-        ? skipWarmup(previous)
-        : previous
-    );
+    setSession((previous) => {
+      if (!previous) return previous;
+      const skipped = skipWarmup(previous);
+      const next = {
+        ...skipped,
+        current_exercise_index: Number.isFinite(Number(skipped.current_exercise_index))
+          ? Number(skipped.current_exercise_index)
+          : 0,
+        warmup_plan: {
+          ...(skipped.warmup_plan || previous.warmup_plan || {}),
+          skipped: true,
+          completed: true,
+          completed_at: new Date().toISOString(),
+        },
+      };
+      persistWorkoutSession(next, plannerItem);
+      return next;
+    });
+    setFinishMessage("Warmup skipped. Your first exercise is ready.");
   }
 
   function completePreparation() {
@@ -4839,24 +4853,24 @@ export default function ActiveWorkoutSessionDrawer({
 
               {!isCompleted && warmupReady && currentExercise ? (
                 <>
-                  <MissionModeProgressCard
-                    session={session}
-                    onModify={() =>
-                      setModifyMenuOpen((current) => !current)
-                    }
-                    onFinish={() => setReviewMode(true)}
-                    onReplay={replayExerciseCue}
-                  />
 
                   <WorkoutFocusCompactPanel
                     session={session}
                     currentExercise={currentExercise}
                     formatSeconds={formatSeconds}
-                    onModify={() =>
-                      setModifyMenuOpen((current) => !current)
-                    }
-                    onFinish={() => setReviewMode(true)}
+                    suggestion={currentSuggestion}
+                    audioOn={coachAudioMode !== "off"}
+                    onStartSet={startSet}
+                    onFinishSet={requestCompleteSet}
+                    onPause={() => setSession(toggleSessionPause(session))}
+                    onToggleAudio={toggleCoachAudio}
+                    onAskSync={() => setAskSyncOpen(true)}
+                    onEndWorkout={() => setReviewMode(true)}
+                    onModify={() => setModifyMenuOpen((current) => !current)}
                     onReplay={replayExerciseCue}
+                    onUseRecommendation={useCoachRecommendation}
+                    onKeepCurrent={keepCurrentTarget}
+                    onAdjustManually={adjustTargetManually}
                   />
                 </>
               ) : null}
@@ -4878,7 +4892,7 @@ export default function ActiveWorkoutSessionDrawer({
                 </details>
               ) : null}
 
-              {!isCompleted ? (
+              {!isCompleted && !warmupReady ? (
                 <DynamicWarmupCard
                   plan={session.warmup_plan}
                   onToggle={togglePreparationItem}
@@ -5686,14 +5700,14 @@ export default function ActiveWorkoutSessionDrawer({
           )}
         </main>
 
-        {session &&
+        {false && session &&
         warmupReady &&
         !reviewMode &&
         !isCompleted ? (
           <div className="absolute inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#020617]/96 px-2 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 backdrop-blur-xl">
             {session.pending_set_logging ? (
               <div className="mx-auto mb-2 max-w-4xl rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-center text-[10px] font-black text-amber-100">
-                Set complete ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â finish logging before starting another set.
+                Set complete — finish logging before starting another set.
               </div>
             ) : null}
 

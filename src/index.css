@@ -108,3 +108,16 @@ body {
     drop-shadow(0 0 18px rgba(34, 211, 238, 0.26))
     drop-shadow(0 0 22px rgba(217, 70, 239, 0.20));
 }
+
+/* Health Workout Command Center v3 */
+/* During an active exercise the new command center is the only workout surface.
+   Legacy cards stay mounted for compatibility but cannot compete for mobile space. */
+#health-workout-command-center ~ * {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  #health-workout-command-center {
+    margin-bottom: 5.75rem;
+  }
+}
