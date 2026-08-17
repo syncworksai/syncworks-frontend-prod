@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import ModeBar from "../components/ModeBar";
 import Button from "../components/ui/Button";
 import GrowthContentEngineCard from "../components/platform/growth/GrowthContentEngineCard";
+import GrowthIntelligenceCard from "../components/platform/growth/GrowthIntelligenceCard";
 import GrowthOnboardingWizard from "../components/platform/growth/GrowthOnboardingWizard";
 import { toneFromStatus } from "../components/platform/growth/growthUtils";
 import { useNavigate } from "react-router-dom";
@@ -189,6 +190,8 @@ export default function SboGrowth() {
             </div>
             <div className="mt-3 rounded-2xl border border-cyan-500/15 bg-cyan-500/5 p-3 text-xs text-slate-300"><span className="font-black text-cyan-200">How automation works:</span> SyncWorks can prepare content in the background, but nothing reaches Facebook or Instagram until the draft is approved. After approval, scheduled publishing can run without you keeping the app open.</div>
           </section>
+
+          <GrowthIntelligenceCard />
 
           {showGuide ? <GrowthOnboardingWizard variant="sbo" onCreateStarter={createStarterFromGuide} onOpenChannels={showChannelsMessage} onSkip={hideGuide} /> : <div className="flex justify-end"><button type="button" onClick={() => setShowGuide(true)} className="rounded-2xl border border-cyan-500/35 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-500/15">Show Social Automation guide</button></div>}
 
