@@ -1,0 +1,101 @@
+name: Apply Health Post Workout Audio
+
+on:
+  push:
+    branches:
+      - health-postworkout-assistant-audio-fix
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: health-postworkout-assistant-audio-fix
+          fetch-depth: 0
+
+      - name: Wire ElevenLabs event compatibility and post-workout assistant
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          voice = Path('src/components/customer-health/healthCoachVoice.js')
+          text = voice.read_text(encoding='utf-8')
+
+          marker = 'const SILENT_AUDIO_DATA_URL =\n  "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";'
+          addition = marker + '''\n\nconst ELEVENLABS_EVENT_ALIASES = {\n  preworkout_briefing: "workout_welcome",\n  warmup_complete: "exercise_intro",\n  set_start: "set_countdown",\n  rest_start: "rest_started",\n  rest_cue: "rest_halfway",\n  exercise_added: "exercise_swap",\n  pain_warning: "pain_response",\n  safety_warning: "form_warning",\n  workout_debrief: "workout_completed",\n};\n\nfunction normalizeElevenLabsEventType(eventType) {\n  const key = String(eventType || "voice_preview").trim().toLowerCase();\n  return ELEVENLABS_EVENT_ALIASES[key] || key;\n}\n'''
+          if 'ELEVENLABS_EVENT_ALIASES' not in text:
+              if marker not in text:
+                  raise SystemExit('voice marker not found')
+              text = text.replace(marker, addition, 1)
+
+          old = '''    const result = await createHealthCoachSpeech({\n      text,\n      eventType,\n      energy,\n      voiceKey,\n      signal: activeVoiceRequest.signal,\n    });'''
+          new = '''    const result = await createHealthCoachSpeech({\n      text,\n      eventType: normalizeElevenLabsEventType(eventType),\n      energy: energy === "controlled" ? "balanced" : energy,\n      voiceKey,\n      signal: activeVoiceRequest.signal,\n    });'''
+          if old not in text:
+              raise SystemExit('voice request anchor not found')
+          text = text.replace(old, new, 1)
+          voice.write_text(text, encoding='utf-8')
+
+          active = Path('src/components/customer-health/ActiveWorkoutSessionDrawer.jsx')
+          active_text = active.read_text(encoding='utf-8')
+
+          import_anchor = 'import PostWorkoutReportCard from "./PostWorkoutReportCard";'
+          if 'PostWorkoutCoachAssistant' not in active_text:
+              if import_anchor not in active_text:
+                  raise SystemExit('post report import anchor not found')
+              active_text = active_text.replace(
+                  import_anchor,
+                  import_anchor + '\nimport PostWorkoutCoachAssistant from "./PostWorkoutCoachAssistant";',
+                  1,
+              )
+
+          render_anchor = '''              {isCompleted ? (\n                <PostWorkoutReportCard\n                  session={session}\n                />\n              ) : null}'''
+          render_new = '''              {isCompleted ? (\n                <PostWorkoutCoachAssistant\n                  session={session}\n                  snapshot={snapshot}\n                />\n              ) : null}\n\n              {isCompleted ? (\n                <PostWorkoutReportCard\n                  session={session}\n                />\n              ) : null}'''
+          if '<PostWorkoutCoachAssistant' not in active_text:
+              if render_anchor not in active_text:
+                  raise SystemExit('completed report anchor not found')
+              active_text = active_text.replace(render_anchor, render_new, 1)
+
+          active.write_text(active_text, encoding='utf-8')
+
+          report = Path('src/components/customer-health/PostWorkoutReportCard.jsx')
+          report_text = report.read_text(encoding='utf-8')
+          report_text = report_text.replace(
+              'useState(true);',
+              'useState(false);',
+              1,
+          )
+          report_text = report_text.replace(
+              'SYNC Post-Workout Recap',
+              'Detailed Workout Report',
+              1,
+          )
+          report_text = report_text.replace(
+              'Session complete',
+              'Training details',
+              1,
+          )
+          report.write_text(report_text, encoding='utf-8')
+          PY
+
+      - name: Verify production build
+        shell: bash
+        run: |
+          npm ci
+          npm run build
+          git diff --check
+
+      - name: Remove temporary workflow and commit verified build
+        shell: bash
+        run: |
+          rm .github/workflows/apply-health-postworkout-audio.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/customer-health/healthCoachVoice.js src/components/customer-health/ActiveWorkoutSessionDrawer.jsx src/components/customer-health/PostWorkoutReportCard.jsx .github/workflows/apply-health-postworkout-audio.yml
+          git commit -m "Wire Health post workout assistant and premium voice"
+          git push origin health-postworkout-assistant-audio-fix
