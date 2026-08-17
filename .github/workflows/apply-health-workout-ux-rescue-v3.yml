@@ -1,0 +1,178 @@
+name: Apply Health Workout UX Rescue v3
+
+on:
+  push:
+    branches:
+      - health-workout-ux-rescue-v3
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: health-workout-ux-rescue-v3
+          fetch-depth: 0
+
+      - name: Rewire active workout to the new command center
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('src/components/customer-health/ActiveWorkoutSessionDrawer.jsx')
+          text = path.read_text(encoding='utf-8')
+          original = text
+
+          # Make skipping the warmup deterministic and persist the resulting active state.
+          old_skip = '''  function skipPreparation() {
+    if (!session) return;
+
+    setSession((previous) =>
+      previous
+        ? skipWarmup(previous)
+        : previous
+    );
+  }'''
+          new_skip = '''  function skipPreparation() {
+    if (!session) return;
+
+    setSession((previous) => {
+      if (!previous) return previous;
+      const skipped = skipWarmup(previous);
+      const next = {
+        ...skipped,
+        current_exercise_index: Number.isFinite(Number(skipped.current_exercise_index))
+          ? Number(skipped.current_exercise_index)
+          : 0,
+        warmup_plan: {
+          ...(skipped.warmup_plan || previous.warmup_plan || {}),
+          skipped: true,
+          completed: true,
+          completed_at: new Date().toISOString(),
+        },
+      };
+      persistWorkoutSession(next, plannerItem);
+      return next;
+    });
+    setFinishMessage("Warmup skipped. Your first exercise is ready.");
+  }'''
+          if old_skip not in text:
+              raise SystemExit('skipPreparation anchor not found')
+          text = text.replace(old_skip, new_skip, 1)
+
+          # Remove the duplicate mission summary above the new workout command center.
+          text, count = re.subn(
+              r'''\s*<MissionModeProgressCard\n\s*session=\{session\}\n\s*onModify=\{\(\) =>\n\s*setModifyMenuOpen\(\(current\) => !current\)\n\s*\}\n\s*onFinish=\{\(\) => setReviewMode\(true\)\}\n\s*onReplay=\{replayExerciseCue\}\n\s*/>''',
+              '',
+              text,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit('MissionModeProgressCard anchor not found')
+
+          old_panel = '''                  <WorkoutFocusCompactPanel
+                    session={session}
+                    currentExercise={currentExercise}
+                    formatSeconds={formatSeconds}
+                    onModify={() =>
+                      setModifyMenuOpen((current) => !current)
+                    }
+                    onFinish={() => setReviewMode(true)}
+                    onReplay={replayExerciseCue}
+                  />'''
+          new_panel = '''                  <WorkoutFocusCompactPanel
+                    session={session}
+                    currentExercise={currentExercise}
+                    formatSeconds={formatSeconds}
+                    suggestion={currentSuggestion}
+                    audioOn={coachAudioMode !== "off"}
+                    onStartSet={startSet}
+                    onFinishSet={requestCompleteSet}
+                    onPause={() => setSession(toggleSessionPause(session))}
+                    onToggleAudio={toggleCoachAudio}
+                    onAskSync={() => setAskSyncOpen(true)}
+                    onEndWorkout={() => setReviewMode(true)}
+                    onModify={() => setModifyMenuOpen((current) => !current)}
+                    onReplay={replayExerciseCue}
+                    onUseRecommendation={useCoachRecommendation}
+                    onKeepCurrent={keepCurrentTarget}
+                    onAdjustManually={adjustTargetManually}
+                  />'''
+          if old_panel not in text:
+              raise SystemExit('WorkoutFocusCompactPanel anchor not found')
+          text = text.replace(old_panel, new_panel, 1)
+
+          # Warmup is only visible before it is completed/skipped.
+          text = text.replace(
+              '''              {!isCompleted ? (\n                <DynamicWarmupCard''',
+              '''              {!isCompleted && !warmupReady ? (\n                <DynamicWarmupCard''',
+              1,
+          )
+
+          # Disable the legacy fixed action bar. The new command center owns the only sticky controls.
+          old_footer = '''        {session &&
+        warmupReady &&
+        !reviewMode &&
+        !isCompleted ? ('''
+          new_footer = '''        {false && session &&
+        warmupReady &&
+        !reviewMode &&
+        !isCompleted ? ('''
+          if old_footer not in text:
+              raise SystemExit('legacy fixed footer anchor not found')
+          text = text.replace(old_footer, new_footer, 1)
+
+          # Remove the visibly corrupted pending-set sentence at source.
+          text = re.sub(
+              r'Set complete .*? finish logging before starting another set\.',
+              'Set complete — finish logging before starting another set.',
+              text,
+              count=1,
+          )
+
+          if text == original:
+              raise SystemExit('No ActiveWorkoutSessionDrawer changes applied')
+          path.write_text(text, encoding='utf-8')
+
+          css = Path('src/index.css')
+          css_text = css.read_text(encoding='utf-8')
+          marker = '/* Health Workout Command Center v3 */'
+          rules = '''\n\n/* Health Workout Command Center v3 */
+/* During an active exercise the new command center is the only workout surface.
+   Legacy cards stay mounted for compatibility but cannot compete for mobile space. */
+#health-workout-command-center ~ * {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  #health-workout-command-center {
+    margin-bottom: 5.75rem;
+  }
+}
+'''
+          if marker not in css_text:
+              css.write_text(css_text + rules, encoding='utf-8')
+          PY
+
+      - name: Remove temporary workflow and verify production build
+        shell: bash
+        run: |
+          rm .github/workflows/apply-health-workout-ux-rescue-v3.yml
+          npm ci
+          npm run build
+          git diff --check
+
+      - name: Commit verified rescue build
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/customer-health/ActiveWorkoutSessionDrawer.jsx src/index.css .github/workflows/apply-health-workout-ux-rescue-v3.yml
+          git commit -m "Rewire Health workout to single command center"
+          git push origin health-workout-ux-rescue-v3
