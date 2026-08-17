@@ -8,6 +8,7 @@ import {
   buildPremiumCoachDelivery,
   normalizeWorkoutAudioMode,
   shouldPlayCoachEvent,
+  shouldUseElevenLabs,
 } from "./healthPremiumAudio";
 
 const PRIORITY = { low: 1, normal: 2, high: 3, critical: 4 };
@@ -101,10 +102,15 @@ function playNext() {
   currentMessage = next;
   markRecent(next.id);
 
+  const eventType = next.options.eventType || "coach_message";
+  const provider = next.options.provider ||
+    (shouldUseElevenLabs(eventType) ? "elevenlabs" : "browser");
+
   announceCoachAudioState({
     status: "speaking",
     id: next.id,
-    eventType: next.options.eventType || "coach_message",
+    eventType,
+    provider,
     audioMode: next.options.audioMode || "basic",
     focusMode: Boolean(next.options.focusMode),
     musicCompatible: next.options.musicCompatible !== false,
@@ -112,6 +118,7 @@ function playNext() {
 
   const started = speakCoachText({
     ...next.options,
+    provider,
     text: next.text,
     cancelFirst: true,
   });
@@ -212,6 +219,8 @@ export function playWorkoutCoachMessage({
     options: {
       ...options,
       ...premiumDelivery,
+      provider: options.provider ||
+        (shouldUseElevenLabs(eventType) ? "elevenlabs" : "browser"),
       audioMode: normalizedAudioMode,
       eventType,
     },
@@ -256,8 +265,11 @@ export function getWorkoutCoachAudioState() {
     queuedCoachMessages: queue.map((message) => ({
       id: message.id,
       priority: message.priority,
+      eventType: message.options?.eventType || "coach_message",
+      provider: message.options?.provider || "browser",
     })),
     audioUnlocked,
     isSpeaking: Boolean(currentMessage),
+    provider: currentMessage?.options?.provider || "",
   };
 }
