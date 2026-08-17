@@ -80,6 +80,7 @@ import TrainerNudgeCard from "./TrainerNudgeCard";
 import WorkoutProgressionCard from "./WorkoutProgressionCard";
 import PersonalRecordsCard from "./PersonalRecordsCard";
 import PostWorkoutReportCard from "./PostWorkoutReportCard";
+import PostWorkoutCoachAssistant from "./PostWorkoutCoachAssistant";
 import LiveWorkoutAdaptationDrawer from "./LiveWorkoutAdaptationDrawer";
 import AdaptiveCoachProposalCard from "./AdaptiveCoachProposalCard";
 import WorkoutFocusCompactPanel from "./WorkoutFocusCompactPanel";
@@ -5187,6 +5188,13 @@ export default function ActiveWorkoutSessionDrawer({
                   )}
                 </div>
               </div>
+
+              {isCompleted ? (
+                <PostWorkoutCoachAssistant
+                  session={session}
+                  snapshot={snapshot}
+                />
+              ) : null}
 
               {isCompleted ? (
                 <PostWorkoutReportCard

@@ -60,6 +60,24 @@ let voiceOptionsPromise = null;
 const SILENT_AUDIO_DATA_URL =
   "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
 
+const ELEVENLABS_EVENT_ALIASES = {
+  preworkout_briefing: "workout_welcome",
+  warmup_complete: "exercise_intro",
+  set_start: "set_countdown",
+  rest_start: "rest_started",
+  rest_cue: "rest_halfway",
+  exercise_added: "exercise_swap",
+  pain_warning: "pain_response",
+  safety_warning: "form_warning",
+  workout_debrief: "workout_completed",
+};
+
+function normalizeElevenLabsEventType(eventType) {
+  const key = String(eventType || "voice_preview").trim().toLowerCase();
+  return ELEVENLABS_EVENT_ALIASES[key] || key;
+}
+
+
 function getSynth() {
   if (typeof window === "undefined") return null;
   if (!("speechSynthesis" in window)) return null;
@@ -362,8 +380,8 @@ async function playElevenLabsSpeech({
   try {
     const result = await createHealthCoachSpeech({
       text,
-      eventType,
-      energy,
+      eventType: normalizeElevenLabsEventType(eventType),
+      energy: energy === "controlled" ? "balanced" : energy,
       voiceKey,
       signal: activeVoiceRequest.signal,
     });

@@ -38,7 +38,7 @@ function MiniStat({ label, value, tone = "slate" }) {
 export default function PostWorkoutReportCard({ session }) {
   const [expanded, setExpanded] = useState(false);
   const [showProgression, setShowProgression] =
-    useState(true);
+    useState(false);
   const report = useMemo(
     () => buildWorkoutReport(session || {}),
     [session]
@@ -51,10 +51,10 @@ export default function PostWorkoutReportCard({ session }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-[9px] font-black uppercase tracking-[0.2em] text-lime-200">
-            SYNC Post-Workout Recap
+            Detailed Workout Report
           </div>
           <h3 className="mt-1 text-xl font-black text-white">
-            Session complete
+            Training details
           </h3>
           <p className="mt-1 text-xs leading-5 text-slate-300">
             What went well, what to fix, and what SYNC should recommend next.
