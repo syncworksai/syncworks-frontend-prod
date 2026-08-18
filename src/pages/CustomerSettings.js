@@ -19,7 +19,7 @@ export default function CustomerSettingsWithConnections() {
       },
       React.createElement("span", { className: "grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-600" }, React.createElement(CalendarDays, { className: "h-5 w-5" })),
       React.createElement("span", null,
-        React.createElement("span", { className: "block text-[10px] font-black uppercase tracking-[.18em] text-cyan-200" }, "Jarvis Connections"),
+        React.createElement("span", { className: "block text-[10px] font-black uppercase tracking-[.18em] text-cyan-200" }, "SYNC Assistant Connections"),
         React.createElement("span", { className: "block text-sm font-black" }, "Connect calendars"),
         React.createElement("span", { className: "block text-[11px] text-slate-400" }, "Google · Outlook · multiple accounts")
       )
