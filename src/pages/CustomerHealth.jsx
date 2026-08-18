@@ -48,6 +48,7 @@ import AiCoachDrawer from "../components/customer-health/AiCoachDrawer";
 import CoachChatDrawer from "../components/customer-health/CoachChatDrawer";
 import ActiveWorkoutSessionDrawer from "../components/customer-health/ActiveWorkoutSessionDrawer";
 import HealthMobileQuickNav from "../components/customer-health/HealthMobileQuickNav";
+import SyncWorksAffiliateStore from "../components/store/SyncWorksAffiliateStore";
 import HealthReleaseUpdateModal, {
   HEALTH_RELEASE_UPDATE_ID,
 } from "../components/customer-health/HealthReleaseUpdateModal";
@@ -3860,6 +3861,14 @@ export default function CustomerHealth() {
             onReuseMeal={
               handleReuseNutritionMeal
             }
+          />
+
+          <SyncWorksAffiliateStore
+            open={drawer === "shop"}
+            onClose={() => setDrawer("")}
+            profile={profile}
+            snapshot={syncedSnapshot}
+            mode="health"
           />
 
           <SmartMealPlannerDrawer
