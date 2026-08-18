@@ -23,9 +23,9 @@ export default function SyncAssistantLauncherRouter() {
     "button",
     {
       type: "button",
-      onClick: () => navigate("/upgrade?product=jarvis&return=/customer"),
+      onClick: () => navigate("/upgrade?product=assistant&return=/customer"),
       className: "fixed bottom-24 right-4 z-[85] flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-2xl border border-cyan-300/40 bg-slate-950/95 px-4 py-3 text-left shadow-[0_0_38px_rgba(34,211,238,.24)] backdrop-blur-xl lg:bottom-6 lg:right-6",
-      "aria-label": "Set up User Jarvis",
+      "aria-label": "Set up SYNC Assistant",
     },
     React.createElement(
       "span",
@@ -35,9 +35,9 @@ export default function SyncAssistantLauncherRouter() {
     React.createElement(
       "span",
       null,
-      React.createElement("span", { className: "block text-[10px] font-black uppercase tracking-[.18em] text-cyan-200" }, "User Jarvis"),
-      React.createElement("span", { className: "block text-sm font-black text-white" }, profile?.onboarding_complete ? "Manage your Jarvis" : "Set up your Jarvis"),
-      React.createElement("span", { className: "block text-[11px] text-slate-400" }, profile ? `${profile.setup_score || 0}% ready · connect your life` : "Marketplace, schedule, health, work and home")
+      React.createElement("span", { className: "block text-[10px] font-black uppercase tracking-[.18em] text-cyan-200" }, "SYNC Assistant"),
+      React.createElement("span", { className: "block text-sm font-black text-white" }, profile?.onboarding_complete ? "Manage SYNC Assistant" : "Set up SYNC Assistant"),
+      React.createElement("span", { className: "block text-[11px] text-slate-400" }, profile ? `${profile.setup_score || 0}% ready · connect your life` : "Calendar, Health, Money, work and home")
     )
   );
 }
