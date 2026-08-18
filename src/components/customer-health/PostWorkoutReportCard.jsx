@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from "react";
 import { buildWorkoutReport } from "./healthWorkoutReport";
 import { formatSeconds } from "./healthWorkoutSession";
+import WorkoutHistoryProgressCard from "./WorkoutHistoryProgressCard";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -132,6 +133,10 @@ export default function PostWorkoutReportCard({ session }) {
           </div>
         </div>
       ) : null}
+
+      <div className="mt-3">
+        <WorkoutHistoryProgressCard session={session} />
+      </div>
 
       <button
         type="button"

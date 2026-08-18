@@ -32,6 +32,56 @@ export async function redeemHealthAccessCode(code) {
   return response.data;
 }
 
+export async function getHealthWorkoutSessions() {
+  const response = await api.get(
+    "/customer-health/workout-sessions/"
+  );
+
+  return response.data;
+}
+
+export async function saveHealthWorkoutSession(session) {
+  const response = await api.post(
+    "/customer-health/workout-sessions/",
+    { session }
+  );
+
+  return response.data;
+}
+
+export async function getHealthActiveWorkout() {
+  const response = await api.get(
+    "/customer-health/workout-sessions/active/"
+  );
+
+  return response.data;
+}
+
+export async function saveHealthActiveWorkout({
+  session,
+  plannerItemId = "",
+  workoutId = "",
+}) {
+  const response = await api.put(
+    "/customer-health/workout-sessions/active/",
+    {
+      session,
+      planner_item_id: plannerItemId,
+      workout_id: workoutId,
+    }
+  );
+
+  return response.data;
+}
+
+export async function clearHealthActiveWorkout() {
+  const response = await api.delete(
+    "/customer-health/workout-sessions/active/"
+  );
+
+  return response.data;
+}
+
 export async function getHealthVoiceOptions() {
   const response = await api.get(
     "/customer-health/voice/options/"
@@ -92,7 +142,6 @@ export async function redeemHealthAiPromo(code) {
 
   return response.data;
 }
-
 
 export async function createHealthCoachTurn({
   userText,
