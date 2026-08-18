@@ -2,7 +2,7 @@ import React from "react";
 import { RefreshCw, Trash2 } from "lucide-react";
 
 const CADENCES = [
-  ["LIVE", "Every minute"],
+  ["LIVE", "Fastest automatic (~5 min)"],
   ["FIVE_MIN", "Every 5 minutes"],
   ["FIFTEEN_MIN", "Every 15 minutes"],
   ["HOURLY", "Hourly"],
@@ -39,7 +39,7 @@ export default function CalendarConnectionCard({ connection, busy, onPatch, onSy
         </label>
       </div>
 
-      <div className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-slate-500">Calendars Jarvis can read</div>
+      <div className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-slate-500">Calendars SYNC Assist can read</div>
       <div className="mt-2 space-y-2">
         {calendars.map((calendar) => (
           <label key={calendar.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900/50 px-3 py-2 text-sm">
