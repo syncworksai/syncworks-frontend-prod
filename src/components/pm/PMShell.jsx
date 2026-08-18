@@ -5,6 +5,7 @@ import api from "../../api/client";
 const navItems = [
   ["Dashboard", "/pm", "home"],
   ["Messages", "/pm/settings?view=messages", "messages"],
+  ["Leads", "/pm/settings?view=leads", "users"],
   ["Make Ready", "/pm/settings?view=make-ready", "wrench"],
   ["Projects", "/pm/projects", "folder"],
   ["Properties", "/pm/properties", "building"],
@@ -52,8 +53,9 @@ function activeFor(pathname, search, path) {
   const view = new URLSearchParams(search).get("view");
   if (path === "/pm") return pathname === "/pm";
   if (path.includes("view=messages")) return pathname === "/pm/settings" && view === "messages";
+  if (path.includes("view=leads")) return pathname === "/pm/settings" && view === "leads";
   if (path.includes("view=make-ready")) return pathname === "/pm/settings" && view === "make-ready";
-  if (path === "/pm/settings") return pathname === "/pm/settings" && !["messages", "make-ready"].includes(view);
+  if (path === "/pm/settings") return pathname === "/pm/settings" && !["messages", "leads", "make-ready"].includes(view);
   if (path === "/pm/properties") return pathname.startsWith("/pm/properties");
   return pathname === path || pathname.startsWith(`${path}/`);
 }
@@ -66,7 +68,7 @@ export default function PMShell({ children }) {
   const [workspaceName, setWorkspaceName] = useState("Property Management");
   const propertyProfile = /^\/pm\/properties\/\d+$/.test(pathname);
   const view = new URLSearchParams(location.search).get("view");
-  const specialView = pathname === "/pm/settings" && ["messages", "make-ready"].includes(view);
+  const specialView = pathname === "/pm/settings" && ["messages", "leads", "make-ready"].includes(view);
 
   useEffect(() => {
     let alive = true;
@@ -77,6 +79,7 @@ export default function PMShell({ children }) {
 
   const [title, subtitle] = useMemo(() => {
     if (view === "messages") return ["PM Messages", "Tenant, investor, maintenance, internal, collections, and lifecycle records."];
+    if (view === "leads") return ["PM Leads", "Rental inquiries, email leads, corporate housing, insurance housing, and leasing follow-up."];
     if (view === "make-ready") return ["Make-Ready Command Center", "Assign vacant-property work, track blockers, approvals, inspection, and listing readiness."];
     if (propertyProfile) return ["Property Command Center", "Property health, occupants, maintenance, projects, messages, documents, and reporting."];
     return pageMeta[pathname] || ["Property Management", "Portfolio operations and command-center tools."];
