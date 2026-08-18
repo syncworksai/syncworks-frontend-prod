@@ -1,0 +1,108 @@
+name: Apply Health Workout Date Rollover
+
+on:
+  push:
+    branches:
+      - health-workout-date-rollover
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: health-workout-date-rollover
+          fetch-depth: 0
+
+      - name: Wire Health day rollover
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          dashboard = Path('src/components/customer-health/HealthDashboard.jsx')
+          text = dashboard.read_text(encoding='utf-8')
+
+          import_anchor = 'import React, { useEffect, useMemo, useState } from "react";\n'
+          imports = import_anchor + '''import {\n  archiveExpiredCloudWorkout,\n  loadCloudActiveWorkout,\n} from "./healthWorkoutCloudSync";\nimport {\n  currentDayWorkout,\n  formatHealthDay,\n  localYmd,\n  shouldOfferPreviousWorkout,\n} from "./healthWorkoutDateLifecycle";\n'''
+          if 'shouldOfferPreviousWorkout' not in text:
+              if import_anchor not in text:
+                  raise SystemExit('HealthDashboard import anchor missing')
+              text = text.replace(import_anchor, imports, 1)
+
+          state_anchor = '''export default function HealthDashboard({ profile = {}, snapshot = {}, history = [], onOpen, onStartWorkout }) {\n  const [screen, setScreen] = useState("dashboard");'''
+          state_new = '''export default function HealthDashboard({ profile = {}, snapshot = {}, history = [], onOpen, onStartWorkout }) {\n  const [screen, setScreen] = useState("dashboard");\n  const [dayKey, setDayKey] = useState(() => localYmd());\n  const [previousWorkout, setPreviousWorkout] = useState(null);'''
+          if state_anchor not in text:
+              raise SystemExit('HealthDashboard state anchor missing')
+          text = text.replace(state_anchor, state_new, 1)
+
+          logic_anchor = '''  const weekPlan = Array.isArray(snapshot?.week_plan) ? snapshot.week_plan : [];\n  const next = weekPlan.find((item) => item?.workout_name && item?.status !== "Completed");\n  const completed = history.filter((item) => item?.completed_at || item?.status === "Completed").length;'''
+          logic_new = '''  const weekPlan = Array.isArray(snapshot?.week_plan) ? snapshot.week_plan : [];\n  const todayWorkout = currentDayWorkout(weekPlan, dayKey);\n  const upcomingWorkout = [...weekPlan]\n    .filter((item) => item?.workout_name && !["Completed", "Skipped", "Rescheduled"].includes(item?.status))\n    .filter((item) => String(item?.ymd || "") >= dayKey)\n    .sort((a, b) => String(a?.ymd || "9999").localeCompare(String(b?.ymd || "9999")))[0];\n  const next = todayWorkout || upcomingWorkout || null;\n  const completed = history.filter((item) => item?.completed_at || item?.status === "Completed").length;'''
+          if logic_anchor not in text:
+              raise SystemExit('HealthDashboard workout selection anchor missing')
+          text = text.replace(logic_anchor, logic_new, 1)
+
+          effect_anchor = '''  const navItems = useMemo(() => [["dashboard", "Home"], ["workouts", "Workouts"], ["nutrition", "Nutrition"], ["progress", "Progress"], ["shop", "Shop"]], []);\n\n  return ('''
+          effect_new = '''  const navItems = useMemo(() => [["dashboard", "Home"], ["workouts", "Workouts"], ["nutrition", "Nutrition"], ["progress", "Progress"], ["shop", "Shop"]], []);\n\n  useEffect(() => {\n    let cancelled = false;\n\n    async function refreshWorkoutDay() {\n      const today = localYmd();\n      setDayKey(today);\n      try {\n        const active = await loadCloudActiveWorkout();\n        if (cancelled || !active?.session) {\n          if (!cancelled) setPreviousWorkout(null);\n          return;\n        }\n\n        const lifecycle = shouldOfferPreviousWorkout(active);\n        if (lifecycle.expired) {\n          await archiveExpiredCloudWorkout(active);\n          if (!cancelled) setPreviousWorkout(null);\n          return;\n        }\n\n        if (lifecycle.ageDays === 1) {\n          if (!cancelled) {\n            setPreviousWorkout({\n              ...active,\n              session: lifecycle.session,\n              label: lifecycle.label,\n            });\n          }\n          return;\n        }\n\n        if (!cancelled) setPreviousWorkout(null);\n      } catch (error) {\n        console.warn("Health date rollover check unavailable.", error);\n      }\n    }\n\n    refreshWorkoutDay();\n    const interval = window.setInterval(refreshWorkoutDay, 60000);\n    const handleVisibility = () => {\n      if (document.visibilityState === "visible") refreshWorkoutDay();\n    };\n    document.addEventListener("visibilitychange", handleVisibility);\n    return () => {\n      cancelled = true;\n      window.clearInterval(interval);\n      document.removeEventListener("visibilitychange", handleVisibility);\n    };\n  }, []);\n\n  const resumePreviousWorkout = previousWorkout\n    ? {\n        ...previousWorkout.session,\n        id: previousWorkout.planner_item_id || previousWorkout.session?.planner_item_id || previousWorkout.session?.id,\n        workout_id: previousWorkout.workout_id || previousWorkout.session?.workout_id || "",\n        ymd: previousWorkout.session?.scheduled_ymd || previousWorkout.session?.ymd || "",\n        workout_name: previousWorkout.session?.workout_name || "Previous workout",\n      }\n    : null;\n\n  return ('''
+          if effect_anchor not in text:
+              raise SystemExit('HealthDashboard effect anchor missing')
+          text = text.replace(effect_anchor, effect_new, 1)
+
+          header_anchor = '''<header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h1 className="text-3xl font-black tracking-tight">Good day, <span className="text-blue-400">{name}</span></h1><p className="mt-1 text-sm text-slate-400">Ready to keep your momentum going.</p></div>'''
+          header_new = '''<header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-300">{formatHealthDay(dayKey)}</div><h1 className="mt-1 text-3xl font-black tracking-tight">Good day, <span className="text-blue-400">{name}</span></h1><p className="mt-1 text-sm text-slate-400">SYNC is tracking today separately from unfinished previous workouts.</p></div>'''
+          if header_anchor not in text:
+              raise SystemExit('HealthDashboard header anchor missing')
+          text = text.replace(header_anchor, header_new, 1)
+
+          grid_anchor = '''              <div className="mt-5 grid gap-4 xl:grid-cols-[1.05fr_1fr_1fr]">'''
+          previous_card = '''              {previousWorkout && resumePreviousWorkout ? (\n                <section className="mt-5 rounded-[1.5rem] border border-amber-300/25 bg-amber-300/[0.07] p-4">\n                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">\n                    <div>\n                      <div className="text-[9px] font-black uppercase tracking-[0.18em] text-amber-200">{previousWorkout.label || "Yesterday - Incomplete"}</div>\n                      <div className="mt-1 text-lg font-black text-white">{resumePreviousWorkout.workout_name}</div>\n                      <div className="mt-1 text-xs leading-5 text-slate-400">Your completed sets are preserved. Today\'s scheduled workout remains separate so SYNC can account for both days correctly.</div>\n                    </div>\n                    <button type="button" onClick={() => onStartWorkout?.(resumePreviousWorkout)} className="h-11 shrink-0 rounded-xl border border-amber-300/35 bg-amber-300/15 px-4 text-xs font-black text-amber-100">Resume Yesterday</button>\n                  </div>\n                </section>\n              ) : null}\n\n              <div className="mt-5 grid gap-4 xl:grid-cols-[1.05fr_1fr_1fr]">'''
+          if grid_anchor not in text:
+              raise SystemExit('HealthDashboard grid anchor missing')
+          text = text.replace(grid_anchor, previous_card, 1)
+
+          dashboard.write_text(text, encoding='utf-8')
+
+          active = Path('src/components/customer-health/ActiveWorkoutSessionDrawer.jsx')
+          active_text = active.read_text(encoding='utf-8')
+          import_anchor = 'import {\n  clearCloudActiveWorkout,'
+          lifecycle_import = '''import {\n  annotateWorkoutDateLifecycle,\n  formatHealthDay,\n} from "./healthWorkoutDateLifecycle";\n'''
+          if 'annotateWorkoutDateLifecycle' not in active_text:
+              if import_anchor not in active_text:
+                  raise SystemExit('ActiveWorkout cloud import anchor missing')
+              active_text = active_text.replace(import_anchor, lifecycle_import + import_anchor, 1)
+
+          set_anchor = '''    setSession(\n      sanitizeLegacyWorkoutData(initializedSession)\n    );'''
+          set_new = '''    setSession(\n      sanitizeLegacyWorkoutData(\n        annotateWorkoutDateLifecycle(initializedSession, plannerItem)\n      )\n    );'''
+          if set_anchor not in active_text:
+              raise SystemExit('ActiveWorkout initialization anchor missing')
+          active_text = active_text.replace(set_anchor, set_new, 1)
+
+          title_anchor = '''              <div className="text-[9px] font-black uppercase tracking-[0.24em] text-emerald-200 sm:text-xs">\n                SYNC WORKOUT FOCUS MODE\n              </div>'''
+          title_new = '''              <div className="text-[9px] font-black uppercase tracking-[0.24em] text-emerald-200 sm:text-xs">\n                {formatHealthDay(session?.scheduled_ymd || session?.ymd || new Date())} · SYNC WORKOUT FOCUS MODE\n              </div>'''
+          if title_anchor not in active_text:
+              raise SystemExit('ActiveWorkout date title anchor missing')
+          active_text = active_text.replace(title_anchor, title_new, 1)
+
+          active.write_text(active_text, encoding='utf-8')
+          PY
+
+      - name: Verify production build
+        shell: bash
+        run: |
+          npm ci
+          npm run build
+          git diff --check
+
+      - name: Commit verified build
+        shell: bash
+        run: |
+          rm .github/workflows/apply-health-date-rollover.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/customer-health/HealthDashboard.jsx src/components/customer-health/ActiveWorkoutSessionDrawer.jsx .github/workflows/apply-health-date-rollover.yml
+          git commit -m "Add Health workout day rollover awareness"
+          git push origin health-workout-date-rollover
