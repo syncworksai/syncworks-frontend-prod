@@ -82,17 +82,23 @@ function pct(value, goal) {
   return Math.max(0, Math.min(100, Math.round((value / goal) * 100)));
 }
 
-function MetricBar({ label, value, goal, suffix = "", purple = false }) {
+function MetricBar({ label, value, goal, suffix = "", purple = false, onSetGoal }) {
   const width = pct(value, goal);
   return (
     <div>
       <div className="flex items-center justify-between gap-3 text-xs">
         <span className={purple ? "font-bold text-violet-200" : "font-bold text-cyan-200"}>{label}</span>
-        <span className="font-black text-white">{value}{suffix} <span className="font-semibold text-slate-500">/ {goal}{suffix}</span></span>
+        <span className="font-black text-white">
+          {Math.round(value)}{suffix}
+          <span className="font-semibold text-slate-500"> {goal ? `/ ${Math.round(goal)}${suffix}` : "/ target not set"}</span>
+        </span>
       </div>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.07]">
         <div className={purple ? "h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500" : "h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400"} style={{ width: `${width}%` }} />
       </div>
+      {!goal && onSetGoal ? (
+        <button type="button" onClick={onSetGoal} className="mt-2 text-[10px] font-black text-cyan-300">Set target →</button>
+      ) : null}
     </div>
   );
 }
@@ -149,7 +155,7 @@ function TimerCard() {
 
 function WorkoutMenu({ onOpen, onStartWorkout }) {
   const [kind, setKind] = useState("strength");
-  const [completed, setCompleted] = useState([0, 1]);
+  const [completed, setCompleted] = useState([]);
   const workout = WORKOUT_TEMPLATES[kind];
   const completion = Math.round((completed.length / workout.exercises.length) * 100);
 
@@ -160,18 +166,18 @@ function WorkoutMenu({ onOpen, onStartWorkout }) {
       <div className="rounded-[2rem] border border-blue-400/20 bg-[#050b18] p-4 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="text-[10px] font-black uppercase tracking-[.22em] text-blue-300">Today's Workout</div>
+            <div className="text-[10px] font-black uppercase tracking-[.22em] text-blue-300">Quick Start Templates</div>
             <h2 className="mt-1 text-2xl font-black text-white">{workout.title}</h2>
             <p className="mt-1 text-sm text-slate-400">{workout.subtitle}</p>
           </div>
-          <button type="button" onClick={() => onStartWorkout?.({ workout_name: workout.title, duration_minutes: workout.minutes, exercises: workout.exercises.map(([name, target]) => ({ name, target })) })} className="h-11 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-600 px-5 text-sm font-black text-white">Start Workout</button>
+          <button type="button" onClick={() => onStartWorkout?.({ workout_name: workout.title, duration_minutes: workout.minutes, exercises: workout.exercises.map(([name, target]) => ({ name, target })) })} className="h-11 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-600 px-5 text-sm font-black text-white">Start Template</button>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
           {[["strength", "Push"], ["pull", "Pull"], ["cardio", "Cardio + Abs"], ["mobility", "Mobility"], ["hiit", "HIIT / Tabata"]].map(([id, label]) => <button key={id} type="button" onClick={() => setKind(id)} className={`rounded-2xl border px-3 py-2 text-xs font-black ${kind === id ? "border-blue-400/60 bg-blue-500/20 text-blue-100" : "border-white/10 bg-white/[.03] text-slate-400"}`}>{label}</button>)}
         </div>
 
-        <div className="mt-5 flex items-center justify-between text-xs font-bold text-slate-400"><span>{completed.length} / {workout.exercises.length} completed</span><span>{completion}%</span></div>
+        <div className="mt-5 flex items-center justify-between text-xs font-bold text-slate-400"><span>{completed.length} / {workout.exercises.length} previewed</span><span>{completion}%</span></div>
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[.06]"><div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400" style={{ width: `${completion}%` }} /></div>
 
         <div className="mt-4 space-y-3">
@@ -197,10 +203,10 @@ function WorkoutMenu({ onOpen, onStartWorkout }) {
         <section className="rounded-3xl border border-violet-400/20 bg-gradient-to-br from-violet-500/10 to-blue-500/10 p-4">
           <div className="flex items-center gap-3"><LogoButton small onClick={() => onOpen?.("coach-chat")} /><div><div className="text-[10px] font-black uppercase tracking-[.2em] text-violet-200">SYNC Coach</div><div className="mt-1 font-black text-white">Adapt today's workout</div></div></div>
           <p className="mt-3 text-sm leading-6 text-slate-300">Say or type: “I only have 30 minutes,” “I am at home,” “my hip hurts,” or “make this beginner friendly.”</p>
-          <div className="mt-3 flex gap-2"><button type="button" onClick={() => onOpen?.("coach-chat")} className="h-10 flex-1 rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 text-xs font-black text-white">Type to SYNC</button><button type="button" onClick={() => onOpen?.("coach-chat")} className="h-10 w-12 rounded-xl border border-cyan-300/30 bg-cyan-300/10 text-lg">🎙</button></div>
+          <div className="mt-3 flex gap-2"><button type="button" onClick={() => onOpen?.("coach-chat")} className="h-10 flex-1 rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 text-xs font-black text-white">Type to SYNC</button><button type="button" onClick={() => onOpen?.("coach-chat")} aria-label="Speak to SYNC" className="h-10 w-12 rounded-xl border border-cyan-300/30 bg-cyan-300/10 text-lg">🎙</button></div>
         </section>
         <TimerCard />
-        <button type="button" onClick={() => onOpen?.("nutrition")} className="w-full rounded-3xl border border-blue-400/20 bg-[#070d1b] p-4 text-left"><div className="text-xs font-black uppercase tracking-[.18em] text-blue-300">Nutrition</div><div className="mt-2 text-lg font-black text-white">Fuel this workout</div><div className="mt-1 text-sm text-slate-400">Open calories, protein, macros and hydration.</div></button>
+        <button type="button" onClick={() => onOpen?.("nutrition-dashboard")} className="w-full rounded-3xl border border-blue-400/20 bg-[#070d1b] p-4 text-left"><div className="text-xs font-black uppercase tracking-[.18em] text-blue-300">Nutrition</div><div className="mt-2 text-lg font-black text-white">Fuel this workout</div><div className="mt-1 text-sm text-slate-400">Open calories, protein, macros and hydration.</div></button>
       </aside>
     </div>
   );
@@ -210,11 +216,11 @@ export default function HealthDashboard({ profile = {}, snapshot = {}, history =
   const [screen, setScreen] = useState("dashboard");
   const [dayKey, setDayKey] = useState(() => localYmd());
   const [previousWorkout, setPreviousWorkout] = useState(null);
-  const name = String(profile?.first_name || profile?.name || "Jacob").split(" ")[0];
-  const calories = safeNumber(snapshot?.calories || snapshot?.calories_today, 1842);
-  const calorieGoal = safeNumber(snapshot?.calorie_goal, 2400);
-  const protein = safeNumber(snapshot?.protein_today || snapshot?.protein, 132);
-  const proteinGoal = safeNumber(snapshot?.protein_goal || profile?.protein_goal, 160);
+  const name = String(profile?.first_name || profile?.name || "").trim().split(/\s+/)[0] || "there";
+  const calories = safeNumber(snapshot?.calories ?? snapshot?.calories_today, 0);
+  const calorieGoal = safeNumber(snapshot?.calorie_goal ?? profile?.calorie_goal, 0);
+  const protein = safeNumber(snapshot?.protein_today ?? snapshot?.protein, 0);
+  const proteinGoal = safeNumber(snapshot?.protein_goal ?? profile?.protein_goal, 0);
   const weekPlan = Array.isArray(snapshot?.week_plan) ? snapshot.week_plan : [];
   const todayWorkout = currentDayWorkout(weekPlan, dayKey);
   const upcomingWorkout = [...weekPlan]
@@ -222,11 +228,16 @@ export default function HealthDashboard({ profile = {}, snapshot = {}, history =
     .filter((item) => String(item?.ymd || "") >= dayKey)
     .sort((a, b) => String(a?.ymd || "9999").localeCompare(String(b?.ymd || "9999")))[0];
   const next = todayWorkout || upcomingWorkout || null;
-  const completed = history.filter((item) => item?.completed_at || item?.status === "Completed").length;
-  const planPct = Math.max(12, Math.min(100, safeNumber(snapshot?.plan_completion_percent, completed ? 68 : 24)));
-  const todayTitle = next?.workout_name || "Chest Push Focus";
+  const completedPlanItems = weekPlan.filter((item) => item?.status === "Completed").length;
+  const scheduledPlanItems = weekPlan.filter((item) => item?.workout_name).length;
+  const calculatedPlanPct = scheduledPlanItems ? Math.round((completedPlanItems / scheduledPlanItems) * 100) : 0;
+  const planPct = Math.max(0, Math.min(100, safeNumber(snapshot?.plan_completion_percent, calculatedPlanPct)));
+  const todayTitle = next?.workout_name || "No workout planned";
+  const todayMinutes = safeNumber(next?.duration_minutes ?? next?.minutes, 0);
+  const todayExercises = Array.isArray(next?.exercises) ? next.exercises.length : 0;
+  const todayFocus = next?.focus || next?.note || next?.muscle_focus || (next ? "Planned session" : "Build or choose a session for today");
 
-  const navItems = useMemo(() => [["dashboard", "Home"], ["workouts", "Workouts"], ["nutrition", "Nutrition"], ["progress", "Progress"], ["shop", "Shop"]], []);
+  const navItems = useMemo(() => [["dashboard", "Home"], ["workouts", "Workouts"], ["nutrition-dashboard", "Nutrition"], ["progress", "Progress"], ["shop", "Shop"]], []);
 
   useEffect(() => {
     let cancelled = false;
@@ -294,11 +305,11 @@ export default function HealthDashboard({ profile = {}, snapshot = {}, history =
         <aside className="hidden rounded-[1.75rem] border border-white/10 bg-[#060b16] p-4 lg:block">
           <div className="text-xs font-black tracking-[.22em] text-white">SYNCWORKS</div><div className="mt-1 text-[9px] font-black tracking-[.3em] text-violet-400">HEALTH</div>
           <nav className="mt-8 space-y-2">{navItems.map(([id, label]) => <button key={id} type="button" onClick={() => id === "dashboard" || id === "workouts" ? setScreen(id) : onOpen?.(id)} className={`h-11 w-full rounded-xl px-3 text-left text-sm font-black ${screen === id ? "bg-blue-500/15 text-blue-200" : "text-slate-400 hover:bg-white/[.04]"}`}>{label}</button>)}</nav>
-          <button type="button" onClick={() => onOpen?.("questionnaire")} className="mt-8 h-11 w-full rounded-xl border border-white/10 text-left px-3 text-sm font-black text-slate-400">Profile</button>
+          <button type="button" onClick={() => onOpen?.("questionnaire")} className="mt-8 h-11 w-full rounded-xl border border-white/10 px-3 text-left text-sm font-black text-slate-400">Profile</button>
         </aside>
 
-        <main className="min-w-0 pb-24 lg:pb-4">
-          <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-300">{formatHealthDay(dayKey)}</div><h1 className="mt-1 text-3xl font-black tracking-tight">Good day, <span className="text-blue-400">{name}</span></h1><p className="mt-1 text-sm text-slate-400">SYNC is tracking today separately from unfinished previous workouts.</p></div><div className="flex items-center gap-2"><button type="button" onClick={() => onOpen?.("questionnaire")} className="h-10 rounded-xl border border-white/10 px-3 text-xs font-black text-slate-300">Profile</button><button type="button" onClick={() => onOpen?.("planner")} className="h-10 rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 text-xs font-black text-blue-200">Plan</button></div></header>
+        <main className="min-w-0 pb-6 lg:pb-4">
+          <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-300">{formatHealthDay(dayKey)}</div><h1 className="mt-1 text-3xl font-black tracking-tight">Good day, <span className="text-blue-400">{name}</span></h1><p className="mt-1 text-sm text-slate-400">Today is isolated from unfinished prior sessions so workout and recovery data stay accurate.</p></div><div className="flex items-center gap-2"><button type="button" onClick={() => onOpen?.("questionnaire")} className="h-10 rounded-xl border border-white/10 px-3 text-xs font-black text-slate-300">Profile</button><button type="button" onClick={() => onOpen?.("planner")} className="h-10 rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 text-xs font-black text-blue-200">Plan</button></div></header>
 
           {screen === "workouts" ? <div className="mt-5"><WorkoutMenu onOpen={onOpen} onStartWorkout={onStartWorkout} /></div> : (
             <>
@@ -308,7 +319,7 @@ export default function HealthDashboard({ profile = {}, snapshot = {}, history =
                     <div>
                       <div className="text-[9px] font-black uppercase tracking-[0.18em] text-amber-200">{previousWorkout.label || "Yesterday - Incomplete"}</div>
                       <div className="mt-1 text-lg font-black text-white">{resumePreviousWorkout.workout_name}</div>
-                      <div className="mt-1 text-xs leading-5 text-slate-400">Your completed sets are preserved. Today's scheduled workout remains separate so SYNC can account for both days correctly.</div>
+                      <div className="mt-1 text-xs leading-5 text-slate-400">Completed sets are preserved. Today's workout remains separate so SYNC can account for both days correctly.</div>
                     </div>
                     <button type="button" onClick={() => onStartWorkout?.(resumePreviousWorkout)} className="h-11 shrink-0 rounded-xl border border-amber-300/35 bg-amber-300/15 px-4 text-xs font-black text-amber-100">Resume Yesterday</button>
                   </div>
@@ -316,29 +327,46 @@ export default function HealthDashboard({ profile = {}, snapshot = {}, history =
               ) : null}
 
               <div className="mt-5 grid gap-4 xl:grid-cols-[1.05fr_1fr_1fr]">
-                <section className="relative overflow-hidden rounded-[1.75rem] border border-blue-400/20 bg-[#07101e] p-5"><div className="text-[10px] font-black uppercase tracking-[.2em] text-blue-300">Today's Workout</div><h2 className="mt-2 text-2xl font-black">{todayTitle}</h2><p className="mt-1 text-sm text-slate-400">Upper body focus · adaptable for home or gym</p><div className="mt-5 grid grid-cols-3 gap-2 text-center"><div><div className="text-xl font-black">45</div><div className="text-[10px] text-slate-500">Minutes</div></div><div><div className="text-xl font-black">8</div><div className="text-[10px] text-slate-500">Exercises</div></div><div><div className="text-xl font-black">All</div><div className="text-[10px] text-slate-500">Levels</div></div></div><button type="button" onClick={() => setScreen("workouts")} className="mt-5 h-11 w-full rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-600 text-sm font-black">Start Workout</button></section>
-                <section className="rounded-[1.75rem] border border-white/10 bg-[#07101e] p-5"><div className="text-[10px] font-black uppercase tracking-[.2em] text-slate-400">Nutrition Summary</div><div className="mt-5 space-y-5"><MetricBar label="Calories" value={calories} goal={calorieGoal} /><MetricBar label="Protein" value={protein} goal={proteinGoal} suffix="g" purple /></div><button type="button" onClick={() => onOpen?.("nutrition")} className="mt-6 text-xs font-black text-cyan-300">See full breakdown →</button></section>
-                <section className="rounded-[1.75rem] border border-white/10 bg-[#07101e] p-5"><div className="text-[10px] font-black uppercase tracking-[.2em] text-slate-400">Plan Progress</div><div className="mx-auto mt-4 flex h-36 w-36 items-center justify-center rounded-full bg-[conic-gradient(#22d3ee_0deg,#2563eb_calc(var(--p)*3.6deg),#111827_calc(var(--p)*3.6deg))]" style={{ "--p": planPct }}><div className="flex h-28 w-28 flex-col items-center justify-center rounded-full bg-[#07101e]"><div className="text-3xl font-black">{planPct}%</div><div className="text-[10px] text-slate-500">Complete</div></div></div><div className="mt-3 text-center text-sm font-black">Phase 2 of 4</div><button type="button" onClick={() => onOpen?.("planner")} className="mt-3 w-full text-xs font-black text-blue-300">View plan →</button></section>
+                <section className="relative overflow-hidden rounded-[1.75rem] border border-blue-400/20 bg-[#07101e] p-5">
+                  <div className="text-[10px] font-black uppercase tracking-[.2em] text-blue-300">{todayWorkout ? "Today's Workout" : next ? "Next Workout" : "Workout Plan"}</div>
+                  <h2 className="mt-2 text-2xl font-black">{todayTitle}</h2>
+                  <p className="mt-1 text-sm text-slate-400">{todayFocus}</p>
+                  <div className="mt-5 grid grid-cols-3 gap-2 text-center">
+                    <div><div className="text-xl font-black">{todayMinutes || "-"}</div><div className="text-[10px] text-slate-500">Minutes</div></div>
+                    <div><div className="text-xl font-black">{todayExercises || "-"}</div><div className="text-[10px] text-slate-500">Exercises</div></div>
+                    <div><div className="text-xl font-black">{next?.level || "Adaptive"}</div><div className="text-[10px] text-slate-500">Level</div></div>
+                  </div>
+                  <button type="button" onClick={() => next ? onStartWorkout?.(next) : onOpen?.("plan-today")} className="mt-5 h-11 w-full rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-600 text-sm font-black">{next ? "Start Planned Workout" : "Plan Today's Workout"}</button>
+                  <button type="button" onClick={() => setScreen("workouts")} className="mt-2 h-10 w-full rounded-xl border border-white/10 bg-white/[.03] text-xs font-black text-slate-300">Browse quick-start templates</button>
+                </section>
+
+                <section className="rounded-[1.75rem] border border-white/10 bg-[#07101e] p-5">
+                  <div className="text-[10px] font-black uppercase tracking-[.2em] text-slate-400">Nutrition Summary</div>
+                  <div className="mt-5 space-y-5">
+                    <MetricBar label="Calories" value={calories} goal={calorieGoal} onSetGoal={() => onOpen?.("nutrition-goals")} />
+                    <MetricBar label="Protein" value={protein} goal={proteinGoal} suffix="g" purple onSetGoal={() => onOpen?.("nutrition-goals")} />
+                  </div>
+                  <button type="button" onClick={() => onOpen?.("nutrition-dashboard")} className="mt-6 text-xs font-black text-cyan-300">Open nutrition center →</button>
+                </section>
+
+                <section className="rounded-[1.75rem] border border-white/10 bg-[#07101e] p-5">
+                  <div className="text-[10px] font-black uppercase tracking-[.2em] text-slate-400">Plan Progress</div>
+                  <div className="mx-auto mt-4 flex h-36 w-36 items-center justify-center rounded-full bg-[conic-gradient(#22d3ee_0deg,#2563eb_calc(var(--p)*3.6deg),#111827_calc(var(--p)*3.6deg))]" style={{ "--p": planPct }}><div className="flex h-28 w-28 flex-col items-center justify-center rounded-full bg-[#07101e]"><div className="text-3xl font-black">{planPct}%</div><div className="text-[10px] text-slate-500">Complete</div></div></div>
+                  <div className="mt-3 text-center text-sm font-black">{scheduledPlanItems ? `${completedPlanItems} of ${scheduledPlanItems} planned sessions` : "No weekly plan yet"}</div>
+                  <button type="button" onClick={() => onOpen?.("planner")} className="mt-3 w-full text-xs font-black text-blue-300">View plan →</button>
+                </section>
               </div>
 
               <div className="mt-4 grid gap-4 xl:grid-cols-[1.3fr_1fr]">
-                <section className="rounded-[1.75rem] border border-blue-400/20 bg-gradient-to-br from-blue-500/10 to-violet-500/10 p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-center"><LogoButton onClick={() => onOpen?.("coach-chat")} /><div><div className="text-[10px] font-black uppercase tracking-[.2em] text-blue-300">SYNC AI Coach</div><h3 className="mt-1 text-2xl font-black">Your coach, planner and accountability partner.</h3><p className="mt-2 text-sm leading-6 text-slate-300">Ask for a shorter workout, a home alternative, mobility work, HIIT, Tabata, nutrition guidance, or a recovery day. Use your microphone or type.</p><div className="mt-4 flex gap-2"><button type="button" onClick={() => onOpen?.("coach-chat")} className="h-10 rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 px-4 text-xs font-black">Chat with SYNC</button><button type="button" onClick={() => onOpen?.("coach-chat")} className="h-10 rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 text-xs font-black">🎙 Speak</button></div></div></div></section>
-                <section className="rounded-[1.75rem] border border-white/10 bg-[#07101e] p-5"><div className="text-[10px] font-black uppercase tracking-[.2em] text-slate-400">Smart Reminders</div><h3 className="mt-2 text-xl font-black">Stay on track.</h3><p className="mt-2 text-sm leading-6 text-slate-400">Workout, nutrition, hydration and reorder reminders can be sent by email.</p><button type="button" onClick={() => onOpen?.("planner")} className="mt-5 text-xs font-black text-cyan-300">Manage reminders →</button></section>
+                <section className="rounded-[1.75rem] border border-blue-400/20 bg-gradient-to-br from-blue-500/10 to-violet-500/10 p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-center"><LogoButton onClick={() => onOpen?.("coach-chat")} /><div><div className="text-[10px] font-black uppercase tracking-[.2em] text-blue-300">SYNC AI Coach</div><h3 className="mt-1 text-2xl font-black">Your coach, planner and accountability partner.</h3><p className="mt-2 text-sm leading-6 text-slate-300">Ask for a shorter workout, a home alternative, mobility work, HIIT, Tabata, nutrition guidance, or a recovery day.</p><div className="mt-4 flex gap-2"><button type="button" onClick={() => onOpen?.("coach-chat")} className="h-10 rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 px-4 text-xs font-black">Chat with SYNC</button><button type="button" onClick={() => onOpen?.("coach-chat")} aria-label="Speak to SYNC" className="h-10 rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 text-xs font-black">🎙 Speak</button></div></div></div></section>
+                <section className="rounded-[1.75rem] border border-white/10 bg-[#07101e] p-5"><div className="text-[10px] font-black uppercase tracking-[.2em] text-slate-400">SYNC Health Alerts</div><h3 className="mt-2 text-xl font-black">Stay on track without chasing the app.</h3><p className="mt-2 text-sm leading-6 text-slate-400">Workout, protein, steps, hydration and recovery attention items now feed the central SYNC Alert Center. High-priority delivery follows your notification preferences and quiet hours.</p><button type="button" onClick={() => onOpen?.("daily-goals")} className="mt-5 text-xs font-black text-cyan-300">Review daily targets →</button></section>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">{[["Nutrition", "nutrition"], ["Plan", "planner"], ["Progress", "progress"], ["Profile", "questionnaire"], ["Shop", "shop"]].map(([label, route]) => <button key={label} type="button" onClick={() => onOpen?.(route)} className="rounded-2xl border border-white/10 bg-[#07101e] p-4 text-left"><div className="text-sm font-black">{label}</div><div className="mt-1 text-[11px] text-slate-500">Open {label.toLowerCase()}</div></button>)}</div>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">{[["Nutrition", "nutrition-dashboard"], ["Plan", "planner"], ["Progress", "progress"], ["Profile", "questionnaire"], ["Shop", "shop"]].map(([label, route]) => <button key={label} type="button" onClick={() => onOpen?.(route)} className="rounded-2xl border border-white/10 bg-[#07101e] p-4 text-left"><div className="text-sm font-black">{label}</div><div className="mt-1 text-[11px] text-slate-500">Open {label.toLowerCase()}</div></button>)}</div>
             </>
           )}
         </main>
       </div>
-
-      <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 items-end rounded-2xl border border-blue-400/20 bg-[#050914]/95 px-2 py-2 shadow-[0_0_30px_rgba(37,99,235,.25)] backdrop-blur lg:hidden">
-        <button type="button" onClick={() => setScreen("dashboard")} className={`h-12 text-[10px] font-black ${screen === "dashboard" ? "text-blue-300" : "text-slate-500"}`}>⌂<br/>Home</button>
-        <button type="button" onClick={() => setScreen("workouts")} className={`h-12 text-[10px] font-black ${screen === "workouts" ? "text-blue-300" : "text-slate-500"}`}>▣<br/>Workouts</button>
-        <div className="flex justify-center"><LogoButton small onClick={() => onOpen?.("coach-chat")} /></div>
-        <button type="button" onClick={() => onOpen?.("nutrition")} className="h-12 text-[10px] font-black text-slate-500">◒<br/>Nutrition</button>
-        <button type="button" onClick={() => onOpen?.("questionnaire")} className="h-12 text-[10px] font-black text-slate-500">○<br/>Profile</button>
-      </nav>
     </div>
   );
 }
