@@ -1,6 +1,6 @@
 // src/components/customer-health/HealthPremiumHome.jsx
 import React, { useEffect } from "react";
-import HealthDashboard from "./HealthDashboard";
+import HealthDayAwareDashboard from "./HealthDayAwareDashboard";
 
 export default function HealthPremiumHome({
   profile = {},
@@ -23,7 +23,7 @@ export default function HealthPremiumHome({
   }, [onOpen]);
 
   return (
-    <HealthDashboard
+    <HealthDayAwareDashboard
       profile={profile}
       snapshot={snapshot}
       history={history}
