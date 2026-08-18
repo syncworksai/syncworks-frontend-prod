@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, Link2, MapPin, Plus, RefreshCw, Sparkles, X } from "lucide-react";
 import ModeBar from "../components/ModeBar";
 import CalendarConnectionsDrawer from "../components/CalendarConnectionsDrawer";
+import TravelWeatherAssistCard from "../components/TravelWeatherAssistCard";
 import api from "../api/client";
 import { getCalendarConnections } from "../api/calendarConnections";
 
@@ -216,6 +217,8 @@ export default function CalendarPage() {
           <div className="rounded-3xl border border-white/10 bg-slate-950/55 p-4 sm:col-span-2"><div className="text-[10px] font-black uppercase tracking-[.18em] text-slate-500">Next</div>{nextEvent ? <><div className="mt-2 font-black text-white">{nextEvent.title}</div><div className="mt-1 text-xs text-slate-400">{new Date(nextEvent.start_at).toLocaleString()} · {sourceLabel(nextEvent.source)}</div></> : <div className="mt-2 text-sm text-slate-400">Nothing upcoming.</div>}</div>
         </section>
 
+        <TravelWeatherAssistCard event={nextEvent} onUpdated={loadEvents} />
+
         <section className="rounded-[1.9rem] border border-white/10 bg-slate-950/45 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div><div className="text-[10px] font-black uppercase tracking-[.18em] text-slate-500">Master calendar</div><h2 className="mt-1 text-xl font-black text-white">Everything in one timeline.</h2></div>
@@ -226,7 +229,7 @@ export default function CalendarPage() {
           </div>
 
           <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-            {[['ALL','All'],['PERSONAL','Personal'],['EXTERNAL','Google + Outlook'],['SYNCWORKS','SyncWorks']].map(([value,label]) => <button key={value} type="button" onClick={() => setFilter(value)} className={`whitespace-nowrap rounded-full border px-3 py-2 text-[11px] font-black ${filter === value ? "border-cyan-300/35 bg-cyan-500/10 text-cyan-100" : "border-white/10 bg-white/[.03] text-slate-400"}`}>{label}</button>)}
+            {[["ALL","All"],["PERSONAL","Personal"],["EXTERNAL","Google + Outlook"],["SYNCWORKS","SyncWorks"]].map(([value,label]) => <button key={value} type="button" onClick={() => setFilter(value)} className={`whitespace-nowrap rounded-full border px-3 py-2 text-[11px] font-black ${filter === value ? "border-cyan-300/35 bg-cyan-500/10 text-cyan-100" : "border-white/10 bg-white/[.03] text-slate-400"}`}>{label}</button>)}
           </div>
 
           {showComposer ? <div className="mt-4 rounded-3xl border border-cyan-400/15 bg-cyan-500/[.04] p-4">
