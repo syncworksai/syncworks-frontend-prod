@@ -5,6 +5,10 @@ import {
   saveHealthActiveWorkout,
   saveHealthWorkoutSession,
 } from "../../api/customerHealth";
+import {
+  annotateWorkoutDateLifecycle,
+  shouldOfferPreviousWorkout,
+} from "./healthWorkoutDateLifecycle";
 
 let pendingTimer = null;
 let lastPayload = "";
@@ -16,6 +20,14 @@ function stableSerialize(value) {
   } catch {
     return "";
   }
+}
+
+function plannerContext(plannerItem = {}, session = {}) {
+  return {
+    id: plannerItem?.id || session?.planner_item_id || "",
+    workout_id: plannerItem?.workout_id || session?.workout_id || "",
+    ymd: plannerItem?.ymd || session?.scheduled_ymd || session?.ymd || "",
+  };
 }
 
 export function loadCloudWorkoutHistory() {
@@ -34,8 +46,15 @@ export function queueCloudActiveWorkoutSave(
 ) {
   if (!session || session.status !== "active") return;
 
+  const datedSession = annotateWorkoutDateLifecycle(
+    {
+      ...session,
+      last_activity_at: new Date().toISOString(),
+    },
+    plannerContext(plannerItem, session)
+  );
   const payload = {
-    session,
+    session: datedSession,
     plannerItemId:
       plannerItem?.id || session?.planner_item_id || "",
     workoutId:
@@ -72,8 +91,15 @@ export function flushCloudActiveWorkoutSave(session, plannerItem) {
     pendingTimer = null;
   }
 
+  const datedSession = annotateWorkoutDateLifecycle(
+    {
+      ...session,
+      last_activity_at: new Date().toISOString(),
+    },
+    plannerContext(plannerItem, session)
+  );
   const payload = {
-    session,
+    session: datedSession,
     plannerItemId:
       plannerItem?.id || session?.planner_item_id || "",
     workoutId:
@@ -91,9 +117,36 @@ export function flushCloudActiveWorkoutSave(session, plannerItem) {
 export async function saveCompletedWorkoutToCloud(session) {
   if (!session) return null;
 
-  const result = await saveHealthWorkoutSession(session);
+  const datedSession = annotateWorkoutDateLifecycle(session, {
+    id: session?.planner_item_id,
+    workout_id: session?.workout_id,
+    ymd: session?.scheduled_ymd || session?.ymd,
+  });
+  const result = await saveHealthWorkoutSession(datedSession);
   lastPayload = "";
   return result;
+}
+
+export async function archiveExpiredCloudWorkout(activeWorkout) {
+  const lifecycle = shouldOfferPreviousWorkout(activeWorkout);
+  if (!lifecycle.expired || !lifecycle.session) return null;
+
+  const archivedAt = new Date().toISOString();
+  const partialSession = {
+    ...lifecycle.session,
+    status: "partial",
+    lifecycle_status: "Expired Partial",
+    partial: true,
+    expired_from_active: true,
+    archived_at: archivedAt,
+    finished_at: lifecycle.session.finished_at || archivedAt,
+    completed_late: false,
+  };
+
+  await saveHealthWorkoutSession(partialSession);
+  await clearHealthActiveWorkout();
+  lastPayload = "";
+  return partialSession;
 }
 
 export async function clearCloudActiveWorkout() {
