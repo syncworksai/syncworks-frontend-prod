@@ -44,6 +44,14 @@ import {
   playWorkoutCoachMessage,
   stopWorkoutCoachAudio,
 } from "./healthWorkoutAudioController";
+import {
+  clearCloudActiveWorkout,
+  cloudWorkoutMatchesPlanner,
+  flushCloudActiveWorkoutSave,
+  loadCloudActiveWorkout,
+  queueCloudActiveWorkoutSave,
+  saveCompletedWorkoutToCloud,
+} from "./healthWorkoutCloudSync";
 
 import {
   buildExerciseAddedPhrase,
@@ -2749,6 +2757,55 @@ export default function ActiveWorkoutSessionDrawer({
   }, [open, plannerItem, workouts, session, snapshot]);
 
   useEffect(() => {
+    if (!open || !plannerItem) return undefined;
+
+    let cancelled = false;
+
+    loadCloudActiveWorkout()
+      .then((activeWorkout) => {
+        if (
+          cancelled ||
+          !activeWorkout?.session ||
+          activeWorkout.session.status !== "active" ||
+          !cloudWorkoutMatchesPlanner(activeWorkout, plannerItem)
+        ) {
+          return;
+        }
+
+        const localPersisted = readPersistedWorkout();
+        if (persistedSessionHasProgress(localPersisted)) return;
+
+        const restored = restorePersistedSession({
+          session: activeWorkout.session,
+          persisted_at: activeWorkout.saved_at,
+        });
+
+        if (!restored) return;
+
+        setSession(
+          sanitizeLegacyWorkoutData(
+            hydrateSessionWithExerciseMemory({
+              session: ensureDynamicPreparation(restored, snapshot || {}),
+              history,
+            })
+          )
+        );
+        setFinishMessage(
+          `Workout restored from SYNC Cloud at exercise ${
+            Number(restored.current_exercise_index || 0) + 1
+          } of ${restored.exercises?.length || 0}.`
+        );
+      })
+      .catch((error) => {
+        console.warn("Health cloud workout restore unavailable.", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, plannerItem?.id]);
+
+  useEffect(() => {
     if (
       !open ||
       !session ||
@@ -2782,6 +2839,7 @@ export default function ActiveWorkoutSessionDrawer({
         session,
         plannerItem
       );
+      queueCloudActiveWorkoutSave(session, plannerItem);
       return;
     }
 
@@ -2803,6 +2861,10 @@ export default function ActiveWorkoutSessionDrawer({
           latestSessionRef.current,
           plannerItem
         );
+        flushCloudActiveWorkoutSave(
+          latestSessionRef.current,
+          plannerItem
+        ).catch(() => undefined);
 
         return;
       }
@@ -2831,6 +2893,10 @@ export default function ActiveWorkoutSessionDrawer({
         latestSessionRef.current,
         plannerItem
       );
+      flushCloudActiveWorkoutSave(
+        latestSessionRef.current,
+        plannerItem
+      ).catch(() => undefined);
     }
 
     document.addEventListener(
@@ -4535,6 +4601,22 @@ export default function ActiveWorkoutSessionDrawer({
           Boolean(completedPlannerItem),
       };
 
+      saveCompletedWorkoutToCloud(finishedSession)
+        .then((cloudResult) => {
+          if (Array.isArray(cloudResult?.session ? [cloudResult.session] : [])) {
+            setFinishMessage((current) =>
+              `${current || "Workout saved."} SYNC Cloud history updated.`
+            );
+          }
+        })
+        .catch((error) => {
+          console.warn("Completed workout cloud save failed.", error);
+          setFinishMessage((current) =>
+            `${current || "Workout saved locally."} Cloud sync will retry next time.`
+          );
+        });
+      clearCloudActiveWorkout().catch(() => undefined);
+
       const nextHistory = (
         Array.isArray(result.nextHistory)
           ? result.nextHistory
@@ -4675,6 +4757,9 @@ export default function ActiveWorkoutSessionDrawer({
     setHistory?.(result.nextHistory);
     setSnapshot?.(nextSnapshot);
     setSession(result.editedSession);
+    saveCompletedWorkoutToCloud(result.editedSession).catch((error) => {
+      console.warn("Edited workout cloud save failed.", error);
+    });
     setEditAfterFinish(false);
     setFinishMessage(
       "Workout edits saved. Coach statistics updated."
