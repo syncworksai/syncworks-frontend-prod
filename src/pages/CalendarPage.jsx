@@ -29,6 +29,20 @@ function addDays(value, amount) {
   date.setDate(date.getDate() + amount);
   return date;
 }
+function recurrenceRule(value) {
+  if (value === "DAILY") return "RRULE:FREQ=DAILY;INTERVAL=1";
+  if (value === "WEEKLY") return "RRULE:FREQ=WEEKLY;INTERVAL=1";
+  if (value === "MONTHLY") return "RRULE:FREQ=MONTHLY;INTERVAL=1";
+  return "";
+}
+function recurrenceLabel(rule) {
+  const value = String(rule || "").toUpperCase();
+  if (value.includes("FREQ=DAILY")) return "Daily";
+  if (value.includes("FREQ=WEEKLY")) return "Weekly";
+  if (value.includes("FREQ=MONTHLY")) return "Monthly";
+  if (value) return "Recurring";
+  return "";
+}
 function sourceTone(source) {
   const key = String(source || "MANUAL").toUpperCase();
   if (key === "GOOGLE") return "border-cyan-400/25 bg-cyan-500/10 text-cyan-100";
@@ -58,6 +72,8 @@ function EventCard({ event, onCancel }) {
   const end = event.end_at ? new Date(event.end_at) : null;
   const location = eventLocation(event);
   const editable = !isExternal(event.source) && event.status === "ACTIVE";
+  const repeats = recurrenceLabel(event.recurrence_rule);
+  const weatherDependent = Boolean(event?.metadata?.weather_dependent);
   return (
     <article className="rounded-[1.6rem] border border-white/10 bg-slate-950/65 p-4 shadow-[0_16px_45px_rgba(0,0,0,.2)]">
       <div className="flex items-start justify-between gap-3">
@@ -65,6 +81,8 @@ function EventCard({ event, onCancel }) {
           <div className="flex flex-wrap items-center gap-2">
             <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[.14em] ${sourceTone(event.source)}`}>{sourceLabel(event.source)}</span>
             {event.all_day ? <span className="rounded-full border border-white/10 bg-white/[.04] px-2.5 py-1 text-[9px] font-black uppercase tracking-[.14em] text-slate-300">All day</span> : null}
+            {repeats ? <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[.14em] text-cyan-100">Repeats {repeats}</span> : null}
+            {weatherDependent ? <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[.14em] text-amber-100">Weather permitting</span> : null}
             {event.status !== "ACTIVE" ? <span className="rounded-full border border-rose-400/20 bg-rose-500/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[.14em] text-rose-200">{event.status}</span> : null}
           </div>
           <h3 className="mt-3 text-base font-black text-white">{event.title}</h3>
@@ -120,7 +138,7 @@ export default function CalendarPage() {
   const [filter, setFilter] = useState("ALL");
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
   const [showComposer, setShowComposer] = useState(false);
-  const [draft, setDraft] = useState({ title: "", date: ymd(), time: "09:00", duration_minutes: "60", location_name: "", arrival_buffer_minutes: "0", reminder_minutes: "30", description: "" });
+  const [draft, setDraft] = useState({ title: "", date: ymd(), time: "09:00", duration_minutes: "60", location_name: "", arrival_buffer_minutes: "0", reminder_minutes: "30", description: "", recurrence: "NONE" });
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
@@ -186,11 +204,12 @@ export default function CalendarPage() {
         location_name: draft.location_name,
         arrival_buffer_minutes: Number(draft.arrival_buffer_minutes || 0),
         reminder_minutes: Number(draft.reminder_minutes || 30),
+        recurrence_rule: recurrenceRule(draft.recurrence),
         source: "MANUAL",
       });
       setDraft((value) => ({ ...value, title: "", location_name: "", description: "" }));
       setShowComposer(false);
-      setNotice("Event added to your SyncWorks Calendar and SYNC Assist context.");
+      setNotice(draft.recurrence === "NONE" ? "Event added to your SyncWorks Calendar and SYNC Assist context." : `Recurring ${draft.recurrence.toLowerCase()} event added to your SyncWorks Calendar.`);
       await loadEvents();
     } catch (e) { setError(e?.response?.data?.detail || "Could not add this event."); }
   }
@@ -240,6 +259,7 @@ export default function CalendarPage() {
               <input type="time" value={draft.time} onChange={(e) => setDraft((v) => ({ ...v, time: e.target.value }))} className="h-11 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none" />
               <input value={draft.location_name} onChange={(e) => setDraft((v) => ({ ...v, location_name: e.target.value }))} placeholder="Location" className="h-11 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none" />
               <label className="text-xs text-slate-400">Duration (min)<input type="number" min="0" value={draft.duration_minutes} onChange={(e) => setDraft((v) => ({ ...v, duration_minutes: e.target.value }))} className="mt-1 h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none" /></label>
+              <label className="text-xs text-slate-400">Repeats<select value={draft.recurrence} onChange={(e) => setDraft((v) => ({ ...v, recurrence: e.target.value }))} className="mt-1 h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none"><option value="NONE">Does not repeat</option><option value="DAILY">Daily</option><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option></select></label>
               <label className="text-xs text-slate-400">Arrive early (min)<input type="number" min="0" max="240" value={draft.arrival_buffer_minutes} onChange={(e) => setDraft((v) => ({ ...v, arrival_buffer_minutes: e.target.value }))} className="mt-1 h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none" /></label>
               <label className="text-xs text-slate-400">Reminder (min)<input type="number" min="0" value={draft.reminder_minutes} onChange={(e) => setDraft((v) => ({ ...v, reminder_minutes: e.target.value }))} className="mt-1 h-11 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none" /></label>
               <button type="button" onClick={createEvent} className="min-h-11 self-end rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 text-sm font-black text-white">Save event</button>
