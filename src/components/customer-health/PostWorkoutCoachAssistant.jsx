@@ -191,7 +191,7 @@ export default function PostWorkoutCoachAssistant({ session, snapshot = {} }) {
       <div className="mt-3 grid grid-cols-2 gap-2">
         <button type="button" onClick={openNutrition} className="min-h-12 rounded-2xl border border-lime-300/25 bg-lime-300/10 px-3 text-xs font-black text-lime-100">Post-workout meal</button>
         <a href={SEEQ_URL} target="_blank" rel="noreferrer" className="flex min-h-12 items-center justify-center rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-3 text-center text-xs font-black text-fuchsia-100">SEEQ Protein</a>
-        <button type="button" onClick={() => setSupplementsOpen((value) => !value)} className="min-h-12 rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] px-3 text-xs font-black text-amber-100">Supplements</button>
+        <button type="button" onClick={() => { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("syncworks:health-open", { detail: { target: "shop", source: "post_workout" } })); }} className="min-h-12 rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] px-3 text-xs font-black text-amber-100">Health Store</button>
         <button type="button" onClick={openCoach} className="min-h-12 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-3 text-xs font-black text-cyan-100">Ask SYNC</button>
       </div>
 
