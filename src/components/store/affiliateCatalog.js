@@ -1,3 +1,4 @@
+// Shared affiliate catalog for Health now and the broader Personal store later.
 export const AMAZON_ASSOCIATE_TAG = "syncworksapp-20";
 
 export const SEEQ_AFFILIATE_URL =
