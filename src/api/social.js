@@ -71,6 +71,15 @@ export async function createEvent(payload) {
   return data;
 }
 
+export async function updateEvent(id, payload) {
+  const { data } = await api.patch(`/social/events/${id}/`, payload);
+  return data;
+}
+
+export async function cancelEvent(id) {
+  await api.delete(`/social/events/${id}/`);
+}
+
 export async function getEventInvitations() {
   const { data } = await api.get("/social/event-invitations/");
   return list(data);
