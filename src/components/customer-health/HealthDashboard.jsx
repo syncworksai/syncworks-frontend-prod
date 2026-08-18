@@ -1,4 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
+import {
+  archiveExpiredCloudWorkout,
+  loadCloudActiveWorkout,
+} from "./healthWorkoutCloudSync";
+import {
+  currentDayWorkout,
+  formatHealthDay,
+  localYmd,
+  shouldOfferPreviousWorkout,
+} from "./healthWorkoutDateLifecycle";
 
 const WORKOUT_TEMPLATES = {
   strength: {
@@ -198,18 +208,85 @@ function WorkoutMenu({ onOpen, onStartWorkout }) {
 
 export default function HealthDashboard({ profile = {}, snapshot = {}, history = [], onOpen, onStartWorkout }) {
   const [screen, setScreen] = useState("dashboard");
+  const [dayKey, setDayKey] = useState(() => localYmd());
+  const [previousWorkout, setPreviousWorkout] = useState(null);
   const name = String(profile?.first_name || profile?.name || "Jacob").split(" ")[0];
   const calories = safeNumber(snapshot?.calories || snapshot?.calories_today, 1842);
   const calorieGoal = safeNumber(snapshot?.calorie_goal, 2400);
   const protein = safeNumber(snapshot?.protein_today || snapshot?.protein, 132);
   const proteinGoal = safeNumber(snapshot?.protein_goal || profile?.protein_goal, 160);
   const weekPlan = Array.isArray(snapshot?.week_plan) ? snapshot.week_plan : [];
-  const next = weekPlan.find((item) => item?.workout_name && item?.status !== "Completed");
+  const todayWorkout = currentDayWorkout(weekPlan, dayKey);
+  const upcomingWorkout = [...weekPlan]
+    .filter((item) => item?.workout_name && !["Completed", "Skipped", "Rescheduled"].includes(item?.status))
+    .filter((item) => String(item?.ymd || "") >= dayKey)
+    .sort((a, b) => String(a?.ymd || "9999").localeCompare(String(b?.ymd || "9999")))[0];
+  const next = todayWorkout || upcomingWorkout || null;
   const completed = history.filter((item) => item?.completed_at || item?.status === "Completed").length;
   const planPct = Math.max(12, Math.min(100, safeNumber(snapshot?.plan_completion_percent, completed ? 68 : 24)));
   const todayTitle = next?.workout_name || "Chest Push Focus";
 
   const navItems = useMemo(() => [["dashboard", "Home"], ["workouts", "Workouts"], ["nutrition", "Nutrition"], ["progress", "Progress"], ["shop", "Shop"]], []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshWorkoutDay() {
+      const today = localYmd();
+      setDayKey(today);
+      try {
+        const active = await loadCloudActiveWorkout();
+        if (cancelled || !active?.session) {
+          if (!cancelled) setPreviousWorkout(null);
+          return;
+        }
+
+        const lifecycle = shouldOfferPreviousWorkout(active);
+        if (lifecycle.expired) {
+          await archiveExpiredCloudWorkout(active);
+          if (!cancelled) setPreviousWorkout(null);
+          return;
+        }
+
+        if (lifecycle.ageDays === 1) {
+          if (!cancelled) {
+            setPreviousWorkout({
+              ...active,
+              session: lifecycle.session,
+              label: lifecycle.label,
+            });
+          }
+          return;
+        }
+
+        if (!cancelled) setPreviousWorkout(null);
+      } catch (error) {
+        console.warn("Health date rollover check unavailable.", error);
+      }
+    }
+
+    refreshWorkoutDay();
+    const interval = window.setInterval(refreshWorkoutDay, 60000);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") refreshWorkoutDay();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, []);
+
+  const resumePreviousWorkout = previousWorkout
+    ? {
+        ...previousWorkout.session,
+        id: previousWorkout.planner_item_id || previousWorkout.session?.planner_item_id || previousWorkout.session?.id,
+        workout_id: previousWorkout.workout_id || previousWorkout.session?.workout_id || "",
+        ymd: previousWorkout.session?.scheduled_ymd || previousWorkout.session?.ymd || "",
+        workout_name: previousWorkout.session?.workout_name || "Previous workout",
+      }
+    : null;
 
   return (
     <div className="min-h-screen rounded-[2rem] border border-blue-400/15 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,.13),transparent_30%),linear-gradient(180deg,#030711,#050a14)] p-3 text-white sm:p-5">
@@ -221,10 +298,23 @@ export default function HealthDashboard({ profile = {}, snapshot = {}, history =
         </aside>
 
         <main className="min-w-0 pb-24 lg:pb-4">
-          <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h1 className="text-3xl font-black tracking-tight">Good day, <span className="text-blue-400">{name}</span></h1><p className="mt-1 text-sm text-slate-400">Ready to keep your momentum going.</p></div><div className="flex items-center gap-2"><button type="button" onClick={() => onOpen?.("questionnaire")} className="h-10 rounded-xl border border-white/10 px-3 text-xs font-black text-slate-300">Profile</button><button type="button" onClick={() => onOpen?.("planner")} className="h-10 rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 text-xs font-black text-blue-200">Plan</button></div></header>
+          <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-300">{formatHealthDay(dayKey)}</div><h1 className="mt-1 text-3xl font-black tracking-tight">Good day, <span className="text-blue-400">{name}</span></h1><p className="mt-1 text-sm text-slate-400">SYNC is tracking today separately from unfinished previous workouts.</p></div><div className="flex items-center gap-2"><button type="button" onClick={() => onOpen?.("questionnaire")} className="h-10 rounded-xl border border-white/10 px-3 text-xs font-black text-slate-300">Profile</button><button type="button" onClick={() => onOpen?.("planner")} className="h-10 rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 text-xs font-black text-blue-200">Plan</button></div></header>
 
           {screen === "workouts" ? <div className="mt-5"><WorkoutMenu onOpen={onOpen} onStartWorkout={onStartWorkout} /></div> : (
             <>
+              {previousWorkout && resumePreviousWorkout ? (
+                <section className="mt-5 rounded-[1.5rem] border border-amber-300/25 bg-amber-300/[0.07] p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="text-[9px] font-black uppercase tracking-[0.18em] text-amber-200">{previousWorkout.label || "Yesterday - Incomplete"}</div>
+                      <div className="mt-1 text-lg font-black text-white">{resumePreviousWorkout.workout_name}</div>
+                      <div className="mt-1 text-xs leading-5 text-slate-400">Your completed sets are preserved. Today's scheduled workout remains separate so SYNC can account for both days correctly.</div>
+                    </div>
+                    <button type="button" onClick={() => onStartWorkout?.(resumePreviousWorkout)} className="h-11 shrink-0 rounded-xl border border-amber-300/35 bg-amber-300/15 px-4 text-xs font-black text-amber-100">Resume Yesterday</button>
+                  </div>
+                </section>
+              ) : null}
+
               <div className="mt-5 grid gap-4 xl:grid-cols-[1.05fr_1fr_1fr]">
                 <section className="relative overflow-hidden rounded-[1.75rem] border border-blue-400/20 bg-[#07101e] p-5"><div className="text-[10px] font-black uppercase tracking-[.2em] text-blue-300">Today's Workout</div><h2 className="mt-2 text-2xl font-black">{todayTitle}</h2><p className="mt-1 text-sm text-slate-400">Upper body focus · adaptable for home or gym</p><div className="mt-5 grid grid-cols-3 gap-2 text-center"><div><div className="text-xl font-black">45</div><div className="text-[10px] text-slate-500">Minutes</div></div><div><div className="text-xl font-black">8</div><div className="text-[10px] text-slate-500">Exercises</div></div><div><div className="text-xl font-black">All</div><div className="text-[10px] text-slate-500">Levels</div></div></div><button type="button" onClick={() => setScreen("workouts")} className="mt-5 h-11 w-full rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-600 text-sm font-black">Start Workout</button></section>
                 <section className="rounded-[1.75rem] border border-white/10 bg-[#07101e] p-5"><div className="text-[10px] font-black uppercase tracking-[.2em] text-slate-400">Nutrition Summary</div><div className="mt-5 space-y-5"><MetricBar label="Calories" value={calories} goal={calorieGoal} /><MetricBar label="Protein" value={protein} goal={proteinGoal} suffix="g" purple /></div><button type="button" onClick={() => onOpen?.("nutrition")} className="mt-6 text-xs font-black text-cyan-300">See full breakdown →</button></section>

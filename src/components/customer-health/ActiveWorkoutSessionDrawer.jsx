@@ -45,6 +45,10 @@ import {
   stopWorkoutCoachAudio,
 } from "./healthWorkoutAudioController";
 import {
+  annotateWorkoutDateLifecycle,
+  formatHealthDay,
+} from "./healthWorkoutDateLifecycle";
+import {
   clearCloudActiveWorkout,
   cloudWorkoutMatchesPlanner,
   flushCloudActiveWorkoutSave,
@@ -2723,7 +2727,9 @@ export default function ActiveWorkoutSessionDrawer({
       });
 
     setSession(
-      sanitizeLegacyWorkoutData(initializedSession)
+      sanitizeLegacyWorkoutData(
+        annotateWorkoutDateLifecycle(initializedSession, plannerItem)
+      )
     );
 
     initializedWorkoutKeyRef.current = workoutKey;
@@ -4775,7 +4781,7 @@ export default function ActiveWorkoutSessionDrawer({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="text-[9px] font-black uppercase tracking-[0.24em] text-emerald-200 sm:text-xs">
-                SYNC WORKOUT FOCUS MODE
+                {formatHealthDay(session?.scheduled_ymd || session?.ymd || new Date())} · SYNC WORKOUT FOCUS MODE
               </div>
 
               <h2 className="mt-1 truncate text-xl font-black text-white sm:text-4xl">
