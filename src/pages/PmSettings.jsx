@@ -6,6 +6,7 @@ import PMHeader from "../components/pm/PMHeader";
 import Button from "../components/ui/Button";
 import PMMessages from "./PMMessages";
 import PMMakeReady from "./PMMakeReady";
+import PMLeads from "./PMLeads";
 
 const inputClass = "min-h-11 w-full rounded-2xl border border-slate-700 bg-black/35 px-3.5 py-2.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-400/15 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-black/20 disabled:text-slate-400";
 
@@ -68,6 +69,7 @@ export default function PmSettings() {
   const query = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const showMessages = query.get("view") === "messages";
   const showMakeReady = query.get("view") === "make-ready";
+  const showLeads = query.get("view") === "leads";
   const creatingNew = query.get("new") === "1";
   const defaults = useMemo(() => userDefaults(user), [user]);
   const [workspace, setWorkspace] = useState(defaults);
@@ -79,7 +81,7 @@ export default function PmSettings() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (showMessages || showMakeReady) return undefined;
+    if (showMessages || showMakeReady || showLeads) return undefined;
     let active = true;
     (async () => {
       setLoading(true);
@@ -106,7 +108,7 @@ export default function PmSettings() {
       }
     })();
     return () => { active = false; };
-  }, [creatingNew, defaults, showMessages, showMakeReady]);
+  }, [creatingNew, defaults, showMessages, showMakeReady, showLeads]);
 
   function update(name, value) { setWorkspace((current) => ({ ...current, [name]: value })); }
 
@@ -131,6 +133,7 @@ export default function PmSettings() {
 
   if (showMessages) return <PMMessages />;
   if (showMakeReady) return <PMMakeReady />;
+  if (showLeads) return <PMLeads />;
 
   const locked = Boolean(workspaceId) && !editing && !creatingNew;
   return (
@@ -140,7 +143,7 @@ export default function PmSettings() {
         <section className="rounded-[28px] border border-cyan-400/20 bg-[#07111f]/95 p-4 sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div><div className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">{creatingNew ? "Additional portfolio" : "Portfolio settings"}</div><h1 className="mt-2 text-xl font-semibold text-white">{creatingNew ? "Create another Property Management portfolio" : "Portfolio identity"}</h1><p className="mt-2 text-sm leading-6 text-slate-400">Registration details are filled in automatically. Saved information stays locked until you choose Edit.</p></div>
-            <div className="flex flex-wrap gap-2"><Button tone="slate" onClick={() => nav("/pm/settings?view=messages")}>Open PM Messages</Button><Button tone="slate" onClick={() => nav("/pm/settings?view=make-ready")}>Open Make Ready</Button>{locked ? <Button tone="cyan" onClick={() => setEditing(true)}>Edit</Button> : null}</div>
+            <div className="flex flex-wrap gap-2"><Button tone="slate" onClick={() => nav("/pm/settings?view=messages")}>Open PM Messages</Button><Button tone="slate" onClick={() => nav("/pm/settings?view=leads")}>Open Leads</Button><Button tone="slate" onClick={() => nav("/pm/settings?view=make-ready")}>Open Make Ready</Button>{locked ? <Button tone="cyan" onClick={() => setEditing(true)}>Edit</Button> : null}</div>
           </div>
           {creatingNew ? <div className="mt-4 rounded-2xl border border-fuchsia-500/25 bg-fuchsia-500/10 p-4 text-sm text-fuchsia-100"><strong>1 portfolio is free.</strong> Each additional portfolio is $9.99/month. Payment activation is required before an additional portfolio can be created.</div> : null}
         </section>
