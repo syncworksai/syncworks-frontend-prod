@@ -23,6 +23,7 @@ import { useAuth } from "../auth/AuthContext";
 import DashboardShell from "../components/dashboard/DashboardShell";
 import CustomerAudioSummaryDrawer from "../components/sync/CustomerAudioSummaryDrawer";
 import SyncLauncherButton from "../components/sync/SyncLauncherButton";
+import SyncWorksAffiliateStore from "../components/store/SyncWorksAffiliateStore";
 
 const GOD_MODE_EMAILS = new Set(["jacoblord7@outlook.com"]);
 
@@ -88,6 +89,7 @@ export default function CustomerDashboard() {
   const nav = useNavigate();
   const { user } = useAuth();
   const [audioOpen, setAudioOpen] = useState(false);
+  const [fitnessStoreOpen, setFitnessStoreOpen] = useState(false);
   const [tickets, setTickets] = useState([]);
   const [invoices, setInvoices] = useState([]);
 
@@ -118,6 +120,7 @@ export default function CustomerDashboard() {
     [MessageSquare, "Messages", "Conversations and items that need a response.", "/customer/inbox", null, "violet"],
     [CheckSquare2, "To-Do", "Personal, family, event and work tasks.", "/customer/todo", null, "cyan"],
     [ShoppingBag, "Shop", "Local businesses, food, products and services.", "/customer/deals", null, "amber"],
+    [ShoppingBag, "Fitness Shop", "Curated training, nutrition, recovery and home-gym essentials.", "__fitness_store__", "affiliate", "emerald"],
     [Building2, "Property", "Properties, tenants and maintenance operations.", "/pm", null, "violet"],
     [BriefcaseBusiness, "Business", "Customers, leads, jobs, schedule and finances.", "/business", null, "cyan"],
     [Users, "Workday", "Employee assignments, schedule and daily tasks.", "/employee", null, "violet"],
@@ -146,7 +149,17 @@ export default function CustomerDashboard() {
         <section>
           <div className="mb-3 flex items-end justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">Launch</div><h2 className="mt-1 text-xl font-black text-white">What do you want to do?</h2></div></div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {actions.map(([Icon, label, detail, href, badge, accent]) => <ActionCard key={label} icon={Icon} label={label} detail={detail} badge={badge} accent={accent} onClick={() => nav(href)} />)}
+            {actions.map(([Icon, label, detail, href, badge, accent]) => (
+              <ActionCard
+                key={label}
+                icon={Icon}
+                label={label}
+                detail={detail}
+                badge={badge}
+                accent={accent}
+                onClick={() => href === "__fitness_store__" ? setFitnessStoreOpen(true) : nav(href)}
+              />
+            ))}
             {isGodMode ? <ActionCard icon={ShieldCheck} label="God Mode" detail="Private platform administration and recovery controls." accent="rose" onClick={() => nav("/god-mode")} /> : null}
           </div>
         </section>
@@ -183,6 +196,11 @@ export default function CustomerDashboard() {
       </main>
 
       <CustomerAudioSummaryDrawer open={audioOpen} onClose={() => setAudioOpen(false)} displayName={firstName(user)} />
+      <SyncWorksAffiliateStore
+        open={fitnessStoreOpen}
+        onClose={() => setFitnessStoreOpen(false)}
+        mode="personal"
+      />
     </DashboardShell>
   );
 }
