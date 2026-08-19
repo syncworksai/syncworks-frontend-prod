@@ -62,6 +62,16 @@ export async function getSyncDailyState() {
   return response?.data || {};
 }
 
+export async function getSyncAssistantProfile() {
+  const response = await api.get("/sync-ai/assistant/profile/");
+  return response?.data || {};
+}
+
+export async function patchSyncAssistantProfile(payload = {}) {
+  const response = await api.patch("/sync-ai/assistant/profile/", payload);
+  return response?.data || {};
+}
+
 export async function getSyncRoleAwareBriefing() {
   try {
     return dailyStateAsBriefing(await getSyncDailyState());
