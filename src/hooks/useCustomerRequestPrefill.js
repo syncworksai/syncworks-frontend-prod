@@ -32,31 +32,74 @@ function splitAddress(value, fallbackZip = "") {
   return result;
 }
 
-export async function loadCustomerRequestProfile() {
+function fromIdentity(data = {}) {
+  const home = data.default_service_location || data.home_location || null;
+  if (!home) return null;
+  return {
+    firstName: data?.user?.first_name || "",
+    lastName: data?.user?.last_name || "",
+    email: data?.user?.email || "",
+    phone: data?.identity?.phone || "",
+    preferredContactMethod: "EMAIL",
+    address: home.address_line1 || "",
+    unit: home.address_line2 || "",
+    city: home.city || "",
+    stateRegion: home.state || "",
+    serviceZip: home.postal_code || "",
+    homeLocation: data.home_location || null,
+    defaultServiceLocation: home,
+    savedLocations: Array.isArray(data.locations) ? data.locations : [],
+    source: "IDENTITY",
+  };
+}
+
+async function legacyProfile() {
+  const response = await api.get("/customer-settings/me/");
+  const data = response?.data || {};
+  const customer = data.customer_profile || {};
+  const location = splitAddress(data.default_address, data.default_zip);
+  return {
+    firstName: customer.first_name || "",
+    lastName: customer.last_name || "",
+    email: customer.email || "",
+    phone: customer.phone || "",
+    preferredContactMethod: customer.preferred_contact_method || "EMAIL",
+    savedLocations: [],
+    source: "LEGACY",
+    ...location,
+  };
+}
+
+export async function loadCustomerRequestProfile({ force = false } = {}) {
+  if (force) cachedProfile = null;
   if (cachedProfile) return cachedProfile;
   if (!profilePromise) {
-    profilePromise = api
-      .get("/customer-settings/me/")
-      .then((response) => {
-        const data = response?.data || {};
-        const customer = data.customer_profile || {};
-        const location = splitAddress(data.default_address, data.default_zip);
-        cachedProfile = {
-          firstName: customer.first_name || "",
-          lastName: customer.last_name || "",
-          email: customer.email || "",
-          phone: customer.phone || "",
-          preferredContactMethod: customer.preferred_contact_method || "EMAIL",
-          ...location,
-        };
+    profilePromise = (async () => {
+      try {
+        const response = await api.get("/identity/profile/");
+        const canonical = fromIdentity(response?.data || {});
+        if (canonical) {
+          cachedProfile = canonical;
+          return cachedProfile;
+        }
+      } catch {
+        // Transition safely to the existing CustomerSettings prefill.
+      }
+      try {
+        cachedProfile = await legacyProfile();
         return cachedProfile;
-      })
-      .catch(() => null)
-      .finally(() => {
-        profilePromise = null;
-      });
+      } catch {
+        return null;
+      }
+    })().finally(() => {
+      profilePromise = null;
+    });
   }
   return profilePromise;
+}
+
+export function clearCustomerRequestProfileCache() {
+  cachedProfile = null;
 }
 
 export default function useCustomerRequestPrefill({ enabled = true, onProfile } = {}) {
