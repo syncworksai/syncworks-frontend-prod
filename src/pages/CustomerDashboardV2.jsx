@@ -16,7 +16,7 @@ function firstName(user) {
 
 const ACTIONS = [
   [Wrench, "Request service", "Marketplace help when something needs fixing or doing.", "/customer/new-request"],
-  [CalendarDays, "Calendar", "Your combined SyncWorks and connected calendars.", "/calendar"],
+  [CalendarDays, "Calendar", "Your combined SyncWorks and connected calendars.", "/customer/calendar"],
   [Dumbbell, "Health", "Workout, nutrition, readiness and recovery.", "/customer/health"],
   [CircleDollarSign, "Money", "Balances, bills, budgets and financial plans.", "/customer/finance"],
   [CheckSquare2, "To-Do", "Personal and shared tasks.", "/customer/todo"],
@@ -37,7 +37,7 @@ export default function CustomerDashboardV2() {
         <SyncAssistantMorningBrief onPlayBriefing={() => setAudioOpen(true)} />
 
         <section className="rounded-[1.75rem] border border-white/10 bg-slate-950/55 p-5">
-          <div className="flex flex-wrap items-end justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">Go somewhere</div><h2 className="mt-1 text-xl font-black text-white">Your SyncWorks tools</h2><p className="mt-1 text-xs text-slate-500">SYNC Assistant brings important items to you. Open a module when you want the detail.</p></div><button type="button" onClick={() => nav("/upgrade?product=assistant")} className="rounded-2xl border border-cyan-300/20 bg-cyan-500/[.07] px-4 py-2 text-xs font-black text-cyan-100">Connect & personalize</button></div>
+          <div className="flex flex-wrap items-end justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">Go somewhere</div><h2 className="mt-1 text-xl font-black text-white">Your SyncWorks tools</h2><p className="mt-1 text-xs text-slate-500">SYNC Assistant brings important items to you. Open a module when you want the detail.</p></div><button type="button" onClick={() => nav("/customer/settings")} className="rounded-2xl border border-cyan-300/20 bg-cyan-500/[.07] px-4 py-2 text-xs font-black text-cyan-100">Connections & settings</button></div>
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {ACTIONS.map(([Icon, label, detail, url]) => (
               <button key={label} type="button" onClick={() => nav(url)} className="min-h-28 rounded-3xl border border-white/10 bg-white/[.025] p-4 text-left transition hover:border-cyan-400/20 hover:bg-cyan-500/[.04]">
@@ -51,7 +51,7 @@ export default function CustomerDashboardV2() {
 
         <section className="rounded-[1.75rem] border border-violet-400/15 bg-violet-500/[.035] p-5">
           <div className="text-[10px] font-black uppercase tracking-[.18em] text-violet-200">Next connection</div>
-          <div className="mt-1 text-lg font-black text-white">Email intelligence is coming next</div>
+          <div className="mt-1 text-lg font-black text-white">Personal email intelligence is next</div>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">Gmail and Outlook will feed important-message summaries into SYNC Assistant while SyncWorks Inbox remains the place for detailed conversations and prepared replies.</p>
         </section>
       </main>
