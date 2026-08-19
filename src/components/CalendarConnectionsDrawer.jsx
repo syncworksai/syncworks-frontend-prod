@@ -65,9 +65,9 @@ export default function CalendarConnectionsDrawer({ open, onClose, returnTo = "/
       <aside className="h-full w-full max-w-xl overflow-y-auto border-l border-cyan-400/20 bg-[#020617] p-5 text-slate-100" onMouseDown={(event) => event.stopPropagation()}>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">SYNC Assist Connections</div>
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">SYNC Assistant Connections</div>
             <h2 className="mt-2 text-2xl font-black text-white">Connected calendars</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-400">Connect the calendars you already use. SyncWorks imports selected events into your master Calendar so SYNC Assist can understand your real schedule.</p>
+            <p className="mt-2 text-sm leading-6 text-slate-400">Connect the calendars you already use. SyncWorks imports selected events into your master Calendar so SYNC Assistant can understand your real schedule.</p>
           </div>
           <button type="button" onClick={onClose} className="grid h-11 w-11 place-items-center rounded-2xl border border-slate-700 bg-slate-900"><X className="h-5 w-5" /></button>
         </div>
