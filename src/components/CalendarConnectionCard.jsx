@@ -1,5 +1,5 @@
 import React from "react";
-import { RefreshCw, Trash2 } from "lucide-react";
+import { Mail, RefreshCw, Trash2 } from "lucide-react";
 
 const CADENCES = [
   ["LIVE", "Fastest automatic (~5 min)"],
@@ -15,6 +15,18 @@ export default function CalendarConnectionCard({ connection, busy, onPatch, onSy
   const toggleCalendar = (calendarId, selected) => onPatch(connection, {
     calendars: calendars.map((row) => row.id === calendarId ? { ...row, selected } : row),
   });
+  const destinations = new Set((connection.mail_destinations || []).map((value) => String(value).toUpperCase()));
+  const personalMailEnabled = Boolean(connection.mail_enabled) && destinations.has("PERSONAL");
+
+  const togglePersonalMail = (enabled) => {
+    const next = new Set(destinations);
+    if (enabled) next.add("PERSONAL");
+    else next.delete("PERSONAL");
+    onPatch(connection, {
+      mail_enabled: enabled || next.size > 0,
+      mail_destinations: [...next],
+    });
+  };
 
   return (
     <div className="rounded-[1.75rem] border border-slate-800 bg-slate-950/75 p-4">
@@ -38,6 +50,26 @@ export default function CalendarConnectionCard({ connection, busy, onPatch, onSy
           Sync enabled
         </label>
       </div>
+
+      {connection.provider === "MICROSOFT" ? (
+        <div className="mt-4 rounded-2xl border border-violet-400/20 bg-violet-500/[.06] p-3">
+          <div className="flex items-start gap-3">
+            <Mail className="mt-0.5 h-5 w-5 shrink-0 text-violet-200" />
+            <div className="min-w-0 flex-1">
+              <div className="font-black text-white">Use this Outlook inbox with SYNC Assistant</div>
+              <div className="mt-1 text-xs leading-5 text-slate-400">When on, SYNC can summarize recent sender, subject, preview, unread state, and likely high-priority messages. Sending still requires a separate approved action.</div>
+              <label className="mt-3 flex items-center gap-2 text-sm font-bold text-violet-100">
+                <input type="checkbox" checked={personalMailEnabled} onChange={(event) => togglePersonalMail(event.target.checked)} />
+                Email intelligence on
+              </label>
+              {connection.mail_last_synced_at ? <div className="mt-2 text-[11px] text-slate-500">Email last checked: {new Date(connection.mail_last_synced_at).toLocaleString()}</div> : null}
+              {connection.mail_last_error ? <div className="mt-2 rounded-xl border border-amber-400/20 bg-amber-500/10 p-2 text-xs text-amber-100">{connection.mail_last_error} If this account was connected before email permissions were added, reconnect Outlook once.</div> : null}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/40 p-3 text-xs leading-5 text-slate-500">Google Calendar is connected. Gmail intelligence uses a separate Google mail permission and is the next provider lane.</div>
+      )}
 
       <div className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-slate-500">Calendars SYNC Assistant can read</div>
       <div className="mt-2 space-y-2">
