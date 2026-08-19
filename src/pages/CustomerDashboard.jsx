@@ -113,6 +113,7 @@ export default function CustomerDashboard() {
   const actions = [
     [CalendarDays, "Calendar", "Events, schedules and calendar connections.", "/calendar", null, "cyan"],
     [Network, "SyncWorks Social", "Friends, groups, events, shared fees and invitations.", "/connect", "new", "violet"],
+    [Users, "Family", "Household calendar, tasks, shopping, meals, goals and permission-based sharing.", "/customer/family", "new", "emerald"],
     [Wrench, "Request Service", "Schedule help through a connection or Marketplace.", "/customer/new-request", null, "cyan"],
     [Dumbbell, "Health", "Workout, nutrition, readiness and recovery.", "/customer/health", null, "emerald"],
     [CircleDollarSign, "Money", "Payments, budgets, invoices and financial plans.", "/customer/finance", dueInvoices.length ? `${dueInvoices.length} due` : null, "amber"],
@@ -191,7 +192,7 @@ export default function CustomerDashboard() {
         </div>
 
         <section className="rounded-[1.75rem] border border-white/10 bg-white/[.025] p-5">
-          <div className="flex items-start gap-3"><Stethoscope className="mt-1 h-5 w-5 text-emerald-300" /><div><div className="font-black text-white">Connected routine</div><p className="mt-1 text-sm leading-6 text-slate-400">Calendar, SyncWorks Social, work, payments, To-Do and Health remain separate sources, while SYNC combines their attention items into one Personal briefing. Health keeps its electric-green identity.</p></div></div>
+          <div className="flex items-start gap-3"><Stethoscope className="mt-1 h-5 w-5 text-emerald-300" /><div><div className="font-black text-white">Connected routine</div><p className="mt-1 text-sm leading-6 text-slate-400">Calendar, SyncWorks Social, Family, work, payments, To-Do and Health remain separate sources, while SYNC combines their attention items into one Personal briefing. Household Finance remains private until each member explicitly enables a sharing category.</p></div></div>
         </section>
       </main>
 
