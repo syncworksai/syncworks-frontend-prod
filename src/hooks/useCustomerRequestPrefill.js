@@ -34,18 +34,17 @@ function splitAddress(value, fallbackZip = "") {
 
 function fromIdentity(data = {}) {
   const home = data.default_service_location || data.home_location || null;
-  if (!home) return null;
   return {
     firstName: data?.user?.first_name || "",
     lastName: data?.user?.last_name || "",
     email: data?.user?.email || "",
     phone: data?.identity?.phone || "",
     preferredContactMethod: "EMAIL",
-    address: home.address_line1 || "",
-    unit: home.address_line2 || "",
-    city: home.city || "",
-    stateRegion: home.state || "",
-    serviceZip: home.postal_code || "",
+    address: home?.address_line1 || "",
+    unit: home?.address_line2 || "",
+    city: home?.city || "",
+    stateRegion: home?.state || "",
+    serviceZip: home?.postal_code || "",
     homeLocation: data.home_location || null,
     defaultServiceLocation: home,
     savedLocations: Array.isArray(data.locations) ? data.locations : [],
@@ -77,13 +76,11 @@ export async function loadCustomerRequestProfile({ force = false } = {}) {
     profilePromise = (async () => {
       try {
         const response = await api.get("/identity/profile/");
-        const canonical = fromIdentity(response?.data || {});
-        if (canonical) {
-          cachedProfile = canonical;
-          return cachedProfile;
-        }
+        cachedProfile = fromIdentity(response?.data || {});
+        return cachedProfile;
       } catch {
-        // Transition safely to the existing CustomerSettings prefill.
+        // Transition safely while the identity API deploys. Once available it is
+        // authoritative even when the user intentionally has no Home saved.
       }
       try {
         cachedProfile = await legacyProfile();
