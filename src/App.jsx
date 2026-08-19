@@ -91,6 +91,7 @@ export default function App() {
         <Route path="/accept-invite" element={<EmployeeInvite />} />
 
         <Route path="/platform" element={<PlatformRoute><PlatformDashboard /></PlatformRoute>} />
+        <Route path="/god-mode" element={<Navigate to="/platform" replace />} />
         <Route path="/platform/support" element={<PlatformRoute><PlatformSupportRequests /></PlatformRoute>} />
         <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
         <Route path="/sync" element={<ProtectedRoute><SyncAssistant /></ProtectedRoute>} />
