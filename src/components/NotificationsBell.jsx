@@ -1,455 +1,309 @@
-// src/components/NotificationsBell.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import {
+  Bell,
+  CheckCheck,
+  Mail,
+  RefreshCw,
+  Settings2,
+  Smartphone,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import api from "../api/client";
+import {
+  getNotifications,
+  getNotificationSettings,
+  getNotificationUnreadCount,
+  markAllNotificationsRead,
+  markNotificationRead,
+  patchNotificationSettings,
+} from "../api/syncNotifications";
 
-function BellIcon({ className = "" }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 22a2.2 2.2 0 0 0 2.2-2.2h-4.4A2.2 2.2 0 0 0 12 22Z" fill="currentColor" opacity="0.9" />
-      <path
-        d="M18 16.8H6c.7-1.1 1.2-2.2 1.2-3.6V10a4.8 4.8 0 0 1 9.6 0v3.2c0 1.4.5 2.5 1.2 3.6Z"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinejoin="round"
-      />
-      <path d="M9.1 6.2a3.6 3.6 0 0 1 5.8 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" opacity="0.85" />
-    </svg>
-  );
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }
 
-function XIcon({ className = "" }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function safeList(data) {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data.results)) return data.results;
-  return [];
-}
-
-function clamp(n, min, max) {
-  return Math.max(min, Math.min(max, n));
-}
-
-/**
- * Best-effort resolver for "where should this notification go?"
- * ✅ Preferred backend field: notification.target_path (string route like "/customer/tickets/12")
- * Fallback heuristics for common fields: url/path/route, ticket_id, invoice_id, support_request_id, etc.
- */
-function resolveTargetPath(n) {
-  const pickStr = (...keys) => {
-    for (const k of keys) {
-      const v = n?.[k];
-      if (typeof v === "string" && v.trim()) return v.trim();
-    }
-    return "";
-  };
-
-  // ✅ ideal fields you can add in backend later
-  const direct = pickStr("target_path", "path", "route", "url", "action_url", "link", "href");
-  if (direct.startsWith("/")) return direct;
-
-  // common ids
-  const ticketId = n?.ticket_id || n?.ticket || n?.ticketId || n?.entity_id;
-  const invoiceId = n?.invoice_id || n?.invoice || n?.invoiceId;
-  const supportId = n?.support_request_id || n?.support_request || n?.supportId;
-
-  // entity_type based routing (if you add it later)
-  const et = String(n?.entity_type || n?.type || n?.kind || "").toUpperCase();
-
-  if (et.includes("TICKET") && ticketId) return `/customer/tickets/${ticketId}`;
-  if (et.includes("INVOICE") && invoiceId) return `/customer?tab=invoices`;
-  if (et.includes("SUPPORT") && supportId) return `/platform?tab=support`;
-
-  // heuristic fallback (works now if you pass ticket_id)
+function targetFor(notification) {
+  const data = notification?.data || {};
+  const direct = data.target_path || data.deep_link || notification?.target_path || notification?.url;
+  if (typeof direct === "string" && direct.startsWith("/")) return direct;
+  const ticketId = data.ticket_id || notification?.ticket_id;
   if (ticketId) return `/customer/tickets/${ticketId}`;
-  if (invoiceId) return `/customer?tab=invoices`;
-  if (supportId) return `/platform?tab=support`;
-
-  // last resort
-  return "/customer?tab=inbox";
+  return "/customer";
 }
 
-/**
- * Mark read / dismiss helpers:
- * We attempt a few endpoint shapes so you don't have to match exactly today.
- * Once you confirm your backend supports one, we can simplify.
- */
-async function markOneRead(id) {
-  if (!id) return;
-
-  // Try PATCH /notifications/:id/
-  try {
-    await api.patch(`/notifications/${id}/`, { is_read: true, read: true });
-    return;
-  } catch {}
-
-  // Try POST /notifications/:id/mark_read/
-  try {
-    await api.post(`/notifications/${id}/mark_read/`);
-    return;
-  } catch {}
-
-  // Try POST /notifications/mark_read/ with id payload
-  try {
-    await api.post(`/notifications/mark_read/`, { id });
-    return;
-  } catch {}
-
-  // If backend doesn't support read yet, we still allow UI dismissal (local-only).
+function sourceLabel(notification) {
+  return String(notification?.data?.source || notification?.type || "SYNC").replaceAll("_", " ");
 }
 
-async function markAllRead(ids) {
-  const cleanIds = (ids || []).filter(Boolean);
+function deliveryLabel(notification) {
+  const delivery = notification?.data?.delivery || {};
+  const labels = [];
+  if (delivery.email === "DELIVERED") labels.push("Email sent");
+  if (delivery.push === "READY") labels.push("Push ready");
+  if (delivery.push === "WAITING_FOR_DEVICE") labels.push("Push awaiting device");
+  return labels.join(" · ");
+}
 
-  // Try POST /notifications/mark_all_read/
-  try {
-    await api.post(`/notifications/mark_all_read/`);
-    return;
-  } catch {}
-
-  // Try POST /notifications/mark_read_bulk/
-  try {
-    await api.post(`/notifications/mark_read_bulk/`, { ids: cleanIds });
-    return;
-  } catch {}
-
-  // fallback: patch a handful (avoid hammering)
-  for (const id of cleanIds.slice(0, 30)) {
-    // eslint-disable-next-line no-await-in-loop
-    await markOneRead(id);
-  }
+function Toggle({ label, detail, checked, onChange, disabled = false }) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[.025] p-3 text-left disabled:opacity-50"
+    >
+      <span className="min-w-0">
+        <span className="block text-xs font-black text-white">{label}</span>
+        <span className="mt-1 block text-[11px] leading-4 text-slate-500">{detail}</span>
+      </span>
+      <span className={`relative h-6 w-11 shrink-0 rounded-full border transition ${checked ? "border-emerald-300/30 bg-emerald-500/25" : "border-slate-700 bg-slate-900"}`}>
+        <span className={`absolute top-0.5 h-[18px] w-[18px] rounded-full bg-white transition ${checked ? "left-[22px]" : "left-1"}`} />
+      </span>
+    </button>
+  );
 }
 
 export default function NotificationsBell() {
   const nav = useNavigate();
-
-  const btnRef = useRef(null);
-  const popRef = useRef(null);
-
+  const buttonRef = useRef(null);
+  const panelRef = useRef(null);
   const [open, setOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [items, setItems] = useState([]);
-  const [err, setErr] = useState("");
+  const [settings, setSettings] = useState(null);
+  const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [clearing, setClearing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [position, setPosition] = useState({ top: 60, left: 12, width: 380 });
 
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 420, ready: false });
+  const visibleUnread = useMemo(
+    () => Math.max(unread, items.filter((item) => !item?.is_read).length),
+    [items, unread]
+  );
 
-  const unreadCount = useMemo(() => {
-    const list = Array.isArray(items) ? items : [];
-    return list.filter((n) => !(n?.read || n?.is_read)).length;
-  }, [items]);
-
-  async function load() {
-    setErr("");
-    setLoading(true);
+  async function loadCount() {
     try {
-      const r = await api.get("/notifications/");
-      setItems(safeList(r.data));
-    } catch (e) {
-      setItems([]);
-      setErr(e?.response?.data?.detail || "Notifications not available yet.");
+      const result = await getNotificationUnreadCount();
+      setUnread(Number(result?.unread || 0));
+    } catch {
+      // Bell remains usable even if the count endpoint is temporarily unavailable.
+    }
+  }
+
+  async function loadAll() {
+    setLoading(true);
+    setError("");
+    try {
+      const [notificationRows, notificationSettings] = await Promise.all([
+        getNotifications({ archived: false }),
+        getNotificationSettings(),
+      ]);
+      setItems(notificationRows);
+      setSettings(notificationSettings);
+      setUnread(notificationRows.filter((item) => !item?.is_read).length);
+    } catch (err) {
+      setError(err?.response?.data?.detail || "Notifications are temporarily unavailable.");
     } finally {
       setLoading(false);
     }
   }
 
+  useEffect(() => {
+    loadCount();
+    const timer = window.setInterval(loadCount, 60000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   function computePosition() {
-    const el = btnRef.current;
-    if (!el) return;
-
-    const r = el.getBoundingClientRect();
-
+    const node = buttonRef.current;
+    if (!node) return;
+    const rect = node.getBoundingClientRect();
     const pad = 12;
-    const vw = window.innerWidth || 1200;
-    const vh = window.innerHeight || 800;
-
-    const desiredW = 460;
-    const width = clamp(desiredW, 320, Math.min(560, vw - pad * 2));
-
-    const estimatedH = 560;
-
-    const belowTop = r.bottom + 10;
-    const aboveTop = r.top - 10 - estimatedH;
-
-    const useAbove = belowTop + estimatedH > vh - pad && aboveTop > pad;
-
-    const top = useAbove ? Math.max(pad, r.top - 10 - estimatedH) : Math.min(vh - pad - 60, belowTop);
-
-    const left = clamp(r.right - width, pad, vw - width - pad);
-
-    setPos({ top, left, width, ready: true });
+    const viewportWidth = window.innerWidth || 390;
+    const width = clamp(440, 320, Math.min(520, viewportWidth - pad * 2));
+    setPosition({
+      top: Math.min((window.innerHeight || 800) - 80, rect.bottom + 10),
+      left: clamp(rect.right - width, pad, viewportWidth - width - pad),
+      width,
+    });
   }
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) return undefined;
     computePosition();
+    loadAll();
 
-    function onMove() {
-      computePosition();
-    }
-
-    window.addEventListener("scroll", onMove, true);
-    window.addEventListener("resize", onMove);
-    return () => {
-      window.removeEventListener("scroll", onMove, true);
-      window.removeEventListener("resize", onMove);
+    const onResize = () => computePosition();
+    const onOutside = (event) => {
+      if (buttonRef.current?.contains(event.target)) return;
+      if (panelRef.current?.contains(event.target)) return;
+      setOpen(false);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    load();
-
-    function onDocDown(e) {
-      const b = btnRef.current;
-      const p = popRef.current;
-      if (!b || !p) return;
-      if (b.contains(e.target)) return;
-      if (!p.contains(e.target)) setOpen(false);
-    }
-
-    function onKey(e) {
-      if (e.key === "Escape") setOpen(false);
-    }
-
-    document.addEventListener("mousedown", onDocDown);
+    const onKey = (event) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", onResize, true);
+    document.addEventListener("mousedown", onOutside);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("mousedown", onDocDown);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onResize, true);
+      document.removeEventListener("mousedown", onOutside);
       document.removeEventListener("keydown", onKey);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  async function dismissOne(n) {
-    const id = n?.id;
-    // optimistic UI: remove now
-    setItems((prev) => (Array.isArray(prev) ? prev.filter((x) => x?.id !== id) : []));
+  async function openNotification(notification) {
+    setItems((rows) => rows.map((row) => row.id === notification.id ? { ...row, is_read: true } : row));
+    setUnread((value) => Math.max(0, value - (notification?.is_read ? 0 : 1)));
     try {
-      await markOneRead(id);
+      await markNotificationRead(notification.id);
     } catch {
-      // ignore (UI already removed)
+      // Optimistic navigation is still safe.
     }
-  }
-
-  async function handleClickNotification(n) {
-    const id = n?.id;
-    const target = resolveTargetPath(n);
-
-    // mark read in background (optimistic)
-    setItems((prev) =>
-      (Array.isArray(prev) ? prev : []).map((x) => (x?.id === id ? { ...x, is_read: true, read: true } : x))
-    );
-
-    try {
-      await markOneRead(id);
-    } catch {
-      // ignore
-    }
-
     setOpen(false);
-    nav(target);
+    nav(targetFor(notification));
   }
 
-  async function clearAll() {
-    const ids = (items || []).map((n) => n?.id).filter(Boolean);
-    if (!ids.length) return;
-
-    setClearing(true);
-    // optimistic: clear immediately
-    setItems([]);
-
+  async function markAllRead() {
+    setSaving(true);
     try {
-      await markAllRead(ids);
-    } catch {
-      // ignore
+      await markAllNotificationsRead();
+      setItems((rows) => rows.map((row) => ({ ...row, is_read: true })));
+      setUnread(0);
     } finally {
-      setClearing(false);
+      setSaving(false);
     }
   }
 
-  const popover = open ? (
-    <div
-      ref={popRef}
-      className="fixed z-[99999] rounded-3xl border border-slate-700 bg-slate-950 shadow-[0_0_90px_rgba(0,0,0,0.75)] overflow-hidden"
-      style={{ top: pos.top, left: pos.left, width: pos.width }}
+  async function saveSettings(patch) {
+    setSaving(true);
+    setError("");
+    try {
+      const updated = await patchNotificationSettings(patch);
+      setSettings(updated);
+    } catch (err) {
+      setError(err?.response?.data?.detail || "Could not save notification settings.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const channels = settings?.channels || {};
+  const proactive = settings?.proactive || {};
+  const push = settings?.push || {};
+
+  const panel = open ? createPortal(
+    <section
+      ref={panelRef}
+      className="fixed z-[99999] max-h-[78dvh] overflow-hidden rounded-[1.75rem] border border-cyan-400/20 bg-[#020617] shadow-[0_24px_90px_rgba(0,0,0,.72)]"
+      style={position}
       role="dialog"
       aria-label="Notifications"
     >
-      {/* header */}
-      <div className="p-4 border-b border-slate-800 bg-slate-950">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <div className="font-semibold text-slate-100 text-base">Notifications</div>
-            <div className="text-xs text-slate-300 mt-1">Updates, reminders, and ticket activity.</div>
+      <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,.16),transparent_40%),rgba(2,6,23,.98)] p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em] text-cyan-200"><Sparkles className="h-4 w-4" />SYNC notifications</div>
+            <div className="mt-1 text-lg font-black text-white">{visibleUnread ? `${visibleUnread} unread` : "You're caught up"}</div>
+            <div className="mt-1 text-[11px] text-slate-400">In-app now · email fallback · push-ready architecture.</div>
           </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={clearAll}
-              disabled={clearing || loading || !items?.length}
-              className="text-[12px] px-3 py-1.5 rounded-full border border-slate-700 bg-slate-900 hover:bg-slate-800 transition text-slate-100 disabled:opacity-50"
-              title="Clear all (mark read)"
-            >
-              {clearing ? "Clearing…" : "Clear"}
-            </button>
-            <button
-              type="button"
-              onClick={load}
-              className="text-[12px] px-3 py-1.5 rounded-full border border-slate-700 bg-slate-900 hover:bg-slate-800 transition text-slate-100"
-            >
-              {loading ? "Loading…" : "Refresh"}
-            </button>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setSettingsOpen((value) => !value)} className={`grid h-9 w-9 place-items-center rounded-xl border ${settingsOpen ? "border-violet-300/30 bg-violet-500/15 text-violet-100" : "border-white/10 bg-white/[.04] text-slate-300"}`} aria-label="Notification settings"><Settings2 className="h-4 w-4" /></button>
+            <button type="button" onClick={() => setOpen(false)} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/[.04] text-slate-300" aria-label="Close notifications"><X className="h-4 w-4" /></button>
           </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button type="button" disabled={loading} onClick={loadAll} className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[.04] px-3 py-2 text-[10px] font-black text-slate-200 disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />Refresh</button>
+          <button type="button" disabled={saving || !visibleUnread} onClick={markAllRead} className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-500/[.07] px-3 py-2 text-[10px] font-black text-emerald-100 disabled:opacity-40"><CheckCheck className="h-3.5 w-3.5" />Mark all read</button>
         </div>
       </div>
 
-      {/* body */}
-      <div className="max-h-[440px] overflow-auto">
-        {err ? (
-          <div className="p-4">
-            <div className="text-sm text-amber-100 bg-amber-900/20 border border-amber-700/30 rounded-2xl p-3">
-              {err}
+      {settingsOpen ? (
+        <div className="max-h-[50dvh] overflow-y-auto border-b border-white/10 p-4">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Toggle label="Email notifications" detail="Uses the same verified SyncWorks sender as login emails." checked={channels.email !== false} disabled={saving} onChange={(value) => saveSettings({ channels: { email: value } })} />
+            <Toggle label="Push notifications" detail={push.registered_device_count ? `${push.registered_device_count} device(s) registered.` : "Ready for device registration when native/web push is connected."} checked={channels.push !== false} disabled={saving} onChange={(value) => saveSettings({ channels: { push: value } })} />
+            <Toggle label="Morning briefing" detail={`Daily SYNC summary · ${proactive.morning_time || "07:30"}.`} checked={proactive.morning_briefing !== false} disabled={saving} onChange={(value) => saveSettings({ proactive: { morning_briefing: value } })} />
+            <Toggle label="Evening wrap-up" detail={`Daily wrap-up · ${proactive.evening_time || "20:30"}.`} checked={proactive.evening_wrap !== false} disabled={saving} onChange={(value) => saveSettings({ proactive: { evening_wrap: value } })} />
+            <Toggle label="Bill reminders" detail="Payment and finance alerts." checked={proactive.bill_reminders !== false} disabled={saving} onChange={(value) => saveSettings({ proactive: { bill_reminders: value } })} />
+            <Toggle label="Health reminders" detail="Workout, nutrition and recovery follow-ups." checked={proactive.health_reminders !== false} disabled={saving} onChange={(value) => saveSettings({ proactive: { health_reminders: value } })} />
+            <Toggle label="Inbox follow-ups" detail="Unread and high-attention conversations." checked={proactive.inbox_followups !== false} disabled={saving} onChange={(value) => saveSettings({ proactive: { inbox_followups: value } })} />
+            <Toggle label="Departure alerts" detail="Leave-time, traffic and travel reminders." checked={proactive.departure_alerts !== false} disabled={saving} onChange={(value) => saveSettings({ proactive: { departure_alerts: value } })} />
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <div className="rounded-2xl border border-cyan-400/15 bg-cyan-500/[.05] p-3">
+              <div className="flex items-center gap-2 text-xs font-black text-white"><Mail className="h-4 w-4 text-cyan-200" />Email sender</div>
+              <div className="mt-1 break-all text-[11px] leading-5 text-slate-400">{settings?.email_sender || "SyncWorks <no-reply@syncworksapp.com>"}</div>
             </div>
-            <div className="mt-3 text-xs text-slate-300">
-              Tip: Open{" "}
+            <div className="rounded-2xl border border-violet-400/15 bg-violet-500/[.05] p-3">
+              <div className="flex items-center gap-2 text-xs font-black text-white"><Smartphone className="h-4 w-4 text-violet-200" />Push status</div>
+              <div className="mt-1 text-[11px] leading-5 text-slate-400">{push.provider_configured ? "Provider connected and ready." : push.registration_ready ? "Registration API ready; provider credentials can be added without changing notification logic." : "Push setup pending."}</div>
+            </div>
+          </div>
+          <button type="button" onClick={() => { setOpen(false); nav("/settings"); }} className="mt-3 w-full rounded-xl border border-white/10 bg-white/[.04] px-3 py-2 text-xs font-black text-slate-200">Open full Settings</button>
+        </div>
+      ) : null}
+
+      <div className="max-h-[46dvh] overflow-y-auto p-3">
+        {error ? <div className="mb-3 rounded-2xl border border-amber-400/20 bg-amber-500/[.06] p-3 text-xs text-amber-100">{error}</div> : null}
+        {!loading && !items.length ? (
+          <div className="rounded-2xl border border-emerald-400/15 bg-emerald-500/[.05] p-4 text-sm text-emerald-100">No notifications right now.</div>
+        ) : null}
+        <div className="space-y-2">
+          {items.slice(0, 50).map((notification) => {
+            const isRead = !!notification?.is_read;
+            return (
               <button
-                className="underline text-cyan-200"
-                onClick={() => {
-                  setOpen(false);
-                  nav("/customer?tab=inbox");
-                }}
+                key={notification.id}
+                type="button"
+                onClick={() => openNotification(notification)}
+                className={`w-full rounded-2xl border p-3 text-left transition ${isRead ? "border-white/8 bg-white/[.02]" : "border-cyan-400/20 bg-cyan-500/[.07]"}`}
               >
-                Inbox
-              </button>{" "}
-              for messages.
-            </div>
-          </div>
-        ) : null}
-
-        {!err && !loading && (!items || items.length === 0) ? (
-          <div className="p-4 text-sm text-slate-200">No notifications.</div>
-        ) : null}
-
-        {!err && items?.length ? (
-          <div className="p-3 space-y-2">
-            {items.slice(0, 50).map((n, idx) => {
-              const isRead = !!(n?.read || n?.is_read);
-              const title = n?.title || n?.subject || "Notification";
-              const body = n?.body || n?.message || n?.text || "—";
-
-              return (
-                <div
-                  key={n?.id || idx}
-                  className={[
-                    "rounded-2xl border p-3 transition",
-                    isRead
-                      ? "border-slate-800 bg-slate-950/70 hover:bg-slate-900/50"
-                      : "border-cyan-500/25 bg-cyan-500/10 hover:bg-cyan-500/15",
-                  ].join(" ")}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    {/* clickable content */}
-                    <button
-                      type="button"
-                      onClick={() => handleClickNotification(n)}
-                      className="min-w-0 text-left flex-1"
-                      title="Open"
-                    >
-                      <div className="font-semibold text-sm text-slate-100 truncate">{title}</div>
-                      <div className="text-sm text-slate-200 mt-1 leading-snug break-words">{body}</div>
-                    </button>
-
-                    {/* right-side actions */}
-                    <div className="shrink-0 flex items-center gap-2">
-                      <span
-                        className={[
-                          "text-[10px] px-2 py-1 rounded-full border",
-                          isRead
-                            ? "border-slate-700 bg-slate-900/60 text-slate-200"
-                            : "border-cyan-400/40 bg-cyan-400/20 text-cyan-100",
-                        ].join(" ")}
-                      >
-                        {isRead ? "Read" : "New"}
-                      </span>
-
-                      {/* ✅ dismiss "X" */}
-                      <button
-                        type="button"
-                        onClick={() => dismissOne(n)}
-                        className="h-7 w-7 rounded-full border border-slate-700 bg-slate-900/70 hover:bg-slate-800 text-slate-200 flex items-center justify-center"
-                        title="Dismiss"
-                      >
-                        <XIcon className="h-4 w-4" />
-                      </button>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[9px] font-black uppercase tracking-[.16em] text-cyan-200">{sourceLabel(notification)}</span>
+                      {!isRead ? <span className="rounded-full bg-cyan-300 px-2 py-0.5 text-[9px] font-black uppercase text-slate-950">New</span> : null}
                     </div>
+                    <div className="mt-1 truncate text-sm font-black text-white">{notification.title || "Notification"}</div>
+                    <div className="mt-1 line-clamp-3 text-xs leading-5 text-slate-400">{notification.body || "Open SyncWorks for details."}</div>
+                    {deliveryLabel(notification) ? <div className="mt-2 text-[10px] font-bold text-slate-500">{deliveryLabel(notification)}</div> : null}
                   </div>
-
-                  {n?.created_at ? (
-                    <div className="text-[11px] text-slate-400 mt-2">{new Date(n.created_at).toLocaleString()}</div>
-                  ) : null}
+                  <Bell className={`mt-1 h-4 w-4 shrink-0 ${isRead ? "text-slate-600" : "text-cyan-200"}`} />
                 </div>
-              );
-            })}
-          </div>
-        ) : null}
+                {notification.created_at ? <div className="mt-2 text-[10px] text-slate-600">{new Date(notification.created_at).toLocaleString()}</div> : null}
+              </button>
+            );
+          })}
+        </div>
       </div>
-
-      {/* footer */}
-      <div className="p-3 border-t border-slate-800 bg-slate-950 flex gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            setOpen(false);
-            nav("/customer");
-          }}
-          className="flex-1 h-10 rounded-2xl border border-slate-700 bg-slate-900 hover:bg-slate-800 transition text-xs text-slate-100"
-        >
-          Customer Home
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setOpen(false);
-            nav("/customer/tickets");
-          }}
-          className="flex-1 h-10 rounded-2xl border border-cyan-500/35 bg-cyan-500/20 hover:bg-cyan-500/28 transition text-xs text-cyan-100"
-        >
-          Orders
-        </button>
-      </div>
-    </div>
+    </section>,
+    document.body
   ) : null;
 
   return (
     <>
       <button
-        ref={btnRef}
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen((value) => !value)}
+        className="relative flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 transition hover:border-cyan-500/30 hover:bg-cyan-500/10 hover:text-cyan-100"
         title="Notifications"
-        className="relative h-10 w-10 rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 hover:text-white hover:border-transparent hover:bg-slate-900/60 transition flex items-center justify-center"
+        aria-label={visibleUnread ? `${visibleUnread} unread notifications` : "Notifications"}
       >
-        <BellIcon className="h-5 w-5" />
-        {unreadCount ? (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-cyan-500 text-[11px] font-extrabold text-slate-950 flex items-center justify-center">
-            {unreadCount > 99 ? "99+" : unreadCount}
+        <Bell className="h-5 w-5" />
+        {visibleUnread > 0 ? (
+          <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-5 items-center justify-center rounded-full border-2 border-[#020617] bg-cyan-300 px-1.5 py-0.5 text-[9px] font-black text-slate-950 shadow-[0_0_18px_rgba(34,211,238,.4)]">
+            {visibleUnread > 99 ? "99+" : visibleUnread}
           </span>
         ) : null}
       </button>
-
-      {open ? createPortal(popover, document.body) : null}
+      {panel}
     </>
   );
 }
