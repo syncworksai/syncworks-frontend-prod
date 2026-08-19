@@ -20,14 +20,55 @@ function rowsOf(value) {
   return [];
 }
 
+function dailyStateAsBriefing(payload = {}) {
+  const attention = Array.isArray(payload?.needs_attention)
+    ? payload.needs_attention
+    : [];
+  const sections = Array.isArray(payload?.briefing_sections)
+    ? [...payload.briefing_sections]
+    : [];
+  const recommended = payload?.recommended_next;
+
+  if (recommended?.title) {
+    sections.unshift({
+      id: "recommended_next",
+      title: "Recommended next",
+      summary: `${recommended.title}. ${recommended.detail || ""}`.trim(),
+      priority: recommended.priority || "normal",
+      details_url: recommended?.action?.url || "",
+      actions: recommended?.action ? [recommended.action] : [],
+      count: attention.length,
+    });
+  }
+
+  return {
+    ...payload,
+    sections,
+    total_updates: Number(payload?.total_updates ?? sections.length),
+    high_priority_count: Number(
+      payload?.high_priority_count ??
+        attention.filter((item) => ["urgent", "high"].includes(item?.priority)).length
+    ),
+  };
+}
+
 export async function getSyncAiStatus() {
   const response = await api.get("/sync-ai/status/");
   return response?.data || {};
 }
 
-export async function getSyncRoleAwareBriefing() {
-  const response = await api.get("/sync-ai/briefing/");
+export async function getSyncDailyState() {
+  const response = await api.get("/sync-ai/assistant/daily-state/");
   return response?.data || {};
+}
+
+export async function getSyncRoleAwareBriefing() {
+  try {
+    return dailyStateAsBriefing(await getSyncDailyState());
+  } catch (dailyError) {
+    const response = await api.get("/sync-ai/briefing/");
+    return response?.data || {};
+  }
 }
 
 export async function getSyncGodModeBriefing() {
