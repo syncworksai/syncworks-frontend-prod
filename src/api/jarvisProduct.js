@@ -40,6 +40,16 @@ export async function getSyncAssistantDailyState() {
   return response?.data || {};
 }
 
+export async function getSyncAssistantInboxState() {
+  const response = await api.get("/sync-ai/assistant/inbox-state/");
+  return response?.data || {};
+}
+
+export async function geocodeSyncAssistantHome(address = "") {
+  const response = await api.post("/sync-ai/assistant/location/geocode/", { address, save: true });
+  return response?.data || {};
+}
+
 export async function setSyncDepartureReminder(eventId, payload) {
   const response = await api.post(`/sync-ai/assistant/calendar/${eventId}/departure-reminder/`, payload);
   return response?.data || {};
