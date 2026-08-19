@@ -197,6 +197,25 @@ export default function NotificationsBell() {
   const proactive = settings?.proactive || {};
   const push = settings?.push || {};
 
+  const bellButton = createPortal(
+    <button
+      ref={buttonRef}
+      type="button"
+      onClick={() => setOpen((value) => !value)}
+      className="fixed right-[7.75rem] top-3 z-[70] flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-500/25 bg-slate-950/90 text-slate-200 shadow-[0_0_24px_rgba(34,211,238,.12)] backdrop-blur transition hover:border-cyan-400/40 hover:bg-cyan-500/10 hover:text-cyan-100 xl:right-[calc((100vw-80rem)/2+7.75rem)]"
+      title="Notifications"
+      aria-label={visibleUnread ? `${visibleUnread} unread notifications` : "Notifications"}
+    >
+      <Bell className="h-5 w-5" />
+      {visibleUnread > 0 ? (
+        <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-5 items-center justify-center rounded-full border-2 border-[#020617] bg-cyan-300 px-1.5 py-0.5 text-[9px] font-black text-slate-950 shadow-[0_0_18px_rgba(34,211,238,.4)]">
+          {visibleUnread > 99 ? "99+" : visibleUnread}
+        </span>
+      ) : null}
+    </button>,
+    document.body
+  );
+
   const panel = open ? createPortal(
     <section
       ref={panelRef}
@@ -286,24 +305,5 @@ export default function NotificationsBell() {
     document.body
   ) : null;
 
-  return (
-    <>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className="relative flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-800 bg-slate-950/55 text-slate-300 transition hover:border-cyan-500/30 hover:bg-cyan-500/10 hover:text-cyan-100"
-        title="Notifications"
-        aria-label={visibleUnread ? `${visibleUnread} unread notifications` : "Notifications"}
-      >
-        <Bell className="h-5 w-5" />
-        {visibleUnread > 0 ? (
-          <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-5 items-center justify-center rounded-full border-2 border-[#020617] bg-cyan-300 px-1.5 py-0.5 text-[9px] font-black text-slate-950 shadow-[0_0_18px_rgba(34,211,238,.4)]">
-            {visibleUnread > 99 ? "99+" : visibleUnread}
-          </span>
-        ) : null}
-      </button>
-      {panel}
-    </>
-  );
+  return <>{bellButton}{panel}</>;
 }
