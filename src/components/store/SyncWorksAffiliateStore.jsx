@@ -8,6 +8,73 @@ import {
   amazonSearchUrl,
 } from "./affiliateCatalog";
 
+const SMART_SEARCH_GROUPS = {
+  protein: [
+    { label: "Whey", query: "whey protein powder" },
+    { label: "Clear Whey", query: "clear whey protein" },
+    { label: "Isolate", query: "whey isolate protein" },
+    { label: "Plant", query: "plant based protein powder" },
+    { label: "Low Carb", query: "low carb protein powder" },
+    { label: "Budget", query: "protein powder value size" },
+  ],
+  preworkout: [
+    { label: "High Stim", query: "high stimulant pre workout" },
+    { label: "Low Stim", query: "low stimulant pre workout" },
+    { label: "Stim-Free", query: "stim free pre workout" },
+    { label: "Pump", query: "pump pre workout nitric oxide" },
+    { label: "Beginner", query: "beginner pre workout low caffeine" },
+  ],
+  creatine: [
+    { label: "Monohydrate", query: "creatine monohydrate powder" },
+    { label: "Capsules", query: "creatine monohydrate capsules" },
+    { label: "Micronized", query: "micronized creatine monohydrate" },
+    { label: "Single Serve", query: "creatine monohydrate travel packets" },
+  ],
+  hydration: [
+    { label: "Electrolytes", query: "electrolyte powder fitness" },
+    { label: "Low Sugar", query: "low sugar electrolyte powder" },
+    { label: "Packets", query: "electrolyte packets hydration" },
+    { label: "Shakers", query: "protein shaker bottle gym" },
+  ],
+  recovery: [
+    { label: "Foam Rollers", query: "foam roller muscle recovery" },
+    { label: "Massage", query: "massage gun muscle recovery" },
+    { label: "Mobility", query: "mobility stretching recovery tools" },
+    { label: "Compression", query: "compression recovery sleeves fitness" },
+  ],
+  equipment: [
+    { label: "Belts", query: "weight lifting belt" },
+    { label: "Straps", query: "lifting straps weightlifting" },
+    { label: "Knee Sleeves", query: "knee sleeves weightlifting" },
+    { label: "Wrist Wraps", query: "wrist wraps weightlifting" },
+    { label: "Bands", query: "resistance bands fitness set" },
+  ],
+  "home-gym": [
+    { label: "Dumbbells", query: "adjustable dumbbells home gym" },
+    { label: "Bench", query: "adjustable workout bench home gym" },
+    { label: "Rack", query: "power rack home gym" },
+    { label: "Cable Attachments", query: "cable machine attachments gym" },
+    { label: "Flooring", query: "rubber gym flooring home gym" },
+  ],
+  "meal-prep": [
+    { label: "Containers", query: "meal prep containers reusable" },
+    { label: "Food Scale", query: "digital food scale nutrition" },
+    { label: "Lunch Bags", query: "meal prep lunch bag fitness" },
+    { label: "Blenders", query: "personal blender protein shake" },
+  ],
+};
+
+const SEARCH_TRIGGERS = [
+  [/(protein|whey|isolate|clear whey|shake)/i, "protein"],
+  [/(pre.?workout|caffeine|stim|pump)/i, "preworkout"],
+  [/(creatine)/i, "creatine"],
+  [/(electrolyte|hydration|water|shaker)/i, "hydration"],
+  [/(recovery|foam|massage|mobility|compression)/i, "recovery"],
+  [/(belt|strap|sleeve|wrap|band|equipment)/i, "equipment"],
+  [/(dumbbell|bench|rack|cable|home gym)/i, "home-gym"],
+  [/(meal prep|food scale|container|blender)/i, "meal-prep"],
+];
+
 function safeNumber(value, fallback = 0) {
   const parsed = Number(String(value ?? "").replace(/[^\d.-]/g, ""));
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -93,13 +160,30 @@ export default function SyncWorksAffiliateStore({
     return HEALTH_STORE_ITEMS.filter((item) => item.category === category);
   }, [category, featuredIds]);
 
+  const smartGroup = useMemo(() => {
+    const clean = String(search || "").trim();
+    const matched = SEARCH_TRIGGERS.find(([pattern]) => pattern.test(clean));
+    if (matched) return matched[1];
+    if (category !== "all" && SMART_SEARCH_GROUPS[category]) return category;
+    if (proteinRemaining >= 25) return "protein";
+    if (workoutToday && !completedToday) return "preworkout";
+    if (completedToday) return "recovery";
+    return "equipment";
+  }, [search, category, proteinRemaining, workoutToday, completedToday]);
+
+  const smartSuggestions = SMART_SEARCH_GROUPS[smartGroup] || SMART_SEARCH_GROUPS.equipment;
+
   if (!open) return null;
+
+  function openTaggedAmazon(query) {
+    const clean = String(query || "").trim();
+    if (!clean) return;
+    window.open(amazonSearchUrl(clean), "_blank", "noopener,noreferrer");
+  }
 
   function submitSearch(event) {
     event.preventDefault();
-    const clean = String(search || "").trim();
-    if (!clean) return;
-    window.open(amazonSearchUrl(clean), "_blank", "noopener,noreferrer");
+    openTaggedAmazon(search);
   }
 
   const storeTitle = mode === "health" ? "SYNC Health Store" : "SYNC Store";
@@ -138,7 +222,7 @@ export default function SyncWorksAffiliateStore({
             </section>
 
             <section className="overflow-hidden rounded-[1.75rem] border border-[#70ff3d]/25 bg-[linear-gradient(135deg,rgba(112,255,61,0.12),rgba(4,10,7,0.92)_45%,rgba(52,223,255,0.08))] p-4 sm:p-5">
-              <div className="grid gap-4 md:grid-cols-[1.2fr_.8fr] md:items-center">
+              <div className="grid gap-4 md:grid-cols-[1.2fr_.8fr] md:items-start">
                 <div>
                   <div className="text-[9px] font-black uppercase tracking-[0.2em] text-[#70ff3d]">Today&apos;s store context</div>
                   <h3 className="mt-1 text-2xl font-black text-white">Useful picks, not random ads.</h3>
@@ -153,20 +237,47 @@ export default function SyncWorksAffiliateStore({
                       : "Browse by what you actually need for your training setup."}
                   </p>
                 </div>
+
                 <form onSubmit={submitSearch} className="rounded-2xl border border-white/10 bg-black/25 p-3">
                   <label className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-500">Search Amazon fitness</label>
                   <div className="mt-2 flex gap-2">
                     <input
                       value={search}
                       onChange={(event) => setSearch(event.target.value)}
-                      placeholder="e.g. gym bag, knee sleeves"
+                      placeholder="e.g. Ghost protein, C4, knee sleeves"
                       className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/30 px-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
                     />
                     <button type="submit" className="h-11 rounded-xl bg-[#70ff3d] px-4 text-xs font-black text-[#041006]">
                       Search
                     </button>
                   </div>
-                  <div className="mt-2 text-[9px] font-bold text-slate-600">Search opens Amazon using the SyncWorks affiliate tag.</div>
+
+                  <div className="mt-3 border-t border-white/10 pt-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[9px] font-black uppercase tracking-[0.14em] text-cyan-200">
+                        SYNC quick search
+                      </div>
+                      <div className="text-[9px] font-bold text-slate-600">
+                        tag: {AMAZON_ASSOCIATE_TAG}
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {smartSuggestions.map((item) => (
+                        <button
+                          key={`${smartGroup}-${item.label}`}
+                          type="button"
+                          onClick={() => openTaggedAmazon(item.query)}
+                          className="min-h-9 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.07] px-3 text-[10px] font-black text-cyan-100 active:scale-[0.98]"
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-2 text-[9px] font-bold leading-4 text-slate-600">
+                    Any typed search or quick-search chip opens Amazon through a SyncWorks affiliate-tagged URL.
+                  </div>
                 </form>
               </div>
             </section>
