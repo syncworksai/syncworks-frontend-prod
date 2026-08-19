@@ -8,6 +8,9 @@ import {
   amazonSearchUrl,
 } from "./affiliateCatalog";
 
+const RECENT_SEARCHES_KEY = "syncworks_affiliate_store_recent_v1";
+const SAVED_ITEMS_KEY = "syncworks_affiliate_store_saved_v1";
+
 const SMART_SEARCH_GROUPS = {
   protein: [
     { label: "Whey", query: "whey protein powder" },
@@ -80,7 +83,26 @@ function safeNumber(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function ProductCard({ item }) {
+function readStoredList(key) {
+  if (typeof window === "undefined") return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(key) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistStoredList(key, value) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Keep shopping usable when storage is unavailable.
+  }
+}
+
+function ProductCard({ item, saved, onToggleSave, onShop }) {
   return (
     <article className="flex min-h-[250px] flex-col rounded-[1.5rem] border border-white/10 bg-[#080d0b] p-4 shadow-[0_18px_55px_rgba(0,0,0,0.28)]">
       <div className="flex items-start justify-between gap-3">
@@ -99,16 +121,47 @@ function ProductCard({ item }) {
         {item.description}
       </p>
 
-      <a
-        href={amazonSearchUrl(item.query)}
-        target="_blank"
-        rel="sponsored noreferrer"
-        className="mt-4 flex h-11 items-center justify-center rounded-xl border border-[#70ff3d]/30 bg-[#70ff3d]/12 px-3 text-xs font-black text-[#d8ffd0]"
-      >
-        Shop on Amazon
-      </a>
+      <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
+        <button
+          type="button"
+          onClick={() => onShop(item.query)}
+          className="flex h-11 items-center justify-center rounded-xl border border-[#70ff3d]/30 bg-[#70ff3d]/12 px-3 text-xs font-black text-[#d8ffd0]"
+        >
+          Shop on Amazon
+        </button>
+        <button
+          type="button"
+          onClick={() => onToggleSave(item.id)}
+          aria-pressed={saved}
+          className={`h-11 rounded-xl border px-3 text-xs font-black ${
+            saved
+              ? "border-fuchsia-300/30 bg-fuchsia-300/10 text-fuchsia-100"
+              : "border-white/10 bg-white/[0.04] text-slate-300"
+          }`}
+        >
+          {saved ? "Saved" : "Save"}
+        </button>
+      </div>
       <div className="mt-2 text-center text-[9px] font-bold text-slate-600">
         Amazon paid link
+      </div>
+    </article>
+  );
+}
+
+function CompactPick({ item, saved, onToggleSave, onShop }) {
+  return (
+    <article className="min-w-[220px] rounded-2xl border border-[#70ff3d]/20 bg-[#70ff3d]/[0.055] p-3 sm:min-w-0">
+      <div className="text-[9px] font-black uppercase tracking-[0.15em] text-[#70ff3d]">{item.badge}</div>
+      <div className="mt-1 text-sm font-black text-white">{item.title}</div>
+      <div className="mt-1 line-clamp-2 text-[10px] font-semibold leading-4 text-slate-500">{item.description}</div>
+      <div className="mt-3 flex gap-2">
+        <button type="button" onClick={() => onShop(item.query)} className="h-9 flex-1 rounded-xl border border-[#70ff3d]/25 bg-[#70ff3d]/10 px-2 text-[10px] font-black text-[#d8ffd0]">
+          Shop
+        </button>
+        <button type="button" onClick={() => onToggleSave(item.id)} aria-pressed={saved} className={`h-9 rounded-xl border px-3 text-[10px] font-black ${saved ? "border-fuchsia-300/25 bg-fuchsia-300/10 text-fuchsia-100" : "border-white/10 bg-white/[0.04] text-slate-400"}`}>
+          {saved ? "Saved" : "Save"}
+        </button>
       </div>
     </article>
   );
@@ -123,6 +176,8 @@ export default function SyncWorksAffiliateStore({
 }) {
   const [category, setCategory] = useState("all");
   const [search, setSearch] = useState("");
+  const [recentSearches, setRecentSearches] = useState(() => readStoredList(RECENT_SEARCHES_KEY));
+  const [savedItemIds, setSavedItemIds] = useState(() => readStoredList(SAVED_ITEMS_KEY));
 
   const proteinGoal = safeNumber(
     snapshot?.protein_goal || profile?.protein_goal,
@@ -146,6 +201,21 @@ export default function SyncWorksAffiliateStore({
     ids.push("creatine-monohydrate", "resistance-bands");
     return [...new Set(ids)].slice(0, 5);
   }, [proteinRemaining, workoutToday, completedToday]);
+
+  const recommendedItems = useMemo(
+    () => featuredIds
+      .map((id) => HEALTH_STORE_ITEMS.find((item) => item.id === id))
+      .filter(Boolean)
+      .slice(0, 4),
+    [featuredIds]
+  );
+
+  const savedItems = useMemo(
+    () => savedItemIds
+      .map((id) => HEALTH_STORE_ITEMS.find((item) => item.id === id))
+      .filter(Boolean),
+    [savedItemIds]
+  );
 
   const items = useMemo(() => {
     if (category === "all") {
@@ -175,10 +245,36 @@ export default function SyncWorksAffiliateStore({
 
   if (!open) return null;
 
+  function rememberSearch(query) {
+    const clean = String(query || "").trim();
+    if (!clean) return;
+    setRecentSearches((previous) => {
+      const next = [
+        clean,
+        ...previous.filter((item) => String(item).toLowerCase() !== clean.toLowerCase()),
+      ].slice(0, 6);
+      persistStoredList(RECENT_SEARCHES_KEY, next);
+      return next;
+    });
+  }
+
   function openTaggedAmazon(query) {
     const clean = String(query || "").trim();
     if (!clean) return;
+    rememberSearch(clean);
     window.open(amazonSearchUrl(clean), "_blank", "noopener,noreferrer");
+  }
+
+  function toggleSavedItem(itemId) {
+    if (!itemId) return;
+    setSavedItemIds((previous) => {
+      const exists = previous.includes(itemId);
+      const next = exists
+        ? previous.filter((id) => id !== itemId)
+        : [itemId, ...previous].slice(0, 20);
+      persistStoredList(SAVED_ITEMS_KEY, next);
+      return next;
+    });
   }
 
   function submitSearch(event) {
@@ -254,12 +350,8 @@ export default function SyncWorksAffiliateStore({
 
                   <div className="mt-3 border-t border-white/10 pt-3">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-[9px] font-black uppercase tracking-[0.14em] text-cyan-200">
-                        SYNC quick search
-                      </div>
-                      <div className="text-[9px] font-bold text-slate-600">
-                        tag: {AMAZON_ASSOCIATE_TAG}
-                      </div>
+                      <div className="text-[9px] font-black uppercase tracking-[0.14em] text-cyan-200">SYNC quick search</div>
+                      <div className="text-[9px] font-bold text-slate-600">tag: {AMAZON_ASSOCIATE_TAG}</div>
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {smartSuggestions.map((item) => (
@@ -275,8 +367,24 @@ export default function SyncWorksAffiliateStore({
                     </div>
                   </div>
 
+                  {recentSearches.length ? (
+                    <div className="mt-3 border-t border-white/10 pt-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">Recent searches</div>
+                        <button type="button" onClick={() => { setRecentSearches([]); persistStoredList(RECENT_SEARCHES_KEY, []); }} className="text-[9px] font-black text-slate-600">Clear</button>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {recentSearches.map((item) => (
+                          <button key={item} type="button" onClick={() => openTaggedAmazon(item)} className="min-h-8 rounded-lg border border-white/10 bg-white/[0.035] px-2.5 text-[9px] font-black text-slate-400">
+                            {item}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div className="mt-2 text-[9px] font-bold leading-4 text-slate-600">
-                    Any typed search or quick-search chip opens Amazon through a SyncWorks affiliate-tagged URL.
+                    Any typed search, recent search, or quick-search chip opens Amazon through a SyncWorks affiliate-tagged URL.
                   </div>
                 </form>
               </div>
@@ -301,6 +409,50 @@ export default function SyncWorksAffiliateStore({
               </div>
             </section>
 
+            <section className="rounded-[1.5rem] border border-[#70ff3d]/20 bg-[#070b09] p-4">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <div className="text-[9px] font-black uppercase tracking-[0.18em] text-[#70ff3d]">SYNC recommended for today</div>
+                  <h3 className="mt-1 text-lg font-black text-white">Start with what fits today&apos;s context</h3>
+                </div>
+                <div className="text-[9px] font-bold text-slate-600">affiliate-tagged</div>
+              </div>
+              <div className="mt-3 flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible">
+                {recommendedItems.map((item) => (
+                  <CompactPick
+                    key={`recommended-${item.id}`}
+                    item={item}
+                    saved={savedItemIds.includes(item.id)}
+                    onToggleSave={toggleSavedItem}
+                    onShop={openTaggedAmazon}
+                  />
+                ))}
+              </div>
+            </section>
+
+            {savedItems.length ? (
+              <section className="rounded-[1.5rem] border border-fuchsia-300/20 bg-fuchsia-300/[0.035] p-4">
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <div className="text-[9px] font-black uppercase tracking-[0.18em] text-fuchsia-200">Saved for later</div>
+                    <h3 className="mt-1 text-lg font-black text-white">Your fitness shortlist</h3>
+                  </div>
+                  <div className="text-[10px] font-black text-fuchsia-100">{savedItems.length} saved</div>
+                </div>
+                <div className="mt-3 flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible">
+                  {savedItems.map((item) => (
+                    <CompactPick
+                      key={`saved-${item.id}`}
+                      item={item}
+                      saved
+                      onToggleSave={toggleSavedItem}
+                      onShop={openTaggedAmazon}
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
             <section>
               <div className="mb-3 flex items-end justify-between gap-3">
                 <div>
@@ -309,17 +461,24 @@ export default function SyncWorksAffiliateStore({
                   </div>
                   <h3 className="mt-1 text-xl font-black text-white">Fitness essentials</h3>
                 </div>
-                <a
-                  href={amazonSearchUrl("fitness workout health")}
-                  target="_blank"
-                  rel="sponsored noreferrer"
+                <button
+                  type="button"
+                  onClick={() => openTaggedAmazon("fitness workout health")}
                   className="text-[10px] font-black text-cyan-200"
                 >
                   Browse all Amazon →
-                </a>
+                </button>
               </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {items.map((item) => <ProductCard key={item.id} item={item} />)}
+                {items.map((item) => (
+                  <ProductCard
+                    key={item.id}
+                    item={item}
+                    saved={savedItemIds.includes(item.id)}
+                    onToggleSave={toggleSavedItem}
+                    onShop={openTaggedAmazon}
+                  />
+                ))}
               </div>
             </section>
 
