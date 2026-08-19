@@ -1,5 +1,6 @@
 import React from "react";
 import ModeBar from "../ModeBar";
+import SyncDailyIntelligenceBar from "../sync/SyncDailyIntelligenceBar";
 import { cx } from "./GlassCard";
 
 export default function DashboardShell({
@@ -26,6 +27,8 @@ export default function DashboardShell({
         rightActions={rightActions}
       />
 
+      <SyncDailyIntelligenceBar />
+
       <main
         className={cx(
           "relative mx-auto px-3 pb-40 pt-4 sm:px-5 lg:pb-10",
@@ -35,7 +38,6 @@ export default function DashboardShell({
       >
         {children}
       </main>
-
     </div>
   );
 }
