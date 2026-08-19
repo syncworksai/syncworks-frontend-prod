@@ -80,12 +80,22 @@ function routeMatches(pathname, target) {
   return pathname.startsWith(cleanTarget);
 }
 
-function navModeFromPath(pathname, fallbackMode) {
+function navModeFromPath(pathname, fallbackMode, search = "") {
   if (pathname.startsWith("/customer") || pathname === "/calendar") return "CUSTOMER";
   if (pathname.startsWith("/sbo")) return "SBO";
   if (pathname.startsWith("/employee")) return "EMPLOYEE";
   if (pathname.startsWith("/pm")) return "PM";
-  return ["CUSTOMER", "SBO", "EMPLOYEE", "PM"].includes(fallbackMode) ? fallbackMode : "";
+
+  if (pathname.startsWith("/sync") || pathname.startsWith("/connect")) {
+    const params = new URLSearchParams(search || "");
+    const returnTo = String(params.get("return") || "").toLowerCase();
+    if (returnTo.startsWith("/sbo") || returnTo.startsWith("/business")) return "SBO";
+    if (returnTo.startsWith("/employee")) return "EMPLOYEE";
+    if (returnTo.startsWith("/pm")) return "PM";
+    if (returnTo.startsWith("/customer")) return "CUSTOMER";
+  }
+
+  return ["CUSTOMER", "SBO", "EMPLOYEE", "PM"].includes(fallbackMode) ? fallbackMode : "CUSTOMER";
 }
 
 function centerConfig(mode) {
@@ -154,14 +164,14 @@ export default function RoleAwareMobileNav() {
   const navigate = useNavigate();
   const { user, mode } = useAuth();
   const pathname = String(location.pathname || "").toLowerCase();
-  const navMode = navModeFromPath(pathname, mode);
+  const navMode = navModeFromPath(pathname, mode, location.search);
   const [items, setItems] = useState(() => navMode ? readPreference(navMode, user) : []);
   const [unread, setUnread] = useState(0);
 
   const hidden = useMemo(() => {
     if (!navMode) return true;
     if (/^\/tickets\/[^/]+\/?$/.test(pathname)) return true;
-    return ["/login", "/register", "/upgrade", "/connect", "/sync", "/customer/health", "/health"].some((prefix) => pathname.startsWith(prefix));
+    return ["/login", "/register", "/upgrade"].some((prefix) => pathname.startsWith(prefix));
   }, [navMode, pathname]);
 
   useEffect(() => {
