@@ -9,6 +9,7 @@ import {
 import ProtectedRoute from "./components/ProtectedRoute";
 import SyncAssistantLauncher from "./components/sync/SyncAssistantLauncher";
 import RoleAwareMobileNav from "./components/navigation/RoleAwareMobileNav";
+import IdentityOnboardingGate from "./components/identity/IdentityOnboardingGate";
 import PlatformRoute from "./components/PlatformRoute";
 
 import Login from "./pages/Login";
@@ -47,6 +48,7 @@ import Upgrade from "./pages/Upgrade";
 import Connect from "./pages/Connect";
 import Household from "./pages/Household";
 import UserProfile from "./pages/UserProfile";
+import IdentitySettings from "./pages/IdentitySettings";
 
 import TicketsBoard from "./pages/TicketsBoard";
 import TicketDetail from "./pages/TicketDetail";
@@ -154,7 +156,8 @@ export default function App() {
         <Route path="/tickets/:id" element={<ProtectedRoute><TicketDetail /></ProtectedRoute>} />
         <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
         <Route path="/inbox" element={<ProtectedRoute><InboxPage /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><IdentitySettings /></ProtectedRoute>} />
+        <Route path="/profile/legacy" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
         <Route path="/upgrade" element={<ProtectedRoute><Upgrade /></ProtectedRoute>} />
         <Route path="/connect" element={<ProtectedRoute><Connect /></ProtectedRoute>} />
         <Route path="/team/invites" element={<ProtectedRoute><TeamInvites /></ProtectedRoute>} />
@@ -162,6 +165,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+      <IdentityOnboardingGate />
       <SyncAssistantLauncher />
       <RoleAwareMobileNav />
     </div>
