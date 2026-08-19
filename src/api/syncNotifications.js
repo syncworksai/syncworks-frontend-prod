@@ -20,7 +20,17 @@ export async function removePushDevice(payload = {}) {
   return response?.data || {};
 }
 
+export async function refreshSyncNotifications() {
+  try {
+    const response = await api.post("/sync-ai/assistant/notifications/refresh/");
+    return response?.data || {};
+  } catch {
+    return {};
+  }
+}
+
 export async function getNotifications(params = {}) {
+  await refreshSyncNotifications();
   const response = await api.get("/notifications/", { params });
   if (Array.isArray(response?.data)) return response.data;
   if (Array.isArray(response?.data?.results)) return response.data.results;
