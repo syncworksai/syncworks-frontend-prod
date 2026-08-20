@@ -1,11 +1,12 @@
 import React from "react";
-import { Building2, CalendarClock, ChevronRight, CreditCard, DoorOpen, MessageSquareText, Settings2, ShieldCheck, UsersRound } from "lucide-react";
+import { Building2, CalendarClock, ChevronRight, CreditCard, DoorOpen, MapPinned, MessageSquareText, Settings2, ShieldCheck, UsersRound } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DashboardShell from "../components/dashboard/DashboardShell";
 
 const CARDS = [
   { icon: Building2, title: "Business profile & operations", detail: "Name, contact information, logo, service areas, offerings, marketplace and digital business card.", route: "/sbo/settings/general", tone: "cyan" },
   { icon: UsersRound, title: "Team & workforce", detail: "Define staff titles, skills, work hours, lunch/breaks, buffers and route start locations so SYNC can schedule the right person.", route: "/sbo/settings/workforce", tone: "emerald" },
+  { icon: MapPinned, title: "Dispatch & SLA control", detail: "See today's staff routes, travel gaps, schedule risk and late work. Update job timing while SYNC recalculates downstream risk without silently moving customers.", route: "/sbo/dispatch", tone: "violet" },
   { icon: CalendarClock, title: "Professional practice & scheduling", detail: "Dentist, eye care and other appointment businesses: insurance, appointment types, office hours and scheduling matrix.", route: "/sbo/settings/practice", tone: "violet" },
   { icon: DoorOpen, title: "Scheduling automation", detail: "Providers, hygienists, rooms, chairs and equipment. Build real bookable capacity and prevent double-booking.", route: "/sbo/settings/practice/automation", tone: "cyan" },
   { icon: MessageSquareText, title: "Appointments", detail: "Propose appointment times and manage patient scheduling responses inside SyncWorks.", route: "/sbo/appointments", tone: "emerald" },

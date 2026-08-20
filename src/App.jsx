@@ -44,6 +44,7 @@ import SboAppointments from "./pages/sbo/SboAppointments";
 import SboPracticeSettings from "./pages/sbo/SboPracticeSettings";
 import SboSchedulingAutomation from "./pages/sbo/SboSchedulingAutomation";
 import SboWorkforceSettings from "./pages/sbo/SboWorkforceSettings";
+import SboDispatch from "./pages/sbo/SboDispatch";
 
 import PlatformDashboard from "./pages/PlatformDashboard";
 import PlatformSupportRequests from "./pages/platform/PlatformSupportRequests";
@@ -114,6 +115,7 @@ export default function App() {
         <Route path="/sbo/settings/practice" element={<ProtectedRoute><SboPracticeSettings /></ProtectedRoute>} />
         <Route path="/sbo/settings/practice/automation" element={<ProtectedRoute><SboSchedulingAutomation /></ProtectedRoute>} />
         <Route path="/sbo/appointments" element={<ProtectedRoute><SboAppointments /></ProtectedRoute>} />
+        <Route path="/sbo/dispatch" element={<ProtectedRoute><SboDispatch /></ProtectedRoute>} />
         <Route path="/sbo/catalog" element={<ProtectedRoute><SboCatalog /></ProtectedRoute>} />
         <Route path="/sbo/growth" element={<ProtectedRoute><SboGrowth /></ProtectedRoute>} />
         <Route path="/sbo/new-ticket" element={<ProtectedRoute><BusinessInternalTicketCreator /></ProtectedRoute>} />
