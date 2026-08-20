@@ -42,6 +42,7 @@ import SboPartners from "./pages/sbo/SboPartners";
 import SboAppointments from "./pages/sbo/SboAppointments";
 import SboPracticeSettings from "./pages/sbo/SboPracticeSettings";
 import SboSchedulingAutomation from "./pages/sbo/SboSchedulingAutomation";
+import SboWorkforceSettings from "./pages/sbo/SboWorkforceSettings";
 
 import PlatformDashboard from "./pages/PlatformDashboard";
 import PlatformSupportRequests from "./pages/platform/PlatformSupportRequests";
@@ -108,6 +109,7 @@ export default function App() {
 
         <Route path="/sbo/settings" element={<ProtectedRoute><SboSettingsHub /></ProtectedRoute>} />
         <Route path="/sbo/settings/general" element={<ProtectedRoute><SboSettings /></ProtectedRoute>} />
+        <Route path="/sbo/settings/workforce" element={<ProtectedRoute><SboWorkforceSettings /></ProtectedRoute>} />
         <Route path="/sbo/settings/practice" element={<ProtectedRoute><SboPracticeSettings /></ProtectedRoute>} />
         <Route path="/sbo/settings/practice/automation" element={<ProtectedRoute><SboSchedulingAutomation /></ProtectedRoute>} />
         <Route path="/sbo/appointments" element={<ProtectedRoute><SboAppointments /></ProtectedRoute>} />
