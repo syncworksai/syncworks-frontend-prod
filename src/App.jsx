@@ -40,6 +40,7 @@ import SboCustomers from "./pages/sbo/SboCustomers";
 import SboLeads from "./pages/sbo/SboLeads";
 import SboReports from "./pages/sbo/SboReports";
 import SboFinance from "./pages/sbo/SboFinance";
+import SboInvoices from "./pages/sbo/SboInvoices";
 import SboPartners from "./pages/sbo/SboPartners";
 import SboAppointments from "./pages/sbo/SboAppointments";
 import SboPracticeSettings from "./pages/sbo/SboPracticeSettings";
@@ -124,6 +125,7 @@ export default function App() {
         <Route path="/sbo/leads" element={<ProtectedRoute><SboLeads /></ProtectedRoute>} />
         <Route path="/sbo/reports" element={<ProtectedRoute><SboReports /></ProtectedRoute>} />
         <Route path="/sbo/finance" element={<ProtectedRoute><SboFinance /></ProtectedRoute>} />
+        <Route path="/sbo/invoices" element={<ProtectedRoute><SboInvoices /></ProtectedRoute>} />
         <Route path="/sbo/partners" element={<ProtectedRoute><SboPartners /></ProtectedRoute>} />
 
         <Route path="/pm/settings" element={<ProtectedRoute><PmSettings /></ProtectedRoute>} />
