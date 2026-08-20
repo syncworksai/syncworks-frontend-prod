@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import GodModeLiveUsers from "./GodModeLiveUsers";
+import GodModeBuildBacklog from "../components/platform/GodModeBuildBacklog";
 
-const tabs = ["command", "users", "approvals", "support", "billing", "social", "automations"];
+const tabs = ["command", "users", "approvals", "support", "billing", "backlog", "social", "automations"];
 const projects = [
   ["Live user classification", "TESTING", 92, "Master Operations Agent", "Verify production accounts and classification persistence"],
   ["Plain-language build approval center", "TESTING", 80, "Master Operations Agent", "Connect approvals to backend execution records"],
@@ -31,6 +32,12 @@ function Stat({ icon, label, value, note, tone = "cyan" }) {
   return <div className={`rounded-[22px] border bg-gradient-to-br p-4 ${tones[tone]}`}><div className="flex items-start gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-slate-950/60 text-xl">{icon}</div><div><div className="text-[10px] font-black uppercase tracking-[.16em] text-slate-400">{label}</div><div className="mt-1 text-2xl font-black text-white">{value}</div><div className="mt-1 text-xs text-slate-500">{note}</div></div></div><div className="mt-4 h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" /></div>;
 }
 
+function tabLabel(id) {
+  if (id === "social") return "Social How-To";
+  if (id === "backlog") return "Build Backlog";
+  return id;
+}
+
 export default function GodModeCompanyOperations() {
   const [tab, setTab] = useState("command");
   const [liveMetrics, setLiveMetrics] = useState({ real: 0, beta: 0, test: 0, total: 0 });
@@ -46,7 +53,7 @@ export default function GodModeCompanyOperations() {
             <div><div className="inline-flex rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[.22em] text-cyan-200">SyncWorks Operations Board</div><h1 className="mt-4 text-3xl font-black tracking-[.08em] text-white sm:text-5xl">SYNCWORKS <span className="bg-gradient-to-r from-cyan-300 via-blue-500 to-fuchsia-400 bg-clip-text text-transparent">GOD MODE</span></h1><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">Private company command center for live users, approvals, support, billing, projects, automations, and launch readiness.</p></div>
             <div className="flex flex-wrap gap-2"><Link to="/platform?tab=developer_agent" className="rounded-xl border border-cyan-400/40 bg-blue-600/20 px-5 py-3 text-sm font-black text-cyan-100">Developer Agent</Link><Link to="/platform?tab=growth_os" className="rounded-xl bg-gradient-to-r from-blue-600 to-fuchsia-600 px-5 py-3 text-sm font-black text-white">Social Media</Link></div>
           </div>
-          <div className="mt-5 flex gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-slate-950/40 p-2">{tabs.map((id) => <button key={id} onClick={() => setTab(id)} className={`whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-black capitalize transition ${tab === id ? "bg-cyan-400/15 text-cyan-200 shadow-[inset_0_-2px_0_#22d3ee]" : "text-slate-400 hover:text-white"}`}>{id === "social" ? "Social How-To" : id}</button>)}</div>
+          <div className="mt-5 flex gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-slate-950/40 p-2">{tabs.map((id) => <button key={id} onClick={() => setTab(id)} className={`whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-black capitalize transition ${tab === id ? "bg-cyan-400/15 text-cyan-200 shadow-[inset_0_-2px_0_#22d3ee]" : "text-slate-400 hover:text-white"}`}>{tabLabel(id)}</button>)}</div>
         </div>
       </Card>
 
@@ -60,6 +67,7 @@ export default function GodModeCompanyOperations() {
       </div>
 
       {tab === "users" && <GodModeLiveUsers onMetrics={setLiveMetrics} />}
+      {tab === "backlog" && <GodModeBuildBacklog />}
 
       {tab === "command" && <div className="grid gap-4 xl:grid-cols-12">
         <Card className="xl:col-span-8"><div className="flex items-center justify-between border-b border-white/10 p-4"><div><div className="text-xs font-black uppercase tracking-[.18em] text-cyan-300">Build Pipeline / Projects</div><div className="text-xs text-slate-500">Key initiatives powering SyncWorks</div></div><button onClick={() => setTab("approvals")} className="rounded-xl border border-white/10 px-3 py-2 text-xs font-bold">View approvals →</button></div><div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">{projects.map(([title, stage, progress, owner, next]) => <div key={title} className="rounded-2xl border border-cyan-400/15 bg-slate-950/45 p-4 hover:border-cyan-400/45"><div className="font-black text-white">{title}</div><div className="mt-3 flex items-center justify-between text-xs"><span className="rounded-full border border-violet-400/30 bg-violet-400/10 px-2 py-1 font-bold text-violet-200">{stage}</span><span className="font-black text-white">{progress}%</span></div><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-800"><div className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500" style={{ width: `${progress}%` }} /></div><div className="mt-3 text-[11px] text-slate-500">{owner}</div><div className="mt-2 text-xs text-slate-400"><b className="text-white">Next:</b> {next}</div></div>)}</div></Card>
