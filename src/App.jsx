@@ -13,6 +13,7 @@ import Register from "./pages/Register";
 
 import CustomerDashboard from "./pages/CustomerDashboard";
 import CustomerNewRequest from "./pages/CustomerNewRequest";
+import CustomerMarketplaceAvailability from "./pages/CustomerMarketplaceAvailability";
 import CustomerSettings from "./pages/CustomerSettings";
 import CustomerFinance from "./pages/CustomerFinance";
 import CustomerHealth from "./pages/CustomerHealth";
@@ -135,6 +136,7 @@ export default function App() {
         <Route path="/customer/business-cards" element={<ProtectedRoute><CustomerBusinessCards /></ProtectedRoute>} />
         <Route path="/customer/business-cards/:favoriteId" element={<ProtectedRoute><CustomerBusinessCardDetail /></ProtectedRoute>} />
         <Route path="/customer/new-request" element={<ProtectedRoute><CustomerNewRequest /></ProtectedRoute>} />
+        <Route path="/customer/marketplace" element={<ProtectedRoute><CustomerMarketplaceAvailability /></ProtectedRoute>} />
         <Route path="/customer/inbox" element={<ProtectedRoute><InboxPage /></ProtectedRoute>} />
         <Route path="/customer/tickets" element={<ProtectedRoute><CustomerTickets /></ProtectedRoute>} />
         <Route path="/customer/settings" element={<ProtectedRoute><CustomerSettings /></ProtectedRoute>} />
