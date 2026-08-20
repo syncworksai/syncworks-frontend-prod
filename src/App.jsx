@@ -11,13 +11,14 @@ import PlatformRoute from "./components/PlatformRoute";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
-import CustomerDashboard from "./pages/CustomerDashboard";
+import CustomerDashboard from "./pages/CustomerDashboardResponsive";
 import CustomerNewRequest from "./pages/CustomerNewRequest";
 import CustomerMarketplaceAvailability from "./pages/CustomerMarketplaceAvailability";
 import CustomerSettings from "./pages/CustomerSettings";
 import CustomerFinance from "./pages/CustomerFinance";
 import CustomerHealth from "./pages/CustomerHealth";
 import CustomerEdge from "./pages/CustomerEdge";
+import CustomerPlans from "./pages/CustomerPlans";
 import CustomerTickets from "./pages/CustomerTickets";
 import CustomerFavorites from "./pages/CustomerFavorites";
 import CustomerBusinessCards from "./pages/CustomerBusinessCards";
@@ -145,6 +146,7 @@ export default function App() {
         <Route path="/customer/finance" element={<ProtectedRoute><CustomerFinance /></ProtectedRoute>} />
         <Route path="/customer/health" element={<ProtectedRoute><CustomerHealth /></ProtectedRoute>} />
         <Route path="/customer/edge" element={<ProtectedRoute><CustomerEdge /></ProtectedRoute>} />
+        <Route path="/customer/plans" element={<ProtectedRoute><CustomerPlans /></ProtectedRoute>} />
         <Route path="/customer/family" element={<ProtectedRoute><Household /></ProtectedRoute>} />
         <Route path="/customer/discover" element={<ProtectedRoute><CustomerDiscover /></ProtectedRoute>} />
         <Route path="/customer/discover/professional" element={<ProtectedRoute><CustomerProfessionalDiscover /></ProtectedRoute>} />
