@@ -30,6 +30,7 @@ import SboDashboard from "./pages/SboDashboard";
 import SboGrowth from "./pages/SboGrowth";
 import SboZipLeaderboard from "./pages/SboZipLeaderboard";
 import SboSettings from "./pages/SboSettings";
+import SboSettingsHub from "./pages/SboSettingsHub";
 import SboCatalog from "./pages/SboCatalog";
 import BusinessInternalTicketCreator from "./pages/BusinessInternalTicketCreator";
 
@@ -104,7 +105,8 @@ export default function App() {
         <Route path="/settings" element={<ProtectedRoute><SettingsHub /></ProtectedRoute>} />
         <Route path="/learn" element={<ProtectedRoute><LearningCenter /></ProtectedRoute>} />
 
-        <Route path="/sbo/settings" element={<ProtectedRoute><SboSettings /></ProtectedRoute>} />
+        <Route path="/sbo/settings" element={<ProtectedRoute><SboSettingsHub /></ProtectedRoute>} />
+        <Route path="/sbo/settings/general" element={<ProtectedRoute><SboSettings /></ProtectedRoute>} />
         <Route path="/sbo/settings/practice" element={<ProtectedRoute><SboPracticeSettings /></ProtectedRoute>} />
         <Route path="/sbo/appointments" element={<ProtectedRoute><SboAppointments /></ProtectedRoute>} />
         <Route path="/sbo/catalog" element={<ProtectedRoute><SboCatalog /></ProtectedRoute>} />
