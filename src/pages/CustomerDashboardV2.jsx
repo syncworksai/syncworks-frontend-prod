@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React from "react";
 import { BriefcaseBusiness, Building2, CalendarDays, CheckSquare2, CircleDollarSign, Dumbbell, MessageSquare, Search, ShoppingBag, Wrench } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import DashboardShell from "../components/dashboard/DashboardShell";
-import CustomerAudioSummaryDrawer from "../components/sync/CustomerAudioSummaryDrawer";
 import SyncAssistantMorningBrief from "../components/sync/SyncAssistantMorningBrief";
+import SyncAssistantStickyDock from "../components/sync/SyncAssistantStickyDock";
 import SyncUnifiedInboxCard from "../components/sync/SyncUnifiedInboxCard";
 import { useAuth } from "../auth/AuthContext";
 
@@ -31,11 +31,12 @@ const ACTIONS = [
 export default function CustomerDashboardV2() {
   const nav = useNavigate();
   const { user } = useAuth();
-  const [audioOpen, setAudioOpen] = useState(false);
+  const playBriefing = () => window.dispatchEvent(new Event("sync-assistant:play-briefing"));
+
   return (
     <DashboardShell>
-      <main className="mx-auto w-full max-w-7xl space-y-5 px-3 pb-28 pt-4 sm:px-5 lg:px-8">
-        <SyncAssistantMorningBrief onPlayBriefing={() => setAudioOpen(true)} />
+      <main className="mx-auto w-full max-w-7xl space-y-5 px-3 pb-72 pt-4 sm:px-5 md:pb-64 lg:px-8 lg:pb-60">
+        <SyncAssistantMorningBrief onPlayBriefing={playBriefing} />
         <SyncUnifiedInboxCard />
 
         <section className="rounded-[1.75rem] border border-white/10 bg-slate-950/55 p-5">
@@ -54,10 +55,11 @@ export default function CustomerDashboardV2() {
         <section className="rounded-[1.75rem] border border-violet-400/15 bg-violet-500/[.035] p-5">
           <div className="text-[10px] font-black uppercase tracking-[.18em] text-violet-200">Connected communication</div>
           <div className="mt-1 text-lg font-black text-white">SyncWorks Inbox first · external email when needed</div>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">Outlook can now feed Personal email intelligence into SYNC Assistant when the user opts in. Gmail is the next provider lane. Detailed SyncWorks service conversations remain in the internal Inbox.</p>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">Outlook can feed Personal email intelligence into SYNC Assistant when the user opts in. Gmail is the next provider lane. Detailed SyncWorks service conversations remain in the internal Inbox.</p>
         </section>
       </main>
-      <CustomerAudioSummaryDrawer open={audioOpen} onClose={() => setAudioOpen(false)} displayName={firstName(user)} />
+
+      <SyncAssistantStickyDock displayName={firstName(user)} />
     </DashboardShell>
   );
 }
