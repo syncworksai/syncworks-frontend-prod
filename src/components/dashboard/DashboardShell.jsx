@@ -1,6 +1,7 @@
 import React from "react";
 import ModeBar from "../ModeBar";
 import ProfileCompletionBanner from "../profile/ProfileCompletionBanner";
+import LocalDiscoveryBanner from "../discovery/LocalDiscoveryBanner";
 import SyncDailyIntelligenceBar from "../sync/SyncDailyIntelligenceBar";
 import { cx } from "./GlassCard";
 
@@ -29,6 +30,7 @@ export default function DashboardShell({
       />
 
       <ProfileCompletionBanner />
+      <LocalDiscoveryBanner />
       <SyncDailyIntelligenceBar />
 
       <main
