@@ -1,10 +1,6 @@
 // src/App.jsx
 import React from "react";
-import {
-  Navigate,
-  Route,
-  Routes,
-} from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import SyncAssistantLauncher from "./components/sync/SyncAssistantLauncher";
@@ -26,6 +22,8 @@ import CustomerFavorites from "./pages/CustomerFavorites";
 import CustomerBusinessCards from "./pages/CustomerBusinessCards";
 import CustomerBusinessCardDetail from "./pages/CustomerBusinessCardDetail";
 import CustomerDiscover from "./pages/CustomerDiscover";
+import CustomerAppointments from "./pages/CustomerAppointments";
+import CustomerProfessionalDiscover from "./pages/CustomerProfessionalDiscover";
 import AffiliateDashboard from "./pages/AffiliateDashboard";
 
 import SboDashboard from "./pages/SboDashboard";
@@ -40,6 +38,8 @@ import SboLeads from "./pages/sbo/SboLeads";
 import SboReports from "./pages/sbo/SboReports";
 import SboFinance from "./pages/sbo/SboFinance";
 import SboPartners from "./pages/sbo/SboPartners";
+import SboAppointments from "./pages/sbo/SboAppointments";
+import SboPracticeSettings from "./pages/sbo/SboPracticeSettings";
 
 import PlatformDashboard from "./pages/PlatformDashboard";
 import PlatformSupportRequests from "./pages/platform/PlatformSupportRequests";
@@ -105,6 +105,8 @@ export default function App() {
         <Route path="/learn" element={<ProtectedRoute><LearningCenter /></ProtectedRoute>} />
 
         <Route path="/sbo/settings" element={<ProtectedRoute><SboSettings /></ProtectedRoute>} />
+        <Route path="/sbo/settings/practice" element={<ProtectedRoute><SboPracticeSettings /></ProtectedRoute>} />
+        <Route path="/sbo/appointments" element={<ProtectedRoute><SboAppointments /></ProtectedRoute>} />
         <Route path="/sbo/catalog" element={<ProtectedRoute><SboCatalog /></ProtectedRoute>} />
         <Route path="/sbo/growth" element={<ProtectedRoute><SboGrowth /></ProtectedRoute>} />
         <Route path="/sbo/new-ticket" element={<ProtectedRoute><BusinessInternalTicketCreator /></ProtectedRoute>} />
@@ -135,6 +137,8 @@ export default function App() {
         <Route path="/customer/edge" element={<ProtectedRoute><CustomerEdge /></ProtectedRoute>} />
         <Route path="/customer/family" element={<ProtectedRoute><Household /></ProtectedRoute>} />
         <Route path="/customer/discover" element={<ProtectedRoute><CustomerDiscover /></ProtectedRoute>} />
+        <Route path="/customer/discover/professional" element={<ProtectedRoute><CustomerProfessionalDiscover /></ProtectedRoute>} />
+        <Route path="/customer/appointments" element={<ProtectedRoute><CustomerAppointments /></ProtectedRoute>} />
 
         <Route path="/sbo/inbox" element={<ProtectedRoute><InboxPage /></ProtectedRoute>} />
         <Route path="/sbo" element={<ProtectedRoute><SboDashboard /></ProtectedRoute>} />
