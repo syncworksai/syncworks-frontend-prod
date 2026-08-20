@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" role="img" aria-labelledby="title desc">
+  <title id="title">SyncWorks</title>
+  <desc id="desc">SyncWorks logo with Work Smarter. Together. tagline.</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="70%">
+      <stop offset="0" stop-color="#0c2f62"/>
+      <stop offset="0.58" stop-color="#06172f"/>
+      <stop offset="1" stop-color="#020814"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00e5ff"/>
+      <stop offset="0.52" stop-color="#1268ff"/>
+      <stop offset="1" stop-color="#b14cff"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="0.15" y1="0.08" x2="0.85" y2="0.92">
+      <stop offset="0" stop-color="#1ff4ff"/>
+      <stop offset="0.44" stop-color="#0b86ff"/>
+      <stop offset="0.72" stop-color="#6f5cff"/>
+      <stop offset="1" stop-color="#e85cff"/>
+    </linearGradient>
+    <linearGradient id="word" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#17cfff"/>
+      <stop offset="0.34" stop-color="#57bfff"/>
+      <stop offset="0.42" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#f4f7ff"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g transform="translate(24 20)">
+    <circle cx="140" cy="140" r="112" fill="url(#bg)" stroke="#13335f" stroke-width="12"/>
+    <circle cx="140" cy="140" r="122" fill="none" stroke="url(#ring)" stroke-width="8" filter="url(#glow)"/>
+    <text x="140" y="196" text-anchor="middle" font-family="Arial Black, Inter, Arial, sans-serif" font-size="176" font-weight="900" font-style="italic" letter-spacing="-14" fill="url(#mark)" filter="url(#glow)">S</text>
+  </g>
+  <text x="330" y="142" font-family="Inter, Arial, sans-serif" font-size="92" font-weight="700" letter-spacing="10" fill="url(#word)">SYNCWORKS</text>
+  <text x="336" y="218" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="500" letter-spacing="9" fill="#aebbd3">WORK SMARTER. TOGETHER.</text>
+</svg>
