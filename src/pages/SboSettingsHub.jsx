@@ -1,11 +1,12 @@
 import React from "react";
-import { Building2, CalendarClock, ChevronRight, CreditCard, MessageSquareText, Settings2, ShieldCheck } from "lucide-react";
+import { Building2, CalendarClock, ChevronRight, CreditCard, DoorOpen, MessageSquareText, Settings2, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DashboardShell from "../components/dashboard/DashboardShell";
 
 const CARDS = [
   { icon: Building2, title: "Business profile & operations", detail: "Name, contact information, logo, service areas, offerings, marketplace and digital business card.", route: "/sbo/settings/general", tone: "cyan" },
   { icon: CalendarClock, title: "Professional practice & scheduling", detail: "Dentist, eye care and other appointment businesses: insurance, appointment types, office hours and scheduling matrix.", route: "/sbo/settings/practice", tone: "violet" },
+  { icon: DoorOpen, title: "Scheduling automation", detail: "Providers, hygienists, rooms, chairs and equipment. Build real bookable capacity and prevent double-booking.", route: "/sbo/settings/practice/automation", tone: "cyan" },
   { icon: MessageSquareText, title: "Appointments", detail: "Propose appointment times and manage patient scheduling responses inside SyncWorks.", route: "/sbo/appointments", tone: "emerald" },
 ];
 
@@ -37,10 +38,10 @@ export default function SboSettingsHub() {
         </div>
 
         <section className="rounded-[1.75rem] border border-white/10 bg-slate-950/60 p-5">
-          <div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-emerald-200" /><h2 className="font-black text-white">Coming through this control center</h2></div>
+          <div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-emerald-200" /><h2 className="font-black text-white">Automation model</h2></div>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-white/[.025] p-4"><CreditCard className="h-4 w-4 text-cyan-200" /><div className="mt-2 text-sm font-black text-white">Payments & subscriptions</div><div className="mt-1 text-xs text-slate-500">Billing and connection settings remain in their existing Business modules while this hub becomes the common entry point.</div></div>
-            <div className="rounded-2xl border border-white/10 bg-white/[.025] p-4"><MessageSquareText className="h-4 w-4 text-violet-200" /><div className="mt-2 text-sm font-black text-white">Communication</div><div className="mt-1 text-xs text-slate-500">Appointment notifications use the existing in-app bell and no-reply email delivery system.</div></div>
+            <div className="rounded-2xl border border-white/10 bg-white/[.025] p-4"><CreditCard className="h-4 w-4 text-cyan-200" /><div className="mt-2 text-sm font-black text-white">Set rules once</div><div className="mt-1 text-xs text-slate-500">Office hours, appointment durations, provider capabilities and scarce rooms/resources become reusable scheduling rules.</div></div>
+            <div className="rounded-2xl border border-white/10 bg-white/[.025] p-4"><MessageSquareText className="h-4 w-4 text-violet-200" /><div className="mt-2 text-sm font-black text-white">Automate communication</div><div className="mt-1 text-xs text-slate-500">Appointment notifications use the existing in-app bell and no-reply email delivery system, with the same event ready for push delivery.</div></div>
           </div>
         </section>
       </div>
