@@ -6,37 +6,71 @@ function rowsOf(value) {
   return [];
 }
 
-export async function getPracticeSettings() {
+function businessParams(extra = {}) {
   const businessId = getActiveBusinessId();
-  const response = await api.get("/sync-ai/professional/business/practice/", {
-    params: businessId ? { business_id: businessId } : {},
-  });
+  return { ...extra, ...(businessId ? { business_id: businessId } : {}) };
+}
+
+export async function getPracticeSettings() {
+  const response = await api.get("/sync-ai/professional/business/practice/", { params: businessParams() });
   return response?.data || {};
 }
 
 export async function savePracticeSettings(payload = {}) {
-  const businessId = getActiveBusinessId();
-  const response = await api.patch("/sync-ai/professional/business/practice/", {
-    ...payload,
-    ...(businessId ? { business_id: businessId } : {}),
-  });
+  const response = await api.patch("/sync-ai/professional/business/practice/", businessParams(payload));
   return response?.data || {};
 }
 
+export async function listProfessionalProviders() {
+  const response = await api.get("/sync-ai/professional/business/providers/", { params: businessParams() });
+  return rowsOf(response?.data);
+}
+
+export async function createProfessionalProvider(payload = {}) {
+  const response = await api.post("/sync-ai/professional/business/providers/", businessParams(payload));
+  return response?.data || {};
+}
+
+export async function updateProfessionalProvider(providerId, payload = {}) {
+  const response = await api.patch(`/sync-ai/professional/business/providers/${providerId}/`, businessParams(payload));
+  return response?.data || {};
+}
+
+export async function deleteProfessionalProvider(providerId) {
+  await api.delete(`/sync-ai/professional/business/providers/${providerId}/`, { data: businessParams() });
+}
+
+export async function listProfessionalResources() {
+  const response = await api.get("/sync-ai/professional/business/resources/", { params: businessParams() });
+  return rowsOf(response?.data);
+}
+
+export async function createProfessionalResource(payload = {}) {
+  const response = await api.post("/sync-ai/professional/business/resources/", businessParams(payload));
+  return response?.data || {};
+}
+
+export async function updateProfessionalResource(resourceId, payload = {}) {
+  const response = await api.patch(`/sync-ai/professional/business/resources/${resourceId}/`, businessParams(payload));
+  return response?.data || {};
+}
+
+export async function deleteProfessionalResource(resourceId) {
+  await api.delete(`/sync-ai/professional/business/resources/${resourceId}/`, { data: businessParams() });
+}
+
+export async function getProfessionalAvailability(filters = {}) {
+  const response = await api.get("/sync-ai/professional/business/availability/", { params: businessParams(filters) });
+  return rowsOf(response?.data);
+}
+
 export async function listBusinessAppointments() {
-  const businessId = getActiveBusinessId();
-  const response = await api.get("/sync-ai/professional/business/appointments/", {
-    params: businessId ? { business_id: businessId } : {},
-  });
+  const response = await api.get("/sync-ai/professional/business/appointments/", { params: businessParams() });
   return rowsOf(response?.data);
 }
 
 export async function proposeBusinessAppointment(payload = {}) {
-  const businessId = getActiveBusinessId();
-  const response = await api.post("/sync-ai/professional/business/appointments/", {
-    ...payload,
-    ...(businessId ? { business_id: businessId } : {}),
-  });
+  const response = await api.post("/sync-ai/professional/business/appointments/", businessParams(payload));
   return response?.data || {};
 }
 
@@ -46,10 +80,7 @@ export async function listCustomerAppointments() {
 }
 
 export async function respondToCustomerAppointment(appointmentId, payload = {}) {
-  const response = await api.post(
-    `/sync-ai/professional/customer/appointments/${appointmentId}/respond/`,
-    payload
-  );
+  const response = await api.post(`/sync-ai/professional/customer/appointments/${appointmentId}/respond/`, payload);
   return response?.data || {};
 }
 
