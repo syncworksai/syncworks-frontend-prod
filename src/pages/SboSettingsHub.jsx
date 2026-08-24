@@ -1,11 +1,12 @@
 import React from "react";
-import { Building2, CalendarClock, ChevronRight, CreditCard, DoorOpen, MapPinned, MessageSquareText, Settings2, ShieldCheck, UsersRound } from "lucide-react";
+import { Building2, CalendarClock, ChevronRight, CreditCard, DoorOpen, MapPinned, MessageSquareText, ReceiptText, Settings2, ShieldCheck, UsersRound } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DashboardShell from "../components/dashboard/DashboardShell";
 
 const CARDS = [
   { icon: Building2, title: "Business profile & operations", detail: "Name, contact information, logo, service areas, offerings, marketplace and digital business card.", route: "/sbo/settings/general", tone: "cyan" },
   { icon: UsersRound, title: "Team & workforce", detail: "Define staff titles, skills, work hours, lunch/breaks, buffers and route start locations so SYNC can schedule the right person.", route: "/sbo/settings/workforce", tone: "emerald" },
+  { icon: ReceiptText, title: "Billing automation & receivables", detail: "Choose draft-first or auto-send invoices, payment terms, reminder rules, aging and overdue customer guardrails.", route: "/sbo/settings/billing-automation", tone: "cyan" },
   { icon: MapPinned, title: "Dispatch & SLA control", detail: "See today's staff routes, travel gaps, schedule risk and late work. Update job timing while SYNC recalculates downstream risk without silently moving customers.", route: "/sbo/dispatch", tone: "violet" },
   { icon: CalendarClock, title: "Professional practice & scheduling", detail: "Dentist, eye care and other appointment businesses: insurance, appointment types, office hours and scheduling matrix.", route: "/sbo/settings/practice", tone: "violet" },
   { icon: DoorOpen, title: "Scheduling automation", detail: "Providers, hygienists, rooms, chairs and equipment. Build real bookable capacity and prevent double-booking.", route: "/sbo/settings/practice/automation", tone: "cyan" },
@@ -26,7 +27,7 @@ export default function SboSettingsHub() {
         <section className="rounded-[2rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_88%_10%,rgba(139,92,246,.2),transparent_32%),rgba(2,6,23,.92)] p-5 sm:p-7">
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.22em] text-cyan-200"><Settings2 className="h-4 w-4" />Business control center</div>
           <h1 className="mt-2 text-3xl font-black text-white">Set the business up once.</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Business identity, team capacity, scheduling rules and connections live here so SyncWorks can reuse them across Marketplace, tickets, routes, appointments, communication and billing.</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Business identity, team capacity, scheduling rules, billing rules and connections live here so SyncWorks can reuse them across Marketplace, tickets, routes, appointments, communication and payments.</p>
         </section>
 
         <div className="grid gap-3 md:grid-cols-2">
@@ -42,8 +43,8 @@ export default function SboSettingsHub() {
         <section className="rounded-[1.75rem] border border-white/10 bg-slate-950/60 p-5">
           <div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-emerald-200" /><h2 className="font-black text-white">One operating model</h2></div>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-white/[.025] p-4"><CreditCard className="h-4 w-4 text-cyan-200" /><div className="mt-2 text-sm font-black text-white">People + work + resources</div><div className="mt-1 text-xs text-slate-500">A dentist, plumber, lawn crew or mechanic shop can use the same workforce rules: permissions, skills, schedules, buffers, locations and resources.</div></div>
-            <div className="rounded-2xl border border-white/10 bg-white/[.025] p-4"><MessageSquareText className="h-4 w-4 text-violet-200" /><div className="mt-2 text-sm font-black text-white">SYNC optimizes; humans control</div><div className="mt-1 text-xs text-slate-500">The engine can recommend schedules and surface SLA risk while approved staff keep authority to move work, extend jobs, change priority or override the plan.</div></div>
+            <div className="rounded-2xl border border-white/10 bg-white/[.025] p-4"><CreditCard className="h-4 w-4 text-cyan-200" /><div className="mt-2 text-sm font-black text-white">People + work + resources + money</div><div className="mt-1 text-xs text-slate-500">A dentist, plumber, lawn crew or mechanic shop can use the same workforce and billing rules without losing business-specific controls.</div></div>
+            <div className="rounded-2xl border border-white/10 bg-white/[.025] p-4"><MessageSquareText className="h-4 w-4 text-violet-200" /><div className="mt-2 text-sm font-black text-white">SYNC optimizes; humans control</div><div className="mt-1 text-xs text-slate-500">The engine can automate approved routines and surface risk while the Business decides whether invoices auto-send, schedules move, or overdue work gets held.</div></div>
           </div>
         </section>
       </div>
