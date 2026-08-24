@@ -1,374 +1,115 @@
-// src/pages/CustomerInvoices.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import api from "../api/client";
-import ModeBar from "../components/ModeBar";
-import Button from "../components/ui/Button";
+import { ArrowLeft, BadgeCheck, CalendarClock, CheckCircle2, ChevronRight, CircleDollarSign, CreditCard, FileText, LoaderCircle, ReceiptText, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
-const STATUS_META = {
-  DRAFT: { label: "Draft", cls: "border-slate-700 text-slate-300 bg-slate-950/40" },
-  SENT: { label: "Sent", cls: "border-cyan-500/40 text-cyan-200 bg-cyan-500/10" },
-  PAID: { label: "Paid", cls: "border-emerald-500/40 text-emerald-200 bg-emerald-500/10" },
-  VOID: { label: "Void", cls: "border-slate-700 text-slate-300 bg-slate-950/40" },
-  CANCELLED: { label: "Cancelled", cls: "border-slate-700 text-slate-300 bg-slate-950/40" },
-  FAILED: { label: "Failed", cls: "border-red-500/40 text-red-200 bg-red-500/10" },
-};
+import DashboardShell from "../components/dashboard/DashboardShell";
+import { getCustomerInvoiceCenter, getCustomerInvoiceDetail, startInvoiceCheckout } from "../api/customerInvoices";
 
-function money(n, currency = "USD") {
-  const num = Number(n);
-  if (!Number.isFinite(num)) return "—";
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 2,
-    }).format(num);
-  } catch {
-    return `$${num.toFixed(2)}`;
-  }
+function money(value) {
+  return Number(value || 0).toLocaleString(undefined, { style: "currency", currency: "USD" });
 }
 
-function fmtDate(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (!Number.isFinite(d.getTime())) return "—";
-  return d.toLocaleString();
+function fmtDate(value) {
+  if (!value) return "No due date";
+  try { return new Date(`${value}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }); }
+  catch { return value; }
 }
 
-function Pill({ status }) {
-  const meta = STATUS_META[status] || { label: status || "—", cls: "border-slate-700 text-slate-300 bg-slate-950/40" };
-  return (
-    <span className={`inline-flex items-center px-2 py-1 rounded-full border text-[11px] ${meta.cls}`}>
-      {meta.label}
-    </span>
-  );
+function fmtTime(value) {
+  if (!value) return "";
+  try { return new Date(value).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); }
+  catch { return value; }
 }
 
-function Card({ title, right, children }) {
-  return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-5">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div>
-          <div className="font-semibold">{title}</div>
-        </div>
-        {right}
-      </div>
-      {children}
-    </div>
-  );
+function stateClass(state) {
+  if (state === "PAID") return "border-emerald-400/25 bg-emerald-500/10 text-emerald-100";
+  if (state === "OVERDUE") return "border-rose-400/25 bg-rose-500/10 text-rose-100";
+  if (state === "PARTIALLY_PAID") return "border-amber-400/25 bg-amber-500/10 text-amber-100";
+  if (state === "VOID") return "border-slate-600 bg-slate-800/60 text-slate-400";
+  return "border-cyan-400/25 bg-cyan-500/10 text-cyan-100";
+}
+
+function StatePill({ state }) {
+  return <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[.13em] ${stateClass(state)}`}>{String(state || "SENT").replaceAll("_", " ")}</span>;
+}
+
+function Metric({ icon: Icon, label, value, hint }) {
+  return <div className="rounded-3xl border border-white/10 bg-white/[.025] p-4"><div className="flex items-center justify-between gap-3"><span className="text-[10px] font-black uppercase tracking-[.16em] text-slate-500">{label}</span><Icon className="h-5 w-5 text-cyan-200" /></div><div className="mt-3 text-2xl font-black text-white sm:text-3xl">{value}</div><div className="mt-1 text-xs text-slate-500">{hint}</div></div>;
+}
+
+function InvoiceCard({ invoice, onOpen }) {
+  return <button type="button" onClick={() => onOpen(invoice.id)} className="w-full rounded-[1.7rem] border border-white/10 bg-slate-950/65 p-4 text-left transition hover:border-cyan-400/25">
+    <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="text-[10px] font-black uppercase tracking-[.16em] text-cyan-300">Invoice #{invoice.id}</div><div className="mt-1 truncate text-lg font-black text-white">{invoice.service_title || invoice.title || "Service invoice"}</div><div className="mt-1 text-sm text-slate-400">{invoice.business_name || "Service provider"}</div></div><StatePill state={invoice.derived_state} /></div>
+    <div className="mt-4 grid grid-cols-3 gap-3"><div><div className="text-[10px] uppercase tracking-[.12em] text-slate-600">Total</div><div className="mt-1 font-black text-white">{money(invoice.total)}</div></div><div><div className="text-[10px] uppercase tracking-[.12em] text-slate-600">Balance</div><div className="mt-1 font-black text-white">{money(invoice.balance_due)}</div></div><div><div className="text-[10px] uppercase tracking-[.12em] text-slate-600">Due</div><div className="mt-1 text-sm font-bold text-slate-300">{fmtDate(invoice.due_date)}</div></div></div>
+    <div className="mt-4 flex items-center justify-between border-t border-white/8 pt-3 text-xs text-slate-500"><span>{invoice.ticket_code ? `Ticket ${invoice.ticket_code}` : `Ticket #${invoice.ticket || "—"}`}</span><span className="inline-flex items-center gap-1 font-black text-cyan-200">Review <ChevronRight className="h-4 w-4" /></span></div>
+  </button>;
+}
+
+function InvoiceDetail({ invoice, busy, onClose, onPay }) {
+  if (!invoice) return null;
+  return <section className="rounded-[2rem] border border-cyan-400/20 bg-slate-950/90 p-5 sm:p-6">
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">Invoice #{invoice.id}</div><h2 className="mt-1 text-2xl font-black text-white">{invoice.service_title || invoice.title || "Service invoice"}</h2><div className="mt-1 text-sm text-slate-400">From {invoice.business_name || "Service provider"}</div></div><div className="flex items-center gap-2"><StatePill state={invoice.derived_state} /><button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 text-slate-400"><XCircle className="h-5 w-5" /></button></div></div>
+    <div className="mt-5 grid gap-3 sm:grid-cols-3"><Metric icon={ReceiptText} label="Invoice total" value={money(invoice.total)} hint="Original invoice" /><Metric icon={CheckCircle2} label="Paid" value={money(invoice.amount_paid)} hint="Payments recorded" /><Metric icon={CalendarClock} label="Balance due" value={money(invoice.balance_due)} hint={`Due ${fmtDate(invoice.due_date)}`} /></div>
+    <div className="mt-5 rounded-3xl border border-white/10 bg-white/[.02] p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div className="font-black text-white">Invoice details</div><div className="text-xs text-slate-500">Subtotal {money(invoice.subtotal)} · Tax {money(invoice.tax)}</div></div><div className="mt-3 divide-y divide-white/8">{(invoice.line_items || []).length ? invoice.line_items.map((line) => <div key={line.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 py-3"><div><div className="font-bold text-slate-200">{line.name}</div><div className="text-xs text-slate-500">{line.quantity} {line.unit_label || ""} × {money(line.unit_price)}</div></div><div className="font-black text-white">{money(line.line_subtotal)}</div></div>) : <div className="py-4 text-sm text-slate-500">No detailed line items were included.</div>}</div>{invoice.notes ? <div className="mt-3 rounded-2xl border border-white/8 bg-slate-950/60 p-3 text-sm leading-6 text-slate-400">{invoice.notes}</div> : null}</div>
+    {invoice.can_pay ? <div className="mt-5 rounded-3xl border border-emerald-400/20 bg-emerald-500/[.05] p-4"><div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-200" /><div><div className="font-black text-white">Pay securely through SyncWorks</div><p className="mt-1 text-xs leading-5 text-slate-400">You will only be charged the remaining balance of {money(invoice.balance_due)}. Card payment is handled through Stripe checkout.</p></div></div><button type="button" disabled={busy} onClick={onPay} className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-5 text-sm font-black text-slate-950 disabled:opacity-50 sm:w-auto">{busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}Pay {money(invoice.balance_due)}</button></div> : invoice.derived_state === "PAID" ? <div className="mt-5 flex items-center gap-3 rounded-3xl border border-emerald-400/20 bg-emerald-500/[.05] p-4 text-emerald-100"><BadgeCheck className="h-5 w-5" /><div><div className="font-black">Paid in full</div><div className="text-xs text-emerald-100/70">No balance remains on this invoice.</div></div></div> : null}
+    <div className="mt-5 rounded-3xl border border-white/10 bg-white/[.02] p-4"><div className="font-black text-white">Activity</div><div className="mt-3 space-y-3">{(invoice.events || []).length ? invoice.events.map((event) => <div key={event.id} className="flex gap-3 text-sm"><div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-cyan-300" /><div><div className="font-bold text-slate-200">{String(event.event_type || "").replaceAll("_", " ")}{event.amount ? ` · ${money(event.amount)}` : ""}</div><div className="mt-0.5 text-xs leading-5 text-slate-500">{event.message} · {fmtTime(event.occurred_at)}</div></div></div>) : <div className="text-sm text-slate-500">No activity recorded yet.</div>}</div></div>
+  </section>;
 }
 
 export default function CustomerInvoices() {
-  const nav = useNavigate();
-
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [data, setData] = useState({ summary: {}, results: [] });
+  const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState("");
-  const [ok, setOk] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  const requestedInvoiceId = useMemo(() => Number(searchParams.get("invoice_id") || 0), [searchParams]);
 
-  const [q, setQ] = useState("");
-  const [status, setStatus] = useState("ALL");
-
-  const [items, setItems] = useState([]);
-  const [payingId, setPayingId] = useState(null);
-
-  // === API assumptions ===
-  // We try a couple common invoice list endpoints without breaking the page.
-  // If your backend uses a different route, you’ll tell me the correct one and we’ll adjust once.
   async function load() {
-    setLoading(true);
-    setErr("");
-    setOk("");
-
-    const candidates = [
-      "/invoices/",
-      "/billing/invoices/",
-      "/customer/invoices/",
-    ];
-
-    let lastError = null;
-
-    for (const path of candidates) {
-      try {
-        const r = await api.get(path);
-        const data = r.data;
-
-        // DRF pagination: { results: [...] }
-        const list = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
-        setItems(list);
-        setLoading(false);
-        return;
-      } catch (e) {
-        lastError = e;
-        // try next candidate
-      }
-    }
-
-    setItems([]);
-    setErr(
-      lastError?.response?.data?.detail ||
-        lastError?.message ||
-        "Failed to load invoices (unknown endpoint)."
-    );
-    setLoading(false);
+    setLoading(true); setError("");
+    try { setData((await getCustomerInvoiceCenter()) || { summary: {}, results: [] }); }
+    catch (e) { setError(e?.response?.data?.detail || "Invoices are temporarily unavailable."); }
+    finally { setLoading(false); }
   }
 
-  // Create Stripe Checkout Session for this invoice and redirect user to hosted checkout.
-  // Common patterns: POST /invoices/:id/checkout/ OR /invoices/:id/pay/ OR /billing/invoices/:id/checkout/
-  async function payInvoice(invoice) {
-    const id = invoice?.id;
-    if (!id) return;
-
-    setPayingId(id);
-    setErr("");
-    setOk("");
-
-    const candidates = [
-      `/invoices/${id}/checkout/`,
-      `/invoices/${id}/pay/`,
-      `/billing/invoices/${id}/checkout/`,
-      `/billing/invoices/${id}/pay/`,
-    ];
-
-    let lastError = null;
-
-    for (const path of candidates) {
-      try {
-        const r = await api.post(path);
-        const url = r.data?.url || r.data?.checkout_url || r.data?.stripe_checkout_url;
-
-        if (!url) {
-          setErr("Payment started but no Stripe Checkout URL was returned by the API.");
-          setPayingId(null);
-          return;
-        }
-
-        window.location.href = url;
-        return;
-      } catch (e) {
-        lastError = e;
-        // try next candidate
-      }
-    }
-
-    // Graceful messaging for Connect not ready yet
-    const msg = lastError?.response?.data?.detail || lastError?.message || "Unable to start payment.";
-    const connectPendingHints = [
-      "charges_enabled",
-      "payouts_enabled",
-      "onboarding",
-      "connect",
-      "transfers",
-      "not ready",
-      "pending",
-    ];
-    const looksLikeConnectPending = connectPendingHints.some((k) => String(msg || "").toLowerCase().includes(k));
-
-    setErr(
-      looksLikeConnectPending
-        ? "Business payout setup pending. Payments may be temporarily unavailable for this provider."
-        : msg
-    );
-    setPayingId(null);
+  async function openInvoice(id) {
+    setBusy(true); setError("");
+    try { setSelected(await getCustomerInvoiceDetail(id)); }
+    catch (e) { setError(e?.response?.data?.detail || "Unable to load invoice."); }
+    finally { setBusy(false); }
   }
 
-  const filtered = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    return (items || [])
-      .filter((x) => {
-        if (status !== "ALL" && String(x?.status || "").toUpperCase() !== status) return false;
-
-        if (!needle) return true;
-
-        const hay = [
-          x?.id,
-          x?.invoice_number,
-          x?.business_name,
-          x?.provider_name,
-          x?.customer_name,
-          x?.description,
-          x?.title,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-
-        return hay.includes(needle);
-      })
-      .sort((a, b) => {
-        const ad = new Date(a?.created_at || a?.updated_at || 0).getTime();
-        const bd = new Date(b?.created_at || b?.updated_at || 0).getTime();
-        return bd - ad;
-      });
-  }, [items, q, status]);
+  async function payInvoice() {
+    if (!selected?.id) return;
+    setBusy(true); setError("");
+    try {
+      const checkout = await startInvoiceCheckout(selected.id);
+      if (!checkout?.checkout_url) throw new Error("Checkout URL missing");
+      window.location.assign(checkout.checkout_url);
+    } catch (e) { setError(e?.response?.data?.detail || "Unable to start secure checkout."); setBusy(false); }
+  }
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (searchParams.get("paid") === "1") setNotice("Payment received. Your invoice status will refresh automatically.");
+    if (searchParams.get("cancelled") === "1") setNotice("Payment was cancelled. No charge was completed.");
   }, []);
 
-  return (
-    <div className="min-h-screen bg-[#020617] text-slate-100">
-      <ModeBar
-        title="Invoices"
-        subtitle="View and pay provider invoices securely"
-        rightActions={
-          <div className="flex gap-2">
-            <Button tone="slate" onClick={load} disabled={loading}>
-              Refresh
-            </Button>
-            <Button tone="slate" onClick={() => nav("/customer")}>
-              Dashboard
-            </Button>
-          </div>
-        }
-      />
+  useEffect(() => { if (requestedInvoiceId) openInvoice(requestedInvoiceId); }, [requestedInvoiceId]);
 
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
-        <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
-          <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-            <div className="flex-1 flex gap-2">
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search invoices (business, number, note)…"
-                className="w-full rounded-2xl bg-slate-950 border border-slate-800 px-4 py-2 text-sm"
-              />
+  const summary = data?.summary || {};
+  const invoices = data?.results || [];
 
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="rounded-2xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm"
-              >
-                <option value="ALL">All</option>
-                <option value="DRAFT">Draft</option>
-                <option value="SENT">Sent</option>
-                <option value="PAID">Paid</option>
-              </select>
-            </div>
-
-            <div className="text-xs text-slate-400">
-              Invoice-based payments only (no card stored on file).
-            </div>
-          </div>
-
-          {err ? (
-            <div className="mt-4 text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-2xl p-3">
-              {err}
-              <div className="text-[11px] text-red-200/80 mt-2">
-                If this is an endpoint mismatch, send me your backend invoice routes (paths only) and we’ll lock it in.
-              </div>
-            </div>
-          ) : null}
-
-          {ok ? (
-            <div className="mt-4 text-sm text-emerald-200 bg-emerald-900/15 border border-emerald-700/30 rounded-2xl p-3">
-              {ok}
-            </div>
-          ) : null}
-        </div>
-
-        <Card
-          title={`Your Invoices (${filtered.length})`}
-          right={
-            loading ? <span className="text-xs text-slate-400">Loading…</span> : null
-          }
-        >
-          {loading ? (
-            <div className="text-sm text-slate-400">Loading invoices…</div>
-          ) : filtered.length === 0 ? (
-            <div className="text-sm text-slate-400">
-              No invoices yet. When a provider completes work, you’ll see invoices here.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filtered.map((inv) => {
-                const invStatus = String(inv?.status || "").toUpperCase();
-                const amount =
-                  inv?.amount_due ??
-                  inv?.amount_total ??
-                  inv?.total ??
-                  inv?.amount ??
-                  inv?.subtotal;
-
-                const currency = inv?.currency || "USD";
-                const canPay = invStatus === "SENT";
-
-                return (
-                  <div
-                    key={inv.id || inv.invoice_number || Math.random()}
-                    className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3 flex-wrap">
-                      <div className="min-w-[240px]">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <div className="font-semibold">
-                            {inv?.invoice_number ? `Invoice #${inv.invoice_number}` : `Invoice ${inv?.id ?? ""}`}
-                          </div>
-                          <Pill status={invStatus} />
-                        </div>
-
-                        <div className="text-xs text-slate-400 mt-1">
-                          {inv?.business_name ? (
-                            <>
-                              From <span className="text-slate-200">{inv.business_name}</span>
-                            </>
-                          ) : inv?.business ? (
-                            <>
-                              From <span className="text-slate-200">{inv.business}</span>
-                            </>
-                          ) : (
-                            "From provider"
-                          )}
-                          <span className="mx-2 text-slate-600">•</span>
-                          Created {fmtDate(inv?.created_at)}
-                        </div>
-
-                        {inv?.description || inv?.note || inv?.memo ? (
-                          <div className="text-sm text-slate-200 mt-2">
-                            {inv?.description || inv?.note || inv?.memo}
-                          </div>
-                        ) : null}
-                      </div>
-
-                      <div className="text-right">
-                        <div className="text-xs text-slate-400">Amount</div>
-                        <div className="text-lg font-semibold">{money(amount, currency)}</div>
-
-                        <div className="mt-3 flex gap-2 justify-end flex-wrap">
-                          {/* If you already have an invoice detail page later, wire it here. */}
-                          {inv?.id ? (
-                            <Link
-                              to={`/customer/invoices/${inv.id}`}
-                              className="inline-flex items-center justify-center h-9 text-xs rounded-xl px-4 border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40 text-slate-200"
-                            >
-                              View
-                            </Link>
-                          ) : null}
-
-                          <Button
-                            tone="cyan"
-                            onClick={() => payInvoice(inv)}
-                            disabled={!canPay || payingId === inv?.id}
-                            title={!canPay ? "Only SENT invoices can be paid." : "Pay now"}
-                          >
-                            {payingId === inv?.id ? "Opening…" : "Pay"}
-                          </Button>
-                        </div>
-
-                        {!canPay ? (
-                          <div className="mt-2 text-[11px] text-slate-500">
-                            {invStatus === "PAID" ? "Paid ✅" : invStatus === "DRAFT" ? "Waiting to be sent" : ""}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </Card>
-      </main>
+  return <DashboardShell eyebrow="Personal · Payments" title="Invoices" subtitle="Review service invoices, track balances, and pay securely without leaving SyncWorks." rightActions={<div className="flex flex-wrap gap-2"><button type="button" onClick={() => navigate("/customer")} className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-slate-700 bg-slate-950 px-4 text-sm font-black text-slate-200"><ArrowLeft className="h-4 w-4" /> Dashboard</button><button type="button" onClick={load} disabled={loading} className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-cyan-300/30 bg-cyan-500/15 px-4 text-sm font-black text-cyan-100 disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh</button></div>}>
+    <div className="space-y-5 pb-24 lg:pb-8">
+      {notice ? <div className="rounded-3xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">{notice}</div> : null}
+      {error ? <div className="rounded-3xl border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-100">{error}</div> : null}
+      <section className="relative overflow-hidden rounded-[2rem] border border-cyan-500/20 bg-slate-950/75 p-5 md:p-7"><div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl" /><div className="relative"><div className="text-[10px] font-black uppercase tracking-[.22em] text-cyan-200">What needs attention</div><h1 className="mt-2 text-3xl font-black tracking-tight text-white">Know exactly what you owe</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">Sent invoices appear here with the original total, payments already recorded, remaining balance, due date, and a secure Pay Now action.</p></div></section>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Metric icon={CircleDollarSign} label="Outstanding" value={money(summary.outstanding)} hint="Across open invoices" /><Metric icon={FileText} label="Open invoices" value={summary.open_count || 0} hint="Awaiting full payment" /><Metric icon={CalendarClock} label="Overdue" value={summary.overdue_count || 0} hint="Past due date" /><Metric icon={CheckCircle2} label="Paid" value={summary.paid_count || 0} hint="Completed invoices" /></div>
+      {selected ? <InvoiceDetail invoice={selected} busy={busy} onClose={() => setSelected(null)} onPay={payInvoice} /> : null}
+      <section className="rounded-[2rem] border border-white/10 bg-slate-950/55 p-4 sm:p-5"><div className="flex items-center justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[.16em] text-slate-500">Your invoices</div><h2 className="mt-1 text-xl font-black text-white">Payment history and balances</h2></div><ReceiptText className="h-6 w-6 text-cyan-200" /></div><div className="mt-4 space-y-3">{loading ? <div className="flex min-h-32 items-center justify-center text-slate-500"><LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> Loading invoices…</div> : invoices.length ? invoices.map((invoice) => <InvoiceCard key={invoice.id} invoice={invoice} onOpen={openInvoice} />) : <div className="rounded-3xl border border-dashed border-white/10 p-8 text-center"><ReceiptText className="mx-auto h-8 w-8 text-slate-700" /><div className="mt-3 font-black text-slate-300">No invoices yet</div><div className="mt-1 text-sm text-slate-500">Invoices sent by businesses you work with will appear here.</div></div>}</div></section>
     </div>
-  );
+  </DashboardShell>;
 }

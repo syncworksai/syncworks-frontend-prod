@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { CalendarDays, ChevronRight, CircleDollarSign, Dumbbell, Mail, Menu, Search, Sparkles, Wrench, X } from "lucide-react";
+import { CalendarDays, ChevronRight, CircleDollarSign, Dumbbell, Mail, Menu, ReceiptText, Search, Sparkles, Wrench, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "./CustomerMobileHome.css";
 
@@ -12,6 +12,7 @@ function titleFor(ticket) {
 
 const MORE = [
   ["Marketplace & services", "Find providers, create requests and track service work.", "/customer/marketplace"],
+  ["Invoices & payments", "Review provider invoices, due dates and secure payments.", "/customer/invoices"],
   ["Health & nutrition", "Training, meals, recovery and progress.", "/customer/health"],
   ["Money", "Bills, budgets, accounts and financial planning.", "/customer/finance"],
   ["SYNC Assistant", "Your paid briefing and connected-life action layer.", "/sync"],
@@ -32,6 +33,7 @@ export default function CustomerMobileHome({
   onOpenRequests,
   onOpenCalendar,
   onOpenMessages,
+  onOpenInvoices,
   onOpenMoney,
   onOpenHealth,
   onOpenAudioSummary,
@@ -42,7 +44,7 @@ export default function CustomerMobileHome({
 
   const active = useMemo(() => list(tickets).filter((ticket) => !["COMPLETED", "PAID", "CLOSED", "CANCELLED"].includes(upper(ticket?.status))).slice(0, 2), [tickets]);
   const nextScheduled = useMemo(() => list(tickets).find((ticket) => ticket?.scheduled_start || ticket?.scheduled_at || ticket?.schedule_time || ticket?.appointment_at) || null, [tickets]);
-  const dueCount = list(invoices).filter((item) => !["PAID", "VOID"].includes(upper(item?.status))).length;
+  const dueCount = list(invoices).filter((item) => !["PAID", "VOID"].includes(upper(item?.derived_state || item?.status))).length;
 
   function submitSearch(event) {
     event.preventDefault();
@@ -73,7 +75,7 @@ export default function CustomerMobileHome({
       <div className="mt-3 grid grid-cols-3 gap-2">
         <button type="button" onClick={onOpenRequests} className="rounded-2xl border border-white/10 bg-white/[.025] p-3 text-left"><Wrench className="h-4 w-4 text-cyan-300" /><div className="mt-2 text-[9px] font-black uppercase tracking-wider text-slate-500">Requests</div><div className="mt-0.5 text-lg font-black text-white">{loading ? "…" : openCount}</div><div className="text-[9px] text-slate-500">active</div></button>
         <button type="button" onClick={onOpenCalendar} className="rounded-2xl border border-white/10 bg-white/[.025] p-3 text-left"><CalendarDays className="h-4 w-4 text-violet-300" /><div className="mt-2 text-[9px] font-black uppercase tracking-wider text-slate-500">Next</div><div className="mt-0.5 truncate text-[11px] font-black text-white">{nextScheduled ? titleFor(nextScheduled) : "No event"}</div><div className="text-[9px] text-slate-500">schedule</div></button>
-        <button type="button" onClick={onOpenMoney} className="rounded-2xl border border-white/10 bg-white/[.025] p-3 text-left"><CircleDollarSign className="h-4 w-4 text-amber-300" /><div className="mt-2 text-[9px] font-black uppercase tracking-wider text-slate-500">Due</div><div className="mt-0.5 text-[12px] font-black text-white">{dueCount ? `${dueCount} item${dueCount === 1 ? "" : "s"}` : "$0"}</div><div className="text-[9px] text-slate-500">{Number(totalDue || 0) > 0 ? "review" : "clear"}</div></button>
+        <button type="button" onClick={onOpenInvoices} className="rounded-2xl border border-white/10 bg-white/[.025] p-3 text-left"><CircleDollarSign className="h-4 w-4 text-amber-300" /><div className="mt-2 text-[9px] font-black uppercase tracking-wider text-slate-500">Due</div><div className="mt-0.5 text-[12px] font-black text-white">{dueCount ? `${dueCount} item${dueCount === 1 ? "" : "s"}` : "$0"}</div><div className="text-[9px] text-slate-500">{Number(totalDue || 0) > 0 ? `${Number(totalDue).toLocaleString(undefined,{style:"currency",currency:"USD"})}` : "clear"}</div></button>
       </div>
 
       <div className="mt-3 rounded-[1.35rem] border border-cyan-300/15 bg-cyan-500/[.04] p-3.5">
@@ -87,7 +89,7 @@ export default function CustomerMobileHome({
       {active.length ? <div className="mt-4"><div className="mb-2 flex items-center justify-between"><h2 className="text-[13px] font-black text-white">Active requests</h2><button type="button" onClick={onOpenRequests} className="text-[10px] font-black text-cyan-300">View all</button></div><div className="space-y-2">{active.map((ticket) => <button key={ticket.id} type="button" onClick={() => onOpenTicket(ticket.id)} className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[.025] p-3 text-left"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-cyan-500/10 text-cyan-300"><Wrench className="h-4 w-4" /></span><span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-black text-white">{titleFor(ticket)}</span><span className="block text-[9px] uppercase tracking-wider text-slate-500">{upper(ticket.status).replaceAll("_", " ")}</span></span><ChevronRight className="h-4 w-4 text-slate-600" /></button>)}</div></div> : null}
 
       <div className="mt-4"><div className="mb-2 flex items-center justify-between"><h2 className="text-[13px] font-black text-white">Quick access</h2><button type="button" onClick={() => setMoreOpen(true)} className="text-[10px] font-black text-cyan-300">View all</button></div><div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none]">
-        {[[CalendarDays,"Calendar",onOpenCalendar],[Mail,"Inbox",onOpenMessages],[Dumbbell,"Health",onOpenHealth],[CircleDollarSign,"Money",onOpenMoney],[Sparkles,"EDGE",()=>nav("/customer/edge")]].map(([Icon,label,action]) => <button key={label} type="button" onClick={action} className="min-w-[86px] rounded-2xl border border-white/10 bg-white/[.025] p-3 text-left"><Icon className="h-4 w-4 text-cyan-300" /><div className="mt-2 text-[10px] font-black text-white">{label}</div></button>)}
+        {[[CalendarDays,"Calendar",onOpenCalendar],[Mail,"Inbox",onOpenMessages],[ReceiptText,"Invoices",onOpenInvoices],[Dumbbell,"Health",onOpenHealth],[CircleDollarSign,"Money",onOpenMoney],[Sparkles,"EDGE",()=>nav("/customer/edge")]].map(([Icon,label,action]) => <button key={label} type="button" onClick={action} className="min-w-[86px] rounded-2xl border border-white/10 bg-white/[.025] p-3 text-left"><Icon className="h-4 w-4 text-cyan-300" /><div className="mt-2 text-[10px] font-black text-white">{label}</div></button>)}
       </div></div>
 
       <button type="button" onClick={() => nav("/customer/plans")} className="mt-4 flex w-full items-center gap-3 rounded-[1.3rem] border border-violet-400/15 bg-violet-500/[.04] p-3.5 text-left"><span className="min-w-0 flex-1"><span className="block text-[12px] font-black text-white">What can SyncWorks do for me?</span><span className="mt-0.5 block text-[10px] leading-4 text-slate-500">Compare free and paid features, pricing and real benefits.</span></span><ChevronRight className="h-4 w-4 shrink-0 text-violet-300" /></button>
