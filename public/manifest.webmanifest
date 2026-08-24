@@ -1,0 +1,17 @@
+{
+  "name": "SyncWorks",
+  "short_name": "SyncWorks",
+  "description": "SyncWorks — Work Smarter. Together.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020814",
+  "theme_color": "#06172f",
+  "icons": [
+    {
+      "src": "/brand/syncworks-app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

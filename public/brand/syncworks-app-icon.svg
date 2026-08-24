@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">SyncWorks app icon</title>
+  <desc id="desc">Glowing SyncWorks S orb on a dark navy background.</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="70%">
+      <stop offset="0" stop-color="#0c2f62"/>
+      <stop offset="0.58" stop-color="#06172f"/>
+      <stop offset="1" stop-color="#020814"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00e5ff"/>
+      <stop offset="0.52" stop-color="#1268ff"/>
+      <stop offset="1" stop-color="#b14cff"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="0.15" y1="0.08" x2="0.85" y2="0.92">
+      <stop offset="0" stop-color="#1ff4ff"/>
+      <stop offset="0.44" stop-color="#0b86ff"/>
+      <stop offset="0.72" stop-color="#6f5cff"/>
+      <stop offset="1" stop-color="#e85cff"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="184" fill="#031125" stroke="#13335f" stroke-width="18"/>
+  <circle cx="256" cy="256" r="199" fill="none" stroke="url(#ring)" stroke-width="12" filter="url(#glow)"/>
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#0e4e8d" stroke-opacity=".65" stroke-width="5"/>
+  <text x="256" y="340" text-anchor="middle" font-family="Arial Black, Inter, Arial, sans-serif" font-size="262" font-weight="900" font-style="italic" letter-spacing="-22" fill="url(#mark)" filter="url(#glow)">S</text>
+</svg>
