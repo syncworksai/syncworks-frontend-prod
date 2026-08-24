@@ -20,6 +20,7 @@ import CustomerHealth from "./pages/CustomerHealth";
 import CustomerEdge from "./pages/CustomerEdge";
 import CustomerPlans from "./pages/CustomerPlans";
 import CustomerTickets from "./pages/CustomerTickets";
+import CustomerInvoices from "./pages/CustomerInvoices";
 import CustomerFavorites from "./pages/CustomerFavorites";
 import CustomerBusinessCards from "./pages/CustomerBusinessCards";
 import CustomerBusinessCardDetail from "./pages/CustomerBusinessCardDetail";
@@ -144,6 +145,7 @@ export default function App() {
         <Route path="/customer/marketplace" element={<ProtectedRoute><CustomerMarketplaceAvailability /></ProtectedRoute>} />
         <Route path="/customer/inbox" element={<ProtectedRoute><InboxPage /></ProtectedRoute>} />
         <Route path="/customer/tickets" element={<ProtectedRoute><CustomerTickets /></ProtectedRoute>} />
+        <Route path="/customer/invoices" element={<ProtectedRoute><CustomerInvoices /></ProtectedRoute>} />
         <Route path="/customer/settings" element={<ProtectedRoute><CustomerSettings /></ProtectedRoute>} />
         <Route path="/customer/finance" element={<ProtectedRoute><CustomerFinance /></ProtectedRoute>} />
         <Route path="/customer/health" element={<ProtectedRoute><CustomerHealth /></ProtectedRoute>} />
