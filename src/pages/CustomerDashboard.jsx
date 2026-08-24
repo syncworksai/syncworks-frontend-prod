@@ -46,6 +46,11 @@ function money(value) {
   return Number(value || 0).toLocaleString("en-US", { style: "currency", currency: "USD" });
 }
 
+function hasProfile(profiles, key) {
+  if (!profiles || typeof profiles !== "object") return false;
+  return Object.keys(profiles).some((name) => String(name).toLowerCase() === String(key).toLowerCase());
+}
+
 function NavItem({ icon: Icon, label, active = false, onClick }) {
   return (
     <button type="button" onClick={onClick} className={`flex min-h-10 w-full items-center gap-3 rounded-xl border px-3 text-left text-xs font-bold transition ${active ? "border-cyan-400/25 bg-cyan-500/10 text-cyan-100" : "border-transparent text-slate-400 hover:border-white/10 hover:bg-white/[.04] hover:text-white"}`}>
@@ -77,7 +82,7 @@ function ToolTile({ icon: Icon, label, detail, onClick, badge }) {
 
 export default function CustomerDashboard() {
   const nav = useNavigate();
-  const { user, myBusinesses, moduleAccess } = useAuth();
+  const { user, profiles, myBusinesses, moduleAccess } = useAuth();
   const [audioOpen, setAudioOpen] = useState(false);
   const [tickets, setTickets] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -96,6 +101,9 @@ export default function CustomerDashboard() {
   const dueInvoices = useMemo(() => invoices.filter((item) => !["PAID", "VOID"].includes(String(item?.derived_state || item?.status || "").toUpperCase())), [invoices]);
   const amountDue = useMemo(() => dueInvoices.reduce((sum, item) => sum + Number(item?.balance_due ?? item?.total ?? 0), 0), [dueInvoices]);
   const businessConnected = (Array.isArray(myBusinesses) && myBusinesses.length > 0) || !!moduleAccess?.sbo;
+  const pmConnected = hasProfile(profiles, "pm") || !!moduleAccess?.pm;
+  const tenantConnected = hasProfile(profiles, "tenant");
+  const propertyRoute = pmConnected ? "/pm" : tenantConnected ? "/tenant" : "/tenant/accept";
 
   function askSync(prompt) {
     sessionStorage.setItem("syncAssistantPendingPrompt", prompt);
@@ -111,8 +119,8 @@ export default function CustomerDashboard() {
     [Search, "EDGE", "Sports research and paper-trading tools.", "/customer/edge", "beta"],
     [Users, "Family", "Shared routines, plans and household coordination.", "/customer/family"],
     [Network, "Social", "Groups, events, shared collections and connections.", "/connect"],
-    [Building2, "Property", "Rental property, tenant and maintenance workflows.", "/pm"],
-    [BriefcaseBusiness, "Business", "Customers, leads, jobs and team operations.", businessConnected ? "/sbo" : "/settings"],
+    [Building2, "Property", "Rental property, tenant and maintenance workflows.", propertyRoute],
+    [BriefcaseBusiness, "Business", "Customers, leads, jobs and team operations.", businessConnected ? "/sbo" : "/customer/settings"],
     [HeartHandshake, "Plans & pricing", "See what is free, what is paid, and why it is useful.", "/customer/plans"],
     [Settings, "Connections", "Connect calendars, email and other services.", "/customer/settings"],
   ];
