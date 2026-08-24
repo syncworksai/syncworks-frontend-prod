@@ -4,6 +4,7 @@ import HealthDashboard from "./HealthDashboard";
 import { loadCloudWorkoutHistory } from "./healthWorkoutCloudSync";
 import { currentDayWorkout, localYmd } from "./healthWorkoutDateLifecycle";
 import { chooseRecoverySafeWorkout } from "./healthWorkoutRecoveryGuard";
+import "./healthElectricBlueMobile.css";
 
 function workoutLabel(workout = {}) {
   return String(
@@ -179,18 +180,18 @@ export default function HealthPremiumHome({
   return (
     <div className="space-y-3">
       {decision?.revised ? (
-        <section className="rounded-[1.5rem] border border-lime-300/25 bg-lime-300/[0.07] p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <section className="rounded-[1.25rem] border border-cyan-300/25 bg-cyan-300/[0.07] p-3 sm:p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <div className="text-[9px] font-black uppercase tracking-[0.18em] text-lime-200">
+              <div className="text-[9px] font-black uppercase tracking-[0.16em] text-cyan-200">
                 AI revised plan
               </div>
-              <div className="mt-1 text-lg font-black text-white">
+              <div className="mt-1 text-base font-black text-white sm:text-lg">
                 {decision.needsRebuild
                   ? "Today's workout needs a recovery-safe rebuild"
                   : `${workoutLabel(decision.workout)} replaces today's repeated muscle focus`}
               </div>
-              <div className="mt-1 text-xs leading-5 text-slate-300">
+              <div className="mt-1 text-[11px] leading-4 text-slate-300 sm:text-xs sm:leading-5">
                 {decision.reason}
               </div>
             </div>
@@ -201,7 +202,7 @@ export default function HealthPremiumHome({
                   ? onOpen?.("planner")
                   : guardedStartWorkout(decision.workout)
               }
-              className="h-11 shrink-0 rounded-xl border border-lime-300/35 bg-lime-300/15 px-4 text-xs font-black text-lime-100"
+              className="h-10 shrink-0 rounded-xl border border-cyan-300/35 bg-cyan-300/15 px-4 text-xs font-black text-cyan-100"
             >
               {decision.needsRebuild ? "Rebuild Today" : "Start Revised Workout"}
             </button>
