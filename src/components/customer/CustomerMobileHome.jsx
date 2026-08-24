@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { CalendarDays, ChevronRight, CircleDollarSign, Dumbbell, Mail, Menu, ReceiptText, Search, Sparkles, Wrench, X } from "lucide-react";
+import { CalendarDays, ChevronRight, CircleDollarSign, CloudSun, Dumbbell, Mail, MapPinned, Menu, Mic2, ReceiptText, Search, ShoppingBag, Sparkles, Utensils, Wrench, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "./CustomerMobileHome.css";
 
@@ -21,6 +21,10 @@ const MORE = [
   ["Plans & features", "See pricing and why each paid feature may be useful.", "/customer/plans"],
 ];
 
+function QuickIntent({ icon: Icon, label, onClick, primary = false }) {
+  return <button type="button" onClick={onClick} className={`min-w-[104px] rounded-2xl border p-3 text-left ${primary ? "border-cyan-300/35 bg-gradient-to-br from-cyan-500/18 to-violet-500/10" : "border-white/10 bg-white/[.025]"}`}><Icon className={`h-4 w-4 ${primary ? "text-cyan-200" : "text-slate-300"}`} /><div className="mt-2 text-[10px] font-black leading-4 text-white">{label}</div></button>;
+}
+
 export default function CustomerMobileHome({
   displayName,
   tickets,
@@ -37,6 +41,7 @@ export default function CustomerMobileHome({
   onOpenMoney,
   onOpenHealth,
   onOpenAudioSummary,
+  onQuickPrompt,
 }) {
   const nav = useNavigate();
   const [query, setQuery] = useState("");
@@ -60,7 +65,7 @@ export default function CustomerMobileHome({
             <div className="min-w-0">
               <div className="customer-mobile-brand">SyncWorks Personal</div>
               <h1 className="mt-1 text-[24px] font-black tracking-tight text-white">Hey {displayName}</h1>
-              <p className="mt-1 text-[12px] text-slate-400">What do you need done today?</p>
+              <p className="mt-1 text-[12px] text-slate-400">What do you need handled today?</p>
             </div>
             <button type="button" onClick={() => setMoreOpen(true)} className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/[.04] text-slate-200" aria-label="Open more"><Menu className="h-5 w-5" /></button>
           </div>
@@ -72,29 +77,30 @@ export default function CustomerMobileHome({
         </div>
       </div>
 
+      <div className="-mx-3 mt-3 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-2">
+          <QuickIntent icon={Sparkles} label="Book service" primary onClick={onNewRequest} />
+          <QuickIntent icon={Utensils} label="Food nearby" onClick={() => onQuickPrompt?.("Find good food near me right now.")} />
+          <QuickIntent icon={ShoppingBag} label="Shops nearby" onClick={() => onQuickPrompt?.("Find useful shops near me right now.")} />
+          <QuickIntent icon={CloudSun} label="Weather" onClick={() => onQuickPrompt?.("What is the weather where I am and what matters for today?")} />
+          <QuickIntent icon={MapPinned} label="Traffic" onClick={() => onQuickPrompt?.("Check traffic around me and tell me if anything affects my schedule.")} />
+          <QuickIntent icon={Mic2} label="Play briefing" onClick={onOpenAudioSummary} />
+        </div>
+      </div>
+
       <div className="mt-3 grid grid-cols-3 gap-2">
         <button type="button" onClick={onOpenRequests} className="rounded-2xl border border-white/10 bg-white/[.025] p-3 text-left"><Wrench className="h-4 w-4 text-cyan-300" /><div className="mt-2 text-[9px] font-black uppercase tracking-wider text-slate-500">Requests</div><div className="mt-0.5 text-lg font-black text-white">{loading ? "…" : openCount}</div><div className="text-[9px] text-slate-500">active</div></button>
         <button type="button" onClick={onOpenCalendar} className="rounded-2xl border border-white/10 bg-white/[.025] p-3 text-left"><CalendarDays className="h-4 w-4 text-violet-300" /><div className="mt-2 text-[9px] font-black uppercase tracking-wider text-slate-500">Next</div><div className="mt-0.5 truncate text-[11px] font-black text-white">{nextScheduled ? titleFor(nextScheduled) : "No event"}</div><div className="text-[9px] text-slate-500">schedule</div></button>
         <button type="button" onClick={onOpenInvoices} className="rounded-2xl border border-white/10 bg-white/[.025] p-3 text-left"><CircleDollarSign className="h-4 w-4 text-amber-300" /><div className="mt-2 text-[9px] font-black uppercase tracking-wider text-slate-500">Due</div><div className="mt-0.5 text-[12px] font-black text-white">{dueCount ? `${dueCount} item${dueCount === 1 ? "" : "s"}` : "$0"}</div><div className="text-[9px] text-slate-500">{Number(totalDue || 0) > 0 ? `${Number(totalDue).toLocaleString(undefined,{style:"currency",currency:"USD"})}` : "clear"}</div></button>
       </div>
 
-      <div className="mt-3 rounded-[1.35rem] border border-cyan-300/15 bg-cyan-500/[.04] p-3.5">
-        <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-cyan-300/40 bg-cyan-500/10 text-cyan-200 shadow-[0_0_22px_rgba(34,211,238,.14)]"><Sparkles className="h-4 w-4" /></span>
-          <div className="min-w-0 flex-1"><div className="text-[10px] font-black uppercase tracking-[.16em] text-cyan-300">SYNC Assistant</div><div className="mt-0.5 text-[13px] font-black text-white">Your day, already reviewed.</div><div className="mt-0.5 truncate text-[10px] text-slate-500">Calendar · inbox · Health · Money · weather · requests</div></div>
-          <button type="button" onClick={onOpenAudioSummary} className="shrink-0 rounded-xl border border-cyan-300/25 bg-cyan-500/10 px-3 py-2 text-[10px] font-black text-cyan-100">Hear brief</button>
-        </div>
-      </div>
+      {active.length ? <div className="mt-4"><div className="mb-2 flex items-center justify-between"><h2 className="text-[13px] font-black text-white">Service activity</h2><button type="button" onClick={onOpenRequests} className="text-[10px] font-black text-cyan-300">View all</button></div><div className="space-y-2">{active.map((ticket) => <button key={ticket.id} type="button" onClick={() => onOpenTicket(ticket.id)} className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[.025] p-3 text-left"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-cyan-500/10 text-cyan-300"><Wrench className="h-4 w-4" /></span><span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-black text-white">{titleFor(ticket)}</span><span className="block text-[9px] uppercase tracking-wider text-slate-500">{upper(ticket.status).replaceAll("_", " ")}</span></span><ChevronRight className="h-4 w-4 text-slate-600" /></button>)}</div></div> : null}
 
-      {active.length ? <div className="mt-4"><div className="mb-2 flex items-center justify-between"><h2 className="text-[13px] font-black text-white">Active requests</h2><button type="button" onClick={onOpenRequests} className="text-[10px] font-black text-cyan-300">View all</button></div><div className="space-y-2">{active.map((ticket) => <button key={ticket.id} type="button" onClick={() => onOpenTicket(ticket.id)} className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[.025] p-3 text-left"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-cyan-500/10 text-cyan-300"><Wrench className="h-4 w-4" /></span><span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-black text-white">{titleFor(ticket)}</span><span className="block text-[9px] uppercase tracking-wider text-slate-500">{upper(ticket.status).replaceAll("_", " ")}</span></span><ChevronRight className="h-4 w-4 text-slate-600" /></button>)}</div></div> : null}
-
-      <div className="mt-4"><div className="mb-2 flex items-center justify-between"><h2 className="text-[13px] font-black text-white">Quick access</h2><button type="button" onClick={() => setMoreOpen(true)} className="text-[10px] font-black text-cyan-300">View all</button></div><div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none]">
+      <div className="mt-4"><div className="mb-2 flex items-center justify-between"><h2 className="text-[13px] font-black text-white">Tools</h2><button type="button" onClick={() => setMoreOpen(true)} className="text-[10px] font-black text-cyan-300">View all</button></div><div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none]">
         {[[CalendarDays,"Calendar",onOpenCalendar],[Mail,"Inbox",onOpenMessages],[ReceiptText,"Invoices",onOpenInvoices],[Dumbbell,"Health",onOpenHealth],[CircleDollarSign,"Money",onOpenMoney],[Sparkles,"EDGE",()=>nav("/customer/edge")]].map(([Icon,label,action]) => <button key={label} type="button" onClick={action} className="min-w-[86px] rounded-2xl border border-white/10 bg-white/[.025] p-3 text-left"><Icon className="h-4 w-4 text-cyan-300" /><div className="mt-2 text-[10px] font-black text-white">{label}</div></button>)}
       </div></div>
 
       <button type="button" onClick={() => nav("/customer/plans")} className="mt-4 flex w-full items-center gap-3 rounded-[1.3rem] border border-violet-400/15 bg-violet-500/[.04] p-3.5 text-left"><span className="min-w-0 flex-1"><span className="block text-[12px] font-black text-white">What can SyncWorks do for me?</span><span className="mt-0.5 block text-[10px] leading-4 text-slate-500">Compare free and paid features, pricing and real benefits.</span></span><ChevronRight className="h-4 w-4 shrink-0 text-violet-300" /></button>
-
-      <button type="button" onClick={onNewRequest} className="mt-4 min-h-12 w-full rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 px-4 text-[12px] font-black text-white shadow-[0_0_28px_rgba(34,211,238,.14)]">+ New service request</button>
 
       {moreOpen ? <div className="fixed inset-0 z-[220] bg-black/70 backdrop-blur-sm" onMouseDown={() => setMoreOpen(false)}><aside className="absolute inset-y-0 right-0 w-[88%] max-w-sm overflow-y-auto border-l border-cyan-300/15 bg-[#020817] p-4" onMouseDown={(e) => e.stopPropagation()}><div className="flex items-center justify-between"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-300">SyncWorks</div><h2 className="mt-1 text-xl font-black text-white">Everything else</h2></div><button type="button" onClick={() => setMoreOpen(false)} className="grid h-10 w-10 place-items-center rounded-2xl border border-white/10"><X className="h-5 w-5" /></button></div><div className="mt-4 space-y-2">{MORE.map(([title,body,url]) => <button key={title} type="button" onClick={() => nav(url)} className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[.025] p-3 text-left"><span className="min-w-0 flex-1"><span className="block text-[12px] font-black text-white">{title}</span><span className="mt-0.5 block text-[10px] leading-4 text-slate-500">{body}</span></span><ChevronRight className="h-4 w-4 shrink-0 text-slate-600" /></button>)}</div></aside></div> : null}
     </section>
