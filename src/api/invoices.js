@@ -21,3 +21,18 @@ export async function invoiceAction(invoiceId, actionName, payload = {}) {
   const response = await api.post(`/sync-ai/business/invoices/${invoiceId}/${actionName}/`, payload);
   return response?.data || {};
 }
+
+export async function getBillingAutomationSettings() {
+  const response = await api.get("/sync-ai/business/billing-automation/");
+  return response?.data || {};
+}
+
+export async function saveBillingAutomationSettings(payload = {}) {
+  const response = await api.patch("/sync-ai/business/billing-automation/", payload);
+  return response?.data || {};
+}
+
+export async function getReceivablesIntelligence() {
+  const response = await api.get("/sync-ai/business/receivables/");
+  return response?.data || { aging: {}, customers: [], settings: {} };
+}
