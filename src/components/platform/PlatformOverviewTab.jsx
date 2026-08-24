@@ -1,6 +1,7 @@
 // src/components/platform/PlatformOverviewTab.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import api from "../../api/client";
+import ProductionReadinessCommandCenter from "./ProductionReadinessCommandCenter";
 import {
   ResponsiveContainer,
   LineChart,
@@ -88,15 +89,14 @@ function ModePill({ active, onClick, label }) {
   );
 }
 
-// 🎨 Space-age lines (you asked for colorful)
 const ROLE_LINE_STYLE = {
-  CUSTOMER: { stroke: "#22d3ee" }, // cyan
-  SBO: { stroke: "#a78bfa" }, // purple
-  EMPLOYEE: { stroke: "#34d399" }, // emerald
-  TENANT: { stroke: "#f472b6" }, // pink
-  INVESTOR: { stroke: "#fbbf24" }, // amber
-  PM: { stroke: "#60a5fa" }, // blue
-  SALES_OS: { stroke: "#fb7185" }, // rose
+  CUSTOMER: { stroke: "#22d3ee" },
+  SBO: { stroke: "#a78bfa" },
+  EMPLOYEE: { stroke: "#34d399" },
+  TENANT: { stroke: "#f472b6" },
+  INVESTOR: { stroke: "#fbbf24" },
+  PM: { stroke: "#60a5fa" },
+  SALES_OS: { stroke: "#fb7185" },
 };
 
 export default function PlatformOverviewTab() {
@@ -104,8 +104,6 @@ export default function PlatformOverviewTab() {
   const [err, setErr] = useState("");
   const [kpis, setKpis] = useState(null);
   const [alerts, setAlerts] = useState(null);
-
-  // timeframe: 7 / 30 / 365
   const [days, setDays] = useState(30);
 
   async function load() {
@@ -138,13 +136,11 @@ export default function PlatformOverviewTab() {
     return a && b ? `${a} → ${b}` : "";
   }, [kpis]);
 
-  // Existing daily chart from backend (signups/businesses/locked)
   const baseChart = useMemo(() => {
     const arr = kpis?.chart || [];
     return Array.isArray(arr) ? arr : [];
   }, [kpis]);
 
-  // NEW: role growth chart from backend: kpis.role_chart = [{dateShort, CUSTOMER, SBO, EMPLOYEE...}]
   const roleChart = useMemo(() => {
     const arr = kpis?.role_chart || [];
     return Array.isArray(arr) ? arr : [];
@@ -159,13 +155,14 @@ export default function PlatformOverviewTab() {
 
   return (
     <div className="space-y-5">
+      <ProductionReadinessCommandCenter />
+
       {err ? (
         <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/20 rounded-2xl p-3">
           {err}
         </div>
       ) : null}
 
-      {/* TOP: “Role Growth Engine” */}
       <div className="rounded-3xl border border-slate-800 bg-slate-950/35 p-4 flex items-center justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <div className="text-sm font-semibold text-slate-100">Role Growth Engine</div>
@@ -178,7 +175,6 @@ export default function PlatformOverviewTab() {
           <ModePill active={days === 7} onClick={() => setDays(7)} label="7D" />
           <ModePill active={days === 30} onClick={() => setDays(30)} label="30D" />
           <ModePill active={days === 365} onClick={() => setDays(365)} label="365D" />
-
           <Badge tone="cyan">Users: {kpis?.users_total ?? "—"}</Badge>
           <Badge tone="purple">Businesses: {kpis?.businesses_total ?? "—"}</Badge>
           <Badge tone="amber">Missing cards: {alerts?.executive?.billing?.businesses_missing_card ?? "—"}</Badge>
@@ -186,7 +182,6 @@ export default function PlatformOverviewTab() {
           <Badge tone={alerts?.alerts_red ? "red" : alerts?.alerts_yellow ? "amber" : "emerald"}>
             Alerts: {alerts?.executive?.alerts_count ?? 0}
           </Badge>
-
           <button
             type="button"
             onClick={load}
@@ -201,7 +196,6 @@ export default function PlatformOverviewTab() {
 
       {!loading && kpis ? (
         <>
-          {/* Role growth multi-line chart */}
           <GlassCard title="Growth by role (daily)" right="multi-line • color-coded">
             <div className="h-80">
               {roleChart.length ? (
@@ -242,7 +236,6 @@ export default function PlatformOverviewTab() {
             </div>
           </GlassCard>
 
-          {/* KPI cards */}
           <div className="grid lg:grid-cols-3 gap-4">
             <GlassCard title="Growth" right={`${days}d snapshot`}>
               <div className="grid grid-cols-2 gap-3">
@@ -293,7 +286,6 @@ export default function PlatformOverviewTab() {
             </GlassCard>
           </div>
 
-          {/* Pie */}
           <div className="grid lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
               <GlassCard title="Platform growth (legacy)" right="signups • businesses • locked">
