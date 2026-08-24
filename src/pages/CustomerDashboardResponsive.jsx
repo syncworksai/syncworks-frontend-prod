@@ -50,6 +50,11 @@ export default function CustomerDashboardResponsive() {
     window.setTimeout(() => window.dispatchEvent(new CustomEvent("sync-assistant:play-briefing")), 30);
   }
 
+  function openQuickPrompt(prompt) {
+    sessionStorage.setItem("syncAssistantPendingPrompt", prompt);
+    nav("/sync?return=%2Fcustomer");
+  }
+
   return (
     <>
       <div className="lg:hidden min-h-dvh bg-[#020617] px-3 pb-24 pt-3 text-slate-100">
@@ -60,7 +65,6 @@ export default function CustomerDashboardResponsive() {
           openCount={openTickets.length}
           totalDue={totalDue}
           loading={loading}
-          onRefresh={load}
           onNewRequest={() => nav("/customer/new-request")}
           onOpenTicket={(id) => nav(`/tickets/${id}`)}
           onOpenRequests={() => nav("/customer/tickets")}
@@ -70,7 +74,7 @@ export default function CustomerDashboardResponsive() {
           onOpenMoney={() => nav("/customer/finance")}
           onOpenHealth={() => nav("/customer/health")}
           onOpenAudioSummary={playBriefing}
-          onOpenMore={() => nav("/customer/settings")}
+          onQuickPrompt={openQuickPrompt}
         />
 
         <nav className="fixed inset-x-3 bottom-[max(.45rem,env(safe-area-inset-bottom))] z-[150] grid grid-cols-5 items-end rounded-[1.4rem] border border-white/10 bg-[#030817]/95 px-2 py-2 shadow-[0_-10px_50px_rgba(2,6,23,.8)] backdrop-blur-2xl">
