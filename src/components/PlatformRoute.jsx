@@ -5,8 +5,10 @@ import { useAuth } from "../auth/AuthContext";
 import GodModeCompanyOperations from "../pages/GodModeCompanyOperations";
 import GlobalModeBar from "./navigation/GlobalModeBar";
 
+const GOD_MODE_EMAIL = "jacoblord7@outlook.com";
+
 export default function PlatformRoute({ children }) {
-  const { booting, isAuthed, isPlatformAdmin } = useAuth();
+  const { booting, isAuthed, user } = useAuth();
   const location = useLocation();
 
   if (booting) {
@@ -14,7 +16,10 @@ export default function PlatformRoute({ children }) {
   }
 
   if (!isAuthed) return <Navigate to="/login" replace />;
-  if (!isPlatformAdmin) return <Navigate to="/customer" replace />;
+
+  const email = String(user?.email || "").trim().toLowerCase();
+  const isGodMode = email === GOD_MODE_EMAIL;
+  if (!isGodMode) return <Navigate to="/customer" replace />;
 
   const isGodModeHome = location.pathname === "/platform" && !new URLSearchParams(location.search).has("tab");
 
