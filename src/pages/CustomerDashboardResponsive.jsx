@@ -32,7 +32,7 @@ export default function CustomerDashboardResponsive() {
     setLoading(true);
     const [ticketResult, invoiceResult] = await Promise.allSettled([
       api.get("/tickets/"),
-      api.get("/cash-fee-invoices/"),
+      api.get("/sync-ai/customer/invoices/"),
     ]);
     setTickets(ticketResult.status === "fulfilled" ? safeList(ticketResult.value?.data) : []);
     setInvoices(invoiceResult.status === "fulfilled" ? safeList(invoiceResult.value?.data) : []);
@@ -42,8 +42,8 @@ export default function CustomerDashboardResponsive() {
   useEffect(() => { load(); }, []);
 
   const openTickets = useMemo(() => tickets.filter((item) => !["COMPLETED", "CLOSED", "CANCELLED", "PAID"].includes(String(item?.status || "").toUpperCase())), [tickets]);
-  const dueInvoices = useMemo(() => invoices.filter((item) => !["PAID", "VOID"].includes(String(item?.status || "").toUpperCase())), [invoices]);
-  const totalDue = useMemo(() => dueInvoices.reduce((sum, item) => sum + Number(item?.amount || item?.total || Number(item?.amount_cents || 0) / 100 || 0), 0), [dueInvoices]);
+  const dueInvoices = useMemo(() => invoices.filter((item) => !["PAID", "VOID"].includes(String(item?.derived_state || item?.status || "").toUpperCase())), [invoices]);
+  const totalDue = useMemo(() => dueInvoices.reduce((sum, item) => sum + Number(item?.balance_due ?? item?.total ?? 0), 0), [dueInvoices]);
 
   function playBriefing() {
     setDockOpen(true);
@@ -66,6 +66,7 @@ export default function CustomerDashboardResponsive() {
           onOpenRequests={() => nav("/customer/tickets")}
           onOpenCalendar={() => nav("/calendar")}
           onOpenMessages={() => nav("/customer/inbox")}
+          onOpenInvoices={() => nav("/customer/invoices")}
           onOpenMoney={() => nav("/customer/finance")}
           onOpenHealth={() => nav("/customer/health")}
           onOpenAudioSummary={playBriefing}
