@@ -1,0 +1,135 @@
+/* SyncWorks Health — compact electric-blue mobile UX override */
+.health-obsidian-electric {
+  --sw-health-green: #34dfff;
+  --sw-health-green-bright: #72eaff;
+  --sw-health-green-deep: #2563eb;
+  --sw-health-green-muted: #8defff;
+  --sw-health-border: rgba(52, 223, 255, 0.18);
+  --sw-health-border-strong: rgba(52, 223, 255, 0.46);
+  --sw-health-glow: rgba(52, 223, 255, 0.18);
+  --sw-health-glow-strong: rgba(37, 99, 235, 0.34);
+  background:
+    radial-gradient(circle at 85% 8%, rgba(52,223,255,0.08), transparent 18rem),
+    radial-gradient(circle at 10% 38%, rgba(37,99,235,0.08), transparent 20rem),
+    linear-gradient(180deg, #020617 0%, #030712 52%, #02040b 100%) !important;
+}
+
+.health-obsidian-electric :where(section, article)[class*="rounded-"] {
+  border-color: rgba(52,223,255,0.16) !important;
+  background: linear-gradient(145deg, rgba(7,16,30,0.98), rgba(3,8,18,0.995)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.025), 0 12px 34px rgba(0,0,0,.34) !important;
+}
+
+.health-obsidian-electric :where(section, article)[class*="rounded-"]::after {
+  background: linear-gradient(90deg, transparent, rgba(52,223,255,.9), transparent) !important;
+  filter: drop-shadow(0 0 8px rgba(52,223,255,.44)) !important;
+}
+
+.health-obsidian-electric [class*="text-lime-"],
+.health-obsidian-electric [class*="text-emerald-"],
+.health-obsidian-electric [class*="text-fuchsia-"],
+.health-obsidian-electric [class*="text-violet-"],
+.health-obsidian-electric [class*="text-purple-"] {
+  color: #7dd3fc !important;
+}
+
+.health-obsidian-electric [class*="border-lime-"],
+.health-obsidian-electric [class*="border-emerald-"],
+.health-obsidian-electric [class*="border-fuchsia-"],
+.health-obsidian-electric [class*="border-violet-"],
+.health-obsidian-electric [class*="border-purple-"] {
+  border-color: rgba(52,223,255,.30) !important;
+}
+
+.health-obsidian-electric [class*="bg-lime-"],
+.health-obsidian-electric [class*="bg-emerald-"],
+.health-obsidian-electric [class*="bg-fuchsia-"],
+.health-obsidian-electric [class*="bg-violet-"],
+.health-obsidian-electric [class*="bg-purple-"] {
+  background-color: rgba(37,99,235,.10) !important;
+}
+
+.health-obsidian-electric button[class*="bg-gradient"],
+.health-obsidian-electric a[class*="bg-gradient"],
+.health-obsidian-electric button[class*="from-cyan"],
+.health-obsidian-electric button[class*="from-emerald"],
+.health-obsidian-electric button[class*="from-lime"] {
+  border: 1px solid rgba(125,211,252,.46) !important;
+  color: #fff !important;
+  background: linear-gradient(135deg, #06b6d4 0%, #2563eb 55%, #4f46e5 100%) !important;
+  box-shadow: 0 8px 22px rgba(37,99,235,.24), inset 0 1px 0 rgba(255,255,255,.18) !important;
+}
+
+.health-obsidian-electric .health-workout-start-button {
+  border-color: rgba(125,211,252,.72) !important;
+  color: #fff !important;
+  background: linear-gradient(135deg, #22d3ee 0%, #2563eb 58%, #4338ca 100%) !important;
+  box-shadow: 0 0 22px rgba(34,211,238,.22), 0 12px 30px rgba(37,99,235,.22) !important;
+}
+
+@media (max-width: 767px) {
+  .health-obsidian-electric {
+    font-size: 14px;
+  }
+
+  .health-obsidian-electric main {
+    padding-left: .65rem !important;
+    padding-right: .65rem !important;
+  }
+
+  .health-obsidian-electric :where(section, article)[class*="rounded-"] {
+    border-radius: 1rem !important;
+  }
+
+  .health-obsidian-electric :where(section, article)[class*="p-5"] {
+    padding: .85rem !important;
+  }
+
+  .health-obsidian-electric :where(section, article)[class*="p-4"] {
+    padding: .75rem !important;
+  }
+
+  .health-obsidian-electric h1[class*="text-3xl"] {
+    font-size: 1.45rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .health-obsidian-electric h2[class*="text-2xl"],
+  .health-obsidian-electric h3[class*="text-2xl"] {
+    font-size: 1.15rem !important;
+    line-height: 1.25 !important;
+  }
+
+  .health-obsidian-electric h2[class*="text-xl"],
+  .health-obsidian-electric h3[class*="text-xl"] {
+    font-size: 1rem !important;
+  }
+
+  .health-obsidian-electric p[class*="text-sm"] {
+    font-size: .75rem !important;
+    line-height: 1.2rem !important;
+  }
+
+  .health-obsidian-electric button {
+    min-height: 38px !important;
+  }
+
+  .health-obsidian-electric button[class*="h-11"] {
+    height: 2.45rem !important;
+  }
+
+  .health-obsidian-electric button[class*="h-10"] {
+    height: 2.25rem !important;
+  }
+
+  .health-obsidian-electric [class*="gap-5"] { gap: .75rem !important; }
+  .health-obsidian-electric [class*="gap-4"] { gap: .65rem !important; }
+  .health-obsidian-electric [class*="mt-5"] { margin-top: .85rem !important; }
+  .health-obsidian-electric [class*="mt-4"] { margin-top: .7rem !important; }
+
+  .health-obsidian-electric .health-mobile-priority-action {
+    position: sticky;
+    bottom: calc(5.4rem + env(safe-area-inset-bottom));
+    z-index: 85;
+  }
+}
