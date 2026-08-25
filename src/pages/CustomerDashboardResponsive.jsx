@@ -3,6 +3,7 @@ import { Home, Inbox, LayoutGrid, MoreHorizontal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import ModeBar from "../components/ModeBar";
 import CustomerDashboard from "./CustomerDashboard";
 import CustomerMobileHome from "../components/customer/CustomerMobileHome";
 import SyncAssistantStickyDock from "../components/sync/SyncAssistantStickyDock";
@@ -57,6 +58,10 @@ export default function CustomerDashboardResponsive() {
 
   return (
     <>
+      <div className="lg:hidden bg-[#020617] text-slate-100">
+        <ModeBar title="Personal" subtitle="Your connected SyncWorks workspace" />
+      </div>
+
       <div className="lg:hidden min-h-dvh bg-[#020617] px-3 pb-24 pt-3 text-slate-100">
         <CustomerMobileHome
           displayName={firstName(user)}
