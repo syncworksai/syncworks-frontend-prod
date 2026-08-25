@@ -11,21 +11,26 @@ body {
 }
 
 /* Global iOS installed-app safe area.
-   The non-translucent iOS status bar keeps the viewport below the system UI.
-   These env() fallbacks also protect existing cached Home Screen installs. */
+   Some iPhone Home Screen installs report safe-area-inset-top as 0 even while
+   the app viewport still extends beneath the status bar. Use a conservative
+   fallback so every SyncWorks page and sticky/fixed top bar stays tappable. */
 @media (display-mode: standalone) {
+  :root {
+    --sw-ios-safe-top: max(env(safe-area-inset-top), 52px);
+  }
+
   body {
     box-sizing: border-box;
     min-height: 100dvh;
-    padding-top: env(safe-area-inset-top);
+    padding-top: var(--sw-ios-safe-top);
   }
 
   .sw-autoglow .sticky.top-0 {
-    top: env(safe-area-inset-top) !important;
+    top: var(--sw-ios-safe-top) !important;
   }
 
-  .sw-autoglow header.fixed.top-0 {
-    top: env(safe-area-inset-top) !important;
+  .sw-autoglow .fixed.top-0 {
+    top: var(--sw-ios-safe-top) !important;
   }
 }
 
