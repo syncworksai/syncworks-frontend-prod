@@ -84,6 +84,11 @@ body {
   .sw-autoglow .fixed.left-0 {
     left: var(--sw-ios-safe-left) !important;
   }
+
+  /* Role-aware bottom navigation uses custom CSS instead of Tailwind bottom-0. */
+  .sw-role-mobile-nav {
+    bottom: calc(.7rem + var(--sw-ios-safe-bottom)) !important;
+  }
 }
 
 /* =========================================================
@@ -177,7 +182,7 @@ body {
   opacity: 1;
   filter:
     drop-shadow(0 0 18px rgba(34, 211, 238, 0.26))
-    drop-shadow(0 0 22px rgba(217, 70, 239, 0.20));
+    drop-shadow(0 0 22px rgba(217, 70,239, 0.20));
 }
 
 /* Health Workout Command Center v3 */
