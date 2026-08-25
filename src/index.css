@@ -10,10 +10,22 @@ body {
   background: #020617;
 }
 
-/* iOS/installed PWA safe area: keep sticky app headers below the status bar. */
+/* Global iOS installed-app safe area.
+   The non-translucent iOS status bar keeps the viewport below the system UI.
+   These env() fallbacks also protect existing cached Home Screen installs. */
 @media (display-mode: standalone) {
-  .sw-autoglow > div > header.sticky.top-0 {
-    padding-top: max(env(safe-area-inset-top), 12px);
+  body {
+    box-sizing: border-box;
+    min-height: 100dvh;
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .sw-autoglow .sticky.top-0 {
+    top: env(safe-area-inset-top) !important;
+  }
+
+  .sw-autoglow header.fixed.top-0 {
+    top: env(safe-area-inset-top) !important;
   }
 }
 
