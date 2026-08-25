@@ -1,0 +1,1 @@
+Production note: the installed iOS Home Screen app requires explicit safe-area spacing on the shared ModeBar so its tappable controls render below the system status bar.
