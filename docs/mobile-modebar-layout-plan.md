@@ -1,0 +1,1 @@
+Plan: use a hard phone-safe visual offset on the shared ModeBar itself rather than relying on body safe-area padding, and remove the redundant mobile Create Business strip from the visible bar. Business creation remains a menu/account action.
