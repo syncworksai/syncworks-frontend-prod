@@ -144,6 +144,31 @@ body {
 }
 
 /* =========================================================
+   Mobile ModeBar hard layout guard
+   The installed iOS viewport can still paint into the status-bar area even
+   after safe-area padding is applied to body. Move the shared ModeBar itself
+   down as a final hit-target guarantee on touch phones. Also remove the
+   redundant Create Business strip from the visible mobile bar; business setup
+   belongs in the hamburger/account flow.
+   ========================================================= */
+@media (max-width: 767px) and (pointer: coarse) {
+  .sw-autoglow .sticky.top-0.z-50.overflow-hidden.border-b.border-slate-800 {
+    top: 0 !important;
+    margin-top: 64px !important;
+  }
+
+  .sw-autoglow .sticky.top-0.z-50.overflow-hidden.border-b.border-slate-800 > .relative.space-y-2.px-4.pb-3.md\:hidden {
+    display: none !important;
+  }
+
+  .sw-autoglow .sticky.top-0.z-50.overflow-hidden.border-b.border-slate-800 button[title="Open menu"],
+  .sw-autoglow .sticky.top-0.z-50.overflow-hidden.border-b.border-slate-800 button[title="Open Inbox"] {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* =========================================================
    SyncWorks: Global Neon Outline Glow (BORDER ONLY)
    - Adds an outline glow like Upgrade cards
    - Does NOT change card backgrounds
@@ -224,7 +249,7 @@ body {
   opacity: 1;
   filter:
     drop-shadow(0 0 18px rgba(34, 211, 238, 0.26))
-    drop-shadow(0 0 22px rgba(217, 70,239, 0.20));
+    drop-shadow(0 0 22px rgba(217,70,239,0.20));
 }
 
 #health-workout-command-center ~ * {
