@@ -10,27 +10,84 @@ body {
   background: #020617;
 }
 
-/* Global iOS installed-app safe area.
-   Some iPhone Home Screen installs report safe-area-inset-top as 0 even while
-   the app viewport still extends beneath the status bar. Use a conservative
-   fallback so every SyncWorks page and sticky/fixed top bar stays tappable. */
+/* =========================================================
+   SyncWorks Mobile / PWA Production Shell
+   - Keeps app chrome below iOS status UI
+   - Keeps fixed drawers/modals below the status bar
+   - Keeps bottom controls above the Home indicator
+   - Uses a fallback because some installed iPhone PWAs report 0px
+     safe-area insets while still rendering under the system UI
+   ========================================================= */
+:root {
+  --sw-ios-safe-top: 0px;
+  --sw-ios-safe-bottom: 0px;
+  --sw-ios-safe-left: 0px;
+  --sw-ios-safe-right: 0px;
+}
+
 @media (display-mode: standalone) {
   :root {
     --sw-ios-safe-top: max(env(safe-area-inset-top), 52px);
+    --sw-ios-safe-bottom: max(env(safe-area-inset-bottom), 12px);
+    --sw-ios-safe-left: env(safe-area-inset-left);
+    --sw-ios-safe-right: env(safe-area-inset-right);
+  }
+
+  html {
+    background: #020617;
   }
 
   body {
     box-sizing: border-box;
     min-height: 100dvh;
     padding-top: var(--sw-ios-safe-top);
+    padding-right: var(--sw-ios-safe-right);
+    padding-bottom: var(--sw-ios-safe-bottom);
+    padding-left: var(--sw-ios-safe-left);
   }
 
+  /* Sticky page/app headers remain tappable while scrolling. */
   .sw-autoglow .sticky.top-0 {
     top: var(--sw-ios-safe-top) !important;
   }
 
-  .sw-autoglow .fixed.top-0 {
+  /* Full-screen drawers/modals are constrained to the usable app viewport. */
+  .sw-autoglow .fixed.inset-0 {
     top: var(--sw-ios-safe-top) !important;
+    right: var(--sw-ios-safe-right) !important;
+    bottom: var(--sw-ios-safe-bottom) !important;
+    left: var(--sw-ios-safe-left) !important;
+  }
+
+  /* Fixed top controls that are not full-screen overlays. */
+  .sw-autoglow .fixed.top-0:not(.inset-0) {
+    top: var(--sw-ios-safe-top) !important;
+  }
+
+  /* Fixed bottom controls/navigation stay above the Home indicator. */
+  .sw-autoglow .fixed.bottom-0:not(.inset-0) {
+    bottom: var(--sw-ios-safe-bottom) !important;
+  }
+
+  /* Common Tailwind drawer/sheet patterns that use inset-x + bottom. */
+  .sw-autoglow .fixed.inset-x-0.bottom-0 {
+    right: var(--sw-ios-safe-right) !important;
+    bottom: var(--sw-ios-safe-bottom) !important;
+    left: var(--sw-ios-safe-left) !important;
+  }
+
+  /* Common fixed side-panel patterns. */
+  .sw-autoglow .fixed.right-0 {
+    right: var(--sw-ios-safe-right) !important;
+  }
+
+  .sw-autoglow .fixed.left-0 {
+    left: var(--sw-ios-safe-left) !important;
+  }
+
+  /* Role-aware bottom navigation uses custom CSS instead of Tailwind bottom-0. */
+  .sw-role-mobile-nav {
+    bottom: calc(.7rem + var(--sw-ios-safe-bottom)) !important;
   }
 }
 
@@ -125,7 +182,7 @@ body {
   opacity: 1;
   filter:
     drop-shadow(0 0 18px rgba(34, 211, 238, 0.26))
-    drop-shadow(0 0 22px rgba(217, 70, 239, 0.20));
+    drop-shadow(0 0 22px rgba(217, 70,239, 0.20));
 }
 
 /* Health Workout Command Center v3 */
