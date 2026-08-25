@@ -10,6 +10,13 @@ body {
   background: #020617;
 }
 
+/* iOS/installed PWA safe area: keep sticky app headers below the status bar. */
+@media (display-mode: standalone) {
+  .sw-autoglow > div > header.sticky.top-0 {
+    padding-top: max(env(safe-area-inset-top), 12px);
+  }
+}
+
 /* =========================================================
    SyncWorks: Global Neon Outline Glow (BORDER ONLY)
    - Adds an outline glow like Upgrade cards
@@ -34,27 +41,22 @@ body {
 .sw-autoglow .rounded-2xl.border.border-slate-800::before {
   content: "";
   position: absolute;
-  inset: -1px;                 /* outline thickness */
+  inset: -1px;
   border-radius: inherit;
-  padding: 1px;                /* outline thickness */
+  padding: 1px;
   background: linear-gradient(
     90deg,
-    rgba(34, 211, 238, 0.62),   /* cyan */
-    rgba(99, 102, 241, 0.52),   /* indigo */
-    rgba(217, 70, 239, 0.62)    /* fuchsia */
+    rgba(34, 211, 238, 0.62),
+    rgba(99, 102, 241, 0.52),
+    rgba(217, 70, 239, 0.62)
   );
-
-  /* Mask out the center so ONLY the border shows */
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
           mask-composite: exclude;
-
   pointer-events: none;
   opacity: 0.92;
-
-  /* glow */
   filter:
     drop-shadow(0 0 14px rgba(34, 211, 238, 0.20))
     drop-shadow(0 0 18px rgba(217, 70, 239, 0.16));
