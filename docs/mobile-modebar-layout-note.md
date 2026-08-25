@@ -1,0 +1,1 @@
+Mobile ModeBar layout follow-up: keep navigation controls out of the iOS status-bar hit area. On phone-sized touch devices the shared ModeBar receives a hard visual offset below system UI, and the redundant mobile Create Business strip is removed from the bar so business creation remains an account/menu concern.
