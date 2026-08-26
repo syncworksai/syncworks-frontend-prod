@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Home, Inbox, LayoutGrid, MoreHorizontal } from "lucide-react";
+import { Activity, Home, Inbox, LayoutGrid, MoreHorizontal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import CustomerDashboard from "./CustomerDashboard";
 import CustomerMobileHome from "../components/customer/CustomerMobileHome";
 import SyncAssistantStickyDock from "../components/sync/SyncAssistantStickyDock";
+
+const DAY_TRADING_EMAIL = "jacoblord7@outlook.com";
 
 function safeList(value) {
   if (Array.isArray(value)) return value;
@@ -27,6 +29,7 @@ export default function CustomerDashboardResponsive() {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dockOpen, setDockOpen] = useState(false);
+  const dayTradingEnabled = String(user?.email || "").trim().toLowerCase() === DAY_TRADING_EMAIL;
 
   async function load() {
     setLoading(true);
@@ -71,6 +74,14 @@ export default function CustomerDashboardResponsive() {
           onOpenAudioSummary={playBriefing}
         />
 
+        {dayTradingEnabled ? (
+          <button type="button" onClick={() => nav("/customer/day-trading-futures")} className="mt-4 flex w-full items-center gap-3 rounded-[1.3rem] border border-emerald-400/25 bg-emerald-500/[.07] p-3.5 text-left shadow-[0_0_28px_rgba(16,185,129,.08)]">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-400/25 bg-emerald-500/10 text-emerald-200"><Activity className="h-5 w-5" /></span>
+            <span className="min-w-0 flex-1"><span className="block text-[12px] font-black text-white">Day Trade</span><span className="mt-0.5 block text-[10px] leading-4 text-slate-500">MNQ futures signal dashboard · analysis mode</span></span>
+            <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-amber-200">Signal only</span>
+          </button>
+        ) : null}
+
         <nav className="fixed inset-x-3 bottom-[max(.45rem,env(safe-area-inset-bottom))] z-[150] grid grid-cols-5 items-end rounded-[1.4rem] border border-white/10 bg-[#030817]/95 px-2 py-2 shadow-[0_-10px_50px_rgba(2,6,23,.8)] backdrop-blur-2xl">
           <button type="button" onClick={() => nav("/customer")} className="flex flex-col items-center gap-1 text-[9px] font-black text-cyan-200"><Home className="h-4 w-4" />Home</button>
           <button type="button" onClick={() => nav("/customer/marketplace")} className="flex flex-col items-center gap-1 text-[9px] font-black text-slate-400"><LayoutGrid className="h-4 w-4" />Services</button>
@@ -81,7 +92,10 @@ export default function CustomerDashboardResponsive() {
 
         {dockOpen ? <SyncAssistantStickyDock displayName={firstName(user)} /> : null}
       </div>
-      <div className="hidden lg:block"><CustomerDashboard /></div>
+      <div className="hidden lg:block">
+        {dayTradingEnabled ? <button type="button" onClick={() => nav("/customer/day-trading-futures")} className="fixed right-5 top-5 z-[120] inline-flex min-h-11 items-center gap-2 rounded-2xl border border-emerald-400/25 bg-[#03130f]/95 px-4 text-xs font-black text-emerald-100 shadow-[0_10px_38px_rgba(0,0,0,.35)] backdrop-blur-xl"><Activity className="h-4 w-4" />Day Trade<span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-1 text-[8px] uppercase tracking-wider text-amber-200">Signal only</span></button> : null}
+        <CustomerDashboard />
+      </div>
     </>
   );
 }
