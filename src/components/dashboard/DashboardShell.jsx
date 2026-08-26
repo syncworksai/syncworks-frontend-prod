@@ -29,13 +29,17 @@ export default function DashboardShell({
         rightActions={rightActions}
       />
 
-      <ProfileCompletionBanner />
-      <LocalDiscoveryBanner />
-      <SyncDailyIntelligenceBar />
+      {/* These mobile intelligence strips are useful on the phone, but on desktop
+          they were pushing the actual Personal command center below the fold. */}
+      <div className="lg:hidden">
+        <ProfileCompletionBanner />
+        <LocalDiscoveryBanner />
+        <SyncDailyIntelligenceBar />
+      </div>
 
       <main
         className={cx(
-          "relative mx-auto px-3 pb-40 pt-4 sm:px-5 lg:px-8 lg:pb-10",
+          "relative mx-auto px-3 pb-40 pt-4 sm:px-5 lg:px-8 lg:pb-10 lg:pt-5",
           maxWidth,
           className
         )}
