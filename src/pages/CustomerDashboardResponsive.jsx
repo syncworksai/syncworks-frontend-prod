@@ -93,7 +93,6 @@ export default function CustomerDashboardResponsive() {
         {dockOpen ? <SyncAssistantStickyDock displayName={firstName(user)} /> : null}
       </div>
       <div className="hidden lg:block">
-        {dayTradingEnabled ? <button type="button" onClick={() => nav("/customer/day-trading-futures")} className="fixed right-5 top-5 z-[120] inline-flex min-h-11 items-center gap-2 rounded-2xl border border-emerald-400/25 bg-[#03130f]/95 px-4 text-xs font-black text-emerald-100 shadow-[0_10px_38px_rgba(0,0,0,.35)] backdrop-blur-xl"><Activity className="h-4 w-4" />Day Trade<span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-1 text-[8px] uppercase tracking-wider text-amber-200">Signal only</span></button> : null}
         <CustomerDashboard />
       </div>
     </>
