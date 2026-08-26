@@ -83,8 +83,8 @@ export default function CustomerDashboardResponsive() {
         {dayTradingEnabled ? (
           <button type="button" onClick={() => nav("/customer/day-trading-futures")} className="mt-4 flex w-full items-center gap-3 rounded-[1.3rem] border border-emerald-400/25 bg-emerald-500/[.07] p-3.5 text-left shadow-[0_0_28px_rgba(16,185,129,.08)]">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-400/25 bg-emerald-500/10 text-emerald-200"><Activity className="h-5 w-5" /></span>
-            <span className="min-w-0 flex-1"><span className="block text-[12px] font-black text-white">Day Trading Futures</span><span className="mt-0.5 block text-[10px] leading-4 text-slate-500">MNQ signal-only cockpit · analysis mode</span></span>
-            <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-amber-200">Feed setup</span>
+            <span className="min-w-0 flex-1"><span className="block text-[12px] font-black text-white">Day Trade</span><span className="mt-0.5 block text-[10px] leading-4 text-slate-500">MNQ futures signal dashboard · analysis mode</span></span>
+            <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-amber-200">Signal only</span>
           </button>
         ) : null}
 
@@ -99,7 +99,7 @@ export default function CustomerDashboardResponsive() {
         {dockOpen ? <SyncAssistantStickyDock displayName={firstName(user)} /> : null}
       </div>
       <div className="hidden lg:block">
-        {dayTradingEnabled ? <button type="button" onClick={() => nav("/customer/day-trading-futures")} className="fixed right-5 top-5 z-[120] inline-flex min-h-11 items-center gap-2 rounded-2xl border border-emerald-400/25 bg-[#03130f]/95 px-4 text-xs font-black text-emerald-100 shadow-[0_10px_38px_rgba(0,0,0,.35)] backdrop-blur-xl"><Activity className="h-4 w-4" />Day Trading Futures<span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-1 text-[8px] uppercase tracking-wider text-amber-200">Signal only</span></button> : null}
+        {dayTradingEnabled ? <button type="button" onClick={() => nav("/customer/day-trading-futures")} className="fixed right-5 top-5 z-[120] inline-flex min-h-11 items-center gap-2 rounded-2xl border border-emerald-400/25 bg-[#03130f]/95 px-4 text-xs font-black text-emerald-100 shadow-[0_10px_38px_rgba(0,0,0,.35)] backdrop-blur-xl"><Activity className="h-4 w-4" />Day Trade<span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-1 text-[8px] uppercase tracking-wider text-amber-200">Signal only</span></button> : null}
         <CustomerDashboard />
       </div>
     </>
