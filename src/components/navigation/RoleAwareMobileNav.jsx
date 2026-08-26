@@ -147,7 +147,7 @@ export function MobileNavSettings() {
       </div>
       <div className="sw-nav-settings-preview">
         {items.slice(0, 2).map((itemId) => <PreviewItem key={`left-${itemId}`} itemId={itemId} />)}
-        <div className={`sw-nav-settings-center-preview ${center?.sync ? "sync" : ""}`}><div className="sw-nav-settings-center-orb">{center?.sync ? <strong>S</strong> : <img src="/brand/syncworks-start-logo.png" alt="" />}</div><span>{center?.label || "Action"}</span></div>
+        <div className={`sw-nav-settings-center-preview ${center?.sync ? "sync" : ""}`}><div className="sw-nav-settings-center-orb">{<img src="/brand/syncworks-start-logo.png" alt="" />}</div><span>{center?.label || "Action"}</span></div>
         {items.slice(2, 4).map((itemId) => <PreviewItem key={`right-${itemId}`} itemId={itemId} />)}
       </div>
       <div className="sw-nav-settings-grid">
@@ -226,7 +226,7 @@ export default function RoleAwareMobileNav() {
       <div className="sw-role-mobile-nav-grid">
         {renderedItems.slice(0, 2).map((item) => <NavButton key={item.id} item={item} onClick={() => navigate(item.target)} />)}
         <button type="button" className={`sw-role-mobile-nav-center ${center.sync ? "is-sync" : ""}`} onClick={openCenter} aria-label={center.sync ? "Open SYNC assistant" : `New ${center.label}`}>
-          <span className="sw-role-mobile-nav-center-orb">{center.sync ? <strong>S</strong> : <img src="/brand/syncworks-start-logo.png" alt="" />}</span>
+          <span className="sw-role-mobile-nav-center-orb">{<img src="/brand/syncworks-start-logo.png" alt="" />}</span>
           <span>{center.label}</span>
         </button>
         {renderedItems.slice(2, 4).map((item) => <NavButton key={item.id} item={item} onClick={() => navigate(item.target)} />)}

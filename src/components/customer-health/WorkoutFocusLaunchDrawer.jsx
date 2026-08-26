@@ -140,10 +140,10 @@ export default function WorkoutFocusLaunchDrawer({ open, workout, onCancel, onBe
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[260] overflow-y-auto bg-[#020617] text-white">
+    <div className="fixed inset-0 z-[1000] overflow-y-auto bg-[#020617] text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(34,211,238,0.13),transparent_27%),radial-gradient(circle_at_85%_35%,rgba(37,99,235,0.11),transparent_25%),linear-gradient(180deg,#020617_0%,#02040b_100%)]" />
 
-      <div className="relative mx-auto min-h-[100dvh] w-full max-w-xl px-3 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-[max(.75rem,env(safe-area-inset-top))] sm:px-5">
+      <div className="relative mx-auto min-h-[100dvh] w-full max-w-xl px-3 pb-[calc(5.25rem+env(safe-area-inset-bottom))] pt-[max(.75rem,env(safe-area-inset-top))] sm:px-5">
         <header className="sticky top-0 z-20 -mx-3 flex items-center justify-between gap-3 border-b border-cyan-300/10 bg-[#020617]/95 px-3 py-2 backdrop-blur-xl sm:-mx-5 sm:px-5">
           <div className="min-w-0">
             <div className="text-[9px] font-black uppercase tracking-[0.16em] text-cyan-300">Ready to train</div>
@@ -165,7 +165,7 @@ export default function WorkoutFocusLaunchDrawer({ open, workout, onCancel, onBe
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-[9px] font-black uppercase tracking-[0.16em] text-cyan-300">Today's workout</div>
-                <div className="mt-1 text-xl font-black text-white">{firstExerciseName(workout)}</div>
+                <div className="mt-1 text-lg font-black text-white">{firstExerciseName(workout)}</div>
               </div>
               <div className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 py-2 text-right">
                 <div className="text-lg font-black text-cyan-200">READY</div>
@@ -175,7 +175,7 @@ export default function WorkoutFocusLaunchDrawer({ open, workout, onCancel, onBe
               </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="mt-2 grid grid-cols-3 gap-1.5">
               <div className="rounded-xl border border-white/8 bg-black/20 p-2 text-center">
                 <div className="text-base font-black text-white">{totals.exercises}</div>
                 <div className="text-[9px] text-slate-500">Exercises</div>
@@ -191,7 +191,7 @@ export default function WorkoutFocusLaunchDrawer({ open, workout, onCancel, onBe
             </div>
           </section>
 
-          <section className="mt-3 rounded-2xl border border-white/10 bg-[#07101e] p-3">
+          <section className="mt-2 rounded-2xl border border-white/10 bg-[#07101e] p-3">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-[9px] font-black uppercase tracking-[0.16em] text-cyan-300">SYNC briefing</div>
@@ -258,7 +258,7 @@ export default function WorkoutFocusLaunchDrawer({ open, workout, onCancel, onBe
           </section>
         </main>
 
-        <footer className="fixed inset-x-0 bottom-0 z-[280] border-t border-cyan-300/15 bg-[#020617]/97 px-3 pb-[max(.65rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl">
+        <footer className="fixed inset-x-0 bottom-0 z-[1020] border-t border-cyan-300/15 bg-[#020617]/97 px-3 pb-[max(.65rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl">
           <div className="mx-auto grid w-full max-w-xl grid-cols-[auto_1fr] gap-2">
             <button
               type="button"
@@ -271,10 +271,10 @@ export default function WorkoutFocusLaunchDrawer({ open, workout, onCancel, onBe
             <button
               type="button"
               onClick={startWorkout}
-              disabled={started}
+              disabled={started || totals.exercises === 0}
               className="health-workout-start-button h-12 rounded-2xl border border-cyan-300/60 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 px-4 text-sm font-black uppercase tracking-[0.08em] text-white shadow-[0_0_26px_rgba(34,211,238,.2)] disabled:cursor-wait disabled:opacity-80"
             >
-              {started ? "Entering Workout..." : "Start Workout"}
+              {totals.exercises === 0 ? "Restoring Plan..." : started ? "Entering Workout..." : "Start Workout"}
             </button>
           </div>
         </footer>
