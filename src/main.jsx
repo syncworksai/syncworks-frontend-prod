@@ -19,6 +19,28 @@ import PMLeasing from "./pages/PMLeasing";
 import PMPayments from "./pages/PMPayments";
 import "./index.css";
 
+const SYNCWORKS_BUILD = "2026.08.26-desktop-v2";
+
+async function retireLegacyAppCaches() {
+  try {
+    window.__SYNCWORKS_BUILD__ = SYNCWORKS_BUILD;
+
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+    }
+
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((key) => caches.delete(key)));
+    }
+  } catch (error) {
+    console.warn("SyncWorks cache cleanup skipped", error);
+  }
+}
+
+retireLegacyAppCaches();
+
 function RoutedApplication() {
   const location = useLocation();
   const pathname = location.pathname.replace(/\/+$/, "") || "/";
