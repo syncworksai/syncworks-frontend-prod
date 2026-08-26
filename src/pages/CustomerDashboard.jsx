@@ -6,6 +6,7 @@ import {
   CircleDollarSign,
   CloudSun,
   ClipboardList,
+  Compass,
   Dumbbell,
   HeartHandshake,
   Home,
@@ -25,6 +26,7 @@ import { useNavigate } from "react-router-dom";
 
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import AroundYouPanel from "../components/customer/AroundYouPanel";
 import DashboardShell from "../components/dashboard/DashboardShell";
 import CustomerAudioSummaryDrawer from "../components/sync/CustomerAudioSummaryDrawer";
 
@@ -105,15 +107,11 @@ export default function CustomerDashboard() {
   const tenantConnected = hasProfile(profiles, "tenant");
   const propertyRoute = pmConnected ? "/pm" : tenantConnected ? "/tenant" : "/tenant/accept";
 
-  function askSync(prompt) {
-    sessionStorage.setItem("syncAssistantPendingPrompt", prompt);
-    nav("/sync?return=%2Fcustomer");
-  }
-
   const tools = [
     [ClipboardList, "Requests", "Track service requests and provider progress.", "/customer/tickets", openTickets.length ? `${openTickets.length} open` : null],
     [MessageSquareText, "Inbox", "SyncWorks conversations and external email intelligence.", "/customer/inbox"],
     [CalendarDays, "Calendar", "Connected calendars, appointments and leave-time planning.", "/calendar"],
+    [Compass, "Discover", "Food, shopping, services and things to do around you.", "/customer/discover"],
     [Dumbbell, "Health", "Workouts, nutrition, readiness and recovery.", "/customer/health"],
     [CircleDollarSign, "Money", "Budgets, bills, accounts and financial planning.", "/customer/finance", dueInvoices.length ? `${dueInvoices.length} due` : null],
     [Search, "EDGE", "Sports research and paper-trading tools.", "/customer/edge", "beta"],
@@ -131,6 +129,7 @@ export default function CustomerDashboard() {
         <aside className="sticky top-4 hidden h-fit rounded-[1.5rem] border border-white/10 bg-slate-950/60 p-3 lg:block">
           <NavItem icon={Home} label="Home" active onClick={() => nav("/customer")} />
           <NavItem icon={Store} label="Services" onClick={() => nav("/customer/marketplace")} />
+          <NavItem icon={Compass} label="Discover" onClick={() => nav("/customer/discover")} />
           <NavItem icon={ClipboardList} label="Requests" onClick={() => nav("/customer/tickets")} />
           <NavItem icon={MessageSquareText} label="Inbox" onClick={() => nav("/customer/inbox")} />
           <NavItem icon={CalendarDays} label="Calendar" onClick={() => nav("/calendar")} />
@@ -152,10 +151,10 @@ export default function CustomerDashboard() {
 
             <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
               <QuickIntent icon={Sparkles} label="Book a service" detail="Tell us what you need done." primary onClick={() => nav("/customer/new-request")} />
-              <QuickIntent icon={Utensils} label="Food nearby" detail="Find something close now." onClick={() => askSync("Find good food near me right now.")} />
-              <QuickIntent icon={ShoppingBag} label="Shops nearby" detail="Find stores around me." onClick={() => askSync("Find useful shops near me right now.")} />
-              <QuickIntent icon={CloudSun} label="Weather" detail="What affects today?" onClick={() => askSync("What is the weather where I am and what should I know today?")} />
-              <QuickIntent icon={MapPinned} label="Traffic" detail="Check delays and travel." onClick={() => askSync("Check traffic around me and tell me if anything affects my schedule.")} />
+              <QuickIntent icon={Utensils} label="Food nearby" detail="Find something close now." onClick={() => nav("/customer/discover?category=FOOD")} />
+              <QuickIntent icon={ShoppingBag} label="Shops nearby" detail="Find stores around me." onClick={() => nav("/customer/discover?category=RETAIL")} />
+              <QuickIntent icon={CloudSun} label="Weather" detail="Live conditions and next hour." onClick={() => nav("/customer/weather")} />
+              <QuickIntent icon={MapPinned} label="Traffic" detail="Live delays and travel." onClick={() => nav("/customer/traffic")} />
               <QuickIntent icon={Mic2} label="Briefing" detail="Hear what matters now." onClick={() => setAudioOpen(true)} />
             </div>
           </section>
@@ -165,6 +164,8 @@ export default function CustomerDashboard() {
             <button type="button" onClick={() => nav("/calendar")} className="rounded-2xl border border-violet-400/15 bg-violet-500/[.04] p-4 text-left"><div className="text-[9px] font-black uppercase tracking-wider text-violet-200">Schedule</div><div className="mt-2 text-lg font-black text-white">Today & upcoming</div><div className="mt-1 text-xs text-slate-500">Events, appointments and leave times</div></button>
             <button type="button" onClick={() => nav("/customer/finance")} className="rounded-2xl border border-amber-400/15 bg-amber-500/[.04] p-4 text-left"><div className="text-[9px] font-black uppercase tracking-wider text-amber-200">Money due</div><div className="mt-2 text-2xl font-black text-white">{money(amountDue)}</div><div className="mt-1 text-xs text-slate-500">Known payments requiring attention</div></button>
           </div>
+
+          <AroundYouPanel />
 
           <section className="rounded-[1.75rem] border border-white/10 bg-slate-950/55 p-5">
             <div className="flex items-end justify-between gap-3"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-200">Service activity</div><h2 className="mt-1 text-lg font-black text-white">What is happening now</h2></div><button type="button" onClick={() => nav("/customer/tickets")} className="text-xs font-black text-cyan-200">View all</button></div>
