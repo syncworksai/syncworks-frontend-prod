@@ -12,7 +12,7 @@ import {
   Store,
   UtensilsCrossed,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import DashboardShell from "../components/dashboard/DashboardShell";
 import { searchLocalDiscovery } from "../api/localDiscovery";
@@ -26,6 +26,12 @@ const CATEGORIES = [
 
 const FOOD_CHIPS = ["Fast Food", "Pizza", "Chinese", "Mexican", "Burgers", "Wings", "BBQ", "Seafood", "Italian", "Breakfast", "Coffee", "Desserts", "Healthy", "American"];
 const SERVICE_CHIPS = ["Dentist", "Eye Doctor", "Barber", "Mechanic", "Plumber", "Electrician", "HVAC", "Tree Service"];
+const CATEGORY_IDS = new Set(CATEGORIES.map((item) => item.id));
+
+function requestedCategory(search) {
+  const value = String(new URLSearchParams(search).get("category") || "FOOD").toUpperCase();
+  return CATEGORY_IDS.has(value) ? value : "FOOD";
+}
 
 function locationLabel(payload) {
   const location = payload?.location || payload?.context?.location || {};
@@ -55,7 +61,8 @@ function PlaceMeta({ place }) {
 
 export default function CustomerDiscover() {
   const nav = useNavigate();
-  const [category, setCategory] = useState("FOOD");
+  const location = useLocation();
+  const [category, setCategory] = useState(() => requestedCategory(location.search));
   const [query, setQuery] = useState("");
   const [useCurrent, setUseCurrent] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -77,12 +84,23 @@ export default function CustomerDiscover() {
     }
   }
 
-  useEffect(() => { runSearch("FOOD", "", true); }, []);
+  useEffect(() => {
+    const next = requestedCategory(location.search);
+    setCategory(next);
+    setQuery("");
+    runSearch(next, "", true);
+  }, [location.search]);
 
   const results = useMemo(() => Array.isArray(data?.results) ? data.results : [], [data]);
   const topRated = useMemo(() => [...results].sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0) || Number(b.user_ratings_total || 0) - Number(a.user_ratings_total || 0)), [results]);
   const sourceLabel = data?.context?.source === "CURRENT" ? "Current location" : data?.context?.source === "HOME_FALLBACK" ? "Home fallback" : "Home";
   const chips = category === "FOOD" ? FOOD_CHIPS : category === "SERVICES" ? SERVICE_CHIPS : [];
+
+  function chooseCategory(id) {
+    setCategory(id);
+    setQuery("");
+    nav(`/customer/discover?category=${id}`, { replace: true });
+  }
 
   function chooseChip(value) {
     setQuery(value);
@@ -113,7 +131,7 @@ export default function CustomerDiscover() {
         <section className="rounded-[1.75rem] border border-white/10 bg-slate-950/60 p-4 sm:p-5">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {CATEGORIES.map(({ id, label, icon: Icon, hint }) => (
-              <button key={id} type="button" onClick={() => { setCategory(id); setQuery(""); runSearch(id, "", useCurrent); }} className={`min-h-28 rounded-2xl border p-3 text-left transition ${category === id ? "border-cyan-400/30 bg-cyan-500/10" : "border-white/10 bg-white/[.02]"}`}>
+              <button key={id} type="button" onClick={() => chooseCategory(id)} className={`min-h-28 rounded-2xl border p-3 text-left transition ${category === id ? "border-cyan-400/30 bg-cyan-500/10" : "border-white/10 bg-white/[.02]"}`}>
                 <Icon className={`h-5 w-5 ${category === id ? "text-cyan-200" : "text-slate-500"}`} />
                 <div className="mt-2 text-sm font-black text-white">{label}</div><div className="mt-1 text-[10px] leading-4 text-slate-500">{hint}</div>
               </button>
