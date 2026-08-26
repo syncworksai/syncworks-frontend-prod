@@ -24,6 +24,8 @@ import CustomerFavorites from "./pages/CustomerFavorites";
 import CustomerBusinessCards from "./pages/CustomerBusinessCards";
 import CustomerBusinessCardDetail from "./pages/CustomerBusinessCardDetail";
 import CustomerDiscover from "./pages/CustomerDiscover";
+import CustomerWeather from "./pages/CustomerWeather";
+import CustomerTraffic from "./pages/CustomerTraffic";
 import CustomerAppointments from "./pages/CustomerAppointments";
 import CustomerProfessionalDiscover from "./pages/CustomerProfessionalDiscover";
 import AffiliateDashboard from "./pages/AffiliateDashboard";
@@ -143,6 +145,8 @@ export default function App() {
         <Route path="/customer/plans" element={<ProtectedRoute><CustomerPlans /></ProtectedRoute>} />
         <Route path="/customer/family" element={<ProtectedRoute><Household /></ProtectedRoute>} />
         <Route path="/customer/discover" element={<ProtectedRoute><CustomerDiscover /></ProtectedRoute>} />
+        <Route path="/customer/weather" element={<ProtectedRoute><CustomerWeather /></ProtectedRoute>} />
+        <Route path="/customer/traffic" element={<ProtectedRoute><CustomerTraffic /></ProtectedRoute>} />
         <Route path="/customer/discover/professional" element={<ProtectedRoute><CustomerProfessionalDiscover /></ProtectedRoute>} />
         <Route path="/customer/appointments" element={<ProtectedRoute><CustomerAppointments /></ProtectedRoute>} />
         <Route path="/sbo/inbox" element={<ProtectedRoute><InboxPage /></ProtectedRoute>} />

@@ -41,7 +41,6 @@ export default function CustomerMobileHome({
   onOpenMoney,
   onOpenHealth,
   onOpenAudioSummary,
-  onQuickPrompt,
 }) {
   const nav = useNavigate();
   const [query, setQuery] = useState("");
@@ -80,10 +79,10 @@ export default function CustomerMobileHome({
       <div className="-mx-3 mt-3 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex gap-2">
           <QuickIntent icon={Sparkles} label="Book service" primary onClick={onNewRequest} />
-          <QuickIntent icon={Utensils} label="Food nearby" onClick={() => onQuickPrompt?.("Find good food near me right now.")} />
-          <QuickIntent icon={ShoppingBag} label="Shops nearby" onClick={() => onQuickPrompt?.("Find useful shops near me right now.")} />
-          <QuickIntent icon={CloudSun} label="Weather" onClick={() => onQuickPrompt?.("What is the weather where I am and what matters for today?")} />
-          <QuickIntent icon={MapPinned} label="Traffic" onClick={() => onQuickPrompt?.("Check traffic around me and tell me if anything affects my schedule.")} />
+          <QuickIntent icon={Utensils} label="Food nearby" onClick={() => nav("/customer/discover?category=FOOD")} />
+          <QuickIntent icon={ShoppingBag} label="Shops nearby" onClick={() => nav("/customer/discover?category=RETAIL")} />
+          <QuickIntent icon={CloudSun} label="Weather" onClick={() => nav("/customer/weather")} />
+          <QuickIntent icon={MapPinned} label="Traffic" onClick={() => nav("/customer/traffic")} />
           <QuickIntent icon={Mic2} label="Play briefing" onClick={onOpenAudioSummary} />
         </div>
       </div>
