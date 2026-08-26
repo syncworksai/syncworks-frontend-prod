@@ -4775,8 +4775,8 @@ export default function ActiveWorkoutSessionDrawer({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] bg-[#020403]">
-<section className="relative z-[91] flex h-[100dvh] w-full flex-col overflow-hidden bg-[radial-gradient(circle_at_50%_-10%,rgba(0,245,106,0.12),transparent_30%),linear-gradient(180deg,#050806_0%,#020403_100%)]">
+    <div className="fixed inset-0 z-[1100] bg-[#020403]">
+<section className="relative z-[1101] flex h-[100dvh] w-full flex-col overflow-hidden bg-[radial-gradient(circle_at_50%_-10%,rgba(0,245,106,0.12),transparent_30%),linear-gradient(180deg,#050806_0%,#020403_100%)]">
         <header className="sticky top-0 z-30 border-b border-emerald-300/15 bg-[#030604]/97 px-3 py-3 backdrop-blur-xl sm:px-6 sm:py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
