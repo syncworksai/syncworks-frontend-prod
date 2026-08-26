@@ -12,7 +12,7 @@ export default function DashboardShell({
   modeBarSubtitle,
   rightActions,
   children,
-  maxWidth = "max-w-7xl",
+  maxWidth = "max-w-[1600px]",
   className = "",
 }) {
   return (
@@ -35,7 +35,7 @@ export default function DashboardShell({
 
       <main
         className={cx(
-          "relative mx-auto px-3 pb-40 pt-4 sm:px-5 lg:pb-10",
+          "relative mx-auto px-3 pb-40 pt-4 sm:px-5 lg:px-8 lg:pb-10",
           maxWidth,
           className
         )}
