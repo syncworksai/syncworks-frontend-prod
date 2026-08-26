@@ -2544,10 +2544,64 @@ export default function CustomerHealth() {
       return;
     }
 
-    setActivePlannerItem({
+    const mergedPlannerItem = {
       ...plannerItem,
       ...(currentPlannerItem || {}),
-    });
+    };
+
+    const hasEmbeddedExercises =
+      Array.isArray(mergedPlannerItem.exercises) &&
+      mergedPlannerItem.exercises.length > 0;
+
+    const matchingWorkout = !hasEmbeddedExercises
+      ? (Array.isArray(workouts) ? workouts : []).find((item) => {
+          const itemName = String(item?.workout_name || item?.name || item?.title || "").trim().toLowerCase();
+          const plannerName = String(mergedPlannerItem?.workout_name || mergedPlannerItem?.name || mergedPlannerItem?.title || "").trim().toLowerCase();
+          return (
+            (mergedPlannerItem?.workout_id && item?.id === mergedPlannerItem.workout_id) ||
+            (plannerName && itemName === plannerName)
+          );
+        })
+      : null;
+
+    let resolvedPlannerItem = hasEmbeddedExercises
+      ? mergedPlannerItem
+      : matchingWorkout && Array.isArray(matchingWorkout.exercises) && matchingWorkout.exercises.length
+      ? {
+          ...matchingWorkout,
+          ...mergedPlannerItem,
+          exercises: matchingWorkout.exercises,
+          workout_id: mergedPlannerItem.workout_id || matchingWorkout.id || "",
+          source: mergedPlannerItem.source || matchingWorkout.source || "planned_workout",
+        }
+      : mergedPlannerItem;
+
+    if (!Array.isArray(resolvedPlannerItem.exercises) || !resolvedPlannerItem.exercises.length) {
+      const fallbackPlan = buildAdaptiveWorkout({
+        history,
+        snapshot: syncedSnapshot,
+        profile,
+        mode: "recommended",
+      });
+
+      if (Array.isArray(fallbackPlan?.exercises) && fallbackPlan.exercises.length) {
+        resolvedPlannerItem = {
+          ...resolvedPlannerItem,
+          exercises: fallbackPlan.exercises,
+          requested_focus: resolvedPlannerItem.requested_focus || fallbackPlan.focus || "",
+          adaptive_focus: fallbackPlan.focus || resolvedPlannerItem.adaptive_focus || "",
+          adaptive_reason: "Restored missing exercise details from your current Health plan context.",
+          source: resolvedPlannerItem.source || "planner_rehydrated",
+        };
+      }
+    }
+
+    if (!Array.isArray(resolvedPlannerItem.exercises) || !resolvedPlannerItem.exercises.length) {
+      setDrawer("plan-today");
+      return;
+    }
+
+    setActivePlannerItem(resolvedPlannerItem);
 
     setSnapshot((previous) => ({
       ...previous,
