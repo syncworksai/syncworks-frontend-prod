@@ -1,6 +1,7 @@
 // src/components/customer-health/HealthPremiumHome.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import HealthDashboard from "./HealthDashboard";
+import HealthMobileHome from "./HealthMobileHome";
 import { loadCloudWorkoutHistory } from "./healthWorkoutCloudSync";
 import { currentDayWorkout, localYmd } from "./healthWorkoutDateLifecycle";
 import { chooseRecoverySafeWorkout } from "./healthWorkoutRecoveryGuard";
@@ -32,6 +33,21 @@ export default function HealthPremiumHome({
   onStartWorkout,
 }) {
   const [cloudHistory, setCloudHistory] = useState([]);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(max-width: 1023px)").matches
+      : false
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const media = window.matchMedia("(max-width: 1023px)");
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener?.("change", update);
+    return () => media.removeEventListener?.("change", update);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -175,6 +191,19 @@ export default function HealthPremiumHome({
     }
 
     onStartWorkout?.(requestedWorkout);
+  }
+
+  if (isMobile) {
+    return (
+      <HealthMobileHome
+        profile={profile}
+        snapshot={guardedSnapshot}
+        history={history}
+        decision={decision}
+        onOpen={onOpen}
+        onStartWorkout={guardedStartWorkout}
+      />
+    );
   }
 
   return (
