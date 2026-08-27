@@ -4,11 +4,12 @@ import { useNavigate } from "react-router-dom";
 
 import api from "../../api/client";
 import { getBrowserCurrentLocation } from "../../api/locationContext";
+import { getLiveWeather } from "../../api/liveContext";
 
 const ACTIONS = [
   { label: "Food", detail: "Restaurants, coffee and places to eat.", icon: Utensils, route: "/customer/discover?category=FOOD" },
   { label: "Shopping", detail: "Stores and useful retail nearby.", icon: ShoppingBag, route: "/customer/discover?category=RETAIL" },
-  { label: "Weather", detail: "Live conditions and the next hour.", icon: CloudSun, route: "/customer/weather" },
+  { label: "Weather", detail: "Live conditions, 24-hour outlook and daily forecast.", icon: CloudSun, route: "/customer/weather" },
   { label: "Traffic", detail: "Live delays and route timing.", icon: Route, route: "/customer/traffic" },
   { label: "Things to do", detail: "Nearby activities and places to explore.", icon: Compass, route: "/customer/discover?category=EVENTS" },
   { label: "Local services", detail: "Businesses and providers around you.", icon: Store, route: "/customer/discover?category=SERVICES" },
@@ -29,6 +30,7 @@ export default function AroundYouPanel() {
   const nav = useNavigate();
   const [location, setLocation] = useState(null);
   const [mapUrl, setMapUrl] = useState("");
+  const [weather, setWeather] = useState(null);
   const [status, setStatus] = useState("loading");
   const [permissionBlocked, setPermissionBlocked] = useState(false);
 
@@ -38,18 +40,26 @@ export default function AroundYouPanel() {
     try {
       const current = await getBrowserCurrentLocation({ enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
       setLocation(current);
-      const response = await api.get("/identity/map-preview/", {
-        params: { latitude: current.latitude, longitude: current.longitude, zoom: 12 },
-        responseType: "blob",
-      });
-      const nextUrl = URL.createObjectURL(response.data);
-      setMapUrl((previous) => {
-        if (previous) URL.revokeObjectURL(previous);
-        return nextUrl;
-      });
+      const [mapResult, weatherResult] = await Promise.allSettled([
+        api.get("/identity/map-preview/", {
+          params: { latitude: current.latitude, longitude: current.longitude, zoom: 12 },
+          responseType: "blob",
+        }),
+        getLiveWeather(current),
+      ]);
+
+      if (mapResult.status === "fulfilled") {
+        const nextUrl = URL.createObjectURL(mapResult.value.data);
+        setMapUrl((previous) => {
+          if (previous) URL.revokeObjectURL(previous);
+          return nextUrl;
+        });
+      }
+      setWeather(weatherResult.status === "fulfilled" ? weatherResult.value : null);
       setStatus("ready");
     } catch {
       setLocation(null);
+      setWeather(null);
       setStatus("location-required");
       try {
         const permission = await navigator.permissions?.query?.({ name: "geolocation" });
@@ -75,21 +85,10 @@ export default function AroundYouPanel() {
     return `${Number(location.latitude).toFixed(3)}, ${Number(location.longitude).toFixed(3)}`;
   }, [location]);
 
-  const locationTitle = status === "ready"
-    ? "Current location"
-    : status === "loading"
-      ? "Locating you…"
-      : permissionBlocked
-        ? "Location blocked"
-        : "Location needed";
-
-  const locationDetail = status === "ready"
-    ? coordinateLabel
-    : status === "loading"
-      ? "Preparing your local map"
-      : permissionBlocked
-        ? "Allow location for SyncWorks in your browser site settings, then tap here to retry."
-        : "Tap here to enable location.";
+  const currentWeather = weather?.current || {};
+  const weatherReady = Number.isFinite(Number(currentWeather.temp_f));
+  const locationTitle = status === "ready" ? "Current location" : status === "loading" ? "Locating you…" : permissionBlocked ? "Location blocked" : "Location needed";
+  const locationDetail = status === "ready" ? coordinateLabel : status === "loading" ? "Preparing your local map" : permissionBlocked ? "Allow location for SyncWorks in your browser site settings, then tap here to retry." : "Tap here to enable location.";
 
   return (
     <section className="overflow-hidden rounded-[1.75rem] border border-cyan-400/15 bg-slate-950/55">
@@ -111,17 +110,24 @@ export default function AroundYouPanel() {
 
         <div className="relative min-h-[300px] border-t border-white/10 bg-[#06101f] xl:border-l xl:border-t-0">
           {mapUrl ? <img src={mapUrl} alt="Map centered on your current location" className="absolute inset-0 h-full w-full object-cover" /> : null}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#020617]/85 via-transparent to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#020617]/90 via-transparent to-[#020617]/20" />
+
+          {weatherReady ? (
+            <button type="button" onClick={() => nav("/customer/weather")} className="absolute right-4 top-4 z-10 flex items-center gap-3 rounded-2xl border border-cyan-300/20 bg-slate-950/85 px-4 py-3 text-left backdrop-blur-xl">
+              <CloudSun className="h-7 w-7 text-cyan-200" />
+              <span><span className="block text-2xl font-black text-white">{Math.round(Number(currentWeather.temp_f))}°</span><span className="block max-w-[150px] truncate text-[10px] capitalize text-slate-400">{currentWeather.description || currentWeather.condition || "Live weather"}</span></span>
+            </button>
+          ) : null}
 
           <div className="absolute bottom-4 left-4 right-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/10 bg-slate-950/80 p-3 backdrop-blur-xl">
             <button type="button" onClick={requestLocation} className="pointer-events-auto flex min-w-0 flex-1 items-center gap-2 rounded-xl text-left transition hover:bg-white/[.035]" title="Enable or refresh location">
               <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border ${permissionBlocked ? "border-amber-300/25 bg-amber-500/10 text-amber-200" : "border-cyan-300/20 bg-cyan-500/10 text-cyan-200"}`}><MapPin className="h-4 w-4" /></span>
-              <div className="min-w-0">
-                <div className={`text-[10px] font-black ${permissionBlocked ? "text-amber-100" : "text-white"}`}>{locationTitle}</div>
-                <div className="truncate text-[9px] text-slate-500">{locationDetail}</div>
-              </div>
+              <div className="min-w-0"><div className={`text-[10px] font-black ${permissionBlocked ? "text-amber-100" : "text-white"}`}>{locationTitle}</div><div className="truncate text-[9px] text-slate-500">{locationDetail}</div></div>
             </button>
-            <button type="button" onClick={() => nav("/customer/traffic")} className="pointer-events-auto inline-flex min-h-10 items-center gap-2 rounded-xl border border-violet-300/20 bg-violet-500/10 px-3 text-[10px] font-black text-violet-100"><MapPinned className="h-4 w-4" />Live traffic</button>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => nav("/customer/weather")} className="pointer-events-auto inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-500/10 px-3 text-[10px] font-black text-cyan-100"><CloudSun className="h-4 w-4" />Weather</button>
+              <button type="button" onClick={() => nav("/customer/traffic")} className="pointer-events-auto inline-flex min-h-10 items-center gap-2 rounded-xl border border-violet-300/20 bg-violet-500/10 px-3 text-[10px] font-black text-violet-100"><MapPinned className="h-4 w-4" />Traffic</button>
+            </div>
           </div>
         </div>
       </div>
