@@ -1,0 +1,1 @@
+Calendar desktop pass keeps mobile behavior intact while desktop uses compact typography and a wide workspace. SMS capture is deferred.
