@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { CloudSun, Compass, MapPinned, MapPin, Route, ShoppingBag, Store, Utensils } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -30,40 +30,66 @@ export default function AroundYouPanel() {
   const [location, setLocation] = useState(null);
   const [mapUrl, setMapUrl] = useState("");
   const [status, setStatus] = useState("loading");
+  const [permissionBlocked, setPermissionBlocked] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    let objectUrl = "";
-
-    async function load() {
+  const requestLocation = useCallback(async () => {
+    setStatus("loading");
+    setPermissionBlocked(false);
+    try {
+      const current = await getBrowserCurrentLocation({ enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+      setLocation(current);
+      const response = await api.get("/identity/map-preview/", {
+        params: { latitude: current.latitude, longitude: current.longitude, zoom: 12 },
+        responseType: "blob",
+      });
+      const nextUrl = URL.createObjectURL(response.data);
+      setMapUrl((previous) => {
+        if (previous) URL.revokeObjectURL(previous);
+        return nextUrl;
+      });
+      setStatus("ready");
+    } catch {
+      setLocation(null);
+      setStatus("location-required");
       try {
-        const current = await getBrowserCurrentLocation({ enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
-        if (cancelled) return;
-        setLocation(current);
-        const response = await api.get("/identity/map-preview/", {
-          params: { latitude: current.latitude, longitude: current.longitude, zoom: 12 },
-          responseType: "blob",
-        });
-        if (cancelled) return;
-        objectUrl = URL.createObjectURL(response.data);
-        setMapUrl(objectUrl);
-        setStatus("ready");
+        const permission = await navigator.permissions?.query?.({ name: "geolocation" });
+        setPermissionBlocked(permission?.state === "denied");
       } catch {
-        if (!cancelled) setStatus("location-required");
+        setPermissionBlocked(false);
       }
     }
-
-    load();
-    return () => {
-      cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
   }, []);
+
+  useEffect(() => {
+    requestLocation();
+    return () => {
+      setMapUrl((current) => {
+        if (current) URL.revokeObjectURL(current);
+        return "";
+      });
+    };
+  }, [requestLocation]);
 
   const coordinateLabel = useMemo(() => {
     if (!location) return "Current location";
     return `${Number(location.latitude).toFixed(3)}, ${Number(location.longitude).toFixed(3)}`;
   }, [location]);
+
+  const locationTitle = status === "ready"
+    ? "Current location"
+    : status === "loading"
+      ? "Locating you…"
+      : permissionBlocked
+        ? "Location blocked"
+        : "Location needed";
+
+  const locationDetail = status === "ready"
+    ? coordinateLabel
+    : status === "loading"
+      ? "Preparing your local map"
+      : permissionBlocked
+        ? "Allow location for SyncWorks in your browser site settings, then tap here to retry."
+        : "Tap here to enable location.";
 
   return (
     <section className="overflow-hidden rounded-[1.75rem] border border-cyan-400/15 bg-slate-950/55">
@@ -88,13 +114,13 @@ export default function AroundYouPanel() {
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#020617]/85 via-transparent to-transparent" />
 
           <div className="absolute bottom-4 left-4 right-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/10 bg-slate-950/80 p-3 backdrop-blur-xl">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-500/10 text-cyan-200"><MapPin className="h-4 w-4" /></span>
+            <button type="button" onClick={requestLocation} className="pointer-events-auto flex min-w-0 flex-1 items-center gap-2 rounded-xl text-left transition hover:bg-white/[.035]" title="Enable or refresh location">
+              <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border ${permissionBlocked ? "border-amber-300/25 bg-amber-500/10 text-amber-200" : "border-cyan-300/20 bg-cyan-500/10 text-cyan-200"}`}><MapPin className="h-4 w-4" /></span>
               <div className="min-w-0">
-                <div className="text-[10px] font-black text-white">{status === "ready" ? "Current location" : status === "loading" ? "Locating you…" : "Location needed"}</div>
-                <div className="truncate text-[9px] text-slate-500">{status === "ready" ? coordinateLabel : status === "loading" ? "Preparing your local map" : "Allow browser location to show the map."}</div>
+                <div className={`text-[10px] font-black ${permissionBlocked ? "text-amber-100" : "text-white"}`}>{locationTitle}</div>
+                <div className="truncate text-[9px] text-slate-500">{locationDetail}</div>
               </div>
-            </div>
+            </button>
             <button type="button" onClick={() => nav("/customer/traffic")} className="pointer-events-auto inline-flex min-h-10 items-center gap-2 rounded-xl border border-violet-300/20 bg-violet-500/10 px-3 text-[10px] font-black text-violet-100"><MapPinned className="h-4 w-4" />Live traffic</button>
           </div>
         </div>
