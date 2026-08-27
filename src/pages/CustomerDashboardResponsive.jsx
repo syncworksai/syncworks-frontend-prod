@@ -3,7 +3,7 @@ import { Activity, Home, Inbox, LayoutGrid, MoreHorizontal } from "lucide-react"
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import CustomerDashboard from "./CustomerDashboard";
+import CustomerDashboard from "./CustomerDashboard.jsx";
 import CustomerMobileHome from "../components/customer/CustomerMobileHome";
 import SyncAssistantStickyDock from "../components/sync/SyncAssistantStickyDock";
 
