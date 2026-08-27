@@ -55,7 +55,7 @@ export default function CustomerDashboardResponsive() {
 
   return (
     <>
-      <div className="lg:hidden min-h-dvh bg-[#020617] px-3 pb-24 pt-3 text-slate-100">
+      <div className="md:hidden min-h-dvh bg-[#020617] px-3 pb-24 pt-3 text-slate-100">
         <CustomerMobileHome
           displayName={firstName(user)}
           tickets={tickets}
@@ -92,7 +92,7 @@ export default function CustomerDashboardResponsive() {
 
         {dockOpen ? <SyncAssistantStickyDock displayName={firstName(user)} /> : null}
       </div>
-      <div className="hidden lg:block">
+      <div className="hidden md:block">
         <CustomerDashboard />
       </div>
     </>

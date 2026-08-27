@@ -29,9 +29,8 @@ export default function DashboardShell({
         rightActions={rightActions}
       />
 
-      {/* These mobile intelligence strips are useful on the phone, but on desktop
-          they were pushing the actual Personal command center below the fold. */}
-      <div className="lg:hidden">
+      {/* Phone-only intelligence strips. Tablet/desktop gets the command center. */}
+      <div className="md:hidden">
         <ProfileCompletionBanner />
         <LocalDiscoveryBanner />
         <SyncDailyIntelligenceBar />
