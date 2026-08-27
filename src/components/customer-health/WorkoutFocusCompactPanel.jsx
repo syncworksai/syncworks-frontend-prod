@@ -65,7 +65,7 @@ function RecommendationBanner({ suggestion, onUse, onKeep, onAdjust }) {
           <div className="mt-1 text-sm font-black text-cyan-100">{proposedWeight !== "" ? formatLoad(proposedWeight) : "Current load"}{proposedReps !== "" ? ` × ${proposedReps}` : ""}</div>
         </div>
       </div>
-      <div className="mt-3 grid grid-cols-3 gap-2">
+      <div className="mt-2 grid grid-cols-3 gap-1.5">
         <button type="button" onClick={() => onKeep?.(suggestion)} className="h-10 rounded-xl border border-white/10 bg-white/[0.04] text-[10px] font-black text-slate-200">Keep Current</button>
         <button type="button" onClick={() => onUse?.(suggestion)} className="h-10 rounded-xl border border-lime-300/30 bg-lime-300/15 text-[10px] font-black text-lime-100">Use Suggestion</button>
         <button type="button" onClick={() => onAdjust?.(suggestion)} className="h-10 rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-[10px] font-black text-cyan-100">Custom</button>
@@ -105,7 +105,7 @@ export default function WorkoutFocusCompactPanel({
   const exerciseName = cleanText(currentExercise?.substitute_name || currentExercise?.name, "Exercise");
   const reps = cleanText(currentExercise?.current_target_reps || currentExercise?.planned_reps, "—");
   const weight = currentExercise?.current_target_weight || currentExercise?.planned_weight || "";
-  const previousSets = currentExercise?.previous_working_sets || currentExercise?.last_working_sets || currentExercise?.exercise_memory?.working_sets || [];
+  const previousSets = currentExercise?.previous_performance?.last_sets || currentExercise?.previous_working_sets || currentExercise?.last_working_sets || currentExercise?.exercise_memory?.working_sets || [];
   const previousSet = Array.isArray(previousSets) ? previousSets[previousSets.length - 1] : null;
   const explicitImage = currentExercise?.image_url || currentExercise?.hero_image || currentExercise?.image || currentExercise?.demo_image || "";
   const fallbackImage = `/health/exercises/${slugify(exerciseName)}/${slugify(exerciseName)}-hero.png`;
@@ -132,36 +132,36 @@ export default function WorkoutFocusCompactPanel({
 
   return (
     <>
-      <section id="health-workout-command-center" className="overflow-hidden rounded-[1.7rem] border border-lime-300/25 bg-[radial-gradient(circle_at_88%_0%,rgba(57,255,136,0.11),transparent_28%),linear-gradient(160deg,#0a120d,#020403)] shadow-[0_22px_70px_rgba(0,0,0,0.46)]">
+      <section id="health-workout-command-center" className="overflow-hidden rounded-[1.7rem] border border-cyan-300/25 bg-[radial-gradient(circle_at_88%_0%,rgba(34,211,238,0.10),transparent_28%),linear-gradient(160deg,#07101f,#020617)] shadow-[0_22px_70px_rgba(0,0,0,0.46)]">
         <div className="border-b border-white/8 p-3 sm:p-4">
           <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0"><div className="text-[9px] font-black uppercase tracking-[0.18em] text-lime-300">Active workout</div><div className="mt-1 truncate text-base font-black text-white">{cleanText(session.workout_name, "Workout")}</div></div>
+            <div className="min-w-0"><div className="text-[9px] font-black uppercase tracking-[0.18em] text-cyan-300">Active workout</div><div className="mt-1 truncate text-base font-black text-white">{cleanText(session.workout_name, "Workout")}</div></div>
             <button type="button" onClick={onEndWorkout} disabled={session.set_active} className="h-10 rounded-xl border border-rose-300/25 bg-rose-300/10 px-3 text-[10px] font-black text-rose-100 disabled:opacity-35">End Workout</button>
           </div>
-          <div className="mt-2 flex items-center gap-2"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/8"><div className="h-full rounded-full bg-lime-300" style={{ width: `${workoutProgress.percent}%` }} /></div><div className="text-[9px] font-black text-slate-500">{workoutProgress.resolved}/{workoutProgress.total}</div></div>
+          <div className="mt-2 flex items-center gap-2"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/8"><div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-600" style={{ width: `${workoutProgress.percent}%` }} /></div><div className="text-[9px] font-black text-slate-500">{workoutProgress.resolved}/{workoutProgress.total}</div></div>
         </div>
-        <div className="p-3 pb-28 sm:p-4 sm:pb-32">
+        <div className="p-2.5 pb-24 sm:p-4 sm:pb-32">
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0"><div className="text-[9px] font-black uppercase tracking-[0.16em] text-cyan-200">Exercise {safeNumber(session.current_exercise_index, 0) + 1} of {Math.max(1, exercises.length)}</div><h2 className="mt-1 truncate text-2xl font-black text-white">{exerciseName}</h2><div className="mt-1 text-xs font-bold text-slate-400">Set {setNumber} of {plannedSets}</div></div>
+            <div className="min-w-0"><div className="text-[9px] font-black uppercase tracking-[0.16em] text-cyan-200">Exercise {safeNumber(session.current_exercise_index, 0) + 1} of {Math.max(1, exercises.length)}</div><h2 className="mt-0.5 truncate text-xl font-black text-white">{exerciseName}</h2><div className="mt-1 text-xs font-bold text-slate-400">Set {setNumber} of {plannedSets}</div></div>
             <button type="button" onClick={() => setDrawerMode("insight")} className="h-10 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 text-[10px] font-black text-cyan-100">Info</button>
           </div>
-          {image ? <button type="button" onClick={() => setDrawerMode("insight")} className="mt-3 block h-44 w-full overflow-hidden rounded-2xl border border-white/10 bg-black/30 sm:h-64"><img src={image} alt={exerciseName} onError={() => setImageFailed(true)} className="h-full w-full object-cover" /></button> : null}
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            <div className="rounded-2xl border border-white/10 bg-black/25 p-3 text-center"><div className="text-[8px] font-black uppercase tracking-wider text-slate-500">Target reps</div><div className="mt-1 text-lg font-black text-white">{reps}</div></div>
-            <div className="rounded-2xl border border-white/10 bg-black/25 p-3 text-center"><div className="text-[8px] font-black uppercase tracking-wider text-slate-500">Target load</div><div className="mt-1 text-lg font-black text-white">{formatLoad(weight)}</div></div>
-            <button type="button" onClick={() => setDrawerMode("history")} className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.06] p-3 text-center"><div className="text-[8px] font-black uppercase tracking-wider text-cyan-200">Last time</div><div className="mt-1 text-sm font-black text-cyan-100">{previousSet ? `${cleanText(previousSet.actual_reps || previousSet.reps, "—")} × ${formatLoad(previousSet.actual_weight || previousSet.weight)}` : "Baseline"}</div></button>
+          {image ? <button type="button" onClick={() => setDrawerMode("insight")} className="mt-2 block h-36 w-full overflow-hidden rounded-2xl border border-white/10 bg-black/30 sm:h-64"><img src={image} alt={exerciseName} onError={() => setImageFailed(true)} className="h-full w-full object-cover" /></button> : null}
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
+            <div className="rounded-xl border border-white/10 bg-black/25 p-2 text-center"><div className="text-[8px] font-black uppercase tracking-wider text-slate-500">Target reps</div><div className="mt-1 text-lg font-black text-white">{reps}</div></div>
+            <div className="rounded-xl border border-white/10 bg-black/25 p-2 text-center"><div className="text-[8px] font-black uppercase tracking-wider text-slate-500">Target load</div><div className="mt-1 text-lg font-black text-white">{formatLoad(weight)}</div></div>
+            <button type="button" onClick={() => setDrawerMode("history")} className="rounded-xl border border-cyan-300/20 bg-cyan-300/[0.06] p-2 text-center"><div className="text-[8px] font-black uppercase tracking-wider text-cyan-200">Last time</div><div className="mt-1 text-sm font-black text-cyan-100">{previousSet ? `${cleanText(previousSet.actual_reps || previousSet.reps, "—")} × ${formatLoad(previousSet.actual_weight || previousSet.weight)}` : "Baseline"}</div></button>
           </div>
           <RecommendationBanner suggestion={suggestion} onUse={onUseRecommendation} onKeep={onKeepCurrent} onAdjust={onAdjustManually} />
-          <div className="mt-3 grid grid-cols-3 gap-2"><button type="button" onClick={() => setDrawerMode("history")} className="h-11 rounded-xl border border-white/10 bg-white/[0.035] text-[10px] font-black text-slate-200">History</button><button type="button" onClick={() => setDrawerMode("insight")} className="h-11 rounded-xl border border-white/10 bg-white/[0.035] text-[10px] font-black text-slate-200">Exercise Info</button><button type="button" onClick={() => setDrawerMode("change")} disabled={session.set_active} className="h-11 rounded-xl border border-white/10 bg-white/[0.035] text-[10px] font-black text-slate-200 disabled:opacity-35">Swap / Skip</button></div>
+          <div className="mt-2 grid grid-cols-3 gap-1.5"><button type="button" onClick={() => setDrawerMode("history")} className="h-11 rounded-xl border border-white/10 bg-white/[0.035] text-[10px] font-black text-slate-200">History</button><button type="button" onClick={() => setDrawerMode("insight")} className="h-11 rounded-xl border border-white/10 bg-white/[0.035] text-[10px] font-black text-slate-200">Exercise Info</button><button type="button" onClick={() => setDrawerMode("change")} disabled={session.set_active} className="h-11 rounded-xl border border-white/10 bg-white/[0.035] text-[10px] font-black text-slate-200 disabled:opacity-35">Swap / Skip</button></div>
           {allSetsComplete ? <button type="button" onClick={onEndWorkout} className="mt-3 h-14 w-full rounded-2xl border border-lime-300/40 bg-lime-300 text-sm font-black uppercase tracking-[0.08em] text-black">End Workout and Review</button> : null}
         </div>
       </section>
 
-      <div className="fixed inset-x-0 bottom-0 z-[210] border-t border-lime-300/20 bg-[#020604]/96 px-3 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] pt-2 backdrop-blur-xl">
-        <div className="mx-auto grid max-w-xl grid-cols-[72px_1fr_72px] gap-2">
-          <button type="button" onClick={onToggleAudio} className={`h-14 rounded-2xl border text-[10px] font-black ${audioOn ? "border-cyan-300/30 bg-cyan-300/12 text-cyan-100" : "border-white/10 bg-white/[0.04] text-slate-300"}`}>Audio<br />{audioOn ? "On" : "Off"}</button>
-          <button type="button" onClick={primaryAction} disabled={session.paused || (session.rest_active && !session.pending_set_logging)} className="h-14 rounded-2xl border border-lime-300/45 bg-lime-300 text-sm font-black uppercase tracking-[0.08em] text-black shadow-[0_0_24px_rgba(57,255,136,0.30)] disabled:opacity-55">{primaryLabel}</button>
-          <button type="button" onClick={onAskSync} className="h-14 rounded-2xl border border-fuchsia-300/25 bg-fuchsia-300/10 text-[10px] font-black text-fuchsia-100">Ask<br />SYNC</button>
+      <div className="health-workout-action-dock fixed inset-x-0 bottom-0 z-[210] border-t border-lime-300/20 bg-[#020604]/96 px-3 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] pt-2 backdrop-blur-xl">
+        <div className="mx-auto grid max-w-xl grid-cols-[64px_1fr_64px] gap-1.5">
+          <button type="button" onClick={onToggleAudio} className={`h-12 rounded-xl border text-[10px] font-black ${audioOn ? "border-cyan-300/30 bg-cyan-300/12 text-cyan-100" : "border-white/10 bg-white/[0.04] text-slate-300"}`}>Audio<br />{audioOn ? "On" : "Off"}</button>
+          <button type="button" onClick={primaryAction} disabled={session.paused || (session.rest_active && !session.pending_set_logging)} className="h-14 rounded-2xl border border-cyan-300/45 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-sm font-black uppercase tracking-[0.08em] text-white shadow-[0_0_24px_rgba(34,211,238,0.24)] disabled:opacity-55">{primaryLabel}</button>
+          <button type="button" onClick={onAskSync} className="h-12 rounded-xl border border-fuchsia-300/25 bg-fuchsia-300/10 text-[10px] font-black text-fuchsia-100">Ask<br />SYNC</button>
         </div>
         <div className="mx-auto mt-1 flex max-w-xl items-center justify-between px-1 text-[8px] font-black uppercase tracking-[0.13em] text-slate-600"><button type="button" onClick={onPause} className="py-1">{session.paused ? "Resume workout" : "Pause workout"}</button><button type="button" onClick={() => setDrawerMode("timer")} className="py-1">Timers</button><button type="button" onClick={() => setDrawerMode("more")} className="py-1">More</button></div>
       </div>

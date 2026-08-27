@@ -2684,6 +2684,29 @@ export default function ActiveWorkoutSessionDrawer({
   }, [session]);
 
   useEffect(() => {
+    if (
+      !open ||
+      !session ||
+      !Array.isArray(history) ||
+      !history.length
+    ) {
+      return;
+    }
+
+    setSession((previous) => {
+      if (!previous) return previous;
+
+      const hydrated =
+        hydrateSessionWithExerciseMemory({
+          session: previous,
+          history,
+        });
+
+      return sanitizeLegacyWorkoutData(hydrated);
+    });
+  }, [open, history]);
+
+  useEffect(() => {
     if (!open || !plannerItem) return;
 
     const workoutKey = String(
@@ -4775,22 +4798,22 @@ export default function ActiveWorkoutSessionDrawer({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[1100] bg-[#020403]">
-<section className="relative z-[1101] flex h-[100dvh] w-full flex-col overflow-hidden bg-[radial-gradient(circle_at_50%_-10%,rgba(0,245,106,0.12),transparent_30%),linear-gradient(180deg,#050806_0%,#020403_100%)]">
-        <header className="sticky top-0 z-30 border-b border-emerald-300/15 bg-[#030604]/97 px-3 py-3 backdrop-blur-xl sm:px-6 sm:py-4">
+    <div className="health-active-workout-root fixed inset-0 z-[1100] bg-[#020617]">
+<section className="health-active-workout-shell relative z-[1101] flex h-[100dvh] w-full flex-col overflow-hidden bg-[radial-gradient(circle_at_50%_-10%,rgba(34,211,238,0.12),transparent_30%),linear-gradient(180deg,#050816_0%,#020617_100%)]">
+        <header className="health-active-workout-header sticky top-0 z-30 border-b border-cyan-300/15 bg-[#020617]/97 px-3 py-2 backdrop-blur-xl sm:px-6 sm:py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-[9px] font-black uppercase tracking-[0.24em] text-emerald-200 sm:text-xs">
+              <div className="text-[9px] font-black uppercase tracking-[0.24em] text-cyan-200 sm:text-xs">
                 {formatHealthDay(session?.scheduled_ymd || session?.ymd || new Date())} · SYNC WORKOUT FOCUS MODE
               </div>
 
-              <h2 className="mt-1 truncate text-xl font-black text-white sm:text-4xl">
+              <h2 className="mt-0.5 truncate text-lg font-black text-white sm:text-4xl">
                 {session?.workout_name ||
                   "Active Workout"}
               </h2>
 
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-emerald-100">
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-cyan-100">
                   {plannerItem?.workout_location_name ||
                     plannerItem?.location_name ||
                     session?.workout_location_name ||
@@ -4827,7 +4850,7 @@ export default function ActiveWorkoutSessionDrawer({
 
           {session ? (
             <>
-              <div className="mt-3 grid grid-cols-4 gap-1.5 sm:hidden">
+              <div className="mt-2 grid grid-cols-4 gap-1 sm:hidden">
                 <MobileStat
                   label="Total"
                   value={formatSeconds(
@@ -4922,7 +4945,7 @@ export default function ActiveWorkoutSessionDrawer({
           ) : null}
         </header>
 
-        <main className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto px-3 py-3 pb-[calc(12rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-5 sm:pb-40">
+        <main className="health-active-workout-main mx-auto w-full max-w-5xl flex-1 overflow-y-auto px-2.5 py-2.5 pb-[calc(7.2rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-5 sm:pb-40">
           {!session ? (
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 text-sm text-slate-300">
               No active workout selected.

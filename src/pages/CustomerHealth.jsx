@@ -18,6 +18,12 @@ import {
 } from "../api/customerHealth";
 
 import { buildHealthAchievements } from "../components/customer-health/healthAchievements";
+import { loadCloudWorkoutHistory } from "../components/customer-health/healthWorkoutCloudSync";
+import {
+  buildExerciseMemoryFromHistory,
+  readExerciseMemory,
+  writeExerciseMemory,
+} from "../components/customer-health/healthExerciseMemory";
 import {
   countWorkoutsThisWeek,
   createNextWeekFromSnapshot,
@@ -59,6 +65,7 @@ import {
 } from "../components/customer-health/healthDailyMetricIntelligence";
 import "../components/customer-health/healthUiPolish.css";
 import "../components/customer-health/healthObsidianElectric.css";
+import "../components/customer-health/healthWorkoutMobileV2.css";
 import {
   adaptWorkoutToAvailableEquipment,
   buildAdaptiveWorkout,
@@ -1277,6 +1284,15 @@ export default function CustomerHealth() {
         const data =
           await getCustomerHealthProfile();
 
+        const workoutHistoryResponse =
+          await loadCloudWorkoutHistory().catch((error) => {
+            console.warn(
+              "Health workout history recovery endpoint unavailable.",
+              error
+            );
+            return null;
+          });
+
         if (!mounted) return;
 
         skipNextCloudSaveRef.current =
@@ -1299,15 +1315,23 @@ export default function CustomerHealth() {
 
         backupHealthHistory(localHistory);
 
+        const endpointHistory =
+          Array.isArray(workoutHistoryResponse?.results)
+            ? workoutHistoryResponse.results
+            : [];
+
+        const profileHistory =
+          Array.isArray(data?.history_json)
+            ? data.history_json
+            : [];
+
         const historyMerge =
           mergeHealthHistory({
             localHistory,
-            cloudHistory:
-              Array.isArray(
-                data?.history_json
-              )
-                ? data.history_json
-                : [],
+            cloudHistory: [
+              ...endpointHistory,
+              ...profileHistory,
+            ],
           });
 
         const cloudHistory =
@@ -1391,6 +1415,13 @@ export default function CustomerHealth() {
         }
 
         setHistory(cloudHistory);
+
+        const recoveredExerciseMemory =
+          buildExerciseMemoryFromHistory(
+            cloudHistory,
+            readExerciseMemory()
+          );
+        writeExerciseMemory(recoveredExerciseMemory);
 
         writeJson(
           HISTORY_KEY,
