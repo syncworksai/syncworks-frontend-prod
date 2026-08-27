@@ -11,6 +11,16 @@ const HIDDEN_PREFIXES = [
   "/accept-invite",
 ];
 
+function contextualPrompt(pathname) {
+  if (pathname === "/calendar" || pathname.startsWith("/calendar/")) return "Review my calendar, upcoming appointments, conflicts, travel timing, traffic and weather. Tell me what matters next and read it aloud.";
+  if (pathname.startsWith("/customer/tasks")) return "Review my personal to-do list and connected day. Help me prioritize what I should do next and read the plan aloud.";
+  if (pathname.startsWith("/customer/inbox")) return "Review my SyncWorks inbox and connected communication. Tell me what needs attention first and read the important items aloud.";
+  if (pathname.startsWith("/customer/traffic")) return "Review my live traffic and upcoming schedule. Tell me about delays, leave-by times and anything that may affect my day.";
+  if (pathname.startsWith("/customer/weather")) return "Review my weather and connected schedule. Tell me what weather could affect today and read the important updates aloud.";
+  if (pathname.startsWith("/customer/discover")) return "Help me with what is nearby and relevant to what I am doing today. Use my connected context and tell me the best next options.";
+  return "Review this part of my SyncWorks account and my connected day. Tell me what matters next and read the important information aloud.";
+}
+
 export default function SyncAssistantLauncher() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -35,8 +45,13 @@ export default function SyncAssistantLauncher() {
 
   if (HIDDEN_PREFIXES.some((prefix) => location.pathname.startsWith(prefix))) return null;
 
-  const isCustomer = location.pathname.startsWith("/customer");
-  const showMic = location.pathname !== "/sync" && !isCustomer;
+  const isCustomerHome = location.pathname === "/customer";
+  const showMic = location.pathname !== "/sync" && !isCustomerHome;
+
+  function openSyncAudio() {
+    sessionStorage.setItem("syncAssistantPendingPrompt", contextualPrompt(location.pathname));
+    navigate(`/sync?return=${encodeURIComponent(location.pathname)}`);
+  }
 
   return (
     <>
@@ -54,10 +69,10 @@ export default function SyncAssistantLauncher() {
 
         {showMic ? <button
           type="button"
-          onClick={() => navigate(`/sync?return=${encodeURIComponent(location.pathname)}`)}
+          onClick={openSyncAudio}
           className="relative grid h-14 w-14 place-items-center rounded-full border border-cyan-200/50 bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-600 text-white shadow-[0_0_34px_rgba(34,211,238,0.42)] transition hover:scale-105"
-          aria-label="Open SYNC assistant"
-          title="Open SYNC"
+          aria-label="Open contextual SYNC assistant"
+          title="Ask SYNC about this page"
         >
           <Mic aria-hidden="true" className="h-6 w-6" />
           <span className="absolute -bottom-5 text-[9px] font-black uppercase tracking-[0.16em] text-cyan-100">SYNC</span>
