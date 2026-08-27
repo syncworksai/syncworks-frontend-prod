@@ -1,0 +1,1 @@
+Desktop Personal dashboard detection now uses browser user-agent/device class instead of pointer type so Windows touchscreen laptops and narrowed DevTools viewports do not fall back to the phone dashboard. Mobile phones retain the mobile dashboard.
