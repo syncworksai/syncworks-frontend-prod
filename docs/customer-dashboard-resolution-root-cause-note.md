@@ -1,0 +1,1 @@
+CustomerDashboardResponsive must explicitly import ./CustomerDashboard.jsx because ./CustomerDashboard.js is a legacy compatibility router to CustomerDashboardV2 and extensionless resolution selects .js first.
