@@ -8,7 +8,7 @@ import CustomerMobileHome from "../components/customer/CustomerMobileHome";
 import SyncAssistantStickyDock from "../components/sync/SyncAssistantStickyDock";
 
 const DAY_TRADING_EMAIL = "jacoblord7@outlook.com";
-const PHONE_QUERY = "(max-width: 767px) and (pointer: coarse)";
+const PHONE_UA = /iPhone|iPod|Android.*Mobile|Windows Phone|BlackBerry|IEMobile|Opera Mini/i;
 
 function safeList(value) {
   if (Array.isArray(value)) return value;
@@ -24,8 +24,8 @@ function firstName(user) {
 }
 
 function getPhoneMode() {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
-  return window.matchMedia(PHONE_QUERY).matches;
+  if (typeof navigator === "undefined") return false;
+  return PHONE_UA.test(String(navigator.userAgent || ""));
 }
 
 export default function CustomerDashboardResponsive() {
@@ -35,7 +35,7 @@ export default function CustomerDashboardResponsive() {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dockOpen, setDockOpen] = useState(false);
-  const [phoneMode, setPhoneMode] = useState(getPhoneMode);
+  const [phoneMode] = useState(getPhoneMode);
   const dayTradingEnabled = String(user?.email || "").trim().toLowerCase() === DAY_TRADING_EMAIL;
 
   async function load() {
@@ -50,15 +50,6 @@ export default function CustomerDashboardResponsive() {
   }
 
   useEffect(() => { load(); }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return undefined;
-    const media = window.matchMedia(PHONE_QUERY);
-    const syncMode = () => setPhoneMode(media.matches);
-    syncMode();
-    media.addEventListener?.("change", syncMode);
-    return () => media.removeEventListener?.("change", syncMode);
-  }, []);
 
   const openTickets = useMemo(() => tickets.filter((item) => !["COMPLETED", "CLOSED", "CANCELLED", "PAID"].includes(String(item?.status || "").toUpperCase())), [tickets]);
   const dueInvoices = useMemo(() => invoices.filter((item) => !["PAID", "VOID"].includes(String(item?.derived_state || item?.status || "").toUpperCase())), [invoices]);
