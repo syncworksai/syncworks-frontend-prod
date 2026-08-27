@@ -61,7 +61,12 @@ export default function CustomerDashboardResponsive() {
   }
 
   if (!phoneMode) {
-    return <CustomerDashboard />;
+    return (
+      <>
+        <CustomerDashboard />
+        <SyncAssistantStickyDock displayName={firstName(user)} />
+      </>
+    );
   }
 
   return (
