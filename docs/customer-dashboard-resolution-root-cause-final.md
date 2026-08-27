@@ -1,0 +1,1 @@
+Final note: the desktop dashboard root cause was extensionless module resolution selecting CustomerDashboard.js (legacy CustomerDashboardV2) instead of CustomerDashboard.jsx. The production fix explicitly imports CustomerDashboard.jsx from CustomerDashboardResponsive.jsx.
