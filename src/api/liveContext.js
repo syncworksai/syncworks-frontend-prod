@@ -1,8 +1,8 @@
 import api from "./client";
 import { getBrowserCurrentLocation } from "./locationContext";
 
-export async function getLiveWeather() {
-  const current = await getBrowserCurrentLocation({ enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+export async function getLiveWeather(knownLocation = null) {
+  const current = knownLocation || await getBrowserCurrentLocation({ enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
   const response = await api.post("/identity/live-weather/", {
     latitude: current.latitude,
     longitude: current.longitude,
