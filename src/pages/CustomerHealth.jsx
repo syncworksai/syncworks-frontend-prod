@@ -2632,7 +2632,42 @@ export default function CustomerHealth() {
       return;
     }
 
-    setActivePlannerItem(resolvedPlannerItem);
+    const directStartLocation =
+      resolvedPlannerItem.workout_location_name ||
+      resolvedPlannerItem.requested_location ||
+      syncedSnapshot?.training_location ||
+      profile?.training_location ||
+      "";
+
+    const directStartItem = {
+      ...resolvedPlannerItem,
+      workout_location_name: directStartLocation,
+      requested_location:
+        resolvedPlannerItem.requested_location || directStartLocation,
+      planned_date:
+        resolvedPlannerItem.planned_date ||
+        resolvedPlannerItem.ymd ||
+        todayYmd(),
+      launch_mode: "direct_mobile_start",
+      launch_started_at: new Date().toISOString(),
+      pre_workout_check_in: {
+        ...(resolvedPlannerItem.pre_workout_check_in || {}),
+        readiness:
+          resolvedPlannerItem.pre_workout_check_in?.readiness ||
+          syncedSnapshot?.readiness ||
+          "",
+        energy:
+          resolvedPlannerItem.pre_workout_check_in?.energy ||
+          syncedSnapshot?.energy ||
+          "",
+        completed_at:
+          resolvedPlannerItem.pre_workout_check_in?.completed_at ||
+          new Date().toISOString(),
+        source: "direct_start_defaults",
+      },
+    };
+
+    setActivePlannerItem(directStartItem);
 
     setSnapshot((previous) => ({
       ...previous,
@@ -2642,12 +2677,15 @@ export default function CustomerHealth() {
         plannerItem.name ||
         previous.workout ||
         "",
+      training_location:
+        directStartLocation || previous.training_location || "",
       updated_at: new Date().toISOString(),
     }));
 
-    setDrawer(
-      "workout-location"
-    );
+    // The Home Start Workout action is the commitment point. Do not make
+    // the athlete pass through location, check-in, and another Start page.
+    // Location / soreness / equipment changes remain available inside Workout Mode.
+    setDrawer("active-workout");
   }
 
   function startAdaptiveWorkout(
