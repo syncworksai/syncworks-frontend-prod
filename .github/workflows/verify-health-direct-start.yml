@@ -1,0 +1,70 @@
+name: Verify Health Direct Workout Start
+
+on:
+  push:
+    branches:
+      - health-direct-workout-start-v3
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: health-direct-workout-start-v3
+          fetch-depth: 0
+
+      - name: Wire planned workouts directly into workout mode
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/pages/CustomerHealth.jsx')
+          text = path.read_text(encoding='utf-8')
+
+          old = '''    setActivePlannerItem(resolvedPlannerItem);\n\n    setSnapshot((previous) => ({\n      ...previous,\n      today_workout_id: plannerItem.id || "",\n      workout:\n        plannerItem.workout_name ||\n        plannerItem.name ||\n        previous.workout ||\n        "",\n      updated_at: new Date().toISOString(),\n    }));\n\n    setDrawer(\n      "workout-location"\n    );'''
+
+          new = '''    const directStartLocation =\n      resolvedPlannerItem.workout_location_name ||\n      resolvedPlannerItem.requested_location ||\n      syncedSnapshot?.training_location ||\n      profile?.training_location ||\n      "";\n\n    const directStartItem = {\n      ...resolvedPlannerItem,\n      workout_location_name: directStartLocation,\n      requested_location:\n        resolvedPlannerItem.requested_location || directStartLocation,\n      planned_date:\n        resolvedPlannerItem.planned_date ||\n        resolvedPlannerItem.ymd ||\n        todayYmd(),\n      launch_mode: "direct_mobile_start",\n      launch_started_at: new Date().toISOString(),\n      pre_workout_check_in: {\n        ...(resolvedPlannerItem.pre_workout_check_in || {}),\n        readiness:\n          resolvedPlannerItem.pre_workout_check_in?.readiness ||\n          syncedSnapshot?.readiness ||\n          "",\n        energy:\n          resolvedPlannerItem.pre_workout_check_in?.energy ||\n          syncedSnapshot?.energy ||\n          "",\n        completed_at:\n          resolvedPlannerItem.pre_workout_check_in?.completed_at ||\n          new Date().toISOString(),\n        source: "direct_start_defaults",\n      },\n    };\n\n    setActivePlannerItem(directStartItem);\n\n    setSnapshot((previous) => ({\n      ...previous,\n      today_workout_id: plannerItem.id || "",\n      workout:\n        plannerItem.workout_name ||\n        plannerItem.name ||\n        previous.workout ||\n        "",\n      training_location:\n        directStartLocation || previous.training_location || "",\n      updated_at: new Date().toISOString(),\n    }));\n\n    // The Home Start Workout action is the commitment point. Do not make\n    // the athlete pass through location, check-in, and another Start page.\n    // Location / soreness / equipment changes remain available inside Workout Mode.\n    setDrawer("active-workout");'''
+
+          if old not in text:
+              raise SystemExit('startPlannerWorkout direct-start anchor not found')
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Assert direct mobile workout path
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('src/pages/CustomerHealth.jsx').read_text(encoding='utf-8')
+          launch = Path('src/components/customer-health/WorkoutFocusLaunchDrawer.jsx').read_text(encoding='utf-8')
+          assert 'launch_mode: "direct_mobile_start"' in text
+          assert 'setDrawer("active-workout")' in text
+          assert 'setDrawer(\n      "workout-location"\n    );' not in text[text.index('function startPlannerWorkout'):text.index('function startAdaptiveWorkout')]
+          assert 'launch_mode: "direct_to_workout"' in launch
+          assert 'Start Workout' not in launch
+          print('Direct workout path assertions passed')
+          PY
+
+      - name: Build frontend
+        shell: bash
+        run: |
+          npm ci
+          npm run build
+          git diff --check
+
+      - name: Commit verified direct-start wiring
+        shell: bash
+        run: |
+          rm .github/workflows/verify-health-direct-start.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/CustomerHealth.jsx .github/workflows/verify-health-direct-start.yml
+          git commit -m "Send Health workouts straight into workout mode"
+          git push origin health-direct-workout-start-v3
