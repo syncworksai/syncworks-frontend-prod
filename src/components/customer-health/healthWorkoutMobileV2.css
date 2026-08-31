@@ -1,0 +1,8 @@
+@media (max-width: 639px) {
+  .health-active-workout-root { background:#020617 !important; }
+  .health-active-workout-header { padding-top:max(.5rem,env(safe-area-inset-top)); }
+  .health-active-workout-main { scrollbar-width:none; }
+  .health-active-workout-main::-webkit-scrollbar { display:none; }
+  .health-active-workout-root #health-workout-command-center { border-radius:1.15rem; }
+  .health-active-workout-root .health-workout-action-dock { padding-left:.55rem; padding-right:.55rem; padding-top:.4rem; padding-bottom:max(.45rem,env(safe-area-inset-bottom)); }
+}
