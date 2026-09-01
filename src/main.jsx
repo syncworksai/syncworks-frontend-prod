@@ -10,6 +10,7 @@ import BusinessLiveAuditGuard from "./components/business/BusinessLiveAuditGuard
 import PMShell from "./components/pm/PMShell";
 import PMTenantEditOverlay from "./components/pm/PMTenantEditOverlay";
 import NutritionCoachGlobalAssist from "./components/customer-health/NutritionCoachGlobalAssist";
+import StorefrontCartDock from "./components/storefront/StorefrontCartDock";
 import StorefrontRevenueKpis from "./components/storefront/StorefrontRevenueKpis";
 import App from "./App";
 import CustomerStoreV2 from "./pages/CustomerStoreV2";
@@ -23,7 +24,7 @@ import PMPayments from "./pages/PMPayments";
 import "./index.css";
 import "./mobile-production.css";
 
-const SYNCWORKS_BUILD = "2026.09.01-storefront-commerce-v2";
+const SYNCWORKS_BUILD = "2026.09.01-storefront-cart-v1";
 
 async function retireLegacyAppCaches() {
   try {
@@ -49,7 +50,7 @@ function RoutedApplication() {
   const location = useLocation();
   const pathname = location.pathname.replace(/\/+$/, "") || "/";
   const directPages = {
-    "/customer/store": <CustomerStoreV2 />,
+    "/customer/store": <><CustomerStoreV2 /><StorefrontCartDock /></>,
     "/pm/properties/new": <PMPropertyCreate />,
     "/pm/properties": <PMProperties />,
     "/pm/tenants": <PMTenants />,
