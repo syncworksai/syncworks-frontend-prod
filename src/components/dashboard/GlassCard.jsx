@@ -27,28 +27,28 @@ export default function GlassCard({
   return (
     <section
       className={cx(
-        "relative overflow-hidden rounded-[1.65rem] border border-white/10 bg-slate-950/45 backdrop-blur-xl",
-        "shadow-[0_18px_60px_rgba(0,0,0,0.28)]",
-        glow && "before:absolute before:inset-0 before:bg-gradient-to-br before:opacity-70",
+        "relative overflow-hidden rounded-[1.45rem] border border-white/10 bg-slate-950/45 backdrop-blur-xl",
+        "shadow-[0_16px_48px_rgba(0,0,0,0.26)]",
+        glow && "before:absolute before:inset-0 before:bg-gradient-to-br before:opacity-60",
         glow && (TONES[tone] || TONES.cyan),
         className
       )}
     >
-      <div className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-cyan-500/8 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-28 -left-28 h-64 w-64 rounded-full bg-fuchsia-500/8 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 -top-24 h-52 w-52 rounded-full bg-cyan-500/8 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-28 -left-28 h-60 w-60 rounded-full bg-fuchsia-500/8 blur-3xl" />
 
-      <div className="relative p-4 sm:p-5">
+      <div className="relative p-3.5 sm:p-4">
         {(title || subtitle || right) && (
-          <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="mb-3 flex items-start justify-between gap-3">
             <div className="min-w-0">
               {title ? (
-                <h3 className="truncate text-base font-extrabold text-slate-100 sm:text-lg">
+                <h3 className="truncate text-sm font-extrabold tracking-tight text-slate-100 sm:text-base">
                   {title}
                 </h3>
               ) : null}
 
               {subtitle ? (
-                <p className="mt-1 text-xs leading-5 text-slate-400 sm:text-sm">
+                <p className="mt-1 text-[11px] leading-4 text-slate-400 sm:text-xs sm:leading-5">
                   {subtitle}
                 </p>
               ) : null}
