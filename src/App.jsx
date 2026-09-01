@@ -18,6 +18,7 @@ import CustomerFinance from "./pages/CustomerFinance";
 import CustomerHealth from "./pages/CustomerHealth";
 import CustomerEdge from "./pages/CustomerEdge";
 import CustomerPlans from "./pages/CustomerPlans";
+import CustomerStore from "./pages/CustomerStore";
 import CustomerTickets from "./pages/CustomerTickets";
 import CustomerInvoices from "./pages/CustomerInvoices";
 import CustomerFavorites from "./pages/CustomerFavorites";
@@ -132,6 +133,7 @@ export default function App() {
         <Route path="/sales/*" element={<Navigate to="/customer" replace />} />
         <Route path="/customer" element={<ProtectedRoute><CustomerDashboard /></ProtectedRoute>} />
         <Route path="/customer/affiliate" element={<ProtectedRoute><AffiliateDashboard /></ProtectedRoute>} />
+        <Route path="/customer/store" element={<ProtectedRoute><CustomerStore /></ProtectedRoute>} />
         <Route path="/customer/favorites" element={<ProtectedRoute><CustomerFavorites /></ProtectedRoute>} />
         <Route path="/customer/business-cards" element={<ProtectedRoute><CustomerBusinessCards /></ProtectedRoute>} />
         <Route path="/customer/business-cards/:favoriteId" element={<ProtectedRoute><CustomerBusinessCardDetail /></ProtectedRoute>} />
