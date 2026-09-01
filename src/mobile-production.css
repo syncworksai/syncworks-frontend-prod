@@ -1,0 +1,67 @@
+/* SyncWorks production mobile viewport guard.
+   Loaded after index.css so the app uses one safe-area offset instead of
+   stacking body padding, sticky offsets, and legacy margin hacks. */
+
+@media (display-mode: standalone), (max-width: 1023px) and (pointer: coarse) {
+  body {
+    min-height: 100dvh;
+    padding-top: var(--sw-ios-safe-top);
+    padding-right: var(--sw-ios-safe-right);
+    padding-bottom: var(--sw-ios-safe-bottom);
+    padding-left: var(--sw-ios-safe-left);
+  }
+
+  /* The protected body viewport already starts below the system status UI. */
+  .sw-autoglow .sticky.top-0,
+  .sw-autoglow .fixed.top-0:not(.inset-0) {
+    top: 0 !important;
+  }
+
+  /* Full-screen overlays stay inside the usable PWA viewport. */
+  .sw-autoglow .fixed.inset-0 {
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+  }
+
+  .sw-autoglow .fixed.bottom-0:not(.inset-0),
+  .sw-autoglow .fixed.inset-x-0.bottom-0 {
+    bottom: 0 !important;
+  }
+}
+
+@media (max-width: 767px) and (pointer: coarse) {
+  /* Retire the old 64px ModeBar margin hack. The body safe area is the source
+     of truth, keeping the bar visible without wasting vertical space. */
+  .sw-autoglow .sticky.top-0.z-50.overflow-hidden.border-b.border-slate-800 {
+    top: 0 !important;
+    margin-top: 0 !important;
+  }
+
+  .sw-autoglow .sticky.top-0.z-50.overflow-hidden.border-b.border-slate-800 button[title="Open menu"],
+  .sw-autoglow .sticky.top-0.z-50.overflow-hidden.border-b.border-slate-800 button[title="Open Inbox"] {
+    min-width: 44px;
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  /* Keep common fixed bottom controls clear of the Home indicator while body
+     padding remains the single top-safe-area source of truth. */
+  .sw-role-mobile-nav {
+    bottom: max(.7rem, env(safe-area-inset-bottom)) !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
+  /* Landscape phones need compact chrome so the workspace gets the height. */
+  .sw-autoglow .sticky.top-0.z-50.overflow-hidden.border-b.border-slate-800 > .relative.mx-auto {
+    padding-top: .45rem !important;
+    padding-bottom: .45rem !important;
+  }
+
+  .sw-autoglow .sticky.top-0.z-50.overflow-hidden.border-b.border-slate-800 img[alt="SyncWorks"] {
+    height: 2.5rem !important;
+    width: 2.5rem !important;
+  }
+}

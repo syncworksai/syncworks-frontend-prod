@@ -18,8 +18,9 @@ import PMWorkOrders from "./pages/PMWorkOrders";
 import PMLeasing from "./pages/PMLeasing";
 import PMPayments from "./pages/PMPayments";
 import "./index.css";
+import "./mobile-production.css";
 
-const SYNCWORKS_BUILD = "2026.08.26-desktop-v2";
+const SYNCWORKS_BUILD = "2026.09.01-mobile-production-v2";
 
 async function retireLegacyAppCaches() {
   try {
