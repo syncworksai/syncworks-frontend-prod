@@ -26,7 +26,7 @@ export default function StatCard({
     <GlassCard
       tone={tone}
       className={cx(
-        "min-h-[132px]",
+        "min-h-[108px]",
         clickable && "cursor-pointer transition hover:-translate-y-0.5 hover:border-cyan-500/35"
       )}
       bodyClassName="h-full"
@@ -35,44 +35,22 @@ export default function StatCard({
         type="button"
         onClick={onClick}
         disabled={!clickable}
-        className={cx(
-          "block h-full w-full text-left",
-          !clickable && "cursor-default"
-        )}
+        className={cx("block h-full w-full text-left", !clickable && "cursor-default")}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              {label}
-            </div>
-            <div className="mt-3 text-3xl font-black tracking-tight text-white">
-              {value}
-            </div>
+            <div className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">{label}</div>
+            <div className="mt-2 text-2xl font-black tracking-tight text-white">{value}</div>
           </div>
 
-          <div
-            className={cx(
-              "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-700/80 bg-slate-950/65 text-lg shadow-[0_0_25px_rgba(34,211,238,0.12)]",
-              TONE_TEXT[tone] || TONE_TEXT.cyan
-            )}
-          >
+          <div className={cx("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-700/80 bg-slate-950/65 text-base shadow-[0_0_20px_rgba(34,211,238,0.10)]", TONE_TEXT[tone] || TONE_TEXT.cyan)}>
             {icon || "✦"}
           </div>
         </div>
 
-        <div className="mt-4 flex items-center justify-between gap-2">
-          <div className="text-xs text-slate-400">{hint || "Live dashboard metric"}</div>
-          {badge ? (
-            <span
-              className={cx(
-                "rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]",
-                "border-slate-700 bg-slate-950/60",
-                TONE_TEXT[tone] || TONE_TEXT.cyan
-              )}
-            >
-              {badge}
-            </span>
-          ) : null}
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <div className="min-w-0 truncate text-[10px] text-slate-400">{hint || "Live dashboard metric"}</div>
+          {badge ? <span className={cx("shrink-0 rounded-full border border-slate-700 bg-slate-950/60 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em]", TONE_TEXT[tone] || TONE_TEXT.cyan)}>{badge}</span> : null}
         </div>
       </button>
     </GlassCard>
