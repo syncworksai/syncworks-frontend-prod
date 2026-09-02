@@ -3,9 +3,6 @@
     background: #020617 !important;
   }
 
-  /* Focus mode lives underneath the global SyncWorks ModeBar. On phone the
-     compact workout card already repeats the workout title/progress, so keep
-     only a small, reachable Exit Focus row instead of a second giant header. */
   .health-active-workout-header {
     margin-top: calc(4.35rem + env(safe-area-inset-top)) !important;
     padding: .35rem .65rem !important;
@@ -51,9 +48,6 @@
     border-radius: 1.05rem;
   }
 
-  /* WorkoutFocusCompactPanel is the mobile controller. All legacy report-style
-     sections beneath it remain available on larger screens and in drawers,
-     but are removed from the live mobile lifting flow. */
   .health-active-workout-main #health-workout-command-center ~ * {
     display: none !important;
   }
@@ -62,26 +56,31 @@
     display: block !important;
   }
 
-  /* SetCompletionSheet and other active workout overlays are siblings of the
-     compact controller. They must remain visible AND above the global mobile
-     nav. The prior rule exposed the sheet, but its Save Set row sat behind the
-     fixed Personal nav, which made the workout appear trapped after every set. */
-  .health-active-workout-main #health-workout-command-center ~ div.fixed.inset-0 {
+  /* Every workout sheet/drawer must sit above the Personal nav, SYNC orb,
+     notification bubble, and coach microphone. */
+  .health-active-workout-main #health-workout-command-center ~ div.fixed.inset-0,
+  .health-active-workout-root div.fixed.inset-0 {
     display: flex !important;
-    z-index: 260 !important;
+    z-index: 520 !important;
     padding-bottom: calc(.65rem + env(safe-area-inset-bottom)) !important;
   }
 
-  .health-active-workout-main #health-workout-command-center ~ div.fixed.inset-0 > section {
-    z-index: 261 !important;
-    max-height: calc(100dvh - max(.75rem, env(safe-area-inset-top)) - max(.75rem, env(safe-area-inset-bottom))) !important;
-    padding: .8rem !important;
-    border-radius: 1.1rem !important;
+  .health-active-workout-main #health-workout-command-center ~ div.fixed.inset-0 > section,
+  .health-active-workout-root div.fixed.inset-0 > section {
+    z-index: 521 !important;
+    max-height: calc(100dvh - max(.6rem, env(safe-area-inset-top)) - max(.6rem, env(safe-area-inset-bottom))) !important;
     overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
-  /* Keep the essential Save Set / Back controls reachable without requiring
-     the user to discover that the sheet scrolls beneath the app navigation. */
+  /* Hide the workout action dock while any workout modal/drawer is open so
+     the user sees one interaction layer at a time. */
+  .health-active-workout-root:has(div.fixed.inset-0) .health-workout-action-dock {
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
+  /* Save Set / Back remain reachable on the set-completion sheet. */
   .health-active-workout-main #health-workout-command-center ~ div.fixed.inset-0 > section > div:last-child {
     position: sticky !important;
     bottom: 0 !important;
@@ -92,6 +91,20 @@
     backdrop-filter: blur(14px);
   }
 
+  /* Exercise art should read as the actual movement rather than a tiny poster
+     floating in a large black frame. */
+  #health-workout-command-center button:has(> img) {
+    height: 8.25rem !important;
+    background: #030712 !important;
+  }
+
+  #health-workout-command-center button > img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center 42% !important;
+  }
+
   .health-active-workout-root .health-workout-action-dock {
     bottom: calc(5.7rem + env(safe-area-inset-bottom)) !important;
     padding-left: .5rem;
@@ -100,7 +113,6 @@
     padding-bottom: .25rem;
   }
 
-  /* Retire the older duplicate four-control dock. */
   .health-active-workout-shell > div[class*="bottom-[calc(70px"] {
     display: none !important;
   }
