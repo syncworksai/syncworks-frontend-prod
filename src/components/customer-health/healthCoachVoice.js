@@ -4,8 +4,7 @@ import {
   getHealthVoiceOptions,
 } from "../../api/customerHealth";
 
-const VOICE_PREFERENCE_KEY =
-  "sw_health_voice_preferences_v1";
+const VOICE_PREFERENCE_KEY = "sw_health_voice_preferences_v1";
 
 const DEFAULT_VOICE_PREFERENCES = {
   provider: "elevenlabs",
@@ -15,50 +14,16 @@ const DEFAULT_VOICE_PREFERENCES = {
   browserVoicePreference: "australian female",
 };
 
-const AUSTRALIAN_HINTS = [
-  "en-au",
-  "australia",
-  "australian",
-  "karen",
-  "lee",
-  "matilda",
-];
-
-const FEMALE_HINTS = [
-  "female",
-  "woman",
-  "samantha",
-  "victoria",
-  "zira",
-  "karen",
-  "moira",
-  "susan",
-  "aria",
-  "jenny",
-  "siri female",
-];
-
-const MALE_HINTS = [
-  "male",
-  "man",
-  "david",
-  "mark",
-  "alex",
-  "fred",
-  "daniel",
-  "jorge",
-  "lee",
-  "tom",
-  "siri male",
-];
+const AUSTRALIAN_HINTS = ["en-au", "australia", "australian", "karen", "lee", "matilda"];
+const FEMALE_HINTS = ["female", "woman", "samantha", "victoria", "zira", "karen", "moira", "susan", "aria", "jenny", "siri female"];
+const MALE_HINTS = ["male", "man", "david", "mark", "alex", "fred", "daniel", "jorge", "lee", "tom", "siri male"];
 
 let activeAudio = null;
 let activeAudioUrl = "";
 let activeVoiceRequest = null;
 let voiceOptionsPromise = null;
 
-const SILENT_AUDIO_DATA_URL =
-  "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+const SILENT_AUDIO_DATA_URL = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
 
 const ELEVENLABS_EVENT_ALIASES = {
   preworkout_briefing: "workout_welcome",
@@ -77,6 +42,17 @@ function normalizeElevenLabsEventType(eventType) {
   return ELEVENLABS_EVENT_ALIASES[key] || key;
 }
 
+function requestMusicFriendlyAudioSession() {
+  try {
+    if (typeof navigator !== "undefined" && navigator.audioSession && "type" in navigator.audioSession) {
+      // "ambient" is the music-friendly Web Audio Session mode: coach cues may
+      // mix with an existing music session instead of claiming exclusive audio.
+      navigator.audioSession.type = "ambient";
+    }
+  } catch {
+    // Audio Session is progressive enhancement; playback still works without it.
+  }
+}
 
 function getSynth() {
   if (typeof window === "undefined") return null;
@@ -85,69 +61,30 @@ function getSynth() {
 }
 
 function readStoredPreferences() {
-  if (typeof window === "undefined") {
-    return DEFAULT_VOICE_PREFERENCES;
-  }
-
+  if (typeof window === "undefined") return DEFAULT_VOICE_PREFERENCES;
   try {
-    const saved = JSON.parse(
-      window.localStorage.getItem(
-        VOICE_PREFERENCE_KEY
-      ) || "{}"
-    );
-
-    return {
-      ...DEFAULT_VOICE_PREFERENCES,
-      ...(saved && typeof saved === "object"
-        ? saved
-        : {}),
-    };
+    const saved = JSON.parse(window.localStorage.getItem(VOICE_PREFERENCE_KEY) || "{}");
+    return { ...DEFAULT_VOICE_PREFERENCES, ...(saved && typeof saved === "object" ? saved : {}) };
   } catch {
     return DEFAULT_VOICE_PREFERENCES;
   }
 }
 
-export function getHealthVoicePreferences() {
-  return readStoredPreferences();
-}
+export function getHealthVoicePreferences() { return readStoredPreferences(); }
 
 export function saveHealthVoicePreferences(next = {}) {
-  const preferences = {
-    ...readStoredPreferences(),
-    ...(next && typeof next === "object"
-      ? next
-      : {}),
-  };
-
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(
-      VOICE_PREFERENCE_KEY,
-      JSON.stringify(preferences)
-    );
-  }
-
+  const preferences = { ...readStoredPreferences(), ...(next && typeof next === "object" ? next : {}) };
+  if (typeof window !== "undefined") window.localStorage.setItem(VOICE_PREFERENCE_KEY, JSON.stringify(preferences));
   return preferences;
 }
 
-export async function loadHealthVoiceOptions({
-  force = false,
-} = {}) {
-  if (!force && voiceOptionsPromise) {
-    return voiceOptionsPromise;
-  }
-
-  voiceOptionsPromise = getHealthVoiceOptions()
-    .catch((error) => {
-      voiceOptionsPromise = null;
-      throw error;
-    });
-
+export async function loadHealthVoiceOptions({ force = false } = {}) {
+  if (!force && voiceOptionsPromise) return voiceOptionsPromise;
+  voiceOptionsPromise = getHealthVoiceOptions().catch((error) => { voiceOptionsPromise = null; throw error; });
   return voiceOptionsPromise;
 }
 
-export function canUseSpeechSynthesis() {
-  return !!getSynth();
-}
+export function canUseSpeechSynthesis() { return !!getSynth(); }
 
 function releaseActiveAudio() {
   if (activeAudio) {
@@ -156,11 +93,7 @@ function releaseActiveAudio() {
     activeAudio.load();
     activeAudio = null;
   }
-
-  if (
-    activeAudioUrl &&
-    typeof URL !== "undefined"
-  ) {
+  if (activeAudioUrl && typeof URL !== "undefined") {
     URL.revokeObjectURL(activeAudioUrl);
     activeAudioUrl = "";
   }
@@ -168,31 +101,16 @@ function releaseActiveAudio() {
 
 function primeCoachAudioPlayback(volume = 1) {
   if (typeof Audio === "undefined") return null;
-
+  requestMusicFriendlyAudioSession();
   releaseActiveAudio();
-
   const audio = new Audio();
   audio.preload = "auto";
   audio.playsInline = true;
-  audio.volume = Math.max(
-    0,
-    Math.min(1, Number(volume) || 1)
-  );
+  audio.volume = Math.max(0, Math.min(1, Number(volume) || 1));
   audio.src = SILENT_AUDIO_DATA_URL;
-
   activeAudio = audio;
-
   const unlockPromise = audio.play();
-
-  if (
-    unlockPromise &&
-    typeof unlockPromise.catch === "function"
-  ) {
-    unlockPromise.catch(() => {
-      // The real playback attempt below will still run.
-    });
-  }
-
+  if (unlockPromise && typeof unlockPromise.catch === "function") unlockPromise.catch(() => {});
   return audio;
 }
 
@@ -201,9 +119,7 @@ export function stopCoachVoice() {
     activeVoiceRequest.abort();
     activeVoiceRequest = null;
   }
-
   releaseActiveAudio();
-
   const synth = getSynth();
   if (synth) synth.cancel();
 }
@@ -214,169 +130,71 @@ export function getAvailableCoachVoices() {
   return synth.getVoices() || [];
 }
 
-function normalize(text) {
-  return String(text || "").trim().toLowerCase();
-}
+function normalize(text) { return String(text || "").trim().toLowerCase(); }
 
 function scoreVoice(voice, preference = "auto") {
-  const haystack =
-    `${voice?.name || ""} ${voice?.lang || ""}`
-      .toLowerCase();
+  const haystack = `${voice?.name || ""} ${voice?.lang || ""}`.toLowerCase();
   let score = 0;
-
   if (haystack.includes("en-us")) score += 8;
   if (haystack.includes("en-au")) score += 12;
   if (haystack.includes("en-gb")) score += 5;
   if (haystack.includes("english")) score += 4;
   if (voice?.localService) score += 2;
-
   const wantsAustralian = preference.includes("australian");
   const wantsFemale = preference.includes("female");
   const wantsMale = preference.includes("male");
-
   if (wantsAustralian) {
-    if (
-      AUSTRALIAN_HINTS.some((hint) =>
-        haystack.includes(hint)
-      )
-    ) {
-      score += 30;
-    }
-
-    if (!haystack.includes("en-au")) {
-      score -= 4;
-    }
+    if (AUSTRALIAN_HINTS.some((hint) => haystack.includes(hint))) score += 30;
+    if (!haystack.includes("en-au")) score -= 4;
   }
-
   if (wantsFemale) {
-    if (
-      FEMALE_HINTS.some((hint) =>
-        haystack.includes(hint)
-      )
-    ) {
-      score += 20;
-    }
-
-    if (
-      MALE_HINTS.some((hint) =>
-        haystack.includes(hint)
-      )
-    ) {
-      score -= 8;
-    }
+    if (FEMALE_HINTS.some((hint) => haystack.includes(hint))) score += 20;
+    if (MALE_HINTS.some((hint) => haystack.includes(hint))) score -= 8;
   }
-
   if (wantsMale) {
-    if (
-      MALE_HINTS.some((hint) =>
-        haystack.includes(hint)
-      )
-    ) {
-      score += 20;
-    }
-
-    if (
-      FEMALE_HINTS.some((hint) =>
-        haystack.includes(hint)
-      )
-    ) {
-      score -= 8;
-    }
+    if (MALE_HINTS.some((hint) => haystack.includes(hint))) score += 20;
+    if (FEMALE_HINTS.some((hint) => haystack.includes(hint))) score -= 8;
   }
-
   return score;
 }
 
-export function pickCoachVoice(
-  preference = "auto"
-) {
+export function pickCoachVoice(preference = "auto") {
   const voices = getAvailableCoachVoices();
   if (!voices.length) return null;
-
-  const wanted = normalize(
-    preference || "auto"
-  );
-
+  const wanted = normalize(preference || "auto");
   if (wanted === "auto") {
-    return (
-      voices.find((voice) =>
-        String(voice?.lang || "")
-          .toLowerCase()
-          .includes("en-au")
-      ) ||
-      voices.find((voice) =>
-        String(voice?.lang || "")
-          .toLowerCase()
-          .includes("en")
-      ) ||
-      voices[0]
-    );
+    return voices.find((voice) => String(voice?.lang || "").toLowerCase().includes("en-au")) ||
+      voices.find((voice) => String(voice?.lang || "").toLowerCase().includes("en")) || voices[0];
   }
-
-  const ranked = [...voices].sort(
-    (a, b) =>
-      scoreVoice(b, wanted) -
-      scoreVoice(a, wanted)
-  );
-
-  return ranked[0] || voices[0];
+  return [...voices].sort((a, b) => scoreVoice(b, wanted) - scoreVoice(a, wanted))[0] || voices[0];
 }
 
-function speakWithBrowser({
-  text,
-  voicePreference = "auto",
-  rate = 1,
-  pitch = 1,
-  volume = 1,
-  cancelFirst = true,
-}) {
+function speakWithBrowser({ text, voicePreference = "auto", rate = 1, pitch = 1, volume = 1, cancelFirst = true }) {
   const synth = getSynth();
   const cleanText = String(text || "").trim();
-
   if (!synth || !cleanText) return false;
-
   try {
+    requestMusicFriendlyAudioSession();
     if (cancelFirst) synth.cancel();
-
-    const utterance =
-      new SpeechSynthesisUtterance(cleanText);
-    const selectedVoice =
-      pickCoachVoice(voicePreference);
-
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-    }
-
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    const selectedVoice = pickCoachVoice(voicePreference);
+    if (selectedVoice) utterance.voice = selectedVoice;
     utterance.rate = rate;
     utterance.pitch = pitch;
     utterance.volume = volume;
-
     synth.speak(utterance);
     return true;
   } catch (error) {
-    console.error(
-      "Browser coach voice error:",
-      error
-    );
+    console.error("Browser coach voice error:", error);
     return false;
   }
 }
 
-async function playElevenLabsSpeech({
-  text,
-  eventType,
-  energy,
-  voiceKey,
-  volume,
-  cancelFirst,
-}) {
+async function playElevenLabsSpeech({ text, eventType, energy, voiceKey, volume, cancelFirst }) {
   if (cancelFirst) stopCoachVoice();
-
-  const playbackAudio =
-    primeCoachAudioPlayback(volume);
-
+  requestMusicFriendlyAudioSession();
+  const playbackAudio = primeCoachAudioPlayback(volume);
   activeVoiceRequest = new AbortController();
-
   try {
     const result = await createHealthCoachSpeech({
       text,
@@ -385,59 +203,28 @@ async function playElevenLabsSpeech({
       voiceKey,
       signal: activeVoiceRequest.signal,
     });
-
     activeVoiceRequest = null;
-
-    if (
-      activeAudioUrl &&
-      typeof URL !== "undefined"
-    ) {
+    if (activeAudioUrl && typeof URL !== "undefined") {
       URL.revokeObjectURL(activeAudioUrl);
       activeAudioUrl = "";
     }
-
-    activeAudioUrl = URL.createObjectURL(
-      result.blob
-    );
-
-    const audio =
-      playbackAudio || new Audio();
-
+    activeAudioUrl = URL.createObjectURL(result.blob);
+    const audio = playbackAudio || new Audio();
     activeAudio = audio;
     audio.pause();
     audio.src = activeAudioUrl;
     audio.preload = "auto";
     audio.playsInline = true;
-    audio.volume = Math.max(
-      0,
-      Math.min(1, Number(volume) || 1)
-    );
-
-    audio.addEventListener(
-      "ended",
-      releaseActiveAudio,
-      { once: true }
-    );
-
-    audio.addEventListener(
-      "error",
-      releaseActiveAudio,
-      { once: true }
-    );
-
+    audio.volume = Math.max(0, Math.min(1, Number(volume) || 1));
+    audio.addEventListener("ended", releaseActiveAudio, { once: true });
+    audio.addEventListener("error", releaseActiveAudio, { once: true });
     audio.load();
+    requestMusicFriendlyAudioSession();
     await audio.play();
     return true;
   } catch (error) {
     activeVoiceRequest = null;
-
-    if (
-      error?.name === "CanceledError" ||
-      error?.name === "AbortError"
-    ) {
-      return false;
-    }
-
+    if (error?.name === "CanceledError" || error?.name === "AbortError") return false;
     releaseActiveAudio();
     throw error;
   }
@@ -458,76 +245,29 @@ export function speakCoachText({
   browserFallback,
 }) {
   const cleanText = String(text || "").trim();
-
-  if (!cleanText || audioMode === "off") {
-    return false;
-  }
-
-  const preferences =
-    getHealthVoicePreferences();
-
-  const selectedProvider =
-    provider || preferences.provider;
-  const selectedVoiceKey =
-    voiceKey || preferences.voiceKey;
-  const selectedEnergy =
-    energy || preferences.energy;
-  const allowBrowserFallback =
-    browserFallback ??
-    preferences.browserFallback;
-  const fallbackVoicePreference =
-    voicePreference === "auto"
-      ? preferences.browserVoicePreference || "australian female"
-      : voicePreference;
-
+  if (!cleanText || audioMode === "off") return false;
+  requestMusicFriendlyAudioSession();
+  const preferences = getHealthVoicePreferences();
+  const selectedProvider = provider || preferences.provider;
+  const selectedVoiceKey = voiceKey || preferences.voiceKey;
+  const selectedEnergy = energy || preferences.energy;
+  const allowBrowserFallback = browserFallback ?? preferences.browserFallback;
+  const fallbackVoicePreference = voicePreference === "auto" ? preferences.browserVoicePreference || "australian female" : voicePreference;
   if (selectedProvider !== "elevenlabs") {
-    return speakWithBrowser({
-      text: cleanText,
-      voicePreference: fallbackVoicePreference,
-      rate,
-      pitch,
-      volume,
-      cancelFirst,
-    });
+    return speakWithBrowser({ text: cleanText, voicePreference: fallbackVoicePreference, rate, pitch, volume, cancelFirst });
   }
-
-  playElevenLabsSpeech({
-    text: cleanText,
-    eventType,
-    energy: selectedEnergy,
-    voiceKey: selectedVoiceKey,
-    volume,
-    cancelFirst,
-  }).catch((error) => {
-    console.warn(
-      "ElevenLabs coach voice unavailable; " +
-        "using Australian female browser fallback.",
-      error
-    );
-
+  playElevenLabsSpeech({ text: cleanText, eventType, energy: selectedEnergy, voiceKey: selectedVoiceKey, volume, cancelFirst }).catch((error) => {
+    console.warn("ElevenLabs coach voice unavailable; using Australian female browser fallback.", error);
     if (allowBrowserFallback) {
-      speakWithBrowser({
-        text: cleanText,
-        voicePreference: fallbackVoicePreference,
-        rate,
-        pitch,
-        volume,
-        cancelFirst: false,
-      });
+      speakWithBrowser({ text: cleanText, voicePreference: fallbackVoicePreference, rate, pitch, volume, cancelFirst: false });
     }
   });
-
   return true;
 }
 
-export function previewHealthCoachVoice({
-  energy = "high_energy",
-  voiceKey = "sync_fitness_coach",
-} = {}) {
+export function previewHealthCoachVoice({ energy = "high_energy", voiceKey = "sync_fitness_coach" } = {}) {
   return speakCoachText({
-    text:
-      "There it is. Stay controlled, keep your form strong, " +
-      "and finish this set with confidence.",
+    text: "There it is. Stay controlled, keep your form strong, and finish this set with confidence.",
     eventType: "voice_preview",
     energy,
     voiceKey,
@@ -536,23 +276,10 @@ export function previewHealthCoachVoice({
   });
 }
 
-export function buildExerciseIntroSpeech(
-  knowledge = {}
-) {
+export function buildExerciseIntroSpeech(knowledge = {}) {
   const name = knowledge?.name || "Exercise";
   const shortCue = knowledge?.short_cue || "";
   const feelCue = knowledge?.feel_cue || "";
-  const warning =
-    knowledge?.correction_cue ||
-    knowledge?.coach_warning ||
-    "";
-
-  return [
-    name,
-    shortCue,
-    feelCue,
-    warning,
-  ]
-    .filter(Boolean)
-    .join(". ");
+  const warning = knowledge?.correction_cue || knowledge?.coach_warning || "";
+  return [name, shortCue, feelCue, warning].filter(Boolean).join(". ");
 }
