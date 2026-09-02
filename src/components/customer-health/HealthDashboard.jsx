@@ -9,6 +9,7 @@ import {
   localYmd,
   shouldOfferPreviousWorkout,
 } from "./healthWorkoutDateLifecycle";
+import WorkoutConsistencyCard from "./WorkoutConsistencyCard";
 
 const WORKOUT_TEMPLATES = {
   strength: {
@@ -355,6 +356,10 @@ export default function HealthDashboard({ profile = {}, snapshot = {}, history =
                   <div className="mt-3 text-center text-sm font-black">{scheduledPlanItems ? `${completedPlanItems} of ${scheduledPlanItems} planned sessions` : "No weekly plan yet"}</div>
                   <button type="button" onClick={() => onOpen?.("planner")} className="mt-3 w-full text-xs font-black text-blue-300">View plan →</button>
                 </section>
+              </div>
+
+              <div className="mt-4">
+                <WorkoutConsistencyCard weekPlan={weekPlan} dayKey={dayKey} onOpenPlan={() => onOpen?.("planner")} />
               </div>
 
               <div className="mt-4 grid gap-4 xl:grid-cols-[1.3fr_1fr]">

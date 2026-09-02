@@ -1,5 +1,6 @@
 // src/components/customer-health/NutritionDashboard.jsx
 import React, { useEffect, useMemo, useState } from "react";
+import NutritionConsistencyTracker from "./NutritionConsistencyTracker";
 
 const STORAGE_KEY = "syncworks_health_nutrition_profile_v1";
 
@@ -461,6 +462,10 @@ export default function NutritionDashboard({
           <MacroCard label="Protein" value={totals.protein} goal={proteinGoal} suffix="g" tone="lime" onSetGoal={onOpenGoals} />
           <MacroCard label="Carbs" value={totals.carbs} goal={carbGoal} suffix="g" tone="cyan" onSetGoal={onOpenGoals} />
           <MacroCard label="Fat" value={totals.fat} goal={fatGoal} suffix="g" tone="amber" onSetGoal={onOpenGoals} />
+        </div>
+
+        <div className="mt-3">
+          <NutritionConsistencyTracker days={last7} calorieGoal={calorieGoal} proteinGoal={proteinGoal} onSelectDay={setSelectedDate} />
         </div>
 
         <div className="mt-3 overflow-hidden rounded-[1.4rem] border border-lime-300/20 bg-lime-300/[0.06]">

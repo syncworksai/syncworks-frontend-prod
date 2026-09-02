@@ -10,7 +10,6 @@ import {
   Hammer,
   Home,
   PackageCheck,
-  Plus,
   Search,
   ShoppingBag,
   Sparkles,
@@ -20,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import SavedSuppliesPanel from "../components/storefront/SavedSuppliesPanel";
 
 const CONTEXTS = [
   { key: "PERSONAL", label: "Personal", icon: Home },
@@ -48,13 +48,6 @@ const PROJECT = {
     { id: "gloves", name: "Garden gloves", quantity: "1 pair", detail: "Reusable project supply that can be remembered for later.", merchant: "Amazon", status: "READY TO SHOP" },
   ],
 };
-
-const REORDERS = [
-  { title: "HVAC filter", detail: "Remember the exact size once a user confirms it.", context: "Personal" },
-  { title: "Printer toner", detail: "Property or Business office supply reorder.", context: "Property" },
-  { title: "Technician consumables", detail: "Bits, blades and supplies used during jobs.", context: "Business" },
-  { title: "Protein / hydration", detail: "Health-driven reorder when the user wants it.", context: "Health" },
-];
 
 const BROWSE = [
   ["Home & maintenance", "Filters, repair supplies and household projects", Home],
@@ -125,7 +118,7 @@ export default function CustomerStoreV2() {
           </main>
 
           <aside className="space-y-4">
-            <section className="rounded-[1.5rem] border border-white/10 bg-white/[.025] p-4"><div className="flex items-center gap-2"><PackageCheck className="h-4 w-4 text-cyan-300" /><h2 className="text-[12px] font-black text-white">Saved supplies & reorder</h2></div><p className="mt-1 text-[9px] leading-4 text-slate-500">Remember exact specifications so repeat purchases become a one-tap decision instead of another search.</p><div className="mt-3 space-y-2">{REORDERS.map((item) => <button key={item.title} type="button" onClick={() => setSelectedSupply({ name: item.title, detail: item.detail, merchant: "Preferred merchant", status: "REORDER PATTERN" })} className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-black/15 p-3 text-left"><span className="grid h-8 w-8 place-items-center rounded-lg border border-cyan-300/15 bg-cyan-500/[.06] text-cyan-300"><Plus className="h-3.5 w-3.5" /></span><span className="min-w-0 flex-1"><span className="block text-[10px] font-black text-white">{item.title}</span><span className="block text-[8px] text-slate-500">{item.context} · {item.detail}</span></span><ChevronRight className="h-3.5 w-3.5 text-slate-600" /></button>)}</div></section>
+            <SavedSuppliesPanel onOpenSupply={setSelectedSupply} candidate={selectedSupply} />
 
             <section className="rounded-[1.5rem] border border-amber-400/15 bg-amber-500/[.03] p-4"><div className="flex items-center gap-2"><CircleDollarSign className="h-4 w-4 text-amber-300" /><h2 className="text-[12px] font-black text-white">How SyncWorks earns</h2></div><p className="mt-2 text-[9px] leading-4 text-slate-400">When an approved partner link is used, SyncWorks may earn a commission. The product recommendation should still be based on the user's need, fit and context—not on creating random ads.</p><div className="mt-3 rounded-xl border border-white/10 bg-black/15 p-3 text-[8px] leading-4 text-slate-500">Attribution: module → need/project → supply → merchant → campaign → click → reported conversion → earning.</div></section>
           </aside>
