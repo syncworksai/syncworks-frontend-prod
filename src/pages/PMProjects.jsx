@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import api from "../api/client";
 import PMHeader from "../components/pm/PMHeader";
 import Button from "../components/ui/Button";
@@ -42,14 +43,15 @@ function adaptiveQuestions(category) {
 }
 
 export default function PMProjects() {
+  const [searchParams] = useSearchParams();
   const [workspace, setWorkspace] = useState(null);
   const [properties, setProperties] = useState([]);
   const [projects, setProjects] = useState([]);
   const [metrics, setMetrics] = useState({ active: 0, overdue: 0, blocked: 0, awaiting_approval: 0, budget_total: 0, actual_total: 0 });
   const [filter, setFilter] = useState("ACTIVE");
   const [search, setSearch] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
-  const [project, setProject] = useState(emptyProject);
+  const [showCreate, setShowCreate] = useState(searchParams.get("create") === "1");
+  const [project, setProject] = useState({ ...emptyProject, property: searchParams.get("property") || "" });
   const [selected, setSelected] = useState(null);
   const [updateForm, setUpdateForm] = useState({ note: "", status: "", progress_percent: "", blocker: "", next_action: "", next_action_due: "" });
   const [saving, setSaving] = useState(false);

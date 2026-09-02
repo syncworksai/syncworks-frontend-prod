@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import api from "../api/client";
 import PMPropertyPaperworkDock from "../components/pm/PMPropertyPaperworkDock";
 import PMPropertyDetailsDrawer from "../components/pm/PMPropertyDetailsDrawer";
@@ -33,6 +33,7 @@ function Checklist({ title, subtitle, items, action }) {
 
 export default function PMPropertyDetail() {
   const nav = useNavigate();
+  const location = useLocation();
   const { propertyId } = useParams();
   const [workspace, setWorkspace] = useState(null);
   const [property, setProperty] = useState(null);
@@ -43,7 +44,10 @@ export default function PMPropertyDetail() {
   const [workOrders, setWorkOrders] = useState([]);
   const [occupancies, setOccupancies] = useState([]);
   const [cases, setCases] = useState([]);
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState(() => {
+    const requested = new URLSearchParams(location.search).get("tab");
+    return tabs.includes(requested) ? requested : "overview";
+  });
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingStatus, setSavingStatus] = useState(false);
@@ -86,6 +90,10 @@ export default function PMPropertyDetail() {
   }
 
   useEffect(() => { load(); }, [propertyId]);
+  useEffect(() => {
+    const requested = new URLSearchParams(location.search).get("tab");
+    if (tabs.includes(requested)) setTab(requested);
+  }, [location.search]);
 
   const tenantIds = useMemo(() => new Set(tenants.map((item) => Number(item.id))), [tenants]);
   const propertyLedger = useMemo(() => ledger.filter((item) => tenantIds.has(Number(item.tenant))), [ledger, tenantIds]);

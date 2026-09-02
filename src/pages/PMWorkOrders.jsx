@@ -38,14 +38,15 @@ function errorMessage(error, fallback) {
 export default function PMWorkOrders() {
   const [params] = useSearchParams();
   const requestedProperty = params.get("property") || "";
+  const requestedFilter = String(params.get("filter") || "OPEN").toUpperCase();
   const [workspace, setWorkspace] = useState(null);
   const [properties, setProperties] = useState([]);
   const [units, setUnits] = useState([]);
   const [tenants, setTenants] = useState([]);
   const [orders, setOrders] = useState([]);
   const [form, setForm] = useState({ ...emptyForm, property: requestedProperty });
-  const [filter, setFilter] = useState("OPEN");
-  const [showForm, setShowForm] = useState(true);
+  const [filter, setFilter] = useState(["OPEN", "URGENT", "MARKETPLACE", "COMPLETED", "ALL"].includes(requestedFilter) ? requestedFilter : "OPEN");
+  const [showForm, setShowForm] = useState(params.get("create") === "1");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
