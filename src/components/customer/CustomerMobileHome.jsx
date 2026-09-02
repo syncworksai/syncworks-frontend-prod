@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { CalendarDays, ChevronRight, CircleDollarSign, CloudSun, Dumbbell, Mail, MapPinned, Menu, Mic2, ReceiptText, Search, ShoppingBag, Sparkles, Utensils, Wrench, X } from "lucide-react";
+import { CalendarDays, ChevronRight, CircleDollarSign, CloudSun, Dumbbell, Mail, MapPinned, Menu, Mic2, ReceiptText, Search, ShoppingBag, Sparkles, Utensils, UserRound, Wrench, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "./CustomerMobileHome.css";
 
@@ -28,6 +28,7 @@ function QuickIntent({ icon: Icon, label, onClick, primary = false }) {
 
 export default function CustomerMobileHome({
   displayName,
+  profilePhotoUrl,
   tickets,
   invoices,
   openCount,
@@ -62,12 +63,17 @@ export default function CustomerMobileHome({
       <div className="customer-mobile-hero p-4">
         <div className="relative">
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="customer-mobile-brand">SyncWorks Personal</div>
               <h1 className="mt-1 text-[24px] font-black tracking-tight text-white">Hey {displayName}</h1>
               <p className="mt-1 text-[12px] text-slate-400">What do you need handled today?</p>
             </div>
-            <button type="button" onClick={() => setMoreOpen(true)} className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/[.04] text-slate-200" aria-label="Open more"><Menu className="h-5 w-5" /></button>
+            <div className="flex shrink-0 items-start gap-2">
+              <button type="button" onClick={() => nav("/profile")} className="grid h-[58px] w-[58px] place-items-center overflow-hidden rounded-2xl border border-cyan-300/25 bg-slate-950/70 shadow-[0_0_24px_rgba(34,211,238,.12)]" aria-label="Open profile">
+                {profilePhotoUrl ? <img src={profilePhotoUrl} alt={`${displayName} profile`} className="h-full w-full object-cover" /> : <UserRound className="h-5 w-5 text-cyan-200" />}
+              </button>
+              <button type="button" onClick={() => setMoreOpen(true)} className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/[.04] text-slate-200" aria-label="Open more"><Menu className="h-5 w-5" /></button>
+            </div>
           </div>
 
           <form onSubmit={submitSearch} className="mt-4 flex gap-2">
