@@ -155,36 +155,85 @@ function MacroCard({ label, value, goal, suffix = "", tone = "cyan", onSetGoal }
   const safeValue = safeNumber(value, 0);
   const safeGoal = safeNumber(goal, 0);
   const remaining = safeGoal ? Math.max(0, safeGoal - safeValue) : 0;
-  const percent = safeGoal ? Math.min(100, Math.round((safeValue / safeGoal) * 100)) : 0;
+  const overage = safeGoal ? Math.max(0, safeValue - safeGoal) : 0;
+  const rawPercent = safeGoal ? Math.round((safeValue / safeGoal) * 100) : 0;
+  const percent = Math.min(100, Math.max(0, rawPercent));
 
-  const tones = {
-    cyan: "from-cyan-300/25 to-cyan-300/5 border-cyan-300/20",
-    lime: "from-lime-300/25 to-lime-300/5 border-lime-300/20",
-    fuchsia: "from-fuchsia-300/25 to-fuchsia-300/5 border-fuchsia-300/20",
-    amber: "from-amber-300/25 to-amber-300/5 border-amber-300/20",
+  const neutralTones = {
+    cyan: "from-cyan-300/16 to-cyan-300/[0.03] border-cyan-300/15",
+    lime: "from-lime-300/16 to-lime-300/[0.03] border-lime-300/15",
+    fuchsia: "from-fuchsia-300/16 to-fuchsia-300/[0.03] border-fuchsia-300/15",
+    amber: "from-amber-300/16 to-amber-300/[0.03] border-amber-300/15",
   };
-  const fills = {
-    cyan: "bg-cyan-300",
-    lime: "bg-lime-300",
-    fuchsia: "bg-fuchsia-300",
-    amber: "bg-amber-300",
+
+  let state = {
+    label: "Target not set",
+    detail: "Target not set",
+    card: neutralTones[tone] || neutralTones.cyan,
+    value: "text-white",
+    status: "border-white/10 bg-white/[0.04] text-slate-400",
+    fill: "bg-slate-500",
   };
+
+  if (safeGoal) {
+    if (safeValue > safeGoal) {
+      state = {
+        label: "Over target",
+        detail: `${Math.round(overage)}${suffix} over`,
+        card: "from-rose-500/22 to-rose-500/[0.04] border-rose-400/35",
+        value: "text-rose-300",
+        status: "border-rose-400/30 bg-rose-500/12 text-rose-200",
+        fill: "bg-rose-400",
+      };
+    } else if (rawPercent >= 90) {
+      state = {
+        label: rawPercent >= 100 ? "Goal met" : "On track",
+        detail: rawPercent >= 100 ? "Target reached" : `${Math.round(remaining)}${suffix} left`,
+        card: "from-emerald-500/20 to-emerald-500/[0.04] border-emerald-400/30",
+        value: "text-emerald-300",
+        status: "border-emerald-400/30 bg-emerald-500/12 text-emerald-200",
+        fill: "bg-emerald-400",
+      };
+    } else if (rawPercent >= 70) {
+      state = {
+        label: "Close",
+        detail: `${Math.round(remaining)}${suffix} left`,
+        card: "from-orange-500/18 to-orange-500/[0.04] border-orange-400/28",
+        value: "text-orange-300",
+        status: "border-orange-400/25 bg-orange-500/10 text-orange-200",
+        fill: "bg-orange-400",
+      };
+    } else {
+      state = {
+        label: "Goal not met",
+        detail: `${Math.round(remaining)}${suffix} left`,
+        card: "from-amber-400/16 to-amber-400/[0.03] border-amber-300/25",
+        value: "text-amber-200",
+        status: "border-amber-300/25 bg-amber-400/10 text-amber-200",
+        fill: "bg-amber-300",
+      };
+    }
+  }
 
   return (
-    <div className={`rounded-[1.35rem] border bg-gradient-to-br p-3 ${tones[tone]}`}>
-      <div className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">{label}</div>
+    <div className={`rounded-[1.35rem] border bg-gradient-to-br p-3 transition-colors ${state.card}`}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">{label}</div>
+        {safeGoal ? (
+          <span className={`rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] ${state.status}`}>{state.label}</span>
+        ) : null}
+      </div>
       <div className="mt-1 flex items-end justify-between gap-2">
         <div>
-          <div className="text-2xl font-black text-white">{Math.round(safeValue)}{suffix}</div>
-          <div className="mt-0.5 text-[10px] font-bold text-slate-400">
-            {safeGoal ? `${Math.round(remaining)}${suffix} left` : "Target not set"}
-          </div>
+          <div className={`text-2xl font-black ${state.value}`}>{Math.round(safeValue)}{suffix}</div>
+          <div className={`mt-0.5 text-[10px] font-bold ${safeGoal ? state.value : "text-slate-400"}`}>{state.detail}</div>
         </div>
         <div className="text-[10px] font-black text-slate-500">{safeGoal ? `${Math.round(safeGoal)}${suffix}` : "-"}</div>
       </div>
       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/30">
-        <div className={`h-full rounded-full ${fills[tone]}`} style={{ width: `${percent}%` }} />
+        <div className={`h-full rounded-full transition-all ${state.fill}`} style={{ width: `${percent}%` }} />
       </div>
+      {safeGoal ? <div className="mt-1 text-right text-[8px] font-black text-slate-500">{rawPercent}% of target</div> : null}
       {!safeGoal && onSetGoal ? (
         <button type="button" onClick={onSetGoal} className="mt-2 text-[10px] font-black text-cyan-200">Set target →</button>
       ) : null}
