@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/client";
 import Button from "../components/ui/Button";
 
@@ -72,6 +72,8 @@ function importErrorMessage(error) {
 
 export default function PMProperties() {
   const nav = useNavigate();
+  const [searchParams] = useSearchParams();
+  const focus = searchParams.get("focus") || "";
   const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
@@ -105,6 +107,7 @@ export default function PMProperties() {
     const risk = properties.filter((item) => String(item?.status || "").toUpperCase() === "AT_RISK").length;
     return { total: properties.length, average, risk };
   }, [properties]);
+  const visibleProperties = focus === "at-risk" ? properties.filter((item) => String(item?.status || "").toUpperCase() === "AT_RISK") : properties;
 
   function exportProperties() {
     const rows = [CSV_COLUMNS, ...properties.map((property) => CSV_COLUMNS.map((column) => property?.[column] ?? ""))];
@@ -180,7 +183,7 @@ export default function PMProperties() {
         </div>
 
         <div className="rounded-2xl border border-cyan-500/15 bg-cyan-500/5 px-4 py-3 text-xs text-slate-400">
-          Spreadsheet workflow: download the template, edit it in Excel or Google Sheets, then save or download it as a CSV file and import it here.
+          {focus === "at-risk" ? `Showing ${visibleProperties.length} properties requiring review. Open a property to see its work, balance, cases, and records.` : "Spreadsheet workflow: download the template, edit it in Excel or Google Sheets, then save or download it as a CSV file and import it here."}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
@@ -191,9 +194,9 @@ export default function PMProperties() {
         {message ? <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">{message}</div> : null}
 
         <section className="rounded-[28px] border border-cyan-500/15 bg-[#07111f]/90 p-4 sm:p-5">
-          {loading ? <div className="py-16 text-center text-sm text-slate-500">Loading properties...</div> : properties.length ? (
+          {loading ? <div className="py-16 text-center text-sm text-slate-500">Loading properties...</div> : visibleProperties.length ? (
             <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-              {properties.map((property, index) => {
+              {visibleProperties.map((property, index) => {
                 const image = propertyImage(property);
                 const occupancy = Math.round(Number(property?.occupancy_rate || 0) * 100);
                 return <button key={property.id} type="button" onClick={() => nav(`/pm/properties/${property.id}`)} className="group overflow-hidden rounded-3xl border border-slate-700/80 bg-black/25 text-left transition hover:-translate-y-0.5 hover:border-cyan-400/45 hover:shadow-[0_18px_50px_rgba(34,211,238,0.08)]">
@@ -205,7 +208,7 @@ export default function PMProperties() {
                 </button>;
               })}
             </div>
-          ) : <div className="rounded-3xl border border-dashed border-slate-700 py-16 text-center"><div className="text-sm text-slate-500">No properties have been added yet.</div><div className="mt-4"><Button tone="cyan" onClick={() => nav("/pm/properties/new")}>Add First Property</Button></div></div>}
+          ) : <div className="rounded-3xl border border-dashed border-slate-700 py-16 text-center"><div className="text-sm text-slate-500">{focus === "at-risk" ? "No properties are currently marked at risk." : "No properties have been added yet."}</div>{focus !== "at-risk" ? <div className="mt-4"><Button tone="cyan" onClick={() => nav("/pm/properties/new")}>Add First Property</Button></div> : null}</div>}
         </section>
       </main>
     </div>
