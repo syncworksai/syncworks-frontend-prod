@@ -6,6 +6,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import BusinessProfileEditController from "./components/business/BusinessProfileEditController";
 import BusinessSettingsLoadGuard from "./components/business/BusinessSettingsLoadGuard";
 import BusinessLiveAuditGuard from "./components/business/BusinessLiveAuditGuard";
+import PersonalStorefrontDock from "./components/customer/PersonalStorefrontDock";
 import PMShell from "./components/pm/PMShell";
 import PMTenantEditOverlay from "./components/pm/PMTenantEditOverlay";
 import NutritionCoachGlobalAssist from "./components/customer-health/NutritionCoachGlobalAssist";
@@ -23,7 +24,7 @@ import PMPayments from "./pages/PMPayments";
 import "./index.css";
 import "./mobile-production.css";
 
-const SYNCWORKS_BUILD = "2026.09.01-godmode-platform-isolated-v2";
+const SYNCWORKS_BUILD = "2026.09.01-storefront-discovery-v1";
 
 async function retireLegacyAppCaches() {
   try {
@@ -66,12 +67,14 @@ function RoutedApplication() {
   const isPmDashboard = pathname === "/pm";
   const isPmRoute = isPmDashboard || pathname.startsWith("/pm/");
   const directPage = directPages[pathname];
+  const showPersonalStorefrontDock = pathname.startsWith("/customer") && pathname !== "/customer/store";
 
   const routedContent = directPage ? (
     <ProtectedRoute>{directPage}</ProtectedRoute>
   ) : (
     <>
       <App />
+      {showPersonalStorefrontDock ? <PersonalStorefrontDock /> : null}
       <BusinessProfileEditController />
       <BusinessSettingsLoadGuard />
       <BusinessLiveAuditGuard />
