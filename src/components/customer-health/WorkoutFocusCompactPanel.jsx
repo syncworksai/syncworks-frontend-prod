@@ -59,6 +59,20 @@ function isBodyweightExercise(name) {
   return /push[- ]?up|plank|sit[- ]?up|bodyweight|air squat|walking lunge|burpee/i.test(String(name || ""));
 }
 
+function clickLegacyWorkoutControl(label) {
+  if (typeof document === "undefined") return false;
+  const root = document.querySelector(".health-active-workout-root");
+  if (!root) return false;
+  const target = String(label || "").trim().toLowerCase();
+  const button = [...root.querySelectorAll("button")].find((node) => {
+    const text = String(node.textContent || "").trim().replace(/\s+/g, " ").toLowerCase();
+    return text === target || text.includes(target);
+  });
+  if (!button || button.disabled) return false;
+  button.click();
+  return true;
+}
+
 function readTimerPreferences() {
   if (typeof window === "undefined") {
     return { mode: "standard", restSeconds: 60, workSeconds: 40, rounds: 8 };
@@ -194,6 +208,30 @@ export default function WorkoutFocusCompactPanel({
     try { window.localStorage.setItem(TIMER_PREFS_KEY, JSON.stringify(next)); } catch { /* best effort */ }
   }
 
+  function stopRestNow() {
+    if (onStopRest) {
+      onStopRest();
+      return;
+    }
+    clickLegacyWorkoutControl("Stop Rest");
+  }
+
+  function openSwapNow() {
+    setDrawerMode("");
+    onModify?.();
+    window.setTimeout(() => clickLegacyWorkoutControl("Swap Exercise"), 60);
+  }
+
+  function skipCurrentNow() {
+    setDrawerMode("");
+    if (onSkipExercise) {
+      onSkipExercise();
+      return;
+    }
+    onModify?.();
+    window.setTimeout(() => clickLegacyWorkoutControl("Skip Exercise"), 60);
+  }
+
   if (!session || !currentExercise) return null;
 
   const primaryLabel = session.pending_set_logging
@@ -210,7 +248,7 @@ export default function WorkoutFocusCompactPanel({
       return;
     }
     if (session.rest_active) {
-      onStopRest?.();
+      stopRestNow();
       return;
     }
     onStartSet?.();
@@ -295,9 +333,9 @@ export default function WorkoutFocusCompactPanel({
         onTimerPreferencesChange={updateTimer}
         onClose={() => setDrawerMode("")}
         onReplay={() => { onReplay?.(); setDrawerMode(""); }}
-        onSwap={() => { setDrawerMode(""); onModify?.(); }}
-        onSkip={() => { setDrawerMode(""); onSkipExercise?.(); }}
-        onComeBackLater={() => { setDrawerMode(""); onSkipExercise?.({ comeBackLater: true }); }}
+        onSwap={openSwapNow}
+        onSkip={skipCurrentNow}
+        onComeBackLater={skipCurrentNow}
         onFinish={() => { setDrawerMode(""); onEndWorkout?.(); }}
       />
     </>
