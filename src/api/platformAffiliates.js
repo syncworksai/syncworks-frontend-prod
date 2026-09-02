@@ -158,3 +158,18 @@ export async function markGodModePayoutBatchPaid(id, payload = {}) {
   );
   return res.data;
 }
+
+export async function getStorefrontMerchants() {
+  const res = await api.get("/platform-affiliates/storefront/merchants/");
+  return res.data;
+}
+
+export async function trackStorefrontClick(payload) {
+  const res = await api.post("/platform-affiliates/storefront/track-click/", payload);
+  return res.data;
+}
+
+export async function getGodModeStorefrontKpis() {
+  const res = await api.get("/platform-affiliates/storefront/godmode/kpis/");
+  return res.data;
+}
