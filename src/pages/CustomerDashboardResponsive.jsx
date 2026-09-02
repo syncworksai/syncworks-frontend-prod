@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Activity, Home, Inbox, LayoutGrid, MoreHorizontal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
+import { getIdentityProfile } from "../api/identity";
 import { useAuth } from "../auth/AuthContext";
 import CustomerDashboard from "./CustomerDashboard.jsx";
 import CustomerMobileHome from "../components/customer/CustomerMobileHome";
@@ -60,6 +61,7 @@ export default function CustomerDashboardResponsive() {
   const { user } = useAuth();
   const [tickets, setTickets] = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [identity, setIdentity] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dockOpen, setDockOpen] = useState(false);
   const viewportMode = useViewportMode();
@@ -68,12 +70,14 @@ export default function CustomerDashboardResponsive() {
 
   async function load() {
     setLoading(true);
-    const [ticketResult, invoiceResult] = await Promise.allSettled([
+    const [ticketResult, invoiceResult, identityResult] = await Promise.allSettled([
       api.get("/tickets/"),
       api.get("/sync-ai/customer/invoices/"),
+      getIdentityProfile(),
     ]);
     setTickets(ticketResult.status === "fulfilled" ? safeList(ticketResult.value?.data) : []);
     setInvoices(invoiceResult.status === "fulfilled" ? safeList(invoiceResult.value?.data) : []);
+    setIdentity(identityResult.status === "fulfilled" ? identityResult.value : null);
     setLoading(false);
   }
 
@@ -82,6 +86,7 @@ export default function CustomerDashboardResponsive() {
   const openTickets = useMemo(() => tickets.filter((item) => !["COMPLETED", "CLOSED", "CANCELLED", "PAID"].includes(String(item?.status || "").toUpperCase())), [tickets]);
   const dueInvoices = useMemo(() => invoices.filter((item) => !["PAID", "VOID"].includes(String(item?.derived_state || item?.status || "").toUpperCase())), [invoices]);
   const totalDue = useMemo(() => dueInvoices.reduce((sum, item) => sum + Number(item?.balance_due ?? item?.total ?? 0), 0), [dueInvoices]);
+  const profilePhotoUrl = String(identity?.identity?.profile_photo_url || "").trim();
 
   function playBriefing() {
     setDockOpen(true);
@@ -101,6 +106,7 @@ export default function CustomerDashboardResponsive() {
     <div className="min-h-dvh bg-[#020617] px-3 pb-24 pt-3 text-slate-100" data-sw-layout="portrait">
       <CustomerMobileHome
         displayName={firstName(user)}
+        profilePhotoUrl={profilePhotoUrl}
         tickets={tickets}
         invoices={invoices}
         openCount={openTickets.length}
