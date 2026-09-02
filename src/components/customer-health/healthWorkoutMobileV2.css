@@ -62,8 +62,34 @@
     display: block !important;
   }
 
+  /* SetCompletionSheet and other active workout overlays are siblings of the
+     compact controller. They must remain visible AND above the global mobile
+     nav. The prior rule exposed the sheet, but its Save Set row sat behind the
+     fixed Personal nav, which made the workout appear trapped after every set. */
   .health-active-workout-main #health-workout-command-center ~ div.fixed.inset-0 {
     display: flex !important;
+    z-index: 260 !important;
+    padding-bottom: calc(.65rem + env(safe-area-inset-bottom)) !important;
+  }
+
+  .health-active-workout-main #health-workout-command-center ~ div.fixed.inset-0 > section {
+    z-index: 261 !important;
+    max-height: calc(100dvh - max(.75rem, env(safe-area-inset-top)) - max(.75rem, env(safe-area-inset-bottom))) !important;
+    padding: .8rem !important;
+    border-radius: 1.1rem !important;
+    overscroll-behavior: contain;
+  }
+
+  /* Keep the essential Save Set / Back controls reachable without requiring
+     the user to discover that the sheet scrolls beneath the app navigation. */
+  .health-active-workout-main #health-workout-command-center ~ div.fixed.inset-0 > section > div:last-child {
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 3 !important;
+    margin: .65rem -.8rem -.8rem !important;
+    padding: .6rem .8rem calc(.6rem + env(safe-area-inset-bottom)) !important;
+    background: linear-gradient(180deg, rgba(4,7,5,.72), #040705 28%) !important;
+    backdrop-filter: blur(14px);
   }
 
   .health-active-workout-root .health-workout-action-dock {
