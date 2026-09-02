@@ -151,7 +151,7 @@ export default function TenantDashboard() {
     }
   }
 
-  const linked = Boolean(accountData?.tenant);
+  const linked = Boolean(accountData?.tenant || accountData?.account?.tenant_id);
   const account = accountData?.account || {};
   const lease = accountData?.lease || {};
   const ledger = accountData?.ledger || [];
