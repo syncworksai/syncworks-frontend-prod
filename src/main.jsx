@@ -4,6 +4,7 @@ import { BrowserRouter, useLocation } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PlatformRoute from "./components/PlatformRoute";
+import PlatformCommerceDock from "./components/platform/PlatformCommerceDock";
 import BusinessProfileEditController from "./components/business/BusinessProfileEditController";
 import BusinessSettingsLoadGuard from "./components/business/BusinessSettingsLoadGuard";
 import BusinessLiveAuditGuard from "./components/business/BusinessLiveAuditGuard";
@@ -11,7 +12,6 @@ import PMShell from "./components/pm/PMShell";
 import PMTenantEditOverlay from "./components/pm/PMTenantEditOverlay";
 import NutritionCoachGlobalAssist from "./components/customer-health/NutritionCoachGlobalAssist";
 import StorefrontCartDock from "./components/storefront/StorefrontCartDock";
-import StorefrontRevenueKpis from "./components/storefront/StorefrontRevenueKpis";
 import App from "./App";
 import CustomerStoreV2 from "./pages/CustomerStoreV2";
 import PMPropertyCreate from "./pages/PMPropertyCreate";
@@ -24,7 +24,7 @@ import PMPayments from "./pages/PMPayments";
 import "./index.css";
 import "./mobile-production.css";
 
-const SYNCWORKS_BUILD = "2026.09.01-storefront-cart-v1";
+const SYNCWORKS_BUILD = "2026.09.01-godmode-platform-separation-v1";
 
 async function retireLegacyAppCaches() {
   try {
@@ -67,14 +67,12 @@ function RoutedApplication() {
     <ProtectedRoute>{directPage}</ProtectedRoute>
   ) : (
     <>
+      <App />
       {pathname === "/platform" ? (
         <PlatformRoute>
-          <div className="mx-auto max-w-[1500px] px-3 pt-3 sm:px-5 lg:px-8">
-            <StorefrontRevenueKpis />
-          </div>
+          <PlatformCommerceDock />
         </PlatformRoute>
       ) : null}
-      <App />
       <BusinessProfileEditController />
       <BusinessSettingsLoadGuard />
       <BusinessLiveAuditGuard />
