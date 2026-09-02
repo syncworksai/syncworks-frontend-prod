@@ -1,8 +1,65 @@
 @media (max-width: 639px) {
-  .health-active-workout-root { background:#020617 !important; }
-  .health-active-workout-header { padding-top:max(.5rem,env(safe-area-inset-top)); }
-  .health-active-workout-main { scrollbar-width:none; }
-  .health-active-workout-main::-webkit-scrollbar { display:none; }
-  .health-active-workout-root #health-workout-command-center { border-radius:1.15rem; }
-  .health-active-workout-root .health-workout-action-dock { padding-left:.55rem; padding-right:.55rem; padding-top:.4rem; padding-bottom:max(.45rem,env(safe-area-inset-bottom)); }
+  .health-active-workout-root {
+    background: #020617 !important;
+  }
+
+  /* The global SyncWorks ModeBar remains visible above workout focus mode.
+     Reserve its mobile footprint so the workout title and Exit Focus control
+     never render underneath the iOS status bar / app header. */
+  .health-active-workout-header {
+    padding-top: calc(max(.5rem, env(safe-area-inset-top)) + 5.4rem) !important;
+    padding-bottom: .45rem !important;
+  }
+
+  .health-active-workout-header h2 {
+    font-size: 1rem !important;
+    line-height: 1.25rem !important;
+  }
+
+  .health-active-workout-header [class*="tracking-[0.24em]"] {
+    font-size: .45rem !important;
+  }
+
+  .health-active-workout-main {
+    scrollbar-width: none;
+    padding-top: .5rem !important;
+    padding-bottom: calc(12.2rem + env(safe-area-inset-bottom)) !important;
+  }
+
+  .health-active-workout-main::-webkit-scrollbar {
+    display: none;
+  }
+
+  .health-active-workout-root #health-workout-command-center {
+    border-radius: 1.1rem;
+  }
+
+  /* WorkoutFocusCompactPanel is the mobile controller. All legacy report-style
+     sections beneath it remain available on larger screens and in drawers,
+     but are removed from the live mobile lifting flow. */
+  .health-active-workout-main #health-workout-command-center ~ * {
+    display: none !important;
+  }
+
+  .health-active-workout-main #health-workout-command-center ~ .health-workout-action-dock {
+    display: block !important;
+  }
+
+  .health-active-workout-main #health-workout-command-center ~ div.fixed.inset-0 {
+    display: flex !important;
+  }
+
+  .health-active-workout-root .health-workout-action-dock {
+    bottom: calc(6.4rem + env(safe-area-inset-bottom)) !important;
+    padding-left: .55rem;
+    padding-right: .55rem;
+    padding-top: .35rem;
+    padding-bottom: .35rem;
+  }
+
+  /* Retire the older duplicate four-control dock. The compact focus dock now
+     owns set/rest/audio/SYNC controls on mobile. */
+  .health-active-workout-shell > div[class*="bottom-[calc(70px"] {
+    display: none !important;
+  }
 }
