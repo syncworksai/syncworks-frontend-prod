@@ -167,6 +167,7 @@ export default function App() {
         <Route path="/pm/properties/:propertyId" element={<ProtectedRoute><PMPropertyDetail /></ProtectedRoute>} />
         <Route path="/tenant" element={<ProtectedRoute><TenantDashboard /></ProtectedRoute>} />
         <Route path="/tenant/accept" element={<ProtectedRoute><TenantAcceptInvite /></ProtectedRoute>} />
+        <Route path="/tenant/invite" element={<ProtectedRoute><TenantAcceptInvite /></ProtectedRoute>} />
         <Route path="/investor" element={<ProtectedRoute><InvestorDashboard /></ProtectedRoute>} />
         <Route path="/investor/accept" element={<ProtectedRoute><InvestorAcceptInvite /></ProtectedRoute>} />
         <Route path="/tickets" element={<ProtectedRoute><TicketsBoard /></ProtectedRoute>} />

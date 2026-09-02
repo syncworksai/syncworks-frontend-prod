@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api/client";
+import { acceptTenantInvitation } from "../api/pmTenantPortal";
 import ModeBar from "../components/ModeBar";
 
 function useQuery() {
@@ -20,11 +21,6 @@ export default function PortalClaim() {
   const [err, setErr] = useState("");
 
   const title = portal === "tenant" ? "Tenant Portal" : "Investor Portal";
-  const endpoint =
-    portal === "tenant"
-      ? "/tenant/invites/accept/" // expects invite_code
-      : "/investor/claim/"; // expects connect_code
-
   async function submit() {
     setErr("");
     setOk("");
@@ -37,12 +33,11 @@ export default function PortalClaim() {
 
     setBusy(true);
     try {
-      const payload =
-        portal === "tenant"
-          ? { invite_code: trimmed }
-          : { connect_code: trimmed };
-
-      await api.post(endpoint, payload);
+      if (portal === "tenant") {
+        await acceptTenantInvitation(trimmed);
+      } else {
+        await api.post("/investor/claim/", { connect_code: trimmed });
+      }
 
       setOk("Linked ✅ Redirecting…");
 
