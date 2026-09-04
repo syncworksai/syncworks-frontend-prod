@@ -20,7 +20,7 @@ const ledgerFilters = [
 ];
 
 function Field({ label, children }) {
-  return <label className="block"><span className="mb-1.5 block text-xs font-semibold text-slate-300">{label}</span>{children}</label>;
+  return <label className="block min-w-0"><span className="mb-1.5 block text-xs font-semibold text-slate-300">{label}</span>{children}</label>;
 }
 
 function Drawer({ title, onClose, children, width = "max-w-xl" }) {
@@ -34,7 +34,7 @@ function Drawer({ title, onClose, children, width = "max-w-xl" }) {
           </div>
           <button type="button" onClick={onClose} className="rounded-xl border border-cyan-400/40 bg-cyan-500/10 px-3 py-2 text-sm font-black text-cyan-100 hover:bg-cyan-500/20">Close ✕</button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5">{children}</div>
+        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 pb-[calc(2rem+var(--sw-ios-safe-bottom))] pt-4 sm:px-5 sm:py-5">{children}</div>
       </aside>
     </div>
   );
@@ -182,9 +182,9 @@ export default function PMPayments() {
   const entryForm = (model, setter, onSave) => (
     <div className="grid gap-4 pb-6">
       <Field label="Tenant"><select className={inputClass} value={model.tenant || ""} disabled={Boolean(model.id)} onChange={(e) => setter({ ...model, tenant: e.target.value })}><option value="">Choose tenant</option>{tenants.map((t) => <option key={t.id} value={t.id}>{t.full_name} · {t.property_name || "No property"}</option>)}</select></Field>
-      <Field label="Who owes / paid this?"><div className="grid grid-cols-2 gap-2">{["TENANT", "HOUSING"].map((v) => <button type="button" key={v} onClick={() => setter({ ...model, payer: v })} className={`rounded-2xl border p-3 text-sm font-black transition ${model.payer === v ? "border-cyan-300 bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-950/30" : "border-slate-600 bg-slate-800/80 text-white hover:border-cyan-400/60"}`}>{v === "TENANT" ? "Tenant" : "Housing / Section 8"}</button>)}</div></Field>
-      <div className="grid grid-cols-2 gap-3"><Field label="Date"><input type="date" className={inputClass} value={model.entry_date || today} onChange={(e) => setter({ ...model, entry_date: e.target.value })}/></Field><Field label="Type"><select className={inputClass} value={model.entry_type} onChange={(e) => setter({ ...model, entry_type: e.target.value })}>{["CHARGE", "PAYMENT", "CREDIT", "ADJUSTMENT"].map((v) => <option key={v}>{v}</option>)}</select></Field></div>
-      <div className="grid grid-cols-2 gap-3"><Field label="Amount"><input className={inputClass} inputMode="decimal" value={model.amount || ""} onChange={(e) => setter({ ...model, amount: e.target.value })}/></Field><Field label="Category"><select className={inputClass} value={String(model.category || "RENT").replace("RENT_TENANT", "RENT").replace("RENT_HOUSING", "RENT")} onChange={(e) => setter({ ...model, category: e.target.value })}>{["RENT", "LATE_FEE", "SECURITY_DEPOSIT", "UTILITY", "REPAIR", "OTHER"].map((v) => <option key={v}>{v}</option>)}</select></Field></div>
+      <Field label="Who owes / paid this?"><div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-2">{["TENANT", "HOUSING"].map((v) => <button type="button" key={v} onClick={() => setter({ ...model, payer: v })} className={`min-w-0 rounded-2xl border p-3 text-sm font-black transition ${model.payer === v ? "border-cyan-300 bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-950/30" : "border-slate-600 bg-slate-800/80 text-white hover:border-cyan-400/60"}`}>{v === "TENANT" ? "Tenant" : "Housing / Section 8"}</button>)}</div></Field>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><Field label="Date"><input type="date" className={inputClass} value={model.entry_date || today} onChange={(e) => setter({ ...model, entry_date: e.target.value })}/></Field><Field label="Type"><select className={inputClass} value={model.entry_type} onChange={(e) => setter({ ...model, entry_type: e.target.value })}>{["CHARGE", "PAYMENT", "CREDIT", "ADJUSTMENT"].map((v) => <option key={v}>{v}</option>)}</select></Field></div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><Field label="Amount"><input className={inputClass} inputMode="decimal" value={model.amount || ""} onChange={(e) => setter({ ...model, amount: e.target.value })}/></Field><Field label="Category"><select className={inputClass} value={String(model.category || "RENT").replace("RENT_TENANT", "RENT").replace("RENT_HOUSING", "RENT")} onChange={(e) => setter({ ...model, category: e.target.value })}>{["RENT", "LATE_FEE", "SECURITY_DEPOSIT", "UTILITY", "REPAIR", "OTHER"].map((v) => <option key={v}>{v}</option>)}</select></Field></div>
       {model.entry_type === "PAYMENT" && model.payer !== "HOUSING" ? <Field label="Payment method"><select className={inputClass} value={model.payment_method || "CASH"} onChange={(e) => setter({ ...model, payment_method: e.target.value })}>{paymentMethods.filter((v) => v !== "HOUSING_AUTHORITY").map((v) => <option key={v}>{v}</option>)}</select></Field> : null}
       <Field label="Reference"><input className={inputClass} value={model.reference || ""} onChange={(e) => setter({ ...model, reference: e.target.value })}/></Field>
       <Field label="Memo"><textarea rows={4} className={inputClass} value={model.memo || ""} onChange={(e) => setter({ ...model, memo: e.target.value })}/></Field>

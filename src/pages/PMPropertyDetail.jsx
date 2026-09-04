@@ -150,7 +150,7 @@ export default function PMPropertyDetail() {
   if (loading) return <main className="px-4 py-10 sm:px-6"><div className="rounded-[28px] border border-cyan-500/15 bg-[#07111f] p-10 text-center text-sm text-slate-500">Loading property command center...</div></main>;
   if (error || !property) return <main className="space-y-4 px-4 py-6 sm:px-6"><div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 text-rose-100">{error || "Property not found."}</div><Button onClick={() => nav("/pm/properties")}>Back to Properties</Button></main>;
 
-  return <main className="space-y-5 px-4 py-6 sm:px-6">
+  return <main className="min-w-0 space-y-5 overflow-x-hidden px-4 pb-[calc(10rem+var(--sw-ios-safe-bottom))] pt-6 sm:px-6">
     {notice ? <div className="rounded-2xl border border-cyan-400/25 bg-cyan-500/10 p-4 text-sm text-cyan-100">{notice}</div> : null}
     <section className="overflow-hidden rounded-[32px] border border-cyan-400/20 bg-gradient-to-br from-cyan-500/14 via-[#07111f] to-fuchsia-500/12 p-5 lg:p-7">
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">

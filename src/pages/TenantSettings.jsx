@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ModeBar from "../components/ModeBar";
 import Button from "../components/ui/Button";
-import api from "../api/client";
+import { acceptTenantInvitation } from "../api/pmTenantPortal";
 
 function Field({ label, hint, children }) {
   return (
@@ -59,14 +59,14 @@ export default function TenantSettings() {
     notify_push: true,
   });
 
-  function clearRedirectTimer() {
+  const clearRedirectTimer = useCallback(() => {
     if (redirectTimerRef.current) {
       clearTimeout(redirectTimerRef.current);
       redirectTimerRef.current = null;
     }
-  }
+  }, []);
 
-  async function load() {
+  const load = useCallback(async () => {
     clearRedirectTimer();
     setLoading(true);
     setErr("");
@@ -93,7 +93,7 @@ export default function TenantSettings() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [clearRedirectTimer]);
 
   async function save() {
     clearRedirectTimer();
@@ -126,7 +126,7 @@ export default function TenantSettings() {
         return;
       }
 
-      await api.post("/tenant/invites/accept/", { code });
+      await acceptTenantInvitation(code);
       setOk("Tenant invite accepted. Redirecting…");
       redirectTimerRef.current = setTimeout(() => {
         nav("/tenant", { replace: true });
@@ -139,9 +139,9 @@ export default function TenantSettings() {
   }
 
   useEffect(() => {
-    load();
+    void load();
     return () => clearRedirectTimer();
-  }, []);
+  }, [clearRedirectTimer, load]);
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">

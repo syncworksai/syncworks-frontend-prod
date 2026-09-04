@@ -1,28 +1,20 @@
 // src/pages/TenantAcceptInvite.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import api from "../api/client";
+import { acceptTenantInvitation } from "../api/pmTenantPortal";
 import ModeBar from "../components/ModeBar";
 import Button from "../components/ui/Button";
 
-function useQuery() {
-  const { search } = useLocation();
-  return useMemo(() => new URLSearchParams(search), [search]);
-}
-
 export default function TenantAcceptInvite() {
   const nav = useNavigate();
-  const q = useQuery();
+  const { search } = useLocation();
 
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(
+    () => (new URLSearchParams(search).get("code") || "").trim().toUpperCase(),
+  );
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
-
-  useEffect(() => {
-    const prefill = (q.get("code") || "").trim();
-    if (prefill) setCode(prefill);
-  }, [q]);
 
   async function accept() {
     setErr("");
@@ -35,12 +27,12 @@ export default function TenantAcceptInvite() {
 
     setBusy(true);
     try {
-      const res = await api.post("/tenant/invites/accept/", { code: trimmed });
-      setMsg("Invite accepted! Loading your tenant portal...");
+      const data = await acceptTenantInvitation(trimmed);
+      setMsg("Invitation accepted. Loading your tenant portal...");
 
       // Give backend a moment to commit/link, then navigate
       setTimeout(() => nav("/tenant"), 400);
-      return res.data;
+      return data;
     } catch (e) {
       const detail = e?.response?.data?.detail || "Unable to accept invite.";
       setErr(detail);
@@ -64,7 +56,7 @@ export default function TenantAcceptInvite() {
             <input
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="OCEANVIEW-4B7X"
+              placeholder="SW-TN-12AB34CD"
               className="mt-2 w-full rounded-2xl border border-blue-500/25 bg-black/35 px-4 py-3 font-semibold tracking-[0.12em] text-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
@@ -82,10 +74,10 @@ export default function TenantAcceptInvite() {
           ) : null}
 
           <div className="mt-6 flex items-center gap-2">
-            <Button onClick={accept} disabled={busy}>
+            <Button tone="cyan" onClick={accept} disabled={busy}>
               {busy ? "Accepting..." : "Accept Invite"}
             </Button>
-            <Button variant="secondary" onClick={() => nav("/tenant")} disabled={busy}>
+            <Button tone="slate" onClick={() => nav("/tenant")} disabled={busy}>
               Back
             </Button>
           </div>
