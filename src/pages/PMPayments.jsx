@@ -70,6 +70,7 @@ export default function PMPayments() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [drawerError, setDrawerError] = useState("");
   const headers = workspace?.id ? { "X-PM-Workspace-ID": String(workspace.id) } : {};
 
   async function load() {
@@ -140,17 +141,20 @@ export default function PMPayments() {
     if (tenant) selectTenant(tenant);
     setEntry({ ...blankEntry, tenant });
     setEditing(null);
+    setDrawerError("");
     setDrawer("entry");
   }
 
   function editRow(r) {
     setEditing({ ...r, payer: bucketFor(r), category: String(r.category || "RENT").startsWith("RENT") ? "RENT" : r.category });
+    setDrawerError("");
     setDrawer("edit");
   }
 
   async function saveEntry(model, isEdit = false) {
-    if (!model.tenant || !model.amount) return setError("Tenant and amount are required.");
-    setBusy(true); setError("");
+    if (!model.tenant) return setDrawerError("Choose a tenant before saving this ledger entry.");
+    if (!model.amount || Number(model.amount) <= 0) return setDrawerError("Enter an amount greater than $0 before saving.");
+    setBusy(true); setError(""); setDrawerError("");
     try {
       const payload = { ...model, category: categoryFor(model.payer, model.category), payment_method: model.entry_type === "PAYMENT" ? (model.payer === "HOUSING" ? "HOUSING_AUTHORITY" : model.payment_method) : "", workspace_id: workspace.id };
       if (isEdit) await api.patch(`/pm-hub/ledger/${model.id}/`, payload, { headers });
@@ -160,7 +164,7 @@ export default function PMPayments() {
       await load();
       await loadPayer(model.tenant);
     } catch (err) {
-      setError(err?.response?.data?.detail || "Could not save ledger entry.");
+      setDrawerError(err?.response?.data?.detail || "Could not save ledger entry.");
     } finally { setBusy(false); }
   }
 
@@ -181,14 +185,17 @@ export default function PMPayments() {
 
   const entryForm = (model, setter, onSave) => (
     <div className="grid gap-4 pb-6">
-      <Field label="Tenant"><select className={inputClass} value={model.tenant || ""} disabled={Boolean(model.id)} onChange={(e) => setter({ ...model, tenant: e.target.value })}><option value="">Choose tenant</option>{tenants.map((t) => <option key={t.id} value={t.id}>{t.full_name} · {t.property_name || "No property"}</option>)}</select></Field>
+      {drawerError ? <div role="alert" className="rounded-2xl border border-rose-400/35 bg-rose-500/10 p-3 text-sm font-semibold text-rose-100">{drawerError}</div> : null}
+      <Field label="Tenant"><select className={inputClass} value={model.tenant || ""} disabled={Boolean(model.id)} onChange={(e) => { setter({ ...model, tenant: e.target.value }); setDrawerError(""); }}><option value="">Choose tenant</option>{tenants.map((t) => <option key={t.id} value={t.id}>{t.full_name} · {t.property_name || "No property"}</option>)}</select></Field>
       <Field label="Who owes / paid this?"><div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-2">{["TENANT", "HOUSING"].map((v) => <button type="button" key={v} onClick={() => setter({ ...model, payer: v })} className={`min-w-0 rounded-2xl border p-3 text-sm font-black transition ${model.payer === v ? "border-cyan-300 bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-950/30" : "border-slate-600 bg-slate-800/80 text-white hover:border-cyan-400/60"}`}>{v === "TENANT" ? "Tenant" : "Housing / Section 8"}</button>)}</div></Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><Field label="Date"><input type="date" className={inputClass} value={model.entry_date || today} onChange={(e) => setter({ ...model, entry_date: e.target.value })}/></Field><Field label="Type"><select className={inputClass} value={model.entry_type} onChange={(e) => setter({ ...model, entry_type: e.target.value })}>{["CHARGE", "PAYMENT", "CREDIT", "ADJUSTMENT"].map((v) => <option key={v}>{v}</option>)}</select></Field></div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><Field label="Amount"><input className={inputClass} inputMode="decimal" value={model.amount || ""} onChange={(e) => setter({ ...model, amount: e.target.value })}/></Field><Field label="Category"><select className={inputClass} value={String(model.category || "RENT").replace("RENT_TENANT", "RENT").replace("RENT_HOUSING", "RENT")} onChange={(e) => setter({ ...model, category: e.target.value })}>{["RENT", "LATE_FEE", "SECURITY_DEPOSIT", "UTILITY", "REPAIR", "OTHER"].map((v) => <option key={v}>{v}</option>)}</select></Field></div>
       {model.entry_type === "PAYMENT" && model.payer !== "HOUSING" ? <Field label="Payment method"><select className={inputClass} value={model.payment_method || "CASH"} onChange={(e) => setter({ ...model, payment_method: e.target.value })}>{paymentMethods.filter((v) => v !== "HOUSING_AUTHORITY").map((v) => <option key={v}>{v}</option>)}</select></Field> : null}
       <Field label="Reference"><input className={inputClass} value={model.reference || ""} onChange={(e) => setter({ ...model, reference: e.target.value })}/></Field>
       <Field label="Memo"><textarea rows={4} className={inputClass} value={model.memo || ""} onChange={(e) => setter({ ...model, memo: e.target.value })}/></Field>
-      <button type="button" onClick={onSave} disabled={busy} className="min-h-12 rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-950/40 hover:bg-cyan-300 disabled:opacity-50">{busy ? "Saving..." : model.id ? "Save Changes" : "Save Entry"}</button>
+      <div className="sticky bottom-0 z-10 -mx-1 bg-[#050c16]/95 px-1 pb-[var(--sw-ios-safe-bottom)] pt-2 backdrop-blur">
+        <button type="button" onClick={onSave} disabled={busy} className="min-h-12 w-full touch-manipulation rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-950/40 hover:bg-cyan-300 disabled:opacity-50">{busy ? "Saving..." : model.id ? "Save Changes" : "Save Entry"}</button>
+      </div>
     </div>
   );
 
