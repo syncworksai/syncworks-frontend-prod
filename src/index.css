@@ -37,24 +37,21 @@ body {
     background: #020617;
   }
 
-  body {
-    box-sizing: border-box;
-    min-height: 100dvh;
-    padding-top: var(--sw-ios-safe-top);
-    padding-right: var(--sw-ios-safe-right);
-    padding-bottom: var(--sw-ios-safe-bottom);
-    padding-left: var(--sw-ios-safe-left);
-  }
+  body { min-height: 100dvh; }
 
-  .sw-autoglow .sticky.top-0 {
-    top: var(--sw-ios-safe-top) !important;
+  .sw-modebar {
+    top: 0 !important;
+    padding-top: var(--sw-ios-safe-top);
   }
 
   .sw-autoglow .fixed.inset-0 {
-    top: var(--sw-ios-safe-top) !important;
+    top: 0 !important;
     right: var(--sw-ios-safe-right) !important;
     bottom: var(--sw-ios-safe-bottom) !important;
     left: var(--sw-ios-safe-left) !important;
+    box-sizing: border-box;
+    padding-top: var(--sw-ios-safe-top);
+    padding-bottom: var(--sw-ios-safe-bottom);
   }
 
   .sw-autoglow .fixed.top-0:not(.inset-0) {
@@ -96,24 +93,21 @@ body {
     --sw-ios-safe-right: env(safe-area-inset-right);
   }
 
-  body {
-    box-sizing: border-box;
-    min-height: 100dvh;
-    padding-top: var(--sw-ios-safe-top);
-    padding-right: var(--sw-ios-safe-right);
-    padding-bottom: var(--sw-ios-safe-bottom);
-    padding-left: var(--sw-ios-safe-left);
-  }
+  body { min-height: 100dvh; }
 
-  .sw-autoglow .sticky.top-0 {
-    top: var(--sw-ios-safe-top) !important;
+  .sw-modebar {
+    top: 0 !important;
+    padding-top: var(--sw-ios-safe-top);
   }
 
   .sw-autoglow .fixed.inset-0 {
-    top: var(--sw-ios-safe-top) !important;
+    top: 0 !important;
     right: var(--sw-ios-safe-right) !important;
     bottom: var(--sw-ios-safe-bottom) !important;
     left: var(--sw-ios-safe-left) !important;
+    box-sizing: border-box;
+    padding-top: var(--sw-ios-safe-top);
+    padding-bottom: var(--sw-ios-safe-bottom);
   }
 
   .sw-autoglow .fixed.top-0:not(.inset-0) {
@@ -152,11 +146,6 @@ body {
    belongs in the hamburger/account flow.
    ========================================================= */
 @media (max-width: 767px) and (pointer: coarse) {
-  .sw-autoglow .sticky.top-0.z-50.overflow-hidden.border-b.border-slate-800 {
-    top: 0 !important;
-    margin-top: 64px !important;
-  }
-
   .sw-autoglow .sticky.top-0.z-50.overflow-hidden.border-b.border-slate-800 > .relative.space-y-2.px-4.pb-3.md\:hidden {
     display: none !important;
   }

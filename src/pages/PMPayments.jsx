@@ -26,7 +26,7 @@ function Field({ label, children }) {
 function Drawer({ title, onClose, children, width = "max-w-xl" }) {
   return (
     <div className="fixed inset-0 z-[220] bg-black/75 backdrop-blur-[2px]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <aside className={`ml-auto flex h-[100dvh] w-full ${width} flex-col border-l border-cyan-400/30 bg-[#050c16] shadow-2xl shadow-cyan-950/40`}>
+      <aside className={`ml-auto flex h-full w-full ${width} flex-col border-l border-cyan-400/30 bg-[#050c16] shadow-2xl shadow-cyan-950/40`}>
         <div className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-cyan-500/20 bg-[#050c16]/95 px-4 py-4 backdrop-blur sm:px-5">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-300">Property Management</div>
@@ -145,6 +145,13 @@ export default function PMPayments() {
     setDrawer("entry");
   }
 
+  function closeDrawer() {
+    setDrawer("");
+    const next = new URLSearchParams(params);
+    next.delete("add");
+    setParams(next, { replace: true });
+  }
+
   function editRow(r) {
     setEditing({ ...r, payer: bucketFor(r), category: String(r.category || "RENT").startsWith("RENT") ? "RENT" : r.category });
     setDrawerError("");
@@ -160,7 +167,7 @@ export default function PMPayments() {
       if (isEdit) await api.patch(`/pm-hub/ledger/${model.id}/`, payload, { headers });
       else await api.post("/pm-hub/ledger/", payload, { headers });
       setMessage(isEdit ? "Ledger entry updated." : "Ledger entry saved.");
-      setDrawer("");
+      closeDrawer();
       await load();
       await loadPayer(model.tenant);
     } catch (err) {
@@ -225,9 +232,9 @@ export default function PMPayments() {
         </section>
       </main>
 
-      {drawer === "entry" ? <Drawer title="Add Ledger Entry" onClose={() => setDrawer("")}>{entryForm(entry, setEntry, () => saveEntry(entry))}</Drawer> : null}
-      {drawer === "edit" && editing ? <Drawer title="Edit Ledger Entry" onClose={() => setDrawer("")}>{entryForm(editing, setEditing, () => saveEntry(editing, true))}</Drawer> : null}
-      {drawer === "rules" ? <Drawer title="Lease & Billing Rules" width="max-w-4xl" onClose={() => setDrawer("")}><PMBillingPolicyEditor workspace={workspace} tenant={selectedTenant} onRefresh={async () => { await load(); await loadPayer(filterTenant); }}/></Drawer> : null}
+      {drawer === "entry" ? <Drawer title="Add Ledger Entry" onClose={closeDrawer}>{entryForm(entry, setEntry, () => saveEntry(entry))}</Drawer> : null}
+      {drawer === "edit" && editing ? <Drawer title="Edit Ledger Entry" onClose={closeDrawer}>{entryForm(editing, setEditing, () => saveEntry(editing, true))}</Drawer> : null}
+      {drawer === "rules" ? <Drawer title="Lease & Billing Rules" width="max-w-4xl" onClose={closeDrawer}><PMBillingPolicyEditor workspace={workspace} tenant={selectedTenant} onRefresh={async () => { await load(); await loadPayer(filterTenant); }}/></Drawer> : null}
     </div>
   );
 }

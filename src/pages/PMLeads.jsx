@@ -19,7 +19,7 @@ function tag(tone, text) {
   return <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${cls}`}>{text}</span>;
 }
 function Drawer({ title, onClose, children, width = "max-w-2xl" }) {
-  return <div className="fixed inset-0 z-[260] bg-black/75 backdrop-blur-[2px]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}><aside className={`ml-auto flex h-[100dvh] w-full ${width} flex-col border-l border-cyan-400/25 bg-[#050c16] shadow-2xl`}><div className="sticky top-0 z-10 flex items-center justify-between border-b border-cyan-500/20 bg-[#050c16]/95 px-4 py-3 backdrop-blur"><h2 className="text-xl font-black">{title}</h2><button onClick={onClose} className="rounded-lg border border-cyan-400/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-black text-cyan-100">Close ✕</button></div><div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div></aside></div>;
+  return <div className="fixed inset-0 z-[260] bg-black/75 backdrop-blur-[2px]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}><aside className={`ml-auto flex h-full w-full ${width} flex-col border-l border-cyan-400/25 bg-[#050c16] shadow-2xl`}><div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-cyan-500/20 bg-[#050c16]/95 px-4 py-3 backdrop-blur"><h2 className="min-w-0 text-lg font-black sm:text-xl">{title}</h2><button onClick={onClose} className="shrink-0 rounded-lg border border-cyan-400/40 bg-cyan-500/10 px-3 py-2 text-xs font-black text-cyan-100">Close ✕</button></div><div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-4">{children}</div></aside></div>;
 }
 
 export default function PMLeads() {
