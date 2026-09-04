@@ -1034,7 +1034,7 @@ function MobileMenuDrawer({
         onClick={onClose}
       />
 
-      <div className="absolute bottom-3 right-3 top-3 w-[min(390px,calc(100vw-24px))] overflow-hidden rounded-[2rem] border border-cyan-500/20 bg-slate-950 shadow-[0_0_80px_rgba(34,211,238,0.16)]">
+      <div className="absolute bottom-[calc(.75rem+var(--sw-ios-safe-bottom))] right-3 top-[calc(.75rem+var(--sw-ios-safe-top))] w-[min(390px,calc(100vw-24px))] overflow-hidden rounded-[2rem] border border-cyan-500/20 bg-slate-950 shadow-[0_0_80px_rgba(34,211,238,0.16)]">
         <div className="relative border-b border-slate-800 p-4">
           <div className="absolute -right-16 -top-20 h-52 w-52 rounded-full bg-cyan-500/15 blur-3xl" />
           <div className="absolute -bottom-20 -left-16 h-52 w-52 rounded-full bg-fuchsia-500/10 blur-3xl" />
@@ -1862,7 +1862,7 @@ export default function ModeBar({
 
   return (
     <>
-      <div className="sticky top-0 z-50 overflow-hidden border-b border-slate-800 bg-slate-950/80 backdrop-blur">
+      <div className="sw-modebar sticky top-0 z-50 overflow-hidden border-b border-slate-800 bg-slate-950/80 backdrop-blur">
         <div className="pointer-events-none absolute inset-0">
           <div
             className="absolute -inset-10 blur-3xl"
