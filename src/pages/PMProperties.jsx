@@ -81,6 +81,7 @@ export default function PMProperties() {
   const [properties, setProperties] = useState([]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [filesOpen, setFilesOpen] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -113,11 +114,13 @@ export default function PMProperties() {
     const rows = [CSV_COLUMNS, ...properties.map((property) => CSV_COLUMNS.map((column) => property?.[column] ?? ""))];
     downloadCsv(`${workspace?.name || "syncworks"}-properties.csv`, rows);
     setMessage(`${properties.length} properties exported. Open the CSV in Excel or Google Sheets.`);
+    setFilesOpen(false);
   }
 
   function downloadTemplate() {
     downloadCsv("syncworks-property-import-template.csv", [CSV_COLUMNS, ["Example Property", "HOME", "123 Main Street", "Montgomery", "AL", "36104", "HEALTHY", "Optional notes"]]);
     setMessage("Template downloaded. Complete it in Excel or Google Sheets, then save or download it as CSV before importing.");
+    setFilesOpen(false);
   }
 
   async function importSpreadsheet(event) {
@@ -174,17 +177,13 @@ export default function PMProperties() {
           <div><div className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Portfolio Inventory</div><div className="mt-2 text-xl font-black text-white">Properties</div><p className="mt-1 text-sm text-slate-400">Open a property to manage units, occupancy, tenants, documents, and activity.</p></div>
           <div className="flex flex-wrap gap-2">
             <Button tone="slate" onClick={load} disabled={loading}>Refresh</Button>
-            <Button tone="slate" onClick={downloadTemplate}>Download Template</Button>
-            <Button tone="slate" onClick={() => fileInputRef.current?.click()} disabled={importing}>{importing ? "Importing..." : "Import Spreadsheet"}</Button>
-            <Button tone="slate" onClick={exportProperties} disabled={!properties.length}>Export CSV</Button>
+            <Button tone="slate" onClick={() => setFilesOpen(true)}>Export files</Button>
             <Button tone="cyan" onClick={() => nav("/pm/properties/new")}>Add Property</Button>
             <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={importSpreadsheet} />
           </div>
         </div>
 
-        <div className="rounded-2xl border border-cyan-500/15 bg-cyan-500/5 px-4 py-3 text-xs text-slate-400">
-          {focus === "at-risk" ? `Showing ${visibleProperties.length} properties requiring review. Open a property to see its work, balance, cases, and records.` : "Spreadsheet workflow: download the template, edit it in Excel or Google Sheets, then save or download it as a CSV file and import it here."}
-        </div>
+        {focus === "at-risk" ? <div className="rounded-2xl border border-cyan-500/15 bg-cyan-500/5 px-4 py-3 text-xs text-slate-400">Showing {visibleProperties.length} properties requiring review. Open a property to see its work, balance, cases, and records.</div> : null}
 
         <div className="grid gap-4 sm:grid-cols-3">
           {[["Total Properties", stats.total, "Portfolio inventory"], ["Average Occupancy", `${stats.average}%`, "Across recorded properties"], ["At Risk", stats.risk, "Requires attention"]].map(([label, value, hint]) => <div key={label} className="rounded-3xl border border-cyan-500/15 bg-[#07111f]/95 p-5"><div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">{label}</div><div className="mt-3 text-3xl font-black text-white">{value}</div><div className="mt-2 text-xs text-slate-500">{hint}</div></div>)}
@@ -211,6 +210,17 @@ export default function PMProperties() {
           ) : <div className="rounded-3xl border border-dashed border-slate-700 py-16 text-center"><div className="text-sm text-slate-500">{focus === "at-risk" ? "No properties are currently marked at risk." : "No properties have been added yet."}</div>{focus !== "at-risk" ? <div className="mt-4"><Button tone="cyan" onClick={() => nav("/pm/properties/new")}>Add First Property</Button></div> : null}</div>}
         </section>
       </main>
+      {filesOpen ? <div className="fixed inset-0 z-[260] flex items-end bg-black/75 p-3 backdrop-blur-sm sm:items-center sm:justify-center" onMouseDown={(event) => event.target === event.currentTarget && setFilesOpen(false)}>
+        <section className="w-full max-w-sm rounded-[28px] border border-cyan-400/25 bg-[#050c16] p-4 shadow-2xl">
+          <div className="flex items-start justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-300">Property files</div><h2 className="mt-1 text-xl font-black text-white">Import & export</h2></div><button type="button" onClick={() => setFilesOpen(false)} className="min-h-11 rounded-xl border border-slate-700 px-3 text-sm font-black text-slate-200">Close</button></div>
+          <p className="mt-3 text-xs leading-5 text-slate-400">Download a starter template, import an edited CSV, or export the current portfolio.</p>
+          <div className="mt-4 grid gap-2">
+            <Button tone="slate" onClick={downloadTemplate}>Download template</Button>
+            <Button tone="slate" onClick={() => { setFilesOpen(false); window.setTimeout(() => fileInputRef.current?.click(), 80); }} disabled={importing}>{importing ? "Importing..." : "Import spreadsheet"}</Button>
+            <Button tone="cyan" onClick={exportProperties} disabled={!properties.length}>Export portfolio CSV</Button>
+          </div>
+        </section>
+      </div> : null}
     </div>
   );
 }
