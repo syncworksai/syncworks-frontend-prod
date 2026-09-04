@@ -22,8 +22,8 @@ const emptyMaintenance = {
 
 function Card({ title, subtitle, right, children }) {
   return (
-    <section className="rounded-[28px] border border-blue-500/20 bg-[#07111f]/90 p-5 shadow-[0_18px_70px_rgba(0,89,255,0.09)] backdrop-blur-xl">
-      <div className="flex items-start justify-between gap-3">
+    <section className="min-w-0 overflow-hidden rounded-[28px] border border-blue-500/20 bg-[#07111f]/90 p-4 shadow-[0_18px_70px_rgba(0,89,255,0.09)] backdrop-blur-xl sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-slate-100">{title}</h2>
           {subtitle ? <div className="mt-1 text-sm text-slate-400">{subtitle}</div> : null}
@@ -161,7 +161,7 @@ export default function TenantDashboard() {
   return (
     <div className="min-h-screen bg-black text-slate-100">
       <ModeBar />
-      <main className="mx-auto max-w-6xl px-4 pb-32 pt-6">
+      <main className="mx-auto max-w-6xl overflow-x-hidden px-4 pb-[calc(10rem+var(--sw-ios-safe-bottom))] pt-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="text-xs font-bold uppercase tracking-[0.22em] text-blue-400">SYNCWORKS PROPERTY MANAGEMENT</div>
@@ -191,7 +191,7 @@ export default function TenantDashboard() {
           <>
             <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
               <Card title="Rent & Balance" subtitle="Your live Property Management ledger" right={<Pill tone={Number(account.amount_due || 0) > 0 ? "blue" : "green"}>{Number(account.amount_due || 0) > 0 ? "Balance open" : "Current"}</Pill>}>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2">
                   <div className="rounded-2xl border border-slate-800 bg-black/25 p-4">
                     <div className="text-xs text-slate-500">Amount due</div>
                     <div className="mt-1 text-2xl font-black text-white">{money(account.amount_due)}</div>
@@ -280,8 +280,8 @@ export default function TenantDashboard() {
       </main>
 
       {messageOpen ? (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/75 p-3 sm:items-center">
-          <form onSubmit={sendMessage} className="w-full max-w-lg rounded-[28px] border border-cyan-400/25 bg-[#07111f] p-5">
+        <div className="fixed inset-0 z-[100] flex items-end justify-center overflow-x-hidden bg-black/75 p-3 pb-[calc(.75rem+var(--sw-ios-safe-bottom))] sm:items-center">
+          <form onSubmit={sendMessage} className="max-h-[calc(100dvh-var(--sw-ios-safe-top)-var(--sw-ios-safe-bottom)-1.5rem)] w-full max-w-lg overflow-y-auto rounded-[28px] border border-cyan-400/25 bg-[#07111f] p-5">
             <div className="flex items-center justify-between gap-4"><h3 className="text-xl font-black text-white">Message Property Management</h3><button type="button" onClick={() => setMessageOpen(false)} className="min-h-11 px-2 text-slate-400">Close</button></div>
             <input required value={messageForm.subject} onChange={(event) => setMessageForm({ ...messageForm, subject: event.target.value })} placeholder="Subject" className="mt-4 min-h-11 w-full rounded-2xl border border-slate-700 bg-black/30 px-4 text-white" />
             <textarea required value={messageForm.body} onChange={(event) => setMessageForm({ ...messageForm, body: event.target.value })} placeholder="How can the PM company help?" className="mt-3 min-h-36 w-full rounded-2xl border border-slate-700 bg-black/30 p-4 text-white" />
@@ -291,8 +291,8 @@ export default function TenantDashboard() {
       ) : null}
 
       {maintenanceOpen ? (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/75 p-3 sm:items-center">
-          <form onSubmit={sendMaintenance} className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-[28px] border border-cyan-400/25 bg-[#07111f] p-5">
+        <div className="fixed inset-0 z-[100] flex items-end justify-center overflow-x-hidden bg-black/75 p-3 pb-[calc(.75rem+var(--sw-ios-safe-bottom))] sm:items-center">
+          <form onSubmit={sendMaintenance} className="max-h-[calc(100dvh-var(--sw-ios-safe-top)-var(--sw-ios-safe-bottom)-1.5rem)] w-full max-w-xl overflow-x-hidden overflow-y-auto rounded-[28px] border border-cyan-400/25 bg-[#07111f] p-5">
             <div className="flex items-center justify-between gap-4"><h3 className="text-xl font-black text-white">New Maintenance Request</h3><button type="button" onClick={() => setMaintenanceOpen(false)} className="min-h-11 px-2 text-slate-400">Close</button></div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <input required value={maintenanceForm.subject} onChange={(event) => setMaintenanceForm({ ...maintenanceForm, subject: event.target.value })} placeholder="Short title" className="min-h-11 rounded-2xl border border-slate-700 bg-black/30 px-4 text-white" />
