@@ -201,6 +201,24 @@ function EventCard({ event, onCancel, onEdit }) {
   );
 }
 
+function HourlyDayView({ day, events, onCreate, onEdit }) {
+  const allDay = events.filter((event) => event.all_day);
+  const timed = events.filter((event) => !event.all_day);
+  const hours = Array.from({ length: 24 }, (_, hour) => hour);
+  const hourLabel = (hour) => new Date(2000, 0, 1, hour).toLocaleTimeString("en-US", { hour: "numeric" });
+  return <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/15">
+    {allDay.length ? <div className="grid grid-cols-[58px_minmax(0,1fr)] border-b border-white/10"><div className="p-2 text-right text-[9px] font-black uppercase text-slate-500">All day</div><div className="space-y-1.5 border-l border-white/10 p-2">{allDay.map((event) => <button type="button" key={event.id} onClick={() => !isExternal(event.source) && onEdit(event)} className={`block w-full rounded-lg border px-2.5 py-2 text-left text-[11px] font-black ${sourceTone(event.source)}`}>{event.title}</button>)}</div></div> : null}
+    <div>{hours.map((hour) => {
+      const rows = timed.filter((event) => { const start = new Date(event.start_at); return ymd(start) === ymd(day) && start.getHours() === hour; });
+      const isNow = ymd(day) === ymd() && new Date().getHours() === hour;
+      return <div key={hour} role="button" tabIndex={0} onClick={() => onCreate(day, hour)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onCreate(day, hour); }} className={`grid min-h-[54px] cursor-pointer grid-cols-[58px_minmax(0,1fr)] border-b border-white/[.07] transition last:border-b-0 hover:bg-cyan-500/[.04] ${isNow ? "bg-cyan-500/[.04]" : ""}`}>
+        <div className={`p-2 text-right text-[10px] font-bold ${isNow ? "text-cyan-300" : "text-slate-500"}`}>{hourLabel(hour)}</div>
+        <div className="relative border-l border-white/10 p-1.5">{isNow ? <span className="absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-cyan-400"/> : null}{rows.map((event) => <button type="button" key={event.id} onClick={(click) => { click.stopPropagation(); if (!isExternal(event.source)) onEdit(event); }} className={`mb-1 block w-full rounded-lg border px-2.5 py-2 text-left ${sourceTone(event.source)}`}><span className="block truncate text-[11px] font-black">{event.title}</span><span className="block text-[9px] opacity-70">{new Date(event.start_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}{event.end_at ? ` – ${new Date(event.end_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : ""}</span></button>)}</div>
+      </div>;
+    })}</div>
+  </div>;
+}
+
 function ConnectionSummary({ data, onOpen, onRefresh, loading }) {
   const connections = data?.connections || [];
   const enabled = connections.filter((row) => row.enabled !== false && row.connected !== false);
@@ -331,6 +349,19 @@ export default function CalendarPage() {
     setShowComposer(true);
   }
 
+  function openEventAt(day, hour) {
+    const next = blankDraft();
+    next.date = ymd(day);
+    next.end_date = ymd(day);
+    next.time = `${pad(hour)}:00`;
+    next.end_time = `${pad((hour + 1) % 24)}:00`;
+    if (hour === 23) next.end_date = ymd(addDays(day, 1));
+    setEditingEvent(null);
+    setDraft(next);
+    setShowComposer(true);
+    window.requestAnimationFrame(() => document.getElementById("calendar-event-composer")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
   function editEvent(event) {
     setEditingEvent(event);
     setDraft(draftFromEvent(event));
@@ -376,12 +407,6 @@ export default function CalendarPage() {
       setNotice(isEditing ? "Event updated." : "Event added to your SyncWorks Calendar and SYNC context.");
       await loadEvents();
     } catch (e) { setError(e?.response?.data?.detail || `Could not ${isEditing ? "update" : "add"} this event.`); }
-  }
-
-  async function cancelEvent(event) {
-    if (!window.confirm(`Cancel ${event.title}?`)) return;
-    try { await api.post(`/personal-calendar/events/${event.id}/cancel/`, {}); await loadEvents(); }
-    catch (e) { setError(e?.response?.data?.detail || "Could not cancel this event."); }
   }
 
   return (
@@ -435,7 +460,7 @@ export default function CalendarPage() {
               <div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-slate-500">Schedule</div><h2 className="mt-1 text-base font-black text-white">Your calendar</h2></div><div className="flex rounded-xl border border-white/10 bg-black/20 p-1"><button type="button" onClick={() => setView("week")} className={`rounded-lg px-3 py-2 text-[11px] font-black ${view === "week" ? "bg-white/10 text-white" : "text-slate-500"}`}>Week</button><button type="button" onClick={() => setView("daily")} className={`rounded-lg px-3 py-2 text-[11px] font-black ${view === "daily" ? "bg-white/10 text-white" : "text-slate-500"}`}>Daily</button></div></div>
               <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1">{[["ALL", "Everything"], ["PERSONAL", "Personal"], ["BUSINESS", "Business"]].map(([value, label]) => <button type="button" key={value} onClick={() => setFilter(value)} className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-black ${filter === value ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100" : "border-white/10 text-slate-500"}`}>{label}</button>)}</div>
               <div className="mt-3 flex items-center justify-between"><button type="button" onClick={() => view === "week" ? setWeekStart(addDays(weekStart, -7)) : setSelectedDay(addDays(selectedDay, -1))} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10"><ChevronLeft className="h-4 w-4" /></button><div className="text-xs font-black text-slate-300">{view === "week" ? `Week of ${weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : selectedDay.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</div><button type="button" onClick={() => view === "week" ? setWeekStart(addDays(weekStart, 7)) : setSelectedDay(addDays(selectedDay, 1))} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10"><ChevronRight className="h-4 w-4" /></button></div>
-              {loading ? <div className="mt-5 text-sm text-slate-400">Loading calendar…</div> : view === "daily" ? <div className="mt-4 space-y-2.5">{dailyEvents.length ? dailyEvents.map((event) => <EventCard key={event.id} event={event} onCancel={cancelEvent} onEdit={editEvent}/>) : <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-slate-500">Nothing scheduled this day.</div>}</div> : <div className="mt-4 grid gap-2 md:grid-cols-7">{weekDays.map((day) => { const dayStart = new Date(`${ymd(day)}T00:00:00`); const dayEnd = new Date(`${ymd(day)}T23:59:59`); const rows = filtered.filter((event) => { const start = new Date(event.start_at); const end = event.end_at ? new Date(event.end_at) : start; return start <= dayEnd && end >= dayStart; }); return <button type="button" onClick={() => { setSelectedDay(day); setView("daily"); }} key={ymd(day)} className={`rounded-2xl border p-3 text-left ${ymd(day) === ymd() ? "border-cyan-400/30 bg-cyan-500/[.06]" : "border-white/10 bg-white/[.025]"}`}><div className="flex items-baseline gap-2 md:block"><div className="text-sm font-black text-white">{day.toLocaleDateString("en-US", { weekday: "short" })}</div><div className="text-[11px] text-slate-500">{day.toLocaleDateString("en-US", { month: "numeric", day: "numeric" })}</div></div><div className={rows.length ? "mt-2 space-y-1.5" : ""}>{rows.slice(0, 3).map((event) => <div key={event.id} className={`rounded-lg border p-2 ${sourceTone(event.source)}`}><div className="truncate text-[10px] font-black">{event.title}</div><div className="text-[9px] opacity-70">{event.all_day ? "All day" : ymd(event.start_at) === ymd(day) ? new Date(event.start_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "Continues"}</div></div>)}{rows.length > 3 ? <div className="text-[9px] font-bold text-slate-500">+{rows.length - 3} more</div> : null}</div></button>; })}</div>}
+              {loading ? <div className="mt-5 text-sm text-slate-400">Loading calendar…</div> : view === "daily" ? <HourlyDayView day={selectedDay} events={dailyEvents} onCreate={openEventAt} onEdit={editEvent}/> : <div className="mt-4 grid gap-2 md:grid-cols-7">{weekDays.map((day) => { const dayStart = new Date(`${ymd(day)}T00:00:00`); const dayEnd = new Date(`${ymd(day)}T23:59:59`); const rows = filtered.filter((event) => { const start = new Date(event.start_at); const end = event.end_at ? new Date(event.end_at) : start; return start <= dayEnd && end >= dayStart; }); return <button type="button" onClick={() => { setSelectedDay(day); setView("daily"); }} key={ymd(day)} className={`rounded-2xl border p-3 text-left ${ymd(day) === ymd() ? "border-cyan-400/30 bg-cyan-500/[.06]" : "border-white/10 bg-white/[.025]"}`}><div className="flex items-baseline gap-2 md:block"><div className="text-sm font-black text-white">{day.toLocaleDateString("en-US", { weekday: "short" })}</div><div className="text-[11px] text-slate-500">{day.toLocaleDateString("en-US", { month: "numeric", day: "numeric" })}</div></div><div className={rows.length ? "mt-2 space-y-1.5" : ""}>{rows.slice(0, 3).map((event) => <div key={event.id} className={`rounded-lg border p-2 ${sourceTone(event.source)}`}><div className="truncate text-[10px] font-black">{event.title}</div><div className="text-[9px] opacity-70">{event.all_day ? "All day" : ymd(event.start_at) === ymd(day) ? new Date(event.start_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "Continues"}</div></div>)}{rows.length > 3 ? <div className="text-[9px] font-bold text-slate-500">+{rows.length - 3} more</div> : null}</div></button>; })}</div>}
             </section>
           </section>
 
