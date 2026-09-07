@@ -10,6 +10,7 @@ import {
   Link2,
   MapPin,
   Mic,
+  Pencil,
   Plus,
   RefreshCw,
   Route,
@@ -33,6 +34,13 @@ function pad(value) { return String(value).padStart(2, "0"); }
 function ymd(value = new Date()) {
   const date = new Date(value);
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+function localTime(value) {
+  const date = new Date(value);
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+function blankDraft() {
+  return { title: "", date: ymd(), time: "09:00", end_date: ymd(), end_time: "10:00", all_day: false, location_name: "", arrival_buffer_minutes: "0", reminder_minutes: "30", description: "", recurrence: "NONE" };
 }
 function startOfWeek(value) {
   const date = new Date(value);
@@ -59,6 +67,11 @@ function recurrenceLabel(rule) {
   if (value.includes("FREQ=MONTHLY")) return "Monthly";
   if (value) return "Recurring";
   return "";
+}
+function draftFromEvent(event) {
+  const start = new Date(event.start_at);
+  const end = event.end_at ? new Date(event.end_at) : new Date(start.getTime() + 60 * 60000);
+  return { title: event.title || "", date: ymd(start), time: localTime(start), end_date: ymd(end), end_time: localTime(end), all_day: Boolean(event.all_day), location_name: event.location_name || "", arrival_buffer_minutes: String(event.arrival_buffer_minutes || 0), reminder_minutes: String(event.reminder_minutes ?? 30), description: event.description || "", recurrence: recurrenceLabel(event.recurrence_rule)?.toUpperCase() || "NONE" };
 }
 function sourceTone(source) {
   const key = String(source || "MANUAL").toUpperCase();
@@ -115,7 +128,7 @@ function parseSmartCapture(text) {
   else {
     const named = lower.match(/\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/);
     if (named) date = nextNamedDay(named[1]) || date;
-    const numeric = lower.match(/\b(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?\b/);
+    const numeric = lower.match(/\b(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?\b/);
     if (numeric) {
       const year = numeric[3] ? Number(numeric[3].length === 2 ? `20${numeric[3]}` : numeric[3]) : date.getFullYear();
       const candidate = new Date(year, Number(numeric[1]) - 1, Number(numeric[2]));
@@ -131,7 +144,7 @@ function parseSmartCapture(text) {
 
   let title = raw
     .replace(/\b(today|tomorrow|sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/gi, "")
-    .replace(/\b\d{1,2}[\/-]\d{1,2}(?:[\/-]\d{2,4})?\b/g, "")
+    .replace(/\b\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b/g, "")
     .replace(/\b(?:at\s*)?\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi, "")
     .replace(/\b(?:at\s*)?\d{1,2}:\d{2}\b/gi, "")
     .replace(locationMatch?.[0] || "", "")
@@ -145,7 +158,9 @@ function parseSmartCapture(text) {
     date: ymd(date),
     time,
     location_name: location,
-    duration_minutes: "60",
+    end_date: ymd(date),
+    end_time: (() => { const [hour, minute] = time.split(":").map(Number); const total = hour * 60 + minute + 60; return `${pad(Math.floor(total / 60) % 24)}:${pad(total % 60)}`; })(),
+    all_day: false,
     arrival_buffer_minutes: location ? "30" : "0",
     reminder_minutes: "30",
     recurrence: "NONE",
@@ -153,7 +168,7 @@ function parseSmartCapture(text) {
   };
 }
 
-function EventCard({ event, onCancel }) {
+function EventCard({ event, onCancel, onEdit }) {
   const start = new Date(event.start_at);
   const end = event.end_at ? new Date(event.end_at) : null;
   const location = eventLocation(event);
@@ -170,14 +185,14 @@ function EventCard({ event, onCancel }) {
             {repeats ? <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[.14em] text-cyan-100">{repeats}</span> : null}
             {weatherDependent ? <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[.14em] text-amber-100">Weather permitting</span> : null}
           </div>
-          <h3 className="mt-3 text-base font-black text-white">{event.title}</h3>
+          <h3 className="mt-2 text-sm font-black text-white sm:mt-3 sm:text-base">{event.title}</h3>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-400">
-            <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />{start.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: event.all_day ? undefined : "numeric", minute: event.all_day ? undefined : "2-digit" })}{end && !event.all_day ? ` – ${end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : ""}</span>
+            <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />{start.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: event.all_day ? undefined : "numeric", minute: event.all_day ? undefined : "2-digit" })}{end ? ` – ${end.toLocaleString("en-US", { weekday: ymd(end) !== ymd(start) ? "short" : undefined, month: ymd(end) !== ymd(start) ? "short" : undefined, day: ymd(end) !== ymd(start) ? "numeric" : undefined, hour: event.all_day ? undefined : "numeric", minute: event.all_day ? undefined : "2-digit" })}` : ""}</span>
             {location ? <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{location}</span> : null}
           </div>
           {event.arrival_buffer_minutes ? <div className="mt-2 text-[11px] font-bold text-amber-200">Arrive {event.arrival_buffer_minutes} min early</div> : null}
         </div>
-        {editable ? <button type="button" onClick={() => onCancel(event)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-rose-400/20 bg-rose-500/10 text-rose-200" aria-label={`Cancel ${event.title}`}><X className="h-4 w-4" /></button> : null}
+        {editable ? <div className="flex shrink-0 gap-1.5"><button type="button" onClick={() => onEdit(event)} className="grid h-9 w-9 place-items-center rounded-xl border border-cyan-400/20 bg-cyan-500/10 text-cyan-100" aria-label={`Edit ${event.title}`}><Pencil className="h-4 w-4" /></button><button type="button" onClick={() => onCancel(event)} className="grid h-9 w-9 place-items-center rounded-xl border border-rose-400/20 bg-rose-500/10 text-rose-200" aria-label={`Cancel ${event.title}`}><X className="h-4 w-4" /></button></div> : null}
       </div>
     </article>
   );
@@ -206,7 +221,7 @@ function QuickCapture({ text, setText, onParse, onVoice, listening }) {
     <section className="rounded-[1.6rem] border border-violet-400/20 bg-[linear-gradient(145deg,rgba(76,29,149,.16),rgba(2,6,23,.88))] p-4">
       <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em] text-violet-200"><WandSparkles className="h-4 w-4" />Quick capture</div>
       <p className="mt-2 text-xs leading-5 text-slate-400">Paste or say an appointment. SYNC will prepare the event for review before saving.</p>
-      <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} placeholder="Dentist Thursday at 10:30 AM at 123 Main St" className="mt-3 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/80 p-3 text-sm text-white outline-none placeholder:text-slate-600" />
+      <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} placeholder="Dentist Thursday at 10:30 AM at 123 Main St" className="mt-3 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/80 p-3 text-sm text-white outline-none placeholder:text-slate-600" />
       <div className="mt-3 grid grid-cols-2 gap-2">
         <button type="button" onClick={onParse} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-3 text-xs font-black text-white"><ClipboardPaste className="h-4 w-4" />Prepare event</button>
         <button type="button" onClick={onVoice} className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-black ${listening ? "border-rose-400/30 bg-rose-500/10 text-rose-100" : "border-white/10 bg-white/[.04] text-slate-200"}`}><Mic className="h-4 w-4" />{listening ? "Listening…" : "Voice"}</button>
@@ -227,9 +242,10 @@ export default function CalendarPage() {
   const [filter, setFilter] = useState("ALL");
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
   const [showComposer, setShowComposer] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
   const [captureText, setCaptureText] = useState("");
   const [listening, setListening] = useState(false);
-  const [draft, setDraft] = useState({ title: "", date: ymd(), time: "09:00", duration_minutes: "60", location_name: "", arrival_buffer_minutes: "0", reminder_minutes: "30", description: "", recurrence: "NONE" });
+  const [draft, setDraft] = useState(blankDraft);
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
@@ -305,32 +321,50 @@ export default function CalendarPage() {
     recognition.start();
   }
 
-  async function createEvent() {
+  function openNewEvent() {
+    setEditingEvent(null);
+    setDraft(blankDraft());
+    setShowComposer(true);
+  }
+
+  function editEvent(event) {
+    setEditingEvent(event);
+    setDraft(draftFromEvent(event));
+    setShowComposer(true);
+    window.requestAnimationFrame(() => document.getElementById("calendar-event-composer")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
+  async function saveEvent() {
+    const isEditing = Boolean(editingEvent);
     const title = String(draft.title || "").trim();
     if (!title) return;
-    const start = new Date(`${draft.date}T${draft.time || "09:00"}`);
-    const duration = Math.max(0, Number(draft.duration_minutes || 0));
-    const end = duration ? new Date(start.getTime() + duration * 60000) : null;
+    const start = new Date(`${draft.date}T${draft.all_day ? "00:00" : draft.time || "09:00"}`);
+    const end = new Date(`${draft.end_date || draft.date}T${draft.all_day ? "23:59" : draft.end_time || draft.time || "10:00"}`);
+    if (end < start) { setError("The event end must be after its start."); return; }
     setError("");
     try {
-      await api.post("/personal-calendar/events/", {
+      const payload = {
         title,
         description: draft.description,
         start_at: start.toISOString(),
-        end_at: end?.toISOString() || null,
+        end_at: end.toISOString(),
+        all_day: Boolean(draft.all_day),
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Chicago",
         location_name: draft.location_name,
         arrival_buffer_minutes: Number(draft.arrival_buffer_minutes || 0),
         reminder_minutes: Number(draft.reminder_minutes || 30),
         recurrence_rule: recurrenceRule(draft.recurrence),
         source: "MANUAL",
-      });
-      setDraft({ title: "", date: ymd(), time: "09:00", duration_minutes: "60", location_name: "", arrival_buffer_minutes: "0", reminder_minutes: "30", description: "", recurrence: "NONE" });
+      };
+      if (editingEvent) await api.patch(`/personal-calendar/events/${editingEvent.id}/`, payload);
+      else await api.post("/personal-calendar/events/", payload);
+      setDraft(blankDraft());
+      setEditingEvent(null);
       setCaptureText("");
       setShowComposer(false);
-      setNotice("Event added to your SyncWorks Calendar and SYNC context.");
+      setNotice(isEditing ? "Event updated." : "Event added to your SyncWorks Calendar and SYNC context.");
       await loadEvents();
-    } catch (e) { setError(e?.response?.data?.detail || "Could not add this event."); }
+    } catch (e) { setError(e?.response?.data?.detail || `Could not ${isEditing ? "update" : "add"} this event.`); }
   }
 
   async function cancelEvent(event) {
@@ -362,7 +396,7 @@ export default function CalendarPage() {
             <div className="rounded-[1.8rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_85%_0%,rgba(139,92,246,.2),transparent_34%),linear-gradient(145deg,rgba(8,18,35,.98),rgba(2,6,23,.98))] p-5 shadow-[0_20px_70px_rgba(0,0,0,.3)] sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div><div className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-200">Master calendar</div><h1 className="mt-1 text-2xl font-black text-white sm:text-3xl">Your day, connected.</h1><p className="mt-2 max-w-2xl text-sm text-slate-400">Appointments, SyncWorks service work, connected calendars, Health and Social events in one timeline.</p></div>
-                <div className="flex gap-2"><button type="button" onClick={() => setShowComposer((v) => !v)} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 text-xs font-black text-white"><Plus className="h-4 w-4" />Add event</button><button type="button" onClick={loadEvents} className="grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-white/[.04] text-slate-300"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /></button></div>
+                <div className="flex gap-2"><button type="button" onClick={openNewEvent} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-3 text-[11px] font-black text-white sm:min-h-11 sm:px-4 sm:text-xs"><Plus className="h-4 w-4" />Add event</button><button type="button" onClick={loadEvents} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[.04] text-slate-300 sm:h-11 sm:w-11"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /></button></div>
               </div>
               <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <div className="rounded-2xl border border-white/10 bg-black/20 p-4"><div className="text-[9px] font-black uppercase tracking-[.16em] text-slate-500">Today</div><div className="mt-1 text-2xl font-black text-white">{today.length}</div></div>
@@ -372,25 +406,28 @@ export default function CalendarPage() {
               </div>
             </div>
 
-            {showComposer ? <section className="rounded-[1.7rem] border border-cyan-400/20 bg-cyan-500/[.04] p-4 sm:p-5">
-              <div className="flex items-center gap-2 text-sm font-black text-white"><Sparkles className="h-4 w-4 text-cyan-200" />Review event</div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {showComposer ? <section id="calendar-event-composer" className="scroll-mt-24 rounded-[1.4rem] border border-cyan-400/20 bg-cyan-500/[.04] p-3 sm:rounded-[1.7rem] sm:p-5">
+              <div className="flex items-center gap-2 text-sm font-black text-white">{editingEvent ? <Pencil className="h-4 w-4 text-cyan-200" /> : <Sparkles className="h-4 w-4 text-cyan-200" />}{editingEvent ? "Edit event" : "Create event"}</div>
+              <div className="mt-3 grid gap-2.5 sm:mt-4 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
                 <label className="text-xs text-slate-400 lg:col-span-2">Title<input value={draft.title} onChange={(e) => setDraft((v) => ({ ...v, title: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
                 <label className="text-xs text-slate-400">Date<input type="date" value={draft.date} onChange={(e) => setDraft((v) => ({ ...v, date: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
-                <label className="text-xs text-slate-400">Time<input type="time" value={draft.time} onChange={(e) => setDraft((v) => ({ ...v, time: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
+                <label className="text-xs text-slate-400">Start time<input disabled={draft.all_day} type="time" value={draft.time} onChange={(e) => setDraft((v) => ({ ...v, time: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none disabled:opacity-40" /></label>
+                <label className="text-xs text-slate-400">End date<input type="date" min={draft.date} value={draft.end_date} onChange={(e) => setDraft((v) => ({ ...v, end_date: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
+                <label className="text-xs text-slate-400">End time<input disabled={draft.all_day} type="time" value={draft.end_time} onChange={(e) => setDraft((v) => ({ ...v, end_time: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none disabled:opacity-40" /></label>
+                <label className="flex min-h-11 items-center gap-3 rounded-xl border border-white/10 bg-slate-950/80 px-3 text-xs font-bold text-slate-300"><input type="checkbox" checked={draft.all_day} onChange={(e) => setDraft((v) => ({ ...v, all_day: e.target.checked }))} className="h-4 w-4 accent-cyan-400" />All-day event</label>
                 <label className="text-xs text-slate-400 lg:col-span-2">Location<input value={draft.location_name} onChange={(e) => setDraft((v) => ({ ...v, location_name: e.target.value }))} placeholder="Address or place" className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
-                <label className="text-xs text-slate-400">Duration<input type="number" min="0" value={draft.duration_minutes} onChange={(e) => setDraft((v) => ({ ...v, duration_minutes: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
                 <label className="text-xs text-slate-400">Arrive early<input type="number" min="0" max="240" value={draft.arrival_buffer_minutes} onChange={(e) => setDraft((v) => ({ ...v, arrival_buffer_minutes: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
                 <label className="text-xs text-slate-400">Reminder<input type="number" min="0" value={draft.reminder_minutes} onChange={(e) => setDraft((v) => ({ ...v, reminder_minutes: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
                 <label className="text-xs text-slate-400">Repeat<select value={draft.recurrence} onChange={(e) => setDraft((v) => ({ ...v, recurrence: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none"><option value="NONE">Does not repeat</option><option value="DAILY">Daily</option><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option></select></label>
-                <div className="flex items-end gap-2 sm:col-span-2"><button type="button" onClick={() => setShowComposer(false)} className="min-h-11 flex-1 rounded-xl border border-white/10 bg-white/[.04] px-4 text-xs font-black text-slate-300">Cancel</button><button type="button" onClick={createEvent} className="min-h-11 flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 text-xs font-black text-white">Save event</button></div>
+                <label className="text-xs text-slate-400 sm:col-span-2 lg:col-span-4">Notes<textarea rows={2} value={draft.description} onChange={(e) => setDraft((v) => ({ ...v, description: e.target.value }))} className="mt-1 w-full resize-none rounded-xl border border-white/10 bg-slate-950/80 p-3 text-sm text-white outline-none" /></label>
+                <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-4"><button type="button" onClick={() => { setShowComposer(false); setEditingEvent(null); }} className="min-h-10 flex-1 rounded-xl border border-white/10 bg-white/[.04] px-3 text-[11px] font-black text-slate-300 sm:min-h-11 sm:px-4 sm:text-xs">Close</button><button type="button" onClick={saveEvent} className="min-h-10 flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-3 text-[11px] font-black text-white sm:min-h-11 sm:px-4 sm:text-xs">{editingEvent ? "Save changes" : "Save event"}</button></div>
               </div>
             </section> : null}
 
             <section className="rounded-[1.7rem] border border-white/10 bg-slate-950/50 p-4 sm:p-5">
               <div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-slate-500">Schedule</div><h2 className="mt-1 text-lg font-black text-white">Everything in one timeline.</h2></div><div className="flex rounded-xl border border-white/10 bg-black/20 p-1"><button type="button" onClick={() => setView("agenda")} className={`rounded-lg px-3 py-2 text-xs font-black ${view === "agenda" ? "bg-white/10 text-white" : "text-slate-500"}`}>Agenda</button><button type="button" onClick={() => setView("week")} className={`rounded-lg px-3 py-2 text-xs font-black ${view === "week" ? "bg-white/10 text-white" : "text-slate-500"}`}>Week</button></div></div>
               {view === "week" ? <div className="mt-4 flex items-center justify-between"><button type="button" onClick={() => setWeekStart(addDays(weekStart, -7))} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10"><ChevronLeft className="h-4 w-4" /></button><div className="text-xs font-black text-slate-300">Week of {weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div><button type="button" onClick={() => setWeekStart(addDays(weekStart, 7))} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10"><ChevronRight className="h-4 w-4" /></button></div> : null}
-              {loading ? <div className="mt-5 text-sm text-slate-400">Loading calendar…</div> : view === "agenda" ? <div className="mt-5 space-y-3">{filtered.length ? filtered.map((event) => <EventCard key={event.id} event={event} onCancel={cancelEvent} />) : <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-500">No calendar items match this filter.</div>}</div> : <div className="mt-5 grid gap-2 md:grid-cols-7">{weekDays.map((day) => { const rows = filtered.filter((event) => ymd(event.start_at) === ymd(day)); return <div key={ymd(day)} className="min-h-44 rounded-2xl border border-white/10 bg-white/[.025] p-3"><div className="font-black text-white">{day.toLocaleDateString("en-US", { weekday: "short" })}</div><div className="text-xs text-slate-500">{day.toLocaleDateString("en-US", { month: "numeric", day: "numeric" })}</div><div className="mt-3 space-y-2">{rows.map((event) => <div key={event.id} className={`rounded-xl border p-2 ${sourceTone(event.source)}`}><div className="truncate text-[11px] font-black">{event.title}</div><div className="mt-0.5 text-[10px] opacity-75">{new Date(event.start_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</div></div>)}</div></div>; })}</div>}
+              {loading ? <div className="mt-5 text-sm text-slate-400">Loading calendar…</div> : view === "agenda" ? <div className="mt-4 space-y-2.5 sm:mt-5 sm:space-y-3">{filtered.length ? filtered.map((event) => <EventCard key={event.id} event={event} onCancel={cancelEvent} onEdit={editEvent} />) : <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-slate-500 sm:p-8">No calendar items match this filter.</div>}</div> : <div className="mt-4 grid gap-2 md:mt-5 md:grid-cols-7">{weekDays.map((day) => { const dayStart = new Date(`${ymd(day)}T00:00:00`); const dayEnd = new Date(`${ymd(day)}T23:59:59`); const rows = filtered.filter((event) => { const start = new Date(event.start_at); const end = event.end_at ? new Date(event.end_at) : start; return start <= dayEnd && end >= dayStart; }); return <div key={ymd(day)} className={`rounded-2xl border border-white/10 bg-white/[.025] p-3 ${rows.length ? "min-h-24 md:min-h-44" : "min-h-0"}`}><div className="flex items-baseline gap-2 md:block"><div className="text-sm font-black text-white md:text-base">{day.toLocaleDateString("en-US", { weekday: "short" })}</div><div className="text-[11px] text-slate-500 md:text-xs">{day.toLocaleDateString("en-US", { month: "numeric", day: "numeric" })}</div></div><div className={rows.length ? "mt-2 space-y-2 md:mt-3" : ""}>{rows.map((event) => <button type="button" onClick={() => !isExternal(event.source) && editEvent(event)} key={event.id} className={`block w-full rounded-xl border p-2 text-left ${sourceTone(event.source)}`}><div className="truncate text-[11px] font-black">{event.title}</div><div className="mt-0.5 text-[10px] opacity-75">{event.all_day ? "All day" : ymd(event.start_at) === ymd(day) ? new Date(event.start_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "Continues"}</div></button>)}</div></div>; })}</div>}
             </section>
           </section>
 
