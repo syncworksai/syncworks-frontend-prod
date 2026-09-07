@@ -55,6 +55,10 @@ function addDays(value, amount) {
   date.setDate(date.getDate() + amount);
   return date;
 }
+function startOfMonthGrid(value) {
+  const first = new Date(value.getFullYear(), value.getMonth(), 1);
+  return addDays(first, -first.getDay());
+}
 function recurrenceRule(value) {
   if (value === "DAILY") return "RRULE:FREQ=DAILY;INTERVAL=1";
   if (value === "WEEKLY") return "RRULE:FREQ=WEEKLY;INTERVAL=1";
@@ -104,7 +108,8 @@ function eventMapsUrl(event) {
     : [event.location_name, event.address_line1, event.city, event.state, event.postal_code].filter(Boolean).join(", ");
   return query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : "";
 }
-function isExternal(source) { return ["GOOGLE", "OUTLOOK", "MICROSOFT", "APPLE"].includes(String(source || "").toUpperCase()); }
+function isExternal(source) { return String(source || "MANUAL").toUpperCase() !== "MANUAL"; }
+function isCalendarEditable(source) { return String(source || "MANUAL").toUpperCase() === "MANUAL"; }
 
 const DAY_INDEX = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
 
@@ -181,7 +186,7 @@ function EventCard({ event, onCancel, onEdit }) {
   const start = new Date(event.start_at);
   const end = event.end_at ? new Date(event.end_at) : null;
   const location = eventLocation(event);
-  const editable = !isExternal(event.source) && event.status === "ACTIVE";
+  const editable = isCalendarEditable(event.source) && event.status === "ACTIVE";
   const repeats = recurrenceLabel(event.recurrence_rule);
   const weatherDependent = Boolean(event?.metadata?.weather_dependent);
   return (
@@ -213,14 +218,33 @@ function HourlyDayView({ day, events, onCreate, onEdit }) {
   const hours = Array.from({ length: 24 }, (_, hour) => hour);
   const hourLabel = (hour) => new Date(2000, 0, 1, hour).toLocaleTimeString("en-US", { hour: "numeric" });
   return <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/15">
-    {allDay.length ? <div className="grid grid-cols-[58px_minmax(0,1fr)] border-b border-white/10"><div className="p-2 text-right text-[9px] font-black uppercase text-slate-500">All day</div><div className="space-y-1.5 border-l border-white/10 p-2">{allDay.map((event) => { const mapsUrl = eventMapsUrl(event); return <div key={event.id} className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 ${sourceTone(event.source)}`}><button type="button" onClick={() => !isExternal(event.source) && onEdit(event)} className="min-w-0 flex-1 truncate text-left text-[11px] font-black">{event.title}</button>{mapsUrl ? <a href={mapsUrl} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 rounded-md border border-current/20 px-2 py-1 text-[9px] font-black"><MapPin className="h-3 w-3"/>Maps</a> : null}</div>; })}</div></div> : null}
+    {allDay.length ? <div className="grid grid-cols-[58px_minmax(0,1fr)] border-b border-white/10"><div className="p-2 text-right text-[9px] font-black uppercase text-slate-500">All day</div><div className="space-y-1.5 border-l border-white/10 p-2">{allDay.map((event) => { const mapsUrl = eventMapsUrl(event); const editable = !isExternal(event.source); return <div key={event.id} className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 ${sourceTone(event.source)}`}><button type="button" onClick={() => editable && onEdit(event)} className="min-w-0 flex-1 truncate text-left text-[11px] font-black">{event.title}</button>{editable ? <button type="button" onClick={() => onEdit(event)} className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-current/20" aria-label={`Edit ${event.title}`}><Pencil className="h-3 w-3"/></button> : null}{mapsUrl ? <a href={mapsUrl} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 rounded-md border border-current/20 px-2 py-1 text-[9px] font-black"><MapPin className="h-3 w-3"/>Maps</a> : null}</div>; })}</div></div> : null}
     <div>{hours.map((hour) => {
       const rows = timed.filter((event) => { const start = new Date(event.start_at); return ymd(start) === ymd(day) && start.getHours() === hour; });
       const isNow = ymd(day) === ymd() && new Date().getHours() === hour;
       return <div key={hour} role="button" tabIndex={0} onClick={() => onCreate(day, hour)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onCreate(day, hour); }} className={`grid min-h-[54px] cursor-pointer grid-cols-[58px_minmax(0,1fr)] border-b border-white/[.07] transition last:border-b-0 hover:bg-cyan-500/[.04] ${isNow ? "bg-cyan-500/[.04]" : ""}`}>
         <div className={`p-2 text-right text-[10px] font-bold ${isNow ? "text-cyan-300" : "text-slate-500"}`}>{hourLabel(hour)}</div>
-        <div className="relative border-l border-white/10 p-1.5">{isNow ? <span className="absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-cyan-400"/> : null}{rows.map((event) => { const mapsUrl = eventMapsUrl(event); return <div key={event.id} onClick={(click) => click.stopPropagation()} className={`mb-1 flex items-center gap-2 rounded-lg border px-2.5 py-2 ${sourceTone(event.source)}`}><button type="button" onClick={() => !isExternal(event.source) && onEdit(event)} className="min-w-0 flex-1 text-left"><span className="block truncate text-[11px] font-black">{event.title}</span><span className="block text-[9px] opacity-70">{new Date(event.start_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}{event.end_at ? ` – ${new Date(event.end_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : ""}</span></button>{mapsUrl ? <a href={mapsUrl} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 rounded-md border border-current/20 px-2 py-1 text-[9px] font-black"><MapPin className="h-3 w-3"/>Maps</a> : null}</div>; })}</div>
+        <div className="relative border-l border-white/10 p-1.5">{isNow ? <span className="absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-cyan-400"/> : null}{rows.map((event) => { const mapsUrl = eventMapsUrl(event); const editable = !isExternal(event.source); return <div key={event.id} onClick={(click) => click.stopPropagation()} className={`mb-1 flex items-center gap-2 rounded-lg border px-2.5 py-2 ${sourceTone(event.source)}`}><button type="button" onClick={() => editable && onEdit(event)} className="min-w-0 flex-1 text-left"><span className="block truncate text-[11px] font-black">{event.title}</span><span className="block text-[9px] opacity-70">{new Date(event.start_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}{event.end_at ? ` – ${new Date(event.end_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : ""}</span></button>{editable ? <button type="button" onClick={() => onEdit(event)} className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-current/20" aria-label={`Edit ${event.title}`}><Pencil className="h-3.5 w-3.5"/></button> : null}{mapsUrl ? <a href={mapsUrl} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 rounded-md border border-current/20 px-2 py-1 text-[9px] font-black"><MapPin className="h-3 w-3"/>Maps</a> : null}</div>; })}</div>
       </div>;
+    })}</div>
+  </div>;
+}
+
+function MonthCalendar({ month, events, onSelectDay }) {
+  const first = startOfMonthGrid(month);
+  const days = Array.from({ length: 42 }, (_, index) => addDays(first, index));
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  return <div className="mt-4 overflow-hidden rounded-2xl border border-white/10">
+    <div className="grid grid-cols-7 border-b border-white/10 bg-black/20">{weekdays.map((day) => <div key={day} className="p-2 text-center text-[9px] font-black uppercase text-slate-500">{day.slice(0, 1)}<span className="hidden sm:inline">{day.slice(1)}</span></div>)}</div>
+    <div className="grid grid-cols-7">{days.map((day) => {
+      const dayStart = new Date(`${ymd(day)}T00:00:00`); const dayEnd = new Date(`${ymd(day)}T23:59:59`);
+      const rows = events.filter((event) => { const start = new Date(event.start_at); const end = event.end_at ? new Date(event.end_at) : start; return start <= dayEnd && end >= dayStart; });
+      const inMonth = day.getMonth() === month.getMonth(); const isToday = ymd(day) === ymd();
+      return <button type="button" key={ymd(day)} onClick={() => onSelectDay(day)} className={`min-h-[72px] border-b border-r border-white/[.07] p-1.5 text-left sm:min-h-24 sm:p-2 ${inMonth ? "bg-white/[.015]" : "bg-black/20 opacity-40"}`}>
+        <span className={`grid h-6 w-6 place-items-center rounded-full text-[10px] font-black ${isToday ? "bg-cyan-400 text-slate-950" : "text-slate-300"}`}>{day.getDate()}</span>
+        <span className={`mt-2 block h-1.5 w-1.5 rounded-full ${rows.length ? "bg-violet-400" : "bg-emerald-400/45"}`} />
+        <span className="mt-1 block text-[8px] font-bold text-slate-500">{rows.length ? `${rows.length} blocked` : "Open"}</span>
+      </button>;
     })}</div>
   </div>;
 }
@@ -269,6 +293,7 @@ export default function CalendarPage() {
   const [filter, setFilter] = useState("ALL");
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
   const [selectedDay, setSelectedDay] = useState(() => new Date());
+  const [monthStart, setMonthStart] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [showComposer, setShowComposer] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [captureText, setCaptureText] = useState("");
@@ -311,7 +336,7 @@ export default function CalendarPage() {
     if (filter === "ALL") return true;
     const source = String(event.source || "MANUAL").toUpperCase();
     if (filter === "BUSINESS") return ["TICKET", "SOCIAL", "SYNC", "SYSTEM"].includes(source);
-    return source === "MANUAL" || isExternal(source) || source === "HEALTH";
+    return ["MANUAL", "GOOGLE", "OUTLOOK", "MICROSOFT", "APPLE", "HEALTH"].includes(source);
   }).sort((a, b) => new Date(a.start_at) - new Date(b.start_at)), [events, filter]);
 
   const nextEvent = useMemo(() => filtered.find((event) => new Date(event.start_at) >= new Date()) || null, [filtered]);
@@ -463,10 +488,10 @@ export default function CalendarPage() {
             </section> : null}
 
             <section className="rounded-[1.7rem] border border-white/10 bg-slate-950/50 p-4 sm:p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-slate-500">Schedule</div><h2 className="mt-1 text-base font-black text-white">Your calendar</h2></div><div className="flex rounded-xl border border-white/10 bg-black/20 p-1"><button type="button" onClick={() => setView("week")} className={`rounded-lg px-3 py-2 text-[11px] font-black ${view === "week" ? "bg-white/10 text-white" : "text-slate-500"}`}>Week</button><button type="button" onClick={() => setView("daily")} className={`rounded-lg px-3 py-2 text-[11px] font-black ${view === "daily" ? "bg-white/10 text-white" : "text-slate-500"}`}>Daily</button></div></div>
+              <div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-slate-500">Schedule</div><h2 className="mt-1 text-base font-black text-white">Your calendar</h2></div><div className="flex rounded-xl border border-white/10 bg-black/20 p-1">{[["month", "Month"], ["week", "Week"], ["daily", "Daily"]].map(([value, label]) => <button type="button" key={value} onClick={() => setView(value)} className={`rounded-lg px-2.5 py-2 text-[10px] font-black sm:px-3 sm:text-[11px] ${view === value ? "bg-white/10 text-white" : "text-slate-500"}`}>{label}</button>)}</div></div>
               <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1">{[["ALL", "Everything"], ["PERSONAL", "Personal"], ["BUSINESS", "Business"]].map(([value, label]) => <button type="button" key={value} onClick={() => setFilter(value)} className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-black ${filter === value ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100" : "border-white/10 text-slate-500"}`}>{label}</button>)}</div>
-              <div className="mt-3 flex items-center justify-between"><button type="button" onClick={() => view === "week" ? setWeekStart(addDays(weekStart, -7)) : setSelectedDay(addDays(selectedDay, -1))} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10"><ChevronLeft className="h-4 w-4" /></button><div className="text-xs font-black text-slate-300">{view === "week" ? `Week of ${weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : selectedDay.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</div><button type="button" onClick={() => view === "week" ? setWeekStart(addDays(weekStart, 7)) : setSelectedDay(addDays(selectedDay, 1))} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10"><ChevronRight className="h-4 w-4" /></button></div>
-              {loading ? <div className="mt-5 text-sm text-slate-400">Loading calendar…</div> : view === "daily" ? <HourlyDayView day={selectedDay} events={dailyEvents} onCreate={openEventAt} onEdit={editEvent}/> : <div className="mt-4 grid gap-2 md:grid-cols-7">{weekDays.map((day) => { const dayStart = new Date(`${ymd(day)}T00:00:00`); const dayEnd = new Date(`${ymd(day)}T23:59:59`); const rows = filtered.filter((event) => { const start = new Date(event.start_at); const end = event.end_at ? new Date(event.end_at) : start; return start <= dayEnd && end >= dayStart; }); return <button type="button" onClick={() => { setSelectedDay(day); setView("daily"); }} key={ymd(day)} className={`rounded-2xl border p-3 text-left ${ymd(day) === ymd() ? "border-cyan-400/30 bg-cyan-500/[.06]" : "border-white/10 bg-white/[.025]"}`}><div className="flex items-baseline gap-2 md:block"><div className="text-sm font-black text-white">{day.toLocaleDateString("en-US", { weekday: "short" })}</div><div className="text-[11px] text-slate-500">{day.toLocaleDateString("en-US", { month: "numeric", day: "numeric" })}</div></div><div className={rows.length ? "mt-2 space-y-1.5" : ""}>{rows.slice(0, 3).map((event) => <div key={event.id} className={`rounded-lg border p-2 ${sourceTone(event.source)}`}><div className="truncate text-[10px] font-black">{event.title}</div><div className="text-[9px] opacity-70">{event.all_day ? "All day" : ymd(event.start_at) === ymd(day) ? new Date(event.start_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "Continues"}</div></div>)}{rows.length > 3 ? <div className="text-[9px] font-bold text-slate-500">+{rows.length - 3} more</div> : null}</div></button>; })}</div>}
+              <div className="mt-3 flex items-center justify-between"><button type="button" onClick={() => view === "month" ? setMonthStart(new Date(monthStart.getFullYear(), monthStart.getMonth() - 1, 1)) : view === "week" ? setWeekStart(addDays(weekStart, -7)) : setSelectedDay(addDays(selectedDay, -1))} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10"><ChevronLeft className="h-4 w-4" /></button><div className="text-xs font-black text-slate-300">{view === "month" ? monthStart.toLocaleDateString("en-US", { month: "long", year: "numeric" }) : view === "week" ? `Week of ${weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : selectedDay.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</div><button type="button" onClick={() => view === "month" ? setMonthStart(new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1)) : view === "week" ? setWeekStart(addDays(weekStart, 7)) : setSelectedDay(addDays(selectedDay, 1))} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10"><ChevronRight className="h-4 w-4" /></button></div>
+              {loading ? <div className="mt-5 text-sm text-slate-400">Loading calendar…</div> : view === "month" ? <MonthCalendar month={monthStart} events={filtered} onSelectDay={(day) => { setSelectedDay(day); setView("daily"); }}/> : view === "daily" ? <HourlyDayView day={selectedDay} events={dailyEvents} onCreate={openEventAt} onEdit={editEvent}/> : <div className="mt-4 grid gap-2 md:grid-cols-7">{weekDays.map((day) => { const dayStart = new Date(`${ymd(day)}T00:00:00`); const dayEnd = new Date(`${ymd(day)}T23:59:59`); const rows = filtered.filter((event) => { const start = new Date(event.start_at); const end = event.end_at ? new Date(event.end_at) : start; return start <= dayEnd && end >= dayStart; }); return <button type="button" onClick={() => { setSelectedDay(day); setView("daily"); }} key={ymd(day)} className={`rounded-2xl border p-3 text-left ${ymd(day) === ymd() ? "border-cyan-400/30 bg-cyan-500/[.06]" : "border-white/10 bg-white/[.025]"}`}><div className="flex items-baseline gap-2 md:block"><div className="text-sm font-black text-white">{day.toLocaleDateString("en-US", { weekday: "short" })}</div><div className="text-[11px] text-slate-500">{day.toLocaleDateString("en-US", { month: "numeric", day: "numeric" })}</div></div><div className={rows.length ? "mt-2 space-y-1.5" : ""}>{rows.slice(0, 3).map((event) => <div key={event.id} className={`rounded-lg border p-2 ${sourceTone(event.source)}`}><div className="truncate text-[10px] font-black">{event.title}</div><div className="text-[9px] opacity-70">{event.all_day ? "All day" : ymd(event.start_at) === ymd(day) ? new Date(event.start_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "Continues"}</div></div>)}{rows.length > 3 ? <div className="text-[9px] font-bold text-slate-500">+{rows.length - 3} more</div> : null}</div></button>; })}</div>}
             </section>
           </section>
 
