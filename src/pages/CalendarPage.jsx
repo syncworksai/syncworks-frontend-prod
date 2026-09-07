@@ -98,6 +98,12 @@ function sourceLabel(source) {
 function eventLocation(event) {
   return [event.location_name, event.address_line1, event.city, event.state].filter(Boolean).join(" · ");
 }
+function eventMapsUrl(event) {
+  const query = event.latitude != null && event.longitude != null
+    ? `${event.latitude},${event.longitude}`
+    : [event.location_name, event.address_line1, event.city, event.state, event.postal_code].filter(Boolean).join(", ");
+  return query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : "";
+}
 function isExternal(source) { return ["GOOGLE", "OUTLOOK", "MICROSOFT", "APPLE"].includes(String(source || "").toUpperCase()); }
 
 const DAY_INDEX = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
@@ -207,13 +213,13 @@ function HourlyDayView({ day, events, onCreate, onEdit }) {
   const hours = Array.from({ length: 24 }, (_, hour) => hour);
   const hourLabel = (hour) => new Date(2000, 0, 1, hour).toLocaleTimeString("en-US", { hour: "numeric" });
   return <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/15">
-    {allDay.length ? <div className="grid grid-cols-[58px_minmax(0,1fr)] border-b border-white/10"><div className="p-2 text-right text-[9px] font-black uppercase text-slate-500">All day</div><div className="space-y-1.5 border-l border-white/10 p-2">{allDay.map((event) => <button type="button" key={event.id} onClick={() => !isExternal(event.source) && onEdit(event)} className={`block w-full rounded-lg border px-2.5 py-2 text-left text-[11px] font-black ${sourceTone(event.source)}`}>{event.title}</button>)}</div></div> : null}
+    {allDay.length ? <div className="grid grid-cols-[58px_minmax(0,1fr)] border-b border-white/10"><div className="p-2 text-right text-[9px] font-black uppercase text-slate-500">All day</div><div className="space-y-1.5 border-l border-white/10 p-2">{allDay.map((event) => { const mapsUrl = eventMapsUrl(event); return <div key={event.id} className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 ${sourceTone(event.source)}`}><button type="button" onClick={() => !isExternal(event.source) && onEdit(event)} className="min-w-0 flex-1 truncate text-left text-[11px] font-black">{event.title}</button>{mapsUrl ? <a href={mapsUrl} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 rounded-md border border-current/20 px-2 py-1 text-[9px] font-black"><MapPin className="h-3 w-3"/>Maps</a> : null}</div>; })}</div></div> : null}
     <div>{hours.map((hour) => {
       const rows = timed.filter((event) => { const start = new Date(event.start_at); return ymd(start) === ymd(day) && start.getHours() === hour; });
       const isNow = ymd(day) === ymd() && new Date().getHours() === hour;
       return <div key={hour} role="button" tabIndex={0} onClick={() => onCreate(day, hour)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onCreate(day, hour); }} className={`grid min-h-[54px] cursor-pointer grid-cols-[58px_minmax(0,1fr)] border-b border-white/[.07] transition last:border-b-0 hover:bg-cyan-500/[.04] ${isNow ? "bg-cyan-500/[.04]" : ""}`}>
         <div className={`p-2 text-right text-[10px] font-bold ${isNow ? "text-cyan-300" : "text-slate-500"}`}>{hourLabel(hour)}</div>
-        <div className="relative border-l border-white/10 p-1.5">{isNow ? <span className="absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-cyan-400"/> : null}{rows.map((event) => <button type="button" key={event.id} onClick={(click) => { click.stopPropagation(); if (!isExternal(event.source)) onEdit(event); }} className={`mb-1 block w-full rounded-lg border px-2.5 py-2 text-left ${sourceTone(event.source)}`}><span className="block truncate text-[11px] font-black">{event.title}</span><span className="block text-[9px] opacity-70">{new Date(event.start_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}{event.end_at ? ` – ${new Date(event.end_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : ""}</span></button>)}</div>
+        <div className="relative border-l border-white/10 p-1.5">{isNow ? <span className="absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-cyan-400"/> : null}{rows.map((event) => { const mapsUrl = eventMapsUrl(event); return <div key={event.id} onClick={(click) => click.stopPropagation()} className={`mb-1 flex items-center gap-2 rounded-lg border px-2.5 py-2 ${sourceTone(event.source)}`}><button type="button" onClick={() => !isExternal(event.source) && onEdit(event)} className="min-w-0 flex-1 text-left"><span className="block truncate text-[11px] font-black">{event.title}</span><span className="block text-[9px] opacity-70">{new Date(event.start_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}{event.end_at ? ` – ${new Date(event.end_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : ""}</span></button>{mapsUrl ? <a href={mapsUrl} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 rounded-md border border-current/20 px-2 py-1 text-[9px] font-black"><MapPin className="h-3 w-3"/>Maps</a> : null}</div>; })}</div>
       </div>;
     })}</div>
   </div>;
