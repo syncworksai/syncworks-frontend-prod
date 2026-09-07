@@ -23,6 +23,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import ModeBar from "../components/ModeBar";
+import PlaceSearchField from "../components/PlaceSearchField";
 import { useAuth } from "../auth/AuthContext";
 import {
   createIdentityLocation,
@@ -173,7 +174,8 @@ function LocationEditor({ open, initial = null, onClose, onSaved }) {
           <div><div className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-200">Location book</div><h3 className="mt-1 text-xl font-black text-white">{initial ? "Edit location" : "Add a place"}</h3></div>
           <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-300"><X className="h-4 w-4" /></button>
         </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div className="mt-5"><PlaceSearchField value={form.label || form.address_line1} onChange={(value) => setForm((prev) => ({ ...prev, label: value }))} onSelect={(place) => setForm((prev) => ({ ...prev, label: place.location_name || prev.label, address_line1: place.address_line1, city: place.city || "", state: place.state || "", postal_code: place.postal_code || "", country: place.country || "US", latitude: place.latitude, longitude: place.longitude }))}/></div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="block"><span className="mb-1.5 block text-[11px] font-black uppercase tracking-wider text-slate-500">Type</span><select value={form.kind} onChange={(e) => setForm((prev) => ({ ...prev, kind: e.target.value }))} className="h-11 w-full rounded-2xl border border-white/10 bg-slate-950 px-3 text-sm text-white"><option value="HOME">Home</option><option value="WORK">Work</option><option value="SAVED">Saved place</option></select></label>
           <Field label="Label" value={form.label} onChange={(value) => setForm((prev) => ({ ...prev, label: value }))} placeholder={form.kind === "HOME" ? "Home" : "Mom's house, office..."} />
           <Field className="sm:col-span-2" label="Street address" value={form.address_line1} onChange={(value) => setForm((prev) => ({ ...prev, address_line1: value }))} placeholder="123 Main St" />

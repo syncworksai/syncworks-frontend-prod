@@ -21,6 +21,7 @@ import {
 import ModeBar from "../components/ModeBar";
 import CalendarConnectionsDrawer from "../components/CalendarConnectionsDrawer";
 import TravelWeatherAssistCard from "../components/TravelWeatherAssistCard";
+import PlaceSearchField from "../components/PlaceSearchField";
 import api from "../api/client";
 import { getCalendarConnections } from "../api/calendarConnections";
 
@@ -40,7 +41,7 @@ function localTime(value) {
   return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 function blankDraft() {
-  return { title: "", date: ymd(), time: "09:00", end_date: ymd(), end_time: "10:00", all_day: false, location_name: "", arrival_buffer_minutes: "0", reminder_minutes: "30", description: "", recurrence: "NONE" };
+  return { title: "", date: ymd(), time: "09:00", end_date: ymd(), end_time: "10:00", all_day: false, location_name: "", address_line1: "", city: "", state: "", postal_code: "", latitude: null, longitude: null, arrival_buffer_minutes: "0", reminder_minutes: "30", description: "", recurrence: "NONE", weather_dependent: false };
 }
 function startOfWeek(value) {
   const date = new Date(value);
@@ -71,7 +72,7 @@ function recurrenceLabel(rule) {
 function draftFromEvent(event) {
   const start = new Date(event.start_at);
   const end = event.end_at ? new Date(event.end_at) : new Date(start.getTime() + 60 * 60000);
-  return { title: event.title || "", date: ymd(start), time: localTime(start), end_date: ymd(end), end_time: localTime(end), all_day: Boolean(event.all_day), location_name: event.location_name || "", arrival_buffer_minutes: String(event.arrival_buffer_minutes || 0), reminder_minutes: String(event.reminder_minutes ?? 30), description: event.description || "", recurrence: recurrenceLabel(event.recurrence_rule)?.toUpperCase() || "NONE" };
+  return { ...blankDraft(), title: event.title || "", date: ymd(start), time: localTime(start), end_date: ymd(end), end_time: localTime(end), all_day: Boolean(event.all_day), location_name: event.location_name || "", address_line1: event.address_line1 || "", city: event.city || "", state: event.state || "", postal_code: event.postal_code || "", latitude: event.latitude, longitude: event.longitude, arrival_buffer_minutes: String(event.arrival_buffer_minutes || 0), reminder_minutes: String(event.reminder_minutes ?? 30), description: event.description || "", recurrence: recurrenceLabel(event.recurrence_rule)?.toUpperCase() || "NONE", weather_dependent: Boolean(event?.metadata?.weather_dependent) };
 }
 function sourceTone(source) {
   const key = String(source || "MANUAL").toUpperCase();
@@ -158,6 +159,7 @@ function parseSmartCapture(text) {
     date: ymd(date),
     time,
     location_name: location,
+    address_line1: "", city: "", state: "", postal_code: "", latitude: null, longitude: null,
     end_date: ymd(date),
     end_time: (() => { const [hour, minute] = time.split(":").map(Number); const total = hour * 60 + minute + 60; return `${pad(Math.floor(total / 60) % 24)}:${pad(total % 60)}`; })(),
     all_day: false,
@@ -165,6 +167,7 @@ function parseSmartCapture(text) {
     reminder_minutes: "30",
     recurrence: "NONE",
     description: `Captured by SYNC from: ${raw}`,
+    weather_dependent: false,
   };
 }
 
@@ -238,9 +241,10 @@ export default function CalendarPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [view, setView] = useState("agenda");
+  const [view, setView] = useState("week");
   const [filter, setFilter] = useState("ALL");
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
+  const [selectedDay, setSelectedDay] = useState(() => new Date());
   const [showComposer, setShowComposer] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [captureText, setCaptureText] = useState("");
@@ -281,15 +285,15 @@ export default function CalendarPage() {
 
   const filtered = useMemo(() => events.filter((event) => {
     if (filter === "ALL") return true;
-    if (filter === "EXTERNAL") return isExternal(event.source);
-    if (filter === "SYNCWORKS") return !isExternal(event.source) && String(event.source).toUpperCase() !== "MANUAL";
-    return String(event.source).toUpperCase() === "MANUAL";
+    const source = String(event.source || "MANUAL").toUpperCase();
+    if (filter === "BUSINESS") return ["TICKET", "SOCIAL", "SYNC", "SYSTEM"].includes(source);
+    return source === "MANUAL" || isExternal(source) || source === "HEALTH";
   }).sort((a, b) => new Date(a.start_at) - new Date(b.start_at)), [events, filter]);
 
-  const today = useMemo(() => filtered.filter((event) => ymd(event.start_at) === ymd()), [filtered]);
   const nextEvent = useMemo(() => filtered.find((event) => new Date(event.start_at) >= new Date()) || null, [filtered]);
   const upcoming = useMemo(() => filtered.filter((event) => new Date(event.start_at) >= new Date()).slice(0, 4), [filtered]);
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)), [weekStart]);
+  const dailyEvents = useMemo(() => { const start = new Date(`${ymd(selectedDay)}T00:00:00`); const end = new Date(`${ymd(selectedDay)}T23:59:59`); return filtered.filter((event) => { const eventStart = new Date(event.start_at); const eventEnd = event.end_at ? new Date(event.end_at) : eventStart; return eventStart <= end && eventEnd >= start; }); }, [filtered, selectedDay]);
 
   function prepareCapture() {
     const parsed = parseSmartCapture(captureText);
@@ -351,10 +355,17 @@ export default function CalendarPage() {
         all_day: Boolean(draft.all_day),
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Chicago",
         location_name: draft.location_name,
+        address_line1: draft.address_line1,
+        city: draft.city,
+        state: draft.state,
+        postal_code: draft.postal_code,
+        latitude: draft.latitude,
+        longitude: draft.longitude,
         arrival_buffer_minutes: Number(draft.arrival_buffer_minutes || 0),
         reminder_minutes: Number(draft.reminder_minutes || 30),
         recurrence_rule: recurrenceRule(draft.recurrence),
         source: "MANUAL",
+        metadata: { ...(editingEvent?.metadata || {}), weather_dependent: Boolean(draft.weather_dependent) },
       };
       if (editingEvent) await api.patch(`/personal-calendar/events/${editingEvent.id}/`, payload);
       else await api.post("/personal-calendar/events/", payload);
@@ -380,30 +391,22 @@ export default function CalendarPage() {
         {notice ? <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-3 text-sm text-emerald-100">{notice}</div> : null}
         {error ? <div className="mb-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 p-3 text-sm text-rose-100">{error}</div> : null}
 
-        <div className="grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)_330px]">
-          <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
+        <div className="grid gap-4">
+          <aside className="hidden">
             <ConnectionSummary data={connections} onOpen={() => setDrawerOpen(true)} onRefresh={() => { loadConnections(); loadEvents(); }} loading={connectionLoading || loading} />
             <QuickCapture text={captureText} setText={setCaptureText} onParse={prepareCapture} onVoice={startVoiceCapture} listening={listening} />
             <section className="rounded-[1.5rem] border border-white/10 bg-slate-950/60 p-3">
               <div className="px-2 pb-2 text-[9px] font-black uppercase tracking-[.18em] text-slate-500">Show calendars</div>
-              {[["ALL", "Everything", "cyan"], ["PERSONAL", "Personal", "slate"], ["EXTERNAL", "Google + Outlook", "violet"], ["SYNCWORKS", "SyncWorks", "emerald"]].map(([value, label]) => (
+              {[["ALL", "Everything"], ["PERSONAL", "Personal"], ["BUSINESS", "Business"]].map(([value, label]) => (
                 <button key={value} type="button" onClick={() => setFilter(value)} className={`mb-1 flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-xs font-black ${filter === value ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100" : "border-transparent text-slate-400 hover:bg-white/[.04] hover:text-white"}`}><span>{label}</span><span className="h-2 w-2 rounded-full bg-current opacity-80" /></button>
               ))}
             </section>
           </aside>
 
           <section className="min-w-0 space-y-4">
-            <div className="rounded-[1.8rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_85%_0%,rgba(139,92,246,.2),transparent_34%),linear-gradient(145deg,rgba(8,18,35,.98),rgba(2,6,23,.98))] p-5 shadow-[0_20px_70px_rgba(0,0,0,.3)] sm:p-6">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div><div className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-200">Master calendar</div><h1 className="mt-1 text-2xl font-black text-white sm:text-3xl">Your day, connected.</h1><p className="mt-2 max-w-2xl text-sm text-slate-400">Appointments, SyncWorks service work, connected calendars, Health and Social events in one timeline.</p></div>
-                <div className="flex gap-2"><button type="button" onClick={openNewEvent} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-3 text-[11px] font-black text-white sm:min-h-11 sm:px-4 sm:text-xs"><Plus className="h-4 w-4" />Add event</button><button type="button" onClick={loadEvents} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[.04] text-slate-300 sm:h-11 sm:w-11"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /></button></div>
-              </div>
-              <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4"><div className="text-[9px] font-black uppercase tracking-[.16em] text-slate-500">Today</div><div className="mt-1 text-2xl font-black text-white">{today.length}</div></div>
-                <div className="rounded-2xl border border-cyan-400/15 bg-cyan-500/[.06] p-4"><div className="text-[9px] font-black uppercase tracking-[.16em] text-cyan-300">Next</div><div className="mt-1 truncate text-sm font-black text-white">{nextEvent?.title || "Clear"}</div></div>
-                <div className="rounded-2xl border border-rose-400/15 bg-rose-500/[.06] p-4"><div className="text-[9px] font-black uppercase tracking-[.16em] text-rose-300">Traffic</div><div className="mt-1 text-sm font-black text-white">Live assist</div></div>
-                <div className="rounded-2xl border border-sky-400/15 bg-sky-500/[.06] p-4"><div className="text-[9px] font-black uppercase tracking-[.16em] text-sky-300">Weather</div><div className="mt-1 text-sm font-black text-white">Route aware</div></div>
-              </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-cyan-400/15 bg-slate-950/60 p-3">
+              <div className="flex gap-2"><button type="button" onClick={openNewEvent} className="inline-flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-3 text-[11px] font-black text-white"><Plus className="h-4 w-4" />Add event</button><button type="button" onClick={() => setDrawerOpen(true)} className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[.04] px-3 text-[11px] font-black text-slate-200"><Link2 className="h-4 w-4" />Connect</button></div>
+              <div className="flex items-center gap-1"><button type="button" onClick={() => setDrawerOpen(true)} className="h-9 rounded-xl px-2.5 text-[10px] font-black text-cyan-200">Manage</button><button type="button" onClick={() => { loadConnections(); loadEvents(); }} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-400"><RefreshCw className={`h-4 w-4 ${connectionLoading || loading ? "animate-spin" : ""}`} /></button></div>
             </div>
 
             {showComposer ? <section id="calendar-event-composer" className="scroll-mt-24 rounded-[1.4rem] border border-cyan-400/20 bg-cyan-500/[.04] p-3 sm:rounded-[1.7rem] sm:p-5">
@@ -415,7 +418,11 @@ export default function CalendarPage() {
                 <label className="text-xs text-slate-400">End date<input type="date" min={draft.date} value={draft.end_date} onChange={(e) => setDraft((v) => ({ ...v, end_date: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
                 <label className="text-xs text-slate-400">End time<input disabled={draft.all_day} type="time" value={draft.end_time} onChange={(e) => setDraft((v) => ({ ...v, end_time: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none disabled:opacity-40" /></label>
                 <label className="flex min-h-11 items-center gap-3 rounded-xl border border-white/10 bg-slate-950/80 px-3 text-xs font-bold text-slate-300"><input type="checkbox" checked={draft.all_day} onChange={(e) => setDraft((v) => ({ ...v, all_day: e.target.checked }))} className="h-4 w-4 accent-cyan-400" />All-day event</label>
-                <label className="text-xs text-slate-400 lg:col-span-2">Location<input value={draft.location_name} onChange={(e) => setDraft((v) => ({ ...v, location_name: e.target.value }))} placeholder="Address or place" className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
+                <div className="sm:col-span-2 lg:col-span-4"><PlaceSearchField value={draft.location_name || draft.address_line1} onChange={(value) => setDraft((v) => ({ ...v, location_name: value }))} onSelect={(place) => setDraft((v) => ({ ...v, location_name: place.location_name, address_line1: place.address_line1, city: place.city || "", state: place.state || "", postal_code: place.postal_code || "", latitude: place.latitude, longitude: place.longitude }))}/></div>
+                <label className="text-xs text-slate-400 lg:col-span-2">Street address<input value={draft.address_line1} onChange={(e) => setDraft((v) => ({ ...v, address_line1: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
+                <label className="text-xs text-slate-400">City<input value={draft.city} onChange={(e) => setDraft((v) => ({ ...v, city: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
+                <div className="grid grid-cols-2 gap-2"><label className="text-xs text-slate-400">State<input value={draft.state} onChange={(e) => setDraft((v) => ({ ...v, state: e.target.value.toUpperCase() }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label><label className="text-xs text-slate-400">ZIP<input value={draft.postal_code} onChange={(e) => setDraft((v) => ({ ...v, postal_code: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label></div>
+                <label className="flex min-h-11 items-center gap-3 rounded-xl border border-amber-400/15 bg-amber-500/[.04] px-3 text-xs font-bold text-amber-100"><input type="checkbox" checked={draft.weather_dependent} onChange={(e) => setDraft((v) => ({ ...v, weather_dependent: e.target.checked }))} className="h-4 w-4 accent-amber-400" />Weather aware</label>
                 <label className="text-xs text-slate-400">Arrive early<input type="number" min="0" max="240" value={draft.arrival_buffer_minutes} onChange={(e) => setDraft((v) => ({ ...v, arrival_buffer_minutes: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
                 <label className="text-xs text-slate-400">Reminder<input type="number" min="0" value={draft.reminder_minutes} onChange={(e) => setDraft((v) => ({ ...v, reminder_minutes: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
                 <label className="text-xs text-slate-400">Repeat<select value={draft.recurrence} onChange={(e) => setDraft((v) => ({ ...v, recurrence: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none"><option value="NONE">Does not repeat</option><option value="DAILY">Daily</option><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option></select></label>
@@ -425,13 +432,14 @@ export default function CalendarPage() {
             </section> : null}
 
             <section className="rounded-[1.7rem] border border-white/10 bg-slate-950/50 p-4 sm:p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-slate-500">Schedule</div><h2 className="mt-1 text-lg font-black text-white">Everything in one timeline.</h2></div><div className="flex rounded-xl border border-white/10 bg-black/20 p-1"><button type="button" onClick={() => setView("agenda")} className={`rounded-lg px-3 py-2 text-xs font-black ${view === "agenda" ? "bg-white/10 text-white" : "text-slate-500"}`}>Agenda</button><button type="button" onClick={() => setView("week")} className={`rounded-lg px-3 py-2 text-xs font-black ${view === "week" ? "bg-white/10 text-white" : "text-slate-500"}`}>Week</button></div></div>
-              {view === "week" ? <div className="mt-4 flex items-center justify-between"><button type="button" onClick={() => setWeekStart(addDays(weekStart, -7))} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10"><ChevronLeft className="h-4 w-4" /></button><div className="text-xs font-black text-slate-300">Week of {weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div><button type="button" onClick={() => setWeekStart(addDays(weekStart, 7))} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10"><ChevronRight className="h-4 w-4" /></button></div> : null}
-              {loading ? <div className="mt-5 text-sm text-slate-400">Loading calendar…</div> : view === "agenda" ? <div className="mt-4 space-y-2.5 sm:mt-5 sm:space-y-3">{filtered.length ? filtered.map((event) => <EventCard key={event.id} event={event} onCancel={cancelEvent} onEdit={editEvent} />) : <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-slate-500 sm:p-8">No calendar items match this filter.</div>}</div> : <div className="mt-4 grid gap-2 md:mt-5 md:grid-cols-7">{weekDays.map((day) => { const dayStart = new Date(`${ymd(day)}T00:00:00`); const dayEnd = new Date(`${ymd(day)}T23:59:59`); const rows = filtered.filter((event) => { const start = new Date(event.start_at); const end = event.end_at ? new Date(event.end_at) : start; return start <= dayEnd && end >= dayStart; }); return <div key={ymd(day)} className={`rounded-2xl border border-white/10 bg-white/[.025] p-3 ${rows.length ? "min-h-24 md:min-h-44" : "min-h-0"}`}><div className="flex items-baseline gap-2 md:block"><div className="text-sm font-black text-white md:text-base">{day.toLocaleDateString("en-US", { weekday: "short" })}</div><div className="text-[11px] text-slate-500 md:text-xs">{day.toLocaleDateString("en-US", { month: "numeric", day: "numeric" })}</div></div><div className={rows.length ? "mt-2 space-y-2 md:mt-3" : ""}>{rows.map((event) => <button type="button" onClick={() => !isExternal(event.source) && editEvent(event)} key={event.id} className={`block w-full rounded-xl border p-2 text-left ${sourceTone(event.source)}`}><div className="truncate text-[11px] font-black">{event.title}</div><div className="mt-0.5 text-[10px] opacity-75">{event.all_day ? "All day" : ymd(event.start_at) === ymd(day) ? new Date(event.start_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "Continues"}</div></button>)}</div></div>; })}</div>}
+              <div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-slate-500">Schedule</div><h2 className="mt-1 text-base font-black text-white">Your calendar</h2></div><div className="flex rounded-xl border border-white/10 bg-black/20 p-1"><button type="button" onClick={() => setView("week")} className={`rounded-lg px-3 py-2 text-[11px] font-black ${view === "week" ? "bg-white/10 text-white" : "text-slate-500"}`}>Week</button><button type="button" onClick={() => setView("daily")} className={`rounded-lg px-3 py-2 text-[11px] font-black ${view === "daily" ? "bg-white/10 text-white" : "text-slate-500"}`}>Daily</button></div></div>
+              <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1">{[["ALL", "Everything"], ["PERSONAL", "Personal"], ["BUSINESS", "Business"]].map(([value, label]) => <button type="button" key={value} onClick={() => setFilter(value)} className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-black ${filter === value ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100" : "border-white/10 text-slate-500"}`}>{label}</button>)}</div>
+              <div className="mt-3 flex items-center justify-between"><button type="button" onClick={() => view === "week" ? setWeekStart(addDays(weekStart, -7)) : setSelectedDay(addDays(selectedDay, -1))} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10"><ChevronLeft className="h-4 w-4" /></button><div className="text-xs font-black text-slate-300">{view === "week" ? `Week of ${weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : selectedDay.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</div><button type="button" onClick={() => view === "week" ? setWeekStart(addDays(weekStart, 7)) : setSelectedDay(addDays(selectedDay, 1))} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10"><ChevronRight className="h-4 w-4" /></button></div>
+              {loading ? <div className="mt-5 text-sm text-slate-400">Loading calendar…</div> : view === "daily" ? <div className="mt-4 space-y-2.5">{dailyEvents.length ? dailyEvents.map((event) => <EventCard key={event.id} event={event} onCancel={cancelEvent} onEdit={editEvent}/>) : <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-slate-500">Nothing scheduled this day.</div>}</div> : <div className="mt-4 grid gap-2 md:grid-cols-7">{weekDays.map((day) => { const dayStart = new Date(`${ymd(day)}T00:00:00`); const dayEnd = new Date(`${ymd(day)}T23:59:59`); const rows = filtered.filter((event) => { const start = new Date(event.start_at); const end = event.end_at ? new Date(event.end_at) : start; return start <= dayEnd && end >= dayStart; }); return <button type="button" onClick={() => { setSelectedDay(day); setView("daily"); }} key={ymd(day)} className={`rounded-2xl border p-3 text-left ${ymd(day) === ymd() ? "border-cyan-400/30 bg-cyan-500/[.06]" : "border-white/10 bg-white/[.025]"}`}><div className="flex items-baseline gap-2 md:block"><div className="text-sm font-black text-white">{day.toLocaleDateString("en-US", { weekday: "short" })}</div><div className="text-[11px] text-slate-500">{day.toLocaleDateString("en-US", { month: "numeric", day: "numeric" })}</div></div><div className={rows.length ? "mt-2 space-y-1.5" : ""}>{rows.slice(0, 3).map((event) => <div key={event.id} className={`rounded-lg border p-2 ${sourceTone(event.source)}`}><div className="truncate text-[10px] font-black">{event.title}</div><div className="text-[9px] opacity-70">{event.all_day ? "All day" : ymd(event.start_at) === ymd(day) ? new Date(event.start_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "Continues"}</div></div>)}{rows.length > 3 ? <div className="text-[9px] font-bold text-slate-500">+{rows.length - 3} more</div> : null}</div></button>; })}</div>}
             </section>
           </section>
 
-          <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
+          <aside className="hidden">
             <section className="rounded-[1.6rem] border border-amber-400/20 bg-amber-500/[.06] p-4">
               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em] text-amber-200"><AlertTriangle className="h-4 w-4" />Needs attention</div>
               {nextEvent ? <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-4"><div className="text-sm font-black text-white">{nextEvent.title}</div><div className="mt-1 text-xs text-slate-400">{new Date(nextEvent.start_at).toLocaleString()}</div>{eventLocation(nextEvent) ? <div className="mt-2 flex items-start gap-2 text-xs text-amber-100"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />{eventLocation(nextEvent)}</div> : <div className="mt-2 text-xs font-bold text-amber-200">No location added — travel timing unavailable.</div>}</div> : <div className="mt-3 text-sm text-slate-400">Nothing urgent on your calendar.</div>}

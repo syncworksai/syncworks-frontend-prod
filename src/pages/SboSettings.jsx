@@ -9,6 +9,7 @@ import BusinessDigitalCardPreview from "../components/business/BusinessDigitalCa
 import BusinessServiceAreasEditor, { normalizeServiceAreas } from "../components/business/BusinessServiceAreasEditor";
 import BusinessServiceOfferingsEditor from "../components/business/BusinessServiceOfferingsEditor";
 import BusinessCommunicationAutomation from "../components/business/BusinessCommunicationAutomation";
+import PlaceSearchField from "../components/PlaceSearchField";
 
 const SETTINGS_SECTIONS = [
   { key: "business", label: "Profile" },
@@ -998,6 +999,7 @@ export default function SboSettings() {
               title="Marketplace Routing"
               subtitle="Controls whether this business can receive local marketplace tickets."
             >
+              <div className="mb-4"><PlaceSearchField value={address} onChange={setAddress} label="Find business or address" onSelect={(place) => { setAddress(place.address_line1 || place.formatted_address || ""); setCity(place.city || ""); setState(place.state || ""); setBaseZip(place.postal_code || ""); }}/></div>
               <div className="grid gap-3 md:grid-cols-2">
                 <Input label="Street Address" value={address} onChange={setAddress} placeholder="123 Main St" />
                 <Input label="City" value={city} onChange={setCity} placeholder="Montgomery" />
