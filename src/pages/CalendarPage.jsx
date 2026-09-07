@@ -2,13 +2,14 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CalendarDays,
+  Check,
   ChevronLeft,
   ChevronRight,
   Clock,
-  ClipboardPaste,
-  CloudSun,
+  Dumbbell,
   ExternalLink,
   Link2,
+  ListTodo,
   MapPin,
   Mic,
   Pencil,
@@ -18,7 +19,9 @@ import {
   Sparkles,
   WandSparkles,
   X,
+  Zap,
 } from "lucide-react";
+
 import ModeBar from "../components/ModeBar";
 import CalendarConnectionsDrawer from "../components/CalendarConnectionsDrawer";
 import TravelWeatherAssistCard from "../components/TravelWeatherAssistCard";
@@ -41,8 +44,13 @@ function localTime(value) {
   const date = new Date(value);
   return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
-function blankDraft() {
-  return { title: "", date: ymd(), time: "09:00", end_date: ymd(), end_time: "10:00", all_day: false, location_name: "", address_line1: "", city: "", state: "", postal_code: "", latitude: null, longitude: null, arrival_buffer_minutes: "0", reminder_minutes: "30", description: "", recurrence: "NONE", weather_dependent: false, flexible: false };
+function addDays(value, amount) {
+  const date = new Date(value);
+  date.setDate(date.getDate() + amount);
+  return date;
+}
+function addMinutes(value, amount) {
+  return new Date(new Date(value).getTime() + amount * 60000);
 }
 function startOfWeek(value) {
   const date = new Date(value);
@@ -51,14 +59,36 @@ function startOfWeek(value) {
   date.setHours(0, 0, 0, 0);
   return date;
 }
-function addDays(value, amount) {
-  const date = new Date(value);
-  date.setDate(date.getDate() + amount);
-  return date;
-}
 function startOfMonthGrid(value) {
   const first = new Date(value.getFullYear(), value.getMonth(), 1);
   return addDays(first, -first.getDay());
+}
+function blankDraft(kind = "EVENT") {
+  const task = kind === "TASK";
+  return {
+    kind,
+    title: "",
+    date: ymd(),
+    time: "09:00",
+    end_date: ymd(),
+    end_time: task ? "09:30" : "10:00",
+    all_day: false,
+    location_name: "",
+    address_line1: "",
+    city: "",
+    state: "",
+    postal_code: "",
+    latitude: null,
+    longitude: null,
+    arrival_buffer_minutes: "0",
+    reminder_minutes: "30",
+    description: "",
+    recurrence: "NONE",
+    weather_dependent: false,
+    flexible: task,
+    task_priority: "NORMAL",
+    task_status: "OPEN",
+  };
 }
 function recurrenceRule(value) {
   if (value === "DAILY") return "RRULE:FREQ=DAILY;INTERVAL=1";
@@ -74,23 +104,55 @@ function recurrenceLabel(rule) {
   if (value) return "Recurring";
   return "";
 }
+function eventKind(event) {
+  return String(event?.metadata?.entity_type || "EVENT").toUpperCase();
+}
+function isTask(event) { return eventKind(event) === "TASK"; }
+function taskDone(event) { return String(event?.metadata?.task_status || "OPEN").toUpperCase() === "DONE"; }
 function draftFromEvent(event) {
   const start = new Date(event.start_at);
-  const end = event.end_at ? new Date(event.end_at) : new Date(start.getTime() + 60 * 60000);
-  return { ...blankDraft(), title: event.title || "", date: ymd(start), time: localTime(start), end_date: ymd(end), end_time: localTime(end), all_day: Boolean(event.all_day), location_name: event.location_name || "", address_line1: event.address_line1 || "", city: event.city || "", state: event.state || "", postal_code: event.postal_code || "", latitude: event.latitude, longitude: event.longitude, arrival_buffer_minutes: String(event.arrival_buffer_minutes || 0), reminder_minutes: String(event.reminder_minutes ?? 30), description: event.description || "", recurrence: recurrenceLabel(event.recurrence_rule)?.toUpperCase() || "NONE", weather_dependent: Boolean(event?.metadata?.weather_dependent), flexible: event?.metadata?.fixed === false };
+  const end = event.end_at ? new Date(event.end_at) : addMinutes(start, 60);
+  const kind = eventKind(event);
+  return {
+    ...blankDraft(kind),
+    kind,
+    title: event.title || "",
+    date: ymd(start),
+    time: localTime(start),
+    end_date: ymd(end),
+    end_time: localTime(end),
+    all_day: Boolean(event.all_day),
+    location_name: event.location_name || "",
+    address_line1: event.address_line1 || "",
+    city: event.city || "",
+    state: event.state || "",
+    postal_code: event.postal_code || "",
+    latitude: event.latitude,
+    longitude: event.longitude,
+    arrival_buffer_minutes: String(event.arrival_buffer_minutes || 0),
+    reminder_minutes: String(event.reminder_minutes ?? 30),
+    description: event.description || "",
+    recurrence: recurrenceLabel(event.recurrence_rule)?.toUpperCase() || "NONE",
+    weather_dependent: Boolean(event?.metadata?.weather_dependent),
+    flexible: event?.metadata?.fixed === false,
+    task_priority: String(event?.metadata?.task_priority || "NORMAL").toUpperCase(),
+    task_status: String(event?.metadata?.task_status || "OPEN").toUpperCase(),
+  };
 }
-function sourceTone(source) {
-  const key = String(source || "MANUAL").toUpperCase();
+function sourceTone(event) {
+  if (isTask(event)) return "border-violet-400/25 bg-violet-500/10 text-violet-100";
+  const key = String(event?.source || "MANUAL").toUpperCase();
   if (key === "GOOGLE") return "border-cyan-400/25 bg-cyan-500/10 text-cyan-100";
-  if (key === "OUTLOOK" || key === "MICROSOFT") return "border-violet-400/25 bg-violet-500/10 text-violet-100";
+  if (key === "OUTLOOK" || key === "MICROSOFT") return "border-indigo-400/25 bg-indigo-500/10 text-indigo-100";
   if (key === "HEALTH") return "border-emerald-400/25 bg-emerald-500/10 text-emerald-100";
   if (key === "TICKET") return "border-blue-400/25 bg-blue-500/10 text-blue-100";
   if (key === "SOCIAL") return "border-pink-400/25 bg-pink-500/10 text-pink-100";
   if (key === "SYNC") return "border-fuchsia-400/25 bg-fuchsia-500/10 text-fuchsia-100";
   return "border-slate-700 bg-slate-900/70 text-slate-200";
 }
-function sourceLabel(source) {
-  const key = String(source || "MANUAL").toUpperCase();
+function sourceLabel(event) {
+  if (isTask(event)) return "Task";
+  const key = String(event?.source || "MANUAL").toUpperCase();
   if (key === "OUTLOOK" || key === "MICROSOFT") return "Outlook";
   if (key === "GOOGLE") return "Google";
   if (key === "HEALTH") return "Health";
@@ -114,11 +176,47 @@ function eventDeepLink(event) {
   if (String(event?.source || "").toUpperCase() === "HEALTH") return "/customer/health";
   return "";
 }
-function isExternal(source) { return String(source || "MANUAL").toUpperCase() !== "MANUAL"; }
-function isCalendarEditable(source) { return String(source || "MANUAL").toUpperCase() === "MANUAL"; }
+function editableEvent(event) { return String(event?.source || "MANUAL").toUpperCase() === "MANUAL"; }
+function scheduleChange(event) {
+  const value = event?.metadata?.schedule_change;
+  return value && typeof value === "object" ? value : null;
+}
+function hasPendingScheduleChange(event) {
+  const change = scheduleChange(event);
+  return Boolean(change?.requires_response && String(change?.status || "").toUpperCase() === "PENDING");
+}
+function overlaps(first, second) {
+  if (!first || !second || first.id === second.id || first.all_day || second.all_day) return false;
+  const aStart = new Date(first.start_at).getTime();
+  const aEnd = new Date(first.end_at || first.start_at).getTime();
+  const bStart = new Date(second.start_at).getTime();
+  const bEnd = new Date(second.end_at || second.start_at).getTime();
+  return aStart < bEnd && bStart < aEnd;
+}
+function conflictIdsFor(events) {
+  const ids = new Set();
+  for (let index = 0; index < events.length; index += 1) {
+    for (let other = index + 1; other < events.length; other += 1) {
+      if (overlaps(events[index], events[other])) {
+        ids.add(events[index].id);
+        ids.add(events[other].id);
+      }
+    }
+  }
+  return ids;
+}
+function priorityLabel(value) {
+  const key = String(value || "NORMAL").toUpperCase();
+  if (key === "HIGH") return "High";
+  if (key === "LOW") return "Low";
+  return "Normal";
+}
+function durationMinutes(start, end) {
+  const minutes = Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000);
+  return Math.max(5, Number.isFinite(minutes) ? minutes : 30);
+}
 
 const DAY_INDEX = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
-
 function nextNamedDay(name) {
   const target = DAY_INDEX[String(name || "").toLowerCase()];
   if (target === undefined) return null;
@@ -126,7 +224,6 @@ function nextNamedDay(name) {
   const delta = (target - now.getDay() + 7) % 7 || 7;
   return addDays(now, delta);
 }
-
 function normalizeTime(hourRaw, minuteRaw, meridiem) {
   let hour = Number(hourRaw || 9);
   const minute = Number(minuteRaw || 0);
@@ -135,13 +232,11 @@ function normalizeTime(hourRaw, minuteRaw, meridiem) {
   if (suffix === "am" && hour === 12) hour = 0;
   return `${pad(Math.min(23, Math.max(0, hour)))}:${pad(Math.min(59, Math.max(0, minute)))}`;
 }
-
 function parseSmartCapture(text) {
   const raw = String(text || "").trim();
   if (!raw) return null;
   const lower = raw.toLowerCase();
   let date = new Date();
-
   if (/\btomorrow\b/.test(lower)) date = addDays(date, 1);
   else {
     const named = lower.match(/\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/);
@@ -153,13 +248,10 @@ function parseSmartCapture(text) {
       if (Number.isFinite(candidate.getTime())) date = candidate;
     }
   }
-
   const timeMatch = lower.match(/\b(?:at\s*)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/) || lower.match(/\b(?:at\s*)?(\d{1,2}):(\d{2})\b/);
   const time = timeMatch ? normalizeTime(timeMatch[1], timeMatch[2], timeMatch[3]) : "09:00";
-
   const locationMatch = raw.match(/(?:\bat\b|\b@\b)\s+([^,.]+(?:,\s*[^,.]+){0,2})\s*$/i);
   const location = locationMatch ? locationMatch[1].trim() : "";
-
   let title = raw
     .replace(/\b(today|tomorrow|sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/gi, "")
     .replace(/\b\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b/g, "")
@@ -170,119 +262,132 @@ function parseSmartCapture(text) {
     .replace(/^[,\s-]+|[,\s-]+$/g, "")
     .trim();
   if (!title) title = "Appointment";
-
+  const [hour, minute] = time.split(":").map(Number);
+  const total = hour * 60 + minute + 60;
   return {
+    ...blankDraft("EVENT"),
     title: title.charAt(0).toUpperCase() + title.slice(1),
     date: ymd(date),
     time,
-    location_name: location,
-    address_line1: "", city: "", state: "", postal_code: "", latitude: null, longitude: null,
     end_date: ymd(date),
-    end_time: (() => { const [hour, minute] = time.split(":").map(Number); const total = hour * 60 + minute + 60; return `${pad(Math.floor(total / 60) % 24)}:${pad(total % 60)}`; })(),
-    all_day: false,
+    end_time: `${pad(Math.floor(total / 60) % 24)}:${pad(total % 60)}`,
+    location_name: location,
     arrival_buffer_minutes: location ? "30" : "0",
-    reminder_minutes: "30",
-    recurrence: "NONE",
     description: `Captured by SYNC from: ${raw}`,
-    weather_dependent: false,
   };
 }
 
-function EventCard({ event, onCancel, onEdit }) {
-  const start = new Date(event.start_at);
-  const end = event.end_at ? new Date(event.end_at) : null;
-  const location = eventLocation(event);
-  const editable = isCalendarEditable(event.source) && event.status === "ACTIVE";
-  const repeats = recurrenceLabel(event.recurrence_rule);
-  const weatherDependent = Boolean(event?.metadata?.weather_dependent);
+function ActionButton({ children, onClick, tone = "slate", disabled = false }) {
+  const tones = {
+    slate: "border-white/10 bg-white/[.04] text-slate-200",
+    cyan: "border-cyan-400/25 bg-cyan-500/10 text-cyan-100",
+    emerald: "border-emerald-400/25 bg-emerald-500/10 text-emerald-100",
+    amber: "border-amber-400/25 bg-amber-500/10 text-amber-100",
+    violet: "border-violet-400/25 bg-violet-500/10 text-violet-100",
+    rose: "border-rose-400/25 bg-rose-500/10 text-rose-100",
+  };
+  return <button type="button" onClick={onClick} disabled={disabled} className={`inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-[9px] font-black disabled:opacity-40 ${tones[tone] || tones.slate}`}>{children}</button>;
+}
+
+function CalendarEventBlock({ event, conflict, onEdit, onServiceResponse, onResolveConflict, onToggleTask }) {
+  const mapsUrl = eventMapsUrl(event);
+  const deepLink = eventDeepLink(event);
+  const editable = editableEvent(event);
+  const task = isTask(event);
+  const done = taskDone(event);
+  const pending = hasPendingScheduleChange(event);
+  const change = scheduleChange(event);
+  const source = String(event.source || "MANUAL").toUpperCase();
+  const flexible = event?.metadata?.fixed === false;
+  const technician = String(event?.metadata?.technician_name || "").trim();
+  const business = String(event?.metadata?.business_name || "").trim();
+
   return (
-    <article className="rounded-[1.4rem] border border-white/10 bg-slate-950/65 p-4 transition hover:border-white/20 hover:bg-white/[.035]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[.14em] ${sourceTone(event.source)}`}>{sourceLabel(event.source)}</span>
-            {event.all_day ? <span className="rounded-full border border-white/10 bg-white/[.04] px-2.5 py-1 text-[9px] font-black uppercase tracking-[.14em] text-slate-300">All day</span> : null}
-            {repeats ? <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[.14em] text-cyan-100">{repeats}</span> : null}
-            {weatherDependent ? <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[.14em] text-amber-100">Weather permitting</span> : null}
+    <div className={`rounded-xl border p-2.5 ${sourceTone(event)} ${done ? "opacity-55" : ""}`}>
+      <div className="flex items-start gap-2">
+        <button type="button" onClick={() => editable && onEdit(event)} className="min-w-0 flex-1 text-left">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="rounded-full border border-current/20 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[.12em]">{sourceLabel(event)}</span>
+            {task ? <span className="text-[8px] font-black uppercase opacity-70">{priorityLabel(event?.metadata?.task_priority)}</span> : null}
+            {flexible ? <span className="rounded-full bg-violet-400/15 px-1.5 py-0.5 text-[8px] font-black uppercase">Flexible</span> : null}
+            {pending ? <span className="rounded-full bg-amber-400/15 px-1.5 py-0.5 text-[8px] font-black uppercase text-amber-100">Time changed</span> : null}
+            {conflict ? <span className="rounded-full bg-rose-400/15 px-1.5 py-0.5 text-[8px] font-black uppercase text-rose-100">Conflict</span> : null}
           </div>
-          <h3 className="mt-2 text-sm font-black text-white sm:mt-3 sm:text-base">{event.title}</h3>
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-400">
-            <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />{start.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: event.all_day ? undefined : "numeric", minute: event.all_day ? undefined : "2-digit" })}{end ? ` – ${end.toLocaleString("en-US", { weekday: ymd(end) !== ymd(start) ? "short" : undefined, month: ymd(end) !== ymd(start) ? "short" : undefined, day: ymd(end) !== ymd(start) ? "numeric" : undefined, hour: event.all_day ? undefined : "numeric", minute: event.all_day ? undefined : "2-digit" })}` : ""}</span>
-            {location ? <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{location}</span> : null}
-          </div>
-          {event.arrival_buffer_minutes ? <div className="mt-2 text-[11px] font-bold text-amber-200">Arrive {event.arrival_buffer_minutes} min early</div> : null}
-        </div>
-        {editable ? <div className="flex shrink-0 gap-1.5"><button type="button" onClick={() => onEdit(event)} className="grid h-9 w-9 place-items-center rounded-xl border border-cyan-400/20 bg-cyan-500/10 text-cyan-100" aria-label={`Edit ${event.title}`}><Pencil className="h-4 w-4" /></button><button type="button" onClick={() => onCancel(event)} className="grid h-9 w-9 place-items-center rounded-xl border border-rose-400/20 bg-rose-500/10 text-rose-200" aria-label={`Cancel ${event.title}`}><X className="h-4 w-4" /></button></div> : null}
+          <div className={`mt-1 truncate text-[11px] font-black ${done ? "line-through" : ""}`}>{event.title}</div>
+          {!event.all_day ? <div className="mt-0.5 text-[9px] opacity-70">{new Date(event.start_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}{event.end_at ? ` – ${new Date(event.end_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : ""}</div> : <div className="mt-0.5 text-[9px] opacity-70">All day</div>}
+          {source === "TICKET" && (business || technician) ? <div className="mt-1 text-[9px] opacity-75">{business || "SyncWorks service"}{technician ? ` · ${technician}` : ""}</div> : null}
+          {pending && change?.previous_start ? <div className="mt-1 text-[9px] font-bold text-amber-100/80">Moved from {new Date(change.previous_start).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div> : null}
+        </button>
+        {editable ? <button type="button" onClick={() => onEdit(event)} className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-current/20" aria-label={`Edit ${event.title}`}><Pencil className="h-3.5 w-3.5" /></button> : null}
       </div>
-    </article>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {task ? <ActionButton onClick={() => onToggleTask(event)} tone={done ? "slate" : "emerald"}><Check className="h-3 w-3" />{done ? "Reopen" : "Done"}</ActionButton> : null}
+        {pending ? <><ActionButton onClick={() => onServiceResponse(event, "ACCEPT")} tone="emerald"><Check className="h-3 w-3" />Accept</ActionButton><ActionButton onClick={() => onServiceResponse(event, "REQUEST_CHANGE")} tone="amber"><Clock className="h-3 w-3" />Different time</ActionButton></> : null}
+        {conflict && flexible && editable ? <ActionButton onClick={() => onResolveConflict(event)} tone="violet"><Zap className="h-3 w-3" />Move +1h</ActionButton> : null}
+        {source === "HEALTH" && deepLink ? <a href={deepLink} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-2.5 text-[9px] font-black text-emerald-100"><Dumbbell className="h-3 w-3" />Start workout</a> : deepLink ? <a href={deepLink} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-current/20 px-2.5 text-[9px] font-black"><ExternalLink className="h-3 w-3" />Open</a> : null}
+        {mapsUrl ? <a href={mapsUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-current/20 px-2.5 text-[9px] font-black"><MapPin className="h-3 w-3" />Maps</a> : null}
+      </div>
+    </div>
   );
 }
 
-function HourlyDayView({ day, events, onCreate, onEdit }) {
+function HourlyDayView({ day, events, conflictIds, onCreate, onEdit, onServiceResponse, onResolveConflict, onToggleTask }) {
   const allDay = events.filter((event) => event.all_day);
   const timed = events.filter((event) => !event.all_day);
   const hours = Array.from({ length: 24 }, (_, hour) => hour);
   const hourLabel = (hour) => new Date(2000, 0, 1, hour).toLocaleTimeString("en-US", { hour: "numeric" });
-  return <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/15">
-    {allDay.length ? <div className="grid grid-cols-[58px_minmax(0,1fr)] border-b border-white/10"><div className="p-2 text-right text-[9px] font-black uppercase text-slate-500">All day</div><div className="space-y-1.5 border-l border-white/10 p-2">{allDay.map((event) => { const mapsUrl = eventMapsUrl(event); const deepLink = eventDeepLink(event); const editable = !isExternal(event.source); return <div key={event.id} className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 ${sourceTone(event.source)}`}><button type="button" onClick={() => editable && onEdit(event)} className="min-w-0 flex-1 truncate text-left text-[11px] font-black">{event.title}</button>{editable ? <button type="button" onClick={() => onEdit(event)} className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-current/20" aria-label={`Edit ${event.title}`}><Pencil className="h-3 w-3"/></button> : null}{deepLink ? <a href={deepLink} className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-current/20" aria-label={`Open ${event.title}`}><ExternalLink className="h-3 w-3"/></a> : null}{mapsUrl ? <a href={mapsUrl} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 rounded-md border border-current/20 px-2 py-1 text-[9px] font-black"><MapPin className="h-3 w-3"/>Maps</a> : null}</div>; })}</div></div> : null}
-    <div>{hours.map((hour) => {
-      const rows = timed.filter((event) => { const start = new Date(event.start_at); return ymd(start) === ymd(day) && start.getHours() === hour; });
-      const isNow = ymd(day) === ymd() && new Date().getHours() === hour;
-      return <div key={hour} role="button" tabIndex={0} onClick={() => onCreate(day, hour)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onCreate(day, hour); }} className={`grid min-h-[54px] cursor-pointer grid-cols-[58px_minmax(0,1fr)] border-b border-white/[.07] transition last:border-b-0 hover:bg-cyan-500/[.04] ${isNow ? "bg-cyan-500/[.04]" : ""}`}>
-        <div className={`p-2 text-right text-[10px] font-bold ${isNow ? "text-cyan-300" : "text-slate-500"}`}>{hourLabel(hour)}</div>
-        <div className="relative border-l border-white/10 p-1.5">{isNow ? <span className="absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-cyan-400"/> : null}{rows.map((event) => { const mapsUrl = eventMapsUrl(event); const deepLink = eventDeepLink(event); const editable = !isExternal(event.source); return <div key={event.id} onClick={(click) => click.stopPropagation()} className={`mb-1 flex items-center gap-2 rounded-lg border px-2.5 py-2 ${sourceTone(event.source)}`}><button type="button" onClick={() => editable && onEdit(event)} className="min-w-0 flex-1 text-left"><span className="block truncate text-[11px] font-black">{event.title}</span><span className="block text-[9px] opacity-70">{new Date(event.start_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}{event.end_at ? ` – ${new Date(event.end_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : ""}</span></button>{editable ? <button type="button" onClick={() => onEdit(event)} className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-current/20" aria-label={`Edit ${event.title}`}><Pencil className="h-3.5 w-3.5"/></button> : null}{deepLink ? <a href={deepLink} className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-current/20" aria-label={`Open ${event.title}`}><ExternalLink className="h-3.5 w-3.5"/></a> : null}{mapsUrl ? <a href={mapsUrl} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1 rounded-md border border-current/20 px-2 py-1 text-[9px] font-black"><MapPin className="h-3 w-3"/>Maps</a> : null}</div>; })}</div>
-      </div>;
-    })}</div>
-  </div>;
+  return (
+    <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/15">
+      {allDay.length ? <div className="grid grid-cols-[58px_minmax(0,1fr)] border-b border-white/10"><div className="p-2 text-right text-[9px] font-black uppercase text-slate-500">All day</div><div className="space-y-1.5 border-l border-white/10 p-2">{allDay.map((event) => <CalendarEventBlock key={event.id} event={event} conflict={conflictIds.has(event.id)} onEdit={onEdit} onServiceResponse={onServiceResponse} onResolveConflict={onResolveConflict} onToggleTask={onToggleTask} />)}</div></div> : null}
+      {hours.map((hour) => {
+        const rows = timed.filter((event) => { const start = new Date(event.start_at); return ymd(start) === ymd(day) && start.getHours() === hour; });
+        const isNow = ymd(day) === ymd() && new Date().getHours() === hour;
+        return (
+          <div key={hour} role="button" tabIndex={0} onClick={() => onCreate(day, hour)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onCreate(day, hour); }} className={`grid min-h-[58px] cursor-pointer grid-cols-[58px_minmax(0,1fr)] border-b border-white/[.07] transition last:border-b-0 hover:bg-cyan-500/[.04] ${isNow ? "bg-cyan-500/[.04]" : ""}`}>
+            <div className={`p-2 text-right text-[10px] font-bold ${isNow ? "text-cyan-300" : "text-slate-500"}`}>{hourLabel(hour)}</div>
+            <div className="relative space-y-1.5 border-l border-white/10 p-1.5" onClick={(click) => click.stopPropagation()}>{isNow ? <span className="absolute -left-1 top-4 h-2 w-2 rounded-full bg-cyan-400" /> : null}{rows.map((event) => <CalendarEventBlock key={event.id} event={event} conflict={conflictIds.has(event.id)} onEdit={onEdit} onServiceResponse={onServiceResponse} onResolveConflict={onResolveConflict} onToggleTask={onToggleTask} />)}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function MonthCalendar({ month, events, onSelectDay }) {
   const first = startOfMonthGrid(month);
   const days = Array.from({ length: 42 }, (_, index) => addDays(first, index));
   const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  return <div className="mt-4 overflow-hidden rounded-2xl border border-white/10">
-    <div className="grid grid-cols-7 border-b border-white/10 bg-black/20">{weekdays.map((day) => <div key={day} className="p-2 text-center text-[9px] font-black uppercase text-slate-500">{day.slice(0, 1)}<span className="hidden sm:inline">{day.slice(1)}</span></div>)}</div>
-    <div className="grid grid-cols-7">{days.map((day) => {
-      const dayStart = new Date(`${ymd(day)}T00:00:00`); const dayEnd = new Date(`${ymd(day)}T23:59:59`);
-      const rows = events.filter((event) => { const start = new Date(event.start_at); const end = event.end_at ? new Date(event.end_at) : start; return start <= dayEnd && end >= dayStart; });
-      const inMonth = day.getMonth() === month.getMonth(); const isToday = ymd(day) === ymd();
-      return <button type="button" key={ymd(day)} onClick={() => onSelectDay(day)} className={`min-h-[72px] border-b border-r border-white/[.07] p-1.5 text-left sm:min-h-24 sm:p-2 ${inMonth ? "bg-white/[.015]" : "bg-black/20 opacity-40"}`}>
-        <span className={`grid h-6 w-6 place-items-center rounded-full text-[10px] font-black ${isToday ? "bg-cyan-400 text-slate-950" : "text-slate-300"}`}>{day.getDate()}</span>
-        <span className={`mt-2 block h-1.5 w-1.5 rounded-full ${rows.length ? "bg-violet-400" : "bg-emerald-400/45"}`} />
-        <span className="mt-1 block text-[8px] font-bold text-slate-500">{rows.length ? `${rows.length} blocked` : "Open"}</span>
-      </button>;
-    })}</div>
-  </div>;
-}
-
-function ConnectionSummary({ data, onOpen, onRefresh, loading }) {
-  const connections = data?.connections || [];
-  const enabled = connections.filter((row) => row.enabled !== false && row.connected !== false);
   return (
-    <section className="rounded-[1.5rem] border border-cyan-400/20 bg-gradient-to-br from-cyan-500/10 via-slate-950/75 to-violet-500/10 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div><div className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-200">Connected calendars</div><div className="mt-1 text-2xl font-black text-white">{enabled.length}</div></div>
-        <button type="button" onClick={onRefresh} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/[.04] text-slate-300"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /></button>
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-        <div className="rounded-xl border border-cyan-400/15 bg-cyan-500/[.06] p-3"><div className="text-slate-500">Google</div><div className="mt-1 font-black text-cyan-100">{enabled.filter((row) => row.provider === "GOOGLE").length}</div></div>
-        <div className="rounded-xl border border-violet-400/15 bg-violet-500/[.06] p-3"><div className="text-slate-500">Outlook</div><div className="mt-1 font-black text-violet-100">{enabled.filter((row) => row.provider === "MICROSOFT").length}</div></div>
-      </div>
-      <button type="button" onClick={onOpen} className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-500/10 px-3 text-xs font-black text-cyan-100"><Link2 className="h-4 w-4" />Manage calendars</button>
-    </section>
+    <div className="mt-4 overflow-hidden rounded-2xl border border-white/10">
+      <div className="grid grid-cols-7 border-b border-white/10 bg-black/20">{weekdays.map((day) => <div key={day} className="p-2 text-center text-[9px] font-black uppercase text-slate-500">{day.slice(0, 1)}<span className="hidden sm:inline">{day.slice(1)}</span></div>)}</div>
+      <div className="grid grid-cols-7">{days.map((day) => {
+        const dayStart = new Date(`${ymd(day)}T00:00:00`);
+        const dayEnd = new Date(`${ymd(day)}T23:59:59`);
+        const rows = events.filter((event) => { const start = new Date(event.start_at); const end = event.end_at ? new Date(event.end_at) : start; return start <= dayEnd && end >= dayStart; });
+        const taskCount = rows.filter(isTask).length;
+        const inMonth = day.getMonth() === month.getMonth();
+        const isToday = ymd(day) === ymd();
+        return <button type="button" key={ymd(day)} onClick={() => onSelectDay(day)} className={`min-h-[78px] border-b border-r border-white/[.07] p-1.5 text-left sm:min-h-24 sm:p-2 ${inMonth ? "bg-white/[.015]" : "bg-black/20 opacity-40"}`}><span className={`grid h-6 w-6 place-items-center rounded-full text-[10px] font-black ${isToday ? "bg-cyan-400 text-slate-950" : "text-slate-300"}`}>{day.getDate()}</span><div className="mt-2 flex items-center gap-1"><span className={`h-1.5 w-1.5 rounded-full ${rows.length ? "bg-cyan-400" : "bg-emerald-400/45"}`} />{taskCount ? <span className="h-1.5 w-1.5 rounded-full bg-violet-400" /> : null}</div><span className="mt-1 block text-[8px] font-bold text-slate-500">{rows.length ? `${rows.length} blocked${taskCount ? ` · ${taskCount} task${taskCount === 1 ? "" : "s"}` : ""}` : "Open"}</span></button>;
+      })}</div>
+    </div>
   );
 }
 
 function QuickCapture({ text, setText, onParse, onVoice, listening }) {
   return (
-    <section className="rounded-[1.6rem] border border-violet-400/20 bg-[linear-gradient(145deg,rgba(76,29,149,.16),rgba(2,6,23,.88))] p-4">
-      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em] text-violet-200"><WandSparkles className="h-4 w-4" />Quick capture</div>
-      <p className="mt-2 text-xs leading-5 text-slate-400">Paste or say an appointment. SYNC will prepare the event for review before saving.</p>
-      <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} placeholder="Dentist Thursday at 10:30 AM at 123 Main St" className="mt-3 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/80 p-3 text-sm text-white outline-none placeholder:text-slate-600" />
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <button type="button" onClick={onParse} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-3 text-xs font-black text-white"><ClipboardPaste className="h-4 w-4" />Prepare event</button>
-        <button type="button" onClick={onVoice} className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-black ${listening ? "border-rose-400/30 bg-rose-500/10 text-rose-100" : "border-white/10 bg-white/[.04] text-slate-200"}`}><Mic className="h-4 w-4" />{listening ? "Listening…" : "Voice"}</button>
-      </div>
+    <section className="rounded-[1.5rem] border border-violet-400/20 bg-violet-500/[.05] p-4">
+      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em] text-violet-200"><WandSparkles className="h-4 w-4" />SYNC quick capture</div>
+      <p className="mt-1 text-xs text-slate-400">Say or paste “Dentist Thursday at 10:30 AM at 123 Main St.”</p>
+      <div className="mt-3 flex gap-2"><input value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") onParse(); }} placeholder="Add something to my day…" className="h-11 min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none placeholder:text-slate-600" /><button type="button" onClick={onParse} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 text-white"><Sparkles className="h-4 w-4" /></button><button type="button" onClick={onVoice} className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl border ${listening ? "border-rose-400/30 bg-rose-500/10 text-rose-100" : "border-white/10 bg-white/[.04] text-slate-200"}`}><Mic className="h-4 w-4" /></button></div>
+    </section>
+  );
+}
+
+function TaskTray({ tasks, onEdit, onToggleTask }) {
+  return (
+    <section className="rounded-[1.5rem] border border-violet-400/20 bg-violet-500/[.04] p-4">
+      <div className="flex items-center justify-between gap-3"><div><div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em] text-violet-200"><ListTodo className="h-4 w-4" />Task tray</div><p className="mt-1 text-xs text-slate-500">Flexible work SYNC can reason around your fixed appointments.</p></div><span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-2.5 py-1 text-[10px] font-black text-violet-100">{tasks.filter((task) => !taskDone(task)).length} open</span></div>
+      <div className="mt-3 grid gap-2 md:grid-cols-2">{tasks.length ? tasks.slice(0, 6).map((task) => <div key={task.id} className={`rounded-xl border border-white/10 bg-black/20 p-3 ${taskDone(task) ? "opacity-50" : ""}`}><button type="button" onClick={() => onEdit(task)} className="w-full text-left"><div className={`truncate text-xs font-black text-white ${taskDone(task) ? "line-through" : ""}`}>{task.title}</div><div className="mt-1 text-[10px] text-slate-500">{new Date(task.start_at).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} · {priorityLabel(task?.metadata?.task_priority)}{task?.metadata?.fixed === false ? " · Flexible" : " · Fixed"}</div></button><div className="mt-2"><ActionButton onClick={() => onToggleTask(task)} tone={taskDone(task) ? "slate" : "emerald"}><Check className="h-3 w-3" />{taskDone(task) ? "Reopen" : "Done"}</ActionButton></div></div>) : <div className="text-xs text-slate-500">No tasks yet. Add one beside Add event.</div>}</div>
     </section>
   );
 }
@@ -304,7 +409,7 @@ export default function CalendarPage() {
   const [editingEvent, setEditingEvent] = useState(null);
   const [captureText, setCaptureText] = useState("");
   const [listening, setListening] = useState(false);
-  const [draft, setDraft] = useState(blankDraft);
+  const [draft, setDraft] = useState(() => blankDraft("EVENT"));
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
@@ -312,8 +417,8 @@ export default function CalendarPage() {
     try {
       const response = await api.get("/personal-calendar/events/", { params: { status: "ACTIVE" } });
       setEvents(safeList(response.data));
-    } catch (e) {
-      setError(e?.response?.data?.detail || "Could not load your SyncWorks Calendar.");
+    } catch (loadError) {
+      setError(loadError?.response?.data?.detail || "Could not load your SyncWorks Calendar.");
     } finally { setLoading(false); }
   }, []);
 
@@ -325,7 +430,6 @@ export default function CalendarPage() {
   }, []);
 
   useEffect(() => { loadEvents(); loadConnections(); }, [loadEvents, loadConnections]);
-
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const oauth = params.get("calendar_oauth");
@@ -341,55 +445,35 @@ export default function CalendarPage() {
   const filtered = useMemo(() => events.filter((event) => {
     if (filter === "ALL") return true;
     const source = String(event.source || "MANUAL").toUpperCase();
-    if (filter === "BUSINESS") return ["TICKET", "SOCIAL", "SYNC", "SYSTEM"].includes(source);
+    if (filter === "TASKS") return isTask(event);
     if (filter === "SERVICE") return source === "TICKET";
     if (filter === "HEALTH") return source === "HEALTH";
-    return ["MANUAL", "GOOGLE", "OUTLOOK", "MICROSOFT", "APPLE", "HEALTH"].includes(source);
+    if (filter === "BUSINESS") return ["TICKET", "SOCIAL", "SYNC", "SYSTEM"].includes(source);
+    return ["MANUAL", "GOOGLE", "OUTLOOK", "MICROSOFT", "APPLE"].includes(source) && !isTask(event);
   }).sort((a, b) => new Date(a.start_at) - new Date(b.start_at)), [events, filter]);
 
-  const nextEvent = useMemo(() => filtered.find((event) => new Date(event.start_at) >= new Date()) || null, [filtered]);
-  const upcoming = useMemo(() => filtered.filter((event) => new Date(event.start_at) >= new Date()).slice(0, 4), [filtered]);
+  const tasks = useMemo(() => events.filter(isTask).sort((a, b) => new Date(a.start_at) - new Date(b.start_at)), [events]);
+  const todayEvents = useMemo(() => events.filter((event) => { const start = new Date(`${ymd()}T00:00:00`); const end = new Date(`${ymd()}T23:59:59`); const eventStart = new Date(event.start_at); const eventEnd = event.end_at ? new Date(event.end_at) : eventStart; return eventStart <= end && eventEnd >= start; }), [events]);
+  const todayConflictIds = useMemo(() => conflictIdsFor(todayEvents), [todayEvents]);
+  const nextEvent = useMemo(() => events.filter((event) => !taskDone(event)).find((event) => new Date(event.start_at) >= new Date()) || null, [events]);
+  const pendingServices = useMemo(() => events.filter(hasPendingScheduleChange), [events]);
+  const enabledConnections = useMemo(() => (connections?.connections || []).filter((row) => row.enabled !== false && row.connected !== false), [connections]);
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)), [weekStart]);
-  const dailyEvents = useMemo(() => { const start = new Date(`${ymd(selectedDay)}T00:00:00`); const end = new Date(`${ymd(selectedDay)}T23:59:59`); return filtered.filter((event) => { const eventStart = new Date(event.start_at); const eventEnd = event.end_at ? new Date(event.end_at) : eventStart; return eventStart <= end && eventEnd >= start; }); }, [filtered, selectedDay]);
+  const dailyEvents = useMemo(() => {
+    const start = new Date(`${ymd(selectedDay)}T00:00:00`);
+    const end = new Date(`${ymd(selectedDay)}T23:59:59`);
+    return filtered.filter((event) => { const eventStart = new Date(event.start_at); const eventEnd = event.end_at ? new Date(event.end_at) : eventStart; return eventStart <= end && eventEnd >= start; });
+  }, [filtered, selectedDay]);
+  const dailyConflictIds = useMemo(() => conflictIdsFor(dailyEvents), [dailyEvents]);
 
-  function prepareCapture() {
-    const parsed = parseSmartCapture(captureText);
-    if (!parsed) return;
-    setDraft(parsed);
-    setShowComposer(true);
-    setNotice("SYNC prepared this appointment. Review the details, then save it.");
-  }
-
-  function startVoiceCapture() {
-    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Recognition) {
-      setError("Voice capture is not supported by this browser. Paste the appointment text instead.");
-      return;
-    }
-    const recognition = new Recognition();
-    recognition.lang = "en-US";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    setListening(true);
-    recognition.onresult = (event) => {
-      const transcript = event.results?.[0]?.[0]?.transcript || "";
-      setCaptureText(transcript);
-      const parsed = parseSmartCapture(transcript);
-      if (parsed) { setDraft(parsed); setShowComposer(true); }
-    };
-    recognition.onerror = () => setError("Could not capture that voice input. Try again or paste the appointment text.");
-    recognition.onend = () => setListening(false);
-    recognition.start();
-  }
-
-  function openNewEvent() {
+  function openNew(kind = "EVENT") {
     setEditingEvent(null);
-    setDraft(blankDraft());
+    setDraft(blankDraft(kind));
     setShowComposer(true);
+    window.requestAnimationFrame(() => document.getElementById("calendar-event-composer")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
-
   function openEventAt(day, hour) {
-    const next = blankDraft();
+    const next = blankDraft("EVENT");
     next.date = ymd(day);
     next.end_date = ymd(day);
     next.time = `${pad(hour)}:00`;
@@ -400,23 +484,60 @@ export default function CalendarPage() {
     setShowComposer(true);
     window.requestAnimationFrame(() => document.getElementById("calendar-event-composer")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
-
   function editEvent(event) {
+    if (!editableEvent(event)) return;
     setEditingEvent(event);
     setDraft(draftFromEvent(event));
     setShowComposer(true);
     window.requestAnimationFrame(() => document.getElementById("calendar-event-composer")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
+  function prepareCapture() {
+    const parsed = parseSmartCapture(captureText);
+    if (!parsed) return;
+    setEditingEvent(null);
+    setDraft(parsed);
+    setShowComposer(true);
+    setNotice("SYNC prepared this appointment. Review the details, then save it.");
+  }
+  function startVoiceCapture() {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) { setError("Voice capture is not supported by this browser. Paste the appointment text instead."); return; }
+    const recognition = new Recognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    setListening(true);
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript || "";
+      setCaptureText(transcript);
+      const parsed = parseSmartCapture(transcript);
+      if (parsed) { setEditingEvent(null); setDraft(parsed); setShowComposer(true); }
+    };
+    recognition.onerror = () => setError("Could not capture that voice input. Try again or paste the appointment text.");
+    recognition.onend = () => setListening(false);
+    recognition.start();
+  }
 
   async function saveEvent() {
-    const isEditing = Boolean(editingEvent);
     const title = String(draft.title || "").trim();
-    if (!title) return;
+    if (!title) { setError("Add a title first."); return; }
     const start = new Date(`${draft.date}T${draft.all_day ? "00:00" : draft.time || "09:00"}`);
     const end = new Date(`${draft.end_date || draft.date}T${draft.all_day ? "23:59" : draft.end_time || draft.time || "10:00"}`);
     if (end < start) { setError("The event end must be after its start."); return; }
     setError("");
     try {
+      const metadata = {
+        ...(editingEvent?.metadata || {}),
+        entity_type: draft.kind,
+        weather_dependent: Boolean(draft.weather_dependent),
+        fixed: !draft.flexible,
+      };
+      if (draft.kind === "TASK") {
+        metadata.task_status = draft.task_status || "OPEN";
+        metadata.task_priority = draft.task_priority || "NORMAL";
+        metadata.task_deadline = end.toISOString();
+        metadata.task_duration_minutes = durationMinutes(start, end);
+      }
       const payload = {
         title,
         description: draft.description,
@@ -435,18 +556,67 @@ export default function CalendarPage() {
         reminder_minutes: Number(draft.reminder_minutes || 30),
         recurrence_rule: recurrenceRule(draft.recurrence),
         source: "MANUAL",
-        metadata: { ...(editingEvent?.metadata || {}), weather_dependent: Boolean(draft.weather_dependent), fixed: !draft.flexible },
+        metadata,
       };
       if (editingEvent) await api.patch(`/personal-calendar/events/${editingEvent.id}/`, payload);
       else await api.post("/personal-calendar/events/", payload);
-      setDraft(blankDraft());
+      setDraft(blankDraft("EVENT"));
       setEditingEvent(null);
       setCaptureText("");
       setShowComposer(false);
-      setNotice(isEditing ? "Event updated." : "Event added to your SyncWorks Calendar and SYNC context.");
+      setNotice(editingEvent ? `${draft.kind === "TASK" ? "Task" : "Event"} updated.` : `${draft.kind === "TASK" ? "Task" : "Event"} added to your master calendar and SYNC context.`);
       await loadEvents();
-    } catch (e) { setError(e?.response?.data?.detail || `Could not ${isEditing ? "update" : "add"} this event.`); }
+    } catch (saveError) { setError(saveError?.response?.data?.detail || "Could not save this calendar item."); }
   }
+
+  async function cancelEditingEvent() {
+    if (!editingEvent) return;
+    try {
+      await api.post(`/personal-calendar/events/${editingEvent.id}/cancel/`);
+      setShowComposer(false);
+      setEditingEvent(null);
+      setNotice("Calendar item removed from your active schedule.");
+      await loadEvents();
+    } catch (cancelError) { setError(cancelError?.response?.data?.detail || "Could not remove this item."); }
+  }
+
+  async function respondToService(event, response) {
+    try {
+      await api.post(`/personal-calendar/events/${event.id}/schedule-response/`, { response, note: response === "REQUEST_CHANGE" ? "Customer requested a different time from the SyncWorks Calendar." : "" });
+      setNotice(response === "ACCEPT" ? "Service time accepted." : "The business can now see that you requested a different time.");
+      await loadEvents();
+    } catch (responseError) { setError(responseError?.response?.data?.detail || "Could not save your service schedule response."); }
+  }
+
+  async function resolveFlexibleConflict(event) {
+    if (!editableEvent(event) || event?.metadata?.fixed !== false) return;
+    try {
+      const start = addMinutes(event.start_at, 60);
+      const end = addMinutes(event.end_at || event.start_at, 60);
+      await api.patch(`/personal-calendar/events/${event.id}/`, {
+        start_at: start.toISOString(),
+        end_at: end.toISOString(),
+        metadata: { ...(event.metadata || {}), last_sync_resolution: { action: "MOVE_60_MINUTES", at: new Date().toISOString() } },
+      });
+      setNotice(`${event.title} moved one hour to clear the conflict.`);
+      await loadEvents();
+    } catch (moveError) { setError(moveError?.response?.data?.detail || "Could not move that flexible item."); }
+  }
+
+  async function toggleTask(event) {
+    if (!editableEvent(event) || !isTask(event)) return;
+    const nextStatus = taskDone(event) ? "OPEN" : "DONE";
+    try {
+      await api.patch(`/personal-calendar/events/${event.id}/`, { metadata: { ...(event.metadata || {}), task_status: nextStatus, task_completed_at: nextStatus === "DONE" ? new Date().toISOString() : null } });
+      setNotice(nextStatus === "DONE" ? `${event.title} completed.` : `${event.title} reopened.`);
+      await loadEvents();
+    } catch (taskError) { setError(taskError?.response?.data?.detail || "Could not update that task."); }
+  }
+
+  const todayServices = todayEvents.filter((event) => String(event.source || "").toUpperCase() === "TICKET").length;
+  const todayWorkouts = todayEvents.filter((event) => String(event.source || "").toUpperCase() === "HEALTH").length;
+  const todayTasks = todayEvents.filter((event) => isTask(event) && !taskDone(event)).length;
+  const todayConflicts = todayConflictIds.size;
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">
@@ -455,69 +625,66 @@ export default function CalendarPage() {
         {notice ? <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-3 text-sm text-emerald-100">{notice}</div> : null}
         {error ? <div className="mb-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 p-3 text-sm text-rose-100">{error}</div> : null}
 
-        <div className="grid gap-4">
-          <aside className="hidden">
-            <ConnectionSummary data={connections} onOpen={() => setDrawerOpen(true)} onRefresh={() => { loadConnections(); loadEvents(); }} loading={connectionLoading || loading} />
-            <QuickCapture text={captureText} setText={setCaptureText} onParse={prepareCapture} onVoice={startVoiceCapture} listening={listening} />
-            <section className="rounded-[1.5rem] border border-white/10 bg-slate-950/60 p-3">
-              <div className="px-2 pb-2 text-[9px] font-black uppercase tracking-[.18em] text-slate-500">Show calendars</div>
-              {[["ALL", "Everything"], ["PERSONAL", "Personal"], ["BUSINESS", "Business"]].map(([value, label]) => (
-                <button key={value} type="button" onClick={() => setFilter(value)} className={`mb-1 flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-xs font-black ${filter === value ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100" : "border-transparent text-slate-400 hover:bg-white/[.04] hover:text-white"}`}><span>{label}</span><span className="h-2 w-2 rounded-full bg-current opacity-80" /></button>
-              ))}
-            </section>
-          </aside>
-
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
           <section className="min-w-0 space-y-4">
+            <section className="overflow-hidden rounded-[1.7rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,.18),transparent_38%),linear-gradient(145deg,rgba(8,47,73,.35),rgba(2,6,23,.92))] p-4 sm:p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em] text-cyan-200"><Sparkles className="h-4 w-4" />Today · connected day</div><h1 className="mt-2 text-xl font-black text-white sm:text-2xl">Your day, not just your events</h1><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">Appointments, service visits, workouts and flexible tasks share one schedule so SYNC can brief and optimize around what is actually happening.</p></div><a href="/sync?prompt=Give%20me%20my%20daily%20briefing%20and%20optimize%20my%20schedule%20today" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-500/10 px-3 text-[11px] font-black text-cyan-100"><Zap className="h-4 w-4" />SYNC day brief</a></div>
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">{[["Blocks", todayEvents.length, "text-cyan-100"], ["Tasks", todayTasks, "text-violet-100"], ["Services", todayServices, "text-blue-100"], ["Workouts", todayWorkouts, "text-emerald-100"], ["Conflicts", todayConflicts, todayConflicts ? "text-rose-100" : "text-slate-200"]].map(([label, value, tone]) => <div key={label} className="rounded-xl border border-white/10 bg-black/20 p-3"><div className="text-[9px] font-black uppercase tracking-[.12em] text-slate-500">{label}</div><div className={`mt-1 text-xl font-black ${tone}`}>{value}</div></div>)}</div>
+              {nextEvent ? <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/20 p-3"><div><div className="text-[9px] font-black uppercase tracking-[.14em] text-slate-500">Next up</div><div className="mt-1 text-sm font-black text-white">{nextEvent.title}</div><div className="mt-1 text-[10px] text-slate-400">{new Date(nextEvent.start_at).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div></div>{eventLocation(nextEvent) ? <a href={eventMapsUrl(nextEvent)} target="_blank" rel="noreferrer" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-white/10 px-2.5 text-[10px] font-black text-slate-200"><Route className="h-3.5 w-3.5" />Route</a> : null}</div> : null}
+            </section>
+
+            {pendingServices.length ? <section className="rounded-[1.5rem] border border-amber-400/25 bg-amber-500/[.06] p-4"><div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em] text-amber-200"><AlertTriangle className="h-4 w-4" />Service schedule changes</div><div className="mt-3 grid gap-2">{pendingServices.map((event) => <CalendarEventBlock key={event.id} event={event} conflict={false} onEdit={editEvent} onServiceResponse={respondToService} onResolveConflict={resolveFlexibleConflict} onToggleTask={toggleTask} />)}</div></section> : null}
+
+            <QuickCapture text={captureText} setText={setCaptureText} onParse={prepareCapture} onVoice={startVoiceCapture} listening={listening} />
+
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-cyan-400/15 bg-slate-950/60 p-3">
-              <div className="flex gap-2"><button type="button" onClick={openNewEvent} className="inline-flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-3 text-[11px] font-black text-white"><Plus className="h-4 w-4" />Add event</button><button type="button" onClick={() => setDrawerOpen(true)} className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[.04] px-3 text-[11px] font-black text-slate-200"><Link2 className="h-4 w-4" />Connect</button></div>
-              <div className="flex items-center gap-1"><button type="button" onClick={() => setDrawerOpen(true)} className="h-9 rounded-xl px-2.5 text-[10px] font-black text-cyan-200">Manage</button><button type="button" onClick={() => { loadConnections(); loadEvents(); }} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-400"><RefreshCw className={`h-4 w-4 ${connectionLoading || loading ? "animate-spin" : ""}`} /></button></div>
+              <div className="flex flex-wrap gap-2"><button type="button" onClick={() => openNew("EVENT")} className="inline-flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-3 text-[11px] font-black text-white"><Plus className="h-4 w-4" />Add event</button><button type="button" onClick={() => openNew("TASK")} className="inline-flex h-10 items-center gap-2 rounded-xl border border-violet-400/20 bg-violet-500/10 px-3 text-[11px] font-black text-violet-100"><ListTodo className="h-4 w-4" />Add task</button><button type="button" onClick={() => setDrawerOpen(true)} className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[.04] px-3 text-[11px] font-black text-slate-200"><Link2 className="h-4 w-4" />Connect</button></div>
+              <div className="flex items-center gap-2"><span className="text-[10px] font-black text-slate-500">{enabledConnections.length} connected</span><button type="button" onClick={() => { loadConnections(); loadEvents(); }} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-400"><RefreshCw className={`h-4 w-4 ${connectionLoading || loading ? "animate-spin" : ""}`} /></button></div>
             </div>
 
-            {showComposer ? <section id="calendar-event-composer" className="scroll-mt-24 rounded-[1.4rem] border border-cyan-400/20 bg-cyan-500/[.04] p-3 sm:rounded-[1.7rem] sm:p-5">
-              <div className="flex items-center gap-2 text-sm font-black text-white">{editingEvent ? <Pencil className="h-4 w-4 text-cyan-200" /> : <Sparkles className="h-4 w-4 text-cyan-200" />}{editingEvent ? "Edit event" : "Create event"}</div>
-              <div className="mt-3 grid gap-2.5 sm:mt-4 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
-                <label className="text-xs text-slate-400 lg:col-span-2">Title<input value={draft.title} onChange={(e) => setDraft((v) => ({ ...v, title: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
-                <label className="text-xs text-slate-400">Date<input type="date" value={draft.date} onChange={(e) => setDraft((v) => ({ ...v, date: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
-                <label className="text-xs text-slate-400">Start time<input disabled={draft.all_day} type="time" value={draft.time} onChange={(e) => setDraft((v) => ({ ...v, time: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none disabled:opacity-40" /></label>
-                <label className="text-xs text-slate-400">End date<input type="date" min={draft.date} value={draft.end_date} onChange={(e) => setDraft((v) => ({ ...v, end_date: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
-                <label className="text-xs text-slate-400">End time<input disabled={draft.all_day} type="time" value={draft.end_time} onChange={(e) => setDraft((v) => ({ ...v, end_time: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none disabled:opacity-40" /></label>
-                <label className="flex min-h-11 items-center gap-3 rounded-xl border border-white/10 bg-slate-950/80 px-3 text-xs font-bold text-slate-300"><input type="checkbox" checked={draft.all_day} onChange={(e) => setDraft((v) => ({ ...v, all_day: e.target.checked }))} className="h-4 w-4 accent-cyan-400" />All-day event</label>
-                <div className="sm:col-span-2 lg:col-span-4"><PlaceSearchField value={draft.location_name || draft.address_line1} onChange={(value) => setDraft((v) => ({ ...v, location_name: value }))} onSelect={(place) => setDraft((v) => ({ ...v, location_name: place.location_name, address_line1: place.address_line1, city: place.city || "", state: place.state || "", postal_code: place.postal_code || "", latitude: place.latitude, longitude: place.longitude }))}/></div>
-                <label className="text-xs text-slate-400 lg:col-span-2">Street address<input value={draft.address_line1} onChange={(e) => setDraft((v) => ({ ...v, address_line1: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
-                <label className="text-xs text-slate-400">City<input value={draft.city} onChange={(e) => setDraft((v) => ({ ...v, city: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
-                <div className="grid grid-cols-2 gap-2"><label className="text-xs text-slate-400">State<input value={draft.state} onChange={(e) => setDraft((v) => ({ ...v, state: e.target.value.toUpperCase() }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label><label className="text-xs text-slate-400">ZIP<input value={draft.postal_code} onChange={(e) => setDraft((v) => ({ ...v, postal_code: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label></div>
-                <label className="flex min-h-11 items-center gap-3 rounded-xl border border-amber-400/15 bg-amber-500/[.04] px-3 text-xs font-bold text-amber-100"><input type="checkbox" checked={draft.weather_dependent} onChange={(e) => setDraft((v) => ({ ...v, weather_dependent: e.target.checked }))} className="h-4 w-4 accent-amber-400" />Weather aware</label>
-                <label className="flex min-h-11 items-center gap-3 rounded-xl border border-violet-400/15 bg-violet-500/[.04] px-3 text-xs font-bold text-violet-100"><input type="checkbox" checked={draft.flexible} onChange={(e) => setDraft((v) => ({ ...v, flexible: e.target.checked }))} className="h-4 w-4 accent-violet-400" />Flexible — SYNC may suggest a better time</label>
-                <label className="text-xs text-slate-400">Arrive early<input type="number" min="0" max="240" value={draft.arrival_buffer_minutes} onChange={(e) => setDraft((v) => ({ ...v, arrival_buffer_minutes: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
-                <label className="text-xs text-slate-400">Reminder<input type="number" min="0" value={draft.reminder_minutes} onChange={(e) => setDraft((v) => ({ ...v, reminder_minutes: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
-                <label className="text-xs text-slate-400">Repeat<select value={draft.recurrence} onChange={(e) => setDraft((v) => ({ ...v, recurrence: e.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none"><option value="NONE">Does not repeat</option><option value="DAILY">Daily</option><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option></select></label>
-                <label className="text-xs text-slate-400 sm:col-span-2 lg:col-span-4">Notes<textarea rows={2} value={draft.description} onChange={(e) => setDraft((v) => ({ ...v, description: e.target.value }))} className="mt-1 w-full resize-none rounded-xl border border-white/10 bg-slate-950/80 p-3 text-sm text-white outline-none" /></label>
-                <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-4"><button type="button" onClick={() => { setShowComposer(false); setEditingEvent(null); }} className="min-h-10 flex-1 rounded-xl border border-white/10 bg-white/[.04] px-3 text-[11px] font-black text-slate-300 sm:min-h-11 sm:px-4 sm:text-xs">Close</button><button type="button" onClick={saveEvent} className="min-h-10 flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-3 text-[11px] font-black text-white sm:min-h-11 sm:px-4 sm:text-xs">{editingEvent ? "Save changes" : "Save event"}</button></div>
+            {showComposer ? <section id="calendar-event-composer" className="scroll-mt-24 rounded-[1.5rem] border border-cyan-400/20 bg-cyan-500/[.04] p-4 sm:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2 text-sm font-black text-white">{draft.kind === "TASK" ? <ListTodo className="h-4 w-4 text-violet-200" /> : editingEvent ? <Pencil className="h-4 w-4 text-cyan-200" /> : <Sparkles className="h-4 w-4 text-cyan-200" />}{editingEvent ? `Edit ${draft.kind === "TASK" ? "task" : "event"}` : `Create ${draft.kind === "TASK" ? "task" : "event"}`}</div>{!editingEvent ? <div className="flex rounded-xl border border-white/10 bg-black/20 p-1"><button type="button" onClick={() => setDraft((current) => ({ ...blankDraft("EVENT"), title: current.title, description: current.description }))} className={`rounded-lg px-3 py-1.5 text-[10px] font-black ${draft.kind === "EVENT" ? "bg-cyan-500/15 text-cyan-100" : "text-slate-500"}`}>Event</button><button type="button" onClick={() => setDraft((current) => ({ ...blankDraft("TASK"), title: current.title, description: current.description }))} className={`rounded-lg px-3 py-1.5 text-[10px] font-black ${draft.kind === "TASK" ? "bg-violet-500/15 text-violet-100" : "text-slate-500"}`}>Task</button></div> : null}</div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <label className="text-xs text-slate-400 lg:col-span-2">Title<input value={draft.title} onChange={(event) => setDraft((value) => ({ ...value, title: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
+                <label className="text-xs text-slate-400">Date<input type="date" value={draft.date} onChange={(event) => setDraft((value) => ({ ...value, date: event.target.value, end_date: value.end_date < event.target.value ? event.target.value : value.end_date }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
+                <label className="text-xs text-slate-400">Start time<input disabled={draft.all_day} type="time" value={draft.time} onChange={(event) => setDraft((value) => ({ ...value, time: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none disabled:opacity-40" /></label>
+                <label className="text-xs text-slate-400">End date<input type="date" min={draft.date} value={draft.end_date} onChange={(event) => setDraft((value) => ({ ...value, end_date: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
+                <label className="text-xs text-slate-400">End time<input disabled={draft.all_day} type="time" value={draft.end_time} onChange={(event) => setDraft((value) => ({ ...value, end_time: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none disabled:opacity-40" /></label>
+                {draft.kind === "EVENT" ? <label className="flex min-h-11 items-center gap-3 rounded-xl border border-white/10 bg-slate-950/80 px-3 text-xs font-bold text-slate-300"><input type="checkbox" checked={draft.all_day} onChange={(event) => setDraft((value) => ({ ...value, all_day: event.target.checked }))} className="h-4 w-4 accent-cyan-400" />All-day event</label> : <label className="text-xs text-slate-400">Priority<select value={draft.task_priority} onChange={(event) => setDraft((value) => ({ ...value, task_priority: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none"><option value="LOW">Low</option><option value="NORMAL">Normal</option><option value="HIGH">High</option></select></label>}
+                <label className="flex min-h-11 items-center gap-3 rounded-xl border border-violet-400/15 bg-violet-500/[.04] px-3 text-xs font-bold text-violet-100"><input type="checkbox" checked={draft.flexible} onChange={(event) => setDraft((value) => ({ ...value, flexible: event.target.checked }))} className="h-4 w-4 accent-violet-400" />Flexible — SYNC may suggest a better time</label>
+                <div className="sm:col-span-2 lg:col-span-4"><PlaceSearchField value={draft.location_name || draft.address_line1} onChange={(value) => setDraft((current) => ({ ...current, location_name: value }))} onSelect={(place) => setDraft((current) => ({ ...current, location_name: place.location_name, address_line1: place.address_line1, city: place.city || "", state: place.state || "", postal_code: place.postal_code || "", latitude: place.latitude, longitude: place.longitude }))} /></div>
+                <label className="text-xs text-slate-400 lg:col-span-2">Street address<input value={draft.address_line1} onChange={(event) => setDraft((value) => ({ ...value, address_line1: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
+                <label className="text-xs text-slate-400">City<input value={draft.city} onChange={(event) => setDraft((value) => ({ ...value, city: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
+                <div className="grid grid-cols-2 gap-2"><label className="text-xs text-slate-400">State<input value={draft.state} onChange={(event) => setDraft((value) => ({ ...value, state: event.target.value.toUpperCase() }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label><label className="text-xs text-slate-400">ZIP<input value={draft.postal_code} onChange={(event) => setDraft((value) => ({ ...value, postal_code: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label></div>
+                {draft.kind === "EVENT" ? <label className="flex min-h-11 items-center gap-3 rounded-xl border border-amber-400/15 bg-amber-500/[.04] px-3 text-xs font-bold text-amber-100"><input type="checkbox" checked={draft.weather_dependent} onChange={(event) => setDraft((value) => ({ ...value, weather_dependent: event.target.checked }))} className="h-4 w-4 accent-amber-400" />Weather aware</label> : null}
+                <label className="text-xs text-slate-400">Arrive early<input type="number" min="0" max="240" value={draft.arrival_buffer_minutes} onChange={(event) => setDraft((value) => ({ ...value, arrival_buffer_minutes: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
+                <label className="text-xs text-slate-400">Reminder<input type="number" min="0" value={draft.reminder_minutes} onChange={(event) => setDraft((value) => ({ ...value, reminder_minutes: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
+                <label className="text-xs text-slate-400">Repeat<select value={draft.recurrence} onChange={(event) => setDraft((value) => ({ ...value, recurrence: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none"><option value="NONE">Does not repeat</option><option value="DAILY">Daily</option><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option></select></label>
+                <label className="text-xs text-slate-400 sm:col-span-2 lg:col-span-4">Notes<textarea rows={2} value={draft.description} onChange={(event) => setDraft((value) => ({ ...value, description: event.target.value }))} className="mt-1 w-full resize-none rounded-xl border border-white/10 bg-slate-950/80 p-3 text-sm text-white outline-none" /></label>
+                <div className="flex flex-wrap items-end gap-2 sm:col-span-2 lg:col-span-4">{editingEvent ? <button type="button" onClick={cancelEditingEvent} className="min-h-10 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 text-[11px] font-black text-rose-100">Remove</button> : null}<button type="button" onClick={() => { setShowComposer(false); setEditingEvent(null); }} className="min-h-10 flex-1 rounded-xl border border-white/10 bg-white/[.04] px-4 text-[11px] font-black text-slate-300">Close</button><button type="button" onClick={saveEvent} className="min-h-10 flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 text-[11px] font-black text-white">{editingEvent ? "Save changes" : draft.kind === "TASK" ? "Save task" : "Save event"}</button></div>
               </div>
             </section> : null}
 
+            <TaskTray tasks={tasks} onEdit={editEvent} onToggleTask={toggleTask} />
+
             <section className="rounded-[1.7rem] border border-white/10 bg-slate-950/50 p-4 sm:p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-slate-500">Schedule</div><h2 className="mt-1 text-base font-black text-white">Your calendar</h2></div><div className="flex rounded-xl border border-white/10 bg-black/20 p-1">{[["month", "Month"], ["week", "Week"], ["daily", "Daily"]].map(([value, label]) => <button type="button" key={value} onClick={() => setView(value)} className={`rounded-lg px-2.5 py-2 text-[10px] font-black sm:px-3 sm:text-[11px] ${view === value ? "bg-white/10 text-white" : "text-slate-500"}`}>{label}</button>)}</div></div>
-              <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1">{[["ALL", "Everything"], ["PERSONAL", "Personal"], ["SERVICE", "Services"], ["HEALTH", "Health"], ["BUSINESS", "Business"]].map(([value, label]) => <button type="button" key={value} onClick={() => setFilter(value)} className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-black ${filter === value ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100" : "border-white/10 text-slate-500"}`}>{label}</button>)}</div>
+              <div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-slate-500">Schedule</div><h2 className="mt-1 text-base font-black text-white">Master calendar</h2></div><div className="flex rounded-xl border border-white/10 bg-black/20 p-1">{[["month", "Month"], ["week", "Week"], ["daily", "Daily"]].map(([value, label]) => <button type="button" key={value} onClick={() => setView(value)} className={`rounded-lg px-2.5 py-2 text-[10px] font-black sm:px-3 sm:text-[11px] ${view === value ? "bg-white/10 text-white" : "text-slate-500"}`}>{label}</button>)}</div></div>
+              <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1">{[["ALL", "Everything"], ["PERSONAL", "Personal"], ["TASKS", "Tasks"], ["SERVICE", "Services"], ["HEALTH", "Health"], ["BUSINESS", "Business"]].map(([value, label]) => <button type="button" key={value} onClick={() => setFilter(value)} className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-black ${filter === value ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100" : "border-white/10 text-slate-500"}`}>{label}</button>)}</div>
               <div className="mt-3 flex items-center justify-between"><button type="button" onClick={() => view === "month" ? setMonthStart(new Date(monthStart.getFullYear(), monthStart.getMonth() - 1, 1)) : view === "week" ? setWeekStart(addDays(weekStart, -7)) : setSelectedDay(addDays(selectedDay, -1))} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10"><ChevronLeft className="h-4 w-4" /></button><div className="text-xs font-black text-slate-300">{view === "month" ? monthStart.toLocaleDateString("en-US", { month: "long", year: "numeric" }) : view === "week" ? `Week of ${weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : selectedDay.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</div><button type="button" onClick={() => view === "month" ? setMonthStart(new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1)) : view === "week" ? setWeekStart(addDays(weekStart, 7)) : setSelectedDay(addDays(selectedDay, 1))} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10"><ChevronRight className="h-4 w-4" /></button></div>
-              {loading ? <div className="mt-5 text-sm text-slate-400">Loading calendar…</div> : view === "month" ? <MonthCalendar month={monthStart} events={filtered} onSelectDay={(day) => { setSelectedDay(day); setView("daily"); }}/> : view === "daily" ? <HourlyDayView day={selectedDay} events={dailyEvents} onCreate={openEventAt} onEdit={editEvent}/> : <div className="mt-4 grid gap-2 md:grid-cols-7">{weekDays.map((day) => { const dayStart = new Date(`${ymd(day)}T00:00:00`); const dayEnd = new Date(`${ymd(day)}T23:59:59`); const rows = filtered.filter((event) => { const start = new Date(event.start_at); const end = event.end_at ? new Date(event.end_at) : start; return start <= dayEnd && end >= dayStart; }); return <button type="button" onClick={() => { setSelectedDay(day); setView("daily"); }} key={ymd(day)} className={`rounded-2xl border p-3 text-left ${ymd(day) === ymd() ? "border-cyan-400/30 bg-cyan-500/[.06]" : "border-white/10 bg-white/[.025]"}`}><div className="flex items-baseline gap-2 md:block"><div className="text-sm font-black text-white">{day.toLocaleDateString("en-US", { weekday: "short" })}</div><div className="text-[11px] text-slate-500">{day.toLocaleDateString("en-US", { month: "numeric", day: "numeric" })}</div></div><div className={rows.length ? "mt-2 space-y-1.5" : ""}>{rows.slice(0, 3).map((event) => <div key={event.id} className={`rounded-lg border p-2 ${sourceTone(event.source)}`}><div className="truncate text-[10px] font-black">{event.title}</div><div className="text-[9px] opacity-70">{event.all_day ? "All day" : ymd(event.start_at) === ymd(day) ? new Date(event.start_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "Continues"}</div></div>)}{rows.length > 3 ? <div className="text-[9px] font-bold text-slate-500">+{rows.length - 3} more</div> : null}</div></button>; })}</div>}
+              {loading ? <div className="mt-5 text-sm text-slate-400">Loading calendar…</div> : view === "month" ? <MonthCalendar month={monthStart} events={filtered} onSelectDay={(day) => { setSelectedDay(day); setView("daily"); }} /> : view === "daily" ? <HourlyDayView day={selectedDay} events={dailyEvents} conflictIds={dailyConflictIds} onCreate={openEventAt} onEdit={editEvent} onServiceResponse={respondToService} onResolveConflict={resolveFlexibleConflict} onToggleTask={toggleTask} /> : <div className="mt-4 grid gap-2 md:grid-cols-7">{weekDays.map((day) => {
+                const dayStart = new Date(`${ymd(day)}T00:00:00`);
+                const dayEnd = new Date(`${ymd(day)}T23:59:59`);
+                const rows = filtered.filter((event) => { const start = new Date(event.start_at); const end = event.end_at ? new Date(event.end_at) : start; return start <= dayEnd && end >= dayStart; });
+                const conflicts = conflictIdsFor(rows);
+                return <div key={ymd(day)} className={`rounded-2xl border p-3 ${ymd(day) === ymd() ? "border-cyan-400/30 bg-cyan-500/[.06]" : "border-white/10 bg-white/[.025]"}`}><button type="button" onClick={() => { setSelectedDay(day); setView("daily"); }} className="w-full text-left"><div className="flex items-baseline gap-2 md:block"><div className="text-sm font-black text-white">{day.toLocaleDateString("en-US", { weekday: "short" })}</div><div className="text-[11px] text-slate-500">{day.toLocaleDateString("en-US", { month: "numeric", day: "numeric" })}</div></div></button><div className="mt-2 space-y-1.5">{rows.slice(0, 4).map((event) => <CalendarEventBlock key={event.id} event={event} conflict={conflicts.has(event.id)} onEdit={editEvent} onServiceResponse={respondToService} onResolveConflict={resolveFlexibleConflict} onToggleTask={toggleTask} />)}{rows.length > 4 ? <button type="button" onClick={() => { setSelectedDay(day); setView("daily"); }} className="text-[9px] font-black text-cyan-200">+{rows.length - 4} more</button> : null}</div></div>;
+              })}</div>}
             </section>
           </section>
 
-          <aside className="hidden">
-            <section className="rounded-[1.6rem] border border-amber-400/20 bg-amber-500/[.06] p-4">
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em] text-amber-200"><AlertTriangle className="h-4 w-4" />Needs attention</div>
-              {nextEvent ? <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-4"><div className="text-sm font-black text-white">{nextEvent.title}</div><div className="mt-1 text-xs text-slate-400">{new Date(nextEvent.start_at).toLocaleString()}</div>{eventLocation(nextEvent) ? <div className="mt-2 flex items-start gap-2 text-xs text-amber-100"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />{eventLocation(nextEvent)}</div> : <div className="mt-2 text-xs font-bold text-amber-200">No location added — travel timing unavailable.</div>}</div> : <div className="mt-3 text-sm text-slate-400">Nothing urgent on your calendar.</div>}
-            </section>
-
+          <aside className="space-y-4">
+            <section className="rounded-[1.5rem] border border-cyan-400/20 bg-cyan-500/[.04] p-4"><div className="flex items-center justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">Connections</div><div className="mt-1 text-2xl font-black text-white">{enabledConnections.length}</div></div><button type="button" onClick={() => setDrawerOpen(true)} className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 text-[10px] font-black text-cyan-100"><Link2 className="h-3.5 w-3.5" />Manage</button></div><div className="mt-3 grid grid-cols-2 gap-2 text-xs"><div className="rounded-xl border border-white/10 bg-black/20 p-3"><div className="text-slate-500">Google</div><div className="mt-1 font-black text-cyan-100">{enabledConnections.filter((row) => row.provider === "GOOGLE").length}</div></div><div className="rounded-xl border border-white/10 bg-black/20 p-3"><div className="text-slate-500">Outlook</div><div className="mt-1 font-black text-indigo-100">{enabledConnections.filter((row) => row.provider === "MICROSOFT").length}</div></div></div></section>
             <TravelWeatherAssistCard event={nextEvent} onUpdated={loadEvents} />
-
-            <section className="rounded-[1.6rem] border border-white/10 bg-slate-950/60 p-4">
-              <div className="text-[10px] font-black uppercase tracking-[.18em] text-slate-500">Coming up</div>
-              <div className="mt-3 space-y-2">{upcoming.length ? upcoming.map((event) => <div key={event.id} className="rounded-xl border border-white/10 bg-white/[.025] p-3"><div className="truncate text-xs font-black text-white">{event.title}</div><div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-500"><CalendarDays className="h-3 w-3" />{new Date(event.start_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div></div>) : <div className="text-sm text-slate-500">No upcoming events.</div>}</div>
-            </section>
-
-            <section className="rounded-[1.6rem] border border-rose-400/15 bg-rose-500/[.04] p-4"><div className="flex items-center gap-2 text-xs font-black text-rose-100"><Route className="h-4 w-4" />Traffic-aware calendar</div><p className="mt-2 text-xs leading-5 text-slate-400">Events with a location can feed live ETA, delay and leave-by guidance. Weather context is shown when available.</p></section>
+            <section className="rounded-[1.5rem] border border-white/10 bg-slate-950/60 p-4"><div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em] text-slate-500"><CalendarDays className="h-4 w-4" />Calendar rules</div><div className="mt-3 space-y-2 text-xs leading-5 text-slate-400"><p><span className="font-black text-white">Fixed</span> blocks are protected appointments.</p><p><span className="font-black text-violet-100">Flexible</span> blocks may be suggested or moved to clear conflicts.</p><p><span className="font-black text-blue-100">Services</span> update when the business changes the scheduled time and ask for your response.</p><p><span className="font-black text-emerald-100">Health</span> workouts appear as real time blocks with a direct Start Workout action.</p></div></section>
           </aside>
         </div>
       </main>
