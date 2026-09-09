@@ -1,6 +1,8 @@
 // src/components/customer-health/HealthAppHeader.jsx
-import React from "react";
+import React, { useEffect } from "react";
 import { ArrowLeft, Activity, Dumbbell, HeartPulse, Utensils, UserRound, Sparkles } from "lucide-react";
+
+const HEALTH_OPEN_ACTION_KEY = "syncworks_health_open_action_v1";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -23,6 +25,24 @@ export default function HealthAppHeader({ hasHealthAccess, syncStatus = "local",
     saved: "Saved",
     error: "Sync issue",
   };
+
+  useEffect(() => {
+    if (!hasHealthAccess || !onOpen) return undefined;
+
+    let target = "";
+    try {
+      target = window.localStorage.getItem(HEALTH_OPEN_ACTION_KEY) || "";
+      if (target) window.localStorage.removeItem(HEALTH_OPEN_ACTION_KEY);
+    } catch {
+      target = "";
+    }
+
+    if (!target) return undefined;
+
+    const resolvedTarget = target === "weight" ? "quick-log" : target;
+    const timer = window.setTimeout(() => onOpen(resolvedTarget), 120);
+    return () => window.clearTimeout(timer);
+  }, [hasHealthAccess, onOpen]);
 
   return (
     <div className="relative z-30 border-b border-cyan-400/10 bg-[#030816]/88 backdrop-blur-xl">
