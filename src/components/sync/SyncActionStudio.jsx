@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 
+import CalendarDailySnapshot from "../calendar/CalendarDailySnapshot";
 import {
   executeSyncTicketReply,
   getSyncAiErrorMessage,
@@ -200,6 +201,8 @@ export default function SyncActionStudio({
 
   return (
     <section className="rounded-[2rem] border border-violet-400/20 bg-slate-950/65 p-5">
+      {workspace === "personal" ? <CalendarDailySnapshot compact title="SYNC · Today" className="mb-4" /> : null}
+
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-3">
