@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import api from "../../api/client";
+import { trackSyncUsage } from "../../api/syncUsage";
 
 const CACHE_KEY = "syncworks_calendar_last_good_v3";
 const HEALTH_ACTION_KEY = "syncworks_health_open_action_v1";
@@ -104,10 +105,11 @@ export default function CalendarDailySnapshot({ compact = false, title = "Today 
   );
   const taskCount = todayEvents.filter(isTask).length;
   const serviceCount = todayEvents.filter((event) => sourceKey(event) === "TICKET").length;
-  const healthEvents = todayEvents.filter((event) => sourceKey(event) === "HEALTH");
+  const healthEvents = todayEvents.filter((event) => sourceKey(event) === "HEALTH" || String(event?.metadata?.category || "").toUpperCase() === "WORKOUT");
   const blocks = todayEvents.filter((event) => !isTask(event)).length;
 
   function openHealth(action) {
+    trackSyncUsage("HEALTH", "QUICK_ACTION", { category: action, source: "calendar_snapshot" });
     try { window.localStorage.setItem(HEALTH_ACTION_KEY, action); } catch { /* optional */ }
     window.location.assign("/customer/health");
   }
@@ -138,6 +140,7 @@ export default function CalendarDailySnapshot({ compact = false, title = "Today 
           },
         },
       });
+      trackSyncUsage("SOCIAL", "GROUP_ATTACHED_TO_EVENT", { completed: true, source: "calendar_snapshot" });
       setGroupNotice("Group attached to this event. Social can use this metadata when the group workflow is finished.");
       await load();
     } catch (error) {
@@ -147,45 +150,38 @@ export default function CalendarDailySnapshot({ compact = false, title = "Today 
     }
   }
 
+  const counters = [[blocks, "Blocks"], [taskCount, "Tasks"], [serviceCount, "Service"], [healthEvents.length, "Health"]];
+
   return (
-    <section className={`rounded-[1.35rem] border border-cyan-400/18 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,.08),transparent_35%),linear-gradient(145deg,rgba(8,18,35,.94),rgba(2,6,23,.96))] p-3 ${className}`}>
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[.16em] text-cyan-200"><CalendarDays className="h-3.5 w-3.5" />{title}</div>
-          <div className="mt-1 text-xs font-black text-white">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</div>
+    <section className={`rounded-[1.25rem] border border-cyan-400/18 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,.07),transparent_35%),linear-gradient(145deg,rgba(8,18,35,.94),rgba(2,6,23,.96))] p-3 ${className}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <CalendarDays className="h-3.5 w-3.5 shrink-0 text-cyan-200" />
+          <div className="min-w-0"><div className="text-[9px] font-black uppercase tracking-[.16em] text-cyan-200">{title}</div><div className="truncate text-[10px] font-black text-white">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</div></div>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {compact ? counters.map(([value, label]) => <span key={label} className="rounded-full border border-white/[.07] bg-black/20 px-2 py-1 text-[8px] font-black text-slate-400"><span className="text-white">{loading && !events.length ? "·" : value}</span> {label}</span>) : null}
           {stale ? <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-1 text-[8px] font-black text-amber-100">Cached</span> : null}
-          <MiniAction href="/calendar" tone="cyan">Open calendar <ExternalLink className="h-3 w-3" /></MiniAction>
+          <MiniAction href="/calendar" tone="cyan">Open <ExternalLink className="h-3 w-3" /></MiniAction>
         </div>
       </div>
 
-      <div className="mt-2 grid grid-cols-4 gap-1.5">
-        {[[blocks, "Blocks"], [taskCount, "Tasks"], [serviceCount, "Service"], [healthEvents.length, "Health"]].map(([value, label]) => <div key={label} className="rounded-xl border border-white/[.07] bg-black/20 p-2"><div className="text-sm font-black text-white">{loading && !events.length ? "·" : value}</div><div className="text-[8px] font-black uppercase tracking-wider text-slate-600">{label}</div></div>)}
-      </div>
+      {!compact ? <div className="mt-2 grid grid-cols-4 gap-1.5">{counters.map(([value, label]) => <div key={label} className="rounded-xl border border-white/[.07] bg-black/20 p-2"><div className="text-sm font-black text-white">{loading && !events.length ? "·" : value}</div><div className="text-[8px] font-black uppercase tracking-wider text-slate-600">{label}</div></div>)}</div> : null}
 
-      <div className={`mt-2 grid gap-2 ${compact ? "lg:grid-cols-[minmax(0,1fr)_auto]" : "md:grid-cols-[minmax(0,1fr)_auto]"}`}>
-        <div className="rounded-xl border border-white/[.07] bg-black/20 p-2.5">
+      <div className="mt-2 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="min-w-0 rounded-xl border border-white/[.07] bg-black/20 p-2.5">
           <div className="text-[8px] font-black uppercase tracking-[.14em] text-slate-600">Next up</div>
-          {nextEvent ? <>
-            <div className="mt-1 truncate text-[11px] font-black text-white">{nextEvent.title}</div>
-            <div className="mt-0.5 text-[9px] text-slate-500">{new Date(nextEvent.start_at).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}</div>
-            {eventLocation(nextEvent) ? <div className="mt-1 truncate text-[9px] text-slate-400"><MapPin className="mr-1 inline h-3 w-3" />{eventLocation(nextEvent)}</div> : null}
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              <MiniAction onClick={() => openGroupEditor(nextEvent)}><Users className="h-3 w-3" />Group</MiniAction>
-              <MiniAction href="/calendar" tone="cyan"><CalendarDays className="h-3 w-3" />Details</MiniAction>
-            </div>
-          </> : <div className="mt-1 text-[10px] text-slate-500">Nothing upcoming. Your day is open.</div>}
+          {nextEvent ? <div className="flex flex-wrap items-end justify-between gap-2"><div className="min-w-0"><div className="mt-1 truncate text-[11px] font-black text-white">{nextEvent.title}</div><div className="mt-0.5 text-[9px] text-slate-500">{new Date(nextEvent.start_at).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}</div>{eventLocation(nextEvent) ? <div className="mt-1 truncate text-[9px] text-slate-400"><MapPin className="mr-1 inline h-3 w-3" />{eventLocation(nextEvent)}</div> : null}</div><div className="flex shrink-0 flex-wrap gap-1.5"><MiniAction onClick={() => openGroupEditor(nextEvent)}><Users className="h-3 w-3" />Group</MiniAction><MiniAction href="/calendar" tone="cyan"><CalendarDays className="h-3 w-3" />Details</MiniAction></div></div> : <div className="mt-1 text-[10px] text-slate-500">Nothing upcoming. Your day is open.</div>}
         </div>
 
         <div className="rounded-xl border border-emerald-400/15 bg-emerald-500/[.045] p-2.5">
-          <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[.14em] text-emerald-200"><HeartPulse className="h-3 w-3" />Health quick</div>
+          <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[.14em] text-emerald-200"><HeartPulse className="h-3 w-3" />Health</div>
           <div className="mt-2 flex max-w-full flex-wrap gap-1.5">
-            {healthEvents.length ? <MiniAction href="/customer/health" tone="emerald"><Dumbbell className="h-3 w-3" />Workout</MiniAction> : <MiniAction onClick={() => openHealth("plan-today")} tone="emerald"><Dumbbell className="h-3 w-3" />Need workout</MiniAction>}
+            {healthEvents.length ? <MiniAction href="/customer/health" tone="emerald"><Dumbbell className="h-3 w-3" />Workout</MiniAction> : <MiniAction onClick={() => openHealth("plan-today")} tone="emerald"><Dumbbell className="h-3 w-3" />Workout</MiniAction>}
             <MiniAction onClick={() => openHealth("coach-chat")} tone="violet"><Sparkles className="h-3 w-3" />AI</MiniAction>
             <MiniAction onClick={() => openHealth("weight")}><Scale className="h-3 w-3" />Weigh</MiniAction>
             <MiniAction onClick={() => openHealth("progress")}><Ruler className="h-3 w-3" />Measure</MiniAction>
-            <MiniAction href="/calendar" tone="cyan"><ListTodo className="h-3 w-3" />Plan day</MiniAction>
+            <MiniAction href="/calendar" tone="cyan"><ListTodo className="h-3 w-3" />Plan</MiniAction>
           </div>
         </div>
       </div>
