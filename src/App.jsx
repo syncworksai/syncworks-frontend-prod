@@ -17,6 +17,7 @@ import CustomerSettings from "./pages/CustomerSettings";
 import CustomerFinance from "./pages/CustomerFinance";
 import CustomerHealth from "./pages/CustomerHealth";
 import CustomerEdge from "./pages/CustomerEdge";
+import CustomerEdgeBtc15m from "./pages/CustomerEdgeBtc15m";
 import CustomerPlans from "./pages/CustomerPlans";
 import CustomerStore from "./pages/CustomerStore";
 import CustomerTickets from "./pages/CustomerTickets";
@@ -145,7 +146,8 @@ export default function App() {
         <Route path="/customer/settings" element={<ProtectedRoute><CustomerSettings /></ProtectedRoute>} />
         <Route path="/customer/finance" element={<ProtectedRoute><CustomerFinance /></ProtectedRoute>} />
         <Route path="/customer/health" element={<ProtectedRoute><CustomerHealth /></ProtectedRoute>} />
-        <Route path="/customer/edge" element={<ProtectedRoute><CustomerEdge /></ProtectedRoute>} />
+        <Route path="/customer/edge" element={<ProtectedRoute><CustomerEdgeBtc15m /></ProtectedRoute>} />
+        <Route path="/customer/edge/sports" element={<ProtectedRoute><CustomerEdge /></ProtectedRoute>} />
         <Route path="/customer/day-trading-futures" element={<ProtectedRoute><DayTradingFutures /></ProtectedRoute>} />
         <Route path="/customer/tasks" element={<ProtectedRoute><CustomerTasks /></ProtectedRoute>} />
         <Route path="/customer/plans" element={<ProtectedRoute><CustomerPlans /></ProtectedRoute>} />
