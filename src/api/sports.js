@@ -31,6 +31,16 @@ export async function getTeamStats(id) {
   return list(data);
 }
 
+export async function getAdvancedTeamStats(id) {
+  const { data } = await api.get(`/sports/advanced/teams/${id}/stats/`);
+  return data;
+}
+
+export async function getPlayerSpray(id) {
+  const { data } = await api.get(`/sports/advanced/players/${id}/spray/`);
+  return data;
+}
+
 export async function getSportsPlayers(team) {
   const { data } = await api.get("/sports/players/", { params: { team } });
   return list(data);
@@ -89,6 +99,11 @@ export async function recordSoftballPlay(id, payload) {
   return data;
 }
 
+export async function saveSoftballPlayContext(payload) {
+  const { data } = await api.post("/sports/advanced/play-context/", payload);
+  return data;
+}
+
 export async function undoSoftballPlay(id) {
   const { data } = await api.post(`/sports/games/${id}/undo/`);
   return data;
@@ -107,4 +122,19 @@ export async function finishSportsGame(id, payload = {}) {
 export async function getPlateAppearances(game) {
   const { data } = await api.get("/sports/plate-appearances/", { params: { game } });
   return list(data);
+}
+
+export async function getGameCastSettings(gameId) {
+  const { data } = await api.get(`/sports/advanced/games/${gameId}/gamecast/`);
+  return data;
+}
+
+export async function updateGameCastSettings(gameId, payload) {
+  const { data } = await api.post(`/sports/advanced/games/${gameId}/gamecast/`, payload);
+  return data;
+}
+
+export async function getPublicGameCast(token) {
+  const { data } = await api.get(`/sports/gamecast/${token}/`);
+  return data;
 }
