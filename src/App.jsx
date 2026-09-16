@@ -58,7 +58,8 @@ import PlatformDashboard from "./pages/PlatformDashboard";
 import PlatformSupportRequests from "./pages/platform/PlatformSupportRequests";
 import TeamInvites from "./pages/TeamInvites";
 import Upgrade from "./pages/Upgrade";
-import Connect from "./pages/Connect";
+import ConnectSportsBridge from "./pages/ConnectSportsBridge";
+import SportsHub from "./pages/SportsHub";
 import SportsTeamDashboard from "./pages/SportsTeamDashboard";
 import SoftballGameDay from "./pages/SoftballGameDay";
 import Household from "./pages/Household";
@@ -182,7 +183,8 @@ export default function App() {
         <Route path="/profile" element={<ProtectedRoute><IdentitySettings /></ProtectedRoute>} />
         <Route path="/profile/legacy" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
         <Route path="/upgrade" element={<ProtectedRoute><Upgrade /></ProtectedRoute>} />
-        <Route path="/connect" element={<ProtectedRoute><Connect /></ProtectedRoute>} />
+        <Route path="/connect" element={<ProtectedRoute><ConnectSportsBridge /></ProtectedRoute>} />
+        <Route path="/connect/sports" element={<ProtectedRoute><SportsHub /></ProtectedRoute>} />
         <Route path="/connect/groups/:groupId/sports" element={<ProtectedRoute><SportsTeamDashboard /></ProtectedRoute>} />
         <Route path="/connect/groups/:groupId/sports/games/:gameId" element={<ProtectedRoute><SoftballGameDay /></ProtectedRoute>} />
         <Route path="/team/invites" element={<ProtectedRoute><TeamInvites /></ProtectedRoute>} />
