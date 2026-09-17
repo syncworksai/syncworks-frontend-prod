@@ -20,6 +20,7 @@ import {
   Settings,
   Sparkles,
   Store,
+  Trophy,
   Users,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -154,6 +155,7 @@ export default function CustomerDashboard() {
     [MapPinned, "Traffic", "Live traffic, ETA and delay intelligence.", "/customer/traffic", "rose", "live"],
     [CloudSun, "Weather", "Live weather and minute forecast.", "/customer/weather", "sky", "live"],
     [Network, "Social", "Groups, events, collections and connections.", "/connect", "fuchsia", null],
+    [Trophy, "Sports", "Teams, softball, schedules, stats and Game Day.", "/connect/sports", "cyan", null],
     [Dumbbell, "Health", "Fitness, nutrition, readiness and recovery.", "/customer/health", "emerald", null],
     [CircleDollarSign, "Money", "Bills, budgets, accounts and planning.", "/customer/finance", overdueInvoices.length ? "rose" : "amber", dueInvoices.length ? `${dueInvoices.length} due` : null],
     [Search, "EDGE", "Sports research and paper trading.", "/customer/edge", "violet", "beta"],
@@ -179,6 +181,7 @@ export default function CustomerDashboard() {
             <NavButton icon={CloudSun} label="Weather" onClick={() => nav("/customer/weather")} color="sky" badge="LIVE" />
             <NavButton icon={Store} label="Services" onClick={() => nav("/customer/marketplace")} color="cyan" />
             <NavButton icon={Network} label="Social" onClick={() => nav("/connect")} color="fuchsia" />
+            <NavButton icon={Trophy} label="Sports" onClick={() => nav("/connect/sports")} color="cyan" />
             <NavButton icon={Search} label="EDGE" onClick={() => nav("/customer/edge")} color="violet" />
             {dayTradingEnabled ? <NavButton icon={Activity} label="Day Trade" onClick={() => nav("/customer/day-trading-futures")} color="emerald" badge="LIVE" /> : null}
           </div>
