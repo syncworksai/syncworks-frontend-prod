@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
+  Bell,
   CalendarDays,
   Camera,
   Check,
@@ -46,6 +47,9 @@ import {
   getTeamDashboard,
   getTeamFees,
   getTeamPaymentSettings,
+  inviteSportsPlayer,
+  remindSportsPlayer,
+  remindTeamDues,
   removeSportsPlayer,
   setSportsLineup,
   updateFeeAssignment,
@@ -171,6 +175,8 @@ export default function SportsTeamManagerDashboard() {
   const [previewPlayerView, setPreviewPlayerView] = useState(false);
   const [eventResponses, setEventResponses] = useState([]);
   const [chatOpen, setChatOpen] = useState(false);
+  const [addPlayerOpen, setAddPlayerOpen] = useState(false);
+  const [quickSaving, setQuickSaving] = useState({});
 
   const [playerDrawer, setPlayerDrawer] = useState(null);
   const [playerEdit, setPlayerEdit] = useState(null);
@@ -310,12 +316,20 @@ export default function SportsTeamManagerDashboard() {
     setLineupPlayerId("");
   }
 
-  function addLineupPlayer() {
-    const playerId = Number(lineupPlayerId);
-    if (!playerId || lineupIds.has(playerId)) return;
-    const player = players.find((row) => Number(row.id) === playerId);
-    setLineup((current) => [...current, { player: playerId, defensive_position: player?.primary_position || "" }]);
+  function appendLineupPlayer(playerId) {
+    const id = Number(playerId);
+    if (!id || lineupIds.has(id)) return;
+    const player = players.find((row) => Number(row.id) === id);
+    setLineup((current) => [...current, { player: id, defensive_position: player?.primary_position || "" }]);
     setLineupPlayerId("");
+  }
+
+  function addLineupPlayer() {
+    appendLineupPlayer(lineupPlayerId);
+  }
+
+  function removeLineupPlayer(playerId) {
+    setLineup((current) => current.filter((spot) => Number(spot.player) !== Number(playerId)));
   }
 
   function reorderLineup(from, to) {
@@ -433,6 +447,7 @@ export default function SportsTeamManagerDashboard() {
       if (newPlayer.email || newPlayer.phone) await createPlayerProfile({ player: player.id, email: newPlayer.email, phone: newPlayer.phone });
     }, "Player added.");
     setNewPlayer({ display_name: "", jersey_number: "", primary_position: "", bats: "R", throws: "R", email: "", phone: "" });
+    setAddPlayerOpen(false);
   }
 
   async function importSocialRoster() {
@@ -453,6 +468,76 @@ export default function SportsTeamManagerDashboard() {
     const startAt = new Date(`${gameForm.date}T${gameForm.time || "18:30"}:00`);
     await run(() => createSportsGame({ team: team.id, game_type: gameForm.game_type, opponent_name: gameForm.opponent_name.trim(), home_away: gameForm.home_away, start_at: startAt.toISOString(), venue_name: gameForm.venue_name.trim(), address_line1: gameForm.address_line1.trim(), city: gameForm.city.trim(), state: gameForm.state.trim(), innings_scheduled: 7 }), "Game added and synced to Social/Calendar.");
     setGameForm((current) => ({ ...current, opponent_name: "", date: "" }));
+  }
+
+  async function inviteRosterPlayer(player) {
+    const profile = profileMap.get(Number(player.id));
+    const email = profile?.email || player.user_detail?.email || "";
+    if (!email && !player.user) {
+      setError("Add an email to this player before sending an invite.");
+      return;
+    }
+    setQuickSaving((current) => ({ ...current, [`invite-${player.id}`]: true }));
+    setError(""); setNotice("");
+    try {
+      await inviteSportsPlayer(player.id, email);
+      setNotice(`Invite sent to ${player.display_name}.`);
+      await refresh({ quiet: true });
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setQuickSaving((current) => ({ ...current, [`invite-${player.id}`]: false }));
+    }
+  }
+
+  async function remindRosterPlayer(player, kind = "GENERAL") {
+    if (!player.user) {
+      setError("This player needs a linked SyncWorks account before reminders can be sent.");
+      return;
+    }
+    setQuickSaving((current) => ({ ...current, [`remind-${player.id}`]: true }));
+    setError(""); setNotice("");
+    try {
+      await remindSportsPlayer(player.id, kind);
+      setNotice(`Reminder sent to ${player.display_name}.`);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setQuickSaving((current) => ({ ...current, [`remind-${player.id}`]: false }));
+    }
+  }
+
+  async function sendUnpaidReminders() {
+    setQuickSaving((current) => ({ ...current, dues: true }));
+    setError(""); setNotice("");
+    try {
+      const result = await remindTeamDues(team.id);
+      setNotice(`${result.sent || 0} unpaid reminder${Number(result.sent || 0) === 1 ? "" : "s"} sent.`);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setQuickSaving((current) => ({ ...current, dues: false }));
+    }
+  }
+
+  async function quickUpdateAssignment(row, patch) {
+    const previous = { ...row };
+    const payload = { ...patch };
+    if (patch.status === "PAID") payload.amount_paid_cents = num(row.amount_cents);
+    if (patch.status === "DUE" || patch.status === "WAIVED") payload.amount_paid_cents = 0;
+    const optimistic = { ...row, ...payload };
+    setAssignments((current) => current.map((item) => Number(item.id) === Number(row.id) ? optimistic : item));
+    setQuickSaving((current) => ({ ...current, [row.id]: true }));
+    setError("");
+    try {
+      const saved = await updateFeeAssignment(row.id, payload);
+      setAssignments((current) => current.map((item) => Number(item.id) === Number(row.id) ? saved : item));
+    } catch (err) {
+      setAssignments((current) => current.map((item) => Number(item.id) === Number(row.id) ? previous : item));
+      setError(errorText(err));
+    } finally {
+      setQuickSaving((current) => ({ ...current, [row.id]: false }));
+    }
   }
 
   async function savePayments() {
@@ -552,19 +637,56 @@ export default function SportsTeamManagerDashboard() {
           {managerView ? <Card title="Team details" body="These labels carry with the team if it later joins an association or league." className="lg:col-span-2"><div className="grid gap-2 sm:grid-cols-3"><Input label="Season" value={meta.season_name} onChange={(value) => setMeta((current) => ({ ...current, season_name: value }))} /><Input label="League" value={meta.league_name} onChange={(value) => setMeta((current) => ({ ...current, league_name: value }))} /><Input label="Division" value={meta.division_name} onChange={(value) => setMeta((current) => ({ ...current, division_name: value }))} /></div><Btn primary className="mt-2 w-full" onClick={saveTeamMeta} disabled={busy}><Save className="mr-1 inline h-4 w-4" />Save</Btn></Card> : <Card title="Your access" body="Players can view team information and only their own payment status." className="lg:col-span-2"><div className="grid gap-2 text-xs text-slate-300 sm:grid-cols-3"><div className="rounded-xl border border-white/10 p-3"><b>Roster:</b> shared team information</div><div className="rounded-xl border border-white/10 p-3"><b>Dues:</b> only your own amount/status</div><div className="rounded-xl border border-white/10 p-3"><b>Game Book:</b> managers keep the official book</div></div></Card>}
         </div> : null}
 
-        {tab === "Roster" ? <div className="grid gap-3 lg:grid-cols-[1.2fr_.8fr]">
-          <Card title="Roster" body="Tap a player for details. Contact/payment data stays private." action={<Users className="h-4 w-4 text-cyan-300" />}>
-            <div className="grid gap-2 sm:grid-cols-2">{players.map((player) => { const profile = profileFor(player); return <button key={player.id} type="button" onClick={() => openPlayer(player)} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[.025] p-2.5 text-left"><Avatar player={player} profile={profile} /><span className="min-w-0 flex-1"><b className="block truncate text-xs text-white">#{player.jersey_number || "—"} {player.display_name}</b><span className="block text-[10px] text-slate-500">{player.primary_position || "Position TBD"}{player.user ? " · SyncWorks linked" : " · manual"}</span></span><span className="rounded-lg border border-white/10 px-2 py-1 text-[9px] font-black text-slate-400">{managerView ? "Edit" : "View"}</span></button>; })}</div>
-          </Card>
-          {managerView ? <div className="space-y-3"><Card title="Import Social members" body="Link active members already inside this Social team."><Btn primary className="w-full" onClick={importSocialRoster} disabled={busy}><UserPlus className="mr-1 inline h-4 w-4" />Import members</Btn></Card><Card title="Add player" body="Contact info is manager-only until that player claims a SyncWorks account."><div className="grid grid-cols-2 gap-2"><Input label="Name" value={newPlayer.display_name} onChange={(value) => setNewPlayer((v) => ({ ...v, display_name: value }))} className="col-span-2" /><Input label="Jersey #" value={newPlayer.jersey_number} onChange={(value) => setNewPlayer((v) => ({ ...v, jersey_number: value }))} /><Select label="Position" value={newPlayer.primary_position} onChange={(value) => setNewPlayer((v) => ({ ...v, primary_position: value }))}><option value="">Choose</option>{POSITIONS.map((position) => <option key={position}>{position}</option>)}</Select><Input label="Email" value={newPlayer.email} onChange={(value) => setNewPlayer((v) => ({ ...v, email: value }))} /><Input label="Phone" value={newPlayer.phone} onChange={(value) => setNewPlayer((v) => ({ ...v, phone: value }))} /></div><Btn primary className="mt-2 w-full" onClick={addPlayer} disabled={!newPlayer.display_name.trim() || busy}><Plus className="mr-1 inline h-4 w-4" />Add player</Btn></Card></div> : null}
-        </div> : null}
+        {tab === "Roster" ? <Card
+          title="Roster"
+          body={managerView ? "Manager directory: contacts, account status, invites and reminders." : "Active team roster."}
+          action={managerView ? <button type="button" onClick={() => setAddPlayerOpen(true)} className="inline-flex min-h-9 items-center gap-1 rounded-xl bg-cyan-300 px-3 text-[9px] font-black text-slate-950"><Plus className="h-3.5 w-3.5" />Add player</button> : <Users className="h-4 w-4 text-cyan-300" />}
+        >
+          {managerView ? <div className="mb-3 grid grid-cols-3 gap-1.5">
+            <Stat label="Players" value={players.length} />
+            <Stat label="Linked" value={players.filter((player) => player.user).length} />
+            <Stat label="Need link" value={players.filter((player) => !player.user).length} />
+          </div> : null}
+          {managerView ? <div className="mb-3 flex gap-2"><Btn onClick={importSocialRoster} disabled={busy}><UserPlus className="mr-1 inline h-4 w-4" />Import Social members</Btn><Btn primary onClick={() => setAddPlayerOpen(true)}><Plus className="mr-1 inline h-4 w-4" />Quick add</Btn></div> : null}
+          <div className="space-y-1.5">
+            {players.map((player) => {
+              const profile = profileFor(player);
+              const email = profile?.email || player.user_detail?.email || "";
+              const phone = profile?.phone || "";
+              return <div key={player.id} className="rounded-xl border border-white/10 bg-white/[.025] p-2.5">
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => openPlayer(player)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                    <Avatar player={player} profile={profile} />
+                    <span className="min-w-0 flex-1">
+                      <b className="block truncate text-xs text-white">#{player.jersey_number || "—"} {player.display_name}</b>
+                      <span className="block text-[9px] text-slate-500">{player.primary_position || "Position TBD"} · {player.user ? "SyncWorks linked" : "not linked"}</span>
+                    </span>
+                  </button>
+                  {managerView ? <button type="button" onClick={() => openPlayer(player)} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-slate-300"><Pencil className="h-3.5 w-3.5" /></button> : null}
+                </div>
+                {managerView ? <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1.5">
+                  <div className="min-w-0">
+                    {email ? <a href={`mailto:${email}`} className="flex items-center gap-1 truncate text-[9px] text-cyan-200"><Mail className="h-3 w-3 shrink-0" />{email}</a> : <div className="text-[9px] text-slate-600">No email</div>}
+                    {phone ? <a href={`tel:${phone}`} className="mt-0.5 flex items-center gap-1 truncate text-[9px] text-slate-400"><Phone className="h-3 w-3 shrink-0" />{phone}</a> : null}
+                  </div>
+                  {!player.user ? <button type="button" disabled={quickSaving[`invite-${player.id}`]} onClick={() => inviteRosterPlayer(player)} className="min-h-8 rounded-lg border border-violet-300/20 bg-violet-300/10 px-2 text-[8px] font-black text-violet-100">{quickSaving[`invite-${player.id}`] ? "..." : "Invite"}</button> : <Pill tone="green">Linked</Pill>}
+                  <button type="button" disabled={!player.user || quickSaving[`remind-${player.id}`]} onClick={() => remindRosterPlayer(player, "GENERAL")} className="grid h-8 w-8 place-items-center rounded-lg border border-amber-300/20 bg-amber-300/10 text-amber-100 disabled:opacity-30" aria-label="Send reminder"><Bell className="h-3.5 w-3.5" /></button>
+                </div> : null}
+              </div>;
+            })}
+          </div>
+        </Card> : null}
 
         {tab === "Lineup" ? <Card title="Lineup" body={managerView ? "Each game has its own lineup. Only confirmed IN or unlinked manual players can be added; OUT is blocked." : "Official batting order and defensive positions."} action={<GripVertical className="h-4 w-4 text-violet-300" />}>
           <div className="grid gap-3 lg:grid-cols-[.72fr_1.28fr]">
             <div className="space-y-2">
               <Select label="Game" value={lineupGameId} onChange={(value) => chooseLineupGame(value)}><option value="">Choose game</option>{games.filter((game) => game.status !== "CANCELLED").map((game) => <option key={game.id} value={game.id}>{new Date(game.start_at).toLocaleDateString()} · {new Date(game.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · {game.opponent_name}</option>)}</Select>
               {selectedGame ? <div className="rounded-xl border border-white/10 bg-black/15 p-3 text-[10px] text-slate-400"><b className="text-xs text-white">vs {selectedGame.opponent_name}</b><div>{selectedGame.venue_name}</div><div className="mt-1 text-[9px] text-slate-500">IN players are eligible. SUB stays on standby. OUT cannot be placed in the lineup.</div></div> : null}
-              {managerView && lineupGameId ? <div className="flex gap-2"><select value={lineupPlayerId} onChange={(event) => setLineupPlayerId(event.target.value)} className="h-10 min-w-0 flex-1 rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs"><option value="">Add confirmed batter…</option>{availablePlayers.map((player) => <option key={player.id} value={player.id}>#{player.jersey_number || "—"} {player.display_name}{player.user ? " · IN" : " · unlinked"}</option>)}</select><Btn primary onClick={addLineupPlayer} disabled={!lineupPlayerId}><Plus className="h-4 w-4" /></Btn></div> : null}
+              {managerView && lineupGameId ? <div className="space-y-2">
+                <div className="flex gap-2"><select value={lineupPlayerId} onChange={(event) => setLineupPlayerId(event.target.value)} className="h-10 min-w-0 flex-1 rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs"><option value="">Add confirmed batter…</option>{availablePlayers.map((player) => <option key={player.id} value={player.id}>#{player.jersey_number || "—"} {player.display_name}{player.user ? " · IN" : " · unlinked"}</option>)}</select><Btn primary onClick={addLineupPlayer} disabled={!lineupPlayerId}><Plus className="h-4 w-4" /></Btn></div>
+                {availablePlayers.length ? <div><div className="mb-1 text-[8px] font-black uppercase tracking-wide text-emerald-300">IN / available</div><div className="flex flex-wrap gap-1">{availablePlayers.map((player) => <button key={player.id} type="button" onClick={() => appendLineupPlayer(player.id)} className="rounded-lg border border-emerald-300/15 bg-emerald-300/[.05] px-2 py-1.5 text-[8px] font-black text-emerald-100">+ {player.display_name}</button>)}</div></div> : null}
+                {subPlayers.length ? <div><div className="mb-1 text-[8px] font-black uppercase tracking-wide text-amber-300">SUB / standby</div><div className="flex flex-wrap gap-1">{subPlayers.map((player) => <button key={player.id} type="button" onClick={() => appendLineupPlayer(player.id)} className="rounded-lg border border-amber-300/15 bg-amber-300/[.05] px-2 py-1.5 text-[8px] font-black text-amber-100">Use {player.display_name}</button>)}</div></div> : null}
+              </div> : null}
               {selectedGame && managerView ? <div className="grid grid-cols-3 gap-1">
                 <div className="rounded-lg border border-amber-300/15 bg-amber-300/[.04] p-2"><div className="text-[8px] font-black uppercase text-amber-300">Subs</div><div className="mt-1 text-[9px] text-slate-400">{subPlayers.length ? subPlayers.map((p) => p.display_name).join(" · ") : "—"}</div></div>
                 <div className="rounded-lg border border-white/10 bg-white/[.025] p-2"><div className="text-[8px] font-black uppercase text-slate-500">Waiting</div><div className="mt-1 text-[9px] text-slate-400">{waitingPlayers.length ? waitingPlayers.map((p) => p.display_name).join(" · ") : "—"}</div></div>
@@ -572,7 +694,7 @@ export default function SportsTeamManagerDashboard() {
               </div> : null}
             </div>
             <div className={cx("space-y-1.5", dragging && "select-none")}>
-              {lineup.map((spot, index) => { const player = players.find((row) => Number(row.id) === Number(spot.player)); const status = statusForSelected(player); return <div key={spot.player} data-lineup-index={index} className={cx("grid grid-cols-[2rem_2.2rem_minmax(0,1fr)_4.2rem] items-center gap-1.5 rounded-xl border p-2", status === "NO" ? "border-rose-400/30 bg-rose-400/[.05]" : dragging ? "border-violet-400/25 bg-violet-400/[.04]" : "border-white/10 bg-white/[.025]")}><div className="text-center text-xs font-black text-violet-200">{index + 1}</div>{managerView ? <button type="button" onPointerDown={(event) => dragStart(event, index)} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd} style={{ touchAction: "none" }} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-slate-400"><GripVertical className="h-4 w-4" /></button> : <div className="h-9 w-9" />}<div className="min-w-0"><b className="block truncate text-xs text-white">#{player?.jersey_number || "—"} {player?.display_name}</b><span className="text-[9px] text-slate-500">{player?.primary_position || "—"} · {status === "YES" ? "IN" : status === "MAYBE" ? "SUB" : status === "NO" ? "OUT" : status === "UNLINKED" ? "unlinked" : "waiting"}</span></div><select disabled={!managerView} value={spot.defensive_position || ""} onChange={(event) => setLineup((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, defensive_position: event.target.value } : row))} className="h-9 rounded-lg border border-white/10 bg-[#050b14] px-1 text-[10px]"><option value="">POS</option>{POSITIONS.map((position) => <option key={position}>{position}</option>)}</select></div>; })}
+              {lineup.map((spot, index) => { const player = players.find((row) => Number(row.id) === Number(spot.player)); const status = statusForSelected(player); return <div key={spot.player} data-lineup-index={index} className={cx("grid grid-cols-[1.7rem_2.5rem_minmax(0,1fr)_4rem_2.2rem] items-center gap-1 rounded-xl border p-2", status === "NO" ? "border-rose-400/30 bg-rose-400/[.05]" : dragging ? "border-violet-400/25 bg-violet-400/[.04]" : "border-white/10 bg-white/[.025]")}><div className="text-center text-xs font-black text-violet-200">{index + 1}</div>{managerView ? <button type="button" onPointerDown={(event) => dragStart(event, index)} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd} style={{ touchAction: "none" }} className="grid h-10 w-10 place-items-center rounded-lg border border-violet-300/15 bg-violet-300/[.04] text-violet-200"><GripVertical className="h-5 w-5" /></button> : <div className="h-9 w-9" />}<div className="min-w-0"><b className="block truncate text-xs text-white">#{player?.jersey_number || "—"} {player?.display_name}</b><span className="text-[9px] text-slate-500">{player?.primary_position || "—"} · {status === "YES" ? "IN" : status === "MAYBE" ? "SUB" : status === "NO" ? "OUT" : status === "UNLINKED" ? "unlinked" : "waiting"}</span></div><select disabled={!managerView} value={spot.defensive_position || ""} onChange={(event) => setLineup((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, defensive_position: event.target.value } : row))} className="h-9 rounded-lg border border-white/10 bg-[#050b14] px-1 text-[10px]"><option value="">POS</option>{POSITIONS.map((position) => <option key={position}>{position}</option>)}</select>{managerView ? <button type="button" onClick={() => removeLineupPlayer(spot.player)} className="grid h-8 w-8 place-items-center rounded-lg border border-rose-300/15 text-rose-200"><X className="h-3.5 w-3.5" /></button> : <div />}</div>; })}
               {!lineup.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-slate-500">Choose a game, confirm availability, then build that game’s lineup.</div> : null}
               {lineup.length ? <div className="grid grid-cols-2 gap-2"><Btn onClick={saveLineupImage}><ImageDown className="mr-1 inline h-4 w-4" />Save image</Btn>{managerView ? <Btn primary onClick={saveLineup} disabled={busy}><Save className="mr-1 inline h-4 w-4" />Save lineup</Btn> : null}</div> : null}
               {selectedGame?.lineup_spots?.length ? <Btn className="w-full" onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${selectedGame.id}`)}><CircleDot className="mr-1 inline h-4 w-4" />{managerView ? "Open Game Book" : "View game"}</Btn> : null}
@@ -591,7 +713,7 @@ export default function SportsTeamManagerDashboard() {
           <Card
             title={managerView ? "Team collections" : "My dues"}
             body={managerView ? "Managers see team totals and can edit charges. Players only see their own balance." : "Your private team balance and payment status."}
-            action={<CircleDollarSign className="h-4 w-4 text-amber-300" />}
+            action={managerView ? <button type="button" disabled={quickSaving.dues} onClick={sendUnpaidReminders} className="inline-flex min-h-9 items-center gap-1 rounded-xl border border-amber-300/20 bg-amber-300/10 px-2.5 text-[8px] font-black text-amber-100"><Bell className="h-3.5 w-3.5" />{quickSaving.dues ? "Sending…" : "Remind unpaid"}</button> : <CircleDollarSign className="h-4 w-4 text-amber-300" />}
           >
             {managerView ? (
               <div className="space-y-3">
@@ -629,10 +751,10 @@ export default function SportsTeamManagerDashboard() {
                         {rows.map((row) => (
                           <div key={row.id} className="grid grid-cols-[minmax(0,1fr)_6rem_5.6rem] items-center gap-1.5 rounded-lg bg-black/15 p-2">
                             <span className="truncate text-[10px] text-slate-300">{row.player_detail?.display_name}</span>
-                            <select value={row.status} onChange={(event) => run(() => updateFeeAssignment(row.id, { status: event.target.value }), "Payment status updated.")} className="h-8 rounded-lg border border-white/10 bg-[#050b14] px-1 text-[9px]">
+                            <select value={row.status} onChange={(event) => quickUpdateAssignment(row, { status: event.target.value })} className="h-8 rounded-lg border border-white/10 bg-[#050b14] px-1 text-[9px]">
                               <option value="DUE">Due</option><option value="PARTIAL">Partial</option><option value="PAID">Paid</option><option value="WAIVED">Waived</option>
                             </select>
-                            <select value={row.payment_method || ""} onChange={(event) => run(() => updateFeeAssignment(row.id, { payment_method: event.target.value }), "Payment method saved.")} className="h-8 rounded-lg border border-white/10 bg-[#050b14] px-1 text-[9px]">
+                            <select value={row.payment_method || ""} onChange={(event) => quickUpdateAssignment(row, { payment_method: event.target.value })} className="h-8 rounded-lg border border-white/10 bg-[#050b14] px-1 text-[9px]">
                               <option value="">Method</option><option>Cash</option><option>Cash App</option><option>Venmo</option><option>Stripe</option><option>Other</option>
                             </select>
                           </div>
@@ -682,6 +804,22 @@ export default function SportsTeamManagerDashboard() {
           ) : null}
         </div> : null}
       </main>
+
+      {addPlayerOpen && managerView ? (
+        <Drawer title="Add player" onClose={() => setAddPlayerOpen(false)}>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <Input label="Name" value={newPlayer.display_name} onChange={(value) => setNewPlayer((v) => ({ ...v, display_name: value }))} className="col-span-2" />
+              <Input label="Jersey #" value={newPlayer.jersey_number} onChange={(value) => setNewPlayer((v) => ({ ...v, jersey_number: value }))} />
+              <Select label="Position" value={newPlayer.primary_position} onChange={(value) => setNewPlayer((v) => ({ ...v, primary_position: value }))}><option value="">Choose</option>{POSITIONS.map((position) => <option key={position}>{position}</option>)}</Select>
+              <Input label="Email" value={newPlayer.email} onChange={(value) => setNewPlayer((v) => ({ ...v, email: value }))} />
+              <Input label="Phone" value={newPlayer.phone} onChange={(value) => setNewPlayer((v) => ({ ...v, phone: value }))} />
+            </div>
+            <div className="rounded-xl border border-violet-300/15 bg-violet-300/[.04] p-3 text-[9px] text-violet-100">Add an email now so you can link the player to an existing SyncWorks account and send an invite from the roster.</div>
+            <Btn primary className="w-full" onClick={addPlayer} disabled={!newPlayer.display_name.trim() || busy}><Plus className="mr-1 inline h-4 w-4" />Add player</Btn>
+          </div>
+        </Drawer>
+      ) : null}
 
       {feeEdit && managerView ? (
         <Drawer title="Edit team fee" onClose={() => setFeeEdit(null)}>
