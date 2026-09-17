@@ -290,3 +290,19 @@ export async function claimMyLeagueRosters() {
   const { data } = await api.post("/sports/league-rosters/claim-mine/");
   return data;
 }
+
+
+export async function inviteSportsPlayer(id, email = "") {
+  const { data } = await api.post(`/sports/players/${id}/invite/`, email ? { email } : {});
+  return data;
+}
+
+export async function remindSportsPlayer(id, kind = "GENERAL", body = "") {
+  const { data } = await api.post(`/sports/players/${id}/remind/`, { kind, body });
+  return data;
+}
+
+export async function remindTeamDues(id) {
+  const { data } = await api.post(`/sports/teams/${id}/remind-dues/`, {});
+  return data;
+}
