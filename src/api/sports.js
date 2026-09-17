@@ -22,7 +22,15 @@ export async function updateSportsTeam(id, payload) {
 }
 
 export async function getTeamDashboard(id) {
-  const { data } = await api.get(`/sports/teams/${id}/dashboard/`);
+  const [dashboardResponse, gamesResponse] = await Promise.all([
+    api.get(`/sports/teams/${id}/dashboard/`),
+    api.get("/sports/games/", { params: { team: id } }),
+  ]);
+  const data = dashboardResponse.data;
+  const allGames = list(gamesResponse.data);
+  data.upcoming_games = allGames
+    .filter((game) => game.status === "SCHEDULED")
+    .sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
   return data;
 }
 
