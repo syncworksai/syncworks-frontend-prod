@@ -49,6 +49,7 @@ import {
   removeSportsPlayer,
   setSportsLineup,
   updateFeeAssignment,
+  updateTeamFee,
   updatePlayerProfile,
   updateSportsPlayer,
   updateSportsTeam,
@@ -187,6 +188,7 @@ export default function SportsTeamManagerDashboard() {
   const dragRef = useRef({ timer: null, active: false, index: null, pointerId: null, target: null });
 
   const [feeForm, setFeeForm] = useState({ title: "League fee", amount: "", due_date: "", description: "" });
+  const [feeEdit, setFeeEdit] = useState(null);
   const [payForm, setPayForm] = useState({ cash_app_url: "", venmo_url: "", stripe_url: "", payment_note: "" });
 
   const managed = useMemo(() => memberships.some((membership) => Number(membership.group) === Number(groupId) && Number(membership.user) === userId && membership.status === "ACTIVE" && ["OWNER", "DIRECTOR", "MANAGER"].includes(membership.role)), [memberships, groupId, userId]);
@@ -469,6 +471,35 @@ export default function SportsTeamManagerDashboard() {
     setFeeForm({ title: "League fee", amount: "", due_date: "", description: "" });
   }
 
+  function openFeeEditor(fee) {
+    setFeeEdit({
+      id: fee.id,
+      title: fee.title || "",
+      amount: (num(fee.amount_cents) / 100).toFixed(2),
+      due_date: fee.due_date || "",
+      description: fee.description || "",
+    });
+  }
+
+  async function saveFeeEdit() {
+    if (!feeEdit?.id || !feeEdit.title.trim()) return;
+    const amount = Number(feeEdit.amount);
+    if (!Number.isFinite(amount) || amount < 0) {
+      setError("Enter a valid per-player amount.");
+      return;
+    }
+    await run(
+      () => updateTeamFee(feeEdit.id, {
+        title: feeEdit.title.trim(),
+        description: feeEdit.description.trim(),
+        amount_cents: Math.round(amount * 100),
+        due_date: feeEdit.due_date || null,
+      }),
+      "Team fee updated.",
+    );
+    setFeeEdit(null);
+  }
+
   async function saveStatEntry() {
     if (!statForm.player) return;
     const integerFields = ["games", "pa", "ab", "hits", "doubles", "triples", "home_runs", "walks", "sac_flies", "rbi", "runs"];
@@ -484,7 +515,9 @@ export default function SportsTeamManagerDashboard() {
 
   const record = dashboard?.record || {};
   const ownDue = visibleAssignments.filter((row) => ["DUE", "PARTIAL"].includes(row.status)).reduce((sum, row) => sum + Math.max(0, num(row.amount_cents) - num(row.amount_paid_cents)), 0);
-  const managerDueCount = assignments.filter((row) => ["DUE", "PARTIAL"].includes(row.status)).length;
+  const managerOpenAssignments = assignments.filter((row) => ["DUE", "PARTIAL"].includes(row.status));
+  const managerDueCount = managerOpenAssignments.length;
+  const managerOutstanding = managerOpenAssignments.reduce((sum, row) => sum + Math.max(0, num(row.amount_cents) - num(row.amount_paid_cents)), 0);
 
   return (
     <div className="min-h-screen bg-[#02060c] pb-24 text-slate-100">
@@ -503,7 +536,7 @@ export default function SportsTeamManagerDashboard() {
             <div className="min-w-0"><div className="flex flex-wrap gap-1.5"><Pill tone="cyan">Softball</Pill><Pill tone={managerView ? "violet" : "green"}>{managerView ? "Manager view" : "Player view"}</Pill><Pill>{team.season_name || "Season"}</Pill><Pill tone="green">Free team tools</Pill></div><h1 className="mt-2 truncate text-2xl font-black text-white">{group.name}</h1><p className="mt-1 text-[11px] text-slate-400">{[team.league_name, team.division_name].filter(Boolean).join(" · ") || "Team workspace"}</p></div>
             {list(dashboard?.live_games).length ? <Btn primary onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${dashboard.live_games[0].id}`)}><CircleDot className="mr-1 inline h-4 w-4" />Live</Btn> : null}
           </div>
-          <div className="mt-3 grid grid-cols-4 gap-1.5"><Stat label="Record" value={`${num(record.wins)}-${num(record.losses)}`} /><Stat label="Roster" value={players.length} /><Stat label="Games" value={games.length} /><Stat label={managerView ? "Due" : "My due"} value={managerView ? managerDueCount : money(ownDue)} /></div>
+          <div className="mt-3 grid grid-cols-4 gap-1.5"><Stat label="Record" value={`${num(record.wins)}-${num(record.losses)}`} /><Stat label="Roster" value={players.length} /><Stat label="Games" value={games.length} /><Stat label={managerView ? "Outstanding" : "My due"} value={managerView ? money(managerOutstanding) : money(ownDue)} sub={managerView ? `${managerDueCount} open charge${managerDueCount === 1 ? "" : "s"}` : undefined} /></div>
           {nextGame ? <button type="button" onClick={() => setTab("Schedule")} className="mt-3 flex w-full items-center justify-between rounded-xl border border-emerald-400/15 bg-emerald-400/[.05] p-2.5 text-left"><span><span className="block text-[9px] font-black uppercase tracking-wide text-emerald-300">Next game</span><b className="text-xs text-white">{new Date(nextGame.start_at).toLocaleDateString()} · {new Date(nextGame.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · vs {nextGame.opponent_name}</b><span className="block text-[10px] text-slate-500">{nextGame.venue_name || "Field TBD"}</span></span><CalendarDays className="h-4 w-4 text-emerald-300" /></button> : null}
         </section>
 
@@ -555,12 +588,117 @@ export default function SportsTeamManagerDashboard() {
         {tab === "Stats" ? <InteractiveStatsBoard rows={scopedStats} scope={statsScope} onScope={setStatsScope} managerView={managerView} onAdd={() => setStatDrawer(true)} /> : null}
 
         {tab === "Dues" ? <div className="grid gap-3 lg:grid-cols-[1.2fr_.8fr]">
-          <Card title={managerView ? "Team collections" : "My dues"} body={managerView ? "Only managers see who has or has not paid. Players only see their own balance." : "Only your own balance and payment status is visible here."} action={<CircleDollarSign className="h-4 w-4 text-amber-300" />}>
-            {managerView ? <div className="space-y-3">{fees.map((fee) => { const rows = assignments.filter((row) => Number(row.fee) === Number(fee.id)); const paid = rows.filter((row) => ["PAID", "WAIVED"].includes(row.status)).length; return <section key={fee.id} className="rounded-xl border border-white/10 p-3"><div className="flex items-start justify-between gap-2"><div><b className="text-xs text-white">{fee.title}</b><div className="text-[9px] text-slate-500">{money(fee.amount_cents)} each{fee.due_date ? ` · due ${new Date(`${fee.due_date}T12:00:00`).toLocaleDateString()}` : ""}</div></div><Pill tone={paid === rows.length && rows.length ? "green" : "amber"}>{paid}/{rows.length} settled</Pill></div><div className="mt-2 space-y-1">{rows.map((row) => <div key={row.id} className="grid grid-cols-[minmax(0,1fr)_6rem_5.6rem] items-center gap-1.5 rounded-lg bg-black/15 p-2"><span className="truncate text-[10px] text-slate-300">{row.player_detail?.display_name}</span><select value={row.status} onChange={(event) => run(() => updateFeeAssignment(row.id, { status: event.target.value }), "Payment status updated.")} className="h-8 rounded-lg border border-white/10 bg-[#050b14] px-1 text-[9px]"><option value="DUE">Due</option><option value="PARTIAL">Partial</option><option value="PAID">Paid</option><option value="WAIVED">Waived</option></select><select value={row.payment_method || ""} onChange={(event) => run(() => updateFeeAssignment(row.id, { payment_method: event.target.value }), "Payment method saved.")} className="h-8 rounded-lg border border-white/10 bg-[#050b14] px-1 text-[9px]"><option value="">Method</option><option>Cash</option><option>Cash App</option><option>Venmo</option><option>Stripe</option><option>Other</option></select></div>)}</div></section>; })}{!fees.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-slate-500">No team fees yet.</div> : null}</div> : <div className="space-y-2">{visibleAssignments.map((row) => <section key={row.id} className="rounded-xl border border-white/10 bg-white/[.025] p-3"><div className="flex justify-between gap-2"><div><b className="text-xs text-white">{row.fee_detail?.title}</b><div className="text-[9px] text-slate-500">{row.fee_detail?.description}</div></div><Pill tone={row.status === "PAID" || row.status === "WAIVED" ? "green" : "amber"}>{row.status}</Pill></div><div className="mt-2 text-lg font-black text-white">{money(Math.max(0, num(row.amount_cents) - num(row.amount_paid_cents)))}</div>{["DUE", "PARTIAL"].includes(row.status) ? <div className="mt-2 grid grid-cols-3 gap-1.5">{paymentSettings?.cash_app_url ? <a href={paymentSettings.cash_app_url} target="_blank" rel="noreferrer" className="rounded-lg border border-white/10 p-2 text-center text-[9px] font-black">Cash App</a> : null}{paymentSettings?.venmo_url ? <a href={paymentSettings.venmo_url} target="_blank" rel="noreferrer" className="rounded-lg border border-white/10 p-2 text-center text-[9px] font-black">Venmo</a> : null}{paymentSettings?.stripe_url ? <a href={paymentSettings.stripe_url} target="_blank" rel="noreferrer" className="rounded-lg border border-white/10 p-2 text-center text-[9px] font-black">Stripe</a> : null}</div> : null}</section>)}{!visibleAssignments.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-slate-500">No dues assigned to your linked player account.</div> : null}{visibleAssignments.some((row) => ["DUE", "PARTIAL"].includes(row.status)) && paymentSettings ? <div className="rounded-xl border border-cyan-400/15 bg-cyan-400/[.04] p-3 text-[9px] text-cyan-100">Online payment links are manager-provided. SyncWorks team tools are currently free; online payment processing is designed to add a 1% platform fee when enabled.</div> : null}</div>}
+          <Card
+            title={managerView ? "Team collections" : "My dues"}
+            body={managerView ? "Managers see team totals and can edit charges. Players only see their own balance." : "Your private team balance and payment status."}
+            action={<CircleDollarSign className="h-4 w-4 text-amber-300" />}
+          >
+            {managerView ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <Stat label="Team outstanding" value={money(managerOutstanding)} sub={`${managerDueCount} open charge${managerDueCount === 1 ? "" : "s"}`} />
+                  <Stat label="Per player now" value={money(fees.filter((fee) => fee.is_active !== false).reduce((sum, fee) => sum + num(fee.amount_cents), 0))} sub="Active fees combined" />
+                </div>
+                {fees.filter((fee) => fee.is_active !== false).map((fee) => {
+                  const rows = assignments.filter((row) => Number(row.fee) === Number(fee.id));
+                  const paid = rows.filter((row) => ["PAID", "WAIVED"].includes(row.status)).length;
+                  const feeOutstanding = rows.reduce((sum, row) => sum + Math.max(0, num(row.amount_cents) - num(row.amount_paid_cents)), 0);
+                  return (
+                    <section key={fee.id} className="rounded-xl border border-white/10 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <b className="block truncate text-xs text-white">{fee.title}</b>
+                          <div className="mt-0.5 text-[9px] text-slate-500">
+                            {money(fee.amount_cents)} per player · {rows.length} assigned{fee.due_date ? ` · due ${new Date(`${fee.due_date}T12:00:00`).toLocaleDateString()}` : ""}
+                          </div>
+                          <div className="mt-1 text-[11px] font-black text-amber-100">Team due: {money(feeOutstanding)}</div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <Pill tone={paid === rows.length && rows.length ? "green" : "amber"}>{paid}/{rows.length} settled</Pill>
+                          <button
+                            type="button"
+                            onClick={() => openFeeEditor(fee)}
+                            className="grid h-9 w-9 place-items-center rounded-lg border border-cyan-300/20 bg-cyan-300/10 text-cyan-100"
+                            aria-label={`Edit ${fee.title}`}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mt-2 space-y-1">
+                        {rows.map((row) => (
+                          <div key={row.id} className="grid grid-cols-[minmax(0,1fr)_6rem_5.6rem] items-center gap-1.5 rounded-lg bg-black/15 p-2">
+                            <span className="truncate text-[10px] text-slate-300">{row.player_detail?.display_name}</span>
+                            <select value={row.status} onChange={(event) => run(() => updateFeeAssignment(row.id, { status: event.target.value }), "Payment status updated.")} className="h-8 rounded-lg border border-white/10 bg-[#050b14] px-1 text-[9px]">
+                              <option value="DUE">Due</option><option value="PARTIAL">Partial</option><option value="PAID">Paid</option><option value="WAIVED">Waived</option>
+                            </select>
+                            <select value={row.payment_method || ""} onChange={(event) => run(() => updateFeeAssignment(row.id, { payment_method: event.target.value }), "Payment method saved.")} className="h-8 rounded-lg border border-white/10 bg-[#050b14] px-1 text-[9px]">
+                              <option value="">Method</option><option>Cash</option><option>Cash App</option><option>Venmo</option><option>Stripe</option><option>Other</option>
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })}
+                {!fees.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-slate-500">No team fees yet.</div> : null}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="rounded-xl border border-amber-300/15 bg-amber-300/[.04] p-3">
+                  <div className="text-[8px] font-black uppercase tracking-[.14em] text-amber-300">Total amount due</div>
+                  <div className="mt-1 text-2xl font-black text-white">{money(ownDue)}</div>
+                </div>
+                {visibleAssignments.map((row) => (
+                  <section key={row.id} className="rounded-xl border border-white/10 bg-white/[.025] p-3">
+                    <div className="flex justify-between gap-2">
+                      <div><b className="text-xs text-white">{row.fee_detail?.title}</b><div className="text-[9px] text-slate-500">{row.fee_detail?.description}</div></div>
+                      <Pill tone={row.status === "PAID" || row.status === "WAIVED" ? "green" : "amber"}>{row.status}</Pill>
+                    </div>
+                    <div className="mt-2 text-lg font-black text-white">{money(Math.max(0, num(row.amount_cents) - num(row.amount_paid_cents)))}</div>
+                    {["DUE", "PARTIAL"].includes(row.status) ? <div className="mt-2 grid grid-cols-3 gap-1.5">{paymentSettings?.cash_app_url ? <a href={paymentSettings.cash_app_url} target="_blank" rel="noreferrer" className="rounded-lg border border-white/10 p-2 text-center text-[9px] font-black">Cash App</a> : null}{paymentSettings?.venmo_url ? <a href={paymentSettings.venmo_url} target="_blank" rel="noreferrer" className="rounded-lg border border-white/10 p-2 text-center text-[9px] font-black">Venmo</a> : null}{paymentSettings?.stripe_url ? <a href={paymentSettings.stripe_url} target="_blank" rel="noreferrer" className="rounded-lg border border-white/10 p-2 text-center text-[9px] font-black">Stripe</a> : null}</div> : null}
+                  </section>
+                ))}
+                {!visibleAssignments.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-slate-500">No dues assigned to your linked player account.</div> : null}
+              </div>
+            )}
           </Card>
-          {managerView ? <div className="space-y-3"><Card title="Add fee" body="Creates a private assignment for every active roster player."><div className="grid grid-cols-2 gap-2"><Input label="Name" value={feeForm.title} onChange={(value) => setFeeForm((v) => ({ ...v, title: value }))} /><Input label="Amount $" value={feeForm.amount} onChange={(value) => setFeeForm((v) => ({ ...v, amount: value }))} /><Input label="Due date" type="date" value={feeForm.due_date} onChange={(value) => setFeeForm((v) => ({ ...v, due_date: value }))} className="col-span-2" /><Input label="Note" value={feeForm.description} onChange={(value) => setFeeForm((v) => ({ ...v, description: value }))} className="col-span-2" /></div><Btn primary className="mt-2 w-full" onClick={addFee} disabled={!feeForm.title.trim() || !feeForm.amount || busy}><Plus className="mr-1 inline h-4 w-4" />Create & assign</Btn></Card><Card title="Payment links" body="Paste the team's Cash App, Venmo or Stripe payment link. No SyncWorks checkout is turned on yet."><div className="space-y-2"><Input label="Cash App URL" value={payForm.cash_app_url} onChange={(value) => setPayForm((v) => ({ ...v, cash_app_url: value }))} /><Input label="Venmo URL" value={payForm.venmo_url} onChange={(value) => setPayForm((v) => ({ ...v, venmo_url: value }))} /><Input label="Stripe URL" value={payForm.stripe_url} onChange={(value) => setPayForm((v) => ({ ...v, stripe_url: value }))} /><Input label="Payment note" value={payForm.payment_note} onChange={(value) => setPayForm((v) => ({ ...v, payment_note: value }))} /></div><Btn primary className="mt-2 w-full" onClick={savePayments}><WalletCards className="mr-1 inline h-4 w-4" />Save links</Btn><div className="mt-2 text-[9px] text-slate-500">Free to the team right now. When SyncWorks processing is enabled, online payments are designed for an additional 1% platform fee.</div></Card></div> : null}
+          {managerView ? (
+            <div className="space-y-3">
+              <Card title="Add fee" body="Creates a private per-player charge for every active roster player.">
+                <div className="grid grid-cols-2 gap-2">
+                  <Input label="Name" value={feeForm.title} onChange={(value) => setFeeForm((v) => ({ ...v, title: value }))} />
+                  <Input label="Per player $" value={feeForm.amount} onChange={(value) => setFeeForm((v) => ({ ...v, amount: value }))} />
+                  <Input label="Due date" type="date" value={feeForm.due_date} onChange={(value) => setFeeForm((v) => ({ ...v, due_date: value }))} className="col-span-2" />
+                  <Input label="Note" value={feeForm.description} onChange={(value) => setFeeForm((v) => ({ ...v, description: value }))} className="col-span-2" />
+                </div>
+                <Btn primary className="mt-2 w-full" onClick={addFee} disabled={!feeForm.title.trim() || !feeForm.amount || busy}><Plus className="mr-1 inline h-4 w-4" />Create & assign</Btn>
+              </Card>
+              <Card title="Payment links" body="Paste the team's Cash App, Venmo or Stripe payment link. No SyncWorks checkout is turned on yet.">
+                <div className="space-y-2"><Input label="Cash App URL" value={payForm.cash_app_url} onChange={(value) => setPayForm((v) => ({ ...v, cash_app_url: value }))} /><Input label="Venmo URL" value={payForm.venmo_url} onChange={(value) => setPayForm((v) => ({ ...v, venmo_url: value }))} /><Input label="Stripe URL" value={payForm.stripe_url} onChange={(value) => setPayForm((v) => ({ ...v, stripe_url: value }))} /><Input label="Payment note" value={payForm.payment_note} onChange={(value) => setPayForm((v) => ({ ...v, payment_note: value }))} /></div>
+                <Btn primary className="mt-2 w-full" onClick={savePayments}><WalletCards className="mr-1 inline h-4 w-4" />Save links</Btn>
+              </Card>
+            </div>
+          ) : null}
         </div> : null}
       </main>
+
+      {feeEdit && managerView ? (
+        <Drawer title="Edit team fee" onClose={() => setFeeEdit(null)}>
+          <div className="space-y-3">
+            <div className="rounded-xl border border-cyan-300/15 bg-cyan-300/[.04] p-3 text-[10px] text-cyan-100">
+              This changes the per-player charge for unpaid roster assignments. Paid or waived history is preserved.
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Input label="Fee name" value={feeEdit.title} onChange={(value) => setFeeEdit((v) => ({ ...v, title: value }))} />
+              <Input label="Per player $" value={feeEdit.amount} onChange={(value) => setFeeEdit((v) => ({ ...v, amount: value }))} />
+              <Input label="Due date" type="date" value={feeEdit.due_date} onChange={(value) => setFeeEdit((v) => ({ ...v, due_date: value }))} className="col-span-2" />
+              <Input label="Note" value={feeEdit.description} onChange={(value) => setFeeEdit((v) => ({ ...v, description: value }))} className="col-span-2" />
+            </div>
+            <Btn primary className="w-full" onClick={saveFeeEdit} disabled={busy || !feeEdit.title.trim()}><Save className="mr-1 inline h-4 w-4" />Save fee</Btn>
+          </div>
+        </Drawer>
+      ) : null}
 
       {chatOpen ? <Drawer title="Team chat" onClose={() => setChatOpen(false)}><TeamChatPanel groupId={group.id} userId={userId} canManage={managed} bare /></Drawer> : null}
 
