@@ -21,7 +21,13 @@ export default function InteractiveStatsBoard({ rows, scope, onScope, managerVie
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef({ timer: null, active: false, index: null });
 
-  const sorted = [...(Array.isArray(rows) ? rows : [])].sort((a, b) => num(b?.[sortKey]) - num(a?.[sortKey]));
+  const cleanRows = Array.isArray(rows) ? rows : [];
+  const sorted = [...cleanRows].sort((a, b) => num(b?.[sortKey]) - num(a?.[sortKey]));
+  const leaderMetrics = ["avg", "ops", "hr", "rbi"];
+  const leaders = leaderMetrics.map((key) => {
+    const leader = [...cleanRows].sort((a, b) => num(b?.[key]) - num(a?.[key]))[0] || null;
+    return { key, leader };
+  });
 
   function reorder(from, to) {
     if (from === to || from == null || to == null) return;
@@ -72,6 +78,24 @@ export default function InteractiveStatsBoard({ rows, scope, onScope, managerVie
           <p className="mt-1 text-[10px] leading-4 text-slate-500">Tap a metric to rank the roster. Press and hold a chip to drag your stat order.</p>
         </div>
         {managerView ? <button type="button" onClick={onAdd} className="min-h-10 rounded-xl bg-amber-300 px-3 text-[10px] font-black text-slate-950"><Plus className="mr-1 inline h-4 w-4" />Add stats</button> : <Trophy className="h-4 w-4 text-amber-300" />}
+      </div>
+
+      <div className="mt-3">
+        <div className="mb-1.5 flex items-center gap-1 text-[8px] font-black uppercase tracking-[.14em] text-amber-300"><Trophy className="h-3.5 w-3.5" />Team leaders</div>
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+          {leaders.map(({ key, leader }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setSortKey(key)}
+              className={`rounded-xl border p-2 text-left transition ${sortKey === key ? "border-amber-300/30 bg-amber-300/10" : "border-white/10 bg-black/15"}`}
+            >
+              <div className="text-[7px] font-black uppercase tracking-wide text-slate-500">{METRICS[key].label}</div>
+              <div className="mt-1 truncate text-[10px] font-black text-white">{leader?.player?.display_name || "—"}</div>
+              <div className="mt-0.5 text-sm font-black text-amber-200">{leader ? METRICS[key].format(leader?.[key]) : "—"}</div>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1">
