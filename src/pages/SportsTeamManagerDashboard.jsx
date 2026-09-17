@@ -1,0 +1,529 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Camera,
+  Check,
+  CircleDollarSign,
+  CircleDot,
+  GripVertical,
+  ImageDown,
+  Loader2,
+  Mail,
+  MapPin,
+  Pencil,
+  Phone,
+  Plus,
+  RefreshCw,
+  Save,
+  Trash2,
+  Trophy,
+  UserPlus,
+  Users,
+  WalletCards,
+  X,
+} from "lucide-react";
+
+import ModeBar from "../components/ModeBar";
+import { useAuth } from "../auth/AuthContext";
+import { getGroups, getMemberships } from "../api/social";
+import {
+  assignTeamFeeRoster,
+  createPlayerProfile,
+  createSportsGame,
+  createSportsPlayer,
+  createStatLedgerEntry,
+  createTeamFee,
+  ensureTeamPaymentSettings,
+  getFeeAssignments,
+  getPlayerProfiles,
+  getScopedTeamStats,
+  getSportsTeams,
+  getTeamDashboard,
+  getTeamFees,
+  getTeamPaymentSettings,
+  removeSportsPlayer,
+  setSportsLineup,
+  updateFeeAssignment,
+  updatePlayerProfile,
+  updateSportsPlayer,
+  updateSportsTeam,
+  updateTeamPaymentSettings,
+} from "../api/sports";
+
+const TABS = ["Overview", "Roster", "Lineup", "Schedule", "Stats", "Dues"];
+const POSITIONS = ["P", "C", "1B", "2B", "3B", "SS", "LF", "LC", "RC", "RF", "OF", "EH", "DH"];
+const cx = (...values) => values.filter(Boolean).join(" ");
+const list = (value) => (Array.isArray(value) ? value : []);
+const num = (value) => Number(value || 0);
+const pct = (value) => num(value).toFixed(3).replace(/^0(?=\.)/, "");
+const money = (cents) => (num(cents) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+const nameOf = (person) => person?.display_name || [person?.first_name, person?.last_name].filter(Boolean).join(" ") || person?.email || "Player";
+const errorText = (error) => error?.response?.data?.detail || Object.values(error?.response?.data || {})?.flat?.()?.[0] || error?.message || "Something went wrong.";
+
+function Btn({ children, onClick, primary, danger, disabled, className = "", type = "button" }) {
+  return (
+    <button
+      type={type}
+      disabled={disabled}
+      onClick={onClick}
+      className={cx(
+        "min-h-10 rounded-xl px-3 text-xs font-black transition disabled:opacity-40",
+        primary ? "bg-cyan-300 text-slate-950" : danger ? "border border-rose-400/25 bg-rose-400/10 text-rose-100" : "border border-white/10 bg-white/[.035] text-slate-200",
+        className,
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Card({ title, body, action, children, className = "" }) {
+  return (
+    <section className={cx("rounded-[1.35rem] border border-white/10 bg-[#07111f]/95 p-3.5 sm:p-4", className)}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0"><h2 className="text-sm font-black text-white">{title}</h2>{body ? <p className="mt-1 text-[11px] leading-4 text-slate-500">{body}</p> : null}</div>
+        {action}
+      </div>
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
+function Input({ label, value, onChange, type = "text", placeholder = "", className = "" }) {
+  return (
+    <label className={cx("block", className)}>
+      <span className="mb-1 block text-[9px] font-black uppercase tracking-[.14em] text-slate-500">{label}</span>
+      <input type={type} value={value ?? ""} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="h-10 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-xs text-white outline-none focus:border-cyan-400/40" />
+    </label>
+  );
+}
+
+function Select({ label, value, onChange, children, className = "" }) {
+  return (
+    <label className={cx("block", className)}>
+      <span className="mb-1 block text-[9px] font-black uppercase tracking-[.14em] text-slate-500">{label}</span>
+      <select value={value ?? ""} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2.5 text-xs text-white outline-none focus:border-cyan-400/40">{children}</select>
+    </label>
+  );
+}
+
+function Pill({ children, tone = "slate" }) {
+  const tones = {
+    slate: "border-white/10 bg-white/[.04] text-slate-300",
+    cyan: "border-cyan-300/20 bg-cyan-300/10 text-cyan-100",
+    green: "border-emerald-300/20 bg-emerald-300/10 text-emerald-100",
+    amber: "border-amber-300/20 bg-amber-300/10 text-amber-100",
+    rose: "border-rose-300/20 bg-rose-300/10 text-rose-100",
+    violet: "border-violet-300/20 bg-violet-300/10 text-violet-100",
+  };
+  return <span className={cx("inline-flex rounded-full border px-2 py-1 text-[9px] font-black uppercase tracking-wide", tones[tone])}>{children}</span>;
+}
+
+function Stat({ label, value, sub }) {
+  return <div className="rounded-xl border border-white/10 bg-black/15 p-2.5"><div className="text-[8px] font-black uppercase tracking-[.13em] text-slate-500">{label}</div><div className="mt-1 text-lg font-black text-white">{value}</div>{sub ? <div className="text-[9px] text-slate-500">{sub}</div> : null}</div>;
+}
+
+function Drawer({ title, onClose, children }) {
+  return (
+    <div className="fixed inset-0 z-[120] flex items-end bg-black/70 backdrop-blur-sm sm:items-center sm:justify-center" onMouseDown={onClose}>
+      <section onMouseDown={(event) => event.stopPropagation()} className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[1.7rem] border border-white/10 bg-[#06101d] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:max-w-xl sm:rounded-[1.7rem]">
+        <div className="sticky top-0 z-10 mb-3 flex items-center justify-between bg-[#06101d]/95 pb-2"><div><div className="text-[9px] font-black uppercase tracking-[.16em] text-cyan-300">Team workspace</div><h2 className="mt-1 text-lg font-black text-white">{title}</h2></div><button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full border border-white/10"><X className="h-4 w-4" /></button></div>
+        {children}
+      </section>
+    </div>
+  );
+}
+
+function Avatar({ player, profile, size = "md" }) {
+  const sizeClass = size === "lg" ? "h-16 w-16 text-xl" : "h-9 w-9 text-xs";
+  if (profile?.profile_photo_url) return <img src={profile.profile_photo_url} alt="" className={cx(sizeClass, "shrink-0 rounded-xl object-cover")} />;
+  const initials = String(player?.display_name || "P").split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+  return <div className={cx(sizeClass, "grid shrink-0 place-items-center rounded-xl border border-cyan-300/15 bg-cyan-300/10 font-black text-cyan-100")}>{initials || "P"}</div>;
+}
+
+export default function SportsTeamManagerDashboard() {
+  const { groupId } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const userId = Number(user?.id || 0);
+
+  const [tab, setTab] = useState("Overview");
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [group, setGroup] = useState(null);
+  const [memberships, setMemberships] = useState([]);
+  const [team, setTeam] = useState(null);
+  const [dashboard, setDashboard] = useState(null);
+  const [profiles, setProfiles] = useState([]);
+  const [paymentSettings, setPaymentSettings] = useState(null);
+  const [fees, setFees] = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [statsScope, setStatsScope] = useState("ALL");
+  const [scopedStats, setScopedStats] = useState([]);
+  const [previewPlayerView, setPreviewPlayerView] = useState(false);
+
+  const [playerDrawer, setPlayerDrawer] = useState(null);
+  const [playerEdit, setPlayerEdit] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [statDrawer, setStatDrawer] = useState(false);
+  const [statForm, setStatForm] = useState({ player: "", scope: "LEAGUE", games: "", pa: "", ab: "", hits: "", doubles: "", triples: "", home_runs: "", walks: "", sac_flies: "", rbi: "", runs: "", note: "" });
+
+  const [meta, setMeta] = useState({ season_name: "", league_name: "", division_name: "" });
+  const [newPlayer, setNewPlayer] = useState({ display_name: "", jersey_number: "", primary_position: "", bats: "R", throws: "R", email: "", phone: "" });
+  const [gameForm, setGameForm] = useState({ game_type: "LEAGUE", opponent_name: "", home_away: "NEUTRAL", date: "", time: "18:30", venue_name: "", address_line1: "", city: "", state: "AL" });
+  const [lineupGameId, setLineupGameId] = useState("");
+  const [lineup, setLineup] = useState([]);
+  const [lineupPlayerId, setLineupPlayerId] = useState("");
+  const [dragging, setDragging] = useState(false);
+  const dragRef = useRef({ timer: null, active: false, index: null, pointerId: null, target: null });
+
+  const [feeForm, setFeeForm] = useState({ title: "League fee", amount: "", due_date: "", description: "" });
+  const [payForm, setPayForm] = useState({ cash_app_url: "", venmo_url: "", stripe_url: "", payment_note: "" });
+
+  const managed = useMemo(() => memberships.some((membership) => Number(membership.group) === Number(groupId) && Number(membership.user) === userId && membership.status === "ACTIVE" && ["OWNER", "DIRECTOR", "MANAGER"].includes(membership.role)), [memberships, groupId, userId]);
+  const managerView = managed && !previewPlayerView;
+  const socialRoster = useMemo(() => memberships.filter((membership) => Number(membership.group) === Number(groupId) && membership.status === "ACTIVE"), [memberships, groupId]);
+  const players = list(dashboard?.players).filter((player) => player.is_active !== false);
+  const profileMap = useMemo(() => new Map(profiles.map((profile) => [Number(profile.player), profile])), [profiles]);
+  const myPlayer = players.find((player) => Number(player.user) === userId);
+  const visibleAssignments = managerView ? assignments : assignments.filter((row) => Number(row.player_detail?.user) === userId || Number(row.player) === Number(myPlayer?.id));
+
+  const games = useMemo(() => {
+    const map = new Map();
+    [...list(dashboard?.live_games), ...list(dashboard?.upcoming_games), ...list(dashboard?.recent_games)].forEach((game) => map.set(Number(game.id), game));
+    return [...map.values()].sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
+  }, [dashboard]);
+
+  const selectedGame = games.find((game) => Number(game.id) === Number(lineupGameId));
+  const lineupIds = new Set(lineup.map((spot) => Number(spot.player)));
+  const availablePlayers = players.filter((player) => !lineupIds.has(Number(player.id)));
+  const nextGame = games.find((game) => game.status === "LIVE") || games.find((game) => game.status === "SCHEDULED" && new Date(game.start_at) >= new Date());
+
+  function profileFor(player) {
+    if (!player) return null;
+    if (!managerView && Number(player.user) !== userId) return null;
+    return profileMap.get(Number(player.id)) || null;
+  }
+
+  async function refresh({ quiet = false } = {}) {
+    if (!quiet) setLoading(true);
+    setError("");
+    try {
+      const [groupRows, membershipRows, teamRows] = await Promise.all([getGroups(), getMemberships(), getSportsTeams()]);
+      const foundGroup = list(groupRows).find((row) => Number(row.id) === Number(groupId));
+      const foundTeam = list(teamRows).find((row) => Number(row.group) === Number(groupId));
+      setGroup(foundGroup || null);
+      setMemberships(list(membershipRows));
+      setTeam(foundTeam || null);
+      if (!foundTeam) {
+        setDashboard(null);
+        return;
+      }
+      const data = await getTeamDashboard(foundTeam.id);
+      setDashboard(data);
+      setMeta({ season_name: data.team?.season_name || "", league_name: data.team?.league_name || "", division_name: data.team?.division_name || "" });
+
+      const extras = await Promise.allSettled([
+        getPlayerProfiles(foundTeam.id),
+        getTeamPaymentSettings(foundTeam.id),
+        getTeamFees(foundTeam.id),
+        getFeeAssignments(foundTeam.id),
+        getScopedTeamStats(foundTeam.id, statsScope),
+      ]);
+      if (extras[0].status === "fulfilled") setProfiles(list(extras[0].value));
+      if (extras[1].status === "fulfilled") {
+        setPaymentSettings(extras[1].value || null);
+        const p = extras[1].value || {};
+        setPayForm({ cash_app_url: p.cash_app_url || "", venmo_url: p.venmo_url || "", stripe_url: p.stripe_url || "", payment_note: p.payment_note || "" });
+      }
+      if (extras[2].status === "fulfilled") setFees(list(extras[2].value));
+      if (extras[3].status === "fulfilled") setAssignments(list(extras[3].value));
+      if (extras[4].status === "fulfilled") setScopedStats(list(extras[4].value?.rows));
+
+      if (!lineupGameId) {
+        const preferred = list(data.live_games)[0] || list(data.upcoming_games)[0] || list(data.recent_games)[0];
+        if (preferred) chooseLineupGame(String(preferred.id), data);
+      }
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [groupId]);
+
+  useEffect(() => {
+    if (!team) return;
+    getScopedTeamStats(team.id, statsScope).then((data) => setScopedStats(list(data?.rows))).catch(() => {});
+  }, [team, statsScope]);
+
+  async function run(fn, message, { closePlayer = false } = {}) {
+    setBusy(true); setError(""); setNotice("");
+    try {
+      await fn();
+      if (message) setNotice(message);
+      if (closePlayer) { setPlayerDrawer(null); setPlayerEdit(null); setPhotoFile(null); }
+      await refresh({ quiet: true });
+    } catch (err) { setError(errorText(err)); }
+    finally { setBusy(false); }
+  }
+
+  function chooseLineupGame(value, data = dashboard) {
+    setLineupGameId(value);
+    const sourceGames = (() => {
+      const map = new Map();
+      [...list(data?.live_games), ...list(data?.upcoming_games), ...list(data?.recent_games)].forEach((game) => map.set(Number(game.id), game));
+      return [...map.values()];
+    })();
+    const game = sourceGames.find((row) => Number(row.id) === Number(value));
+    setLineup(list(game?.lineup_spots).map((spot) => ({ player: Number(spot.player), defensive_position: spot.defensive_position || "" })));
+    setLineupPlayerId("");
+  }
+
+  function addLineupPlayer() {
+    const playerId = Number(lineupPlayerId);
+    if (!playerId || lineupIds.has(playerId)) return;
+    const player = players.find((row) => Number(row.id) === playerId);
+    setLineup((current) => [...current, { player: playerId, defensive_position: player?.primary_position || "" }]);
+    setLineupPlayerId("");
+  }
+
+  function reorderLineup(from, to) {
+    if (from === to || from == null || to == null) return;
+    setLineup((current) => {
+      const next = [...current];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  }
+
+  function dragStart(event, index) {
+    if (!managerView) return;
+    const target = event.currentTarget;
+    target.setPointerCapture?.(event.pointerId);
+    dragRef.current = { timer: setTimeout(() => { dragRef.current.active = true; setDragging(true); }, 180), active: false, index, pointerId: event.pointerId, target };
+  }
+
+  function dragMove(event) {
+    if (!dragRef.current.active) return;
+    event.preventDefault();
+    const row = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-lineup-index]");
+    if (!row) return;
+    const to = Number(row.dataset.lineupIndex);
+    const from = Number(dragRef.current.index);
+    if (Number.isNaN(to) || to === from) return;
+    reorderLineup(from, to);
+    dragRef.current.index = to;
+  }
+
+  function dragEnd() {
+    clearTimeout(dragRef.current.timer);
+    dragRef.current.active = false;
+    dragRef.current.index = null;
+    setDragging(false);
+  }
+
+  async function saveLineup() {
+    if (!lineupGameId || !lineup.length) return;
+    await run(() => setSportsLineup(Number(lineupGameId), lineup.map((spot, index) => ({ player: Number(spot.player), batting_order: index + 1, defensive_position: spot.defensive_position || "", is_starter: true }))), "Lineup saved.");
+  }
+
+  async function saveLineupImage() {
+    if (!lineup.length) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 300 + lineup.length * 86;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#030712"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#34dfff"; ctx.font = "700 26px sans-serif"; ctx.fillText("SYNCWORKS TEAM LINEUP", 70, 70);
+    ctx.fillStyle = "#ffffff"; ctx.font = "800 48px sans-serif"; ctx.fillText(group?.name || "Team", 70, 130);
+    ctx.fillStyle = "#94a3b8"; ctx.font = "26px sans-serif";
+    const gameText = selectedGame ? `${new Date(selectedGame.start_at).toLocaleString()}  •  vs ${selectedGame.opponent_name}` : "Lineup";
+    ctx.fillText(gameText, 70, 178);
+    lineup.forEach((spot, index) => {
+      const player = players.find((row) => Number(row.id) === Number(spot.player));
+      const y = 250 + index * 86;
+      ctx.fillStyle = index % 2 ? "#0b1324" : "#101b30"; ctx.fillRect(55, y - 48, 970, 68);
+      ctx.fillStyle = "#8b5cff"; ctx.font = "800 30px sans-serif"; ctx.fillText(String(index + 1), 80, y - 3);
+      ctx.fillStyle = "#ffffff"; ctx.font = "700 30px sans-serif"; ctx.fillText(`#${player?.jersey_number || "—"} ${player?.display_name || "Player"}`, 145, y - 3);
+      ctx.fillStyle = "#70ff3d"; ctx.font = "700 26px sans-serif"; ctx.fillText(spot.defensive_position || "—", 900, y - 3);
+    });
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!blob) return;
+    const file = new File([blob], `${(group?.name || "team").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-lineup.png`, { type: "image/png" });
+    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ title: `${group?.name || "Team"} lineup`, files: [file] });
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a"); anchor.href = url; anchor.download = file.name; anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function openPlayer(player) {
+    const profile = profileFor(player);
+    setPlayerDrawer(player);
+    setPlayerEdit({
+      display_name: player.display_name || "", jersey_number: player.jersey_number || "", primary_position: player.primary_position || "", bats: player.bats || "R", throws: player.throws || "R",
+      email: profile?.email || player.user_detail?.email || "", phone: profile?.phone || "", emergency_contact_name: profile?.emergency_contact_name || "", emergency_contact_phone: profile?.emergency_contact_phone || "", notes: profile?.notes || "",
+    });
+    setPhotoFile(null);
+  }
+
+  async function savePlayer() {
+    if (!playerDrawer || !playerEdit) return;
+    const profile = profileMap.get(Number(playerDrawer.id));
+    await run(async () => {
+      await updateSportsPlayer(playerDrawer.id, {
+        display_name: playerEdit.display_name.trim(), jersey_number: playerEdit.jersey_number.trim(), primary_position: playerEdit.primary_position, bats: playerEdit.bats, throws: playerEdit.throws,
+      });
+      const form = new FormData();
+      form.append("player", String(playerDrawer.id));
+      form.append("email", playerEdit.email || "");
+      form.append("phone", playerEdit.phone || "");
+      form.append("emergency_contact_name", playerEdit.emergency_contact_name || "");
+      form.append("emergency_contact_phone", playerEdit.emergency_contact_phone || "");
+      form.append("notes", playerEdit.notes || "");
+      if (photoFile) form.append("profile_photo", photoFile);
+      if (profile) await updatePlayerProfile(profile.id, form); else await createPlayerProfile(form);
+    }, "Player updated.", { closePlayer: true });
+  }
+
+  async function archivePlayer() {
+    if (!playerDrawer) return;
+    if (!window.confirm(`Remove ${playerDrawer.display_name} from the active roster? Historical game data will be kept.`)) return;
+    await run(() => removeSportsPlayer(playerDrawer.id), "Player removed from active roster.", { closePlayer: true });
+  }
+
+  async function addPlayer() {
+    if (!newPlayer.display_name.trim()) return;
+    await run(async () => {
+      const player = await createSportsPlayer({ team: team.id, display_name: newPlayer.display_name.trim(), jersey_number: newPlayer.jersey_number.trim(), primary_position: newPlayer.primary_position, bats: newPlayer.bats, throws: newPlayer.throws });
+      if (newPlayer.email || newPlayer.phone) await createPlayerProfile({ player: player.id, email: newPlayer.email, phone: newPlayer.phone });
+    }, "Player added.");
+    setNewPlayer({ display_name: "", jersey_number: "", primary_position: "", bats: "R", throws: "R", email: "", phone: "" });
+  }
+
+  async function importSocialRoster() {
+    const linkedIds = new Set(players.map((player) => Number(player.user)).filter(Boolean));
+    const missing = socialRoster.filter((membership) => !linkedIds.has(Number(membership.user)));
+    if (!missing.length) return setNotice("Every active Social member is already represented on the roster.");
+    await run(async () => {
+      for (const membership of missing) await createSportsPlayer({ team: team.id, user: Number(membership.user), display_name: nameOf(membership.user_detail), jersey_number: "", primary_position: "" });
+    }, `${missing.length} Social member${missing.length === 1 ? "" : "s"} added.`);
+  }
+
+  async function saveTeamMeta() {
+    await run(() => updateSportsTeam(team.id, meta), "Team details saved.");
+  }
+
+  async function addGame() {
+    if (!gameForm.opponent_name.trim() || !gameForm.date) return;
+    const startAt = new Date(`${gameForm.date}T${gameForm.time || "18:30"}:00`);
+    await run(() => createSportsGame({ team: team.id, game_type: gameForm.game_type, opponent_name: gameForm.opponent_name.trim(), home_away: gameForm.home_away, start_at: startAt.toISOString(), venue_name: gameForm.venue_name.trim(), address_line1: gameForm.address_line1.trim(), city: gameForm.city.trim(), state: gameForm.state.trim(), innings_scheduled: 7 }), "Game added and synced to Social/Calendar.");
+    setGameForm((current) => ({ ...current, opponent_name: "", date: "" }));
+  }
+
+  async function savePayments() {
+    await run(async () => {
+      const current = paymentSettings || await ensureTeamPaymentSettings(team.id);
+      await updateTeamPaymentSettings(current.id, payForm);
+    }, "Payment links saved.");
+  }
+
+  async function addFee() {
+    if (!feeForm.title.trim() || !feeForm.amount) return;
+    await run(async () => {
+      const fee = await createTeamFee({ team: team.id, title: feeForm.title.trim(), description: feeForm.description.trim(), amount_cents: Math.round(Number(feeForm.amount) * 100), due_date: feeForm.due_date || null });
+      await assignTeamFeeRoster(fee.id);
+    }, "Fee created and assigned to the active roster.");
+    setFeeForm({ title: "League fee", amount: "", due_date: "", description: "" });
+  }
+
+  async function saveStatEntry() {
+    if (!statForm.player) return;
+    const integerFields = ["games", "pa", "ab", "hits", "doubles", "triples", "home_runs", "walks", "sac_flies", "rbi", "runs"];
+    const payload = { team: team.id, player: Number(statForm.player), season_name: team.season_name || "", scope: statForm.scope, source: "MANUAL", note: statForm.note || "" };
+    integerFields.forEach((field) => { payload[field] = Math.max(0, Number.parseInt(statForm[field] || "0", 10) || 0); });
+    await run(() => createStatLedgerEntry(payload), "Historical stats added.");
+    setStatDrawer(false);
+    setStatForm({ player: "", scope: "LEAGUE", games: "", pa: "", ab: "", hits: "", doubles: "", triples: "", home_runs: "", walks: "", sac_flies: "", rbi: "", runs: "", note: "" });
+  }
+
+  if (loading) return <div className="min-h-screen bg-[#02060c] text-white"><ModeBar title="Team" subtitle="SyncWorks Social" /><div className="grid min-h-[65vh] place-items-center"><Loader2 className="h-8 w-8 animate-spin text-cyan-300" /></div></div>;
+  if (!group || !team) return <div className="min-h-screen bg-[#02060c] p-4 text-white"><ModeBar title="Team" subtitle="SyncWorks Social" /><Card title="Team workspace unavailable" body="Open this from an enabled Team group in SyncWorks Social."><Btn onClick={() => navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4" />Social</Btn></Card></div>;
+
+  const record = dashboard?.record || {};
+  const ownDue = visibleAssignments.filter((row) => ["DUE", "PARTIAL"].includes(row.status)).reduce((sum, row) => sum + Math.max(0, num(row.amount_cents) - num(row.amount_paid_cents)), 0);
+  const managerDueCount = assignments.filter((row) => ["DUE", "PARTIAL"].includes(row.status)).length;
+
+  return (
+    <div className="min-h-screen bg-[#02060c] pb-24 text-slate-100">
+      <ModeBar title={group.name} subtitle="Team • SyncWorks Social" />
+      <main className="mx-auto max-w-7xl space-y-3 px-3 py-3 sm:px-5">
+        <div className="flex items-center justify-between gap-2">
+          <Btn onClick={() => navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4" />Social</Btn>
+          <div className="flex items-center gap-2">{managed ? <button type="button" onClick={() => setPreviewPlayerView((value) => !value)} className="rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-2 text-[9px] font-black uppercase tracking-wide text-violet-100">{previewPlayerView ? "Back to manager" : "Preview player"}</button> : null}<button type="button" onClick={() => refresh()} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10"><RefreshCw className="h-4 w-4" /></button></div>
+        </div>
+
+        {error ? <div className="rounded-xl border border-rose-400/20 bg-rose-400/10 p-3 text-xs text-rose-100">{error}</div> : null}
+        {notice ? <div className="rounded-xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-xs text-cyan-100">{notice}</div> : null}
+
+        <section className="rounded-[1.55rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_90%_0%,rgba(34,211,238,.16),transparent_35%),radial-gradient(circle_at_0%_100%,rgba(139,92,246,.13),transparent_35%),#07111f] p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0"><div className="flex flex-wrap gap-1.5"><Pill tone="cyan">Softball</Pill><Pill tone={managerView ? "violet" : "green"}>{managerView ? "Manager view" : "Player view"}</Pill><Pill>{team.season_name || "Season"}</Pill><Pill tone="green">Free team tools</Pill></div><h1 className="mt-2 truncate text-2xl font-black text-white">{group.name}</h1><p className="mt-1 text-[11px] text-slate-400">{[team.league_name, team.division_name].filter(Boolean).join(" · ") || "Team workspace"}</p></div>
+            {list(dashboard?.live_games).length ? <Btn primary onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${dashboard.live_games[0].id}`)}><CircleDot className="mr-1 inline h-4 w-4" />Live</Btn> : null}
+          </div>
+          <div className="mt-3 grid grid-cols-4 gap-1.5"><Stat label="Record" value={`${num(record.wins)}-${num(record.losses)}`} /><Stat label="Roster" value={players.length} /><Stat label="Games" value={games.length} /><Stat label={managerView ? "Due" : "My due"} value={managerView ? managerDueCount : money(ownDue)} /></div>
+          {nextGame ? <button type="button" onClick={() => setTab("Schedule")} className="mt-3 flex w-full items-center justify-between rounded-xl border border-emerald-400/15 bg-emerald-400/[.05] p-2.5 text-left"><span><span className="block text-[9px] font-black uppercase tracking-wide text-emerald-300">Next game</span><b className="text-xs text-white">{new Date(nextGame.start_at).toLocaleDateString()} · {new Date(nextGame.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · vs {nextGame.opponent_name}</b><span className="block text-[10px] text-slate-500">{nextGame.venue_name || "Field TBD"}</span></span><CalendarDays className="h-4 w-4 text-emerald-300" /></button> : null}
+        </section>
+
+        <div className="flex gap-1.5 overflow-x-auto pb-1">{TABS.map((name) => <button key={name} type="button" onClick={() => setTab(name)} className={cx("min-h-9 shrink-0 rounded-full px-3 text-[10px] font-black", tab === name ? "bg-white text-slate-950" : "border border-white/10 text-slate-400")}>{name}</button>)}</div>
+
+        {tab === "Overview" ? <div className="grid gap-3 lg:grid-cols-2">
+          <Card title="Season command" body={managerView ? "Manager controls. Players see the same team data without edit access." : "Your team, schedule, lineup, stats and dues in one place."}>
+            <div className="grid grid-cols-2 gap-2"><Stat label="Team AVG" value={pct(dashboard?.team_stats?.avg)} sub={`${num(dashboard?.team_stats?.hits)} H`} /><Stat label="Run diff" value={num(dashboard?.team_stats?.runs_for) - num(dashboard?.team_stats?.runs_against)} sub={`${num(dashboard?.team_stats?.runs_for)}-${num(dashboard?.team_stats?.runs_against)}`} /></div>
+            <div className="mt-3 grid grid-cols-3 gap-1.5"><Btn onClick={() => setTab("Lineup")}>Lineup</Btn><Btn onClick={() => setTab("Stats")}>Stats</Btn><Btn onClick={() => setTab("Dues")}>Dues</Btn></div>
+          </Card>
+          {managerView ? <Card title="Team details" body="These labels carry with the team if it later joins an association or league."><div className="grid gap-2 sm:grid-cols-3"><Input label="Season" value={meta.season_name} onChange={(value) => setMeta((current) => ({ ...current, season_name: value }))} /><Input label="League" value={meta.league_name} onChange={(value) => setMeta((current) => ({ ...current, league_name: value }))} /><Input label="Division" value={meta.division_name} onChange={(value) => setMeta((current) => ({ ...current, division_name: value }))} /></div><Btn primary className="mt-2 w-full" onClick={saveTeamMeta} disabled={busy}><Save className="mr-1 inline h-4 w-4" />Save</Btn></Card> : <Card title="Your access" body="Players can view team information and only their own payment status."><div className="space-y-2 text-xs text-slate-300"><div className="rounded-xl border border-white/10 p-3"><b>Roster:</b> shared team information</div><div className="rounded-xl border border-white/10 p-3"><b>Dues:</b> only your own amount/status</div><div className="rounded-xl border border-white/10 p-3"><b>Game Day:</b> managers keep the official book</div></div></Card>}
+        </div> : null}
+
+        {tab === "Roster" ? <div className="grid gap-3 lg:grid-cols-[1.2fr_.8fr]">
+          <Card title="Roster" body="Tap a player for details. Contact/payment data stays private." action={<Users className="h-4 w-4 text-cyan-300" />}>
+            <div className="grid gap-2 sm:grid-cols-2">{players.map((player) => { const profile = profileFor(player); return <button key={player.id} type="button" onClick={() => openPlayer(player)} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[.025] p-2.5 text-left"><Avatar player={player} profile={profile} /><span className="min-w-0 flex-1"><b className="block truncate text-xs text-white">#{player.jersey_number || "—"} {player.display_name}</b><span className="block text-[10px] text-slate-500">{player.primary_position || "Position TBD"}{player.user ? " · SyncWorks linked" : " · manual"}</span></span><span className="rounded-lg border border-white/10 px-2 py-1 text-[9px] font-black text-slate-400">{managerView ? "Edit" : "View"}</span></button>; })}</div>
+          </Card>
+          {managerView ? <div className="space-y-3"><Card title="Import Social members" body="Link active members already inside this Social team."><Btn primary className="w-full" onClick={importSocialRoster} disabled={busy}><UserPlus className="mr-1 inline h-4 w-4" />Import members</Btn></Card><Card title="Add player" body="Contact info is manager-only until that player claims a SyncWorks account."><div className="grid grid-cols-2 gap-2"><Input label="Name" value={newPlayer.display_name} onChange={(value) => setNewPlayer((v) => ({ ...v, display_name: value }))} className="col-span-2" /><Input label="Jersey #" value={newPlayer.jersey_number} onChange={(value) => setNewPlayer((v) => ({ ...v, jersey_number: value }))} /><Select label="Position" value={newPlayer.primary_position} onChange={(value) => setNewPlayer((v) => ({ ...v, primary_position: value }))}><option value="">Choose</option>{POSITIONS.map((position) => <option key={position}>{position}</option>)}</Select><Input label="Email" value={newPlayer.email} onChange={(value) => setNewPlayer((v) => ({ ...v, email: value }))} /><Input label="Phone" value={newPlayer.phone} onChange={(value) => setNewPlayer((v) => ({ ...v, phone: value }))} /></div><Btn primary className="mt-2 w-full" onClick={addPlayer} disabled={!newPlayer.display_name.trim() || busy}><Plus className="mr-1 inline h-4 w-4" />Add player</Btn></Card></div> : null}
+        </div> : null}
+
+        {tab === "Lineup" ? <Card title="Lineup" body={managerView ? "Press and hold the grip, then drag. Position can be changed inline." : "Official batting order and defensive positions."} action={<GripVertical className="h-4 w-4 text-violet-300" />}>
+          <div className="grid gap-3 lg:grid-cols-[.7fr_1.3fr]"><div className="space-y-2"><Select label="Game" value={lineupGameId} onChange={(value) => chooseLineupGame(value)}><option value="">Choose game</option>{games.filter((game) => game.status !== "CANCELLED").map((game) => <option key={game.id} value={game.id}>{new Date(game.start_at).toLocaleDateString()} · {new Date(game.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · {game.opponent_name}</option>)}</Select>{selectedGame ? <div className="rounded-xl border border-white/10 bg-black/15 p-3 text-[10px] text-slate-400"><b className="text-xs text-white">vs {selectedGame.opponent_name}</b><div>{selectedGame.venue_name}</div></div> : null}{managerView && lineupGameId ? <div className="flex gap-2"><select value={lineupPlayerId} onChange={(event) => setLineupPlayerId(event.target.value)} className="h-10 min-w-0 flex-1 rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs"><option value="">Add batter…</option>{availablePlayers.map((player) => <option key={player.id} value={player.id}>#{player.jersey_number || "—"} {player.display_name}</option>)}</select><Btn primary onClick={addLineupPlayer} disabled={!lineupPlayerId}><Plus className="h-4 w-4" /></Btn></div> : null}</div>
+            <div className={cx("space-y-1.5", dragging && "select-none")}>{lineup.map((spot, index) => { const player = players.find((row) => Number(row.id) === Number(spot.player)); return <div key={spot.player} data-lineup-index={index} className={cx("grid grid-cols-[2rem_2.2rem_minmax(0,1fr)_4.2rem] items-center gap-1.5 rounded-xl border p-2", dragging ? "border-violet-400/25 bg-violet-400/[.04]" : "border-white/10 bg-white/[.025]")}><div className="text-center text-xs font-black text-violet-200">{index + 1}</div>{managerView ? <button type="button" onPointerDown={(event) => dragStart(event, index)} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd} style={{ touchAction: "none" }} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-slate-400"><GripVertical className="h-4 w-4" /></button> : <div className="h-9 w-9" />}<div className="min-w-0"><b className="block truncate text-xs text-white">#{player?.jersey_number || "—"} {player?.display_name}</b><span className="text-[9px] text-slate-500">{player?.primary_position || "—"}</span></div><select disabled={!managerView} value={spot.defensive_position || ""} onChange={(event) => setLineup((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, defensive_position: event.target.value } : row))} className="h-9 rounded-lg border border-white/10 bg-[#050b14] px-1 text-[10px]"><option value="">POS</option>{POSITIONS.map((position) => <option key={position}>{position}</option>)}</select></div>; })}{!lineup.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-slate-500">Choose a game and build its batting order.</div> : null}{lineup.length ? <div className="grid grid-cols-2 gap-2"><Btn onClick={saveLineupImage}><ImageDown className="mr-1 inline h-4 w-4" />Save image</Btn>{managerView ? <Btn primary onClick={saveLineup} disabled={busy}><Save className="mr-1 inline h-4 w-4" />Save lineup</Btn> : null}</div> : null}{selectedGame?.lineup_spots?.length ? <Btn className="w-full" onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${selectedGame.id}`)}><CircleDot className="mr-1 inline h-4 w-4" />{managerView ? "Keep book / Game Day" : "View game"}</Btn> : null}</div></div>
+        </Card> : null}
+
+        {tab === "Schedule" ? <div className="grid gap-3 lg:grid-cols-[1.3fr_.7fr]">
+          <Card title="Team schedule" body="Games are synced to the Social team and members' SyncWorks calendars." action={<CalendarDays className="h-4 w-4 text-emerald-300" />}><div className="space-y-1.5">{games.map((game) => <div key={game.id} className="rounded-xl border border-white/10 bg-white/[.025] p-2.5"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="flex flex-wrap items-center gap-1.5"><b className="text-xs text-white">{new Date(game.start_at).toLocaleDateString()} · {new Date(game.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</b><Pill tone={game.home_away === "HOME" ? "green" : game.home_away === "AWAY" ? "amber" : "slate"}>{game.home_away}</Pill></div><div className="mt-1 text-[11px] font-black text-slate-200">vs {game.opponent_name}</div><div className="mt-0.5 flex items-center gap-1 text-[9px] text-slate-500"><MapPin className="h-3 w-3" />{game.venue_name || "Field TBD"}</div>{game.address_line1 ? <div className="pl-4 text-[9px] text-slate-600">{game.address_line1}, {game.city}, {game.state}</div> : null}</div><Btn onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>{managerView ? "Book" : "Open"}</Btn></div></div>)}{!games.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-slate-500">No games yet.</div> : null}</div></Card>
+          {managerView ? <Card title="Add game" body="Manual additions use the same calendar sync."><div className="grid grid-cols-2 gap-2"><Select label="Type" value={gameForm.game_type} onChange={(value) => setGameForm((v) => ({ ...v, game_type: value }))}><option value="LEAGUE">League</option><option value="TOURNAMENT">Tournament</option><option value="PRACTICE">Practice</option><option value="EXHIBITION">Exhibition</option></Select><Select label="Home/Away" value={gameForm.home_away} onChange={(value) => setGameForm((v) => ({ ...v, home_away: value }))}><option value="HOME">Home</option><option value="AWAY">Away</option><option value="NEUTRAL">Neutral</option></Select><Input label="Opponent" value={gameForm.opponent_name} onChange={(value) => setGameForm((v) => ({ ...v, opponent_name: value }))} className="col-span-2" /><Input label="Date" type="date" value={gameForm.date} onChange={(value) => setGameForm((v) => ({ ...v, date: value }))} /><Input label="Time" type="time" value={gameForm.time} onChange={(value) => setGameForm((v) => ({ ...v, time: value }))} /><Input label="Venue / field" value={gameForm.venue_name} onChange={(value) => setGameForm((v) => ({ ...v, venue_name: value }))} className="col-span-2" /><Input label="Address" value={gameForm.address_line1} onChange={(value) => setGameForm((v) => ({ ...v, address_line1: value }))} className="col-span-2" /><Input label="City" value={gameForm.city} onChange={(value) => setGameForm((v) => ({ ...v, city: value }))} /><Input label="State" value={gameForm.state} onChange={(value) => setGameForm((v) => ({ ...v, state: value }))} /></div><Btn primary className="mt-2 w-full" onClick={addGame} disabled={!gameForm.opponent_name.trim() || !gameForm.date || busy}><Plus className="mr-1 inline h-4 w-4" />Add game</Btn></Card> : <Card title="Tournament week" body="League or tournament games will appear here once published by a manager or association."><div className="text-xs text-slate-400">Your Fall 2026 league sheet lists tournament week beginning October 27.</div></Card>}
+        </div> : null}
+
+        {tab === "Stats" ? <Card title="Batting stats" body="Switch between league, tournament or combined running totals. Game Day and manual history roll together." action={managerView ? <Btn primary onClick={() => setStatDrawer(true)}><Plus className="mr-1 inline h-4 w-4" />Add stats</Btn> : <Trophy className="h-4 w-4 text-amber-300" />}><div className="mb-3 flex gap-1.5">{["ALL", "LEAGUE", "TOURNAMENT"].map((scope) => <button key={scope} type="button" onClick={() => setStatsScope(scope)} className={cx("rounded-full px-3 py-1.5 text-[9px] font-black", statsScope === scope ? "bg-amber-300 text-slate-950" : "border border-white/10 text-slate-400")}>{scope === "ALL" ? "Combined" : scope[0] + scope.slice(1).toLowerCase()}</button>)}</div><div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{scopedStats.map((row) => <div key={row.player?.id} className="rounded-xl border border-white/10 bg-white/[.025] p-3"><div className="flex items-center justify-between"><b className="text-xs text-white">#{row.player?.jersey_number || "—"} {row.player?.display_name}</b><Pill tone="cyan">{row.g} G</Pill></div><div className="mt-2 grid grid-cols-4 gap-1"><Stat label="AVG" value={pct(row.avg)} /><Stat label="OBP" value={pct(row.obp)} /><Stat label="SLG" value={pct(row.slg)} /><Stat label="OPS" value={pct(row.ops)} /></div><div className="mt-2 text-[9px] text-slate-500">{row.h}/{row.ab} H/AB · {row.double} 2B · {row.triple} 3B · {row.hr} HR · {row.rbi} RBI · {row.runs} R</div></div>)}{!scopedStats.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-slate-500">No stats recorded yet.</div> : null}</div></Card> : null}
+
+        {tab === "Dues" ? <div className="grid gap-3 lg:grid-cols-[1.2fr_.8fr]">
+          <Card title={managerView ? "Team collections" : "My dues"} body={managerView ? "Only managers see who has or has not paid. Players only see their own balance." : "Only your own balance and payment status is visible here."} action={<CircleDollarSign className="h-4 w-4 text-amber-300" />}>
+            {managerView ? <div className="space-y-3">{fees.map((fee) => { const rows = assignments.filter((row) => Number(row.fee) === Number(fee.id)); const paid = rows.filter((row) => ["PAID", "WAIVED"].includes(row.status)).length; return <section key={fee.id} className="rounded-xl border border-white/10 p-3"><div className="flex items-start justify-between gap-2"><div><b className="text-xs text-white">{fee.title}</b><div className="text-[9px] text-slate-500">{money(fee.amount_cents)} each{fee.due_date ? ` · due ${new Date(`${fee.due_date}T12:00:00`).toLocaleDateString()}` : ""}</div></div><Pill tone={paid === rows.length && rows.length ? "green" : "amber"}>{paid}/{rows.length} settled</Pill></div><div className="mt-2 space-y-1">{rows.map((row) => <div key={row.id} className="grid grid-cols-[minmax(0,1fr)_6rem_5.6rem] items-center gap-1.5 rounded-lg bg-black/15 p-2"><span className="truncate text-[10px] text-slate-300">{row.player_detail?.display_name}</span><select value={row.status} onChange={(event) => run(() => updateFeeAssignment(row.id, { status: event.target.value }), "Payment status updated.")} className="h-8 rounded-lg border border-white/10 bg-[#050b14] px-1 text-[9px]"><option value="DUE">Due</option><option value="PARTIAL">Partial</option><option value="PAID">Paid</option><option value="WAIVED">Waived</option></select><select value={row.payment_method || ""} onChange={(event) => run(() => updateFeeAssignment(row.id, { payment_method: event.target.value }), "Payment method saved.")} className="h-8 rounded-lg border border-white/10 bg-[#050b14] px-1 text-[9px]"><option value="">Method</option><option>Cash</option><option>Cash App</option><option>Venmo</option><option>Stripe</option><option>Other</option></select></div>)}</div></section>; })}{!fees.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-slate-500">No team fees yet.</div> : null}</div> : <div className="space-y-2">{visibleAssignments.map((row) => <section key={row.id} className="rounded-xl border border-white/10 bg-white/[.025] p-3"><div className="flex justify-between gap-2"><div><b className="text-xs text-white">{row.fee_detail?.title}</b><div className="text-[9px] text-slate-500">{row.fee_detail?.description}</div></div><Pill tone={row.status === "PAID" || row.status === "WAIVED" ? "green" : "amber"}>{row.status}</Pill></div><div className="mt-2 text-lg font-black text-white">{money(Math.max(0, num(row.amount_cents) - num(row.amount_paid_cents)))}</div>{["DUE", "PARTIAL"].includes(row.status) ? <div className="mt-2 grid grid-cols-3 gap-1.5">{paymentSettings?.cash_app_url ? <a href={paymentSettings.cash_app_url} target="_blank" rel="noreferrer" className="rounded-lg border border-white/10 p-2 text-center text-[9px] font-black">Cash App</a> : null}{paymentSettings?.venmo_url ? <a href={paymentSettings.venmo_url} target="_blank" rel="noreferrer" className="rounded-lg border border-white/10 p-2 text-center text-[9px] font-black">Venmo</a> : null}{paymentSettings?.stripe_url ? <a href={paymentSettings.stripe_url} target="_blank" rel="noreferrer" className="rounded-lg border border-white/10 p-2 text-center text-[9px] font-black">Stripe</a> : null}</div> : null}</section>)}{!visibleAssignments.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-slate-500">No dues assigned to your linked player account.</div> : null}{visibleAssignments.some((row) => ["DUE", "PARTIAL"].includes(row.status)) && paymentSettings ? <div className="rounded-xl border border-cyan-400/15 bg-cyan-400/[.04] p-3 text-[9px] text-cyan-100">Online payment links are manager-provided. SyncWorks team tools are currently free; online payment processing is designed to add a 1% platform fee when enabled.</div> : null}</div>}
+          </Card>
+          {managerView ? <div className="space-y-3"><Card title="Add fee" body="Creates a private assignment for every active roster player."><div className="grid grid-cols-2 gap-2"><Input label="Name" value={feeForm.title} onChange={(value) => setFeeForm((v) => ({ ...v, title: value }))} /><Input label="Amount $" value={feeForm.amount} onChange={(value) => setFeeForm((v) => ({ ...v, amount: value }))} /><Input label="Due date" type="date" value={feeForm.due_date} onChange={(value) => setFeeForm((v) => ({ ...v, due_date: value }))} className="col-span-2" /><Input label="Note" value={feeForm.description} onChange={(value) => setFeeForm((v) => ({ ...v, description: value }))} className="col-span-2" /></div><Btn primary className="mt-2 w-full" onClick={addFee} disabled={!feeForm.title.trim() || !feeForm.amount || busy}><Plus className="mr-1 inline h-4 w-4" />Create & assign</Btn></Card><Card title="Payment links" body="Paste the team's Cash App, Venmo or Stripe payment link. No SyncWorks checkout is turned on yet."><div className="space-y-2"><Input label="Cash App URL" value={payForm.cash_app_url} onChange={(value) => setPayForm((v) => ({ ...v, cash_app_url: value }))} /><Input label="Venmo URL" value={payForm.venmo_url} onChange={(value) => setPayForm((v) => ({ ...v, venmo_url: value }))} /><Input label="Stripe URL" value={payForm.stripe_url} onChange={(value) => setPayForm((v) => ({ ...v, stripe_url: value }))} /><Input label="Payment note" value={payForm.payment_note} onChange={(value) => setPayForm((v) => ({ ...v, payment_note: value }))} /></div><Btn primary className="mt-2 w-full" onClick={savePayments}><WalletCards className="mr-1 inline h-4 w-4" />Save links</Btn><div className="mt-2 text-[9px] text-slate-500">Free to the team right now. When SyncWorks processing is enabled, online payments are designed for an additional 1% platform fee.</div></Card></div> : null}
+        </div> : null}
+      </main>
+
+      {playerDrawer && playerEdit ? <Drawer title={playerDrawer.display_name} onClose={() => { setPlayerDrawer(null); setPlayerEdit(null); setPhotoFile(null); }}><div className="space-y-3"><div className="flex items-center gap-3"><Avatar player={playerDrawer} profile={profileFor(playerDrawer)} size="lg" /><div><b className="text-white">#{playerDrawer.jersey_number || "—"} {playerDrawer.display_name}</b><div className="mt-1 text-[10px] text-slate-500">{playerDrawer.primary_position || "Position TBD"}{playerDrawer.user ? " · linked SyncWorks account" : " · manual roster entry"}</div></div></div>{managerView ? <><div className="grid grid-cols-2 gap-2"><Input label="Name" value={playerEdit.display_name} onChange={(value) => setPlayerEdit((v) => ({ ...v, display_name: value }))} className="col-span-2" /><Input label="Jersey #" value={playerEdit.jersey_number} onChange={(value) => setPlayerEdit((v) => ({ ...v, jersey_number: value }))} /><Select label="Position" value={playerEdit.primary_position} onChange={(value) => setPlayerEdit((v) => ({ ...v, primary_position: value }))}><option value="">Choose</option>{POSITIONS.map((position) => <option key={position}>{position}</option>)}</Select><Input label="Email" value={playerEdit.email} onChange={(value) => setPlayerEdit((v) => ({ ...v, email: value }))} /><Input label="Phone" value={playerEdit.phone} onChange={(value) => setPlayerEdit((v) => ({ ...v, phone: value }))} /><Input label="Emergency contact" value={playerEdit.emergency_contact_name} onChange={(value) => setPlayerEdit((v) => ({ ...v, emergency_contact_name: value }))} /><Input label="Emergency phone" value={playerEdit.emergency_contact_phone} onChange={(value) => setPlayerEdit((v) => ({ ...v, emergency_contact_phone: value }))} /></div><label className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 text-xs font-black text-slate-300"><Camera className="h-4 w-4" />{photoFile ? photoFile.name : "Choose profile photo"}<input type="file" accept="image/*" className="hidden" onChange={(event) => setPhotoFile(event.target.files?.[0] || null)} /></label><label className="block"><span className="mb-1 block text-[9px] font-black uppercase tracking-wide text-slate-500">Manager notes</span><textarea rows={3} value={playerEdit.notes} onChange={(event) => setPlayerEdit((v) => ({ ...v, notes: event.target.value }))} className="w-full rounded-xl border border-white/10 bg-black/20 p-3 text-xs" /></label><div className="grid grid-cols-[1fr_auto] gap-2"><Btn primary onClick={savePlayer} disabled={busy}><Save className="mr-1 inline h-4 w-4" />Save player</Btn><Btn danger onClick={archivePlayer}><Trash2 className="h-4 w-4" /></Btn></div></> : <div className="space-y-2">{profileFor(playerDrawer)?.email ? <div className="flex items-center gap-2 rounded-xl border border-white/10 p-3 text-xs"><Mail className="h-4 w-4 text-cyan-300" />{profileFor(playerDrawer).email}</div> : null}{profileFor(playerDrawer)?.phone ? <div className="flex items-center gap-2 rounded-xl border border-white/10 p-3 text-xs"><Phone className="h-4 w-4 text-cyan-300" />{profileFor(playerDrawer).phone}</div> : null}<div className="rounded-xl border border-white/10 p-3 text-xs text-slate-400">Player contact information is private unless this is your own linked profile.</div></div>}</div></Drawer> : null}
+
+      {statDrawer ? <Drawer title="Add historical stats" onClose={() => setStatDrawer(false)}><div className="space-y-3"><div className="grid grid-cols-2 gap-2"><Select label="Player" value={statForm.player} onChange={(value) => setStatForm((v) => ({ ...v, player: value }))} className="col-span-2"><option value="">Choose player</option>{players.map((player) => <option key={player.id} value={player.id}>#{player.jersey_number || "—"} {player.display_name}</option>)}</Select><Select label="Bucket" value={statForm.scope} onChange={(value) => setStatForm((v) => ({ ...v, scope: value }))}><option value="LEAGUE">League</option><option value="TOURNAMENT">Tournament</option><option value="OTHER">Other</option></Select><Input label="Games" value={statForm.games} onChange={(value) => setStatForm((v) => ({ ...v, games: value }))} />{[["pa","PA"],["ab","AB"],["hits","H"],["doubles","2B"],["triples","3B"],["home_runs","HR"],["walks","BB"],["sac_flies","SF"],["rbi","RBI"],["runs","R"]].map(([key, label]) => <Input key={key} label={label} value={statForm[key]} onChange={(value) => setStatForm((v) => ({ ...v, [key]: value }))} />)}<Input label="Note" value={statForm.note} onChange={(value) => setStatForm((v) => ({ ...v, note: value }))} className="col-span-2" /></div><div className="rounded-xl border border-amber-300/15 bg-amber-300/[.04] p-3 text-[9px] text-amber-100">Manual history stays auditable and is added to Game Day statistics. It is never rewritten as if SyncWorks scored those games live.</div><Btn primary className="w-full" onClick={saveStatEntry} disabled={!statForm.player || busy}><Check className="mr-1 inline h-4 w-4" />Add to stats</Btn></div></Drawer> : null}
+    </div>
+  );
+}
