@@ -139,6 +139,90 @@ export async function getPublicGameCast(token) {
   return data;
 }
 
+export async function getPlayerProfiles(team) {
+  const { data } = await api.get("/sports/player-profiles/", { params: { team } });
+  return list(data);
+}
+
+export async function createPlayerProfile(payload) {
+  const { data } = await api.post("/sports/player-profiles/", payload);
+  return data;
+}
+
+export async function updatePlayerProfile(id, payload) {
+  const { data } = await api.patch(`/sports/player-profiles/${id}/`, payload);
+  return data;
+}
+
+export async function getTeamPaymentSettings(team) {
+  const { data } = await api.get("/sports/payment-settings/", { params: { team } });
+  return list(data)[0] || null;
+}
+
+export async function ensureTeamPaymentSettings(team) {
+  const { data } = await api.post("/sports/payment-settings/ensure/", { team });
+  return data;
+}
+
+export async function updateTeamPaymentSettings(id, payload) {
+  const { data } = await api.patch(`/sports/payment-settings/${id}/`, payload);
+  return data;
+}
+
+export async function getTeamFees(team) {
+  const { data } = await api.get("/sports/team-fees/", { params: { team } });
+  return list(data);
+}
+
+export async function createTeamFee(payload) {
+  const { data } = await api.post("/sports/team-fees/", payload);
+  return data;
+}
+
+export async function updateTeamFee(id, payload) {
+  const { data } = await api.patch(`/sports/team-fees/${id}/`, payload);
+  return data;
+}
+
+export async function assignTeamFeeRoster(id) {
+  const { data } = await api.post(`/sports/team-fees/${id}/assign-roster/`, {});
+  return data;
+}
+
+export async function getFeeAssignments(team) {
+  const { data } = await api.get("/sports/fee-assignments/", { params: { team } });
+  return list(data);
+}
+
+export async function updateFeeAssignment(id, payload) {
+  const { data } = await api.patch(`/sports/fee-assignments/${id}/`, payload);
+  return data;
+}
+
+export async function getStatLedger(team, scope) {
+  const { data } = await api.get("/sports/stat-ledger/", { params: { team, scope } });
+  return list(data);
+}
+
+export async function createStatLedgerEntry(payload) {
+  const { data } = await api.post("/sports/stat-ledger/", payload);
+  return data;
+}
+
+export async function updateStatLedgerEntry(id, payload) {
+  const { data } = await api.patch(`/sports/stat-ledger/${id}/`, payload);
+  return data;
+}
+
+export async function removeStatLedgerEntry(id) {
+  await api.delete(`/sports/stat-ledger/${id}/`);
+}
+
+export async function getScopedTeamStats(team, scope = "ALL") {
+  const { data } = await api.get("/sports/stat-ledger/summary/", { params: { team, scope } });
+  return data;
+}
+
 export async function getSportsOrganizations() {
   const { data } = await api.get("/sports/organizations/");
   return list(data);
