@@ -3,6 +3,7 @@ import { BriefcaseBusiness, Building2, CalendarDays, CheckSquare2, CircleDollarS
 import { useNavigate } from "react-router-dom";
 
 import DashboardShell from "../components/dashboard/DashboardShell";
+import NeedsAttentionCard from "../components/NeedsAttentionCard";
 import SyncAssistantMorningBrief from "../components/sync/SyncAssistantMorningBrief";
 import SyncAssistantStickyDock from "../components/sync/SyncAssistantStickyDock";
 import SyncUnifiedInboxCard from "../components/sync/SyncUnifiedInboxCard";
@@ -35,8 +36,9 @@ export default function CustomerDashboardV2() {
 
   return (
     <DashboardShell>
-      <main className="mx-auto w-full max-w-7xl space-y-5 px-3 pb-72 pt-4 sm:px-5 md:pb-64 lg:px-8 lg:pb-60">
+      <main className="mx-auto w-full max-w-7xl space-y-4 px-3 pb-72 pt-4 sm:px-5 md:pb-64 lg:px-8 lg:pb-60">
         <SyncAssistantMorningBrief onPlayBriefing={playBriefing} />
+        <NeedsAttentionCard compact maxItems={3} />
         <SyncUnifiedInboxCard />
 
         <section className="rounded-[1.75rem] border border-white/10 bg-slate-950/55 p-5">
