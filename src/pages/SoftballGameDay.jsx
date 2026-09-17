@@ -195,7 +195,7 @@ export default function SoftballGameDay() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#02060c] text-white">
-        <ModeBar title="Game Day" subtitle="Softball" />
+        <ModeBar title="Game Book" subtitle="Softball" />
         <div className="grid min-h-[70vh] place-items-center"><Loader2 className="h-9 w-9 animate-spin text-cyan-300" /></div>
       </div>
     );
@@ -204,7 +204,7 @@ export default function SoftballGameDay() {
   if (!game) {
     return (
       <div className="min-h-screen bg-[#02060c] p-4 text-white">
-        <ModeBar title="Game Day" subtitle="Softball" />
+        <ModeBar title="Game Book" subtitle="Softball" />
         <div className="rounded-2xl border border-rose-400/20 bg-rose-400/10 p-4 text-rose-100">{error || "Game unavailable."}</div>
       </div>
     );
@@ -217,7 +217,7 @@ export default function SoftballGameDay() {
 
   return (
     <div className="min-h-screen bg-[#02060c] pb-36 text-slate-100">
-      <ModeBar title="Game Day" subtitle={`${game.team_name} • Softball`} />
+      <ModeBar title="Game Book" subtitle={`${game.team_name} • Softball`} />
       <main className="mx-auto max-w-5xl space-y-4 px-3 py-4 sm:px-5">
         <div className="flex items-center justify-between gap-2">
           <Btn onClick={() => navigate(`/connect/groups/${groupId}/sports`)}><ArrowLeft className="mr-2 inline h-4 w-4" />Team</Btn>
@@ -245,7 +245,7 @@ export default function SoftballGameDay() {
         {!lineup.length ? (
           <section className="rounded-[1.65rem] border border-amber-400/20 bg-amber-400/[.06] p-5">
             <h2 className="font-black text-amber-100">Lineup needed</h2>
-            <p className="mt-1 text-sm leading-6 text-amber-100/70">Build this game’s batting order on the team Lineup card before starting Game Day.</p>
+            <p className="mt-1 text-sm leading-6 text-amber-100/70">Build this game’s batting order on the team Lineup card before starting Game Book.</p>
             <Btn className="mt-4" onClick={() => navigate(`/connect/groups/${groupId}/sports`)}><ArrowLeft className="mr-2 inline h-4 w-4" />Open team lineup</Btn>
           </section>
         ) : null}
@@ -267,7 +267,7 @@ export default function SoftballGameDay() {
             <section className="rounded-[1.65rem] border border-cyan-400/20 bg-cyan-400/[.05] p-5">
               <Play className="h-7 w-7 text-cyan-300" />
               <h2 className="mt-3 text-xl font-black text-white">Ready to score?</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-300">Starting locks Game Day onto batter #1 and begins the live inning/out state.</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">Starting locks Game Book onto batter #1 and begins the live inning/out state.</p>
               {canManage ? <Btn primary className="mt-5 w-full" disabled={busy} onClick={() => run(() => startSportsGame(game.id), "Game started.")}><CircleDot className="mr-2 inline h-4 w-4" />Start Game</Btn> : <div className="mt-5 text-sm text-amber-200">A team coach or manager starts and scores the game.</div>}
             </section>
           </div>
