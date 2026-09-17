@@ -134,3 +134,23 @@ export async function createCollectionShare(payload) {
   const { data } = await api.post("/social/collection-shares/", payload);
   return data;
 }
+
+
+export async function getGroupMessages(group) {
+  const { data } = await api.get("/social/group-messages/", { params: { group } });
+  return list(data);
+}
+
+export async function sendGroupMessage(payload) {
+  const { data } = await api.post("/social/group-messages/", payload);
+  return data;
+}
+
+export async function updateGroupMessage(id, body) {
+  const { data } = await api.patch(`/social/group-messages/${id}/`, { body });
+  return data;
+}
+
+export async function deleteGroupMessage(id) {
+  await api.delete(`/social/group-messages/${id}/`);
+}
