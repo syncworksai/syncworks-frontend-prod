@@ -138,3 +138,63 @@ export async function getPublicGameCast(token) {
   const { data } = await api.get(`/sports/gamecast/${token}/`);
   return data;
 }
+
+export async function getSportsOrganizations() {
+  const { data } = await api.get("/sports/organizations/");
+  return list(data);
+}
+
+export async function createSportsOrganization(payload) {
+  const { data } = await api.post("/sports/organizations/", payload);
+  return data;
+}
+
+export async function getSportsOrganizationDashboard(id) {
+  const { data } = await api.get(`/sports/organizations/${id}/dashboard/`);
+  return data;
+}
+
+export async function getLeagueSeasons(organization) {
+  const { data } = await api.get("/sports/seasons/", { params: { organization } });
+  return list(data);
+}
+
+export async function createLeagueSeason(payload) {
+  const { data } = await api.post("/sports/seasons/", payload);
+  return data;
+}
+
+export async function getLeagueDivisions(season) {
+  const { data } = await api.get("/sports/divisions/", { params: { season } });
+  return list(data);
+}
+
+export async function createLeagueDivision(payload) {
+  const { data } = await api.post("/sports/divisions/", payload);
+  return data;
+}
+
+export async function getLeagueTeams(division) {
+  const { data } = await api.get("/sports/league-teams/", { params: { division } });
+  return list(data);
+}
+
+export async function addLeagueTeam(payload) {
+  const { data } = await api.post("/sports/league-teams/", payload);
+  return data;
+}
+
+export async function getLeagueRoster({ division, team } = {}) {
+  const { data } = await api.get("/sports/league-rosters/", { params: { division, team } });
+  return list(data);
+}
+
+export async function inviteLeaguePlayer(payload) {
+  const { data } = await api.post("/sports/league-rosters/invite-email/", payload);
+  return data;
+}
+
+export async function claimMyLeagueRosters() {
+  const { data } = await api.post("/sports/league-rosters/claim-mine/");
+  return data;
+}
