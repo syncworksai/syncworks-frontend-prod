@@ -21,6 +21,7 @@ import SoftballDefenseField from "../components/sports/SoftballDefenseField";
 import { useAuth } from "../auth/AuthContext";
 import { getMemberships } from "../api/social";
 import {
+  correctSoftballPlay,
   finishSportsGame,
   getGameCastSettings,
   getPlateAppearances,
@@ -238,6 +239,8 @@ export default function SoftballGameDayAdvanced() {
   const [sprayZone, setSprayZone] = useState("");
   const [outMenuOpen, setOutMenuOpen] = useState(false);
   const [outChoice, setOutChoice] = useState(null);
+  const [editingPlay, setEditingPlay] = useState(null);
+  const [editForm, setEditForm] = useState({ inning: 1, result: "OUT", outs_recorded: 1, rbi: 0, runs_scored: 0, notes: "" });
 
   const canManage = useMemo(() => memberships.some(
     (membership) => Number(membership.group) === Number(groupId)
@@ -432,6 +435,34 @@ export default function SoftballGameDayAdvanced() {
     }
   }
 
+  function openPlayEditor(play) {
+    if (!canManage) return;
+    setEditingPlay(play);
+    setEditForm({
+      inning: Math.max(1, num(play.inning)),
+      result: play.result || "OUT",
+      outs_recorded: num(play.outs_recorded),
+      rbi: num(play.rbi),
+      runs_scored: num(play.runs_scored),
+      notes: play.notes || "",
+    });
+  }
+
+  async function savePlayCorrection() {
+    if (!editingPlay || busy) return;
+    const saved = await run(
+      () => correctSoftballPlay(editingPlay.id, {
+        inning: Math.max(1, num(editForm.inning)),
+        result: editForm.result,
+        outs_recorded: Math.max(0, Math.min(3, num(editForm.outs_recorded))),
+        rbi: Math.max(0, num(editForm.rbi)),
+        runs_scored: Math.max(0, num(editForm.runs_scored)),
+        notes: editForm.notes || "",
+      }),
+      "Scorebook corrected.",
+    );
+    if (saved) setEditingPlay(null);
+  }
   async function toggleGameCast(enabled) {
     const next = await run(() => updateGameCastSettings(game.id, { enabled, show_player_stats: true }), enabled ? "GameCast is live." : "GameCast sharing off.");
     if (next) setGamecast(next);
