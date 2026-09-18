@@ -306,3 +306,32 @@ export async function remindTeamDues(id) {
   const { data } = await api.post(`/sports/teams/${id}/remind-dues/`, {});
   return data;
 }
+
+
+export async function setOpponentHomeRuns(id, homeRunsAgainst) {
+  const { data } = await api.post(`/sports/games/${id}/opponent-home-runs/`, { home_runs_against: homeRunsAgainst });
+  return data;
+}
+
+export async function updateDefensivePosition(id, player, defensivePosition) {
+  const { data } = await api.post(`/sports/games/${id}/defensive-position/`, {
+    player,
+    defensive_position: defensivePosition,
+  });
+  return data;
+}
+
+export async function getSoftballRuleSets(params = {}) {
+  const { data } = await api.get("/sports/rule-sets/", { params });
+  return list(data);
+}
+
+export async function createSoftballRuleSet(payload) {
+  const { data } = await api.post("/sports/rule-sets/", payload);
+  return data;
+}
+
+export async function updateSoftballRuleSet(id, payload) {
+  const { data } = await api.patch(`/sports/rule-sets/${id}/`, payload);
+  return data;
+}
