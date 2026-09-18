@@ -21,6 +21,11 @@ export async function updateSportsTeam(id, payload) {
   return data;
 }
 
+export async function getPlayerCenter(id) {
+  const { data } = await api.get(`/sports/teams/${id}/player-center/`);
+  return data;
+}
+
 export async function getTeamDashboard(id) {
   const [dashboardResponse, gamesResponse] = await Promise.all([
     api.get(`/sports/teams/${id}/dashboard/`),
@@ -425,5 +430,16 @@ export async function previewSportsInvite(token, roster) {
 
 export async function claimSportsInvite(token, roster) {
   const { data } = await api.post("/sports/league-rosters/claim-token/", { token, roster });
+  return data;
+}
+
+
+export async function previewTeamPlayerInvite(token) {
+  const { data } = await api.get("/sports/players/invite-preview/", { params: { token } });
+  return data;
+}
+
+export async function claimTeamPlayerInvite(token) {
+  const { data } = await api.post("/sports/players/claim-invite/", { token });
   return data;
 }
