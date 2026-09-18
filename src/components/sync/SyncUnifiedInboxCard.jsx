@@ -13,7 +13,7 @@ function when(value) {
   }
 }
 
-export default function SyncUnifiedInboxCard() {
+export default function SyncUnifiedInboxCard({ compact = false }) {
   const nav = useNavigate();
   const [state, setState] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,7 +34,7 @@ export default function SyncUnifiedInboxCard() {
   const syncworks = state?.syncworks || {};
   const external = state?.external_email || {};
   const conversations = syncworks.conversations || [];
-  const messages = external.messages || [];
+  const messages = external.messages || [];\n\n  if (compact) {\n    const important = messages.filter((row) => row.priority === "high").slice(0, 2);\n    return (\n      <section className="rounded-[1.6rem] border border-violet-400/15 bg-slate-950/55 p-4 sm:p-5">\n        <div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-violet-200">Messages & email</div><h2 className="mt-1 text-lg font-black text-white">{state?.total_high_priority || 0} need attention · {state?.total_unread || 0} unread</h2><p className="mt-1 text-xs text-slate-500">{external.available ? "SYNC is filtering connected email for what matters." : "Connect email so SYNC can separate action from noise."}</p></div><div className="flex gap-2">{!external.available ? <button type="button" onClick={() => nav("/customer/settings")} className="rounded-xl border border-violet-300/20 bg-violet-500/[.07] px-3 py-2 text-[10px] font-black text-violet-100">Connect email</button> : null}<button type="button" onClick={() => nav("/customer/inbox")} className="rounded-xl border border-white/10 px-3 py-2 text-[10px] font-black text-slate-300">Open inbox</button></div></div>\n        {(important.length || conversations.length) ? <div className="mt-3 grid gap-2 md:grid-cols-2">{important.map((row) => <button key={`${row.mailbox}-${row.id}`} type="button" onClick={() => nav("/customer/inbox?quick=email")} className="rounded-2xl border border-amber-400/15 bg-amber-500/[.04] p-3 text-left"><div className="truncate text-sm font-black text-white">{row.subject}</div><div className="mt-1 truncate text-xs text-slate-500">{row.sender_name || row.sender_email}</div></button>)}{conversations.slice(0, Math.max(0, 2 - important.length)).map((row) => <button key={row.id} type="button" onClick={() => nav(row.url || "/customer/inbox")} className="rounded-2xl border border-white/10 bg-black/20 p-3 text-left"><div className="truncate text-sm font-black text-white">{row.title}</div><div className="mt-1 truncate text-xs text-slate-500">{row.latest_message || row.status}</div></button>)}</div> : null}\n      </section>\n    );\n  }
 
   return (
     <section className="rounded-[1.75rem] border border-violet-400/15 bg-slate-950/55 p-5">
