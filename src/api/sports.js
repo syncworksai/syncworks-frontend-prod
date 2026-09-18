@@ -335,3 +335,14 @@ export async function updateSoftballRuleSet(id, payload) {
   const { data } = await api.patch(`/sports/rule-sets/${id}/`, payload);
   return data;
 }
+
+
+export async function getTeamInningStats(id) {
+  const { data } = await api.get(`/sports/teams/${id}/inning-stats/`);
+  return data;
+}
+
+export async function updateGameInningLine(id, payload) {
+  const { data } = await api.post(`/sports/games/${id}/inning-line/`, payload);
+  return data;
+}

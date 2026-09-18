@@ -30,6 +30,7 @@ import {
   saveSoftballPlayContext,
   setOpponentHomeRuns,
   setOpponentScore,
+  updateGameInningLine,
   startSportsGame,
   undoSoftballPlay,
   updateDefensivePosition,
@@ -277,6 +278,17 @@ export default function SoftballGameDayAdvanced() {
     await run(() => updateDefensivePosition(game.id, Number(playerId), position), "Defense updated.");
   }
 
+  async function changeOpponentInning(inning, field, delta) {
+    const current = list(game?.inning_lines).find((row) => num(row.inning) === num(inning)) || {};
+    const payload = {
+      inning: Number(inning),
+      opponent_runs: num(current.opponent_runs),
+      opponent_hits: num(current.opponent_hits),
+    };
+    payload[field] = Math.max(0, num(payload[field]) + delta);
+    await run(() => updateGameInningLine(game.id, payload));
+  }
+
   const innings = useMemo(() => {
     const max = Math.max(num(game?.innings_scheduled) || 7, num(game?.current_inning) || 1, ...plays.map((play) => num(play.inning)));
     return Array.from({ length: max }, (_, index) => index + 1);
@@ -305,6 +317,11 @@ export default function SoftballGameDayAdvanced() {
     return map;
   }, [plays, innings]);
 
+  const opponentInningMap = useMemo(
+    () => new Map(list(game?.inning_lines).map((row) => [num(row.inning), row])),
+    [game?.inning_lines],
+  );
+
   if (loading) return <div className="min-h-screen bg-[#02060c] text-white"><ModeBar title="Game Book" subtitle="Softball" /><div className="grid min-h-[70vh] place-items-center"><Loader2 className="h-8 w-8 animate-spin text-cyan-300" /></div></div>;
   if (!game) return <div className="min-h-screen bg-[#02060c] p-4 text-white"><ModeBar title="Game Book" subtitle="Softball" /><div className="rounded-xl border border-rose-300/20 bg-rose-300/10 p-3">{error || "Game unavailable."}</div></div>;
 
@@ -332,6 +349,17 @@ export default function SoftballGameDayAdvanced() {
             <div className="rounded-xl border border-white/10 bg-black/20 px-2 py-1.5 text-center"><div className="text-[7px] text-slate-500">INN</div><b className="text-sm">{game.current_inning}</b><div className="mt-1 flex gap-0.5">{[0,1,2].map((i)=><span key={i} className={cx("h-2 w-2 rounded-full border",i<num(game.outs)?"border-rose-300 bg-rose-300":"border-white/20")} />)}</div></div>
             <div className="text-center"><div className="truncate text-[8px] font-black uppercase text-slate-400">{game.opponent_name}</div><div className="text-3xl font-black text-white">{game.runs_against}</div></div>
           </div>
+        </section>
+
+        <section className="overflow-x-auto rounded-2xl border border-white/10 bg-[#07111f] p-2">
+          <div className="mb-1 text-[8px] font-black uppercase tracking-[.14em] text-slate-500">Inning scoreboard</div>
+          <table className="min-w-max border-collapse text-center text-[8px]">
+            <thead><tr><th className="sticky left-0 z-10 min-w-28 bg-[#07111f] px-2 py-1 text-left text-slate-500">TEAM</th>{innings.map((inning)=><th key={inning} className="min-w-10 border-l border-white/5 px-1 py-1">{inning}</th>)}<th className="border-l border-white/10 px-2">R</th><th className="border-l border-white/10 px-2">H</th></tr></thead>
+            <tbody>
+              <tr className="border-t border-white/5"><td className="sticky left-0 z-10 bg-[#07111f] px-2 py-1.5 text-left font-black text-cyan-100">{game.team_name}</td>{innings.map((inning)=>{const row=inningTotals.get(inning)||{};return <td key={inning} className="border-l border-white/5 px-1">{num(row.runs)}</td>})}<td className="border-l border-white/10 font-black">{game.runs_for}</td><td className="border-l border-white/10 font-black">{innings.reduce((sum,inning)=>sum+num(inningTotals.get(inning)?.hits),0)}</td></tr>
+              <tr className="border-t border-white/5"><td className="sticky left-0 z-10 bg-[#07111f] px-2 py-1.5 text-left font-black text-slate-300">{game.opponent_name}</td>{innings.map((inning)=>{const row=opponentInningMap.get(inning)||{};return <td key={inning} className="border-l border-white/5 px-1">{num(row.opponent_runs)}</td>})}<td className="border-l border-white/10 font-black">{game.runs_against}</td><td className="border-l border-white/10 font-black">{innings.reduce((sum,inning)=>sum+num(opponentInningMap.get(inning)?.opponent_hits),0)}</td></tr>
+            </tbody>
+          </table>
         </section>
 
         {!lineup.length ? <section className="rounded-xl border border-amber-300/20 bg-amber-300/[.05] p-3 text-[10px] text-amber-100">Build the game lineup before starting Game Book.</section> : null}
@@ -414,7 +442,7 @@ export default function SoftballGameDayAdvanced() {
                   {game.home_run_allowed===false?<div className="mt-2 rounded-lg border border-rose-300/20 bg-rose-300/10 p-2 text-[8px] font-black text-rose-100">HR currently blocked by the attached rule.</div>:null}
                 </section>
 
-                {canManage ? <section className="rounded-2xl border border-white/10 bg-[#07111f] p-2.5"><div className="text-[8px] font-black uppercase tracking-wide text-slate-500">Opponent score</div><div className="mt-2 grid grid-cols-[2rem_1fr_2rem] items-center gap-1"><button onClick={()=>run(()=>setOpponentScore(game.id,Math.max(0,num(game.runs_against)-1)))} className="grid h-8 w-8 place-items-center rounded-lg border border-white/10"><Minus className="h-3 w-3"/></button><b className="text-center text-xl">{game.runs_against}</b><button onClick={()=>run(()=>setOpponentScore(game.id,num(game.runs_against)+1))} className="grid h-8 w-8 place-items-center rounded-lg border border-white/10"><Plus className="h-3 w-3"/></button></div></section> : null}
+                {canManage ? <section className="rounded-2xl border border-white/10 bg-[#07111f] p-2.5"><div className="text-[8px] font-black uppercase tracking-wide text-slate-500">Opponent · inning {game.current_inning}</div><div className="mt-2 grid grid-cols-2 gap-2">{[["opponent_runs","Runs"],["opponent_hits","Hits"]].map(([field,label])=>{const row=opponentInningMap.get(num(game.current_inning))||{};return <div key={field} className="rounded-lg border border-white/8 bg-black/15 p-2"><div className="text-center text-[7px] text-slate-500">{label}</div><div className="mt-1 grid grid-cols-[1.8rem_1fr_1.8rem] items-center gap-1"><button onClick={()=>changeOpponentInning(game.current_inning,field,-1)} className="grid h-7 w-7 place-items-center rounded-lg border border-white/10"><Minus className="h-3 w-3"/></button><b className="text-center text-base">{num(row[field])}</b><button onClick={()=>changeOpponentInning(game.current_inning,field,1)} className="grid h-7 w-7 place-items-center rounded-lg border border-white/10"><Plus className="h-3 w-3"/></button></div></div>})}</div></section> : null}
 
                 {canManage&&gamecast?<section className="rounded-2xl border border-emerald-300/15 bg-[#07111f] p-2.5"><div className="flex items-center justify-between"><div><div className="text-[8px] font-black uppercase text-emerald-300">Public GameCast</div><div className="text-[9px] text-slate-500">No login required.</div></div>{gamecast.enabled?<Radio className="h-4 w-4 text-emerald-300"/>:<EyeOff className="h-4 w-4 text-slate-500"/>}</div><div className="mt-2 grid grid-cols-2 gap-1.5"><Button primary={!gamecast.enabled} onClick={()=>toggleGameCast(!gamecast.enabled)}>{gamecast.enabled?<><EyeOff className="mr-1 inline h-3.5 w-3.5"/>Stop</>:<><Eye className="mr-1 inline h-3.5 w-3.5"/>Go live</>}</Button><Button disabled={!gamecast.enabled} onClick={shareGameCast}><Share2 className="mr-1 inline h-3.5 w-3.5"/>Share</Button></div>{gamecast.enabled?<Button className="mt-1.5 w-full" onClick={facebookGameCast}>Share to Facebook</Button>:null}</section>:null}
 
