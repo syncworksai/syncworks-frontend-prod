@@ -54,6 +54,11 @@ export async function getPlayerSpray(id) {
   return data;
 }
 
+export async function getPlayerCard(id) {
+  const { data } = await api.get(`/sports/advanced/players/${id}/card/`);
+  return data;
+}
+
 export async function getSportsPlayers(team) {
   const { data } = await api.get("/sports/players/", { params: { team } });
   return list(data);
@@ -104,6 +109,11 @@ export async function setSportsLineup(id, spots) {
 
 export async function startSportsGame(id) {
   const { data } = await api.post(`/sports/games/${id}/start/`);
+  return data;
+}
+
+export async function substituteSportsGame(id, payload) {
+  const { data } = await api.post(`/sports/games/${id}/substitute/`, payload);
   return data;
 }
 
