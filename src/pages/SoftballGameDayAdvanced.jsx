@@ -530,6 +530,11 @@ export default function SoftballGameDayAdvanced() {
   const final = game.status === "FINAL";
   const currentBatter = game.current_batter;
   const selected = RESULTS.find((row) => row.value === result);
+  const selectedDetail = outChoice?.detail || selected?.detail || "";
+  const smartSuggestion = selected
+    ? scoringSuggestion(result, { first: runner1, second: runner2, third: runner3 }, num(game.outs))
+    : { runs: 0, rbi: 0 };
+  const basesLoaded = runner1 && runner2 && runner3;
   const rule = game.rule_set_detail;
 
   return (
@@ -550,6 +555,21 @@ export default function SoftballGameDayAdvanced() {
             <div className="rounded-xl border border-white/10 bg-black/20 px-2 py-1.5 text-center"><div className="text-[7px] text-slate-500">INN</div><b className="text-sm">{game.current_inning}</b><div className="mt-1 flex gap-0.5">{[0,1,2].map((i)=><span key={i} className={cx("h-2 w-2 rounded-full border",i<num(game.outs)?"border-rose-300 bg-rose-300":"border-white/20")} />)}</div></div>
             <div className="text-center"><div className="truncate text-[8px] font-black uppercase text-slate-400">{game.opponent_name}</div><div className="text-3xl font-black text-white">{game.runs_against}</div></div>
           </div>
+        </section>
+
+        <section className="grid grid-cols-5 gap-1.5">
+          {[
+            ["HITS", teamGameMetrics.hits],
+            ["RBI", teamGameMetrics.rbi],
+            ["AVG", teamGameMetrics.avg.toFixed(3)],
+            ["OBP", teamGameMetrics.obp.toFixed(3)],
+            ["OPS", teamGameMetrics.ops.toFixed(3)],
+          ].map(([label,value]) => (
+            <div key={label} className="rounded-xl border border-white/10 bg-[#07111f] px-1.5 py-2 text-center">
+              <div className="text-[7px] font-black text-slate-500">{label}</div>
+              <div className="mt-0.5 text-[11px] font-black text-white">{value}</div>
+            </div>
+          ))}
         </section>
 
         <section className="overflow-x-auto rounded-2xl border border-white/10 bg-[#07111f] p-2">
@@ -580,7 +600,7 @@ export default function SoftballGameDayAdvanced() {
           <>
             <section className="rounded-2xl border border-cyan-300/20 bg-[#07111f] p-2.5">
               <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0"><div className="text-[7px] font-black uppercase tracking-[.14em] text-cyan-300">At bat</div><div className="truncate text-base font-black text-white">#{currentBatter?.jersey_number || "—"} {currentBatter?.display_name || "Current batter"}</div></div>
+                <div className="min-w-0"><div className="text-[7px] font-black uppercase tracking-[.14em] text-cyan-300">At bat</div><div className="truncate text-base font-black text-white">#{currentBatter?.jersey_number || "—"} {currentBatter?.display_name || "Current batter"}</div><div className="mt-0.5 text-[8px] text-slate-500">Game: {currentBatterMetrics.hits}-{currentBatterMetrics.ab} · {currentBatterMetrics.rbi} RBI · {currentBatterMetrics.avg.toFixed(3)} AVG</div></div>
                 <div className="text-right text-[8px] text-slate-500">Order #{game.current_batter_order}<br />{currentBatter?.primary_position || "—"}</div>
               </div>
 
