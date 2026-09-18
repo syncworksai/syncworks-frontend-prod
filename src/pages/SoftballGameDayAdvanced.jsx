@@ -372,6 +372,63 @@ export default function SoftballGameDayAdvanced() {
   const lineup = useMemo(() => [...list(game?.lineup_spots)].sort((a, b) => num(a.batting_order) - num(b.batting_order)), [game]);
   const benchPlayers = useMemo(() => list(game?.bench_players), [game?.bench_players]);
   const substitutions = useMemo(() => list(game?.substitutions), [game?.substitutions]);
+  const scorebookRows = useMemo(() => {
+    const rows = [];
+    const subsByOrder = new Map();
+    for (const sub of substitutions) {
+      const order = num(sub.batting_order);
+      const bucket = subsByOrder.get(order) || [];
+      bucket.push(sub);
+      subsByOrder.set(order, bucket);
+    }
+
+    for (const spot of lineup) {
+      const order = num(spot.batting_order);
+      const subs = (subsByOrder.get(order) || []).slice().sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+      const lineage = [];
+      if (subs.length) {
+        lineage.push({
+          player: subs[0].outgoing_player,
+          player_detail: subs[0].outgoing_player_detail,
+          batting_order: order,
+          sub_label: "START",
+        });
+        for (const sub of subs) {
+          lineage.push({
+            player: sub.incoming_player,
+            player_detail: sub.incoming_player_detail,
+            batting_order: order,
+            sub_label: "SUB",
+          });
+        }
+      } else {
+        lineage.push({
+          player: spot.player,
+          player_detail: spot.player_detail,
+          batting_order: order,
+          sub_label: "",
+        });
+      }
+
+      const seen = new Set();
+      for (const row of lineage) {
+        if (!row.player || seen.has(num(row.player))) continue;
+        seen.add(num(row.player));
+        rows.push({...row, key: order + "-" + row.player});
+      }
+
+      if (!seen.has(num(spot.player))) {
+        rows.push({
+          player: spot.player,
+          player_detail: spot.player_detail,
+          batting_order: order,
+          sub_label: subs.length ? "SUB" : "",
+          key: order + "-" + spot.player,
+        });
+      }
+    }
+    return rows;
+  }, [lineup, substitutions]);
 
   async function refresh({ quiet = false } = {}) {
     if (!quiet) setLoading(true);
@@ -715,11 +772,11 @@ export default function SoftballGameDayAdvanced() {
 
   const playerGameMetrics = useMemo(() => {
     const map = new Map();
-    for (const spot of lineup) {
+    for (const spot of scorebookRows) {
       map.set(num(spot.player), gameBattingMetrics(plays.filter((play) => num(play.player) === num(spot.player))));
     }
     return map;
-  }, [lineup, plays]);
+  }, [scorebookRows, plays]);
 
   const opponentInningMap = useMemo(
     () => new Map(list(game?.inning_lines).map((row) => [num(row.inning), row])),
@@ -985,13 +1042,13 @@ export default function SoftballGameDayAdvanced() {
                   </tr>
                 </thead>
                 <tbody>
-                  {lineup.map((spot)=>{
+                  {scorebookRows.map((spot)=>{
                     const metrics=playerGameMetrics.get(num(spot.player))||gameBattingMetrics([]);
                     return (
-                      <tr key={spot.id} className="border-t border-white/5">
+                      <tr key={spot.key || spot.id} className="border-t border-white/5">
                         <td className="sticky left-0 z-10 max-w-28 bg-[#07111f] px-2 py-1.5 text-left font-black text-white">
                           <button type="button" onClick={()=>openPlayerCard(spot.player)} className="flex max-w-28 items-center gap-1 text-left">
-                            <span className="truncate">{spot.batting_order}. {spot.player_detail?.display_name}</span>
+                            <span className="truncate">{spot.batting_order}. {spot.player_detail?.display_name}{spot.sub_label ? " · " + spot.sub_label : ""}</span>
                             <UserRound className="h-3 w-3 shrink-0 text-cyan-300/70"/>
                           </button>
                         </td>
