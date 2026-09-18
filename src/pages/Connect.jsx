@@ -1,17 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays, ChevronRight, CreditCard, Loader2, Pencil, Plus, RefreshCw, Search, Send, Sparkles, Trophy, UserPlus, Users, WalletCards, X } from "lucide-react";
+import { Bell, CalendarDays, Check, ChevronRight, Copy, CreditCard, Link2, Loader2, Pencil, Plus, RefreshCw, Search, Send, Settings, Share2, Trophy, UserPlus, Users, WalletCards, X } from "lucide-react";
 import ModeBar from "../components/ModeBar";
 import { useAuth } from "../auth/AuthContext";
 import {
   acceptConnection, acceptEventInvitation, acceptMembership, cancelEvent, createCollection,
-  createEvent, createEventInvitation, createEventResponse, createGroup, declineConnection,
+  createEvent, createEventInvitation, createEventResponse, createGroup, createGroupInviteLink, declineConnection,
   declineEventInvitation, declineMembership, getCollectionShares, getCollections, getConnections,
-  getEventInvitations, getEventResponses, getEvents, getGroups, getMemberships, inviteMember,
-  searchPeople, sendConnection, updateEvent, updateEventResponse,
+  getEventInvitations, getEventResponses, getEvents, getGroupPaymentSettings, getGroups, getMemberships, inviteMember,
+  recordCollectionPayment, searchPeople, sendConnection, updateEvent, updateEventResponse, updateGroupPaymentSettings,
 } from "../api/social";
 
-const TABS = ["Home", "People", "Groups", "Events", "Collect"];
+const TABS = ["Home", "People", "Groups", "Events", "Invites"];
 const blankEvent = { title:"", organizer_group:"", date:"", time:"09:00", venue_name:"", address_line1:"", city:"", state:"", entryAmount:"", description:"", prizes:"", rules:"", flyer_url:"", recurrence:"NONE", weather_dependent:false, weather_note:"" };
 const cx = (...v) => v.filter(Boolean).join(" ");
 const arr = (v) => Array.isArray(v) ? v : [];
@@ -47,16 +47,21 @@ export default function Connect() {
   const [people,setPeople]=useState([]), [connections,setConnections]=useState([]), [groups,setGroups]=useState([]), [memberships,setMemberships]=useState([]), [events,setEvents]=useState([]), [invites,setInvites]=useState([]), [responses,setResponses]=useState([]), [collections,setCollections]=useState([]), [shares,setShares]=useState([]);
   const [search,setSearch]=useState(""), [inviteSearch,setInviteSearch]=useState(""), [inviteResults,setInviteResults]=useState([]), [inviteRole,setInviteRole]=useState("MEMBER"), [targetGroup,setTargetGroup]=useState("");
   const [groupForm,setGroupForm]=useState({name:"",kind:"COMMUNITY",visibility:"PRIVATE",city:"",state:""}), [eventForm,setEventForm]=useState(blankEvent), [collectionForm,setCollectionForm]=useState({title:"",group:"",event:"",total:""});
+  const [groupInviteLink,setGroupInviteLink]=useState(null);
+  const [paymentSettings,setPaymentSettings]=useState({cash_app_url:"",cash_app_label:"",venmo_url:"",venmo_label:"",zelle_instructions:"",stripe_payment_link:""});
+  const [paymentForm,setPaymentForm]=useState({amount:"",method:"VENMO",external_reference:""});
 
   const managed=useMemo(()=>new Set(memberships.filter(m=>m.status==="ACTIVE"&&Number(m.user)===userId&&["OWNER","DIRECTOR","MANAGER"].includes(m.role)).map(m=>Number(m.group))),[memberships,userId]);
   const active=useMemo(()=>new Set(memberships.filter(m=>m.status==="ACTIVE"&&Number(m.user)===userId).map(m=>Number(m.group))),[memberships,userId]);
   const friendIds=useMemo(()=>new Set(connections.filter(c=>c.status==="ACCEPTED").map(c=>Number(c.sender)===userId?Number(c.recipient):Number(c.sender))),[connections,userId]);
   const incoming=connections.filter(c=>c.status==="PENDING"&&Number(c.recipient)===userId);
   const membershipInvites=memberships.filter(m=>m.status==="INVITED"&&Number(m.user)===userId);
+  const joinRequests=memberships.filter(m=>m.status==="REQUESTED"&&managed.has(Number(m.group)));
   const managerInvites=invites.filter(i=>i.status==="PENDING"&&managed.has(Number(i.target_group)));
   const myResponses=responses.filter(r=>Number(r.user)===userId);
   const pendingRsvp=myResponses.filter(r=>r.response==="PENDING");
-  const actions=incoming.length+membershipInvites.length+managerInvites.length+pendingRsvp.length;
+  const inviteActions=incoming.length+membershipInvites.length+joinRequests.length+managerInvites.length;
+  const actions=inviteActions+pendingRsvp.length;
 
   async function load(){ setLoading(true); setError(""); const calls=await Promise.allSettled([getConnections(),getGroups(),getMemberships(),getEvents(),getEventInvitations(),getEventResponses(),getCollections(),getCollectionShares()]); const setters=[setConnections,setGroups,setMemberships,setEvents,setInvites,setResponses,setCollections,setShares]; calls.forEach((r,i)=>r.status==="fulfilled"&&setters[i](arr(r.value))); const bad=calls.find(r=>r.status==="rejected"); if(bad)setError(`Some Social data could not load: ${errorText(bad.reason)}`); setLoading(false); }
   useEffect(()=>{load();},[]);
@@ -74,6 +79,63 @@ export default function Connect() {
   const payload=(f)=>({title:f.title.trim(),description:f.description||"",start_at:new Date(`${f.date}T${f.time||"09:00"}:00`).toISOString(),venue_name:f.venue_name||"",address_line1:f.address_line1||"",city:f.city||"",state:f.state||"",entry_amount_cents:Math.round(Number(f.entryAmount||0)*100),prizes:f.prizes||"",rules:f.rules||"",flyer_url:f.flyer_url||"",recurrence_rule:recurrenceRule(f.recurrence),weather_dependent:!!f.weather_dependent,weather_note:f.weather_note||""});
   function editForm(ev){const d=new Date(ev.start_at),pad=n=>String(n).padStart(2,"0");return {title:ev.title||"",organizer_group:ev.organizer_group||"",date:`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,time:`${pad(d.getHours())}:${pad(d.getMinutes())}`,venue_name:ev.venue_name||"",address_line1:ev.address_line1||"",city:ev.city||"",state:ev.state||"",entryAmount:String(Number(ev.entry_amount_cents||0)/100),description:ev.description||"",prizes:ev.prizes||"",rules:ev.rules||"",flyer_url:ev.flyer_url||"",recurrence:recurrenceValue(ev.recurrence_rule),weather_dependent:!!ev.weather_dependent,weather_note:ev.weather_note||""};}
   async function searchPeopleNow(q,setter){if(q.trim().length<2)return setter([]);setBusy(true);try{setter(await searchPeople(q.trim()));}catch(e){setError(errorText(e));}finally{setBusy(false);}}
+
+  async function openGroupSettings(row){
+    setDrawer({type:"groupSettings",row});
+    setError("");
+    try{
+      const data=await getGroupPaymentSettings(row.id);
+      setPaymentSettings({
+        cash_app_url:data?.cash_app_url||"",
+        cash_app_label:data?.cash_app_label||"",
+        venmo_url:data?.venmo_url||"",
+        venmo_label:data?.venmo_label||"",
+        zelle_instructions:data?.zelle_instructions||"",
+        stripe_payment_link:data?.stripe_payment_link||"",
+      });
+    }catch(e){setError(errorText(e));}
+  }
+
+  async function saveGroupPaymentSettings(row){
+    setBusy(true);setError("");setNotice("");
+    try{
+      await updateGroupPaymentSettings(row.id,paymentSettings);
+      setNotice("Collect payment settings saved.");
+      await load();
+    }catch(e){setError(errorText(e));}finally{setBusy(false);}
+  }
+
+  async function ensureGroupShareLink(row){
+    setBusy(true);setError("");
+    try{
+      const data=await createGroupInviteLink(row.id,inviteRole);
+      setGroupInviteLink(data);
+      return data;
+    }catch(e){setError(errorText(e));return null;}finally{setBusy(false);}
+  }
+
+  function groupShareUrl(link){
+    return link?.token ? `${window.location.origin}/social/invite/${link.token}` : "";
+  }
+
+  async function shareGroupLink(row){
+    const link=groupInviteLink||await ensureGroupShareLink(row);
+    const url=groupShareUrl(link);
+    if(!url)return;
+    if(navigator.share){
+      try{await navigator.share({title:`Join ${row.name} on SyncWorks`,text:`Join ${row.name} on SyncWorks Social.`,url});return;}catch{}
+    }
+    await navigator.clipboard?.writeText(url);
+    setNotice("Group invite link copied.");
+  }
+
+  async function copyGroupLink(row){
+    const link=groupInviteLink||await ensureGroupShareLink(row);
+    const url=groupShareUrl(link);
+    if(!url)return;
+    await navigator.clipboard?.writeText(url);
+    setNotice("Group invite link copied.");
+  }
 
   function EventFields({ form, setForm }) { return <div className="space-y-3"><Input label="Event name" value={form.title} onChange={v=>setForm(f=>({...f,title:v}))}/><div className="grid grid-cols-2 gap-3"><Input label="Date" type="date" value={form.date} onChange={v=>setForm(f=>({...f,date:v}))}/><Input label="Time" type="time" value={form.time} onChange={v=>setForm(f=>({...f,time:v}))}/></div><label className="block"><span className="mb-1 block text-[10px] font-black uppercase tracking-[.14em] text-slate-500">Repeats</span><select value={form.recurrence||"NONE"} onChange={e=>setForm(f=>({...f,recurrence:e.target.value}))} className="h-12 w-full rounded-2xl border border-white/10 bg-black/20 px-4 text-sm text-white"><option value="NONE">Does not repeat</option><option value="DAILY">Daily</option><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option></select></label><label className={cx("flex items-center justify-between rounded-2xl border p-3",form.weather_dependent?"border-amber-300/25 bg-amber-300/[.06]":"border-white/10")}><span><b className="text-sm">Weather permitting</b><span className="block text-xs text-slate-500">SYNC can flag this event when weather affects the plan.</span></span><input type="checkbox" checked={!!form.weather_dependent} onChange={e=>setForm(f=>({...f,weather_dependent:e.target.checked}))} className="h-5 w-5"/></label>{form.weather_dependent?<Input label="Weather note" value={form.weather_note||""} onChange={v=>setForm(f=>({...f,weather_note:v}))} placeholder="Rain date / field conditions / outdoor only"/>:null}<Input label="Venue" value={form.venue_name} onChange={v=>setForm(f=>({...f,venue_name:v}))}/><Input label="Address" value={form.address_line1} onChange={v=>setForm(f=>({...f,address_line1:v}))}/><div className="grid grid-cols-2 gap-3"><Input label="City" value={form.city} onChange={v=>setForm(f=>({...f,city:v}))}/><Input label="State" value={form.state} onChange={v=>setForm(f=>({...f,state:v}))}/></div><Input label="Entry / cost" value={form.entryAmount} onChange={v=>setForm(f=>({...f,entryAmount:v}))} placeholder="400.00"/><Area label="Description" value={form.description} onChange={v=>setForm(f=>({...f,description:v}))}/><Area label="Prizes / benefits" value={form.prizes} onChange={v=>setForm(f=>({...f,prizes:v}))}/><Area label="Rules / notes" value={form.rules} onChange={v=>setForm(f=>({...f,rules:v}))}/><Input label="Flyer image URL" value={form.flyer_url} onChange={v=>setForm(f=>({...f,flyer_url:v}))}/></div>; }
 
