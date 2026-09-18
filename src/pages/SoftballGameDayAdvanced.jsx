@@ -356,15 +356,22 @@ export default function SoftballGameDayAdvanced() {
   const [outChoice, setOutChoice] = useState(null);
   const [editingPlay, setEditingPlay] = useState(null);
   const [editForm, setEditForm] = useState({ inning: 1, result: "OUT", outs_recorded: 1, rbi: 0, runs_scored: 0, notes: "" });
+  const [hitterCard, setHitterCard] = useState(null);
+  const [playerCard, setPlayerCard] = useState(null);
+  const [playerCardOpen, setPlayerCardOpen] = useState(false);
+  const [substituteOpen, setSubstituteOpen] = useState(false);
+  const [subForm, setSubForm] = useState({ batting_order: "", incoming_player: "", defensive_position: "" });
 
-  const canManage = useMemo(() => memberships.some(
+  const canManage = useMemo(() => Boolean(game?.can_manage) || memberships.some(
     (membership) => Number(membership.group) === Number(groupId)
       && Number(membership.user) === userId
       && membership.status === "ACTIVE"
       && ["OWNER", "DIRECTOR", "MANAGER"].includes(membership.role),
-  ), [memberships, groupId, userId]);
+  ), [game?.can_manage, memberships, groupId, userId]);
 
   const lineup = useMemo(() => [...list(game?.lineup_spots)].sort((a, b) => num(a.batting_order) - num(b.batting_order)), [game]);
+  const benchPlayers = useMemo(() => list(game?.bench_players), [game?.bench_players]);
+  const substitutions = useMemo(() => list(game?.substitutions), [game?.substitutions]);
 
   async function refresh({ quiet = false } = {}) {
     if (!quiet) setLoading(true);
@@ -443,6 +450,19 @@ export default function SoftballGameDayAdvanced() {
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.status, gameId]);
+
+  useEffect(() => {
+    const playerId = game?.current_batter?.id;
+    if (!playerId) {
+      setHitterCard(null);
+      return undefined;
+    }
+    let alive = true;
+    getPlayerCard(playerId)
+      .then((data) => { if (alive) setHitterCard(data); })
+      .catch(() => { if (alive) setHitterCard(null); });
+    return () => { alive = false; };
+  }, [game?.current_batter?.id]);
 
   async function run(fn, message) {
     setBusy(true); setError(""); setNotice("");
@@ -578,6 +598,42 @@ export default function SoftballGameDayAdvanced() {
     );
     if (saved) setEditingPlay(null);
   }
+  async function openPlayerCard(playerId) {
+    if (!playerId) return;
+    setPlayerCardOpen(true);
+    setPlayerCard(null);
+    try {
+      const data = await getPlayerCard(playerId);
+      setPlayerCard(data);
+    } catch (err) {
+      setError(errorText(err));
+      setPlayerCardOpen(false);
+    }
+  }
+
+  function openSubstitution(spot = null) {
+    const fallback = spot || lineup.find((row) => num(row.batting_order) === num(game?.current_batter_order)) || lineup[0];
+    setSubForm({
+      batting_order: fallback ? String(fallback.batting_order) : "",
+      incoming_player: benchPlayers[0] ? String(benchPlayers[0].id) : "",
+      defensive_position: fallback?.defensive_position || benchPlayers[0]?.primary_position || "",
+    });
+    setSubstituteOpen(true);
+  }
+
+  async function saveSubstitution() {
+    if (!subForm.batting_order || !subForm.incoming_player) return;
+    const saved = await run(
+      () => substituteSportsGame(game.id, {
+        batting_order: Number(subForm.batting_order),
+        incoming_player: Number(subForm.incoming_player),
+        defensive_position: subForm.defensive_position,
+      }),
+      "Substitution recorded.",
+    );
+    if (saved) setSubstituteOpen(false);
+  }
+
   async function toggleGameCast(enabled) {
     const next = await run(() => updateGameCastSettings(game.id, { enabled, show_player_stats: true }), enabled ? "GameCast is live." : "GameCast sharing off.");
     if (next) setGamecast(next);
