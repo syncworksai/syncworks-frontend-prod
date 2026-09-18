@@ -51,6 +51,16 @@ const RESULTS = [
   { value: "SF", label: "SF", detail: "Sac fly", outs: 1, productive: true, tone: "amber" },
 ];
 
+const QUICK_RESULT_VALUES = ["1B", "2B", "3B", "HR", "BB", "ROE", "OUT"];
+const OUT_OPTIONS = [
+  { value: "OUT", label: "Routine", detail: "Routine out", outs: 1 },
+  { value: "K", label: "K", detail: "Strikeout", outs: 1 },
+  { value: "FC", label: "FC", detail: "Fielder's choice", outs: 1 },
+  { value: "SF", label: "SF", detail: "Sac fly", outs: 1, productive: true },
+  { value: "OUT", label: "DP", detail: "Double play", outs: 2 },
+  { value: "OUT", label: "TP", detail: "Triple play", outs: 3 },
+];
+
 const BATTED_BALLS = [["GROUND", "Ground"], ["LINE", "Line"], ["FLY", "Fly"], ["POP", "Pop"]];
 const SPRAY_ZONES = [
   ["LEFT_LINE", "LF line"], ["LEFT", "Left"], ["LEFT_CENTER", "Left center"],
@@ -63,6 +73,104 @@ const cx = (...values) => values.filter(Boolean).join(" ");
 const list = (value) => Array.isArray(value) ? value : [];
 const num = (value) => Number(value || 0);
 const errorText = (error) => error?.response?.data?.detail || Object.values(error?.response?.data || {})?.flat?.()?.[0] || error?.message || "Something went wrong.";
+
+function scoringSuggestion(result, bases, outsBefore = 0) {
+  const first = Boolean(bases.first);
+  const second = Boolean(bases.second);
+  const third = Boolean(bases.third);
+  const runners = Number(first) + Number(second) + Number(third);
+
+  let runs = 0;
+  if (result === "1B") runs = third ? 1 : 0;
+  if (result === "2B") runs = Number(second) + Number(third);
+  if (result === "3B") runs = runners;
+  if (result === "HR") runs = runners + 1;
+  if (result === "BB") runs = first && second && third ? 1 : 0;
+  if (result === "SF") runs = third && outsBefore < 2 ? 1 : 0;
+
+  return { runs, rbi: runs };
+}
+
+function predictedBasesAfter(result, bases, runsScored, suggestion) {
+  const first = Boolean(bases.first);
+  const second = Boolean(bases.second);
+  const third = Boolean(bases.third);
+  const extraRuns = Math.max(0, num(runsScored) - num(suggestion?.runs));
+
+  if (result === "HR") return { first: false, second: false, third: false };
+  if (result === "3B") return { first: false, second: false, third: true };
+  if (result === "2B") {
+    return {
+      first: false,
+      second: true,
+      third: first && extraRuns === 0,
+    };
+  }
+  if (result === "1B") {
+    return {
+      first: true,
+      second: first,
+      third: second && extraRuns === 0,
+    };
+  }
+  if (result === "BB") {
+    return {
+      first: true,
+      second: first || second,
+      third: third || (first && second),
+    };
+  }
+  if (result === "SF" && runsScored > 0) return { first, second, third: false };
+  return { first, second, third };
+}
+
+function gameBattingMetrics(plays) {
+  let ab = 0;
+  let hits = 0;
+  let walks = 0;
+  let sacFlies = 0;
+  let totalBases = 0;
+  let rbi = 0;
+  let runs = 0;
+
+  for (const play of plays) {
+    rbi += num(play.rbi);
+    runs += num(play.runs_scored);
+    if (!["BB", "SF"].includes(play.result)) ab += 1;
+    if (["1B", "2B", "3B", "HR"].includes(play.result)) hits += 1;
+    if (play.result === "BB") walks += 1;
+    if (play.result === "SF") sacFlies += 1;
+    if (play.result === "1B") totalBases += 1;
+    if (play.result === "2B") totalBases += 2;
+    if (play.result === "3B") totalBases += 3;
+    if (play.result === "HR") totalBases += 4;
+  }
+
+  const avg = ab ? hits / ab : 0;
+  const obpDen = ab + walks + sacFlies;
+  const obp = obpDen ? (hits + walks) / obpDen : 0;
+  const slg = ab ? totalBases / ab : 0;
+
+  return {
+    pa: plays.length,
+    ab,
+    hits,
+    rbi,
+    runs,
+    avg,
+    obp,
+    slg,
+    ops: obp + slg,
+  };
+}
+
+function playBadge(play) {
+  if (play.result !== "OUT") return play.result;
+  const note = String(play.notes || "").toLowerCase();
+  if (note.includes("double play")) return "DP";
+  if (note.includes("triple play")) return "TP";
+  return "OUT";
+}
 
 function Button({ children, onClick, primary, danger, disabled, className = "" }) {
   return (
@@ -128,6 +236,8 @@ export default function SoftballGameDayAdvanced() {
   const [productiveOut, setProductiveOut] = useState(false);
   const [battedBallType, setBattedBallType] = useState("");
   const [sprayZone, setSprayZone] = useState("");
+  const [outMenuOpen, setOutMenuOpen] = useState(false);
+  const [outChoice, setOutChoice] = useState(null);
 
   const canManage = useMemo(() => memberships.some(
     (membership) => Number(membership.group) === Number(groupId)
@@ -189,6 +299,27 @@ export default function SoftballGameDayAdvanced() {
   }, [game?.status, game?.id, groupId]);
 
   useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(`sw_sports_bases_${gameId}`) || "null");
+      if (saved && typeof saved === "object") {
+        setRunner1(Boolean(saved.first));
+        setRunner2(Boolean(saved.second));
+        setRunner3(Boolean(saved.third));
+      }
+    } catch {}
+  }, [gameId]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`sw_sports_bases_${gameId}`, JSON.stringify({
+        first: runner1,
+        second: runner2,
+        third: runner3,
+      }));
+    } catch {}
+  }, [gameId, runner1, runner2, runner3]);
+
+  useEffect(() => {
     if (game?.status !== "LIVE") return undefined;
     const id = window.setInterval(() => refresh({ quiet: true }), 5000);
     return () => window.clearInterval(id);
@@ -208,42 +339,97 @@ export default function SoftballGameDayAdvanced() {
     } finally { setBusy(false); }
   }
 
-  function chooseResult(row) {
+  function applyResult(row, choice = null) {
     if (row.value === "HR" && game?.home_run_allowed === false) return;
+    const remainingOuts = Math.max(0, 3 - num(game?.outs));
+    const nextOuts = Math.min(remainingOuts, num(choice?.outs ?? row.outs ?? 0));
+    const suggestion = scoringSuggestion(
+      row.value,
+      { first: runner1, second: runner2, third: runner3 },
+      num(game?.outs),
+    );
+
     setResult(row.value);
-    setOutsRecorded(row.outs || 0);
-    setRbi(row.rbi || 0);
-    setRuns(row.runs || 0);
-    setProductiveOut(Boolean(row.productive));
-    if (["BB", "K"].includes(row.value)) { setBattedBallType(""); setSprayZone(""); }
+    setOutsRecorded(nextOuts);
+    setRbi(suggestion.rbi);
+    setRuns(suggestion.runs);
+    setProductiveOut(Boolean(choice?.productive ?? row.productive));
+    setOutChoice(choice);
+    setOutMenuOpen(false);
+    if (["BB", "K"].includes(row.value)) {
+      setBattedBallType("");
+      setSprayZone("");
+    }
   }
 
-  function clearEntry() {
+  function chooseResult(row) {
+    if (row.value === "OUT") {
+      setOutMenuOpen(true);
+      return;
+    }
+    applyResult(row);
+  }
+
+  function chooseOut(option) {
+    const row = RESULTS.find((item) => item.value === option.value) || RESULTS.find((item) => item.value === "OUT");
+    applyResult({ ...row, value: option.value, productive: option.productive }, option);
+  }
+
+  function clearEntry({ keepBases = true } = {}) {
     setResult(""); setOutsRecorded(0); setRbi(0); setRuns(0);
-    setRunner1(false); setRunner2(false); setRunner3(false);
+    if (!keepBases) { setRunner1(false); setRunner2(false); setRunner3(false); }
     setRunnersAdvanced(0); setProductiveOut(false); setBattedBallType(""); setSprayZone("");
+    setOutMenuOpen(false); setOutChoice(null);
   }
 
   async function recordPlay() {
     if (!result || !game || busy) return;
     setBusy(true); setError(""); setNotice("");
     try {
-      const response = await recordSoftballPlay(game.id, { result, outs_recorded: outsRecorded, rbi, runs_scored: runs });
+      const beforeInning = num(game.current_inning);
+      const basesBefore = { first: runner1, second: runner2, third: runner3 };
+      const suggestion = scoringSuggestion(result, basesBefore, num(game.outs));
+      const response = await recordSoftballPlay(game.id, {
+        result,
+        outs_recorded: outsRecorded,
+        rbi,
+        runs_scored: runs,
+        notes: outChoice?.detail || "",
+      });
       const plateAppearanceId = response?.play?.id;
       if (plateAppearanceId) {
         try {
           await saveSoftballPlayContext({
             plate_appearance: plateAppearanceId,
-            runner_on_first_before: runner1, runner_on_second_before: runner2, runner_on_third_before: runner3,
-            runners_advanced: runnersAdvanced, productive_out: result === "SF" ? true : productiveOut,
-            batted_ball_type: battedBallType, spray_zone: sprayZone,
+            runner_on_first_before: runner1,
+            runner_on_second_before: runner2,
+            runner_on_third_before: runner3,
+            runners_advanced: runnersAdvanced,
+            productive_out: result === "SF" ? true : productiveOut,
+            batted_ball_type: battedBallType,
+            spray_zone: sprayZone,
           });
         } catch {}
       }
-      clearEntry();
+
+      const inningAdvanced = num(response?.game?.current_inning) > beforeInning;
+      if (inningAdvanced) {
+        setRunner1(false); setRunner2(false); setRunner3(false);
+        setNotice(`3 outs — inning ${response.game.current_inning} started automatically.`);
+      } else {
+        const nextBases = predictedBasesAfter(result, basesBefore, runs, suggestion);
+        setRunner1(nextBases.first);
+        setRunner2(nextBases.second);
+        setRunner3(nextBases.third);
+      }
+
+      clearEntry({ keepBases: true });
       await refresh({ quiet: true });
-    } catch (err) { setError(errorText(err)); }
-    finally { setBusy(false); }
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function toggleGameCast(enabled) {
@@ -316,6 +502,21 @@ export default function SoftballGameDayAdvanced() {
     }
     return map;
   }, [plays, innings]);
+
+  const teamGameMetrics = useMemo(() => gameBattingMetrics(plays), [plays]);
+
+  const currentBatterMetrics = useMemo(
+    () => gameBattingMetrics(plays.filter((play) => num(play.player) === num(game?.current_batter?.id))),
+    [plays, game?.current_batter?.id],
+  );
+
+  const playerGameMetrics = useMemo(() => {
+    const map = new Map();
+    for (const spot of lineup) {
+      map.set(num(spot.player), gameBattingMetrics(plays.filter((play) => num(play.player) === num(spot.player))));
+    }
+    return map;
+  }, [lineup, plays]);
 
   const opponentInningMap = useMemo(
     () => new Map(list(game?.inning_lines).map((row) => [num(row.inning), row])),
