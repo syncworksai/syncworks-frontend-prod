@@ -6,6 +6,7 @@ import {
   CircleDot,
   Eye,
   EyeOff,
+  Edit3,
   Loader2,
   Minus,
   Plus,
@@ -14,6 +15,7 @@ import {
   Share2,
   Trophy,
   Undo2,
+  UserRound,
 } from "lucide-react";
 
 import ModeBar from "../components/ModeBar";
@@ -25,6 +27,7 @@ import {
   finishSportsGame,
   getGameCastSettings,
   getPlateAppearances,
+  getPlayerCard,
   getSoftballRuleSets,
   getSportsGame,
   recordSoftballPlay,
@@ -33,6 +36,7 @@ import {
   setOpponentScore,
   updateGameInningLine,
   startSportsGame,
+  substituteSportsGame,
   undoSoftballPlay,
   updateDefensivePosition,
   updateGameCastSettings,
