@@ -2,15 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
-  BarChart3,
   Check,
   CircleDot,
-  Clipboard,
   Eye,
   EyeOff,
   Loader2,
   Minus,
-  Play,
   Plus,
   Radio,
   RotateCcw,
@@ -20,115 +17,87 @@ import {
 } from "lucide-react";
 
 import ModeBar from "../components/ModeBar";
+import SoftballDefenseField from "../components/sports/SoftballDefenseField";
 import { useAuth } from "../auth/AuthContext";
 import { getMemberships } from "../api/social";
 import {
   finishSportsGame,
   getGameCastSettings,
   getPlateAppearances,
+  getSoftballRuleSets,
   getSportsGame,
   recordSoftballPlay,
   saveSoftballPlayContext,
+  setOpponentHomeRuns,
   setOpponentScore,
   startSportsGame,
   undoSoftballPlay,
+  updateDefensivePosition,
   updateGameCastSettings,
+  updateSportsGame,
 } from "../api/sports";
 
 const RESULTS = [
-  { value: "1B", label: "1B", detail: "Single", outs: 0 },
-  { value: "2B", label: "2B", detail: "Double", outs: 0 },
-  { value: "3B", label: "3B", detail: "Triple", outs: 0 },
-  { value: "HR", label: "HR", detail: "Home run", outs: 0, rbi: 1, runs: 1 },
-  { value: "BB", label: "BB", detail: "Walk", outs: 0 },
-  { value: "OUT", label: "OUT", detail: "Out", outs: 1 },
-  { value: "K", label: "K", detail: "Strikeout", outs: 1 },
-  { value: "ROE", label: "ROE", detail: "Reached on error", outs: 0 },
-  { value: "FC", label: "FC", detail: "Fielder's choice", outs: 1 },
-  { value: "SF", label: "SF", detail: "Sac fly", outs: 1, productive: true },
+  { value: "1B", label: "1B", detail: "Single", outs: 0, tone: "cyan" },
+  { value: "2B", label: "2B", detail: "Double", outs: 0, tone: "cyan" },
+  { value: "3B", label: "3B", detail: "Triple", outs: 0, tone: "cyan" },
+  { value: "HR", label: "HR", detail: "Home run", outs: 0, rbi: 1, runs: 1, tone: "green" },
+  { value: "BB", label: "BB", detail: "Walk", outs: 0, tone: "violet" },
+  { value: "OUT", label: "OUT", detail: "Out", outs: 1, tone: "slate" },
+  { value: "K", label: "K", detail: "Strikeout", outs: 1, tone: "slate" },
+  { value: "ROE", label: "ROE", detail: "Error", outs: 0, tone: "amber" },
+  { value: "FC", label: "FC", detail: "Fielder's choice", outs: 1, tone: "amber" },
+  { value: "SF", label: "SF", detail: "Sac fly", outs: 1, productive: true, tone: "amber" },
 ];
 
-const BATTED_BALLS = [
-  ["GROUND", "Ground"],
-  ["LINE", "Line"],
-  ["FLY", "Fly"],
-  ["POP", "Pop"],
-];
-
+const BATTED_BALLS = [["GROUND", "Ground"], ["LINE", "Line"], ["FLY", "Fly"], ["POP", "Pop"]];
 const SPRAY_ZONES = [
-  ["LEFT_LINE", "LF line"],
-  ["LEFT", "Left"],
-  ["LEFT_CENTER", "Left center"],
-  ["CENTER", "Center"],
-  ["RIGHT_CENTER", "Right center"],
-  ["RIGHT", "Right"],
-  ["RIGHT_LINE", "RF line"],
-  ["INFIELD_LEFT", "IF left"],
-  ["INFIELD_MIDDLE", "IF middle"],
-  ["INFIELD_RIGHT", "IF right"],
+  ["LEFT_LINE", "LF line"], ["LEFT", "Left"], ["LEFT_CENTER", "Left center"],
+  ["CENTER", "Center"], ["RIGHT_CENTER", "Right center"], ["RIGHT", "Right"],
+  ["RIGHT_LINE", "RF line"], ["INFIELD_LEFT", "IF left"], ["INFIELD_MIDDLE", "IF middle"], ["INFIELD_RIGHT", "IF right"],
 ];
+const POSITIONS = ["P", "C", "1B", "2B", "3B", "SS", "MM", "LF", "LC", "CF", "RC", "RF", "OF", "EH1", "EH2", "EH", "DH"];
 
 const cx = (...values) => values.filter(Boolean).join(" ");
-const list = (value) => (Array.isArray(value) ? value : []);
+const list = (value) => Array.isArray(value) ? value : [];
 const num = (value) => Number(value || 0);
 const errorText = (error) => error?.response?.data?.detail || Object.values(error?.response?.data || {})?.flat?.()?.[0] || error?.message || "Something went wrong.";
 
 function Button({ children, onClick, primary, danger, disabled, className = "" }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={cx(
-        "min-h-12 rounded-2xl px-4 text-sm font-black transition active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-40",
-        primary
-          ? "bg-cyan-300 text-slate-950"
-          : danger
-            ? "border border-rose-400/25 bg-rose-400/10 text-rose-100"
-            : "border border-white/10 bg-white/[.04] text-slate-100",
-        className,
-      )}
-    >
-      {children}
-    </button>
+    <button type="button" onClick={onClick} disabled={disabled} className={cx(
+      "min-h-9 rounded-xl px-2.5 text-[10px] font-black transition active:scale-[.98] disabled:opacity-40",
+      primary ? "bg-cyan-300 text-slate-950" : danger ? "border border-rose-300/25 bg-rose-300/10 text-rose-100" : "border border-white/10 bg-white/[.035] text-slate-200",
+      className,
+    )}>{children}</button>
   );
 }
 
-function Stepper({ label, value, onChange, max = 9 }) {
+function MiniStepper({ label, value, onChange, max = 9 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-      <div className="text-center text-[9px] font-black uppercase tracking-[.14em] text-slate-500">{label}</div>
-      <div className="mt-2 grid grid-cols-[2.75rem_1fr_2.75rem] items-center gap-2">
-        <button type="button" onClick={() => onChange(Math.max(0, value - 1))} className="grid h-11 w-11 place-items-center rounded-xl border border-white/10"><Minus className="h-4 w-4" /></button>
-        <div className="text-center text-2xl font-black text-white">{value}</div>
-        <button type="button" onClick={() => onChange(Math.min(max, value + 1))} className="grid h-11 w-11 place-items-center rounded-xl border border-white/10"><Plus className="h-4 w-4" /></button>
+    <div className="rounded-xl border border-white/10 bg-black/20 p-1.5">
+      <div className="text-center text-[7px] font-black uppercase tracking-wide text-slate-500">{label}</div>
+      <div className="mt-1 grid grid-cols-[1.9rem_1fr_1.9rem] items-center gap-1">
+        <button type="button" onClick={() => onChange(Math.max(0, value - 1))} className="grid h-8 w-8 place-items-center rounded-lg border border-white/10"><Minus className="h-3 w-3" /></button>
+        <div className="text-center text-lg font-black text-white">{value}</div>
+        <button type="button" onClick={() => onChange(Math.min(max, value + 1))} className="grid h-8 w-8 place-items-center rounded-lg border border-white/10"><Plus className="h-3 w-3" /></button>
       </div>
     </div>
   );
 }
 
 function Toggle({ active, onClick, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cx(
-        "min-h-11 rounded-xl border px-3 text-xs font-black",
-        active ? "border-cyan-300/40 bg-cyan-300/15 text-cyan-100" : "border-white/10 bg-black/15 text-slate-400",
-      )}
-    >
-      {active ? <Check className="mr-1 inline h-3.5 w-3.5" /> : null}{children}
-    </button>
-  );
+  return <button type="button" onClick={onClick} className={cx("min-h-8 rounded-lg border px-2 text-[9px] font-black", active ? "border-cyan-300/35 bg-cyan-300/12 text-cyan-100" : "border-white/10 bg-black/15 text-slate-400")}>{active ? <Check className="mr-1 inline h-3 w-3" /> : null}{children}</button>;
 }
 
-function ScoreBox({ name, score, accent }) {
-  return (
-    <div className={cx("rounded-2xl border p-4 text-center", accent ? "border-cyan-300/25 bg-cyan-300/[.07]" : "border-white/10 bg-black/20")}>
-      <div className="truncate text-[10px] font-black uppercase tracking-[.12em] text-slate-500">{name}</div>
-      <div className="mt-1 text-4xl font-black text-white">{score}</div>
-    </div>
-  );
+function resultTone(row, active, disabled) {
+  if (disabled) return "border-white/5 bg-white/[.015] text-slate-700";
+  if (active) return "border-white/60 bg-white text-slate-950";
+  if (row.tone === "green") return "border-emerald-300/25 bg-emerald-300/10 text-emerald-100";
+  if (row.tone === "violet") return "border-violet-300/25 bg-violet-300/10 text-violet-100";
+  if (row.tone === "amber") return "border-amber-300/25 bg-amber-300/10 text-amber-100";
+  if (row.tone === "cyan") return "border-cyan-300/25 bg-cyan-300/10 text-cyan-100";
+  return "border-white/10 bg-white/[.035] text-slate-200";
 }
 
 export default function SoftballGameDayAdvanced() {
@@ -141,6 +110,7 @@ export default function SoftballGameDayAdvanced() {
   const [plays, setPlays] = useState([]);
   const [memberships, setMemberships] = useState([]);
   const [gamecast, setGamecast] = useState(null);
+  const [ruleSets, setRuleSets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -158,20 +128,14 @@ export default function SoftballGameDayAdvanced() {
   const [battedBallType, setBattedBallType] = useState("");
   const [sprayZone, setSprayZone] = useState("");
 
-  const canManage = useMemo(
-    () => memberships.some(
-      (membership) => Number(membership.group) === Number(groupId)
-        && Number(membership.user) === userId
-        && membership.status === "ACTIVE"
-        && ["OWNER", "DIRECTOR", "MANAGER"].includes(membership.role),
-    ),
-    [memberships, groupId, userId],
-  );
+  const canManage = useMemo(() => memberships.some(
+    (membership) => Number(membership.group) === Number(groupId)
+      && Number(membership.user) === userId
+      && membership.status === "ACTIVE"
+      && ["OWNER", "DIRECTOR", "MANAGER"].includes(membership.role),
+  ), [memberships, groupId, userId]);
 
-  const lineup = useMemo(
-    () => [...list(game?.lineup_spots)].sort((a, b) => num(a.batting_order) - num(b.batting_order)),
-    [game],
-  );
+  const lineup = useMemo(() => [...list(game?.lineup_spots)].sort((a, b) => num(a.batting_order) - num(b.batting_order)), [game]);
 
   async function refresh({ quiet = false } = {}) {
     if (!quiet) setLoading(true);
@@ -184,6 +148,7 @@ export default function SoftballGameDayAdvanced() {
       setGame(gameData);
       setPlays(list(playRows));
       setMemberships(list(membershipRows));
+
       const manager = list(membershipRows).some(
         (membership) => Number(membership.group) === Number(groupId)
           && Number(membership.user) === userId
@@ -191,11 +156,12 @@ export default function SoftballGameDayAdvanced() {
           && ["OWNER", "DIRECTOR", "MANAGER"].includes(membership.role),
       );
       if (manager) {
-        try {
-          setGamecast(await getGameCastSettings(gameId));
-        } catch {
-          setGamecast(null);
-        }
+        const [share, rules] = await Promise.all([
+          getGameCastSettings(gameId).catch(() => null),
+          getSoftballRuleSets().catch(() => []),
+        ]);
+        setGamecast(share);
+        setRuleSets(list(rules));
       }
     } catch (err) {
       setError(errorText(err));
@@ -204,22 +170,32 @@ export default function SoftballGameDayAdvanced() {
     }
   }
 
+  useEffect(() => { refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [gameId]);
+
   useEffect(() => {
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameId]);
+    if (!game) return;
+    try {
+      if (game.status === "LIVE") {
+        localStorage.setItem("sw_live_sports_game_v1", JSON.stringify({
+          groupId: Number(groupId), gameId: Number(game.id), teamName: game.team_name || "", opponentName: game.opponent_name || "",
+        }));
+      } else if (game.status === "FINAL") {
+        const current = JSON.parse(localStorage.getItem("sw_live_sports_game_v1") || "null");
+        if (Number(current?.gameId) === Number(game.id)) localStorage.removeItem("sw_live_sports_game_v1");
+      }
+      window.dispatchEvent(new CustomEvent("sw:liveSportsGameChanged"));
+    } catch {}
+  }, [game?.status, game?.id, groupId]);
 
   useEffect(() => {
     if (game?.status !== "LIVE") return undefined;
-    const id = window.setInterval(() => refresh({ quiet: true }), 3000);
+    const id = window.setInterval(() => refresh({ quiet: true }), 5000);
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.status, gameId]);
 
   async function run(fn, message) {
-    setBusy(true);
-    setError("");
-    setNotice("");
+    setBusy(true); setError(""); setNotice("");
     try {
       const value = await fn();
       if (message) setNotice(message);
@@ -228,228 +204,227 @@ export default function SoftballGameDayAdvanced() {
     } catch (err) {
       setError(errorText(err));
       return null;
-    } finally {
-      setBusy(false);
-    }
+    } finally { setBusy(false); }
   }
 
   function chooseResult(row) {
+    if (row.value === "HR" && game?.home_run_allowed === false) return;
     setResult(row.value);
     setOutsRecorded(row.outs || 0);
     setRbi(row.rbi || 0);
     setRuns(row.runs || 0);
     setProductiveOut(Boolean(row.productive));
-    if (row.value === "BB" || row.value === "K") {
-      setBattedBallType("");
-      setSprayZone("");
-    }
+    if (["BB", "K"].includes(row.value)) { setBattedBallType(""); setSprayZone(""); }
   }
 
   function clearEntry() {
-    setResult("");
-    setOutsRecorded(0);
-    setRbi(0);
-    setRuns(0);
-    setRunner1(false);
-    setRunner2(false);
-    setRunner3(false);
-    setRunnersAdvanced(0);
-    setProductiveOut(false);
-    setBattedBallType("");
-    setSprayZone("");
+    setResult(""); setOutsRecorded(0); setRbi(0); setRuns(0);
+    setRunner1(false); setRunner2(false); setRunner3(false);
+    setRunnersAdvanced(0); setProductiveOut(false); setBattedBallType(""); setSprayZone("");
   }
 
   async function recordPlay() {
     if (!result || !game || busy) return;
-    setBusy(true);
-    setError("");
-    setNotice("");
+    setBusy(true); setError(""); setNotice("");
     try {
-      const response = await recordSoftballPlay(game.id, {
-        result,
-        outs_recorded: outsRecorded,
-        rbi,
-        runs_scored: runs,
-      });
+      const response = await recordSoftballPlay(game.id, { result, outs_recorded: outsRecorded, rbi, runs_scored: runs });
       const plateAppearanceId = response?.play?.id;
       if (plateAppearanceId) {
         try {
           await saveSoftballPlayContext({
             plate_appearance: plateAppearanceId,
-            runner_on_first_before: runner1,
-            runner_on_second_before: runner2,
-            runner_on_third_before: runner3,
-            runners_advanced: runnersAdvanced,
-            productive_out: result === "SF" ? true : productiveOut,
-            batted_ball_type: battedBallType,
-            spray_zone: sprayZone,
+            runner_on_first_before: runner1, runner_on_second_before: runner2, runner_on_third_before: runner3,
+            runners_advanced: runnersAdvanced, productive_out: result === "SF" ? true : productiveOut,
+            batted_ball_type: battedBallType, spray_zone: sprayZone,
           });
-          setNotice(`${game.current_batter?.display_name || "Batter"}: ${result} recorded with quality context.`);
-        } catch (contextError) {
-          setNotice(`${result} was recorded, but the advanced context did not save. Official game scoring is intact.`);
-          setError(errorText(contextError));
-        }
+        } catch {}
       }
       clearEntry();
       await refresh({ quiet: true });
-    } catch (err) {
-      setError(errorText(err));
-    } finally {
-      setBusy(false);
-    }
+    } catch (err) { setError(errorText(err)); }
+    finally { setBusy(false); }
   }
 
   async function toggleGameCast(enabled) {
-    if (!gamecast) return;
-    const next = await run(
-      () => updateGameCastSettings(game.id, { enabled, show_player_stats: true }),
-      enabled ? "GameCast is live for fans." : "GameCast sharing turned off.",
-    );
+    const next = await run(() => updateGameCastSettings(game.id, { enabled, show_player_stats: true }), enabled ? "GameCast is live." : "GameCast sharing off.");
     if (next) setGamecast(next);
   }
 
-  async function copyGameCast() {
+  async function shareGameCast() {
     if (!gamecast?.token) return;
     const url = `${window.location.origin}/gamecast/${gamecast.token}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setNotice("GameCast link copied.");
-    } catch {
-      setNotice(url);
+    if (navigator.share) {
+      try { await navigator.share({ title: `${game.team_name} GameCast`, text: `Follow ${game.team_name} vs ${game.opponent_name} live.`, url }); return; } catch {}
     }
+    try { await navigator.clipboard.writeText(url); setNotice("GameCast link copied."); } catch { setNotice(url); }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#02060c] text-white">
-        <ModeBar title="Game Day" subtitle="Softball" />
-        <div className="grid min-h-[70vh] place-items-center"><Loader2 className="h-9 w-9 animate-spin text-cyan-300" /></div>
-      </div>
-    );
+  function facebookGameCast() {
+    if (!gamecast?.token) return;
+    const url = `${window.location.origin}/gamecast/${gamecast.token}`;
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, "_blank", "noopener,noreferrer");
   }
 
-  if (!game) {
-    return <div className="min-h-screen bg-[#02060c] p-4 text-white"><ModeBar title="Game Day" subtitle="Softball" /><div className="rounded-2xl border border-rose-400/20 bg-rose-400/10 p-4">{error || "Game unavailable."}</div></div>;
+  async function changeRule(ruleSetId) {
+    const rule = ruleSets.find((row) => String(row.id) === String(ruleSetId));
+    await run(() => updateSportsGame(game.id, {
+      rule_set: ruleSetId ? Number(ruleSetId) : null,
+      ...(rule?.innings ? { innings_scheduled: Number(rule.innings) } : {}),
+    }), "Game rules updated.");
   }
+
+  async function changeDefense(playerId, position) {
+    await run(() => updateDefensivePosition(game.id, Number(playerId), position), "Defense updated.");
+  }
+
+  const innings = useMemo(() => {
+    const max = Math.max(num(game?.innings_scheduled) || 7, num(game?.current_inning) || 1, ...plays.map((play) => num(play.inning)));
+    return Array.from({ length: max }, (_, index) => index + 1);
+  }, [game, plays]);
+
+  const cellMap = useMemo(() => {
+    const map = new Map();
+    for (const play of plays) {
+      const key = `${play.player}-${play.inning}`;
+      const rows = map.get(key) || [];
+      rows.push(play);
+      map.set(key, rows);
+    }
+    return map;
+  }, [plays]);
+
+  const inningTotals = useMemo(() => {
+    const map = new Map();
+    innings.forEach((inning) => map.set(inning, { runs: 0, hits: 0 }));
+    for (const play of plays) {
+      const row = map.get(num(play.inning)) || { runs: 0, hits: 0 };
+      row.runs += num(play.runs_scored);
+      if (["1B", "2B", "3B", "HR"].includes(play.result)) row.hits += 1;
+      map.set(num(play.inning), row);
+    }
+    return map;
+  }, [plays, innings]);
+
+  if (loading) return <div className="min-h-screen bg-[#02060c] text-white"><ModeBar title="Game Book" subtitle="Softball" /><div className="grid min-h-[70vh] place-items-center"><Loader2 className="h-8 w-8 animate-spin text-cyan-300" /></div></div>;
+  if (!game) return <div className="min-h-screen bg-[#02060c] p-4 text-white"><ModeBar title="Game Book" subtitle="Softball" /><div className="rounded-xl border border-rose-300/20 bg-rose-300/10 p-3">{error || "Game unavailable."}</div></div>;
 
   const live = game.status === "LIVE";
   const final = game.status === "FINAL";
   const currentBatter = game.current_batter;
   const selected = RESULTS.find((row) => row.value === result);
-  const battedBallRelevant = result && !["BB", "K"].includes(result);
-  const productiveRelevant = ["OUT", "FC", "SF"].includes(result);
-  const gamecastUrl = gamecast?.token ? `${window.location.origin}/gamecast/${gamecast.token}` : "";
+  const rule = game.rule_set_detail;
 
   return (
-    <div className="min-h-screen bg-[#02060c] pb-36 text-slate-100">
-      <ModeBar title="Game Day" subtitle={`${game.team_name} • Softball`} />
-      <main className="mx-auto max-w-6xl space-y-4 px-3 py-4 sm:px-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button onClick={() => navigate(`/connect/groups/${groupId}/sports`)}><ArrowLeft className="mr-2 inline h-4 w-4" />Team</Button>
-          <div className="flex gap-2">
-            <Button onClick={() => navigate(`/connect/groups/${groupId}/sports/analytics`)}><BarChart3 className="mr-2 inline h-4 w-4" />Analytics</Button>
-            <span className={cx("grid min-h-12 place-items-center rounded-2xl px-4 text-xs font-black uppercase", live ? "bg-emerald-300 text-slate-950" : "border border-white/10 text-slate-300")}>{live ? "● Live" : game.status}</span>
-          </div>
+    <div className="min-h-screen bg-[#02060c] pb-32 text-slate-100">
+      <ModeBar title="Game Book" subtitle={`${game.team_name} • Softball`} />
+      <main className="mx-auto max-w-6xl space-y-2.5 px-2.5 py-2.5 sm:px-4">
+        <div className="flex items-center justify-between gap-2">
+          <Button onClick={() => navigate(`/connect/groups/${groupId}/sports`)}><ArrowLeft className="mr-1 inline h-3.5 w-3.5" />Team</Button>
+          <span className={cx("rounded-full px-2.5 py-1.5 text-[8px] font-black uppercase tracking-wide", live ? "bg-emerald-300 text-slate-950" : "border border-white/10 text-slate-300")}>{live ? "● Live" : game.status}</span>
         </div>
 
-        {error ? <div className="rounded-2xl border border-rose-400/20 bg-rose-400/10 p-3 text-sm text-rose-100">{error}</div> : null}
-        {notice ? <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-sm text-cyan-100">{notice}</div> : null}
+        {error ? <div className="rounded-xl border border-rose-300/20 bg-rose-300/10 p-2 text-[10px] text-rose-100">{error}</div> : null}
+        {notice ? <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-2 text-[10px] text-cyan-100">{notice}</div> : null}
 
-        <section className="rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_50%_-20%,rgba(34,211,238,.22),transparent_48%),#07111f] p-4 sm:p-6">
-          <div className="grid grid-cols-2 gap-2">
-            <ScoreBox name={game.team_name} score={num(game.runs_for)} accent />
-            <ScoreBox name={game.opponent_name} score={num(game.runs_against)} />
+        <section className="rounded-2xl border border-cyan-300/15 bg-[#07111f] p-2.5">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+            <div className="text-center"><div className="truncate text-[8px] font-black uppercase text-cyan-300">{game.team_name}</div><div className="text-3xl font-black text-white">{game.runs_for}</div></div>
+            <div className="rounded-xl border border-white/10 bg-black/20 px-2 py-1.5 text-center"><div className="text-[7px] text-slate-500">INN</div><b className="text-sm">{game.current_inning}</b><div className="mt-1 flex gap-0.5">{[0,1,2].map((i)=><span key={i} className={cx("h-2 w-2 rounded-full border",i<num(game.outs)?"border-rose-300 bg-rose-300":"border-white/20")} />)}</div></div>
+            <div className="text-center"><div className="truncate text-[8px] font-black uppercase text-slate-400">{game.opponent_name}</div><div className="text-3xl font-black text-white">{game.runs_against}</div></div>
           </div>
-          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-3"><div className="text-[9px] uppercase tracking-widest text-slate-500">Inning</div><b className="text-2xl">{game.current_inning}</b></div>
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-3"><div className="text-[9px] uppercase tracking-widest text-slate-500">Outs</div><div className="mt-2 flex justify-center gap-1">{[0, 1, 2].map((index) => <span key={index} className={cx("h-4 w-4 rounded-full border", index < num(game.outs) ? "border-rose-300 bg-rose-300" : "border-white/20")} />)}</div></div>
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-3"><div className="text-[9px] uppercase tracking-widest text-slate-500">Batter</div><b className="text-2xl">#{game.current_batter_order}</b></div>
-          </div>
-          <div className="mt-3 text-center text-xs text-slate-500">{new Date(game.start_at).toLocaleString()} · {game.venue_name || "Location TBD"}</div>
         </section>
 
-        {!lineup.length ? (
-          <section className="rounded-[1.65rem] border border-amber-400/20 bg-amber-400/[.06] p-5">
-            <b className="text-amber-100">Build the lineup before Game Day.</b>
-          </section>
-        ) : null}
+        {!lineup.length ? <section className="rounded-xl border border-amber-300/20 bg-amber-300/[.05] p-3 text-[10px] text-amber-100">Build the game lineup before starting Game Book.</section> : null}
 
         {game.status === "SCHEDULED" && lineup.length ? (
-          <section className="rounded-[1.65rem] border border-cyan-400/20 bg-[#07111f] p-5">
-            <div className="grid gap-4 lg:grid-cols-[1fr_.7fr]">
-              <div>
-                <h2 className="font-black text-white">Starting lineup</h2>
-                <div className="mt-3 space-y-2">{lineup.map((spot) => <div key={spot.id} className="flex items-center justify-between rounded-2xl border border-white/10 p-3"><span><b>{spot.batting_order}. {spot.player_detail?.display_name}</b><span className="ml-2 text-xs text-slate-500">#{spot.player_detail?.jersey_number || "—"}</span></span><span className="text-xs font-black text-slate-400">{spot.defensive_position || "—"}</span></div>)}</div>
-              </div>
-              <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/[.05] p-4">
-                <Play className="h-7 w-7 text-cyan-300" />
-                <h2 className="mt-3 text-xl font-black">Start live scoring</h2>
-                <p className="mt-2 text-sm text-slate-400">The first batter, inning and out state will go live.</p>
-                {canManage ? <Button primary disabled={busy} className="mt-4 w-full" onClick={() => run(() => startSportsGame(game.id), "Game started.")}><CircleDot className="mr-2 inline h-4 w-4" />Start Game</Button> : null}
-              </div>
-            </div>
-          </section>
+          <div className="grid gap-2 lg:grid-cols-[1fr_.8fr]">
+            <SoftballDefenseField lineup={lineup} compact />
+            <section className="rounded-2xl border border-cyan-300/15 bg-[#07111f] p-3">
+              <div className="text-[8px] font-black uppercase tracking-wide text-cyan-300">Ready</div>
+              <div className="mt-1 text-sm font-black text-white">{lineup.length} batters loaded</div>
+              {canManage ? <Button primary className="mt-3 w-full" disabled={busy} onClick={() => run(() => startSportsGame(game.id), "Game started.")}><CircleDot className="mr-1 inline h-3.5 w-3.5" />Start Game</Button> : null}
+            </section>
+          </div>
         ) : null}
 
         {live ? (
-          <div className="grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
-            <div className="space-y-4">
-              <section className="rounded-[1.75rem] border border-cyan-400/25 bg-[#07111f] p-4 sm:p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div><div className="text-[10px] font-black uppercase tracking-[.16em] text-cyan-300">At bat now</div><h2 className="mt-1 text-2xl font-black text-white">#{currentBatter?.jersey_number || "—"} {currentBatter?.display_name || "Lineup batter"}</h2></div>
-                  <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-black text-slate-400">{currentBatter?.primary_position || "Player"}</span>
-                </div>
+          <>
+            <section className="rounded-2xl border border-cyan-300/20 bg-[#07111f] p-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0"><div className="text-[7px] font-black uppercase tracking-[.14em] text-cyan-300">At bat</div><div className="truncate text-base font-black text-white">#{currentBatter?.jersey_number || "—"} {currentBatter?.display_name || "Current batter"}</div></div>
+                <div className="text-right text-[8px] text-slate-500">Order #{game.current_batter_order}<br />{currentBatter?.primary_position || "—"}</div>
+              </div>
 
-                {canManage ? (
-                  <>
-                    <div className="mt-5 grid grid-cols-5 gap-2">{RESULTS.map((row) => <button key={row.value} type="button" onClick={() => chooseResult(row)} className={cx("min-h-16 rounded-2xl border p-2 text-center transition", result === row.value ? "border-cyan-300 bg-cyan-300 text-slate-950" : "border-white/10 bg-black/20 text-white")}><b className="block text-lg">{row.label}</b><span className="text-[9px] opacity-60">{row.detail}</span></button>)}</div>
+              {canManage ? (
+                <>
+                  <div className="mt-2 grid grid-cols-5 gap-1">
+                    {RESULTS.map((row) => {
+                      const blockedHr = row.value === "HR" && game.home_run_allowed === false;
+                      return <button key={row.value} type="button" disabled={blockedHr} onClick={() => chooseResult(row)} className={cx("min-h-11 rounded-xl border px-1 py-1 text-center",resultTone(row,result===row.value,blockedHr))}><b className="block text-[12px]">{row.label}</b><span className="block truncate text-[7px] opacity-70">{blockedHr ? "RULE" : row.detail}</span></button>;
+                    })}
+                  </div>
 
-                    {result ? (
-                      <div className="mt-4 space-y-4 rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
-                        <div className="flex items-center justify-between gap-2"><div><div className="text-[10px] font-black uppercase tracking-wider text-slate-500">Selected</div><b className="text-lg text-white">{selected?.detail}</b></div><Button onClick={clearEntry}><RotateCcw className="mr-1 inline h-4 w-4" />Reset</Button></div>
-
-                        <div className="grid grid-cols-3 gap-2"><Stepper label="Outs" value={outsRecorded} onChange={setOutsRecorded} max={Math.max(0, 3 - num(game.outs))} /><Stepper label="RBI" value={rbi} onChange={setRbi} max={4} /><Stepper label="Runs" value={runs} onChange={setRuns} max={4} /></div>
-
-                        <div>
-                          <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">Runners on before contact</div>
-                          <div className="mt-2 grid grid-cols-3 gap-2"><Toggle active={runner1} onClick={() => setRunner1(!runner1)}>1st</Toggle><Toggle active={runner2} onClick={() => setRunner2(!runner2)}>2nd</Toggle><Toggle active={runner3} onClick={() => setRunner3(!runner3)}>3rd</Toggle></div>
-                        </div>
-
-                        <Stepper label="Runners advanced" value={runnersAdvanced} onChange={setRunnersAdvanced} max={3} />
-
-                        {productiveRelevant ? <Toggle active={result === "SF" || productiveOut} onClick={() => result !== "SF" && setProductiveOut(!productiveOut)}>Quality / productive out</Toggle> : null}
-
-                        {battedBallRelevant ? (
-                          <>
-                            <div><div className="text-[10px] font-black uppercase tracking-wider text-slate-500">Batted ball</div><div className="mt-2 grid grid-cols-4 gap-2">{BATTED_BALLS.map(([value, label]) => <Toggle key={value} active={battedBallType === value} onClick={() => setBattedBallType(battedBallType === value ? "" : value)}>{label}</Toggle>)}</div></div>
-                            <div><div className="text-[10px] font-black uppercase tracking-wider text-slate-500">Where did it go?</div><div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">{SPRAY_ZONES.map(([value, label]) => <Toggle key={value} active={sprayZone === value} onClick={() => setSprayZone(sprayZone === value ? "" : value)}>{label}</Toggle>)}</div></div>
-                          </>
-                        ) : null}
-
-                        <Button primary disabled={busy} className="w-full" onClick={recordPlay}>Record plate appearance</Button>
+                  {selected ? (
+                    <div className="mt-2 rounded-xl border border-white/10 bg-black/20 p-2">
+                      <div className="grid grid-cols-[1fr_auto] items-center gap-2"><div className="text-[9px]"><b className="text-white">{selected.detail}</b><span className="ml-1 text-slate-500">selected</span></div><button type="button" onClick={clearEntry} className="grid h-8 w-8 place-items-center rounded-lg border border-white/10"><RotateCcw className="h-3.5 w-3.5" /></button></div>
+                      <div className="mt-2 grid grid-cols-3 gap-1.5">
+                        <MiniStepper label="Outs" value={outsRecorded} onChange={setOutsRecorded} max={Math.max(0,3-num(game.outs))} />
+                        <MiniStepper label="RBI" value={rbi} onChange={setRbi} max={4} />
+                        <MiniStepper label="Runs" value={runs} onChange={setRuns} max={4} />
                       </div>
-                    ) : null}
-                  </>
-                ) : <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/[.05] p-3 text-sm text-amber-100">Game entry is controlled by an owner, director or coach.</div>}
-              </section>
+                      <details className="mt-2 rounded-lg border border-white/10 bg-white/[.02] p-2">
+                        <summary className="cursor-pointer text-[8px] font-black uppercase tracking-wide text-slate-500">More play detail</summary>
+                        <div className="mt-2 space-y-2">
+                          <div className="grid grid-cols-3 gap-1"><Toggle active={runner1} onClick={() => setRunner1(!runner1)}>Runner 1B</Toggle><Toggle active={runner2} onClick={() => setRunner2(!runner2)}>Runner 2B</Toggle><Toggle active={runner3} onClick={() => setRunner3(!runner3)}>Runner 3B</Toggle></div>
+                          <MiniStepper label="Runners advanced" value={runnersAdvanced} onChange={setRunnersAdvanced} max={3} />
+                          {["OUT","FC","SF"].includes(result) ? <Toggle active={result==="SF"||productiveOut} onClick={() => result!=="SF"&&setProductiveOut(!productiveOut)}>Productive out</Toggle> : null}
+                          {!["BB","K"].includes(result) ? <><div className="grid grid-cols-4 gap-1">{BATTED_BALLS.map(([value,label])=><Toggle key={value} active={battedBallType===value} onClick={()=>setBattedBallType(battedBallType===value?"":value)}>{label}</Toggle>)}</div><div className="grid grid-cols-2 gap-1 sm:grid-cols-5">{SPRAY_ZONES.map(([value,label])=><Toggle key={value} active={sprayZone===value} onClick={()=>setSprayZone(sprayZone===value?"":value)}>{label}</Toggle>)}</div></> : null}
+                        </div>
+                      </details>
+                      <Button primary className="mt-2 w-full" disabled={busy} onClick={recordPlay}>Record {selected.label}</Button>
+                    </div>
+                  ) : null}
+                </>
+              ) : <div className="mt-2 text-[9px] text-amber-200">Managers control scoring.</div>}
+            </section>
 
-              <section className="rounded-[1.65rem] border border-white/10 bg-[#07111f] p-4">
-                <div className="flex items-center justify-between"><h2 className="font-black">Play-by-play</h2>{canManage && plays.length ? <Button onClick={() => run(() => undoSoftballPlay(game.id), "Last play undone.")}><Undo2 className="mr-1 inline h-4 w-4" />Undo</Button> : null}</div>
-                <div className="mt-3 space-y-2">{[...plays].reverse().slice(0, 12).map((play) => <div key={play.id} className="flex items-center justify-between rounded-2xl border border-white/10 p-3"><div><b className="text-sm">{play.player_name}</b><div className="text-xs text-slate-500">Inning {play.inning} · PA #{play.sequence}</div></div><div className="text-right"><b className="text-cyan-100">{play.result_label || play.result}</b>{play.rbi ? <div className="text-[10px] text-slate-500">{play.rbi} RBI</div> : null}</div></div>)}</div>
-              </section>
+            <section className="overflow-x-auto rounded-2xl border border-white/10 bg-[#07111f] p-2">
+              <div className="mb-1.5 flex items-center justify-between"><div className="text-[8px] font-black uppercase tracking-[.14em] text-slate-500">Scorebook grid</div>{canManage&&plays.length?<Button onClick={()=>run(()=>undoSoftballPlay(game.id),"Last play undone.")}><Undo2 className="mr-1 inline h-3.5 w-3.5" />Undo</Button>:null}</div>
+              <table className="min-w-max border-collapse text-center text-[8px]">
+                <thead><tr><th className="sticky left-0 z-10 min-w-28 bg-[#07111f] px-2 py-1 text-left text-slate-500">PLAYER</th>{innings.map((inning)=><th key={inning} className="min-w-12 border-l border-white/5 px-1 py-1 text-slate-500">{inning}</th>)}</tr></thead>
+                <tbody>
+                  {lineup.map((spot)=><tr key={spot.id} className="border-t border-white/5"><td className="sticky left-0 z-10 max-w-28 truncate bg-[#07111f] px-2 py-1.5 text-left font-black text-white">{spot.batting_order}. {spot.player_detail?.display_name}</td>{innings.map((inning)=>{const rows=cellMap.get(`${spot.player}-${inning}`)||[];return <td key={inning} className="border-l border-white/5 px-1 py-1"><div className="flex justify-center gap-0.5">{rows.map((play)=><span key={play.id} className={cx("rounded px-1 py-0.5 font-black",["1B","2B","3B","HR"].includes(play.result)?"bg-emerald-300/15 text-emerald-100":play.result==="BB"?"bg-violet-300/15 text-violet-100":"bg-white/[.05] text-slate-300")}>{play.result}</span>)}</div></td>})}</tr>)}
+                  <tr className="border-t border-cyan-300/15"><td className="sticky left-0 z-10 bg-[#07111f] px-2 py-1 text-left font-black text-cyan-200">RUNS / HITS</td>{innings.map((inning)=>{const t=inningTotals.get(inning)||{};return <td key={inning} className="border-l border-white/5 px-1 py-1 font-black text-cyan-100">{num(t.runs)} / {num(t.hits)}</td>})}</tr>
+                </tbody>
+              </table>
+            </section>
+
+            <div className="grid gap-2 lg:grid-cols-[1.15fr_.85fr]">
+              <div className="space-y-2">
+                <SoftballDefenseField lineup={lineup} compact />
+                {canManage ? <section className="rounded-2xl border border-white/10 bg-[#07111f] p-2.5"><div className="text-[8px] font-black uppercase tracking-wide text-slate-500">Change defense</div><div className="mt-2 grid grid-cols-2 gap-1.5">{lineup.map((spot)=><label key={spot.id} className="grid grid-cols-[minmax(0,1fr)_4.3rem] items-center gap-1 rounded-lg border border-white/8 bg-white/[.02] p-1.5"><span className="truncate text-[9px] text-slate-300">{spot.player_detail?.display_name}</span><select value={spot.defensive_position||""} onChange={(event)=>changeDefense(spot.player,event.target.value)} className="h-8 rounded-lg border border-white/10 bg-[#050b14] px-1 text-[9px] text-white"><option value="">—</option>{POSITIONS.map((position)=><option key={position}>{position}</option>)}</select></label>)}</div></section> : null}
+              </div>
+
+              <div className="space-y-2">
+                <section className="rounded-2xl border border-amber-300/15 bg-[#07111f] p-2.5">
+                  <div className="text-[8px] font-black uppercase tracking-wide text-amber-300">Rules</div>
+                  {canManage ? <select value={game.rule_set||""} onChange={(event)=>changeRule(event.target.value)} className="mt-2 h-9 w-full rounded-lg border border-white/10 bg-[#050b14] px-2 text-[9px] text-white"><option value="">Unlimited / no attached rules</option>{ruleSets.filter((row)=>row.is_active!==false).map((row)=><option key={row.id} value={row.id}>{row.competition_type} · {row.name}</option>)}</select> : null}
+                  <div className="mt-2 rounded-lg border border-white/8 bg-black/15 p-2 text-[9px] text-slate-300">{rule ? <><b className="text-white">{rule.name}</b><div>{rule.home_run_rule==="FIXED"?`${rule.home_run_limit} HR cap`:rule.home_run_rule==="ONE_UP"?`One-up / San Diego · max +${rule.home_run_max_ahead}`:"Unlimited HR"}</div></> : "No HR restriction attached."}</div>
+                  <div className="mt-2 grid grid-cols-2 gap-1.5"><div className="rounded-lg border border-cyan-300/15 bg-cyan-300/[.04] p-2 text-center"><div className="text-[7px] text-slate-500">OUR HR</div><b className="text-lg text-cyan-100">{game.home_runs_for||0}</b></div><div className="rounded-lg border border-white/10 bg-white/[.025] p-2 text-center"><div className="text-[7px] text-slate-500">OPP HR</div><div className="mt-1 flex items-center justify-center gap-1">{canManage?<button onClick={()=>run(()=>setOpponentHomeRuns(game.id,Math.max(0,num(game.home_runs_against)-1)))} className="grid h-7 w-7 place-items-center rounded-lg border border-white/10"><Minus className="h-3 w-3"/></button>:null}<b className="min-w-5 text-lg">{game.home_runs_against||0}</b>{canManage?<button onClick={()=>run(()=>setOpponentHomeRuns(game.id,num(game.home_runs_against)+1))} className="grid h-7 w-7 place-items-center rounded-lg border border-white/10"><Plus className="h-3 w-3"/></button>:null}</div></div></div>
+                  {game.home_run_allowed===false?<div className="mt-2 rounded-lg border border-rose-300/20 bg-rose-300/10 p-2 text-[8px] font-black text-rose-100">HR currently blocked by the attached rule.</div>:null}
+                </section>
+
+                {canManage ? <section className="rounded-2xl border border-white/10 bg-[#07111f] p-2.5"><div className="text-[8px] font-black uppercase tracking-wide text-slate-500">Opponent score</div><div className="mt-2 grid grid-cols-[2rem_1fr_2rem] items-center gap-1"><button onClick={()=>run(()=>setOpponentScore(game.id,Math.max(0,num(game.runs_against)-1)))} className="grid h-8 w-8 place-items-center rounded-lg border border-white/10"><Minus className="h-3 w-3"/></button><b className="text-center text-xl">{game.runs_against}</b><button onClick={()=>run(()=>setOpponentScore(game.id,num(game.runs_against)+1))} className="grid h-8 w-8 place-items-center rounded-lg border border-white/10"><Plus className="h-3 w-3"/></button></div></section> : null}
+
+                {canManage&&gamecast?<section className="rounded-2xl border border-emerald-300/15 bg-[#07111f] p-2.5"><div className="flex items-center justify-between"><div><div className="text-[8px] font-black uppercase text-emerald-300">Public GameCast</div><div className="text-[9px] text-slate-500">No login required.</div></div>{gamecast.enabled?<Radio className="h-4 w-4 text-emerald-300"/>:<EyeOff className="h-4 w-4 text-slate-500"/>}</div><div className="mt-2 grid grid-cols-2 gap-1.5"><Button primary={!gamecast.enabled} onClick={()=>toggleGameCast(!gamecast.enabled)}>{gamecast.enabled?<><EyeOff className="mr-1 inline h-3.5 w-3.5"/>Stop</>:<><Eye className="mr-1 inline h-3.5 w-3.5"/>Go live</>}</Button><Button disabled={!gamecast.enabled} onClick={shareGameCast}><Share2 className="mr-1 inline h-3.5 w-3.5"/>Share</Button></div>{gamecast.enabled?<Button className="mt-1.5 w-full" onClick={facebookGameCast}>Share to Facebook</Button>:null}</section>:null}
+
+                {canManage?<Button danger className="w-full" onClick={()=>run(()=>finishSportsGame(game.id),"Game marked final.")}><Trophy className="mr-1 inline h-3.5 w-3.5"/>Finish Game</Button>:null}
+              </div>
             </div>
-
-            <div className="space-y-4">
-              {canManage ? <section className="rounded-[1.65rem] border border-white/10 bg-[#07111f] p-4"><h2 className="font-black">Opponent score</h2><div className="mt-3 grid grid-cols-[3rem_1fr_3rem] items-center gap-2"><button onClick={() => run(() => setOpponentScore(game.id, Math.max(0, num(game.runs_against) - 1)), "Opponent score updated.")} className="grid h-12 w-12 place-items-center rounded-xl border border-white/10"><Minus /></button><div className="text-center text-3xl font-black">{game.runs_against}</div><button onClick={() => run(() => setOpponentScore(game.id, num(game.runs_against) + 1), "Opponent score updated.")} className="grid h-12 w-12 place-items-center rounded-xl border border-white/10"><Plus /></button></div></section> : null}
-
-              {canManage && gamecast ? <section className="rounded-[1.65rem] border border-emerald-400/20 bg-emerald-400/[.05] p-4"><div className="flex items-start justify-between"><div><div className="text-[10px] font-black uppercase tracking-wider text-emerald-300">Fan view</div><h2 className="mt-1 font-black">GameCast</h2></div>{gamecast.enabled ? <Radio className="h-6 w-6 text-emerald-300" /> : <EyeOff className="h-6 w-6 text-slate-500" />}</div><p className="mt-2 text-sm leading-6 text-slate-400">Share this one game without opening the private team group.</p><div className="mt-3 grid grid-cols-2 gap-2"><Button primary={!gamecast.enabled} onClick={() => toggleGameCast(!gamecast.enabled)}>{gamecast.enabled ? <><EyeOff className="mr-1 inline h-4 w-4" />Stop</> : <><Eye className="mr-1 inline h-4 w-4" />Go live</>}</Button><Button disabled={!gamecast.enabled} onClick={copyGameCast}><Share2 className="mr-1 inline h-4 w-4" />Copy link</Button></div>{gamecast.enabled ? <div className="mt-3 break-all rounded-xl bg-black/20 p-2 text-[10px] text-slate-500">{gamecastUrl}</div> : null}</section> : null}
-
-              {canManage ? <Button danger className="w-full" onClick={() => run(() => finishSportsGame(game.id), "Game marked final.")}><Trophy className="mr-2 inline h-4 w-4" />Finish Game</Button> : null}
-            </div>
-          </div>
+          </>
         ) : null}
 
-        {final ? <section className="rounded-[1.65rem] border border-emerald-400/20 bg-emerald-400/[.05] p-5 text-center"><Trophy className="mx-auto h-8 w-8 text-emerald-300" /><h2 className="mt-2 text-xl font-black">Final: {game.runs_for}–{game.runs_against}</h2><Button className="mt-4" onClick={() => navigate(`/connect/groups/${groupId}/sports/analytics`)}><BarChart3 className="mr-2 inline h-4 w-4" />Review game impact</Button></section> : null}
+        {final ? <section className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[.04] p-4 text-center"><Trophy className="mx-auto h-6 w-6 text-emerald-300"/><div className="mt-1 text-lg font-black">{game.team_name} {game.runs_for}–{game.runs_against} {game.opponent_name}</div><Button className="mt-3" onClick={()=>navigate(`/connect/groups/${groupId}/sports`)}>Back to team</Button></section> : null}
       </main>
     </div>
   );
