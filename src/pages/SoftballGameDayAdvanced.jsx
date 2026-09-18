@@ -725,6 +725,21 @@ export default function SoftballGameDayAdvanced() {
                         </div>
                       ) : null}
 
+                      {["1B","2B","3B","BB","ROE"].includes(result) ? (
+                        <button
+                          type="button"
+                          onClick={() => setOutsRecorded(outsRecorded ? 0 : 1)}
+                          className={cx(
+                            "mt-2 flex min-h-9 w-full items-center justify-between rounded-lg border px-2.5 text-[9px] font-black",
+                            outsRecorded
+                              ? "border-rose-300/25 bg-rose-300/10 text-rose-100"
+                              : "border-white/10 bg-white/[.025] text-slate-300",
+                          )}
+                        >
+                          <span>Runner out on bases</span>
+                          <span>{outsRecorded ? "+" + outsRecorded + " OUT" : "+1 OUT"}</span>
+                        </button>
+                      ) : null}
                       <div className="mt-2 grid grid-cols-2 gap-1.5">
                         <MiniStepper label="RBI" value={rbi} onChange={setRbi} max={4} />
                         <MiniStepper label="Runs" value={runs} onChange={setRuns} max={4} />
