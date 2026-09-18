@@ -1098,6 +1098,45 @@ export default function SoftballGameDayAdvanced() {
           </>
         ) : null}
 
+        {substituteOpen ? (
+          <div className="fixed inset-0 z-[92] flex items-end justify-center bg-black/75 px-3 pb-4 pt-20 sm:items-center">
+            <div className="w-full max-w-md rounded-[1.6rem] border border-violet-300/20 bg-[#07111f] p-4 shadow-2xl">
+              <div className="flex items-start justify-between gap-3">
+                <div><div className="text-[8px] font-black uppercase tracking-[.15em] text-violet-300">Live substitution</div><div className="mt-1 text-base font-black text-white">Move a bench player into the game</div><div className="mt-1 text-[8px] text-slate-500">The outgoing player returns to the bench/sub list and the batting slot stays intact.</div></div>
+                <button type="button" onClick={()=>setSubstituteOpen(false)} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-400">×</button>
+              </div>
+              <div className="mt-3 space-y-2">
+                <label className="block text-[8px] font-black uppercase text-slate-500">Batting slot / outgoing player
+                  <select value={subForm.batting_order} onChange={(e)=>{const spot=lineup.find((row)=>String(row.batting_order)===e.target.value);setSubForm({...subForm,batting_order:e.target.value,defensive_position:spot?.defensive_position||subForm.defensive_position});}} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs font-black text-white">
+                    {lineup.map((spot)=><option key={spot.id} value={spot.batting_order}>#{spot.batting_order} · {spot.player_detail?.display_name} · {spot.defensive_position||"EH"}</option>)}
+                  </select>
+                </label>
+                <label className="block text-[8px] font-black uppercase text-slate-500">Incoming sub
+                  <select value={subForm.incoming_player} onChange={(e)=>{const player=benchPlayers.find((row)=>String(row.id)===e.target.value);setSubForm({...subForm,incoming_player:e.target.value,defensive_position:player?.primary_position||subForm.defensive_position});}} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs font-black text-white">
+                    {benchPlayers.map((player)=><option key={player.id} value={player.id}>#{player.jersey_number||"—"} · {player.display_name} · {player.primary_position||"Utility"}</option>)}
+                  </select>
+                </label>
+                <label className="block text-[8px] font-black uppercase text-slate-500">Defensive position
+                  <select value={subForm.defensive_position} onChange={(e)=>setSubForm({...subForm,defensive_position:e.target.value})} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs font-black text-white"><option value="">EH / no field position</option>{POSITIONS.map((position)=><option key={position} value={position}>{position}</option>)}</select>
+                </label>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2"><Button onClick={()=>setSubstituteOpen(false)}>Cancel</Button><Button primary disabled={busy||!subForm.incoming_player||!subForm.batting_order} onClick={saveSubstitution}>{busy?"Saving…":"Record substitution"}</Button></div>
+            </div>
+          </div>
+        ) : null}
+
+        {playerCardOpen ? (
+          <div className="fixed inset-0 z-[91] flex items-end justify-center bg-black/75 px-3 pb-4 pt-16 sm:items-center">
+            <div className="max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-[1.6rem] border border-cyan-300/20 bg-[#07111f] p-4 shadow-2xl">
+              <div className="sticky top-0 z-10 flex items-center justify-between gap-3 bg-[#07111f]/95 pb-3">
+                <div><div className="text-[8px] font-black uppercase tracking-[.15em] text-cyan-300">Back of the card</div><div className="mt-1 text-base font-black text-white">Player history & tendencies</div></div>
+                <button type="button" onClick={()=>{setPlayerCardOpen(false);setPlayerCard(null);}} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-400">×</button>
+              </div>
+              {playerCard?<PlayerBackCard card={playerCard}/>:<div className="grid min-h-40 place-items-center"><Loader2 className="h-6 w-6 animate-spin text-cyan-300"/></div>}
+            </div>
+          </div>
+        ) : null}
+
         {editingPlay ? (
           <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/70 px-3 pb-4 pt-20 sm:items-center">
             <div className="w-full max-w-md rounded-[1.6rem] border border-cyan-300/20 bg-[#07111f] p-4 shadow-2xl">
