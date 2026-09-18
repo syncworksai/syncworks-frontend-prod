@@ -191,7 +191,8 @@ export default function SportsTeamManagerDashboard() {
   const [lineup, setLineup] = useState([]);
   const [lineupPlayerId, setLineupPlayerId] = useState("");
   const [dragging, setDragging] = useState(false);
-  const dragRef = useRef({ timer: null, active: false, index: null, pointerId: null, target: null });
+  const [liftedPlayerId, setLiftedPlayerId] = useState(null);
+  const dragRef = useRef({ timer: null, active: false, index: null, playerId: null, pointerId: null, target: null });
 
   const [feeForm, setFeeForm] = useState({ title: "League fee", amount: "", due_date: "", description: "" });
   const [feeEdit, setFeeEdit] = useState(null);
@@ -215,10 +216,20 @@ export default function SportsTeamManagerDashboard() {
   const lineupIds = new Set(lineup.map((spot) => Number(spot.player)));
   const nextGame = games.find((game) => game.status === "LIVE") || games.find((game) => game.status === "SCHEDULED" && new Date(game.start_at) >= new Date());
   const statusForSelected = (player) => availabilityStatus(player, selectedGame, eventResponses);
-  const availablePlayers = players.filter((player) => !lineupIds.has(Number(player.id)) && ["YES", "UNLINKED"].includes(statusForSelected(player)));
-  const subPlayers = players.filter((player) => !lineupIds.has(Number(player.id)) && statusForSelected(player) === "MAYBE");
+  const benchPlayers = players.filter((player) => !lineupIds.has(Number(player.id)) && statusForSelected(player) !== "NO");
   const outPlayers = players.filter((player) => statusForSelected(player) === "NO");
-  const waitingPlayers = players.filter((player) => !lineupIds.has(Number(player.id)) && statusForSelected(player) === "PENDING");
+  const waitingPlayers = benchPlayers.filter((player) => statusForSelected(player) === "PENDING");
+  const confirmedSubPlayers = benchPlayers.filter((player) => statusForSelected(player) === "MAYBE");
+  const statsByPlayerId = useMemo(() => {
+    const map = new Map();
+    const source = scopedStats.length ? scopedStats : list(dashboard?.player_stats);
+    source.forEach((row) => {
+      const playerId = Number(row?.player?.id || row?.player);
+      if (playerId) map.set(playerId, row);
+    });
+    return map;
+  }, [scopedStats, dashboard]);
+  const playerStat = (player) => statsByPlayerId.get(Number(player?.id)) || null;
 
   function profileFor(player) {
     if (!player) return null;
@@ -264,7 +275,7 @@ export default function SportsTeamManagerDashboard() {
 
       if (!lineupGameId) {
         const preferred = list(data.live_games)[0] || list(data.upcoming_games)[0] || list(data.recent_games)[0];
-        if (preferred) chooseLineupGame(String(preferred.id), data);
+        if (preferred) chooseLineupGame(String(preferred.id), data, list(responseRows));
       }
     } catch (err) {
       setError(errorText(err));
@@ -304,32 +315,50 @@ export default function SportsTeamManagerDashboard() {
     );
   }
 
-  function chooseLineupGame(value, data = dashboard) {
+  function chooseLineupGame(value, data = dashboard, responses = eventResponses) {
     setLineupGameId(value);
+    setLiftedPlayerId(null);
     const sourceGames = (() => {
       const map = new Map();
       [...list(data?.live_games), ...list(data?.upcoming_games), ...list(data?.recent_games)].forEach((game) => map.set(Number(game.id), game));
       return [...map.values()];
     })();
     const game = sourceGames.find((row) => Number(row.id) === Number(value));
-    setLineup(list(game?.lineup_spots).map((spot) => ({ player: Number(spot.player), defensive_position: spot.defensive_position || "" })));
-    setLineupPlayerId("");
+    const saved = list(game?.lineup_spots).map((spot) => ({
+      player: Number(spot.player),
+      defensive_position: spot.defensive_position || "",
+    }));
+    if (saved.length) {
+      setLineup(saved);
+      return;
+    }
+    const roster = list(data?.players).length ? list(data?.players).filter((player) => player.is_active !== false) : players;
+    const defaultStarters = roster
+      .filter((player) => ["YES", "UNLINKED"].includes(availabilityStatus(player, game, responses)))
+      .map((player) => ({
+        player: Number(player.id),
+        defensive_position: player.primary_position || "",
+      }));
+    setLineup(defaultStarters);
   }
 
-  function appendLineupPlayer(playerId) {
+  function restoreFromBench(playerId) {
     const id = Number(playerId);
     if (!id || lineupIds.has(id)) return;
     const player = players.find((row) => Number(row.id) === id);
-    setLineup((current) => [...current, { player: id, defensive_position: player?.primary_position || "" }]);
-    setLineupPlayerId("");
-  }
-
-  function addLineupPlayer() {
-    appendLineupPlayer(lineupPlayerId);
+    if (statusForSelected(player) === "NO") return;
+    setLineup((current) => [...current, {
+      player: id,
+      defensive_position: player?.primary_position || "",
+    }]);
+    setLiftedPlayerId(null);
+    navigator.vibrate?.(10);
   }
 
   function removeLineupPlayer(playerId) {
     setLineup((current) => current.filter((spot) => Number(spot.player) !== Number(playerId)));
+    setLiftedPlayerId((current) => Number(current) === Number(playerId) ? null : current);
+    navigator.vibrate?.(10);
   }
 
   function reorderLineup(from, to) {
@@ -337,36 +366,99 @@ export default function SportsTeamManagerDashboard() {
     setLineup((current) => {
       const next = [...current];
       const [item] = next.splice(from, 1);
-      next.splice(to, 0, item);
+      next.splice(Math.max(0, Math.min(to, next.length)), 0, item);
       return next;
     });
   }
 
-  function dragStart(event, index) {
+  function dropLiftedAt(index) {
+    if (!liftedPlayerId) return;
+    const from = lineup.findIndex((spot) => Number(spot.player) === Number(liftedPlayerId));
+    if (from < 0) {
+      setLiftedPlayerId(null);
+      return;
+    }
+    reorderLineup(from, index);
+    setLiftedPlayerId(null);
+    navigator.vibrate?.(12);
+  }
+
+  function toggleLift(playerId, index) {
     if (!managerView) return;
+    if (liftedPlayerId && Number(liftedPlayerId) !== Number(playerId)) {
+      dropLiftedAt(index);
+      return;
+    }
+    const next = Number(liftedPlayerId) === Number(playerId) ? null : Number(playerId);
+    setLiftedPlayerId(next);
+    if (next) navigator.vibrate?.(12);
+  }
+
+  function dragStart(event, index, playerId) {
+    if (!managerView) return;
+    event.stopPropagation();
     const target = event.currentTarget;
     target.setPointerCapture?.(event.pointerId);
-    dragRef.current = { timer: setTimeout(() => { dragRef.current.active = true; setDragging(true); }, 180), active: false, index, pointerId: event.pointerId, target };
+    clearTimeout(dragRef.current.timer);
+    dragRef.current = {
+      timer: setTimeout(() => {
+        dragRef.current.active = true;
+        setDragging(true);
+        setLiftedPlayerId(Number(playerId));
+        navigator.vibrate?.(15);
+      }, 170),
+      active: false,
+      index,
+      playerId: Number(playerId),
+      pointerId: event.pointerId,
+      target,
+    };
   }
 
   function dragMove(event) {
     if (!dragRef.current.active) return;
     event.preventDefault();
-    const row = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-lineup-index]");
-    if (!row) return;
-    const to = Number(row.dataset.lineupIndex);
+    const nodes = [...document.querySelectorAll("[data-lineup-index]")];
+    if (!nodes.length) return;
+    let to = Number(nodes[nodes.length - 1].dataset.lineupIndex);
+    for (const node of nodes) {
+      const rect = node.getBoundingClientRect();
+      const index = Number(node.dataset.lineupIndex);
+      if (event.clientY < rect.top + (rect.height / 2)) {
+        to = index;
+        break;
+      }
+    }
     const from = Number(dragRef.current.index);
     if (Number.isNaN(to) || to === from) return;
     reorderLineup(from, to);
     dragRef.current.index = to;
   }
 
-  function dragEnd() {
+  function dragEnd(event, index, playerId) {
+    event?.stopPropagation?.();
+    clearTimeout(dragRef.current.timer);
+    const wasActive = dragRef.current.active;
+    dragRef.current.active = false;
+    dragRef.current.index = null;
+    dragRef.current.playerId = null;
+    setDragging(false);
+    if (wasActive) {
+      setLiftedPlayerId(null);
+      navigator.vibrate?.(8);
+    } else {
+      toggleLift(playerId, index);
+    }
+  }
+
+  function dragCancel() {
     clearTimeout(dragRef.current.timer);
     dragRef.current.active = false;
     dragRef.current.index = null;
+    dragRef.current.playerId = null;
     setDragging(false);
   }
+
 
   async function saveLineup() {
     if (!lineupGameId || !lineup.length) return;
@@ -677,30 +769,142 @@ export default function SportsTeamManagerDashboard() {
           </div>
         </Card> : null}
 
-        {tab === "Lineup" ? <Card title="Lineup" body={managerView ? "Each game has its own lineup. Only confirmed IN or unlinked manual players can be added; OUT is blocked." : "Official batting order and defensive positions."} action={<GripVertical className="h-4 w-4 text-violet-300" />}>
-          <div className="grid gap-3 lg:grid-cols-[.72fr_1.28fr]">
-            <div className="space-y-2">
-              <Select label="Game" value={lineupGameId} onChange={(value) => chooseLineupGame(value)}><option value="">Choose game</option>{games.filter((game) => game.status !== "CANCELLED").map((game) => <option key={game.id} value={game.id}>{new Date(game.start_at).toLocaleDateString()} · {new Date(game.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · {game.opponent_name}</option>)}</Select>
-              {selectedGame ? <div className="rounded-xl border border-white/10 bg-black/15 p-3 text-[10px] text-slate-400"><b className="text-xs text-white">vs {selectedGame.opponent_name}</b><div>{selectedGame.venue_name}</div><div className="mt-1 text-[9px] text-slate-500">IN players are eligible. SUB stays on standby. OUT cannot be placed in the lineup.</div></div> : null}
-              {managerView && lineupGameId ? <div className="space-y-2">
-                <div className="flex gap-2"><select value={lineupPlayerId} onChange={(event) => setLineupPlayerId(event.target.value)} className="h-10 min-w-0 flex-1 rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs"><option value="">Add confirmed batter…</option>{availablePlayers.map((player) => <option key={player.id} value={player.id}>#{player.jersey_number || "—"} {player.display_name}{player.user ? " · IN" : " · unlinked"}</option>)}</select><Btn primary onClick={addLineupPlayer} disabled={!lineupPlayerId}><Plus className="h-4 w-4" /></Btn></div>
-                {availablePlayers.length ? <div><div className="mb-1 text-[8px] font-black uppercase tracking-wide text-emerald-300">IN / available</div><div className="flex flex-wrap gap-1">{availablePlayers.map((player) => <button key={player.id} type="button" onClick={() => appendLineupPlayer(player.id)} className="rounded-lg border border-emerald-300/15 bg-emerald-300/[.05] px-2 py-1.5 text-[8px] font-black text-emerald-100">+ {player.display_name}</button>)}</div></div> : null}
-                {subPlayers.length ? <div><div className="mb-1 text-[8px] font-black uppercase tracking-wide text-amber-300">SUB / standby</div><div className="flex flex-wrap gap-1">{subPlayers.map((player) => <button key={player.id} type="button" onClick={() => appendLineupPlayer(player.id)} className="rounded-lg border border-amber-300/15 bg-amber-300/[.05] px-2 py-1.5 text-[8px] font-black text-amber-100">Use {player.display_name}</button>)}</div></div> : null}
-              </div> : null}
-              {selectedGame && managerView ? <div className="grid grid-cols-3 gap-1">
-                <div className="rounded-lg border border-amber-300/15 bg-amber-300/[.04] p-2"><div className="text-[8px] font-black uppercase text-amber-300">Subs</div><div className="mt-1 text-[9px] text-slate-400">{subPlayers.length ? subPlayers.map((p) => p.display_name).join(" · ") : "—"}</div></div>
-                <div className="rounded-lg border border-white/10 bg-white/[.025] p-2"><div className="text-[8px] font-black uppercase text-slate-500">Waiting</div><div className="mt-1 text-[9px] text-slate-400">{waitingPlayers.length ? waitingPlayers.map((p) => p.display_name).join(" · ") : "—"}</div></div>
-                <div className="rounded-lg border border-rose-300/15 bg-rose-300/[.04] p-2"><div className="text-[8px] font-black uppercase text-rose-300">Out</div><div className="mt-1 text-[9px] text-slate-400">{outPlayers.length ? outPlayers.map((p) => p.display_name).join(" · ") : "—"}</div></div>
-              </div> : null}
+        {tab === "Lineup" ? <div className="space-y-3">
+          <Card
+            title="Game lineup"
+            body={managerView ? "Every rostered player stays visible here: Batting Order, SUB / Bench, or OUT. Tap a grip to lift a player, then tap where you want him dropped — or press/hold and drag." : "Official batting order, bench and availability."}
+            action={<GripVertical className="h-4 w-4 text-violet-300" />}
+          >
+            <div className="grid gap-3 lg:grid-cols-[.68fr_1.32fr]">
+              <div className="space-y-2">
+                <Select label="Game" value={lineupGameId} onChange={(value) => chooseLineupGame(value)}>
+                  <option value="">Choose game</option>
+                  {games.filter((game) => game.status !== "CANCELLED").map((game) => (
+                    <option key={game.id} value={game.id}>{new Date(game.start_at).toLocaleDateString()} · {new Date(game.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · {game.opponent_name}</option>
+                  ))}
+                </Select>
+
+                {selectedGame ? <div className="rounded-xl border border-cyan-300/15 bg-gradient-to-br from-cyan-300/[.06] via-violet-300/[.04] to-transparent p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div><b className="text-xs text-white">vs {selectedGame.opponent_name}</b><div className="mt-0.5 text-[9px] text-slate-500">{selectedGame.venue_name || "Field TBD"}</div></div>
+                    <Pill tone={selectedGame.status === "LIVE" ? "green" : "cyan"}>{selectedGame.status}</Pill>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-1.5">
+                    <div className="rounded-lg border border-emerald-300/15 bg-emerald-300/[.05] p-2 text-center"><div className="text-base font-black text-emerald-100">{lineup.length}</div><div className="text-[7px] font-black uppercase text-emerald-300">Batting</div></div>
+                    <div className="rounded-lg border border-amber-300/15 bg-amber-300/[.05] p-2 text-center"><div className="text-base font-black text-amber-100">{benchPlayers.length}</div><div className="text-[7px] font-black uppercase text-amber-300">Subs</div></div>
+                    <div className="rounded-lg border border-rose-300/15 bg-rose-300/[.05] p-2 text-center"><div className="text-base font-black text-rose-100">{outPlayers.length}</div><div className="text-[7px] font-black uppercase text-rose-300">Out</div></div>
+                  </div>
+                </div> : null}
+
+                {liftedPlayerId ? <div className="rounded-xl border border-violet-300/30 bg-violet-300/10 p-2.5 text-[9px] font-black text-violet-100">Player lifted. Tap another batting-order row to drop him there.</div> : null}
+
+                {selectedGame ? <div className="grid grid-cols-2 gap-1.5 text-[9px]">
+                  <div className="rounded-xl border border-amber-300/15 bg-amber-300/[.03] p-2"><b className="text-amber-200">Confirmed SUB</b><div className="mt-1 leading-4 text-slate-400">{confirmedSubPlayers.length ? confirmedSubPlayers.map((p) => p.display_name).join(" · ") : "None"}</div></div>
+                  <div className="rounded-xl border border-white/10 bg-white/[.025] p-2"><b className="text-slate-300">Waiting</b><div className="mt-1 leading-4 text-slate-500">{waitingPlayers.length ? waitingPlayers.map((p) => p.display_name).join(" · ") : "None"}</div></div>
+                </div> : null}
+              </div>
+
+              <div className={cx("space-y-2", dragging && "select-none")}>
+                <div className="flex items-center justify-between px-1">
+                  <div className="text-[9px] font-black uppercase tracking-[.14em] text-emerald-300">Batting order</div>
+                  <div className="text-[8px] text-slate-600">AVG · OPS · RBI</div>
+                </div>
+
+                {lineup.map((spot, index) => {
+                  const player = players.find((row) => Number(row.id) === Number(spot.player));
+                  const status = statusForSelected(player);
+                  const stat = playerStat(player);
+                  const lifted = Number(liftedPlayerId) === Number(spot.player);
+                  return <div
+                    key={spot.player}
+                    data-lineup-index={index}
+                    onClick={() => { if (managerView && liftedPlayerId && !lifted) dropLiftedAt(index); }}
+                    className={cx(
+                      "relative overflow-hidden rounded-2xl border p-2.5 transition-all duration-150",
+                      lifted ? "z-10 scale-[1.025] border-violet-300/60 bg-violet-300/15 shadow-[0_12px_36px_rgba(139,92,255,.22)]" :
+                      status === "MAYBE" ? "border-amber-300/20 bg-gradient-to-r from-amber-300/[.06] to-transparent" :
+                      status === "PENDING" ? "border-white/10 bg-white/[.025]" :
+                      "border-emerald-300/15 bg-gradient-to-r from-emerald-300/[.055] via-cyan-300/[.025] to-transparent"
+                    )}
+                  >
+                    <div className="grid grid-cols-[1.7rem_2.6rem_minmax(0,1fr)_3.8rem_2.2rem] items-center gap-1.5">
+                      <div className="grid h-8 place-items-center rounded-lg bg-black/20 text-sm font-black text-cyan-200">{index + 1}</div>
+                      {managerView ? <button
+                        type="button"
+                        onPointerDown={(event) => dragStart(event, index, spot.player)}
+                        onPointerMove={dragMove}
+                        onPointerUp={(event) => dragEnd(event, index, spot.player)}
+                        onPointerCancel={dragCancel}
+                        style={{ touchAction: "none" }}
+                        className={cx("grid h-10 w-10 place-items-center rounded-xl border transition", lifted ? "border-violet-200/50 bg-violet-200/15 text-violet-100" : "border-violet-300/20 bg-violet-300/[.06] text-violet-200")}
+                        aria-label={lifted ? "Drop player" : "Lift or drag player"}
+                      ><GripVertical className="h-5 w-5" /></button> : <div />}
+
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <b className="truncate text-[11px] text-white">#{player?.jersey_number || "—"} {player?.display_name}</b>
+                          <Pill tone={status === "YES" ? "green" : status === "MAYBE" ? "amber" : status === "NO" ? "rose" : status === "PENDING" ? "slate" : "violet"}>
+                            {status === "YES" ? "IN" : status === "MAYBE" ? "SUB" : status === "PENDING" ? "WAIT" : status === "UNLINKED" ? "MANUAL" : status}
+                          </Pill>
+                        </div>
+                        <div className="mt-1 flex items-center gap-2 text-[8px]">
+                          <span className="text-cyan-200">AVG <b>{pct(stat?.avg)}</b></span>
+                          <span className="text-violet-200">OPS <b>{pct(stat?.ops)}</b></span>
+                          <span className="text-amber-200">RBI <b>{num(stat?.rbi)}</b></span>
+                        </div>
+                      </div>
+
+                      <select
+                        disabled={!managerView}
+                        value={spot.defensive_position || ""}
+                        onClick={(event) => event.stopPropagation()}
+                        onChange={(event) => setLineup((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, defensive_position: event.target.value } : row))}
+                        className="h-9 rounded-lg border border-cyan-300/15 bg-[#050b14] px-1 text-[9px] font-black text-cyan-100"
+                      ><option value="">POS</option>{POSITIONS.map((position) => <option key={position}>{position}</option>)}</select>
+
+                      {managerView ? <button type="button" onClick={(event) => { event.stopPropagation(); removeLineupPlayer(spot.player); }} className="grid h-8 w-8 place-items-center rounded-lg border border-amber-300/20 bg-amber-300/[.06] text-amber-200" aria-label="Move to sub list"><X className="h-3.5 w-3.5" /></button> : <div />}
+                    </div>
+                  </div>;
+                })}
+
+                {!lineup.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-slate-500">No starters yet. Tap a player in SUB / Bench to move him into the batting order.</div> : null}
+
+                {lineup.length ? <div className="grid grid-cols-2 gap-2"><Btn onClick={saveLineupImage}><ImageDown className="mr-1 inline h-4 w-4" />Save image</Btn>{managerView ? <Btn primary onClick={saveLineup} disabled={busy}><Save className="mr-1 inline h-4 w-4" />Save lineup</Btn> : null}</div> : null}
+                {selectedGame?.lineup_spots?.length ? <Btn className="w-full" onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${selectedGame.id}`)}><CircleDot className="mr-1 inline h-4 w-4" />{managerView ? "Open Game Book" : "View game"}</Btn> : null}
+              </div>
             </div>
-            <div className={cx("space-y-1.5", dragging && "select-none")}>
-              {lineup.map((spot, index) => { const player = players.find((row) => Number(row.id) === Number(spot.player)); const status = statusForSelected(player); return <div key={spot.player} data-lineup-index={index} className={cx("grid grid-cols-[1.7rem_2.5rem_minmax(0,1fr)_4rem_2.2rem] items-center gap-1 rounded-xl border p-2", status === "NO" ? "border-rose-400/30 bg-rose-400/[.05]" : dragging ? "border-violet-400/25 bg-violet-400/[.04]" : "border-white/10 bg-white/[.025]")}><div className="text-center text-xs font-black text-violet-200">{index + 1}</div>{managerView ? <button type="button" onPointerDown={(event) => dragStart(event, index)} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd} style={{ touchAction: "none" }} className="grid h-10 w-10 place-items-center rounded-lg border border-violet-300/15 bg-violet-300/[.04] text-violet-200"><GripVertical className="h-5 w-5" /></button> : <div className="h-9 w-9" />}<div className="min-w-0"><b className="block truncate text-xs text-white">#{player?.jersey_number || "—"} {player?.display_name}</b><span className="text-[9px] text-slate-500">{player?.primary_position || "—"} · {status === "YES" ? "IN" : status === "MAYBE" ? "SUB" : status === "NO" ? "OUT" : status === "UNLINKED" ? "unlinked" : "waiting"}</span></div><select disabled={!managerView} value={spot.defensive_position || ""} onChange={(event) => setLineup((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, defensive_position: event.target.value } : row))} className="h-9 rounded-lg border border-white/10 bg-[#050b14] px-1 text-[10px]"><option value="">POS</option>{POSITIONS.map((position) => <option key={position}>{position}</option>)}</select>{managerView ? <button type="button" onClick={() => removeLineupPlayer(spot.player)} className="grid h-8 w-8 place-items-center rounded-lg border border-rose-300/15 text-rose-200"><X className="h-3.5 w-3.5" /></button> : <div />}</div>; })}
-              {!lineup.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-slate-500">Choose a game, confirm availability, then build that game’s lineup.</div> : null}
-              {lineup.length ? <div className="grid grid-cols-2 gap-2"><Btn onClick={saveLineupImage}><ImageDown className="mr-1 inline h-4 w-4" />Save image</Btn>{managerView ? <Btn primary onClick={saveLineup} disabled={busy}><Save className="mr-1 inline h-4 w-4" />Save lineup</Btn> : null}</div> : null}
-              {selectedGame?.lineup_spots?.length ? <Btn className="w-full" onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${selectedGame.id}`)}><CircleDot className="mr-1 inline h-4 w-4" />{managerView ? "Open Game Book" : "View game"}</Btn> : null}
-            </div>
-          </div>
-        </Card> : null}
+          </Card>
+
+          {selectedGame ? <div className="grid gap-3 lg:grid-cols-[1fr_.55fr]">
+            <Card title="SUB / Bench" body="Everyone not in the batting order stays here. Tap a player to return him to the bottom of the lineup." action={<Users className="h-4 w-4 text-amber-300" />}>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {benchPlayers.map((player) => {
+                  const status = statusForSelected(player);
+                  const stat = playerStat(player);
+                  return <button
+                    key={player.id}
+                    type="button"
+                    disabled={!managerView}
+                    onClick={() => restoreFromBench(player.id)}
+                    className={cx("rounded-xl border p-2.5 text-left transition", status === "MAYBE" ? "border-amber-300/25 bg-amber-300/[.07]" : status === "PENDING" ? "border-white/10 bg-white/[.025]" : "border-cyan-300/15 bg-cyan-300/[.04]", managerView && "active:scale-[.98]")}
+                  >
+                    <div className="flex items-center justify-between gap-2"><b className="truncate text-[11px] text-white">#{player.jersey_number || "—"} {player.display_name}</b><Pill tone={status === "MAYBE" ? "amber" : status === "YES" ? "green" : status === "PENDING" ? "slate" : "violet"}>{status === "MAYBE" ? "SUB" : status === "PENDING" ? "WAIT" : status === "UNLINKED" ? "MANUAL" : status}</Pill></div>
+                    <div className="mt-1.5 flex items-center gap-3 text-[8px]"><span className="text-cyan-200">AVG <b>{pct(stat?.avg)}</b></span><span className="text-violet-200">OPS <b>{pct(stat?.ops)}</b></span><span className="text-amber-200">RBI <b>{num(stat?.rbi)}</b></span></div>
+                    {managerView ? <div className="mt-2 text-[8px] font-black uppercase tracking-wide text-cyan-300">Tap to lineup</div> : null}
+                  </button>;
+                })}
+                {!benchPlayers.length ? <div className="rounded-xl border border-dashed border-amber-300/15 p-4 text-[10px] text-slate-500 sm:col-span-2">No bench players. Everyone available is currently in the batting order.</div> : null}
+              </div>
+            </Card>
+
+            <Card title="OUT" body="These players stay visible but cannot be placed into this game lineup." action={<X className="h-4 w-4 text-rose-300" />}>
+              <div className="space-y-1.5">
+                {outPlayers.map((player) => <div key={player.id} className="rounded-xl border border-rose-300/15 bg-rose-300/[.05] p-2.5"><div className="flex items-center justify-between gap-2"><b className="truncate text-[10px] text-slate-300">#{player.jersey_number || "—"} {player.display_name}</b><Pill tone="rose">OUT</Pill></div></div>)}
+                {!outPlayers.length ? <div className="rounded-xl border border-dashed border-white/10 p-4 text-[10px] text-slate-600">Nobody is marked OUT.</div> : null}
+              </div>
+            </Card>
+          </div> : null}
+        </div> : null}
 
         {tab === "Schedule" ? <div className="grid gap-3 lg:grid-cols-[1.3fr_.7fr]">
           <Card title="Team schedule" body="Games are synced to the Social team and members' SyncWorks calendars." action={<CalendarDays className="h-4 w-4 text-emerald-300" />}><div className="space-y-1.5">{games.map((game) => <div key={game.id} className="rounded-xl border border-white/10 bg-white/[.025] p-2.5"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="flex flex-wrap items-center gap-1.5"><b className="text-xs text-white">{new Date(game.start_at).toLocaleDateString()} · {new Date(game.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</b><Pill tone={game.home_away === "HOME" ? "green" : game.home_away === "AWAY" ? "amber" : "slate"}>{game.home_away}</Pill></div><div className="mt-1 text-[11px] font-black text-slate-200">vs {game.opponent_name}</div><div className="mt-0.5 flex items-center gap-1 text-[9px] text-slate-500"><MapPin className="h-3 w-3" />{game.venue_name || "Field TBD"}</div>{game.address_line1 ? <div className="pl-4 text-[9px] text-slate-600">{game.address_line1}, {game.city}, {game.state}</div> : null}</div><Btn onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>{managerView ? "Game Book" : "Open"}</Btn></div></div>)}{!games.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-slate-500">No games yet.</div> : null}</div></Card>
