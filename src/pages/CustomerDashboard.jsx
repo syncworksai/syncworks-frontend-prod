@@ -27,6 +27,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import AroundYouPanel from "../components/customer/AroundYouPanel";
+import CalendarDailySnapshot from "../components/calendar/CalendarDailySnapshot";
 import DashboardShell from "../components/dashboard/DashboardShell";
 
 const DAY_TRADING_EMAIL = "jacoblord7@outlook.com";
