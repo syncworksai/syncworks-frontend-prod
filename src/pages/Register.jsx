@@ -25,6 +25,11 @@ function normalizeState(value) {
   return normalizeCode(value).slice(0, 2);
 }
 
+function safeReturnPath(value, fallback = "/customer") {
+  const path = String(value || "").trim();
+  return path.startsWith("/") && !path.startsWith("//") ? path : fallback;
+}
+
 function suggestedUsername(email) {
   return normalizeEmail(email)
     .split("@")[0]
@@ -488,6 +493,9 @@ export default function Register() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const returnTo = safeReturnPath(queryParams.get("next"));
+  const invitedEmail = normalizeEmail(queryParams.get("email"));
 
   const [stage, setStage] = useState("EMAIL");
   const [loading, setLoading] = useState(false);
@@ -537,6 +545,12 @@ export default function Register() {
       setCodeResult(null);
     }
   }
+
+  useEffect(() => {
+    if (!email && invitedEmail) {
+      setEmail(invitedEmail);
+    }
+  }, [invitedEmail, email]);
 
   useEffect(() => {
     const captured = captureAffiliateCodeFromLocation(location);
@@ -736,9 +750,13 @@ export default function Register() {
         registration_proof: registrationProof,
         affiliate_code: affiliateCode,
         promo_code: promoCode,
-        registration_source: affiliateCode ? "INVITATION" : "WEB",
+        registration_source: returnTo.includes("/sports/invite/") ? "SPORTS_INVITATION" : affiliateCode ? "INVITATION" : "WEB",
       });
 
+      if (returnTo !== "/customer") {
+        navigate(returnTo, { replace: true });
+        return;
+      }
       setStage("WELCOME");
     } catch (err) {
       setError(getErrorMessage(err, "Unable to create your account."));
@@ -843,7 +861,7 @@ export default function Register() {
         <div className="mx-auto max-w-md">
           <Welcome
             firstName={account.firstName}
-            onContinue={() => navigate("/customer", { replace: true })}
+            onContinue={() => navigate(returnTo, { replace: true })}
             onBusiness={() => setBusinessOpen(true)}
             onInfo={() => setInfoOpen(true)}
             onUpdates={() => setUpdatesOpen(true)}

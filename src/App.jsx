@@ -63,6 +63,8 @@ import SportsHub from "./pages/SportsHub";
 import SportsTeamDashboard from "./pages/SportsTeamDashboard";
 import SoftballGameDayAdvanced from "./pages/SoftballGameDayAdvanced";
 import PublicGameCast from "./pages/PublicGameCast";
+import SportsCommissionerDashboard from "./pages/SportsCommissionerDashboard";
+import SportsInviteLanding from "./pages/SportsInviteLanding";
 import Household from "./pages/Household";
 import UserProfile from "./pages/UserProfile";
 import IdentitySettings from "./pages/IdentitySettings";
@@ -100,6 +102,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/gamecast/:token" element={<PublicGameCast />} />
+        <Route path="/sports/invite/:token" element={<SportsInviteLanding />} />
         <Route path="/employee/invite" element={<EmployeeInvite />} />
         <Route path="/accept-invite" element={<EmployeeInvite />} />
         <Route path="/platform" element={<PlatformRoute><PlatformDashboard /></PlatformRoute>} />
@@ -187,6 +190,8 @@ export default function App() {
         <Route path="/upgrade" element={<ProtectedRoute><Upgrade /></ProtectedRoute>} />
         <Route path="/connect" element={<ProtectedRoute><ConnectSportsBridge /></ProtectedRoute>} />
         <Route path="/connect/sports" element={<ProtectedRoute><SportsHub /></ProtectedRoute>} />
+        <Route path="/connect/sports/commissioner" element={<ProtectedRoute><SportsCommissionerDashboard /></ProtectedRoute>} />
+        <Route path="/connect/sports/commissioner/:organizationId" element={<ProtectedRoute><SportsCommissionerDashboard /></ProtectedRoute>} />
         <Route path="/connect/groups/:groupId/sports" element={<ProtectedRoute><SportsTeamDashboard /></ProtectedRoute>} />
         <Route path="/connect/groups/:groupId/sports/games/:gameId" element={<ProtectedRoute><SoftballGameDayAdvanced /></ProtectedRoute>} />
         <Route path="/team/invites" element={<ProtectedRoute><TeamInvites /></ProtectedRoute>} />

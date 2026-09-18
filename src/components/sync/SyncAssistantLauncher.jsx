@@ -9,6 +9,7 @@ const HIDDEN_PREFIXES = [
   "/register",
   "/employee/invite",
   "/accept-invite",
+  "/sports/invite",
 ];
 
 function contextualPrompt(pathname) {

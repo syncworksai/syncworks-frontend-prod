@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ChevronRight, Loader2, Plus, Trophy, Users } from "lucide-react";
+import { ArrowLeft, ChevronRight, Loader2, Plus, ShieldCheck, Trophy, Users } from "lucide-react";
 
 import ModeBar from "../components/ModeBar";
 import SportsLeagueManager from "../components/sports/SportsLeagueManager";
 import { useAuth } from "../auth/AuthContext";
 import { getGroups, getMemberships } from "../api/social";
-import { getSportsTeams } from "../api/sports";
+import { getSportsOrganizationMemberships, getSportsTeams } from "../api/sports";
 
 const list = (value) => (Array.isArray(value) ? value : []);
 const cx = (...values) => values.filter(Boolean).join(" ");
@@ -19,6 +19,7 @@ export default function SportsHub() {
   const [groups, setGroups] = useState([]);
   const [memberships, setMemberships] = useState([]);
   const [sportsTeams, setSportsTeams] = useState([]);
+  const [organizationMemberships, setOrganizationMemberships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -28,15 +29,17 @@ export default function SportsHub() {
       setLoading(true);
       setError("");
       try {
-        const [groupRows, membershipRows, teamRows] = await Promise.all([
+        const [groupRows, membershipRows, teamRows, organizationRows] = await Promise.all([
           getGroups(),
           getMemberships(),
           getSportsTeams(),
+          getSportsOrganizationMemberships().catch(() => []),
         ]);
         if (!alive) return;
         setGroups(list(groupRows));
         setMemberships(list(membershipRows));
         setSportsTeams(list(teamRows));
+        setOrganizationMemberships(list(organizationRows));
       } catch (err) {
         if (alive) setError(errorText(err));
       } finally {
@@ -52,6 +55,7 @@ export default function SportsHub() {
   );
   const teamGroups = groups.filter((group) => group.kind === "TEAM" && (activeGroupIds.has(Number(group.id)) || Number(group.created_by) === userId));
   const sportsByGroup = new Map(sportsTeams.map((team) => [Number(team.group), team]));
+  const commissionerMembership = organizationMemberships.find((row) => row.status === "ACTIVE" && ["COMMISSIONER", "ADMIN"].includes(row.role));
 
   return (
     <div className="min-h-screen bg-[#02060c] pb-28 text-slate-100">
@@ -63,6 +67,7 @@ export default function SportsHub() {
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[.15em] text-cyan-100"><Trophy className="h-4 w-4 text-amber-300" />Competition tools inside Social</div>
           <h1 className="mt-4 max-w-3xl text-3xl font-black sm:text-5xl">Softball clubs, leagues, game day and stats.</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Your club starts as a SyncWorks Social group. Team tools add lineups, schedules, live scoring, leagues and analytics without creating a separate sports identity.</p>
+          {commissionerMembership ? <button type="button" onClick={() => navigate("/connect/sports/commissioner/" + commissionerMembership.organization)} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 text-[10px] font-black text-amber-100"><ShieldCheck className="h-4 w-4" />Commissioner Command Center</button> : null}
         </section>
 
         {error ? <div className="rounded-2xl border border-rose-400/20 bg-rose-400/10 p-3 text-sm text-rose-100">{error}</div> : null}

@@ -21,6 +21,7 @@ import SoftballDefenseField from "../components/sports/SoftballDefenseField";
 import { useAuth } from "../auth/AuthContext";
 import { getMemberships } from "../api/social";
 import {
+  correctSoftballPlay,
   finishSportsGame,
   getGameCastSettings,
   getPlateAppearances,
@@ -51,6 +52,16 @@ const RESULTS = [
   { value: "SF", label: "SF", detail: "Sac fly", outs: 1, productive: true, tone: "amber" },
 ];
 
+const QUICK_RESULT_VALUES = ["1B", "2B", "3B", "HR", "BB", "ROE", "OUT"];
+const OUT_OPTIONS = [
+  { value: "OUT", label: "Routine", detail: "Routine out", outs: 1 },
+  { value: "K", label: "K", detail: "Strikeout", outs: 1 },
+  { value: "FC", label: "FC", detail: "Fielder's choice", outs: 1 },
+  { value: "SF", label: "SF", detail: "Sac fly", outs: 1, productive: true },
+  { value: "OUT", label: "DP", detail: "Double play", outs: 2 },
+  { value: "OUT", label: "TP", detail: "Triple play", outs: 3 },
+];
+
 const BATTED_BALLS = [["GROUND", "Ground"], ["LINE", "Line"], ["FLY", "Fly"], ["POP", "Pop"]];
 const SPRAY_ZONES = [
   ["LEFT_LINE", "LF line"], ["LEFT", "Left"], ["LEFT_CENTER", "Left center"],
@@ -63,6 +74,104 @@ const cx = (...values) => values.filter(Boolean).join(" ");
 const list = (value) => Array.isArray(value) ? value : [];
 const num = (value) => Number(value || 0);
 const errorText = (error) => error?.response?.data?.detail || Object.values(error?.response?.data || {})?.flat?.()?.[0] || error?.message || "Something went wrong.";
+
+function scoringSuggestion(result, bases, outsBefore = 0) {
+  const first = Boolean(bases.first);
+  const second = Boolean(bases.second);
+  const third = Boolean(bases.third);
+  const runners = Number(first) + Number(second) + Number(third);
+
+  let runs = 0;
+  if (result === "1B") runs = third ? 1 : 0;
+  if (result === "2B") runs = Number(second) + Number(third);
+  if (result === "3B") runs = runners;
+  if (result === "HR") runs = runners + 1;
+  if (result === "BB") runs = first && second && third ? 1 : 0;
+  if (result === "SF") runs = third && outsBefore < 2 ? 1 : 0;
+
+  return { runs, rbi: runs };
+}
+
+function predictedBasesAfter(result, bases, runsScored, suggestion) {
+  const first = Boolean(bases.first);
+  const second = Boolean(bases.second);
+  const third = Boolean(bases.third);
+  const extraRuns = Math.max(0, num(runsScored) - num(suggestion?.runs));
+
+  if (result === "HR") return { first: false, second: false, third: false };
+  if (result === "3B") return { first: false, second: false, third: true };
+  if (result === "2B") {
+    return {
+      first: false,
+      second: true,
+      third: first && extraRuns === 0,
+    };
+  }
+  if (result === "1B") {
+    return {
+      first: true,
+      second: first,
+      third: second && extraRuns === 0,
+    };
+  }
+  if (result === "BB") {
+    return {
+      first: true,
+      second: first || second,
+      third: third || (first && second),
+    };
+  }
+  if (result === "SF" && runsScored > 0) return { first, second, third: false };
+  return { first, second, third };
+}
+
+function gameBattingMetrics(plays) {
+  let ab = 0;
+  let hits = 0;
+  let walks = 0;
+  let sacFlies = 0;
+  let totalBases = 0;
+  let rbi = 0;
+  let runs = 0;
+
+  for (const play of plays) {
+    rbi += num(play.rbi);
+    runs += num(play.runs_scored);
+    if (!["BB", "SF"].includes(play.result)) ab += 1;
+    if (["1B", "2B", "3B", "HR"].includes(play.result)) hits += 1;
+    if (play.result === "BB") walks += 1;
+    if (play.result === "SF") sacFlies += 1;
+    if (play.result === "1B") totalBases += 1;
+    if (play.result === "2B") totalBases += 2;
+    if (play.result === "3B") totalBases += 3;
+    if (play.result === "HR") totalBases += 4;
+  }
+
+  const avg = ab ? hits / ab : 0;
+  const obpDen = ab + walks + sacFlies;
+  const obp = obpDen ? (hits + walks) / obpDen : 0;
+  const slg = ab ? totalBases / ab : 0;
+
+  return {
+    pa: plays.length,
+    ab,
+    hits,
+    rbi,
+    runs,
+    avg,
+    obp,
+    slg,
+    ops: obp + slg,
+  };
+}
+
+function playBadge(play) {
+  if (play.result !== "OUT") return play.result;
+  const note = String(play.notes || "").toLowerCase();
+  if (note.includes("double play")) return "DP";
+  if (note.includes("triple play")) return "TP";
+  return "OUT";
+}
 
 function Button({ children, onClick, primary, danger, disabled, className = "" }) {
   return (
@@ -128,6 +237,10 @@ export default function SoftballGameDayAdvanced() {
   const [productiveOut, setProductiveOut] = useState(false);
   const [battedBallType, setBattedBallType] = useState("");
   const [sprayZone, setSprayZone] = useState("");
+  const [outMenuOpen, setOutMenuOpen] = useState(false);
+  const [outChoice, setOutChoice] = useState(null);
+  const [editingPlay, setEditingPlay] = useState(null);
+  const [editForm, setEditForm] = useState({ inning: 1, result: "OUT", outs_recorded: 1, rbi: 0, runs_scored: 0, notes: "" });
 
   const canManage = useMemo(() => memberships.some(
     (membership) => Number(membership.group) === Number(groupId)
@@ -189,6 +302,27 @@ export default function SoftballGameDayAdvanced() {
   }, [game?.status, game?.id, groupId]);
 
   useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(`sw_sports_bases_${gameId}`) || "null");
+      if (saved && typeof saved === "object") {
+        setRunner1(Boolean(saved.first));
+        setRunner2(Boolean(saved.second));
+        setRunner3(Boolean(saved.third));
+      }
+    } catch {}
+  }, [gameId]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`sw_sports_bases_${gameId}`, JSON.stringify({
+        first: runner1,
+        second: runner2,
+        third: runner3,
+      }));
+    } catch {}
+  }, [gameId, runner1, runner2, runner3]);
+
+  useEffect(() => {
     if (game?.status !== "LIVE") return undefined;
     const id = window.setInterval(() => refresh({ quiet: true }), 5000);
     return () => window.clearInterval(id);
@@ -208,44 +342,127 @@ export default function SoftballGameDayAdvanced() {
     } finally { setBusy(false); }
   }
 
-  function chooseResult(row) {
+  function applyResult(row, choice = null) {
     if (row.value === "HR" && game?.home_run_allowed === false) return;
+    const remainingOuts = Math.max(0, 3 - num(game?.outs));
+    const nextOuts = Math.min(remainingOuts, num(choice?.outs ?? row.outs ?? 0));
+    const suggestion = scoringSuggestion(
+      row.value,
+      { first: runner1, second: runner2, third: runner3 },
+      num(game?.outs),
+    );
+
     setResult(row.value);
-    setOutsRecorded(row.outs || 0);
-    setRbi(row.rbi || 0);
-    setRuns(row.runs || 0);
-    setProductiveOut(Boolean(row.productive));
-    if (["BB", "K"].includes(row.value)) { setBattedBallType(""); setSprayZone(""); }
+    setOutsRecorded(nextOuts);
+    setRbi(suggestion.rbi);
+    setRuns(suggestion.runs);
+    setProductiveOut(Boolean(choice?.productive ?? row.productive));
+    setOutChoice(choice);
+    setOutMenuOpen(false);
+    if (["BB", "K"].includes(row.value)) {
+      setBattedBallType("");
+      setSprayZone("");
+    }
   }
 
-  function clearEntry() {
+  function chooseResult(row) {
+    if (row.value === "OUT") {
+      setOutMenuOpen(true);
+      return;
+    }
+    applyResult(row);
+  }
+
+  function chooseOut(option) {
+    const row = RESULTS.find((item) => item.value === option.value) || RESULTS.find((item) => item.value === "OUT");
+    applyResult({ ...row, value: option.value, productive: option.productive }, option);
+  }
+
+  function clearEntry({ keepBases = true } = {}) {
     setResult(""); setOutsRecorded(0); setRbi(0); setRuns(0);
-    setRunner1(false); setRunner2(false); setRunner3(false);
+    if (!keepBases) { setRunner1(false); setRunner2(false); setRunner3(false); }
     setRunnersAdvanced(0); setProductiveOut(false); setBattedBallType(""); setSprayZone("");
+    setOutMenuOpen(false); setOutChoice(null);
   }
 
   async function recordPlay() {
     if (!result || !game || busy) return;
     setBusy(true); setError(""); setNotice("");
     try {
-      const response = await recordSoftballPlay(game.id, { result, outs_recorded: outsRecorded, rbi, runs_scored: runs });
+      const beforeInning = num(game.current_inning);
+      const basesBefore = { first: runner1, second: runner2, third: runner3 };
+      const suggestion = scoringSuggestion(result, basesBefore, num(game.outs));
+      const response = await recordSoftballPlay(game.id, {
+        result,
+        outs_recorded: outsRecorded,
+        rbi,
+        runs_scored: runs,
+        notes: outChoice?.detail || "",
+      });
       const plateAppearanceId = response?.play?.id;
       if (plateAppearanceId) {
         try {
           await saveSoftballPlayContext({
             plate_appearance: plateAppearanceId,
-            runner_on_first_before: runner1, runner_on_second_before: runner2, runner_on_third_before: runner3,
-            runners_advanced: runnersAdvanced, productive_out: result === "SF" ? true : productiveOut,
-            batted_ball_type: battedBallType, spray_zone: sprayZone,
+            runner_on_first_before: runner1,
+            runner_on_second_before: runner2,
+            runner_on_third_before: runner3,
+            runners_advanced: runnersAdvanced,
+            productive_out: result === "SF" ? true : productiveOut,
+            batted_ball_type: battedBallType,
+            spray_zone: sprayZone,
           });
         } catch {}
       }
-      clearEntry();
+
+      const inningAdvanced = num(response?.game?.current_inning) > beforeInning;
+      if (inningAdvanced) {
+        setRunner1(false); setRunner2(false); setRunner3(false);
+        setNotice(`3 outs — inning ${response.game.current_inning} started automatically.`);
+      } else {
+        const nextBases = predictedBasesAfter(result, basesBefore, runs, suggestion);
+        setRunner1(nextBases.first);
+        setRunner2(nextBases.second);
+        setRunner3(nextBases.third);
+      }
+
+      clearEntry({ keepBases: true });
       await refresh({ quiet: true });
-    } catch (err) { setError(errorText(err)); }
-    finally { setBusy(false); }
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
   }
 
+  function openPlayEditor(play) {
+    if (!canManage) return;
+    setEditingPlay(play);
+    setEditForm({
+      inning: Math.max(1, num(play.inning)),
+      result: play.result || "OUT",
+      outs_recorded: num(play.outs_recorded),
+      rbi: num(play.rbi),
+      runs_scored: num(play.runs_scored),
+      notes: play.notes || "",
+    });
+  }
+
+  async function savePlayCorrection() {
+    if (!editingPlay || busy) return;
+    const saved = await run(
+      () => correctSoftballPlay(editingPlay.id, {
+        inning: Math.max(1, num(editForm.inning)),
+        result: editForm.result,
+        outs_recorded: Math.max(0, Math.min(3, num(editForm.outs_recorded))),
+        rbi: Math.max(0, num(editForm.rbi)),
+        runs_scored: Math.max(0, num(editForm.runs_scored)),
+        notes: editForm.notes || "",
+      }),
+      "Scorebook corrected.",
+    );
+    if (saved) setEditingPlay(null);
+  }
   async function toggleGameCast(enabled) {
     const next = await run(() => updateGameCastSettings(game.id, { enabled, show_player_stats: true }), enabled ? "GameCast is live." : "GameCast sharing off.");
     if (next) setGamecast(next);
@@ -317,6 +534,21 @@ export default function SoftballGameDayAdvanced() {
     return map;
   }, [plays, innings]);
 
+  const teamGameMetrics = useMemo(() => gameBattingMetrics(plays), [plays]);
+
+  const currentBatterMetrics = useMemo(
+    () => gameBattingMetrics(plays.filter((play) => num(play.player) === num(game?.current_batter?.id))),
+    [plays, game?.current_batter?.id],
+  );
+
+  const playerGameMetrics = useMemo(() => {
+    const map = new Map();
+    for (const spot of lineup) {
+      map.set(num(spot.player), gameBattingMetrics(plays.filter((play) => num(play.player) === num(spot.player))));
+    }
+    return map;
+  }, [lineup, plays]);
+
   const opponentInningMap = useMemo(
     () => new Map(list(game?.inning_lines).map((row) => [num(row.inning), row])),
     [game?.inning_lines],
@@ -329,6 +561,11 @@ export default function SoftballGameDayAdvanced() {
   const final = game.status === "FINAL";
   const currentBatter = game.current_batter;
   const selected = RESULTS.find((row) => row.value === result);
+  const selectedDetail = outChoice?.detail || selected?.detail || "";
+  const smartSuggestion = selected
+    ? scoringSuggestion(result, { first: runner1, second: runner2, third: runner3 }, num(game.outs))
+    : { runs: 0, rbi: 0 };
+  const basesLoaded = runner1 && runner2 && runner3;
   const rule = game.rule_set_detail;
 
   return (
@@ -349,6 +586,21 @@ export default function SoftballGameDayAdvanced() {
             <div className="rounded-xl border border-white/10 bg-black/20 px-2 py-1.5 text-center"><div className="text-[7px] text-slate-500">INN</div><b className="text-sm">{game.current_inning}</b><div className="mt-1 flex gap-0.5">{[0,1,2].map((i)=><span key={i} className={cx("h-2 w-2 rounded-full border",i<num(game.outs)?"border-rose-300 bg-rose-300":"border-white/20")} />)}</div></div>
             <div className="text-center"><div className="truncate text-[8px] font-black uppercase text-slate-400">{game.opponent_name}</div><div className="text-3xl font-black text-white">{game.runs_against}</div></div>
           </div>
+        </section>
+
+        <section className="grid grid-cols-5 gap-1.5">
+          {[
+            ["HITS", teamGameMetrics.hits],
+            ["RBI", teamGameMetrics.rbi],
+            ["AVG", teamGameMetrics.avg.toFixed(3)],
+            ["OBP", teamGameMetrics.obp.toFixed(3)],
+            ["OPS", teamGameMetrics.ops.toFixed(3)],
+          ].map(([label,value]) => (
+            <div key={label} className="rounded-xl border border-white/10 bg-[#07111f] px-1.5 py-2 text-center">
+              <div className="text-[7px] font-black text-slate-500">{label}</div>
+              <div className="mt-0.5 text-[11px] font-black text-white">{value}</div>
+            </div>
+          ))}
         </section>
 
         <section className="overflow-x-auto rounded-2xl border border-white/10 bg-[#07111f] p-2">
@@ -379,37 +631,142 @@ export default function SoftballGameDayAdvanced() {
           <>
             <section className="rounded-2xl border border-cyan-300/20 bg-[#07111f] p-2.5">
               <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0"><div className="text-[7px] font-black uppercase tracking-[.14em] text-cyan-300">At bat</div><div className="truncate text-base font-black text-white">#{currentBatter?.jersey_number || "—"} {currentBatter?.display_name || "Current batter"}</div></div>
+                <div className="min-w-0"><div className="text-[7px] font-black uppercase tracking-[.14em] text-cyan-300">At bat</div><div className="truncate text-base font-black text-white">#{currentBatter?.jersey_number || "—"} {currentBatter?.display_name || "Current batter"}</div><div className="mt-0.5 text-[8px] text-slate-500">Game: {currentBatterMetrics.hits}-{currentBatterMetrics.ab} · {currentBatterMetrics.rbi} RBI · {currentBatterMetrics.avg.toFixed(3)} AVG</div></div>
                 <div className="text-right text-[8px] text-slate-500">Order #{game.current_batter_order}<br />{currentBatter?.primary_position || "—"}</div>
               </div>
 
               {canManage ? (
                 <>
-                  <div className="mt-2 grid grid-cols-5 gap-1">
-                    {RESULTS.map((row) => {
+                  <div className="mt-2 rounded-xl border border-white/10 bg-black/15 p-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <div className="text-[7px] font-black uppercase tracking-[.13em] text-slate-500">Bases before play</div>
+                        <div className="mt-0.5 text-[8px] text-slate-500">Tap occupied bases first. SyncWorks uses them for run/RBI suggestions.</div>
+                      </div>
+                      {basesLoaded ? <span className="rounded-full bg-amber-300 px-2 py-1 text-[7px] font-black text-slate-950">LOADED</span> : null}
+                    </div>
+                    <div className="mt-2 grid grid-cols-4 gap-1.5">
+                      <Toggle active={runner1} onClick={() => setRunner1(!runner1)}>1B</Toggle>
+                      <Toggle active={runner2} onClick={() => setRunner2(!runner2)}>2B</Toggle>
+                      <Toggle active={runner3} onClick={() => setRunner3(!runner3)}>3B</Toggle>
+                      <button type="button" onClick={() => { setRunner1(false); setRunner2(false); setRunner3(false); }} className="min-h-8 rounded-lg border border-white/10 px-2 text-[9px] font-black text-slate-500">Clear</button>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 grid grid-cols-4 gap-1">
+                    {QUICK_RESULT_VALUES.map((value) => RESULTS.find((row) => row.value === value)).filter(Boolean).map((row) => {
                       const blockedHr = row.value === "HR" && game.home_run_allowed === false;
-                      return <button key={row.value} type="button" disabled={blockedHr} onClick={() => chooseResult(row)} className={cx("min-h-11 rounded-xl border px-1 py-1 text-center",resultTone(row,result===row.value,blockedHr))}><b className="block text-[12px]">{row.label}</b><span className="block truncate text-[7px] opacity-70">{blockedHr ? "RULE" : row.detail}</span></button>;
+                      const active = row.value === "OUT"
+                        ? outMenuOpen || (result === "OUT" && Boolean(outChoice))
+                        : result === row.value;
+                      return (
+                        <button
+                          key={row.value}
+                          type="button"
+                          disabled={blockedHr}
+                          onClick={() => chooseResult(row)}
+                          className={cx(
+                            "min-h-12 rounded-xl border px-1 py-1 text-center",
+                            resultTone(row,active,blockedHr),
+                            row.value === "OUT" && "col-span-2",
+                          )}
+                        >
+                          <b className="block text-[12px]">{row.label}</b>
+                          <span className="block truncate text-[7px] opacity-70">
+                            {blockedHr ? "RULE" : row.value === "OUT" ? "Choose out" : row.detail}
+                          </span>
+                        </button>
+                      );
                     })}
                   </div>
 
+                  {outMenuOpen ? (
+                    <div className="mt-2 rounded-xl border border-slate-300/15 bg-slate-300/[.04] p-2">
+                      <div className="text-[8px] font-black uppercase tracking-[.12em] text-slate-400">What kind of out?</div>
+                      <div className="mt-2 grid grid-cols-3 gap-1.5">
+                        {OUT_OPTIONS.map((option) => (
+                          <button
+                            key={option.label}
+                            type="button"
+                            onClick={() => chooseOut(option)}
+                            className="min-h-10 rounded-lg border border-white/10 bg-black/20 px-2 text-[9px] font-black text-white"
+                          >
+                            <span className="block text-[11px]">{option.label}</span>
+                            <span className="text-[7px] font-medium text-slate-500">{option.detail}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mt-2 text-[8px] text-cyan-200">
+                        Any out that reaches 3 total outs automatically starts the next inning.
+                      </div>
+                    </div>
+                  ) : null}
+
                   {selected ? (
                     <div className="mt-2 rounded-xl border border-white/10 bg-black/20 p-2">
-                      <div className="grid grid-cols-[1fr_auto] items-center gap-2"><div className="text-[9px]"><b className="text-white">{selected.detail}</b><span className="ml-1 text-slate-500">selected</span></div><button type="button" onClick={clearEntry} className="grid h-8 w-8 place-items-center rounded-lg border border-white/10"><RotateCcw className="h-3.5 w-3.5" /></button></div>
-                      <div className="mt-2 grid grid-cols-3 gap-1.5">
-                        <MiniStepper label="Outs" value={outsRecorded} onChange={setOutsRecorded} max={Math.max(0,3-num(game.outs))} />
+                      <div className="grid grid-cols-[1fr_auto] items-center gap-2">
+                        <div className="text-[9px]">
+                          <b className="text-white">{selectedDetail}</b>
+                          <span className="ml-1 text-slate-500">selected</span>
+                          {outsRecorded ? (
+                            <span className="ml-2 rounded-full bg-rose-300/10 px-2 py-0.5 text-[7px] font-black text-rose-100">
+                              +{outsRecorded} OUT{outsRecorded === 1 ? "" : "S"}
+                            </span>
+                          ) : null}
+                        </div>
+                        <button type="button" onClick={() => clearEntry({ keepBases: true })} className="grid h-8 w-8 place-items-center rounded-lg border border-white/10">
+                          <RotateCcw className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+
+                      {(smartSuggestion.runs > 0 || smartSuggestion.rbi > 0) ? (
+                        <div className="mt-2 rounded-lg border border-cyan-300/20 bg-cyan-300/[.07] p-2 text-[8px] leading-4 text-cyan-100">
+                          Smart start: <b>{smartSuggestion.runs} run{smartSuggestion.runs === 1 ? "" : "s"}</b> / <b>{smartSuggestion.rbi} RBI</b> from the current base state. Use +/− if the actual play differed.
+                        </div>
+                      ) : null}
+
+                      {["1B","2B","3B","BB","ROE"].includes(result) ? (
+                        <button
+                          type="button"
+                          onClick={() => setOutsRecorded(outsRecorded ? 0 : 1)}
+                          className={cx(
+                            "mt-2 flex min-h-9 w-full items-center justify-between rounded-lg border px-2.5 text-[9px] font-black",
+                            outsRecorded
+                              ? "border-rose-300/25 bg-rose-300/10 text-rose-100"
+                              : "border-white/10 bg-white/[.025] text-slate-300",
+                          )}
+                        >
+                          <span>Runner out on bases</span>
+                          <span>{outsRecorded ? "+" + outsRecorded + " OUT" : "+1 OUT"}</span>
+                        </button>
+                      ) : null}
+                      <div className="mt-2 grid grid-cols-2 gap-1.5">
                         <MiniStepper label="RBI" value={rbi} onChange={setRbi} max={4} />
                         <MiniStepper label="Runs" value={runs} onChange={setRuns} max={4} />
                       </div>
+
                       <details className="mt-2 rounded-lg border border-white/10 bg-white/[.02] p-2">
                         <summary className="cursor-pointer text-[8px] font-black uppercase tracking-wide text-slate-500">More play detail</summary>
                         <div className="mt-2 space-y-2">
-                          <div className="grid grid-cols-3 gap-1"><Toggle active={runner1} onClick={() => setRunner1(!runner1)}>Runner 1B</Toggle><Toggle active={runner2} onClick={() => setRunner2(!runner2)}>Runner 2B</Toggle><Toggle active={runner3} onClick={() => setRunner3(!runner3)}>Runner 3B</Toggle></div>
+                          {outsRecorded ? <MiniStepper label="Outs on play" value={outsRecorded} onChange={setOutsRecorded} max={Math.max(0,3-num(game.outs))} /> : null}
                           <MiniStepper label="Runners advanced" value={runnersAdvanced} onChange={setRunnersAdvanced} max={3} />
                           {["OUT","FC","SF"].includes(result) ? <Toggle active={result==="SF"||productiveOut} onClick={() => result!=="SF"&&setProductiveOut(!productiveOut)}>Productive out</Toggle> : null}
-                          {!["BB","K"].includes(result) ? <><div className="grid grid-cols-4 gap-1">{BATTED_BALLS.map(([value,label])=><Toggle key={value} active={battedBallType===value} onClick={()=>setBattedBallType(battedBallType===value?"":value)}>{label}</Toggle>)}</div><div className="grid grid-cols-2 gap-1 sm:grid-cols-5">{SPRAY_ZONES.map(([value,label])=><Toggle key={value} active={sprayZone===value} onClick={()=>setSprayZone(sprayZone===value?"":value)}>{label}</Toggle>)}</div></> : null}
+                          {!["BB","K"].includes(result) ? (
+                            <>
+                              <div className="grid grid-cols-4 gap-1">
+                                {BATTED_BALLS.map(([value,label])=><Toggle key={value} active={battedBallType===value} onClick={()=>setBattedBallType(battedBallType===value?"":value)}>{label}</Toggle>)}
+                              </div>
+                              <div className="grid grid-cols-2 gap-1 sm:grid-cols-5">
+                                {SPRAY_ZONES.map(([value,label])=><Toggle key={value} active={sprayZone===value} onClick={()=>setSprayZone(sprayZone===value?"":value)}>{label}</Toggle>)}
+                              </div>
+                            </>
+                          ) : null}
                         </div>
                       </details>
-                      <Button primary className="mt-2 w-full" disabled={busy} onClick={recordPlay}>Record {selected.label}</Button>
+
+                      <Button primary className="mt-2 w-full" disabled={busy} onClick={recordPlay}>
+                        Record {outChoice?.label || selected.label}
+                      </Button>
                     </div>
                   ) : null}
                 </>
@@ -417,12 +774,66 @@ export default function SoftballGameDayAdvanced() {
             </section>
 
             <section className="overflow-x-auto rounded-2xl border border-white/10 bg-[#07111f] p-2">
-              <div className="mb-1.5 flex items-center justify-between"><div className="text-[8px] font-black uppercase tracking-[.14em] text-slate-500">Scorebook grid</div>{canManage&&plays.length?<Button onClick={()=>run(()=>undoSoftballPlay(game.id),"Last play undone.")}><Undo2 className="mr-1 inline h-3.5 w-3.5" />Undo</Button>:null}</div>
+              <div className="mb-1.5 flex items-center justify-between"><div><div className="text-[8px] font-black uppercase tracking-[.14em] text-slate-500">Scorebook grid</div>{canManage?<div className="mt-0.5 text-[7px] text-slate-600">Tap any recorded box to correct it.</div>:null}</div>{canManage&&plays.length?<Button onClick={()=>run(()=>undoSoftballPlay(game.id),"Last play undone.")}><Undo2 className="mr-1 inline h-3.5 w-3.5" />Undo</Button>:null}</div>
               <table className="min-w-max border-collapse text-center text-[8px]">
-                <thead><tr><th className="sticky left-0 z-10 min-w-28 bg-[#07111f] px-2 py-1 text-left text-slate-500">PLAYER</th>{innings.map((inning)=><th key={inning} className="min-w-12 border-l border-white/5 px-1 py-1 text-slate-500">{inning}</th>)}</tr></thead>
+                <thead>
+                  <tr>
+                    <th className="sticky left-0 z-10 min-w-28 bg-[#07111f] px-2 py-1 text-left text-slate-500">PLAYER</th>
+                    {innings.map((inning)=><th key={inning} className="min-w-12 border-l border-white/5 px-1 py-1 text-slate-500">{inning}</th>)}
+                    <th className="border-l border-cyan-300/10 px-2 text-cyan-200">H/AB</th>
+                    <th className="border-l border-cyan-300/10 px-2 text-cyan-200">RBI</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  {lineup.map((spot)=><tr key={spot.id} className="border-t border-white/5"><td className="sticky left-0 z-10 max-w-28 truncate bg-[#07111f] px-2 py-1.5 text-left font-black text-white">{spot.batting_order}. {spot.player_detail?.display_name}</td>{innings.map((inning)=>{const rows=cellMap.get(`${spot.player}-${inning}`)||[];return <td key={inning} className="border-l border-white/5 px-1 py-1"><div className="flex justify-center gap-0.5">{rows.map((play)=><span key={play.id} className={cx("rounded px-1 py-0.5 font-black",["1B","2B","3B","HR"].includes(play.result)?"bg-emerald-300/15 text-emerald-100":play.result==="BB"?"bg-violet-300/15 text-violet-100":"bg-white/[.05] text-slate-300")}>{play.result}</span>)}</div></td>})}</tr>)}
-                  <tr className="border-t border-cyan-300/15"><td className="sticky left-0 z-10 bg-[#07111f] px-2 py-1 text-left font-black text-cyan-200">RUNS / HITS</td>{innings.map((inning)=>{const t=inningTotals.get(inning)||{};return <td key={inning} className="border-l border-white/5 px-1 py-1 font-black text-cyan-100">{num(t.runs)} / {num(t.hits)}</td>})}</tr>
+                  {lineup.map((spot)=>{
+                    const metrics=playerGameMetrics.get(num(spot.player))||gameBattingMetrics([]);
+                    return (
+                      <tr key={spot.id} className="border-t border-white/5">
+                        <td className="sticky left-0 z-10 max-w-28 truncate bg-[#07111f] px-2 py-1.5 text-left font-black text-white">
+                          {spot.batting_order}. {spot.player_detail?.display_name}
+                        </td>
+                        {innings.map((inning)=>{
+                          const rows=cellMap.get(String(spot.player) + "-" + inning)||[];
+                          return (
+                            <td key={inning} className="border-l border-white/5 px-1 py-1">
+                              <div className="flex justify-center gap-0.5">
+                                {rows.map((play)=>(
+                                  <button
+                                    key={play.id}
+                                    type="button"
+                                    onClick={() => openPlayEditor(play)}
+                                    className={cx(
+                                      "rounded px-1 py-0.5 font-black",
+                                      canManage && "cursor-pointer transition hover:ring-1 hover:ring-cyan-300/40",
+                                      ["1B","2B","3B","HR"].includes(play.result)
+                                        ? "bg-emerald-300/15 text-emerald-100"
+                                        : play.result==="BB"
+                                          ? "bg-violet-300/15 text-violet-100"
+                                          : "bg-white/[.05] text-slate-300",
+                                    )}
+                                    title={canManage ? "Tap to correct this scorebook entry" : undefined}
+                                  >
+                                    {playBadge(play)}
+                                  </button>
+                                ))}
+                              </div>
+                            </td>
+                          );
+                        })}
+                        <td className="border-l border-cyan-300/10 px-2 font-black text-cyan-100">{metrics.hits}/{metrics.ab}</td>
+                        <td className="border-l border-cyan-300/10 px-2 font-black text-cyan-100">{metrics.rbi}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="border-t border-cyan-300/15">
+                    <td className="sticky left-0 z-10 bg-[#07111f] px-2 py-1 text-left font-black text-cyan-200">RUNS / HITS</td>
+                    {innings.map((inning)=>{
+                      const t=inningTotals.get(inning)||{};
+                      return <td key={inning} className="border-l border-white/5 px-1 py-1 font-black text-cyan-100">{num(t.runs)} / {num(t.hits)}</td>;
+                    })}
+                    <td className="border-l border-cyan-300/10 px-2 font-black text-cyan-100">{teamGameMetrics.hits}/{teamGameMetrics.ab}</td>
+                    <td className="border-l border-cyan-300/10 px-2 font-black text-cyan-100">{teamGameMetrics.rbi}</td>
+                  </tr>
                 </tbody>
               </table>
             </section>
@@ -430,7 +841,7 @@ export default function SoftballGameDayAdvanced() {
             <div className="grid gap-2 lg:grid-cols-[1.15fr_.85fr]">
               <div className="space-y-2">
                 <SoftballDefenseField lineup={lineup} compact />
-                {canManage ? <section className="rounded-2xl border border-white/10 bg-[#07111f] p-2.5"><div className="text-[8px] font-black uppercase tracking-wide text-slate-500">Change defense</div><div className="mt-2 grid grid-cols-2 gap-1.5">{lineup.map((spot)=><label key={spot.id} className="grid grid-cols-[minmax(0,1fr)_4.3rem] items-center gap-1 rounded-lg border border-white/8 bg-white/[.02] p-1.5"><span className="truncate text-[9px] text-slate-300">{spot.player_detail?.display_name}</span><select value={spot.defensive_position||""} onChange={(event)=>changeDefense(spot.player,event.target.value)} className="h-8 rounded-lg border border-white/10 bg-[#050b14] px-1 text-[9px] text-white"><option value="">—</option>{POSITIONS.map((position)=><option key={position}>{position}</option>)}</select></label>)}</div></section> : null}
+                {canManage ? <section className="rounded-2xl border border-white/10 bg-[#07111f] p-2.5"><div className="text-[8px] font-black uppercase tracking-wide text-slate-500">Change defense</div><div className="mt-2 grid grid-cols-2 gap-1.5">{lineup.map((spot)=><label key={spot.id} className="flex min-h-[4.9rem] flex-col items-center justify-center rounded-lg border border-white/8 bg-white/[.02] px-2 py-2 text-center"><span className="w-full truncate text-[9px] font-bold text-slate-300">{spot.player_detail?.display_name}</span><select value={spot.defensive_position||""} onChange={(event)=>changeDefense(spot.player,event.target.value)} className="mt-1.5 h-8 w-[5.4rem] rounded-lg border border-white/10 bg-[#050b14] px-1 text-center text-[10px] font-black text-white"><option value="">—</option>{POSITIONS.map((position)=><option key={position}>{position}</option>)}</select></label>)}</div></section> : null}
               </div>
 
               <div className="space-y-2">
@@ -452,6 +863,46 @@ export default function SoftballGameDayAdvanced() {
           </>
         ) : null}
 
+        {editingPlay ? (
+          <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/70 px-3 pb-4 pt-20 sm:items-center">
+            <div className="w-full max-w-md rounded-[1.6rem] border border-cyan-300/20 bg-[#07111f] p-4 shadow-2xl">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[8px] font-black uppercase tracking-[.15em] text-cyan-300">Correct scorebook entry</div>
+                  <div className="mt-1 text-base font-black text-white">{editingPlay.player_name}</div>
+                  <div className="text-[8px] text-slate-500">Save rebuilds the inning totals and live game stats from the corrected book.</div>
+                </div>
+                <button type="button" onClick={() => setEditingPlay(null)} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-400">×</button>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <label className="text-[8px] font-black uppercase text-slate-500">Inning
+                  <input type="number" min="1" value={editForm.inning} onChange={(e)=>setEditForm({...editForm,inning:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] font-black text-white sm:text-xs" />
+                </label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Result
+                  <select value={editForm.result} onChange={(e)=>setEditForm({...editForm,result:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs font-black text-white">
+                    {RESULTS.map((row)=><option key={row.value} value={row.value}>{row.label} · {row.detail}</option>)}
+                  </select>
+                </label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Outs on play
+                  <input type="number" min="0" max="3" value={editForm.outs_recorded} onChange={(e)=>setEditForm({...editForm,outs_recorded:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] font-black text-white sm:text-xs" />
+                </label>
+                <label className="text-[8px] font-black uppercase text-slate-500">RBI
+                  <input type="number" min="0" max="4" value={editForm.rbi} onChange={(e)=>setEditForm({...editForm,rbi:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] font-black text-white sm:text-xs" />
+                </label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Runs
+                  <input type="number" min="0" max="4" value={editForm.runs_scored} onChange={(e)=>setEditForm({...editForm,runs_scored:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] font-black text-white sm:text-xs" />
+                </label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Note
+                  <input value={editForm.notes} onChange={(e)=>setEditForm({...editForm,notes:e.target.value})} placeholder="Optional" className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] text-white sm:text-xs" />
+                </label>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Button onClick={() => setEditingPlay(null)}>Cancel</Button>
+                <Button primary disabled={busy} onClick={savePlayCorrection}>{busy ? "Saving…" : "Save correction"}</Button>
+              </div>
+            </div>
+          </div>
+        ) : null}
         {final ? <section className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[.04] p-4 text-center"><Trophy className="mx-auto h-6 w-6 text-emerald-300"/><div className="mt-1 text-lg font-black">{game.team_name} {game.runs_for}–{game.runs_against} {game.opponent_name}</div><Button className="mt-3" onClick={()=>navigate(`/connect/groups/${groupId}/sports`)}>Back to team</Button></section> : null}
       </main>
     </div>
