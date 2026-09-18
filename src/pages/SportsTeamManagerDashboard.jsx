@@ -275,7 +275,7 @@ export default function SportsTeamManagerDashboard() {
 
       if (!lineupGameId) {
         const preferred = list(data.live_games)[0] || list(data.upcoming_games)[0] || list(data.recent_games)[0];
-        if (preferred) chooseLineupGame(String(preferred.id), data);
+        if (preferred) chooseLineupGame(String(preferred.id), data, list(responseRows));
       }
     } catch (err) {
       setError(errorText(err));
@@ -315,7 +315,7 @@ export default function SportsTeamManagerDashboard() {
     );
   }
 
-  function chooseLineupGame(value, data = dashboard) {
+  function chooseLineupGame(value, data = dashboard, responses = eventResponses) {
     setLineupGameId(value);
     setLiftedPlayerId(null);
     const sourceGames = (() => {
@@ -332,8 +332,9 @@ export default function SportsTeamManagerDashboard() {
       setLineup(saved);
       return;
     }
-    const defaultStarters = players
-      .filter((player) => ["YES", "UNLINKED"].includes(availabilityStatus(player, game, eventResponses)))
+    const roster = list(data?.players).length ? list(data?.players).filter((player) => player.is_active !== false) : players;
+    const defaultStarters = roster
+      .filter((player) => ["YES", "UNLINKED"].includes(availabilityStatus(player, game, responses)))
       .map((player) => ({
         player: Number(player.id),
         defensive_position: player.primary_position || "",
