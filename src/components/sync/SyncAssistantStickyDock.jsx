@@ -69,15 +69,25 @@ export default function SyncAssistantStickyDock({ displayName = "", defaultMinim
   const navigate = useNavigate();
   const audioRef = useRef(null);
   const objectUrlRef = useRef("");
-  const recognitionRef = useRef(null);\n  const briefingRef = useRef(null);\n  const briefingPromiseRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const briefingRef = useRef(null);
+  const briefingPromiseRef = useRef(null);
   const mountedRef = useRef(true);
   const [state, setState] = useState("idle");
-  const [minimized, setMinimized] = useState(() => {\n    if (typeof window === "undefined") return defaultMinimized;\n    const saved = window.localStorage.getItem("sync-assistant-dock-minimized");\n    return saved == null ? defaultMinimized : saved === "true";\n  });
+  const [minimized, setMinimized] = useState(() => {
+    if (typeof window === "undefined") return defaultMinimized;
+    const saved = window.localStorage.getItem("sync-assistant-dock-minimized");
+    return saved == null ? defaultMinimized : saved === "true";
+  });
   const [notice, setNotice] = useState("Tap SYNC to hear what matters now.");
   const [voiceConfigured, setVoiceConfigured] = useState(null);
   const [usingFallback, setUsingFallback] = useState(false);
 
-  useEffect(() => {\n    try { window.localStorage.setItem("sync-assistant-dock-minimized", String(minimized)); } catch {}\n  }, [minimized]);\n\n  const cleanupAudio = useCallback(() => {
+  useEffect(() => {
+    try { window.localStorage.setItem("sync-assistant-dock-minimized", String(minimized)); } catch {}
+  }, [minimized]);
+
+  const cleanupAudio = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
