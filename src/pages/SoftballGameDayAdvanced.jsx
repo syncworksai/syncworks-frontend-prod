@@ -78,6 +78,7 @@ const cx = (...values) => values.filter(Boolean).join(" ");
 const list = (value) => Array.isArray(value) ? value : [];
 const num = (value) => Number(value || 0);
 const errorText = (error) => error?.response?.data?.detail || Object.values(error?.response?.data || {})?.flat?.()?.[0] || error?.message || "Something went wrong.";
+const sprayLabel = (value) => String(value || "").replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (m) => m.toUpperCase());
 
 function scoringSuggestion(result, bases, outsBefore = 0) {
   const first = Boolean(bases.first);
@@ -704,6 +705,23 @@ export default function SoftballGameDayAdvanced() {
                 <div className="text-right text-[8px] text-slate-500">Order #{game.current_batter_order}<br />{currentBatter?.primary_position || "—"}</div>
               </div>
 
+              <div className="mt-2 grid grid-cols-[.7fr_1.3fr] gap-2">
+                <div className="rounded-xl border border-rose-300/20 bg-rose-300/[.04] p-2">
+                  <div className="text-[7px] font-black uppercase tracking-[.13em] text-rose-200">Outs</div>
+                  <div className="mt-1 flex items-center justify-between">
+                    <b className="text-xl text-white">{num(game.outs)} / 3</b>
+                    <div className="flex gap-1">{[0,1,2].map((i)=><span key={i} className={cx("h-3 w-3 rounded-full border",i<num(game.outs)?"border-rose-300 bg-rose-300":"border-white/20 bg-transparent")}/>)}</div>
+                  </div>
+                  <div className="mt-1 text-[7px] text-slate-500">{3-num(game.outs)} out{3-num(game.outs)===1?"":"s"} left in inning {game.current_inning}</div>
+                </div>
+                <div className="rounded-xl border border-violet-300/15 bg-violet-300/[.035] p-2">
+                  <div className="flex items-center justify-between"><div className="text-[7px] font-black uppercase tracking-[.13em] text-violet-200">Historical contact tendency</div><TrendingUp className="h-3.5 w-3.5 text-violet-300"/></div>
+                  {batterCard?.tendencies?.spray?.length ? <div className="mt-1.5 grid grid-cols-3 gap-1">
+                    {batterCard.tendencies.spray.slice(0,6).map((row)=><div key={row.zone} className="rounded-lg border border-white/8 bg-black/20 px-1.5 py-1 text-center"><div className="truncate text-[6px] uppercase text-slate-500">{sprayLabel(row.zone)}</div><b className="text-[10px] text-white">{Math.round(num(row.pct)*100)}%</b></div>)}
+                  </div> : <div className="mt-2 text-[8px] text-slate-500">No spray history yet. Record batted-ball direction to build this prediction.</div>}
+                </div>
+              </div>
+
               {canManage ? (
                 <>
                   <div className="mt-2 rounded-xl border border-white/10 bg-black/15 p-2">
@@ -906,6 +924,26 @@ export default function SoftballGameDayAdvanced() {
                 </tbody>
               </table>
             </section>
+
+            {canManage ? <section className="rounded-2xl border border-violet-300/15 bg-[#07111f] p-2.5">
+              <div className="flex items-center justify-between gap-2"><div><div className="text-[8px] font-black uppercase tracking-wide text-violet-300">Bench / substitutions</div><div className="text-[8px] text-slate-500">Swap a bench player directly into a batting slot. Previous at-bats stay attached to the outgoing player.</div></div><Users className="h-4 w-4 text-violet-300"/></div>
+              <div className="mt-2 grid grid-cols-[1fr_1fr_auto] gap-1.5">
+                <select value={subOrder} onChange={(e)=>setSubOrder(e.target.value)} className="h-9 rounded-lg border border-white/10 bg-[#050b14] px-2 text-[9px] text-white">
+                  <option value="">Batting slot</option>
+                  {lineup.map((spot)=><option key={spot.batting_order} value={spot.batting_order}>{spot.batting_order}. {spot.player_detail?.display_name}</option>)}
+                </select>
+                <select value={subPlayer} onChange={(e)=>setSubPlayer(e.target.value)} className="h-9 rounded-lg border border-white/10 bg-[#050b14] px-2 text-[9px] text-white">
+                  <option value="">Bench player</option>
+                  {list(game?.bench_players).map((player)=><option key={player.id} value={player.id}>#{player.jersey_number||"—"} {player.display_name}</option>)}
+                </select>
+                <Button primary disabled={!subOrder||!subPlayer||busy} onClick={makeSubstitution}>Sub in</Button>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {list(game?.bench_players).map((player)=><span key={player.id} className="rounded-full border border-white/10 bg-white/[.025] px-2 py-1 text-[7px] text-slate-300">#{player.jersey_number||"—"} {player.display_name}</span>)}
+                {!list(game?.bench_players).length ? <span className="text-[8px] text-slate-600">No bench players available.</span> : null}
+              </div>
+              {list(game?.substitutions).length ? <div className="mt-2 border-t border-white/8 pt-2"><div className="text-[7px] font-black uppercase text-slate-500">Sub history</div><div className="mt-1 space-y-1">{list(game.substitutions).slice().reverse().map((sub)=><div key={sub.id} className="flex items-center justify-between rounded-lg bg-black/15 px-2 py-1.5 text-[8px]"><span><b className="text-violet-100">{sub.incoming_player_detail?.display_name}</b> for {sub.outgoing_player_detail?.display_name}</span><span className="text-slate-500">#{sub.batting_order} · inn {sub.inning}</span></div>)}</div></div> : null}
+            </section> : null}
 
             <div className="grid gap-2 lg:grid-cols-[1.15fr_.85fr]">
               <div className="space-y-2">
