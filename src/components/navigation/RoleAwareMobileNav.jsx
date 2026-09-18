@@ -172,7 +172,7 @@ export default function RoleAwareMobileNav() {
   const hidden = useMemo(() => {
     if (!navMode) return true;
     if (/^\/tickets\/[^/]+\/?$/.test(pathname)) return true;
-    return ["/login", "/register", "/upgrade"].some((prefix) => pathname.startsWith(prefix));
+    return ["/login", "/register", "/upgrade", "/gamecast"].some((prefix) => pathname.startsWith(prefix));
   }, [navMode, pathname]);
 
   useEffect(() => {
