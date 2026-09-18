@@ -1002,6 +1002,13 @@ export default function SoftballGameDayAdvanced() {
                         <MiniStepper label="Runs" value={runs} onChange={setRuns} max={4} />
                       </div>
 
+                      {!["BB","K"].includes(result) ? <div className="mt-2 rounded-xl border border-emerald-300/15 bg-emerald-300/[.035] p-2">
+                        <div className="flex items-center justify-between gap-2"><div className="text-[7px] font-black uppercase tracking-wide text-emerald-300">Hit direction</div><div className="text-[7px] text-slate-600">Builds hitter tendency %</div></div>
+                        <div className="mt-1.5 grid grid-cols-5 gap-1">
+                          {[["LEFT","LF"],["LEFT_CENTER","LC"],["CENTER","CF"],["RIGHT_CENTER","RC"],["RIGHT","RF"]].map(([value,label])=><button key={value} type="button" onClick={()=>setSprayZone(sprayZone===value?"":value)} className={cx("min-h-9 rounded-lg border text-[8px] font-black",sprayZone===value?"border-emerald-200/40 bg-emerald-300/20 text-emerald-100":"border-white/10 bg-black/15 text-slate-400")}>{label}</button>)}
+                        </div>
+                      </div> : null}
+
                       <details className="mt-2 rounded-lg border border-white/10 bg-white/[.02] p-2">
                         <summary className="cursor-pointer text-[8px] font-black uppercase tracking-wide text-slate-500">More play detail</summary>
                         <div className="mt-2 space-y-2">
