@@ -36,6 +36,11 @@ export async function getGroups() {
   return list(data);
 }
 
+export async function getGroupMembers(group) {
+  const { data } = await api.get(`/social/groups/${group}/members/`);
+  return list(data);
+}
+
 export async function createGroup(payload) {
   const { data } = await api.post("/social/groups/", payload);
   return data;
