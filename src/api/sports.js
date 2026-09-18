@@ -346,3 +346,79 @@ export async function updateGameInningLine(id, payload) {
   const { data } = await api.post(`/sports/games/${id}/inning-line/`, payload);
   return data;
 }
+
+
+export async function getSportsOrganizationMemberships() {
+  const { data } = await api.get("/sports/organization-memberships/");
+  return list(data);
+}
+
+export async function getAvailableLeagueTeams(organization) {
+  const { data } = await api.get(`/sports/organizations/${organization}/available-teams/`);
+  return list(data);
+}
+
+export async function getDivisionStandings(division) {
+  const { data } = await api.get(`/sports/divisions/${division}/standings/`);
+  return data;
+}
+
+export async function getDivisionLeagueStats(division) {
+  const { data } = await api.get(`/sports/divisions/${division}/league-stats/`);
+  return data;
+}
+
+export async function buildDivisionSchedule(division, payload) {
+  const { data } = await api.post(`/sports/divisions/${division}/build-schedule/`, payload);
+  return data;
+}
+
+export async function getLeagueGames(params = {}) {
+  const { data } = await api.get("/sports/league-games/", { params });
+  return list(data);
+}
+
+export async function updateLeagueGame(id, payload) {
+  const { data } = await api.patch(`/sports/league-games/${id}/`, payload);
+  return data;
+}
+
+export async function getLeagueTournaments(params = {}) {
+  const { data } = await api.get("/sports/tournaments/", { params });
+  return list(data);
+}
+
+export async function createLeagueTournament(payload) {
+  const { data } = await api.post("/sports/tournaments/", payload);
+  return data;
+}
+
+export async function addTournamentTeam(id, payload) {
+  const { data } = await api.post(`/sports/tournaments/${id}/add-team/`, payload);
+  return data;
+}
+
+export async function getTournamentBracket(id) {
+  const { data } = await api.get(`/sports/tournaments/${id}/bracket/`);
+  return data;
+}
+
+export async function buildTournament(id, payload) {
+  const { data } = await api.post(`/sports/tournaments/${id}/build/`, payload);
+  return data;
+}
+
+export async function advanceTournament(id, payload = {}) {
+  const { data } = await api.post(`/sports/tournaments/${id}/advance/`, payload);
+  return data;
+}
+
+export async function previewSportsInvite(token, roster) {
+  const { data } = await api.get("/sports/league-rosters/invite-preview/", { params: { token, roster } });
+  return data;
+}
+
+export async function claimSportsInvite(token, roster) {
+  const { data } = await api.post("/sports/league-rosters/claim-token/", { token, roster });
+  return data;
+}
