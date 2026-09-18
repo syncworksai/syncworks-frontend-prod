@@ -30,6 +30,7 @@ import ModeBar from "../components/ModeBar";
 import TeamChatPanel from "../components/sports/TeamChatPanel";
 import GameAvailabilityCard, { availabilityStatus } from "../components/sports/GameAvailabilityCard";
 import InteractiveStatsBoard from "../components/sports/InteractiveStatsBoard";
+import SoftballDefenseField from "../components/sports/SoftballDefenseField";
 import { useAuth } from "../auth/AuthContext";
 import { createEventResponse, getEventResponses, getGroups, getMemberships, updateEventResponse } from "../api/social";
 import {
@@ -40,6 +41,7 @@ import {
   createStatLedgerEntry,
   createTeamFee,
   ensureTeamPaymentSettings,
+  getAdvancedTeamStats,
   getFeeAssignments,
   getPlayerProfiles,
   getScopedTeamStats,
@@ -61,7 +63,7 @@ import {
 } from "../api/sports";
 
 const TABS = ["Overview", "Roster", "Lineup", "Schedule", "Stats", "Dues"];
-const POSITIONS = ["P", "C", "1B", "2B", "3B", "SS", "LF", "LC", "RC", "RF", "OF", "EH", "DH"];
+const POSITIONS = ["P", "C", "1B", "2B", "3B", "SS", "MM", "LF", "LC", "CF", "RC", "RF", "OF", "EH1", "EH2", "EH", "DH"];
 const cx = (...values) => values.filter(Boolean).join(" ");
 const list = (value) => (Array.isArray(value) ? value : []);
 const num = (value) => Number(value || 0);
@@ -172,6 +174,7 @@ export default function SportsTeamManagerDashboard() {
   const [assignments, setAssignments] = useState([]);
   const [statsScope, setStatsScope] = useState("ALL");
   const [scopedStats, setScopedStats] = useState([]);
+  const [advancedAnalytics, setAdvancedAnalytics] = useState(null);
   const [previewPlayerView, setPreviewPlayerView] = useState(false);
   const [eventResponses, setEventResponses] = useState([]);
   const [chatOpen, setChatOpen] = useState(false);
@@ -213,6 +216,7 @@ export default function SportsTeamManagerDashboard() {
   }, [dashboard]);
 
   const selectedGame = games.find((game) => Number(game.id) === Number(lineupGameId));
+  const liveGame = games.find((game) => game.status === "LIVE") || null;
   const lineupIds = new Set(lineup.map((spot) => Number(spot.player)));
   const nextGame = games.find((game) => game.status === "LIVE") || games.find((game) => game.status === "SCHEDULED" && new Date(game.start_at) >= new Date());
   const statusForSelected = (player) => availabilityStatus(player, selectedGame, eventResponses);
@@ -230,6 +234,7 @@ export default function SportsTeamManagerDashboard() {
     return map;
   }, [scopedStats, dashboard]);
   const playerStat = (player) => statsByPlayerId.get(Number(player?.id)) || null;
+  const fieldLineup = lineup.map((spot) => ({ ...spot, player_detail: players.find((player) => Number(player.id) === Number(spot.player)) }));
 
   function profileFor(player) {
     if (!player) return null;
@@ -284,12 +289,32 @@ export default function SportsTeamManagerDashboard() {
     }
   }
 
+  useEffect(() => {
+    if (!liveGame) return;
+    try {
+      localStorage.setItem("sw_live_sports_game_v1", JSON.stringify({
+        groupId: Number(groupId),
+        gameId: Number(liveGame.id),
+        teamName: group?.name || "",
+        opponentName: liveGame.opponent_name || "",
+      }));
+      window.dispatchEvent(new CustomEvent("sw:liveSportsGameChanged"));
+    } catch {
+      // no-op
+    }
+  }, [liveGame?.id, groupId, group?.name]);
+
   useEffect(() => { refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [groupId]);
 
   useEffect(() => {
     if (!team) return;
     getScopedTeamStats(team.id, statsScope).then((data) => setScopedStats(list(data?.rows))).catch(() => {});
   }, [team, statsScope]);
+
+  useEffect(() => {
+    if (!team) return;
+    getAdvancedTeamStats(team.id).then(setAdvancedAnalytics).catch(() => setAdvancedAnalytics(null));
+  }, [team?.id]);
 
   async function run(fn, message, { closePlayer = false } = {}) {
     setBusy(true); setError(""); setNotice("");
@@ -708,6 +733,13 @@ export default function SportsTeamManagerDashboard() {
         {error ? <div className="rounded-xl border border-rose-400/20 bg-rose-400/10 p-3 text-xs text-rose-100">{error}</div> : null}
         {notice ? <div className="rounded-xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-xs text-cyan-100">{notice}</div> : null}
 
+        {liveGame ? (
+          <button type="button" onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${liveGame.id}`)} className="sticky top-[5.2rem] z-30 flex w-full items-center justify-between gap-2 rounded-xl border border-emerald-300/30 bg-[#04150f]/95 px-3 py-2.5 text-left shadow-lg backdrop-blur">
+            <span><span className="block text-[8px] font-black uppercase tracking-[.14em] text-emerald-300">● Live now</span><b className="mt-0.5 block text-xs text-white">vs {liveGame.opponent_name}</b></span>
+            <span className="rounded-lg bg-emerald-300 px-3 py-2 text-[9px] font-black text-slate-950">Resume live Game Book</span>
+          </button>
+        ) : null}
+
         <section className="rounded-[1.55rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_90%_0%,rgba(34,211,238,.16),transparent_35%),radial-gradient(circle_at_0%_100%,rgba(139,92,246,.13),transparent_35%),#07111f] p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0"><div className="flex flex-wrap gap-1.5"><Pill tone="cyan">Softball</Pill><Pill tone={managerView ? "violet" : "green"}>{managerView ? "Manager view" : "Player view"}</Pill><Pill>{team.season_name || "Season"}</Pill><Pill tone="green">Free team tools</Pill></div><h1 className="mt-2 truncate text-2xl font-black text-white">{group.name}</h1><p className="mt-1 text-[11px] text-slate-400">{[team.league_name, team.division_name].filter(Boolean).join(" · ") || "Team workspace"}</p></div>
@@ -875,6 +907,8 @@ export default function SportsTeamManagerDashboard() {
             </div>
           </Card>
 
+          {selectedGame && lineup.length ? <SoftballDefenseField lineup={fieldLineup} title="Defensive field" /> : null}
+
           {selectedGame ? <div className="grid gap-3 lg:grid-cols-[1fr_.55fr]">
             <Card title="SUB / Bench" body="Everyone not in the batting order stays here. Tap a player to return him to the bottom of the lineup." action={<Users className="h-4 w-4 text-amber-300" />}>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -911,7 +945,25 @@ export default function SportsTeamManagerDashboard() {
           {managerView ? <Card title="Add game" body="Manual additions use the same calendar sync."><div className="grid grid-cols-2 gap-2"><Select label="Type" value={gameForm.game_type} onChange={(value) => setGameForm((v) => ({ ...v, game_type: value }))}><option value="LEAGUE">League</option><option value="TOURNAMENT">Tournament</option><option value="PRACTICE">Practice</option><option value="EXHIBITION">Exhibition</option></Select><Select label="Home/Away" value={gameForm.home_away} onChange={(value) => setGameForm((v) => ({ ...v, home_away: value }))}><option value="HOME">Home</option><option value="AWAY">Away</option><option value="NEUTRAL">Neutral</option></Select><Input label="Opponent" value={gameForm.opponent_name} onChange={(value) => setGameForm((v) => ({ ...v, opponent_name: value }))} className="col-span-2" /><Input label="Date" type="date" value={gameForm.date} onChange={(value) => setGameForm((v) => ({ ...v, date: value }))} /><Input label="Time" type="time" value={gameForm.time} onChange={(value) => setGameForm((v) => ({ ...v, time: value }))} /><Input label="Venue / field" value={gameForm.venue_name} onChange={(value) => setGameForm((v) => ({ ...v, venue_name: value }))} className="col-span-2" /><Input label="Address" value={gameForm.address_line1} onChange={(value) => setGameForm((v) => ({ ...v, address_line1: value }))} className="col-span-2" /><Input label="City" value={gameForm.city} onChange={(value) => setGameForm((v) => ({ ...v, city: value }))} /><Input label="State" value={gameForm.state} onChange={(value) => setGameForm((v) => ({ ...v, state: value }))} /></div><Btn primary className="mt-2 w-full" onClick={addGame} disabled={!gameForm.opponent_name.trim() || !gameForm.date || busy}><Plus className="mr-1 inline h-4 w-4" />Add game</Btn></Card> : <Card title="Tournament week" body="League or tournament games will appear here once published by a manager or association."><div className="text-xs text-slate-400">Your Fall 2026 league sheet lists tournament week beginning October 27.</div></Card>}
         </div> : null}
 
-        {tab === "Stats" ? <InteractiveStatsBoard rows={scopedStats} scope={statsScope} onScope={setStatsScope} managerView={managerView} onAdd={() => setStatDrawer(true)} /> : null}
+        {tab === "Stats" ? <div className="space-y-3">
+          {advancedAnalytics?.inning_analytics ? <Card title="Team scoring pace" body="Live Game Book data rolled into team averages by game and inning." action={<Trophy className="h-4 w-4 text-amber-300" />}>
+            <div className="grid grid-cols-2 gap-2">
+              <Stat label="Avg runs / game" value={num(advancedAnalytics.inning_analytics.avg_runs_per_game).toFixed(2)} sub={`${num(advancedAnalytics.inning_analytics.runs)} total runs`} />
+              <Stat label="Avg hits / game" value={num(advancedAnalytics.inning_analytics.avg_hits_per_game).toFixed(2)} sub={`${num(advancedAnalytics.inning_analytics.hits)} total hits`} />
+            </div>
+            <div className="mt-3 overflow-x-auto">
+              <div className="flex min-w-max gap-1.5">
+                {list(advancedAnalytics.inning_analytics.innings).map((row) => <div key={row.inning} className="w-[5.3rem] rounded-xl border border-white/10 bg-black/15 p-2 text-center">
+                  <div className="text-[8px] font-black uppercase text-cyan-300">Inn {row.inning}</div>
+                  <div className="mt-1 text-[10px] font-black text-white">{num(row.avg_runs).toFixed(2)} R</div>
+                  <div className="text-[9px] text-slate-500">{num(row.avg_hits).toFixed(2)} H</div>
+                </div>)}
+                {!list(advancedAnalytics.inning_analytics.innings).length ? <div className="rounded-xl border border-dashed border-white/10 px-4 py-3 text-[10px] text-slate-500">Inning averages appear after Game Book data is recorded.</div> : null}
+              </div>
+            </div>
+          </Card> : null}
+          <InteractiveStatsBoard rows={scopedStats} scope={statsScope} onScope={setStatsScope} managerView={managerView} onAdd={() => setStatDrawer(true)} />
+        </div> : null}
 
         {tab === "Dues" ? <div className="grid gap-3 lg:grid-cols-[1.2fr_.8fr]">
           <Card

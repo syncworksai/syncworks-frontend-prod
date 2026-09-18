@@ -167,11 +167,12 @@ export default function RoleAwareMobileNav() {
   const navMode = navModeFromPath(pathname, mode, location.search);
   const [items, setItems] = useState(() => navMode ? readPreference(navMode, user) : []);
   const [unread, setUnread] = useState(0);
+  const [liveGame, setLiveGame] = useState(() => { try { return JSON.parse(localStorage.getItem("sw_live_sports_game_v1") || "null"); } catch { return null; } });
 
   const hidden = useMemo(() => {
     if (!navMode) return true;
     if (/^\/tickets\/[^/]+\/?$/.test(pathname)) return true;
-    return ["/login", "/register", "/upgrade"].some((prefix) => pathname.startsWith(prefix));
+    return ["/login", "/register", "/upgrade", "/gamecast"].some((prefix) => pathname.startsWith(prefix));
   }, [navMode, pathname]);
 
   useEffect(() => {
@@ -186,6 +187,22 @@ export default function RoleAwareMobileNav() {
       window.removeEventListener("sw:mobileNavChanged", handleChanged);
     };
   }, [navMode, user]);
+
+  useEffect(() => {
+    function readLiveGame() {
+      try { setLiveGame(JSON.parse(localStorage.getItem("sw_live_sports_game_v1") || "null")); }
+      catch { setLiveGame(null); }
+    }
+    readLiveGame();
+    window.addEventListener("storage", readLiveGame);
+    window.addEventListener("sw:liveSportsGameChanged", readLiveGame);
+    const timer = window.setInterval(readLiveGame, 5000);
+    return () => {
+      window.removeEventListener("storage", readLiveGame);
+      window.removeEventListener("sw:liveSportsGameChanged", readLiveGame);
+      window.clearInterval(timer);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     let cancelled = false;
@@ -222,7 +239,17 @@ export default function RoleAwareMobileNav() {
   }
 
   return (
-    <nav className="sw-role-mobile-nav lg:hidden" aria-label="Mobile quick navigation">
+    <>
+      {liveGame && pathname !== `/connect/groups/${String(liveGame.groupId)}/sports/games/${String(liveGame.gameId)}` ? (
+        <button
+          type="button"
+          onClick={() => navigate(`/connect/groups/${liveGame.groupId}/sports/games/${liveGame.gameId}`)}
+          className="fixed bottom-[6.7rem] left-1/2 z-[90] -translate-x-1/2 rounded-full border border-emerald-300/30 bg-[#04150f]/95 px-4 py-2 text-[10px] font-black text-emerald-100 shadow-[0_10px_35px_rgba(16,185,129,.25)] backdrop-blur lg:hidden"
+        >
+          ● LIVE · Resume Game Book
+        </button>
+      ) : null}
+      <nav className="sw-role-mobile-nav lg:hidden" aria-label="Mobile quick navigation">
       <div className="sw-role-mobile-nav-grid">
         {renderedItems.slice(0, 2).map((item) => <NavButton key={item.id} item={item} onClick={() => navigate(item.target)} />)}
         <button type="button" className={`sw-role-mobile-nav-center ${center.sync ? "is-sync" : ""}`} onClick={openCenter} aria-label={center.sync ? "Open SYNC assistant" : `New ${center.label}`}>
@@ -231,7 +258,8 @@ export default function RoleAwareMobileNav() {
         </button>
         {renderedItems.slice(2, 4).map((item) => <NavButton key={item.id} item={item} onClick={() => navigate(item.target)} />)}
       </div>
-    </nav>
+      </nav>
+    </>
   );
 }
 
