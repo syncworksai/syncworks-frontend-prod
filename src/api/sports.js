@@ -346,18 +346,3 @@ export async function updateGameInningLine(id, payload) {
   const { data } = await api.post(`/sports/games/${id}/inning-line/`, payload);
   return data;
 }
-
-export async function updateOpponentHomeRuns(id, opponentHomeRuns) {
-  const { data } = await api.post(`/sports/games/${id}/opponent-home-runs/`, { opponent_home_runs: opponentHomeRuns });
-  return data;
-}
-
-export async function getSoftballRuleSets(params = {}) {
-  const { data } = await api.get("/sports/rule-sets/", { params });
-  return list(data);
-}
-
-export async function createSoftballRuleSet(payload) {
-  const { data } = await api.post("/sports/rule-sets/", payload);
-  return data;
-}
