@@ -66,6 +66,11 @@ export async function getEvents() {
   return list(data);
 }
 
+export async function getEvent(id) {
+  const { data } = await api.get(`/social/events/${id}/`);
+  return data;
+}
+
 export async function createEvent(payload) {
   const { data } = await api.post("/social/events/", payload);
   return data;
@@ -73,6 +78,13 @@ export async function createEvent(payload) {
 
 export async function updateEvent(id, payload) {
   const { data } = await api.patch(`/social/events/${id}/`, payload);
+  return data;
+}
+
+export async function uploadEventFlyer(id, file) {
+  const form = new FormData();
+  form.append("flyer_image", file);
+  const { data } = await api.patch(`/social/events/${id}/`, form);
   return data;
 }
 
