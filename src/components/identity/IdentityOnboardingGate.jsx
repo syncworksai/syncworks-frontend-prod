@@ -11,7 +11,7 @@ import {
   resolveCurrentLocation,
 } from "../../api/identity";
 
-const SKIP_PATHS = ["/login", "/register", "/employee/invite", "/accept-invite", "/sports/invite"];
+const SKIP_PATHS = ["/login", "/register", "/employee/invite", "/accept-invite", "/sports/invite", "/social/invite"];
 
 function Field({ label, value, onChange, placeholder = "", type = "text" }) {
   return (
