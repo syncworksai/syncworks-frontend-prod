@@ -5,7 +5,7 @@ import { deleteGroupMessage, getGroupMessages, sendGroupMessage } from "../../ap
 
 const nameOf = (row) => row?.author_detail?.display_name || row?.author_detail?.email || "Member";
 
-export default function TeamChatPanel({ groupId, userId, canManage = false, bare = false }) {
+export default function TeamChatPanel({ groupId, userId, canManage = false, bare = false, title = "Team chat", noun = "team" }) {
   const [messages, setMessages] = useState([]);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
@@ -70,7 +70,7 @@ export default function TeamChatPanel({ groupId, userId, canManage = false, bare
     <section className={shell}>
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h2 className="text-sm font-black text-white">Team chat</h2>
+          <h2 className="text-sm font-black text-white">{title}</h2>
           <p className="mt-0.5 text-[10px] text-slate-500">Visible to active members of this Social group.</p>
         </div>
         <button type="button" onClick={() => load()} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-400">
@@ -101,7 +101,7 @@ export default function TeamChatPanel({ groupId, userId, canManage = false, bare
             </div>
           );
         })}
-        {!messages.length ? <div className="rounded-xl border border-dashed border-white/10 p-4 text-center text-[10px] text-slate-500">Start the team conversation.</div> : null}
+        {!messages.length ? <div className="rounded-xl border border-dashed border-white/10 p-4 text-center text-[10px] text-slate-500">Start the {noun} conversation.</div> : null}
         <div ref={endRef} />
       </div>
 
@@ -110,7 +110,7 @@ export default function TeamChatPanel({ groupId, userId, canManage = false, bare
           value={body}
           maxLength={2000}
           onChange={(event) => setBody(event.target.value)}
-          placeholder="Message the team…"
+          placeholder={`Message the ${noun}…`}
           className="h-11 min-w-0 flex-1 rounded-xl border border-white/10 bg-black/20 px-3 text-[16px] text-white outline-none focus:border-cyan-400/40 sm:text-xs"
         />
         <button type="submit" disabled={busy || !body.trim()} className="grid h-11 w-11 place-items-center rounded-xl bg-cyan-300 text-slate-950 disabled:opacity-40">
