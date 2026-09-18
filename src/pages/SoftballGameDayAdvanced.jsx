@@ -611,12 +611,13 @@ export default function SoftballGameDayAdvanced() {
     }
   }
 
-  function openSubstitution(spot = null) {
+  function openSubstitution(spot = null, incoming = null) {
     const fallback = spot || lineup.find((row) => num(row.batting_order) === num(game?.current_batter_order)) || lineup[0];
+    const bench = incoming || benchPlayers[0] || null;
     setSubForm({
       batting_order: fallback ? String(fallback.batting_order) : "",
-      incoming_player: benchPlayers[0] ? String(benchPlayers[0].id) : "",
-      defensive_position: fallback?.defensive_position || benchPlayers[0]?.primary_position || "",
+      incoming_player: bench ? String(bench.id) : "",
+      defensive_position: bench?.primary_position || fallback?.defensive_position || "",
     });
     setSubstituteOpen(true);
   }
