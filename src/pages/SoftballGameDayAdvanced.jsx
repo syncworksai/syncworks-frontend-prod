@@ -730,10 +730,57 @@ export default function SoftballGameDayAdvanced() {
             <section className="overflow-x-auto rounded-2xl border border-white/10 bg-[#07111f] p-2">
               <div className="mb-1.5 flex items-center justify-between"><div className="text-[8px] font-black uppercase tracking-[.14em] text-slate-500">Scorebook grid</div>{canManage&&plays.length?<Button onClick={()=>run(()=>undoSoftballPlay(game.id),"Last play undone.")}><Undo2 className="mr-1 inline h-3.5 w-3.5" />Undo</Button>:null}</div>
               <table className="min-w-max border-collapse text-center text-[8px]">
-                <thead><tr><th className="sticky left-0 z-10 min-w-28 bg-[#07111f] px-2 py-1 text-left text-slate-500">PLAYER</th>{innings.map((inning)=><th key={inning} className="min-w-12 border-l border-white/5 px-1 py-1 text-slate-500">{inning}</th>)}</tr></thead>
+                <thead>
+                  <tr>
+                    <th className="sticky left-0 z-10 min-w-28 bg-[#07111f] px-2 py-1 text-left text-slate-500">PLAYER</th>
+                    {innings.map((inning)=><th key={inning} className="min-w-12 border-l border-white/5 px-1 py-1 text-slate-500">{inning}</th>)}
+                    <th className="border-l border-cyan-300/10 px-2 text-cyan-200">H/AB</th>
+                    <th className="border-l border-cyan-300/10 px-2 text-cyan-200">RBI</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  {lineup.map((spot)=><tr key={spot.id} className="border-t border-white/5"><td className="sticky left-0 z-10 max-w-28 truncate bg-[#07111f] px-2 py-1.5 text-left font-black text-white">{spot.batting_order}. {spot.player_detail?.display_name}</td>{innings.map((inning)=>{const rows=cellMap.get(`${spot.player}-${inning}`)||[];return <td key={inning} className="border-l border-white/5 px-1 py-1"><div className="flex justify-center gap-0.5">{rows.map((play)=><span key={play.id} className={cx("rounded px-1 py-0.5 font-black",["1B","2B","3B","HR"].includes(play.result)?"bg-emerald-300/15 text-emerald-100":play.result==="BB"?"bg-violet-300/15 text-violet-100":"bg-white/[.05] text-slate-300")}>{play.result}</span>)}</div></td>})}</tr>)}
-                  <tr className="border-t border-cyan-300/15"><td className="sticky left-0 z-10 bg-[#07111f] px-2 py-1 text-left font-black text-cyan-200">RUNS / HITS</td>{innings.map((inning)=>{const t=inningTotals.get(inning)||{};return <td key={inning} className="border-l border-white/5 px-1 py-1 font-black text-cyan-100">{num(t.runs)} / {num(t.hits)}</td>})}</tr>
+                  {lineup.map((spot)=>{
+                    const metrics=playerGameMetrics.get(num(spot.player))||gameBattingMetrics([]);
+                    return (
+                      <tr key={spot.id} className="border-t border-white/5">
+                        <td className="sticky left-0 z-10 max-w-28 truncate bg-[#07111f] px-2 py-1.5 text-left font-black text-white">
+                          {spot.batting_order}. {spot.player_detail?.display_name}
+                        </td>
+                        {innings.map((inning)=>{
+                          const rows=cellMap.get(String(spot.player) + "-" + inning)||[];
+                          return (
+                            <td key={inning} className="border-l border-white/5 px-1 py-1">
+                              <div className="flex justify-center gap-0.5">
+                                {rows.map((play)=>(
+                                  <span key={play.id} className={cx(
+                                    "rounded px-1 py-0.5 font-black",
+                                    ["1B","2B","3B","HR"].includes(play.result)
+                                      ? "bg-emerald-300/15 text-emerald-100"
+                                      : play.result==="BB"
+                                        ? "bg-violet-300/15 text-violet-100"
+                                        : "bg-white/[.05] text-slate-300",
+                                  )}>
+                                    {playBadge(play)}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                          );
+                        })}
+                        <td className="border-l border-cyan-300/10 px-2 font-black text-cyan-100">{metrics.hits}/{metrics.ab}</td>
+                        <td className="border-l border-cyan-300/10 px-2 font-black text-cyan-100">{metrics.rbi}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="border-t border-cyan-300/15">
+                    <td className="sticky left-0 z-10 bg-[#07111f] px-2 py-1 text-left font-black text-cyan-200">RUNS / HITS</td>
+                    {innings.map((inning)=>{
+                      const t=inningTotals.get(inning)||{};
+                      return <td key={inning} className="border-l border-white/5 px-1 py-1 font-black text-cyan-100">{num(t.runs)} / {num(t.hits)}</td>;
+                    })}
+                    <td className="border-l border-cyan-300/10 px-2 font-black text-cyan-100">{teamGameMetrics.hits}/{teamGameMetrics.ab}</td>
+                    <td className="border-l border-cyan-300/10 px-2 font-black text-cyan-100">{teamGameMetrics.rbi}</td>
+                  </tr>
                 </tbody>
               </table>
             </section>
