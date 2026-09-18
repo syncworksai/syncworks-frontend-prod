@@ -25,21 +25,21 @@ const QUICK = [
   [Utensils, "Meal", "/customer/health"],
   [Dumbbell, "Workout", "/customer/health"],
   [Weight, "Weight", "/customer/health"],
-  [CheckSquare2, "Task", "/customer/todo"],
-  [CalendarDays, "Event", "/customer/calendar"],
+  [CheckSquare2, "Task", "/customer/tasks"],
+  [CalendarDays, "Event", "/calendar"],
   [Wrench, "Request", "/customer/new-request"],
 ];
 
 const PORTAL = [
   [Wrench, "Services", "/customer/marketplace"],
-  [CalendarDays, "Calendar", "/customer/calendar"],
+  [CalendarDays, "Calendar", "/calendar"],
   [Dumbbell, "Health", "/customer/health"],
   [CircleDollarSign, "Money", "/customer/finance"],
-  [CheckSquare2, "To-Do", "/customer/todo"],
+  [CheckSquare2, "To-Do", "/customer/tasks"],
   [MessageSquare, "Inbox", "/customer/inbox"],
   [Building2, "Property", "/pm"],
-  [BriefcaseBusiness, "Business", "/business"],
-  [ShoppingBag, "Local", "/customer/deals"],
+  [BriefcaseBusiness, "Business", "/sbo"],
+  [ShoppingBag, "Local", "/customer/discover"],
   [Search, "EDGE", "/customer/edge"],
 ];
 
@@ -95,7 +95,7 @@ export default function CustomerDashboardV2() {
         <SyncUnifiedInboxCard compact />
 
         <section className="rounded-[1.6rem] border border-white/10 bg-slate-950/50 p-4 sm:p-5">
-          <button type="button" onClick={() => nav("/customer/portal")} className="flex w-full items-center justify-between gap-3 text-left">
+          <button type="button" onClick={() => nav("/customer/settings")} className="flex w-full items-center justify-between gap-3 text-left">
             <div><div className="text-[9px] font-black uppercase tracking-[.18em] text-violet-200">Personal portal</div><h2 className="mt-1 text-lg font-black text-white">All your SyncWorks tools</h2><p className="mt-1 text-xs text-slate-500">Home stays focused. Open the portal when you want the full toolbox.</p></div>
             <ChevronRight className="h-5 w-5 text-violet-200" />
           </button>
