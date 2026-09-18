@@ -74,7 +74,7 @@ export default function CalendarDailySnapshot({ compact = false, title = "Today 
   const [groupName, setGroupName] = useState("");
   const [groupUrl, setGroupUrl] = useState("");
   const [savingGroup, setSavingGroup] = useState(false);
-  const [groupNotice, setGroupNotice] = useState("");
+  const [groupNotice, setGroupNotice] = useState("");\n  const [healthCollapsed, setHealthCollapsed] = useState(() => {\n    try { return window.localStorage.getItem("syncworks_calendar_health_quick_collapsed") === "true"; }\n    catch { return false; }\n  });
 
   async function load() {
     setLoading(true);
@@ -107,7 +107,7 @@ export default function CalendarDailySnapshot({ compact = false, title = "Today 
   const healthEvents = todayEvents.filter((event) => sourceKey(event) === "HEALTH");
   const blocks = todayEvents.filter((event) => !isTask(event)).length;
 
-  function openHealth(action) {
+  function toggleHealthQuick() {\n    setHealthCollapsed((value) => {\n      const next = !value;\n      try { window.localStorage.setItem("syncworks_calendar_health_quick_collapsed", String(next)); } catch {}\n      return next;\n    });\n  }\n\n  function openHealth(action) {
     try { window.localStorage.setItem(HEALTH_ACTION_KEY, action); } catch { /* optional */ }
     window.location.assign("/customer/health");
   }
@@ -164,7 +164,7 @@ export default function CalendarDailySnapshot({ compact = false, title = "Today 
         {[[blocks, "Blocks"], [taskCount, "Tasks"], [serviceCount, "Service"], [healthEvents.length, "Health"]].map(([value, label]) => <div key={label} className="rounded-xl border border-white/[.07] bg-black/20 p-2"><div className="text-sm font-black text-white">{loading && !events.length ? "·" : value}</div><div className="text-[8px] font-black uppercase tracking-wider text-slate-600">{label}</div></div>)}
       </div>
 
-      <div className={`mt-2 grid gap-2 ${compact ? "lg:grid-cols-[minmax(0,1fr)_auto]" : "md:grid-cols-[minmax(0,1fr)_auto]"}`}>
+      <div className={`mt-2 grid gap-2 ${compact ? "grid-cols-1" : "md:grid-cols-[minmax(0,1fr)_auto]"}`}>
         <div className="rounded-xl border border-white/[.07] bg-black/20 p-2.5">
           <div className="text-[8px] font-black uppercase tracking-[.14em] text-slate-600">Next up</div>
           {nextEvent ? <>
