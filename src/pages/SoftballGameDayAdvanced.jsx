@@ -606,31 +606,121 @@ export default function SoftballGameDayAdvanced() {
 
               {canManage ? (
                 <>
-                  <div className="mt-2 grid grid-cols-5 gap-1">
-                    {RESULTS.map((row) => {
+                  <div className="mt-2 rounded-xl border border-white/10 bg-black/15 p-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <div className="text-[7px] font-black uppercase tracking-[.13em] text-slate-500">Bases before play</div>
+                        <div className="mt-0.5 text-[8px] text-slate-500">Tap occupied bases first. SyncWorks uses them for run/RBI suggestions.</div>
+                      </div>
+                      {basesLoaded ? <span className="rounded-full bg-amber-300 px-2 py-1 text-[7px] font-black text-slate-950">LOADED</span> : null}
+                    </div>
+                    <div className="mt-2 grid grid-cols-4 gap-1.5">
+                      <Toggle active={runner1} onClick={() => setRunner1(!runner1)}>1B</Toggle>
+                      <Toggle active={runner2} onClick={() => setRunner2(!runner2)}>2B</Toggle>
+                      <Toggle active={runner3} onClick={() => setRunner3(!runner3)}>3B</Toggle>
+                      <button type="button" onClick={() => { setRunner1(false); setRunner2(false); setRunner3(false); }} className="min-h-8 rounded-lg border border-white/10 px-2 text-[9px] font-black text-slate-500">Clear</button>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 grid grid-cols-4 gap-1">
+                    {QUICK_RESULT_VALUES.map((value) => RESULTS.find((row) => row.value === value)).filter(Boolean).map((row) => {
                       const blockedHr = row.value === "HR" && game.home_run_allowed === false;
-                      return <button key={row.value} type="button" disabled={blockedHr} onClick={() => chooseResult(row)} className={cx("min-h-11 rounded-xl border px-1 py-1 text-center",resultTone(row,result===row.value,blockedHr))}><b className="block text-[12px]">{row.label}</b><span className="block truncate text-[7px] opacity-70">{blockedHr ? "RULE" : row.detail}</span></button>;
+                      const active = row.value === "OUT"
+                        ? outMenuOpen || (result === "OUT" && Boolean(outChoice))
+                        : result === row.value;
+                      return (
+                        <button
+                          key={row.value}
+                          type="button"
+                          disabled={blockedHr}
+                          onClick={() => chooseResult(row)}
+                          className={cx(
+                            "min-h-12 rounded-xl border px-1 py-1 text-center",
+                            resultTone(row,active,blockedHr),
+                            row.value === "OUT" && "col-span-2",
+                          )}
+                        >
+                          <b className="block text-[12px]">{row.label}</b>
+                          <span className="block truncate text-[7px] opacity-70">
+                            {blockedHr ? "RULE" : row.value === "OUT" ? "Choose out" : row.detail}
+                          </span>
+                        </button>
+                      );
                     })}
                   </div>
 
+                  {outMenuOpen ? (
+                    <div className="mt-2 rounded-xl border border-slate-300/15 bg-slate-300/[.04] p-2">
+                      <div className="text-[8px] font-black uppercase tracking-[.12em] text-slate-400">What kind of out?</div>
+                      <div className="mt-2 grid grid-cols-3 gap-1.5">
+                        {OUT_OPTIONS.map((option) => (
+                          <button
+                            key={option.label}
+                            type="button"
+                            onClick={() => chooseOut(option)}
+                            className="min-h-10 rounded-lg border border-white/10 bg-black/20 px-2 text-[9px] font-black text-white"
+                          >
+                            <span className="block text-[11px]">{option.label}</span>
+                            <span className="text-[7px] font-medium text-slate-500">{option.detail}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mt-2 text-[8px] text-cyan-200">
+                        Any out that reaches 3 total outs automatically starts the next inning.
+                      </div>
+                    </div>
+                  ) : null}
+
                   {selected ? (
                     <div className="mt-2 rounded-xl border border-white/10 bg-black/20 p-2">
-                      <div className="grid grid-cols-[1fr_auto] items-center gap-2"><div className="text-[9px]"><b className="text-white">{selected.detail}</b><span className="ml-1 text-slate-500">selected</span></div><button type="button" onClick={clearEntry} className="grid h-8 w-8 place-items-center rounded-lg border border-white/10"><RotateCcw className="h-3.5 w-3.5" /></button></div>
-                      <div className="mt-2 grid grid-cols-3 gap-1.5">
-                        <MiniStepper label="Outs" value={outsRecorded} onChange={setOutsRecorded} max={Math.max(0,3-num(game.outs))} />
+                      <div className="grid grid-cols-[1fr_auto] items-center gap-2">
+                        <div className="text-[9px]">
+                          <b className="text-white">{selectedDetail}</b>
+                          <span className="ml-1 text-slate-500">selected</span>
+                          {outsRecorded ? (
+                            <span className="ml-2 rounded-full bg-rose-300/10 px-2 py-0.5 text-[7px] font-black text-rose-100">
+                              +{outsRecorded} OUT{outsRecorded === 1 ? "" : "S"}
+                            </span>
+                          ) : null}
+                        </div>
+                        <button type="button" onClick={() => clearEntry({ keepBases: true })} className="grid h-8 w-8 place-items-center rounded-lg border border-white/10">
+                          <RotateCcw className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+
+                      {(smartSuggestion.runs > 0 || smartSuggestion.rbi > 0) ? (
+                        <div className="mt-2 rounded-lg border border-cyan-300/20 bg-cyan-300/[.07] p-2 text-[8px] leading-4 text-cyan-100">
+                          Smart start: <b>{smartSuggestion.runs} run{smartSuggestion.runs === 1 ? "" : "s"}</b> / <b>{smartSuggestion.rbi} RBI</b> from the current base state. Use +/− if the actual play differed.
+                        </div>
+                      ) : null}
+
+                      <div className="mt-2 grid grid-cols-2 gap-1.5">
                         <MiniStepper label="RBI" value={rbi} onChange={setRbi} max={4} />
                         <MiniStepper label="Runs" value={runs} onChange={setRuns} max={4} />
                       </div>
+
                       <details className="mt-2 rounded-lg border border-white/10 bg-white/[.02] p-2">
                         <summary className="cursor-pointer text-[8px] font-black uppercase tracking-wide text-slate-500">More play detail</summary>
                         <div className="mt-2 space-y-2">
-                          <div className="grid grid-cols-3 gap-1"><Toggle active={runner1} onClick={() => setRunner1(!runner1)}>Runner 1B</Toggle><Toggle active={runner2} onClick={() => setRunner2(!runner2)}>Runner 2B</Toggle><Toggle active={runner3} onClick={() => setRunner3(!runner3)}>Runner 3B</Toggle></div>
+                          {outsRecorded ? <MiniStepper label="Outs on play" value={outsRecorded} onChange={setOutsRecorded} max={Math.max(0,3-num(game.outs))} /> : null}
                           <MiniStepper label="Runners advanced" value={runnersAdvanced} onChange={setRunnersAdvanced} max={3} />
                           {["OUT","FC","SF"].includes(result) ? <Toggle active={result==="SF"||productiveOut} onClick={() => result!=="SF"&&setProductiveOut(!productiveOut)}>Productive out</Toggle> : null}
-                          {!["BB","K"].includes(result) ? <><div className="grid grid-cols-4 gap-1">{BATTED_BALLS.map(([value,label])=><Toggle key={value} active={battedBallType===value} onClick={()=>setBattedBallType(battedBallType===value?"":value)}>{label}</Toggle>)}</div><div className="grid grid-cols-2 gap-1 sm:grid-cols-5">{SPRAY_ZONES.map(([value,label])=><Toggle key={value} active={sprayZone===value} onClick={()=>setSprayZone(sprayZone===value?"":value)}>{label}</Toggle>)}</div></> : null}
+                          {!["BB","K"].includes(result) ? (
+                            <>
+                              <div className="grid grid-cols-4 gap-1">
+                                {BATTED_BALLS.map(([value,label])=><Toggle key={value} active={battedBallType===value} onClick={()=>setBattedBallType(battedBallType===value?"":value)}>{label}</Toggle>)}
+                              </div>
+                              <div className="grid grid-cols-2 gap-1 sm:grid-cols-5">
+                                {SPRAY_ZONES.map(([value,label])=><Toggle key={value} active={sprayZone===value} onClick={()=>setSprayZone(sprayZone===value?"":value)}>{label}</Toggle>)}
+                              </div>
+                            </>
+                          ) : null}
                         </div>
                       </details>
-                      <Button primary className="mt-2 w-full" disabled={busy} onClick={recordPlay}>Record {selected.label}</Button>
+
+                      <Button primary className="mt-2 w-full" disabled={busy} onClick={recordPlay}>
+                        Record {outChoice?.label || selected.label}
+                      </Button>
                     </div>
                   ) : null}
                 </>
