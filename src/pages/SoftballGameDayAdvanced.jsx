@@ -988,8 +988,11 @@ export default function SoftballGameDayAdvanced() {
                     const metrics=playerGameMetrics.get(num(spot.player))||gameBattingMetrics([]);
                     return (
                       <tr key={spot.id} className="border-t border-white/5">
-                        <td className="sticky left-0 z-10 max-w-28 truncate bg-[#07111f] px-2 py-1.5 text-left font-black text-white">
-                          {spot.batting_order}. {spot.player_detail?.display_name}
+                        <td className="sticky left-0 z-10 max-w-28 bg-[#07111f] px-2 py-1.5 text-left font-black text-white">
+                          <button type="button" onClick={()=>openPlayerCard(spot.player)} className="flex max-w-28 items-center gap-1 text-left">
+                            <span className="truncate">{spot.batting_order}. {spot.player_detail?.display_name}</span>
+                            <UserRound className="h-3 w-3 shrink-0 text-cyan-300/70"/>
+                          </button>
                         </td>
                         {innings.map((inning)=>{
                           const rows=cellMap.get(String(spot.player) + "-" + inning)||[];
@@ -1012,7 +1015,11 @@ export default function SoftballGameDayAdvanced() {
                                     )}
                                     title={canManage ? "Tap to correct this scorebook entry" : undefined}
                                   >
-                                    {playBadge(play)}
+                                    <span className="flex items-center justify-center gap-0.5">
+                                      <span>{playBadge(play)}</span>
+                                      {num(play.outs_recorded)>0?<span className="text-[6px] text-rose-200">+{num(play.outs_recorded)}O</span>:null}
+                                      {canManage?<Edit3 className="h-2.5 w-2.5 opacity-55"/>:null}
+                                    </span>
                                   </button>
                                 ))}
                               </div>
