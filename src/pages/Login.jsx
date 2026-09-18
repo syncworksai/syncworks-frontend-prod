@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
 const ROLE_OPTIONS = [
@@ -57,6 +57,11 @@ const PLATFORM_GROUPS = [
   ["Grow the business", "Social content drafts, channel connections, lead capture, conversations, campaign queues, and safe automation."],
   ["Coordinate personal life", "Personal schedule, service requests, health and fitness tools, money views, reminders, and SYNC assistance."],
 ];
+
+function safeReturnPath(value, fallback = "/customer") {
+  const path = String(value || "").trim();
+  return path.startsWith("/") && !path.startsWith("//") ? path : fallback;
+}
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -120,8 +125,11 @@ function LoginPanel({ emailOrUser, setEmailOrUser, password, setPassword, err, l
 
 export default function Login() {
   const nav = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = safeReturnPath(searchParams.get("next"));
+  const invitedEmail = String(searchParams.get("email") || "").trim().toLowerCase();
   const { login, user } = useAuth();
-  const [emailOrUser, setEmailOrUser] = useState("");
+  const [emailOrUser, setEmailOrUser] = useState(invitedEmail);
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
@@ -129,8 +137,8 @@ export default function Login() {
   const [activeRole, setActiveRole] = useState(ROLE_OPTIONS[0].id);
 
   useEffect(() => {
-    if (user) nav("/customer", { replace: true });
-  }, [user, nav]);
+    if (user) nav(returnTo, { replace: true });
+  }, [user, nav, returnTo]);
 
   useEffect(() => {
     if (!signInOpen) return undefined;
@@ -149,7 +157,7 @@ export default function Login() {
       const value = emailOrUser.trim();
       const isEmail = value.includes("@");
       await login({ email: isEmail ? value : "", username: isEmail ? "" : value, password });
-      nav("/customer", { replace: true });
+      nav(returnTo, { replace: true });
     } catch (ex) {
       const rawMessage = ex?.response?.data?.detail || ex?.response?.data?.non_field_errors?.[0] || ex?.message || "Login failed";
       const networkMessage = /network error|failed to fetch|err_failed/i.test(String(rawMessage));
