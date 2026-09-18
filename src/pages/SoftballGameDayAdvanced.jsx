@@ -754,9 +754,22 @@ export default function SoftballGameDayAdvanced() {
         <section className="rounded-2xl border border-cyan-300/15 bg-[#07111f] p-2.5">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
             <div className="text-center"><div className="truncate text-[8px] font-black uppercase text-cyan-300">{game.team_name}</div><div className="text-3xl font-black text-white">{game.runs_for}</div></div>
-            <div className="rounded-xl border border-white/10 bg-black/20 px-2 py-1.5 text-center"><div className="text-[7px] text-slate-500">INN</div><b className="text-sm">{game.current_inning}</b><div className="mt-1 flex gap-0.5">{[0,1,2].map((i)=><span key={i} className={cx("h-2 w-2 rounded-full border",i<num(game.outs)?"border-rose-300 bg-rose-300":"border-white/20")} />)}</div></div>
+            <div className="min-w-[7.5rem] rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-center">
+              <div className="text-[7px] font-black uppercase tracking-[.14em] text-slate-500">Inning {game.current_inning}</div>
+              <div className="mt-1 text-base font-black text-white">{num(game.outs)} OUT{num(game.outs)===1?"":"S"}</div>
+              <div className="mt-1.5 flex justify-center gap-1.5">{[0,1,2].map((i)=><span key={i} className={cx("h-3 w-3 rounded-full border",i<num(game.outs)?"border-rose-200 bg-rose-300":"border-white/20 bg-white/[.02]")} />)}</div>
+            </div>
             <div className="text-center"><div className="truncate text-[8px] font-black uppercase text-slate-400">{game.opponent_name}</div><div className="text-3xl font-black text-white">{game.runs_against}</div></div>
           </div>
+          {live ? <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-2 rounded-xl border border-white/8 bg-black/15 px-2.5 py-2">
+            <div>
+              <div className="text-[7px] font-black uppercase tracking-wide text-slate-500">Live situation</div>
+              <div className="mt-0.5 text-[9px] font-black text-white">Inning {game.current_inning} · {num(game.outs)} out{num(game.outs)===1?"":"s"} · Batter #{game.current_batter_order}</div>
+            </div>
+            <div className="grid grid-cols-3 gap-1">
+              {[["1B",runner1],["2B",runner2],["3B",runner3]].map(([label,on])=><span key={label} className={cx("grid h-8 w-8 place-items-center rounded-lg border text-[7px] font-black",on?"border-amber-200/40 bg-amber-300/20 text-amber-100":"border-white/10 text-slate-600")}>{label}</span>)}
+            </div>
+          </div> : null}
         </section>
 
         <section className="grid grid-cols-5 gap-1.5">
@@ -802,8 +815,23 @@ export default function SoftballGameDayAdvanced() {
           <>
             <section className="rounded-2xl border border-cyan-300/20 bg-[#07111f] p-2.5">
               <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0"><div className="text-[7px] font-black uppercase tracking-[.14em] text-cyan-300">At bat</div><div className="truncate text-base font-black text-white">#{currentBatter?.jersey_number || "—"} {currentBatter?.display_name || "Current batter"}</div><div className="mt-0.5 text-[8px] text-slate-500">Game: {currentBatterMetrics.hits}-{currentBatterMetrics.ab} · {currentBatterMetrics.rbi} RBI · {currentBatterMetrics.avg.toFixed(3)} AVG</div></div>
-                <div className="text-right text-[8px] text-slate-500">Order #{game.current_batter_order}<br />{currentBatter?.primary_position || "—"}</div>
+                <button type="button" onClick={()=>openPlayerCard(currentBatter?.id)} className="min-w-0 text-left">
+                  <div className="text-[7px] font-black uppercase tracking-[.14em] text-cyan-300">At bat · tap player card</div>
+                  <div className="truncate text-base font-black text-white">#{currentBatter?.jersey_number || "—"} {currentBatter?.display_name || "Current batter"}</div>
+                  <div className="mt-0.5 text-[8px] text-slate-500">Game: {currentBatterMetrics.hits}-{currentBatterMetrics.ab} · {currentBatterMetrics.rbi} RBI · {currentBatterMetrics.avg.toFixed(3)} AVG</div>
+                </button>
+                <div className="text-right"><div className="text-[8px] text-slate-500">Order #{game.current_batter_order}<br />{currentBatter?.primary_position || "—"}</div><UserRound className="ml-auto mt-1 h-4 w-4 text-cyan-300"/></div>
+              </div>
+
+              <div className="mt-2 grid gap-2 lg:grid-cols-[1.2fr_.8fr]">
+                <HitterTendencyFan card={hitterCard} compact />
+                <div className="rounded-xl border border-violet-300/15 bg-violet-300/[.035] p-2">
+                  <div className="text-[7px] font-black uppercase tracking-wide text-violet-300">Prior result mix</div>
+                  <div className="mt-1.5 grid grid-cols-3 gap-1">
+                    {list(hitterCard?.tendencies?.results).slice(0,6).map((row)=><div key={row.result} className="rounded-lg border border-white/8 bg-black/15 px-1.5 py-1 text-center"><div className="text-[8px] font-black text-white">{row.result}</div><div className="text-[7px] text-slate-500">{Math.round(num(row.pct)*100)}%</div></div>)}
+                  </div>
+                  {!list(hitterCard?.tendencies?.results).length?<div className="mt-2 text-[8px] text-slate-600">No prior PA history yet.</div>:null}
+                </div>
               </div>
 
               {canManage ? (
