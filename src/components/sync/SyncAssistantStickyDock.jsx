@@ -65,19 +65,19 @@ function MiniOrb({ active, label, children, onClick, accent = "cyan" }) {
   );
 }
 
-export default function SyncAssistantStickyDock({ displayName = "" }) {
+export default function SyncAssistantStickyDock({ displayName = "", defaultMinimized = false }) {
   const navigate = useNavigate();
   const audioRef = useRef(null);
   const objectUrlRef = useRef("");
   const recognitionRef = useRef(null);
   const mountedRef = useRef(true);
   const [state, setState] = useState("idle");
-  const [minimized, setMinimized] = useState(false);
+  const [minimized, setMinimized] = useState(() => {\n    if (typeof window === "undefined") return defaultMinimized;\n    const saved = window.localStorage.getItem("sync-assistant-dock-minimized");\n    return saved == null ? defaultMinimized : saved === "true";\n  });
   const [notice, setNotice] = useState("Tap SYNC to hear what matters now.");
   const [voiceConfigured, setVoiceConfigured] = useState(null);
   const [usingFallback, setUsingFallback] = useState(false);
 
-  const cleanupAudio = useCallback(() => {
+  useEffect(() => {\n    try { window.localStorage.setItem("sync-assistant-dock-minimized", String(minimized)); } catch {}\n  }, [minimized]);\n\n  const cleanupAudio = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
