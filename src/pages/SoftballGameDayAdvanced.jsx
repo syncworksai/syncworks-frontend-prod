@@ -863,6 +863,46 @@ export default function SoftballGameDayAdvanced() {
           </>
         ) : null}
 
+        {editingPlay ? (
+          <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/70 px-3 pb-4 pt-20 sm:items-center">
+            <div className="w-full max-w-md rounded-[1.6rem] border border-cyan-300/20 bg-[#07111f] p-4 shadow-2xl">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[8px] font-black uppercase tracking-[.15em] text-cyan-300">Correct scorebook entry</div>
+                  <div className="mt-1 text-base font-black text-white">{editingPlay.player_name}</div>
+                  <div className="text-[8px] text-slate-500">Save rebuilds the inning totals and live game stats from the corrected book.</div>
+                </div>
+                <button type="button" onClick={() => setEditingPlay(null)} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-400">×</button>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <label className="text-[8px] font-black uppercase text-slate-500">Inning
+                  <input type="number" min="1" value={editForm.inning} onChange={(e)=>setEditForm({...editForm,inning:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] font-black text-white sm:text-xs" />
+                </label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Result
+                  <select value={editForm.result} onChange={(e)=>setEditForm({...editForm,result:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs font-black text-white">
+                    {RESULTS.map((row)=><option key={row.value} value={row.value}>{row.label} · {row.detail}</option>)}
+                  </select>
+                </label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Outs on play
+                  <input type="number" min="0" max="3" value={editForm.outs_recorded} onChange={(e)=>setEditForm({...editForm,outs_recorded:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] font-black text-white sm:text-xs" />
+                </label>
+                <label className="text-[8px] font-black uppercase text-slate-500">RBI
+                  <input type="number" min="0" max="4" value={editForm.rbi} onChange={(e)=>setEditForm({...editForm,rbi:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] font-black text-white sm:text-xs" />
+                </label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Runs
+                  <input type="number" min="0" max="4" value={editForm.runs_scored} onChange={(e)=>setEditForm({...editForm,runs_scored:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] font-black text-white sm:text-xs" />
+                </label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Note
+                  <input value={editForm.notes} onChange={(e)=>setEditForm({...editForm,notes:e.target.value})} placeholder="Optional" className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] text-white sm:text-xs" />
+                </label>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Button onClick={() => setEditingPlay(null)}>Cancel</Button>
+                <Button primary disabled={busy} onClick={savePlayCorrection}>{busy ? "Saving…" : "Save correction"}</Button>
+              </div>
+            </div>
+          </div>
+        ) : null}
         {final ? <section className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[.04] p-4 text-center"><Trophy className="mx-auto h-6 w-6 text-emerald-300"/><div className="mt-1 text-lg font-black">{game.team_name} {game.runs_for}–{game.runs_against} {game.opponent_name}</div><Button className="mt-3" onClick={()=>navigate(`/connect/groups/${groupId}/sports`)}>Back to team</Button></section> : null}
       </main>
     </div>
