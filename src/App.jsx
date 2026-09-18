@@ -67,6 +67,7 @@ import SportsCommissionerDashboard from "./pages/SportsCommissionerDashboard";
 import SportsInviteLanding from "./pages/SportsInviteLanding";
 import SportsTeamInviteLanding from "./pages/SportsTeamInviteLanding";
 import SocialGroupInviteLanding from "./pages/SocialGroupInviteLanding";
+import SocialEventDetail from "./pages/SocialEventDetail";
 import Household from "./pages/Household";
 import UserProfile from "./pages/UserProfile";
 import IdentitySettings from "./pages/IdentitySettings";
@@ -194,6 +195,7 @@ export default function App() {
         <Route path="/upgrade" element={<ProtectedRoute><Upgrade /></ProtectedRoute>} />
         <Route path="/connect" element={<ProtectedRoute><ConnectSportsBridge /></ProtectedRoute>} />
         <Route path="/connect/sports" element={<ProtectedRoute><SportsHub /></ProtectedRoute>} />
+        <Route path="/connect/events/:eventId" element={<ProtectedRoute><SocialEventDetail /></ProtectedRoute>} />
         <Route path="/connect/sports/commissioner" element={<ProtectedRoute><SportsCommissionerDashboard /></ProtectedRoute>} />
         <Route path="/connect/sports/commissioner/:organizationId" element={<ProtectedRoute><SportsCommissionerDashboard /></ProtectedRoute>} />
         <Route path="/connect/groups/:groupId/sports" element={<ProtectedRoute><SportsTeamDashboard /></ProtectedRoute>} />
