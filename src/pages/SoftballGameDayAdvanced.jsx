@@ -1045,6 +1045,34 @@ export default function SoftballGameDayAdvanced() {
               </table>
             </section>
 
+            <section className="rounded-2xl border border-violet-300/15 bg-[#07111f] p-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <div className="text-[8px] font-black uppercase tracking-[.14em] text-violet-300">Bench / subs</div>
+                  <div className="mt-0.5 text-[8px] text-slate-500">{benchPlayers.length} available · {substitutions.length} substitution{substitutions.length===1?"":"s"} recorded</div>
+                </div>
+                {canManage&&live&&benchPlayers.length?<Button onClick={()=>openSubstitution()}>Substitute</Button>:null}
+              </div>
+              <div className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+                {benchPlayers.map((player)=>(
+                  <div key={player.id} className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[.025] p-2">
+                    <button type="button" onClick={()=>openPlayerCard(player.id)} className="min-w-0 text-left">
+                      <b className="block truncate text-[10px] text-white">#{player.jersey_number||"—"} {player.display_name}</b>
+                      <span className="text-[8px] text-slate-500">{player.primary_position||"Utility"} · SUB</span>
+                    </button>
+                    {canManage&&live?<button type="button" onClick={()=>openSubstitution(null,player)} className="shrink-0 rounded-lg border border-violet-300/20 bg-violet-300/[.06] px-2 py-1 text-[8px] font-black text-violet-100">SUB IN</button>:null}
+                  </div>
+                ))}
+                {!benchPlayers.length?<div className="rounded-xl border border-dashed border-white/10 p-3 text-center text-[9px] text-slate-600 sm:col-span-2 lg:col-span-3">No available bench players. Anyone removed from the live lineup returns here as a sub option.</div>:null}
+              </div>
+              {substitutions.length?<div className="mt-2 rounded-xl border border-white/8 bg-black/15 p-2">
+                <div className="text-[7px] font-black uppercase tracking-wide text-slate-600">Substitution log</div>
+                <div className="mt-1 space-y-1">
+                  {substitutions.slice().reverse().slice(0,6).map((sub)=><div key={sub.id} className="text-[8px] text-slate-400"><b className="text-violet-200">Inn {sub.inning}</b> · {sub.incoming_player_detail?.display_name} for {sub.outgoing_player_detail?.display_name} · slot {sub.batting_order}{sub.defensive_position ? " · " + sub.defensive_position : ""}</div>)}
+                </div>
+              </div>:null}
+            </section>
+
             <div className="grid gap-2 lg:grid-cols-[1.15fr_.85fr]">
               <div className="space-y-2">
                 <SoftballDefenseField lineup={lineup} compact />
