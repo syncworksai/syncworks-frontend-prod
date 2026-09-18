@@ -41,6 +41,7 @@ import {
   createStatLedgerEntry,
   createTeamFee,
   ensureTeamPaymentSettings,
+  getAdvancedTeamStats,
   getFeeAssignments,
   getPlayerProfiles,
   getScopedTeamStats,
@@ -173,6 +174,7 @@ export default function SportsTeamManagerDashboard() {
   const [assignments, setAssignments] = useState([]);
   const [statsScope, setStatsScope] = useState("ALL");
   const [scopedStats, setScopedStats] = useState([]);
+  const [advancedAnalytics, setAdvancedAnalytics] = useState(null);
   const [previewPlayerView, setPreviewPlayerView] = useState(false);
   const [eventResponses, setEventResponses] = useState([]);
   const [chatOpen, setChatOpen] = useState(false);
@@ -308,6 +310,11 @@ export default function SportsTeamManagerDashboard() {
     if (!team) return;
     getScopedTeamStats(team.id, statsScope).then((data) => setScopedStats(list(data?.rows))).catch(() => {});
   }, [team, statsScope]);
+
+  useEffect(() => {
+    if (!team) return;
+    getAdvancedTeamStats(team.id).then(setAdvancedAnalytics).catch(() => setAdvancedAnalytics(null));
+  }, [team?.id]);
 
   async function run(fn, message, { closePlayer = false } = {}) {
     setBusy(true); setError(""); setNotice("");
@@ -938,7 +945,25 @@ export default function SportsTeamManagerDashboard() {
           {managerView ? <Card title="Add game" body="Manual additions use the same calendar sync."><div className="grid grid-cols-2 gap-2"><Select label="Type" value={gameForm.game_type} onChange={(value) => setGameForm((v) => ({ ...v, game_type: value }))}><option value="LEAGUE">League</option><option value="TOURNAMENT">Tournament</option><option value="PRACTICE">Practice</option><option value="EXHIBITION">Exhibition</option></Select><Select label="Home/Away" value={gameForm.home_away} onChange={(value) => setGameForm((v) => ({ ...v, home_away: value }))}><option value="HOME">Home</option><option value="AWAY">Away</option><option value="NEUTRAL">Neutral</option></Select><Input label="Opponent" value={gameForm.opponent_name} onChange={(value) => setGameForm((v) => ({ ...v, opponent_name: value }))} className="col-span-2" /><Input label="Date" type="date" value={gameForm.date} onChange={(value) => setGameForm((v) => ({ ...v, date: value }))} /><Input label="Time" type="time" value={gameForm.time} onChange={(value) => setGameForm((v) => ({ ...v, time: value }))} /><Input label="Venue / field" value={gameForm.venue_name} onChange={(value) => setGameForm((v) => ({ ...v, venue_name: value }))} className="col-span-2" /><Input label="Address" value={gameForm.address_line1} onChange={(value) => setGameForm((v) => ({ ...v, address_line1: value }))} className="col-span-2" /><Input label="City" value={gameForm.city} onChange={(value) => setGameForm((v) => ({ ...v, city: value }))} /><Input label="State" value={gameForm.state} onChange={(value) => setGameForm((v) => ({ ...v, state: value }))} /></div><Btn primary className="mt-2 w-full" onClick={addGame} disabled={!gameForm.opponent_name.trim() || !gameForm.date || busy}><Plus className="mr-1 inline h-4 w-4" />Add game</Btn></Card> : <Card title="Tournament week" body="League or tournament games will appear here once published by a manager or association."><div className="text-xs text-slate-400">Your Fall 2026 league sheet lists tournament week beginning October 27.</div></Card>}
         </div> : null}
 
-        {tab === "Stats" ? <InteractiveStatsBoard rows={scopedStats} scope={statsScope} onScope={setStatsScope} managerView={managerView} onAdd={() => setStatDrawer(true)} /> : null}
+        {tab === "Stats" ? <div className="space-y-3">
+          {advancedAnalytics?.inning_analytics ? <Card title="Team scoring pace" body="Live Game Book data rolled into team averages by game and inning." action={<Trophy className="h-4 w-4 text-amber-300" />}>
+            <div className="grid grid-cols-2 gap-2">
+              <Stat label="Avg runs / game" value={num(advancedAnalytics.inning_analytics.avg_runs_per_game).toFixed(2)} sub={`${num(advancedAnalytics.inning_analytics.runs)} total runs`} />
+              <Stat label="Avg hits / game" value={num(advancedAnalytics.inning_analytics.avg_hits_per_game).toFixed(2)} sub={`${num(advancedAnalytics.inning_analytics.hits)} total hits`} />
+            </div>
+            <div className="mt-3 overflow-x-auto">
+              <div className="flex min-w-max gap-1.5">
+                {list(advancedAnalytics.inning_analytics.innings).map((row) => <div key={row.inning} className="w-[5.3rem] rounded-xl border border-white/10 bg-black/15 p-2 text-center">
+                  <div className="text-[8px] font-black uppercase text-cyan-300">Inn {row.inning}</div>
+                  <div className="mt-1 text-[10px] font-black text-white">{num(row.avg_runs).toFixed(2)} R</div>
+                  <div className="text-[9px] text-slate-500">{num(row.avg_hits).toFixed(2)} H</div>
+                </div>)}
+                {!list(advancedAnalytics.inning_analytics.innings).length ? <div className="rounded-xl border border-dashed border-white/10 px-4 py-3 text-[10px] text-slate-500">Inning averages appear after Game Book data is recorded.</div> : null}
+              </div>
+            </div>
+          </Card> : null}
+          <InteractiveStatsBoard rows={scopedStats} scope={statsScope} onScope={setStatsScope} managerView={managerView} onAdd={() => setStatDrawer(true)} />
+        </div> : null}
 
         {tab === "Dues" ? <div className="grid gap-3 lg:grid-cols-[1.2fr_.8fr]">
           <Card
