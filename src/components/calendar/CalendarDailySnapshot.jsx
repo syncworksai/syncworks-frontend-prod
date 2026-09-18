@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
+  ChevronDown,
+  ChevronUp,
   Dumbbell,
   ExternalLink,
   HeartPulse,
@@ -74,7 +76,11 @@ export default function CalendarDailySnapshot({ compact = false, title = "Today 
   const [groupName, setGroupName] = useState("");
   const [groupUrl, setGroupUrl] = useState("");
   const [savingGroup, setSavingGroup] = useState(false);
-  const [groupNotice, setGroupNotice] = useState("");\n  const [healthCollapsed, setHealthCollapsed] = useState(() => {\n    try { return window.localStorage.getItem("syncworks_calendar_health_quick_collapsed") === "true"; }\n    catch { return false; }\n  });
+  const [groupNotice, setGroupNotice] = useState("");
+  const [healthCollapsed, setHealthCollapsed] = useState(() => {
+    try { return window.localStorage.getItem("syncworks_calendar_health_quick_collapsed") === "true"; }
+    catch { return false; }
+  });
 
   async function load() {
     setLoading(true);
@@ -107,7 +113,15 @@ export default function CalendarDailySnapshot({ compact = false, title = "Today 
   const healthEvents = todayEvents.filter((event) => sourceKey(event) === "HEALTH");
   const blocks = todayEvents.filter((event) => !isTask(event)).length;
 
-  function toggleHealthQuick() {\n    setHealthCollapsed((value) => {\n      const next = !value;\n      try { window.localStorage.setItem("syncworks_calendar_health_quick_collapsed", String(next)); } catch {}\n      return next;\n    });\n  }\n\n  function openHealth(action) {
+  function toggleHealthQuick() {
+    setHealthCollapsed((value) => {
+      const next = !value;
+      try { window.localStorage.setItem("syncworks_calendar_health_quick_collapsed", String(next)); } catch {}
+      return next;
+    });
+  }
+
+  function openHealth(action) {
     try { window.localStorage.setItem(HEALTH_ACTION_KEY, action); } catch { /* optional */ }
     window.location.assign("/customer/health");
   }
@@ -179,14 +193,19 @@ export default function CalendarDailySnapshot({ compact = false, title = "Today 
         </div>
 
         <div className="rounded-xl border border-emerald-400/15 bg-emerald-500/[.045] p-2.5">
-          <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[.14em] text-emerald-200"><HeartPulse className="h-3 w-3" />Health quick</div>
-          <div className="mt-2 flex max-w-full flex-wrap gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[.14em] text-emerald-200"><HeartPulse className="h-3 w-3" />Health quick</div>
+            <button type="button" onClick={toggleHealthQuick} className="grid h-7 w-7 place-items-center rounded-lg border border-emerald-300/15 text-emerald-200" aria-label={healthCollapsed ? "Expand health quick actions" : "Minimize health quick actions"}>
+              {healthCollapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+          {!healthCollapsed ? <div className="mt-2 flex max-w-full flex-wrap gap-1.5">
             {healthEvents.length ? <MiniAction href="/customer/health" tone="emerald"><Dumbbell className="h-3 w-3" />Workout</MiniAction> : <MiniAction onClick={() => openHealth("plan-today")} tone="emerald"><Dumbbell className="h-3 w-3" />Need workout</MiniAction>}
             <MiniAction onClick={() => openHealth("coach-chat")} tone="violet"><Sparkles className="h-3 w-3" />AI</MiniAction>
             <MiniAction onClick={() => openHealth("weight")}><Scale className="h-3 w-3" />Weigh</MiniAction>
             <MiniAction onClick={() => openHealth("progress")}><Ruler className="h-3 w-3" />Measure</MiniAction>
             <MiniAction href="/calendar" tone="cyan"><ListTodo className="h-3 w-3" />Plan day</MiniAction>
-          </div>
+          </div> : <div className="mt-1 text-[9px] text-slate-500">Health actions minimized.</div>}
         </div>
       </div>
 
