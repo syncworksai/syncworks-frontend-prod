@@ -214,6 +214,117 @@ function resultTone(row, active, disabled) {
   return "border-white/10 bg-white/[.035] text-slate-200";
 }
 
+
+function statRate(value) {
+  return num(value).toFixed(3).replace(/^0(?=\.)/, "");
+}
+
+function HitterTendencyFan({ card, compact = false }) {
+  const zones = list(card?.tendencies?.spray_field);
+  const sample = num(card?.tendencies?.spray_total);
+  if (!card) {
+    return <div className="rounded-xl border border-white/10 bg-black/15 p-3 text-center text-[9px] text-slate-600">Loading hitter history…</div>;
+  }
+  if (!sample) {
+    return <div className="rounded-xl border border-dashed border-white/10 bg-black/10 p-3 text-center text-[9px] text-slate-500">No spray-chart data yet. Record spray zones on batted balls and the percentages will build automatically.</div>;
+  }
+  const labels = { LEFT:"LF", LEFT_CENTER:"LC", CENTER:"CF", RIGHT_CENTER:"RC", RIGHT:"RF" };
+  const maxPct = Math.max(...zones.map((row)=>num(row.pct)), 0.01);
+  return (
+    <div className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.035] p-2">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <div className="text-[7px] font-black uppercase tracking-[.13em] text-emerald-300">Historical spray tendency</div>
+          <div className="mt-0.5 text-[8px] text-slate-500">{sample} tracked batted ball{sample===1?"":"s"} · descriptive, not a prediction</div>
+        </div>
+        <div className="text-[8px] font-black text-slate-400">{num(card?.tendencies?.sample_size)} PA</div>
+      </div>
+      <div className={cx("mt-2 grid grid-cols-5 items-end gap-1 rounded-t-[4rem] border border-emerald-200/10 bg-[#08291d] px-2 pt-3", compact ? "h-20" : "h-28")}>
+        {zones.map((row)=>(
+          <div key={row.zone} className="flex h-full min-w-0 flex-col items-center justify-end">
+            <div className="mb-1 text-[8px] font-black text-white">{Math.round(num(row.pct)*100)}%</div>
+            <div
+              className="w-full rounded-t-md bg-emerald-300/20"
+              style={{height:`${Math.max(8, Math.round((num(row.pct)/maxPct)*55))}%`}}
+            />
+            <div className="mt-1 text-[7px] font-black text-emerald-100">{labels[row.zone] || row.zone}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PlayerBackCard({ card }) {
+  if (!card) return null;
+  const overall = card.overall || {};
+  const seasons = list(card.seasons);
+  const split = (scope) => list(card.splits).find((row)=>row.scope===scope) || {};
+  return (
+    <div className="space-y-3">
+      <section className="rounded-2xl border border-cyan-300/15 bg-gradient-to-br from-cyan-300/[.08] to-violet-300/[.05] p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[8px] font-black uppercase tracking-[.14em] text-cyan-300">Player card</div>
+            <div className="mt-1 text-xl font-black text-white">#{card.player?.jersey_number || "—"} {card.player?.display_name}</div>
+            <div className="mt-1 text-[9px] text-slate-400">{card.player?.primary_position || "Position TBD"} · {card.team?.name}</div>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-center">
+            <div className="text-[7px] font-black uppercase text-slate-500">OPS</div>
+            <div className="text-xl font-black text-white">{statRate(overall.ops)}</div>
+          </div>
+        </div>
+        <div className="mt-3 grid grid-cols-5 gap-1">
+          {[["G",overall.g],["AVG",statRate(overall.avg)],["HR",overall.hr],["RBI",overall.rbi],["R",overall.runs]].map(([label,value])=>(
+            <div key={label} className="rounded-lg border border-white/10 bg-black/15 p-1.5 text-center">
+              <div className="text-[6px] font-black text-slate-500">{label}</div>
+              <div className="mt-0.5 text-[10px] font-black text-white">{value ?? 0}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <HitterTendencyFan card={card} />
+
+      <section className="rounded-xl border border-white/10 bg-black/15 p-2.5">
+        <div className="text-[8px] font-black uppercase tracking-wide text-slate-500">League vs tournament</div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {[["LEAGUE","League",split("LEAGUE")],["TOURNAMENT","Tournament",split("TOURNAMENT")]].map(([key,label,row])=>(
+            <div key={key} className="rounded-xl border border-white/10 bg-white/[.025] p-2">
+              <div className="text-[8px] font-black text-cyan-200">{label}</div>
+              <div className="mt-1 grid grid-cols-2 gap-x-2 text-[8px] text-slate-400">
+                <span>G <b className="text-white">{num(row.g)}</b></span>
+                <span>AVG <b className="text-white">{statRate(row.avg)}</b></span>
+                <span>HR <b className="text-white">{num(row.hr)}</b></span>
+                <span>RBI <b className="text-white">{num(row.rbi)}</b></span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="overflow-x-auto rounded-xl border border-white/10 bg-black/15 p-2.5">
+        <div className="mb-2 text-[8px] font-black uppercase tracking-wide text-slate-500">Year / season history</div>
+        <table className="min-w-[560px] w-full text-center text-[8px]">
+          <thead className="text-slate-600"><tr><th className="py-1 text-left">SEASON</th><th>TYPE</th><th>G</th><th>AB</th><th>H</th><th>AVG</th><th>OBP</th><th>SLG</th><th>OPS</th><th>HR</th><th>RBI</th></tr></thead>
+          <tbody>
+            {seasons.map((row,index)=>(
+              <tr key={`${row.year || "hist"}-${row.season}-${row.scope}-${index}`} className="border-t border-white/5">
+                <td className="py-1.5 text-left font-black text-white">{row.year ? `${row.year} · ` : ""}{row.season}</td>
+                <td className="text-slate-400">{row.scope}</td>
+                <td>{num(row.g)}</td><td>{num(row.ab)}</td><td>{num(row.h)}</td>
+                <td>{statRate(row.avg)}</td><td>{statRate(row.obp)}</td><td>{statRate(row.slg)}</td><td className="font-black text-cyan-100">{statRate(row.ops)}</td>
+                <td>{num(row.hr)}</td><td>{num(row.rbi)}</td>
+              </tr>
+            ))}
+            {!seasons.length ? <tr><td colSpan="11" className="py-4 text-center text-slate-600">No season history yet.</td></tr> : null}
+          </tbody>
+        </table>
+      </section>
+    </div>
+  );
+}
+
 export default function SoftballGameDayAdvanced() {
   const { groupId, gameId } = useParams();
   const navigate = useNavigate();
