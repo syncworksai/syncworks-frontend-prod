@@ -6,7 +6,6 @@ import { getIdentityProfile } from "../api/identity";
 import { useAuth } from "../auth/AuthContext";
 import CustomerDashboard from "./CustomerDashboard.jsx";
 import CustomerMobileHome from "../components/customer/CustomerMobileHome";
-import CalendarDailySnapshot from "../components/calendar/CalendarDailySnapshot";
 import SyncAssistantStickyDock from "../components/sync/SyncAssistantStickyDock";
 
 const DAY_TRADING_EMAIL = "jacoblord7@outlook.com";
@@ -98,10 +97,7 @@ export default function CustomerDashboardResponsive() {
     return (
       <div data-sw-layout="landscape">
         <CustomerDashboard />
-        <div className="fixed right-4 top-24 z-[85] hidden w-[360px] 2xl:block">
-          <CalendarDailySnapshot compact title="Today · Calendar" />
-        </div>
-        <SyncAssistantStickyDock displayName={firstName(user)} />
+        <SyncAssistantStickyDock displayName={firstName(user)} defaultMinimized />
       </div>
     );
   }

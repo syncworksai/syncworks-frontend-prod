@@ -65,17 +65,27 @@ function MiniOrb({ active, label, children, onClick, accent = "cyan" }) {
   );
 }
 
-export default function SyncAssistantStickyDock({ displayName = "" }) {
+export default function SyncAssistantStickyDock({ displayName = "", defaultMinimized = false }) {
   const navigate = useNavigate();
   const audioRef = useRef(null);
   const objectUrlRef = useRef("");
   const recognitionRef = useRef(null);
+  const briefingRef = useRef(null);
+  const briefingPromiseRef = useRef(null);
   const mountedRef = useRef(true);
   const [state, setState] = useState("idle");
-  const [minimized, setMinimized] = useState(false);
+  const [minimized, setMinimized] = useState(() => {
+    if (typeof window === "undefined") return defaultMinimized;
+    const saved = window.localStorage.getItem("sync-assistant-dock-minimized");
+    return saved == null ? defaultMinimized : saved === "true";
+  });
   const [notice, setNotice] = useState("Tap SYNC to hear what matters now.");
   const [voiceConfigured, setVoiceConfigured] = useState(null);
   const [usingFallback, setUsingFallback] = useState(false);
+
+  useEffect(() => {
+    try { window.localStorage.setItem("sync-assistant-dock-minimized", String(minimized)); } catch {}
+  }, [minimized]);
 
   const cleanupAudio = useCallback(() => {
     if (audioRef.current) {
@@ -112,7 +122,8 @@ export default function SyncAssistantStickyDock({ displayName = "" }) {
     setNotice("Reviewing your connected day…");
 
     try {
-      const payload = await getSyncRoleAwareBriefing();
+      const payload = briefingRef.current || await (briefingPromiseRef.current || getSyncRoleAwareBriefing());
+      briefingRef.current = payload;
       const text = briefingText(payload, displayName);
       setNotice("SYNC is preparing your voice briefing…");
       const blob = await synthesizeSyncSpeech(text);
@@ -142,7 +153,8 @@ export default function SyncAssistantStickyDock({ displayName = "" }) {
     } catch {
       setUsingFallback(true);
       try {
-        const payload = await getSyncRoleAwareBriefing();
+        const payload = briefingRef.current || await (briefingPromiseRef.current || getSyncRoleAwareBriefing());
+        briefingRef.current = payload;
         const text = briefingText(payload, displayName);
         const started = browserSpeak(text, {
           onStart: () => {
@@ -202,6 +214,12 @@ export default function SyncAssistantStickyDock({ displayName = "" }) {
     getSyncVoiceStatus()
       .then((value) => setVoiceConfigured(Boolean(value?.configured)))
       .catch(() => setVoiceConfigured(false));
+    briefingPromiseRef.current = getSyncRoleAwareBriefing()
+      .then((payload) => {
+        briefingRef.current = payload;
+        return payload;
+      })
+      .catch(() => null);
     const handlePlay = () => playBriefing();
     window.addEventListener("sync-assistant:play-briefing", handlePlay);
     return () => {
