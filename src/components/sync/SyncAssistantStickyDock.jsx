@@ -69,7 +69,7 @@ export default function SyncAssistantStickyDock({ displayName = "", defaultMinim
   const navigate = useNavigate();
   const audioRef = useRef(null);
   const objectUrlRef = useRef("");
-  const recognitionRef = useRef(null);
+  const recognitionRef = useRef(null);\n  const briefingRef = useRef(null);\n  const briefingPromiseRef = useRef(null);
   const mountedRef = useRef(true);
   const [state, setState] = useState("idle");
   const [minimized, setMinimized] = useState(() => {\n    if (typeof window === "undefined") return defaultMinimized;\n    const saved = window.localStorage.getItem("sync-assistant-dock-minimized");\n    return saved == null ? defaultMinimized : saved === "true";\n  });
