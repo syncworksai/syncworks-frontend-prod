@@ -122,7 +122,8 @@ export default function SyncAssistantStickyDock({ displayName = "", defaultMinim
     setNotice("Reviewing your connected day…");
 
     try {
-      const payload = await getSyncRoleAwareBriefing();
+      const payload = briefingRef.current || await (briefingPromiseRef.current || getSyncRoleAwareBriefing());
+      briefingRef.current = payload;
       const text = briefingText(payload, displayName);
       setNotice("SYNC is preparing your voice briefing…");
       const blob = await synthesizeSyncSpeech(text);
@@ -152,7 +153,8 @@ export default function SyncAssistantStickyDock({ displayName = "", defaultMinim
     } catch {
       setUsingFallback(true);
       try {
-        const payload = await getSyncRoleAwareBriefing();
+        const payload = briefingRef.current || await (briefingPromiseRef.current || getSyncRoleAwareBriefing());
+        briefingRef.current = payload;
         const text = briefingText(payload, displayName);
         const started = browserSpeak(text, {
           onStart: () => {
@@ -212,6 +214,12 @@ export default function SyncAssistantStickyDock({ displayName = "", defaultMinim
     getSyncVoiceStatus()
       .then((value) => setVoiceConfigured(Boolean(value?.configured)))
       .catch(() => setVoiceConfigured(false));
+    briefingPromiseRef.current = getSyncRoleAwareBriefing()
+      .then((payload) => {
+        briefingRef.current = payload;
+        return payload;
+      })
+      .catch(() => null);
     const handlePlay = () => playBriefing();
     window.addEventListener("sync-assistant:play-briefing", handlePlay);
     return () => {
