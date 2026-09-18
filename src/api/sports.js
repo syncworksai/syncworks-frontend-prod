@@ -132,6 +132,11 @@ export async function getPlateAppearances(game) {
   return list(data);
 }
 
+export async function correctSoftballPlay(id, payload) {
+  const { data } = await api.patch(`/sports/plate-appearances/${id}/correct/`, payload);
+  return data;
+}
+
 export async function getGameCastSettings(gameId) {
   const { data } = await api.get(`/sports/advanced/games/${gameId}/gamecast/`);
   return data;
