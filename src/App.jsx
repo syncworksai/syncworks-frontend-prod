@@ -65,6 +65,7 @@ import SoftballGameDayAdvanced from "./pages/SoftballGameDayAdvanced";
 import PublicGameCast from "./pages/PublicGameCast";
 import SportsCommissionerDashboard from "./pages/SportsCommissionerDashboard";
 import SportsInviteLanding from "./pages/SportsInviteLanding";
+import SocialGroupInviteLanding from "./pages/SocialGroupInviteLanding";
 import Household from "./pages/Household";
 import UserProfile from "./pages/UserProfile";
 import IdentitySettings from "./pages/IdentitySettings";
@@ -103,6 +104,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/gamecast/:token" element={<PublicGameCast />} />
         <Route path="/sports/invite/:token" element={<SportsInviteLanding />} />
+        <Route path="/social/invite/:token" element={<SocialGroupInviteLanding />} />
         <Route path="/employee/invite" element={<EmployeeInvite />} />
         <Route path="/accept-invite" element={<EmployeeInvite />} />
         <Route path="/platform" element={<PlatformRoute><PlatformDashboard /></PlatformRoute>} />

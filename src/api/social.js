@@ -154,3 +154,34 @@ export async function updateGroupMessage(id, body) {
 export async function deleteGroupMessage(id) {
   await api.delete(`/social/group-messages/${id}/`);
 }
+
+
+export async function createGroupInviteLink(group, role = "MEMBER") {
+  const { data } = await api.post(`/social/groups/${group}/invite-link/`, { role });
+  return data;
+}
+
+export async function previewGroupInviteLink(token) {
+  const { data } = await api.get("/social/group-invite-links/preview/", { params: { token } });
+  return data;
+}
+
+export async function requestJoinGroup(token) {
+  const { data } = await api.post("/social/group-invite-links/request-join/", { token });
+  return data;
+}
+
+export async function getGroupPaymentSettings(group) {
+  const { data } = await api.get(`/social/groups/${group}/payment-settings/`);
+  return data;
+}
+
+export async function updateGroupPaymentSettings(group, payload) {
+  const { data } = await api.patch(`/social/groups/${group}/payment-settings/`, payload);
+  return data;
+}
+
+export async function recordCollectionPayment(share, payload) {
+  const { data } = await api.post(`/social/collection-shares/${share}/record-payment/`, payload);
+  return data;
+}
