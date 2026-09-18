@@ -14,6 +14,8 @@ import {
   Share2,
   Trophy,
   Undo2,
+  Users,
+  TrendingUp,
 } from "lucide-react";
 
 import ModeBar from "../components/ModeBar";
@@ -25,6 +27,7 @@ import {
   finishSportsGame,
   getGameCastSettings,
   getPlateAppearances,
+  getPlayerCard,
   getSoftballRuleSets,
   getSportsGame,
   recordSoftballPlay,
@@ -33,6 +36,7 @@ import {
   setOpponentScore,
   updateGameInningLine,
   startSportsGame,
+  substituteSportsPlayer,
   undoSoftballPlay,
   updateDefensivePosition,
   updateGameCastSettings,
@@ -74,6 +78,7 @@ const cx = (...values) => values.filter(Boolean).join(" ");
 const list = (value) => Array.isArray(value) ? value : [];
 const num = (value) => Number(value || 0);
 const errorText = (error) => error?.response?.data?.detail || Object.values(error?.response?.data || {})?.flat?.()?.[0] || error?.message || "Something went wrong.";
+const sprayLabel = (value) => String(value || "").replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (m) => m.toUpperCase());
 
 function scoringSuggestion(result, bases, outsBefore = 0) {
   const first = Boolean(bases.first);
@@ -221,6 +226,9 @@ export default function SoftballGameDayAdvanced() {
   const [memberships, setMemberships] = useState([]);
   const [gamecast, setGamecast] = useState(null);
   const [ruleSets, setRuleSets] = useState([]);
+  const [batterCard, setBatterCard] = useState(null);
+  const [subOrder, setSubOrder] = useState("");
+  const [subPlayer, setSubPlayer] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -242,12 +250,13 @@ export default function SoftballGameDayAdvanced() {
   const [editingPlay, setEditingPlay] = useState(null);
   const [editForm, setEditForm] = useState({ inning: 1, result: "OUT", outs_recorded: 1, rbi: 0, runs_scored: 0, notes: "" });
 
-  const canManage = useMemo(() => memberships.some(
+  const membershipCanManage = useMemo(() => memberships.some(
     (membership) => Number(membership.group) === Number(groupId)
       && Number(membership.user) === userId
       && membership.status === "ACTIVE"
       && ["OWNER", "DIRECTOR", "MANAGER"].includes(membership.role),
   ), [memberships, groupId, userId]);
+  const canManage = Boolean(game?.can_manage || membershipCanManage);
 
   const lineup = useMemo(() => [...list(game?.lineup_spots)].sort((a, b) => num(a.batting_order) - num(b.batting_order)), [game]);
 
@@ -285,6 +294,16 @@ export default function SoftballGameDayAdvanced() {
   }
 
   useEffect(() => { refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [gameId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const playerId = game?.current_batter?.id;
+    if (!playerId) { setBatterCard(null); return undefined; }
+    getPlayerCard(playerId)
+      .then((data) => { if (!cancelled) setBatterCard(data); })
+      .catch(() => { if (!cancelled) setBatterCard(null); });
+    return () => { cancelled = true; };
+  }, [game?.current_batter?.id]);
 
   useEffect(() => {
     if (!game) return;
@@ -491,6 +510,22 @@ export default function SoftballGameDayAdvanced() {
     }), "Game rules updated.");
   }
 
+  async function makeSubstitution() {
+    if (!subOrder || !subPlayer || busy) return;
+    const spot = lineup.find((row) => num(row.batting_order) === num(subOrder));
+    const incoming = list(game?.bench_players).find((row) => num(row.id) === num(subPlayer));
+    if (!spot || !incoming) return;
+    const saved = await run(
+      () => substituteSportsPlayer(game.id, {
+        batting_order: num(subOrder),
+        incoming_player: num(subPlayer),
+        defensive_position: incoming.primary_position || spot.defensive_position || "",
+      }),
+      incoming.display_name + " entered for " + (spot.player_detail?.display_name || "lineup spot") + ".",
+    );
+    if (saved) { setSubOrder(""); setSubPlayer(""); }
+  }
+
   async function changeDefense(playerId, position) {
     await run(() => updateDefensivePosition(game.id, Number(playerId), position), "Defense updated.");
   }
@@ -541,13 +576,48 @@ export default function SoftballGameDayAdvanced() {
     [plays, game?.current_batter?.id],
   );
 
+  const scorebookPlayers = useMemo(() => {
+    const rows = new Map();
+    lineup.forEach((spot) => rows.set(num(spot.player), {
+      key: "live-" + spot.player,
+      player: num(spot.player),
+      batting_order: num(spot.batting_order),
+      player_detail: spot.player_detail,
+      active: true,
+      subbed_out: false,
+    }));
+    list(game?.substitutions).forEach((sub) => {
+      const outId = num(sub.outgoing_player);
+      if (!rows.has(outId)) rows.set(outId, {
+        key: "sub-" + outId,
+        player: outId,
+        batting_order: num(sub.batting_order),
+        player_detail: sub.outgoing_player_detail,
+        active: false,
+        subbed_out: true,
+      });
+    });
+    plays.forEach((play) => {
+      const id = num(play.player);
+      if (!rows.has(id)) rows.set(id, {
+        key: "played-" + id,
+        player: id,
+        batting_order: 999,
+        player_detail: { display_name: play.player_name },
+        active: false,
+        subbed_out: true,
+      });
+    });
+    return [...rows.values()].sort((a,b) => a.batting_order - b.batting_order || Number(b.active) - Number(a.active) || a.player - b.player);
+  }, [lineup, game?.substitutions, plays]);
+
   const playerGameMetrics = useMemo(() => {
     const map = new Map();
-    for (const spot of lineup) {
+    for (const spot of scorebookPlayers) {
       map.set(num(spot.player), gameBattingMetrics(plays.filter((play) => num(play.player) === num(spot.player))));
     }
     return map;
-  }, [lineup, plays]);
+  }, [scorebookPlayers, plays]);
 
   const opponentInningMap = useMemo(
     () => new Map(list(game?.inning_lines).map((row) => [num(row.inning), row])),
@@ -633,6 +703,23 @@ export default function SoftballGameDayAdvanced() {
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0"><div className="text-[7px] font-black uppercase tracking-[.14em] text-cyan-300">At bat</div><div className="truncate text-base font-black text-white">#{currentBatter?.jersey_number || "—"} {currentBatter?.display_name || "Current batter"}</div><div className="mt-0.5 text-[8px] text-slate-500">Game: {currentBatterMetrics.hits}-{currentBatterMetrics.ab} · {currentBatterMetrics.rbi} RBI · {currentBatterMetrics.avg.toFixed(3)} AVG</div></div>
                 <div className="text-right text-[8px] text-slate-500">Order #{game.current_batter_order}<br />{currentBatter?.primary_position || "—"}</div>
+              </div>
+
+              <div className="mt-2 grid grid-cols-[.7fr_1.3fr] gap-2">
+                <div className="rounded-xl border border-rose-300/20 bg-rose-300/[.04] p-2">
+                  <div className="text-[7px] font-black uppercase tracking-[.13em] text-rose-200">Outs</div>
+                  <div className="mt-1 flex items-center justify-between">
+                    <b className="text-xl text-white">{num(game.outs)} / 3</b>
+                    <div className="flex gap-1">{[0,1,2].map((i)=><span key={i} className={cx("h-3 w-3 rounded-full border",i<num(game.outs)?"border-rose-300 bg-rose-300":"border-white/20 bg-transparent")}/>)}</div>
+                  </div>
+                  <div className="mt-1 text-[7px] text-slate-500">{3-num(game.outs)} out{3-num(game.outs)===1?"":"s"} left in inning {game.current_inning}</div>
+                </div>
+                <div className="rounded-xl border border-violet-300/15 bg-violet-300/[.035] p-2">
+                  <div className="flex items-center justify-between"><div className="text-[7px] font-black uppercase tracking-[.13em] text-violet-200">Historical contact tendency</div><TrendingUp className="h-3.5 w-3.5 text-violet-300"/></div>
+                  {batterCard?.tendencies?.spray?.length ? <div className="mt-1.5 grid grid-cols-3 gap-1">
+                    {batterCard.tendencies.spray.slice(0,6).map((row)=><div key={row.zone} className="rounded-lg border border-white/8 bg-black/20 px-1.5 py-1 text-center"><div className="truncate text-[6px] uppercase text-slate-500">{sprayLabel(row.zone)}</div><b className="text-[10px] text-white">{Math.round(num(row.pct)*100)}%</b></div>)}
+                  </div> : <div className="mt-2 text-[8px] text-slate-500">No spray history yet. Record batted-ball direction to build this prediction.</div>}
+                </div>
               </div>
 
               {canManage ? (
@@ -748,7 +835,7 @@ export default function SoftballGameDayAdvanced() {
                       <details className="mt-2 rounded-lg border border-white/10 bg-white/[.02] p-2">
                         <summary className="cursor-pointer text-[8px] font-black uppercase tracking-wide text-slate-500">More play detail</summary>
                         <div className="mt-2 space-y-2">
-                          {outsRecorded ? <MiniStepper label="Outs on play" value={outsRecorded} onChange={setOutsRecorded} max={Math.max(0,3-num(game.outs))} /> : null}
+                          <MiniStepper label="Outs on play" value={outsRecorded} onChange={setOutsRecorded} max={Math.max(0,3-num(game.outs))} />
                           <MiniStepper label="Runners advanced" value={runnersAdvanced} onChange={setRunnersAdvanced} max={3} />
                           {["OUT","FC","SF"].includes(result) ? <Toggle active={result==="SF"||productiveOut} onClick={() => result!=="SF"&&setProductiveOut(!productiveOut)}>Productive out</Toggle> : null}
                           {!["BB","K"].includes(result) ? (
@@ -785,12 +872,12 @@ export default function SoftballGameDayAdvanced() {
                   </tr>
                 </thead>
                 <tbody>
-                  {lineup.map((spot)=>{
+                  {scorebookPlayers.map((spot)=>{
                     const metrics=playerGameMetrics.get(num(spot.player))||gameBattingMetrics([]);
                     return (
-                      <tr key={spot.id} className="border-t border-white/5">
+                      <tr key={spot.key || spot.id} className={cx("border-t border-white/5", spot.subbed_out && "opacity-70")}>
                         <td className="sticky left-0 z-10 max-w-28 truncate bg-[#07111f] px-2 py-1.5 text-left font-black text-white">
-                          {spot.batting_order}. {spot.player_detail?.display_name}
+                          {spot.batting_order < 999 ? spot.batting_order + ". " : ""}{spot.player_detail?.display_name}{spot.subbed_out ? <span className="ml-1 rounded bg-amber-300/10 px-1 py-0.5 text-[6px] text-amber-200">SUB OUT</span> : null}
                         </td>
                         {innings.map((inning)=>{
                           const rows=cellMap.get(String(spot.player) + "-" + inning)||[];
@@ -803,7 +890,7 @@ export default function SoftballGameDayAdvanced() {
                                     type="button"
                                     onClick={() => openPlayEditor(play)}
                                     className={cx(
-                                      "rounded px-1 py-0.5 font-black",
+                                      "min-h-7 min-w-8 rounded-md border border-white/10 px-1.5 py-1 font-black",
                                       canManage && "cursor-pointer transition hover:ring-1 hover:ring-cyan-300/40",
                                       ["1B","2B","3B","HR"].includes(play.result)
                                         ? "bg-emerald-300/15 text-emerald-100"
@@ -838,6 +925,26 @@ export default function SoftballGameDayAdvanced() {
               </table>
             </section>
 
+            {canManage ? <section className="rounded-2xl border border-violet-300/15 bg-[#07111f] p-2.5">
+              <div className="flex items-center justify-between gap-2"><div><div className="text-[8px] font-black uppercase tracking-wide text-violet-300">Bench / substitutions</div><div className="text-[8px] text-slate-500">Swap a bench player directly into a batting slot. Previous at-bats stay attached to the outgoing player.</div></div><Users className="h-4 w-4 text-violet-300"/></div>
+              <div className="mt-2 grid grid-cols-[1fr_1fr_auto] gap-1.5">
+                <select value={subOrder} onChange={(e)=>setSubOrder(e.target.value)} className="h-9 rounded-lg border border-white/10 bg-[#050b14] px-2 text-[9px] text-white">
+                  <option value="">Batting slot</option>
+                  {lineup.map((spot)=><option key={spot.batting_order} value={spot.batting_order}>{spot.batting_order}. {spot.player_detail?.display_name}</option>)}
+                </select>
+                <select value={subPlayer} onChange={(e)=>setSubPlayer(e.target.value)} className="h-9 rounded-lg border border-white/10 bg-[#050b14] px-2 text-[9px] text-white">
+                  <option value="">Bench player</option>
+                  {list(game?.bench_players).map((player)=><option key={player.id} value={player.id}>#{player.jersey_number||"—"} {player.display_name}</option>)}
+                </select>
+                <Button primary disabled={!subOrder||!subPlayer||busy} onClick={makeSubstitution}>Sub in</Button>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {list(game?.bench_players).map((player)=><span key={player.id} className="rounded-full border border-white/10 bg-white/[.025] px-2 py-1 text-[7px] text-slate-300">#{player.jersey_number||"—"} {player.display_name}</span>)}
+                {!list(game?.bench_players).length ? <span className="text-[8px] text-slate-600">No bench players available.</span> : null}
+              </div>
+              {list(game?.substitutions).length ? <div className="mt-2 border-t border-white/8 pt-2"><div className="text-[7px] font-black uppercase text-slate-500">Sub history</div><div className="mt-1 space-y-1">{list(game.substitutions).slice().reverse().map((sub)=><div key={sub.id} className="flex items-center justify-between rounded-lg bg-black/15 px-2 py-1.5 text-[8px]"><span><b className="text-violet-100">{sub.incoming_player_detail?.display_name}</b> for {sub.outgoing_player_detail?.display_name}</span><span className="text-slate-500">#{sub.batting_order} · inn {sub.inning}</span></div>)}</div></div> : null}
+            </section> : null}
+
             <div className="grid gap-2 lg:grid-cols-[1.15fr_.85fr]">
               <div className="space-y-2">
                 <SoftballDefenseField lineup={lineup} compact />
@@ -870,7 +977,7 @@ export default function SoftballGameDayAdvanced() {
                 <div>
                   <div className="text-[8px] font-black uppercase tracking-[.15em] text-cyan-300">Correct scorebook entry</div>
                   <div className="mt-1 text-base font-black text-white">{editingPlay.player_name}</div>
-                  <div className="text-[8px] text-slate-500">Save rebuilds the inning totals and live game stats from the corrected book.</div>
+                  <div className="text-[8px] text-slate-500">Change result, inning, outs, RBI or runs. Save rebuilds the live book immediately.</div>
                 </div>
                 <button type="button" onClick={() => setEditingPlay(null)} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-400">×</button>
               </div>
