@@ -201,6 +201,7 @@ export default function App() {
         <Route path="/connect/sports/commissioner" element={<ProtectedRoute><SportsCommissionerDashboard /></ProtectedRoute>} />
         <Route path="/connect/sports/commissioner/:organizationId" element={<ProtectedRoute><SportsCommissionerDashboard /></ProtectedRoute>} />
         <Route path="/connect/groups/:groupId/sports" element={<ProtectedRoute><SportsTeamDashboard /></ProtectedRoute>} />
+        <Route path="/connect/groups/:groupId/sports/players/:playerId" element={<ProtectedRoute><SportsPlayerCard /></ProtectedRoute>} />
         <Route path="/connect/groups/:groupId/sports/games/:gameId" element={<ProtectedRoute><SoftballGameDayAdvanced /></ProtectedRoute>} />
         <Route path="/team/invites" element={<ProtectedRoute><TeamInvites /></ProtectedRoute>} />
         <Route path="/team" element={<ProtectedRoute><TeamInvites /></ProtectedRoute>} />
