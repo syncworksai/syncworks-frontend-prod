@@ -6,6 +6,7 @@ import {
   CircleDot,
   Eye,
   EyeOff,
+  Edit3,
   Loader2,
   Minus,
   Plus,
@@ -14,6 +15,7 @@ import {
   Share2,
   Trophy,
   Undo2,
+  UserRound,
 } from "lucide-react";
 
 import ModeBar from "../components/ModeBar";
@@ -25,6 +27,7 @@ import {
   finishSportsGame,
   getGameCastSettings,
   getPlateAppearances,
+  getPlayerCard,
   getSoftballRuleSets,
   getSportsGame,
   recordSoftballPlay,
@@ -33,6 +36,7 @@ import {
   setOpponentScore,
   updateGameInningLine,
   startSportsGame,
+  substituteSportsGame,
   undoSoftballPlay,
   updateDefensivePosition,
   updateGameCastSettings,
@@ -210,6 +214,117 @@ function resultTone(row, active, disabled) {
   return "border-white/10 bg-white/[.035] text-slate-200";
 }
 
+
+function statRate(value) {
+  return num(value).toFixed(3).replace(/^0(?=\.)/, "");
+}
+
+function HitterTendencyFan({ card, compact = false }) {
+  const zones = list(card?.tendencies?.spray_field);
+  const sample = num(card?.tendencies?.spray_total);
+  if (!card) {
+    return <div className="rounded-xl border border-white/10 bg-black/15 p-3 text-center text-[9px] text-slate-600">Loading hitter history…</div>;
+  }
+  if (!sample) {
+    return <div className="rounded-xl border border-dashed border-white/10 bg-black/10 p-3 text-center text-[9px] text-slate-500">No spray-chart data yet. Record spray zones on batted balls and the percentages will build automatically.</div>;
+  }
+  const labels = { LEFT:"LF", LEFT_CENTER:"LC", CENTER:"CF", RIGHT_CENTER:"RC", RIGHT:"RF" };
+  const maxPct = Math.max(...zones.map((row)=>num(row.pct)), 0.01);
+  return (
+    <div className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.035] p-2">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <div className="text-[7px] font-black uppercase tracking-[.13em] text-emerald-300">Historical spray tendency</div>
+          <div className="mt-0.5 text-[8px] text-slate-500">{sample} tracked batted ball{sample===1?"":"s"} · descriptive, not a prediction</div>
+        </div>
+        <div className="text-[8px] font-black text-slate-400">{num(card?.tendencies?.sample_size)} PA</div>
+      </div>
+      <div className={cx("mt-2 grid grid-cols-5 items-end gap-1 rounded-t-[4rem] border border-emerald-200/10 bg-[#08291d] px-2 pt-3", compact ? "h-20" : "h-28")}>
+        {zones.map((row)=>(
+          <div key={row.zone} className="flex h-full min-w-0 flex-col items-center justify-end">
+            <div className="mb-1 text-[8px] font-black text-white">{Math.round(num(row.pct)*100)}%</div>
+            <div
+              className="w-full rounded-t-md bg-emerald-300/20"
+              style={{height:`${Math.max(8, Math.round((num(row.pct)/maxPct)*55))}%`}}
+            />
+            <div className="mt-1 text-[7px] font-black text-emerald-100">{labels[row.zone] || row.zone}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PlayerBackCard({ card }) {
+  if (!card) return null;
+  const overall = card.overall || {};
+  const seasons = list(card.seasons);
+  const split = (scope) => list(card.splits).find((row)=>row.scope===scope) || {};
+  return (
+    <div className="space-y-3">
+      <section className="rounded-2xl border border-cyan-300/15 bg-gradient-to-br from-cyan-300/[.08] to-violet-300/[.05] p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[8px] font-black uppercase tracking-[.14em] text-cyan-300">Player card</div>
+            <div className="mt-1 text-xl font-black text-white">#{card.player?.jersey_number || "—"} {card.player?.display_name}</div>
+            <div className="mt-1 text-[9px] text-slate-400">{card.player?.primary_position || "Position TBD"} · {card.team?.name}</div>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-center">
+            <div className="text-[7px] font-black uppercase text-slate-500">OPS</div>
+            <div className="text-xl font-black text-white">{statRate(overall.ops)}</div>
+          </div>
+        </div>
+        <div className="mt-3 grid grid-cols-5 gap-1">
+          {[["G",overall.g],["AVG",statRate(overall.avg)],["HR",overall.hr],["RBI",overall.rbi],["R",overall.runs]].map(([label,value])=>(
+            <div key={label} className="rounded-lg border border-white/10 bg-black/15 p-1.5 text-center">
+              <div className="text-[6px] font-black text-slate-500">{label}</div>
+              <div className="mt-0.5 text-[10px] font-black text-white">{value ?? 0}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <HitterTendencyFan card={card} />
+
+      <section className="rounded-xl border border-white/10 bg-black/15 p-2.5">
+        <div className="text-[8px] font-black uppercase tracking-wide text-slate-500">League vs tournament</div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {[["LEAGUE","League",split("LEAGUE")],["TOURNAMENT","Tournament",split("TOURNAMENT")]].map(([key,label,row])=>(
+            <div key={key} className="rounded-xl border border-white/10 bg-white/[.025] p-2">
+              <div className="text-[8px] font-black text-cyan-200">{label}</div>
+              <div className="mt-1 grid grid-cols-2 gap-x-2 text-[8px] text-slate-400">
+                <span>G <b className="text-white">{num(row.g)}</b></span>
+                <span>AVG <b className="text-white">{statRate(row.avg)}</b></span>
+                <span>HR <b className="text-white">{num(row.hr)}</b></span>
+                <span>RBI <b className="text-white">{num(row.rbi)}</b></span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="overflow-x-auto rounded-xl border border-white/10 bg-black/15 p-2.5">
+        <div className="mb-2 text-[8px] font-black uppercase tracking-wide text-slate-500">Year / season history</div>
+        <table className="min-w-[560px] w-full text-center text-[8px]">
+          <thead className="text-slate-600"><tr><th className="py-1 text-left">SEASON</th><th>TYPE</th><th>G</th><th>AB</th><th>H</th><th>AVG</th><th>OBP</th><th>SLG</th><th>OPS</th><th>HR</th><th>RBI</th></tr></thead>
+          <tbody>
+            {seasons.map((row,index)=>(
+              <tr key={`${row.year || "hist"}-${row.season}-${row.scope}-${index}`} className="border-t border-white/5">
+                <td className="py-1.5 text-left font-black text-white">{row.year ? `${row.year} · ` : ""}{row.season}</td>
+                <td className="text-slate-400">{row.scope}</td>
+                <td>{num(row.g)}</td><td>{num(row.ab)}</td><td>{num(row.h)}</td>
+                <td>{statRate(row.avg)}</td><td>{statRate(row.obp)}</td><td>{statRate(row.slg)}</td><td className="font-black text-cyan-100">{statRate(row.ops)}</td>
+                <td>{num(row.hr)}</td><td>{num(row.rbi)}</td>
+              </tr>
+            ))}
+            {!seasons.length ? <tr><td colSpan="11" className="py-4 text-center text-slate-600">No season history yet.</td></tr> : null}
+          </tbody>
+        </table>
+      </section>
+    </div>
+  );
+}
+
 export default function SoftballGameDayAdvanced() {
   const { groupId, gameId } = useParams();
   const navigate = useNavigate();
@@ -241,15 +356,79 @@ export default function SoftballGameDayAdvanced() {
   const [outChoice, setOutChoice] = useState(null);
   const [editingPlay, setEditingPlay] = useState(null);
   const [editForm, setEditForm] = useState({ inning: 1, result: "OUT", outs_recorded: 1, rbi: 0, runs_scored: 0, notes: "" });
+  const [hitterCard, setHitterCard] = useState(null);
+  const [playerCard, setPlayerCard] = useState(null);
+  const [playerCardOpen, setPlayerCardOpen] = useState(false);
+  const [substituteOpen, setSubstituteOpen] = useState(false);
+  const [subForm, setSubForm] = useState({ batting_order: "", incoming_player: "", defensive_position: "" });
 
-  const canManage = useMemo(() => memberships.some(
+  const canManage = useMemo(() => Boolean(game?.can_manage) || memberships.some(
     (membership) => Number(membership.group) === Number(groupId)
       && Number(membership.user) === userId
       && membership.status === "ACTIVE"
       && ["OWNER", "DIRECTOR", "MANAGER"].includes(membership.role),
-  ), [memberships, groupId, userId]);
+  ), [game?.can_manage, memberships, groupId, userId]);
 
   const lineup = useMemo(() => [...list(game?.lineup_spots)].sort((a, b) => num(a.batting_order) - num(b.batting_order)), [game]);
+  const benchPlayers = useMemo(() => list(game?.bench_players), [game?.bench_players]);
+  const substitutions = useMemo(() => list(game?.substitutions), [game?.substitutions]);
+  const scorebookRows = useMemo(() => {
+    const rows = [];
+    const subsByOrder = new Map();
+    for (const sub of substitutions) {
+      const order = num(sub.batting_order);
+      const bucket = subsByOrder.get(order) || [];
+      bucket.push(sub);
+      subsByOrder.set(order, bucket);
+    }
+
+    for (const spot of lineup) {
+      const order = num(spot.batting_order);
+      const subs = (subsByOrder.get(order) || []).slice().sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+      const lineage = [];
+      if (subs.length) {
+        lineage.push({
+          player: subs[0].outgoing_player,
+          player_detail: subs[0].outgoing_player_detail,
+          batting_order: order,
+          sub_label: "START",
+        });
+        for (const sub of subs) {
+          lineage.push({
+            player: sub.incoming_player,
+            player_detail: sub.incoming_player_detail,
+            batting_order: order,
+            sub_label: "SUB",
+          });
+        }
+      } else {
+        lineage.push({
+          player: spot.player,
+          player_detail: spot.player_detail,
+          batting_order: order,
+          sub_label: "",
+        });
+      }
+
+      const seen = new Set();
+      for (const row of lineage) {
+        if (!row.player || seen.has(num(row.player))) continue;
+        seen.add(num(row.player));
+        rows.push({...row, key: order + "-" + row.player});
+      }
+
+      if (!seen.has(num(spot.player))) {
+        rows.push({
+          player: spot.player,
+          player_detail: spot.player_detail,
+          batting_order: order,
+          sub_label: subs.length ? "SUB" : "",
+          key: order + "-" + spot.player,
+        });
+      }
+    }
+    return rows;
+  }, [lineup, substitutions]);
 
   async function refresh({ quiet = false } = {}) {
     if (!quiet) setLoading(true);
@@ -328,6 +507,19 @@ export default function SoftballGameDayAdvanced() {
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.status, gameId]);
+
+  useEffect(() => {
+    const playerId = game?.current_batter?.id;
+    if (!playerId) {
+      setHitterCard(null);
+      return undefined;
+    }
+    let alive = true;
+    getPlayerCard(playerId)
+      .then((data) => { if (alive) setHitterCard(data); })
+      .catch(() => { if (alive) setHitterCard(null); });
+    return () => { alive = false; };
+  }, [game?.current_batter?.id]);
 
   async function run(fn, message) {
     setBusy(true); setError(""); setNotice("");
@@ -463,6 +655,43 @@ export default function SoftballGameDayAdvanced() {
     );
     if (saved) setEditingPlay(null);
   }
+  async function openPlayerCard(playerId) {
+    if (!playerId) return;
+    setPlayerCardOpen(true);
+    setPlayerCard(null);
+    try {
+      const data = await getPlayerCard(playerId);
+      setPlayerCard(data);
+    } catch (err) {
+      setError(errorText(err));
+      setPlayerCardOpen(false);
+    }
+  }
+
+  function openSubstitution(spot = null, incoming = null) {
+    const fallback = spot || lineup.find((row) => num(row.batting_order) === num(game?.current_batter_order)) || lineup[0];
+    const bench = incoming || benchPlayers[0] || null;
+    setSubForm({
+      batting_order: fallback ? String(fallback.batting_order) : "",
+      incoming_player: bench ? String(bench.id) : "",
+      defensive_position: bench?.primary_position || fallback?.defensive_position || "",
+    });
+    setSubstituteOpen(true);
+  }
+
+  async function saveSubstitution() {
+    if (!subForm.batting_order || !subForm.incoming_player) return;
+    const saved = await run(
+      () => substituteSportsGame(game.id, {
+        batting_order: Number(subForm.batting_order),
+        incoming_player: Number(subForm.incoming_player),
+        defensive_position: subForm.defensive_position,
+      }),
+      "Substitution recorded.",
+    );
+    if (saved) setSubstituteOpen(false);
+  }
+
   async function toggleGameCast(enabled) {
     const next = await run(() => updateGameCastSettings(game.id, { enabled, show_player_stats: true }), enabled ? "GameCast is live." : "GameCast sharing off.");
     if (next) setGamecast(next);
@@ -543,11 +772,11 @@ export default function SoftballGameDayAdvanced() {
 
   const playerGameMetrics = useMemo(() => {
     const map = new Map();
-    for (const spot of lineup) {
+    for (const spot of scorebookRows) {
       map.set(num(spot.player), gameBattingMetrics(plays.filter((play) => num(play.player) === num(spot.player))));
     }
     return map;
-  }, [lineup, plays]);
+  }, [scorebookRows, plays]);
 
   const opponentInningMap = useMemo(
     () => new Map(list(game?.inning_lines).map((row) => [num(row.inning), row])),
@@ -583,9 +812,22 @@ export default function SoftballGameDayAdvanced() {
         <section className="rounded-2xl border border-cyan-300/15 bg-[#07111f] p-2.5">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
             <div className="text-center"><div className="truncate text-[8px] font-black uppercase text-cyan-300">{game.team_name}</div><div className="text-3xl font-black text-white">{game.runs_for}</div></div>
-            <div className="rounded-xl border border-white/10 bg-black/20 px-2 py-1.5 text-center"><div className="text-[7px] text-slate-500">INN</div><b className="text-sm">{game.current_inning}</b><div className="mt-1 flex gap-0.5">{[0,1,2].map((i)=><span key={i} className={cx("h-2 w-2 rounded-full border",i<num(game.outs)?"border-rose-300 bg-rose-300":"border-white/20")} />)}</div></div>
+            <div className="min-w-[7.5rem] rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-center">
+              <div className="text-[7px] font-black uppercase tracking-[.14em] text-slate-500">Inning {game.current_inning}</div>
+              <div className="mt-1 text-base font-black text-white">{num(game.outs)} OUT{num(game.outs)===1?"":"S"}</div>
+              <div className="mt-1.5 flex justify-center gap-1.5">{[0,1,2].map((i)=><span key={i} className={cx("h-3 w-3 rounded-full border",i<num(game.outs)?"border-rose-200 bg-rose-300":"border-white/20 bg-white/[.02]")} />)}</div>
+            </div>
             <div className="text-center"><div className="truncate text-[8px] font-black uppercase text-slate-400">{game.opponent_name}</div><div className="text-3xl font-black text-white">{game.runs_against}</div></div>
           </div>
+          {live ? <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-2 rounded-xl border border-white/8 bg-black/15 px-2.5 py-2">
+            <div>
+              <div className="text-[7px] font-black uppercase tracking-wide text-slate-500">Live situation</div>
+              <div className="mt-0.5 text-[9px] font-black text-white">Inning {game.current_inning} · {num(game.outs)} out{num(game.outs)===1?"":"s"} · Batter #{game.current_batter_order}</div>
+            </div>
+            <div className="grid grid-cols-3 gap-1">
+              {[["1B",runner1],["2B",runner2],["3B",runner3]].map(([label,on])=><span key={label} className={cx("grid h-8 w-8 place-items-center rounded-lg border text-[7px] font-black",on?"border-amber-200/40 bg-amber-300/20 text-amber-100":"border-white/10 text-slate-600")}>{label}</span>)}
+            </div>
+          </div> : null}
         </section>
 
         <section className="grid grid-cols-5 gap-1.5">
@@ -631,8 +873,23 @@ export default function SoftballGameDayAdvanced() {
           <>
             <section className="rounded-2xl border border-cyan-300/20 bg-[#07111f] p-2.5">
               <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0"><div className="text-[7px] font-black uppercase tracking-[.14em] text-cyan-300">At bat</div><div className="truncate text-base font-black text-white">#{currentBatter?.jersey_number || "—"} {currentBatter?.display_name || "Current batter"}</div><div className="mt-0.5 text-[8px] text-slate-500">Game: {currentBatterMetrics.hits}-{currentBatterMetrics.ab} · {currentBatterMetrics.rbi} RBI · {currentBatterMetrics.avg.toFixed(3)} AVG</div></div>
-                <div className="text-right text-[8px] text-slate-500">Order #{game.current_batter_order}<br />{currentBatter?.primary_position || "—"}</div>
+                <button type="button" onClick={()=>openPlayerCard(currentBatter?.id)} className="min-w-0 text-left">
+                  <div className="text-[7px] font-black uppercase tracking-[.14em] text-cyan-300">At bat · tap player card</div>
+                  <div className="truncate text-base font-black text-white">#{currentBatter?.jersey_number || "—"} {currentBatter?.display_name || "Current batter"}</div>
+                  <div className="mt-0.5 text-[8px] text-slate-500">Game: {currentBatterMetrics.hits}-{currentBatterMetrics.ab} · {currentBatterMetrics.rbi} RBI · {currentBatterMetrics.avg.toFixed(3)} AVG</div>
+                </button>
+                <div className="text-right"><div className="text-[8px] text-slate-500">Order #{game.current_batter_order}<br />{currentBatter?.primary_position || "—"}</div><UserRound className="ml-auto mt-1 h-4 w-4 text-cyan-300"/></div>
+              </div>
+
+              <div className="mt-2 grid gap-2 lg:grid-cols-[1.2fr_.8fr]">
+                <HitterTendencyFan card={hitterCard} compact />
+                <div className="rounded-xl border border-violet-300/15 bg-violet-300/[.035] p-2">
+                  <div className="text-[7px] font-black uppercase tracking-wide text-violet-300">Prior result mix</div>
+                  <div className="mt-1.5 grid grid-cols-3 gap-1">
+                    {list(hitterCard?.tendencies?.results).slice(0,6).map((row)=><div key={row.result} className="rounded-lg border border-white/8 bg-black/15 px-1.5 py-1 text-center"><div className="text-[8px] font-black text-white">{row.result}</div><div className="text-[7px] text-slate-500">{Math.round(num(row.pct)*100)}%</div></div>)}
+                  </div>
+                  {!list(hitterCard?.tendencies?.results).length?<div className="mt-2 text-[8px] text-slate-600">No prior PA history yet.</div>:null}
+                </div>
               </div>
 
               {canManage ? (
@@ -745,6 +1002,13 @@ export default function SoftballGameDayAdvanced() {
                         <MiniStepper label="Runs" value={runs} onChange={setRuns} max={4} />
                       </div>
 
+                      {!["BB","K"].includes(result) ? <div className="mt-2 rounded-xl border border-emerald-300/15 bg-emerald-300/[.035] p-2">
+                        <div className="flex items-center justify-between gap-2"><div className="text-[7px] font-black uppercase tracking-wide text-emerald-300">Hit direction</div><div className="text-[7px] text-slate-600">Builds hitter tendency %</div></div>
+                        <div className="mt-1.5 grid grid-cols-5 gap-1">
+                          {[["LEFT","LF"],["LEFT_CENTER","LC"],["CENTER","CF"],["RIGHT_CENTER","RC"],["RIGHT","RF"]].map(([value,label])=><button key={value} type="button" onClick={()=>setSprayZone(sprayZone===value?"":value)} className={cx("min-h-9 rounded-lg border text-[8px] font-black",sprayZone===value?"border-emerald-200/40 bg-emerald-300/20 text-emerald-100":"border-white/10 bg-black/15 text-slate-400")}>{label}</button>)}
+                        </div>
+                      </div> : null}
+
                       <details className="mt-2 rounded-lg border border-white/10 bg-white/[.02] p-2">
                         <summary className="cursor-pointer text-[8px] font-black uppercase tracking-wide text-slate-500">More play detail</summary>
                         <div className="mt-2 space-y-2">
@@ -785,12 +1049,15 @@ export default function SoftballGameDayAdvanced() {
                   </tr>
                 </thead>
                 <tbody>
-                  {lineup.map((spot)=>{
+                  {scorebookRows.map((spot)=>{
                     const metrics=playerGameMetrics.get(num(spot.player))||gameBattingMetrics([]);
                     return (
-                      <tr key={spot.id} className="border-t border-white/5">
-                        <td className="sticky left-0 z-10 max-w-28 truncate bg-[#07111f] px-2 py-1.5 text-left font-black text-white">
-                          {spot.batting_order}. {spot.player_detail?.display_name}
+                      <tr key={spot.key || spot.id} className="border-t border-white/5">
+                        <td className="sticky left-0 z-10 max-w-28 bg-[#07111f] px-2 py-1.5 text-left font-black text-white">
+                          <button type="button" onClick={()=>openPlayerCard(spot.player)} className="flex max-w-28 items-center gap-1 text-left">
+                            <span className="truncate">{spot.batting_order}. {spot.player_detail?.display_name}{spot.sub_label ? " · " + spot.sub_label : ""}</span>
+                            <UserRound className="h-3 w-3 shrink-0 text-cyan-300/70"/>
+                          </button>
                         </td>
                         {innings.map((inning)=>{
                           const rows=cellMap.get(String(spot.player) + "-" + inning)||[];
@@ -813,7 +1080,11 @@ export default function SoftballGameDayAdvanced() {
                                     )}
                                     title={canManage ? "Tap to correct this scorebook entry" : undefined}
                                   >
-                                    {playBadge(play)}
+                                    <span className="flex items-center justify-center gap-0.5">
+                                      <span>{playBadge(play)}</span>
+                                      {num(play.outs_recorded)>0?<span className="text-[6px] text-rose-200">+{num(play.outs_recorded)}O</span>:null}
+                                      {canManage?<Edit3 className="h-2.5 w-2.5 opacity-55"/>:null}
+                                    </span>
                                   </button>
                                 ))}
                               </div>
@@ -836,6 +1107,34 @@ export default function SoftballGameDayAdvanced() {
                   </tr>
                 </tbody>
               </table>
+            </section>
+
+            <section className="rounded-2xl border border-violet-300/15 bg-[#07111f] p-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <div className="text-[8px] font-black uppercase tracking-[.14em] text-violet-300">Bench / subs</div>
+                  <div className="mt-0.5 text-[8px] text-slate-500">{benchPlayers.length} available · {substitutions.length} substitution{substitutions.length===1?"":"s"} recorded</div>
+                </div>
+                {canManage&&live&&benchPlayers.length?<Button onClick={()=>openSubstitution()}>Substitute</Button>:null}
+              </div>
+              <div className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+                {benchPlayers.map((player)=>(
+                  <div key={player.id} className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[.025] p-2">
+                    <button type="button" onClick={()=>openPlayerCard(player.id)} className="min-w-0 text-left">
+                      <b className="block truncate text-[10px] text-white">#{player.jersey_number||"—"} {player.display_name}</b>
+                      <span className="text-[8px] text-slate-500">{player.primary_position||"Utility"} · SUB</span>
+                    </button>
+                    {canManage&&live?<button type="button" onClick={()=>openSubstitution(null,player)} className="shrink-0 rounded-lg border border-violet-300/20 bg-violet-300/[.06] px-2 py-1 text-[8px] font-black text-violet-100">SUB IN</button>:null}
+                  </div>
+                ))}
+                {!benchPlayers.length?<div className="rounded-xl border border-dashed border-white/10 p-3 text-center text-[9px] text-slate-600 sm:col-span-2 lg:col-span-3">No available bench players. Anyone removed from the live lineup returns here as a sub option.</div>:null}
+              </div>
+              {substitutions.length?<div className="mt-2 rounded-xl border border-white/8 bg-black/15 p-2">
+                <div className="text-[7px] font-black uppercase tracking-wide text-slate-600">Substitution log</div>
+                <div className="mt-1 space-y-1">
+                  {substitutions.slice().reverse().slice(0,6).map((sub)=><div key={sub.id} className="text-[8px] text-slate-400"><b className="text-violet-200">Inn {sub.inning}</b> · {sub.incoming_player_detail?.display_name} for {sub.outgoing_player_detail?.display_name} · slot {sub.batting_order}{sub.defensive_position ? " · " + sub.defensive_position : ""}</div>)}
+                </div>
+              </div>:null}
             </section>
 
             <div className="grid gap-2 lg:grid-cols-[1.15fr_.85fr]">
@@ -861,6 +1160,45 @@ export default function SoftballGameDayAdvanced() {
               </div>
             </div>
           </>
+        ) : null}
+
+        {substituteOpen ? (
+          <div className="fixed inset-0 z-[92] flex items-end justify-center bg-black/75 px-3 pb-4 pt-20 sm:items-center">
+            <div className="w-full max-w-md rounded-[1.6rem] border border-violet-300/20 bg-[#07111f] p-4 shadow-2xl">
+              <div className="flex items-start justify-between gap-3">
+                <div><div className="text-[8px] font-black uppercase tracking-[.15em] text-violet-300">Live substitution</div><div className="mt-1 text-base font-black text-white">Move a bench player into the game</div><div className="mt-1 text-[8px] text-slate-500">The outgoing player returns to the bench/sub list and the batting slot stays intact.</div></div>
+                <button type="button" onClick={()=>setSubstituteOpen(false)} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-400">×</button>
+              </div>
+              <div className="mt-3 space-y-2">
+                <label className="block text-[8px] font-black uppercase text-slate-500">Batting slot / outgoing player
+                  <select value={subForm.batting_order} onChange={(e)=>{const spot=lineup.find((row)=>String(row.batting_order)===e.target.value);setSubForm({...subForm,batting_order:e.target.value,defensive_position:spot?.defensive_position||subForm.defensive_position});}} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs font-black text-white">
+                    {lineup.map((spot)=><option key={spot.id} value={spot.batting_order}>#{spot.batting_order} · {spot.player_detail?.display_name} · {spot.defensive_position||"EH"}</option>)}
+                  </select>
+                </label>
+                <label className="block text-[8px] font-black uppercase text-slate-500">Incoming sub
+                  <select value={subForm.incoming_player} onChange={(e)=>{const player=benchPlayers.find((row)=>String(row.id)===e.target.value);setSubForm({...subForm,incoming_player:e.target.value,defensive_position:player?.primary_position||subForm.defensive_position});}} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs font-black text-white">
+                    {benchPlayers.map((player)=><option key={player.id} value={player.id}>#{player.jersey_number||"—"} · {player.display_name} · {player.primary_position||"Utility"}</option>)}
+                  </select>
+                </label>
+                <label className="block text-[8px] font-black uppercase text-slate-500">Defensive position
+                  <select value={subForm.defensive_position} onChange={(e)=>setSubForm({...subForm,defensive_position:e.target.value})} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs font-black text-white"><option value="">EH / no field position</option>{POSITIONS.map((position)=><option key={position} value={position}>{position}</option>)}</select>
+                </label>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2"><Button onClick={()=>setSubstituteOpen(false)}>Cancel</Button><Button primary disabled={busy||!subForm.incoming_player||!subForm.batting_order} onClick={saveSubstitution}>{busy?"Saving…":"Record substitution"}</Button></div>
+            </div>
+          </div>
+        ) : null}
+
+        {playerCardOpen ? (
+          <div className="fixed inset-0 z-[91] flex items-end justify-center bg-black/75 px-3 pb-4 pt-16 sm:items-center">
+            <div className="max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-[1.6rem] border border-cyan-300/20 bg-[#07111f] p-4 shadow-2xl">
+              <div className="sticky top-0 z-10 flex items-center justify-between gap-3 bg-[#07111f]/95 pb-3">
+                <div><div className="text-[8px] font-black uppercase tracking-[.15em] text-cyan-300">Back of the card</div><div className="mt-1 text-base font-black text-white">Player history & tendencies</div></div>
+                <button type="button" onClick={()=>{setPlayerCardOpen(false);setPlayerCard(null);}} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-400">×</button>
+              </div>
+              {playerCard?<PlayerBackCard card={playerCard}/>:<div className="grid min-h-40 place-items-center"><Loader2 className="h-6 w-6 animate-spin text-cyan-300"/></div>}
+            </div>
+          </div>
         ) : null}
 
         {editingPlay ? (
