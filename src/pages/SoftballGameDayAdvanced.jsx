@@ -774,7 +774,7 @@ export default function SoftballGameDayAdvanced() {
             </section>
 
             <section className="overflow-x-auto rounded-2xl border border-white/10 bg-[#07111f] p-2">
-              <div className="mb-1.5 flex items-center justify-between"><div className="text-[8px] font-black uppercase tracking-[.14em] text-slate-500">Scorebook grid</div>{canManage&&plays.length?<Button onClick={()=>run(()=>undoSoftballPlay(game.id),"Last play undone.")}><Undo2 className="mr-1 inline h-3.5 w-3.5" />Undo</Button>:null}</div>
+              <div className="mb-1.5 flex items-center justify-between"><div><div className="text-[8px] font-black uppercase tracking-[.14em] text-slate-500">Scorebook grid</div>{canManage?<div className="mt-0.5 text-[7px] text-slate-600">Tap any recorded box to correct it.</div>:null}</div>{canManage&&plays.length?<Button onClick={()=>run(()=>undoSoftballPlay(game.id),"Last play undone.")}><Undo2 className="mr-1 inline h-3.5 w-3.5" />Undo</Button>:null}</div>
               <table className="min-w-max border-collapse text-center text-[8px]">
                 <thead>
                   <tr>
@@ -798,16 +798,23 @@ export default function SoftballGameDayAdvanced() {
                             <td key={inning} className="border-l border-white/5 px-1 py-1">
                               <div className="flex justify-center gap-0.5">
                                 {rows.map((play)=>(
-                                  <span key={play.id} className={cx(
-                                    "rounded px-1 py-0.5 font-black",
-                                    ["1B","2B","3B","HR"].includes(play.result)
-                                      ? "bg-emerald-300/15 text-emerald-100"
-                                      : play.result==="BB"
-                                        ? "bg-violet-300/15 text-violet-100"
-                                        : "bg-white/[.05] text-slate-300",
-                                  )}>
+                                  <button
+                                    key={play.id}
+                                    type="button"
+                                    onClick={() => openPlayEditor(play)}
+                                    className={cx(
+                                      "rounded px-1 py-0.5 font-black",
+                                      canManage && "cursor-pointer transition hover:ring-1 hover:ring-cyan-300/40",
+                                      ["1B","2B","3B","HR"].includes(play.result)
+                                        ? "bg-emerald-300/15 text-emerald-100"
+                                        : play.result==="BB"
+                                          ? "bg-violet-300/15 text-violet-100"
+                                          : "bg-white/[.05] text-slate-300",
+                                    )}
+                                    title={canManage ? "Tap to correct this scorebook entry" : undefined}
+                                  >
                                     {playBadge(play)}
-                                  </span>
+                                  </button>
                                 ))}
                               </div>
                             </td>
