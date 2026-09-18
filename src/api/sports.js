@@ -54,6 +54,13 @@ export async function getPlayerSpray(id) {
   return data;
 }
 
+export async function getPlayerCard(id, excludeGame = null) {
+  const { data } = await api.get(`/sports/advanced/players/${id}/card/`, {
+    params: excludeGame ? { exclude_game: excludeGame } : {},
+  });
+  return data;
+}
+
 export async function getSportsPlayers(team) {
   const { data } = await api.get("/sports/players/", { params: { team } });
   return list(data);
@@ -326,6 +333,15 @@ export async function setOpponentHomeRuns(id, homeRunsAgainst) {
 export async function updateDefensivePosition(id, player, defensivePosition) {
   const { data } = await api.post(`/sports/games/${id}/defensive-position/`, {
     player,
+    defensive_position: defensivePosition,
+  });
+  return data;
+}
+
+export async function substituteSportsPlayer(id, outPlayer, inPlayer, defensivePosition = "") {
+  const { data } = await api.post(`/sports/games/${id}/substitute/`, {
+    out_player: outPlayer,
+    in_player: inPlayer,
     defensive_position: defensivePosition,
   });
   return data;
