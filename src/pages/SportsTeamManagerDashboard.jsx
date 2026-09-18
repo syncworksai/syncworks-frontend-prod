@@ -30,6 +30,7 @@ import ModeBar from "../components/ModeBar";
 import TeamChatPanel from "../components/sports/TeamChatPanel";
 import GameAvailabilityCard, { availabilityStatus } from "../components/sports/GameAvailabilityCard";
 import InteractiveStatsBoard from "../components/sports/InteractiveStatsBoard";
+import SoftballDefenseField from "../components/sports/SoftballDefenseField";
 import { useAuth } from "../auth/AuthContext";
 import { createEventResponse, getEventResponses, getGroups, getMemberships, updateEventResponse } from "../api/social";
 import {
@@ -61,7 +62,7 @@ import {
 } from "../api/sports";
 
 const TABS = ["Overview", "Roster", "Lineup", "Schedule", "Stats", "Dues"];
-const POSITIONS = ["P", "C", "1B", "2B", "3B", "SS", "LF", "LC", "RC", "RF", "OF", "EH", "DH"];
+const POSITIONS = ["P", "C", "1B", "2B", "3B", "SS", "MM", "LF", "LC", "CF", "RC", "RF", "OF", "EH1", "EH2", "EH", "DH"];
 const cx = (...values) => values.filter(Boolean).join(" ");
 const list = (value) => (Array.isArray(value) ? value : []);
 const num = (value) => Number(value || 0);
@@ -213,6 +214,7 @@ export default function SportsTeamManagerDashboard() {
   }, [dashboard]);
 
   const selectedGame = games.find((game) => Number(game.id) === Number(lineupGameId));
+  const liveGame = games.find((game) => game.status === "LIVE") || null;
   const lineupIds = new Set(lineup.map((spot) => Number(spot.player)));
   const nextGame = games.find((game) => game.status === "LIVE") || games.find((game) => game.status === "SCHEDULED" && new Date(game.start_at) >= new Date());
   const statusForSelected = (player) => availabilityStatus(player, selectedGame, eventResponses);
@@ -230,6 +232,7 @@ export default function SportsTeamManagerDashboard() {
     return map;
   }, [scopedStats, dashboard]);
   const playerStat = (player) => statsByPlayerId.get(Number(player?.id)) || null;
+  const fieldLineup = lineup.map((spot) => ({ ...spot, player_detail: players.find((player) => Number(player.id) === Number(spot.player)) }));
 
   function profileFor(player) {
     if (!player) return null;
@@ -283,6 +286,21 @@ export default function SportsTeamManagerDashboard() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!liveGame) return;
+    try {
+      localStorage.setItem("sw_live_sports_game_v1", JSON.stringify({
+        groupId: Number(groupId),
+        gameId: Number(liveGame.id),
+        teamName: group?.name || "",
+        opponentName: liveGame.opponent_name || "",
+      }));
+      window.dispatchEvent(new CustomEvent("sw:liveSportsGameChanged"));
+    } catch {
+      // no-op
+    }
+  }, [liveGame?.id, groupId, group?.name]);
 
   useEffect(() => { refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [groupId]);
 
@@ -708,6 +726,13 @@ export default function SportsTeamManagerDashboard() {
         {error ? <div className="rounded-xl border border-rose-400/20 bg-rose-400/10 p-3 text-xs text-rose-100">{error}</div> : null}
         {notice ? <div className="rounded-xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-xs text-cyan-100">{notice}</div> : null}
 
+        {liveGame ? (
+          <button type="button" onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${liveGame.id}`)} className="sticky top-[5.2rem] z-30 flex w-full items-center justify-between gap-2 rounded-xl border border-emerald-300/30 bg-[#04150f]/95 px-3 py-2.5 text-left shadow-lg backdrop-blur">
+            <span><span className="block text-[8px] font-black uppercase tracking-[.14em] text-emerald-300">● Live now</span><b className="mt-0.5 block text-xs text-white">vs {liveGame.opponent_name}</b></span>
+            <span className="rounded-lg bg-emerald-300 px-3 py-2 text-[9px] font-black text-slate-950">Resume live Game Book</span>
+          </button>
+        ) : null}
+
         <section className="rounded-[1.55rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_90%_0%,rgba(34,211,238,.16),transparent_35%),radial-gradient(circle_at_0%_100%,rgba(139,92,246,.13),transparent_35%),#07111f] p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0"><div className="flex flex-wrap gap-1.5"><Pill tone="cyan">Softball</Pill><Pill tone={managerView ? "violet" : "green"}>{managerView ? "Manager view" : "Player view"}</Pill><Pill>{team.season_name || "Season"}</Pill><Pill tone="green">Free team tools</Pill></div><h1 className="mt-2 truncate text-2xl font-black text-white">{group.name}</h1><p className="mt-1 text-[11px] text-slate-400">{[team.league_name, team.division_name].filter(Boolean).join(" · ") || "Team workspace"}</p></div>
@@ -874,6 +899,8 @@ export default function SportsTeamManagerDashboard() {
               </div>
             </div>
           </Card>
+
+          {selectedGame && lineup.length ? <SoftballDefenseField lineup={fieldLineup} title="Defensive field" /> : null}
 
           {selectedGame ? <div className="grid gap-3 lg:grid-cols-[1fr_.55fr]">
             <Card title="SUB / Bench" body="Everyone not in the batting order stays here. Tap a player to return him to the bottom of the lineup." action={<Users className="h-4 w-4 text-amber-300" />}>
