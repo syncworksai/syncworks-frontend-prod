@@ -10,6 +10,7 @@ const HIDDEN_PREFIXES = [
   "/employee/invite",
   "/accept-invite",
   "/sports/invite",
+  "/sports/team-invite",
   "/social/invite",
 ];
 
