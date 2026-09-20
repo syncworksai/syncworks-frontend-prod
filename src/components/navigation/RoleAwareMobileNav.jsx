@@ -8,6 +8,7 @@ import {
   MapPinned,
   MessageSquareText,
   Settings,
+  Trophy,
   Users,
   Wrench,
 } from "lucide-react";
@@ -25,6 +26,7 @@ const ITEM_LIBRARY = {
   inbox: { label: "Messages", icon: MessageSquareText, routes: { CUSTOMER: "/customer/inbox", SBO: "/sbo/inbox", EMPLOYEE: "/employee/inbox", PM: "/inbox" } },
   customers: { label: "Customers", icon: Users, routes: { SBO: "/sbo/customers", EMPLOYEE: "/tickets", PM: "/pm" } },
   marketplace: { label: "Marketplace", icon: LayoutGrid, routes: { CUSTOMER: "/customer", SBO: "/tickets", EMPLOYEE: "/tickets", PM: "/tickets" } },
+  sports: { label: "Sports", icon: Trophy, routes: { CUSTOMER: "/connect/sports" } },
   map: { label: "Map", icon: MapPinned, routes: { CUSTOMER: "/calendar", SBO: "/calendar", EMPLOYEE: "/calendar", PM: "/pm/calendar" } },
   tools: { label: "Tools", icon: Wrench, routes: { CUSTOMER: "/settings", SBO: "/sbo/settings", EMPLOYEE: "/employee/settings", PM: "/pm/settings" } },
   more: { label: "More", icon: Settings, routes: { CUSTOMER: "/settings", SBO: "/sbo/settings", EMPLOYEE: "/employee/settings", PM: "/pm/settings" } },
@@ -38,7 +40,7 @@ const DEFAULTS = {
 };
 
 const ALLOWED = {
-  CUSTOMER: ["home", "requests", "schedule", "inbox", "marketplace", "map", "tools", "more"],
+  CUSTOMER: ["home", "requests", "schedule", "inbox", "marketplace", "sports", "map", "tools", "more"],
   SBO: ["home", "requests", "schedule", "inbox", "customers", "marketplace", "map", "tools", "more"],
   EMPLOYEE: ["home", "requests", "schedule", "inbox", "customers", "map", "tools", "more"],
   PM: ["home", "requests", "schedule", "inbox", "customers", "map", "tools", "more"],

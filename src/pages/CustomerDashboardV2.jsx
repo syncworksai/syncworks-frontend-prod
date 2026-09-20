@@ -1,7 +1,7 @@
 import React from "react";
 import {
   BriefcaseBusiness, Building2, CalendarDays, CheckSquare2, ChevronRight,
-  CircleDollarSign, Dumbbell, Mail, MessageSquare, Plus, Search, ShoppingBag,
+  CircleDollarSign, Dumbbell, Mail, MessageSquare, Plus, Search, ShoppingBag, Trophy,
   Sparkles, Utensils, Weight, Wrench,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -40,6 +40,7 @@ const PORTAL = [
   [Building2, "Property", "/pm"],
   [BriefcaseBusiness, "Business", "/sbo"],
   [ShoppingBag, "Local", "/customer/discover"],
+  [Trophy, "Sports", "/connect/sports"],
   [Search, "EDGE", "/customer/edge"],
 ];
 
@@ -99,7 +100,7 @@ export default function CustomerDashboardV2() {
             <div><div className="text-[9px] font-black uppercase tracking-[.18em] text-violet-200">Personal portal</div><h2 className="mt-1 text-lg font-black text-white">All your SyncWorks tools</h2><p className="mt-1 text-xs text-slate-500">Home stays focused. Open the portal when you want the full toolbox.</p></div>
             <ChevronRight className="h-5 w-5 text-violet-200" />
           </button>
-          <div className="mt-4 grid grid-cols-5 gap-2 sm:grid-cols-10">
+          <div className="mt-4 grid grid-cols-5 gap-2 sm:grid-cols-6 lg:grid-cols-11">
             {PORTAL.map(([Icon, label, url]) => (
               <button key={label} type="button" onClick={() => nav(url)} className="rounded-2xl border border-white/10 bg-white/[.02] p-3 text-center transition hover:border-violet-400/20 hover:bg-violet-500/[.04]">
                 <Icon className="mx-auto h-4 w-4 text-slate-300" />
