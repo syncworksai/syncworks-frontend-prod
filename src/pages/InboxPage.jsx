@@ -111,7 +111,7 @@ export default function InboxPage() {
     const timer = window.setTimeout(() => loadThreads(), query ? 250 : 0);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope, activeBusinessId, query, statusFilter, showArchived]);
+  }, [scope, activeBusinessId, query, statusFilter, showArchived, requestedTicketId]);
   useEffect(() => { loadMessages(selectedId); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [selectedId, scope, activeBusinessId]);
 
   async function sendMessage(event) {
