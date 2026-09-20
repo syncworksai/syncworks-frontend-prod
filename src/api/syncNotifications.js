@@ -37,6 +37,20 @@ export async function getNotifications(params = {}) {
   return [];
 }
 
+export async function getSyncAlerts(params = {}) {
+  const response = await api.get("/me/notifications/", {
+    params: { sync_alerts: true, archived: false, ...params },
+  });
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.data?.results)) return response.data.results;
+  return [];
+}
+
+export async function refreshSyncAlerts() {
+  const response = await api.post("/me/notifications/refresh-sync-alerts/", {});
+  return response?.data || {};
+}
+
 export async function getNotificationUnreadCount() {
   const response = await api.get("/notifications/unread-count/");
   return response?.data || { unread: 0, sync_alerts: 0 };

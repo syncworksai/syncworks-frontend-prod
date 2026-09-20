@@ -6,6 +6,7 @@ import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import ModeBar from "../components/ModeBar";
 import BusinessPicker from "../components/BusinessPicker";
+import SyncUnifiedInboxCard from "../components/sync/SyncUnifiedInboxCard";
 
 function cx(...parts) { return parts.filter(Boolean).join(" "); }
 function safeList(data) {
@@ -49,6 +50,9 @@ export default function InboxPage() {
   const navigate = useNavigate();
   const { mode, activeBusinessId } = useAuth();
   const scope = useMemo(() => scopeFromPath(location.pathname, mode), [location.pathname, mode]);
+  const routeParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const requestedTicketId = routeParams.get("ticket");
+  const quickMode = routeParams.get("quick") || "";
   const [threads, setThreads] = useState([]);
   const [unreadTotal, setUnreadTotal] = useState(0);
   const [selectedId, setSelectedId] = useState(null);
@@ -78,8 +82,12 @@ export default function InboxPage() {
       const next = safeList(response?.data);
       setThreads(next);
       setUnreadTotal(Number(response?.data?.unread_total || 0));
+      const requested = requestedTicketId
+        ? next.find((thread) => Number(thread.id) === Number(requestedTicketId))
+        : null;
       const stillExists = next.some((thread) => Number(thread.id) === Number(selectedId));
-      if (!preserveSelection || !stillExists) setSelectedId(next[0]?.id || null);
+      if (requested) setSelectedId(requested.id);
+      else if (!preserveSelection || !stillExists) setSelectedId(next[0]?.id || null);
     } catch (requestError) {
       setError(requestError?.response?.data?.detail || requestError?.response?.data?.business?.[0] || "Inbox conversations could not be loaded.");
     } finally { setLoadingThreads(false); }
@@ -103,7 +111,7 @@ export default function InboxPage() {
     const timer = window.setTimeout(() => loadThreads(), query ? 250 : 0);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope, activeBusinessId, query, statusFilter, showArchived]);
+  }, [scope, activeBusinessId, query, statusFilter, showArchived, requestedTicketId]);
   useEffect(() => { loadMessages(selectedId); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [selectedId, scope, activeBusinessId]);
 
   async function sendMessage(event) {
@@ -128,6 +136,7 @@ export default function InboxPage() {
       <ModeBar title={title} subtitle={scope === "BUSINESS" ? "Customer conversations routed by ticket and role" : "One place for conversations that need you"} rightActions={<div className="flex gap-2">{scope === "BUSINESS" ? <BusinessPicker /> : null}<button type="button" onClick={() => navigate(scope === "BUSINESS" ? "/sbo" : "/customer")} className="rounded-xl border border-white/10 bg-white/[.04] px-3 py-2 text-xs font-black text-slate-200">Back</button></div>} />
 
       <main className="mx-auto max-w-[1500px] space-y-4 px-4 py-5 pb-28 lg:px-8">
+        {scope === "PERSONAL" && quickMode === "email" ? <SyncUnifiedInboxCard /> : null}
         {scope === "PERSONAL" ? (
           <section className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_360px]">
             <div className="rounded-[1.7rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_90%_10%,rgba(139,92,246,.14),transparent_35%),rgba(2,6,23,.88)] p-5">

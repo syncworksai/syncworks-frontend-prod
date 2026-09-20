@@ -40,6 +40,12 @@ export default function SyncAssistantLauncher() {
   }, []);
 
   useEffect(() => {
+    const openAlerts = () => setAlertsOpen(true);
+    window.addEventListener("sync-assistant:open-alerts", openAlerts);
+    return () => window.removeEventListener("sync-assistant:open-alerts", openAlerts);
+  }, []);
+
+  useEffect(() => {
     if (HIDDEN_PREFIXES.some((prefix) => location.pathname.startsWith(prefix))) return;
     loadUnread();
     const timer = window.setInterval(loadUnread, 60000);

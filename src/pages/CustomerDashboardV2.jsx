@@ -10,6 +10,7 @@ import DashboardShell from "../components/dashboard/DashboardShell";
 import SyncAssistantMorningBrief from "../components/sync/SyncAssistantMorningBrief";
 import SyncAssistantStickyDock from "../components/sync/SyncAssistantStickyDock";
 import SyncUnifiedInboxCard from "../components/sync/SyncUnifiedInboxCard";
+import SyncQuickNotificationsCard from "../components/sync/SyncQuickNotificationsCard";
 import { useAuth } from "../auth/AuthContext";
 
 function firstName(user) {
@@ -77,6 +78,8 @@ export default function CustomerDashboardV2() {
         </section>
 
         <SyncAssistantMorningBrief onPlayBriefing={playBriefing} compact />
+
+        <SyncQuickNotificationsCard />
 
         <section className="rounded-[1.6rem] border border-white/10 bg-slate-950/55 p-4 sm:p-5">
           <div className="flex items-end justify-between gap-3">
