@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Bell, CalendarDays, Check, ChevronRight, Copy, CreditCard, ImageUp, Link2, Loader2, Pencil, Plus, RefreshCw, Search, Send, Settings, Share2, Trophy, UserPlus, Users, WalletCards, X } from "lucide-react";
 import ModeBar from "../components/ModeBar";
 import { useAuth } from "../auth/AuthContext";
@@ -42,7 +42,7 @@ function Status({ children, tone="slate" }) {
 }
 
 export default function Connect() {
-  const nav=useNavigate(); const { user }=useAuth(); const userId=Number(user?.id||0);
+  const nav=useNavigate(); const [searchParams,setSearchParams]=useSearchParams(); const { user }=useAuth(); const userId=Number(user?.id||0);
   const [tab,setTab]=useState("Home"), [loading,setLoading]=useState(true), [busy,setBusy]=useState(false), [drawer,setDrawer]=useState(null), [error,setError]=useState(""), [notice,setNotice]=useState("");
   const [people,setPeople]=useState([]), [connections,setConnections]=useState([]), [groups,setGroups]=useState([]), [memberships,setMemberships]=useState([]), [events,setEvents]=useState([]), [invites,setInvites]=useState([]), [responses,setResponses]=useState([]), [collections,setCollections]=useState([]), [shares,setShares]=useState([]);
   const [search,setSearch]=useState(""), [inviteSearch,setInviteSearch]=useState(""), [inviteResults,setInviteResults]=useState([]), [inviteRole,setInviteRole]=useState("MEMBER"), [targetGroup,setTargetGroup]=useState("");
@@ -66,6 +66,20 @@ export default function Connect() {
 
   async function load(){ setLoading(true); setError(""); const calls=await Promise.allSettled([getConnections(),getGroups(),getMemberships(),getEvents(),getEventInvitations(),getEventResponses(),getCollections(),getCollectionShares()]); const setters=[setConnections,setGroups,setMemberships,setEvents,setInvites,setResponses,setCollections,setShares]; calls.forEach((r,i)=>r.status==="fulfilled"&&setters[i](arr(r.value))); const bad=calls.find(r=>r.status==="rejected"); if(bad)setError(`Some Social data could not load: ${errorText(bad.reason)}`); setLoading(false); }
   useEffect(()=>{load();},[]);
+  useEffect(()=>{
+    if(loading) return;
+    const membershipId=Number(searchParams.get("invite")||0);
+    const eventInviteId=Number(searchParams.get("eventInvite")||0);
+    if(membershipId){
+      const row=membershipInvites.find(item=>Number(item.id)===membershipId);
+      if(row) setDrawer({type:"membershipInvite",row});
+      setSearchParams({}, {replace:true});
+    } else if(eventInviteId){
+      const row=managerInvites.find(item=>Number(item.id)===eventInviteId);
+      if(row) setDrawer({type:"eventInvite",row});
+      setSearchParams({}, {replace:true});
+    }
+  },[loading,searchParams]);
   async function run(fn,msg,close=true){ setBusy(true);setError("");setNotice("");try{await fn();setNotice(msg);if(close)setDrawer(null);await load();}catch(e){setError(errorText(e));}finally{setBusy(false);} }
   const group=(id)=>groups.find(g=>Number(g.id)===Number(id)); const event=(id)=>events.find(e=>Number(e.id)===Number(id));
   const roster=(id)=>memberships.filter(m=>Number(m.group)===Number(id)&&["ACTIVE","INVITED"].includes(m.status));
