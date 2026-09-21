@@ -12,6 +12,7 @@ import PMTenantEditOverlay from "./components/pm/PMTenantEditOverlay";
 import NutritionCoachGlobalAssist from "./components/customer-health/NutritionCoachGlobalAssist";
 import StorefrontCartDock from "./components/storefront/StorefrontCartDock";
 import App from "./App";
+import AppCrashBoundary from "./components/AppCrashBoundary";
 import PlatformDirectEntry from "./pages/PlatformDirectEntry";
 import CustomerStoreV2 from "./pages/CustomerStoreV2";
 import PMPropertyCreate from "./pages/PMPropertyCreate";
@@ -90,7 +91,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <RoutedApplication />
+        <AppCrashBoundary>
+          <RoutedApplication />
+        </AppCrashBoundary>
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>
