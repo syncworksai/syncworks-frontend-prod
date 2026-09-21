@@ -27,6 +27,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import AroundYouPanel from "../components/customer/AroundYouPanel";
+import SyncQuickNotificationsCard from "../components/sync/SyncQuickNotificationsCard";
 import CalendarDailySnapshot from "../components/calendar/CalendarDailySnapshot";
 import DashboardShell from "../components/dashboard/DashboardShell";
 
@@ -208,6 +209,8 @@ export default function CustomerDashboard() {
               <Metric label="Weather" value="LIVE" detail="Current-location forecast" color="sky" />
             </div>
           </section>
+
+          <SyncQuickNotificationsCard maxItems={3} />
 
           <section className="grid grid-cols-4 gap-3">
             <ActionCard icon={CalendarDays} title="Calendar" detail="Appointments, events and travel timing." onClick={() => nav("/calendar")} color="sky" />
