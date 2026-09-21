@@ -19,6 +19,54 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      (function () {
+        var bootError = "";
+        window.addEventListener("error", function (event) {
+          bootError = String((event && (event.message || (event.error && event.error.message))) || "JavaScript failed to load.");
+        });
+        window.addEventListener("unhandledrejection", function (event) {
+          var reason = event && event.reason;
+          bootError = String((reason && reason.message) || reason || "The app could not finish starting.");
+        });
+
+        window.setTimeout(function () {
+          var root = document.getElementById("root");
+          if (!root || root.childNodes.length) return;
+
+          root.innerHTML =
+            '<main style="min-height:100dvh;background:#020617;color:#e2e8f0;display:flex;align-items:center;justify-content:center;padding:16px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' +
+              '<section style="width:100%;max-width:420px;border:1px solid rgba(34,211,238,.25);border-radius:28px;background:#020b1a;padding:22px">' +
+                '<div style="font-size:10px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:#67e8f9">SyncWorks recovery</div>' +
+                '<h1 style="font-size:22px;margin:10px 0 0;color:white">The app did not finish loading.</h1>' +
+                '<p style="font-size:14px;line-height:1.6;color:#94a3b8">Tap below to clear the old iPhone web-app shell and reload the current production build. Your account data is not deleted.</p>' +
+                '<div style="margin-top:12px;padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:12px;color:#64748b;font-size:11px;word-break:break-word">' + (bootError || "No React screen mounted.") + '</div>' +
+                '<button id="sw-emergency-reset" style="margin-top:16px;width:100%;height:48px;border:0;border-radius:16px;background:#22d3ee;color:#020617;font-weight:900">Reset app shell & reload</button>' +
+              '</section>' +
+            '</main>';
+
+          var button = document.getElementById("sw-emergency-reset");
+          if (button) button.onclick = function () {
+            var tasks = [];
+            try {
+              if ("serviceWorker" in navigator) {
+                tasks.push(navigator.serviceWorker.getRegistrations().then(function (regs) {
+                  return Promise.all(regs.map(function (reg) { return reg.unregister(); }));
+                }));
+              }
+              if ("caches" in window) {
+                tasks.push(caches.keys().then(function (keys) {
+                  return Promise.all(keys.map(function (key) { return caches.delete(key); }));
+                }));
+              }
+            } catch (_) {}
+            Promise.all(tasks).catch(function () {}).then(function () {
+              window.location.replace("/login?recover=" + Date.now());
+            });
+          };
+        }, 5000);
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
