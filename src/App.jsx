@@ -1,5 +1,5 @@
 // src/App.jsx
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -58,17 +58,17 @@ import PlatformDashboard from "./pages/PlatformDashboard";
 import PlatformSupportRequests from "./pages/platform/PlatformSupportRequests";
 import TeamInvites from "./pages/TeamInvites";
 import Upgrade from "./pages/Upgrade";
-import ConnectSportsBridge from "./pages/ConnectSportsBridge";
-import SportsHub from "./pages/SportsHub";
-import SportsTeamDashboard from "./pages/SportsTeamDashboard";
-import SoftballGameDayAdvanced from "./pages/SoftballGameDayAdvanced";
-import PublicGameCast from "./pages/PublicGameCast";
-import SportsCommissionerDashboard from "./pages/SportsCommissionerDashboard";
-import SportsInviteLanding from "./pages/SportsInviteLanding";
-import SportsTeamInviteLanding from "./pages/SportsTeamInviteLanding";
-import SocialGroupInviteLanding from "./pages/SocialGroupInviteLanding";
-import SocialEventDetail from "./pages/SocialEventDetail";
-import SocialGroupDashboard from "./pages/SocialGroupDashboard";
+
+
+
+
+
+
+
+
+
+
+
 import Household from "./pages/Household";
 import UserProfile from "./pages/UserProfile";
 import IdentitySettings from "./pages/IdentitySettings";
@@ -99,9 +99,27 @@ import SyncAssistant from "./pages/SyncAssistant";
 import SyncHistory from "./pages/SyncHistory";
 import SyncVoiceDemo from "./pages/SyncVoiceDemo";
 
+const ConnectSportsBridge = lazy(() => import("./pages/ConnectSportsBridge"));
+const SportsHub = lazy(() => import("./pages/SportsHub"));
+const SportsTeamDashboard = lazy(() => import("./pages/SportsTeamDashboard"));
+const SoftballGameDayAdvanced = lazy(() => import("./pages/SoftballGameDayAdvanced"));
+const PublicGameCast = lazy(() => import("./pages/PublicGameCast"));
+const SportsCommissionerDashboard = lazy(() => import("./pages/SportsCommissionerDashboard"));
+const SportsInviteLanding = lazy(() => import("./pages/SportsInviteLanding"));
+const SportsTeamInviteLanding = lazy(() => import("./pages/SportsTeamInviteLanding"));
+const SocialGroupInviteLanding = lazy(() => import("./pages/SocialGroupInviteLanding"));
+const SocialEventDetail = lazy(() => import("./pages/SocialEventDetail"));
+const SocialGroupDashboard = lazy(() => import("./pages/SocialGroupDashboard"));
+
+function RouteLoading() {
+  return <div className="flex min-h-dvh items-center justify-center bg-[#020617] text-slate-300"><div className="text-sm font-black">Loading SyncWorks…</div></div>;
+}
+
+
 export default function App() {
   return (
     <div className="sw-autoglow">
+      <Suspense fallback={<RouteLoading />}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -207,6 +225,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+      </Suspense>
       <IdentityOnboardingGate />
       <SyncAssistantLauncher />
       <RoleAwareMobileNav />
