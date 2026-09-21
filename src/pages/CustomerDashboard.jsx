@@ -26,7 +26,8 @@ import { useNavigate } from "react-router-dom";
 
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import AroundYouPanel from "../components/customer/AroundYouPanel";\nimport SyncQuickNotificationsCard from "../components/sync/SyncQuickNotificationsCard";
+import AroundYouPanel from "../components/customer/AroundYouPanel";
+import SyncQuickNotificationsCard from "../components/sync/SyncQuickNotificationsCard";
 import CalendarDailySnapshot from "../components/calendar/CalendarDailySnapshot";
 import DashboardShell from "../components/dashboard/DashboardShell";
 
@@ -209,7 +210,9 @@ export default function CustomerDashboard() {
             </div>
           </section>
 
-          <SyncQuickNotificationsCard maxItems={3} />\n\n          <section className="grid grid-cols-4 gap-3">
+          <SyncQuickNotificationsCard maxItems={3} />
+
+          <section className="grid grid-cols-4 gap-3">
             <ActionCard icon={CalendarDays} title="Calendar" detail="Appointments, events and travel timing." onClick={() => nav("/calendar")} color="sky" />
             <ActionCard icon={MessageSquareText} title="Inbox" detail="Internal messages and connected email." onClick={() => nav("/customer/inbox")} color="violet" />
             <ActionCard icon={MapPinned} title="Traffic" detail="Check live delays before you leave." onClick={() => nav("/customer/traffic")} color="rose" badge="live" />
