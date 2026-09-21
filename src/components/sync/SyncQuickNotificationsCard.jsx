@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Bell, ChevronRight, RefreshCw, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-import { getSyncAlerts, refreshSyncAlerts } from "../../api/syncNotifications";\nimport { acceptEventInvitation, acceptMembership, declineEventInvitation, declineMembership } from "../../api/social";
+import { getSyncAlerts, refreshSyncAlerts } from "../../api/syncNotifications";
+import { acceptEventInvitation, acceptMembership, declineEventInvitation, declineMembership } from "../../api/social";
 
 function severityTone(value) {
   const key = String(value || "MEDIUM").toUpperCase();
@@ -45,7 +46,22 @@ export default function SyncQuickNotificationsCard({ maxItems = 3 }) {
     }
   }
 
-  async function respond(item, accept) {\n    const kind = item?.data?.kind;\n    const membershipId = item?.data?.social_membership_id;\n    const eventInviteId = item?.data?.social_event_invitation_id;\n    try {\n      if (kind === "GROUP_INVITE" && membershipId) await (accept ? acceptMembership(membershipId) : declineMembership(membershipId));\n      else if (kind === "EVENT_INVITE" && eventInviteId) await (accept ? acceptEventInvitation(eventInviteId) : declineEventInvitation(eventInviteId));\n      else return openItem(item);\n      setItems((rows) => rows.filter((row) => row.id !== item.id));\n      await refreshSyncAlerts().catch(() => null);\n    } catch {\n      openItem(item);\n    }\n  }\n\n  function openAlertCenter() {
+  async function respond(item, accept) {
+    const kind = item?.data?.kind;
+    const membershipId = item?.data?.social_membership_id;
+    const eventInviteId = item?.data?.social_event_invitation_id;
+    try {
+      if (kind === "GROUP_INVITE" && membershipId) await (accept ? acceptMembership(membershipId) : declineMembership(membershipId));
+      else if (kind === "EVENT_INVITE" && eventInviteId) await (accept ? acceptEventInvitation(eventInviteId) : declineEventInvitation(eventInviteId));
+      else return openItem(item);
+      setItems((rows) => rows.filter((row) => row.id !== item.id));
+      await refreshSyncAlerts().catch(() => null);
+    } catch {
+      openItem(item);
+    }
+  }
+
+  function openAlertCenter() {
     window.dispatchEvent(new Event("sync-assistant:open-alerts"));
   }
 
