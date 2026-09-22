@@ -41,6 +41,7 @@ import {
   createStatLedgerEntry,
   createTeamFee,
   ensureTeamPaymentSettings,
+  finishSportsGame,
   getAdvancedTeamStats,
   getFeeAssignments,
   getPlayerProfiles,
@@ -57,6 +58,7 @@ import {
   updateFeeAssignment,
   updateTeamFee,
   updatePlayerProfile,
+  updateSportsGame,
   updateSportsPlayer,
   updateSportsTeam,
   updateTeamPaymentSettings,
@@ -190,6 +192,7 @@ export default function SportsTeamManagerDashboard() {
   const [meta, setMeta] = useState({ season_name: "", league_name: "", division_name: "" });
   const [newPlayer, setNewPlayer] = useState({ display_name: "", jersey_number: "", primary_position: "", bats: "R", throws: "R", email: "", phone: "" });
   const [gameForm, setGameForm] = useState({ game_type: "LEAGUE", opponent_name: "", home_away: "NEUTRAL", date: "", time: "18:30", venue_name: "", address_line1: "", city: "", state: "AL" });
+  const [gameEditor, setGameEditor] = useState(null);
   const [lineupGameId, setLineupGameId] = useState("");
   const [lineup, setLineup] = useState([]);
   const [lineupPlayerId, setLineupPlayerId] = useState("");
@@ -588,6 +591,57 @@ export default function SportsTeamManagerDashboard() {
     setGameForm((current) => ({ ...current, opponent_name: "", date: "" }));
   }
 
+  function openGameEditor(game, { complete = false } = {}) {
+    const start = new Date(game.start_at);
+    const pad = (value) => String(value).padStart(2, "0");
+    setGameEditor({
+      id: game.id,
+      status: game.status,
+      opponent_name: game.opponent_name || "",
+      game_type: game.game_type || "LEAGUE",
+      home_away: game.home_away || "NEUTRAL",
+      date: `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`,
+      time: `${pad(start.getHours())}:${pad(start.getMinutes())}`,
+      venue_name: game.venue_name || "",
+      address_line1: game.address_line1 || "",
+      city: game.city || "",
+      state: game.state || "",
+      runs_for: String(num(game.runs_for)),
+      runs_against: String(num(game.runs_against)),
+      mark_final: complete || game.status === "FINAL",
+    });
+  }
+
+  async function saveGameEditor() {
+    if (!gameEditor?.id || !gameEditor.opponent_name.trim() || !gameEditor.date) return;
+    const ourScore = Math.max(0, Number.parseInt(gameEditor.runs_for || "0", 10) || 0);
+    const theirScore = Math.max(0, Number.parseInt(gameEditor.runs_against || "0", 10) || 0);
+    const startAt = new Date(`${gameEditor.date}T${gameEditor.time || "18:30"}:00`);
+    setBusy(true); setError(""); setNotice("");
+    try {
+      await updateSportsGame(gameEditor.id, {
+        opponent_name: gameEditor.opponent_name.trim(),
+        game_type: gameEditor.game_type,
+        home_away: gameEditor.home_away,
+        start_at: startAt.toISOString(),
+        venue_name: gameEditor.venue_name.trim(),
+        address_line1: gameEditor.address_line1.trim(),
+        city: gameEditor.city.trim(),
+        state: gameEditor.state.trim(),
+      });
+      if (gameEditor.mark_final || gameEditor.status === "FINAL") {
+        await finishSportsGame(gameEditor.id, { runs_for: ourScore, runs_against: theirScore });
+      }
+      setNotice(gameEditor.mark_final || gameEditor.status === "FINAL" ? "Game and final score saved." : "Game updated.");
+      setGameEditor(null);
+      await refresh({ quiet: true });
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function inviteRosterPlayer(player) {
     const profile = profileMap.get(Number(player.id));
     const email = profile?.email || player.user_detail?.email || "";
@@ -954,9 +1008,9 @@ export default function SportsTeamManagerDashboard() {
         {tab === "Schedule" ? <div className="grid gap-3 lg:grid-cols-[1.3fr_.7fr]">
           <div className="space-y-3">
             {needsCompletionGames.length ? <Card title="Needs completion" body="Past games stay out of Upcoming until you enter the final result or finish the Game Book." action={<Pill tone="amber">{needsCompletionGames.length} OPEN</Pill>}>
-              <div className="space-y-2">{needsCompletionGames.map((game)=><div key={game.id} className="flex items-center justify-between gap-2 rounded-xl border border-amber-300/20 bg-amber-300/[.05] p-3"><div className="min-w-0"><div className="text-[8px] font-black uppercase tracking-wide text-amber-300">{new Date(game.start_at).toLocaleDateString()}</div><b className="block truncate text-xs text-white">vs {game.opponent_name}</b><span className="text-[9px] text-slate-500">{game.venue_name || "Field TBD"} · final score/stat entry needed</span></div><Btn primary onClick={()=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>Complete game</Btn></div>)}</div>
+              <div className="space-y-2">{needsCompletionGames.map((game)=><div key={game.id} className="rounded-xl border border-amber-300/20 bg-amber-300/[.05] p-3"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="text-[8px] font-black uppercase tracking-wide text-amber-300">{new Date(game.start_at).toLocaleDateString()}</div><b className="block truncate text-xs text-white">vs {game.opponent_name}</b><span className="text-[9px] text-slate-500">{game.venue_name || "Field TBD"} · final score/stat entry needed</span></div><Pill tone="amber">Needs final</Pill></div><div className="mt-2 grid grid-cols-2 gap-2"><Btn primary onClick={()=>openGameEditor(game,{complete:true})}>Enter final score</Btn><Btn onClick={()=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>Open Game Book</Btn></div></div>)}</div>
             </Card> : null}
-          <Card title="Team schedule" body="Games are synced to the Social team and members' SyncWorks calendars." action={<CalendarDays className="h-4 w-4 text-emerald-300" />}><div className="space-y-1.5">{games.map((game) => <div key={game.id} className="rounded-xl border border-white/10 bg-white/[.025] p-2.5"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="flex flex-wrap items-center gap-1.5"><b className="text-xs text-white">{new Date(game.start_at).toLocaleDateString()} · {new Date(game.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</b><Pill tone={game.home_away === "HOME" ? "green" : game.home_away === "AWAY" ? "amber" : "slate"}>{game.home_away}</Pill></div><div className="mt-1 text-[11px] font-black text-slate-200">vs {game.opponent_name}</div><div className="mt-0.5 flex items-center gap-1 text-[9px] text-slate-500"><MapPin className="h-3 w-3" />{game.venue_name || "Field TBD"}</div>{game.address_line1 ? <div className="pl-4 text-[9px] text-slate-600">{game.address_line1}, {game.city}, {game.state}</div> : null}</div><Btn onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>{managerView ? "Game Book" : "Open"}</Btn></div></div>)}{!games.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-slate-500">No games yet.</div> : null}</div></Card>
+          <Card title="Team schedule" body="Managers can edit schedule details, past finals and Game Books at any time." action={<CalendarDays className="h-4 w-4 text-emerald-300" />}><div className="space-y-1.5">{games.map((game) => <div key={game.id} className="rounded-xl border border-white/10 bg-white/[.025] p-2.5"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="flex flex-wrap items-center gap-1.5"><b className="text-xs text-white">{new Date(game.start_at).toLocaleDateString()} · {new Date(game.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</b><Pill tone={game.status === "LIVE" ? "green" : game.status === "FINAL" ? "cyan" : game.home_away === "AWAY" ? "amber" : "slate"}>{game.status === "FINAL" ? `FINAL ${game.runs_for}-${game.runs_against}` : game.status === "LIVE" ? "LIVE" : game.home_away}</Pill></div><div className="mt-1 text-[11px] font-black text-slate-200">vs {game.opponent_name}</div><div className="mt-0.5 flex items-center gap-1 text-[9px] text-slate-500"><MapPin className="h-3 w-3" />{game.venue_name || "Field TBD"}</div>{game.address_line1 ? <div className="pl-4 text-[9px] text-slate-600">{game.address_line1}, {game.city}, {game.state}</div> : null}</div></div><div className="mt-2 grid grid-cols-2 gap-2">{managerView?<Btn onClick={()=>openGameEditor(game)}><Pencil className="mr-1 inline h-3.5 w-3.5"/>Edit game</Btn>:null}<Btn onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>{managerView ? "Game Book" : "Open"}</Btn></div></div>)}{!games.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-slate-500">No games yet.</div> : null}</div></Card>
           </div>
           {managerView ? <Card title="Add game" body="Manual additions use the same calendar sync."><div className="grid grid-cols-2 gap-2"><Select label="Type" value={gameForm.game_type} onChange={(value) => setGameForm((v) => ({ ...v, game_type: value }))}><option value="LEAGUE">League</option><option value="TOURNAMENT">Tournament</option><option value="PRACTICE">Practice</option><option value="EXHIBITION">Exhibition</option></Select><Select label="Home/Away" value={gameForm.home_away} onChange={(value) => setGameForm((v) => ({ ...v, home_away: value }))}><option value="HOME">Home</option><option value="AWAY">Away</option><option value="NEUTRAL">Neutral</option></Select><Input label="Opponent" value={gameForm.opponent_name} onChange={(value) => setGameForm((v) => ({ ...v, opponent_name: value }))} className="col-span-2" /><Input label="Date" type="date" value={gameForm.date} onChange={(value) => setGameForm((v) => ({ ...v, date: value }))} /><Input label="Time" type="time" value={gameForm.time} onChange={(value) => setGameForm((v) => ({ ...v, time: value }))} /><Input label="Venue / field" value={gameForm.venue_name} onChange={(value) => setGameForm((v) => ({ ...v, venue_name: value }))} className="col-span-2" /><Input label="Address" value={gameForm.address_line1} onChange={(value) => setGameForm((v) => ({ ...v, address_line1: value }))} className="col-span-2" /><Input label="City" value={gameForm.city} onChange={(value) => setGameForm((v) => ({ ...v, city: value }))} /><Input label="State" value={gameForm.state} onChange={(value) => setGameForm((v) => ({ ...v, state: value }))} /></div><Btn primary className="mt-2 w-full" onClick={addGame} disabled={!gameForm.opponent_name.trim() || !gameForm.date || busy}><Plus className="mr-1 inline h-4 w-4" />Add game</Btn></Card> : <Card title="Tournament week" body="League or tournament games will appear here once published by a manager or association."><div className="text-xs text-slate-400">Your Fall 2026 league sheet lists tournament week beginning October 27.</div></Card>}
         </div> : null}
@@ -1106,6 +1160,28 @@ export default function SportsTeamManagerDashboard() {
           ) : null}
         </div> : null}
       </main>
+
+      {gameEditor && managerView ? (
+        <Drawer title={gameEditor.status === "FINAL" ? "Edit final game" : gameEditor.mark_final ? "Complete past game" : "Edit game"} onClose={() => setGameEditor(null)}>
+          <div className="space-y-3">
+            <div className="rounded-xl border border-cyan-300/15 bg-cyan-300/[.04] p-3 text-[10px] text-cyan-100">Managers can correct schedule details and final scores. Game Book stats remain editable separately; deleting a book removes that book's stat contribution.</div>
+            <div className="grid grid-cols-2 gap-2">
+              <Select label="Type" value={gameEditor.game_type} onChange={(value)=>setGameEditor((v)=>({...v,game_type:value}))}><option value="LEAGUE">League</option><option value="TOURNAMENT">Tournament</option><option value="PRACTICE">Practice</option><option value="EXHIBITION">Exhibition</option></Select>
+              <Select label="Home/Away" value={gameEditor.home_away} onChange={(value)=>setGameEditor((v)=>({...v,home_away:value}))}><option value="HOME">Home</option><option value="AWAY">Away</option><option value="NEUTRAL">Neutral</option></Select>
+              <Input label="Opponent" value={gameEditor.opponent_name} onChange={(value)=>setGameEditor((v)=>({...v,opponent_name:value}))} className="col-span-2"/>
+              <Input label="Date" type="date" value={gameEditor.date} onChange={(value)=>setGameEditor((v)=>({...v,date:value}))}/>
+              <Input label="Time" type="time" value={gameEditor.time} onChange={(value)=>setGameEditor((v)=>({...v,time:value}))}/>
+              <Input label="Venue / field" value={gameEditor.venue_name} onChange={(value)=>setGameEditor((v)=>({...v,venue_name:value}))} className="col-span-2"/>
+              <Input label="Address" value={gameEditor.address_line1} onChange={(value)=>setGameEditor((v)=>({...v,address_line1:value}))} className="col-span-2"/>
+              <Input label="City" value={gameEditor.city} onChange={(value)=>setGameEditor((v)=>({...v,city:value}))}/>
+              <Input label="State" value={gameEditor.state} onChange={(value)=>setGameEditor((v)=>({...v,state:value}))}/>
+            </div>
+            <label className="flex items-center justify-between rounded-xl border border-amber-300/15 bg-amber-300/[.04] p-3"><span><b className="block text-xs text-white">Final score</b><span className="text-[9px] text-slate-500">Turn this on to complete a past game or revise an existing final.</span></span><input type="checkbox" checked={!!gameEditor.mark_final || gameEditor.status==="FINAL"} disabled={gameEditor.status==="FINAL"} onChange={(e)=>setGameEditor((v)=>({...v,mark_final:e.target.checked}))} className="h-5 w-5"/></label>
+            {(gameEditor.mark_final || gameEditor.status==="FINAL") ? <div className="grid grid-cols-2 gap-2"><Input label="Team score" type="number" value={gameEditor.runs_for} onChange={(value)=>setGameEditor((v)=>({...v,runs_for:value}))}/><Input label="Opponent score" type="number" value={gameEditor.runs_against} onChange={(value)=>setGameEditor((v)=>({...v,runs_against:value}))}/></div> : null}
+            <div className="grid grid-cols-2 gap-2"><Btn onClick={()=>setGameEditor(null)}>Cancel</Btn><Btn primary onClick={saveGameEditor} disabled={busy || !gameEditor.opponent_name.trim()}><Save className="mr-1 inline h-4 w-4"/>{busy ? "Saving…" : "Save game"}</Btn></div>
+          </div>
+        </Drawer>
+      ) : null}
 
       {addPlayerOpen && managerView ? (
         <Drawer title="Add player" onClose={() => setAddPlayerOpen(false)}>

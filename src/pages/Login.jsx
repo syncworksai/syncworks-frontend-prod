@@ -67,7 +67,7 @@ function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
-function LoginPanel({ emailOrUser, setEmailOrUser, password, setPassword, err, loading, onSubmit, onClose }) {
+function LoginPanel({ emailOrUser, setEmailOrUser, password, setPassword, err, loading, onSubmit, onClose, registerPath }) {
   return (
     <div className="w-full rounded-[28px] border border-cyan-400/20 bg-[#07111f]/95 p-5 shadow-2xl shadow-cyan-950/40 backdrop-blur-xl sm:p-6">
       <div className="flex items-start justify-between gap-4">
@@ -116,7 +116,7 @@ function LoginPanel({ emailOrUser, setEmailOrUser, password, setPassword, err, l
       </form>
 
       <div className="mt-5 flex flex-col gap-2 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
-        <span>New to SyncWorks? <Link className="font-semibold text-cyan-300" to="/register">Create an account</Link></span>
+        <span>New to SyncWorks? <Link className="font-semibold text-cyan-300" to={registerPath}>Create an account</Link></span>
         <span>Tenant and investor access uses your invitation.</span>
       </div>
     </div>
@@ -169,6 +169,8 @@ export default function Login() {
 
   const selectedRole = ROLE_OPTIONS.find((role) => role.id === activeRole) || ROLE_OPTIONS[0];
 
+  const registerPath = `/register?next=${encodeURIComponent(returnTo)}${invitedEmail ? `&email=${encodeURIComponent(invitedEmail)}` : ""}`;
+
   return (
     <div className="min-h-screen bg-[#020712] text-slate-100">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#020712]/90 backdrop-blur-xl">
@@ -182,7 +184,7 @@ export default function Login() {
             <a href="#story" className="hover:text-white">Why it exists</a>
           </nav>
           <div className="flex items-center gap-2">
-            <Link to="/register" className="hidden rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800 sm:inline-flex">Create account</Link>
+            <Link to={registerPath} className="hidden rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800 sm:inline-flex">Create account</Link>
             <button onClick={() => setSignInOpen(true)} className="rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-4 py-2 text-sm font-bold text-cyan-200 hover:bg-cyan-400/20">Sign in</button>
           </div>
         </div>
@@ -205,7 +207,7 @@ export default function Login() {
                 SyncWorks is a connected operating system for people, service businesses, landlords, property managers, tenants, investors, and teams. It replaces scattered apps and missed handoffs with one shared workflow and an assistant that helps surface what matters next.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link to="/register" className="rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500 px-6 py-3 text-center font-bold text-slate-950 hover:brightness-110">Start with SyncWorks</Link>
+                <Link to={registerPath} className="rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500 px-6 py-3 text-center font-bold text-slate-950 hover:brightness-110">Start with SyncWorks</Link>
                 <a href="#roles" className="rounded-2xl border border-slate-700 bg-slate-900/60 px-6 py-3 text-center font-semibold text-slate-200 hover:bg-slate-800">See what it does for you</a>
               </div>
               <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-400">
@@ -280,7 +282,7 @@ export default function Login() {
       {signInOpen ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label="Sign in to SyncWorks" onMouseDown={(event) => { if (event.target === event.currentTarget) setSignInOpen(false); }}>
           <div className="max-h-[92vh] w-full overflow-y-auto sm:max-w-xl">
-            <LoginPanel emailOrUser={emailOrUser} setEmailOrUser={setEmailOrUser} password={password} setPassword={setPassword} err={err} loading={loading} onSubmit={onSubmit} onClose={() => setSignInOpen(false)} />
+            <LoginPanel emailOrUser={emailOrUser} setEmailOrUser={setEmailOrUser} password={password} setPassword={setPassword} err={err} loading={loading} onSubmit={onSubmit} onClose={() => setSignInOpen(false)} registerPath={registerPath} />
           </div>
         </div>
       ) : null}

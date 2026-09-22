@@ -12,7 +12,9 @@ import {
   Plus,
   Radio,
   RotateCcw,
+  Settings,
   Share2,
+  Trash2,
   Trophy,
   Undo2,
   UserRound,
@@ -24,17 +26,20 @@ import { useAuth } from "../auth/AuthContext";
 import { getMemberships } from "../api/social";
 import {
   correctSoftballPlay,
+  deleteSportsGameBook,
   finishSportsGame,
   getGameCastSettings,
   getPlateAppearances,
   getPlayerCard,
   getSoftballRuleSets,
   getSportsGame,
+  getSportsGames,
   recordSoftballPlay,
   saveSoftballPlayContext,
   setOpponentHomeRuns,
   setOpponentScore,
   updateGameInningLine,
+  reopenSportsGame,
   startSportsGame,
   substituteSportsGame,
   undoSoftballPlay,
@@ -335,6 +340,8 @@ export default function SoftballGameDayAdvanced() {
   const [plays, setPlays] = useState([]);
   const [memberships, setMemberships] = useState([]);
   const [gamecast, setGamecast] = useState(null);
+  const [nextGame, setNextGame] = useState(null);
+  const [gamecastOptionsOpen, setGamecastOptionsOpen] = useState(false);
   const [ruleSets, setRuleSets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -441,6 +448,12 @@ export default function SoftballGameDayAdvanced() {
       setGame(gameData);
       setPlays(list(playRows));
       setMemberships(list(membershipRows));
+      const teamGames = await getSportsGames(gameData.team).catch(() => []);
+      const orderedGames = list(teamGames)
+        .filter((row) => Number(row.id) !== Number(gameData.id) && row.status !== "CANCELLED")
+        .sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
+      const chronologicalNext = orderedGames.find((row) => new Date(row.start_at) > new Date(gameData.start_at));
+      setNextGame(chronologicalNext || orderedGames.find((row) => row.status === "SCHEDULED") || null);
 
       const manager = list(membershipRows).some(
         (membership) => Number(membership.group) === Number(groupId)
@@ -490,6 +503,13 @@ export default function SoftballGameDayAdvanced() {
       }
     } catch {}
   }, [gameId]);
+
+  useEffect(() => {
+    if (!game) return;
+    setRunner1(Boolean(game.runner_on_first));
+    setRunner2(Boolean(game.runner_on_second));
+    setRunner3(Boolean(game.runner_on_third));
+  }, [game?.runner_on_first, game?.runner_on_second, game?.runner_on_third]);
 
   useEffect(() => {
     try {
@@ -584,12 +604,18 @@ export default function SoftballGameDayAdvanced() {
       const beforeInning = num(game.current_inning);
       const basesBefore = { first: runner1, second: runner2, third: runner3 };
       const suggestion = scoringSuggestion(result, basesBefore, num(game.outs));
+      const predicted = predictedBasesAfter(result, basesBefore, runs, suggestion);
+      const inningWillAdvance = num(game.outs) + num(outsRecorded) >= 3;
+      const nextBases = inningWillAdvance ? { first: false, second: false, third: false } : predicted;
       const response = await recordSoftballPlay(game.id, {
         result,
         outs_recorded: outsRecorded,
         rbi,
         runs_scored: runs,
         notes: outChoice?.detail || "",
+        runner_on_first_after: nextBases.first,
+        runner_on_second_after: nextBases.second,
+        runner_on_third_after: nextBases.third,
       });
       const plateAppearanceId = response?.play?.id;
       if (plateAppearanceId) {
@@ -612,10 +638,9 @@ export default function SoftballGameDayAdvanced() {
         setRunner1(false); setRunner2(false); setRunner3(false);
         setNotice(`3 outs — inning ${response.game.current_inning} started automatically.`);
       } else {
-        const nextBases = predictedBasesAfter(result, basesBefore, runs, suggestion);
-        setRunner1(nextBases.first);
-        setRunner2(nextBases.second);
-        setRunner3(nextBases.third);
+        setRunner1(Boolean(response?.game?.runner_on_first ?? nextBases.first));
+        setRunner2(Boolean(response?.game?.runner_on_second ?? nextBases.second));
+        setRunner3(Boolean(response?.game?.runner_on_third ?? nextBases.third));
       }
 
       clearEntry({ keepBases: true });
@@ -712,6 +737,43 @@ export default function SoftballGameDayAdvanced() {
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, "_blank", "noopener,noreferrer");
   }
 
+  async function saveGameCastOption(key, value) {
+    if (!gamecast || busy) return;
+    const next = await run(() => updateGameCastSettings(game.id, { [key]: value }));
+    if (next) setGamecast(next);
+  }
+
+  async function quickFacebookGameCast() {
+    let share = gamecast;
+    if (!share?.enabled) {
+      share = await run(
+        () => updateGameCastSettings(game.id, { enabled: true, show_live_score: true, show_current_batter: true }),
+        "GameCast is live.",
+      );
+      if (share) setGamecast(share);
+    }
+    if (!share?.token) return;
+    const url = `${window.location.origin}/gamecast/${share.token}`;
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, "_blank", "noopener,noreferrer");
+  }
+
+  async function deleteBook() {
+    if (!window.confirm("Delete this entire Game Book? All recorded plate appearances from this game will be removed from player/team stats. The scheduled game itself will remain.")) return;
+    const result = await run(() => deleteSportsGameBook(game.id), "Game Book deleted. This game no longer affects stats.");
+    if (result?.game) {
+      setRunner1(false); setRunner2(false); setRunner3(false);
+    }
+  }
+
+  async function reopenGame(status = "SCHEDULED") {
+    await run(() => reopenSportsGame(game.id, status), status === "LIVE" ? "Game reopened live." : "Game reopened for editing.");
+  }
+
+  async function finishGame() {
+    if (!window.confirm(`Mark final: ${game.team_name} ${game.runs_for}–${game.runs_against} ${game.opponent_name}?`)) return;
+    await run(() => finishSportsGame(game.id), "Game marked final.");
+  }
+
   async function changeRule(ruleSetId) {
     const rule = ruleSets.find((row) => String(row.id) === String(ruleSetId));
     await run(() => updateSportsGame(game.id, {
@@ -796,6 +858,7 @@ export default function SoftballGameDayAdvanced() {
     : { runs: 0, rbi: 0 };
   const basesLoaded = runner1 && runner2 && runner3;
   const rule = game.rule_set_detail;
+  const gameCastUrl = gamecast?.token ? `${window.location.origin}/gamecast/${gamecast.token}` : "";
 
   return (
     <div className="min-h-screen bg-[#02060c] pb-32 text-slate-100">
@@ -803,13 +866,16 @@ export default function SoftballGameDayAdvanced() {
       <main className="mx-auto max-w-6xl space-y-2.5 px-2.5 py-2.5 sm:px-4">
         <div className="flex items-center justify-between gap-2">
           <Button onClick={() => navigate(`/connect/groups/${groupId}/sports`)}><ArrowLeft className="mr-1 inline h-3.5 w-3.5" />Team</Button>
-          <span className={cx("rounded-full px-2.5 py-1.5 text-[8px] font-black uppercase tracking-wide", live ? "bg-emerald-300 text-slate-950" : "border border-white/10 text-slate-300")}>{live ? "● Live" : game.status}</span>
+          <div className="flex items-center gap-1.5">
+            {canManage && gamecast ? <Button onClick={() => setGamecastOptionsOpen(true)}><Settings className="mr-1 inline h-3.5 w-3.5" />GameCast</Button> : null}
+            <span className={cx("rounded-full px-2.5 py-1.5 text-[8px] font-black uppercase tracking-wide", live ? "bg-emerald-300 text-slate-950" : "border border-white/10 text-slate-300")}>{live ? "● Live" : game.status}</span>
+          </div>
         </div>
 
         {error ? <div className="rounded-xl border border-rose-300/20 bg-rose-300/10 p-2 text-[10px] text-rose-100">{error}</div> : null}
         {notice ? <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-2 text-[10px] text-cyan-100">{notice}</div> : null}
 
-        <section className="rounded-2xl border border-cyan-300/15 bg-[#07111f] p-2.5">
+        <section className="sticky top-[4.7rem] z-30 rounded-2xl border border-cyan-300/20 bg-[#07111f]/95 p-2.5 shadow-xl backdrop-blur">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
             <div className="text-center"><div className="truncate text-[8px] font-black uppercase text-cyan-300">{game.team_name}</div><div className="text-3xl font-black text-white">{game.runs_for}</div></div>
             <div className="min-w-[7.5rem] rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-center">
@@ -1154,12 +1220,49 @@ export default function SoftballGameDayAdvanced() {
 
                 {canManage ? <section className="rounded-2xl border border-white/10 bg-[#07111f] p-2.5"><div className="text-[8px] font-black uppercase tracking-wide text-slate-500">Opponent · inning {game.current_inning}</div><div className="mt-2 grid grid-cols-2 gap-2">{[["opponent_runs","Runs"],["opponent_hits","Hits"]].map(([field,label])=>{const row=opponentInningMap.get(num(game.current_inning))||{};return <div key={field} className="rounded-lg border border-white/8 bg-black/15 p-2"><div className="text-center text-[7px] text-slate-500">{label}</div><div className="mt-1 grid grid-cols-[1.8rem_1fr_1.8rem] items-center gap-1"><button onClick={()=>changeOpponentInning(game.current_inning,field,-1)} className="grid h-7 w-7 place-items-center rounded-lg border border-white/10"><Minus className="h-3 w-3"/></button><b className="text-center text-base">{num(row[field])}</b><button onClick={()=>changeOpponentInning(game.current_inning,field,1)} className="grid h-7 w-7 place-items-center rounded-lg border border-white/10"><Plus className="h-3 w-3"/></button></div></div>})}</div></section> : null}
 
-                {canManage&&gamecast?<section className="rounded-2xl border border-emerald-300/15 bg-[#07111f] p-2.5"><div className="flex items-center justify-between"><div><div className="text-[8px] font-black uppercase text-emerald-300">Public GameCast</div><div className="text-[9px] text-slate-500">No login required.</div></div>{gamecast.enabled?<Radio className="h-4 w-4 text-emerald-300"/>:<EyeOff className="h-4 w-4 text-slate-500"/>}</div><div className="mt-2 grid grid-cols-2 gap-1.5"><Button primary={!gamecast.enabled} onClick={()=>toggleGameCast(!gamecast.enabled)}>{gamecast.enabled?<><EyeOff className="mr-1 inline h-3.5 w-3.5"/>Stop</>:<><Eye className="mr-1 inline h-3.5 w-3.5"/>Go live</>}</Button><Button disabled={!gamecast.enabled} onClick={shareGameCast}><Share2 className="mr-1 inline h-3.5 w-3.5"/>Share</Button></div>{gamecast.enabled?<Button className="mt-1.5 w-full" onClick={facebookGameCast}>Share to Facebook</Button>:null}</section>:null}
+                {canManage&&gamecast?<section className="rounded-2xl border border-emerald-300/15 bg-[#07111f] p-2.5">
+                  <div className="flex items-center justify-between gap-2"><div><div className="text-[8px] font-black uppercase text-emerald-300">GameCast</div><div className="text-[9px] text-slate-500">Viewers create/sign into a free SyncWorks account, then return directly to this live game.</div></div>{gamecast.enabled?<Radio className="h-4 w-4 text-emerald-300"/>:<EyeOff className="h-4 w-4 text-slate-500"/>}</div>
+                  {gameCastUrl?<div className="mt-2 break-all rounded-lg border border-white/8 bg-black/20 p-2 text-[8px] text-cyan-100">{gameCastUrl}</div>:null}
+                  <div className="mt-2 grid grid-cols-2 gap-1.5"><Button primary={!gamecast.enabled} onClick={()=>toggleGameCast(!gamecast.enabled)}>{gamecast.enabled?<><EyeOff className="mr-1 inline h-3.5 w-3.5"/>Stop</>:<><Eye className="mr-1 inline h-3.5 w-3.5"/>Go live</>}</Button><Button onClick={()=>setGamecastOptionsOpen(true)}><Settings className="mr-1 inline h-3.5 w-3.5"/>Options</Button><Button disabled={!gamecast.enabled} onClick={shareGameCast}><Share2 className="mr-1 inline h-3.5 w-3.5"/>Share</Button><Button onClick={quickFacebookGameCast}>Facebook</Button></div>
+                </section>:null}
 
-                {canManage?<Button danger className="w-full" onClick={()=>run(()=>finishSportsGame(game.id),"Game marked final.")}><Trophy className="mr-1 inline h-3.5 w-3.5"/>Finish Game</Button>:null}
+                {canManage?<div className="grid grid-cols-2 gap-1.5">
+                  {final?<Button onClick={()=>reopenGame("SCHEDULED")}><RotateCcw className="mr-1 inline h-3.5 w-3.5"/>Reopen</Button>:<Button danger onClick={finishGame}><Trophy className="mr-1 inline h-3.5 w-3.5"/>Finish</Button>}
+                  <Button danger onClick={deleteBook}><Trash2 className="mr-1 inline h-3.5 w-3.5"/>Delete Book</Button>
+                </div>:null}
               </div>
             </div>
           </>
+        ) : null}
+
+        {canManage ? <div className="fixed inset-x-0 bottom-0 z-[70] border-t border-white/10 bg-[#06101d]/95 px-2.5 pb-[calc(.5rem+env(safe-area-inset-bottom))] pt-2 shadow-2xl backdrop-blur sm:hidden">
+          <div className="grid grid-cols-4 gap-1.5">
+            {live ? <Button onClick={()=>run(()=>undoSoftballPlay(game.id),"Last play undone.")} disabled={!plays.length}><Undo2 className="mx-auto h-4 w-4"/><span className="mt-0.5 block text-[7px]">Undo</span></Button> : final ? <Button onClick={()=>reopenGame("LIVE")} disabled={!lineup.length}><CircleDot className="mx-auto h-4 w-4"/><span className="mt-0.5 block text-[7px]">Reopen</span></Button> : <Button onClick={()=>run(()=>startSportsGame(game.id),"Game started.")} disabled={!lineup.length}><CircleDot className="mx-auto h-4 w-4"/><span className="mt-0.5 block text-[7px]">Start</span></Button>}
+            <Button onClick={()=>setGamecastOptionsOpen(true)}><Radio className="mx-auto h-4 w-4"/><span className="mt-0.5 block text-[7px]">GameCast</span></Button>
+            <Button onClick={quickFacebookGameCast}><Share2 className="mx-auto h-4 w-4"/><span className="mt-0.5 block text-[7px]">Facebook</span></Button>
+            {live ? <Button danger onClick={finishGame}><Trophy className="mx-auto h-4 w-4"/><span className="mt-0.5 block text-[7px]">Final</span></Button> : nextGame ? <Button onClick={()=>navigate(`/connect/groups/${groupId}/sports/games/${nextGame.id}`)}><ArrowLeft className="mx-auto h-4 w-4 rotate-180"/><span className="mt-0.5 block text-[7px]">Next game</span></Button> : <Button onClick={()=>navigate(`/connect/groups/${groupId}/sports`)}><ArrowLeft className="mx-auto h-4 w-4"/><span className="mt-0.5 block text-[7px]">Team</span></Button>}
+          </div>
+        </div> : null}
+
+        {gamecastOptionsOpen && gamecast ? (
+          <div className="fixed inset-0 z-[95] flex items-end justify-center bg-black/75 px-3 pb-4 pt-16 sm:items-center">
+            <div className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-[1.6rem] border border-emerald-300/20 bg-[#07111f] p-4 shadow-2xl">
+              <div className="flex items-start justify-between gap-3"><div><div className="text-[8px] font-black uppercase tracking-[.15em] text-emerald-300">GameCast options</div><div className="mt-1 text-lg font-black text-white">{game.team_name} vs {game.opponent_name}</div><div className="mt-1 text-[9px] text-slate-500">The Game Book feeds this page live. Viewers must have a free SyncWorks login.</div></div><button type="button" onClick={()=>setGamecastOptionsOpen(false)} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10">×</button></div>
+              {gameCastUrl?<div className="mt-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[.04] p-3"><div className="text-[7px] font-black uppercase text-cyan-300">Share link</div><div className="mt-1 break-all text-[10px] text-white">{gameCastUrl}</div><div className="mt-2 grid grid-cols-2 gap-2"><Button onClick={shareGameCast}><Share2 className="mr-1 inline h-3.5 w-3.5"/>Share / Copy</Button><Button onClick={quickFacebookGameCast}>Share Facebook</Button></div></div>:null}
+              <div className="mt-3 space-y-2">
+                {[
+                  ["enabled","GameCast live","Allow logged-in viewers to watch live updates."],
+                  ["show_live_score","Live score, inning & bases","Show score, outs, inning and occupied bases."],
+                  ["show_current_batter","Current batter","Show who is at bat right now."],
+                  ["show_recent_plays","Recent plays","Show the live play-by-play feed."],
+                  ["show_lineup","Lineup","Show batting order and defensive positions."],
+                  ["show_player_stats","Player statistics","Show season/team statistics in GameCast."],
+                  ["allow_follow","Follow team","Allow viewers to follow this team."],
+                ].map(([key,label,help])=><label key={key} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[.025] p-3"><span><b className="block text-xs text-white">{label}</b><span className="mt-0.5 block text-[9px] text-slate-500">{help}</span></span><input type="checkbox" checked={!!gamecast[key]} onChange={(e)=>saveGameCastOption(key,e.target.checked)} className="h-5 w-5 accent-cyan-300"/></label>)}
+              </div>
+              <Button className="mt-3 w-full" onClick={()=>window.open(gameCastUrl,"_blank","noopener,noreferrer")} disabled={!gamecast.enabled}>Preview GameCast</Button>
+            </div>
+          </div>
         ) : null}
 
         {substituteOpen ? (
@@ -1241,7 +1344,7 @@ export default function SoftballGameDayAdvanced() {
             </div>
           </div>
         ) : null}
-        {final ? <section className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[.04] p-4 text-center"><Trophy className="mx-auto h-6 w-6 text-emerald-300"/><div className="mt-1 text-lg font-black">{game.team_name} {game.runs_for}–{game.runs_against} {game.opponent_name}</div><Button className="mt-3" onClick={()=>navigate(`/connect/groups/${groupId}/sports`)}>Back to team</Button></section> : null}
+        {final ? <section className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[.04] p-4 text-center"><Trophy className="mx-auto h-6 w-6 text-emerald-300"/><div className="mt-1 text-lg font-black">{game.team_name} {game.runs_for}–{game.runs_against} {game.opponent_name}</div><div className="mt-3 grid grid-cols-2 gap-2"><Button onClick={()=>reopenGame("SCHEDULED")}><RotateCcw className="mr-1 inline h-3.5 w-3.5"/>Reopen / edit</Button>{nextGame?<Button primary onClick={()=>navigate(`/connect/groups/${groupId}/sports/games/${nextGame.id}`)}>Next game →</Button>:<Button onClick={()=>navigate(`/connect/groups/${groupId}/sports`)}>Back to team</Button>}</div></section> : null}
       </main>
     </div>
   );
