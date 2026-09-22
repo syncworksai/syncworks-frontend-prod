@@ -2,14 +2,18 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Radio, Share2 } from "lucide-react";
 import { useParams } from "react-router-dom";
 
+import { followGroup, unfollowGroup } from "../api/social";
 import { getPublicGameCast } from "../api/sports";
+import { useAuth } from "../auth/AuthContext";
 
 const list = (value) => Array.isArray(value) ? value : [];
 const num = (value) => Number(value || 0);
 
 export default function PublicGameCast() {
   const { token } = useParams();
+  const { user } = useAuth();
   const [data, setData] = useState(null);
+  const [followBusy, setFollowBusy] = useState(false);
   const [error, setError] = useState("");
 
   async function load() {
@@ -22,10 +26,11 @@ export default function PublicGameCast() {
   }
 
   useEffect(() => {
+    if (!user?.id) return undefined;
     load();
     const timer = window.setInterval(load, 3000);
     return () => window.clearInterval(timer);
-  }, [token]);
+  }, [token, user?.id]);
 
   const innings = useMemo(() => {
     const map = new Map(list(data?.game?.inning_grid).map((row) => [num(row.inning), row]));
@@ -45,6 +50,47 @@ export default function PublicGameCast() {
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, "_blank", "noopener,noreferrer");
   }
 
+  async function toggleFollow() {
+    const groupId = data?.game?.group_id;
+    if (!groupId || followBusy) return;
+    setFollowBusy(true);
+    try {
+      const group = data?.game?.is_following
+        ? await unfollowGroup(groupId)
+        : await followGroup(groupId);
+      setData((current) => ({
+        ...current,
+        game: {
+          ...current.game,
+          follower_count: group?.follower_count ?? current.game.follower_count,
+          is_following: !!group?.is_following,
+        },
+      }));
+    } catch {
+      setError("We could not update your follow status. Please try again.");
+    } finally {
+      setFollowBusy(false);
+    }
+  }
+
+  if (!user?.id) {
+    const next = encodeURIComponent(`/gamecast/${token}`);
+    return (
+      <div className="grid min-h-screen place-items-center bg-[#02060c] px-4 text-white">
+        <section className="w-full max-w-lg rounded-[2rem] border border-cyan-300/20 bg-[radial-gradient(circle_at_85%_0%,rgba(34,211,238,.17),transparent_35%),#07111f] p-5 text-center shadow-2xl">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-cyan-300/25 bg-cyan-300/10"><Radio className="h-7 w-7 text-cyan-200" /></div>
+          <div className="mt-4 text-[10px] font-black uppercase tracking-[.18em] text-cyan-300">SyncWorks GameCast</div>
+          <h1 className="mt-2 text-2xl font-black">Watch the live game</h1>
+          <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-400">Create a free SyncWorks Personal profile or sign in to follow teams and watch live GameCast updates.</p>
+          <div className="mt-5 grid gap-2 sm:grid-cols-2">
+            <a href={`/register?next=${next}`} className="flex min-h-11 items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-black text-slate-950">Create free account</a>
+            <a href={`/login?next=${next}`} className="flex min-h-11 items-center justify-center rounded-xl border border-white/10 bg-white/[.04] px-4 text-sm font-black text-white">Sign in</a>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   if (error) return <div className="min-h-screen bg-[#02060c] p-5 text-white"><div className="mx-auto max-w-xl rounded-2xl border border-rose-300/20 bg-rose-300/10 p-4">{error}</div></div>;
   if (!data) return <div className="grid min-h-screen place-items-center bg-[#02060c] text-cyan-200">Loading GameCast…</div>;
 
@@ -62,6 +108,12 @@ export default function PublicGameCast() {
             <div><div className="truncate text-[10px] text-slate-400">{game.opponent_name}</div><div className="text-4xl font-black text-white">{game.runs_against}</div></div>
           </div>
           <div className="mt-2 text-center text-[10px] text-slate-500">{game.current_batter ? `At bat: ${game.current_batter.display_name}` : "Game updates automatically"}</div>
+          {game.group_id ? <div className="mt-3 flex items-center justify-center gap-2">
+            <button type="button" disabled={followBusy} onClick={toggleFollow} className={`min-h-9 rounded-full border px-4 text-[9px] font-black uppercase tracking-wide ${game.is_following ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100" : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"}`}>
+              {followBusy ? "Saving…" : game.is_following ? "Following" : "+ Follow team"}
+            </button>
+            <span className="text-[9px] text-slate-500">{num(game.follower_count)} follower{num(game.follower_count) === 1 ? "" : "s"}</span>
+          </div> : null}
         </header>
 
         <section className="overflow-x-auto rounded-2xl border border-white/10 bg-[#07111f] p-2.5">
