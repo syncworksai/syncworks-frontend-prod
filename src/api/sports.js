@@ -73,6 +73,11 @@ export async function createSportsPlayer(payload) {
   return data;
 }
 
+export async function joinMySportsTeamRoster(team) {
+  const { data } = await api.post("/sports/players/join-mine/", { team });
+  return data;
+}
+
 export async function updateSportsPlayer(id, payload) {
   const { data } = await api.patch(`/sports/players/${id}/`, payload);
   return data;
