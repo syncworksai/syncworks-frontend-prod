@@ -8,8 +8,10 @@ import {
   Check,
   CircleDollarSign,
   CircleDot,
+  Copy,
   GripVertical,
   ImageDown,
+  Link2,
   Loader2,
   Mail,
   MapPin,
@@ -18,6 +20,7 @@ import {
   Plus,
   RefreshCw,
   Save,
+  Share2,
   Trash2,
   Trophy,
   UserPlus,
@@ -33,7 +36,7 @@ import InteractiveStatsBoard from "../components/sports/InteractiveStatsBoard";
 import SoftballDefenseField from "../components/sports/SoftballDefenseField";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import { useAuth } from "../auth/AuthContext";
-import { createEventResponse, getEventResponses, getGroups, getMemberships, inviteMember, setMembershipRole, uploadGroupLogo, updateEventResponse } from "../api/social";
+import { acceptMembership, createEventResponse, createGroupInviteLink, getEventResponses, getGroups, getMemberships, inviteMember, setMembershipRole, uploadGroupLogo, updateEventResponse } from "../api/social";
 import {
   assignTeamFeeRoster,
   createPlayerProfile,
@@ -52,6 +55,7 @@ import {
   getTeamFees,
   getTeamPaymentSettings,
   inviteSportsPlayer,
+  joinMySportsTeamRoster,
   remindSportsPlayer,
   remindTeamDues,
   removeSportsPlayer,
@@ -207,6 +211,12 @@ export default function SportsTeamManagerDashboard() {
   const [chatOpen, setChatOpen] = useState(false);
   const [addPlayerOpen, setAddPlayerOpen] = useState(false);
   const [quickSaving, setQuickSaving] = useState({});
+  const [teamInviteOpen, setTeamInviteOpen] = useState(false);
+  const [teamInviteUrl, setTeamInviteUrl] = useState("");
+  const [teamInviteLoading, setTeamInviteLoading] = useState(false);
+  const [shareStatus, setShareStatus] = useState("");
+  const [playerInviteEmails, setPlayerInviteEmails] = useState({});
+  const [playerInviteUrls, setPlayerInviteUrls] = useState({});
 
   const [playerDrawer, setPlayerDrawer] = useState(null);
   const [playerEdit, setPlayerEdit] = useState(null);
@@ -233,6 +243,7 @@ export default function SportsTeamManagerDashboard() {
   const canScore = managed || myMembership?.role === "SCOREKEEPER";
   const managerView = managed && !previewPlayerView;
   const socialRoster = useMemo(() => memberships.filter((membership) => Number(membership.group) === Number(groupId) && membership.status === "ACTIVE"), [memberships, groupId]);
+  const pendingTeamRequests = useMemo(() => memberships.filter((membership) => Number(membership.group) === Number(groupId) && membership.status === "REQUESTED"), [memberships, groupId]);
   const players = list(dashboard?.players).filter((player) => player.is_active !== false);
   const profileMap = useMemo(() => new Map(profiles.map((profile) => [Number(profile.player), profile])), [profiles]);
   const myPlayer = players.find((player) => Number(player.user) === userId);
@@ -401,6 +412,77 @@ export default function SportsTeamManagerDashboard() {
       setError(errorText(err));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function openTeamInvites() {
+    if (!managerView) return;
+    setTeamInviteOpen(true);
+    setShareStatus("");
+    if (teamInviteUrl) return;
+    setTeamInviteLoading(true);
+    try {
+      const link = await createGroupInviteLink(Number(groupId), "MEMBER");
+      setTeamInviteUrl(window.location.origin + "/social/invite/" + link.token);
+    } catch (err) {
+      setShareStatus(errorText(err));
+    } finally {
+      setTeamInviteLoading(false);
+    }
+  }
+
+  async function copyInviteUrl(url) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareStatus("Invite link copied — paste it into your team group chat.");
+    } catch {
+      setShareStatus("Select the link above to copy it manually.");
+    }
+  }
+
+  async function shareInviteUrl(url, name) {
+    if (!url) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Join " + name + " on SyncWorks", text: "Join our team on SyncWorks.", url });
+        setShareStatus("Invite shared.");
+        return;
+      } catch (err) {
+        if (err?.name === "AbortError") return;
+      }
+    }
+    await copyInviteUrl(url);
+  }
+
+  async function approveTeamRequest(membership) {
+    const key = "approve-" + membership.id;
+    setQuickSaving((current) => ({ ...current, [key]: true }));
+    setError("");
+    try {
+      await acceptMembership(membership.id);
+      setNotice("Approved " + (membership.user_detail?.display_name || "new member") + ". They can now add themselves to the roster.");
+      await refresh({ quiet: true });
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setQuickSaving((current) => ({ ...current, [key]: false }));
+    }
+  }
+
+  async function selfJoinRoster() {
+    if (!myMembership || !team) return;
+    setQuickSaving((current) => ({ ...current, "self-join": true }));
+    setError(""); setNotice("");
+    try {
+      const result = await joinMySportsTeamRoster(team.id);
+      setNotice(result.matched_existing
+        ? "Your account is linked to your existing player card and stats."
+        : "You are on the team roster. Your manager can now assign your jersey and position.");
+      await refresh({ quiet: true });
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setQuickSaving((current) => ({ ...current, "self-join": false }));
     }
   }
 
@@ -697,18 +779,19 @@ export default function SportsTeamManagerDashboard() {
     setGameForm((current) => ({ ...current, opponent_name: "", date: "" }));
   }
 
-  async function inviteRosterPlayer(player) {
+  async function inviteRosterPlayer(player, suppliedEmail = "") {
     const profile = profileMap.get(Number(player.id));
-    const email = profile?.email || player.user_detail?.email || "";
-    if (!email && !player.user) {
-      setError("Add an email to this player before sending an invite.");
+    const email = (suppliedEmail || profile?.email || player.user_detail?.email || "").trim().toLowerCase();
+    if (!email.includes("@")) {
+      setError("Enter the email address this player uses for SyncWorks.");
       return;
     }
     setQuickSaving((current) => ({ ...current, [`invite-${player.id}`]: true }));
     setError(""); setNotice("");
     try {
-      await inviteSportsPlayer(player.id, email);
-      setNotice(`Invite sent to ${player.display_name}.`);
+      const invite = await inviteSportsPlayer(player.id, email);
+      if (invite.invite_url) setPlayerInviteUrls((current) => ({ ...current, [player.id]: invite.invite_url }));
+      setNotice(`Personal invite sent to ${player.display_name}. Use Copy or Share below to send it in a text too.`);
       await refresh({ quiet: true });
     } catch (err) {
       setError(errorText(err));
@@ -881,6 +964,11 @@ export default function SportsTeamManagerDashboard() {
         </div> : null}
 
         {tab === "Roster" ? <div className="space-y-3">
+          {managerView ? <Card title="Invite your team" body="Send one group link to everyone. Players register or sign in, request to join, and add themselves to the roster after you approve them." action={<Link2 className="h-5 w-5 text-emerald-300" />}>
+            <Btn primary className="w-full" onClick={openTeamInvites}><Share2 className="mr-2 inline h-4 w-4" />Share team invite link</Btn>
+            <p className="mt-2 text-[10px] leading-5 text-slate-400">Already entered a player and their stats? Use their personal email invitation below to link that exact roster card instead.</p>
+          </Card> : myMembership && !myPlayer ? <Card title="Add yourself to the team roster" body="After your group request is approved, claim your existing player card by account email or create your own. Existing jersey numbers and stats are preserved when your email matches." action={<UserPlus className="h-5 w-5 text-cyan-300" />}><Btn primary className="w-full" disabled={!!quickSaving["self-join"]} onClick={selfJoinRoster}>{quickSaving["self-join"] ? "Connecting…" : "Add me to roster"}</Btn></Card> : null}
+          {managerView && pendingTeamRequests.length ? <Card title="Team join requests" body="Approve players who opened your shared group link. After approval, they can add themselves to the roster."><div className="space-y-2">{pendingTeamRequests.map((membership)=><div key={membership.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[.03] p-3"><span className="min-w-0"><b className="block truncate text-xs text-white">{membership.user_detail?.display_name || membership.user_detail?.email || "SyncWorks member"}</b><span className="block truncate text-[10px] text-slate-400">{membership.user_detail?.email || "Request to join"}</span></span><Btn primary disabled={!!quickSaving["approve-"+membership.id]} onClick={()=>approveTeamRequest(membership)}>{quickSaving["approve-"+membership.id] ? "…" : "Approve"}</Btn></div>)}</div></Card> : null}
           <Card
             title="Team access & roles"
             body="Assign access here or on each linked roster player below. Unlinked players must accept a SyncWorks invite before they can receive scoring permissions. Staff can join without taking a roster spot."
@@ -1261,6 +1349,8 @@ export default function SportsTeamManagerDashboard() {
         nextGameId={liveGame?.id || nextGame?.id || null}
         activeTab={tab}
       />
+
+      {teamInviteOpen && managerView ? <Drawer title="Invite players to the team" onClose={()=>setTeamInviteOpen(false)}><div className="space-y-3"><p className="text-sm text-slate-300">Send this one link to your team group chat. Each player requests membership, then adds themselves to the roster after approval.</p>{teamInviteLoading ? <div className="flex items-center gap-2 text-xs text-cyan-200"><Loader2 className="h-4 w-4 animate-spin" />Creating invite link…</div> : teamInviteUrl ? <><input aria-label="Shared team invite URL" readOnly value={teamInviteUrl} onClick={(event)=>event.currentTarget.select()} onFocus={(event)=>event.currentTarget.select()} className="min-h-12 w-full rounded-xl border border-cyan-300/25 bg-black/20 px-3 text-xs text-cyan-100" /><div className="grid grid-cols-2 gap-2"><Btn onClick={()=>copyInviteUrl(teamInviteUrl)}><Copy className="mr-1 inline h-4 w-4" />Copy link</Btn><Btn primary onClick={()=>shareInviteUrl(teamInviteUrl, group.name)}><Share2 className="mr-1 inline h-4 w-4" />Share invite</Btn></div></> : <Btn onClick={()=>{setTeamInviteOpen(false);openTeamInvites();}}>Retry</Btn>}{shareStatus ? <p className="rounded-xl border border-cyan-300/15 bg-cyan-300/10 p-3 text-xs text-cyan-100">{shareStatus}</p> : null}<p className="text-xs leading-5 text-slate-400">Already on the paper roster? Send that player a personal invite using their account email to connect the existing record without duplicating it.</p></div></Drawer> : null}
 
       {addPlayerOpen && managerView ? (
         <Drawer title="Add player" onClose={() => setAddPlayerOpen(false)}>
