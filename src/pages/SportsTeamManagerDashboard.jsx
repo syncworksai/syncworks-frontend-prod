@@ -34,6 +34,7 @@ import TeamChatPanel from "../components/sports/TeamChatPanel";
 import GameAvailabilityCard, { availabilityStatus } from "../components/sports/GameAvailabilityCard";
 import InteractiveStatsBoard from "../components/sports/InteractiveStatsBoard";
 import SoftballDefenseField from "../components/sports/SoftballDefenseField";
+import TeamRewardSettings from "../components/sports/TeamRewardSettings";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import PlayerCollectibleCard, { SportsPlayerPhoto } from "../components/sports/PlayerCollectibleCard";
 import PlayerStatSplits from "../components/sports/PlayerStatSplits";
@@ -55,6 +56,9 @@ import {
   getScopedTeamStats,
   getSportsTeams,
   getTeamDashboard,
+  getTeamBadgeRules,
+  saveTeamBadgeRules,
+  getTeamBadgeStandings,
   getTeamFees,
   getTeamPaymentSettings,
   inviteSportsPlayer,
@@ -77,7 +81,7 @@ import {
   updateTeamPaymentSettings,
 } from "../api/sports";
 
-const TABS = ["Overview", "Roster", "Lineup", "Schedule", "Stats", "Dues"];
+const TABS = ["Overview", "Roster", "Lineup", "Schedule", "Stats", "Dues", "Rewards"];
 const ROLE_OPTIONS = [
   ["MEMBER", "Member / Player"],
   ["SCOREKEEPER", "Scorekeeper"],
@@ -207,6 +211,9 @@ export default function SportsTeamManagerDashboard() {
   const [dashboard, setDashboard] = useState(null);
   const [profiles, setProfiles] = useState([]);
   const [paymentSettings, setPaymentSettings] = useState(null);
+  const [rewardRules, setRewardRules] = useState(null);
+  const [rewardSaving, setRewardSaving] = useState(false);
+  const [badgeRings, setBadgeRings] = useState({});
   const [fees, setFees] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [statsScope, setStatsScope] = useState("ALL");
@@ -314,6 +321,8 @@ export default function SportsTeamManagerDashboard() {
       }
       const data = await getTeamDashboard(foundTeam.id);
       setDashboard(data);
+      getTeamBadgeRules(foundTeam.id).then(result=>setRewardRules(result.rules)).catch(()=>setRewardRules(null));
+      getTeamBadgeStandings(foundTeam.id).then(result=>setBadgeRings(Object.fromEntries(list(result.players).map(item=>[Number(item.player),item])))).catch(()=>setBadgeRings({}));
       setMeta({ season_name: data.team?.season_name || "", league_name: data.team?.league_name || "", division_name: data.team?.division_name || "" });
 
       const extras = await Promise.allSettled([
@@ -874,6 +883,21 @@ export default function SportsTeamManagerDashboard() {
     }, "Social members imported. Existing email matches are linked to their roster records; staff are left off the player roster.");
   }
 
+  async function saveRewardRules(rules) {
+    if (!managed || !team || rewardSaving) return;
+    setRewardSaving(true); setError(""); setNotice("");
+    try {
+      const saved=await saveTeamBadgeRules(team.id,rules);
+      setRewardRules(saved.rules);
+      setNotice("Reward settings saved. All earned borders and rankings now use the updated team goals.");
+      const standings=await getTeamBadgeStandings(team.id);
+      setBadgeRings(Object.fromEntries(list(standings.players).map(row=>[Number(row.player),row])));
+    } catch(err) {
+      setError(errorText(err));
+      throw err;
+    } finally {setRewardSaving(false);}
+  }
+
   async function saveTeamMeta() {
     await run(() => updateSportsTeam(team.id, meta), "Team details saved.");
   }
@@ -1053,7 +1077,7 @@ export default function SportsTeamManagerDashboard() {
           {nextGame ? <button type="button" onClick={() => setTab("Schedule")} className="mt-3 flex w-full items-center justify-between rounded-xl border border-emerald-400/15 bg-emerald-400/[.05] p-2.5 text-left"><span><span className="block text-[9px] font-black uppercase tracking-wide text-emerald-300">Next game</span><b className="text-xs text-white">{new Date(nextGame.start_at).toLocaleDateString()} · {new Date(nextGame.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · vs {nextGame.opponent_name}</b><span className="block text-[10px] text-slate-500">{nextGame.venue_name || "Field TBD"}</span></span><CalendarDays className="h-4 w-4 text-emerald-300" /></button> : null}
         </section>
 
-        <div className="flex gap-1.5 overflow-x-auto pb-1">{TABS.map((name) => <button key={name} type="button" onClick={() => setTab(name)} className={cx("min-h-9 shrink-0 rounded-full px-3 text-[10px] font-black", tab === name ? "bg-white text-slate-950" : "border border-white/10 text-slate-400")}>{name}</button>)}</div>
+        <div className="flex gap-1.5 overflow-x-auto pb-1">{TABS.filter((name)=>name!=="Rewards"||managerView).map((name) => <button key={name) type="button" onClick={() => setTab(name)} className={cx("min-h-9 shrink-0 rounded-full px-3 text-[10px] font-black", tab === name ? "bg-white text-slate-950" : "border border-white/10 text-slate-400")}>{name}</button>)}</div>
 
         {tab === "Overview" ? <div className="grid gap-3 lg:grid-cols-[1fr_1fr_.92fr]">
           <Card title="Season command" body={managerView ? "Manager controls. Players see the same team data without edit access." : "Your team, schedule, lineup, stats and dues in one place."}>
@@ -1071,7 +1095,22 @@ export default function SportsTeamManagerDashboard() {
           </Card>
           <GameAvailabilityCard game={nextGame} players={players} responses={eventResponses} userId={userId} managerView={managerView} onRespond={respondToGame} />
           <div className="hidden lg:block lg:row-span-2"><TeamChatPanel groupId={group.id} userId={userId} canManage={managed} /></div>
+          {managerView ? <Card title="Earned rewards · settings" body="Control Power, Contact, Speed and Clutch goals; verify or undo individual achievements from the roster." className="lg:col-span-2" action={<Trophy className="h-5 w-5 text-amber-300" />}>
+            <div className="grid grid-cols-4 gap-1.5">
+              {[["Power","#FBBF24"],["Contact","#22D3EE"],["Speed","#70FF3D"],["Clutch","#C084FC"]].map(([label,color])=><div key={label} className="rounded-xl border p-2 text-center text-[9px] font-black" style={{borderColor:color+"66",color}}>{label}</div>)}
+            </div>
+            <Btn primary className="mt-3 w-full" onClick={()=>setTab("Rewards")}>Customize badge thresholds & rewards</Btn>
+          </Card> : null}
           {managerView ? <Card title="Team details" body="These labels carry with the team if it later joins an association or league." className="lg:col-span-2"><div className="grid gap-2 sm:grid-cols-3"><Input label="Season" value={meta.season_name} onChange={(value) => setMeta((current) => ({ ...current, season_name: value }))} /><Input label="League" value={meta.league_name} onChange={(value) => setMeta((current) => ({ ...current, league_name: value }))} /><Input label="Division" value={meta.division_name} onChange={(value) => setMeta((current) => ({ ...current, division_name: value }))} /></div><Btn primary className="mt-2 w-full" onClick={saveTeamMeta} disabled={busy}><Save className="mr-1 inline h-4 w-4" />Save</Btn></Card> : <Card title="Your access" body="Players can view team information and only their own payment status." className="lg:col-span-2"><div className="grid gap-2 text-xs text-slate-300 sm:grid-cols-3"><div className="rounded-xl border border-white/10 p-3"><b>Roster:</b> shared team information</div><div className="rounded-xl border border-white/10 p-3"><b>Dues:</b> only your own amount/status</div><div className="rounded-xl border border-white/10 p-3"><b>Game Book:</b> managers keep the official book</div></div></Card>}
+        </div> : null}
+
+        {tab === "Rewards" && managerView ? <div className="mx-auto max-w-4xl space-y-3">
+          <Card title="Team rewards settings" body="Set the goals required to earn Bronze, Silver, Gold and Diamond. Changes affect this team only." action={<Trophy className="h-5 w-5 text-amber-300"/>}>
+            {rewardRules ? <TeamRewardSettings initialRules={rewardRules} onSave={saveRewardRules} saving={rewardSaving}/> : <div className="text-xs text-slate-400">Loading current reward settings…</div>}
+          </Card>
+          <Card title="Coach review" body="Corrections to individual verified moments are managed on the player's roster card.">
+            <Btn className="w-full" onClick={()=>setTab("Roster")}>Open roster & review player badges</Btn>
+          </Card>
         </div> : null}
 
         {tab === "Roster" ? <div className="space-y-3">
@@ -1126,10 +1165,10 @@ export default function SportsTeamManagerDashboard() {
               return <div key={player.id} className="rounded-xl border border-white/10 bg-white/[.025] p-2.5">
                 <div className="flex items-center gap-2">
                   <button type="button" onClick={() => openPlayer(player)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-                    <Avatar player={player} profile={profile} />
+                    <span className="shrink-0 rounded-xl border border-transparent" style={badgeRings[player.id]?.highest_tier&&badgeRings[player.id].highest_tier!=="LOCKED"?{borderColor:badgeRings[player.id].ring_color,boxShadow:`0 0 15px ${badgeRings[player.id].ring_color}88`}:{}}><Avatar player={player} profile={profile} /></span>
                     <span className="min-w-0 flex-1">
                       <b className="block truncate text-xs text-white">#{player.jersey_number || "—"} {player.display_name}</b>
-                      <span className="block text-[9px] text-slate-500">{player.primary_position || "Position TBD"} · {player.user ? "SyncWorks linked" : "not linked"}</span>
+                      <span className="block text-[9px] text-slate-500">{player.primary_position || "Position TBD"} · {player.user ? "SyncWorks linked" : "not linked"}</span>{badgeRings[player.id]?.badges?.some(item=>item.achieved)?<span className="mt-1 flex flex-wrap gap-1">{badgeRings[player.id].badges.filter(item=>item.achieved).map(item=><span key={item.key} className="rounded-md border px-1.5 py-0.5 text-[8px] font-black" style={{borderColor:badgeRings[player.id].ring_color,color:badgeRings[player.id].ring_color}}>{item.key} · {item.tier}</span>)}</span>:null}
                       {playerStat(player) ? <span className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[8px] font-black text-cyan-100"><span>AVG {pct(playerStat(player).avg)}</span><span>OBP {pct(playerStat(player).obp)}</span><span>SLG {pct(playerStat(player).slg)}</span><span>OPS {pct(playerStat(player).ops)}</span><span className="text-slate-500">{num(playerStat(player).h)} H · {num(playerStat(player).double)} 2B · {num(playerStat(player).rbi)} RBI</span></span> : null}
                     </span>
                   </button>
@@ -1290,7 +1329,7 @@ export default function SportsTeamManagerDashboard() {
             </div>
           </Card>
 
-          {selectedGame && lineup.length ? <SoftballDefenseField lineup={fieldLineup} title="Defensive field" /> : null}
+          {selectedGame && lineup.length ? <SoftballDefenseField lineup={fieldLineup} bench={benchPlayers} badgeRings={badgeRings} title="Defensive field" /> : null}
 
           {selectedGame ? <div className="grid gap-3 lg:grid-cols-[1fr_.55fr]">
             <Card title="SUB / Bench" body="Everyone not in the batting order stays here. Tap a player to return him to the bottom of the lineup." action={<Users className="h-4 w-4 text-amber-300" />}>
