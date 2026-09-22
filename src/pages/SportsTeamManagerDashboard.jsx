@@ -1045,6 +1045,11 @@ export default function SportsTeamManagerDashboard() {
             {list(dashboard?.live_games).length ? <Btn primary onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${dashboard.live_games[0].id}`)}><CircleDot className="mr-1 inline h-4 w-4" />Live</Btn> : null}
           </div>
           <div className="mt-3 grid grid-cols-4 gap-1.5"><Stat label="Record" value={`${num(record.wins)}-${num(record.losses)}`} /><Stat label="Roster" value={players.length} /><Stat label="Games" value={games.length} /><Stat label={managerView ? "Outstanding" : "My due"} value={managerView ? money(managerOutstanding) : money(ownDue)} sub={managerView ? `${managerDueCount} open charge${managerDueCount === 1 ? "" : "s"}` : undefined} /></div>
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
+            <Stat label="Runs for" value={num(dashboard?.team_stats?.runs_for)} sub="Scored" />
+            <Stat label="Runs against" value={num(dashboard?.team_stats?.runs_against)} sub="Allowed" />
+            <Stat label="Run differential" value={`${(num(dashboard?.team_stats?.runs_for)-num(dashboard?.team_stats?.runs_against))>=0?"+":""}${num(dashboard?.team_stats?.runs_for)-num(dashboard?.team_stats?.runs_against)}`} />
+          </div>
           {nextGame ? <button type="button" onClick={() => setTab("Schedule")} className="mt-3 flex w-full items-center justify-between rounded-xl border border-emerald-400/15 bg-emerald-400/[.05] p-2.5 text-left"><span><span className="block text-[9px] font-black uppercase tracking-wide text-emerald-300">Next game</span><b className="text-xs text-white">{new Date(nextGame.start_at).toLocaleDateString()} · {new Date(nextGame.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · vs {nextGame.opponent_name}</b><span className="block text-[10px] text-slate-500">{nextGame.venue_name || "Field TBD"}</span></span><CalendarDays className="h-4 w-4 text-emerald-300" /></button> : null}
         </section>
 
@@ -1323,7 +1328,48 @@ export default function SportsTeamManagerDashboard() {
             {needsCompletionGames.length ? <Card title="Needs completion" body="Past games stay out of Upcoming until you enter the final result or finish the Game Book." action={<Pill tone="amber">{needsCompletionGames.length} OPEN</Pill>}>
               <div className="space-y-2">{needsCompletionGames.map((game)=><div key={game.id} className="flex items-center justify-between gap-2 rounded-xl border border-amber-300/20 bg-amber-300/[.05] p-3"><div className="min-w-0"><div className="text-[8px] font-black uppercase tracking-wide text-amber-300">{new Date(game.start_at).toLocaleDateString()}</div><b className="block truncate text-xs text-white">vs {game.opponent_name}</b><span className="text-[9px] text-slate-500">{game.venue_name || "Field TBD"} · final score/stat entry needed</span></div><div className="grid shrink-0 gap-1"><Btn primary onClick={()=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>Game Book</Btn>{managerView?<Btn onClick={()=>quickFinal(game)}>Quick final</Btn>:null}</div></div>)}</div>
             </Card> : null}
-          <Card title="Team schedule" body="Games are synced to the Social team and members' SyncWorks calendars." action={<CalendarDays className="h-4 w-4 text-emerald-300" />}><div className="space-y-1.5">{games.map((game) => <div key={game.id} className="rounded-xl border border-white/10 bg-white/[.025] p-2.5"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="flex flex-wrap items-center gap-1.5"><b className="text-xs text-white">{new Date(game.start_at).toLocaleDateString()} · {new Date(game.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</b><Pill tone={game.home_away === "HOME" ? "green" : game.home_away === "AWAY" ? "amber" : "slate"}>{game.home_away}</Pill></div><div className="mt-1 text-[11px] font-black text-slate-200">vs {game.opponent_name}</div><div className="mt-0.5 flex items-center gap-1 text-[9px] text-slate-500"><MapPin className="h-3 w-3" />{game.venue_name || "Field TBD"}</div>{game.address_line1 ? <div className="pl-4 text-[9px] text-slate-600">{game.address_line1}, {game.city}, {game.state}</div> : null}</div><div className="grid shrink-0 gap-1"><Btn onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>{canScore ? "Game Book" : "Open"}</Btn>{managerView?<Btn onClick={()=>quickEditGame(game)}><Pencil className="mr-1 inline h-3 w-3"/>Edit game</Btn>:null}{managerView&&game.status==="FINAL"?<Btn onClick={()=>quickFinal(game)}>Edit final</Btn>:null}</div></div></div>)}{!games.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-slate-500">No games yet.</div> : null}</div></Card>
+          <Card title="Team schedule" body="Completed games show the official final score and result. Upcoming and live games stay distinct." action={<CalendarDays className="h-4 w-4 text-emerald-300" />}>
+            <div className="mb-3 grid grid-cols-4 gap-1.5">
+              <Stat label="Record" value={`${num(record.wins)}-${num(record.losses)}`} sub={num(record.ties) ? `${num(record.ties)} ties` : "Season"} />
+              <Stat label="RF" value={num(dashboard?.team_stats?.runs_for)} />
+              <Stat label="RA" value={num(dashboard?.team_stats?.runs_against)} />
+              <Stat label="Diff" value={`${(num(dashboard?.team_stats?.runs_for)-num(dashboard?.team_stats?.runs_against))>=0?"+":""}${num(dashboard?.team_stats?.runs_for)-num(dashboard?.team_stats?.runs_against)}`} />
+            </div>
+            <div className="space-y-2">{games.map((game)=>{
+              const final = game.status === "FINAL";
+              const live = game.status === "LIVE";
+              const win = final && num(game.runs_for) > num(game.runs_against);
+              const loss = final && num(game.runs_for) < num(game.runs_against);
+              const result = win ? "W" : loss ? "L" : "T";
+              const tone = win ? "border-emerald-300/35 bg-emerald-300/[.06]" : loss ? "border-rose-300/35 bg-rose-300/[.06]" : final ? "border-amber-300/35 bg-amber-300/[.05]" : live ? "border-cyan-300/35 bg-cyan-300/[.05]" : "border-white/10 bg-white/[.025]";
+              const badgeTone = win ? "bg-emerald-400 text-[#03100b]" : loss ? "bg-rose-400 text-slate-950" : "bg-amber-300 text-slate-950";
+              return <div key={game.id} className={`rounded-xl border p-3 ${tone}`}>
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <b className="text-xs text-white">{new Date(game.start_at).toLocaleDateString()} · {new Date(game.start_at).toLocaleTimeString([], { hour:"numeric",minute:"2-digit" })}</b>
+                      <Pill tone={game.home_away==="HOME"?"green":game.home_away==="AWAY"?"amber":"slate"}>{game.home_away}</Pill>
+                    </div>
+                    <div className="mt-1 text-[12px] font-black text-white">vs {game.opponent_name}</div>
+                    <div className="mt-1 flex items-center gap-1 text-[10px] text-slate-400"><MapPin className="h-3 w-3 shrink-0"/>{game.venue_name || "Field TBD"}</div>
+                    {game.address_line1 ? <div className="pl-4 text-[9px] leading-4 text-slate-500">{game.address_line1}, {game.city}, {game.state}</div> : null}
+                    {final ? <div className="mt-3 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 p-2">
+                      <span className={`grid h-10 w-10 place-items-center rounded-lg text-lg font-black ${badgeTone}`}>{result}</span>
+                      <span><span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Final score</span>
+                        <span className={`block text-lg font-black ${win?"text-emerald-200":loss?"text-rose-200":"text-amber-200"}`}>{num(game.runs_for)} – {num(game.runs_against)}</span>
+                      </span>
+                    </div> : live ? <div className="mt-3 inline-flex items-center gap-2 rounded-xl border border-cyan-300/35 bg-cyan-300/10 px-3 py-2 text-xs font-black text-cyan-100"><span className="h-2 w-2 animate-pulse rounded-full bg-cyan-300"/>LIVE · {num(game.runs_for)} – {num(game.runs_against)}</div> : game.status==="CANCELLED" ? <div className="mt-2 text-[10px] font-black text-slate-500">CANCELLED</div> : <div className="mt-2 text-[10px] font-bold text-cyan-200">UPCOMING</div>}
+                  </div>
+                  <div className="grid content-start gap-1.5">
+                    <Btn onClick={()=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>{canScore ? "Game Book" : "Open"}</Btn>
+                    {managerView ? <Btn onClick={()=>quickEditGame(game)}><Pencil className="mr-1 inline h-3 w-3"/>Edit game</Btn> : null}
+                    {managerView && final ? <Btn onClick={()=>quickFinal(game)}>Edit final</Btn> : null}
+                  </div>
+                </div>
+              </div>;
+            })}
+            {!games.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-slate-500">No games scheduled.</div>:null}</div>
+          </Card>
           </div>
           {managerView ? <Card title="Add game" body="Manual additions use the same calendar sync."><div className="grid grid-cols-2 gap-2"><Select label="Type" value={gameForm.game_type} onChange={(value) => setGameForm((v) => ({ ...v, game_type: value }))}><option value="LEAGUE">League</option><option value="TOURNAMENT">Tournament</option><option value="PRACTICE">Practice</option><option value="EXHIBITION">Exhibition</option></Select><Select label="Home/Away" value={gameForm.home_away} onChange={(value) => setGameForm((v) => ({ ...v, home_away: value }))}><option value="HOME">Home</option><option value="AWAY">Away</option><option value="NEUTRAL">Neutral</option></Select><Input label="Opponent" value={gameForm.opponent_name} onChange={(value) => setGameForm((v) => ({ ...v, opponent_name: value }))} className="col-span-2" /><Input label="Date" type="date" value={gameForm.date} onChange={(value) => setGameForm((v) => ({ ...v, date: value }))} /><Input label="Time" type="time" value={gameForm.time} onChange={(value) => setGameForm((v) => ({ ...v, time: value }))} /><Input label="Venue / field" value={gameForm.venue_name} onChange={(value) => setGameForm((v) => ({ ...v, venue_name: value }))} className="col-span-2" /><Input label="Address" value={gameForm.address_line1} onChange={(value) => setGameForm((v) => ({ ...v, address_line1: value }))} className="col-span-2" /><Input label="City" value={gameForm.city} onChange={(value) => setGameForm((v) => ({ ...v, city: value }))} /><Input label="State" value={gameForm.state} onChange={(value) => setGameForm((v) => ({ ...v, state: value }))} /></div><Btn primary className="mt-2 w-full" onClick={addGame} disabled={!gameForm.opponent_name.trim() || !gameForm.date || busy}><Plus className="mr-1 inline h-4 w-4" />Add game</Btn></Card> : <Card title="Tournament week" body="League or tournament games will appear here once published by a manager or association."><div className="text-xs text-slate-400">Your Fall 2026 league sheet lists tournament week beginning October 27.</div></Card>}
         </div> : null}
