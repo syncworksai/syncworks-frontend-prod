@@ -8,6 +8,7 @@ import {
   CreditCard,
   ExternalLink,
   ImageUp,
+  KeyRound,
   Loader2,
   MessageCircle,
   Save,
@@ -36,6 +37,7 @@ import {
   getGroups,
   getMemberships,
   getSocialPaymentProfile,
+  setGroupPlayerPassword,
   unfollowGroup,
   updateGroup,
   uploadGroupLogo,
@@ -128,6 +130,7 @@ export default function SocialGroupDashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [groupEdit, setGroupEdit] = useState(null);
   const [groupLogoFile, setGroupLogoFile] = useState(null);
+  const [playerJoinPassword, setPlayerJoinPassword] = useState("");
   const [groupPayment, setGroupPayment] = useState({ cash_app_url:"", cash_app_label:"", venmo_url:"", venmo_label:"", zelle_instructions:"", stripe_payment_link:"" });
   const [personalPayment, setPersonalPayment] = useState({ cash_app_url:"", cash_app_label:"", venmo_url:"", venmo_label:"", zelle_instructions:"", stripe_payment_link:"" });
 
@@ -234,6 +237,7 @@ export default function SocialGroupDashboard() {
     if (!managed || !group) return;
     setSettingsOpen(true);
     setGroupLogoFile(null);
+    setPlayerJoinPassword("");
     setGroupEdit({
       name: group.name || "",
       description: group.description || "",
@@ -259,6 +263,25 @@ export default function SocialGroupDashboard() {
       setPersonalPayment(clean(pp));
     } catch (err) {
       setError(errorText(err));
+    }
+  }
+
+  async function savePlayerJoinPassword(clear = false) {
+    if (!clear && (playerJoinPassword.length < 5 || playerJoinPassword.length > 64)) {
+      setError("Use 5–64 characters for the team password.");
+      return;
+    }
+    if (clear && !window.confirm("Remove the player password? Players will no longer be able to join using this link until a new one is configured.")) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const result = await setGroupPlayerPassword(group.id, clear ? "" : playerJoinPassword);
+      setGroup((current)=>({...current, has_player_join_password: result.has_player_join_password}));
+      setPlayerJoinPassword("");
+      setNotice(clear ? "Player join password removed." : "Player join password saved. Team members can now join using your shared invite link.");
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -421,6 +444,20 @@ export default function SocialGroupDashboard() {
           <label className="mt-2 flex items-center justify-between rounded-xl border border-white/10 p-3 text-xs"><span><b className="text-white">Allow followers</b><span className="block text-[9px] text-slate-500">Followers can track public activity and live games without becoming members.</span></span><input type="checkbox" checked={!!groupEdit.allow_followers} onChange={(event)=>setGroupEdit((row)=>({...row,allow_followers:event.target.checked}))} className="h-5 w-5"/></label>
           <Btn primary className="mt-3 w-full" onClick={saveGroupSettings} disabled={busy || !groupEdit.name.trim()}><Save className="mr-1 inline h-4 w-4"/>Save group</Btn>
         </section>
+
+        {(Number(group.created_by) === userId || myMembership?.role === "OWNER") ? <section className="rounded-2xl border border-emerald-300/20 bg-emerald-300/[.04] p-3">
+          <div className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-emerald-300"/><b className="text-sm font-black text-white">Player / member invite password</b></div>
+          <p className="mt-2 text-xs leading-5 text-slate-300">Only people with your team's password can join as players using the shared link. Fans never need this password. Each group chooses its own.</p>
+          <span className="mt-2 inline-flex rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2 py-1 text-[10px] font-bold text-emerald-100">{group.has_player_join_password ? "Password configured" : "No player password configured"}</span>
+          <label className="mt-3 block text-[10px] font-black uppercase text-slate-300">New player password
+            <input type="password" autoComplete="new-password" value={playerJoinPassword} onChange={(event)=>setPlayerJoinPassword(event.target.value)} placeholder={group.has_player_join_password ? "Enter a new password to change it" : "Set a team password"} minLength={5} maxLength={64} className="mt-2 min-h-12 w-full rounded-xl border border-emerald-300/20 bg-black/30 px-3 text-sm font-bold text-white"/>
+          </label>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Btn primary disabled={busy || playerJoinPassword.length < 5} onClick={()=>savePlayerJoinPassword(false)}><Save className="mr-1 inline h-4 w-4"/>Save password</Btn>
+            <Btn disabled={busy || !group.has_player_join_password} onClick={()=>savePlayerJoinPassword(true)}>Remove password</Btn>
+          </div>
+          <p className="mt-2 text-[10px] text-slate-500">The current password cannot be viewed here. Changing it takes effect for new player joins. Existing members keep their access.</p>
+        </section> : null}
 
         <section className="rounded-2xl border border-violet-300/15 bg-violet-300/[.03] p-3">
           <div className="flex items-start justify-between gap-2"><div><b className="text-sm text-white">Payment methods</b><div className="mt-1 text-[9px] text-slate-500">Use your saved Personal defaults or override them only for this group.</div></div><CreditCard className="h-4 w-4 text-violet-300"/></div>
