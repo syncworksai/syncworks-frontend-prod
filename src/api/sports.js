@@ -63,6 +63,21 @@ export async function getPlayerCard(id) {
   return data;
 }
 
+export async function getTeamBadgeRules(teamId) {
+  const { data } = await api.get(`/sports/teams/${teamId}/badge-rules/`);
+  return data;
+}
+
+export async function saveTeamBadgeRules(teamId, rules) {
+  const { data } = await api.post(`/sports/teams/${teamId}/badge-rules/`, { rules });
+  return data;
+}
+
+export async function getTeamBadgeStandings(teamId) {
+  const { data } = await api.get(`/sports/teams/${teamId}/badge-standings/`, { timeout: 45000 });
+  return data;
+}
+
 export async function getPlayerBadgeCard(playerId) {
   const { data } = await api.get(`/sports/players/${playerId}/badge-card/`, { timeout: 45000 });
   return data;
