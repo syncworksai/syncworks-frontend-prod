@@ -794,6 +794,7 @@ export default function SportsTeamManagerDashboard() {
                     <span className="min-w-0 flex-1">
                       <b className="block truncate text-xs text-white">#{player.jersey_number || "—"} {player.display_name}</b>
                       <span className="block text-[9px] text-slate-500">{player.primary_position || "Position TBD"} · {player.user ? "SyncWorks linked" : "not linked"}</span>
+                      {playerStat(player) ? <span className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[8px] font-black text-cyan-100"><span>AVG {pct(playerStat(player).avg)}</span><span>OBP {pct(playerStat(player).obp)}</span><span>SLG {pct(playerStat(player).slg)}</span><span>OPS {pct(playerStat(player).ops)}</span><span className="text-slate-500">{num(playerStat(player).h)} H · {num(playerStat(player).double)} 2B · {num(playerStat(player).rbi)} RBI</span></span> : null}
                     </span>
                   </button>
                   {managerView ? <button type="button" onClick={() => openPlayer(player)} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-slate-300"><Pencil className="h-3.5 w-3.5" /></button> : null}
