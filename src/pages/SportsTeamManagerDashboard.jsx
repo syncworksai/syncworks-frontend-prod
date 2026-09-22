@@ -764,10 +764,31 @@ export default function SportsTeamManagerDashboard() {
   async function importSocialRoster() {
     const linkedIds = new Set(players.map((player) => Number(player.user)).filter(Boolean));
     const missing = socialRoster.filter((membership) => !linkedIds.has(Number(membership.user)));
-    if (!missing.length) return setNotice("Every active Social member is already represented on the roster.");
+    if (!missing.length) return setNotice("Every active Social member is already linked to a roster entry.");
     await run(async () => {
-      for (const membership of missing) await createSportsPlayer({ team: team.id, user: Number(membership.user), display_name: nameOf(membership.user_detail), jersey_number: "", primary_position: "" });
-    }, `${missing.length} Social member${missing.length === 1 ? "" : "s"} added.`);
+      const currentProfiles = list(await getPlayerProfiles(team.id));
+      let linked = 0;
+      let added = 0;
+      let skipped = 0;
+      for (const membership of missing) {
+        const email = String(membership.user_detail?.email || "").trim().toLowerCase();
+        const matchedPlayers = email ? players.filter((player) =>
+          !player.user && currentProfiles.some((profile) => Number(profile.player) === Number(player.id) && String(profile.email || "").trim().toLowerCase() === email)
+        ) : [];
+        if (matchedPlayers.length === 1) {
+          await updateSportsPlayer(matchedPlayers[0].id, { user: Number(membership.user) });
+          linked += 1;
+        } else if (matchedPlayers.length > 1) {
+          skipped += 1;
+        } else if (membership.role === "MEMBER") {
+          await createSportsPlayer({ team: team.id, user: Number(membership.user), display_name: nameOf(membership.user_detail), jersey_number: "", primary_position: "" });
+          added += 1;
+        } else {
+          skipped += 1; // Staff/scorekeepers stay off the player roster unless they join explicitly.
+        }
+      }
+      return { linked, added, skipped };
+    }, "Social members imported. Existing email matches are linked to their roster records; staff are left off the player roster.");
   }
 
   async function saveTeamMeta() {
