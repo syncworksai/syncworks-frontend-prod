@@ -3,10 +3,11 @@ import {
   ArrowLeft, CalendarDays, Camera, Check, CircleDollarSign, Edit3, ExternalLink,
   Loader2, MapPin, MessageCircle, Save, Trophy, WalletCards, X,
 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import ModeBar from "../components/ModeBar";
 import TeamChatPanel from "../components/sports/TeamChatPanel";
+import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import { useAuth } from "../auth/AuthContext";
 import { createEventResponse, updateEventResponse } from "../api/social";
 import {
@@ -15,6 +16,7 @@ import {
 } from "../api/sports";
 
 const TABS = ["Home", "My Player", "Team", "League", "Dues"];
+const TEAM_TAB_ALIAS = { Schedule: "Home", Stats: "My Player", Roster: "Team" };
 const cx = (...v) => v.filter(Boolean).join(" ");
 const num = (v) => Number(v || 0);
 const money = (v) => (num(v) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -84,8 +86,9 @@ function RateLine({ row }) {
 export default function SportsPlayerDashboard() {
   const { groupId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const [tab, setTab] = useState("Home");
+  const [tab, setTab] = useState(() => TEAM_TAB_ALIAS[searchParams.get("tab")] || "Home");
   const [team, setTeam] = useState(null);
   const [center, setCenter] = useState(null);
   const [playerCard, setPlayerCard] = useState(null);
@@ -156,6 +159,12 @@ export default function SportsPlayerDashboard() {
   }
 
   useEffect(() => { refresh(); }, [groupId]);
+
+  useEffect(() => {
+    const requested = TEAM_TAB_ALIAS[searchParams.get("tab")];
+    if (requested && requested !== tab) setTab(requested);
+  }, [searchParams, tab]);
+
 
   async function respond(value) {
     if (!nextGame?.social_event) return;
@@ -276,6 +285,12 @@ export default function SportsPlayerDashboard() {
 
       {tab==="Dues" ? <div className="grid gap-3 lg:grid-cols-[1fr_.8fr]"><Card title="My team fees" body="Your balance is private. Other players cannot see whether you have paid." action={<WalletCards className="h-4 w-4 text-amber-300"/>}><div className="mb-3 rounded-xl border border-amber-300/15 bg-amber-300/[.05] p-3"><div className="text-[8px] font-black uppercase tracking-wide text-amber-300">Total due</div><div className="mt-1 text-3xl font-black text-white">{money(center.balance_cents)}</div></div><div className="space-y-2">{dues.map((row)=><section key={row.id} className="rounded-xl border border-white/10 bg-white/[.025] p-3"><div className="flex justify-between gap-2"><div><b className="text-xs text-white">{row.fee_detail?.title}</b><div className="mt-0.5 text-[9px] text-slate-500">{row.fee_detail?.description}</div></div><span className={cx("rounded-full px-2 py-1 text-[7px] font-black",["PAID","WAIVED"].includes(row.status)?"bg-emerald-300/10 text-emerald-200":"bg-amber-300/10 text-amber-200")}>{row.status}</span></div><div className="mt-2 text-lg font-black text-white">{money(Math.max(0,num(row.amount_cents)-num(row.amount_paid_cents)))}</div></section>)}{!dues.length?<div className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-slate-500">No team fees are assigned to your player profile.</div>:null}</div></Card><Card title="Payment options" body="Saved by your team manager."><div className="grid gap-2">{center.payment_settings?.cash_app_url?<a href={center.payment_settings.cash_app_url} target="_blank" rel="noreferrer" className="flex min-h-11 items-center justify-between rounded-xl border border-white/10 px-3 text-xs font-black text-white"><span>Cash App</span><ExternalLink className="h-4 w-4"/></a>:null}{center.payment_settings?.venmo_url?<a href={center.payment_settings.venmo_url} target="_blank" rel="noreferrer" className="flex min-h-11 items-center justify-between rounded-xl border border-white/10 px-3 text-xs font-black text-white"><span>Venmo</span><ExternalLink className="h-4 w-4"/></a>:null}{center.payment_settings?.stripe_url?<a href={center.payment_settings.stripe_url} target="_blank" rel="noreferrer" className="flex min-h-11 items-center justify-between rounded-xl border border-cyan-300/20 bg-cyan-300/[.05] px-3 text-xs font-black text-cyan-100"><span>Stripe</span><ExternalLink className="h-4 w-4"/></a>:null}{center.payment_settings?.payment_note?<div className="rounded-xl border border-white/10 bg-black/15 p-3 text-[10px] leading-5 text-slate-400">{center.payment_settings.payment_note}</div>:null}</div></Card></div> : null}
     </main>
+
+    <SportsTeamMobileNav
+      groupId={groupId}
+      nextGameId={nextGame?.id || null}
+      activeTab={tab === "Home" ? "Schedule" : tab === "My Player" ? "Stats" : tab === "Team" ? "Roster" : ""}
+    />
 
     {profileOpen ? <Drawer title="Edit my player profile" onClose={()=>{setProfileOpen(false);setPhotoFile(null);}}><div className="space-y-3">
       <div className="flex items-center gap-3"><PlayerPhoto player={player} profile={profile}/><label className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 text-xs font-black text-slate-300"><Camera className="h-4 w-4"/>{photoFile?photoFile.name:"Choose profile photo"}<input type="file" accept="image/*" className="hidden" onChange={(e)=>setPhotoFile(e.target.files?.[0]||null)}/></label></div>
