@@ -108,6 +108,7 @@ const SportsCommissionerDashboard = lazy(() => import("./pages/SportsCommissione
 const SportsInviteLanding = lazy(() => import("./pages/SportsInviteLanding"));
 const SportsTeamInviteLanding = lazy(() => import("./pages/SportsTeamInviteLanding"));
 const SocialGroupInviteLanding = lazy(() => import("./pages/SocialGroupInviteLanding"));
+const SocialGroupFanLanding = lazy(() => import("./pages/SocialGroupFanLanding"));
 const SocialEventDetail = lazy(() => import("./pages/SocialEventDetail"));
 const SocialGroupDashboard = lazy(() => import("./pages/SocialGroupDashboard"));
 
@@ -127,6 +128,7 @@ export default function App() {
         <Route path="/sports/invite/:token" element={<SportsInviteLanding />} />
         <Route path="/sports/team-invite/:token" element={<SportsTeamInviteLanding />} />
         <Route path="/social/invite/:token" element={<SocialGroupInviteLanding />} />
+        <Route path="/social/fan/:token" element={<SocialGroupFanLanding />} />
         <Route path="/employee/invite" element={<EmployeeInvite />} />
         <Route path="/accept-invite" element={<EmployeeInvite />} />
         <Route path="/platform" element={<PlatformRoute><PlatformDashboard /></PlatformRoute>} />
