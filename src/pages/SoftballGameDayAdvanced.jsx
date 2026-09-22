@@ -24,6 +24,7 @@ import {
 
 import ModeBar from "../components/ModeBar";
 import SoftballDefenseField from "../components/sports/SoftballDefenseField";
+import PregameLineupEditor from "../components/sports/PregameLineupEditor";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import { useAuth } from "../auth/AuthContext";
 import { getMemberships } from "../api/social";
@@ -32,6 +33,7 @@ import {
   deleteSportsGameBook,
   finishSportsGame,
   getGameCastSettings,
+  getTeamBadgeStandings,
   getPlateAppearances,
   getPlayerCard,
   getSoftballRuleSets,
@@ -43,6 +45,7 @@ import {
   setOpponentScore,
   updateGameInningLine,
   startSportsGame,
+  setSportsLineup,
   substituteSportsGame,
   undoSoftballPlay,
   updateDefensivePosition,
@@ -343,6 +346,8 @@ export default function SoftballGameDayAdvanced() {
   const [memberships, setMemberships] = useState([]);
   const [gamecast, setGamecast] = useState(null);
   const [gamecastOpen, setGamecastOpen] = useState(false);
+  const [pregameEditorOpen, setPregameEditorOpen] = useState(false);
+  const [badgeRings, setBadgeRings] = useState({});
   const [ruleSets, setRuleSets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -476,12 +481,16 @@ export default function SoftballGameDayAdvanced() {
       );
 
       if (scoreAccess) {
-        const [shareResult, rulesResult] = await Promise.allSettled([
+        const [shareResult, rulesResult, ranksResult] = await Promise.allSettled([
           getGameCastSettings(gameId),
           getSoftballRuleSets(),
+          getTeamBadgeStandings(gameData.team),
         ]);
         if (shareResult.status === "fulfilled") setGamecast(shareResult.value);
         if (rulesResult.status === "fulfilled") setRuleSets(list(rulesResult.value));
+        if (ranksResult.status === "fulfilled") setBadgeRings(
+          Object.fromEntries(list(ranksResult.value?.players).map(row => [Number(row.player), row]))
+        );
       }
 
       if (!quiet && playResult.status === "rejected") {
@@ -729,6 +738,22 @@ export default function SoftballGameDayAdvanced() {
     return next;
   }
 
+  async function publishPregameGameCast() {
+    if (!game?.id || busy) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const settings = await updateGameCastSettings(game.id, { enabled: true });
+      setGamecast(settings);
+      setGamecastOpen(true);
+      setNotice("GameCast preview is shared. Post this link now; it updates automatically when scoring begins. Fan email alerts will be sent at first pitch.");
+    } catch (err) { setError(errorText(err)); }
+    finally { setBusy(false); }
+  }
+
+  async function savePregameLineup(spots) {
+    return run(() => setSportsLineup(game.id, spots), "Pregame lineup saved. Field positions and subs updated.");
+  }
+
   async function toggleGameCast(enabled) {
     return saveGameCastSettings({ enabled }, enabled ? "GameCast is live." : "GameCast sharing off.");
   }
@@ -913,18 +938,39 @@ export default function SoftballGameDayAdvanced() {
           </table>
         </section>
 
-        {!lineup.length ? <section className="rounded-xl border border-amber-300/20 bg-amber-300/[.05] p-3 text-[10px] text-amber-100">Build the game lineup before starting Game Book.</section> : null}
-
-        {game.status === "SCHEDULED" && lineup.length ? (
-          <div className="grid gap-2 lg:grid-cols-[1fr_.8fr]">
-            <SoftballDefenseField lineup={lineup} compact />
-            <section className="rounded-2xl border border-cyan-300/15 bg-[#07111f] p-3">
-              <div className="text-[8px] font-black uppercase tracking-wide text-cyan-300">Ready</div>
-              <div className="mt-1 text-sm font-black text-white">{lineup.length} batters loaded</div>
-              {canScore ? <Button primary className="mt-3 w-full" disabled={busy} onClick={() => run(() => startSportsGame(game.id), "Game started.")}><CircleDot className="mr-1 inline h-3.5 w-3.5" />Start Game</Button> : null}
-            </section>
+        {game.status === "SCHEDULED" ? <section className="space-y-3">
+          <div className="rounded-2xl border border-cyan-300/30 bg-gradient-to-r from-cyan-300/[.10] to-violet-400/[.06] p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div><div className="text-[9px] font-black uppercase tracking-[.13em] text-cyan-200">Before the first pitch</div>
+                <div className="mt-1 text-sm font-black text-white">Review lineup · Assign MM, EHs & subs · Share GameCast</div>
+                <p className="mt-1 text-[10px] leading-5 text-slate-400">Publish a working watch link before the game starts. Your audience sees the pregame page, then live scores automatically.</p>
+              </div>
+              {canScore ? <button type="button" onClick={()=>setPregameEditorOpen(v=>!v)} className="min-h-11 rounded-xl border border-cyan-300/35 bg-cyan-300/10 px-4 text-xs font-black text-cyan-100">{pregameEditorOpen ? "Close editor" : "Edit lineup"}</button> : null}
+            </div>
+            {canScore ? <div className="mt-3 grid grid-cols-2 gap-2">
+              <button type="button" onClick={()=>setPregameEditorOpen(true)} className="min-h-12 rounded-xl border border-violet-300/30 bg-violet-300/10 px-2 text-xs font-black text-violet-100"><Edit3 className="mr-1 inline h-4 w-4"/>Quick lineup</button>
+              <button type="button" disabled={busy||!gamecast} onClick={publishPregameGameCast} className="min-h-12 rounded-xl bg-emerald-300 px-2 text-xs font-black text-slate-950 disabled:opacity-50"><Share2 className="mr-1 inline h-4 w-4"/>{gamecast?.enabled ? "Share GameCast" : "Publish watch link"}</button>
+            </div> : null}
+            {gamecast?.enabled ? <div className="mt-3 rounded-xl border border-emerald-300/25 bg-emerald-300/[.06] p-2">
+              <span className="text-[10px] font-bold text-emerald-100">Shareable before kickoff</span>
+              <input readOnly value={`${window.location.origin}/gamecast/${gamecast.token}`} onFocus={event=>event.target.select()} onClick={event=>event.currentTarget.select()} aria-label="Pregame GameCast watch URL" className="mt-1.5 min-h-10 w-full rounded-lg border border-white/10 bg-black/25 px-2 text-xs text-white"/>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button type="button" onClick={()=>setGamecastOpen(true)} className="min-h-10 rounded-lg bg-emerald-300 text-xs font-black text-slate-950">Share / social</button>
+                <button type="button" onClick={copyGameCastLink} className="min-h-10 rounded-lg border border-emerald-300/25 text-xs font-black text-emerald-100"><Copy className="mr-1 inline h-3.5 w-3.5"/>Copy link</button>
+              </div>
+            </div> : null}
           </div>
-        ) : null}
+          {canScore && pregameEditorOpen ? <PregameLineupEditor
+            key={game.id} game={game} rings={badgeRings} disabled={busy}
+            onClose={()=>setPregameEditorOpen(false)} onSave={savePregameLineup}
+          /> : <SoftballDefenseField lineup={lineup} bench={benchPlayers} badgeRings={badgeRings} compact onEditPosition={canScore?()=>setPregameEditorOpen(true):null}/>}
+          <section className="rounded-2xl border border-cyan-300/15 bg-[#07111f] p-3">
+            <div className="text-[9px] font-black uppercase tracking-wide text-cyan-300">Ready</div>
+            <div className="mt-1 text-base font-black text-white">{lineup.length} batters loaded · {benchPlayers.length} subs / bench</div>
+            {!lineup.length ? <div className="mt-1 text-xs text-amber-200">Build and save the batting order to start the game.</div> : null}
+            {canScore ? <button type="button" disabled={busy||!lineup.length||pregameEditorOpen} onClick={()=>run(()=>startSportsGame(game.id),"Game started. Your published GameCast link is now live.")} className="mt-3 min-h-12 w-full rounded-xl bg-cyan-300 text-sm font-black text-slate-950 disabled:opacity-40"><CircleDot className="mr-2 inline h-4 w-4"/>Start Game</button> : null}
+          </section>
+        </section> : null}
 
         {live ? (
           <>
@@ -1196,7 +1242,7 @@ export default function SoftballGameDayAdvanced() {
 
             <div className="grid gap-2 lg:grid-cols-[1.15fr_.85fr]">
               <div className="space-y-2">
-                <SoftballDefenseField lineup={lineup} compact />
+                <SoftballDefenseField lineup={lineup} bench={benchPlayers} badgeRings={badgeRings} compact />
                 {canScore ? <section className="rounded-2xl border border-white/10 bg-[#07111f] p-2.5"><div className="text-[8px] font-black uppercase tracking-wide text-slate-500">Change defense</div><div className="mt-2 grid grid-cols-2 gap-1.5">{lineup.map((spot)=><label key={spot.id} className="flex min-h-[4.9rem] flex-col items-center justify-center rounded-lg border border-white/8 bg-white/[.02] px-2 py-2 text-center"><span className="w-full truncate text-[9px] font-bold text-slate-300">{spot.player_detail?.display_name}</span><select aria-label={"Position for " + (spot.player_detail?.display_name || "player")} value={spot.defensive_position||""} onChange={(event)=>changeDefense(spot.player,event.target.value)} className="mt-1.5 h-8 w-[5.4rem] rounded-lg border border-white/10 bg-[#050b14] px-1 text-center text-[10px] font-black text-white"><option value="">—</option>{POSITIONS.map((position)=><option key={position}>{position}</option>)}</select></label>)}</div></section> : null}
               </div>
 
@@ -1255,9 +1301,9 @@ export default function SoftballGameDayAdvanced() {
               </div>
 
               <div className="mt-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[.035] p-3">
-                <div className="text-[10px] font-black uppercase tracking-wide text-cyan-300">Share live GameCast</div>
+                <div className="text-[10px] font-black uppercase tracking-wide text-cyan-300">{game.status==="SCHEDULED"?"Share pregame watch link":"Share live GameCast"}</div>
                 <input aria-label="GameCast share URL" type="text" readOnly onFocus={(event)=>event.target.select()} onClick={(event)=>event.currentTarget.select()} value={`${window.location.origin}/gamecast/${gamecast.token}`} className="mt-2 min-h-11 w-full rounded-lg border border-cyan-300/20 bg-black/30 p-2 text-xs text-cyan-100" />
-                {!gamecast.enabled ? <p className="mt-2 text-xs text-amber-200">Turn on GameCast above to share the live feed.</p> : null}
+                {!gamecast.enabled ? <p className="mt-2 text-xs text-amber-200">Turn on GameCast above to share the preview or live feed.</p> : <p className="mt-2 text-xs text-emerald-100">{game.status==="SCHEDULED"?"Ready to share on social media now. This exact URL shows the upcoming game and will display live scoring after kickoff.":"Live now. Send this watch link to players and fans."}</p>}
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <Button disabled={!gamecast.enabled} primary onClick={shareGameCast}><Share2 className="mr-1 inline h-3.5 w-3.5"/>Share link</Button>
                   <Button onClick={copyGameCastLink}><Copy className="mr-1 inline h-3.5 w-3.5"/>Copy link</Button>
