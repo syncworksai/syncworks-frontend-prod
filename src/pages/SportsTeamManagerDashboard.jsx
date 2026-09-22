@@ -33,7 +33,7 @@ import InteractiveStatsBoard from "../components/sports/InteractiveStatsBoard";
 import SoftballDefenseField from "../components/sports/SoftballDefenseField";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import { useAuth } from "../auth/AuthContext";
-import { createEventResponse, getEventResponses, getGroups, getMemberships, setMembershipRole, updateEventResponse } from "../api/social";
+import { createEventResponse, getEventResponses, getGroups, getMemberships, setMembershipRole, uploadGroupLogo, updateEventResponse } from "../api/social";
 import {
   assignTeamFeeRoster,
   createPlayerProfile,
@@ -388,6 +388,20 @@ export default function SportsTeamManagerDashboard() {
     const payload = { opponent_name: opponent.trim() || game.opponent_name };
     if (!Number.isNaN(parsed.getTime())) payload.start_at = parsed.toISOString();
     await run(() => updateSportsGame(game.id, payload), "Game updated.");
+  }
+
+  async function changeTeamLogo(file) {
+    if (!managerView || !file) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      await uploadGroupLogo(groupId, file);
+      setNotice("Team logo updated.");
+      await refresh({ quiet: true });
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function changeMemberRole(membership, role) {
@@ -821,7 +835,7 @@ export default function SportsTeamManagerDashboard() {
 
         <section className="rounded-[1.55rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_90%_0%,rgba(34,211,238,.16),transparent_35%),radial-gradient(circle_at_0%_100%,rgba(139,92,246,.13),transparent_35%),#07111f] p-4">
           <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-start gap-3"><TeamLogo group={group}/><div className="min-w-0"><div className="flex flex-wrap gap-1.5"><Pill tone="cyan">Softball</Pill><Pill tone={managerView ? "violet" : canScore ? "amber" : "green"}>{managerView ? "Manager view" : canScore ? "Scorekeeper view" : "Player view"}</Pill><Pill>{team.season_name || "Season"}</Pill><Pill tone="green">Free team tools</Pill></div><h1 className="mt-2 truncate text-2xl font-black text-white">{group.name}</h1><p className="mt-1 text-[11px] text-slate-400">{[team.league_name, team.division_name].filter(Boolean).join(" · ") || "Team workspace"}</p></div></div>
+            <div className="flex min-w-0 items-start gap-3">{managerView ? <label className="group relative shrink-0 cursor-pointer" title="Change team logo"><TeamLogo group={group}/><span className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full border border-cyan-200/35 bg-cyan-300 text-slate-950 shadow-lg"><Camera className="h-3.5 w-3.5"/></span><input type="file" accept="image/*" className="hidden" onChange={(event)=>changeTeamLogo(event.target.files?.[0] || null)}/></label> : <TeamLogo group={group}/>}<div className="min-w-0"><div className="flex flex-wrap gap-1.5"><Pill tone="cyan">Softball</Pill><Pill tone={managerView ? "violet" : canScore ? "amber" : "green"}>{managerView ? "Manager view" : canScore ? "Scorekeeper view" : "Player view"}</Pill><Pill>{team.season_name || "Season"}</Pill><Pill tone="green">Free team tools</Pill></div><h1 className="mt-2 truncate text-2xl font-black text-white">{group.name}</h1><p className="mt-1 text-[11px] text-slate-400">{[team.league_name, team.division_name].filter(Boolean).join(" · ") || "Team workspace"}</p></div></div>
             {list(dashboard?.live_games).length ? <Btn primary onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${dashboard.live_games[0].id}`)}><CircleDot className="mr-1 inline h-4 w-4" />Live</Btn> : null}
           </div>
           <div className="mt-3 grid grid-cols-4 gap-1.5"><Stat label="Record" value={`${num(record.wins)}-${num(record.losses)}`} /><Stat label="Roster" value={players.length} /><Stat label="Games" value={games.length} /><Stat label={managerView ? "Outstanding" : "My due"} value={managerView ? money(managerOutstanding) : money(ownDue)} sub={managerView ? `${managerDueCount} open charge${managerDueCount === 1 ? "" : "s"}` : undefined} /></div>
