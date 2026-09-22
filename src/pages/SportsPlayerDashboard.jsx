@@ -13,7 +13,7 @@ import PlayerStatSplits from "../components/sports/PlayerStatSplits";
 import { useAuth } from "../auth/AuthContext";
 import { createEventResponse, updateEventResponse } from "../api/social";
 import {
-  createPlayerProfile, getPlayerCard, getPlayerBadgeCard, getPlayerCenter, getSportsTeams,
+  createPlayerProfile, getPlayerCard, getPlayerBadgeCard, getPlayerCenter, getSportsTeams, joinMySportsTeamRoster,
   updatePlayerProfile, updateSportsPlayer,
 } from "../api/sports";
 
@@ -90,6 +90,7 @@ export default function SportsPlayerDashboard() {
   const [badgeCard, setBadgeCard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [joiningRoster, setJoiningRoster] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
@@ -169,6 +170,25 @@ export default function SportsPlayerDashboard() {
   }, [searchParams]);
 
 
+  async function addMyselfToRoster() {
+    if (!team?.id || joiningRoster) return;
+    setJoiningRoster(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await joinMySportsTeamRoster(team.id);
+      setNotice(result.matched_existing
+        ? "Your existing player card and stats are now linked to your account."
+        : "Your player card has been created. Your coach can now set your jersey and position.");
+      setTab("My Player");
+      await refresh();
+    } catch (e) {
+      setError(errText(e));
+    } finally {
+      setJoiningRoster(false);
+    }
+  }
+
   async function respond(value) {
     if (!nextGame?.social_event) return;
     setBusy(true); setError(""); setNotice("");
@@ -223,7 +243,23 @@ export default function SportsPlayerDashboard() {
 
   if (!team || !center) return <div className="min-h-screen bg-[#02060c] p-3 text-white"><ModeBar title="Player" subtitle="SyncWorks Social"/><Card title="Team unavailable"><div className="text-xs text-slate-500">{error || "This team could not be loaded."}</div><Btn className="mt-3" onClick={()=>navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4"/>Back to Social</Btn></Card></div>;
 
-  if (!player) return <div className="min-h-screen bg-[#02060c] p-3 text-white"><ModeBar title="Team member" subtitle="SyncWorks Social"/><Card title="Player profile not linked" body="You’re in this Social group, but your account is not linked to a roster player yet."><div className="text-xs leading-5 text-slate-400">Ask a team manager to send the player invitation to the email on your SyncWorks account. Once claimed, this page becomes your full player dashboard.</div><Btn className="mt-3" onClick={()=>navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4"/>Back to Groups</Btn></Card></div>;
+  if (!player) return <div className="min-h-screen bg-[#02060c] pb-28 text-white">
+    <ModeBar title={team.group_name || "Team"} subtitle="SyncWorks Sports" />
+    <main className="mx-auto max-w-xl space-y-3 px-3 py-4">
+      <Btn onClick={()=>navigate("/connect/groups/"+groupId)}><ArrowLeft className="mr-1 inline h-4 w-4"/>Back to my group</Btn>
+      {error ? <div role="alert" className="rounded-xl border border-rose-300/20 bg-rose-300/10 p-3 text-xs text-rose-100">{error}</div> : null}
+      <section className="rounded-[1.6rem] border border-cyan-300/25 bg-[radial-gradient(ellipse_at_top_right,rgba(34,211,238,.16),transparent_60%),#07111f] p-5">
+        <div className="mb-3 inline-flex rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 text-[10px] font-black uppercase text-emerald-100">Team membership active</div>
+        <h1 className="text-xl font-black text-white">Welcome to {team.group_name || "your team"}</h1>
+        <p className="mt-2 text-sm leading-6 text-slate-300">Your group invitation is accepted. Connect your player profile to unlock your card, earned badges, team schedule, availability, lineup and stats.</p>
+        <div className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/[.05] p-3 text-xs leading-5 text-amber-100">
+          <b>Already on the roster?</b> We match your SyncWorks account email to the player card your coach entered, keeping its jersey and stats. If it uses a different email, ask your coach to use Link account first to avoid a duplicate player.
+        </div>
+        <button type="button" disabled={joiningRoster} onClick={addMyselfToRoster} className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 text-sm font-black text-slate-950 disabled:opacity-50">{joiningRoster ? <><Loader2 className="h-4 w-4 animate-spin"/>Connecting your card…</> : "Connect my player card"}</button>
+        <Btn className="mt-2 w-full" onClick={()=>navigate("/connect/groups/"+groupId)}>View group updates &amp; chat</Btn>
+      </section>
+    </main>
+  </div>;
 
   return <div className="min-h-screen bg-[#02060c] pb-28 text-slate-100">
     <ModeBar title="Player" subtitle="SyncWorks Social"/>
