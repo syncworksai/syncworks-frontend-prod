@@ -362,6 +362,7 @@ export default function SocialGroupDashboard() {
             <div className="mt-1 text-[9px] text-slate-500">{[group.city,group.state].filter(Boolean).join(", ")}</div>
           </div>
         </div>
+        {isTeam && myMembership ? <button type="button" onClick={()=>navigate("/connect/groups/"+group.id+"/sports")} className="relative mt-4 flex min-h-16 w-full items-center justify-between gap-3 rounded-2xl border border-cyan-300/45 bg-gradient-to-r from-cyan-300/20 to-violet-400/10 px-4 py-3 text-left shadow-[0_0_24px_rgba(34,211,238,.12)]"><span className="min-w-0"><span className="block text-base font-black text-white"><Trophy className="mr-2 inline h-5 w-5 text-amber-300"/>Open Team Dashboard</span><span className="mt-1 block text-[11px] leading-5 text-cyan-100/80">{managed ? "Manage roster, game book, scores and player achievements." : "Your player card, roster, schedule, scores, stats and team chat."}</span></span><ChevronRight className="h-5 w-5 shrink-0 text-cyan-200"/></button> : null}
         <div className="relative mt-4 grid grid-cols-3 gap-1.5 sm:grid-cols-5">
           <Metric label="Members" value={members.length}/>
           <Metric label="Followers" value={num(group.follower_count)} tone="violet"/>
@@ -370,7 +371,7 @@ export default function SocialGroupDashboard() {
           <Metric label="My due" value={money(myDue)} tone="amber"/>
         </div>
         {group.allow_followers !== false ? <button type="button" disabled={busy} onClick={toggleFollow} className={cx("relative mt-3 min-h-9 rounded-full border px-4 text-[9px] font-black uppercase tracking-wide", group.is_following ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100" : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100")}>{group.is_following ? "Following" : "+ Follow group"}</button> : null}
-        {isTeam ? <button type="button" onClick={()=>navigate("/connect/groups/"+group.id+"/sports")} className="relative mt-3 flex w-full items-center justify-between rounded-xl border border-amber-300/20 bg-gradient-to-r from-amber-300/[.07] to-cyan-300/[.04] p-3 text-left"><span><span className="block text-xs font-black text-white"><Trophy className="mr-1 inline h-4 w-4 text-amber-300"/>Sports team center</span><span className="mt-0.5 block text-[9px] text-slate-500">Player profiles, lineup, games, stats, league and Game Book.</span></span><ChevronRight className="h-4 w-4 text-amber-200"/></button> : null}
+
       </section>
 
       <section className="rounded-[1.3rem] border border-emerald-300/15 bg-emerald-300/[.035] p-3">
