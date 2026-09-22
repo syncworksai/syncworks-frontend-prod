@@ -83,6 +83,11 @@ export async function updateSportsPlayer(id, payload) {
   return data;
 }
 
+export async function linkSportsPlayerMember(playerId, user) {
+  const { data } = await api.post(`/sports/players/${playerId}/link-member/`, { user });
+  return data;
+}
+
 export async function mergeSportsPlayer(sourceId, target_player) {
   const { data } = await api.post(`/sports/players/${sourceId}/merge/`, { target_player });
   return data;
