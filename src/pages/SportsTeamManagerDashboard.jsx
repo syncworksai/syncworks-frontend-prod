@@ -33,7 +33,7 @@ import InteractiveStatsBoard from "../components/sports/InteractiveStatsBoard";
 import SoftballDefenseField from "../components/sports/SoftballDefenseField";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import { useAuth } from "../auth/AuthContext";
-import { createEventResponse, getEventResponses, getGroups, getMemberships, setMembershipRole, uploadGroupLogo, updateEventResponse } from "../api/social";
+import { createEventResponse, getEventResponses, getGroups, getMemberships, inviteMember, setMembershipRole, uploadGroupLogo, updateEventResponse } from "../api/social";
 import {
   assignTeamFeeRoster,
   createPlayerProfile,
@@ -401,6 +401,22 @@ export default function SportsTeamManagerDashboard() {
       setError(errorText(err));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function addLinkedPlayerToGroup(player) {
+    if (!managerView || !player?.user) return;
+    const key = `group-${player.id}`;
+    setQuickSaving((current) => ({ ...current, [key]: true }));
+    setError(""); setNotice("");
+    try {
+      await inviteMember({ group: Number(groupId), user: Number(player.user), role: "MEMBER" });
+      setNotice(`Group invitation created for ${player.display_name}. Role assignment will be available when they accept.`);
+      await refresh({ quiet: true });
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setQuickSaving((current) => ({ ...current, [key]: false }));
     }
   }
 
@@ -867,7 +883,7 @@ export default function SportsTeamManagerDashboard() {
         {tab === "Roster" ? <div className="space-y-3">
           <Card
             title="Team access & roles"
-            body="Roles are separate from the player roster. A player can also be a scorekeeper, and staff can have Game Book access without taking a roster spot."
+            body="Assign access here or on each linked roster player below. Unlinked players must accept a SyncWorks invite before they can receive scoring permissions. Staff can join without taking a roster spot."
             action={<Users className="h-4 w-4 text-violet-300" />}
           >
             <div className="space-y-2">
@@ -905,6 +921,8 @@ export default function SportsTeamManagerDashboard() {
               const profile = profileFor(player);
               const email = profile?.email || player.user_detail?.email || "";
               const phone = profile?.phone || "";
+              const linkedMembership = memberships.find((membership) => Number(membership.group) === Number(groupId) && Number(membership.user) === Number(player.user) && membership.status === "ACTIVE");
+              const pendingMembership = memberships.find((membership) => Number(membership.group) === Number(groupId) && Number(membership.user) === Number(player.user) && membership.status === "INVITED");
               return <div key={player.id} className="rounded-xl border border-white/10 bg-white/[.025] p-2.5">
                 <div className="flex items-center gap-2">
                   <button type="button" onClick={() => openPlayer(player)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
@@ -924,6 +942,19 @@ export default function SportsTeamManagerDashboard() {
                   </div>
                   {!player.user ? <button type="button" disabled={quickSaving[`invite-${player.id}`]} onClick={() => inviteRosterPlayer(player)} className="min-h-8 rounded-lg border border-violet-300/20 bg-violet-300/10 px-2 text-[8px] font-black text-violet-100">{quickSaving[`invite-${player.id}`] ? "..." : "Invite"}</button> : <Pill tone="green">Linked</Pill>}
                   <button type="button" disabled={!player.user || quickSaving[`remind-${player.id}`]} onClick={() => remindRosterPlayer(player, "GENERAL")} className="grid h-8 w-8 place-items-center rounded-lg border border-amber-300/20 bg-amber-300/10 text-amber-100 disabled:opacity-30" aria-label="Send reminder"><Bell className="h-3.5 w-3.5" /></button>
+                </div> : null}
+                {managerView ? <div className="mt-2 rounded-xl border border-violet-300/15 bg-violet-300/[.035] p-2.5">
+                  <div className="mb-1 text-[9px] font-black uppercase tracking-wide text-violet-200">Team role / Game Book access</div>
+                  {linkedMembership ? linkedMembership.role === "OWNER" || (myMembership?.role === "MANAGER" && linkedMembership.role === "DIRECTOR") ?
+                    <div className="text-[11px] text-slate-200">{ROLE_HELP[linkedMembership.role] || linkedMembership.role}</div>
+                    : <select aria-label={`Role for ${player.display_name}`} disabled={!!quickSaving[`role-${linkedMembership.id}`]} value={linkedMembership.role} onChange={(event)=>changeMemberRole(linkedMembership,event.target.value)} className="min-h-11 w-full rounded-xl border border-violet-300/25 bg-[#050b14] px-3 text-xs font-bold text-white disabled:opacity-50">
+                        {ROLE_OPTIONS.filter(([value]) => myMembership?.role !== "MANAGER" || value !== "DIRECTOR").map(([value,label])=><option key={value} value={value}>{label}</option>)}
+                      </select>
+                  : !player.user ?
+                    <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[10px] text-amber-200">Not linked to SyncWorks. Add an email, then invite this player.</span><button type="button" onClick={()=>openPlayer(player)} className="min-h-10 rounded-lg border border-amber-300/30 px-3 text-[10px] font-bold text-amber-100">Edit / invite</button></div>
+                  : pendingMembership ?
+                    <span className="text-[10px] text-amber-200">Group invitation pending. Assign a role after acceptance.</span>
+                  : <button type="button" disabled={!!quickSaving[`group-${player.id}`]} onClick={()=>addLinkedPlayerToGroup(player)} className="min-h-11 w-full rounded-xl border border-violet-300/30 bg-violet-300/10 px-3 text-xs font-bold text-violet-100 disabled:opacity-50">Invite linked player to group</button>}
                 </div> : null}
               </div>;
             })}
