@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -749,9 +750,17 @@ export default function SoftballGameDayAdvanced() {
     if (!gamecast?.token) return;
     const url = `${window.location.origin}/gamecast/${gamecast.token}`;
     if (navigator.share) {
-      try { await navigator.share({ title: `${game.team_name} GameCast`, text: `Follow ${game.team_name} vs ${game.opponent_name} live.`, url }); return; } catch {}
+      try { await navigator.share({ title: `${game.team_name} GameCast`, text: `Follow ${game.team_name} vs ${game.opponent_name} live.`, url }); return; }
+      catch (error) { if (error?.name === "AbortError") return; }
     }
-    try { await navigator.clipboard.writeText(url); setNotice("GameCast link copied."); } catch { setNotice(url); }
+    try { await navigator.clipboard.writeText(url); setNotice("GameCast link copied."); } catch { setNotice("Select and copy the GameCast URL shown in the sharing panel."); }
+  }
+
+  async function copyGameCastLink() {
+    if (!gamecast?.token) return;
+    const url = `${window.location.origin}/gamecast/${gamecast.token}`;
+    try { await navigator.clipboard.writeText(url); setNotice("GameCast link copied."); }
+    catch { setNotice("Select and copy the GameCast URL shown in the sharing panel."); }
   }
 
   function facebookGameCast() {
@@ -1210,7 +1219,7 @@ export default function SoftballGameDayAdvanced() {
                   <div className="mt-2 grid grid-cols-2 gap-1.5">
                     <Button primary={!gamecast.enabled} onClick={()=>toggleGameCast(!gamecast.enabled)}>{gamecast.enabled?<><EyeOff className="mr-1 inline h-3.5 w-3.5"/>Stop live</>:<><Eye className="mr-1 inline h-3.5 w-3.5"/>Enable</>}</Button>
                     <Button onClick={()=>setGamecastOpen(true)}><Radio className="mr-1 inline h-3.5 w-3.5"/>GameCast options</Button>
-                    <Button disabled={!gamecast.enabled} onClick={shareGameCast}><Share2 className="mr-1 inline h-3.5 w-3.5"/>Quick share</Button>
+                    <Button onClick={()=>setGamecastOpen(true)}><Share2 className="mr-1 inline h-3.5 w-3.5"/>Share link</Button>
                     <Button disabled={!gamecast.enabled} onClick={facebookGameCast}>Facebook</Button>
                   </div>
                 </section>:null}
@@ -1221,9 +1230,9 @@ export default function SoftballGameDayAdvanced() {
           </>
         ) : null}
 
-        {canScore && gamecastOpen && gamecast ? (
-          <div className="fixed inset-0 z-[96] flex items-end justify-center bg-black/80 px-3 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-16 sm:items-center">
-            <div className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-[1.7rem] border border-emerald-300/20 bg-[#06101d] p-4 shadow-2xl">
+        {canScore && gamecastOpen && gamecast ? createPortal(
+          <div role="dialog" aria-modal="true" aria-label="Share live GameCast" className="fixed inset-0 z-[200] flex items-end justify-center bg-black/85 px-2 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(3.5rem,env(safe-area-inset-top))] sm:items-center" onClick={(event)=>{if(event.target===event.currentTarget)setGamecastOpen(false);}}>
+            <div className="max-h-[calc(100dvh-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-[1.7rem] rounded-b-xl border border-emerald-300/25 bg-[#06101d] p-4 shadow-2xl sm:rounded-[1.7rem]">
               <div className="flex items-start justify-between gap-3">
                 <div><div className="text-[8px] font-black uppercase tracking-[.15em] text-emerald-300">Live GameCast</div><div className="mt-1 text-lg font-black text-white">{game.team_name} vs {game.opponent_name}</div><div className="mt-1 text-[10px] text-slate-400">The Game Book is the live source. Score, inning, outs, current batter and recent plays refresh for viewers automatically.</div></div>
                 <button type="button" onClick={()=>setGamecastOpen(false)} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 text-slate-300">×</button>
@@ -1246,17 +1255,18 @@ export default function SoftballGameDayAdvanced() {
               </div>
 
               <div className="mt-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[.035] p-3">
-                <div className="text-[8px] font-black uppercase tracking-wide text-cyan-300">Share link</div>
-                <div className="mt-1 break-all rounded-lg bg-black/25 p-2 text-[10px] text-cyan-100">{window.location.origin}/gamecast/{gamecast.token}</div>
+                <div className="text-[10px] font-black uppercase tracking-wide text-cyan-300">Share live GameCast</div>
+                <input aria-label="GameCast share URL" type="text" readOnly onFocus={(event)=>event.target.select()} onClick={(event)=>event.currentTarget.select()} value={`${window.location.origin}/gamecast/${gamecast.token}`} className="mt-2 min-h-11 w-full rounded-lg border border-cyan-300/20 bg-black/30 p-2 text-xs text-cyan-100" />
+                {!gamecast.enabled ? <p className="mt-2 text-xs text-amber-200">Turn on GameCast above to share the live feed.</p> : null}
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <Button disabled={!gamecast.enabled} primary onClick={shareGameCast}><Share2 className="mr-1 inline h-3.5 w-3.5"/>Share link</Button>
-                  <Button disabled={!gamecast.enabled} onClick={async()=>{const url=`${window.location.origin}/gamecast/${gamecast.token}`;await navigator.clipboard?.writeText(url);setNotice("GameCast link copied.");}}><Copy className="mr-1 inline h-3.5 w-3.5"/>Copy</Button>
+                  <Button onClick={copyGameCastLink}><Copy className="mr-1 inline h-3.5 w-3.5"/>Copy link</Button>
                   <Button disabled={!gamecast.enabled} onClick={facebookGameCast}>Facebook</Button>
                   <Button disabled={!gamecast.enabled} onClick={()=>window.open(`/gamecast/${gamecast.token}`,"_blank","noopener,noreferrer")}><ExternalLink className="mr-1 inline h-3.5 w-3.5"/>Preview</Button>
                 </div>
               </div>
             </div>
-          </div>
+          </div>, document.body
         ) : null}
 
         {live && canScore ? (
@@ -1265,7 +1275,7 @@ export default function SoftballGameDayAdvanced() {
               <button type="button" onClick={()=>run(()=>undoSoftballPlay(game.id),"Last play undone.")} className="min-h-12 rounded-xl border border-white/10 text-[9px] font-black"><Undo2 className="mx-auto mb-0.5 h-4 w-4"/>Undo</button>
               <button type="button" onClick={()=>openSubstitution()} className="min-h-12 rounded-xl border border-violet-300/20 bg-violet-300/[.05] text-[9px] font-black text-violet-100"><UserRound className="mx-auto mb-0.5 h-4 w-4"/>Sub</button>
               <button type="button" onClick={()=>setGamecastOpen(true)} className="min-h-12 rounded-xl border border-emerald-300/20 bg-emerald-300/[.05] text-[9px] font-black text-emerald-100"><Radio className="mx-auto mb-0.5 h-4 w-4"/>GameCast</button>
-              <button type="button" onClick={facebookGameCast} disabled={!gamecast?.enabled} className="min-h-12 rounded-xl bg-cyan-300 text-[9px] font-black text-slate-950 disabled:opacity-40"><Share2 className="mx-auto mb-0.5 h-4 w-4"/>Facebook</button>
+              <button type="button" onClick={()=>setGamecastOpen(true)} className="min-h-12 rounded-xl bg-cyan-300 text-[9px] font-black text-slate-950"><Share2 className="mx-auto mb-0.5 h-4 w-4"/>Share</button>
             </div>
           </div>
         ) : null}
