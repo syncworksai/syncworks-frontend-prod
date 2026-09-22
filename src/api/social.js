@@ -215,6 +215,31 @@ export async function createGroupInviteLink(group, role = "MEMBER") {
   return data;
 }
 
+export async function joinGroupAsPlayer(token, password) {
+  const { data } = await api.post("/social/group-invite-links/join-player/", { token, password });
+  return data;
+}
+
+export async function followGroupAsFan(token, email_updates = true) {
+  const { data } = await api.post("/social/group-invite-links/follow-fan/", { token, email_updates });
+  return data;
+}
+
+export async function unfollowGroupAsFan(token) {
+  const { data } = await api.post("/social/group-invite-links/unfollow-fan/", { token });
+  return data;
+}
+
+export async function getGroupFanFeed(token) {
+  const { data } = await api.get("/social/group-invite-links/fan-feed/", { params: { token } });
+  return data;
+}
+
+export async function setGroupPlayerPassword(groupId, password) {
+  const { data } = await api.post(`/social/groups/${groupId}/player-password/`, { password });
+  return data;
+}
+
 export async function previewGroupInviteLink(token) {
   const { data } = await api.get("/social/group-invite-links/preview/", { params: { token } });
   return data;
