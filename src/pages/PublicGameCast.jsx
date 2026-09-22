@@ -26,7 +26,6 @@ export default function PublicGameCast() {
   }
 
   useEffect(() => {
-    if (!user?.id) return undefined;
     load();
     const timer = window.setInterval(load, 3000);
     return () => window.clearInterval(timer);
@@ -51,6 +50,10 @@ export default function PublicGameCast() {
   }
 
   async function toggleFollow() {
+    if (!user?.id) {
+      window.location.assign("/register?next="+encodeURIComponent("/gamecast/"+token));
+      return;
+    }
     const groupId = data?.game?.group_id;
     if (!groupId || followBusy) return;
     setFollowBusy(true);
@@ -73,24 +76,6 @@ export default function PublicGameCast() {
     }
   }
 
-  if (!user?.id) {
-    const next = encodeURIComponent(`/gamecast/${token}`);
-    return (
-      <div className="grid min-h-screen place-items-center bg-[#02060c] px-4 text-white">
-        <section className="w-full max-w-lg rounded-[2rem] border border-cyan-300/20 bg-[radial-gradient(circle_at_85%_0%,rgba(34,211,238,.17),transparent_35%),#07111f] p-5 text-center shadow-2xl">
-          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-cyan-300/25 bg-cyan-300/10"><Radio className="h-7 w-7 text-cyan-200" /></div>
-          <div className="mt-4 text-[10px] font-black uppercase tracking-[.18em] text-cyan-300">SyncWorks GameCast</div>
-          <h1 className="mt-2 text-2xl font-black">Watch the live game</h1>
-          <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-400">Create a free SyncWorks Personal profile or sign in to follow teams and watch live GameCast updates.</p>
-          <div className="mt-5 grid gap-2 sm:grid-cols-2">
-            <a href={`/register?next=${next}`} className="flex min-h-11 items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-black text-slate-950">Create free account</a>
-            <a href={`/login?next=${next}`} className="flex min-h-11 items-center justify-center rounded-xl border border-white/10 bg-white/[.04] px-4 text-sm font-black text-white">Sign in</a>
-          </div>
-        </section>
-      </div>
-    );
-  }
-
   if (error) return <div className="min-h-screen bg-[#02060c] p-5 text-white"><div className="mx-auto max-w-xl rounded-2xl border border-rose-300/20 bg-rose-300/10 p-4">{error}</div></div>;
   if (!data) return <div className="grid min-h-screen place-items-center bg-[#02060c] text-cyan-200">Loading GameCast…</div>;
 
@@ -100,22 +85,37 @@ export default function PublicGameCast() {
   return (
     <div className="min-h-screen bg-[#02060c] pb-10 text-slate-100">
       <main className="mx-auto max-w-3xl space-y-3 px-3 py-4">
+        {game.status==="SCHEDULED" ? <section role="status" className="rounded-2xl border border-amber-300/30 bg-gradient-to-r from-amber-300/10 to-cyan-300/[.04] p-4">
+          <span className="text-[10px] font-black uppercase tracking-widest text-amber-200">Pregame · Watch link active</span>
+          <h1 className="mt-2 text-xl font-black text-white">{game.team_name} vs {game.opponent_name}</h1>
+          <p className="mt-2 text-sm text-amber-100">{game.start_at ? new Date(game.start_at).toLocaleString([], {dateStyle:"full",timeStyle:"short"}) : "Kickoff time will be announced"}{game.venue_name ? " · "+game.venue_name : ""}</p>
+          <p className="mt-2 text-[11px] leading-5 text-slate-300">This is the same GameCast link you'll use during the game. Leave it open: scores and the inning-by-inning scoreboard update automatically as soon as the scorer starts the game.</p>
+          <button type="button" onClick={share} className="mt-3 min-h-11 w-full rounded-xl bg-amber-300 text-xs font-black text-slate-950"><Share2 className="mr-1 inline h-4 w-4"/>Share the pregame watch link</button>
+        </section> : null}
         <header className="rounded-2xl border border-cyan-300/20 bg-[#07111f] p-3">
-          <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[.15em] text-emerald-300"><Radio className="h-4 w-4" />SyncWorks GameCast</div><span className="rounded-full bg-emerald-300/10 px-2 py-1 text-[8px] font-black text-emerald-200">{game.status}</span></div>
+          <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[.15em] text-emerald-300"><Radio className="h-4 w-4" />SyncWorks GameCast</div><span className={`rounded-full px-2 py-1 text-[8px] font-black ${game.status==="SCHEDULED"?"bg-amber-300/10 text-amber-200":"bg-emerald-300/10 text-emerald-200"}`}>{game.status==="SCHEDULED"?"UPCOMING":game.status}</span></div>
           <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center">
             <div><div className="truncate text-[10px] text-slate-400">{game.team_name}</div><div className="text-4xl font-black text-cyan-100">{game.runs_for}</div></div>
             <div className="text-[9px] font-black text-slate-500">INN {game.current_inning}<br />{game.outs} OUT</div>
             <div><div className="truncate text-[10px] text-slate-400">{game.opponent_name}</div><div className="text-4xl font-black text-white">{game.runs_against}</div></div>
           </div>
-          <div className="mt-2 text-center text-[10px] text-slate-500">{game.current_batter ? `At bat: ${game.current_batter.display_name}` : "Game updates automatically"}</div>
+          <div className="mt-2 text-center text-[10px] text-slate-500">{game.status==="SCHEDULED" ? "Awaiting first pitch · This preview updates automatically" : game.current_batter ? `At bat: ${game.current_batter.display_name}` : "Game updates automatically"}</div>
           {game.group_id ? <div className="mt-3 flex items-center justify-center gap-2">
             <button type="button" disabled={followBusy} onClick={toggleFollow} className={`min-h-9 rounded-full border px-4 text-[9px] font-black uppercase tracking-wide ${game.is_following ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100" : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"}`}>
-              {followBusy ? "Saving…" : game.is_following ? "Following" : "+ Follow team"}
+              {followBusy ? "Saving…" : game.is_following ? "Following" : user?.id ? "+ Follow team" : "+ Join free to follow"}
             </button>
             <span className="text-[9px] text-slate-500">{num(game.follower_count)} follower{num(game.follower_count) === 1 ? "" : "s"}</span>
           </div> : null}
         </header>
 
+        {!user?.id ? <section className="rounded-xl border border-cyan-300/20 bg-cyan-300/[.04] p-3">
+          <b className="text-xs font-black text-cyan-100">You're watching as a guest</b>
+          <p className="mt-1 text-[11px] leading-5 text-slate-300">The pregame preview and live scores are free to watch from this share link. Create an optional free SyncWorks account to follow the team and receive GameCast email alerts.</p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <a href={`/register?next=${encodeURIComponent("/gamecast/"+token)}`} className="flex min-h-11 items-center justify-center rounded-lg bg-cyan-300 px-2 text-xs font-black text-slate-950">Follow for free</a>
+            <a href={`/login?next=${encodeURIComponent("/gamecast/"+token)}`} className="flex min-h-11 items-center justify-center rounded-lg border border-white/15 text-xs font-black text-white">Sign in</a>
+          </div>
+        </section> : null}
         <section className="overflow-x-auto rounded-2xl border border-white/10 bg-[#07111f] p-2.5">
           <table className="min-w-full border-collapse text-center text-[9px]">
             <thead><tr><th className="sticky left-0 bg-[#07111f] px-2 py-1 text-left text-slate-500">TEAM</th>{innings.map((row) => <th key={row.inning} className="min-w-8 px-1 py-1 text-slate-500">{row.inning}</th>)}<th className="px-2 text-cyan-200">R</th><th className="px-2 text-cyan-200">H</th></tr></thead>

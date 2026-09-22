@@ -1312,6 +1312,7 @@ export default function ModeBar({
   title = "SyncWorks",
   subtitle = "",
   rightActions = null,
+  sportsCompact = false,
 }) {
   const nav = useNavigate();
   const location =
@@ -1906,7 +1907,14 @@ export default function ModeBar({
         </div>
 
         <div className="relative mx-auto max-w-7xl px-4 py-3">
-          <div className="flex items-center gap-3">
+          {sportsCompact ? <div className="flex min-h-14 items-center gap-3">
+            <img src="/brands/syncworks new logo.jpg" alt="SyncWorks" className="h-12 w-12 shrink-0 rounded-2xl border border-cyan-500/30 bg-slate-950 object-cover"/>
+            <div className="min-w-0 flex-1 truncate text-sm font-black uppercase tracking-[.19em] text-white sm:text-lg">SYNCWORKS</div>
+            <div className="flex shrink-0 items-center gap-2">
+              <NotificationsBell inline />
+              <button type="button" onClick={()=>setMobileMenuOpen(true)} title="Open SyncWorks menu" className="flex min-h-12 items-center gap-2 rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-3 text-sm font-black text-cyan-100"><MenuIcon className="h-5 w-5"/><span>Menu</span></button>
+            </div>
+          </div> : <div className="flex items-center gap-3">
             <div className="flex min-w-0 items-center gap-3">
               <img
                 src="/brands/syncworks new logo.jpg"
@@ -2119,10 +2127,10 @@ export default function ModeBar({
                 <MenuIcon className="h-5 w-5" />
               </button>
             </div>
-          </div>
+          </div>}
         </div>
 
-        <div className="relative space-y-2 px-4 pb-3 md:hidden">
+        <div className={sportsCompact ? "hidden" : "relative space-y-2 px-4 pb-3 md:hidden"}>
           {showBusinessPicker ? (
             <BusinessPicker />
           ) : null}
