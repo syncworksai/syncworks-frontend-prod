@@ -435,8 +435,10 @@ export default function SportsTeamManagerDashboard() {
     try {
       await navigator.clipboard.writeText(url);
       setShareStatus("Invite link copied — paste it into your team group chat.");
+      setNotice("Invite link copied.");
     } catch {
       setShareStatus("Select the link above to copy it manually.");
+      setNotice("Select and copy the invitation URL displayed on the page.");
     }
   }
 
@@ -1011,6 +1013,7 @@ export default function SportsTeamManagerDashboard() {
               const phone = profile?.phone || "";
               const linkedMembership = memberships.find((membership) => Number(membership.group) === Number(groupId) && Number(membership.user) === Number(player.user) && membership.status === "ACTIVE");
               const pendingMembership = memberships.find((membership) => Number(membership.group) === Number(groupId) && Number(membership.user) === Number(player.user) && membership.status === "INVITED");
+              const personalInviteUrl = playerInviteUrls[player.id];
               return <div key={player.id} className="rounded-xl border border-white/10 bg-white/[.025] p-2.5">
                 <div className="flex items-center gap-2">
                   <button type="button" onClick={() => openPlayer(player)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
@@ -1043,6 +1046,21 @@ export default function SportsTeamManagerDashboard() {
                   : pendingMembership ?
                     <span className="text-[10px] text-amber-200">Group invitation pending. Assign a role after acceptance.</span>
                   : <button type="button" disabled={!!quickSaving[`group-${player.id}`]} onClick={()=>addLinkedPlayerToGroup(player)} className="min-h-11 w-full rounded-xl border border-violet-300/30 bg-violet-300/10 px-3 text-xs font-bold text-violet-100 disabled:opacity-50">Invite linked player to group</button>}
+                </div> : null}
+                {managerView && !linkedMembership ? <div className="mt-2 rounded-xl border border-cyan-300/15 bg-cyan-300/[.035] p-2.5">
+                  <b className="block text-[10px] text-cyan-100">Link this player to SyncWorks</b>
+                  <p className="mt-1 text-[10px] leading-4 text-slate-400">Enter the email they use for SyncWorks. The personal invite claims this exact roster entry and keeps their stats.</p>
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                    <input aria-label={`SyncWorks email for ${player.display_name}`} type="email" placeholder="player@example.com" value={playerInviteEmails[player.id] ?? email} onChange={(event)=>setPlayerInviteEmails((current)=>({ ...current, [player.id]: event.target.value }))} className="min-h-11 min-w-0 flex-1 rounded-xl border border-cyan-300/20 bg-[#050b14] px-3 text-xs text-white" />
+                    <Btn primary disabled={!!quickSaving[`invite-${player.id}`]} onClick={()=>inviteRosterPlayer(player, playerInviteEmails[player.id] ?? email)}>{quickSaving[`invite-${player.id}`] ? "Sending…" : player.user ? "Resend invite" : "Send player invite"}</Btn>
+                  </div>
+                  {personalInviteUrl ? <div className="mt-3 rounded-xl border border-emerald-300/15 bg-black/20 p-2">
+                    <input aria-label={`Personal invite URL for ${player.display_name}`} readOnly value={personalInviteUrl} onFocus={(event)=>event.target.select()} onClick={(event)=>event.currentTarget.select()} className="min-h-11 w-full rounded-lg border border-white/10 bg-black/20 p-2 text-[10px] text-cyan-100" />
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <Btn onClick={()=>copyInviteUrl(personalInviteUrl)}><Copy className="mr-1 inline h-4 w-4" />Copy link</Btn>
+                      <Btn primary onClick={()=>shareInviteUrl(personalInviteUrl, group?.name || "our team")}><Share2 className="mr-1 inline h-4 w-4" />Share link</Btn>
+                    </div>
+                  </div> : null}
                 </div> : null}
               </div>;
             })}
