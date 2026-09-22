@@ -110,8 +110,9 @@ export default function SocialGroupInviteLanding() {
             {done ? <div className="mt-5 rounded-2xl border border-emerald-300/30 bg-emerald-300/10 p-4">
               <CheckCircle2 className="h-7 w-7 text-emerald-300"/>
               <h2 className="mt-2 text-lg font-black text-white">You're on the team!</h2>
-              <p className="mt-1 text-xs leading-5 text-slate-300">Open Roster and tap Add me to roster. If your account email matches a player your manager already created, we'll link to that player instead of replacing their stats.</p>
-              <button type="button" onClick={()=>navigate((done.route || "/connect")+"?tab=Roster", { replace: true })} className="mt-3 min-h-12 w-full rounded-xl bg-emerald-300 px-4 text-sm font-black text-slate-950">Open my team roster</button>
+              <p className="mt-1 text-xs leading-5 text-slate-300">Your team dashboard is ready. From there, connect your existing player card by account email or add yourself to the roster, then access your schedule, stats and chat.</p>
+              <button type="button" onClick={()=>navigate(done.route || "/connect", { replace: true })} className="mt-3 min-h-12 w-full rounded-xl bg-emerald-300 px-4 text-sm font-black text-slate-950">Open my team dashboard</button>
+              {done.route ? <button type="button" onClick={()=>navigate("/connect/groups/"+preview.group.id, { replace: true })} className="mt-2 min-h-11 w-full rounded-xl border border-emerald-300/25 px-4 text-xs font-bold text-emerald-100">Visit team group &amp; updates</button> : null}
             </div> : null}
           </> : null}
         </section>
