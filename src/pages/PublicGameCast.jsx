@@ -26,7 +26,6 @@ export default function PublicGameCast() {
   }
 
   useEffect(() => {
-    if (!user?.id) return undefined;
     load();
     const timer = window.setInterval(load, 3000);
     return () => window.clearInterval(timer);
@@ -51,6 +50,10 @@ export default function PublicGameCast() {
   }
 
   async function toggleFollow() {
+    if (!user?.id) {
+      window.location.assign("/register?next="+encodeURIComponent("/gamecast/"+token));
+      return;
+    }
     const groupId = data?.game?.group_id;
     if (!groupId || followBusy) return;
     setFollowBusy(true);
@@ -71,24 +74,6 @@ export default function PublicGameCast() {
     } finally {
       setFollowBusy(false);
     }
-  }
-
-  if (!user?.id) {
-    const next = encodeURIComponent(`/gamecast/${token}`);
-    return (
-      <div className="grid min-h-screen place-items-center bg-[#02060c] px-4 text-white">
-        <section className="w-full max-w-lg rounded-[2rem] border border-cyan-300/20 bg-[radial-gradient(circle_at_85%_0%,rgba(34,211,238,.17),transparent_35%),#07111f] p-5 text-center shadow-2xl">
-          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-cyan-300/25 bg-cyan-300/10"><Radio className="h-7 w-7 text-cyan-200" /></div>
-          <div className="mt-4 text-[10px] font-black uppercase tracking-[.18em] text-cyan-300">SyncWorks GameCast</div>
-          <h1 className="mt-2 text-2xl font-black">Follow the game before first pitch</h1>
-          <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-400">Create a free SyncWorks Personal profile or sign in to see the upcoming game, follow the team and watch live scores when the game starts.</p>
-          <div className="mt-5 grid gap-2 sm:grid-cols-2">
-            <a href={`/register?next=${next}`} className="flex min-h-11 items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-black text-slate-950">Create free account</a>
-            <a href={`/login?next=${next}`} className="flex min-h-11 items-center justify-center rounded-xl border border-white/10 bg-white/[.04] px-4 text-sm font-black text-white">Sign in</a>
-          </div>
-        </section>
-      </div>
-    );
   }
 
   if (error) return <div className="min-h-screen bg-[#02060c] p-5 text-white"><div className="mx-auto max-w-xl rounded-2xl border border-rose-300/20 bg-rose-300/10 p-4">{error}</div></div>;
@@ -117,12 +102,20 @@ export default function PublicGameCast() {
           <div className="mt-2 text-center text-[10px] text-slate-500">{game.status==="SCHEDULED" ? "Awaiting first pitch · This preview updates automatically" : game.current_batter ? `At bat: ${game.current_batter.display_name}` : "Game updates automatically"}</div>
           {game.group_id ? <div className="mt-3 flex items-center justify-center gap-2">
             <button type="button" disabled={followBusy} onClick={toggleFollow} className={`min-h-9 rounded-full border px-4 text-[9px] font-black uppercase tracking-wide ${game.is_following ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100" : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"}`}>
-              {followBusy ? "Saving…" : game.is_following ? "Following" : "+ Follow team"}
+              {followBusy ? "Saving…" : game.is_following ? "Following" : user?.id ? "+ Follow team" : "+ Join free to follow"}
             </button>
             <span className="text-[9px] text-slate-500">{num(game.follower_count)} follower{num(game.follower_count) === 1 ? "" : "s"}</span>
           </div> : null}
         </header>
 
+        {!user?.id ? <section className="rounded-xl border border-cyan-300/20 bg-cyan-300/[.04] p-3">
+          <b className="text-xs font-black text-cyan-100">You're watching as a guest</b>
+          <p className="mt-1 text-[11px] leading-5 text-slate-300">The pregame preview and live scores are free to watch from this share link. Create an optional free SyncWorks account to follow the team and receive GameCast email alerts.</p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <a href={`/register?next=${encodeURIComponent("/gamecast/"+token)}`} className="flex min-h-11 items-center justify-center rounded-lg bg-cyan-300 px-2 text-xs font-black text-slate-950">Follow for free</a>
+            <a href={`/login?next=${encodeURIComponent("/gamecast/"+token)}`} className="flex min-h-11 items-center justify-center rounded-lg border border-white/15 text-xs font-black text-white">Sign in</a>
+          </div>
+        </section> : null}
         <section className="overflow-x-auto rounded-2xl border border-white/10 bg-[#07111f] p-2.5">
           <table className="min-w-full border-collapse text-center text-[9px]">
             <thead><tr><th className="sticky left-0 bg-[#07111f] px-2 py-1 text-left text-slate-500">TEAM</th>{innings.map((row) => <th key={row.inning} className="min-w-8 px-1 py-1 text-slate-500">{row.inning}</th>)}<th className="px-2 text-cyan-200">R</th><th className="px-2 text-cyan-200">H</th></tr></thead>
