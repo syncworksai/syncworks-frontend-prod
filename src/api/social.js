@@ -46,6 +46,31 @@ export async function createGroup(payload) {
   return data;
 }
 
+export async function updateGroup(id, payload) {
+  const { data } = await api.patch(`/social/groups/${id}/`, payload);
+  return data;
+}
+
+export async function followGroup(id) {
+  const { data } = await api.post(`/social/groups/${id}/follow/`);
+  return data;
+}
+
+export async function unfollowGroup(id) {
+  const { data } = await api.post(`/social/groups/${id}/unfollow/`);
+  return data;
+}
+
+export async function getSocialPaymentProfile() {
+  const { data } = await api.get("/social/groups/payment-profile/");
+  return data;
+}
+
+export async function updateSocialPaymentProfile(payload) {
+  const { data } = await api.patch("/social/groups/payment-profile/", payload);
+  return data;
+}
+
 export async function getMemberships() {
   const { data } = await api.get("/social/memberships/");
   return list(data);

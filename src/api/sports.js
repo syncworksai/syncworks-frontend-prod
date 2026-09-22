@@ -33,9 +33,13 @@ export async function getTeamDashboard(id) {
   ]);
   const data = dashboardResponse.data;
   const allGames = list(gamesResponse.data);
+  const now = Date.now();
   data.upcoming_games = allGames
-    .filter((game) => game.status === "SCHEDULED")
+    .filter((game) => game.status === "SCHEDULED" && new Date(game.start_at).getTime() >= now)
     .sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
+  data.needs_completion_games = allGames
+    .filter((game) => game.status === "SCHEDULED" && new Date(game.start_at).getTime() < now)
+    .sort((a, b) => new Date(b.start_at) - new Date(a.start_at));
   return data;
 }
 

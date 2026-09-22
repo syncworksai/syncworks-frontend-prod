@@ -211,7 +211,7 @@ export default function SportsTeamManagerDashboard() {
 
   const games = useMemo(() => {
     const map = new Map();
-    [...list(dashboard?.live_games), ...list(dashboard?.upcoming_games), ...list(dashboard?.recent_games)].forEach((game) => map.set(Number(game.id), game));
+    [...list(dashboard?.live_games), ...list(dashboard?.upcoming_games), ...list(dashboard?.needs_completion_games), ...list(dashboard?.recent_games)].forEach((game) => map.set(Number(game.id), game));
     return [...map.values()].sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
   }, [dashboard]);
 
@@ -219,6 +219,7 @@ export default function SportsTeamManagerDashboard() {
   const liveGame = games.find((game) => game.status === "LIVE") || null;
   const lineupIds = new Set(lineup.map((spot) => Number(spot.player)));
   const nextGame = games.find((game) => game.status === "LIVE") || games.find((game) => game.status === "SCHEDULED" && new Date(game.start_at) >= new Date());
+  const needsCompletionGames = list(dashboard?.needs_completion_games);
   const statusForSelected = (player) => availabilityStatus(player, selectedGame, eventResponses);
   const benchPlayers = players.filter((player) => !lineupIds.has(Number(player.id)) && statusForSelected(player) !== "NO");
   const outPlayers = players.filter((player) => statusForSelected(player) === "NO");
@@ -279,7 +280,7 @@ export default function SportsTeamManagerDashboard() {
       if (extras[4].status === "fulfilled") setScopedStats(list(extras[4].value?.rows));
 
       if (!lineupGameId) {
-        const preferred = list(data.live_games)[0] || list(data.upcoming_games)[0] || list(data.recent_games)[0];
+        const preferred = list(data.live_games)[0] || list(data.upcoming_games)[0] || list(data.needs_completion_games)[0] || list(data.recent_games)[0];
         if (preferred) chooseLineupGame(String(preferred.id), data, list(responseRows));
       }
     } catch (err) {
@@ -345,7 +346,7 @@ export default function SportsTeamManagerDashboard() {
     setLiftedPlayerId(null);
     const sourceGames = (() => {
       const map = new Map();
-      [...list(data?.live_games), ...list(data?.upcoming_games), ...list(data?.recent_games)].forEach((game) => map.set(Number(game.id), game));
+      [...list(data?.live_games), ...list(data?.upcoming_games), ...list(data?.needs_completion_games), ...list(data?.recent_games)].forEach((game) => map.set(Number(game.id), game));
       return [...map.values()];
     })();
     const game = sourceGames.find((row) => Number(row.id) === Number(value));
@@ -753,7 +754,16 @@ export default function SportsTeamManagerDashboard() {
 
         {tab === "Overview" ? <div className="grid gap-3 lg:grid-cols-[1fr_1fr_.92fr]">
           <Card title="Season command" body={managerView ? "Manager controls. Players see the same team data without edit access." : "Your team, schedule, lineup, stats and dues in one place."}>
-            <div className="grid grid-cols-2 gap-2"><Stat label="Team AVG" value={pct(dashboard?.team_stats?.avg)} sub={`${num(dashboard?.team_stats?.hits)} H`} /><Stat label="Run diff" value={num(dashboard?.team_stats?.runs_for) - num(dashboard?.team_stats?.runs_against)} sub={`${num(dashboard?.team_stats?.runs_for)}-${num(dashboard?.team_stats?.runs_against)}`} /></div>
+            <div className="grid grid-cols-3 gap-2">
+  <Stat label="AVG" value={pct(dashboard?.team_stats?.avg)} sub={`${num(dashboard?.team_stats?.hits)} H`} />
+  <Stat label="OBP" value={pct(dashboard?.team_stats?.obp)} sub={`${num(dashboard?.team_stats?.walks)} BB`} />
+  <Stat label="OPS" value={pct(dashboard?.team_stats?.ops)} sub={`${num(dashboard?.team_stats?.doubles)} 2B · ${num(dashboard?.team_stats?.home_runs)} HR`} />
+</div>
+<div className="mt-2 grid grid-cols-3 gap-2">
+  <Stat label="Runs" value={num(dashboard?.team_stats?.runs_for)} />
+  <Stat label="RBI" value={num(dashboard?.team_stats?.rbi)} />
+  <Stat label="Run diff" value={num(dashboard?.team_stats?.runs_for) - num(dashboard?.team_stats?.runs_against)} sub={`${num(dashboard?.team_stats?.runs_for)}-${num(dashboard?.team_stats?.runs_against)}`} />
+</div>
             <div className="mt-3 grid grid-cols-3 gap-1.5"><Btn onClick={() => setTab("Lineup")}>Lineup</Btn><Btn onClick={() => setTab("Stats")}>Stats</Btn><Btn onClick={() => setTab("Dues")}>Dues</Btn></div>
           </Card>
           <GameAvailabilityCard game={nextGame} players={players} responses={eventResponses} userId={userId} managerView={managerView} onRespond={respondToGame} />
@@ -784,6 +794,7 @@ export default function SportsTeamManagerDashboard() {
                     <span className="min-w-0 flex-1">
                       <b className="block truncate text-xs text-white">#{player.jersey_number || "—"} {player.display_name}</b>
                       <span className="block text-[9px] text-slate-500">{player.primary_position || "Position TBD"} · {player.user ? "SyncWorks linked" : "not linked"}</span>
+                      {playerStat(player) ? <span className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[8px] font-black text-cyan-100"><span>AVG {pct(playerStat(player).avg)}</span><span>OBP {pct(playerStat(player).obp)}</span><span>SLG {pct(playerStat(player).slg)}</span><span>OPS {pct(playerStat(player).ops)}</span><span className="text-slate-500">{num(playerStat(player).h)} H · {num(playerStat(player).double)} 2B · {num(playerStat(player).rbi)} RBI</span></span> : null}
                     </span>
                   </button>
                   {managerView ? <button type="button" onClick={() => openPlayer(player)} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-slate-300"><Pencil className="h-3.5 w-3.5" /></button> : null}
@@ -941,7 +952,12 @@ export default function SportsTeamManagerDashboard() {
         </div> : null}
 
         {tab === "Schedule" ? <div className="grid gap-3 lg:grid-cols-[1.3fr_.7fr]">
+          <div className="space-y-3">
+            {needsCompletionGames.length ? <Card title="Needs completion" body="Past games stay out of Upcoming until you enter the final result or finish the Game Book." action={<Pill tone="amber">{needsCompletionGames.length} OPEN</Pill>}>
+              <div className="space-y-2">{needsCompletionGames.map((game)=><div key={game.id} className="flex items-center justify-between gap-2 rounded-xl border border-amber-300/20 bg-amber-300/[.05] p-3"><div className="min-w-0"><div className="text-[8px] font-black uppercase tracking-wide text-amber-300">{new Date(game.start_at).toLocaleDateString()}</div><b className="block truncate text-xs text-white">vs {game.opponent_name}</b><span className="text-[9px] text-slate-500">{game.venue_name || "Field TBD"} · final score/stat entry needed</span></div><Btn primary onClick={()=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>Complete game</Btn></div>)}</div>
+            </Card> : null}
           <Card title="Team schedule" body="Games are synced to the Social team and members' SyncWorks calendars." action={<CalendarDays className="h-4 w-4 text-emerald-300" />}><div className="space-y-1.5">{games.map((game) => <div key={game.id} className="rounded-xl border border-white/10 bg-white/[.025] p-2.5"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="flex flex-wrap items-center gap-1.5"><b className="text-xs text-white">{new Date(game.start_at).toLocaleDateString()} · {new Date(game.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</b><Pill tone={game.home_away === "HOME" ? "green" : game.home_away === "AWAY" ? "amber" : "slate"}>{game.home_away}</Pill></div><div className="mt-1 text-[11px] font-black text-slate-200">vs {game.opponent_name}</div><div className="mt-0.5 flex items-center gap-1 text-[9px] text-slate-500"><MapPin className="h-3 w-3" />{game.venue_name || "Field TBD"}</div>{game.address_line1 ? <div className="pl-4 text-[9px] text-slate-600">{game.address_line1}, {game.city}, {game.state}</div> : null}</div><Btn onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>{managerView ? "Game Book" : "Open"}</Btn></div></div>)}{!games.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-slate-500">No games yet.</div> : null}</div></Card>
+          </div>
           {managerView ? <Card title="Add game" body="Manual additions use the same calendar sync."><div className="grid grid-cols-2 gap-2"><Select label="Type" value={gameForm.game_type} onChange={(value) => setGameForm((v) => ({ ...v, game_type: value }))}><option value="LEAGUE">League</option><option value="TOURNAMENT">Tournament</option><option value="PRACTICE">Practice</option><option value="EXHIBITION">Exhibition</option></Select><Select label="Home/Away" value={gameForm.home_away} onChange={(value) => setGameForm((v) => ({ ...v, home_away: value }))}><option value="HOME">Home</option><option value="AWAY">Away</option><option value="NEUTRAL">Neutral</option></Select><Input label="Opponent" value={gameForm.opponent_name} onChange={(value) => setGameForm((v) => ({ ...v, opponent_name: value }))} className="col-span-2" /><Input label="Date" type="date" value={gameForm.date} onChange={(value) => setGameForm((v) => ({ ...v, date: value }))} /><Input label="Time" type="time" value={gameForm.time} onChange={(value) => setGameForm((v) => ({ ...v, time: value }))} /><Input label="Venue / field" value={gameForm.venue_name} onChange={(value) => setGameForm((v) => ({ ...v, venue_name: value }))} className="col-span-2" /><Input label="Address" value={gameForm.address_line1} onChange={(value) => setGameForm((v) => ({ ...v, address_line1: value }))} className="col-span-2" /><Input label="City" value={gameForm.city} onChange={(value) => setGameForm((v) => ({ ...v, city: value }))} /><Input label="State" value={gameForm.state} onChange={(value) => setGameForm((v) => ({ ...v, state: value }))} /></div><Btn primary className="mt-2 w-full" onClick={addGame} disabled={!gameForm.opponent_name.trim() || !gameForm.date || busy}><Plus className="mr-1 inline h-4 w-4" />Add game</Btn></Card> : <Card title="Tournament week" body="League or tournament games will appear here once published by a manager or association."><div className="text-xs text-slate-400">Your Fall 2026 league sheet lists tournament week beginning October 27.</div></Card>}
         </div> : null}
 
@@ -976,6 +992,36 @@ export default function SportsTeamManagerDashboard() {
                 <div className="grid grid-cols-2 gap-2">
                   <Stat label="Team outstanding" value={money(managerOutstanding)} sub={`${managerDueCount} open charge${managerDueCount === 1 ? "" : "s"}`} />
                   <Stat label="Per player now" value={money(fees.filter((fee) => fee.is_active !== false).reduce((sum, fee) => sum + num(fee.amount_cents), 0))} sub="Active fees combined" />
+                </div>
+                <div className="overflow-x-auto rounded-xl border border-white/10 bg-black/15">
+                  <table className="min-w-[720px] w-full border-collapse text-[9px]">
+                    <thead><tr className="border-b border-white/10 text-slate-500">
+                      <th className="sticky left-0 z-10 bg-[#07111f] px-3 py-2 text-left">PLAYER</th>
+                      {fees.filter((fee)=>fee.is_active!==false).map((fee)=><th key={fee.id} className="min-w-[8rem] px-2 py-2 text-center"><button type="button" onClick={()=>openFeeEditor(fee)} className="font-black text-cyan-200">{fee.title}</button><div className="font-normal text-slate-600">{money(fee.amount_cents)}</div></th>)}
+                      <th className="min-w-[7rem] px-2 py-2 text-right">DUE</th>
+                    </tr></thead>
+                    <tbody>
+                      {players.map((player)=>{
+                        const playerRows=assignments.filter((row)=>Number(row.player)===Number(player.id));
+                        const totalDue=playerRows.reduce((sum,row)=>sum+Math.max(0,num(row.amount_cents)-num(row.amount_paid_cents)),0);
+                        return <tr key={player.id} className="border-b border-white/5 last:border-0">
+                          <td className="sticky left-0 z-10 bg-[#07111f] px-3 py-2 font-black text-white">#{player.jersey_number || "—"} {player.display_name}</td>
+                          {fees.filter((fee)=>fee.is_active!==false).map((fee)=>{
+                            const row=playerRows.find((item)=>Number(item.fee)===Number(fee.id));
+                            if(!row)return <td key={fee.id} className="px-2 py-2 text-center text-slate-700">—</td>;
+                            const settled=["PAID","WAIVED"].includes(row.status);
+                            const partial=row.status==="PARTIAL";
+                            return <td key={fee.id} className="px-1.5 py-1.5 text-center">
+                              <select value={row.status} onChange={(event)=>quickUpdateAssignment(row,{status:event.target.value})} className={cx("h-8 w-full rounded-lg border px-1 text-[8px] font-black", settled ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100" : partial ? "border-amber-300/25 bg-amber-300/10 text-amber-100" : "border-rose-300/25 bg-rose-300/10 text-rose-100")}>
+                                <option value="DUE">UNPAID</option><option value="PARTIAL">PARTIAL</option><option value="PAID">PAID</option><option value="WAIVED">WAIVED</option>
+                              </select>
+                            </td>;
+                          })}
+                          <td className={cx("px-3 py-2 text-right font-black",totalDue>0?"text-rose-200":"text-emerald-200")}>{money(totalDue)}</td>
+                        </tr>;
+                      })}
+                    </tbody>
+                  </table>
                 </div>
                 {fees.filter((fee) => fee.is_active !== false).map((fee) => {
                   const rows = assignments.filter((row) => Number(row.fee) === Number(fee.id));
