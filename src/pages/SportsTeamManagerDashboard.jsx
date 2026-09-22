@@ -8,8 +8,10 @@ import {
   Check,
   CircleDollarSign,
   CircleDot,
+  Copy,
   GripVertical,
   ImageDown,
+  Link2,
   Loader2,
   Mail,
   MapPin,
@@ -18,6 +20,7 @@ import {
   Plus,
   RefreshCw,
   Save,
+  Share2,
   Trash2,
   Trophy,
   UserPlus,
@@ -33,7 +36,7 @@ import InteractiveStatsBoard from "../components/sports/InteractiveStatsBoard";
 import SoftballDefenseField from "../components/sports/SoftballDefenseField";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import { useAuth } from "../auth/AuthContext";
-import { createEventResponse, getEventResponses, getGroups, getMemberships, inviteMember, setMembershipRole, uploadGroupLogo, updateEventResponse } from "../api/social";
+import { acceptMembership, createEventResponse, createGroupInviteLink, getEventResponses, getGroups, getMemberships, inviteMember, setMembershipRole, uploadGroupLogo, updateEventResponse } from "../api/social";
 import {
   assignTeamFeeRoster,
   createPlayerProfile,
@@ -52,6 +55,10 @@ import {
   getTeamFees,
   getTeamPaymentSettings,
   inviteSportsPlayer,
+  joinMySportsTeamRoster,
+  linkSportsPlayerMember,
+  mergeSportsPlayer,
+  deleteEmptySportsPlayer,
   remindSportsPlayer,
   remindTeamDues,
   removeSportsPlayer,
@@ -207,6 +214,15 @@ export default function SportsTeamManagerDashboard() {
   const [chatOpen, setChatOpen] = useState(false);
   const [addPlayerOpen, setAddPlayerOpen] = useState(false);
   const [quickSaving, setQuickSaving] = useState({});
+  const [teamInviteOpen, setTeamInviteOpen] = useState(false);
+  const [teamInviteUrl, setTeamInviteUrl] = useState("");
+  const [teamInviteLoading, setTeamInviteLoading] = useState(false);
+  const [shareStatus, setShareStatus] = useState("");
+  const [playerInviteEmails, setPlayerInviteEmails] = useState({});
+  const [playerInviteUrls, setPlayerInviteUrls] = useState({});
+  const [selectedMemberByPlayer, setSelectedMemberByPlayer] = useState({});
+  const [mergeSourcePlayer, setMergeSourcePlayer] = useState(null);
+  const [mergeTargetId, setMergeTargetId] = useState("");
 
   const [playerDrawer, setPlayerDrawer] = useState(null);
   const [playerEdit, setPlayerEdit] = useState(null);
@@ -233,6 +249,7 @@ export default function SportsTeamManagerDashboard() {
   const canScore = managed || myMembership?.role === "SCOREKEEPER";
   const managerView = managed && !previewPlayerView;
   const socialRoster = useMemo(() => memberships.filter((membership) => Number(membership.group) === Number(groupId) && membership.status === "ACTIVE"), [memberships, groupId]);
+  const pendingTeamRequests = useMemo(() => memberships.filter((membership) => Number(membership.group) === Number(groupId) && membership.status === "REQUESTED"), [memberships, groupId]);
   const players = list(dashboard?.players).filter((player) => player.is_active !== false);
   const profileMap = useMemo(() => new Map(profiles.map((profile) => [Number(profile.player), profile])), [profiles]);
   const myPlayer = players.find((player) => Number(player.user) === userId);
@@ -401,6 +418,79 @@ export default function SportsTeamManagerDashboard() {
       setError(errorText(err));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function openTeamInvites() {
+    if (!managerView) return;
+    setTeamInviteOpen(true);
+    setShareStatus("");
+    if (teamInviteUrl) return;
+    setTeamInviteLoading(true);
+    try {
+      const link = await createGroupInviteLink(Number(groupId), "MEMBER");
+      setTeamInviteUrl(window.location.origin + "/social/invite/" + link.token);
+    } catch (err) {
+      setShareStatus(errorText(err));
+    } finally {
+      setTeamInviteLoading(false);
+    }
+  }
+
+  async function copyInviteUrl(url) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareStatus("Invite link copied — paste it into your team group chat.");
+      setNotice("Invite link copied.");
+    } catch {
+      setShareStatus("Select the link above to copy it manually.");
+      setNotice("Select and copy the invitation URL displayed on the page.");
+    }
+  }
+
+  async function shareInviteUrl(url, name) {
+    if (!url) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Join " + name + " on SyncWorks", text: "Join our team on SyncWorks.", url });
+        setShareStatus("Invite shared.");
+        return;
+      } catch (err) {
+        if (err?.name === "AbortError") return;
+      }
+    }
+    await copyInviteUrl(url);
+  }
+
+  async function approveTeamRequest(membership) {
+    const key = "approve-" + membership.id;
+    setQuickSaving((current) => ({ ...current, [key]: true }));
+    setError("");
+    try {
+      await acceptMembership(membership.id);
+      setNotice("Approved " + (membership.user_detail?.display_name || "new member") + ". They can now add themselves to the roster.");
+      await refresh({ quiet: true });
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setQuickSaving((current) => ({ ...current, [key]: false }));
+    }
+  }
+
+  async function selfJoinRoster() {
+    if (!myMembership || !team) return;
+    setQuickSaving((current) => ({ ...current, "self-join": true }));
+    setError(""); setNotice("");
+    try {
+      const result = await joinMySportsTeamRoster(team.id);
+      setNotice(result.matched_existing
+        ? "Your account is linked to your existing player card and stats."
+        : "You are on the team roster. Your manager can now assign your jersey and position.");
+      await refresh({ quiet: true });
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setQuickSaving((current) => ({ ...current, "self-join": false }));
     }
   }
 
@@ -661,6 +751,46 @@ export default function SportsTeamManagerDashboard() {
     }, "Player updated.", { closePlayer: true });
   }
 
+  async function linkSelectedMember(player) {
+    const userIdToLink = Number(selectedMemberByPlayer[player.id]);
+    const member = socialRoster.find((row)=>Number(row.user)===userIdToLink);
+    if (!member || !player || player.user) return;
+    if (players.some((row)=>row.id !== player.id && Number(row.user) === userIdToLink)) {
+      setError("That account already has a roster entry. Use Merge instead.");
+      return;
+    }
+    const savedEmail = String(profileFor(player)?.email || "").trim().toLowerCase();
+    const memberEmail = String(member.user_detail?.email || "").trim().toLowerCase();
+    if (savedEmail && memberEmail && savedEmail !== memberEmail &&
+      !window.confirm("This roster card has a different email than the selected member. Confirm that this is the correct player before linking.")) return;
+    await run(
+      ()=>linkSportsPlayerMember(player.id, userIdToLink),
+      `${player.display_name} is now linked to ${member.user_detail?.display_name || memberEmail || "this member"}.`
+    );
+    setSelectedMemberByPlayer((current)=>({...current,[player.id]:""}));
+  }
+
+  async function mergeDuplicatePlayer() {
+    if (!mergeSourcePlayer || !mergeTargetId || busy) return;
+    const target = players.find((row)=>Number(row.id)===Number(mergeTargetId));
+    if (!target) return;
+    if (!window.confirm(`Merge ${mergeSourcePlayer.display_name} into ${target.display_name}? Stats and payment records will move to the surviving player. The original card is archived for historical reference.`)) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const data = await mergeSportsPlayer(mergeSourcePlayer.id, target.id);
+      setMergeSourcePlayer(null); setMergeTargetId("");
+      setNotice(`Merged into ${target.display_name}. ${data.plate_appearances_moved || 0} game plays and ${data.stat_entries_moved || 0} historical stat entries preserved.`);
+      await refresh({quiet:true});
+    } catch(err) {setError(errorText(err));}
+    finally {setBusy(false);}
+  }
+
+  async function deleteEmptyPlayer() {
+    if (!playerDrawer || busy) return;
+    if (!window.confirm(`Permanently delete ${playerDrawer.display_name}? Only an empty card with no game, stats or payment history can be deleted. Use Archive or Merge for players with history.`)) return;
+    await run(()=>deleteEmptySportsPlayer(playerDrawer.id), "Empty roster entry deleted.", {closePlayer:true});
+  }
+
   async function archivePlayer() {
     if (!playerDrawer) return;
     if (!window.confirm(`Remove ${playerDrawer.display_name} from the active roster? Historical game data will be kept.`)) return;
@@ -680,10 +810,31 @@ export default function SportsTeamManagerDashboard() {
   async function importSocialRoster() {
     const linkedIds = new Set(players.map((player) => Number(player.user)).filter(Boolean));
     const missing = socialRoster.filter((membership) => !linkedIds.has(Number(membership.user)));
-    if (!missing.length) return setNotice("Every active Social member is already represented on the roster.");
+    if (!missing.length) return setNotice("Every active Social member is already linked to a roster entry.");
     await run(async () => {
-      for (const membership of missing) await createSportsPlayer({ team: team.id, user: Number(membership.user), display_name: nameOf(membership.user_detail), jersey_number: "", primary_position: "" });
-    }, `${missing.length} Social member${missing.length === 1 ? "" : "s"} added.`);
+      const currentProfiles = list(await getPlayerProfiles(team.id));
+      let linked = 0;
+      let added = 0;
+      let skipped = 0;
+      for (const membership of missing) {
+        const email = String(membership.user_detail?.email || "").trim().toLowerCase();
+        const matchedPlayers = email ? players.filter((player) =>
+          !player.user && currentProfiles.some((profile) => Number(profile.player) === Number(player.id) && String(profile.email || "").trim().toLowerCase() === email)
+        ) : [];
+        if (matchedPlayers.length === 1) {
+          await updateSportsPlayer(matchedPlayers[0].id, { user: Number(membership.user) });
+          linked += 1;
+        } else if (matchedPlayers.length > 1) {
+          skipped += 1;
+        } else if (membership.role === "MEMBER") {
+          await createSportsPlayer({ team: team.id, user: Number(membership.user), display_name: nameOf(membership.user_detail), jersey_number: "", primary_position: "" });
+          added += 1;
+        } else {
+          skipped += 1; // Staff/scorekeepers stay off the player roster unless they join explicitly.
+        }
+      }
+      return { linked, added, skipped };
+    }, "Social members imported. Existing email matches are linked to their roster records; staff are left off the player roster.");
   }
 
   async function saveTeamMeta() {
@@ -697,18 +848,19 @@ export default function SportsTeamManagerDashboard() {
     setGameForm((current) => ({ ...current, opponent_name: "", date: "" }));
   }
 
-  async function inviteRosterPlayer(player) {
+  async function inviteRosterPlayer(player, suppliedEmail = "") {
     const profile = profileMap.get(Number(player.id));
-    const email = profile?.email || player.user_detail?.email || "";
-    if (!email && !player.user) {
-      setError("Add an email to this player before sending an invite.");
+    const email = (suppliedEmail || profile?.email || player.user_detail?.email || "").trim().toLowerCase();
+    if (!email.includes("@")) {
+      setError("Enter the email address this player uses for SyncWorks.");
       return;
     }
     setQuickSaving((current) => ({ ...current, [`invite-${player.id}`]: true }));
     setError(""); setNotice("");
     try {
-      await inviteSportsPlayer(player.id, email);
-      setNotice(`Invite sent to ${player.display_name}.`);
+      const invite = await inviteSportsPlayer(player.id, email);
+      if (invite.invite_url) setPlayerInviteUrls((current) => ({ ...current, [player.id]: invite.invite_url }));
+      setNotice(`Personal invite sent to ${player.display_name}. Use Copy or Share below to send it in a text too.`);
       await refresh({ quiet: true });
     } catch (err) {
       setError(errorText(err));
@@ -881,6 +1033,11 @@ export default function SportsTeamManagerDashboard() {
         </div> : null}
 
         {tab === "Roster" ? <div className="space-y-3">
+          {managerView ? <Card title="Invite your team" body="One link, two options: players sign in with the team password; fans can follow and opt in to GameCast email alerts without a password." action={<Link2 className="h-5 w-5 text-emerald-300" />}>
+            <Btn primary className="w-full" onClick={openTeamInvites}><Share2 className="mr-2 inline h-4 w-4" />Share team invite link</Btn>
+            <p className="mt-2 text-[10px] leading-5 text-slate-400">Already entered a player and their stats? Use their personal email invitation below to link that exact roster card instead.</p>
+          </Card> : myMembership && !myPlayer ? <Card title="Add yourself to the team roster" body="After your group request is approved, claim your existing player card by account email or create your own. Existing jersey numbers and stats are preserved when your email matches." action={<UserPlus className="h-5 w-5 text-cyan-300" />}><Btn primary className="w-full" disabled={!!quickSaving["self-join"]} onClick={selfJoinRoster}>{quickSaving["self-join"] ? "Connecting…" : "Add me to roster"}</Btn></Card> : null}
+          {managerView && pendingTeamRequests.length ? <Card title="Team join requests" body="Review any pending manual membership requests. Players who enter the correct group password join immediately."><div className="space-y-2">{pendingTeamRequests.map((membership)=><div key={membership.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[.03] p-3"><span className="min-w-0"><b className="block truncate text-xs text-white">{membership.user_detail?.display_name || membership.user_detail?.email || "SyncWorks member"}</b><span className="block truncate text-[10px] text-slate-400">{membership.user_detail?.email || "Request to join"}</span></span><Btn primary disabled={!!quickSaving["approve-"+membership.id]} onClick={()=>approveTeamRequest(membership)}>{quickSaving["approve-"+membership.id] ? "…" : "Approve"}</Btn></div>)}</div></Card> : null}
           <Card
             title="Team access & roles"
             body="Assign access here or on each linked roster player below. Unlinked players must accept a SyncWorks invite before they can receive scoring permissions. Staff can join without taking a roster spot."
@@ -923,6 +1080,7 @@ export default function SportsTeamManagerDashboard() {
               const phone = profile?.phone || "";
               const linkedMembership = memberships.find((membership) => Number(membership.group) === Number(groupId) && Number(membership.user) === Number(player.user) && membership.status === "ACTIVE");
               const pendingMembership = memberships.find((membership) => Number(membership.group) === Number(groupId) && Number(membership.user) === Number(player.user) && membership.status === "INVITED");
+              const personalInviteUrl = playerInviteUrls[player.id];
               return <div key={player.id} className="rounded-xl border border-white/10 bg-white/[.025] p-2.5">
                 <div className="flex items-center gap-2">
                   <button type="button" onClick={() => openPlayer(player)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
@@ -955,6 +1113,29 @@ export default function SportsTeamManagerDashboard() {
                   : pendingMembership ?
                     <span className="text-[10px] text-amber-200">Group invitation pending. Assign a role after acceptance.</span>
                   : <button type="button" disabled={!!quickSaving[`group-${player.id}`]} onClick={()=>addLinkedPlayerToGroup(player)} className="min-h-11 w-full rounded-xl border border-violet-300/30 bg-violet-300/10 px-3 text-xs font-bold text-violet-100 disabled:opacity-50">Invite linked player to group</button>}
+                </div> : null}
+                {managerView && !linkedMembership ? <div className="mt-2 rounded-xl border border-cyan-300/15 bg-cyan-300/[.035] p-2.5">
+                  <b className="block text-[10px] text-cyan-100">Link this player to SyncWorks</b>
+                  <p className="mt-1 text-[10px] leading-4 text-slate-400">Enter the email they use for SyncWorks. The personal invite claims this exact roster entry and keeps their stats.</p>
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                    <input aria-label={`SyncWorks email for ${player.display_name}`} type="email" placeholder="player@example.com" value={playerInviteEmails[player.id] ?? email} onChange={(event)=>setPlayerInviteEmails((current)=>({ ...current, [player.id]: event.target.value }))} className="min-h-11 min-w-0 flex-1 rounded-xl border border-cyan-300/20 bg-[#050b14] px-3 text-xs text-white" />
+                    <Btn primary disabled={!!quickSaving[`invite-${player.id}`]} onClick={()=>inviteRosterPlayer(player, playerInviteEmails[player.id] ?? email)}>{quickSaving[`invite-${player.id}`] ? "Sending…" : player.user ? "Resend invite" : "Send player invite"}</Btn>
+                  </div>
+                  {!player.user && socialRoster.some((membership)=>!players.some((other)=>other.id !== player.id && Number(other.user)===Number(membership.user))) ? <div className="mt-3 rounded-xl border border-violet-300/20 bg-violet-300/[.035] p-2.5">
+                    <b className="block text-[10px] font-black text-violet-200">Already in the team? Link their account now</b>
+                    <select aria-label={`Link an approved group member to ${player.display_name}`} value={selectedMemberByPlayer[player.id] || ""} onChange={(event)=>setSelectedMemberByPlayer((current)=>({...current,[player.id]:event.target.value}))} className="mt-2 min-h-11 w-full rounded-xl border border-violet-300/25 bg-[#050b14] px-3 text-xs text-white">
+                      <option value="">Select approved SyncWorks member</option>
+                      {socialRoster.filter((membership)=>!players.some((other)=>other.id !== player.id && Number(other.user)===Number(membership.user))).map((membership)=><option key={membership.id} value={membership.user}>{membership.user_detail?.display_name || membership.user_detail?.email || "Team member"}{membership.user_detail?.email ? " · "+membership.user_detail.email : ""}</option>)}
+                    </select>
+                    <Btn primary disabled={!selectedMemberByPlayer[player.id] || busy} className="mt-2 w-full" onClick={()=>linkSelectedMember(player)}><Link2 className="mr-1 inline h-4 w-4" />Link existing member</Btn>
+                  </div> : null}
+                  {personalInviteUrl ? <div className="mt-3 rounded-xl border border-emerald-300/15 bg-black/20 p-2">
+                    <input aria-label={`Personal invite URL for ${player.display_name}`} readOnly value={personalInviteUrl} onFocus={(event)=>event.target.select()} onClick={(event)=>event.currentTarget.select()} className="min-h-11 w-full rounded-lg border border-white/10 bg-black/20 p-2 text-[10px] text-cyan-100" />
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <Btn onClick={()=>copyInviteUrl(personalInviteUrl)}><Copy className="mr-1 inline h-4 w-4" />Copy link</Btn>
+                      <Btn primary onClick={()=>shareInviteUrl(personalInviteUrl, group?.name || "our team")}><Share2 className="mr-1 inline h-4 w-4" />Share link</Btn>
+                    </div>
+                  </div> : null}
                 </div> : null}
               </div>;
             })}
@@ -1262,6 +1443,8 @@ export default function SportsTeamManagerDashboard() {
         activeTab={tab}
       />
 
+      {teamInviteOpen && managerView ? <Drawer title="Invite players to the team" onClose={()=>setTeamInviteOpen(false)}><div className="space-y-3"><p className="text-sm text-slate-300">Share this one link with players and fans. Players enter the team password; fans follow live scores and opt into GameCast emails without a password.</p>{teamInviteLoading ? <div className="flex items-center gap-2 text-xs text-cyan-200"><Loader2 className="h-4 w-4 animate-spin" />Creating invite link…</div> : teamInviteUrl ? <><input aria-label="Shared team invite URL" readOnly value={teamInviteUrl} onClick={(event)=>event.currentTarget.select()} onFocus={(event)=>event.currentTarget.select()} className="min-h-12 w-full rounded-xl border border-cyan-300/25 bg-black/20 px-3 text-xs text-cyan-100" /><div className="grid grid-cols-2 gap-2"><Btn onClick={()=>copyInviteUrl(teamInviteUrl)}><Copy className="mr-1 inline h-4 w-4" />Copy link</Btn><Btn primary onClick={()=>shareInviteUrl(teamInviteUrl, group.name)}><Share2 className="mr-1 inline h-4 w-4" />Share invite</Btn></div></> : <Btn onClick={()=>{setTeamInviteOpen(false);openTeamInvites();}}>Retry</Btn>}{shareStatus ? <p className="rounded-xl border border-cyan-300/15 bg-cyan-300/10 p-3 text-xs text-cyan-100">{shareStatus}</p> : null}<p className="text-xs leading-5 text-slate-400">Already on the paper roster? Send that player a personal invite using their account email to connect the existing record without duplicating it.</p></div></Drawer> : null}
+
       {addPlayerOpen && managerView ? (
         <Drawer title="Add player" onClose={() => setAddPlayerOpen(false)}>
           <div className="space-y-3">
@@ -1297,7 +1480,29 @@ export default function SportsTeamManagerDashboard() {
 
       {chatOpen ? <Drawer title="Team chat" onClose={() => setChatOpen(false)}><TeamChatPanel groupId={group.id} userId={userId} canManage={managed} bare /></Drawer> : null}
 
-      {playerDrawer && playerEdit ? <Drawer title={playerDrawer.display_name} onClose={() => { setPlayerDrawer(null); setPlayerEdit(null); setPhotoFile(null); }}><div className="space-y-3"><div className="flex items-center gap-3"><Avatar player={playerDrawer} profile={profileFor(playerDrawer)} size="lg" /><div><b className="text-white">#{playerDrawer.jersey_number || "—"} {playerDrawer.display_name}</b><div className="mt-1 text-[10px] text-slate-500">{playerDrawer.primary_position || "Position TBD"}{playerDrawer.user ? " · linked SyncWorks account" : " · manual roster entry"}</div></div></div>{managerView ? <><div className="grid grid-cols-2 gap-2"><Input label="Name" value={playerEdit.display_name} onChange={(value) => setPlayerEdit((v) => ({ ...v, display_name: value }))} className="col-span-2" /><Input label="Jersey #" value={playerEdit.jersey_number} onChange={(value) => setPlayerEdit((v) => ({ ...v, jersey_number: value }))} /><Select label="Position" value={playerEdit.primary_position} onChange={(value) => setPlayerEdit((v) => ({ ...v, primary_position: value }))}><option value="">Choose</option>{POSITIONS.map((position) => <option key={position}>{position}</option>)}</Select><Input label="Email" value={playerEdit.email} onChange={(value) => setPlayerEdit((v) => ({ ...v, email: value }))} /><Input label="Phone" value={playerEdit.phone} onChange={(value) => setPlayerEdit((v) => ({ ...v, phone: value }))} /><Input label="Emergency contact" value={playerEdit.emergency_contact_name} onChange={(value) => setPlayerEdit((v) => ({ ...v, emergency_contact_name: value }))} /><Input label="Emergency phone" value={playerEdit.emergency_contact_phone} onChange={(value) => setPlayerEdit((v) => ({ ...v, emergency_contact_phone: value }))} /></div><label className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 text-xs font-black text-slate-300"><Camera className="h-4 w-4" />{photoFile ? photoFile.name : "Choose profile photo"}<input type="file" accept="image/*" className="hidden" onChange={(event) => setPhotoFile(event.target.files?.[0] || null)} /></label><label className="block"><span className="mb-1 block text-[9px] font-black uppercase tracking-wide text-slate-500">Manager notes</span><textarea rows={3} value={playerEdit.notes} onChange={(event) => setPlayerEdit((v) => ({ ...v, notes: event.target.value }))} className="w-full rounded-xl border border-white/10 bg-black/20 p-3 text-xs" /></label><div className="grid grid-cols-[1fr_auto] gap-2"><Btn primary onClick={savePlayer} disabled={busy}><Save className="mr-1 inline h-4 w-4" />Save player</Btn><Btn danger onClick={archivePlayer}><Trash2 className="h-4 w-4" /></Btn></div></> : <div className="space-y-2">{profileFor(playerDrawer)?.email ? <div className="flex items-center gap-2 rounded-xl border border-white/10 p-3 text-xs"><Mail className="h-4 w-4 text-cyan-300" />{profileFor(playerDrawer).email}</div> : null}{profileFor(playerDrawer)?.phone ? <div className="flex items-center gap-2 rounded-xl border border-white/10 p-3 text-xs"><Phone className="h-4 w-4 text-cyan-300" />{profileFor(playerDrawer).phone}</div> : null}<div className="rounded-xl border border-white/10 p-3 text-xs text-slate-400">Player contact information is private unless this is your own linked profile.</div></div>}</div></Drawer> : null}
+      {playerDrawer && playerEdit ? <Drawer title={playerDrawer.display_name} onClose={() => { setPlayerDrawer(null); setPlayerEdit(null); setPhotoFile(null); }}><div className="space-y-3"><div className="flex items-center gap-3"><Avatar player={playerDrawer} profile={profileFor(playerDrawer)} size="lg" /><div><b className="text-white">#{playerDrawer.jersey_number || "—"} {playerDrawer.display_name}</b><div className="mt-1 text-[10px] text-slate-500">{playerDrawer.primary_position || "Position TBD"}{playerDrawer.user ? " · linked SyncWorks account" : " · manual roster entry"}</div></div></div>{managerView ? <><div className="grid grid-cols-2 gap-2"><Input label="Name" value={playerEdit.display_name} onChange={(value) => setPlayerEdit((v) => ({ ...v, display_name: value }))} className="col-span-2" /><Input label="Jersey #" value={playerEdit.jersey_number} onChange={(value) => setPlayerEdit((v) => ({ ...v, jersey_number: value }))} /><Select label="Position" value={playerEdit.primary_position} onChange={(value) => setPlayerEdit((v) => ({ ...v, primary_position: value }))}><option value="">Choose</option>{POSITIONS.map((position) => <option key={position}>{position}</option>)}</Select><Input label="Email" value={playerEdit.email} onChange={(value) => setPlayerEdit((v) => ({ ...v, email: value }))} /><Input label="Phone" value={playerEdit.phone} onChange={(value) => setPlayerEdit((v) => ({ ...v, phone: value }))} /><Input label="Emergency contact" value={playerEdit.emergency_contact_name} onChange={(value) => setPlayerEdit((v) => ({ ...v, emergency_contact_name: value }))} /><Input label="Emergency phone" value={playerEdit.emergency_contact_phone} onChange={(value) => setPlayerEdit((v) => ({ ...v, emergency_contact_phone: value }))} /></div><label className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 text-xs font-black text-slate-300"><Camera className="h-4 w-4" />{photoFile ? photoFile.name : "Choose profile photo"}<input type="file" accept="image/*" className="hidden" onChange={(event) => setPhotoFile(event.target.files?.[0] || null)} /></label><label className="block"><span className="mb-1 block text-[9px] font-black uppercase tracking-wide text-slate-500">Manager notes</span><textarea rows={3} value={playerEdit.notes} onChange={(event) => setPlayerEdit((v) => ({ ...v, notes: event.target.value }))} className="w-full rounded-xl border border-white/10 bg-black/20 p-3 text-xs" /></label><div className="grid grid-cols-2 gap-2"><Btn primary onClick={savePlayer} disabled={busy}><Save className="mr-1 inline h-4 w-4" />Save player</Btn><Btn danger onClick={archivePlayer}><Trash2 className="mr-1 inline h-4 w-4" />Archive player</Btn></div>
+        <div className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/[.035] p-3">
+          <b className="block text-xs text-amber-100">Duplicate or incorrect player?</b>
+          <p className="mt-1 text-[10px] leading-5 text-slate-400">Merge moves scores, historical statistics and non-conflicting dues to another player. An archived copy is retained for historical game lineups.</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Btn onClick={()=>{setMergeSourcePlayer(playerDrawer);setMergeTargetId("");setPlayerDrawer(null);setPlayerEdit(null);}}>Merge into…</Btn>
+            <Btn danger disabled={busy} onClick={deleteEmptyPlayer}>Delete empty card</Btn>
+          </div>
+        </div></> : <div className="space-y-2">{profileFor(playerDrawer)?.email ? <div className="flex items-center gap-2 rounded-xl border border-white/10 p-3 text-xs"><Mail className="h-4 w-4 text-cyan-300" />{profileFor(playerDrawer).email}</div> : null}{profileFor(playerDrawer)?.phone ? <div className="flex items-center gap-2 rounded-xl border border-white/10 p-3 text-xs"><Phone className="h-4 w-4 text-cyan-300" />{profileFor(playerDrawer).phone}</div> : null}<div className="rounded-xl border border-white/10 p-3 text-xs text-slate-400">Player contact information is private unless this is your own linked profile.</div></div>}</div></Drawer> : null}
+
+      {mergeSourcePlayer && managerView ? <Drawer title={`Merge ${mergeSourcePlayer.display_name}`} onClose={()=>{setMergeSourcePlayer(null);setMergeTargetId("");}}>
+        <div className="space-y-3">
+          <p className="text-xs leading-5 text-slate-300">Select the player record to keep. Game plays and manually entered statistics will move to that player; the duplicate card will be archived with an audit trail.</p>
+          <label className="block text-xs font-black text-white">Surviving player
+            <select value={mergeTargetId} onChange={(event)=>setMergeTargetId(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-white/15 bg-[#050b14] px-3 text-xs text-white">
+              <option value="">Select the player to keep</option>
+              {players.filter((row)=>row.id !== mergeSourcePlayer.id).map((row)=><option key={row.id} value={row.id}>#{row.jersey_number || "—"} {row.display_name}{row.user ? " · linked" : ""}</option>)}
+            </select>
+          </label>
+          <p className="rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-[11px] leading-5 text-amber-100">If both records have the same fee with payments, the system stops the merge so those payments can be reconciled. Historical lineup conflicts remain archived instead of silently disappearing.</p>
+          <Btn primary className="w-full" disabled={!mergeTargetId || busy} onClick={mergeDuplicatePlayer}>Merge player records</Btn>
+        </div>
+      </Drawer> : null}
 
       {statDrawer ? <Drawer title="Add historical stats" onClose={() => setStatDrawer(false)}><div className="space-y-3"><div className="grid grid-cols-2 gap-2"><Select label="Player" value={statForm.player} onChange={(value) => setStatForm((v) => ({ ...v, player: value }))} className="col-span-2"><option value="">Choose player</option>{players.map((player) => <option key={player.id} value={player.id}>#{player.jersey_number || "—"} {player.display_name}</option>)}</Select><Select label="Bucket" value={statForm.scope} onChange={(value) => setStatForm((v) => ({ ...v, scope: value }))}><option value="LEAGUE">League</option><option value="TOURNAMENT">Tournament</option><option value="OTHER">Other</option></Select><Input label="Games" value={statForm.games} onChange={(value) => setStatForm((v) => ({ ...v, games: value }))} />{[["pa","PA"],["ab","AB"],["hits","H"],["doubles","2B"],["triples","3B"],["home_runs","HR"],["walks","BB"],["sac_flies","SF"],["rbi","RBI"],["runs","R"]].map(([key, label]) => <Input key={key} label={label} value={statForm[key]} onChange={(value) => setStatForm((v) => ({ ...v, [key]: value }))} />)}<Input label="Note" value={statForm.note} onChange={(value) => setStatForm((v) => ({ ...v, note: value }))} className="col-span-2" /></div><div className="rounded-xl border border-amber-300/15 bg-amber-300/[.04] p-3 text-[9px] text-amber-100">Manual history stays auditable and is added to Game Book statistics. It is never rewritten as if SyncWorks scored those games live.</div><Btn primary className="w-full" onClick={saveStatEntry} disabled={!statForm.player || busy}><Check className="mr-1 inline h-4 w-4" />Add to stats</Btn></div></Drawer> : null}
     </div>

@@ -73,8 +73,28 @@ export async function createSportsPlayer(payload) {
   return data;
 }
 
+export async function joinMySportsTeamRoster(team) {
+  const { data } = await api.post("/sports/players/join-mine/", { team });
+  return data;
+}
+
 export async function updateSportsPlayer(id, payload) {
   const { data } = await api.patch(`/sports/players/${id}/`, payload);
+  return data;
+}
+
+export async function linkSportsPlayerMember(playerId, user) {
+  const { data } = await api.post(`/sports/players/${playerId}/link-member/`, { user });
+  return data;
+}
+
+export async function mergeSportsPlayer(sourceId, target_player) {
+  const { data } = await api.post(`/sports/players/${sourceId}/merge/`, { target_player });
+  return data;
+}
+
+export async function deleteEmptySportsPlayer(id) {
+  const { data } = await api.post(`/sports/players/${id}/delete-empty/`);
   return data;
 }
 
