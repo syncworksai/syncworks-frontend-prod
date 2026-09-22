@@ -338,8 +338,8 @@ export default function SportsTeamManagerDashboard() {
 
   useEffect(() => {
     const requested = searchParams.get("tab");
-    if (TABS.includes(requested) && requested !== tab) setTab(requested);
-  }, [searchParams, tab]);
+    if (TABS.includes(requested)) setTab((current) => current === requested ? current : requested);
+  }, [searchParams]);
 
 
   useEffect(() => {
@@ -406,6 +406,7 @@ export default function SportsTeamManagerDashboard() {
 
   async function changeMemberRole(membership, role) {
     if (!managerView || membership.role === "OWNER" || membership.role === role) return;
+    if (myMembership?.role === "MANAGER" && (role === "DIRECTOR" || membership.role === "DIRECTOR")) return;
     const key = `role-${membership.id}`;
     setQuickSaving((current) => ({ ...current, [key]: true }));
     setError(""); setNotice("");
@@ -879,7 +880,7 @@ export default function SportsTeamManagerDashboard() {
                       <div className="flex flex-wrap items-center gap-1.5"><b className="truncate text-[11px] text-white">{membership.user_detail?.display_name || membership.user_detail?.email || "Team member"}</b>{linkedPlayer ? <Pill tone="cyan">Player #{linkedPlayer.jersey_number || "—"}</Pill> : <Pill>Staff / member</Pill>}</div>
                       <div className="mt-1 text-[9px] leading-4 text-slate-500">{ROLE_HELP[membership.role] || ROLE_HELP.MEMBER}</div>
                     </div>
-                    {managerView && membership.role !== "OWNER" ? <select disabled={!!quickSaving[`role-${membership.id}`]} value={membership.role} onChange={(event)=>changeMemberRole(membership,event.target.value)} className="h-10 w-full rounded-xl border border-violet-300/20 bg-[#050b14] px-2 text-[10px] font-black text-violet-100 disabled:opacity-50">{ROLE_OPTIONS.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select> : <div className="rounded-xl border border-white/10 bg-white/[.025] px-3 py-2 text-center text-[9px] font-black text-slate-300">{roleLabel}</div>}
+                    {managerView && membership.role !== "OWNER" && (myMembership?.role !== "MANAGER" || membership.role !== "DIRECTOR") ? <select disabled={!!quickSaving[`role-${membership.id}`]} value={membership.role} onChange={(event)=>changeMemberRole(membership,event.target.value)} className="h-10 w-full rounded-xl border border-violet-300/20 bg-[#050b14] px-2 text-[10px] font-black text-violet-100 disabled:opacity-50">{ROLE_OPTIONS.filter(([value]) => myMembership?.role !== "MANAGER" || value !== "DIRECTOR").map(([value,label])=><option key={value} value={value}>{label}</option>)}</select> : <div className="rounded-xl border border-white/10 bg-white/[.025] px-3 py-2 text-center text-[9px] font-black text-slate-300">{roleLabel}</div>}
                   </div>
                 </div>;
               })}
