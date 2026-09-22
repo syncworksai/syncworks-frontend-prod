@@ -35,6 +35,8 @@ import GameAvailabilityCard, { availabilityStatus } from "../components/sports/G
 import InteractiveStatsBoard from "../components/sports/InteractiveStatsBoard";
 import SoftballDefenseField from "../components/sports/SoftballDefenseField";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
+import PlayerCollectibleCard, { SportsPlayerPhoto } from "../components/sports/PlayerCollectibleCard";
+import PlayerStatSplits from "../components/sports/PlayerStatSplits";
 import { useAuth } from "../auth/AuthContext";
 import { acceptMembership, createEventResponse, createGroupInviteLink, getEventResponses, getGroups, getMemberships, inviteMember, setMembershipRole, uploadGroupLogo, updateEventResponse } from "../api/social";
 import {
@@ -49,6 +51,7 @@ import {
   getAdvancedTeamStats,
   getFeeAssignments,
   getPlayerProfiles,
+  getPlayerBadgeCard,
   getScopedTeamStats,
   getSportsTeams,
   getTeamDashboard,
@@ -58,6 +61,8 @@ import {
   joinMySportsTeamRoster,
   linkSportsPlayerMember,
   mergeSportsPlayer,
+  verifyPlayerMoment,
+  removePlayerMoment,
   deleteEmptySportsPlayer,
   remindSportsPlayer,
   remindTeamDues,
@@ -177,11 +182,9 @@ function TeamLogo({ group }) {
 }
 
 function Avatar({ player, profile, size = "md" }) {
-  const sizeClass = size === "lg" ? "h-16 w-16 text-xl" : "h-9 w-9 text-xs";
-  if (profile?.profile_photo_url) return <img src={profile.profile_photo_url} alt="" className={cx(sizeClass, "shrink-0 rounded-xl object-cover")} />;
-  const initials = String(player?.display_name || "P").split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
-  return <div className={cx(sizeClass, "grid shrink-0 place-items-center rounded-xl border border-cyan-300/15 bg-cyan-300/10 font-black text-cyan-100")}>{initials || "P"}</div>;
+  return <SportsPlayerPhoto player={player} profile={profile} size={size === "lg" ? "md" : "sm"}/>;
 }
+
 
 export default function SportsTeamManagerDashboard() {
   const { groupId } = useParams();
@@ -227,6 +230,11 @@ export default function SportsTeamManagerDashboard() {
   const [playerDrawer, setPlayerDrawer] = useState(null);
   const [playerEdit, setPlayerEdit] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
+  const [drawerBadgeCard, setDrawerBadgeCard] = useState(null);
+  const [drawerBadgeLoading, setDrawerBadgeLoading] = useState(false);
+  const [momentGameId, setMomentGameId] = useState("");
+  const [momentKind, setMomentKind] = useState("");
+  const [momentBusy, setMomentBusy] = useState(false);
   const [statDrawer, setStatDrawer] = useState(false);
   const [statForm, setStatForm] = useState({ player: "", scope: "LEAGUE", games: "", pa: "", ab: "", hits: "", doubles: "", triples: "", home_runs: "", walks: "", sac_flies: "", rbi: "", runs: "", note: "" });
 
@@ -725,6 +733,10 @@ export default function SportsTeamManagerDashboard() {
   function openPlayer(player) {
     const profile = profileFor(player);
     setPlayerDrawer(player);
+    setDrawerBadgeCard(null);
+    setDrawerBadgeLoading(true);
+    getPlayerBadgeCard(player.id).then(setDrawerBadgeCard).catch(()=>setDrawerBadgeCard(null)).finally(()=>setDrawerBadgeLoading(false));
+    setMomentGameId(""); setMomentKind("");
     setPlayerEdit({
       display_name: player.display_name || "", jersey_number: player.jersey_number || "", primary_position: player.primary_position || "", bats: player.bats || "R", throws: player.throws || "R",
       email: profile?.email || player.user_detail?.email || "", phone: profile?.phone || "", emergency_contact_name: profile?.emergency_contact_name || "", emergency_contact_phone: profile?.emergency_contact_phone || "", notes: profile?.notes || "",
@@ -749,6 +761,31 @@ export default function SportsTeamManagerDashboard() {
       if (photoFile) form.append("profile_photo", photoFile);
       if (profile) await updatePlayerProfile(profile.id, form); else await createPlayerProfile(form);
     }, "Player updated.", { closePlayer: true });
+  }
+
+  async function verifyDrawerMoment() {
+    if (!playerDrawer || !momentGameId || !momentKind || momentBusy) return;
+    if ((momentKind === "TYING_HIT" || momentKind === "GO_AHEAD_HIT") &&
+        !window.confirm("Does the official Game Book contain a late RBI-producing hit that really tied or took the lead? Clutch cannot be awarded for an ordinary RBI.")) return;
+    setMomentBusy(true); setError(""); setNotice("");
+    try {
+      const result = await verifyPlayerMoment(playerDrawer.id, { game: Number(momentGameId), kind: momentKind });
+      setDrawerBadgeCard(result.card);
+      setNotice("Verified achievement recorded. Earned badge borders updated.");
+      setMomentGameId(""); setMomentKind("");
+    } catch(err) { setError(errorText(err)); }
+    finally { setMomentBusy(false); }
+  }
+
+  async function removeDrawerMoment(moment) {
+    if (!playerDrawer || momentBusy || !window.confirm("Remove this verified moment and recalculate the player's badges?")) return;
+    setMomentBusy(true); setError(""); setNotice("");
+    try {
+      const result = await removePlayerMoment(playerDrawer.id, moment.id);
+      setDrawerBadgeCard(result.card);
+      setNotice("Moment removed. Badges recalculated.");
+    } catch(err) { setError(errorText(err)); }
+    finally { setMomentBusy(false); }
   }
 
   async function linkSelectedMember(player) {
