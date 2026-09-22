@@ -63,6 +63,21 @@ export async function getPlayerCard(id) {
   return data;
 }
 
+export async function getPlayerBadgeCard(playerId) {
+  const { data } = await api.get(`/sports/players/${playerId}/badge-card/`, { timeout: 45000 });
+  return data;
+}
+
+export async function verifyPlayerMoment(playerId, payload) {
+  const { data } = await api.post(`/sports/players/${playerId}/verify-moment/`, payload);
+  return data;
+}
+
+export async function removePlayerMoment(playerId, momentId) {
+  const { data } = await api.delete(`/sports/players/${playerId}/moments/${momentId}/`);
+  return data;
+}
+
 export async function getSportsPlayers(team) {
   const { data } = await api.get("/sports/players/", { params: { team } });
   return list(data);
