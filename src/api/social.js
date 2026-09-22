@@ -76,6 +76,18 @@ export async function getMemberships() {
   return list(data);
 }
 
+export async function setMembershipRole(id, role) {
+  const { data } = await api.post(`/social/memberships/${id}/set-role/`, { role });
+  return data;
+}
+
+export async function uploadGroupLogo(id, file) {
+  const form = new FormData();
+  form.append("logo_image", file);
+  const { data } = await api.patch(`/social/groups/${id}/`, form, { timeout: 45000 });
+  return data;
+}
+
 export async function inviteMember(payload) {
   const { data } = await api.post("/social/memberships/", payload);
   return data;

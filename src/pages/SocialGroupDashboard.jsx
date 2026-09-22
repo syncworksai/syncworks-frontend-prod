@@ -7,6 +7,7 @@ import {
   Copy,
   CreditCard,
   ExternalLink,
+  ImageUp,
   Loader2,
   MessageCircle,
   Save,
@@ -37,6 +38,7 @@ import {
   getSocialPaymentProfile,
   unfollowGroup,
   updateGroup,
+  uploadGroupLogo,
   updateGroupPaymentSettings,
   updateSocialPaymentProfile,
 } from "../api/social";
@@ -92,7 +94,8 @@ function Pill({ children, tone = "slate" }) {
 }
 
 function GroupMark({ group }) {
-  if (group?.logo_url) return <img src={group.logo_url} alt="" className="h-20 w-20 rounded-[1.35rem] border border-white/10 object-cover" />;
+  const logo = group?.logo_image_url || group?.logo_url;
+  if (logo) return <img src={logo} alt="" className="h-20 w-20 rounded-[1.35rem] border border-white/10 object-cover" />;
   const initials = String(group?.name || "G").split(/\s+/).slice(0,2).map((part)=>part[0]).join("").toUpperCase();
   return <div className="grid h-20 w-20 place-items-center rounded-[1.35rem] border border-cyan-300/20 bg-gradient-to-br from-cyan-300/20 to-violet-300/10 text-2xl font-black text-cyan-100">{initials}</div>;
 }
@@ -124,6 +127,7 @@ export default function SocialGroupDashboard() {
   const [error, setError] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [groupEdit, setGroupEdit] = useState(null);
+  const [groupLogoFile, setGroupLogoFile] = useState(null);
   const [groupPayment, setGroupPayment] = useState({ cash_app_url:"", cash_app_label:"", venmo_url:"", venmo_label:"", zelle_instructions:"", stripe_payment_link:"" });
   const [personalPayment, setPersonalPayment] = useState({ cash_app_url:"", cash_app_label:"", venmo_url:"", venmo_label:"", zelle_instructions:"", stripe_payment_link:"" });
 
@@ -229,6 +233,7 @@ export default function SocialGroupDashboard() {
   async function openSettings() {
     if (!managed || !group) return;
     setSettingsOpen(true);
+    setGroupLogoFile(null);
     setGroupEdit({
       name: group.name || "",
       description: group.description || "",
@@ -261,9 +266,13 @@ export default function SocialGroupDashboard() {
     if (!groupEdit?.name?.trim()) return;
     setBusy(true); setError(""); setNotice("");
     try {
-      const updated = await updateGroup(group.id, { ...groupEdit, name: groupEdit.name.trim(), description: groupEdit.description.trim() });
+      let updated = await updateGroup(group.id, { ...groupEdit, name: groupEdit.name.trim(), description: groupEdit.description.trim() });
+      if (groupLogoFile) {
+        updated = await uploadGroupLogo(group.id, groupLogoFile);
+        setGroupLogoFile(null);
+      }
       setGroup(updated);
-      setNotice("Group settings saved.");
+      setNotice(groupLogoFile ? "Group settings and team logo saved." : "Group settings saved.");
       setSettingsOpen(false);
       await refresh();
     } catch (err) {
@@ -397,6 +406,12 @@ export default function SocialGroupDashboard() {
           <div className="grid gap-2 sm:grid-cols-2">
             <Field label="Group name" value={groupEdit.name} onChange={(value)=>setGroupEdit((row)=>({...row,name:value}))}/>
             <Field label="Logo URL" value={groupEdit.logo_url} onChange={(value)=>setGroupEdit((row)=>({...row,logo_url:value}))}/>
+            <label className="sm:col-span-2 block rounded-xl border border-dashed border-cyan-300/20 bg-cyan-300/[.03] p-3">
+              <span className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[.12em] text-cyan-200"><ImageUp className="h-4 w-4"/>Upload group / team logo</span>
+              <span className="mt-1 block text-[9px] leading-4 text-slate-500">Use this for Bed Springs Baptist or any other group profile picture. Square images work best.</span>
+              <input type="file" accept="image/*" onChange={(event)=>setGroupLogoFile(event.target.files?.[0] || null)} className="mt-2 block w-full text-[10px] text-slate-300 file:mr-2 file:rounded-lg file:border-0 file:bg-cyan-300 file:px-3 file:py-2 file:text-[9px] file:font-black file:text-slate-950"/>
+              {groupLogoFile ? <div className="mt-1 text-[9px] text-emerald-300">{groupLogoFile.name}</div> : null}
+            </label>
             <label className="block"><span className="mb-1 block text-[8px] font-black uppercase tracking-[.14em] text-slate-500">Category</span><select value={groupEdit.category} onChange={(event)=>setGroupEdit((row)=>({...row,category:event.target.value}))} className="h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-3 text-xs text-white"><option value="SPORTS">Sports</option><option value="FAMILY">Family</option><option value="WORK">Work</option><option value="HOBBIES">Hobbies</option><option value="CHURCH">Church / Faith</option><option value="FRIENDS">Friends</option><option value="COMMUNITY">Community</option><option value="OTHER">Other</option></select></label>
             <label className="block"><span className="mb-1 block text-[8px] font-black uppercase tracking-[.14em] text-slate-500">Group type</span><select value={groupEdit.kind} onChange={(event)=>setGroupEdit((row)=>({...row,kind:event.target.value}))} className="h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-3 text-xs text-white"><option value="ORGANIZATION">Organization</option><option value="DIVISION">Division / Chapter</option><option value="TEAM">Team</option><option value="CLUB">Club</option><option value="COMMUNITY">Community</option><option value="HOUSEHOLD">Household</option><option value="OTHER">Other</option></select></label>
             <label className="block"><span className="mb-1 block text-[8px] font-black uppercase tracking-[.14em] text-slate-500">Visibility</span><select value={groupEdit.visibility} onChange={(event)=>setGroupEdit((row)=>({...row,visibility:event.target.value}))} className="h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-3 text-xs text-white"><option value="PUBLIC">Public</option><option value="PRIVATE">Private</option><option value="INVITE_ONLY">Invite only</option></select></label>

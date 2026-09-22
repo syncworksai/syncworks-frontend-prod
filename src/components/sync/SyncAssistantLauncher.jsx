@@ -45,14 +45,16 @@ export default function SyncAssistantLauncher() {
     return () => window.removeEventListener("sync-assistant:open-alerts", openAlerts);
   }, []);
 
+  const hiddenForSports = /^\/connect\/groups\/[^/]+\/sports(?:\/|$)/.test(location.pathname);
+
   useEffect(() => {
-    if (HIDDEN_PREFIXES.some((prefix) => location.pathname.startsWith(prefix))) return;
+    if (hiddenForSports || HIDDEN_PREFIXES.some((prefix) => location.pathname.startsWith(prefix))) return;
     loadUnread();
     const timer = window.setInterval(loadUnread, 60000);
     return () => window.clearInterval(timer);
-  }, [location.pathname, loadUnread]);
+  }, [location.pathname, loadUnread, hiddenForSports]);
 
-  if (HIDDEN_PREFIXES.some((prefix) => location.pathname.startsWith(prefix))) return null;
+  if (hiddenForSports || HIDDEN_PREFIXES.some((prefix) => location.pathname.startsWith(prefix))) return null;
 
   const isCustomerHome = location.pathname === "/customer";
   const showMic = location.pathname !== "/sync" && !isCustomerHome;

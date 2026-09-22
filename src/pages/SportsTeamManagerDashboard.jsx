@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   Bell,
@@ -31,8 +31,9 @@ import TeamChatPanel from "../components/sports/TeamChatPanel";
 import GameAvailabilityCard, { availabilityStatus } from "../components/sports/GameAvailabilityCard";
 import InteractiveStatsBoard from "../components/sports/InteractiveStatsBoard";
 import SoftballDefenseField from "../components/sports/SoftballDefenseField";
+import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import { useAuth } from "../auth/AuthContext";
-import { createEventResponse, getEventResponses, getGroups, getMemberships, updateEventResponse } from "../api/social";
+import { createEventResponse, getEventResponses, getGroups, getMemberships, setMembershipRole, uploadGroupLogo, updateEventResponse } from "../api/social";
 import {
   assignTeamFeeRoster,
   createPlayerProfile,
@@ -65,6 +66,19 @@ import {
 } from "../api/sports";
 
 const TABS = ["Overview", "Roster", "Lineup", "Schedule", "Stats", "Dues"];
+const ROLE_OPTIONS = [
+  ["MEMBER", "Member / Player"],
+  ["SCOREKEEPER", "Scorekeeper"],
+  ["MANAGER", "Manager / Coach"],
+  ["DIRECTOR", "Director"],
+];
+const ROLE_HELP = {
+  OWNER: "Full group and team control.",
+  DIRECTOR: "Full team administration, roster, games, stats and dues.",
+  MANAGER: "Coach/manager access to roster, games, stats, dues and Game Book.",
+  SCOREKEEPER: "Can run and correct the live Game Book without full manager access.",
+  MEMBER: "Standard member/player view.",
+};
 const POSITIONS = ["P", "C", "1B", "2B", "3B", "SS", "MM", "LF", "LC", "CF", "RC", "RF", "OF", "EH1", "EH2", "EH", "DH"];
 const cx = (...values) => values.filter(Boolean).join(" ");
 const list = (value) => (Array.isArray(value) ? value : []);
@@ -148,6 +162,13 @@ function Drawer({ title, onClose, children }) {
   );
 }
 
+function TeamLogo({ group }) {
+  const source = group?.logo_image_url || group?.logo_url;
+  if (source) return <img src={source} alt="" className="h-14 w-14 shrink-0 rounded-2xl border border-white/10 object-cover shadow-xl" />;
+  const initials = String(group?.name || "T").split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+  return <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 text-base font-black text-cyan-100">{initials}</div>;
+}
+
 function Avatar({ player, profile, size = "md" }) {
   const sizeClass = size === "lg" ? "h-16 w-16 text-xl" : "h-9 w-9 text-xs";
   if (profile?.profile_photo_url) return <img src={profile.profile_photo_url} alt="" className={cx(sizeClass, "shrink-0 rounded-xl object-cover")} />;
@@ -158,10 +179,14 @@ function Avatar({ player, profile, size = "md" }) {
 export default function SportsTeamManagerDashboard() {
   const { groupId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const userId = Number(user?.id || 0);
 
-  const [tab, setTab] = useState("Overview");
+  const [tab, setTab] = useState(() => {
+    const requested = searchParams.get("tab");
+    return TABS.includes(requested) ? requested : "Overview";
+  });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -203,7 +228,9 @@ export default function SportsTeamManagerDashboard() {
   const [feeEdit, setFeeEdit] = useState(null);
   const [payForm, setPayForm] = useState({ cash_app_url: "", venmo_url: "", stripe_url: "", payment_note: "" });
 
-  const managed = useMemo(() => memberships.some((membership) => Number(membership.group) === Number(groupId) && Number(membership.user) === userId && membership.status === "ACTIVE" && ["OWNER", "DIRECTOR", "MANAGER"].includes(membership.role)), [memberships, groupId, userId]);
+  const myMembership = useMemo(() => memberships.find((membership) => Number(membership.group) === Number(groupId) && Number(membership.user) === userId && membership.status === "ACTIVE") || null, [memberships, groupId, userId]);
+  const managed = useMemo(() => ["OWNER", "DIRECTOR", "MANAGER"].includes(myMembership?.role), [myMembership?.role]);
+  const canScore = managed || myMembership?.role === "SCOREKEEPER";
   const managerView = managed && !previewPlayerView;
   const socialRoster = useMemo(() => memberships.filter((membership) => Number(membership.group) === Number(groupId) && membership.status === "ACTIVE"), [memberships, groupId]);
   const players = list(dashboard?.players).filter((player) => player.is_active !== false);
@@ -310,6 +337,12 @@ export default function SportsTeamManagerDashboard() {
   useEffect(() => { refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [groupId]);
 
   useEffect(() => {
+    const requested = searchParams.get("tab");
+    if (TABS.includes(requested)) setTab((current) => current === requested ? current : requested);
+  }, [searchParams]);
+
+
+  useEffect(() => {
     if (!team) return;
     getScopedTeamStats(team.id, statsScope).then((data) => setScopedStats(list(data?.rows))).catch(() => {});
   }, [team, statsScope]);
@@ -355,6 +388,37 @@ export default function SportsTeamManagerDashboard() {
     const payload = { opponent_name: opponent.trim() || game.opponent_name };
     if (!Number.isNaN(parsed.getTime())) payload.start_at = parsed.toISOString();
     await run(() => updateSportsGame(game.id, payload), "Game updated.");
+  }
+
+  async function changeTeamLogo(file) {
+    if (!managerView || !file) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      await uploadGroupLogo(groupId, file);
+      setNotice("Team logo updated.");
+      await refresh({ quiet: true });
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function changeMemberRole(membership, role) {
+    if (!managerView || membership.role === "OWNER" || membership.role === role) return;
+    if (myMembership?.role === "MANAGER" && (role === "DIRECTOR" || membership.role === "DIRECTOR")) return;
+    const key = `role-${membership.id}`;
+    setQuickSaving((current) => ({ ...current, [key]: true }));
+    setError(""); setNotice("");
+    try {
+      await setMembershipRole(membership.id, role);
+      setNotice(`${membership.user_detail?.display_name || "Member"} is now ${ROLE_OPTIONS.find(([value]) => value === role)?.[1] || role}.`);
+      await refresh({ quiet: true });
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setQuickSaving((current) => ({ ...current, [key]: false }));
+    }
   }
 
   async function respondToGame(game, responseValue) {
@@ -772,7 +836,7 @@ export default function SportsTeamManagerDashboard() {
 
         <section className="rounded-[1.55rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_90%_0%,rgba(34,211,238,.16),transparent_35%),radial-gradient(circle_at_0%_100%,rgba(139,92,246,.13),transparent_35%),#07111f] p-4">
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0"><div className="flex flex-wrap gap-1.5"><Pill tone="cyan">Softball</Pill><Pill tone={managerView ? "violet" : "green"}>{managerView ? "Manager view" : "Player view"}</Pill><Pill>{team.season_name || "Season"}</Pill><Pill tone="green">Free team tools</Pill></div><h1 className="mt-2 truncate text-2xl font-black text-white">{group.name}</h1><p className="mt-1 text-[11px] text-slate-400">{[team.league_name, team.division_name].filter(Boolean).join(" · ") || "Team workspace"}</p></div>
+            <div className="flex min-w-0 items-start gap-3">{managerView ? <label className="group relative shrink-0 cursor-pointer" title="Change team logo"><TeamLogo group={group}/><span className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full border border-cyan-200/35 bg-cyan-300 text-slate-950 shadow-lg"><Camera className="h-3.5 w-3.5"/></span><input type="file" accept="image/*" className="hidden" onChange={(event)=>changeTeamLogo(event.target.files?.[0] || null)}/></label> : <TeamLogo group={group}/>}<div className="min-w-0"><div className="flex flex-wrap gap-1.5"><Pill tone="cyan">Softball</Pill><Pill tone={managerView ? "violet" : canScore ? "amber" : "green"}>{managerView ? "Manager view" : canScore ? "Scorekeeper view" : "Player view"}</Pill><Pill>{team.season_name || "Season"}</Pill><Pill tone="green">Free team tools</Pill></div><h1 className="mt-2 truncate text-2xl font-black text-white">{group.name}</h1><p className="mt-1 text-[11px] text-slate-400">{[team.league_name, team.division_name].filter(Boolean).join(" · ") || "Team workspace"}</p></div></div>
             {list(dashboard?.live_games).length ? <Btn primary onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${dashboard.live_games[0].id}`)}><CircleDot className="mr-1 inline h-4 w-4" />Live</Btn> : null}
           </div>
           <div className="mt-3 grid grid-cols-4 gap-1.5"><Stat label="Record" value={`${num(record.wins)}-${num(record.losses)}`} /><Stat label="Roster" value={players.length} /><Stat label="Games" value={games.length} /><Stat label={managerView ? "Outstanding" : "My due"} value={managerView ? money(managerOutstanding) : money(ownDue)} sub={managerView ? `${managerDueCount} open charge${managerDueCount === 1 ? "" : "s"}` : undefined} /></div>
@@ -800,7 +864,32 @@ export default function SportsTeamManagerDashboard() {
           {managerView ? <Card title="Team details" body="These labels carry with the team if it later joins an association or league." className="lg:col-span-2"><div className="grid gap-2 sm:grid-cols-3"><Input label="Season" value={meta.season_name} onChange={(value) => setMeta((current) => ({ ...current, season_name: value }))} /><Input label="League" value={meta.league_name} onChange={(value) => setMeta((current) => ({ ...current, league_name: value }))} /><Input label="Division" value={meta.division_name} onChange={(value) => setMeta((current) => ({ ...current, division_name: value }))} /></div><Btn primary className="mt-2 w-full" onClick={saveTeamMeta} disabled={busy}><Save className="mr-1 inline h-4 w-4" />Save</Btn></Card> : <Card title="Your access" body="Players can view team information and only their own payment status." className="lg:col-span-2"><div className="grid gap-2 text-xs text-slate-300 sm:grid-cols-3"><div className="rounded-xl border border-white/10 p-3"><b>Roster:</b> shared team information</div><div className="rounded-xl border border-white/10 p-3"><b>Dues:</b> only your own amount/status</div><div className="rounded-xl border border-white/10 p-3"><b>Game Book:</b> managers keep the official book</div></div></Card>}
         </div> : null}
 
-        {tab === "Roster" ? <Card
+        {tab === "Roster" ? <div className="space-y-3">
+          <Card
+            title="Team access & roles"
+            body="Roles are separate from the player roster. A player can also be a scorekeeper, and staff can have Game Book access without taking a roster spot."
+            action={<Users className="h-4 w-4 text-violet-300" />}
+          >
+            <div className="space-y-2">
+              {socialRoster.map((membership) => {
+                const linkedPlayer = players.find((player) => Number(player.user) === Number(membership.user));
+                const roleLabel = membership.role === "OWNER" ? "Owner" : ROLE_OPTIONS.find(([value]) => value === membership.role)?.[1] || membership.role;
+                return <div key={membership.id} className="rounded-xl border border-white/10 bg-black/15 p-2.5">
+                  <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_12rem] sm:items-center">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5"><b className="truncate text-[11px] text-white">{membership.user_detail?.display_name || membership.user_detail?.email || "Team member"}</b>{linkedPlayer ? <Pill tone="cyan">Player #{linkedPlayer.jersey_number || "—"}</Pill> : <Pill>Staff / member</Pill>}</div>
+                      <div className="mt-1 text-[9px] leading-4 text-slate-500">{ROLE_HELP[membership.role] || ROLE_HELP.MEMBER}</div>
+                    </div>
+                    {managerView && membership.role !== "OWNER" && (myMembership?.role !== "MANAGER" || membership.role !== "DIRECTOR") ? <select disabled={!!quickSaving[`role-${membership.id}`]} value={membership.role} onChange={(event)=>changeMemberRole(membership,event.target.value)} className="h-10 w-full rounded-xl border border-violet-300/20 bg-[#050b14] px-2 text-[10px] font-black text-violet-100 disabled:opacity-50">{ROLE_OPTIONS.filter(([value]) => myMembership?.role !== "MANAGER" || value !== "DIRECTOR").map(([value,label])=><option key={value} value={value}>{label}</option>)}</select> : <div className="rounded-xl border border-white/10 bg-white/[.025] px-3 py-2 text-center text-[9px] font-black text-slate-300">{roleLabel}</div>}
+                  </div>
+                </div>;
+              })}
+              {!socialRoster.length ? <div className="rounded-xl border border-dashed border-white/10 p-4 text-center text-[10px] text-slate-500">No linked SyncWorks group members yet.</div> : null}
+            </div>
+            {managerView ? <Btn className="mt-3 w-full" onClick={()=>navigate(`/connect/groups/${groupId}`)}><UserPlus className="mr-1 inline h-4 w-4"/>Invite or add group member</Btn> : null}
+          </Card>
+
+          <Card
           title="Roster"
           body={managerView ? "Manager directory: contacts, account status, invites and reminders." : "Active team roster."}
           action={managerView ? <button type="button" onClick={() => setAddPlayerOpen(true)} className="inline-flex min-h-9 items-center gap-1 rounded-xl bg-cyan-300 px-3 text-[9px] font-black text-slate-950"><Plus className="h-3.5 w-3.5" />Add player</button> : <Users className="h-4 w-4 text-cyan-300" />}
@@ -839,7 +928,7 @@ export default function SportsTeamManagerDashboard() {
               </div>;
             })}
           </div>
-        </Card> : null}
+        </Card></div> : null}
 
         {tab === "Lineup" ? <div className="space-y-3">
           <Card
@@ -985,7 +1074,7 @@ export default function SportsTeamManagerDashboard() {
             {needsCompletionGames.length ? <Card title="Needs completion" body="Past games stay out of Upcoming until you enter the final result or finish the Game Book." action={<Pill tone="amber">{needsCompletionGames.length} OPEN</Pill>}>
               <div className="space-y-2">{needsCompletionGames.map((game)=><div key={game.id} className="flex items-center justify-between gap-2 rounded-xl border border-amber-300/20 bg-amber-300/[.05] p-3"><div className="min-w-0"><div className="text-[8px] font-black uppercase tracking-wide text-amber-300">{new Date(game.start_at).toLocaleDateString()}</div><b className="block truncate text-xs text-white">vs {game.opponent_name}</b><span className="text-[9px] text-slate-500">{game.venue_name || "Field TBD"} · final score/stat entry needed</span></div><div className="grid shrink-0 gap-1"><Btn primary onClick={()=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>Game Book</Btn>{managerView?<Btn onClick={()=>quickFinal(game)}>Quick final</Btn>:null}</div></div>)}</div>
             </Card> : null}
-          <Card title="Team schedule" body="Games are synced to the Social team and members' SyncWorks calendars." action={<CalendarDays className="h-4 w-4 text-emerald-300" />}><div className="space-y-1.5">{games.map((game) => <div key={game.id} className="rounded-xl border border-white/10 bg-white/[.025] p-2.5"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="flex flex-wrap items-center gap-1.5"><b className="text-xs text-white">{new Date(game.start_at).toLocaleDateString()} · {new Date(game.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</b><Pill tone={game.home_away === "HOME" ? "green" : game.home_away === "AWAY" ? "amber" : "slate"}>{game.home_away}</Pill></div><div className="mt-1 text-[11px] font-black text-slate-200">vs {game.opponent_name}</div><div className="mt-0.5 flex items-center gap-1 text-[9px] text-slate-500"><MapPin className="h-3 w-3" />{game.venue_name || "Field TBD"}</div>{game.address_line1 ? <div className="pl-4 text-[9px] text-slate-600">{game.address_line1}, {game.city}, {game.state}</div> : null}</div><div className="grid shrink-0 gap-1"><Btn onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>{managerView ? "Game Book" : "Open"}</Btn>{managerView?<Btn onClick={()=>quickEditGame(game)}><Pencil className="mr-1 inline h-3 w-3"/>Edit game</Btn>:null}{managerView&&game.status==="FINAL"?<Btn onClick={()=>quickFinal(game)}>Edit final</Btn>:null}</div></div></div>)}{!games.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-slate-500">No games yet.</div> : null}</div></Card>
+          <Card title="Team schedule" body="Games are synced to the Social team and members' SyncWorks calendars." action={<CalendarDays className="h-4 w-4 text-emerald-300" />}><div className="space-y-1.5">{games.map((game) => <div key={game.id} className="rounded-xl border border-white/10 bg-white/[.025] p-2.5"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="flex flex-wrap items-center gap-1.5"><b className="text-xs text-white">{new Date(game.start_at).toLocaleDateString()} · {new Date(game.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</b><Pill tone={game.home_away === "HOME" ? "green" : game.home_away === "AWAY" ? "amber" : "slate"}>{game.home_away}</Pill></div><div className="mt-1 text-[11px] font-black text-slate-200">vs {game.opponent_name}</div><div className="mt-0.5 flex items-center gap-1 text-[9px] text-slate-500"><MapPin className="h-3 w-3" />{game.venue_name || "Field TBD"}</div>{game.address_line1 ? <div className="pl-4 text-[9px] text-slate-600">{game.address_line1}, {game.city}, {game.state}</div> : null}</div><div className="grid shrink-0 gap-1"><Btn onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>{canScore ? "Game Book" : "Open"}</Btn>{managerView?<Btn onClick={()=>quickEditGame(game)}><Pencil className="mr-1 inline h-3 w-3"/>Edit game</Btn>:null}{managerView&&game.status==="FINAL"?<Btn onClick={()=>quickFinal(game)}>Edit final</Btn>:null}</div></div></div>)}{!games.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-slate-500">No games yet.</div> : null}</div></Card>
           </div>
           {managerView ? <Card title="Add game" body="Manual additions use the same calendar sync."><div className="grid grid-cols-2 gap-2"><Select label="Type" value={gameForm.game_type} onChange={(value) => setGameForm((v) => ({ ...v, game_type: value }))}><option value="LEAGUE">League</option><option value="TOURNAMENT">Tournament</option><option value="PRACTICE">Practice</option><option value="EXHIBITION">Exhibition</option></Select><Select label="Home/Away" value={gameForm.home_away} onChange={(value) => setGameForm((v) => ({ ...v, home_away: value }))}><option value="HOME">Home</option><option value="AWAY">Away</option><option value="NEUTRAL">Neutral</option></Select><Input label="Opponent" value={gameForm.opponent_name} onChange={(value) => setGameForm((v) => ({ ...v, opponent_name: value }))} className="col-span-2" /><Input label="Date" type="date" value={gameForm.date} onChange={(value) => setGameForm((v) => ({ ...v, date: value }))} /><Input label="Time" type="time" value={gameForm.time} onChange={(value) => setGameForm((v) => ({ ...v, time: value }))} /><Input label="Venue / field" value={gameForm.venue_name} onChange={(value) => setGameForm((v) => ({ ...v, venue_name: value }))} className="col-span-2" /><Input label="Address" value={gameForm.address_line1} onChange={(value) => setGameForm((v) => ({ ...v, address_line1: value }))} className="col-span-2" /><Input label="City" value={gameForm.city} onChange={(value) => setGameForm((v) => ({ ...v, city: value }))} /><Input label="State" value={gameForm.state} onChange={(value) => setGameForm((v) => ({ ...v, state: value }))} /></div><Btn primary className="mt-2 w-full" onClick={addGame} disabled={!gameForm.opponent_name.trim() || !gameForm.date || busy}><Plus className="mr-1 inline h-4 w-4" />Add game</Btn></Card> : <Card title="Tournament week" body="League or tournament games will appear here once published by a manager or association."><div className="text-xs text-slate-400">Your Fall 2026 league sheet lists tournament week beginning October 27.</div></Card>}
         </div> : null}
@@ -1135,6 +1224,12 @@ export default function SportsTeamManagerDashboard() {
           ) : null}
         </div> : null}
       </main>
+
+      <SportsTeamMobileNav
+        groupId={groupId}
+        nextGameId={liveGame?.id || nextGame?.id || null}
+        activeTab={tab}
+      />
 
       {addPlayerOpen && managerView ? (
         <Drawer title="Add player" onClose={() => setAddPlayerOpen(false)}>

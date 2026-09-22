@@ -23,6 +23,7 @@ import {
 
 import ModeBar from "../components/ModeBar";
 import SoftballDefenseField from "../components/sports/SoftballDefenseField";
+import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import { useAuth } from "../auth/AuthContext";
 import { getMemberships } from "../api/social";
 import {
@@ -368,12 +369,21 @@ export default function SoftballGameDayAdvanced() {
   const [substituteOpen, setSubstituteOpen] = useState(false);
   const [subForm, setSubForm] = useState({ batting_order: "", incoming_player: "", defensive_position: "" });
 
-  const canManage = useMemo(() => Boolean(game?.can_manage) || memberships.some(
+  const myMembership = useMemo(() => memberships.find(
     (membership) => Number(membership.group) === Number(groupId)
       && Number(membership.user) === userId
-      && membership.status === "ACTIVE"
-      && ["OWNER", "DIRECTOR", "MANAGER"].includes(membership.role),
-  ), [game?.can_manage, memberships, groupId, userId]);
+      && membership.status === "ACTIVE",
+  ) || null, [memberships, groupId, userId]);
+
+  const canManage = useMemo(
+    () => Boolean(game?.can_manage) || ["OWNER", "DIRECTOR", "MANAGER"].includes(myMembership?.role),
+    [game?.can_manage, myMembership?.role],
+  );
+
+  const canScore = useMemo(
+    () => Boolean(game?.can_score) || canManage || myMembership?.role === "SCOREKEEPER",
+    [game?.can_score, canManage, myMembership?.role],
+  );
 
   const lineup = useMemo(() => [...list(game?.lineup_spots)].sort((a, b) => num(a.batting_order) - num(b.batting_order)), [game]);
   const benchPlayers = useMemo(() => list(game?.bench_players), [game?.bench_players]);
@@ -438,34 +448,48 @@ export default function SoftballGameDayAdvanced() {
 
   async function refresh({ quiet = false } = {}) {
     if (!quiet) setLoading(true);
+    if (!quiet) setError("");
     try {
-      const [gameData, playRows, membershipRows] = await Promise.all([
-        getSportsGame(gameId),
+      // Load the game shell first so a slow roster/history request never blocks
+      // the entire mobile Game Book screen.
+      const gameData = await getSportsGame(gameId);
+      setGame(gameData);
+      if (!quiet) setLoading(false);
+
+      const [playResult, membershipResult] = await Promise.allSettled([
         getPlateAppearances(gameId),
         getMemberships(),
       ]);
-      setGame(gameData);
-      setPlays(list(playRows));
-      setMemberships(list(membershipRows));
 
-      const manager = list(membershipRows).some(
+      const playRows = playResult.status === "fulfilled" ? list(playResult.value) : plays;
+      const membershipRows = membershipResult.status === "fulfilled" ? list(membershipResult.value) : memberships;
+
+      if (playResult.status === "fulfilled") setPlays(playRows);
+      if (membershipResult.status === "fulfilled") setMemberships(membershipRows);
+
+      const scoreAccess = Boolean(gameData?.can_score) || membershipRows.some(
         (membership) => Number(membership.group) === Number(groupId)
           && Number(membership.user) === userId
           && membership.status === "ACTIVE"
-          && ["OWNER", "DIRECTOR", "MANAGER"].includes(membership.role),
+          && ["OWNER", "DIRECTOR", "MANAGER", "SCOREKEEPER"].includes(membership.role),
       );
-      if (manager) {
-        const [share, rules] = await Promise.all([
-          getGameCastSettings(gameId).catch(() => null),
-          getSoftballRuleSets().catch(() => []),
+
+      if (scoreAccess) {
+        const [shareResult, rulesResult] = await Promise.allSettled([
+          getGameCastSettings(gameId),
+          getSoftballRuleSets(),
         ]);
-        setGamecast(share);
-        setRuleSets(list(rules));
+        if (shareResult.status === "fulfilled") setGamecast(shareResult.value);
+        if (rulesResult.status === "fulfilled") setRuleSets(list(rulesResult.value));
+      }
+
+      if (!quiet && playResult.status === "rejected") {
+        setNotice("Game loaded. Scorebook history is taking longer than normal; live scoring is still available.");
       }
     } catch (err) {
       setError(errorText(err));
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   }
 
@@ -634,7 +658,7 @@ export default function SoftballGameDayAdvanced() {
   }
 
   function openPlayEditor(play) {
-    if (!canManage) return;
+    if (!canScore) return;
     setEditingPlay(play);
     setEditForm({
       inning: Math.max(1, num(play.inning)),
@@ -822,7 +846,7 @@ export default function SoftballGameDayAdvanced() {
   const rule = game.rule_set_detail;
 
   return (
-    <div className="min-h-screen bg-[#02060c] pb-32 text-slate-100">
+    <div className="min-h-screen bg-[#02060c] pb-48 sm:pb-32 text-slate-100">
       <ModeBar title="Game Book" subtitle={`${game.team_name} • Softball`} />
       <main className="mx-auto max-w-6xl space-y-2.5 px-2.5 py-2.5 sm:px-4">
         <div className="flex items-center justify-between gap-2">
@@ -888,7 +912,7 @@ export default function SoftballGameDayAdvanced() {
             <section className="rounded-2xl border border-cyan-300/15 bg-[#07111f] p-3">
               <div className="text-[8px] font-black uppercase tracking-wide text-cyan-300">Ready</div>
               <div className="mt-1 text-sm font-black text-white">{lineup.length} batters loaded</div>
-              {canManage ? <Button primary className="mt-3 w-full" disabled={busy} onClick={() => run(() => startSportsGame(game.id), "Game started.")}><CircleDot className="mr-1 inline h-3.5 w-3.5" />Start Game</Button> : null}
+              {canScore ? <Button primary className="mt-3 w-full" disabled={busy} onClick={() => run(() => startSportsGame(game.id), "Game started.")}><CircleDot className="mr-1 inline h-3.5 w-3.5" />Start Game</Button> : null}
             </section>
           </div>
         ) : null}
@@ -916,7 +940,7 @@ export default function SoftballGameDayAdvanced() {
                 </div>
               </div>
 
-              {canManage ? (
+              {canScore ? (
                 <>
                   <div className="mt-2 rounded-xl border border-white/10 bg-black/15 p-2">
                     <div className="flex items-center justify-between gap-2">
@@ -1062,7 +1086,7 @@ export default function SoftballGameDayAdvanced() {
             </section>
 
             <section className="overflow-x-auto rounded-2xl border border-white/10 bg-[#07111f] p-2">
-              <div className="mb-1.5 flex items-center justify-between"><div><div className="text-[8px] font-black uppercase tracking-[.14em] text-slate-500">Scorebook grid</div>{canManage?<div className="mt-0.5 text-[7px] text-slate-600">Tap any recorded box to correct it.</div>:null}</div>{canManage&&plays.length?<Button onClick={()=>run(()=>undoSoftballPlay(game.id),"Last play undone.")}><Undo2 className="mr-1 inline h-3.5 w-3.5" />Undo</Button>:null}</div>
+              <div className="mb-1.5 flex items-center justify-between"><div><div className="text-[8px] font-black uppercase tracking-[.14em] text-slate-500">Scorebook grid</div>{canScore?<div className="mt-0.5 text-[7px] text-slate-600">Tap any recorded box to correct it.</div>:null}</div>{canScore&&plays.length?<Button onClick={()=>run(()=>undoSoftballPlay(game.id),"Last play undone.")}><Undo2 className="mr-1 inline h-3.5 w-3.5" />Undo</Button>:null}</div>
               <table className="min-w-max border-collapse text-center text-[8px]">
                 <thead>
                   <tr>
@@ -1095,19 +1119,19 @@ export default function SoftballGameDayAdvanced() {
                                     onClick={() => openPlayEditor(play)}
                                     className={cx(
                                       "rounded px-1 py-0.5 font-black",
-                                      canManage && "cursor-pointer transition hover:ring-1 hover:ring-cyan-300/40",
+                                      canScore && "cursor-pointer transition hover:ring-1 hover:ring-cyan-300/40",
                                       ["1B","2B","3B","HR"].includes(play.result)
                                         ? "bg-emerald-300/15 text-emerald-100"
                                         : play.result==="BB"
                                           ? "bg-violet-300/15 text-violet-100"
                                           : "bg-white/[.05] text-slate-300",
                                     )}
-                                    title={canManage ? "Tap to correct this scorebook entry" : undefined}
+                                    title={canScore ? "Tap to correct this scorebook entry" : undefined}
                                   >
                                     <span className="flex items-center justify-center gap-0.5">
                                       <span>{playBadge(play)}</span>
                                       {num(play.outs_recorded)>0?<span className="text-[6px] text-rose-200">+{num(play.outs_recorded)}O</span>:null}
-                                      {canManage?<Edit3 className="h-2.5 w-2.5 opacity-55"/>:null}
+                                      {canScore?<Edit3 className="h-2.5 w-2.5 opacity-55"/>:null}
                                     </span>
                                   </button>
                                 ))}
@@ -1139,7 +1163,7 @@ export default function SoftballGameDayAdvanced() {
                   <div className="text-[8px] font-black uppercase tracking-[.14em] text-violet-300">Bench / subs</div>
                   <div className="mt-0.5 text-[8px] text-slate-500">{benchPlayers.length} available · {substitutions.length} substitution{substitutions.length===1?"":"s"} recorded</div>
                 </div>
-                {canManage&&live&&benchPlayers.length?<Button onClick={()=>openSubstitution()}>Substitute</Button>:null}
+                {canScore&&live&&benchPlayers.length?<Button onClick={()=>openSubstitution()}>Substitute</Button>:null}
               </div>
               <div className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
                 {benchPlayers.map((player)=>(
@@ -1148,7 +1172,7 @@ export default function SoftballGameDayAdvanced() {
                       <b className="block truncate text-[10px] text-white">#{player.jersey_number||"—"} {player.display_name}</b>
                       <span className="text-[8px] text-slate-500">{player.primary_position||"Utility"} · SUB</span>
                     </button>
-                    {canManage&&live?<button type="button" onClick={()=>openSubstitution(null,player)} className="shrink-0 rounded-lg border border-violet-300/20 bg-violet-300/[.06] px-2 py-1 text-[8px] font-black text-violet-100">SUB IN</button>:null}
+                    {canScore&&live?<button type="button" onClick={()=>openSubstitution(null,player)} className="shrink-0 rounded-lg border border-violet-300/20 bg-violet-300/[.06] px-2 py-1 text-[8px] font-black text-violet-100">SUB IN</button>:null}
                   </div>
                 ))}
                 {!benchPlayers.length?<div className="rounded-xl border border-dashed border-white/10 p-3 text-center text-[9px] text-slate-600 sm:col-span-2 lg:col-span-3">No available bench players. Anyone removed from the live lineup returns here as a sub option.</div>:null}
@@ -1164,7 +1188,7 @@ export default function SoftballGameDayAdvanced() {
             <div className="grid gap-2 lg:grid-cols-[1.15fr_.85fr]">
               <div className="space-y-2">
                 <SoftballDefenseField lineup={lineup} compact />
-                {canManage ? <section className="rounded-2xl border border-white/10 bg-[#07111f] p-2.5"><div className="text-[8px] font-black uppercase tracking-wide text-slate-500">Change defense</div><div className="mt-2 grid grid-cols-2 gap-1.5">{lineup.map((spot)=><label key={spot.id} className="flex min-h-[4.9rem] flex-col items-center justify-center rounded-lg border border-white/8 bg-white/[.02] px-2 py-2 text-center"><span className="w-full truncate text-[9px] font-bold text-slate-300">{spot.player_detail?.display_name}</span><select aria-label={"Position for " + (spot.player_detail?.display_name || "player")} value={spot.defensive_position||""} onChange={(event)=>changeDefense(spot.player,event.target.value)} className="mt-1.5 h-8 w-[5.4rem] rounded-lg border border-white/10 bg-[#050b14] px-1 text-center text-[10px] font-black text-white"><option value="">—</option>{POSITIONS.map((position)=><option key={position}>{position}</option>)}</select></label>)}</div></section> : null}
+                {canScore ? <section className="rounded-2xl border border-white/10 bg-[#07111f] p-2.5"><div className="text-[8px] font-black uppercase tracking-wide text-slate-500">Change defense</div><div className="mt-2 grid grid-cols-2 gap-1.5">{lineup.map((spot)=><label key={spot.id} className="flex min-h-[4.9rem] flex-col items-center justify-center rounded-lg border border-white/8 bg-white/[.02] px-2 py-2 text-center"><span className="w-full truncate text-[9px] font-bold text-slate-300">{spot.player_detail?.display_name}</span><select aria-label={"Position for " + (spot.player_detail?.display_name || "player")} value={spot.defensive_position||""} onChange={(event)=>changeDefense(spot.player,event.target.value)} className="mt-1.5 h-8 w-[5.4rem] rounded-lg border border-white/10 bg-[#050b14] px-1 text-center text-[10px] font-black text-white"><option value="">—</option>{POSITIONS.map((position)=><option key={position}>{position}</option>)}</select></label>)}</div></section> : null}
               </div>
 
               <div className="space-y-2">
@@ -1172,13 +1196,13 @@ export default function SoftballGameDayAdvanced() {
                   <div className="text-[8px] font-black uppercase tracking-wide text-amber-300">Rules</div>
                   {canManage ? <select value={game.rule_set||""} onChange={(event)=>changeRule(event.target.value)} className="mt-2 h-9 w-full rounded-lg border border-white/10 bg-[#050b14] px-2 text-[9px] text-white"><option value="">Unlimited / no attached rules</option>{ruleSets.filter((row)=>row.is_active!==false).map((row)=><option key={row.id} value={row.id}>{row.competition_type} · {row.name}</option>)}</select> : null}
                   <div className="mt-2 rounded-lg border border-white/8 bg-black/15 p-2 text-[9px] text-slate-300">{rule ? <><b className="text-white">{rule.name}</b><div>{rule.home_run_rule==="FIXED"?`${rule.home_run_limit} HR cap`:rule.home_run_rule==="ONE_UP"?`One-up / San Diego · max +${rule.home_run_max_ahead}`:"Unlimited HR"}</div></> : "No HR restriction attached."}</div>
-                  <div className="mt-2 grid grid-cols-2 gap-1.5"><div className="rounded-lg border border-cyan-300/15 bg-cyan-300/[.04] p-2 text-center"><div className="text-[7px] text-slate-500">OUR HR</div><b className="text-lg text-cyan-100">{game.home_runs_for||0}</b></div><div className="rounded-lg border border-white/10 bg-white/[.025] p-2 text-center"><div className="text-[7px] text-slate-500">OPP HR</div><div className="mt-1 flex items-center justify-center gap-1">{canManage?<button onClick={()=>run(()=>setOpponentHomeRuns(game.id,Math.max(0,num(game.home_runs_against)-1)))} className="grid h-7 w-7 place-items-center rounded-lg border border-white/10"><Minus className="h-3 w-3"/></button>:null}<b className="min-w-5 text-lg">{game.home_runs_against||0}</b>{canManage?<button onClick={()=>run(()=>setOpponentHomeRuns(game.id,num(game.home_runs_against)+1))} className="grid h-7 w-7 place-items-center rounded-lg border border-white/10"><Plus className="h-3 w-3"/></button>:null}</div></div></div>
+                  <div className="mt-2 grid grid-cols-2 gap-1.5"><div className="rounded-lg border border-cyan-300/15 bg-cyan-300/[.04] p-2 text-center"><div className="text-[7px] text-slate-500">OUR HR</div><b className="text-lg text-cyan-100">{game.home_runs_for||0}</b></div><div className="rounded-lg border border-white/10 bg-white/[.025] p-2 text-center"><div className="text-[7px] text-slate-500">OPP HR</div><div className="mt-1 flex items-center justify-center gap-1">{canScore?<button onClick={()=>run(()=>setOpponentHomeRuns(game.id,Math.max(0,num(game.home_runs_against)-1)))} className="grid h-7 w-7 place-items-center rounded-lg border border-white/10"><Minus className="h-3 w-3"/></button>:null}<b className="min-w-5 text-lg">{game.home_runs_against||0}</b>{canScore?<button onClick={()=>run(()=>setOpponentHomeRuns(game.id,num(game.home_runs_against)+1))} className="grid h-7 w-7 place-items-center rounded-lg border border-white/10"><Plus className="h-3 w-3"/></button>:null}</div></div></div>
                   {game.home_run_allowed===false?<div className="mt-2 rounded-lg border border-rose-300/20 bg-rose-300/10 p-2 text-[8px] font-black text-rose-100">HR currently blocked by the attached rule.</div>:null}
                 </section>
 
-                {canManage ? <section className="rounded-2xl border border-white/10 bg-[#07111f] p-2.5"><div className="text-[8px] font-black uppercase tracking-wide text-slate-500">Opponent · inning {game.current_inning}</div><div className="mt-2 grid grid-cols-2 gap-2">{[["opponent_runs","Runs"],["opponent_hits","Hits"]].map(([field,label])=>{const row=opponentInningMap.get(num(game.current_inning))||{};return <div key={field} className="rounded-lg border border-white/8 bg-black/15 p-2"><div className="text-center text-[7px] text-slate-500">{label}</div><div className="mt-1 grid grid-cols-[1.8rem_1fr_1.8rem] items-center gap-1"><button onClick={()=>changeOpponentInning(game.current_inning,field,-1)} className="grid h-7 w-7 place-items-center rounded-lg border border-white/10"><Minus className="h-3 w-3"/></button><b className="text-center text-base">{num(row[field])}</b><button onClick={()=>changeOpponentInning(game.current_inning,field,1)} className="grid h-7 w-7 place-items-center rounded-lg border border-white/10"><Plus className="h-3 w-3"/></button></div></div>})}</div></section> : null}
+                {canScore ? <section className="rounded-2xl border border-white/10 bg-[#07111f] p-2.5"><div className="text-[8px] font-black uppercase tracking-wide text-slate-500">Opponent · inning {game.current_inning}</div><div className="mt-2 grid grid-cols-2 gap-2">{[["opponent_runs","Runs"],["opponent_hits","Hits"]].map(([field,label])=>{const row=opponentInningMap.get(num(game.current_inning))||{};return <div key={field} className="rounded-lg border border-white/8 bg-black/15 p-2"><div className="text-center text-[7px] text-slate-500">{label}</div><div className="mt-1 grid grid-cols-[1.8rem_1fr_1.8rem] items-center gap-1"><button onClick={()=>changeOpponentInning(game.current_inning,field,-1)} className="grid h-7 w-7 place-items-center rounded-lg border border-white/10"><Minus className="h-3 w-3"/></button><b className="text-center text-base">{num(row[field])}</b><button onClick={()=>changeOpponentInning(game.current_inning,field,1)} className="grid h-7 w-7 place-items-center rounded-lg border border-white/10"><Plus className="h-3 w-3"/></button></div></div>})}</div></section> : null}
 
-                {canManage&&gamecast?<section className="rounded-2xl border border-emerald-300/15 bg-[#07111f] p-2.5">
+                {canScore&&gamecast?<section className="rounded-2xl border border-emerald-300/15 bg-[#07111f] p-2.5">
                   <div className="flex items-center justify-between gap-2">
                     <div><div className="text-[8px] font-black uppercase text-emerald-300">GameCast</div><div className="text-[9px] text-slate-500">Viewers create/sign in to a free SyncWorks account, then return directly to this live game.</div></div>
                     {gamecast.enabled?<Radio className="h-4 w-4 shrink-0 text-emerald-300"/>:<EyeOff className="h-4 w-4 shrink-0 text-slate-500"/>}
@@ -1191,13 +1215,13 @@ export default function SoftballGameDayAdvanced() {
                   </div>
                 </section>:null}
 
-                {canManage?<Button danger className="w-full" onClick={()=>run(()=>finishSportsGame(game.id),"Game marked final.")}><Trophy className="mr-1 inline h-3.5 w-3.5"/>Finish Game</Button>:null}
+                {canScore?<Button danger className="w-full" onClick={()=>run(()=>finishSportsGame(game.id),"Game marked final.")}><Trophy className="mr-1 inline h-3.5 w-3.5"/>Finish Game</Button>:null}
               </div>
             </div>
           </>
         ) : null}
 
-        {canManage && gamecastOpen && gamecast ? (
+        {canScore && gamecastOpen && gamecast ? (
           <div className="fixed inset-0 z-[96] flex items-end justify-center bg-black/80 px-3 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-16 sm:items-center">
             <div className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-[1.7rem] border border-emerald-300/20 bg-[#06101d] p-4 shadow-2xl">
               <div className="flex items-start justify-between gap-3">
@@ -1235,8 +1259,8 @@ export default function SoftballGameDayAdvanced() {
           </div>
         ) : null}
 
-        {live && canManage ? (
-          <div className="fixed inset-x-0 bottom-0 z-[70] border-t border-cyan-300/15 bg-[#030914]/95 px-2.5 pb-[calc(.55rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl sm:hidden">
+        {live && canScore ? (
+          <div className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-[105] border-t border-cyan-300/15 bg-[#030914]/95 px-2.5 py-2 backdrop-blur-xl sm:hidden">
             <div className="mx-auto grid max-w-lg grid-cols-4 gap-1.5">
               <button type="button" onClick={()=>run(()=>undoSoftballPlay(game.id),"Last play undone.")} className="min-h-12 rounded-xl border border-white/10 text-[9px] font-black"><Undo2 className="mx-auto mb-0.5 h-4 w-4"/>Undo</button>
               <button type="button" onClick={()=>openSubstitution()} className="min-h-12 rounded-xl border border-violet-300/20 bg-violet-300/[.05] text-[9px] font-black text-violet-100"><UserRound className="mx-auto mb-0.5 h-4 w-4"/>Sub</button>
@@ -1337,6 +1361,13 @@ export default function SoftballGameDayAdvanced() {
           <Button className="mt-3 w-full" onClick={()=>navigate(`/connect/groups/${groupId}/sports`)}>Next game / Team dashboard</Button>
         </section> : null}
       </main>
+
+      <SportsTeamMobileNav
+        groupId={groupId}
+        gameId={game.id}
+        nextGameId={game.id}
+        activeTab=""
+      />
     </div>
   );
 }
