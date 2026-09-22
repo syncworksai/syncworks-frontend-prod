@@ -40,6 +40,7 @@ import {
   createSportsPlayer,
   createStatLedgerEntry,
   createTeamFee,
+  finishSportsGame,
   ensureTeamPaymentSettings,
   getAdvancedTeamStats,
   getFeeAssignments,
@@ -57,6 +58,7 @@ import {
   updateFeeAssignment,
   updateTeamFee,
   updatePlayerProfile,
+  updateSportsGame,
   updateSportsPlayer,
   updateSportsTeam,
   updateTeamPaymentSettings,
@@ -326,6 +328,33 @@ export default function SportsTeamManagerDashboard() {
       await refresh({ quiet: true });
     } catch (err) { setError(errorText(err)); }
     finally { setBusy(false); }
+  }
+
+  async function quickFinal(game) {
+    if (!managerView) return;
+    const ours = window.prompt(`Final score — ${group?.name || "Team"} runs`, String(game.runs_for || 0));
+    if (ours === null) return;
+    const theirs = window.prompt(`Final score — ${game.opponent_name} runs`, String(game.runs_against || 0));
+    if (theirs === null) return;
+    const runsFor = Number.parseInt(ours, 10);
+    const runsAgainst = Number.parseInt(theirs, 10);
+    if (!Number.isFinite(runsFor) || !Number.isFinite(runsAgainst) || runsFor < 0 || runsAgainst < 0) {
+      setError("Enter valid whole-number final scores.");
+      return;
+    }
+    await run(() => finishSportsGame(game.id, { runs_for: runsFor, runs_against: runsAgainst }), "Final score saved.");
+  }
+
+  async function quickEditGame(game) {
+    if (!managerView) return;
+    const opponent = window.prompt("Opponent", game.opponent_name || "");
+    if (opponent === null) return;
+    const dateText = window.prompt("Game date/time (YYYY-MM-DD HH:MM)", new Date(game.start_at).toLocaleString());
+    if (dateText === null) return;
+    const parsed = new Date(dateText);
+    const payload = { opponent_name: opponent.trim() || game.opponent_name };
+    if (!Number.isNaN(parsed.getTime())) payload.start_at = parsed.toISOString();
+    await run(() => updateSportsGame(game.id, payload), "Game updated.");
   }
 
   async function respondToGame(game, responseValue) {
@@ -954,9 +983,9 @@ export default function SportsTeamManagerDashboard() {
         {tab === "Schedule" ? <div className="grid gap-3 lg:grid-cols-[1.3fr_.7fr]">
           <div className="space-y-3">
             {needsCompletionGames.length ? <Card title="Needs completion" body="Past games stay out of Upcoming until you enter the final result or finish the Game Book." action={<Pill tone="amber">{needsCompletionGames.length} OPEN</Pill>}>
-              <div className="space-y-2">{needsCompletionGames.map((game)=><div key={game.id} className="flex items-center justify-between gap-2 rounded-xl border border-amber-300/20 bg-amber-300/[.05] p-3"><div className="min-w-0"><div className="text-[8px] font-black uppercase tracking-wide text-amber-300">{new Date(game.start_at).toLocaleDateString()}</div><b className="block truncate text-xs text-white">vs {game.opponent_name}</b><span className="text-[9px] text-slate-500">{game.venue_name || "Field TBD"} · final score/stat entry needed</span></div><Btn primary onClick={()=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>Complete game</Btn></div>)}</div>
+              <div className="space-y-2">{needsCompletionGames.map((game)=><div key={game.id} className="flex items-center justify-between gap-2 rounded-xl border border-amber-300/20 bg-amber-300/[.05] p-3"><div className="min-w-0"><div className="text-[8px] font-black uppercase tracking-wide text-amber-300">{new Date(game.start_at).toLocaleDateString()}</div><b className="block truncate text-xs text-white">vs {game.opponent_name}</b><span className="text-[9px] text-slate-500">{game.venue_name || "Field TBD"} · final score/stat entry needed</span></div><div className="grid shrink-0 gap-1"><Btn primary onClick={()=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>Game Book</Btn>{managerView?<Btn onClick={()=>quickFinal(game)}>Quick final</Btn>:null}</div></div>)}</div>
             </Card> : null}
-          <Card title="Team schedule" body="Games are synced to the Social team and members' SyncWorks calendars." action={<CalendarDays className="h-4 w-4 text-emerald-300" />}><div className="space-y-1.5">{games.map((game) => <div key={game.id} className="rounded-xl border border-white/10 bg-white/[.025] p-2.5"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="flex flex-wrap items-center gap-1.5"><b className="text-xs text-white">{new Date(game.start_at).toLocaleDateString()} · {new Date(game.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</b><Pill tone={game.home_away === "HOME" ? "green" : game.home_away === "AWAY" ? "amber" : "slate"}>{game.home_away}</Pill></div><div className="mt-1 text-[11px] font-black text-slate-200">vs {game.opponent_name}</div><div className="mt-0.5 flex items-center gap-1 text-[9px] text-slate-500"><MapPin className="h-3 w-3" />{game.venue_name || "Field TBD"}</div>{game.address_line1 ? <div className="pl-4 text-[9px] text-slate-600">{game.address_line1}, {game.city}, {game.state}</div> : null}</div><Btn onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>{managerView ? "Game Book" : "Open"}</Btn></div></div>)}{!games.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-slate-500">No games yet.</div> : null}</div></Card>
+          <Card title="Team schedule" body="Games are synced to the Social team and members' SyncWorks calendars." action={<CalendarDays className="h-4 w-4 text-emerald-300" />}><div className="space-y-1.5">{games.map((game) => <div key={game.id} className="rounded-xl border border-white/10 bg-white/[.025] p-2.5"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="flex flex-wrap items-center gap-1.5"><b className="text-xs text-white">{new Date(game.start_at).toLocaleDateString()} · {new Date(game.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</b><Pill tone={game.home_away === "HOME" ? "green" : game.home_away === "AWAY" ? "amber" : "slate"}>{game.home_away}</Pill></div><div className="mt-1 text-[11px] font-black text-slate-200">vs {game.opponent_name}</div><div className="mt-0.5 flex items-center gap-1 text-[9px] text-slate-500"><MapPin className="h-3 w-3" />{game.venue_name || "Field TBD"}</div>{game.address_line1 ? <div className="pl-4 text-[9px] text-slate-600">{game.address_line1}, {game.city}, {game.state}</div> : null}</div><div className="grid shrink-0 gap-1"><Btn onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>{managerView ? "Game Book" : "Open"}</Btn>{managerView?<Btn onClick={()=>quickEditGame(game)}><Pencil className="mr-1 inline h-3 w-3"/>Edit game</Btn>:null}{managerView&&game.status==="FINAL"?<Btn onClick={()=>quickFinal(game)}>Edit final</Btn>:null}</div></div></div>)}{!games.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-slate-500">No games yet.</div> : null}</div></Card>
           </div>
           {managerView ? <Card title="Add game" body="Manual additions use the same calendar sync."><div className="grid grid-cols-2 gap-2"><Select label="Type" value={gameForm.game_type} onChange={(value) => setGameForm((v) => ({ ...v, game_type: value }))}><option value="LEAGUE">League</option><option value="TOURNAMENT">Tournament</option><option value="PRACTICE">Practice</option><option value="EXHIBITION">Exhibition</option></Select><Select label="Home/Away" value={gameForm.home_away} onChange={(value) => setGameForm((v) => ({ ...v, home_away: value }))}><option value="HOME">Home</option><option value="AWAY">Away</option><option value="NEUTRAL">Neutral</option></Select><Input label="Opponent" value={gameForm.opponent_name} onChange={(value) => setGameForm((v) => ({ ...v, opponent_name: value }))} className="col-span-2" /><Input label="Date" type="date" value={gameForm.date} onChange={(value) => setGameForm((v) => ({ ...v, date: value }))} /><Input label="Time" type="time" value={gameForm.time} onChange={(value) => setGameForm((v) => ({ ...v, time: value }))} /><Input label="Venue / field" value={gameForm.venue_name} onChange={(value) => setGameForm((v) => ({ ...v, venue_name: value }))} className="col-span-2" /><Input label="Address" value={gameForm.address_line1} onChange={(value) => setGameForm((v) => ({ ...v, address_line1: value }))} className="col-span-2" /><Input label="City" value={gameForm.city} onChange={(value) => setGameForm((v) => ({ ...v, city: value }))} /><Input label="State" value={gameForm.state} onChange={(value) => setGameForm((v) => ({ ...v, state: value }))} /></div><Btn primary className="mt-2 w-full" onClick={addGame} disabled={!gameForm.opponent_name.trim() || !gameForm.date || busy}><Plus className="mr-1 inline h-4 w-4" />Add game</Btn></Card> : <Card title="Tournament week" body="League or tournament games will appear here once published by a manager or association."><div className="text-xs text-slate-400">Your Fall 2026 league sheet lists tournament week beginning October 27.</div></Card>}
         </div> : null}

@@ -4,6 +4,8 @@ import {
   ArrowLeft,
   Check,
   CircleDot,
+  Copy,
+  ExternalLink,
   Eye,
   EyeOff,
   Edit3,
@@ -14,6 +16,7 @@ import {
   RotateCcw,
   Share2,
   Trophy,
+  Trash2,
   Undo2,
   UserRound,
 } from "lucide-react";
@@ -24,6 +27,7 @@ import { useAuth } from "../auth/AuthContext";
 import { getMemberships } from "../api/social";
 import {
   correctSoftballPlay,
+  deleteSportsGameBook,
   finishSportsGame,
   getGameCastSettings,
   getPlateAppearances,
@@ -31,6 +35,7 @@ import {
   getSoftballRuleSets,
   getSportsGame,
   recordSoftballPlay,
+  reopenSportsGame,
   saveSoftballPlayContext,
   setOpponentHomeRuns,
   setOpponentScore,
@@ -335,6 +340,7 @@ export default function SoftballGameDayAdvanced() {
   const [plays, setPlays] = useState([]);
   const [memberships, setMemberships] = useState([]);
   const [gamecast, setGamecast] = useState(null);
+  const [gamecastOpen, setGamecastOpen] = useState(false);
   const [ruleSets, setRuleSets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -692,9 +698,27 @@ export default function SoftballGameDayAdvanced() {
     if (saved) setSubstituteOpen(false);
   }
 
-  async function toggleGameCast(enabled) {
-    const next = await run(() => updateGameCastSettings(game.id, { enabled, show_player_stats: true }), enabled ? "GameCast is live." : "GameCast sharing off.");
+  async function saveGameCastSettings(patch, message = "GameCast settings saved.") {
+    const next = await run(() => updateGameCastSettings(game.id, patch), message);
     if (next) setGamecast(next);
+    return next;
+  }
+
+  async function toggleGameCast(enabled) {
+    return saveGameCastSettings({ enabled }, enabled ? "GameCast is live." : "GameCast sharing off.");
+  }
+
+  async function deleteEntireBook() {
+    if (!window.confirm("Delete this entire Game Book? Every recorded play from this book will be removed from player/team stats. The scheduled game and lineup will remain.")) return;
+    const saved = await run(() => deleteSportsGameBook(game.id), "Game Book deleted. Stats recalculated.");
+    if (saved) {
+      setRunner1(false); setRunner2(false); setRunner3(false);
+      clearEntry({ keepBases: false });
+    }
+  }
+
+  async function reopenGame() {
+    await run(() => reopenSportsGame(game.id), "Game reopened for editing.");
   }
 
   async function shareGameCast() {
@@ -1154,12 +1178,72 @@ export default function SoftballGameDayAdvanced() {
 
                 {canManage ? <section className="rounded-2xl border border-white/10 bg-[#07111f] p-2.5"><div className="text-[8px] font-black uppercase tracking-wide text-slate-500">Opponent · inning {game.current_inning}</div><div className="mt-2 grid grid-cols-2 gap-2">{[["opponent_runs","Runs"],["opponent_hits","Hits"]].map(([field,label])=>{const row=opponentInningMap.get(num(game.current_inning))||{};return <div key={field} className="rounded-lg border border-white/8 bg-black/15 p-2"><div className="text-center text-[7px] text-slate-500">{label}</div><div className="mt-1 grid grid-cols-[1.8rem_1fr_1.8rem] items-center gap-1"><button onClick={()=>changeOpponentInning(game.current_inning,field,-1)} className="grid h-7 w-7 place-items-center rounded-lg border border-white/10"><Minus className="h-3 w-3"/></button><b className="text-center text-base">{num(row[field])}</b><button onClick={()=>changeOpponentInning(game.current_inning,field,1)} className="grid h-7 w-7 place-items-center rounded-lg border border-white/10"><Plus className="h-3 w-3"/></button></div></div>})}</div></section> : null}
 
-                {canManage&&gamecast?<section className="rounded-2xl border border-emerald-300/15 bg-[#07111f] p-2.5"><div className="flex items-center justify-between"><div><div className="text-[8px] font-black uppercase text-emerald-300">Public GameCast</div><div className="text-[9px] text-slate-500">No login required.</div></div>{gamecast.enabled?<Radio className="h-4 w-4 text-emerald-300"/>:<EyeOff className="h-4 w-4 text-slate-500"/>}</div><div className="mt-2 grid grid-cols-2 gap-1.5"><Button primary={!gamecast.enabled} onClick={()=>toggleGameCast(!gamecast.enabled)}>{gamecast.enabled?<><EyeOff className="mr-1 inline h-3.5 w-3.5"/>Stop</>:<><Eye className="mr-1 inline h-3.5 w-3.5"/>Go live</>}</Button><Button disabled={!gamecast.enabled} onClick={shareGameCast}><Share2 className="mr-1 inline h-3.5 w-3.5"/>Share</Button></div>{gamecast.enabled?<Button className="mt-1.5 w-full" onClick={facebookGameCast}>Share to Facebook</Button>:null}</section>:null}
+                {canManage&&gamecast?<section className="rounded-2xl border border-emerald-300/15 bg-[#07111f] p-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div><div className="text-[8px] font-black uppercase text-emerald-300">GameCast</div><div className="text-[9px] text-slate-500">Viewers create/sign in to a free SyncWorks account, then return directly to this live game.</div></div>
+                    {gamecast.enabled?<Radio className="h-4 w-4 shrink-0 text-emerald-300"/>:<EyeOff className="h-4 w-4 shrink-0 text-slate-500"/>}
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-1.5">
+                    <Button primary={!gamecast.enabled} onClick={()=>toggleGameCast(!gamecast.enabled)}>{gamecast.enabled?<><EyeOff className="mr-1 inline h-3.5 w-3.5"/>Stop live</>:<><Eye className="mr-1 inline h-3.5 w-3.5"/>Enable</>}</Button>
+                    <Button onClick={()=>setGamecastOpen(true)}><Radio className="mr-1 inline h-3.5 w-3.5"/>GameCast options</Button>
+                    <Button disabled={!gamecast.enabled} onClick={shareGameCast}><Share2 className="mr-1 inline h-3.5 w-3.5"/>Quick share</Button>
+                    <Button disabled={!gamecast.enabled} onClick={facebookGameCast}>Facebook</Button>
+                  </div>
+                </section>:null}
 
                 {canManage?<Button danger className="w-full" onClick={()=>run(()=>finishSportsGame(game.id),"Game marked final.")}><Trophy className="mr-1 inline h-3.5 w-3.5"/>Finish Game</Button>:null}
               </div>
             </div>
           </>
+        ) : null}
+
+        {canManage && gamecastOpen && gamecast ? (
+          <div className="fixed inset-0 z-[96] flex items-end justify-center bg-black/80 px-3 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-16 sm:items-center">
+            <div className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-[1.7rem] border border-emerald-300/20 bg-[#06101d] p-4 shadow-2xl">
+              <div className="flex items-start justify-between gap-3">
+                <div><div className="text-[8px] font-black uppercase tracking-[.15em] text-emerald-300">Live GameCast</div><div className="mt-1 text-lg font-black text-white">{game.team_name} vs {game.opponent_name}</div><div className="mt-1 text-[10px] text-slate-400">The Game Book is the live source. Score, inning, outs, current batter and recent plays refresh for viewers automatically.</div></div>
+                <button type="button" onClick={()=>setGamecastOpen(false)} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 text-slate-300">×</button>
+              </div>
+
+              <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div><b className="text-xs text-white">GameCast enabled</b><div className="text-[9px] text-slate-500">Account required to watch and follow.</div></div>
+                  <button type="button" onClick={()=>toggleGameCast(!gamecast.enabled)} className={cx("h-8 min-w-16 rounded-full px-3 text-[9px] font-black",gamecast.enabled?"bg-emerald-300 text-slate-950":"border border-white/10 text-slate-400")}>{gamecast.enabled?"LIVE":"OFF"}</button>
+                </div>
+              </div>
+
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button type="button" onClick={()=>saveGameCastSettings({show_batter:!gamecast.show_batter})} className={cx("rounded-xl border p-3 text-left",gamecast.show_batter?"border-cyan-300/25 bg-cyan-300/[.06]":"border-white/10")}>
+                  <b className="text-[10px] text-white">Current batter</b><div className="mt-1 text-[8px] text-slate-500">{gamecast.show_batter?"Shown":"Hidden"}</div>
+                </button>
+                <button type="button" onClick={()=>saveGameCastSettings({show_recent_plays:!gamecast.show_recent_plays})} className={cx("rounded-xl border p-3 text-left",gamecast.show_recent_plays?"border-cyan-300/25 bg-cyan-300/[.06]":"border-white/10")}>
+                  <b className="text-[10px] text-white">Recent plays</b><div className="mt-1 text-[8px] text-slate-500">{gamecast.show_recent_plays?"Shown":"Hidden"}</div>
+                </button>
+              </div>
+
+              <div className="mt-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[.035] p-3">
+                <div className="text-[8px] font-black uppercase tracking-wide text-cyan-300">Share link</div>
+                <div className="mt-1 break-all rounded-lg bg-black/25 p-2 text-[10px] text-cyan-100">{window.location.origin}/gamecast/{gamecast.token}</div>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <Button disabled={!gamecast.enabled} primary onClick={shareGameCast}><Share2 className="mr-1 inline h-3.5 w-3.5"/>Share link</Button>
+                  <Button disabled={!gamecast.enabled} onClick={async()=>{const url=`${window.location.origin}/gamecast/${gamecast.token}`;await navigator.clipboard?.writeText(url);setNotice("GameCast link copied.");}}><Copy className="mr-1 inline h-3.5 w-3.5"/>Copy</Button>
+                  <Button disabled={!gamecast.enabled} onClick={facebookGameCast}>Facebook</Button>
+                  <Button disabled={!gamecast.enabled} onClick={()=>window.open(`/gamecast/${gamecast.token}`,"_blank","noopener,noreferrer")}><ExternalLink className="mr-1 inline h-3.5 w-3.5"/>Preview</Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {live && canManage ? (
+          <div className="fixed inset-x-0 bottom-0 z-[70] border-t border-cyan-300/15 bg-[#030914]/95 px-2.5 pb-[calc(.55rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl sm:hidden">
+            <div className="mx-auto grid max-w-lg grid-cols-4 gap-1.5">
+              <button type="button" onClick={()=>run(()=>undoSoftballPlay(game.id),"Last play undone.")} className="min-h-12 rounded-xl border border-white/10 text-[9px] font-black"><Undo2 className="mx-auto mb-0.5 h-4 w-4"/>Undo</button>
+              <button type="button" onClick={()=>openSubstitution()} className="min-h-12 rounded-xl border border-violet-300/20 bg-violet-300/[.05] text-[9px] font-black text-violet-100"><UserRound className="mx-auto mb-0.5 h-4 w-4"/>Sub</button>
+              <button type="button" onClick={()=>setGamecastOpen(true)} className="min-h-12 rounded-xl border border-emerald-300/20 bg-emerald-300/[.05] text-[9px] font-black text-emerald-100"><Radio className="mx-auto mb-0.5 h-4 w-4"/>GameCast</button>
+              <button type="button" onClick={facebookGameCast} disabled={!gamecast?.enabled} className="min-h-12 rounded-xl bg-cyan-300 text-[9px] font-black text-slate-950 disabled:opacity-40"><Share2 className="mx-auto mb-0.5 h-4 w-4"/>Facebook</button>
+            </div>
+          </div>
         ) : null}
 
         {substituteOpen ? (
@@ -1241,7 +1325,17 @@ export default function SoftballGameDayAdvanced() {
             </div>
           </div>
         ) : null}
-        {final ? <section className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[.04] p-4 text-center"><Trophy className="mx-auto h-6 w-6 text-emerald-300"/><div className="mt-1 text-lg font-black">{game.team_name} {game.runs_for}–{game.runs_against} {game.opponent_name}</div><Button className="mt-3" onClick={()=>navigate(`/connect/groups/${groupId}/sports`)}>Back to team</Button></section> : null}
+        {final ? <section className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[.04] p-4 text-center">
+          <Trophy className="mx-auto h-6 w-6 text-emerald-300"/>
+          <div className="mt-1 text-lg font-black">{game.team_name} {game.runs_for}–{game.runs_against} {game.opponent_name}</div>
+          <div className="mt-1 text-[10px] text-slate-400">Managers can reopen this game, correct the book, change the final score, or delete the book without deleting the scheduled game.</div>
+          {canManage?<div className="mt-3 grid grid-cols-2 gap-2">
+            <Button onClick={reopenGame}><Edit3 className="mr-1 inline h-3.5 w-3.5"/>Reopen game</Button>
+            <Button onClick={()=>setGamecastOpen(true)}><Radio className="mr-1 inline h-3.5 w-3.5"/>GameCast</Button>
+            <Button danger className="col-span-2" onClick={deleteEntireBook}><Trash2 className="mr-1 inline h-3.5 w-3.5"/>Delete entire Game Book</Button>
+          </div>:null}
+          <Button className="mt-3 w-full" onClick={()=>navigate(`/connect/groups/${groupId}/sports`)}>Next game / Team dashboard</Button>
+        </section> : null}
       </main>
     </div>
   );
