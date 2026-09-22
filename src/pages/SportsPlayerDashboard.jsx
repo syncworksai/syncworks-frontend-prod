@@ -162,8 +162,8 @@ export default function SportsPlayerDashboard() {
 
   useEffect(() => {
     const requested = TEAM_TAB_ALIAS[searchParams.get("tab")];
-    if (requested && requested !== tab) setTab(requested);
-  }, [searchParams, tab]);
+    if (requested) setTab((current) => current === requested ? current : requested);
+  }, [searchParams]);
 
 
   async function respond(value) {
