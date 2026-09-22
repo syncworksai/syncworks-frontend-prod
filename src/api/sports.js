@@ -88,7 +88,7 @@ export async function getSportsGames(team) {
 }
 
 export async function getSportsGame(id) {
-  const { data } = await api.get(`/sports/games/${id}/`);
+  const { data } = await api.get(`/sports/games/${id}/`, { timeout: 45000 });
   return data;
 }
 
@@ -157,7 +157,7 @@ export async function reopenSportsGame(id) {
 }
 
 export async function getPlateAppearances(game) {
-  const { data } = await api.get("/sports/plate-appearances/", { params: { game } });
+  const { data } = await api.get("/sports/plate-appearances/", { params: { game }, timeout: 45000 });
   return list(data);
 }
 
@@ -167,7 +167,7 @@ export async function correctSoftballPlay(id, payload) {
 }
 
 export async function getGameCastSettings(gameId) {
-  const { data } = await api.get(`/sports/games/${gameId}/gamecast/`);
+  const { data } = await api.get(`/sports/games/${gameId}/gamecast/`, { timeout: 45000 });
   return data;
 }
 
