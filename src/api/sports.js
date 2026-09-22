@@ -146,6 +146,16 @@ export async function finishSportsGame(id, payload = {}) {
   return data;
 }
 
+export async function deleteSportsGameBook(id) {
+  const { data } = await api.post(`/sports/games/${id}/delete-book/`, {});
+  return data;
+}
+
+export async function reopenSportsGame(id, status = "SCHEDULED") {
+  const { data } = await api.post(`/sports/games/${id}/reopen/`, { status });
+  return data;
+}
+
 export async function getPlateAppearances(game) {
   const { data } = await api.get("/sports/plate-appearances/", { params: { game } });
   return list(data);
@@ -163,6 +173,11 @@ export async function getGameCastSettings(gameId) {
 
 export async function updateGameCastSettings(gameId, payload) {
   const { data } = await api.post(`/sports/advanced/games/${gameId}/gamecast/`, payload);
+  return data;
+}
+
+export async function getGameCastPreview(token) {
+  const { data } = await api.get(`/sports/gamecast/${token}/preview/`);
   return data;
 }
 
