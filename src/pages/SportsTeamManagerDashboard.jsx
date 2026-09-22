@@ -1011,8 +1011,8 @@ export default function SportsTeamManagerDashboard() {
     setStatForm({ player: "", scope: "LEAGUE", games: "", pa: "", ab: "", hits: "", doubles: "", triples: "", home_runs: "", walks: "", sac_flies: "", rbi: "", runs: "", note: "" });
   }
 
-  if (loading) return <div className="min-h-screen bg-[#02060c] text-white"><ModeBar title="Team" subtitle="SyncWorks Social" /><div className="grid min-h-[65vh] place-items-center"><Loader2 className="h-8 w-8 animate-spin text-cyan-300" /></div></div>;
-  if (!group || !team) return <div className="min-h-screen bg-[#02060c] p-4 text-white"><ModeBar title="Team" subtitle="SyncWorks Social" /><Card title="Team workspace unavailable" body="Open this from an enabled Team group in SyncWorks Social."><Btn onClick={() => navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4" />Social</Btn></Card></div>;
+  if (loading) return <div className="min-h-screen bg-[#02060c] text-white"><ModeBar sportsCompact title="Team" subtitle="SyncWorks Social" /><div className="grid min-h-[65vh] place-items-center"><Loader2 className="h-8 w-8 animate-spin text-cyan-300" /></div></div>;
+  if (!group || !team) return <div className="min-h-screen bg-[#02060c] p-4 text-white"><ModeBar sportsCompact title="Team" subtitle="SyncWorks Social" /><Card title="Team workspace unavailable" body="Open this from an enabled Team group in SyncWorks Social."><Btn onClick={() => navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4" />Social</Btn></Card></div>;
 
   const record = dashboard?.record || {};
   const ownDue = visibleAssignments.filter((row) => ["DUE", "PARTIAL"].includes(row.status)).reduce((sum, row) => sum + Math.max(0, num(row.amount_cents) - num(row.amount_paid_cents)), 0);
@@ -1022,7 +1022,7 @@ export default function SportsTeamManagerDashboard() {
 
   return (
     <div className="min-h-screen bg-[#02060c] pb-24 text-slate-100">
-      <ModeBar title={group.name} subtitle="Team • SyncWorks Social" />
+      <ModeBar sportsCompact title={group.name} subtitle="Team • SyncWorks Social" />
       <main className="mx-auto max-w-7xl space-y-3 px-3 py-3 sm:px-5">
         <div className="flex items-center justify-between gap-2">
           <Btn onClick={() => navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4" />Social</Btn>
