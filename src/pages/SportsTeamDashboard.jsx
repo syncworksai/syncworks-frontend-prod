@@ -7,7 +7,7 @@ import { getMemberships } from "../api/social";
 import SportsPlayerDashboard from "./SportsPlayerDashboard";
 import SportsTeamManagerDashboard from "./SportsTeamManagerDashboard";
 
-const MANAGEMENT_ROLES = new Set(["OWNER", "DIRECTOR", "MANAGER"]);
+const MANAGEMENT_ROLES = new Set(["OWNER", "DIRECTOR", "MANAGER", "SCOREKEEPER"]);
 
 export default function SportsTeamDashboard() {
   const { groupId } = useParams();
