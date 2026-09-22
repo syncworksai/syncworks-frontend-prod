@@ -232,7 +232,7 @@ export default function SportsPlayerDashboard() {
       {error ? <div className="rounded-xl border border-rose-300/20 bg-rose-300/10 p-2.5 text-[10px] text-rose-100">{error}</div> : null}
       {notice ? <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-2.5 text-[10px] text-emerald-100">{notice}</div> : null}
 
-      <section className="relative overflow-hidden rounded-[1.8rem] border border-cyan-300/20 bg-[radial-gradient(circle_at_84%_0%,rgba(34,211,238,.19),transparent_31%),radial-gradient(circle_at_0%_100%,rgba(139,92,246,.17),transparent_35%),linear-gradient(145deg,#07111f,#081321_60%,#0d1020)] p-4">
+      <section className="relative overflow-hidden rounded-[1.8rem] border border-cyan-300/20 bg-[radial-gradient(circle_at_84%_0%,rgba(34,211,238,.19),transparent_31%),radial-gradient(circle_at_0%_100%,rgba(139,92,246,.17),transparent_35%),linear-gradient(145deg,#07111f,#081321_60%,#0d1020)] p-4" style={badgeCard?.achieved_count ? { borderColor: badgeCard.card_border, boxShadow: `0 0 18px ${badgeCard.card_border}38` } : {}}>
         <div className="absolute -right-8 top-5 text-[7rem] font-black leading-none text-white/[.025]">#{player.jersey_number || "—"}</div>
         <div className="relative flex items-start gap-3">
           <button type="button" onClick={()=>setProfileOpen(true)} className="relative shrink-0"><SportsPlayerPhoto player={player} profile={profile} size="lg"/><span className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full border border-cyan-200/30 bg-cyan-300 text-slate-950"><Camera className="h-3.5 w-3.5"/></span></button>
@@ -245,6 +245,7 @@ export default function SportsPlayerDashboard() {
           </div>
         </div>
         <div className="relative mt-4 grid grid-cols-4 gap-1.5"><Metric label="AVG" value={pct(stats.avg)}/><Metric label="HR" value={num(stats.hr)} tone="violet"/><Metric label="RBI" value={num(stats.rbi)} tone="green"/><Metric label="OPS" value={pct(stats.ops)} tone="amber"/></div>
+        <button type="button" onClick={()=>setTab("My Player")} className="relative mt-3 flex min-h-11 w-full items-center justify-between rounded-xl border border-amber-300/25 bg-amber-300/[.07] px-3 text-left text-xs font-bold text-amber-100"><span>View my collectible player card</span><span>{badgeCard?.achieved_count || 0}/4 badges earned →</span></button>
       </section>
 
       <div className="flex gap-1.5 overflow-x-auto pb-1">{TABS.map((name)=><button key={name} type="button" onClick={()=>setTab(name)} className={cx("min-h-9 shrink-0 rounded-full px-3 text-[9px] font-black",tab===name?"bg-white text-slate-950":"border border-white/10 text-slate-400")}>{name}{name==="Dues"&&dueCount?<span className="ml-1 rounded-full bg-rose-500 px-1.5 py-0.5 text-[7px] text-white">{dueCount}</span>:null}</button>)}</div>
@@ -267,22 +268,16 @@ export default function SportsPlayerDashboard() {
 
       {tab==="My Player" ? <div className="space-y-3">
         <div className="grid gap-3 lg:grid-cols-[.85fr_1.15fr]">
-          <Card title="Player card" body="Your linked SyncWorks sports identity." action={<Edit3 className="h-4 w-4 text-cyan-300"/>}><div className="flex items-center gap-3"><SportsPlayerPhoto player={player} profile={profile} size="lg"/><div className="min-w-0"><div className="truncate text-xl font-black text-white">{player.display_name}</div><div className="mt-1 text-xs text-slate-400">#{player.jersey_number||"—"} · {player.primary_position||"Position TBD"}</div><div className="mt-1 text-[9px] text-slate-500">Bats {player.bats||"—"} · Throws {player.throws||"—"}</div></div></div><Btn primary className="mt-4 w-full" onClick={()=>setProfileOpen(true)}><Edit3 className="mr-1 inline h-4 w-4"/>Edit my profile</Btn></Card>
+          <div className="space-y-3">
+            <PlayerCollectibleCard player={player} profile={profile} progress={badgeCard} teamName={team.group_name} onEdit={()=>setProfileOpen(true)} />
+            <Btn primary className="w-full" onClick={()=>setProfileOpen(true)}><Edit3 className="mr-1 inline h-4 w-4" />Customize my card</Btn>
+          </div>
           <Card title="Stat profile" body="League, tournament and combined totals."><div className="space-y-3"><div><div className="mb-1 text-[8px] font-black uppercase tracking-[.13em] text-cyan-300">All games</div><RateLine row={stats}/></div><div><div className="mb-1 text-[8px] font-black uppercase tracking-[.13em] text-emerald-300">League</div><RateLine row={leagueStats}/></div><div><div className="mb-1 text-[8px] font-black uppercase tracking-[.13em] text-violet-300">Tournament</div><RateLine row={tournamentStats}/></div></div></Card>
         </div>
-        <Card title="Back of the card" body="Year, season and competition splits from official Game Book data plus approved historical entries.">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[680px] text-center text-[9px]">
-              <thead className="text-slate-500"><tr><th className="p-1 text-left">YEAR / SEASON</th><th>TYPE</th><th>G</th><th>AB</th><th>H</th><th>AVG</th><th>OBP</th><th>SLG</th><th>OPS</th><th>HR</th><th>RBI</th><th>R</th></tr></thead>
-              <tbody>{(playerCard?.seasons||[]).map((row,index)=><tr key={String(row.year||"hist")+"-"+row.season+"-"+row.scope+"-"+index} className="border-t border-white/10"><td className="p-2 text-left font-black text-white">{row.year ? row.year+" · " : ""}{row.season}</td><td className="text-slate-400">{row.scope}</td><td>{num(row.g)}</td><td>{num(row.ab)}</td><td>{num(row.h)}</td><td>{pct(row.avg)}</td><td>{pct(row.obp)}</td><td>{pct(row.slg)}</td><td className="font-black text-cyan-200">{pct(row.ops)}</td><td>{num(row.hr)}</td><td>{num(row.rbi)}</td><td>{num(row.runs)}</td></tr>)}</tbody>
-            </table>
-          </div>
-          {!(playerCard?.seasons||[]).length?<div className="rounded-xl border border-dashed border-white/10 p-4 text-center text-xs text-slate-500">Season history will build as games are scored or historical stats are entered.</div>:null}
-          <div className="mt-3 grid grid-cols-5 gap-1.5">
-            {(playerCard?.tendencies?.spray_field||[]).map((row)=><div key={row.zone} className="rounded-xl border border-emerald-300/10 bg-emerald-300/[.035] p-2 text-center"><div className="text-[7px] font-black text-emerald-200">{row.zone.replace("_"," ")}</div><div className="mt-1 text-lg font-black text-white">{Math.round(num(row.pct)*100)}%</div></div>)}
-          </div>
-          <div className="mt-1 text-[8px] text-slate-600">Spray percentages use only at-bats where a spray location was recorded.</div>
-        </Card>
+        <PlayerStatSplits progress={badgeCard} />
+        {(playerCard?.tendencies?.spray_field||[]).length ? <Card title="Hitting spray map" body="Based only on at-bats with a logged spray location.">
+          <div className="grid grid-cols-5 gap-1.5">{(playerCard.tendencies.spray_field||[]).map((row)=><div key={row.zone} className="rounded-xl border border-emerald-300/10 bg-emerald-300/[.035] p-2 text-center"><div className="text-[7px] font-black text-emerald-200">{row.zone.replace("_"," ")}</div><div className="mt-1 text-lg font-black text-white">{Math.round(num(row.pct)*100)}%</div></div>)}</div>
+        </Card> : null}
       </div> : null}
 
       {tab==="Team" ? <div className="space-y-3"><Card title="Team statistics" body="Current team leaderboard."><div className="overflow-x-auto"><table className="w-full min-w-[650px] text-center text-[9px]"><thead className="text-slate-500"><tr><th className="p-1 text-left">PLAYER</th><th>G</th><th>AVG</th><th>OBP</th><th>SLG</th><th>OPS</th><th>H</th><th>HR</th><th>RBI</th></tr></thead><tbody>{[...teamRows].sort((a,b)=>num(b.ops)-num(a.ops)).map((row,index)=><tr key={row.player?.id} className={cx("border-t border-white/10",Number(row.player?.id)===Number(player.id)&&"bg-cyan-300/[.04]")}><td className="p-2 text-left"><span className="mr-2 text-slate-600">{index+1}</span><b className="text-white">#{row.player?.jersey_number||"—"} {row.player?.display_name}</b></td><td>{num(row.g)}</td><td>{pct(row.avg)}</td><td>{pct(row.obp)}</td><td>{pct(row.slg)}</td><td className="font-black text-cyan-200">{pct(row.ops)}</td><td>{num(row.h)}</td><td>{num(row.hr)}</td><td>{num(row.rbi)}</td></tr>)}</tbody></table></div></Card>{nextGame?.lineup_spots?.length?<Card title="Next lineup" body="Published lineup for the next game."><div className="grid gap-1.5 sm:grid-cols-2">{nextGame.lineup_spots.map((spot)=><div key={spot.id} className={cx("grid grid-cols-[2rem_1fr_auto] items-center gap-2 rounded-xl border p-2",Number(spot.player)===Number(player.id)?"border-cyan-300/30 bg-cyan-300/[.07]":"border-white/10 bg-white/[.02]")}><div className="text-center text-base font-black text-cyan-200">{spot.batting_order}</div><div className="truncate text-[10px] font-black text-white">{spot.player_detail?.display_name}</div><div className="rounded-lg bg-black/20 px-2 py-1 text-[8px] font-black text-slate-300">{spot.defensive_position||"EH"}</div></div>)}</div></Card>:null}</div> : null}
