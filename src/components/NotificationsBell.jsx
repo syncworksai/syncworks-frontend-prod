@@ -65,7 +65,7 @@ function Toggle({ label, detail, checked, onChange, disabled = false }) {
   );
 }
 
-export default function NotificationsBell() {
+export default function NotificationsBell({ inline = false }) {
   const nav = useNavigate();
   const buttonRef = useRef(null);
   const panelRef = useRef(null);
@@ -197,12 +197,14 @@ export default function NotificationsBell() {
   const proactive = settings?.proactive || {};
   const push = settings?.push || {};
 
-  const bellButton = createPortal(
+  const bellElement = (
     <button
       ref={buttonRef}
       type="button"
       onClick={() => setOpen((value) => !value)}
-      className="fixed right-[7.75rem] top-3 z-[70] flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-500/25 bg-slate-950/90 text-slate-200 shadow-[0_0_24px_rgba(34,211,238,.12)] backdrop-blur transition hover:border-cyan-400/40 hover:bg-cyan-500/10 hover:text-cyan-100 xl:right-[calc((100vw-80rem)/2+7.75rem)]"
+      className={inline
+        ? "relative z-[70] flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-cyan-500/25 bg-slate-950/90 text-slate-200 shadow-[0_0_24px_rgba(34,211,238,.12)] transition hover:border-cyan-400/40 hover:bg-cyan-500/10"
+        : "fixed right-[7.75rem] top-3 z-[70] flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-500/25 bg-slate-950/90 text-slate-200 shadow-[0_0_24px_rgba(34,211,238,.12)] backdrop-blur transition hover:border-cyan-400/40 hover:bg-cyan-500/10 hover:text-cyan-100 xl:right-[calc((100vw-80rem)/2+7.75rem)]"}
       title="Notifications"
       aria-label={visibleUnread ? `${visibleUnread} unread notifications` : "Notifications"}
     >
@@ -212,9 +214,9 @@ export default function NotificationsBell() {
           {visibleUnread > 99 ? "99+" : visibleUnread}
         </span>
       ) : null}
-    </button>,
-    document.body
+    </button>
   );
+  const bellButton = inline ? bellElement : createPortal(bellElement, document.body);
 
   const panel = open ? createPortal(
     <section
