@@ -83,6 +83,16 @@ export async function updateSportsPlayer(id, payload) {
   return data;
 }
 
+export async function mergeSportsPlayer(sourceId, target_player) {
+  const { data } = await api.post(`/sports/players/${sourceId}/merge/`, { target_player });
+  return data;
+}
+
+export async function deleteEmptySportsPlayer(id) {
+  const { data } = await api.post(`/sports/players/${id}/delete-empty/`);
+  return data;
+}
+
 export async function removeSportsPlayer(id) {
   await api.delete(`/sports/players/${id}/`);
 }
