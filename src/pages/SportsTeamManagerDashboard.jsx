@@ -56,6 +56,9 @@ import {
   getTeamPaymentSettings,
   inviteSportsPlayer,
   joinMySportsTeamRoster,
+  linkSportsPlayerMember,
+  mergeSportsPlayer,
+  deleteEmptySportsPlayer,
   remindSportsPlayer,
   remindTeamDues,
   removeSportsPlayer,
@@ -217,6 +220,9 @@ export default function SportsTeamManagerDashboard() {
   const [shareStatus, setShareStatus] = useState("");
   const [playerInviteEmails, setPlayerInviteEmails] = useState({});
   const [playerInviteUrls, setPlayerInviteUrls] = useState({});
+  const [selectedMemberByPlayer, setSelectedMemberByPlayer] = useState({});
+  const [mergeSourcePlayer, setMergeSourcePlayer] = useState(null);
+  const [mergeTargetId, setMergeTargetId] = useState("");
 
   const [playerDrawer, setPlayerDrawer] = useState(null);
   const [playerEdit, setPlayerEdit] = useState(null);
@@ -743,6 +749,46 @@ export default function SportsTeamManagerDashboard() {
       if (photoFile) form.append("profile_photo", photoFile);
       if (profile) await updatePlayerProfile(profile.id, form); else await createPlayerProfile(form);
     }, "Player updated.", { closePlayer: true });
+  }
+
+  async function linkSelectedMember(player) {
+    const userIdToLink = Number(selectedMemberByPlayer[player.id]);
+    const member = socialRoster.find((row)=>Number(row.user)===userIdToLink);
+    if (!member || !player || player.user) return;
+    if (players.some((row)=>row.id !== player.id && Number(row.user) === userIdToLink)) {
+      setError("That account already has a roster entry. Use Merge instead.");
+      return;
+    }
+    const savedEmail = String(profileFor(player)?.email || "").trim().toLowerCase();
+    const memberEmail = String(member.user_detail?.email || "").trim().toLowerCase();
+    if (savedEmail && memberEmail && savedEmail !== memberEmail &&
+      !window.confirm("This roster card has a different email than the selected member. Confirm that this is the correct player before linking.")) return;
+    await run(
+      ()=>linkSportsPlayerMember(player.id, userIdToLink),
+      `${player.display_name} is now linked to ${member.user_detail?.display_name || memberEmail || "this member"}.`
+    );
+    setSelectedMemberByPlayer((current)=>({...current,[player.id]:""}));
+  }
+
+  async function mergeDuplicatePlayer() {
+    if (!mergeSourcePlayer || !mergeTargetId || busy) return;
+    const target = players.find((row)=>Number(row.id)===Number(mergeTargetId));
+    if (!target) return;
+    if (!window.confirm(`Merge ${mergeSourcePlayer.display_name} into ${target.display_name}? Stats and payment records will move to the surviving player. The original card is archived for historical reference.`)) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const data = await mergeSportsPlayer(mergeSourcePlayer.id, target.id);
+      setMergeSourcePlayer(null); setMergeTargetId("");
+      setNotice(`Merged into ${target.display_name}. ${data.plate_appearances_moved || 0} game plays and ${data.stat_entries_moved || 0} historical stat entries preserved.`);
+      await refresh({quiet:true});
+    } catch(err) {setError(errorText(err));}
+    finally {setBusy(false);}
+  }
+
+  async function deleteEmptyPlayer() {
+    if (!playerDrawer || busy) return;
+    if (!window.confirm(`Permanently delete ${playerDrawer.display_name}? Only an empty card with no game, stats or payment history can be deleted. Use Archive or Merge for players with history.`)) return;
+    await run(()=>deleteEmptySportsPlayer(playerDrawer.id), "Empty roster entry deleted.", {closePlayer:true});
   }
 
   async function archivePlayer() {
