@@ -8,10 +8,12 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import ModeBar from "../components/ModeBar";
 import TeamChatPanel from "../components/sports/TeamChatPanel";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
+import PlayerCollectibleCard, { SportsPlayerPhoto } from "../components/sports/PlayerCollectibleCard";
+import PlayerStatSplits from "../components/sports/PlayerStatSplits";
 import { useAuth } from "../auth/AuthContext";
 import { createEventResponse, updateEventResponse } from "../api/social";
 import {
-  createPlayerProfile, getPlayerCard, getPlayerCenter, getSportsTeams,
+  createPlayerProfile, getPlayerCard, getPlayerBadgeCard, getPlayerCenter, getSportsTeams,
   updatePlayerProfile, updateSportsPlayer,
 } from "../api/sports";
 
@@ -67,13 +69,6 @@ function Drawer({ title, onClose, children }) {
   </div>;
 }
 
-function PlayerPhoto({ player, profile, big = false }) {
-  const size = big ? "h-28 w-28 text-3xl" : "h-16 w-16 text-xl";
-  if (profile?.profile_photo_url) return <img src={profile.profile_photo_url} alt="" className={cx(size, "rounded-[1.4rem] border border-white/10 object-cover shadow-2xl")} />;
-  const initials = String(player?.display_name || "P").split(/\s+/).slice(0,2).map((p)=>p[0]).join("").toUpperCase();
-  return <div className={cx(size, "grid place-items-center rounded-[1.4rem] border border-cyan-300/20 bg-gradient-to-br from-cyan-300/20 to-violet-300/10 font-black text-cyan-100 shadow-2xl")}>{initials || "P"}</div>;
-}
-
 function RateLine({ row }) {
   return <div className="grid grid-cols-4 gap-1.5">
     <Metric label="AVG" value={pct(row?.avg)} />
@@ -92,6 +87,7 @@ export default function SportsPlayerDashboard() {
   const [team, setTeam] = useState(null);
   const [center, setCenter] = useState(null);
   const [playerCard, setPlayerCard] = useState(null);
+  const [badgeCard, setBadgeCard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -102,6 +98,7 @@ export default function SportsPlayerDashboard() {
   const [form, setForm] = useState({
     display_name:"", primary_position:"", bats:"", throws:"",
     email:"", phone:"", emergency_contact_name:"", emergency_contact_phone:"",
+    card_style:"CLASSIC", card_nickname:"", card_photo_position:50,
   });
 
   const player = center?.player;
@@ -135,9 +132,12 @@ export default function SportsPlayerDashboard() {
       const data = await getPlayerCenter(found.id);
       setCenter(data);
       if (data.player?.id) {
-        try { setPlayerCard(await getPlayerCard(data.player.id)); } catch { setPlayerCard(null); }
+        const [oldCard, newCard] = await Promise.allSettled([getPlayerCard(data.player.id), getPlayerBadgeCard(data.player.id)]);
+        setPlayerCard(oldCard.status === "fulfilled" ? oldCard.value : null);
+        setBadgeCard(newCard.status === "fulfilled" ? newCard.value : null);
       } else {
         setPlayerCard(null);
+        setBadgeCard(null);
       }
       const p = data.player || {};
       const pr = data.profile || {};
@@ -150,6 +150,9 @@ export default function SportsPlayerDashboard() {
         phone:pr.phone || "",
         emergency_contact_name:pr.emergency_contact_name || "",
         emergency_contact_phone:pr.emergency_contact_phone || "",
+        card_style:pr.card_style || "CLASSIC",
+        card_nickname:pr.card_nickname || "",
+        card_photo_position:pr.card_photo_position ?? 50,
       });
     } catch (e) {
       setError(errText(e));
@@ -193,6 +196,9 @@ export default function SportsPlayerDashboard() {
       data.append("phone", form.phone || "");
       data.append("emergency_contact_name", form.emergency_contact_name || "");
       data.append("emergency_contact_phone", form.emergency_contact_phone || "");
+      data.append("card_style", form.card_style || "CLASSIC");
+      data.append("card_nickname", form.card_nickname || "");
+      data.append("card_photo_position", String(form.card_photo_position ?? 50));
       if (photoFile) data.append("profile_photo", photoFile);
       if (profile?.id) await updatePlayerProfile(profile.id, data);
       else await createPlayerProfile(data);
@@ -229,7 +235,7 @@ export default function SportsPlayerDashboard() {
       <section className="relative overflow-hidden rounded-[1.8rem] border border-cyan-300/20 bg-[radial-gradient(circle_at_84%_0%,rgba(34,211,238,.19),transparent_31%),radial-gradient(circle_at_0%_100%,rgba(139,92,246,.17),transparent_35%),linear-gradient(145deg,#07111f,#081321_60%,#0d1020)] p-4">
         <div className="absolute -right-8 top-5 text-[7rem] font-black leading-none text-white/[.025]">#{player.jersey_number || "—"}</div>
         <div className="relative flex items-start gap-3">
-          <button type="button" onClick={()=>setProfileOpen(true)} className="relative shrink-0"><PlayerPhoto player={player} profile={profile} big/><span className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full border border-cyan-200/30 bg-cyan-300 text-slate-950"><Camera className="h-3.5 w-3.5"/></span></button>
+          <button type="button" onClick={()=>setProfileOpen(true)} className="relative shrink-0"><SportsPlayerPhoto player={player} profile={profile} size="lg"/><span className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full border border-cyan-200/30 bg-cyan-300 text-slate-950"><Camera className="h-3.5 w-3.5"/></span></button>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap gap-1.5"><span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-1 text-[8px] font-black uppercase text-cyan-100">{team.sport}</span><span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2 py-1 text-[8px] font-black uppercase text-emerald-100">SyncWorks linked</span></div>
             <h1 className="mt-2 truncate text-xl font-black text-white">{player.display_name}</h1>
@@ -261,7 +267,7 @@ export default function SportsPlayerDashboard() {
 
       {tab==="My Player" ? <div className="space-y-3">
         <div className="grid gap-3 lg:grid-cols-[.85fr_1.15fr]">
-          <Card title="Player card" body="Your linked SyncWorks sports identity." action={<Edit3 className="h-4 w-4 text-cyan-300"/>}><div className="flex items-center gap-3"><PlayerPhoto player={player} profile={profile} big/><div className="min-w-0"><div className="truncate text-xl font-black text-white">{player.display_name}</div><div className="mt-1 text-xs text-slate-400">#{player.jersey_number||"—"} · {player.primary_position||"Position TBD"}</div><div className="mt-1 text-[9px] text-slate-500">Bats {player.bats||"—"} · Throws {player.throws||"—"}</div></div></div><Btn primary className="mt-4 w-full" onClick={()=>setProfileOpen(true)}><Edit3 className="mr-1 inline h-4 w-4"/>Edit my profile</Btn></Card>
+          <Card title="Player card" body="Your linked SyncWorks sports identity." action={<Edit3 className="h-4 w-4 text-cyan-300"/>}><div className="flex items-center gap-3"><SportsPlayerPhoto player={player} profile={profile} size="lg"/><div className="min-w-0"><div className="truncate text-xl font-black text-white">{player.display_name}</div><div className="mt-1 text-xs text-slate-400">#{player.jersey_number||"—"} · {player.primary_position||"Position TBD"}</div><div className="mt-1 text-[9px] text-slate-500">Bats {player.bats||"—"} · Throws {player.throws||"—"}</div></div></div><Btn primary className="mt-4 w-full" onClick={()=>setProfileOpen(true)}><Edit3 className="mr-1 inline h-4 w-4"/>Edit my profile</Btn></Card>
           <Card title="Stat profile" body="League, tournament and combined totals."><div className="space-y-3"><div><div className="mb-1 text-[8px] font-black uppercase tracking-[.13em] text-cyan-300">All games</div><RateLine row={stats}/></div><div><div className="mb-1 text-[8px] font-black uppercase tracking-[.13em] text-emerald-300">League</div><RateLine row={leagueStats}/></div><div><div className="mb-1 text-[8px] font-black uppercase tracking-[.13em] text-violet-300">Tournament</div><RateLine row={tournamentStats}/></div></div></Card>
         </div>
         <Card title="Back of the card" body="Year, season and competition splits from official Game Book data plus approved historical entries.">
@@ -293,7 +299,7 @@ export default function SportsPlayerDashboard() {
     />
 
     {profileOpen ? <Drawer title="Edit my player profile" onClose={()=>{setProfileOpen(false);setPhotoFile(null);}}><div className="space-y-3">
-      <div className="flex items-center gap-3"><PlayerPhoto player={player} profile={profile}/><label className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 text-xs font-black text-slate-300"><Camera className="h-4 w-4"/>{photoFile?photoFile.name:"Choose profile photo"}<input type="file" accept="image/*" className="hidden" onChange={(e)=>setPhotoFile(e.target.files?.[0]||null)}/></label></div>
+      <div className="flex items-center gap-3"><SportsPlayerPhoto player={player} profile={profile}/><label className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 text-xs font-black text-slate-300"><Camera className="h-4 w-4"/>{photoFile?photoFile.name:"Choose profile photo"}<input type="file" accept="image/*" className="hidden" onChange={(e)=>setPhotoFile(e.target.files?.[0]||null)}/></label></div>
       <div className="grid grid-cols-2 gap-2">
         {[["Name","display_name"],["Primary position","primary_position"],["Contact email","email"],["Phone","phone"],["Emergency contact","emergency_contact_name"],["Emergency phone","emergency_contact_phone"]].map(([label,key])=><label key={key} className={cx("block",key==="display_name"&&"col-span-2")}><span className="mb-1 block text-[8px] font-black uppercase text-slate-500">{label}</span><input value={form[key]} onChange={(e)=>setForm({...form,[key]:e.target.value})} className="h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] text-white sm:text-xs"/></label>)}
         <label className="block"><span className="mb-1 block text-[8px] font-black uppercase text-slate-500">Bats</span><select value={form.bats} onChange={(e)=>setForm({...form,bats:e.target.value})} className="h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs text-white"><option value="">—</option><option value="R">Right</option><option value="L">Left</option><option value="S">Switch</option></select></label>
