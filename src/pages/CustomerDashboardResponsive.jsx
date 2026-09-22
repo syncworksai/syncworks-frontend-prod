@@ -6,6 +6,7 @@ import { getIdentityProfile } from "../api/identity";
 import { useAuth } from "../auth/AuthContext";
 import CustomerDashboard from "./CustomerDashboard.jsx";
 import CustomerMobileHome from "../components/customer/CustomerMobileHome";
+import CalendarDailySnapshot from "../components/calendar/CalendarDailySnapshot";
 import SyncAssistantStickyDock from "../components/sync/SyncAssistantStickyDock";
 
 const DAY_TRADING_EMAIL = "jacoblord7@outlook.com";
