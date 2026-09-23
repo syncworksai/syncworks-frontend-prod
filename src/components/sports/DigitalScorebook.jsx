@@ -134,7 +134,7 @@ export default function DigitalScorebook({
                     {canScore ? <Edit3 className="mt-1 h-3 w-3 text-slate-500"/> : null}
                   </button>)}
                   {!cell.length ? <div className="grid h-16 place-items-center rounded-lg border border-dashed border-white/10 text-[8px] font-bold text-slate-700">NOT ENTERED</div> : null}
-                  {canScore ? <button type="button" onClick={() => firstReviewed ? onAddPlay?.({player: n(spot.player), inning, source_photo: firstReviewed.id}) : onUploadSource?.()}
+                  {canScore ? <button type="button" onClick={() => firstReviewed ? onAddPlay?.({player: n(spot.player), inning, source_photo: firstReviewed.id, source_cell_key: `${spot.player}:${inning}:${cell.length}`}) : onUploadSource?.()}
                     className="min-h-9 rounded-lg border border-white/10 bg-white/[.02] px-1 text-[9px] font-black text-cyan-200">
                     <Plus className="mr-0.5 inline h-3 w-3" />{firstReviewed ? "Add play" : "Source first"}</button> : null}
                 </div>
