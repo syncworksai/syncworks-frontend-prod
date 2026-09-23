@@ -10,17 +10,18 @@ import TeamChatPanel from "../components/sports/TeamChatPanel";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import PlayerCollectibleCard, { SportsPlayerPhoto } from "../components/sports/PlayerCollectibleCard";
 import PlayerStatSplits from "../components/sports/PlayerStatSplits";
-import WeeklyAvailabilityCard from "../components/sports/WeeklyAvailabilityCard";
+import WeeklyAvailabilityCard, { weekStartForGame } from "../components/sports/WeeklyAvailabilityCard";
+import InteractiveStatsBoard from "../components/sports/InteractiveStatsBoard";
 import PlayerBookAuditCard from "../components/sports/PlayerBookAuditCard";
 import { useAuth } from "../auth/AuthContext";
 import { createEventResponse, updateEventResponse } from "../api/social";
 import {
-  createPlayerProfile, getPlayerCard, getPlayerBadgeCard, getPlayerBookAudit, getPlayerCenter, getSportsTeams, joinMySportsTeamRoster,
+  createPlayerProfile, getPlayerCard, getPlayerBadgeCard, getPlayerBookAudit, getPlayerCenter, getScopedTeamStats, getSportsTeams, joinMySportsTeamRoster,
   updatePlayerProfile, updateSportsPlayer,
 } from "../api/sports";
 
-const TABS = ["Home", "My Player", "Team", "League", "Dues"];
-const TEAM_TAB_ALIAS = { Schedule: "Home", Stats: "My Player", Roster: "Team" };
+const TABS = ["Home", "My Player", "Team", "Stats", "League", "Dues"];
+const TEAM_TAB_ALIAS = { Schedule: "Home", Roster: "Team" };
 const cx = (...v) => v.filter(Boolean).join(" ");
 const num = (v) => Number(v || 0);
 const money = (v) => (num(v) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -91,6 +92,8 @@ export default function SportsPlayerDashboard() {
   const [playerCard, setPlayerCard] = useState(null);
   const [badgeCard, setBadgeCard] = useState(null);
   const [bookAudit, setBookAudit] = useState(null);
+  const [statsScope, setStatsScope] = useState("ALL");
+  const [teamScopedRows, setTeamScopedRows] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [joiningRoster, setJoiningRoster] = useState(false);
@@ -170,6 +173,13 @@ export default function SportsPlayerDashboard() {
   }
 
   useEffect(() => { refresh(); }, [groupId]);
+
+  useEffect(() => {
+    if (!team?.id || (tab !== "Stats" && tab !== "Team")) return;
+    let current = true;
+    getScopedTeamStats(team.id, statsScope).then(data=>{if(current)setTeamScopedRows(Array.isArray(data?.rows)?data.rows:[]);}).catch(()=>{if(current)setTeamScopedRows(null);});
+    return ()=>{current=false};
+  }, [team?.id, statsScope, tab]);
 
   useEffect(() => {
     const requested = TEAM_TAB_ALIAS[searchParams.get("tab")];
@@ -295,13 +305,22 @@ export default function SportsPlayerDashboard() {
 
       <div className="flex gap-1.5 overflow-x-auto pb-1">{TABS.map((name)=><button key={name} type="button" onClick={()=>setTab(name)} className={cx("min-h-9 shrink-0 rounded-full px-3 text-[9px] font-black",tab===name?"bg-white text-slate-950":"border border-white/10 text-slate-400")}>{name}{name==="Dues"&&dueCount?<span className="ml-1 rounded-full bg-rose-500 px-1.5 py-0.5 text-[7px] text-white">{dueCount}</span>:null}</button>)}</div>
 
-      {tab==="Home" ? <div className="space-y-3"><WeeklyAvailabilityCard teamId={team.id} initialWeekStart={center?.weekly_availability?.week_start || ""} /><div className="grid gap-3 lg:grid-cols-[1.15fr_.85fr]">
+      {tab==="Home" ? <div className="space-y-3"><WeeklyAvailabilityCard teamId={team.id} initialWeekStart={nextGame?weekStartForGame(nextGame):center?.weekly_availability?.week_start || ""} title="Next game day · all games" onGameOpen={(game)=>navigate(`/connect/groups/${groupId}/sports/games/${game.id}`)} /><div className="grid gap-3 lg:grid-cols-[1.15fr_.85fr]">
         <div className="space-y-3">
           <Card title={nextGame?"Next game":"Schedule"} body={nextGame?"Everything you need before first pitch.":"No upcoming game has been published yet."} action={<CalendarDays className="h-4 w-4 text-emerald-300"/>}>
             {nextGame ? <div className="space-y-3">
               <div className="grid grid-cols-[1fr_auto] gap-3"><div><div className="text-[8px] font-black uppercase tracking-[.14em] text-emerald-300">{nextGame.status==="LIVE"?"LIVE NOW":new Date(nextGame.start_at).toLocaleDateString([], {weekday:"short",month:"short",day:"numeric"})}</div><div className="mt-1 text-xl font-black text-white">vs {nextGame.opponent_name}</div><div className="mt-1 text-[10px] text-slate-400">{new Date(nextGame.start_at).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})} · {nextGame.venue_name || "Field TBD"}</div><div className="mt-1 text-[9px] text-slate-500">{[nextGame.address_line1,nextGame.city,nextGame.state].filter(Boolean).join(", ")}</div></div>{lineupSpot?<div className="rounded-xl border border-violet-300/15 bg-violet-300/[.05] p-2 text-center"><div className="text-[7px] font-black uppercase text-violet-300">Lineup</div><div className="mt-1 text-lg font-black text-white">#{lineupSpot.batting_order}</div><div className="text-[8px] text-slate-500">{lineupSpot.defensive_position || "EH"}</div></div>:null}</div>
               {(nextGame.social_event_detail?.flyer_image_url || nextGame.social_event_detail?.flyer_url) ? <img src={nextGame.social_event_detail?.flyer_image_url || nextGame.social_event_detail?.flyer_url} alt="Game flyer" className="max-h-64 w-full rounded-2xl border border-white/10 object-cover"/> : null}
-              <div className="rounded-xl border border-white/10 bg-black/15 p-2.5"><div className="text-[8px] font-black uppercase tracking-[.12em] text-slate-500">Are you in?</div><div className="mt-2 grid grid-cols-3 gap-1.5">{[["YES","IN"],["MAYBE","SUB"],["NO","OUT"]].map(([value,label])=><button key={value} type="button" disabled={busy} onClick={()=>respond(value)} className={cx("min-h-10 rounded-xl border text-[10px] font-black",response===value?(value==="YES"?"border-emerald-300/40 bg-emerald-300/20 text-emerald-100":value==="MAYBE"?"border-amber-300/40 bg-amber-300/20 text-amber-100":"border-rose-300/40 bg-rose-300/20 text-rose-100"):"border-white/10 text-slate-400")}>{response===value?<Check className="mr-1 inline h-3.5 w-3.5"/>:null}{label}</button>)}</div></div>
+              <div className="rounded-xl border border-cyan-300/15 bg-cyan-300/[.04] p-2.5">
+                <div className="text-[9px] font-black uppercase text-cyan-200">Game 1 lineup · {nextGame.home_away==="AWAY"?"Visitor":nextGame.home_away}</div>
+                {(nextGame.lineup_spots||[]).length ? <div className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2">
+                  {[...(nextGame.lineup_spots||[])].sort((a,b)=>num(a.batting_order)-num(b.batting_order)).map(spot=>
+                    <div key={spot.id} className={cx("flex items-center gap-2 rounded-lg border px-2 py-1.5 text-[9px]",Number(spot.player)===Number(player?.id)?"border-amber-300/30 bg-amber-300/10 text-amber-100":"border-white/10 text-slate-200")}>
+                      <b className="w-4 text-cyan-200">{spot.batting_order}</b><span className="min-w-0 flex-1 truncate">#{spot.player_detail?.jersey_number||"—"} {spot.player_detail?.display_name}</span><b>{spot.defensive_position||"EH"}</b>
+                    </div>)}
+                </div> : <p className="mt-1 text-[9px] text-slate-400">Starting lineup is not published yet. Your coach will post it before first pitch.</p>}
+                <p className="mt-2 text-[9px] text-slate-400">Use the game-day card above to accept or decline either game. Your response updates the coach’s lineup view.</p>
+              </div>
               <div className="grid grid-cols-2 gap-2"><a href={directionsUrl()} target="_blank" rel="noreferrer" className="flex min-h-10 items-center justify-center gap-1 rounded-xl border border-white/10 text-[9px] font-black text-slate-200"><MapPin className="h-3.5 w-3.5"/>Route</a><Btn onClick={openCalendar}><CalendarDays className="mr-1 inline h-3.5 w-3.5"/>Open calendar</Btn></div>
               <div className="text-[8px] leading-4 text-slate-600">Team games sync to your SyncWorks calendar while you’re IN, SUB or pending. Marking OUT removes the game from your active calendar.</div>
             </div> : <div className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-slate-500">Your manager or league will publish the next game here.</div>}
@@ -340,6 +359,11 @@ export default function SportsPlayerDashboard() {
       </div> : null}
 
       {tab==="Team" ? <div className="space-y-3"><Card title="Team statistics" body="Current team leaderboard."><div className="overflow-x-auto"><table className="w-full min-w-[650px] text-center text-[9px]"><thead className="text-slate-500"><tr><th className="p-1 text-left">PLAYER</th><th>G</th><th>AVG</th><th>OBP</th><th>SLG</th><th>OPS</th><th>H</th><th>HR</th><th>RBI</th></tr></thead><tbody>{[...teamRows].sort((a,b)=>num(b.ops)-num(a.ops)).map((row,index)=><tr key={row.player?.id} className={cx("border-t border-white/10",Number(row.player?.id)===Number(player.id)&&"bg-cyan-300/[.04]")}><td className="p-2 text-left"><span className="mr-2 text-slate-600">{index+1}</span><b className="text-white">#{row.player?.jersey_number||"—"} {row.player?.display_name}</b></td><td>{num(row.g)}</td><td>{pct(row.avg)}</td><td>{pct(row.obp)}</td><td>{pct(row.slg)}</td><td className="font-black text-cyan-200">{pct(row.ops)}</td><td>{num(row.h)}</td><td>{num(row.hr)}</td><td>{num(row.rbi)}</td></tr>)}</tbody></table></div></Card>{nextGame?.lineup_spots?.length?<Card title="Next lineup" body="Published lineup for the next game."><div className="grid gap-1.5 sm:grid-cols-2">{nextGame.lineup_spots.map((spot)=><div key={spot.id} className={cx("grid grid-cols-[2rem_1fr_auto] items-center gap-2 rounded-xl border p-2",Number(spot.player)===Number(player.id)?"border-cyan-300/30 bg-cyan-300/[.07]":"border-white/10 bg-white/[.02]")}><div className="text-center text-base font-black text-cyan-200">{spot.batting_order}</div><div className="truncate text-[10px] font-black text-white">{spot.player_detail?.display_name}</div><div className="rounded-lg bg-black/20 px-2 py-1 text-[8px] font-black text-slate-300">{spot.defensive_position||"EH"}</div></div>)}</div></Card>:null}</div> : null}
+
+      {tab==="Stats" ? <InteractiveStatsBoard
+        rows={teamScopedRows || teamRows} scope={statsScope} onScope={setStatsScope}
+        managerView={false}
+      /> : null}
 
       {tab==="League" ? <div className="space-y-3">{center.league?<><Card title={(center.league.organization?.name||"League")+" standings"} body={[center.league.season?.name,center.league.division?.name].filter(Boolean).join(" · ")} action={<Trophy className="h-4 w-4 text-amber-300"/>}><div className="overflow-x-auto"><table className="w-full min-w-[540px] text-center text-[9px]"><thead className="text-slate-500"><tr><th className="p-1 text-left">TEAM</th><th>W</th><th>L</th><th>T</th><th>PCT</th><th>DIFF</th></tr></thead><tbody>{leagueRows.map((row)=><tr key={row.team.id} className={cx("border-t border-white/10",Number(row.team.id)===Number(team.id)&&"bg-amber-300/[.04]")}><td className="p-2 text-left font-black text-white">{row.standing_rank}. {row.team.group_name}</td><td>{row.wins}</td><td>{row.losses}</td><td>{row.ties}</td><td>{Number(row.pct||0).toFixed(3)}</td><td>{row.run_diff}</td></tr>)}</tbody></table></div></Card><Card title="League leaders" body="Top current division stats."><div className="grid gap-3 md:grid-cols-2">{["avg","ops","hr","rbi"].map((metric)=><div key={metric} className="rounded-xl border border-white/10 bg-black/15 p-2"><div className="mb-1 text-[8px] font-black uppercase text-violet-300">{metric.toUpperCase()}</div>{(center.league.leaders?.[metric]||[]).slice(0,5).map((row,index)=><div key={String(row.player?.id)+"-"+metric} className="grid grid-cols-[1.2rem_1fr_auto] gap-1 border-t border-white/5 py-1.5 text-[8px]"><b className="text-slate-600">{index+1}</b><span className="truncate text-slate-300">{row.player?.display_name}<span className="ml-1 text-slate-600">{row.team_name}</span></span><b className="text-white">{["avg","ops"].includes(metric)?Number(row[metric]||0).toFixed(3):row[metric]}</b></div>)}</div>)}</div></Card></>:<Card title="League data" body="This team is not attached to a SyncWorks league/division yet."><div className="text-xs text-slate-500">Standings and league leaderboards appear automatically when a commissioner adds the team to a division.</div></Card>}</div> : null}
 
