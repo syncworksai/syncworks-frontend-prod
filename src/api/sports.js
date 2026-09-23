@@ -303,7 +303,14 @@ export async function openGameBookPhoto(id) {
 }
 
 export async function updateGameBookPhoto(id, payload) {
-  const { data } = await api.patch(`/sports/game-book-photos/${id}/`, payload);
+  // The image endpoint accepts multipart/form-data for photo review as well.
+  const body = new FormData();
+  Object.entries(payload || {}).forEach(([key,value]) => {
+    if (value !== undefined && value !== null) body.append(key, String(value));
+  });
+  const { data } = await api.patch(`/sports/game-book-photos/${id}/`, body, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
   return data;
 }
 
