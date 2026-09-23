@@ -10,6 +10,7 @@ import TeamChatPanel from "../components/sports/TeamChatPanel";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import PlayerCollectibleCard, { SportsPlayerPhoto } from "../components/sports/PlayerCollectibleCard";
 import PlayerStatSplits from "../components/sports/PlayerStatSplits";
+import WeeklyAvailabilityCard from "../components/sports/WeeklyAvailabilityCard";
 import { useAuth } from "../auth/AuthContext";
 import { createEventResponse, updateEventResponse } from "../api/social";
 import {
@@ -98,7 +99,7 @@ export default function SportsPlayerDashboard() {
   const [photoFile, setPhotoFile] = useState(null);
   const [form, setForm] = useState({
     display_name:"", primary_position:"", bats:"", throws:"",
-    email:"", phone:"", emergency_contact_name:"", emergency_contact_phone:"",
+    email:"", phone:"", date_of_birth:"", show_age_to_team:false, emergency_contact_name:"", emergency_contact_phone:"",
     card_style:"CLASSIC", card_nickname:"", card_photo_position:50,
   });
 
@@ -149,6 +150,8 @@ export default function SportsPlayerDashboard() {
         throws:p.throws || "",
         email:pr.email || user?.email || "",
         phone:pr.phone || "",
+        date_of_birth:pr.date_of_birth || "",
+        show_age_to_team:pr.show_age_to_team === true,
         emergency_contact_name:pr.emergency_contact_name || "",
         emergency_contact_phone:pr.emergency_contact_phone || "",
         card_style:pr.card_style || "CLASSIC",
@@ -214,6 +217,8 @@ export default function SportsPlayerDashboard() {
       data.append("player", String(player.id));
       data.append("email", form.email || "");
       data.append("phone", form.phone || "");
+      data.append("date_of_birth", form.date_of_birth || "");
+      data.append("show_age_to_team", form.show_age_to_team ? "true" : "false");
       data.append("emergency_contact_name", form.emergency_contact_name || "");
       data.append("emergency_contact_phone", form.emergency_contact_phone || "");
       data.append("card_style", form.card_style || "CLASSIC");
@@ -286,7 +291,7 @@ export default function SportsPlayerDashboard() {
 
       <div className="flex gap-1.5 overflow-x-auto pb-1">{TABS.map((name)=><button key={name} type="button" onClick={()=>setTab(name)} className={cx("min-h-9 shrink-0 rounded-full px-3 text-[9px] font-black",tab===name?"bg-white text-slate-950":"border border-white/10 text-slate-400")}>{name}{name==="Dues"&&dueCount?<span className="ml-1 rounded-full bg-rose-500 px-1.5 py-0.5 text-[7px] text-white">{dueCount}</span>:null}</button>)}</div>
 
-      {tab==="Home" ? <div className="grid gap-3 lg:grid-cols-[1.15fr_.85fr]">
+      {tab==="Home" ? <div className="space-y-3"><WeeklyAvailabilityCard teamId={team.id} initialWeekStart={center?.weekly_availability?.week_start || ""} /><div className="grid gap-3 lg:grid-cols-[1.15fr_.85fr]">
         <div className="space-y-3">
           <Card title={nextGame?"Next game":"Schedule"} body={nextGame?"Everything you need before first pitch.":"No upcoming game has been published yet."} action={<CalendarDays className="h-4 w-4 text-emerald-300"/>}>
             {nextGame ? <div className="space-y-3">
@@ -300,7 +305,7 @@ export default function SportsPlayerDashboard() {
           <Card title="My season" body="Official Game Book statistics plus approved historical stats."><RateLine row={stats}/><div className="mt-2 grid grid-cols-4 gap-1.5"><Metric label="G" value={num(stats.g)}/><Metric label="H" value={num(stats.h)}/><Metric label="R" value={num(stats.runs)}/><Metric label="TB" value={num(stats.tb)}/></div></Card>
         </div>
         <div className="space-y-3"><Card title="Team pulse" body={(center.record?.wins||0)+"-"+(center.record?.losses||0)+"-"+(center.record?.ties||0)+" record"}><div className="grid grid-cols-2 gap-2"><Metric label="Team AVG" value={pct(center.team_stats?.avg)}/><Metric label="Run diff" value={num(center.team_stats?.runs_for)-num(center.team_stats?.runs_against)} tone="green"/></div><div className="mt-2 grid grid-cols-2 gap-2"><Metric label="Runs" value={num(center.team_stats?.runs_for)}/><Metric label="Team HR" value={num(center.team_stats?.home_runs)} tone="violet"/></div></Card><Card title="My balance" body="Only your own team charges are visible here." action={<CircleDollarSign className="h-4 w-4 text-amber-300"/>}><div className="text-2xl font-black text-white">{money(center.balance_cents)}</div><div className="mt-1 text-[9px] text-slate-500">{dueCount?dueCount+" open item"+(dueCount===1?"":"s"):"Nothing due"}</div><Btn className="mt-3 w-full" onClick={()=>setTab("Dues")}>View dues</Btn></Card></div>
-      </div> : null}
+      </div></div> : null}
 
       {tab==="My Player" ? <div className="space-y-3">
         <div className="grid gap-3 lg:grid-cols-[.85fr_1.15fr]">
@@ -311,6 +316,15 @@ export default function SportsPlayerDashboard() {
           <Card title="Stat profile" body="League, tournament and combined totals."><div className="space-y-3"><div><div className="mb-1 text-[8px] font-black uppercase tracking-[.13em] text-cyan-300">All games</div><RateLine row={stats}/></div><div><div className="mb-1 text-[8px] font-black uppercase tracking-[.13em] text-emerald-300">League</div><RateLine row={leagueStats}/></div><div><div className="mb-1 text-[8px] font-black uppercase tracking-[.13em] text-violet-300">Tournament</div><RateLine row={tournamentStats}/></div></div></Card>
         </div>
         <PlayerStatSplits progress={badgeCard} />
+        {(badgeCard?.milestones||[]).length ? <Card title="Career milestones" body="Automatically calculated from verified Game Books and approved historical stats.">
+          <div className="grid gap-2 sm:grid-cols-3">{badgeCard.milestones.map((item)=><div key={item.key} className="rounded-xl border border-amber-300/15 bg-amber-300/[.04] p-3"><div className="text-[9px] font-black uppercase tracking-wide text-amber-200">{item.title}</div><div className="mt-1 text-xl font-black text-white">{item.value}</div><div className="text-[9px] text-slate-500">{item.unit}{item.next_goal ? ` · next ${item.next_goal}` : " · max tier reached"}</div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/5"><div className="h-full bg-amber-300" style={{width:`${item.progress}%`}}/></div></div>)}</div>
+        </Card> : null}
+        {(center?.awards||[]).length ? <Card title="Coach awards" body="Recognition given by your team staff.">
+          <div className="grid gap-2 sm:grid-cols-2">{center.awards.map((award)=><div key={award.id} className="rounded-xl border border-violet-300/15 bg-violet-300/[.04] p-3"><div className="flex items-center gap-2"><Trophy className="h-4 w-4 text-amber-300"/><b className="text-xs text-white">{award.title}</b></div><div className="mt-1 text-[9px] text-slate-500">{award.season_name || team.season_name || "Team award"}{award.week_of ? " · week of "+new Date(award.week_of+"T12:00:00").toLocaleDateString() : ""}</div>{award.note ? <p className="mt-2 text-[10px] leading-4 text-slate-300">{award.note}</p> : null}<div className="mt-2 text-[8px] text-slate-600">Awarded by {award.awarded_by_name}</div></div>)}</div>
+        </Card> : null}
+        {(badgeCard?.age_performance||[]).length ? <Card title="Performance by age" body="Your own historical performance grouped by season age. This is context, not a claim that age caused the result.">
+          <div className="overflow-x-auto"><table className="w-full min-w-[520px] text-center text-[9px]"><thead className="text-slate-500"><tr><th className="p-2 text-left">AGE</th><th>YEAR</th><th>G</th><th>AVG</th><th>OPS</th><th>H</th><th>HR</th></tr></thead><tbody>{badgeCard.age_performance.map((row)=><tr key={row.year} className="border-t border-white/10"><td className="p-2 text-left font-black text-white">{row.age}</td><td>{row.year}</td><td>{row.g}</td><td>{pct(row.avg)}</td><td>{pct(row.ops)}</td><td>{row.h}</td><td>{row.hr}</td></tr>)}</tbody></table></div>
+        </Card> : null}
         {(playerCard?.tendencies?.spray_field||[]).length ? <Card title="Hitting spray map" body="Based only on at-bats with a logged spray location.">
           <div className="grid grid-cols-5 gap-1.5">{(playerCard.tendencies.spray_field||[]).map((row)=><div key={row.zone} className="rounded-xl border border-emerald-300/10 bg-emerald-300/[.035] p-2 text-center"><div className="text-[7px] font-black text-emerald-200">{row.zone.replace("_"," ")}</div><div className="mt-1 text-lg font-black text-white">{Math.round(num(row.pct)*100)}%</div></div>)}</div>
         </Card> : null}
@@ -333,6 +347,9 @@ export default function SportsPlayerDashboard() {
       <div className="flex items-center gap-3"><SportsPlayerPhoto player={player} profile={profile}/><label className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 text-xs font-black text-slate-300"><Camera className="h-4 w-4"/>{photoFile?photoFile.name:"Choose profile photo"}<input type="file" accept="image/*" className="hidden" onChange={(e)=>setPhotoFile(e.target.files?.[0]||null)}/></label></div>
       <div className="grid grid-cols-2 gap-2">
         {[["Name","display_name"],["Primary position","primary_position"],["Contact email","email"],["Phone","phone"],["Emergency contact","emergency_contact_name"],["Emergency phone","emergency_contact_phone"]].map(([label,key])=><label key={key} className={cx("block",key==="display_name"&&"col-span-2")}><span className="mb-1 block text-[8px] font-black uppercase text-slate-500">{label}</span><input value={form[key]} onChange={(e)=>setForm({...form,[key]:e.target.value})} className="h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] text-white sm:text-xs"/></label>)}
+        <label className="block"><span className="mb-1 block text-[8px] font-black uppercase text-slate-500">Date of birth</span><input type="date" value={form.date_of_birth} onChange={(e)=>setForm({...form,date_of_birth:e.target.value})} className="h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] text-white sm:text-xs"/></label>
+        <label className="flex min-h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[.025] px-3 text-[9px] font-bold text-slate-300"><input type="checkbox" checked={form.show_age_to_team} onChange={(e)=>setForm({...form,show_age_to_team:e.target.checked})} className="h-4 w-4 accent-cyan-300"/>Show my age to teammates</label>
+        {profile?.age != null ? <div className="col-span-2 rounded-xl border border-cyan-300/15 bg-cyan-300/[.04] p-2 text-[9px] text-cyan-100">Current age: <b>{profile.age}</b>. Exact DOB remains in your private profile and coach directory.</div> : null}
         <label className="block"><span className="mb-1 block text-[8px] font-black uppercase text-slate-500">Bats</span><select value={form.bats} onChange={(e)=>setForm({...form,bats:e.target.value})} className="h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs text-white"><option value="">—</option><option value="R">Right</option><option value="L">Left</option><option value="S">Switch</option></select></label>
         <label className="block"><span className="mb-1 block text-[8px] font-black uppercase text-slate-500">Throws</span><select value={form.throws} onChange={(e)=>setForm({...form,throws:e.target.value})} className="h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs text-white"><option value="">—</option><option value="R">Right</option><option value="L">Left</option></select></label>
       </div>
@@ -348,6 +365,6 @@ export default function SportsPlayerDashboard() {
       <Btn primary className="w-full" disabled={busy} onClick={saveProfile}><Save className="mr-1 inline h-4 w-4"/>{busy?"Saving…":"Save player profile"}</Btn>
     </div></Drawer> : null}
 
-    {chatOpen ? <Drawer title={team.group_name+" chat"} onClose={()=>setChatOpen(false)}><TeamChatPanel groupId={Number(groupId)} userId={Number(user?.id||0)} canManage={false} bare/></Drawer> : null}
+    {chatOpen ? <Drawer title={team.group_name+" chat"} onClose={()=>setChatOpen(false)}><TeamChatPanel groupId={Number(groupId)} teamId={team.id} userId={Number(user?.id||0)} canManage={false} bare/></Drawer> : null}
   </div>;
 }
