@@ -1,15 +1,17 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   Check,
+  Camera,
   CircleDot,
   Copy,
   ExternalLink,
   Eye,
   EyeOff,
   Edit3,
+  Image as ImageIcon,
   Loader2,
   Minus,
   Plus,
@@ -32,12 +34,14 @@ import {
   correctSoftballPlay,
   deleteSportsGameBook,
   finishSportsGame,
+  getGameBookPhotos,
   getGameCastSettings,
   getTeamBadgeStandings,
   getPlateAppearances,
   getPlayerCard,
   getSoftballRuleSets,
   getSportsGame,
+  openGameBookPhoto,
   recordSoftballPlay,
   reopenSportsGame,
   saveSoftballPlayContext,
@@ -51,6 +55,8 @@ import {
   updateDefensivePosition,
   updateGameCastSettings,
   updateSportsGame,
+  uploadGameBookPhoto,
+  deleteGameBookPhoto,
 } from "../api/sports";
 
 const RESULTS = [
@@ -353,6 +359,11 @@ export default function SoftballGameDayAdvanced() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [bookPhotos, setBookPhotos] = useState([]);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+  const bookPhotoInputRef = useRef(null);
+  const bookLibraryInputRef = useRef(null);
 
   const [result, setResult] = useState("");
   const [outsRecorded, setOutsRecorded] = useState(0);
@@ -462,9 +473,10 @@ export default function SoftballGameDayAdvanced() {
       setGame(gameData);
       if (!quiet) setLoading(false);
 
-      const [playResult, membershipResult] = await Promise.allSettled([
+      const [playResult, membershipResult, photoResult] = await Promise.allSettled([
         getPlateAppearances(gameId),
         getMemberships(),
+        getGameBookPhotos(gameId),
       ]);
 
       const playRows = playResult.status === "fulfilled" ? list(playResult.value) : plays;
@@ -472,6 +484,7 @@ export default function SoftballGameDayAdvanced() {
 
       if (playResult.status === "fulfilled") setPlays(playRows);
       if (membershipResult.status === "fulfilled") setMemberships(membershipRows);
+      if (photoResult.status === "fulfilled") setBookPhotos(list(photoResult.value));
 
       const scoreAccess = Boolean(gameData?.can_score) || membershipRows.some(
         (membership) => Number(membership.group) === Number(groupId)
@@ -560,6 +573,42 @@ export default function SoftballGameDayAdvanced() {
       .catch(() => { if (alive) setHitterCard(null); });
     return () => { alive = false; };
   }, [game?.current_batter?.id]);
+
+  async function handleBookPhotoUpload(event) {
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";
+    if (!files.length || !game?.id) return;
+    setPhotoBusy(true);
+    setPhotoError("");
+    try {
+      for (const file of files) {
+        if (!file.type.startsWith("image/")) throw new Error("Choose a photo from the camera or photo library.");
+        await uploadGameBookPhoto(game.id, file);
+      }
+      const rows = await getGameBookPhotos(game.id);
+      setBookPhotos(list(rows));
+      setNotice(files.length === 1 ? "Scorebook photo uploaded. Review it before stats are verified." : `${files.length} scorebook photos uploaded.`);
+    } catch (err) {
+      setPhotoError(errorText(err));
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  async function removeBookPhoto(photo) {
+    if (!canManage || photoBusy) return;
+    if (!window.confirm("Remove this scorebook photo? Verified game stats are not deleted.")) return;
+    setPhotoBusy(true);
+    setPhotoError("");
+    try {
+      await deleteGameBookPhoto(photo.id);
+      setBookPhotos((rows) => rows.filter((row) => Number(row.id) !== Number(photo.id)));
+    } catch (err) {
+      setPhotoError(errorText(err));
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
 
   async function run(fn, message) {
     setBusy(true); setError(""); setNotice("");
@@ -890,6 +939,47 @@ export default function SoftballGameDayAdvanced() {
 
         {error ? <div className="rounded-xl border border-rose-300/20 bg-rose-300/10 p-2 text-[10px] text-rose-100">{error}</div> : null}
         {notice ? <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-2 text-[10px] text-cyan-100">{notice}</div> : null}
+        {photoError ? <div className="rounded-xl border border-rose-300/20 bg-rose-300/10 p-2 text-[10px] text-rose-100">{photoError}</div> : null}
+
+        <section className="rounded-2xl border border-violet-300/15 bg-[linear-gradient(135deg,rgba(139,92,246,.08),rgba(34,211,238,.035)),#07111f] p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[.13em] text-violet-200"><ImageIcon className="h-3.5 w-3.5" />Original scorebook</div>
+              <div className="mt-1 text-[10px] leading-4 text-slate-400">Keep the paper book attached to this exact game. Imported stats use player IDs, not batting-order slots, so lineup changes cannot move a hit to the wrong player.</div>
+            </div>
+            <span className="shrink-0 rounded-full border border-white/10 px-2 py-1 text-[8px] font-black text-slate-400">{bookPhotos.length} PHOTO{bookPhotos.length === 1 ? "" : "S"}</span>
+          </div>
+
+          {canScore ? (
+            <>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <input ref={bookPhotoInputRef} className="hidden" type="file" accept="image/*" capture="environment" onChange={handleBookPhotoUpload} />
+              <input ref={bookLibraryInputRef} className="hidden" type="file" accept="image/*" multiple onChange={handleBookPhotoUpload} />
+              <Button primary disabled={photoBusy} onClick={() => bookPhotoInputRef.current?.click()}>
+                {photoBusy ? <Loader2 className="mr-1 inline h-3.5 w-3.5 animate-spin" /> : <Camera className="mr-1 inline h-3.5 w-3.5" />}
+                Take photo
+              </Button>
+              <Button disabled={photoBusy} onClick={() => bookLibraryInputRef.current?.click()}><ImageIcon className="mr-1 inline h-3.5 w-3.5" />Photo library</Button>
+            </div>
+            <div className="mt-2 text-[8px] font-black uppercase tracking-[.12em] text-amber-200">Review the source page before approving player statistics.</div>
+            </>
+          ) : null}
+
+          {bookPhotos.length ? (
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {bookPhotos.map((photo, index) => (
+                <div key={photo.id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 p-2">
+                  <button type="button" onClick={() => openGameBookPhoto(photo.id).catch((err) => setPhotoError(errorText(err)))} className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-cyan-300/15 bg-cyan-300/[.05] text-cyan-100"><ImageIcon className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => openGameBookPhoto(photo.id).catch((err) => setPhotoError(errorText(err)))} className="min-w-0 flex-1 text-left">
+                    <b className="block truncate text-[10px] text-white">{photo.page_label || photo.original_name || `Scorebook page ${index + 1}`}</b>
+                    <span className="block text-[8px] text-slate-500">{photo.review_status} · {Math.max(1, Math.round(num(photo.byte_size) / 1024))} KB</span>
+                  </button>
+                  {canManage ? <button type="button" disabled={photoBusy} onClick={() => removeBookPhoto(photo)} className="grid h-9 w-9 place-items-center rounded-lg border border-rose-300/15 text-rose-200 disabled:opacity-40"><Trash2 className="h-3.5 w-3.5" /></button> : null}
+                </div>
+              ))}
+            </div>
+          ) : <div className="mt-3 rounded-xl border border-dashed border-white/10 p-3 text-center text-[9px] text-slate-500">No paper scorebook attached yet.</div>}
+        </section>
 
         <section className="rounded-2xl border border-cyan-300/15 bg-[#07111f] p-2.5">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
