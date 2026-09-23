@@ -90,7 +90,6 @@ export default function ScorebookPhotoArchive({ gameId, canScore, canManage }) {
       setPages(rows);
       setSelectedId((old) => rows.some((page) => Number(page.id) === Number(old))
         ? old : rows[0]?.id || null);
-      setError("");
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -241,7 +240,7 @@ export default function ScorebookPhotoArchive({ gameId, canScore, canManage }) {
           <input ref={cameraRef} type="file" accept="image/*" capture="environment"
             className="sr-only" aria-label="Photograph paper scorebook"
             onChange={(event) => {
-              const selectedFiles = event.target.files;
+              const selectedFiles = Array.from(event.target.files || []);
               event.target.value = "";
               addPhotos(selectedFiles);
             }} />
