@@ -1863,7 +1863,7 @@ export default function ModeBar({
 
   return (
     <>
-      <div className="sw-modebar sticky top-0 z-50 overflow-hidden border-b border-slate-800 bg-slate-950/80 backdrop-blur">
+      <div className={`sw-modebar ${sportsCompact ? "sw-modebar--sports" : ""} sticky top-0 z-50 overflow-hidden border-b border-slate-800 bg-slate-950/80 backdrop-blur`}>
         <div className="pointer-events-none absolute inset-0">
           <div
             className="absolute -inset-10 blur-3xl"

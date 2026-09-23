@@ -119,6 +119,11 @@ export async function getTeamBadgeStandings(teamId) {
   return data;
 }
 
+export async function getPlayerBookAudit(playerId) {
+  const { data } = await api.get(`/sports/players/${playerId}/book-audit/`);
+  return data;
+}
+
 export async function getPlayerBadgeCard(playerId) {
   const { data } = await api.get(`/sports/players/${playerId}/badge-card/`, { timeout: 45000 });
   return data;

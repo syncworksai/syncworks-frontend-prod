@@ -65,3 +65,10 @@
     width: 2.5rem !important;
   }
 }
+
+
+/* One top bar in Team / Game Book. iOS may briefly retain the old workspace
+   ModeBar during a route change; the sports bar owns logo, bell and menu. */
+body:has(.sw-modebar--sports) .sw-modebar:not(.sw-modebar--sports) {
+  display: none !important;
+}
