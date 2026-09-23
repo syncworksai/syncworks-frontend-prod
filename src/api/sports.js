@@ -89,6 +89,13 @@ export async function getTeamStats(id) {
   return list(data);
 }
 
+export async function getGameSituationStats(teamId, playerId = null) {
+  const { data } = await api.get(`/sports/advanced/teams/${teamId}/situations/`, {
+    params: playerId ? { player: playerId } : {},
+  });
+  return data;
+}
+
 export async function getAdvancedTeamStats(id) {
   const { data } = await api.get(`/sports/advanced/teams/${id}/stats/`);
   return data;
