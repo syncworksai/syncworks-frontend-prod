@@ -206,6 +206,53 @@ export async function reopenSportsGame(id) {
   return data;
 }
 
+export async function getScorebookPages(gameId) {
+  const { data } = await api.get(`/sports/games/${gameId}/scorebook-pages/`, { timeout: 45000 });
+  return list(data);
+}
+
+export async function uploadScorebookPage(gameId, file, side = "TEAM", onProgress) {
+  const form = new FormData();
+  form.append("side", side);
+  form.append("photo", file);
+  const { data } = await api.post(`/sports/games/${gameId}/scorebook-pages/`, form, {
+    timeout: 120000,
+    onUploadProgress: onProgress,
+  });
+  return data;
+}
+
+export async function getScorebookImage(gameId, pageId) {
+  const { data } = await api.get(`/sports/games/${gameId}/scorebook-pages/${pageId}/image/`, {
+    responseType: "blob", timeout: 45000,
+  });
+  return data;
+}
+
+export async function updateScorebookPage(gameId, pageId, payload) {
+  const { data } = await api.patch(`/sports/games/${gameId}/scorebook-pages/${pageId}/`, payload);
+  return data;
+}
+
+export async function deleteScorebookPage(gameId, pageId) {
+  await api.delete(`/sports/games/${gameId}/scorebook-pages/${pageId}/`);
+}
+
+export async function getScorebookReview(gameId) {
+  const { data } = await api.get(`/sports/games/${gameId}/scorebook-review/`);
+  return data;
+}
+
+export async function saveScorebookReview(gameId, payload) {
+  const { data } = await api.put(`/sports/games/${gameId}/scorebook-review/`, { payload });
+  return data;
+}
+
+export async function confirmScorebookReview(gameId, payload) {
+  const { data } = await api.post(`/sports/games/${gameId}/scorebook-review/confirm/`, payload, { timeout: 60000 });
+  return data;
+}
+
 export async function getPlateAppearances(game) {
   const { data } = await api.get("/sports/plate-appearances/", { params: { game }, timeout: 45000 });
   return list(data);
