@@ -26,6 +26,7 @@ import ModeBar from "../components/ModeBar";
 import SoftballDefenseField from "../components/sports/SoftballDefenseField";
 import PregameLineupEditor from "../components/sports/PregameLineupEditor";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
+import ScorebookArchive from "../components/sports/ScorebookArchive";
 import { useAuth } from "../auth/AuthContext";
 import { getMemberships } from "../api/social";
 import {
@@ -937,6 +938,8 @@ export default function SoftballGameDayAdvanced() {
             </tbody>
           </table>
         </section>
+
+        <ScorebookArchive game={game} canScore={canScore} canManage={canManage} onUpdated={() => refresh({ quiet: true })} />
 
         {game.status === "SCHEDULED" ? <section className="space-y-3">
           <div className="rounded-2xl border border-cyan-300/30 bg-gradient-to-r from-cyan-300/[.10] to-violet-400/[.06] p-3">
