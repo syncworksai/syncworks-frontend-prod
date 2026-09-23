@@ -35,6 +35,7 @@ import TeamChatPanel from "../components/sports/TeamChatPanel";
 import { availabilityStatus } from "../components/sports/GameAvailabilityCard";
 import GameDayLineupPreview from "../components/sports/GameDayLineupPreview";
 import InteractiveStatsBoard from "../components/sports/InteractiveStatsBoard";
+import SituationBaselineCard from "../components/sports/SituationBaselineCard";
 import SoftballDefenseField from "../components/sports/SoftballDefenseField";
 import TeamRewardSettings from "../components/sports/TeamRewardSettings";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
@@ -55,6 +56,7 @@ import {
   finishSportsGame,
   ensureTeamPaymentSettings,
   getAdvancedTeamStats,
+  getGameSituationStats,
   getFeeAssignments,
   getPlayerProfiles,
   getPlayerAwards,
@@ -243,6 +245,7 @@ export default function SportsTeamManagerDashboard() {
   const [statsScope, setStatsScope] = useState("ALL");
   const [scopedStats, setScopedStats] = useState([]);
   const [advancedAnalytics, setAdvancedAnalytics] = useState(null);
+  const [situationData, setSituationData] = useState(null);
   const [previewPlayerView, setPreviewPlayerView] = useState(false);
   const [eventResponses, setEventResponses] = useState([]);
   const [chatOpen, setChatOpen] = useState(false);
@@ -413,6 +416,7 @@ export default function SportsTeamManagerDashboard() {
   useEffect(() => {
     if (!team) return;
     getAdvancedTeamStats(team.id).then(setAdvancedAnalytics).catch(() => setAdvancedAnalytics(null));
+    getGameSituationStats(team.id).then(setSituationData).catch(() => setSituationData(null));
   }, [team?.id]);
 
   async function run(fn, message, { closePlayer = false } = {}) {
@@ -1526,6 +1530,7 @@ export default function SportsTeamManagerDashboard() {
               </div>
             </div>
           </Card> : null}
+          <SituationBaselineCard data={situationData} title="Situational hitting · real games" />
           <InteractiveStatsBoard rows={scopedStats} scope={statsScope} onScope={setStatsScope}
             bookCoverage={{total:list(dashboard?.recent_games).filter(g=>g.status==="FINAL").length,withPlays:list(dashboard?.recent_games).filter(g=>g.status==="FINAL" && num(g.plate_appearance_count)>0).length}}
             managerView={managerView} onAdd={() => setStatDrawer(true)} onPlayer={(row)=>{const player=players.find(p=>Number(p.id)===Number(row.player?.id));if(player)openPlayer(player);}} />
