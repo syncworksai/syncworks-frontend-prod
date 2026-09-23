@@ -295,6 +295,16 @@ export async function openGameBookPhoto(id) {
   }
 }
 
+export async function updateGameBookPhoto(id, payload) {
+  const { data } = await api.patch(`/sports/game-book-photos/${id}/`, payload);
+  return data;
+}
+
+export async function addHistoricalBookPlay(gameId, payload) {
+  const { data } = await api.post(`/sports/games/${gameId}/add-historical-play/`, payload);
+  return data;
+}
+
 export async function importHistoricalGameBook(id, payload) {
   const { data } = await api.post(`/sports/games/${id}/import-historical-book/`, payload, { timeout: 90000 });
   return data;
