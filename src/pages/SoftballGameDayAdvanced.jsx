@@ -951,6 +951,7 @@ export default function SoftballGameDayAdvanced() {
           </div>
 
           {canScore ? (
+            <>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <input ref={bookPhotoInputRef} className="hidden" type="file" accept="image/*" capture="environment" onChange={handleBookPhotoUpload} />
               <input ref={bookLibraryInputRef} className="hidden" type="file" accept="image/*" multiple onChange={handleBookPhotoUpload} />
@@ -961,6 +962,7 @@ export default function SoftballGameDayAdvanced() {
               <Button disabled={photoBusy} onClick={() => bookLibraryInputRef.current?.click()}><ImageIcon className="mr-1 inline h-3.5 w-3.5" />Photo library</Button>
             </div>
             <div className="mt-2 text-[8px] font-black uppercase tracking-[.12em] text-amber-200">Review the source page before approving player statistics.</div>
+            </>
           ) : null}
 
           {bookPhotos.length ? (
