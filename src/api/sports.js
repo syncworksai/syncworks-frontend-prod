@@ -228,13 +228,25 @@ export async function deleteGameBookPhoto(id) {
 }
 
 export async function openGameBookPhoto(id) {
-  const { data } = await api.get(`/sports/game-book-photos/${id}/image/`, {
-    responseType: "blob",
-    timeout: 45000,
-  });
-  const url = URL.createObjectURL(data);
-  window.open(url, "_blank", "noopener,noreferrer");
-  window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+  // Open synchronously during the tap: Safari blocks windows opened after await.
+  const tab = window.open("about:blank", "_blank");
+  try {
+    const { data } = await api.get(`/sports/game-book-photos/${id}/image/`, {
+      responseType: "blob",
+      timeout: 45000,
+    });
+    const url = URL.createObjectURL(data);
+    if (tab) {
+      tab.opener = null;
+      tab.location.replace(url);
+    } else {
+      window.location.assign(url);
+    }
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (err) {
+    if (tab) tab.close();
+    throw err;
+  }
 }
 
 export async function importHistoricalGameBook(id, payload) {
