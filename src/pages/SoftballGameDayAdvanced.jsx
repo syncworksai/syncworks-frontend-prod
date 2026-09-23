@@ -1550,15 +1550,15 @@ export default function SoftballGameDayAdvanced() {
         ) : null}
 
         {editingPlay ? (
-          <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/70 px-3 pb-4 pt-20 sm:items-center">
-            <div className="w-full max-w-md rounded-[1.6rem] border border-cyan-300/20 bg-[#07111f] p-4 shadow-2xl">
+          <div className="fixed inset-0 z-[220] flex items-end justify-center bg-black/85 px-2 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:items-center">
+            <div role="dialog" aria-modal="true" aria-label="Correct scorebook entry" className="max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.25rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-[1.6rem] border border-cyan-300/20 bg-[#07111f] p-4 shadow-2xl">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-[8px] font-black uppercase tracking-[.15em] text-cyan-300">Correct scorebook entry</div>
                   <div className="mt-1 text-base font-black text-white">{editingPlay.player_name}</div>
                   <div className="text-[8px] text-slate-500">Final games preserve the official score and inning totals. Live games recalculate from corrected plays.</div>
                 </div>
-                <button type="button" onClick={() => setEditingPlay(null)} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-400">×</button>
+                <button type="button" aria-label="Close play editor" onClick={() => setEditingPlay(null)} className="grid min-h-11 min-w-11 place-items-center rounded-xl border border-cyan-300/20 text-lg text-cyan-100">×</button>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <label className="text-[8px] font-black uppercase text-slate-500">Inning
