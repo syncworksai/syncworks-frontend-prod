@@ -1168,7 +1168,7 @@ export default function SportsTeamManagerDashboard() {
 
         {tab === "Overview" ? <div className="grid gap-3 lg:grid-cols-[1fr_1fr_.92fr]">
           {nextGame ? <div className="lg:col-span-3">
-            <WeeklyAvailabilityCard teamId={team.id} managerView={managerView} showRoster={false}
+            <WeeklyAvailabilityCard teamId={team.id} managerView={managerView} showRoster={false} showSelfResponse={Boolean(myPlayer)}
               title="Upcoming game day · all games" initialWeekStart={weekStartForGame(nextGame)}
               onGameOpen={(game)=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}
             />
@@ -1462,7 +1462,7 @@ export default function SportsTeamManagerDashboard() {
           </div> : null}
         </div> : null}
 
-        {tab === "Schedule" ? <div className="space-y-3"><WeeklyAvailabilityCard teamId={team.id} managerView={managerView} initialWeekStart={nextGame?weekStartForGame(nextGame):undefined} title="Week-by-week game confirmations" onGameOpen={(game)=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)} /><div className="grid gap-3 lg:grid-cols-[1.3fr_.7fr]">
+        {tab === "Schedule" ? <div className="space-y-3"><WeeklyAvailabilityCard teamId={team.id} managerView={managerView} showSelfResponse={Boolean(myPlayer)} initialWeekStart={nextGame?weekStartForGame(nextGame):undefined} title="Week-by-week game confirmations" onGameOpen={(game)=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)} /><div className="grid gap-3 lg:grid-cols-[1.3fr_.7fr]">
           <div className="space-y-3">
             {needsCompletionGames.length ? <Card title="Needs completion" body="Past games stay out of Upcoming until you enter the final result or finish the Game Book." action={<Pill tone="amber">{needsCompletionGames.length} OPEN</Pill>}>
               <div className="space-y-2">{needsCompletionGames.map((game)=><div key={game.id} className="flex items-center justify-between gap-2 rounded-xl border border-amber-300/20 bg-amber-300/[.05] p-3"><div className="min-w-0"><div className="text-[8px] font-black uppercase tracking-wide text-amber-300">{new Date(game.start_at).toLocaleDateString()}</div><b className="block truncate text-xs text-white">vs {game.opponent_name}</b><span className="text-[9px] text-slate-500">{game.venue_name || "Field TBD"} · final score/stat entry needed</span></div><div className="grid shrink-0 gap-1"><Btn primary onClick={()=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>Game Book</Btn>{managerView?<Btn onClick={()=>quickFinal(game)}>Quick final</Btn>:null}</div></div>)}</div>
