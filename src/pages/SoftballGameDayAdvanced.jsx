@@ -25,6 +25,7 @@ import {
 import ModeBar from "../components/ModeBar";
 import SoftballDefenseField from "../components/sports/SoftballDefenseField";
 import PregameLineupEditor from "../components/sports/PregameLineupEditor";
+import ScorebookPhotoArchive from "../components/sports/ScorebookPhotoArchive";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import { useAuth } from "../auth/AuthContext";
 import { getMemberships } from "../api/social";
@@ -890,6 +891,8 @@ export default function SoftballGameDayAdvanced() {
 
         {error ? <div className="rounded-xl border border-rose-300/20 bg-rose-300/10 p-2 text-[10px] text-rose-100">{error}</div> : null}
         {notice ? <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-2 text-[10px] text-cyan-100">{notice}</div> : null}
+
+        <ScorebookPhotoArchive gameId={game.id} canScore={canScore} canManage={canManage} />
 
         <section className="rounded-2xl border border-cyan-300/15 bg-[#07111f] p-2.5">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
