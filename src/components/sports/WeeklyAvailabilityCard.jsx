@@ -77,6 +77,8 @@ export default function WeeklyAvailabilityCard({
   compact = false,
   initialWeekStart = "",
   title = "This week's games",
+  showRoster = true,
+  onGameOpen = null,
 }) {
   const [weekStart, setWeekStart] = useState(initialWeekStart || mondayYmd());
   const [data, setData] = useState(null);
