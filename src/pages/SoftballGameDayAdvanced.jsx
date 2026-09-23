@@ -363,6 +363,7 @@ export default function SoftballGameDayAdvanced() {
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState("");
   const bookPhotoInputRef = useRef(null);
+  const bookLibraryInputRef = useRef(null);
 
   const [result, setResult] = useState("");
   const [outsRecorded, setOutsRecorded] = useState(0);
@@ -951,13 +952,15 @@ export default function SoftballGameDayAdvanced() {
 
           {canScore ? (
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <input ref={bookPhotoInputRef} className="hidden" type="file" accept="image/*" capture="environment" multiple onChange={handleBookPhotoUpload} />
+              <input ref={bookPhotoInputRef} className="hidden" type="file" accept="image/*" capture="environment" onChange={handleBookPhotoUpload} />
+              <input ref={bookLibraryInputRef} className="hidden" type="file" accept="image/*" multiple onChange={handleBookPhotoUpload} />
               <Button primary disabled={photoBusy} onClick={() => bookPhotoInputRef.current?.click()}>
                 {photoBusy ? <Loader2 className="mr-1 inline h-3.5 w-3.5 animate-spin" /> : <Camera className="mr-1 inline h-3.5 w-3.5" />}
-                Take / upload photo
+                Take photo
               </Button>
-              <div className="flex min-h-9 items-center justify-center rounded-xl border border-amber-300/15 bg-amber-300/[.04] px-2 text-center text-[8px] font-black text-amber-100">VERIFY BEFORE STATS</div>
+              <Button disabled={photoBusy} onClick={() => bookLibraryInputRef.current?.click()}><ImageIcon className="mr-1 inline h-3.5 w-3.5" />Photo library</Button>
             </div>
+            <div className="mt-2 text-[8px] font-black uppercase tracking-[.12em] text-amber-200">Review the source page before approving player statistics.</div>
           ) : null}
 
           {bookPhotos.length ? (
