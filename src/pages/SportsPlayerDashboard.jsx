@@ -11,10 +11,11 @@ import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import PlayerCollectibleCard, { SportsPlayerPhoto } from "../components/sports/PlayerCollectibleCard";
 import PlayerStatSplits from "../components/sports/PlayerStatSplits";
 import WeeklyAvailabilityCard from "../components/sports/WeeklyAvailabilityCard";
+import PlayerBookAuditCard from "../components/sports/PlayerBookAuditCard";
 import { useAuth } from "../auth/AuthContext";
 import { createEventResponse, updateEventResponse } from "../api/social";
 import {
-  createPlayerProfile, getPlayerCard, getPlayerBadgeCard, getPlayerCenter, getSportsTeams, joinMySportsTeamRoster,
+  createPlayerProfile, getPlayerCard, getPlayerBadgeCard, getPlayerBookAudit, getPlayerCenter, getSportsTeams, joinMySportsTeamRoster,
   updatePlayerProfile, updateSportsPlayer,
 } from "../api/sports";
 
@@ -89,6 +90,7 @@ export default function SportsPlayerDashboard() {
   const [center, setCenter] = useState(null);
   const [playerCard, setPlayerCard] = useState(null);
   const [badgeCard, setBadgeCard] = useState(null);
+  const [bookAudit, setBookAudit] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [joiningRoster, setJoiningRoster] = useState(false);
@@ -134,12 +136,14 @@ export default function SportsPlayerDashboard() {
       const data = await getPlayerCenter(found.id);
       setCenter(data);
       if (data.player?.id) {
-        const [oldCard, newCard] = await Promise.allSettled([getPlayerCard(data.player.id), getPlayerBadgeCard(data.player.id)]);
+        const [oldCard, newCard, audit] = await Promise.allSettled([getPlayerCard(data.player.id), getPlayerBadgeCard(data.player.id), getPlayerBookAudit(data.player.id)]);
         setPlayerCard(oldCard.status === "fulfilled" ? oldCard.value : null);
         setBadgeCard(newCard.status === "fulfilled" ? newCard.value : null);
+        setBookAudit(audit.status === "fulfilled" ? audit.value : null);
       } else {
         setPlayerCard(null);
         setBadgeCard(null);
+        setBookAudit(null);
       }
       const p = data.player || {};
       const pr = data.profile || {};
@@ -244,7 +248,7 @@ export default function SportsPlayerDashboard() {
     navigate(date ? "/calendar?date=" + date : "/calendar");
   }
 
-  if (loading) return <div className="min-h-screen bg-[#02060c] text-white"><ModeBar sportsCompact title="Player" subtitle="SyncWorks Social"/><div className="grid min-h-[70vh] place-items-center"><Loader2 className="h-7 w-7 animate-spin text-cyan-300"/></div></div>;
+  if (loading) return <div className="grid min-h-screen place-items-center bg-[#02060c] text-white" aria-label="Loading player dashboard"><Loader2 className="h-7 w-7 animate-spin text-cyan-300"/></div>;
 
   if (!team || !center) return <div className="min-h-screen bg-[#02060c] p-3 text-white"><ModeBar sportsCompact title="Player" subtitle="SyncWorks Social"/><Card title="Team unavailable"><div className="text-xs text-slate-500">{error || "This team could not be loaded."}</div><Btn className="mt-3" onClick={()=>navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4"/>Back to Social</Btn></Card></div>;
 
@@ -308,6 +312,10 @@ export default function SportsPlayerDashboard() {
       </div></div> : null}
 
       {tab==="My Player" ? <div className="space-y-3">
+        <div className="sticky top-[5.15rem] z-40 -mx-1 flex items-center justify-between gap-2 rounded-xl border border-cyan-300/25 bg-[#06101d]/95 p-2 shadow-xl backdrop-blur">
+          <button type="button" onClick={()=>setTab("Home")} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[.04] px-3 text-xs font-black text-cyan-100"><ArrowLeft className="h-4 w-4"/>Back to team</button>
+          <button type="button" aria-label="Close player profile" onClick={()=>setTab("Home")} className="grid min-h-11 min-w-11 place-items-center rounded-xl border border-cyan-300/25 bg-cyan-300/10 text-cyan-100"><X className="h-5 w-5"/></button>
+        </div>
         <div className="grid gap-3 lg:grid-cols-[.85fr_1.15fr]">
           <div className="space-y-3">
             <PlayerCollectibleCard player={player} profile={profile} progress={badgeCard} teamName={team.group_name} onEdit={()=>setProfileOpen(true)} />
@@ -316,6 +324,7 @@ export default function SportsPlayerDashboard() {
           <Card title="Stat profile" body="League, tournament and combined totals."><div className="space-y-3"><div><div className="mb-1 text-[8px] font-black uppercase tracking-[.13em] text-cyan-300">All games</div><RateLine row={stats}/></div><div><div className="mb-1 text-[8px] font-black uppercase tracking-[.13em] text-emerald-300">League</div><RateLine row={leagueStats}/></div><div><div className="mb-1 text-[8px] font-black uppercase tracking-[.13em] text-violet-300">Tournament</div><RateLine row={tournamentStats}/></div></div></Card>
         </div>
         <PlayerStatSplits progress={badgeCard} />
+        <PlayerBookAuditCard audit={bookAudit} onOpenGame={(gameId)=>navigate(`/connect/groups/${groupId}/sports/games/${gameId}`)} />
         {(badgeCard?.milestones||[]).length ? <Card title="Career milestones" body="Automatically calculated from verified Game Books and approved historical stats.">
           <div className="grid gap-2 sm:grid-cols-3">{badgeCard.milestones.map((item)=><div key={item.key} className="rounded-xl border border-amber-300/15 bg-amber-300/[.04] p-3"><div className="text-[9px] font-black uppercase tracking-wide text-amber-200">{item.title}</div><div className="mt-1 text-xl font-black text-white">{item.value}</div><div className="text-[9px] text-slate-500">{item.unit}{item.next_goal ? ` · next ${item.next_goal}` : " · max tier reached"}</div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/5"><div className="h-full bg-amber-300" style={{width:`${item.progress}%`}}/></div></div>)}</div>
         </Card> : null}
