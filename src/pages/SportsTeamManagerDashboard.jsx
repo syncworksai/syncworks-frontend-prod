@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -38,6 +39,7 @@ import TeamRewardSettings from "../components/sports/TeamRewardSettings";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import PlayerCollectibleCard, { SportsPlayerPhoto } from "../components/sports/PlayerCollectibleCard";
 import PlayerStatSplits from "../components/sports/PlayerStatSplits";
+import PlayerBookAuditCard from "../components/sports/PlayerBookAuditCard";
 import WeeklyAvailabilityCard from "../components/sports/WeeklyAvailabilityCard";
 import { useAuth } from "../auth/AuthContext";
 import { acceptMembership, createEventResponse, createGroupInviteLink, getEventResponses, getGroups, getMemberships, inviteMember, setMembershipRole, uploadGroupLogo, updateEventResponse } from "../api/social";
@@ -56,6 +58,7 @@ import {
   getPlayerProfiles,
   getPlayerAwards,
   getPlayerBadgeCard,
+  getPlayerBookAudit,
   getScopedTeamStats,
   getSportsTeams,
   getTeamDashboard,
@@ -172,13 +175,29 @@ function Stat({ label, value, sub }) {
 }
 
 function Drawer({ title, onClose, children }) {
-  return (
-    <div className="fixed inset-0 z-[120] flex items-end bg-black/70 backdrop-blur-sm sm:items-center sm:justify-center" onMouseDown={onClose}>
-      <section onMouseDown={(event) => event.stopPropagation()} className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[1.7rem] border border-white/10 bg-[#06101d] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:max-w-xl sm:rounded-[1.7rem]">
-        <div className="sticky top-0 z-10 mb-3 flex items-center justify-between bg-[#06101d]/95 pb-2"><div><div className="text-[9px] font-black uppercase tracking-[.16em] text-cyan-300">Team workspace</div><h2 className="mt-1 text-lg font-black text-white">{title}</h2></div><button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full border border-white/10"><X className="h-4 w-4" /></button></div>
-        {children}
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onEscape = (event) => { if (event.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onEscape);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener("keydown", onEscape);
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <div className="fixed inset-0 z-[500] flex items-end justify-center bg-black/85 px-1 pt-[calc(env(safe-area-inset-top)+.5rem)] backdrop-blur-sm sm:items-center sm:px-3" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section role="dialog" aria-modal="true" aria-label={title} className="flex max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-.5rem)] w-full max-w-xl flex-col overflow-hidden rounded-t-[1.5rem] border border-cyan-300/20 bg-[#06101d] shadow-2xl sm:rounded-[1.7rem]">
+        <div className="z-10 flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-[#06101d] px-4 py-3">
+          <div className="min-w-0"><div className="text-[9px] font-black uppercase tracking-[.16em] text-cyan-300">Team workspace</div><h2 className="mt-1 truncate text-base font-black text-white">{title}</h2></div>
+          <button type="button" aria-label={"Close " + title} onClick={onClose} className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 text-xs font-black text-cyan-100"><X className="h-4 w-4" />Close</button>
+        </div>
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3 pb-5">{children}</div>
+        <button type="button" onClick={onClose} className="min-h-12 shrink-0 border-t border-cyan-300/15 bg-[#071522] pb-[env(safe-area-inset-bottom)] text-xs font-black text-cyan-100 sm:hidden">← Back to team</button>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -242,6 +261,7 @@ export default function SportsTeamManagerDashboard() {
   const [playerEdit, setPlayerEdit] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
   const [drawerBadgeCard, setDrawerBadgeCard] = useState(null);
+  const [drawerAudit, setDrawerAudit] = useState(null);
   const [drawerBadgeLoading, setDrawerBadgeLoading] = useState(false);
   const [momentGameId, setMomentGameId] = useState("");
   const [momentKind, setMomentKind] = useState("");
@@ -752,9 +772,11 @@ export default function SportsTeamManagerDashboard() {
     setDrawerBadgeCard(null);
     setDrawerBadgeLoading(true);
     setDrawerAwards([]);
-    Promise.allSettled([getPlayerBadgeCard(player.id), getPlayerAwards({ player: player.id })]).then(([badgeResult, awardResult])=>{
+    setDrawerAudit(null);
+    Promise.allSettled([getPlayerBadgeCard(player.id), getPlayerAwards({ player: player.id }), getPlayerBookAudit(player.id)]).then(([badgeResult, awardResult, auditResult])=>{
       setDrawerBadgeCard(badgeResult.status==="fulfilled" ? badgeResult.value : null);
       setDrawerAwards(awardResult.status==="fulfilled" ? awardResult.value : []);
+      setDrawerAudit(auditResult.status==="fulfilled" ? auditResult.value : null);
     }).finally(()=>setDrawerBadgeLoading(false));
     setMomentGameId(""); setMomentKind("");
     setAwardForm({ kind:"PLAYER_OF_WEEK", title:"Player of the Week", week_of:"", note:"" });
@@ -1080,7 +1102,7 @@ export default function SportsTeamManagerDashboard() {
     setStatForm({ player: "", scope: "LEAGUE", games: "", pa: "", ab: "", hits: "", doubles: "", triples: "", home_runs: "", walks: "", sac_flies: "", rbi: "", runs: "", note: "" });
   }
 
-  if (loading) return <div className="min-h-screen bg-[#02060c] text-white"><ModeBar sportsCompact title="Team" subtitle="SyncWorks Social" /><div className="grid min-h-[65vh] place-items-center"><Loader2 className="h-8 w-8 animate-spin text-cyan-300" /></div></div>;
+  if (loading) return <div className="grid min-h-screen place-items-center bg-[#02060c] text-white" aria-label="Loading team"><Loader2 className="h-8 w-8 animate-spin text-cyan-300" /></div>;
   if (!group || !team) return <div className="min-h-screen bg-[#02060c] p-4 text-white"><ModeBar sportsCompact title="Team" subtitle="SyncWorks Social" /><Card title="Team workspace unavailable" body="Open this from an enabled Team group in SyncWorks Social."><Btn onClick={() => navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4" />Social</Btn></Card></div>;
 
   const record = dashboard?.record || {};
@@ -1647,7 +1669,7 @@ export default function SportsTeamManagerDashboard() {
 
       {chatOpen ? <Drawer title="Team chat" onClose={() => setChatOpen(false)}><TeamChatPanel groupId={group.id} teamId={team.id} userId={userId} canManage={managed} bare /></Drawer> : null}
 
-      {playerDrawer && playerEdit ? <Drawer title={playerDrawer.display_name} onClose={() => { setPlayerDrawer(null); setPlayerEdit(null); setPhotoFile(null); }}><div className="space-y-3">{drawerBadgeLoading ? <div className="flex items-center gap-2 rounded-xl border border-cyan-300/15 bg-cyan-300/[.04] p-3 text-xs text-cyan-100"><Loader2 className="h-4 w-4 animate-spin"/>Loading player achievement card…</div> : drawerBadgeCard ? <><PlayerCollectibleCard player={playerDrawer} profile={profileFor(playerDrawer)} progress={drawerBadgeCard} teamName={group?.name} /><details className="rounded-xl border border-white/10 bg-white/[.02] p-2"><summary className="cursor-pointer px-2 py-2 text-xs font-black text-slate-200">Year, month and league stats</summary><PlayerStatSplits progress={drawerBadgeCard}/></details></> : null}<div className="flex items-center gap-3"><Avatar player={playerDrawer} profile={profileFor(playerDrawer)} size="lg" /><div><b className="text-white">#{playerDrawer.jersey_number || "—"} {playerDrawer.display_name}</b><div className="mt-1 text-[10px] text-slate-500">{playerDrawer.primary_position || "Position TBD"}{playerDrawer.user ? " · linked SyncWorks account" : " · manual roster entry"}</div></div></div>{managerView ? <><div className="grid grid-cols-2 gap-2"><Input label="Name" value={playerEdit.display_name} onChange={(value) => setPlayerEdit((v) => ({ ...v, display_name: value }))} className="col-span-2" /><Input label="Jersey #" value={playerEdit.jersey_number} onChange={(value) => setPlayerEdit((v) => ({ ...v, jersey_number: value }))} /><Select label="Position" value={playerEdit.primary_position} onChange={(value) => setPlayerEdit((v) => ({ ...v, primary_position: value }))}><option value="">Choose</option>{POSITIONS.map((position) => <option key={position}>{position}</option>)}</Select><Input label="Email" value={playerEdit.email} onChange={(value) => setPlayerEdit((v) => ({ ...v, email: value }))} /><Input label="Phone" value={playerEdit.phone} onChange={(value) => setPlayerEdit((v) => ({ ...v, phone: value }))} /><Input label="DOB" type="date" value={playerEdit.date_of_birth} onChange={(value) => setPlayerEdit((v) => ({ ...v, date_of_birth: value }))} /><label className="flex min-h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[.025] px-3 text-[9px] font-bold text-slate-300"><input type="checkbox" checked={playerEdit.show_age_to_team} onChange={(event)=>setPlayerEdit((v)=>({...v,show_age_to_team:event.target.checked}))} className="h-4 w-4 accent-cyan-300"/>Age visible to team</label><Input label="Emergency contact" value={playerEdit.emergency_contact_name} onChange={(value) => setPlayerEdit((v) => ({ ...v, emergency_contact_name: value }))} /><Input label="Emergency phone" value={playerEdit.emergency_contact_phone} onChange={(value) => setPlayerEdit((v) => ({ ...v, emergency_contact_phone: value }))} /></div><label className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 text-xs font-black text-slate-300"><Camera className="h-4 w-4" />{photoFile ? photoFile.name : "Choose profile photo"}<input type="file" accept="image/*" className="hidden" onChange={(event) => setPhotoFile(event.target.files?.[0] || null)} /></label><label className="block"><span className="mb-1 block text-[9px] font-black uppercase tracking-wide text-slate-500">Manager notes</span><textarea rows={3} value={playerEdit.notes} onChange={(event) => setPlayerEdit((v) => ({ ...v, notes: event.target.value }))} className="w-full rounded-xl border border-white/10 bg-black/20 p-3 text-xs" /></label><div className="grid grid-cols-2 gap-2"><Btn primary onClick={savePlayer} disabled={busy}><Save className="mr-1 inline h-4 w-4" />Save player</Btn><Btn danger onClick={archivePlayer}><Trash2 className="mr-1 inline h-4 w-4" />Archive player</Btn></div>
+      {playerDrawer && playerEdit ? <Drawer title={playerDrawer.display_name} onClose={() => { setPlayerDrawer(null); setPlayerEdit(null); setPhotoFile(null); }}><div className="space-y-3">{drawerBadgeLoading ? <div className="flex items-center gap-2 rounded-xl border border-cyan-300/15 bg-cyan-300/[.04] p-3 text-xs text-cyan-100"><Loader2 className="h-4 w-4 animate-spin"/>Loading player achievement card…</div> : drawerBadgeCard ? <><PlayerCollectibleCard player={playerDrawer} profile={profileFor(playerDrawer)} progress={drawerBadgeCard} teamName={group?.name} /><details className="rounded-xl border border-white/10 bg-white/[.02] p-2"><summary className="cursor-pointer px-2 py-2 text-xs font-black text-slate-200">Year, month and league stats</summary><PlayerStatSplits progress={drawerBadgeCard}/></details></> : null}<PlayerBookAuditCard audit={drawerAudit} loading={drawerBadgeLoading} coach={managerView} onOpenGame={(gameId)=>navigate(`/connect/groups/${group.id}/sports/games/${gameId}`)} /><div className="flex items-center gap-3"><Avatar player={playerDrawer} profile={profileFor(playerDrawer)} size="lg" /><div><b className="text-white">#{playerDrawer.jersey_number || "—"} {playerDrawer.display_name}</b><div className="mt-1 text-[10px] text-slate-500">{playerDrawer.primary_position || "Position TBD"}{playerDrawer.user ? " · linked SyncWorks account" : " · manual roster entry"}</div></div></div>{managerView ? <><div className="grid grid-cols-2 gap-2"><Input label="Name" value={playerEdit.display_name} onChange={(value) => setPlayerEdit((v) => ({ ...v, display_name: value }))} className="col-span-2" /><Input label="Jersey #" value={playerEdit.jersey_number} onChange={(value) => setPlayerEdit((v) => ({ ...v, jersey_number: value }))} /><Select label="Position" value={playerEdit.primary_position} onChange={(value) => setPlayerEdit((v) => ({ ...v, primary_position: value }))}><option value="">Choose</option>{POSITIONS.map((position) => <option key={position}>{position}</option>)}</Select><Input label="Email" value={playerEdit.email} onChange={(value) => setPlayerEdit((v) => ({ ...v, email: value }))} /><Input label="Phone" value={playerEdit.phone} onChange={(value) => setPlayerEdit((v) => ({ ...v, phone: value }))} /><Input label="DOB" type="date" value={playerEdit.date_of_birth} onChange={(value) => setPlayerEdit((v) => ({ ...v, date_of_birth: value }))} /><label className="flex min-h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[.025] px-3 text-[9px] font-bold text-slate-300"><input type="checkbox" checked={playerEdit.show_age_to_team} onChange={(event)=>setPlayerEdit((v)=>({...v,show_age_to_team:event.target.checked}))} className="h-4 w-4 accent-cyan-300"/>Age visible to team</label><Input label="Emergency contact" value={playerEdit.emergency_contact_name} onChange={(value) => setPlayerEdit((v) => ({ ...v, emergency_contact_name: value }))} /><Input label="Emergency phone" value={playerEdit.emergency_contact_phone} onChange={(value) => setPlayerEdit((v) => ({ ...v, emergency_contact_phone: value }))} /></div><label className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 text-xs font-black text-slate-300"><Camera className="h-4 w-4" />{photoFile ? photoFile.name : "Choose profile photo"}<input type="file" accept="image/*" className="hidden" onChange={(event) => setPhotoFile(event.target.files?.[0] || null)} /></label><label className="block"><span className="mb-1 block text-[9px] font-black uppercase tracking-wide text-slate-500">Manager notes</span><textarea rows={3} value={playerEdit.notes} onChange={(event) => setPlayerEdit((v) => ({ ...v, notes: event.target.value }))} className="w-full rounded-xl border border-white/10 bg-black/20 p-3 text-xs" /></label><div className="grid grid-cols-2 gap-2"><Btn primary onClick={savePlayer} disabled={busy}><Save className="mr-1 inline h-4 w-4" />Save player</Btn><Btn danger onClick={archivePlayer}><Trash2 className="mr-1 inline h-4 w-4" />Archive player</Btn></div>
         {managerView ? <section className="space-y-3 rounded-xl border border-amber-300/20 bg-amber-300/[.035] p-3">
           <div><b className="text-xs font-black text-amber-100">Coach awards & recognition</b><p className="mt-1 text-[10px] leading-4 text-slate-400">Coach-selected awards stay separate from automatic statistical milestones, so recognition never rewrites official stats.</p></div>
           <div className="grid grid-cols-2 gap-2">
