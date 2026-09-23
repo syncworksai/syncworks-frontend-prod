@@ -720,6 +720,7 @@ export default function SoftballGameDayAdvanced() {
         try {
           await saveSoftballPlayContext({
             plate_appearance: plateAppearanceId,
+            outs_before: Math.min(2, Math.max(0, Number(game.outs || 0))),
             runner_on_first_before: runner1,
             runner_on_second_before: runner2,
             runner_on_third_before: runner3,
