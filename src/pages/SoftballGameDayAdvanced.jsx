@@ -1540,7 +1540,7 @@ export default function SoftballGameDayAdvanced() {
                   <input value={historicalDraft.notes} onChange={e=>setHistoricalDraft({...historicalDraft,notes:e.target.value})} placeholder="e.g. 6-3 groundout · runner advances" className="mt-1 min-h-11 w-full rounded-xl border border-white/10 bg-[#050c16] p-2 text-[16px] text-white"/>
                 </label>
               </div>
-              <div className="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/[.06] p-2 text-[10px] text-amber-100">An entered play contributes to player stats. Check the original photograph before saving. The official game score will not change.</div>
+              <div className="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/[.06] p-2 text-[10px] text-amber-100">Each photo cell is saved once. An entered play contributes to player stats. Check the original photograph before saving. The official game score will not change.</div>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <Button onClick={()=>setHistoricalDraft(null)}>Cancel</Button>
                 <Button primary disabled={busy || !historicalDraft.source_photo} onClick={saveHistoricalEntry}>{busy?"Saving…":"Save cell"}</Button>
