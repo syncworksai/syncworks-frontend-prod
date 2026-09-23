@@ -1,149 +1,143 @@
-import React, { useRef, useState } from "react";
-import { GripVertical, Plus, Trophy } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, ChevronRight, LayoutGrid, Plus, Search, Table2, Trophy } from "lucide-react";
 
-const num = (value) => Number(value || 0);
-const pct = (value) => num(value).toFixed(3).replace(/^0(?=\.)/, "");
+const n = (value) => Number(value || 0);
+const rate = (value) => n(value).toFixed(3).replace(/^0(?=\.)/, "");
+const COLUMNS = [
+  { key: "g", label: "G", type: "int" },
+  { key: "pa", label: "PA", type: "int" },
+  { key: "ab", label: "AB", type: "int" },
+  { key: "h", label: "H", type: "int" },
+  { key: "avg", label: "AVG", type: "rate" },
+  { key: "obp", label: "OBP", type: "rate" },
+  { key: "slg", label: "SLG", type: "rate" },
+  { key: "ops", label: "OPS", type: "rate" },
+  { key: "double", label: "2B", type: "int" },
+  { key: "triple", label: "3B", type: "int" },
+  { key: "hr", label: "HR", type: "int" },
+  { key: "rbi", label: "RBI", type: "int" },
+  { key: "runs", label: "R", type: "int" },
+  { key: "bb", label: "BB", type: "int" },
+];
+const BY_KEY = Object.fromEntries(COLUMNS.map(column=>[column.key,column]));
+const LEADER_KEYS = ["avg", "ops", "h", "hr", "rbi"];
+const format = (key,value) => BY_KEY[key]?.type === "rate" ? rate(value) : String(n(value));
+const qualified = (row, key, minAB) => BY_KEY[key]?.type !== "rate" || n(row.ab) >= Math.max(1,minAB);
 
-const METRICS = {
-  avg: { label: "AVG", format: pct },
-  obp: { label: "OBP", format: pct },
-  slg: { label: "SLG", format: pct },
-  ops: { label: "OPS", format: pct },
-  h: { label: "H", format: (v) => num(v) },
-  hr: { label: "HR", format: (v) => num(v) },
-  rbi: { label: "RBI", format: (v) => num(v) },
-  runs: { label: "R", format: (v) => num(v) },
-};
-
-export default function InteractiveStatsBoard({ rows, scope, onScope, managerView, onAdd }) {
+export default function InteractiveStatsBoard({
+  rows = [], scope = "ALL", onScope, managerView = false, onAdd, onPlayer,
+  bookCoverage = null,
+}) {
   const [sortKey, setSortKey] = useState("ops");
-  const [metricOrder, setMetricOrder] = useState(["avg", "obp", "slg", "ops", "h", "hr", "rbi", "runs"]);
-  const [dragging, setDragging] = useState(false);
-  const dragRef = useRef({ timer: null, active: false, index: null });
+  const [direction, setDirection] = useState("desc");
+  const [view, setView] = useState("grid");
+  const [minAB, setMinAB] = useState(1);
+  const [search, setSearch] = useState("");
+  const [onlyQualified, setOnlyQualified] = useState(false);
+  const cleanRows = useMemo(() => (Array.isArray(rows)?rows:[]).filter(row=>row.player && row.player.is_active!==false && !row.player.merged_into),[rows]);
+  const sorted = useMemo(() => cleanRows
+    .filter(row => (row.player?.display_name||"").toLowerCase().includes(search.toLowerCase()) ||
+      String(row.player?.jersey_number||"").includes(search))
+    .filter(row => !onlyQualified || qualified(row,sortKey,minAB))
+    .sort((a,b) => {
+      const qa = qualified(a,sortKey,minAB), qb = qualified(b,sortKey,minAB);
+      if (qa !== qb) return qa ? -1 : 1;
+      const delta = n(a[sortKey]) - n(b[sortKey]);
+      return (direction==="desc" ? -delta : delta) || (a.player?.display_name||"").localeCompare(b.player?.display_name||"");
+    }), [cleanRows,sortKey,direction,minAB,search,onlyQualified]);
 
-  const cleanRows = Array.isArray(rows) ? rows : [];
-  const sorted = [...cleanRows].sort((a, b) => num(b?.[sortKey]) - num(a?.[sortKey]));
-  const leaderMetrics = ["avg", "ops", "hr", "rbi"];
-  const leaders = leaderMetrics.map((key) => {
-    const leader = [...cleanRows].sort((a, b) => num(b?.[key]) - num(a?.[key]))[0] || null;
-    return { key, leader };
+  const leaders = LEADER_KEYS.map(key => {
+    const eligible = cleanRows.filter(row=>qualified(row,key,minAB) && n(row[key])>0);
+    const found = [...eligible].sort((a,b)=>n(b[key])-n(a[key])||n(b.ab)-n(a.ab))[0]||null;
+    return {key,row:found};
   });
 
-  function reorder(from, to) {
-    if (from === to || from == null || to == null) return;
-    setMetricOrder((current) => {
-      const next = [...current];
-      const [item] = next.splice(from, 1);
-      next.splice(to, 0, item);
-      return next;
-    });
+  function changeSort(key) {
+    if (sortKey===key) setDirection(current=>current==="desc"?"asc":"desc");
+    else {setSortKey(key);setDirection("desc");}
   }
 
-  function dragStart(event, index) {
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-    dragRef.current = {
-      timer: window.setTimeout(() => {
-        dragRef.current.active = true;
-        setDragging(true);
-      }, 180),
-      active: false,
-      index,
-    };
-  }
-
-  function dragMove(event) {
-    if (!dragRef.current.active) return;
-    event.preventDefault();
-    const chip = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-stat-chip]");
-    if (!chip) return;
-    const to = Number(chip.dataset.statChip);
-    const from = Number(dragRef.current.index);
-    if (Number.isNaN(to) || to === from) return;
-    reorder(from, to);
-    dragRef.current.index = to;
-  }
-
-  function dragEnd() {
-    window.clearTimeout(dragRef.current.timer);
-    dragRef.current.active = false;
-    dragRef.current.index = null;
-    setDragging(false);
-  }
-
-  return (
-    <section className="rounded-[1.35rem] border border-white/10 bg-[#07111f]/95 p-3.5 sm:p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-black text-white">Season stats</h2>
-          <p className="mt-1 text-[10px] leading-4 text-slate-500">Tap a metric to rank the roster. Press and hold a chip to drag your stat order.</p>
-        </div>
-        {managerView ? <button type="button" onClick={onAdd} className="min-h-10 rounded-xl bg-amber-300 px-3 text-[10px] font-black text-slate-950"><Plus className="mr-1 inline h-4 w-4" />Add stats</button> : <Trophy className="h-4 w-4 text-amber-300" />}
+  return <section className="rounded-[1.35rem] border border-cyan-300/15 bg-[#07111f]/95 p-3.5 sm:p-4">
+    <div className="flex items-start justify-between gap-2">
+      <div>
+        <h2 className="text-base font-black text-white">Stat center · sortable roster</h2>
+        <p className="mt-1 text-[10px] leading-4 text-slate-400">MLB-style leaders and spreadsheet columns. Tap any category to sort high-to-low, then tap again to reverse.</p>
+        {bookCoverage && bookCoverage.total>bookCoverage.withPlays ? <p className="mt-1 text-[10px] font-bold text-amber-200">
+          Only {bookCoverage.withPlays}/{bookCoverage.total} final games have recorded play-by-play. Historical batting totals are incomplete.
+        </p> : null}
       </div>
+      {managerView && onAdd ? <button type="button" onClick={onAdd} className="min-h-11 shrink-0 rounded-xl bg-amber-300 px-3 text-[10px] font-black text-slate-950"><Plus className="mr-1 inline h-4 w-4"/>Add stats</button> : null}
+    </div>
 
-      <div className="mt-3">
-        <div className="mb-1.5 flex items-center gap-1 text-[8px] font-black uppercase tracking-[.14em] text-amber-300"><Trophy className="h-3.5 w-3.5" />Team leaders</div>
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-          {leaders.map(({ key, leader }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setSortKey(key)}
-              className={`rounded-xl border p-2 text-left transition ${sortKey === key ? "border-amber-300/30 bg-amber-300/10" : "border-white/10 bg-black/15"}`}
-            >
-              <div className="text-[7px] font-black uppercase tracking-wide text-slate-500">{METRICS[key].label}</div>
-              <div className="mt-1 truncate text-[10px] font-black text-white">{leader?.player?.display_name || "—"}</div>
-              <div className="mt-0.5 text-sm font-black text-amber-200">{leader ? METRICS[key].format(leader?.[key]) : "—"}</div>
+    <div className="mt-3 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-amber-200"><Trophy className="h-4 w-4"/>Team leaders · recorded data</div>
+    <div className="mt-1.5 grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+      {leaders.map(({key,row})=><button type="button" key={key} onClick={()=>changeSort(key)}
+        className={`min-w-0 rounded-xl border p-2 text-left ${sortKey===key?"border-amber-300/40 bg-amber-300/10":"border-white/10 bg-white/[.025]"}`}>
+        <span className="block text-[8px] font-black text-amber-200">{BY_KEY[key].label}</span>
+        <b className="mt-1 block truncate text-[10px] text-white">{row?.player?.display_name||"Not recorded"}</b>
+        <span className="mt-1 block text-lg font-black tabular-nums text-cyan-200">{row?format(key,row[key]):"—"}</span>
+        {BY_KEY[key].type==="rate"?<span className="text-[8px] text-slate-500">{row?n(row.ab)+" AB":"Min "+Math.max(1,minAB)+" AB"}</span>:null}
+      </button>)}
+    </div>
+
+    <div className="mt-3 flex flex-wrap gap-1.5">
+      {["ALL","LEAGUE","TOURNAMENT"].map(value=><button type="button" key={value} onClick={()=>onScope?.(value)}
+        className={`min-h-10 rounded-xl px-3 text-[9px] font-black ${scope===value?"bg-cyan-300 text-slate-950":"border border-white/10 text-slate-400"}`}>
+        {value==="ALL"?"Combined":value.charAt(0)+value.slice(1).toLowerCase()}
+      </button>)}
+    </div>
+
+    <div className="mt-3 flex flex-wrap items-end gap-2">
+      <label className="relative min-w-[10rem] flex-1">
+        <Search className="pointer-events-none absolute left-2.5 top-3 h-4 w-4 text-slate-500"/>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search player or jersey"
+          className="h-11 w-full rounded-xl border border-white/10 bg-[#050b14] pl-8 pr-3 text-[16px] text-white sm:text-[11px]"/>
+      </label>
+      <label className="flex items-center gap-1.5 text-[9px] font-black text-slate-400">MIN AB
+        <select value={minAB} onChange={e=>setMinAB(Number(e.target.value))} className="h-11 rounded-xl border border-white/10 bg-[#050b14] px-2 text-[11px] text-white">
+          {[1,5,10,20].map(value=><option key={value} value={value}>{value}</option>)}
+        </select>
+      </label>
+      <div className="flex rounded-xl border border-white/10 p-0.5">
+        <button type="button" aria-label="Spreadsheet view" onClick={()=>setView("grid")} className={`grid h-10 w-10 place-items-center rounded-lg ${view==="grid"?"bg-white text-slate-950":"text-slate-400"}`}><Table2 className="h-4 w-4"/></button>
+        <button type="button" aria-label="Player cards view" onClick={()=>setView("cards")} className={`grid h-10 w-10 place-items-center rounded-lg ${view==="cards"?"bg-white text-slate-950":"text-slate-400"}`}><LayoutGrid className="h-4 w-4"/></button>
+      </div>
+    </div>
+    <label className="mt-2 flex items-center gap-2 text-[10px] text-slate-400">
+      <input type="checkbox" checked={onlyQualified} onChange={e=>setOnlyQualified(e.target.checked)} className="h-4 w-4 accent-cyan-300"/>
+      Hide players below qualifying AB for rate statistics
+    </label>
+
+    {view==="grid" ? <div className="mt-3 overflow-x-auto overscroll-x-contain rounded-xl border border-white/10" role="region" aria-label="Swipe sideways to view all baseball statistics" tabIndex={0}>
+      <table className="w-full min-w-[1030px] border-collapse text-right text-[10px] tabular-nums">
+        <thead><tr className="border-b border-white/15 bg-[#0f1e2e]">
+          <th scope="col" className="sticky left-0 z-20 min-w-36 border-r border-white/10 bg-[#0f1e2e] px-3 py-3 text-left font-black text-slate-400">PLAYER</th>
+          {COLUMNS.map(col=><th key={col.key} scope="col" className="min-w-12 border-r border-white/[.04] p-0">
+            <button type="button" onClick={()=>changeSort(col.key)} aria-sort={sortKey===col.key?(direction==="desc"?"descending":"ascending"):undefined}
+              className={`flex min-h-11 w-full items-center justify-end gap-1 px-2 text-[9px] font-black ${sortKey===col.key?"bg-cyan-300/10 text-cyan-100":"text-slate-400"}`}>
+              {col.label}{sortKey===col.key?(direction==="desc"?<ArrowDown className="h-3 w-3"/>:<ArrowUp className="h-3 w-3"/>):null}
             </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1">
-        {["ALL", "LEAGUE", "TOURNAMENT"].map((value) => (
-          <button key={value} type="button" onClick={() => onScope?.(value)} className={`shrink-0 rounded-full px-3 py-1.5 text-[9px] font-black ${scope === value ? "bg-amber-300 text-slate-950" : "border border-white/10 text-slate-400"}`}>
-            {value === "ALL" ? "Combined" : value[0] + value.slice(1).toLowerCase()}
-          </button>
-        ))}
-      </div>
-
-      <div className={`mt-2 flex gap-1.5 overflow-x-auto pb-1 ${dragging ? "select-none" : ""}`}>
-        {metricOrder.map((key, index) => (
-          <button
-            key={key}
-            type="button"
-            data-stat-chip={index}
-            onClick={() => { if (!dragRef.current.active) setSortKey(key); }}
-            onPointerDown={(event) => dragStart(event, index)}
-            onPointerMove={dragMove}
-            onPointerUp={dragEnd}
-            onPointerCancel={dragEnd}
-            style={{ touchAction: "pan-y" }}
-            className={`flex min-h-9 shrink-0 items-center gap-1 rounded-xl border px-2.5 text-[9px] font-black ${sortKey === key ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100" : "border-white/10 text-slate-400"}`}
-          >
-            <GripVertical className="h-3 w-3" /> {METRICS[key].label}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-3 space-y-2">
-        {sorted.map((row, rank) => (
-          <div key={row.player?.id} className="rounded-xl border border-white/10 bg-white/[.025] p-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0"><span className="mr-2 text-[9px] font-black text-cyan-300">#{rank + 1}</span><b className="truncate text-xs text-white">#{row.player?.jersey_number || "—"} {row.player?.display_name}</b></div>
-              <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-1 text-[8px] font-black text-cyan-100">{METRICS[sortKey].label} {METRICS[sortKey].format(row?.[sortKey])}</span>
-            </div>
-            <div className="mt-2 grid grid-cols-4 gap-1">
-              {metricOrder.slice(0, 8).map((key) => (
-                <button key={key} type="button" onClick={() => setSortKey(key)} className={`rounded-lg border p-1.5 text-left ${sortKey === key ? "border-cyan-300/20 bg-cyan-300/[.06]" : "border-white/10 bg-black/15"}`}>
-                  <div className="text-[7px] font-black uppercase text-slate-500">{METRICS[key].label}</div>
-                  <div className="mt-0.5 text-[11px] font-black text-white">{METRICS[key].format(row?.[key])}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-        {!sorted.length ? <div className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-slate-500">No stats recorded yet.</div> : null}
-      </div>
-    </section>
-  );
+          </th>)}
+        </tr></thead>
+        <tbody>{sorted.map((row,index)=><tr key={row.player.id} className="border-b border-white/[.06] odd:bg-white/[.016] hover:bg-cyan-300/[.05]">
+          <th className="sticky left-0 z-10 border-r border-white/10 bg-[#0a1827] px-2 py-2 text-left">
+            {onPlayer ? <button type="button" onClick={()=>onPlayer(row)} className="flex w-full items-center gap-1 text-left">
+              <span className="w-4 shrink-0 text-[9px] text-cyan-400">{index+1}</span><span className="min-w-0 truncate text-[9px] font-black text-white">#{row.player.jersey_number||"—"} {row.player.display_name}</span><ChevronRight className="h-3 w-3 shrink-0 text-cyan-300"/>
+            </button> : <div className="flex items-center gap-1"><span className="w-4 shrink-0 text-[9px] text-cyan-400">{index+1}</span><span className="min-w-0 truncate text-[9px] font-black text-white">#{row.player.jersey_number||"—"} {row.player.display_name}</span></div>}
+          </th>
+          {COLUMNS.map(col=><td key={col.key} className={`border-r border-white/[.03] px-2 py-2 text-right ${sortKey===col.key?"bg-cyan-300/[.06] font-black text-cyan-100":col.type==="rate"&&!qualified(row,col.key,minAB)?"text-slate-600":"text-slate-300"}`}>
+            {format(col.key,row[col.key])}
+          </td>)}
+        </tr>)}
+          {!sorted.length?<tr><td colSpan={COLUMNS.length+1} className="py-8 text-center text-xs text-slate-500">No players match your filters.</td></tr>:null}
+        </tbody>
+      </table>
+    </div> : <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      {sorted.map((row,index)=><button type="button" key={row.player.id} onClick={()=>onPlayer?.(row)} className="rounded-xl border border-white/10 bg-white/[.025] p-3 text-left">
+        <div className="flex items-center justify-between gap-2"><b className="truncate text-xs text-white">#{index+1} · #{row.player.jersey_number||"—"} {row.player.display_name}</b><span className="rounded-lg bg-cyan-300/10 px-2 py-1 text-[10px] font-black text-cyan-100">{BY_KEY[sortKey].label} {format(sortKey,row[sortKey])}</span></div>
+        <div className="mt-2 grid grid-cols-4 gap-1.5">{["g","ab","h","avg","ops","hr","rbi","runs"].map(key=><div key={key} className="rounded-lg border border-white/10 bg-black/15 p-1.5"><div className="text-[8px] font-black text-slate-500">{BY_KEY[key].label}</div><b className="text-[11px] text-white">{format(key,row[key])}</b></div>)}</div>
+      </button>)}
+    </div>}
+    <p className="mt-2 text-[9px] text-slate-500">Rate leaders require at least {Math.max(1,minAB)} recorded AB. Blank historical games are not zero-hit performances; upload and review their original Game Books before treating season leaderboards as complete.</p>
+  </section>;
 }

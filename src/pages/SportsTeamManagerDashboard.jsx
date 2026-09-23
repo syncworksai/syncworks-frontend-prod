@@ -32,15 +32,17 @@ import {
 
 import ModeBar from "../components/ModeBar";
 import TeamChatPanel from "../components/sports/TeamChatPanel";
-import GameAvailabilityCard, { availabilityStatus } from "../components/sports/GameAvailabilityCard";
+import { availabilityStatus } from "../components/sports/GameAvailabilityCard";
+import GameDayLineupPreview from "../components/sports/GameDayLineupPreview";
 import InteractiveStatsBoard from "../components/sports/InteractiveStatsBoard";
+import SituationBaselineCard from "../components/sports/SituationBaselineCard";
 import SoftballDefenseField from "../components/sports/SoftballDefenseField";
 import TeamRewardSettings from "../components/sports/TeamRewardSettings";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import PlayerCollectibleCard, { SportsPlayerPhoto } from "../components/sports/PlayerCollectibleCard";
 import PlayerStatSplits from "../components/sports/PlayerStatSplits";
 import PlayerBookAuditCard from "../components/sports/PlayerBookAuditCard";
-import WeeklyAvailabilityCard from "../components/sports/WeeklyAvailabilityCard";
+import WeeklyAvailabilityCard, { weekStartForGame } from "../components/sports/WeeklyAvailabilityCard";
 import { useAuth } from "../auth/AuthContext";
 import { acceptMembership, createEventResponse, createGroupInviteLink, getEventResponses, getGroups, getMemberships, inviteMember, setMembershipRole, uploadGroupLogo, updateEventResponse } from "../api/social";
 import {
@@ -54,6 +56,7 @@ import {
   finishSportsGame,
   ensureTeamPaymentSettings,
   getAdvancedTeamStats,
+  getGameSituationStats,
   getFeeAssignments,
   getPlayerProfiles,
   getPlayerAwards,
@@ -242,6 +245,7 @@ export default function SportsTeamManagerDashboard() {
   const [statsScope, setStatsScope] = useState("ALL");
   const [scopedStats, setScopedStats] = useState([]);
   const [advancedAnalytics, setAdvancedAnalytics] = useState(null);
+  const [situationData, setSituationData] = useState(null);
   const [previewPlayerView, setPreviewPlayerView] = useState(false);
   const [eventResponses, setEventResponses] = useState([]);
   const [chatOpen, setChatOpen] = useState(false);
@@ -412,6 +416,7 @@ export default function SportsTeamManagerDashboard() {
   useEffect(() => {
     if (!team) return;
     getAdvancedTeamStats(team.id).then(setAdvancedAnalytics).catch(() => setAdvancedAnalytics(null));
+    getGameSituationStats(team.id).then(setSituationData).catch(() => setSituationData(null));
   }, [team?.id]);
 
   async function run(fn, message, { closePlayer = false } = {}) {
@@ -570,6 +575,18 @@ export default function SportsTeamManagerDashboard() {
     } finally {
       setQuickSaving((current) => ({ ...current, [key]: false }));
     }
+  }
+
+  async function copyDayLineup(source, target) {
+    if (!managerView || target?.status !== "SCHEDULED" || !source?.lineup_spots?.length) return;
+    if (!window.confirm(`Copy ${source.opponent_name}'s batting order and positions to ${target.opponent_name}? Player OUT responses for the second game will still be checked.`)) return;
+    const spots = source.lineup_spots.map((spot)=>({
+      player: Number(spot.player),
+      batting_order: Number(spot.batting_order),
+      defensive_position: spot.defensive_position || "",
+      is_starter: spot.is_starter !== false,
+    }));
+    await run(()=>setSportsLineup(target.id, spots), "Copied to the second game. Review this game's positions and availability before first pitch.");
   }
 
   async function respondToGame(game, responseValue) {
@@ -1144,12 +1161,26 @@ export default function SportsTeamManagerDashboard() {
             <Stat label="Runs against" value={num(dashboard?.team_stats?.runs_against)} sub="Allowed" />
             <Stat label="Run differential" value={`${(num(dashboard?.team_stats?.runs_for)-num(dashboard?.team_stats?.runs_against))>=0?"+":""}${num(dashboard?.team_stats?.runs_for)-num(dashboard?.team_stats?.runs_against)}`} />
           </div>
-          {nextGame ? <button type="button" onClick={() => setTab("Schedule")} className="mt-3 flex w-full items-center justify-between rounded-xl border border-emerald-400/15 bg-emerald-400/[.05] p-2.5 text-left"><span><span className="block text-[9px] font-black uppercase tracking-wide text-emerald-300">Next game</span><b className="text-xs text-white">{new Date(nextGame.start_at).toLocaleDateString()} · {new Date(nextGame.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · vs {nextGame.opponent_name}</b><span className="block text-[10px] text-slate-500">{nextGame.venue_name || "Field TBD"}</span></span><CalendarDays className="h-4 w-4 text-emerald-300" /></button> : null}
+          {nextGame ? <button type="button" onClick={() => setTab("Schedule")} className="mt-3 flex w-full items-center justify-between rounded-xl border border-emerald-400/15 bg-emerald-400/[.05] p-2.5 text-left"><span><span className="block text-[9px] font-black uppercase tracking-wide text-emerald-300">Upcoming game day · open full slate</span><b className="mt-1 block text-xs text-white">{new Date(nextGame.start_at).toLocaleDateString("en-US",{timeZone:nextGame.timezone||"America/Chicago",weekday:"short",month:"short",day:"numeric"})} · {list(dashboard?.upcoming_games).filter(g=>weekStartForGame(g)===weekStartForGame(nextGame)).length} game(s) this week</b><span className="mt-1 block text-[10px] text-slate-400">See every game, time, field, home/visitor and lineup below.</span></span><CalendarDays className="h-4 w-4 text-emerald-300" /></button> : null}
         </section>
 
         <div className="flex gap-1.5 overflow-x-auto pb-1">{TABS.filter((name)=>name!=="Rewards"||managerView).map((name) => <button key={name} type="button" onClick={() => setTab(name)} className={cx("min-h-9 shrink-0 rounded-full px-3 text-[10px] font-black", tab === name ? "bg-white text-slate-950" : "border border-white/10 text-slate-400")}>{name}</button>)}</div>
 
         {tab === "Overview" ? <div className="grid gap-3 lg:grid-cols-[1fr_1fr_.92fr]">
+          {nextGame ? <div className="lg:col-span-3">
+            <WeeklyAvailabilityCard teamId={team.id} managerView={managerView} showRoster={false} showSelfResponse={Boolean(myPlayer)}
+              title="Upcoming game day · all games" initialWeekStart={weekStartForGame(nextGame)}
+              onGameOpen={(game)=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}
+            />
+          </div> : null}
+          <div className="lg:col-span-3">
+            <GameDayLineupPreview games={games} players={players} badgeRings={badgeRings}
+              managerView={managerView}
+              onEditLineup={(game)=>{ chooseLineupGame(String(game.id)); setTab("Lineup"); }}
+              onOpenGame={(game)=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}
+              onCopyLineup={copyDayLineup}
+            />
+          </div>
           <Card title="Season command" body={managerView ? "Manager controls. Players see the same team data without edit access." : "Your team, schedule, lineup, stats and dues in one place."}>
             <div className="grid grid-cols-3 gap-2">
   <Stat label="AVG" value={pct(dashboard?.team_stats?.avg)} sub={`${num(dashboard?.team_stats?.hits)} H`} />
@@ -1163,7 +1194,6 @@ export default function SportsTeamManagerDashboard() {
 </div>
             <div className="mt-3 grid grid-cols-3 gap-1.5"><Btn onClick={() => setTab("Lineup")}>Lineup</Btn><Btn onClick={() => setTab("Stats")}>Stats</Btn><Btn onClick={() => setTab("Dues")}>Dues</Btn></div>
           </Card>
-          <GameAvailabilityCard game={nextGame} players={players} responses={eventResponses} userId={userId} managerView={managerView} onRespond={respondToGame} />
           <div className="hidden lg:block lg:row-span-2"><TeamChatPanel groupId={group.id} teamId={team.id} userId={userId} canManage={managed} /></div>
           {managerView ? <Card title="Earned rewards · settings" body="Control Power, Contact, Speed and Clutch goals; verify or undo individual achievements from the roster." className="lg:col-span-2" action={<Trophy className="h-5 w-5 text-amber-300" />}>
             <div className="grid grid-cols-4 gap-1.5">
@@ -1223,7 +1253,7 @@ export default function SportsTeamManagerDashboard() {
             <Stat label="Linked" value={players.filter((player) => player.user).length} />
             <Stat label="Need link" value={players.filter((player) => !player.user).length} />
           </div> : null}
-          {managerView ? <div className="mb-3 flex gap-2"><Btn onClick={importSocialRoster} disabled={busy}><UserPlus className="mr-1 inline h-4 w-4" />Import Social members</Btn><Btn primary onClick={() => setAddPlayerOpen(true)}><Plus className="mr-1 inline h-4 w-4" />Quick add</Btn></div> : null}
+          {managerView ? <div className="mb-3"><Btn onClick={importSocialRoster} disabled={busy}><UserPlus className="mr-1 inline h-4 w-4" />Import existing Social members</Btn><p className="mt-1 text-[9px] text-slate-500">For a new player, use Add player above. Import does not create a second card for an already linked member.</p></div> : null}
           <div className="space-y-1.5">
             {players.map((player) => {
               const profile = profileFor(player);
@@ -1432,7 +1462,7 @@ export default function SportsTeamManagerDashboard() {
           </div> : null}
         </div> : null}
 
-        {tab === "Schedule" ? <div className="space-y-3"><WeeklyAvailabilityCard teamId={team.id} managerView={managerView} /><div className="grid gap-3 lg:grid-cols-[1.3fr_.7fr]">
+        {tab === "Schedule" ? <div className="space-y-3"><WeeklyAvailabilityCard teamId={team.id} managerView={managerView} showSelfResponse={Boolean(myPlayer)} initialWeekStart={nextGame?weekStartForGame(nextGame):undefined} title="Week-by-week game confirmations" onGameOpen={(game)=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)} /><div className="grid gap-3 lg:grid-cols-[1.3fr_.7fr]">
           <div className="space-y-3">
             {needsCompletionGames.length ? <Card title="Needs completion" body="Past games stay out of Upcoming until you enter the final result or finish the Game Book." action={<Pill tone="amber">{needsCompletionGames.length} OPEN</Pill>}>
               <div className="space-y-2">{needsCompletionGames.map((game)=><div key={game.id} className="flex items-center justify-between gap-2 rounded-xl border border-amber-300/20 bg-amber-300/[.05] p-3"><div className="min-w-0"><div className="text-[8px] font-black uppercase tracking-wide text-amber-300">{new Date(game.start_at).toLocaleDateString()}</div><b className="block truncate text-xs text-white">vs {game.opponent_name}</b><span className="text-[9px] text-slate-500">{game.venue_name || "Field TBD"} · final score/stat entry needed</span></div><div className="grid shrink-0 gap-1"><Btn primary onClick={()=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>Game Book</Btn>{managerView?<Btn onClick={()=>quickFinal(game)}>Quick final</Btn>:null}</div></div>)}</div>
@@ -1500,7 +1530,10 @@ export default function SportsTeamManagerDashboard() {
               </div>
             </div>
           </Card> : null}
-          <InteractiveStatsBoard rows={scopedStats} scope={statsScope} onScope={setStatsScope} managerView={managerView} onAdd={() => setStatDrawer(true)} />
+          <SituationBaselineCard data={situationData} title="Situational hitting · real games" />
+          <InteractiveStatsBoard rows={scopedStats} scope={statsScope} onScope={setStatsScope}
+            bookCoverage={{total:list(dashboard?.recent_games).filter(g=>g.status==="FINAL").length,withPlays:list(dashboard?.recent_games).filter(g=>g.status==="FINAL" && num(g.plate_appearance_count)>0).length}}
+            managerView={managerView} onAdd={() => setStatDrawer(true)} onPlayer={(row)=>{const player=players.find(p=>Number(p.id)===Number(row.player?.id));if(player)openPlayer(player);}} />
         </div> : null}
 
         {tab === "Dues" ? <div className="grid gap-3 lg:grid-cols-[1.2fr_.8fr]">

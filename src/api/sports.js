@@ -89,6 +89,13 @@ export async function getTeamStats(id) {
   return list(data);
 }
 
+export async function getGameSituationStats(teamId, playerId = null) {
+  const { data } = await api.get(`/sports/advanced/teams/${teamId}/situations/`, {
+    params: playerId ? { player: playerId } : {},
+  });
+  return data;
+}
+
 export async function getAdvancedTeamStats(id) {
   const { data } = await api.get(`/sports/advanced/teams/${id}/stats/`);
   return data;
@@ -293,6 +300,23 @@ export async function openGameBookPhoto(id) {
     if (tab) tab.close();
     throw err;
   }
+}
+
+export async function updateGameBookPhoto(id, payload) {
+  // The image endpoint accepts multipart/form-data for photo review as well.
+  const body = new FormData();
+  Object.entries(payload || {}).forEach(([key,value]) => {
+    if (value !== undefined && value !== null) body.append(key, String(value));
+  });
+  const { data } = await api.patch(`/sports/game-book-photos/${id}/`, body, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
+export async function addHistoricalBookPlay(gameId, payload) {
+  const { data } = await api.post(`/sports/games/${gameId}/add-historical-play/`, payload);
+  return data;
 }
 
 export async function importHistoricalGameBook(id, payload) {

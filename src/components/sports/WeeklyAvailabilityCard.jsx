@@ -9,6 +9,39 @@ import {
 
 const cx = (...values) => values.filter(Boolean).join(" ");
 
+export function weekStartForGame(game) {
+  if (!game?.start_at) return mondayYmd();
+  const date = new Date(game.start_at);
+  const zone = game.timezone || "America/Chicago";
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(date);
+  const part = (name) => parts.find((row) => row.type === name)?.value;
+  return mondayYmd(new Date(`${part("year")}-${part("month")}-${part("day")}T12:00:00`));
+}
+
+function gameDayKey(game) {
+  const date = new Date(game.start_at);
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: game.timezone || "America/Chicago",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(date);
+}
+
+function gameTime(game) {
+  return new Date(game.start_at).toLocaleTimeString("en-US", {
+    timeZone: game.timezone || "America/Chicago",
+    hour: "numeric", minute: "2-digit",
+  });
+}
+
+function gameDate(game) {
+  return new Date(game.start_at).toLocaleDateString("en-US", {
+    timeZone: game.timezone || "America/Chicago",
+    weekday: "long", month: "short", day: "numeric",
+  });
+}
+
 function mondayYmd(date = new Date()) {
   const copy = new Date(date);
   const day = copy.getDay();
@@ -44,6 +77,9 @@ export default function WeeklyAvailabilityCard({
   compact = false,
   initialWeekStart = "",
   title = "This week's games",
+  showRoster = true,
+  showSelfResponse = false,
+  onGameOpen = null,
 }) {
   const [weekStart, setWeekStart] = useState(initialWeekStart || mondayYmd());
   const [data, setData] = useState(null);
@@ -65,9 +101,12 @@ export default function WeeklyAvailabilityCard({
   }
 
   useEffect(() => { load(weekStart); }, [teamId, weekStart]);
+  useEffect(() => { if (initialWeekStart) setWeekStart(initialWeekStart); }, [initialWeekStart]);
 
   const games = Array.isArray(data?.games) ? data.games : [];
   const roster = Array.isArray(data?.roster) ? data.roster : [];
+  const dayCounts = new Map();
+  games.forEach((row) => dayCounts.set(gameDayKey(row.game), (dayCounts.get(gameDayKey(row.game)) || 0) + 1));
   const pendingPlayers = useMemo(
     () => roster.filter((row) => Number(row.pending || 0) > 0).length,
     [roster],
@@ -124,7 +163,7 @@ export default function WeeklyAvailabilityCard({
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="flex items-center gap-2 text-sm font-black text-white"><CalendarDays className="h-4 w-4 text-cyan-300" />{title}</div>
-          <p className="mt-1 text-[10px] leading-4 text-slate-400">One weekly poll, with each game saved separately so the lineup always uses the real game response.</p>
+          <p className="mt-1 text-[10px] leading-4 text-slate-400">All games on the same day, with field, first pitch and Home/Visitor. Choose both, one game or neither; answers save to each real Game Book.</p>
         </div>
         {busy ? <Loader2 className="h-4 w-4 animate-spin text-cyan-300" /> : null}
       </div>
@@ -141,8 +180,8 @@ export default function WeeklyAvailabilityCard({
       {!games.length && !busy ? <div className="mt-3 rounded-xl border border-dashed border-white/10 p-4 text-center text-[10px] text-slate-500">No games scheduled for this week.</div> : null}
 
       {games.length ? <>
-        {!managerView ? <div className="mt-3 grid grid-cols-3 gap-1.5">
-          <button type="button" disabled={busy} onClick={() => answerAll("YES")} className="min-h-10 rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-2 text-[9px] font-black text-emerald-100">IN FOR ALL</button>
+        {(!managerView || showSelfResponse) ? <div className="mt-3 grid grid-cols-3 gap-1.5">
+          <button type="button" disabled={busy} onClick={() => answerAll("YES")} className="min-h-10 rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-2 text-[9px] font-black text-emerald-100">{games.length === 2 && dayCounts.size === 1 ? "IN FOR BOTH" : "IN FOR ALL"}</button>
           <button type="button" disabled={busy} onClick={() => answerAll("MAYBE")} className="min-h-10 rounded-xl border border-amber-300/25 bg-amber-300/10 px-2 text-[9px] font-black text-amber-100">SUB / MAYBE</button>
           <button type="button" disabled={busy} onClick={() => answerAll("NO")} className="min-h-10 rounded-xl border border-rose-300/25 bg-rose-300/10 px-2 text-[9px] font-black text-rose-100">OUT FOR ALL</button>
         </div> : <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-violet-300/15 bg-violet-300/[.04] p-2.5">
@@ -154,17 +193,25 @@ export default function WeeklyAvailabilityCard({
           {games.map((row, index) => {
             const game = row.game;
             const value = row.my_response?.response || "PENDING";
-            return <div key={game.id} className="rounded-xl border border-white/10 bg-white/[.025] p-2.5">
+            const currentDay = gameDayKey(game);
+          const previousDay = index > 0 ? gameDayKey(games[index - 1].game) : "";
+          return <React.Fragment key={game.id}>
+            {currentDay !== previousDay ? <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-cyan-300/15 bg-cyan-300/[.05] px-3 py-2">
+              <b className="text-[10px] font-black uppercase tracking-wider text-cyan-200">{gameDate(game)}</b>
+              <span className="text-[9px] font-black text-slate-400">{dayCounts.get(currentDay)} GAME{dayCounts.get(currentDay) === 1 ? "" : "S"} TODAY</span>
+            </div> : null}
+            <div className="rounded-xl border border-white/10 bg-white/[.025] p-2.5">
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0"><div className="text-[8px] font-black uppercase tracking-wide text-cyan-300">Game {index + 1} · {game.home_away}</div><b className="block truncate text-xs text-white">vs {game.opponent_name}</b><div className="mt-0.5 text-[9px] text-slate-500">{new Date(game.start_at).toLocaleString([], { weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit" })} · {game.venue_name || "Field TBD"}</div></div>
-                {!managerView ? <span className={cx("rounded-full border px-2 py-1 text-[8px] font-black", responseTone(value))}>{labelFor(value)}</span> : null}
+                <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-1 text-[9px] font-black uppercase tracking-wide text-cyan-300"><span>Game {index + 1}</span><span className={cx("rounded px-1.5 py-0.5", game.home_away === "HOME" ? "bg-emerald-300/10 text-emerald-200" : game.home_away === "AWAY" ? "bg-amber-300/10 text-amber-200" : "bg-white/5 text-slate-400")}>{game.home_away === "AWAY" ? "VISITOR" : game.home_away}</span></div><b className="mt-1 block text-sm text-white">vs {game.opponent_name}</b><div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-bold text-white"><span>{gameTime(game)}</span><span className="text-cyan-200">{game.venue_name || "Field TBD"}</span></div></div>
+                <div className="flex shrink-0 flex-col items-end gap-1">{(!managerView || showSelfResponse) ? <span className={cx("rounded-full border px-2 py-1 text-[8px] font-black", responseTone(value))}>{labelFor(value)}</span> : null}{onGameOpen ? <button type="button" onClick={() => onGameOpen(game)} className="min-h-9 rounded-lg border border-white/10 px-2 text-[9px] font-black text-cyan-200">Lineup / Book ›</button> : null}</div>
               </div>
-              {!managerView ? <div className="mt-2 grid grid-cols-3 gap-1.5">{[["YES","IN"],["MAYBE","SUB"],["NO","OUT"]].map(([answer,label])=><button key={answer} type="button" disabled={busy} onClick={() => answerOne(game.id, answer)} className={cx("min-h-9 rounded-lg border text-[8px] font-black",value===answer?responseTone(answer):"border-white/10 text-slate-500")}>{value===answer?<Check className="mr-1 inline h-3 w-3" />:null}{label}</button>)}</div> : null}
-            </div>;
+              {(!managerView || showSelfResponse) ? <div className="mt-2 grid grid-cols-3 gap-1.5">{[["YES","IN"],["MAYBE","SUB"],["NO","OUT"]].map(([answer,label])=><button key={answer} type="button" disabled={busy} onClick={() => answerOne(game.id, answer)} className={cx("min-h-9 rounded-lg border text-[8px] font-black",value===answer?responseTone(answer):"border-white/10 text-slate-500")}>{value===answer?<Check className="mr-1 inline h-3 w-3" />:null}{label}</button>)}</div> : null}
+            </div>
+          </React.Fragment>;
           })}
         </div>
 
-        {managerView && roster.length ? <div className="mt-3 overflow-x-auto rounded-xl border border-white/10">
+        {managerView && showRoster && roster.length ? <div className="mt-3 overflow-x-auto rounded-xl border border-white/10">
           <table className="w-full min-w-[560px] text-[9px]">
             <thead className="bg-white/[.04] text-slate-500"><tr><th className="p-2 text-left">PLAYER</th>{games.map((row,index)=><th key={row.game.id} className="p-2 text-center">G{index+1}</th>)}<th className="p-2 text-center">WEEK</th></tr></thead>
             <tbody>{roster.map((row)=><tr key={row.player.id} className="border-t border-white/10"><td className="p-2 font-black text-white">#{row.player.jersey_number || "—"} {row.player.display_name}</td>{games.map((gameRow)=><td key={gameRow.game.id} className="p-2 text-center"><span className={cx("rounded-md border px-1.5 py-1 text-[8px] font-black",responseTone(row.responses?.[String(gameRow.game.id)] || "PENDING"))}>{labelFor(row.responses?.[String(gameRow.game.id)] || "PENDING")}</span></td>)}<td className="p-2 text-center font-black text-slate-300">{row.all_yes ? "ALL IN" : row.pending ? `${row.pending} PENDING` : "SET"}</td></tr>)}</tbody>
