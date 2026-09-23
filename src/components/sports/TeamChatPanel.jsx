@@ -2,10 +2,11 @@ import React, { useEffect, useRef, useState } from "react";
 import { RefreshCw, Send, Trash2 } from "lucide-react";
 
 import { deleteGroupMessage, getGroupMessages, sendGroupMessage } from "../../api/social";
+import WeeklyAvailabilityCard from "./WeeklyAvailabilityCard";
 
 const nameOf = (row) => row?.author_detail?.display_name || row?.author_detail?.email || "Member";
 
-export default function TeamChatPanel({ groupId, userId, canManage = false, bare = false, title = "Team chat", noun = "team" }) {
+export default function TeamChatPanel({ groupId, userId, teamId = null, canManage = false, bare = false, title = "Team chat", noun = "team" }) {
   const [messages, setMessages] = useState([]);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
@@ -79,6 +80,8 @@ export default function TeamChatPanel({ groupId, userId, canManage = false, bare
       </div>
 
       {error ? <div className="mt-2 rounded-lg border border-rose-400/20 bg-rose-400/10 p-2 text-[10px] text-rose-100">{error}</div> : null}
+
+      {teamId ? <div className="mt-3"><WeeklyAvailabilityCard teamId={teamId} managerView={canManage} compact title="Weekly availability poll" /></div> : null}
 
       <div className="mt-3 max-h-[22rem] space-y-2 overflow-y-auto pr-1">
         {messages.map((message) => {
