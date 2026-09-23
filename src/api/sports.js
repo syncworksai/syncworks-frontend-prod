@@ -26,6 +26,47 @@ export async function getPlayerCenter(id) {
   return data;
 }
 
+export async function getWeeklyAvailability(teamId, weekStart = "") {
+  const { data } = await api.get(`/sports/teams/${teamId}/weekly-availability/`, {
+    params: weekStart ? { week_start: weekStart } : {},
+  });
+  return data;
+}
+
+export async function respondWeeklyAvailability(teamId, weekStart, responses) {
+  const { data } = await api.post(`/sports/teams/${teamId}/respond-weekly-availability/`, {
+    week_start: weekStart,
+    responses,
+  });
+  return data;
+}
+
+export async function openWeeklyAvailability(teamId, weekStart) {
+  const { data } = await api.post(`/sports/teams/${teamId}/open-weekly-availability/`, {
+    week_start: weekStart,
+  });
+  return data;
+}
+
+export async function getPlayerAwards({ team, player } = {}) {
+  const { data } = await api.get("/sports/player-awards/", { params: { team, player } });
+  return list(data);
+}
+
+export async function createPlayerAward(payload) {
+  const { data } = await api.post("/sports/player-awards/", payload);
+  return data;
+}
+
+export async function updatePlayerAward(id, payload) {
+  const { data } = await api.patch(`/sports/player-awards/${id}/`, payload);
+  return data;
+}
+
+export async function removePlayerAward(id) {
+  await api.delete(`/sports/player-awards/${id}/`);
+}
+
 export async function getTeamDashboard(id) {
   const [dashboardResponse, gamesResponse] = await Promise.all([
     api.get(`/sports/teams/${id}/dashboard/`),
