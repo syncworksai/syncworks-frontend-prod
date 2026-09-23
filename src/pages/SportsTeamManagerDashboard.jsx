@@ -1526,7 +1526,9 @@ export default function SportsTeamManagerDashboard() {
               </div>
             </div>
           </Card> : null}
-          <InteractiveStatsBoard rows={scopedStats} scope={statsScope} onScope={setStatsScope} managerView={managerView} onAdd={() => setStatDrawer(true)} onPlayer={(row)=>{const player=players.find(p=>Number(p.id)===Number(row.player?.id));if(player)openPlayer(player);}} />
+          <InteractiveStatsBoard rows={scopedStats} scope={statsScope} onScope={setStatsScope}
+            bookCoverage={{total:list(dashboard?.recent_games).filter(g=>g.status==="FINAL").length,withPlays:list(dashboard?.recent_games).filter(g=>g.status==="FINAL" && num(g.plate_appearance_count)>0).length}}
+            managerView={managerView} onAdd={() => setStatDrawer(true)} onPlayer={(row)=>{const player=players.find(p=>Number(p.id)===Number(row.player?.id));if(player)openPlayer(player);}} />
         </div> : null}
 
         {tab === "Dues" ? <div className="grid gap-3 lg:grid-cols-[1.2fr_.8fr]">
