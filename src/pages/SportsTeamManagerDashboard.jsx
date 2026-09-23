@@ -38,11 +38,13 @@ import TeamRewardSettings from "../components/sports/TeamRewardSettings";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import PlayerCollectibleCard, { SportsPlayerPhoto } from "../components/sports/PlayerCollectibleCard";
 import PlayerStatSplits from "../components/sports/PlayerStatSplits";
+import WeeklyAvailabilityCard from "../components/sports/WeeklyAvailabilityCard";
 import { useAuth } from "../auth/AuthContext";
 import { acceptMembership, createEventResponse, createGroupInviteLink, getEventResponses, getGroups, getMemberships, inviteMember, setMembershipRole, uploadGroupLogo, updateEventResponse } from "../api/social";
 import {
   assignTeamFeeRoster,
   createPlayerProfile,
+  createPlayerAward,
   createSportsGame,
   createSportsPlayer,
   createStatLedgerEntry,
@@ -52,6 +54,7 @@ import {
   getAdvancedTeamStats,
   getFeeAssignments,
   getPlayerProfiles,
+  getPlayerAwards,
   getPlayerBadgeCard,
   getScopedTeamStats,
   getSportsTeams,
@@ -71,6 +74,7 @@ import {
   remindSportsPlayer,
   remindTeamDues,
   removeSportsPlayer,
+  removePlayerAward,
   setSportsLineup,
   updateFeeAssignment,
   updateTeamFee,
@@ -242,6 +246,9 @@ export default function SportsTeamManagerDashboard() {
   const [momentGameId, setMomentGameId] = useState("");
   const [momentKind, setMomentKind] = useState("");
   const [momentBusy, setMomentBusy] = useState(false);
+  const [drawerAwards, setDrawerAwards] = useState([]);
+  const [awardBusy, setAwardBusy] = useState(false);
+  const [awardForm, setAwardForm] = useState({ kind:"PLAYER_OF_WEEK", title:"Player of the Week", week_of:"", note:"" });
   const [statDrawer, setStatDrawer] = useState(false);
   const [statForm, setStatForm] = useState({ player: "", scope: "LEAGUE", games: "", pa: "", ab: "", hits: "", doubles: "", triples: "", home_runs: "", walks: "", sac_flies: "", rbi: "", runs: "", note: "" });
 
@@ -744,11 +751,16 @@ export default function SportsTeamManagerDashboard() {
     setPlayerDrawer(player);
     setDrawerBadgeCard(null);
     setDrawerBadgeLoading(true);
-    getPlayerBadgeCard(player.id).then(setDrawerBadgeCard).catch(()=>setDrawerBadgeCard(null)).finally(()=>setDrawerBadgeLoading(false));
+    setDrawerAwards([]);
+    Promise.allSettled([getPlayerBadgeCard(player.id), getPlayerAwards({ player: player.id })]).then(([badgeResult, awardResult])=>{
+      setDrawerBadgeCard(badgeResult.status==="fulfilled" ? badgeResult.value : null);
+      setDrawerAwards(awardResult.status==="fulfilled" ? awardResult.value : []);
+    }).finally(()=>setDrawerBadgeLoading(false));
     setMomentGameId(""); setMomentKind("");
+    setAwardForm({ kind:"PLAYER_OF_WEEK", title:"Player of the Week", week_of:"", note:"" });
     setPlayerEdit({
       display_name: player.display_name || "", jersey_number: player.jersey_number || "", primary_position: player.primary_position || "", bats: player.bats || "R", throws: player.throws || "R",
-      email: profile?.email || player.user_detail?.email || "", phone: profile?.phone || "", emergency_contact_name: profile?.emergency_contact_name || "", emergency_contact_phone: profile?.emergency_contact_phone || "", notes: profile?.notes || "",
+      email: profile?.email || player.user_detail?.email || "", phone: profile?.phone || "", date_of_birth: profile?.date_of_birth || "", show_age_to_team: profile?.show_age_to_team === true, emergency_contact_name: profile?.emergency_contact_name || "", emergency_contact_phone: profile?.emergency_contact_phone || "", notes: profile?.notes || "",
     });
     setPhotoFile(null);
   }
@@ -764,12 +776,45 @@ export default function SportsTeamManagerDashboard() {
       form.append("player", String(playerDrawer.id));
       form.append("email", playerEdit.email || "");
       form.append("phone", playerEdit.phone || "");
+      form.append("date_of_birth", playerEdit.date_of_birth || "");
+      form.append("show_age_to_team", playerEdit.show_age_to_team ? "true" : "false");
       form.append("emergency_contact_name", playerEdit.emergency_contact_name || "");
       form.append("emergency_contact_phone", playerEdit.emergency_contact_phone || "");
       form.append("notes", playerEdit.notes || "");
       if (photoFile) form.append("profile_photo", photoFile);
       if (profile) await updatePlayerProfile(profile.id, form); else await createPlayerProfile(form);
     }, "Player updated.", { closePlayer: true });
+  }
+
+  async function giveCoachAward() {
+    if (!team?.id || !playerDrawer?.id || awardBusy) return;
+    setAwardBusy(true); setError(""); setNotice("");
+    try {
+      const saved = await createPlayerAward({
+        team: Number(team.id),
+        player: Number(playerDrawer.id),
+        kind: awardForm.kind,
+        title: awardForm.title || "Coach Award",
+        season_name: team.season_name || "",
+        week_of: awardForm.week_of || null,
+        note: awardForm.note || "",
+      });
+      setDrawerAwards((rows)=>[saved, ...rows]);
+      setAwardForm({ kind:"PLAYER_OF_WEEK", title:"Player of the Week", week_of:"", note:"" });
+      setNotice("Coach award added to the player profile.");
+    } catch (err) { setError(errorText(err)); }
+    finally { setAwardBusy(false); }
+  }
+
+  async function removeCoachAward(award) {
+    if (!award?.id || awardBusy || !window.confirm("Remove this coach award?")) return;
+    setAwardBusy(true); setError(""); setNotice("");
+    try {
+      await removePlayerAward(award.id);
+      setDrawerAwards((rows)=>rows.filter((row)=>Number(row.id)!==Number(award.id)));
+      setNotice("Coach award removed.");
+    } catch (err) { setError(errorText(err)); }
+    finally { setAwardBusy(false); }
   }
 
   async function verifyDrawerMoment() {
@@ -1094,7 +1139,7 @@ export default function SportsTeamManagerDashboard() {
             <div className="mt-3 grid grid-cols-3 gap-1.5"><Btn onClick={() => setTab("Lineup")}>Lineup</Btn><Btn onClick={() => setTab("Stats")}>Stats</Btn><Btn onClick={() => setTab("Dues")}>Dues</Btn></div>
           </Card>
           <GameAvailabilityCard game={nextGame} players={players} responses={eventResponses} userId={userId} managerView={managerView} onRespond={respondToGame} />
-          <div className="hidden lg:block lg:row-span-2"><TeamChatPanel groupId={group.id} userId={userId} canManage={managed} /></div>
+          <div className="hidden lg:block lg:row-span-2"><TeamChatPanel groupId={group.id} teamId={team.id} userId={userId} canManage={managed} /></div>
           {managerView ? <Card title="Earned rewards · settings" body="Control Power, Contact, Speed and Clutch goals; verify or undo individual achievements from the roster." className="lg:col-span-2" action={<Trophy className="h-5 w-5 text-amber-300" />}>
             <div className="grid grid-cols-4 gap-1.5">
               {[["Power","#FBBF24"],["Contact","#22D3EE"],["Speed","#70FF3D"],["Clutch","#C084FC"]].map(([label,color])=><div key={label} className="rounded-xl border p-2 text-center text-[9px] font-black" style={{borderColor:color+"66",color}}>{label}</div>)}
@@ -1362,7 +1407,7 @@ export default function SportsTeamManagerDashboard() {
           </div> : null}
         </div> : null}
 
-        {tab === "Schedule" ? <div className="grid gap-3 lg:grid-cols-[1.3fr_.7fr]">
+        {tab === "Schedule" ? <div className="space-y-3"><WeeklyAvailabilityCard teamId={team.id} managerView={managerView} /><div className="grid gap-3 lg:grid-cols-[1.3fr_.7fr]">
           <div className="space-y-3">
             {needsCompletionGames.length ? <Card title="Needs completion" body="Past games stay out of Upcoming until you enter the final result or finish the Game Book." action={<Pill tone="amber">{needsCompletionGames.length} OPEN</Pill>}>
               <div className="space-y-2">{needsCompletionGames.map((game)=><div key={game.id} className="flex items-center justify-between gap-2 rounded-xl border border-amber-300/20 bg-amber-300/[.05] p-3"><div className="min-w-0"><div className="text-[8px] font-black uppercase tracking-wide text-amber-300">{new Date(game.start_at).toLocaleDateString()}</div><b className="block truncate text-xs text-white">vs {game.opponent_name}</b><span className="text-[9px] text-slate-500">{game.venue_name || "Field TBD"} · final score/stat entry needed</span></div><div className="grid shrink-0 gap-1"><Btn primary onClick={()=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)}>Game Book</Btn>{managerView?<Btn onClick={()=>quickFinal(game)}>Quick final</Btn>:null}</div></div>)}</div>
@@ -1411,7 +1456,7 @@ export default function SportsTeamManagerDashboard() {
           </Card>
           </div>
           {managerView ? <Card title="Add game" body="Manual additions use the same calendar sync."><div className="grid grid-cols-2 gap-2"><Select label="Type" value={gameForm.game_type} onChange={(value) => setGameForm((v) => ({ ...v, game_type: value }))}><option value="LEAGUE">League</option><option value="TOURNAMENT">Tournament</option><option value="PRACTICE">Practice</option><option value="EXHIBITION">Exhibition</option></Select><Select label="Home/Away" value={gameForm.home_away} onChange={(value) => setGameForm((v) => ({ ...v, home_away: value }))}><option value="HOME">Home</option><option value="AWAY">Away</option><option value="NEUTRAL">Neutral</option></Select><Input label="Opponent" value={gameForm.opponent_name} onChange={(value) => setGameForm((v) => ({ ...v, opponent_name: value }))} className="col-span-2" /><Input label="Date" type="date" value={gameForm.date} onChange={(value) => setGameForm((v) => ({ ...v, date: value }))} /><Input label="Time" type="time" value={gameForm.time} onChange={(value) => setGameForm((v) => ({ ...v, time: value }))} /><Input label="Venue / field" value={gameForm.venue_name} onChange={(value) => setGameForm((v) => ({ ...v, venue_name: value }))} className="col-span-2" /><Input label="Address" value={gameForm.address_line1} onChange={(value) => setGameForm((v) => ({ ...v, address_line1: value }))} className="col-span-2" /><Input label="City" value={gameForm.city} onChange={(value) => setGameForm((v) => ({ ...v, city: value }))} /><Input label="State" value={gameForm.state} onChange={(value) => setGameForm((v) => ({ ...v, state: value }))} /></div><Btn primary className="mt-2 w-full" onClick={addGame} disabled={!gameForm.opponent_name.trim() || !gameForm.date || busy}><Plus className="mr-1 inline h-4 w-4" />Add game</Btn></Card> : <Card title="Tournament week" body="League or tournament games will appear here once published by a manager or association."><div className="text-xs text-slate-400">Your Fall 2026 league sheet lists tournament week beginning October 27.</div></Card>}
-        </div> : null}
+        </div></div> : null}
 
         {tab === "Stats" ? <div className="space-y-3">
           {advancedAnalytics?.inning_analytics ? <Card title="Team scoring pace" body="Live Game Book data rolled into team averages by game and inning." action={<Trophy className="h-4 w-4 text-amber-300" />}>
@@ -1600,9 +1645,22 @@ export default function SportsTeamManagerDashboard() {
         </Drawer>
       ) : null}
 
-      {chatOpen ? <Drawer title="Team chat" onClose={() => setChatOpen(false)}><TeamChatPanel groupId={group.id} userId={userId} canManage={managed} bare /></Drawer> : null}
+      {chatOpen ? <Drawer title="Team chat" onClose={() => setChatOpen(false)}><TeamChatPanel groupId={group.id} teamId={team.id} userId={userId} canManage={managed} bare /></Drawer> : null}
 
-      {playerDrawer && playerEdit ? <Drawer title={playerDrawer.display_name} onClose={() => { setPlayerDrawer(null); setPlayerEdit(null); setPhotoFile(null); }}><div className="space-y-3">{drawerBadgeLoading ? <div className="flex items-center gap-2 rounded-xl border border-cyan-300/15 bg-cyan-300/[.04] p-3 text-xs text-cyan-100"><Loader2 className="h-4 w-4 animate-spin"/>Loading player achievement card…</div> : drawerBadgeCard ? <><PlayerCollectibleCard player={playerDrawer} profile={profileFor(playerDrawer)} progress={drawerBadgeCard} teamName={group?.name} /><details className="rounded-xl border border-white/10 bg-white/[.02] p-2"><summary className="cursor-pointer px-2 py-2 text-xs font-black text-slate-200">Year, month and league stats</summary><PlayerStatSplits progress={drawerBadgeCard}/></details></> : null}<div className="flex items-center gap-3"><Avatar player={playerDrawer} profile={profileFor(playerDrawer)} size="lg" /><div><b className="text-white">#{playerDrawer.jersey_number || "—"} {playerDrawer.display_name}</b><div className="mt-1 text-[10px] text-slate-500">{playerDrawer.primary_position || "Position TBD"}{playerDrawer.user ? " · linked SyncWorks account" : " · manual roster entry"}</div></div></div>{managerView ? <><div className="grid grid-cols-2 gap-2"><Input label="Name" value={playerEdit.display_name} onChange={(value) => setPlayerEdit((v) => ({ ...v, display_name: value }))} className="col-span-2" /><Input label="Jersey #" value={playerEdit.jersey_number} onChange={(value) => setPlayerEdit((v) => ({ ...v, jersey_number: value }))} /><Select label="Position" value={playerEdit.primary_position} onChange={(value) => setPlayerEdit((v) => ({ ...v, primary_position: value }))}><option value="">Choose</option>{POSITIONS.map((position) => <option key={position}>{position}</option>)}</Select><Input label="Email" value={playerEdit.email} onChange={(value) => setPlayerEdit((v) => ({ ...v, email: value }))} /><Input label="Phone" value={playerEdit.phone} onChange={(value) => setPlayerEdit((v) => ({ ...v, phone: value }))} /><Input label="Emergency contact" value={playerEdit.emergency_contact_name} onChange={(value) => setPlayerEdit((v) => ({ ...v, emergency_contact_name: value }))} /><Input label="Emergency phone" value={playerEdit.emergency_contact_phone} onChange={(value) => setPlayerEdit((v) => ({ ...v, emergency_contact_phone: value }))} /></div><label className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 text-xs font-black text-slate-300"><Camera className="h-4 w-4" />{photoFile ? photoFile.name : "Choose profile photo"}<input type="file" accept="image/*" className="hidden" onChange={(event) => setPhotoFile(event.target.files?.[0] || null)} /></label><label className="block"><span className="mb-1 block text-[9px] font-black uppercase tracking-wide text-slate-500">Manager notes</span><textarea rows={3} value={playerEdit.notes} onChange={(event) => setPlayerEdit((v) => ({ ...v, notes: event.target.value }))} className="w-full rounded-xl border border-white/10 bg-black/20 p-3 text-xs" /></label><div className="grid grid-cols-2 gap-2"><Btn primary onClick={savePlayer} disabled={busy}><Save className="mr-1 inline h-4 w-4" />Save player</Btn><Btn danger onClick={archivePlayer}><Trash2 className="mr-1 inline h-4 w-4" />Archive player</Btn></div>
+      {playerDrawer && playerEdit ? <Drawer title={playerDrawer.display_name} onClose={() => { setPlayerDrawer(null); setPlayerEdit(null); setPhotoFile(null); }}><div className="space-y-3">{drawerBadgeLoading ? <div className="flex items-center gap-2 rounded-xl border border-cyan-300/15 bg-cyan-300/[.04] p-3 text-xs text-cyan-100"><Loader2 className="h-4 w-4 animate-spin"/>Loading player achievement card…</div> : drawerBadgeCard ? <><PlayerCollectibleCard player={playerDrawer} profile={profileFor(playerDrawer)} progress={drawerBadgeCard} teamName={group?.name} /><details className="rounded-xl border border-white/10 bg-white/[.02] p-2"><summary className="cursor-pointer px-2 py-2 text-xs font-black text-slate-200">Year, month and league stats</summary><PlayerStatSplits progress={drawerBadgeCard}/></details></> : null}<div className="flex items-center gap-3"><Avatar player={playerDrawer} profile={profileFor(playerDrawer)} size="lg" /><div><b className="text-white">#{playerDrawer.jersey_number || "—"} {playerDrawer.display_name}</b><div className="mt-1 text-[10px] text-slate-500">{playerDrawer.primary_position || "Position TBD"}{playerDrawer.user ? " · linked SyncWorks account" : " · manual roster entry"}</div></div></div>{managerView ? <><div className="grid grid-cols-2 gap-2"><Input label="Name" value={playerEdit.display_name} onChange={(value) => setPlayerEdit((v) => ({ ...v, display_name: value }))} className="col-span-2" /><Input label="Jersey #" value={playerEdit.jersey_number} onChange={(value) => setPlayerEdit((v) => ({ ...v, jersey_number: value }))} /><Select label="Position" value={playerEdit.primary_position} onChange={(value) => setPlayerEdit((v) => ({ ...v, primary_position: value }))}><option value="">Choose</option>{POSITIONS.map((position) => <option key={position}>{position}</option>)}</Select><Input label="Email" value={playerEdit.email} onChange={(value) => setPlayerEdit((v) => ({ ...v, email: value }))} /><Input label="Phone" value={playerEdit.phone} onChange={(value) => setPlayerEdit((v) => ({ ...v, phone: value }))} /><Input label="DOB" type="date" value={playerEdit.date_of_birth} onChange={(value) => setPlayerEdit((v) => ({ ...v, date_of_birth: value }))} /><label className="flex min-h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[.025] px-3 text-[9px] font-bold text-slate-300"><input type="checkbox" checked={playerEdit.show_age_to_team} onChange={(event)=>setPlayerEdit((v)=>({...v,show_age_to_team:event.target.checked}))} className="h-4 w-4 accent-cyan-300"/>Age visible to team</label><Input label="Emergency contact" value={playerEdit.emergency_contact_name} onChange={(value) => setPlayerEdit((v) => ({ ...v, emergency_contact_name: value }))} /><Input label="Emergency phone" value={playerEdit.emergency_contact_phone} onChange={(value) => setPlayerEdit((v) => ({ ...v, emergency_contact_phone: value }))} /></div><label className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 text-xs font-black text-slate-300"><Camera className="h-4 w-4" />{photoFile ? photoFile.name : "Choose profile photo"}<input type="file" accept="image/*" className="hidden" onChange={(event) => setPhotoFile(event.target.files?.[0] || null)} /></label><label className="block"><span className="mb-1 block text-[9px] font-black uppercase tracking-wide text-slate-500">Manager notes</span><textarea rows={3} value={playerEdit.notes} onChange={(event) => setPlayerEdit((v) => ({ ...v, notes: event.target.value }))} className="w-full rounded-xl border border-white/10 bg-black/20 p-3 text-xs" /></label><div className="grid grid-cols-2 gap-2"><Btn primary onClick={savePlayer} disabled={busy}><Save className="mr-1 inline h-4 w-4" />Save player</Btn><Btn danger onClick={archivePlayer}><Trash2 className="mr-1 inline h-4 w-4" />Archive player</Btn></div>
+        {managerView ? <section className="space-y-3 rounded-xl border border-amber-300/20 bg-amber-300/[.035] p-3">
+          <div><b className="text-xs font-black text-amber-100">Coach awards & recognition</b><p className="mt-1 text-[10px] leading-4 text-slate-400">Coach-selected awards stay separate from automatic statistical milestones, so recognition never rewrites official stats.</p></div>
+          <div className="grid grid-cols-2 gap-2">
+            <Select label="Award" value={awardForm.kind} onChange={(value)=>setAwardForm((v)=>({...v,kind:value,title:({PLAYER_OF_WEEK:"Player of the Week",ROOKIE_OF_YEAR:"Rookie of the Year",GOLD_GLOVE:"Gold Glove",HUSTLE:"Hustle Award",TEAM_FIRST:"Team First",MVP:"Most Valuable Player",CUSTOM:v.title}[value]||v.title)}))}>
+              <option value="PLAYER_OF_WEEK">Player of the Week</option><option value="ROOKIE_OF_YEAR">Rookie of the Year</option><option value="GOLD_GLOVE">Gold Glove</option><option value="HUSTLE">Hustle Award</option><option value="TEAM_FIRST">Team First</option><option value="MVP">MVP</option><option value="CUSTOM">Custom</option>
+            </Select>
+            <Input label="Week of (optional)" type="date" value={awardForm.week_of} onChange={(value)=>setAwardForm((v)=>({...v,week_of:value}))}/>
+            <Input label="Award title" value={awardForm.title} onChange={(value)=>setAwardForm((v)=>({...v,title:value}))} className="col-span-2"/>
+            <Input label="Coach note" value={awardForm.note} onChange={(value)=>setAwardForm((v)=>({...v,note:value}))} className="col-span-2"/>
+          </div>
+          <Btn primary className="w-full" disabled={awardBusy || !awardForm.title.trim()} onClick={giveCoachAward}><Trophy className="mr-1 inline h-4 w-4"/>{awardBusy?"Saving…":"Give coach award"}</Btn>
+          {drawerAwards.length ? <div className="space-y-1.5">{drawerAwards.map((award)=><div key={award.id} className="flex items-start justify-between gap-2 rounded-lg border border-white/10 bg-black/20 p-2"><div><b className="text-[10px] text-white">{award.title}</b><div className="text-[8px] text-slate-500">{award.season_name || "Team award"}{award.week_of?" · "+award.week_of:""}</div>{award.note?<div className="mt-1 text-[9px] text-slate-300">{award.note}</div>:null}</div><Btn danger disabled={awardBusy} onClick={()=>removeCoachAward(award)}>Remove</Btn></div>)}</div> : null}
+        </section> : null}
         {managerView && drawerBadgeCard ? <section className="space-y-3 rounded-xl border border-violet-300/20 bg-violet-300/[.04] p-3">
           <div><b className="text-xs font-black text-violet-100">Verified Speed & Clutch moments</b><p className="mt-1 text-[10px] leading-4 text-slate-400">Scorekeeper or manager can record a real baserunning moment or late tying/go-ahead RBI hit after the official Game Book is final. The system validates the game and play, and badges unlock automatically.</p></div>
           <Select label="Finalized game" value={momentGameId} onChange={setMomentGameId}><option value="">Select completed game</option>{games.filter((game)=>game.status==="FINAL").map((game)=><option key={game.id} value={game.id}>{new Date(game.start_at).toLocaleDateString()} · vs {game.opponent_name}</option>)}</Select>
