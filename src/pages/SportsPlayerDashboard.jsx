@@ -12,11 +12,12 @@ import PlayerCollectibleCard, { SportsPlayerPhoto } from "../components/sports/P
 import PlayerStatSplits from "../components/sports/PlayerStatSplits";
 import WeeklyAvailabilityCard, { weekStartForGame } from "../components/sports/WeeklyAvailabilityCard";
 import InteractiveStatsBoard from "../components/sports/InteractiveStatsBoard";
+import SituationBaselineCard from "../components/sports/SituationBaselineCard";
 import PlayerBookAuditCard from "../components/sports/PlayerBookAuditCard";
 import { useAuth } from "../auth/AuthContext";
 import { createEventResponse, updateEventResponse } from "../api/social";
 import {
-  createPlayerProfile, getPlayerCard, getPlayerBadgeCard, getPlayerBookAudit, getPlayerCenter, getScopedTeamStats, getSportsTeams, joinMySportsTeamRoster,
+  createPlayerProfile, getPlayerCard, getPlayerBadgeCard, getPlayerBookAudit, getPlayerCenter, getScopedTeamStats, getGameSituationStats, getSportsTeams, joinMySportsTeamRoster,
   updatePlayerProfile, updateSportsPlayer,
 } from "../api/sports";
 
@@ -94,6 +95,7 @@ export default function SportsPlayerDashboard() {
   const [bookAudit, setBookAudit] = useState(null);
   const [statsScope, setStatsScope] = useState("ALL");
   const [teamScopedRows, setTeamScopedRows] = useState(null);
+  const [mySituationData, setMySituationData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [joiningRoster, setJoiningRoster] = useState(false);
@@ -173,6 +175,13 @@ export default function SportsPlayerDashboard() {
   }
 
   useEffect(() => { refresh(); }, [groupId]);
+
+  useEffect(() => {
+    if (!team?.id || !player?.id || tab !== "Stats") return;
+    let active=true;
+    getGameSituationStats(team.id,player.id).then(data=>{if(active)setMySituationData(data);}).catch(()=>{if(active)setMySituationData(null);});
+    return ()=>{active=false};
+  },[team?.id,player?.id,tab]);
 
   useEffect(() => {
     if (!team?.id || (tab !== "Stats" && tab !== "Team")) return;
@@ -360,10 +369,11 @@ export default function SportsPlayerDashboard() {
 
       {tab==="Team" ? <div className="space-y-3"><Card title="Team statistics" body="Current team leaderboard."><div className="overflow-x-auto"><table className="w-full min-w-[650px] text-center text-[9px]"><thead className="text-slate-500"><tr><th className="p-1 text-left">PLAYER</th><th>G</th><th>AVG</th><th>OBP</th><th>SLG</th><th>OPS</th><th>H</th><th>HR</th><th>RBI</th></tr></thead><tbody>{[...teamRows].sort((a,b)=>num(b.ops)-num(a.ops)).map((row,index)=><tr key={row.player?.id} className={cx("border-t border-white/10",Number(row.player?.id)===Number(player.id)&&"bg-cyan-300/[.04]")}><td className="p-2 text-left"><span className="mr-2 text-slate-600">{index+1}</span><b className="text-white">#{row.player?.jersey_number||"—"} {row.player?.display_name}</b></td><td>{num(row.g)}</td><td>{pct(row.avg)}</td><td>{pct(row.obp)}</td><td>{pct(row.slg)}</td><td className="font-black text-cyan-200">{pct(row.ops)}</td><td>{num(row.h)}</td><td>{num(row.hr)}</td><td>{num(row.rbi)}</td></tr>)}</tbody></table></div></Card>{nextGame?.lineup_spots?.length?<Card title="Next lineup" body="Published lineup for the next game."><div className="grid gap-1.5 sm:grid-cols-2">{nextGame.lineup_spots.map((spot)=><div key={spot.id} className={cx("grid grid-cols-[2rem_1fr_auto] items-center gap-2 rounded-xl border p-2",Number(spot.player)===Number(player.id)?"border-cyan-300/30 bg-cyan-300/[.07]":"border-white/10 bg-white/[.02]")}><div className="text-center text-base font-black text-cyan-200">{spot.batting_order}</div><div className="truncate text-[10px] font-black text-white">{spot.player_detail?.display_name}</div><div className="rounded-lg bg-black/20 px-2 py-1 text-[8px] font-black text-slate-300">{spot.defensive_position||"EH"}</div></div>)}</div></Card>:null}</div> : null}
 
-      {tab==="Stats" ? <InteractiveStatsBoard
-        rows={teamScopedRows || teamRows} scope={statsScope} onScope={setStatsScope}
-        managerView={false}
-      /> : null}
+      {tab==="Stats" ? <div className="space-y-3">
+        <SituationBaselineCard data={mySituationData} title="My live-game situation baseline" />
+        <InteractiveStatsBoard rows={teamScopedRows || teamRows} scope={statsScope} onScope={setStatsScope}
+          managerView={false} />
+      </div> : null}
 
       {tab==="League" ? <div className="space-y-3">{center.league?<><Card title={(center.league.organization?.name||"League")+" standings"} body={[center.league.season?.name,center.league.division?.name].filter(Boolean).join(" · ")} action={<Trophy className="h-4 w-4 text-amber-300"/>}><div className="overflow-x-auto"><table className="w-full min-w-[540px] text-center text-[9px]"><thead className="text-slate-500"><tr><th className="p-1 text-left">TEAM</th><th>W</th><th>L</th><th>T</th><th>PCT</th><th>DIFF</th></tr></thead><tbody>{leagueRows.map((row)=><tr key={row.team.id} className={cx("border-t border-white/10",Number(row.team.id)===Number(team.id)&&"bg-amber-300/[.04]")}><td className="p-2 text-left font-black text-white">{row.standing_rank}. {row.team.group_name}</td><td>{row.wins}</td><td>{row.losses}</td><td>{row.ties}</td><td>{Number(row.pct||0).toFixed(3)}</td><td>{row.run_diff}</td></tr>)}</tbody></table></div></Card><Card title="League leaders" body="Top current division stats."><div className="grid gap-3 md:grid-cols-2">{["avg","ops","hr","rbi"].map((metric)=><div key={metric} className="rounded-xl border border-white/10 bg-black/15 p-2"><div className="mb-1 text-[8px] font-black uppercase text-violet-300">{metric.toUpperCase()}</div>{(center.league.leaders?.[metric]||[]).slice(0,5).map((row,index)=><div key={String(row.player?.id)+"-"+metric} className="grid grid-cols-[1.2rem_1fr_auto] gap-1 border-t border-white/5 py-1.5 text-[8px]"><b className="text-slate-600">{index+1}</b><span className="truncate text-slate-300">{row.player?.display_name}<span className="ml-1 text-slate-600">{row.team_name}</span></span><b className="text-white">{["avg","ops"].includes(metric)?Number(row[metric]||0).toFixed(3):row[metric]}</b></div>)}</div>)}</div></Card></>:<Card title="League data" body="This team is not attached to a SyncWorks league/division yet."><div className="text-xs text-slate-500">Standings and league leaderboards appear automatically when a commissioner adds the team to a division.</div></Card>}</div> : null}
 
