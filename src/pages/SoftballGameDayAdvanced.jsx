@@ -28,10 +28,12 @@ import ModeBar from "../components/ModeBar";
 import SoftballDefenseField from "../components/sports/SoftballDefenseField";
 import PregameLineupEditor from "../components/sports/PregameLineupEditor";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
+import DigitalScorebook from "../components/sports/DigitalScorebook";
 import { useAuth } from "../auth/AuthContext";
 import { getMemberships } from "../api/social";
 import {
   correctSoftballPlay,
+  addHistoricalBookPlay,
   deleteSportsGameBook,
   finishSportsGame,
   getGameBookPhotos,
@@ -57,6 +59,7 @@ import {
   updateSportsGame,
   uploadGameBookPhoto,
   deleteGameBookPhoto,
+  updateGameBookPhoto,
 } from "../api/sports";
 
 const RESULTS = [
@@ -379,6 +382,7 @@ export default function SoftballGameDayAdvanced() {
   const [outMenuOpen, setOutMenuOpen] = useState(false);
   const [outChoice, setOutChoice] = useState(null);
   const [editingPlay, setEditingPlay] = useState(null);
+  const [historicalDraft, setHistoricalDraft] = useState(null);
   const [editForm, setEditForm] = useState({ inning: 1, result: "OUT", outs_recorded: 1, rbi: 0, runs_scored: 0, notes: "" });
   const [hitterCard, setHitterCard] = useState(null);
   const [playerCard, setPlayerCard] = useState(null);
@@ -593,6 +597,37 @@ export default function SoftballGameDayAdvanced() {
     } finally {
       setPhotoBusy(false);
     }
+  }
+
+  async function markBookPhotoReviewed(photo) {
+    if (!canScore || photoBusy) return;
+    setPhotoBusy(true); setPhotoError("");
+    try {
+      await updateGameBookPhoto(photo.id, { review_status: "REVIEWED", review_notes: "Source inspected by scorekeeper; individual plays still require transcription." });
+      setBookPhotos(await getGameBookPhotos(game.id));
+      setNotice("Original image marked reviewed. Add individual plays to the digital book, then reconcile all runs.");
+    } catch (err) {
+      setPhotoError(errorText(err));
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  async function saveHistoricalEntry() {
+    if (!historicalDraft || busy) return;
+    const saved = await run(
+      () => addHistoricalBookPlay(game.id, {
+        ...historicalDraft,
+        player: Number(historicalDraft.player),
+        inning: Number(historicalDraft.inning),
+        source_photo: Number(historicalDraft.source_photo),
+        outs_recorded: Number(historicalDraft.outs_recorded),
+        rbi: Number(historicalDraft.rbi),
+        runs_scored: Number(historicalDraft.runs_scored),
+      }),
+      "Digital scorebook entry saved. Official final score is preserved; verify the whole book before using these stats as complete.",
+    );
+    if (saved) setHistoricalDraft(null);
   }
 
   async function removeBookPhoto(photo) {
@@ -941,7 +976,20 @@ export default function SoftballGameDayAdvanced() {
         {notice ? <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-2 text-[10px] text-cyan-100">{notice}</div> : null}
         {photoError ? <div className="rounded-xl border border-rose-300/20 bg-rose-300/10 p-2 text-[10px] text-rose-100">{photoError}</div> : null}
 
-        <section className="rounded-2xl border border-violet-300/15 bg-[linear-gradient(135deg,rgba(139,92,246,.08),rgba(34,211,238,.035)),#07111f] p-3">
+        {final ? <DigitalScorebook
+          game={game}
+          plays={plays}
+          bookPhotos={bookPhotos}
+          canScore={canScore}
+          onEditPlay={openPlayEditor}
+          onAddPlay={(base) => setHistoricalDraft({
+            ...base, result: "1B", outs_recorded: 0, rbi: 0, runs_scored: 0, notes: "",
+          })}
+          onUploadSource={() => bookLibraryInputRef.current?.click()}
+          onOpenPhoto={(id) => openGameBookPhoto(id).catch((err) => setPhotoError(errorText(err)))}
+        /> : null}
+
+        <section id="original-book-photos" className="rounded-2xl border border-violet-300/15 bg-[linear-gradient(135deg,rgba(139,92,246,.08),rgba(34,211,238,.035)),#07111f] p-3">
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[.13em] text-violet-200"><ImageIcon className="h-3.5 w-3.5" />Original scorebook</div>
@@ -974,6 +1022,7 @@ export default function SoftballGameDayAdvanced() {
                     <b className="block truncate text-[10px] text-white">{photo.page_label || photo.original_name || `Scorebook page ${index + 1}`}</b>
                     <span className="block text-[8px] text-slate-500">{photo.review_status} · {Math.max(1, Math.round(num(photo.byte_size) / 1024))} KB</span>
                   </button>
+                  {canScore && photo.review_status === "UPLOADED" ? <button type="button" disabled={photoBusy} onClick={() => markBookPhotoReviewed(photo)} className="min-h-10 rounded-lg border border-amber-300/25 bg-amber-300/10 px-2 text-[9px] font-bold text-amber-100">Mark reviewed</button> : null}
                   {canManage ? <button type="button" disabled={photoBusy} onClick={() => removeBookPhoto(photo)} className="grid h-9 w-9 place-items-center rounded-lg border border-rose-300/15 text-rose-200 disabled:opacity-40"><Trash2 className="h-3.5 w-3.5" /></button> : null}
                 </div>
               ))}
@@ -1455,6 +1504,50 @@ export default function SoftballGameDayAdvanced() {
           </div>
         ) : null}
 
+        {historicalDraft && final ? (
+          <div role="presentation" className="fixed inset-0 z-[190] flex items-end justify-center bg-black/85 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:items-center">
+            <div role="dialog" aria-modal="true" aria-label="Transcribe historical scorebook cell" className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-[1.5rem] border border-cyan-300/25 bg-[#07111f] p-4 shadow-2xl">
+              <div className="flex items-center justify-between gap-3">
+                <div><h2 className="text-sm font-black text-white">Transcribe from the original book</h2><p className="mt-1 text-[9px] text-slate-400">This cell belongs to the actual player ID. Batting-order changes cannot transfer hits to another player.</p></div>
+                <button type="button" aria-label="Close entry" onClick={()=>setHistoricalDraft(null)} className="min-h-11 min-w-11 rounded-xl border border-white/10 text-lg text-slate-200">×</button>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <label className="col-span-2 text-[9px] font-black uppercase text-slate-400">Original photo
+                  <select value={historicalDraft.source_photo} onChange={(e)=>setHistoricalDraft({...historicalDraft,source_photo:e.target.value})} className="mt-1 min-h-11 w-full rounded-xl border border-white/10 bg-[#050c16] p-2 text-xs text-white">
+                    {bookPhotos.filter(photo=>["REVIEWED","VERIFIED"].includes(photo.review_status)).map((photo)=><option key={photo.id} value={photo.id}>{photo.page_label || photo.original_name || "Scorebook"} · {photo.review_status}</option>)}
+                  </select>
+                </label>
+                <label className="col-span-2 text-[9px] font-black uppercase text-slate-400">Player
+                  <select value={historicalDraft.player} onChange={(e)=>setHistoricalDraft({...historicalDraft,player:e.target.value})} className="mt-1 min-h-11 w-full rounded-xl border border-white/10 bg-[#050c16] p-2 text-xs text-white">
+                    {lineup.map(spot=><option key={spot.player} value={spot.player}>#{spot.batting_order} · {spot.player_detail?.display_name}</option>)}
+                  </select>
+                </label>
+                <label className="text-[9px] font-black uppercase text-slate-400">Inning
+                  <input type="number" min="1" max="20" value={historicalDraft.inning} onChange={e=>setHistoricalDraft({...historicalDraft,inning:e.target.value})} className="mt-1 min-h-11 w-full rounded-xl border border-white/10 bg-[#050c16] p-2 text-[16px] text-white"/>
+                </label>
+                <label className="text-[9px] font-black uppercase text-slate-400">Result
+                  <select value={historicalDraft.result} onChange={e=>setHistoricalDraft({...historicalDraft,result:e.target.value,outs_recorded:["OUT","K","FC","SF"].includes(e.target.value)?1:0})} className="mt-1 min-h-11 w-full rounded-xl border border-white/10 bg-[#050c16] p-2 text-xs text-white">
+                    {RESULTS.map(row=><option key={row.value} value={row.value}>{row.label} · {row.detail}</option>)}
+                  </select>
+                </label>
+                {[[ "outs_recorded", "Outs recorded", 3 ],["rbi","RBI",4],["runs_scored","Runs scored on play",4]].map(([key,label,max])=>
+                  <label key={key} className="text-[9px] font-black uppercase text-slate-400">{label}
+                    <input type="number" min="0" max={max} value={historicalDraft[key]} onChange={e=>setHistoricalDraft({...historicalDraft,[key]:e.target.value})} className="mt-1 min-h-11 w-full rounded-xl border border-white/10 bg-[#050c16] p-2 text-[16px] text-white"/>
+                  </label>
+                )}
+                <label className="col-span-2 text-[9px] font-black uppercase text-slate-400">Scorekeeper note
+                  <input value={historicalDraft.notes} onChange={e=>setHistoricalDraft({...historicalDraft,notes:e.target.value})} placeholder="e.g. 6-3 groundout · runner advances" className="mt-1 min-h-11 w-full rounded-xl border border-white/10 bg-[#050c16] p-2 text-[16px] text-white"/>
+                </label>
+              </div>
+              <div className="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/[.06] p-2 text-[10px] text-amber-100">An entered play contributes to player stats. Check the original photograph before saving. The official game score will not change.</div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Button onClick={()=>setHistoricalDraft(null)}>Cancel</Button>
+                <Button primary disabled={busy || !historicalDraft.source_photo} onClick={saveHistoricalEntry}>{busy?"Saving…":"Save cell"}</Button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         {editingPlay ? (
           <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/70 px-3 pb-4 pt-20 sm:items-center">
             <div className="w-full max-w-md rounded-[1.6rem] border border-cyan-300/20 bg-[#07111f] p-4 shadow-2xl">
@@ -1462,7 +1555,7 @@ export default function SoftballGameDayAdvanced() {
                 <div>
                   <div className="text-[8px] font-black uppercase tracking-[.15em] text-cyan-300">Correct scorebook entry</div>
                   <div className="mt-1 text-base font-black text-white">{editingPlay.player_name}</div>
-                  <div className="text-[8px] text-slate-500">Save rebuilds the inning totals and live game stats from the corrected book.</div>
+                  <div className="text-[8px] text-slate-500">Final games preserve the official score and inning totals. Live games recalculate from corrected plays.</div>
                 </div>
                 <button type="button" onClick={() => setEditingPlay(null)} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-400">×</button>
               </div>
