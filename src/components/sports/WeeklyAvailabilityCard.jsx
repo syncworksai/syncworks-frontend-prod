@@ -78,6 +78,7 @@ export default function WeeklyAvailabilityCard({
   initialWeekStart = "",
   title = "This week's games",
   showRoster = true,
+  showSelfResponse = false,
   onGameOpen = null,
 }) {
   const [weekStart, setWeekStart] = useState(initialWeekStart || mondayYmd());
@@ -179,7 +180,7 @@ export default function WeeklyAvailabilityCard({
       {!games.length && !busy ? <div className="mt-3 rounded-xl border border-dashed border-white/10 p-4 text-center text-[10px] text-slate-500">No games scheduled for this week.</div> : null}
 
       {games.length ? <>
-        {!managerView ? <div className="mt-3 grid grid-cols-3 gap-1.5">
+        {(!managerView || showSelfResponse) ? <div className="mt-3 grid grid-cols-3 gap-1.5">
           <button type="button" disabled={busy} onClick={() => answerAll("YES")} className="min-h-10 rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-2 text-[9px] font-black text-emerald-100">{games.length === 2 && dayCounts.size === 1 ? "IN FOR BOTH" : "IN FOR ALL"}</button>
           <button type="button" disabled={busy} onClick={() => answerAll("MAYBE")} className="min-h-10 rounded-xl border border-amber-300/25 bg-amber-300/10 px-2 text-[9px] font-black text-amber-100">SUB / MAYBE</button>
           <button type="button" disabled={busy} onClick={() => answerAll("NO")} className="min-h-10 rounded-xl border border-rose-300/25 bg-rose-300/10 px-2 text-[9px] font-black text-rose-100">OUT FOR ALL</button>
@@ -202,9 +203,9 @@ export default function WeeklyAvailabilityCard({
             <div className="rounded-xl border border-white/10 bg-white/[.025] p-2.5">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-1 text-[9px] font-black uppercase tracking-wide text-cyan-300"><span>Game {index + 1}</span><span className={cx("rounded px-1.5 py-0.5", game.home_away === "HOME" ? "bg-emerald-300/10 text-emerald-200" : game.home_away === "AWAY" ? "bg-amber-300/10 text-amber-200" : "bg-white/5 text-slate-400")}>{game.home_away === "AWAY" ? "VISITOR" : game.home_away}</span></div><b className="mt-1 block text-sm text-white">vs {game.opponent_name}</b><div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-bold text-white"><span>{gameTime(game)}</span><span className="text-cyan-200">{game.venue_name || "Field TBD"}</span></div></div>
-                <div className="flex shrink-0 flex-col items-end gap-1">{!managerView ? <span className={cx("rounded-full border px-2 py-1 text-[8px] font-black", responseTone(value))}>{labelFor(value)}</span> : null}{onGameOpen ? <button type="button" onClick={() => onGameOpen(game)} className="min-h-9 rounded-lg border border-white/10 px-2 text-[9px] font-black text-cyan-200">Lineup / Book ›</button> : null}</div>
+                <div className="flex shrink-0 flex-col items-end gap-1">{(!managerView || showSelfResponse) ? <span className={cx("rounded-full border px-2 py-1 text-[8px] font-black", responseTone(value))}>{labelFor(value)}</span> : null}{onGameOpen ? <button type="button" onClick={() => onGameOpen(game)} className="min-h-9 rounded-lg border border-white/10 px-2 text-[9px] font-black text-cyan-200">Lineup / Book ›</button> : null}</div>
               </div>
-              {!managerView ? <div className="mt-2 grid grid-cols-3 gap-1.5">{[["YES","IN"],["MAYBE","SUB"],["NO","OUT"]].map(([answer,label])=><button key={answer} type="button" disabled={busy} onClick={() => answerOne(game.id, answer)} className={cx("min-h-9 rounded-lg border text-[8px] font-black",value===answer?responseTone(answer):"border-white/10 text-slate-500")}>{value===answer?<Check className="mr-1 inline h-3 w-3" />:null}{label}</button>)}</div> : null}
+              {(!managerView || showSelfResponse) ? <div className="mt-2 grid grid-cols-3 gap-1.5">{[["YES","IN"],["MAYBE","SUB"],["NO","OUT"]].map(([answer,label])=><button key={answer} type="button" disabled={busy} onClick={() => answerOne(game.id, answer)} className={cx("min-h-9 rounded-lg border text-[8px] font-black",value===answer?responseTone(answer):"border-white/10 text-slate-500")}>{value===answer?<Check className="mr-1 inline h-3 w-3" />:null}{label}</button>)}</div> : null}
             </div>
           </React.Fragment>;
           })}
