@@ -6,6 +6,63 @@ function list(data) {
   return [];
 }
 
+
+export async function getWeeklyAvailability(teamId) {
+  const { data } = await api.get(`/sports/team-engagement/${teamId}/weekly/`, { timeout: 45000 });
+  return data;
+}
+
+export async function publishWeeklyAvailability(teamId, payload) {
+  const { data } = await api.post(`/sports/team-engagement/${teamId}/weekly/`, payload);
+  return data;
+}
+
+export async function respondWeeklyAvailability(teamId, payload) {
+  const { data } = await api.post(`/sports/team-engagement/${teamId}/weekly/respond/`, payload);
+  return data;
+}
+
+export async function remindWeeklyAvailability(teamId, week_start) {
+  const { data } = await api.post(`/sports/team-engagement/${teamId}/weekly/remind/`, { week_start });
+  return data;
+}
+
+export async function getTeamChatPolls(teamId) {
+  const { data } = await api.get(`/sports/team-engagement/${teamId}/polls/`);
+  return list(data);
+}
+
+export async function createTeamChatPoll(teamId, payload) {
+  const { data } = await api.post(`/sports/team-engagement/${teamId}/polls/`, payload);
+  return data;
+}
+
+export async function voteTeamChatPoll(teamId, pollId, option_index) {
+  const { data } = await api.post(`/sports/team-engagement/${teamId}/polls/${pollId}/vote/`, { option_index });
+  return data;
+}
+
+export async function closeTeamChatPoll(teamId, pollId) {
+  const { data } = await api.post(`/sports/team-engagement/${teamId}/polls/${pollId}/close/`, {});
+  return data;
+}
+
+export async function getCoachAwards(teamId, playerId = null) {
+  const { data } = await api.get("/sports/coach-awards/", {
+    params: { team: teamId, ...(playerId ? { player: playerId } : {}) },
+  });
+  return list(data);
+}
+
+export async function createCoachAward(payload) {
+  const { data } = await api.post("/sports/coach-awards/", payload);
+  return data;
+}
+
+export async function revokeCoachAward(id) {
+  await api.delete(`/sports/coach-awards/${id}/`);
+}
+
 export async function getSportsTeams() {
   const { data } = await api.get("/sports/teams/");
   return list(data);
