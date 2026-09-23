@@ -262,6 +262,7 @@ export default function SportsTeamManagerDashboard() {
   const [photoFile, setPhotoFile] = useState(null);
   const [drawerBadgeCard, setDrawerBadgeCard] = useState(null);
   const [drawerAudit, setDrawerAudit] = useState(null);
+  const drawerLoadVersion = useRef(0);
   const [drawerBadgeLoading, setDrawerBadgeLoading] = useState(false);
   const [momentGameId, setMomentGameId] = useState("");
   const [momentKind, setMomentKind] = useState("");
@@ -767,6 +768,7 @@ export default function SportsTeamManagerDashboard() {
   }
 
   function openPlayer(player) {
+    const version = ++drawerLoadVersion.current;
     const profile = profileFor(player);
     setPlayerDrawer(player);
     setDrawerBadgeCard(null);
@@ -774,10 +776,11 @@ export default function SportsTeamManagerDashboard() {
     setDrawerAwards([]);
     setDrawerAudit(null);
     Promise.allSettled([getPlayerBadgeCard(player.id), getPlayerAwards({ player: player.id }), getPlayerBookAudit(player.id)]).then(([badgeResult, awardResult, auditResult])=>{
+      if (version !== drawerLoadVersion.current) return;
       setDrawerBadgeCard(badgeResult.status==="fulfilled" ? badgeResult.value : null);
       setDrawerAwards(awardResult.status==="fulfilled" ? awardResult.value : []);
       setDrawerAudit(auditResult.status==="fulfilled" ? auditResult.value : null);
-    }).finally(()=>setDrawerBadgeLoading(false));
+    }).finally(()=>{ if (version === drawerLoadVersion.current) setDrawerBadgeLoading(false); });
     setMomentGameId(""); setMomentKind("");
     setAwardForm({ kind:"PLAYER_OF_WEEK", title:"Player of the Week", week_of:"", note:"" });
     setPlayerEdit({
