@@ -206,6 +206,42 @@ export async function reopenSportsGame(id) {
   return data;
 }
 
+export async function getGameBookPhotos(game) {
+  const { data } = await api.get("/sports/game-book-photos/", { params: { game }, timeout: 45000 });
+  return list(data);
+}
+
+export async function uploadGameBookPhoto(game, image, pageLabel = "") {
+  const form = new FormData();
+  form.append("game", game);
+  form.append("image", image, image.name || "scorebook.jpg");
+  if (pageLabel) form.append("page_label", pageLabel);
+  const { data } = await api.post("/sports/game-book-photos/", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+    timeout: 90000,
+  });
+  return data;
+}
+
+export async function deleteGameBookPhoto(id) {
+  await api.delete(`/sports/game-book-photos/${id}/`);
+}
+
+export async function openGameBookPhoto(id) {
+  const { data } = await api.get(`/sports/game-book-photos/${id}/image/`, {
+    responseType: "blob",
+    timeout: 45000,
+  });
+  const url = URL.createObjectURL(data);
+  window.open(url, "_blank", "noopener,noreferrer");
+  window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+export async function importHistoricalGameBook(id, payload) {
+  const { data } = await api.post(`/sports/games/${id}/import-historical-book/`, payload, { timeout: 90000 });
+  return data;
+}
+
 export async function getPlateAppearances(game) {
   const { data } = await api.get("/sports/plate-appearances/", { params: { game }, timeout: 45000 });
   return list(data);
