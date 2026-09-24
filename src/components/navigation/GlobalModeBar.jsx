@@ -34,7 +34,13 @@ export default function GlobalModeBar() {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const isGodMode = String(user?.email || "").trim().toLowerCase() === GOD_MODE_EMAIL;
-  const hidden = ["/login", "/register", "/employee/invite", "/accept-invite"].some((path) => location.pathname.startsWith(path));
+  // Group, team, and game-book workspaces already render ModeBar with the
+  // notification bell and app menu. The portal-wide header above them was
+  // producing two logos/menus and a large empty iPhone header gap.
+  const hasWorkspaceBar = /^\\/connect\\/groups\\/[^/]+(?:\\/|$)/.test(location.pathname);
+  const hidden = hasWorkspaceBar || ["/login", "/register", "/employee/invite", "/accept-invite"].some(
+    (path) => location.pathname.startsWith(path)
+  );
   const modes = useMemo(() => Object.entries(MODE_ROUTES).filter(([key]) => availableModes?.[key] && (key !== "PLATFORM" || isGodMode)), [availableModes, isGodMode]);
 
   useEffect(() => setOpen(false), [location.pathname, location.search]);
