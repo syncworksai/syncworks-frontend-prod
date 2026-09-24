@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
-import ModeBar from "../components/ModeBar";
+
 import TeamChatPanel from "../components/sports/TeamChatPanel";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import PlayerCollectibleCard, { SportsPlayerPhoto } from "../components/sports/PlayerCollectibleCard";
@@ -268,10 +268,10 @@ export default function SportsPlayerDashboard() {
 
   if (loading) return <div className="grid min-h-screen place-items-center bg-[#02060c] text-white" aria-label="Loading player dashboard"><Loader2 className="h-7 w-7 animate-spin text-cyan-300"/></div>;
 
-  if (!team || !center) return <div className="min-h-screen bg-[#02060c] p-3 text-white"><ModeBar sportsCompact title="Player" subtitle="SyncWorks Social"/><Card title="Team unavailable"><div className="text-xs text-slate-500">{error || "This team could not be loaded."}</div><Btn className="mt-3" onClick={()=>navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4"/>Back to Social</Btn></Card></div>;
+  if (!team || !center) return <div className="min-h-screen bg-[#02060c] p-3 text-white"><Card title="Team unavailable"><div className="text-xs text-slate-500">{error || "This team could not be loaded."}</div><Btn className="mt-3" onClick={()=>navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4"/>Back to Social</Btn></Card></div>;
 
   if (!player) return <div className="min-h-screen bg-[#02060c] pb-28 text-white">
-    <ModeBar sportsCompact title={team.group_name || "Team"} subtitle="SyncWorks Sports" />
+    
     <main className="mx-auto max-w-xl space-y-3 px-3 py-4">
       <Btn onClick={()=>navigate("/connect/groups/"+groupId)}><ArrowLeft className="mr-1 inline h-4 w-4"/>Back to my group</Btn>
       {error ? <div role="alert" className="rounded-xl border border-rose-300/20 bg-rose-300/10 p-3 text-xs text-rose-100">{error}</div> : null}
@@ -289,7 +289,7 @@ export default function SportsPlayerDashboard() {
   </div>;
 
   return <div className="min-h-screen bg-[#02060c] pb-28 text-slate-100">
-    <ModeBar sportsCompact title="Player" subtitle="SyncWorks Social"/>
+    
     <main className="mx-auto max-w-6xl space-y-3 px-3 py-3 sm:px-5">
       <div className="flex items-center justify-between gap-2"><Btn onClick={()=>navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4"/>Groups</Btn><Btn onClick={()=>setChatOpen(true)}><MessageCircle className="mr-1 inline h-4 w-4"/>Team chat</Btn></div>
       {error ? <div className="rounded-xl border border-rose-300/20 bg-rose-300/10 p-2.5 text-[10px] text-rose-100">{error}</div> : null}
