@@ -24,7 +24,7 @@ export default function SportsTeamMobileNav({
       id: "back",
       label: "Back",
       Icon: ArrowLeft,
-      onClick: () => navigate(location.pathname.includes("/games/") ? base : `/connect/groups/${groupId}`),
+      onClick: () => navigate(location.pathname.includes("/games/") ? base : activeTab && activeTab !== "Overview" ? `${base}?tab=Overview` : `/connect/groups/${groupId}`),
       active: false,
     },
     {
