@@ -120,8 +120,9 @@ export default function SportsPlayerDashboard() {
   const dueCount = dues.filter((row)=>["DUE","PARTIAL"].includes(row.status)).length;
   const lineupSpot = nextGame?.lineup_spots?.find((spot)=>Number(spot.player)===Number(player?.id));
   const weeklyGameRows = Array.isArray(center?.weekly_availability?.games) ? center.weekly_availability.games : [];
-  const nextDayGames = firstUpcomingGameDay(weeklyGameRows.map((row)=>row.game).filter((game)=>game?.status==="SCHEDULED"||game?.status==="LIVE"));
-  const weeklyResponseMap = Object.fromEntries(weeklyGameRows.map((row)=>[String(row.game?.id), row.my_response?.response || "PENDING"]));
+  const nextGameDayRows = Array.isArray(center?.next_game_day) && center.next_game_day.length ? center.next_game_day : weeklyGameRows;
+  const nextDayGames = firstUpcomingGameDay(nextGameDayRows.map((row)=>row.game).filter((game)=>game?.status==="SCHEDULED"||game?.status==="LIVE"));
+  const weeklyResponseMap = Object.fromEntries(nextGameDayRows.map((row)=>[String(row.game?.id), row.my_response?.response || "PENDING"]));
 
   const teamOpsRank = useMemo(() => {
     if (!player) return null;
@@ -205,7 +206,7 @@ export default function SportsPlayerDashboard() {
     if (!game?.social_event) return;
     setBusy(true); setError(""); setNotice("");
     try {
-      const weeklyRow = weeklyGameRows.find((row)=>Number(row.game?.id)===Number(game.id));
+      const weeklyRow = nextGameDayRows.find((row)=>Number(row.game?.id)===Number(game.id));
       if (weeklyRow?.my_response?.id) await updateEventResponse(weeklyRow.my_response.id, value);
       else await createEventResponse({ event:Number(game.social_event), group:Number(groupId), response:value });
       setNotice(value==="YES" ? "You’re IN for this game." : value==="NO" ? "You’re OUT for this game." : "You’re marked as a SUB for this game.");
