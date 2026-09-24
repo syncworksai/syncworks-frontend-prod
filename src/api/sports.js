@@ -92,19 +92,14 @@ export async function removePlayerAward(id) {
 }
 
 export async function getTeamDashboard(id) {
-  const [dashboardResponse, gamesResponse] = await Promise.all([
-    api.get(`/sports/teams/${id}/dashboard/`),
-    api.get("/sports/games/", { params: { team: id } }),
-  ]);
-  const data = dashboardResponse.data;
-  const allGames = list(gamesResponse.data);
-  const now = Date.now();
-  data.upcoming_games = allGames
-    .filter((game) => game.status === "SCHEDULED" && new Date(game.start_at).getTime() >= now)
-    .sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
-  data.needs_completion_games = allGames
-    .filter((game) => game.status === "SCHEDULED" && new Date(game.start_at).getTime() < now)
-    .sort((a, b) => new Date(b.start_at) - new Date(a.start_at));
+  // The compact endpoint returns the roster and all game-day summaries
+  // together without serializing each game twice. A longer timeout protects
+  // first load during Render cold starts; it is not a substitute for the
+  // bounded-query server response.
+  const { data } = await api.get(`/sports/teams/${id}/dashboard/`, {
+    params: { compact: 1 },
+    timeout: 30000,
+  });
   return data;
 }
 
