@@ -48,6 +48,30 @@ export async function openWeeklyAvailability(teamId, weekStart) {
   return data;
 }
 
+export async function getPracticeSessions({ team, player } = {}) {
+  const { data } = await api.get("/sports/practice-sessions/", { params: { team, player } });
+  return list(data);
+}
+
+export async function createPracticeSession(payload) {
+  const { data } = await api.post("/sports/practice-sessions/", payload);
+  return data;
+}
+
+export async function addPracticeRep(sessionId, payload) {
+  const { data } = await api.post(`/sports/practice-sessions/${sessionId}/add-rep/`, payload);
+  return data;
+}
+
+export async function getPracticeSummary(team, player = "") {
+  const { data } = await api.get("/sports/practice-sessions/summary/", { params: { team, ...(player ? { player } : {}) } });
+  return data;
+}
+
+export async function removePracticeRep(id) {
+  await api.delete(`/sports/practice-reps/${id}/`);
+}
+
 export async function getPlayerAwards({ team, player } = {}) {
   const { data } = await api.get("/sports/player-awards/", { params: { team, player } });
   return list(data);
@@ -214,6 +238,11 @@ export async function startSportsGame(id) {
 
 export async function substituteSportsGame(id, payload) {
   const { data } = await api.post(`/sports/games/${id}/substitute/`, payload);
+  return data;
+}
+
+export async function addHistoricalSoftballPlay(id, payload) {
+  const { data } = await api.post(`/sports/games/${id}/add-book-play/`, payload);
   return data;
 }
 

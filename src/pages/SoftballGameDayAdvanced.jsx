@@ -31,6 +31,7 @@ import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import { useAuth } from "../auth/AuthContext";
 import { getMemberships } from "../api/social";
 import {
+  addHistoricalSoftballPlay,
   correctSoftballPlay,
   deleteSportsGameBook,
   finishSportsGame,
@@ -89,6 +90,19 @@ const SPRAY_ZONES = [
   ["RIGHT_LINE", "RF line"], ["INFIELD_LEFT", "IF left"], ["INFIELD_MIDDLE", "IF middle"], ["INFIELD_RIGHT", "IF right"],
 ];
 const POSITIONS = ["P", "C", "1B", "2B", "3B", "SS", "MM", "LF", "LC", "CF", "RC", "RF", "OF", "EH1", "EH2", "EH", "DH"];
+const SITUATION_OBJECTIVES = [
+  ["", "No situation tag"],
+  ["QUALITY_AB", "Quality at-bat"],
+  ["ADVANCE_RUNNER", "Move the runner"],
+  ["SAC_FLY", "Sacrifice fly"],
+  ["SCORE_RUNNER", "Score the runner"],
+  ["TWO_OUT_HIT", "Two-out hitting"],
+  ["HIT_BEHIND_RUNNER", "Hit behind runner"],
+];
+const BASE_STATES = [["","Bases empty"],["1","Runner on 1st"],["2","Runner on 2nd"],["3","Runner on 3rd"],["12","1st + 2nd"],["13","1st + 3rd"],["23","2nd + 3rd"],["123","Bases loaded"]];
+function baseState(first, second, third) {
+  return [first?"1":"",second?"2":"",third?"3":""].join("");
+}
 
 const cx = (...values) => values.filter(Boolean).join(" ");
 const list = (value) => Array.isArray(value) ? value : [];
@@ -374,12 +388,16 @@ export default function SoftballGameDayAdvanced() {
   const [runner3, setRunner3] = useState(false);
   const [runnersAdvanced, setRunnersAdvanced] = useState(0);
   const [productiveOut, setProductiveOut] = useState(false);
+  const [situationObjective, setSituationObjective] = useState("");
+  const [situationSuccess, setSituationSuccess] = useState(false);
   const [battedBallType, setBattedBallType] = useState("");
   const [sprayZone, setSprayZone] = useState("");
   const [outMenuOpen, setOutMenuOpen] = useState(false);
   const [outChoice, setOutChoice] = useState(null);
   const [editingPlay, setEditingPlay] = useState(null);
-  const [editForm, setEditForm] = useState({ inning: 1, result: "OUT", outs_recorded: 1, rbi: 0, runs_scored: 0, notes: "" });
+  const [editForm, setEditForm] = useState({ inning: 1, result: "OUT", outs_recorded: 1, rbi: 0, runs_scored: 0, outs_before: 0, base_state: "", situation_objective: "", runners_advanced: 0, situation_success: false, notes: "" });
+  const [historicalAddOpen, setHistoricalAddOpen] = useState(false);
+  const [historicalForm, setHistoricalForm] = useState({ player: "", inning: 1, result: "OUT", outs_recorded: 1, rbi: 0, runs_scored: 0, outs_before: 0, base_state: "", situation_objective: "", runners_advanced: 0, situation_success: false, notes: "" });
   const [hitterCard, setHitterCard] = useState(null);
   const [playerCard, setPlayerCard] = useState(null);
   const [playerCardOpen, setPlayerCardOpen] = useState(false);
@@ -662,7 +680,7 @@ export default function SoftballGameDayAdvanced() {
   function clearEntry({ keepBases = true } = {}) {
     setResult(""); setOutsRecorded(0); setRbi(0); setRuns(0);
     if (!keepBases) { setRunner1(false); setRunner2(false); setRunner3(false); }
-    setRunnersAdvanced(0); setProductiveOut(false); setBattedBallType(""); setSprayZone("");
+    setRunnersAdvanced(0); setProductiveOut(false); setSituationObjective(""); setSituationSuccess(false); setBattedBallType(""); setSprayZone("");
     setOutMenuOpen(false); setOutChoice(null);
   }
 
@@ -678,6 +696,10 @@ export default function SoftballGameDayAdvanced() {
         outs_recorded: outsRecorded,
         rbi,
         runs_scored: runs,
+        base_state: baseState(runner1, runner2, runner3),
+        situation_objective: situationObjective,
+        runners_advanced: runnersAdvanced,
+        situation_success: situationObjective ? situationSuccess : "",
         notes: outChoice?.detail || "",
       });
       const plateAppearanceId = response?.play?.id;
@@ -716,6 +738,47 @@ export default function SoftballGameDayAdvanced() {
     }
   }
 
+  function openHistoricalAdd(playerId = "") {
+    const fallbackPlayer = playerId || lineup[0]?.player || "";
+    setHistoricalForm({
+      player: String(fallbackPlayer || ""),
+      inning: 1,
+      result: "OUT",
+      outs_recorded: 1,
+      rbi: 0,
+      runs_scored: 0,
+      outs_before: 0,
+      base_state: "",
+      situation_objective: "",
+      runners_advanced: 0,
+      situation_success: false,
+      notes: "",
+    });
+    setHistoricalAddOpen(true);
+  }
+
+  async function saveHistoricalAdd() {
+    if (!historicalForm.player || busy) return;
+    const saved = await run(
+      () => addHistoricalSoftballPlay(game.id, {
+        player: Number(historicalForm.player),
+        inning: Math.max(1, num(historicalForm.inning)),
+        result: historicalForm.result,
+        outs_recorded: Math.max(0, Math.min(3, num(historicalForm.outs_recorded))),
+        rbi: Math.max(0, num(historicalForm.rbi)),
+        runs_scored: Math.max(0, num(historicalForm.runs_scored)),
+        outs_before: Math.max(0, Math.min(2, num(historicalForm.outs_before))),
+        base_state: historicalForm.base_state || "",
+        situation_objective: historicalForm.situation_objective || "",
+        runners_advanced: Math.max(0, Math.min(3, num(historicalForm.runners_advanced))),
+        situation_success: historicalForm.situation_objective ? Boolean(historicalForm.situation_success) : null,
+        notes: historicalForm.notes || "",
+      }),
+      "Historical Game Book play added. Final score preserved.",
+    );
+    if (saved) setHistoricalAddOpen(false);
+  }
+
   function openPlayEditor(play) {
     if (!canScore) return;
     setEditingPlay(play);
@@ -725,6 +788,11 @@ export default function SoftballGameDayAdvanced() {
       outs_recorded: num(play.outs_recorded),
       rbi: num(play.rbi),
       runs_scored: num(play.runs_scored),
+      outs_before: play.outs_before ?? 0,
+      base_state: play.base_state || "",
+      situation_objective: play.situation_objective || "",
+      runners_advanced: num(play.runners_advanced),
+      situation_success: play.situation_success === true,
       notes: play.notes || "",
     });
   }
@@ -738,6 +806,11 @@ export default function SoftballGameDayAdvanced() {
         outs_recorded: Math.max(0, Math.min(3, num(editForm.outs_recorded))),
         rbi: Math.max(0, num(editForm.rbi)),
         runs_scored: Math.max(0, num(editForm.runs_scored)),
+        outs_before: Math.max(0, Math.min(2, num(editForm.outs_before))),
+        base_state: editForm.base_state || "",
+        situation_objective: editForm.situation_objective || "",
+        runners_advanced: Math.max(0, Math.min(3, num(editForm.runners_advanced))),
+        situation_success: editForm.situation_objective ? Boolean(editForm.situation_success) : null,
         notes: editForm.notes || "",
       }),
       "Scorebook corrected.",
@@ -1208,6 +1281,12 @@ export default function SoftballGameDayAdvanced() {
                           {outsRecorded ? <MiniStepper label="Outs on play" value={outsRecorded} onChange={setOutsRecorded} max={Math.max(0,3-num(game.outs))} /> : null}
                           <MiniStepper label="Runners advanced" value={runnersAdvanced} onChange={setRunnersAdvanced} max={3} />
                           {["OUT","FC","SF"].includes(result) ? <Toggle active={result==="SF"||productiveOut} onClick={() => result!=="SF"&&setProductiveOut(!productiveOut)}>Productive out</Toggle> : null}
+                          <label className="block text-[7px] font-black uppercase tracking-wide text-slate-500">Situation
+                            <select value={situationObjective} onChange={(e)=>{setSituationObjective(e.target.value);setSituationSuccess(false);}} className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#050b14] px-2 text-[10px] font-black text-white">
+                              {SITUATION_OBJECTIVES.map(([value,label])=><option key={value||"none"} value={value}>{label}</option>)}
+                            </select>
+                          </label>
+                          {situationObjective ? <Toggle active={situationSuccess} onClick={()=>setSituationSuccess(!situationSuccess)}>{situationSuccess ? "Situation accomplished" : "Mark situation successful"}</Toggle> : null}
                           {!["BB","K"].includes(result) ? (
                             <>
                               <div className="grid grid-cols-4 gap-1">
@@ -1231,7 +1310,7 @@ export default function SoftballGameDayAdvanced() {
             </section>
 
             <section className="overflow-x-auto rounded-2xl border border-white/10 bg-[#07111f] p-2">
-              <div className="mb-1.5 flex items-center justify-between"><div><div className="text-[8px] font-black uppercase tracking-[.14em] text-slate-500">Scorebook grid</div>{canScore?<div className="mt-0.5 text-[7px] text-slate-600">Tap any recorded box to correct it.</div>:null}</div>{canScore&&plays.length?<Button onClick={()=>run(()=>undoSoftballPlay(game.id),"Last play undone.")}><Undo2 className="mr-1 inline h-3.5 w-3.5" />Undo</Button>:null}</div>
+              <div className="mb-1.5 flex items-center justify-between gap-2"><div><div className="text-[8px] font-black uppercase tracking-[.14em] text-slate-500">Digital Game Book</div>{canScore?<div className="mt-0.5 text-[7px] text-slate-600">{final ? "Review the historical book here. Add missing plate appearances or tap a recorded box to correct it." : "Tap any recorded box to correct it."}</div>:null}</div><div className="flex shrink-0 gap-1.5">{final&&canScore?<Button onClick={()=>openHistoricalAdd()}><Plus className="mr-1 inline h-3.5 w-3.5"/>Add PA</Button>:null}{canScore&&live&&plays.length?<Button onClick={()=>run(()=>undoSoftballPlay(game.id),"Last play undone.")}><Undo2 className="mr-1 inline h-3.5 w-3.5" />Undo</Button>:null}</div></div>
               <table className="min-w-max border-collapse text-center text-[8px]">
                 <thead>
                   <tr>
@@ -1273,10 +1352,16 @@ export default function SoftballGameDayAdvanced() {
                                     )}
                                     title={canScore ? "Tap to correct this scorebook entry" : undefined}
                                   >
-                                    <span className="flex items-center justify-center gap-0.5">
-                                      <span>{playBadge(play)}</span>
-                                      {num(play.outs_recorded)>0?<span className="text-[6px] text-rose-200">+{num(play.outs_recorded)}O</span>:null}
-                                      {canScore?<Edit3 className="h-2.5 w-2.5 opacity-55"/>:null}
+                                    <span className="flex min-w-9 flex-col items-center justify-center gap-0.5">
+                                      <span className="relative grid h-7 w-7 place-items-center">
+                                        <span className="absolute inset-1 rotate-45 rounded-[2px] border border-current/25 bg-black/10" />
+                                        <span className="relative z-10 text-[7px]">{playBadge(play)}</span>
+                                      </span>
+                                      <span className="flex items-center justify-center gap-1 whitespace-nowrap">
+                                        {num(play.runs_scored)>0?<span className="text-[6px] font-black text-amber-200">+{num(play.runs_scored)} RUN{num(play.runs_scored)===1?"":"S"}</span>:null}
+                                        {num(play.outs_recorded)>0?<span className="text-[6px] text-rose-200">+{num(play.outs_recorded)}O</span>:null}
+                                        {canScore?<Edit3 className="h-2.5 w-2.5 opacity-55"/>:null}
+                                      </span>
                                     </span>
                                   </button>
                                 ))}
@@ -1455,6 +1540,36 @@ export default function SoftballGameDayAdvanced() {
           </div>
         ) : null}
 
+        {historicalAddOpen ? (
+          <div className="fixed inset-0 z-[93] flex items-end justify-center bg-black/80 px-3 pb-4 pt-[max(4rem,env(safe-area-inset-top))] sm:items-center">
+            <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-[1.6rem] border border-amber-300/20 bg-[#07111f] p-4 shadow-2xl">
+              <div className="flex items-start justify-between gap-3">
+                <div><div className="text-[8px] font-black uppercase tracking-[.15em] text-amber-300">Historical Game Book</div><div className="mt-1 text-base font-black text-white">Add missing plate appearance</div><div className="mt-1 text-[8px] leading-4 text-slate-500">This fills the digital book without changing the official final score. Use the paper book as the source.</div></div>
+                <button type="button" onClick={()=>setHistoricalAddOpen(false)} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 text-slate-300">×</button>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <label className="col-span-2 text-[8px] font-black uppercase text-slate-500">Player
+                  <select value={historicalForm.player} onChange={(e)=>setHistoricalForm({...historicalForm,player:e.target.value})} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs font-black text-white">
+                    <option value="">Choose player</option>{lineup.map((spot)=><option key={spot.player} value={spot.player}>{spot.batting_order}. #{spot.player_detail?.jersey_number||"—"} {spot.player_detail?.display_name}</option>)}
+                  </select>
+                </label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Inning<input type="number" min="1" value={historicalForm.inning} onChange={(e)=>setHistoricalForm({...historicalForm,inning:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] text-white sm:text-xs"/></label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Result<select value={historicalForm.result} onChange={(e)=>setHistoricalForm({...historicalForm,result:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs font-black text-white">{RESULTS.map((row)=><option key={row.value} value={row.value}>{row.label} · {row.detail}</option>)}</select></label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Outs on play<input type="number" min="0" max="3" value={historicalForm.outs_recorded} onChange={(e)=>setHistoricalForm({...historicalForm,outs_recorded:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] text-white sm:text-xs"/></label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Runs scored<input type="number" min="0" max="4" value={historicalForm.runs_scored} onChange={(e)=>setHistoricalForm({...historicalForm,runs_scored:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] text-white sm:text-xs"/></label>
+                <label className="text-[8px] font-black uppercase text-slate-500">RBI<input type="number" min="0" max="4" value={historicalForm.rbi} onChange={(e)=>setHistoricalForm({...historicalForm,rbi:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] text-white sm:text-xs"/></label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Outs before<select value={historicalForm.outs_before} onChange={(e)=>setHistoricalForm({...historicalForm,outs_before:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs text-white"><option value={0}>0</option><option value={1}>1</option><option value={2}>2</option></select></label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Runners before<select value={historicalForm.base_state} onChange={(e)=>setHistoricalForm({...historicalForm,base_state:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs text-white">{BASE_STATES.map(([value,label])=><option key={value||"empty"} value={value}>{label}</option>)}</select></label>
+                <label className="col-span-2 text-[8px] font-black uppercase text-slate-500">Situation<select value={historicalForm.situation_objective} onChange={(e)=>setHistoricalForm({...historicalForm,situation_objective:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs text-white">{SITUATION_OBJECTIVES.map(([value,label])=><option key={value||"none"} value={value}>{label}</option>)}</select></label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Runners moved<input type="number" min="0" max="3" value={historicalForm.runners_advanced} onChange={(e)=>setHistoricalForm({...historicalForm,runners_advanced:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] text-white sm:text-xs"/></label>
+                <button type="button" disabled={!historicalForm.situation_objective} onClick={()=>setHistoricalForm({...historicalForm,situation_success:!historicalForm.situation_success})} className={cx("mt-4 min-h-10 rounded-xl border text-[9px] font-black",historicalForm.situation_success?"border-emerald-300/30 bg-emerald-300/10 text-emerald-100":"border-white/10 text-slate-500","disabled:opacity-30")}>{historicalForm.situation_success?"Situation success":"Situation miss"}</button>
+                <label className="col-span-2 text-[8px] font-black uppercase text-slate-500">Book note<input value={historicalForm.notes} onChange={(e)=>setHistoricalForm({...historicalForm,notes:e.target.value})} placeholder="Optional note from the paper book" className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] text-white sm:text-xs"/></label>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2"><Button onClick={()=>setHistoricalAddOpen(false)}>Cancel</Button><Button primary disabled={busy||!historicalForm.player} onClick={saveHistoricalAdd}>{busy?"Saving…":"Add to book"}</Button></div>
+            </div>
+          </div>
+        ) : null}
+
         {editingPlay ? (
           <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/70 px-3 pb-4 pt-20 sm:items-center">
             <div className="w-full max-w-md rounded-[1.6rem] border border-cyan-300/20 bg-[#07111f] p-4 shadow-2xl">
@@ -1484,7 +1599,20 @@ export default function SoftballGameDayAdvanced() {
                 <label className="text-[8px] font-black uppercase text-slate-500">Runs
                   <input type="number" min="0" max="4" value={editForm.runs_scored} onChange={(e)=>setEditForm({...editForm,runs_scored:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] font-black text-white sm:text-xs" />
                 </label>
-                <label className="text-[8px] font-black uppercase text-slate-500">Note
+                <label className="text-[8px] font-black uppercase text-slate-500">Outs before
+                  <select value={editForm.outs_before} onChange={(e)=>setEditForm({...editForm,outs_before:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs font-black text-white"><option value={0}>0 outs</option><option value={1}>1 out</option><option value={2}>2 outs</option></select>
+                </label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Runners before
+                  <select value={editForm.base_state} onChange={(e)=>setEditForm({...editForm,base_state:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs font-black text-white">{BASE_STATES.map(([value,label])=><option key={value||"empty"} value={value}>{label}</option>)}</select>
+                </label>
+                <label className="col-span-2 text-[8px] font-black uppercase text-slate-500">Situation
+                  <select value={editForm.situation_objective} onChange={(e)=>setEditForm({...editForm,situation_objective:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs font-black text-white">{SITUATION_OBJECTIVES.map(([value,label])=><option key={value||"none"} value={value}>{label}</option>)}</select>
+                </label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Runners moved
+                  <input type="number" min="0" max="3" value={editForm.runners_advanced} onChange={(e)=>setEditForm({...editForm,runners_advanced:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] text-white sm:text-xs" />
+                </label>
+                <button type="button" disabled={!editForm.situation_objective} onClick={()=>setEditForm({...editForm,situation_success:!editForm.situation_success})} className={cx("mt-4 min-h-10 rounded-xl border text-[9px] font-black",editForm.situation_success?"border-emerald-300/30 bg-emerald-300/10 text-emerald-100":"border-white/10 text-slate-500","disabled:opacity-30")}>{editForm.situation_success?"Situation success":"Situation miss"}</button>
+                <label className="col-span-2 text-[8px] font-black uppercase text-slate-500">Note
                   <input value={editForm.notes} onChange={(e)=>setEditForm({...editForm,notes:e.target.value})} placeholder="Optional" className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] text-white sm:text-xs" />
                 </label>
               </div>
