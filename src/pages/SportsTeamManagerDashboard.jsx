@@ -41,6 +41,8 @@ import PlayerCollectibleCard, { SportsPlayerPhoto } from "../components/sports/P
 import PlayerStatSplits from "../components/sports/PlayerStatSplits";
 import PlayerBookAuditCard from "../components/sports/PlayerBookAuditCard";
 import WeeklyAvailabilityCard from "../components/sports/WeeklyAvailabilityCard";
+import UpcomingGameDayCard, { firstUpcomingGameDay } from "../components/sports/UpcomingGameDayCard";
+import PracticeModeCard from "../components/sports/PracticeModeCard";
 import { useAuth } from "../auth/AuthContext";
 import { acceptMembership, createEventResponse, createGroupInviteLink, getEventResponses, getGroups, getMemberships, inviteMember, setMembershipRole, uploadGroupLogo, updateEventResponse } from "../api/social";
 import {
@@ -88,7 +90,7 @@ import {
   updateTeamPaymentSettings,
 } from "../api/sports";
 
-const TABS = ["Overview", "Roster", "Lineup", "Schedule", "Stats", "Dues", "Rewards"];
+const TABS = ["Overview", "Roster", "Lineup", "Schedule", "Stats", "Practice", "Dues", "Rewards"];
 const ROLE_OPTIONS = [
   ["MEMBER", "Member / Player"],
   ["SCOREKEEPER", "Scorekeeper"],
@@ -308,6 +310,7 @@ export default function SportsTeamManagerDashboard() {
   const liveGame = games.find((game) => game.status === "LIVE") || null;
   const lineupIds = new Set(lineup.map((spot) => Number(spot.player)));
   const nextGame = games.find((game) => game.status === "LIVE") || games.find((game) => game.status === "SCHEDULED" && new Date(game.start_at) >= new Date());
+  const nextDayGames = firstUpcomingGameDay(games.filter((game)=>game.status === "LIVE" || (game.status === "SCHEDULED" && new Date(game.start_at) >= new Date())));
   const needsCompletionGames = list(dashboard?.needs_completion_games);
   const statusForSelected = (player) => availabilityStatus(player, selectedGame, eventResponses);
   const benchPlayers = players.filter((player) => !lineupIds.has(Number(player.id)) && statusForSelected(player) !== "NO");
@@ -1144,10 +1147,10 @@ export default function SportsTeamManagerDashboard() {
             <Stat label="Runs against" value={num(dashboard?.team_stats?.runs_against)} sub="Allowed" />
             <Stat label="Run differential" value={`${(num(dashboard?.team_stats?.runs_for)-num(dashboard?.team_stats?.runs_against))>=0?"+":""}${num(dashboard?.team_stats?.runs_for)-num(dashboard?.team_stats?.runs_against)}`} />
           </div>
-          {nextGame ? <button type="button" onClick={() => setTab("Schedule")} className="mt-3 flex w-full items-center justify-between rounded-xl border border-emerald-400/15 bg-emerald-400/[.05] p-2.5 text-left"><span><span className="block text-[9px] font-black uppercase tracking-wide text-emerald-300">Next game</span><b className="text-xs text-white">{new Date(nextGame.start_at).toLocaleDateString()} · {new Date(nextGame.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · vs {nextGame.opponent_name}</b><span className="block text-[10px] text-slate-500">{nextGame.venue_name || "Field TBD"}</span></span><CalendarDays className="h-4 w-4 text-emerald-300" /></button> : null}
+          {nextDayGames.length ? <div className="mt-3"><UpcomingGameDayCard games={nextDayGames} onOpen={(game)=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)} /></div> : null}
         </section>
 
-        <div className="flex gap-1.5 overflow-x-auto pb-1">{TABS.filter((name)=>name!=="Rewards"||managerView).map((name) => <button key={name} type="button" onClick={() => setTab(name)} className={cx("min-h-9 shrink-0 rounded-full px-3 text-[10px] font-black", tab === name ? "bg-white text-slate-950" : "border border-white/10 text-slate-400")}>{name}</button>)}</div>
+        <div className="hidden gap-1.5 overflow-x-auto pb-1 lg:flex">{TABS.filter((name)=>name!=="Rewards"||managerView).map((name) => <button key={name} type="button" onClick={() => setTab(name)} className={cx("min-h-9 shrink-0 rounded-full px-3 text-[10px] font-black", tab === name ? "bg-white text-slate-950" : "border border-white/10 text-slate-400")}>{name}</button>)}</div>
 
         {tab === "Overview" ? <div className="grid gap-3 lg:grid-cols-[1fr_1fr_.92fr]">
           <Card title="Season command" body={managerView ? "Manager controls. Players see the same team data without edit access." : "Your team, schedule, lineup, stats and dues in one place."}>
@@ -1164,6 +1167,14 @@ export default function SportsTeamManagerDashboard() {
             <div className="mt-3 grid grid-cols-3 gap-1.5"><Btn onClick={() => setTab("Lineup")}>Lineup</Btn><Btn onClick={() => setTab("Stats")}>Stats</Btn><Btn onClick={() => setTab("Dues")}>Dues</Btn></div>
           </Card>
           <GameAvailabilityCard game={nextGame} players={players} responses={eventResponses} userId={userId} managerView={managerView} onRespond={respondToGame} />
+          <Card title="Starting lineup" body={selectedGame ? `Game ${new Date(selectedGame.start_at).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})} · ${selectedGame.home_away||"TBD"} vs ${selectedGame.opponent_name}` : "Choose an upcoming game in Lineup."} className="lg:col-span-2">
+            {lineup.length ? <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">{lineup.map((spot,index)=>{const player=players.find((row)=>Number(row.id)===Number(spot.player));return <button key={spot.player+"-"+index} type="button" onClick={()=>setTab("Lineup")} className="grid grid-cols-[2rem_1fr_auto] items-center gap-2 rounded-xl border border-white/10 bg-black/15 p-2 text-left"><span className="text-center text-base font-black text-cyan-200">{index+1}</span><span className="min-w-0"><b className="block truncate text-[10px] text-white">{player?.display_name||"Player"}</b><span className="text-[8px] text-slate-500">#{player?.jersey_number||"—"}</span></span><span className="rounded-lg bg-white/[.05] px-2 py-1 text-[8px] font-black text-slate-300">{spot.defensive_position||"EH"}</span></button>})}</div>
+              <div className="rounded-xl border border-violet-300/15 bg-violet-300/[.035] p-2.5"><div className="text-[8px] font-black uppercase tracking-wide text-violet-200">Subs / bench · {benchPlayers.length}</div><div className="mt-1.5 flex flex-wrap gap-1.5">{benchPlayers.map((player)=><span key={player.id} className="rounded-full border border-white/10 px-2 py-1 text-[8px] text-slate-300">#{player.jersey_number||"—"} {player.display_name}</span>)}{!benchPlayers.length?<span className="text-[9px] text-slate-500">No available bench players.</span>:null}</div></div>
+              <Btn className="w-full" onClick={()=>setTab("Lineup")}>Edit / drag lineup</Btn>
+            </div> : <div className="rounded-xl border border-dashed border-white/10 p-4 text-center text-[10px] text-slate-500">No starting lineup saved yet.</div>}
+          </Card>
+          <button type="button" onClick={()=>setTab("Practice")} className="min-h-12 rounded-xl border border-emerald-300/20 bg-emerald-300/[.07] px-3 text-left text-xs font-black text-emerald-100 lg:col-span-2">Practice mode · BP, situations & live-game comparison →</button>
           <div className="hidden lg:block lg:row-span-2"><TeamChatPanel groupId={group.id} teamId={team.id} userId={userId} canManage={managed} /></div>
           {managerView ? <Card title="Earned rewards · settings" body="Control Power, Contact, Speed and Clutch goals; verify or undo individual achievements from the roster." className="lg:col-span-2" action={<Trophy className="h-5 w-5 text-amber-300" />}>
             <div className="grid grid-cols-4 gap-1.5">
@@ -1223,7 +1234,7 @@ export default function SportsTeamManagerDashboard() {
             <Stat label="Linked" value={players.filter((player) => player.user).length} />
             <Stat label="Need link" value={players.filter((player) => !player.user).length} />
           </div> : null}
-          {managerView ? <div className="mb-3 flex gap-2"><Btn onClick={importSocialRoster} disabled={busy}><UserPlus className="mr-1 inline h-4 w-4" />Import Social members</Btn><Btn primary onClick={() => setAddPlayerOpen(true)}><Plus className="mr-1 inline h-4 w-4" />Quick add</Btn></div> : null}
+          {managerView ? <div className="mb-3"><Btn onClick={importSocialRoster} disabled={busy}><UserPlus className="mr-1 inline h-4 w-4" />Import Social members</Btn></div> : null}
           <div className="space-y-1.5">
             {players.map((player) => {
               const profile = profileFor(player);
@@ -1482,6 +1493,8 @@ export default function SportsTeamManagerDashboard() {
           </div>
           {managerView ? <Card title="Add game" body="Manual additions use the same calendar sync."><div className="grid grid-cols-2 gap-2"><Select label="Type" value={gameForm.game_type} onChange={(value) => setGameForm((v) => ({ ...v, game_type: value }))}><option value="LEAGUE">League</option><option value="TOURNAMENT">Tournament</option><option value="PRACTICE">Practice</option><option value="EXHIBITION">Exhibition</option></Select><Select label="Home/Away" value={gameForm.home_away} onChange={(value) => setGameForm((v) => ({ ...v, home_away: value }))}><option value="HOME">Home</option><option value="AWAY">Away</option><option value="NEUTRAL">Neutral</option></Select><Input label="Opponent" value={gameForm.opponent_name} onChange={(value) => setGameForm((v) => ({ ...v, opponent_name: value }))} className="col-span-2" /><Input label="Date" type="date" value={gameForm.date} onChange={(value) => setGameForm((v) => ({ ...v, date: value }))} /><Input label="Time" type="time" value={gameForm.time} onChange={(value) => setGameForm((v) => ({ ...v, time: value }))} /><Input label="Venue / field" value={gameForm.venue_name} onChange={(value) => setGameForm((v) => ({ ...v, venue_name: value }))} className="col-span-2" /><Input label="Address" value={gameForm.address_line1} onChange={(value) => setGameForm((v) => ({ ...v, address_line1: value }))} className="col-span-2" /><Input label="City" value={gameForm.city} onChange={(value) => setGameForm((v) => ({ ...v, city: value }))} /><Input label="State" value={gameForm.state} onChange={(value) => setGameForm((v) => ({ ...v, state: value }))} /></div><Btn primary className="mt-2 w-full" onClick={addGame} disabled={!gameForm.opponent_name.trim() || !gameForm.date || busy}><Plus className="mr-1 inline h-4 w-4" />Add game</Btn></Card> : <Card title="Tournament week" body="League or tournament games will appear here once published by a manager or association."><div className="text-xs text-slate-400">Your Fall 2026 league sheet lists tournament week beginning October 27.</div></Card>}
         </div></div> : null}
+
+        {tab === "Practice" ? <PracticeModeCard teamId={team.id} playerId={myPlayer?.id || ""} players={players} managerView={managerView} /> : null}
 
         {tab === "Stats" ? <div className="space-y-3">
           {advancedAnalytics?.inning_analytics ? <Card title="Team scoring pace" body="Live Game Book data rolled into team averages by game and inning." action={<Trophy className="h-4 w-4 text-amber-300" />}>
