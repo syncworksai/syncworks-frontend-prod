@@ -438,14 +438,37 @@ export default function SportsTeamManagerDashboard({ initialMemberships = [] }) 
 
 
   useEffect(() => {
-    if (!team) return;
-    getScopedTeamStats(team.id, statsScope).then((data) => setScopedStats(list(data?.rows))).catch(() => {});
-  }, [team, statsScope]);
+    if (!team || !dashboard || !["Stats", "Roster"].includes(tab)) return;
+    getScopedTeamStats(team.id, statsScope)
+      .then((data) => setScopedStats(list(data?.rows)))
+      .catch(() => {});
+  }, [team?.id, dashboard?.team?.id, statsScope, tab]);
 
   useEffect(() => {
-    if (!team) return;
-    getAdvancedTeamStats(team.id).then(setAdvancedAnalytics).catch(() => setAdvancedAnalytics(null));
-  }, [team?.id]);
+    if (!team || !dashboard || tab !== "Stats") return;
+    getAdvancedTeamStats(team.id)
+      .then(setAdvancedAnalytics)
+      .catch(() => setAdvancedAnalytics(null));
+  }, [team?.id, dashboard?.team?.id, tab]);
+
+  useEffect(() => {
+    if (!team || !dashboard) return;
+    if (["Roster", "Lineup", "Rewards", "Overview"].includes(tab)) {
+      getTeamBadgeStandings(team.id)
+        .then((result) => setBadgeRings(Object.fromEntries(
+          list(result.players).map((item) => [Number(item.player), item])
+        )))
+        .catch(() => {});
+    }
+    if (tab === "Rewards") {
+      getTeamBadgeRules(team.id)
+        .then((result) => setRewardRules(result.rules))
+        .catch(() => setRewardRules({}));
+    }
+    if (tab === "Roster") {
+      getPlayerProfiles(team.id).then((data) => setProfiles(list(data))).catch(() => {});
+    }
+  }, [team?.id, dashboard?.team?.id, tab]);
 
   async function run(fn, message, { closePlayer = false } = {}) {
     setBusy(true); setError(""); setNotice("");
@@ -1157,6 +1180,11 @@ export default function SportsTeamManagerDashboard({ initialMemberships = [] }) 
         </div>
 
         {error ? <div className="rounded-xl border border-rose-400/20 bg-rose-400/10 p-3 text-xs text-rose-100">{error}</div> : null}
+        {!dashboard ? <div className="rounded-xl border border-amber-300/20 bg-amber-300/[.05] p-3">
+          <b className="block text-xs text-amber-100">Team data not loaded yet</b>
+          <p className="mt-1 text-[10px] text-slate-400">Your roster and game records remain saved. Retry the team snapshot without leaving this page.</p>
+          <Btn className="mt-2" onClick={() => refresh()}>Retry team data</Btn>
+        </div> : null}
         {notice ? <div className="rounded-xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-xs text-cyan-100">{notice}</div> : null}
 
         {liveGame ? (
@@ -1171,11 +1199,11 @@ export default function SportsTeamManagerDashboard({ initialMemberships = [] }) 
             <div className="flex min-w-0 items-start gap-3">{managerView ? <label className="group relative shrink-0 cursor-pointer" title="Change team logo"><TeamLogo group={group}/><span className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full border border-cyan-200/35 bg-cyan-300 text-slate-950 shadow-lg"><Camera className="h-3.5 w-3.5"/></span><input type="file" accept="image/*" className="hidden" onChange={(event)=>changeTeamLogo(event.target.files?.[0] || null)}/></label> : <TeamLogo group={group}/>}<div className="min-w-0"><div className="flex flex-wrap gap-1.5"><Pill tone="cyan">Softball</Pill><Pill tone={managerView ? "violet" : canScore ? "amber" : "green"}>{managerView ? "Manager view" : canScore ? "Scorekeeper view" : "Player view"}</Pill><Pill>{team.season_name || "Season"}</Pill><Pill tone="green">Free team tools</Pill></div><h1 className="mt-2 truncate text-2xl font-black text-white">{group.name}</h1><p className="mt-1 text-[11px] text-slate-400">{[team.league_name, team.division_name].filter(Boolean).join(" · ") || "Team workspace"}</p></div></div>
             {list(dashboard?.live_games).length ? <Btn primary onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${dashboard.live_games[0].id}`)}><CircleDot className="mr-1 inline h-4 w-4" />Live</Btn> : null}
           </div>
-          <div className="mt-3 grid grid-cols-4 gap-1.5"><Stat label="Record" value={`${num(record.wins)}-${num(record.losses)}`} /><Stat label="Roster" value={players.length} /><Stat label="Games" value={games.length} /><Stat label={managerView ? "Outstanding" : "My due"} value={managerView ? money(managerOutstanding) : money(ownDue)} sub={managerView ? `${managerDueCount} open charge${managerDueCount === 1 ? "" : "s"}` : undefined} /></div>
+          <div className="mt-3 grid grid-cols-4 gap-1.5"><Stat label="Record" value={dashboard ? `${num(record.wins)}-${num(record.losses)}` : "—"} /><Stat label="Roster" value={dashboard ? players.length : "—"} /><Stat label="Games" value={dashboard ? games.length : "—"} /><Stat label={managerView ? "Outstanding" : "My due"} value={managerView ? money(managerOutstanding) : money(ownDue)} sub={managerView ? `${managerDueCount} open charge${managerDueCount === 1 ? "" : "s"}` : undefined} /></div>
           <div className="mt-2 grid grid-cols-3 gap-1.5">
-            <Stat label="Runs for" value={num(dashboard?.team_stats?.runs_for)} sub="Scored" />
-            <Stat label="Runs against" value={num(dashboard?.team_stats?.runs_against)} sub="Allowed" />
-            <Stat label="Run differential" value={`${(num(dashboard?.team_stats?.runs_for)-num(dashboard?.team_stats?.runs_against))>=0?"+":""}${num(dashboard?.team_stats?.runs_for)-num(dashboard?.team_stats?.runs_against)}`} />
+            <Stat label="Runs for" value={dashboard ? num(dashboard.team_stats?.runs_for) : "—"} sub="Scored" />
+            <Stat label="Runs against" value={dashboard ? num(dashboard.team_stats?.runs_against) : "—"} sub="Allowed" />
+            <Stat label="Run differential" value={dashboard ? `${(num(dashboard.team_stats?.runs_for)-num(dashboard.team_stats?.runs_against))>=0?"+":""}${num(dashboard.team_stats?.runs_for)-num(dashboard.team_stats?.runs_against)}` : "—"} />
           </div>
           {nextDayGames.length ? <div className="mt-3"><UpcomingGameDayCard games={nextDayGames} onOpen={(game)=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)} /></div> : null}
         </section>
