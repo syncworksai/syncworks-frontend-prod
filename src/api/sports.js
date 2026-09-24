@@ -241,6 +241,11 @@ export async function substituteSportsGame(id, payload) {
   return data;
 }
 
+export async function addHistoricalSoftballPlay(id, payload) {
+  const { data } = await api.post(`/sports/games/${id}/add-book-play/`, payload);
+  return data;
+}
+
 export async function recordSoftballPlay(id, payload) {
   const { data } = await api.post(`/sports/games/${id}/play/`, payload);
   return data;
