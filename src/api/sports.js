@@ -276,6 +276,21 @@ export async function reopenSportsGame(id) {
   return data;
 }
 
+export async function getGameBookCandidates(game) {
+  const { data } = await api.get("/sports/game-book-candidates/", { params: { game } });
+  return list(data);
+}
+
+export async function approveGameBookCandidate(id, payload) {
+  const { data } = await api.post(`/sports/game-book-candidates/${id}/approve/`, payload);
+  return data;
+}
+
+export async function rejectGameBookCandidate(id) {
+  const { data } = await api.post(`/sports/game-book-candidates/${id}/reject/`, {});
+  return data;
+}
+
 export async function getGameBookPhotos(game) {
   const { data } = await api.get("/sports/game-book-photos/", { params: { game }, timeout: 45000 });
   return list(data);
