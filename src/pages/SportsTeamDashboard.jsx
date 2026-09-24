@@ -38,6 +38,6 @@ export default function SportsTeamDashboard() {
   }
 
   return MANAGEMENT_ROLES.has(membership?.role)
-    ? <SportsTeamManagerDashboard />
+    ? <SportsTeamManagerDashboard initialMemberships={memberships} />
     : <SportsPlayerDashboard />;
 }
