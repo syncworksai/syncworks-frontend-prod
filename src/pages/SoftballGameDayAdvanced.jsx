@@ -27,6 +27,7 @@ import {
 
 import SoftballDefenseField from "../components/sports/SoftballDefenseField";
 import PregameLineupEditor from "../components/sports/PregameLineupEditor";
+import ScorebookPhotoArchive from "../components/sports/ScorebookPhotoArchive";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
 import { useAuth } from "../auth/AuthContext";
 import { getMemberships } from "../api/social";
@@ -1053,6 +1054,8 @@ export default function SoftballGameDayAdvanced() {
             </div>
           ) : <div className="mt-3 rounded-xl border border-dashed border-white/10 p-3 text-center text-[9px] text-slate-500">No paper scorebook attached yet.</div>}
         </section>
+
+        <ScorebookPhotoArchive gameId={game.id} canScore={canScore} canManage={canManage} />
 
         <section className="rounded-2xl border border-cyan-300/15 bg-[#07111f] p-2.5">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
