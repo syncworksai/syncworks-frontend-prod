@@ -30,7 +30,7 @@ import {
   X,
 } from "lucide-react";
 
-import ModeBar from "../components/ModeBar";
+
 import TeamChatPanel from "../components/sports/TeamChatPanel";
 import GameAvailabilityCard, { availabilityStatus } from "../components/sports/GameAvailabilityCard";
 import InteractiveStatsBoard from "../components/sports/InteractiveStatsBoard";
@@ -1162,7 +1162,7 @@ export default function SportsTeamManagerDashboard({ initialMemberships = [] }) 
   }
 
   if (loading) return <div className="grid min-h-screen place-items-center bg-[#02060c] text-white" aria-label="Loading team"><Loader2 className="h-8 w-8 animate-spin text-cyan-300" /></div>;
-  if (!group || !team) return <div className="min-h-screen bg-[#02060c] p-4 text-white"><ModeBar sportsCompact title="Team" subtitle="SyncWorks Social" /><Card title="Team workspace unavailable" body="Open this from an enabled Team group in SyncWorks Social."><Btn onClick={() => navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4" />Social</Btn></Card></div>;
+  if (!group || !team) return <div className="min-h-screen bg-[#02060c] p-4 text-white"><Card title="Team workspace unavailable" body="Open this from an enabled Team group in SyncWorks Social."><Btn onClick={() => navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4" />Social</Btn></Card></div>;
 
   const record = dashboard?.record || {};
   const ownDue = visibleAssignments.filter((row) => ["DUE", "PARTIAL"].includes(row.status)).reduce((sum, row) => sum + Math.max(0, num(row.amount_cents) - num(row.amount_paid_cents)), 0);
@@ -1172,7 +1172,7 @@ export default function SportsTeamManagerDashboard({ initialMemberships = [] }) 
 
   return (
     <div className="min-h-screen bg-[#02060c] pb-24 text-slate-100">
-      <ModeBar sportsCompact title={group.name} subtitle="Team • SyncWorks Social" />
+      
       <main className="mx-auto max-w-7xl space-y-3 px-3 py-3 sm:px-5">
         <div className="flex items-center justify-between gap-2">
           <Btn onClick={() => navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4" />Social</Btn>
