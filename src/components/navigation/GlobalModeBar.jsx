@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
+import NotificationsBell from "../NotificationsBell";
 
 const GOD_MODE_EMAIL = "jacoblord7@outlook.com";
 const MODE_ROUTES = {
@@ -34,6 +35,7 @@ export default function GlobalModeBar() {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const isGodMode = String(user?.email || "").trim().toLowerCase() === GOD_MODE_EMAIL;
+  const groupOverview = /^\/connect\/groups\/[^/]+\/?$/.test(location.pathname);
   const hidden = ["/login", "/register", "/employee/invite", "/accept-invite"].some((path) => location.pathname.startsWith(path));
   const modes = useMemo(() => Object.entries(MODE_ROUTES).filter(([key]) => availableModes?.[key] && (key !== "PLATFORM" || isGodMode)), [availableModes, isGodMode]);
 
@@ -65,7 +67,7 @@ export default function GlobalModeBar() {
     <div ref={rootRef} className="fixed inset-x-0 top-[58px] sm:top-0 z-[320] h-[57px] border-b border-cyan-400/15 bg-[#020617]/98 px-3 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.38)] backdrop-blur-xl">
       <div className="mx-auto flex h-full max-w-[1900px] items-center justify-between gap-3">
         <Link to="/customer" className="flex min-w-0 items-center gap-3" aria-label="Open SyncWorks home"><img src="/brands/syncworks new logo.jpg" alt="SyncWorks" className="h-10 w-10 rounded-xl border border-cyan-400/20 object-cover shadow-[0_0_22px_rgba(34,211,238,0.16)]" /><span className="text-sm font-black tracking-[0.18em] text-white">SYNCWORKS</span></Link>
-        <button type="button" onClick={() => setOpen((value) => !value)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-3 text-sm font-black text-cyan-100" aria-label="Open SyncWorks app navigation" aria-expanded={open}><MenuIcon open={open} /><span>Menu</span></button>
+        <div className="flex shrink-0 items-center gap-2">{groupOverview ? <NotificationsBell inline /> : null}<button type="button" onClick={() => setOpen((value) => !value)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-3 text-sm font-black text-cyan-100" aria-label="Open SyncWorks app navigation" aria-expanded={open}><MenuIcon open={open} /><span>Menu</span></button></div>
       </div>
       {open ? <>
         <button type="button" className="fixed inset-x-0 bottom-0 top-[115px] sm:top-[57px] z-[321] bg-black/70" aria-label="Close app navigation" onClick={() => setOpen(false)} />
