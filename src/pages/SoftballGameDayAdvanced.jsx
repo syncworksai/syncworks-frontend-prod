@@ -89,6 +89,19 @@ const SPRAY_ZONES = [
   ["RIGHT_LINE", "RF line"], ["INFIELD_LEFT", "IF left"], ["INFIELD_MIDDLE", "IF middle"], ["INFIELD_RIGHT", "IF right"],
 ];
 const POSITIONS = ["P", "C", "1B", "2B", "3B", "SS", "MM", "LF", "LC", "CF", "RC", "RF", "OF", "EH1", "EH2", "EH", "DH"];
+const SITUATION_OBJECTIVES = [
+  ["", "No situation tag"],
+  ["QUALITY_AB", "Quality at-bat"],
+  ["ADVANCE_RUNNER", "Move the runner"],
+  ["SAC_FLY", "Sacrifice fly"],
+  ["SCORE_RUNNER", "Score the runner"],
+  ["TWO_OUT_HIT", "Two-out hitting"],
+  ["HIT_BEHIND_RUNNER", "Hit behind runner"],
+];
+const BASE_STATES = [["","Bases empty"],["1","Runner on 1st"],["2","Runner on 2nd"],["3","Runner on 3rd"],["12","1st + 2nd"],["13","1st + 3rd"],["23","2nd + 3rd"],["123","Bases loaded"]];
+function baseState(first, second, third) {
+  return [first?"1":"",second?"2":"",third?"3":""].join("");
+}
 
 const cx = (...values) => values.filter(Boolean).join(" ");
 const list = (value) => Array.isArray(value) ? value : [];
@@ -374,12 +387,14 @@ export default function SoftballGameDayAdvanced() {
   const [runner3, setRunner3] = useState(false);
   const [runnersAdvanced, setRunnersAdvanced] = useState(0);
   const [productiveOut, setProductiveOut] = useState(false);
+  const [situationObjective, setSituationObjective] = useState("");
+  const [situationSuccess, setSituationSuccess] = useState(false);
   const [battedBallType, setBattedBallType] = useState("");
   const [sprayZone, setSprayZone] = useState("");
   const [outMenuOpen, setOutMenuOpen] = useState(false);
   const [outChoice, setOutChoice] = useState(null);
   const [editingPlay, setEditingPlay] = useState(null);
-  const [editForm, setEditForm] = useState({ inning: 1, result: "OUT", outs_recorded: 1, rbi: 0, runs_scored: 0, notes: "" });
+  const [editForm, setEditForm] = useState({ inning: 1, result: "OUT", outs_recorded: 1, rbi: 0, runs_scored: 0, outs_before: 0, base_state: "", situation_objective: "", runners_advanced: 0, situation_success: false, notes: "" });
   const [hitterCard, setHitterCard] = useState(null);
   const [playerCard, setPlayerCard] = useState(null);
   const [playerCardOpen, setPlayerCardOpen] = useState(false);
@@ -662,7 +677,7 @@ export default function SoftballGameDayAdvanced() {
   function clearEntry({ keepBases = true } = {}) {
     setResult(""); setOutsRecorded(0); setRbi(0); setRuns(0);
     if (!keepBases) { setRunner1(false); setRunner2(false); setRunner3(false); }
-    setRunnersAdvanced(0); setProductiveOut(false); setBattedBallType(""); setSprayZone("");
+    setRunnersAdvanced(0); setProductiveOut(false); setSituationObjective(""); setSituationSuccess(false); setBattedBallType(""); setSprayZone("");
     setOutMenuOpen(false); setOutChoice(null);
   }
 
@@ -678,6 +693,10 @@ export default function SoftballGameDayAdvanced() {
         outs_recorded: outsRecorded,
         rbi,
         runs_scored: runs,
+        base_state: baseState(runner1, runner2, runner3),
+        situation_objective: situationObjective,
+        runners_advanced: runnersAdvanced,
+        situation_success: situationObjective ? situationSuccess : "",
         notes: outChoice?.detail || "",
       });
       const plateAppearanceId = response?.play?.id;
@@ -725,6 +744,11 @@ export default function SoftballGameDayAdvanced() {
       outs_recorded: num(play.outs_recorded),
       rbi: num(play.rbi),
       runs_scored: num(play.runs_scored),
+      outs_before: play.outs_before ?? 0,
+      base_state: play.base_state || "",
+      situation_objective: play.situation_objective || "",
+      runners_advanced: num(play.runners_advanced),
+      situation_success: play.situation_success === true,
       notes: play.notes || "",
     });
   }
@@ -738,6 +762,11 @@ export default function SoftballGameDayAdvanced() {
         outs_recorded: Math.max(0, Math.min(3, num(editForm.outs_recorded))),
         rbi: Math.max(0, num(editForm.rbi)),
         runs_scored: Math.max(0, num(editForm.runs_scored)),
+        outs_before: Math.max(0, Math.min(2, num(editForm.outs_before))),
+        base_state: editForm.base_state || "",
+        situation_objective: editForm.situation_objective || "",
+        runners_advanced: Math.max(0, Math.min(3, num(editForm.runners_advanced))),
+        situation_success: editForm.situation_objective ? Boolean(editForm.situation_success) : null,
         notes: editForm.notes || "",
       }),
       "Scorebook corrected.",
@@ -1208,6 +1237,12 @@ export default function SoftballGameDayAdvanced() {
                           {outsRecorded ? <MiniStepper label="Outs on play" value={outsRecorded} onChange={setOutsRecorded} max={Math.max(0,3-num(game.outs))} /> : null}
                           <MiniStepper label="Runners advanced" value={runnersAdvanced} onChange={setRunnersAdvanced} max={3} />
                           {["OUT","FC","SF"].includes(result) ? <Toggle active={result==="SF"||productiveOut} onClick={() => result!=="SF"&&setProductiveOut(!productiveOut)}>Productive out</Toggle> : null}
+                          <label className="block text-[7px] font-black uppercase tracking-wide text-slate-500">Situation
+                            <select value={situationObjective} onChange={(e)=>{setSituationObjective(e.target.value);setSituationSuccess(false);}} className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#050b14] px-2 text-[10px] font-black text-white">
+                              {SITUATION_OBJECTIVES.map(([value,label])=><option key={value||"none"} value={value}>{label}</option>)}
+                            </select>
+                          </label>
+                          {situationObjective ? <Toggle active={situationSuccess} onClick={()=>setSituationSuccess(!situationSuccess)}>{situationSuccess ? "Situation accomplished" : "Mark situation successful"}</Toggle> : null}
                           {!["BB","K"].includes(result) ? (
                             <>
                               <div className="grid grid-cols-4 gap-1">
@@ -1273,10 +1308,16 @@ export default function SoftballGameDayAdvanced() {
                                     )}
                                     title={canScore ? "Tap to correct this scorebook entry" : undefined}
                                   >
-                                    <span className="flex items-center justify-center gap-0.5">
-                                      <span>{playBadge(play)}</span>
-                                      {num(play.outs_recorded)>0?<span className="text-[6px] text-rose-200">+{num(play.outs_recorded)}O</span>:null}
-                                      {canScore?<Edit3 className="h-2.5 w-2.5 opacity-55"/>:null}
+                                    <span className="flex min-w-9 flex-col items-center justify-center gap-0.5">
+                                      <span className="relative grid h-7 w-7 place-items-center">
+                                        <span className="absolute inset-1 rotate-45 rounded-[2px] border border-current/25 bg-black/10" />
+                                        <span className="relative z-10 text-[7px]">{playBadge(play)}</span>
+                                      </span>
+                                      <span className="flex items-center justify-center gap-1 whitespace-nowrap">
+                                        {num(play.runs_scored)>0?<span className="text-[6px] font-black text-amber-200">+{num(play.runs_scored)} RUN{num(play.runs_scored)===1?"":"S"}</span>:null}
+                                        {num(play.outs_recorded)>0?<span className="text-[6px] text-rose-200">+{num(play.outs_recorded)}O</span>:null}
+                                        {canScore?<Edit3 className="h-2.5 w-2.5 opacity-55"/>:null}
+                                      </span>
                                     </span>
                                   </button>
                                 ))}
@@ -1484,7 +1525,20 @@ export default function SoftballGameDayAdvanced() {
                 <label className="text-[8px] font-black uppercase text-slate-500">Runs
                   <input type="number" min="0" max="4" value={editForm.runs_scored} onChange={(e)=>setEditForm({...editForm,runs_scored:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] font-black text-white sm:text-xs" />
                 </label>
-                <label className="text-[8px] font-black uppercase text-slate-500">Note
+                <label className="text-[8px] font-black uppercase text-slate-500">Outs before
+                  <select value={editForm.outs_before} onChange={(e)=>setEditForm({...editForm,outs_before:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs font-black text-white"><option value={0}>0 outs</option><option value={1}>1 out</option><option value={2}>2 outs</option></select>
+                </label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Runners before
+                  <select value={editForm.base_state} onChange={(e)=>setEditForm({...editForm,base_state:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs font-black text-white">{BASE_STATES.map(([value,label])=><option key={value||"empty"} value={value}>{label}</option>)}</select>
+                </label>
+                <label className="col-span-2 text-[8px] font-black uppercase text-slate-500">Situation
+                  <select value={editForm.situation_objective} onChange={(e)=>setEditForm({...editForm,situation_objective:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs font-black text-white">{SITUATION_OBJECTIVES.map(([value,label])=><option key={value||"none"} value={value}>{label}</option>)}</select>
+                </label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Runners moved
+                  <input type="number" min="0" max="3" value={editForm.runners_advanced} onChange={(e)=>setEditForm({...editForm,runners_advanced:e.target.value})} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] text-white sm:text-xs" />
+                </label>
+                <button type="button" disabled={!editForm.situation_objective} onClick={()=>setEditForm({...editForm,situation_success:!editForm.situation_success})} className={cx("mt-4 min-h-10 rounded-xl border text-[9px] font-black",editForm.situation_success?"border-emerald-300/30 bg-emerald-300/10 text-emerald-100":"border-white/10 text-slate-500","disabled:opacity-30")}>{editForm.situation_success?"Situation success":"Situation miss"}</button>
+                <label className="col-span-2 text-[8px] font-black uppercase text-slate-500">Note
                   <input value={editForm.notes} onChange={(e)=>setEditForm({...editForm,notes:e.target.value})} placeholder="Optional" className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-[16px] text-white sm:text-xs" />
                 </label>
               </div>
