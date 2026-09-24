@@ -24,7 +24,7 @@ import {
   UserRound,
 } from "lucide-react";
 
-import ModeBar from "../components/ModeBar";
+
 import SoftballDefenseField from "../components/sports/SoftballDefenseField";
 import PregameLineupEditor from "../components/sports/PregameLineupEditor";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
@@ -988,7 +988,7 @@ export default function SoftballGameDayAdvanced() {
   );
 
   if (loading) return <div className="grid min-h-screen place-items-center bg-[#02060c] text-white" aria-label="Loading Game Book"><Loader2 className="h-8 w-8 animate-spin text-cyan-300" /></div>;
-  if (!game) return <div className="min-h-screen bg-[#02060c] p-4 text-white"><ModeBar sportsCompact title="Game Book" subtitle="Softball" /><div className="rounded-xl border border-rose-300/20 bg-rose-300/10 p-3">{error || "Game unavailable."}</div></div>;
+  if (!game) return <div className="min-h-screen bg-[#02060c] p-4 text-white"><div className="rounded-xl border border-rose-300/20 bg-rose-300/10 p-3">{error || "Game unavailable."}</div></div>;
 
   const live = game.status === "LIVE";
   const final = game.status === "FINAL";
@@ -1003,7 +1003,7 @@ export default function SoftballGameDayAdvanced() {
 
   return (
     <div className="min-h-screen bg-[#02060c] pb-48 sm:pb-32 text-slate-100">
-      <ModeBar sportsCompact title="Game Book" subtitle={`${game.team_name} • Softball`} />
+      
       <main className="mx-auto max-w-6xl space-y-2.5 px-2.5 py-2.5 sm:px-4">
         <div className="flex items-center justify-between gap-2">
           <Button onClick={() => navigate(`/connect/groups/${groupId}/sports`)}><ArrowLeft className="mr-1 inline h-3.5 w-3.5" />Team</Button>
