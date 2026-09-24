@@ -37,7 +37,7 @@ export default function GlobalModeBar() {
   // Group, team, and game-book workspaces already render ModeBar with the
   // notification bell and app menu. The portal-wide header above them was
   // producing two logos/menus and a large empty iPhone header gap.
-  const hasWorkspaceBar = /^\\/connect\\/groups\\/[^/]+(?:\\/|$)/.test(location.pathname);
+  const hasWorkspaceBar = location.pathname.startsWith("/connect/groups/");
   const hidden = hasWorkspaceBar || ["/login", "/register", "/employee/invite", "/accept-invite"].some(
     (path) => location.pathname.startsWith(path)
   );
