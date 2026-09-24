@@ -25,7 +25,7 @@ import PMPayments from "./pages/PMPayments";
 import "./index.css";
 import "./mobile-production.css";
 
-const SYNCWORKS_BUILD = "2026.09.01-storefront-discovery-v1";
+const SYNCWORKS_BUILD = "2026.09.24-sports-gamebook-practice-v2";
 
 async function retireLegacyAppCaches() {
   try {
