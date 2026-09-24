@@ -23,7 +23,6 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import ModeBar from "../components/ModeBar";
 import TeamChatPanel from "../components/sports/TeamChatPanel";
 import { useAuth } from "../auth/AuthContext";
 import {
@@ -334,12 +333,12 @@ export default function SocialGroupDashboard() {
     }
   }
 
-  if (loading) return <div className="min-h-screen bg-[#02060c] text-white"><ModeBar title="Group" subtitle="SyncWorks Social"/><div className="grid min-h-[70vh] place-items-center"><Loader2 className="h-7 w-7 animate-spin text-cyan-300"/></div></div>;
+  if (loading) return <div className="min-h-screen bg-[#02060c] text-white"><div className="grid min-h-[70vh] place-items-center"><Loader2 className="h-7 w-7 animate-spin text-cyan-300"/></div></div>;
 
-  if (!group) return <div className="min-h-screen bg-[#02060c] p-3 text-white"><ModeBar title="Group" subtitle="SyncWorks Social"/><Card title="Group unavailable"><p className="text-xs text-slate-500">{error || "This group could not be loaded."}</p><Btn className="mt-3" onClick={()=>navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4"/>Back to Social</Btn></Card></div>;
+  if (!group) return <div className="min-h-screen bg-[#02060c] p-3 text-white"><Card title="Group unavailable"><p className="text-xs text-slate-500">{error || "This group could not be loaded."}</p><Btn className="mt-3" onClick={()=>navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4"/>Back to Social</Btn></Card></div>;
 
   return <div className="min-h-screen bg-[#02060c] pb-28 text-slate-100">
-    <ModeBar title="Group" subtitle="SyncWorks Social"/>
+    
     <main className="mx-auto max-w-6xl space-y-3 px-3 py-3 sm:px-5">
       <div className="flex items-center justify-between gap-2">
         <Btn onClick={()=>navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4"/>Social</Btn>
