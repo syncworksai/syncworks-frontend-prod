@@ -72,3 +72,11 @@
 body:has(.sw-modebar--sports) .sw-modebar:not(.sw-modebar--sports) {
   display: none !important;
 }
+
+
+/* Protected routes already render GlobalModeBar from ProtectedRoute.
+   Hide any legacy page-level ModeBar that remains inside older screens so
+   mobile never shows two SyncWorks headers during route transitions. */
+body:has([data-syncworks-global-header="true"]) .sw-modebar {
+  display: none !important;
+}

@@ -20,6 +20,8 @@ jobs:
         run: npm ci
       - name: Single-header regression
         run: npm run check:single-header
+      - name: Navigation contract
+        run: npm run check:navigation
       - name: Build
         shell: bash
         run: |

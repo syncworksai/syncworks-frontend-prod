@@ -62,9 +62,7 @@ function ModalShell({ title, subtitle, onClose, children }) {
               <div className="text-base sm:text-lg font-extrabold text-slate-100 truncate">{title}</div>
               {subtitle ? <div className="text-[11px] sm:text-xs text-slate-400 mt-1">{subtitle}</div> : null}
             </div>
-            <Button tone="slate" onClick={onClose}>
-              ✖ Close
-            </Button>
+            <Button tone="slate" size="icon" onClick={onClose} aria-label="Close Section 8 case">✕</Button>
           </div>
         </div>
 
