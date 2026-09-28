@@ -71,7 +71,7 @@ export default function CalendarConnectionsDrawer({ open, onClose, returnTo = "/
             <h2 className="mt-2 text-2xl font-black text-white">Calendars & email</h2>
             <p className="mt-2 text-sm leading-6 text-slate-400">Connect accounts you already use. Calendar events feed your master schedule; Outlook email can be turned on separately for Personal SYNC summaries.</p>
           </div>
-          <button type="button" onClick={onClose} className="grid h-11 w-11 place-items-center rounded-2xl border border-slate-700 bg-slate-900"><X className="h-5 w-5" /></button>
+          <button type="button" onClick={onClose} aria-label="Close calendar connections" className="grid h-10 w-10 place-items-center rounded-xl border border-slate-700 bg-slate-900"><X className="h-4 w-4" /></button>
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
