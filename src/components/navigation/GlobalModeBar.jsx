@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import NotificationsBell from "../NotificationsBell";
 
@@ -25,6 +25,30 @@ const BAR_HEIGHT = 57;
 const MOBILE_SAFE_TOP = 58;
 const MOBILE_SHELL_TOP = BAR_HEIGHT + MOBILE_SAFE_TOP;
 
+function BackIcon() {
+  return <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true"><path d="M15 5 8 12l7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
+function parentRouteFor(pathname, mode) {
+  const clean = String(pathname || "").replace(/\/+$/, "") || "/";
+  const game = clean.match(/^\/connect\/groups\/([^/]+)\/sports\/games\/[^/]+$/);
+  if (game) return `/connect/groups/${game[1]}/sports`;
+  const sports = clean.match(/^\/connect\/groups\/([^/]+)\/sports$/);
+  if (sports) return `/connect/groups/${sports[1]}`;
+  if (/^\/connect\/groups\/[^/]+$/.test(clean) || /^\/connect\/events\/[^/]+$/.test(clean)) return "/connect";
+  if (/^\/customer\/business-cards\/[^/]+$/.test(clean)) return "/customer/business-cards";
+  if (clean.startsWith("/customer/")) return "/customer";
+  if (clean.startsWith("/sbo/")) return "/sbo";
+  if (/^\/pm\/properties\/[^/]+$/.test(clean)) return "/pm/properties";
+  if (clean.startsWith("/pm/")) return "/pm";
+  if (clean.startsWith("/employee/")) return "/employee";
+  if (clean.startsWith("/tenant/")) return "/tenant";
+  if (clean.startsWith("/investor/")) return "/investor";
+  if (/^\/tickets\/[^/]+$/.test(clean)) return "/tickets";
+  if (clean.startsWith("/connect/")) return "/connect";
+  return MODE_ROUTES[mode]?.to || "/customer";
+}
+
 function MenuIcon({ open }) {
   return <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true">{open ? <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /> : <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />}</svg>;
 }
@@ -32,6 +56,7 @@ function MenuIcon({ open }) {
 export default function GlobalModeBar() {
   const { isAuthed, availableModes, mode, setMode, user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const isGodMode = String(user?.email || "").trim().toLowerCase() === GOD_MODE_EMAIL;
@@ -39,6 +64,12 @@ export default function GlobalModeBar() {
   const showConnectNotifications = location.pathname === "/connect" || location.pathname.startsWith("/connect/");
   const hidden = ["/login", "/register", "/employee/invite", "/accept-invite"].some((path) => location.pathname.startsWith(path));
   const modes = useMemo(() => Object.entries(MODE_ROUTES).filter(([key]) => availableModes?.[key] && (key !== "PLATFORM" || isGodMode)), [availableModes, isGodMode]);
+  const topLevelRoutes = new Set(["/customer", "/sbo", "/employee", "/pm", "/tenant", "/investor", "/connect", "/calendar", "/inbox", "/settings", "/profile"]);
+  const showBack = !topLevelRoutes.has(location.pathname.replace(/\/+$/, "") || "/") && !location.pathname.startsWith("/platform");
+  const goBack = () => {
+    setOpen(false);
+    navigate(parentRouteFor(location.pathname, mode));
+  };
 
   useEffect(() => setOpen(false), [location.pathname, location.search]);
   useEffect(() => {
@@ -67,7 +98,10 @@ export default function GlobalModeBar() {
     <style>{`[data-pm-command-shell] > header{top:${BAR_HEIGHT}px!important}[data-pm-command-shell] > aside{top:${BAR_HEIGHT}px!important}@media(max-width:639px){[data-pm-command-shell] > header{top:${MOBILE_SHELL_TOP}px!important}[data-pm-command-shell] > aside{top:${MOBILE_SHELL_TOP}px!important}}`}</style>
     <div ref={rootRef} data-syncworks-global-header="true" className="fixed inset-x-0 top-[58px] sm:top-0 z-[320] h-[57px] border-b border-cyan-400/15 bg-[#020617]/98 px-3 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.38)] backdrop-blur-xl">
       <div className="mx-auto flex h-full max-w-[1900px] items-center justify-between gap-3">
-        <Link to="/customer" className="flex min-w-0 items-center gap-3" aria-label="Open SyncWorks home"><img src="/brands/syncworks new logo.jpg" alt="SyncWorks" className="h-10 w-10 rounded-xl border border-cyan-400/20 object-cover shadow-[0_0_22px_rgba(34,211,238,0.16)]" /><span className="text-sm font-black tracking-[0.18em] text-white">SYNCWORKS</span></Link>
+        <div className="flex min-w-0 items-center gap-2">
+          {showBack ? <button type="button" onClick={goBack} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[.035] text-slate-300 transition hover:border-cyan-400/30 hover:text-cyan-100" aria-label="Back to previous SyncWorks section"><BackIcon /></button> : null}
+          <Link to="/customer" className="flex min-w-0 items-center gap-3" aria-label="Open SyncWorks home"><img src="/brands/syncworks new logo.jpg" alt="SyncWorks" className="h-10 w-10 rounded-xl border border-cyan-400/20 object-cover shadow-[0_0_22px_rgba(34,211,238,0.16)]" /><span className="truncate text-sm font-black tracking-[0.18em] text-white">SYNCWORKS</span></Link>
+        </div>
         <div className="flex shrink-0 items-center gap-2">{showConnectNotifications ? <NotificationsBell inline /> : null}<button type="button" onClick={() => setOpen((value) => !value)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-3 text-sm font-black text-cyan-100" aria-label="Open SyncWorks app navigation" aria-expanded={open}><MenuIcon open={open} /><span>Menu</span></button></div>
       </div>
       {open ? <>
