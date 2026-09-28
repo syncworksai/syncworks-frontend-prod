@@ -1,4 +1,5 @@
 import React from "react";
+import { X } from "lucide-react";
 import ChannelBadge from "./ChannelBadge";
 
 function StatusPill({ children, tone = "slate", cx }) {
@@ -51,9 +52,10 @@ export default function GrowthConnectChannelsDrawer({
           <button
             type="button"
             onClick={() => setConnectModalOpen(false)}
-            className="h-9 px-3 rounded-2xl text-xs border border-slate-800 bg-slate-950/60 text-slate-200"
+            aria-label="Close channel connections"
+            className="grid h-9 w-9 place-items-center rounded-xl border border-slate-800 bg-slate-950/60 text-slate-200"
           >
-            Close
+            <X className="h-4 w-4" />
           </button>
         </div>
 
