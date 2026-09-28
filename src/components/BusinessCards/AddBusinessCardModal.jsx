@@ -1,5 +1,6 @@
 // src/components/BusinessCards/AddBusinessCardModal.jsx
 import React, { useEffect, useRef, useState } from "react";
+import { X } from "lucide-react";
 import Button from "../ui/Button";
 
 export default function AddBusinessCardModal({ open, onClose, onSubmit }) {
@@ -71,9 +72,9 @@ export default function AddBusinessCardModal({ open, onClose, onSubmit }) {
             </div>
           </div>
 
-          <Button tone="slate" size="sm" onClick={onClose} disabled={submitting}>
-            Close
-          </Button>
+          <button type="button" onClick={onClose} disabled={submitting} aria-label="Close add business card" className="grid h-9 w-9 place-items-center rounded-xl border border-slate-800 bg-slate-900/40 text-slate-200 disabled:opacity-40">
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
