@@ -1,5 +1,6 @@
 // src/components/BusinessCards/BarcodeScannerModal.jsx
 import React, { useEffect, useRef, useState } from "react";
+import { X } from "lucide-react";
 
 export default function BarcodeScannerModal({ open, onClose, onDetected }) {
   const videoRef = useRef(null);
@@ -99,10 +100,12 @@ export default function BarcodeScannerModal({ open, onClose, onDetected }) {
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="h-9 px-3 rounded-xl border border-slate-800 bg-slate-900/40 hover:bg-slate-900/70 text-slate-200"
+            aria-label="Close QR scanner"
+            className="grid h-9 w-9 place-items-center rounded-xl border border-slate-800 bg-slate-900/40 text-slate-200 hover:bg-slate-900/70"
           >
-            Close
+            <X className="h-4 w-4" />
           </button>
         </div>
 
