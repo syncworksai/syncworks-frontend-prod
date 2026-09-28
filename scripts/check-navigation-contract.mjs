@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const app = read("src/App.jsx");
 const main = read("src/main.jsx");
+const mobileCss = read("src/mobile-production.css");
 
 const appRoutes = [...app.matchAll(/<Route\s+path=["']([^"']+)["']/g)].map((match) => match[1]);
 const directRoutes = [...main.matchAll(/["'](\/[^"']+)["']:\s*</g)].map((match) => match[1]);
@@ -41,6 +42,8 @@ for (const token of [
 ]) {
   assert.ok(globalModeBar.includes(token), `Global protected navigation is missing ${token}`);
 }
+
+assert.ok(mobileCss.includes('body:has([data-syncworks-global-header="true"]) .sw-modebar'), "Legacy page ModeBars must be suppressed under the protected global header");
 
 const drawerContracts = [
   ["src/components/CalendarConnectionsDrawer.jsx", "Close calendar connections"],
