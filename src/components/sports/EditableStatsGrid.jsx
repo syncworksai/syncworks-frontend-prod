@@ -113,8 +113,10 @@ export default function EditableStatsGrid({ teamId, initialScope = "LEAGUE", onS
       const saved = result?.row || row;
       setRows((current) => current.map((item) => Number(item.player?.id) === playerId ? saved : item));
       setDrafts((current) => ({ ...current, [playerId]: draftFromRow(saved) }));
-      await onSaved?.(saved, scope, result);
-      if (!quiet) setNotice(`${row.player?.display_name || "Player"} updated. Lineup, leaders and earned badges now recalculate from these totals.`);
+      if (!quiet) {
+        await onSaved?.(saved, scope, result);
+        setNotice(`${row.player?.display_name || "Player"} updated. Lineup, leaders and earned badges now recalculate from these totals.`);
+      }
       return saved;
     } finally {
       setSaving((current) => ({ ...current, [playerId]: false }));
@@ -131,6 +133,7 @@ export default function EditableStatsGrid({ teamId, initialScope = "LEAGUE", onS
         const row = rows.find((item) => Number(item.player?.id) === playerId);
         if (row) await saveRow(row, { quiet: true });
       }
+      await onSaved?.(null, scope, { bulk: true });
       setNotice(`${changedIds.length} player${changedIds.length === 1 ? "" : "s"} updated. Team leaders, league leaders, lineup stats and badges are recalculated.`);
     } catch (err) {
       setError(err?.response?.data?.detail || err?.message || "One of the stat rows could not be saved.");
