@@ -15,6 +15,7 @@ import {
   getSportsOrganizationDashboard,
   getSportsOrganizations,
   inviteLeaguePlayer,
+  updateSoftballRuleSet,
 } from "../../api/sports";
 
 const list = (value) => (Array.isArray(value) ? value : []);
@@ -42,6 +43,7 @@ export default function SportsLeagueManager({ sportsTeams = [] }) {
   const [teamId, setTeamId] = useState("");
   const [invite, setInvite] = useState({ team: "", email: "", display_name: "", jersey_number: "" });
   const [ruleSets, setRuleSets] = useState([]);
+  const [editingRuleId, setEditingRuleId] = useState(null);
   const [ruleForm, setRuleForm] = useState({ name: "League rules", competition_type: "LEAGUE", innings: "7", home_run_rule: "UNLIMITED", home_run_limit: "3", home_run_max_ahead: "1", notes: "" });
 
   const selectedOrg = organizations.find((row) => String(row.id) === String(selectedOrgId));
@@ -166,12 +168,30 @@ export default function SportsLeagueManager({ sportsTeams = [] }) {
     } catch (err) { setError(errorText(err)); } finally { setBusy(false); }
   }
 
+  function editRuleSet(rule) {
+    setEditingRuleId(rule.id);
+    setRuleForm({
+      name: rule.name || "",
+      competition_type: rule.competition_type || "LEAGUE",
+      innings: String(rule.innings || 7),
+      home_run_rule: rule.home_run_rule || "UNLIMITED",
+      home_run_limit: String(rule.home_run_limit ?? 3),
+      home_run_max_ahead: String(rule.home_run_max_ahead ?? 1),
+      notes: rule.notes || "",
+    });
+  }
+
+  function cancelRuleEdit() {
+    setEditingRuleId(null);
+    setRuleForm({ name: "League rules", competition_type: "LEAGUE", innings: "7", home_run_rule: "UNLIMITED", home_run_limit: "3", home_run_max_ahead: "1", notes: "" });
+  }
+
   async function createRuleSet(event) {
     event.preventDefault();
     if (!selectedOrgId || !ruleForm.name.trim()) return;
     setBusy(true); setError(""); setNotice("");
     try {
-      await createSoftballRuleSet({
+      const payload = {
         organization: Number(selectedOrgId),
         season: selectedSeasonId ? Number(selectedSeasonId) : null,
         division: selectedDivisionId ? Number(selectedDivisionId) : null,
@@ -183,9 +203,12 @@ export default function SportsLeagueManager({ sportsTeams = [] }) {
         home_run_max_ahead: ruleForm.home_run_rule === "ONE_UP" ? Math.max(0, Number(ruleForm.home_run_max_ahead) || 1) : 1,
         notes: ruleForm.notes.trim(),
         is_active: true,
-      });
+      };
+      if (editingRuleId) await updateSoftballRuleSet(editingRuleId, payload);
+      else await createSoftballRuleSet(payload);
       setRuleSets(await getSoftballRuleSets({ organization: selectedOrgId }));
-      setNotice(`${ruleForm.competition_type === "TOURNAMENT" ? "Tournament" : "League"} rules saved.`);
+      setNotice(`${ruleForm.competition_type === "TOURNAMENT" ? "Tournament" : "League"} rules ${editingRuleId ? "updated" : "saved"}.`);
+      setEditingRuleId(null);
     } catch (err) { setError(errorText(err)); } finally { setBusy(false); }
   }
 
@@ -245,7 +268,7 @@ export default function SportsLeagueManager({ sportsTeams = [] }) {
 
           {selectedOrgId && selectedOrg?.sport === "SOFTBALL" ? <div className="rounded-2xl border border-amber-300/15 bg-amber-300/[.035] p-3">
             <div className="flex items-center justify-between gap-2"><div><b className="text-sm text-white">Competition rules</b><p className="text-[10px] text-slate-500">Save league or tournament rules and attach them to Game Book games.</p></div><ShieldCheck className="h-4 w-4 text-amber-200" /></div>
-            <div className="mt-2 flex flex-wrap gap-1">{ruleSets.map((rule) => <span key={rule.id} className="rounded-full border border-white/10 bg-white/[.035] px-2 py-1 text-[8px] font-black text-slate-300">{rule.competition_type} · {rule.name} · {rule.home_run_rule === "FIXED" ? `${rule.home_run_limit} HR` : rule.home_run_rule === "ONE_UP" ? `1-up +${rule.home_run_max_ahead}` : "Unlimited"}</span>)}</div>
+            <div className="mt-2 flex flex-wrap gap-1">{ruleSets.map((rule) => <button type="button" onClick={() => editRuleSet(rule)} key={rule.id} className={`rounded-full border px-2 py-1 text-[8px] font-black ${Number(editingRuleId) === Number(rule.id) ? "border-amber-300/40 bg-amber-300/12 text-amber-100" : "border-white/10 bg-white/[.035] text-slate-300"}`}>{rule.competition_type} · {rule.name} · {rule.home_run_rule === "FIXED" ? `${rule.home_run_limit} HR` : rule.home_run_rule === "ONE_UP" ? `1-up +${rule.home_run_max_ahead}` : "Unlimited"}</button>)}</div>
             <form onSubmit={createRuleSet} className="mt-3 grid gap-2 sm:grid-cols-2">
               <input className={field} placeholder="Rule-set name" value={ruleForm.name} onChange={(e) => setRuleForm({ ...ruleForm, name: e.target.value })} />
               <select className={field} value={ruleForm.competition_type} onChange={(e) => setRuleForm({ ...ruleForm, competition_type: e.target.value })}><option value="LEAGUE">League</option><option value="TOURNAMENT">Tournament</option><option value="OTHER">Other</option></select>
@@ -254,7 +277,7 @@ export default function SportsLeagueManager({ sportsTeams = [] }) {
               {ruleForm.home_run_rule === "FIXED" ? <input className={field} inputMode="numeric" placeholder="HR cap (ex. 3)" value={ruleForm.home_run_limit} onChange={(e) => setRuleForm({ ...ruleForm, home_run_limit: e.target.value })} /> : null}
               {ruleForm.home_run_rule === "ONE_UP" ? <input className={field} inputMode="numeric" placeholder="Max HR ahead (ex. 1)" value={ruleForm.home_run_max_ahead} onChange={(e) => setRuleForm({ ...ruleForm, home_run_max_ahead: e.target.value })} /> : null}
               <input className={`${field} sm:col-span-2`} placeholder="Rule notes / tournament exceptions" value={ruleForm.notes} onChange={(e) => setRuleForm({ ...ruleForm, notes: e.target.value })} />
-              <button disabled={busy} className={`${button} bg-amber-300 text-slate-950 sm:col-span-2`}>Save rule set</button>
+              <div className="flex gap-2 sm:col-span-2"><button disabled={busy} className={`${button} flex-1 bg-amber-300 text-slate-950`}>{editingRuleId ? "Update rule set" : "Save rule set"}</button>{editingRuleId ? <button type="button" onClick={cancelRuleEdit} className={`${button} border border-white/10 text-slate-300`}>Cancel</button> : null}</div>
             </form>
           </div> : null}
         </div>
