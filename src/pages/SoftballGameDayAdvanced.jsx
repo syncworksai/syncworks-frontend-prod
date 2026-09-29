@@ -34,6 +34,7 @@ import {
   addHistoricalSoftballPlay,
   correctSoftballPlay,
   deleteSportsGameBook,
+  editFinalSportsGame,
   finishSportsGame,
   getGameBookPhotos,
   getGameCastSettings,
@@ -108,6 +109,12 @@ const cx = (...values) => values.filter(Boolean).join(" ");
 const list = (value) => Array.isArray(value) ? value : [];
 const num = (value) => Number(value || 0);
 const errorText = (error) => error?.response?.data?.detail || Object.values(error?.response?.data || {})?.flat?.()?.[0] || error?.message || "Something went wrong.";
+const toLocalDateTimeInput = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+};
 
 function scoringSuggestion(result, bases, outsBefore = 0) {
   const first = Boolean(bases.first);
@@ -378,6 +385,7 @@ export default function SoftballGameDayAdvanced() {
   const [photoError, setPhotoError] = useState("");
   const bookPhotoInputRef = useRef(null);
   const bookLibraryInputRef = useRef(null);
+  const scorebookRef = useRef(null);
 
   const [result, setResult] = useState("");
   const [outsRecorded, setOutsRecorded] = useState(0);
@@ -397,6 +405,11 @@ export default function SoftballGameDayAdvanced() {
   const [editingPlay, setEditingPlay] = useState(null);
   const [editForm, setEditForm] = useState({ inning: 1, result: "OUT", outs_recorded: 1, rbi: 0, runs_scored: 0, outs_before: 0, base_state: "", situation_objective: "", runners_advanced: 0, situation_success: false, notes: "" });
   const [historicalAddOpen, setHistoricalAddOpen] = useState(false);
+  const [gameEditOpen, setGameEditOpen] = useState(false);
+  const [gameEditForm, setGameEditForm] = useState({
+    opponent_name: "", home_away: "NEUTRAL", venue_name: "", start_at: "",
+    runs_for: 0, runs_against: 0,
+  });
   const [historicalForm, setHistoricalForm] = useState({ player: "", inning: 1, result: "OUT", outs_recorded: 1, rbi: 0, runs_scored: 0, outs_before: 0, base_state: "", situation_objective: "", runners_advanced: 0, situation_success: false, notes: "" });
   const [hitterCard, setHitterCard] = useState(null);
   const [playerCard, setPlayerCard] = useState(null);
@@ -889,8 +902,50 @@ export default function SoftballGameDayAdvanced() {
     }
   }
 
+  function jumpToScorebook() {
+    scorebookRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setNotice("Historical edit mode: tap any recorded cell to correct it, or use Add PA for a missing plate appearance.");
+  }
+
+  function openGameEdit() {
+    setGameEditForm({
+      opponent_name: game.opponent_name || "",
+      home_away: game.home_away || "NEUTRAL",
+      venue_name: game.venue_name || "",
+      start_at: toLocalDateTimeInput(game.start_at),
+      runs_for: num(game.runs_for),
+      runs_against: num(game.runs_against),
+    });
+    setGameEditOpen(true);
+  }
+
+  async function saveGameEdit() {
+    if (!game?.id || busy) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      await updateSportsGame(game.id, {
+        opponent_name: gameEditForm.opponent_name.trim(),
+        home_away: gameEditForm.home_away,
+        venue_name: gameEditForm.venue_name.trim(),
+        start_at: gameEditForm.start_at ? new Date(gameEditForm.start_at).toISOString() : game.start_at,
+      });
+      await editFinalSportsGame(game.id, {
+        runs_for: Math.max(0, num(gameEditForm.runs_for)),
+        runs_against: Math.max(0, num(gameEditForm.runs_against)),
+      });
+      setGameEditOpen(false);
+      setNotice("Final game details saved. The game stayed FINAL and the Game Book was preserved.");
+      await refresh({ quiet: true });
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function reopenGame() {
-    await run(() => reopenSportsGame(game.id), "Game reopened for editing.");
+    if (!window.confirm("Resume this completed game as LIVE scoring? Use Edit Game Book for normal historical corrections.")) return;
+    await run(() => reopenSportsGame(game.id), "Live scoring resumed.");
   }
 
   async function shareGameCast() {
@@ -1309,7 +1364,7 @@ export default function SoftballGameDayAdvanced() {
               ) : <div className="mt-2 text-[9px] text-amber-200">Managers control scoring.</div>}
             </section>
 
-            <section className="overflow-x-auto rounded-2xl border border-white/10 bg-[#07111f] p-2">
+            <section ref={scorebookRef} className="scroll-mt-28 overflow-x-auto rounded-2xl border border-white/10 bg-[#07111f] p-2">
               <div className="mb-1.5 flex items-center justify-between gap-2"><div><div className="text-[8px] font-black uppercase tracking-[.14em] text-slate-500">Digital Game Book</div>{canScore?<div className="mt-0.5 text-[7px] text-slate-600">{final ? "Review the historical book here. Add missing plate appearances or tap a recorded box to correct it." : "Tap any recorded box to correct it."}</div>:null}</div><div className="flex shrink-0 gap-1.5">{final&&canScore?<Button onClick={()=>openHistoricalAdd()}><Plus className="mr-1 inline h-3.5 w-3.5"/>Add PA</Button>:null}{canScore&&live&&plays.length?<Button onClick={()=>run(()=>undoSoftballPlay(game.id),"Last play undone.")}><Undo2 className="mr-1 inline h-3.5 w-3.5" />Undo</Button>:null}</div></div>
               <table className="min-w-max border-collapse text-center text-[8px]">
                 <thead>
@@ -1540,6 +1595,26 @@ export default function SoftballGameDayAdvanced() {
           </div>
         ) : null}
 
+        {gameEditOpen ? (
+          <div className="fixed inset-0 z-[205] flex items-end justify-center bg-black/85 px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(4rem,env(safe-area-inset-top))] sm:items-center" onClick={(event)=>{if(event.target===event.currentTarget)setGameEditOpen(false);}}>
+            <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-[1.6rem] border border-cyan-300/20 bg-[#07111f] p-4 shadow-2xl">
+              <div className="flex items-start justify-between gap-3">
+                <div><div className="text-[8px] font-black uppercase tracking-[.15em] text-cyan-300">Completed game</div><div className="mt-1 text-base font-black text-white">Edit game details & final score</div><div className="mt-1 text-[9px] text-slate-500">This does not reopen live scoring or delete the Game Book.</div></div>
+                <button type="button" aria-label="Close edit game" onClick={()=>setGameEditOpen(false)} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 text-slate-300">×</button>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <label className="col-span-2 text-[8px] font-black uppercase text-slate-500">Opponent<input value={gameEditForm.opponent_name} onChange={(e)=>setGameEditForm({...gameEditForm,opponent_name:e.target.value})} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-[#050b14] px-3 text-[16px] text-white sm:text-xs"/></label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Home / away<select value={gameEditForm.home_away} onChange={(e)=>setGameEditForm({...gameEditForm,home_away:e.target.value})} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-[#050b14] px-2 text-xs text-white"><option value="HOME">Home</option><option value="AWAY">Visitor / Away</option><option value="NEUTRAL">Neutral</option></select></label>
+                <label className="text-[8px] font-black uppercase text-slate-500">Field / venue<input value={gameEditForm.venue_name} onChange={(e)=>setGameEditForm({...gameEditForm,venue_name:e.target.value})} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-[#050b14] px-3 text-[16px] text-white sm:text-xs"/></label>
+                <label className="col-span-2 text-[8px] font-black uppercase text-slate-500">Date & time<input type="datetime-local" value={gameEditForm.start_at} onChange={(e)=>setGameEditForm({...gameEditForm,start_at:e.target.value})} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-[#050b14] px-3 text-[16px] text-white sm:text-xs"/></label>
+                <label className="text-[8px] font-black uppercase text-slate-500">{game.team_name} final<input type="number" min="0" value={gameEditForm.runs_for} onChange={(e)=>setGameEditForm({...gameEditForm,runs_for:e.target.value})} className="mt-1 h-11 w-full rounded-xl border border-cyan-300/20 bg-[#050b14] px-3 text-[16px] font-black text-cyan-100"/></label>
+                <label className="text-[8px] font-black uppercase text-slate-500">{gameEditForm.opponent_name || game.opponent_name} final<input type="number" min="0" value={gameEditForm.runs_against} onChange={(e)=>setGameEditForm({...gameEditForm,runs_against:e.target.value})} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-[#050b14] px-3 text-[16px] font-black text-white"/></label>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2"><Button onClick={()=>setGameEditOpen(false)}>Cancel</Button><Button primary disabled={busy||!gameEditForm.opponent_name.trim()} onClick={saveGameEdit}>{busy?"Saving…":"Save game"}</Button></div>
+            </div>
+          </div>
+        ) : null}
+
         {historicalAddOpen ? (
           <div className="fixed inset-0 z-[93] flex items-end justify-center bg-black/80 px-3 pb-4 pt-[max(4rem,env(safe-area-inset-top))] sm:items-center">
             <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-[1.6rem] border border-amber-300/20 bg-[#07111f] p-4 shadow-2xl">
@@ -1626,10 +1701,12 @@ export default function SoftballGameDayAdvanced() {
         {final ? <section className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[.04] p-4 text-center">
           <Trophy className="mx-auto h-6 w-6 text-emerald-300"/>
           <div className="mt-1 text-lg font-black">{game.team_name} {game.runs_for}–{game.runs_against} {game.opponent_name}</div>
-          <div className="mt-1 text-[10px] text-slate-400">Managers can reopen this game, correct the book, change the final score, or delete the book without deleting the scheduled game.</div>
+          <div className="mt-1 text-[10px] text-slate-400">Completed games stay FINAL while you correct the digital book or final score. Reopen only if you truly need to resume live scoring.</div>
           {canManage?<div className="mt-3 grid grid-cols-2 gap-2">
-            <Button onClick={reopenGame}><Edit3 className="mr-1 inline h-3.5 w-3.5"/>Reopen game</Button>
+            <Button primary onClick={jumpToScorebook}><Edit3 className="mr-1 inline h-3.5 w-3.5"/>Edit Game Book</Button>
+            <Button onClick={openGameEdit}><Edit3 className="mr-1 inline h-3.5 w-3.5"/>Edit game / score</Button>
             <Button onClick={()=>setGamecastOpen(true)}><Radio className="mr-1 inline h-3.5 w-3.5"/>GameCast</Button>
+            <Button onClick={reopenGame}><RotateCcw className="mr-1 inline h-3.5 w-3.5"/>Resume live</Button>
             <Button danger className="col-span-2" onClick={deleteEntireBook}><Trash2 className="mr-1 inline h-3.5 w-3.5"/>Delete entire Game Book</Button>
           </div>:null}
           <Button className="mt-3 w-full" onClick={()=>navigate(`/connect/groups/${groupId}/sports`)}>Next game / Team dashboard</Button>
