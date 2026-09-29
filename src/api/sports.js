@@ -424,6 +424,17 @@ export async function createStatLedgerEntry(payload) {
   return data;
 }
 
+export async function adjustScopedTeamStats(team, player, scope, totals, note = "") {
+  const { data } = await api.post("/sports/stat-ledger/adjust-totals/", {
+    team,
+    player,
+    scope,
+    totals,
+    note,
+  });
+  return data;
+}
+
 export async function updateStatLedgerEntry(id, payload) {
   const { data } = await api.patch(`/sports/stat-ledger/${id}/`, payload);
   return data;
