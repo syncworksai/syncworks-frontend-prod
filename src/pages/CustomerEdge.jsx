@@ -7,89 +7,347 @@ import EdgeLivePaperPortfolio from "../components/edge/EdgeLivePaperPortfolio";
 import EdgeResearchLab from "../components/edge/EdgeResearchLab";
 import EdgeStrategyV2Race from "../components/edge/EdgeStrategyV2Race";
 
+const views = [["LIVE", "Live", Activity], ["PORTFOLIO", "Portfolio", WalletCards], ["RESEARCH", "Research", BarChart3], ["SETTINGS", "Settings", Settings2]];
+const sports = ["NFL", "NCAAF", "MLB"];
+const endpoints = { NFL: "/edge/live/nfl/", NCAAF: "/edge/live/ncaaf/", MLB: "/edge/live/mlb/" };
 const signalTone = {
-  GREEN: "border-emerald-400/30 bg-emerald-500/[.08]",
-  YELLOW: "border-amber-400/25 bg-amber-500/[.06]",
-  RED: "border-white/10 bg-white/[.025]",
+  GREEN: "border-emerald-400/35 bg-emerald-500/[.08]",
+  YELLOW: "border-amber-400/25 bg-amber-500/[.05]",
+  RED: "border-white/10 bg-white/[.02]",
 };
 const signalText = { GREEN: "text-emerald-300", YELLOW: "text-amber-300", RED: "text-slate-400" };
-const views = [["LIVE", "Live", Activity], ["PORTFOLIO", "Portfolio", WalletCards], ["RESEARCH", "Research", BarChart3], ["SETTINGS", "Settings", Settings2]];
 
 function formatDateTime(value) {
   if (!value) return "—";
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString([], { month: "numeric", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", second: "2-digit" });
+  return date.toLocaleString([], { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
-function Metric({ label, value, detail, compact = false }) {
-  return <div className={`rounded-xl border border-white/10 bg-white/[.035] ${compact ? "p-2.5" : "p-3 sm:p-4"}`}><div className="text-[9px] font-black uppercase tracking-[.14em] text-slate-500">{label}</div><div className={`${compact ? "mt-1 text-lg" : "mt-1 text-xl sm:text-2xl"} font-black text-white`}>{value}</div>{detail ? <div className="mt-1 text-[10px] leading-4 text-slate-400">{detail}</div> : null}</div>;
+
+function money(cents) {
+  const value = Number(cents || 0) / 100;
+  return value ? `$${value.toFixed(value % 1 ? 2 : 0)}` : "$0";
 }
-function priceText(value) { return value === null || value === undefined ? "—" : `${value}¢`; }
-function TickerItem({ game }) {
-  const away = game.away?.code || game.away?.name; const home = game.home?.code || game.home?.name; const live = Boolean(game.is_live);
-  return <div className="min-w-[190px] rounded-xl border border-white/10 bg-black/20 px-3 py-2"><div className="flex items-center justify-between gap-2"><div className="text-[11px] font-black text-white">{away} {game.away?.score ?? 0} <span className="text-slate-600">@</span> {home} {game.home?.score ?? 0}</div><span className={`text-[8px] font-black uppercase ${live ? "text-emerald-300" : "text-slate-500"}`}>{live ? "LIVE" : game.status}</span></div><div className="mt-1 flex items-center justify-between gap-2 text-[9px] text-slate-400"><span>{game.game_state}</span><span className="font-black text-cyan-200">{away} {priceText(game.away_market?.yes_ask_cents)}</span></div></div>;
+
+function Metric({ label, value, detail }) {
+  return <div className="min-w-0 rounded-lg border border-white/10 bg-white/[.03] px-2 py-2">
+    <div className="truncate text-[8px] font-black uppercase tracking-[.11em] text-slate-500">{label}</div>
+    <div className="mt-0.5 truncate text-base font-black leading-none text-white sm:text-lg">{value}</div>
+    {detail ? <div className="mt-1 truncate text-[8px] text-slate-500">{detail}</div> : null}
+  </div>;
 }
+
+function priceText(value) {
+  return value === null || value === undefined ? "—" : `${value}¢`;
+}
+
+function TickerItem({ game, sport }) {
+  const away = game.away?.code || game.away?.name;
+  const home = game.home?.code || game.home?.name;
+  const live = Boolean(game.is_live);
+  return <div className="min-w-[158px] rounded-lg border border-white/10 bg-black/20 px-2.5 py-2">
+    <div className="flex items-center justify-between gap-2">
+      <div className="truncate text-[10px] font-black text-white">{away} <span className="text-slate-600">@</span> {home}</div>
+      <span className={`text-[7px] font-black uppercase ${live ? "text-emerald-300" : "text-slate-500"}`}>{live ? "LIVE" : sport}</span>
+    </div>
+    <div className="mt-1 flex items-center justify-between gap-2 text-[8px] text-slate-500">
+      <span className="truncate">{game.game_state || game.status}</span>
+      <span className="shrink-0 font-black text-cyan-200">{priceText(game.away_market?.yes_ask_cents)} / {priceText(game.home_market?.yes_ask_cents)}</span>
+    </div>
+  </div>;
+}
+
 function adaptSignal(item, minEdge, observedAt) {
-  const edge = Number(item.edge_pct || 0); const yellowFloor = Math.max(3, Math.min(6, minEdge / 2)); let signal = "RED"; let action = edge < 0 ? "TOO LATE" : "PASS";
-  if (edge >= minEdge) { signal = "GREEN"; action = edge >= Math.max(10, minEdge + 2) ? "PRIME" : "ENTRY"; } else if (edge >= yellowFloor) { signal = "YELLOW"; action = "WATCH"; }
-  return { ...item, signal, action, market: item.market_price_cents, model: item.model_probability_pct, edge, score: item.opportunity_score, maxEntry: item.max_entry_cents, gameState: item.game_state, observedAt };
+  const edge = Number(item.edge_pct || 0);
+  const yellowFloor = Math.max(3, Math.min(6, minEdge / 2));
+  let signal = item.signal || "RED";
+  if (!item.signal) signal = edge >= minEdge ? "GREEN" : edge >= yellowFloor ? "YELLOW" : "RED";
+  const action = signal === "GREEN" ? (edge >= Math.max(10, minEdge + 2) ? "PRIME" : "EDGE") : signal === "YELLOW" ? "WATCH" : "PASS";
+  return {
+    ...item,
+    id: item.id || item.market_ticker || `${item.sport || "EDGE"}-${item.event_key || item.matchup}-${item.team_code || item.side}`,
+    signal,
+    action,
+    market: item.market_price_cents,
+    model: item.model_probability_pct,
+    edge,
+    score: item.opportunity_score,
+    maxEntry: item.max_entry_cents,
+    gameState: item.game_state,
+    observedAt,
+  };
 }
 
 function SignalRow({ item, onOpen, priority = false }) {
-  const positive = item.edge >= 0;
-  const priorityClass = priority ? "border-emerald-300/70 bg-emerald-500/[.12] shadow-[0_0_26px_rgba(57,255,136,0.20)]" : signalTone[item.signal] || signalTone.RED;
-  return <button type="button" onClick={() => onOpen(item)} className={`relative w-full rounded-xl border px-3 py-2.5 text-left transition active:scale-[.995] ${priorityClass}`}>
-    {priority ? <div className="absolute -top-2 right-2 rounded-full border border-emerald-200/70 bg-emerald-400 px-2.5 py-1 text-[8px] font-black uppercase tracking-[.12em] text-slate-950 shadow-[0_0_18px_rgba(57,255,136,0.65)]">BUY FIRST • PAPER</div> : null}
-    <div className="sm:hidden">
-      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className={`text-[9px] font-black uppercase tracking-[.13em] ${priority ? "text-emerald-200" : signalText[item.signal]}`}>MLB • {item.action}</div><div className={`mt-1 truncate text-sm font-black ${priority ? "text-emerald-100 underline decoration-emerald-300 decoration-2 underline-offset-4" : "text-white"}`}>{item.matchup}</div><div className="mt-1 truncate text-[10px] text-slate-500">{item.gameState}</div><div className="mt-1 text-[9px] text-slate-600">As of {formatDateTime(item.observedAt)}</div></div><ChevronRight className={`mt-1 h-4 w-4 shrink-0 ${priority ? "text-emerald-300" : "text-slate-500"}`} /></div>
-      <div className="mt-2 grid grid-cols-4 gap-1.5"><div><div className="text-[8px] font-black uppercase text-slate-600">Ask</div><div className="text-sm font-black text-white">{item.market}¢</div></div><div><div className="text-[8px] font-black uppercase text-slate-600">Fair</div><div className="text-sm font-black text-cyan-200">{item.model}%</div></div><div><div className="text-[8px] font-black uppercase text-slate-600">Edge</div><div className={`text-sm font-black ${priority ? "text-emerald-200" : signalText[item.signal]}`}>{positive ? "+" : ""}{item.edge}%</div></div><div><div className="text-[8px] font-black uppercase text-slate-600">Score</div><div className="text-sm font-black text-white">{item.score}</div></div></div>
+  const plan = item.stake_plan || {};
+  const hasPlan = Number(plan.contracts || 0) > 0;
+  const tone = priority ? "border-emerald-300/60 bg-emerald-500/[.11] shadow-[0_0_18px_rgba(57,255,136,0.12)]" : signalTone[item.signal] || signalTone.RED;
+  return <button type="button" onClick={() => onOpen(item)} className={`w-full rounded-lg border px-2.5 py-2 text-left transition active:scale-[.995] ${tone}`}>
+    <div className="flex items-start justify-between gap-2">
+      <div className="min-w-0">
+        <div className={`flex flex-wrap items-center gap-1 text-[8px] font-black uppercase tracking-[.12em] ${signalText[item.signal]}`}>
+          <span>{item.sport || "MLB"} • {item.action}</span>
+          {item.primary_price_band ? <span className="rounded border border-cyan-300/20 bg-cyan-500/10 px-1 py-0.5 text-[7px] text-cyan-100">25–45¢ band</span> : null}
+          {priority ? <span className="rounded border border-emerald-300/25 bg-emerald-500/10 px-1 py-0.5 text-[7px] text-emerald-100">Top edge</span> : null}
+        </div>
+        <div className="mt-0.5 truncate text-[12px] font-black text-white sm:text-sm">{item.matchup} <span className="text-slate-500">•</span> {item.side}</div>
+      </div>
+      <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" />
     </div>
-    <div className="hidden items-center gap-3 sm:grid lg:grid-cols-[1.45fr_.8fr_.8fr_.8fr_.65fr_auto]"><div className="min-w-0"><div className={`text-[9px] font-black uppercase tracking-[.15em] ${priority ? "text-emerald-200" : signalText[item.signal]}`}>MLB • {item.action}</div><div className={`mt-1 truncate text-sm font-black ${priority ? "text-emerald-100 underline decoration-emerald-300 decoration-2 underline-offset-4" : "text-white"}`}>{item.matchup} • {item.side}</div><div className="mt-1 truncate text-[11px] text-slate-500">{item.gameState}</div><div className="mt-1 text-[9px] text-slate-600">As of {formatDateTime(item.observedAt)}</div></div><div><div className="text-[9px] font-black uppercase text-slate-600">Market</div><div className="mt-1 text-sm font-black text-white">{item.market}¢</div></div><div><div className="text-[9px] font-black uppercase text-slate-600">EDGE fair</div><div className="mt-1 text-sm font-black text-cyan-200">{item.model}%</div></div><div><div className="text-[9px] font-black uppercase text-slate-600">Live edge</div><div className={`mt-1 text-sm font-black ${priority ? "text-emerald-200" : signalText[item.signal]}`}>{positive ? "+" : ""}{item.edge}%</div></div><div><div className="text-[9px] font-black uppercase text-slate-600">Score</div><div className="mt-1 text-sm font-black text-white">{item.score}</div></div><ChevronRight className={`h-4 w-4 ${priority ? "text-emerald-300" : "text-slate-500"}`} /></div>
+
+    <div className="mt-1.5 grid grid-cols-4 gap-1 border-t border-white/[.06] pt-1.5">
+      <div><div className="text-[7px] font-black uppercase text-slate-600">Ask</div><div className="text-[11px] font-black text-white">{item.market}¢</div></div>
+      <div><div className="text-[7px] font-black uppercase text-slate-600">Fair</div><div className="text-[11px] font-black text-cyan-200">{item.model}%</div></div>
+      <div><div className="text-[7px] font-black uppercase text-slate-600">Edge</div><div className={`text-[11px] font-black ${signalText[item.signal]}`}>{item.edge >= 0 ? "+" : ""}{item.edge}%</div></div>
+      <div><div className="text-[7px] font-black uppercase text-slate-600">Risk</div><div className="text-[11px] font-black text-white">{hasPlan ? money(plan.estimated_cost_cents) : "—"}</div></div>
+    </div>
+
+    <div className="mt-1 flex items-center justify-between gap-2 text-[8px] text-slate-500">
+      <span className="truncate">{item.gameState}</span>
+      <span className="shrink-0">{hasPlan ? `Pays ${money(plan.gross_payout_cents)} • +${money(plan.profit_if_correct_cents)}` : "No stake until edge qualifies"}</span>
+    </div>
   </button>;
 }
 
 function SignalDrawer({ item, onClose, priority = false }) {
   if (!item) return null;
-  return <div className="fixed inset-0 z-[90] flex items-end justify-end bg-black/55 backdrop-blur-sm sm:items-stretch" onMouseDown={onClose}><aside className="max-h-[76vh] w-full overflow-y-auto rounded-t-[1.5rem] border-t border-cyan-300/20 bg-slate-950 p-4 shadow-2xl sm:h-full sm:max-h-none sm:max-w-lg sm:rounded-none sm:border-l sm:border-t-0 sm:p-5" onMouseDown={(e) => e.stopPropagation()}>
-    <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20 sm:hidden" />
-    <div className="flex items-start justify-between gap-3"><div><div className={`text-[9px] font-black uppercase tracking-[.16em] ${priority ? "text-emerald-200" : signalText[item.signal]}`}>MLB • {item.action}</div><h2 className={`mt-1 text-xl font-black sm:text-2xl ${priority ? "text-emerald-100 underline decoration-emerald-300 decoration-2 underline-offset-4" : "text-white"}`}>{item.matchup}</h2><div className="mt-1 text-xs text-slate-400">{item.gameState}</div><div className="mt-1 text-[10px] text-slate-600">Observed {formatDateTime(item.observedAt)}</div></div><button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[.04] text-slate-300"><X className="h-4 w-4" /></button></div>
-    {priority ? <div className="mt-4 rounded-xl border border-emerald-200/60 bg-emerald-500/15 p-3 shadow-[0_0_28px_rgba(57,255,136,0.20)]"><div className="text-[10px] font-black uppercase tracking-[.15em] text-emerald-200">BUY FIRST • HIGHEST-RANKED PAPER ENTRY</div><div className="mt-1 text-xs text-emerald-100">This is the highest-ranked qualifying signal at the timestamp above. It can change on the next refresh and is not a guaranteed outcome.</div></div> : item.signal === "GREEN" ? <div className="mt-4 rounded-xl border border-emerald-300/35 bg-emerald-500/10 p-3"><div className="text-[9px] font-black uppercase tracking-[.14em] text-emerald-200">PRIME ENTRY • PAPER SIGNAL</div><div className="mt-1 text-xs text-emerald-100">Meets your configured edge threshold. Not a guaranteed outcome.</div></div> : null}
-    <div className="mt-4 grid grid-cols-3 gap-2"><Metric label="Ask" value={`${item.market}¢`} compact /><Metric label="Fair" value={`${item.model}%`} compact /><Metric label="Edge" value={`${item.edge >= 0 ? "+" : ""}${item.edge}%`} compact /><Metric label="Trade" value={item.side} compact /><Metric label="Max entry" value={`${item.maxEntry ?? "—"}¢`} compact /><Metric label="Score" value={item.score} compact /></div>
-    <div className="mt-4"><div className="text-[9px] font-black uppercase tracking-[.14em] text-slate-500">Why EDGE sees it</div><div className="mt-2 space-y-2">{item.why?.length ? item.why.map((reason) => <div key={reason} className="rounded-xl border border-white/10 bg-white/[.025] p-2.5 text-xs leading-5 text-slate-300">{reason}</div>) : <div className="text-xs text-slate-500">No detailed factors returned.</div>}</div></div>
-    <div className="mt-4 rounded-xl border border-rose-400/15 bg-rose-500/[.04] p-3 text-[11px] leading-5 text-slate-400"><span className="font-black text-rose-200">Risk:</span> rankings and prices can change immediately. Liquidity can change, execution can differ from displayed prices, and the full amount risked may be lost.</div>
-  </aside></div>;
+  const plan = item.stake_plan || {};
+  const hasPlan = Number(plan.contracts || 0) > 0;
+  return <div className="fixed inset-0 z-[90] flex items-end justify-end bg-black/60 backdrop-blur-sm sm:items-stretch" onMouseDown={onClose}>
+    <aside className="max-h-[80vh] w-full overflow-y-auto rounded-t-[1.4rem] border-t border-cyan-300/20 bg-slate-950 p-3.5 shadow-2xl sm:h-full sm:max-h-none sm:max-w-md sm:rounded-none sm:border-l sm:border-t-0 sm:p-5" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="mx-auto mb-2 h-1 w-9 rounded-full bg-white/20 sm:hidden" />
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className={`text-[8px] font-black uppercase tracking-[.14em] ${signalText[item.signal]}`}>{item.sport || "MLB"} • {item.action}{priority ? " • TOP EDGE" : ""}</div>
+          <h2 className="mt-1 text-lg font-black text-white">{item.matchup}</h2>
+          <div className="mt-0.5 text-[10px] text-slate-400">{item.side} • {item.gameState}</div>
+        </div>
+        <button type="button" onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[.04] text-slate-300"><X className="h-3.5 w-3.5" /></button>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-1.5">
+        <Metric label="Kalshi ask" value={`${item.market}¢`} />
+        <Metric label="Fair" value={`${item.model}%`} />
+        <Metric label="Edge" value={`${item.edge >= 0 ? "+" : ""}${item.edge}%`} />
+      </div>
+
+      {hasPlan ? <section className="mt-3 rounded-xl border border-emerald-300/20 bg-emerald-500/[.06] p-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="text-[8px] font-black uppercase tracking-[.13em] text-emerald-200">$100 pool • 4 × $25</div>
+            <div className="mt-0.5 text-sm font-black text-white">{plan.contracts} contracts • {money(plan.estimated_cost_cents)} total risk</div>
+          </div>
+          {item.primary_price_band ? <div className="rounded-lg border border-cyan-300/20 bg-cyan-500/10 px-2 py-1 text-[8px] font-black text-cyan-100">VALUE BAND</div> : null}
+        </div>
+        <div className="mt-2 grid grid-cols-3 gap-1.5">
+          <Metric label="If correct" value={money(plan.gross_payout_cents)} />
+          <Metric label="Profit" value={`+${money(plan.profit_if_correct_cents)}`} />
+          <Metric label="Each risks" value={money(plan.per_person_cost_cents)} />
+        </div>
+        <div className="mt-2 text-[9px] leading-4 text-slate-500">{plan.fee_note}</div>
+      </section> : <div className="mt-3 rounded-xl border border-white/10 bg-white/[.025] p-3 text-[10px] text-slate-400">This price does not clear the configured edge threshold, so the pool model assigns no stake.</div>}
+
+      <div className="mt-3">
+        <div className="text-[8px] font-black uppercase tracking-[.13em] text-slate-500">Why it ranks here</div>
+        <div className="mt-1.5 space-y-1.5">{item.why?.length ? item.why.map((reason) => <div key={reason} className="rounded-lg border border-white/10 bg-white/[.025] px-2.5 py-2 text-[10px] leading-4 text-slate-300">{reason}</div>) : <div className="text-[10px] text-slate-500">No detailed factors returned.</div>}</div>
+      </div>
+
+      <div className="mt-3 rounded-xl border border-rose-400/15 bg-rose-500/[.04] p-2.5 text-[9px] leading-4 text-slate-400"><span className="font-black text-rose-200">Risk:</span> prices and odds can change before execution. The full amount risked can be lost. These are research/paper signals, not guaranteed outcomes.</div>
+    </aside>
+  </div>;
 }
 
 export default function CustomerEdge() {
-  const [view, setView] = useState("LIVE"); const [sport, setSport] = useState("MLB"); const [execution, setExecution] = useState("MANUAL"); const [dailyRisk, setDailyRisk] = useState(15); const [perTrade, setPerTrade] = useState(1); const [minEdge, setMinEdge] = useState(8); const [dashboard, setDashboard] = useState(null); const [message, setMessage] = useState(""); const [connectOpen, setConnectOpen] = useState(false); const [environment, setEnvironment] = useState("DEMO"); const [apiKeyId, setApiKeyId] = useState(""); const [privateKey, setPrivateKey] = useState(""); const [savingConnection, setSavingConnection] = useState(false); const [liveBoard, setLiveBoard] = useState(null); const [liveLoading, setLiveLoading] = useState(true); const [lastLiveRefresh, setLastLiveRefresh] = useState(null); const [selectedSignal, setSelectedSignal] = useState(null);
+  const [view, setView] = useState("LIVE");
+  const [sport, setSport] = useState("NFL");
+  const [execution, setExecution] = useState("MANUAL");
+  const [dailyRisk, setDailyRisk] = useState(30);
+  const [perTrade, setPerTrade] = useState(5);
+  const [minEdge, setMinEdge] = useState(5);
+  const [dashboard, setDashboard] = useState(null);
+  const [message, setMessage] = useState("");
+  const [connectOpen, setConnectOpen] = useState(false);
+  const [environment, setEnvironment] = useState("DEMO");
+  const [apiKeyId, setApiKeyId] = useState("");
+  const [privateKey, setPrivateKey] = useState("");
+  const [savingConnection, setSavingConnection] = useState(false);
+  const [liveBoard, setLiveBoard] = useState(null);
+  const [liveLoading, setLiveLoading] = useState(true);
+  const [lastLiveRefresh, setLastLiveRefresh] = useState(null);
+  const [selectedSignal, setSelectedSignal] = useState(null);
 
-  async function loadDashboard() { try { const response = await api.get("/edge/dashboard/"); setDashboard(response.data); const strategy = response.data?.strategy; if (strategy) { setExecution(strategy.execution_mode === "AUTO" ? "AUTO" : "MANUAL"); setDailyRisk(Number(strategy.daily_risk_limit_cents || 1500) / 100); setPerTrade(Number(strategy.per_trade_limit_cents || 100) / 100); setMinEdge(Number(strategy.minimum_edge_bps || 800) / 100); } } catch { setMessage("EDGE account settings are temporarily unavailable."); } }
-  async function loadLiveBoard(silent = false) { if (!silent) setLiveLoading(true); try { const response = await api.get("/edge/live/mlb/"); setLiveBoard(response.data); setLastLiveRefresh(new Date()); } catch { if (!silent) setLiveBoard(null); } finally { if (!silent) setLiveLoading(false); } }
-  useEffect(() => { loadDashboard(); loadLiveBoard(); const timer = window.setInterval(() => loadLiveBoard(true), 10000); return () => window.clearInterval(timer); }, []);
-  async function saveStrategy() { const id = dashboard?.strategy?.id; if (!id) return setMessage("EDGE strategy settings are not available yet."); try { await api.patch(`/edge/strategies/${id}/`, { execution_mode: execution, daily_risk_limit_cents: Math.round(dailyRisk * 100), per_trade_limit_cents: Math.round(perTrade * 100), minimum_edge_bps: Math.round(minEdge * 100), never_chase: true }); setMessage("EDGE rules saved."); await loadDashboard(); } catch { setMessage("Could not save EDGE settings."); } }
-  async function handleKeyFile(event) { const file = event.target.files?.[0]; if (file) setPrivateKey(await file.text()); }
-  async function connectKalshi() { if (!apiKeyId.trim() || !privateKey.includes("PRIVATE KEY")) return setMessage("Add the Kalshi Key ID and private-key file."); setSavingConnection(true); try { const response = await api.post("/edge/exchanges/kalshi/", { environment, api_key_id: apiKeyId.trim(), private_key: privateKey }); setMessage(response.data?.message || "Kalshi connected."); setConnectOpen(false); setPrivateKey(""); setApiKeyId(""); await loadDashboard(); } catch (error) { setMessage(error?.response?.data?.detail || "Kalshi connection could not be verified."); } finally { setSavingConnection(false); } }
+  async function loadDashboard() {
+    try {
+      const response = await api.get("/edge/dashboard/");
+      setDashboard(response.data);
+      const strategy = response.data?.strategy;
+      if (strategy) {
+        setExecution(strategy.execution_mode === "AUTO" ? "AUTO" : "MANUAL");
+        setDailyRisk(Number(strategy.daily_risk_limit_cents || 3000) / 100);
+        setPerTrade(Number(strategy.per_trade_limit_cents || 500) / 100);
+        setMinEdge(Number(strategy.minimum_edge_bps || 500) / 100);
+      }
+    } catch {
+      setMessage("EDGE account settings are temporarily unavailable.");
+    }
+  }
 
-  const connection = dashboard?.connections?.find((item) => item.exchange === "KALSHI"); const liveGames = liveBoard?.games || [];
+  async function loadLiveBoard(silent = false, requestedSport = sport) {
+    if (!silent) setLiveLoading(true);
+    try {
+      const response = await api.get(endpoints[requestedSport], { params: { minimum_edge: minEdge } });
+      setLiveBoard(response.data);
+      setLastLiveRefresh(new Date());
+    } catch {
+      if (!silent) {
+        setLiveBoard(null);
+        setMessage(`${requestedSport} data is temporarily unavailable.`);
+      }
+    } finally {
+      if (!silent) setLiveLoading(false);
+    }
+  }
+
+  useEffect(() => { loadDashboard(); }, []);
+  useEffect(() => {
+    setSelectedSignal(null);
+    loadLiveBoard(false, sport);
+    const seconds = sport === "MLB" ? 10 : 30;
+    const timer = window.setInterval(() => loadLiveBoard(true, sport), seconds * 1000);
+    return () => window.clearInterval(timer);
+  }, [sport, minEdge]);
+
+  async function saveStrategy() {
+    const id = dashboard?.strategy?.id;
+    if (!id) return setMessage("EDGE strategy settings are not available yet.");
+    try {
+      await api.patch(`/edge/strategies/${id}/`, {
+        execution_mode: execution,
+        daily_risk_limit_cents: Math.round(dailyRisk * 100),
+        per_trade_limit_cents: Math.round(perTrade * 100),
+        minimum_edge_bps: Math.round(minEdge * 100),
+        never_chase: true,
+      });
+      setMessage("EDGE rules saved.");
+      await loadDashboard();
+      await loadLiveBoard();
+    } catch {
+      setMessage("Could not save EDGE settings.");
+    }
+  }
+
+  async function handleKeyFile(event) {
+    const file = event.target.files?.[0];
+    if (file) setPrivateKey(await file.text());
+  }
+
+  async function connectKalshi() {
+    if (!apiKeyId.trim() || !privateKey.includes("PRIVATE KEY")) return setMessage("Add the Kalshi Key ID and private-key file.");
+    setSavingConnection(true);
+    try {
+      const response = await api.post("/edge/exchanges/kalshi/", { environment, api_key_id: apiKeyId.trim(), private_key: privateKey });
+      setMessage(response.data?.message || "Kalshi connected.");
+      setConnectOpen(false);
+      setPrivateKey("");
+      setApiKeyId("");
+      await loadDashboard();
+    } catch (error) {
+      setMessage(error?.response?.data?.detail || "Kalshi connection could not be verified.");
+    } finally {
+      setSavingConnection(false);
+    }
+  }
+
+  const connection = dashboard?.connections?.find((item) => item.exchange === "KALSHI");
+  const liveGames = liveBoard?.games || [];
   const observedAt = lastLiveRefresh?.toISOString?.() || null;
-  const liveSignals = useMemo(() => (liveBoard?.signals || []).map((item) => adaptSignal(item, minEdge, observedAt)).sort((a, b) => { const rank = { GREEN: 3, YELLOW: 2, RED: 1 }; return (rank[b.signal] - rank[a.signal]) || (b.edge - a.edge) || (b.score - a.score); }), [liveBoard, minEdge, observedAt]);
-  const signals = sport === "MLB" || sport === "ALL" ? liveSignals : []; const greenSignals = liveSignals.filter((i) => i.signal === "GREEN"); const watchSignals = liveSignals.filter((i) => i.signal === "YELLOW"); const liveCount = liveGames.filter((g) => g.is_live).length; const visibleSignals = signals.slice(0, 12); const buyFirstId = greenSignals[0]?.id ?? null;
+  const liveSignals = useMemo(() => (liveBoard?.signals || []).map((item) => adaptSignal(item, minEdge, observedAt)).sort((a, b) => {
+    const rank = { GREEN: 3, YELLOW: 2, RED: 1 };
+    return (rank[b.signal] - rank[a.signal]) || (Number(b.primary_price_band) - Number(a.primary_price_band)) || (b.edge - a.edge) || (b.score - a.score);
+  }), [liveBoard, minEdge, observedAt]);
 
-  return <DashboardShell><main className="mx-auto w-full max-w-[1500px] space-y-3 px-2.5 pb-28 pt-3 sm:space-y-4 sm:px-5 lg:px-8">
-    <section className="rounded-2xl border border-cyan-400/20 bg-slate-950/70 p-3 sm:p-5"><div className="flex items-center justify-between gap-3"><div><div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[.18em] text-cyan-200"><Zap className="h-3.5 w-3.5" /> EDGE</div><h1 className="mt-1 text-xl font-black text-white sm:text-3xl">Find the entry. Trade the repricing.</h1><p className="mt-1 hidden text-sm text-slate-400 sm:block">Live signals, paper performance, research, and risk settings.</p></div><button type="button" onClick={() => loadLiveBoard()} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[.04] text-slate-300 sm:h-auto sm:w-auto sm:px-3 sm:py-2"><RefreshCw className="h-4 w-4" /><span className="ml-2 hidden text-xs font-black sm:inline">Refresh</span></button></div>{message ? <div className="mt-2 rounded-xl border border-white/10 bg-black/20 p-2.5 text-[11px] text-slate-300">{message}</div> : null}</section>
+  const greenSignals = liveSignals.filter((item) => item.signal === "GREEN");
+  const watchSignals = liveSignals.filter((item) => item.signal === "YELLOW");
+  const valueBandSignals = liveSignals.filter((item) => item.primary_price_band && item.signal !== "RED");
+  const visibleSignals = liveSignals.slice(0, 16);
+  const topEdgeId = greenSignals[0]?.id ?? null;
 
-    <nav className="sticky top-0 z-30 rounded-xl border border-white/10 bg-slate-950/90 p-1 backdrop-blur-xl"><div className="grid grid-cols-4 gap-1">{views.map(([key, label, Icon]) => <button key={key} type="button" onClick={() => setView(key)} className={`inline-flex min-h-10 items-center justify-center gap-1 rounded-lg px-2 text-[10px] font-black ${view === key ? "bg-cyan-500/15 text-cyan-100 ring-1 ring-cyan-300/25" : "text-slate-400"}`}><Icon className="h-3.5 w-3.5" /><span>{label}</span></button>)}</div></nav>
+  return <DashboardShell><main className="mx-auto w-full max-w-[1320px] space-y-2 px-2 pb-28 pt-2 sm:space-y-3 sm:px-4 lg:px-6">
+    <section className="rounded-xl border border-cyan-400/20 bg-slate-950/70 p-2.5 sm:p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[.16em] text-cyan-200"><Zap className="h-3 w-3" /> EDGE Sports</div>
+          <h1 className="mt-0.5 truncate text-lg font-black text-white sm:text-2xl">Find mispriced football contracts.</h1>
+          <div className="mt-0.5 text-[9px] text-slate-500">$100 pool • 4 × $25 • 25–45¢ primary band • $5 normal / $7.50 strong edge</div>
+        </div>
+        <button type="button" onClick={() => loadLiveBoard()} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[.04] text-slate-300"><RefreshCw className="h-3.5 w-3.5" /></button>
+      </div>
+      {message ? <div className="mt-2 rounded-lg border border-white/10 bg-black/20 px-2.5 py-2 text-[9px] text-slate-300">{message}</div> : null}
+    </section>
+
+    <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/10 bg-slate-950/80 p-1">
+      {sports.map((value) => <button key={value} type="button" onClick={() => setSport(value)} className={`min-h-8 rounded-lg px-2 text-[9px] font-black ${sport === value ? "bg-cyan-500/15 text-cyan-100 ring-1 ring-cyan-300/25" : "text-slate-500"}`}>{value === "NCAAF" ? "COLLEGE" : value}</button>)}
+    </div>
+
+    <nav className="sticky top-0 z-30 rounded-xl border border-white/10 bg-slate-950/90 p-1 backdrop-blur-xl">
+      <div className="grid grid-cols-4 gap-1">{views.map(([key, label, Icon]) => <button key={key} type="button" onClick={() => setView(key)} className={`inline-flex min-h-8 items-center justify-center gap-1 rounded-lg px-1.5 text-[8px] font-black ${view === key ? "bg-white/[.07] text-white" : "text-slate-500"}`}><Icon className="h-3 w-3" /><span>{label}</span></button>)}</div>
+    </nav>
 
     {view === "LIVE" ? <>
-      <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5"><Metric label="PRIME" value={String(greenSignals.length)} detail={`≥ +${minEdge}%`} /><Metric label="Watch" value={String(watchSignals.length)} /><Metric label="Live MLB" value={String(liveCount)} detail={`${liveGames.length} games`} /><div className="hidden sm:block"><Metric label="Per trade" value={`$${perTrade}`} detail={`$${dailyRisk} daily max`} /></div><div className="hidden xl:block"><Metric label="As of" value={lastLiveRefresh ? lastLiveRefresh.toLocaleDateString([], { month: "numeric", day: "numeric" }) : "—"} detail={lastLiveRefresh ? lastLiveRefresh.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" }) : "Waiting for feed"} /></div></section>
-      <section className="rounded-xl border border-white/10 bg-slate-950/55 p-2.5"><div className="mb-2 flex items-center justify-between"><div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[.14em] text-emerald-200"><Wifi className="h-3.5 w-3.5" /> Live ticker</div><span className="text-[9px] text-slate-600">As of {formatDateTime(observedAt)}</span></div>{liveLoading ? <div className="p-2 text-xs text-slate-500">Loading…</div> : <div className="flex gap-2 overflow-x-auto pb-1">{liveGames.slice(0, 12).map((game) => <TickerItem key={game.game_pk} game={game} />)}</div>}</section>
-      <section className="space-y-2"><div className="flex items-center justify-between gap-3"><div><div className="text-[9px] font-black uppercase tracking-[.15em] text-cyan-200">Market scanner</div><h2 className="text-base font-black text-white sm:text-xl">Best signals first</h2><div className="mt-0.5 text-[9px] text-slate-600">Ranked at {formatDateTime(observedAt)} • BUY FIRST can change each refresh</div></div><div className="flex gap-1">{["MLB", "NFL", "NCAAF"].map((value) => <button key={value} type="button" onClick={() => setSport(value)} className={`rounded-lg border px-2.5 py-1.5 text-[9px] font-black ${sport === value ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100" : "border-white/10 text-slate-500"}`}>{value}</button>)}</div></div>{visibleSignals.length ? <div className="space-y-1.5">{visibleSignals.map((item) => <SignalRow key={item.id} item={item} priority={item.id === buyFirstId} onOpen={setSelectedSignal} />)}</div> : <div className="rounded-xl border border-dashed border-white/10 p-4 text-xs text-slate-500">{sport === "MLB" ? "No matched signals right now." : `${sport} live adapter is not connected yet.`}</div>}</section>
+      <section className="grid grid-cols-4 gap-1">
+        <Metric label="Prime" value={String(greenSignals.length)} detail={`≥+${minEdge}%`} />
+        <Metric label="Watch" value={String(watchSignals.length)} />
+        <Metric label="25–45¢" value={String(valueBandSignals.length)} detail="value band" />
+        <Metric label="Games" value={String(liveGames.length)} detail={sport} />
+      </section>
+
+      <section className="rounded-xl border border-white/10 bg-slate-950/55 p-2">
+        <div className="mb-1.5 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-[.13em] text-emerald-200"><Wifi className="h-3 w-3" /> {sport} slate</div>
+          <span className="text-[8px] text-slate-600">{formatDateTime(observedAt)}</span>
+        </div>
+        {liveLoading ? <div className="p-2 text-[10px] text-slate-500">Loading {sport}…</div> : liveGames.length ? <div className="flex gap-1.5 overflow-x-auto pb-1">{liveGames.slice(0, 20).map((game) => <TickerItem key={game.game_pk} game={game} sport={sport} />)}</div> : <div className="p-2 text-[10px] text-slate-500">No games found in the current slate window.</div>}
+      </section>
+
+      <section className="space-y-1.5">
+        <div className="flex items-end justify-between gap-2 px-0.5">
+          <div>
+            <div className="text-[8px] font-black uppercase tracking-[.13em] text-cyan-200">Value scanner</div>
+            <h2 className="text-sm font-black text-white">Best price gaps first</h2>
+          </div>
+          <div className="text-right text-[8px] leading-3 text-slate-600">{liveBoard?.source || "Kalshi"}<br />{liveBoard?.model?.version || ""}</div>
+        </div>
+
+        {visibleSignals.length ? <div className="space-y-1">{visibleSignals.map((item) => <SignalRow key={item.id} item={item} priority={item.id === topEdgeId} onOpen={setSelectedSignal} />)}</div> : <div className="rounded-xl border border-dashed border-white/10 p-4 text-[10px] text-slate-500">{liveLoading ? "Scanning…" : `No matched ${sport} signals. Games without a matched Kalshi market or usable reference odds are skipped.`}</div>}
+      </section>
     </> : null}
 
-    {view === "PORTFOLIO" ? <div className="space-y-4"><EdgeStrategyV2Race /><details className="rounded-2xl border border-white/10 bg-slate-950/50"><summary className="cursor-pointer px-4 py-3 text-xs font-black text-slate-300">Legacy frozen A/B/E strategy lab</summary><div className="border-t border-white/10 p-2 sm:p-4"><EdgeLivePaperPortfolio /></div></details></div> : null}
+    {view === "PORTFOLIO" ? <div className="space-y-3"><EdgeStrategyV2Race /><details className="rounded-xl border border-white/10 bg-slate-950/50"><summary className="cursor-pointer px-3 py-2.5 text-[10px] font-black text-slate-300">Legacy frozen A/B/E strategy lab</summary><div className="border-t border-white/10 p-2"><EdgeLivePaperPortfolio /></div></details></div> : null}
     {view === "RESEARCH" ? <EdgeResearchLab /> : null}
-    {view === "SETTINGS" ? <div className="grid gap-3 lg:grid-cols-2"><section className="rounded-2xl border border-white/10 bg-slate-950/60 p-4"><div className="flex items-center gap-2"><SlidersHorizontal className="h-4 w-4 text-cyan-300" /><h2 className="font-black text-white">Trading rules</h2></div><div className="mt-3 grid grid-cols-2 gap-2"><button onClick={() => setExecution("MANUAL")} className={`rounded-xl border p-3 text-xs font-black ${execution === "MANUAL" ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100" : "border-white/10 text-slate-400"}`}>Manual</button><button onClick={() => setExecution("AUTO")} className={`rounded-xl border p-3 text-xs font-black ${execution === "AUTO" ? "border-emerald-300/30 bg-emerald-500/10 text-emerald-100" : "border-white/10 text-slate-400"}`}>Pre-approved</button></div><div className="mt-3 grid gap-3 sm:grid-cols-3"><label className="text-xs font-black text-slate-300">Daily max<input type="number" value={dailyRisk} onChange={(e) => setDailyRisk(Number(e.target.value || 0))} className="mt-1 w-full rounded-xl border border-white/10 bg-black/20 p-3 text-white" /></label><label className="text-xs font-black text-slate-300">Per trade<input type="number" value={perTrade} onChange={(e) => setPerTrade(Number(e.target.value || 0))} className="mt-1 w-full rounded-xl border border-white/10 bg-black/20 p-3 text-white" /></label><label className="text-xs font-black text-slate-300">Min edge %<input type="number" value={minEdge} onChange={(e) => setMinEdge(Number(e.target.value || 0))} className="mt-1 w-full rounded-xl border border-white/10 bg-black/20 p-3 text-white" /></label></div><button onClick={saveStrategy} className="mt-3 w-full rounded-xl border border-cyan-300/30 bg-cyan-500/10 p-3 text-xs font-black text-cyan-100">Save rules</button></section><section className="rounded-2xl border border-white/10 bg-slate-950/60 p-4"><div className="flex items-center gap-2"><LockKeyhole className="h-4 w-4 text-violet-300" /><h2 className="font-black text-white">Kalshi connection</h2></div><div className="mt-3 flex items-center justify-between rounded-xl border border-white/10 bg-black/20 p-3"><span className="text-sm font-black text-white">Kalshi</span><span className="text-xs text-slate-400">{connection?.connected ? "Connected" : "Not connected"}</span></div>{!connectOpen ? <button onClick={() => setConnectOpen(true)} className="mt-3 w-full rounded-xl border border-violet-300/30 bg-violet-500/10 p-3 text-xs font-black text-violet-100">Connect Kalshi</button> : <div className="mt-3 space-y-2"><select value={environment} onChange={(e) => setEnvironment(e.target.value)} className="w-full rounded-xl border border-white/10 bg-slate-950 p-3 text-sm text-white"><option value="DEMO">Demo / test</option><option value="LIVE">Live account</option></select><input value={apiKeyId} onChange={(e) => setApiKeyId(e.target.value)} placeholder="Kalshi API Key ID" className="w-full rounded-xl border border-white/10 bg-slate-950 p-3 text-sm text-white" /><input type="file" accept=".key,.txt,text/plain" onChange={handleKeyFile} className="w-full text-xs text-slate-400" /><button disabled={savingConnection} onClick={connectKalshi} className="w-full rounded-xl border border-violet-300/30 bg-violet-500/10 p-3 text-xs font-black text-violet-100">{savingConnection ? "Verifying…" : "Connect"}</button></div>}</section><section className="lg:col-span-2 rounded-2xl border border-rose-400/15 bg-rose-500/[.04] p-4"><div className="flex items-start gap-3"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" /><div><div className="font-black text-white">Risk & disclosures</div><p className="mt-1 text-xs leading-5 text-slate-400">EDGE is experimental. PRIME and BUY FIRST are rankings, not guarantees. Paper results can differ from live results because of fees, spread, liquidity, slippage, latency, market movement, and execution quality. Past or simulated performance does not guarantee future results. Only risk capital you can afford to lose and follow all applicable platform rules and laws.</p></div></div></section></div> : null}
 
-    <SignalDrawer item={selectedSignal} priority={selectedSignal?.id === buyFirstId} onClose={() => setSelectedSignal(null)} />
+    {view === "SETTINGS" ? <div className="grid gap-2 lg:grid-cols-2">
+      <section className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
+        <div className="flex items-center gap-1.5"><SlidersHorizontal className="h-3.5 w-3.5 text-cyan-300" /><h2 className="text-sm font-black text-white">Risk rules</h2></div>
+        <div className="mt-2 grid grid-cols-2 gap-1.5"><button onClick={() => setExecution("MANUAL")} className={`rounded-lg border p-2 text-[9px] font-black ${execution === "MANUAL" ? "border-cyan-300/30 bg-cyan-500/10 text-cyan-100" : "border-white/10 text-slate-400"}`}>Manual</button><button onClick={() => setExecution("AUTO")} className={`rounded-lg border p-2 text-[9px] font-black ${execution === "AUTO" ? "border-emerald-300/30 bg-emerald-500/10 text-emerald-100" : "border-white/10 text-slate-400"}`}>Pre-approved</button></div>
+        <div className="mt-2 grid grid-cols-3 gap-1.5">
+          <label className="text-[9px] font-black text-slate-400">Daily max<input type="number" value={dailyRisk} onChange={(e) => setDailyRisk(Number(e.target.value || 0))} className="mt-1 w-full rounded-lg border border-white/10 bg-black/20 p-2 text-xs text-white" /></label>
+          <label className="text-[9px] font-black text-slate-400">Per trade<input type="number" value={perTrade} onChange={(e) => setPerTrade(Number(e.target.value || 0))} className="mt-1 w-full rounded-lg border border-white/10 bg-black/20 p-2 text-xs text-white" /></label>
+          <label className="text-[9px] font-black text-slate-400">Min edge %<input type="number" value={minEdge} onChange={(e) => setMinEdge(Number(e.target.value || 0))} className="mt-1 w-full rounded-lg border border-white/10 bg-black/20 p-2 text-xs text-white" /></label>
+        </div>
+        <button onClick={saveStrategy} className="mt-2 w-full rounded-lg border border-cyan-300/30 bg-cyan-500/10 p-2 text-[9px] font-black text-cyan-100">Save rules</button>
+      </section>
+
+      <section className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
+        <div className="flex items-center gap-1.5"><LockKeyhole className="h-3.5 w-3.5 text-violet-300" /><h2 className="text-sm font-black text-white">Kalshi connection</h2></div>
+        <div className="mt-2 flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-2.5 py-2"><span className="text-xs font-black text-white">Kalshi</span><span className="text-[9px] text-slate-400">{connection?.connected ? "Connected" : "Not connected"}</span></div>
+        {!connectOpen ? <button onClick={() => setConnectOpen(true)} className="mt-2 w-full rounded-lg border border-violet-300/30 bg-violet-500/10 p-2 text-[9px] font-black text-violet-100">Connect Kalshi</button> : <div className="mt-2 space-y-1.5"><select value={environment} onChange={(e) => setEnvironment(e.target.value)} className="w-full rounded-lg border border-white/10 bg-slate-950 p-2 text-xs text-white"><option value="DEMO">Demo / test</option><option value="LIVE">Live account</option></select><input value={apiKeyId} onChange={(e) => setApiKeyId(e.target.value)} placeholder="Kalshi API Key ID" className="w-full rounded-lg border border-white/10 bg-slate-950 p-2 text-xs text-white" /><input type="file" accept=".key,.txt,text/plain" onChange={handleKeyFile} className="w-full text-[9px] text-slate-400" /><button disabled={savingConnection} onClick={connectKalshi} className="w-full rounded-lg border border-violet-300/30 bg-violet-500/10 p-2 text-[9px] font-black text-violet-100">{savingConnection ? "Verifying…" : "Connect"}</button></div>}
+      </section>
+
+      <section className="lg:col-span-2 rounded-xl border border-rose-400/15 bg-rose-500/[.04] p-3">
+        <div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-300" /><p className="text-[9px] leading-4 text-slate-400"><span className="font-black text-white">Risk:</span> EDGE is experimental. Reference odds, Kalshi prices, spreads, liquidity and fees can change. Paper results can differ from live execution. Only risk capital you can afford to lose.</p></div>
+      </section>
+    </div> : null}
+
+    <SignalDrawer item={selectedSignal} priority={selectedSignal?.id === topEdgeId} onClose={() => setSelectedSignal(null)} />
   </main></DashboardShell>;
 }
