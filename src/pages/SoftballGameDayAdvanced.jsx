@@ -60,6 +60,7 @@ import {
   uploadGameBookPhoto,
   deleteGameBookPhoto,
 } from "../api/sports";
+import { saveGameBookImage } from "../utils/sportsGameBookImage";
 
 const RESULTS = [
   { value: "1B", label: "1B", detail: "Single", outs: 0, tone: "cyan" },
@@ -383,6 +384,7 @@ export default function SoftballGameDayAdvanced() {
   const [bookPhotos, setBookPhotos] = useState([]);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState("");
+  const [exportBusy, setExportBusy] = useState(false);
   const bookPhotoInputRef = useRef(null);
   const bookLibraryInputRef = useRef(null);
   const scorebookRef = useRef(null);
@@ -652,6 +654,59 @@ export default function SoftballGameDayAdvanced() {
       setError(errorText(err));
       return null;
     } finally { setBusy(false); }
+  }
+
+  async function saveBookImage() {
+    if (!game || exportBusy) return;
+    setExportBusy(true);
+    setError("");
+    try {
+      const exportPlayers = scorebookRows.map((spot) => {
+        const stats = playerGameMetrics.get(num(spot.player)) || gameBattingMetrics([]);
+        return {
+          ...spot,
+          stats: {
+            pa: stats.pa,
+            ab: stats.ab,
+            h: stats.hits,
+            rbi: stats.rbi,
+            runs: stats.runs,
+            hr: plays.filter((play) => num(play.player) === num(spot.player) && play.result === "HR").length,
+          },
+        };
+      });
+      await saveGameBookImage({
+        game: { ...game, inning_grid: list(game?.inning_lines).map((row) => ({
+          inning: row.inning,
+          runs: num(inningTotals.get(num(row.inning))?.runs),
+          hits: num(inningTotals.get(num(row.inning))?.hits),
+          opponent_runs: row.opponent_runs,
+          opponent_hits: row.opponent_hits,
+        })) },
+        bookPlayers: exportPlayers,
+        plays,
+        innings: innings.map((inning) => ({
+          inning,
+          runs: num(inningTotals.get(inning)?.runs),
+          hits: num(inningTotals.get(inning)?.hits),
+          opponent_runs: num(opponentInningMap.get(inning)?.opponent_runs),
+          opponent_hits: num(opponentInningMap.get(inning)?.opponent_hits),
+        })),
+        gameTotals: {
+          pa: teamGameMetrics.pa,
+          ab: teamGameMetrics.ab,
+          h: teamGameMetrics.hits,
+          rbi: teamGameMetrics.rbi,
+          runs: teamGameMetrics.runs,
+          hr: plays.filter((play) => play.result === "HR").length,
+        },
+      });
+      setNotice("Game Book image created.");
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setExportBusy(false);
+    }
   }
 
   function applyResult(row, choice = null) {
@@ -1504,6 +1559,114 @@ export default function SoftballGameDayAdvanced() {
               </div>
             </div>
           </>
+        ) : null}
+
+        {final ? (
+          <div className="space-y-2.5">
+            <section ref={scorebookRef} className="scroll-mt-28 rounded-2xl border border-cyan-300/15 bg-[#07111f] p-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div className="text-[8px] font-black uppercase tracking-[.14em] text-cyan-300">Final Digital Game Book</div>
+                  <div className="mt-0.5 text-[8px] text-slate-500">Tap any plate appearance to correct the historical game. Changes rebuild the game statistics while the official final score stays intact.</div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {canScore ? <Button onClick={()=>openHistoricalAdd()}><Plus className="mr-1 inline h-3.5 w-3.5"/>Add PA</Button> : null}
+                  <Button disabled={exportBusy || !scorebookRows.length} onClick={saveBookImage}><ImageIcon className="mr-1 inline h-3.5 w-3.5"/>{exportBusy ? "Creating…" : "Save image"}</Button>
+                  {canManage ? <Button onClick={openGameEdit}><Edit3 className="mr-1 inline h-3.5 w-3.5"/>Final score</Button> : null}
+                </div>
+              </div>
+
+              <div className="mt-2 overflow-x-auto rounded-xl border border-white/8">
+                <table className="min-w-max border-collapse text-center text-[8px]">
+                  <thead>
+                    <tr className="bg-[#091421]">
+                      <th className="sticky left-0 z-20 min-w-28 bg-[#091421] px-2 py-2 text-left text-slate-500">PLAYER</th>
+                      {innings.map((inning)=><th key={inning} className="min-w-16 border-l border-white/5 px-1 py-2 text-slate-500">{inning}</th>)}
+                      <th className="border-l border-cyan-300/10 px-2 text-cyan-200">H/AB</th>
+                      <th className="border-l border-cyan-300/10 px-2 text-cyan-200">R</th>
+                      <th className="border-l border-cyan-300/10 px-2 text-cyan-200">RBI</th>
+                      <th className="border-l border-cyan-300/10 px-2 text-cyan-200">HR</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {scorebookRows.map((spot)=>{
+                      const metrics=playerGameMetrics.get(num(spot.player))||gameBattingMetrics([]);
+                      const homeRuns=plays.filter((play)=>num(play.player)===num(spot.player)&&play.result==="HR").length;
+                      return (
+                        <tr key={spot.key || spot.id} className="border-t border-white/5">
+                          <td className="sticky left-0 z-10 max-w-28 bg-[#07111f] px-2 py-2 text-left font-black text-white">
+                            <button type="button" onClick={()=>openPlayerCard(spot.player)} className="max-w-28 text-left">
+                              <span className="block truncate">{spot.batting_order}. {spot.player_detail?.display_name}{spot.sub_label ? " · " + spot.sub_label : ""}</span>
+                              <span className="block text-[7px] font-medium text-slate-500">#{spot.player_detail?.jersey_number||"—"} · {spot.player_detail?.primary_position||"—"}</span>
+                            </button>
+                          </td>
+                          {innings.map((inning)=>{
+                            const rows=cellMap.get(String(spot.player) + "-" + inning)||[];
+                            return (
+                              <td key={inning} className="border-l border-white/5 px-1 py-1">
+                                <div className="flex justify-center gap-0.5">
+                                  {rows.map((play)=>(
+                                    <button
+                                      key={play.id}
+                                      type="button"
+                                      disabled={!canScore}
+                                      onClick={() => canScore && openPlayEditor(play)}
+                                      className={cx(
+                                        "rounded px-1 py-0.5 font-black",
+                                        canScore && "cursor-pointer transition hover:ring-1 hover:ring-cyan-300/40",
+                                        ["1B","2B","3B","HR"].includes(play.result)
+                                          ? "bg-emerald-300/15 text-emerald-100"
+                                          : play.result==="BB"
+                                            ? "bg-violet-300/15 text-violet-100"
+                                            : "bg-white/[.05] text-slate-300",
+                                      )}
+                                    >
+                                      <span className="flex min-w-10 flex-col items-center justify-center gap-0.5">
+                                        <span className="text-[8px]">{playBadge(play)}</span>
+                                        <span className="text-[6px] text-slate-400">{num(play.rbi)>0?num(play.rbi)+" RBI":""}{num(play.rbi)>0&&num(play.runs_scored)>0?" · ":""}{num(play.runs_scored)>0?"+"+num(play.runs_scored)+" R":""}</span>
+                                      </span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </td>
+                            );
+                          })}
+                          <td className="border-l border-cyan-300/10 px-2 font-black text-cyan-100">{metrics.hits}/{metrics.ab}</td>
+                          <td className="border-l border-white/5 px-2 font-black text-slate-200">{metrics.runs}</td>
+                          <td className="border-l border-white/5 px-2 font-black text-slate-200">{metrics.rbi}</td>
+                          <td className="border-l border-white/5 px-2 font-black text-slate-200">{homeRuns}</td>
+                        </tr>
+                      );
+                    })}
+                    <tr className="border-t border-cyan-300/15 bg-cyan-300/[.025]">
+                      <td className="sticky left-0 z-10 bg-[#07111f] px-2 py-2 text-left font-black text-cyan-200">TEAM</td>
+                      {innings.map((inning)=>{const t=inningTotals.get(inning)||{};return <td key={inning} className="border-l border-white/5 px-1 py-2 font-black text-cyan-100">{num(t.runs)} R · {num(t.hits)} H</td>;})}
+                      <td className="border-l border-cyan-300/10 px-2 font-black text-cyan-100">{teamGameMetrics.hits}/{teamGameMetrics.ab}</td>
+                      <td className="border-l border-white/5 px-2 font-black text-slate-200">{game.runs_for}</td>
+                      <td className="border-l border-white/5 px-2 font-black text-slate-200">{teamGameMetrics.rbi}</td>
+                      <td className="border-l border-white/5 px-2 font-black text-slate-200">{plays.filter((play)=>play.result==="HR").length}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <div className="grid gap-2 lg:grid-cols-[1.15fr_.85fr]">
+              <SoftballDefenseField lineup={lineup} bench={benchPlayers} badgeRings={badgeRings} title="Final defense & lineup" compact />
+              <section className="rounded-2xl border border-violet-300/15 bg-[#07111f] p-3">
+                <div className="text-[8px] font-black uppercase tracking-[.14em] text-violet-300">Game stats</div>
+                <div className="mt-2 grid grid-cols-3 gap-1.5">
+                  <div className="rounded-xl border border-white/10 bg-black/20 p-2 text-center"><div className="text-[7px] text-slate-500">HITS</div><div className="text-xl font-black text-white">{teamGameMetrics.hits}</div></div>
+                  <div className="rounded-xl border border-white/10 bg-black/20 p-2 text-center"><div className="text-[7px] text-slate-500">RBI</div><div className="text-xl font-black text-white">{teamGameMetrics.rbi}</div></div>
+                  <div className="rounded-xl border border-white/10 bg-black/20 p-2 text-center"><div className="text-[7px] text-slate-500">HR</div><div className="text-xl font-black text-white">{plays.filter((play)=>play.result==="HR").length}</div></div>
+                  <div className="rounded-xl border border-white/10 bg-black/20 p-2 text-center"><div className="text-[7px] text-slate-500">AVG</div><div className="text-xl font-black text-white">{teamGameMetrics.avg.toFixed(3)}</div></div>
+                  <div className="rounded-xl border border-white/10 bg-black/20 p-2 text-center"><div className="text-[7px] text-slate-500">OBP</div><div className="text-xl font-black text-white">{teamGameMetrics.obp.toFixed(3)}</div></div>
+                  <div className="rounded-xl border border-white/10 bg-black/20 p-2 text-center"><div className="text-[7px] text-slate-500">OPS</div><div className="text-xl font-black text-white">{teamGameMetrics.ops.toFixed(3)}</div></div>
+                </div>
+                <Button primary className="mt-2 w-full" disabled={exportBusy || !scorebookRows.length} onClick={saveBookImage}><ImageIcon className="mr-1 inline h-3.5 w-3.5"/>{exportBusy ? "Creating image…" : "Save full Game Book image"}</Button>
+              </section>
+            </div>
+          </div>
         ) : null}
 
         {canScore && gamecastOpen && gamecast ? createPortal(
