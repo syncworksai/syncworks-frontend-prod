@@ -34,6 +34,7 @@ import {
 import TeamChatPanel from "../components/sports/TeamChatPanel";
 import GameAvailabilityCard, { availabilityStatus } from "../components/sports/GameAvailabilityCard";
 import InteractiveStatsBoard from "../components/sports/InteractiveStatsBoard";
+import EditableStatsGrid from "../components/sports/EditableStatsGrid";
 import SoftballDefenseField from "../components/sports/SoftballDefenseField";
 import TeamRewardSettings from "../components/sports/TeamRewardSettings";
 import SportsTeamMobileNav from "../components/sports/SportsTeamMobileNav";
@@ -51,7 +52,6 @@ import {
   createPlayerAward,
   createSportsGame,
   createSportsPlayer,
-  createStatLedgerEntry,
   createTeamFee,
   finishSportsGame,
   ensureTeamPaymentSettings,
@@ -176,7 +176,7 @@ function Stat({ label, value, sub }) {
   return <div className="rounded-xl border border-white/10 bg-black/15 p-2.5"><div className="text-[8px] font-black uppercase tracking-[.13em] text-slate-500">{label}</div><div className="mt-1 text-lg font-black text-white">{value}</div>{sub ? <div className="text-[9px] text-slate-500">{sub}</div> : null}</div>;
 }
 
-function Drawer({ title, onClose, children }) {
+function Drawer({ title, onClose, children, wide = false }) {
   useEffect(() => {
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -190,7 +190,7 @@ function Drawer({ title, onClose, children }) {
 
   return createPortal(
     <div className="fixed inset-0 z-[500] flex items-end justify-center bg-black/85 px-1 pt-[calc(env(safe-area-inset-top)+.5rem)] backdrop-blur-sm sm:items-center sm:px-3" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section role="dialog" aria-modal="true" aria-label={title} className="flex max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-.5rem)] w-full max-w-xl flex-col overflow-hidden rounded-t-[1.5rem] border border-cyan-300/20 bg-[#06101d] shadow-2xl sm:rounded-[1.7rem]">
+      <section role="dialog" aria-modal="true" aria-label={title} className={cx("flex max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-.5rem)] w-full flex-col overflow-hidden rounded-t-[1.5rem] border border-cyan-300/20 bg-[#06101d] shadow-2xl sm:rounded-[1.7rem]", wide ? "max-w-[96rem]" : "max-w-xl")}>
         <div className="z-10 flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-[#06101d] px-4 py-3">
           <div className="min-w-0"><div className="text-[9px] font-black uppercase tracking-[.16em] text-cyan-300">Team workspace</div><h2 className="mt-1 truncate text-base font-black text-white">{title}</h2></div>
           <button type="button" aria-label={"Close " + title} onClick={onClose} className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 text-xs font-black text-cyan-100"><X className="h-4 w-4" />Close</button>
@@ -273,7 +273,6 @@ export default function SportsTeamManagerDashboard({ initialMemberships = [] }) 
   const [awardBusy, setAwardBusy] = useState(false);
   const [awardForm, setAwardForm] = useState({ kind:"PLAYER_OF_WEEK", title:"Player of the Week", week_of:"", note:"" });
   const [statDrawer, setStatDrawer] = useState(false);
-  const [statForm, setStatForm] = useState({ player: "", scope: "LEAGUE", games: "", pa: "", ab: "", hits: "", doubles: "", triples: "", home_runs: "", walks: "", sac_flies: "", rbi: "", runs: "", note: "" });
 
   const [meta, setMeta] = useState({ season_name: "", league_name: "", division_name: "" });
   const [newPlayer, setNewPlayer] = useState({ display_name: "", jersey_number: "", primary_position: "", bats: "R", throws: "R", email: "", phone: "" });
@@ -1151,14 +1150,22 @@ export default function SportsTeamManagerDashboard({ initialMemberships = [] }) 
     setFeeEdit(null);
   }
 
-  async function saveStatEntry() {
-    if (!statForm.player) return;
-    const integerFields = ["games", "pa", "ab", "hits", "doubles", "triples", "home_runs", "walks", "sac_flies", "rbi", "runs"];
-    const payload = { team: team.id, player: Number(statForm.player), season_name: team.season_name || "", scope: statForm.scope, source: "MANUAL", note: statForm.note || "" };
-    integerFields.forEach((field) => { payload[field] = Math.max(0, Number.parseInt(statForm[field] || "0", 10) || 0); });
-    await run(() => createStatLedgerEntry(payload), "Historical stats added.");
-    setStatDrawer(false);
-    setStatForm({ player: "", scope: "LEAGUE", games: "", pa: "", ab: "", hits: "", doubles: "", triples: "", home_runs: "", walks: "", sac_flies: "", rbi: "", runs: "", note: "" });
+  async function handleStatsGridSaved(_row, _scope, _result) {
+    if (!team) return;
+    setNotice("Stats updated. Lineup, team leaders, League leaders and earned badges will use the adjusted totals.");
+    try {
+      const [summary, standings] = await Promise.all([
+        getScopedTeamStats(team.id, statsScope),
+        getTeamBadgeStandings(team.id),
+      ]);
+      setScopedStats(list(summary?.rows));
+      setBadgeRings(Object.fromEntries(
+        list(standings?.players).map((item) => [Number(item.player), item]),
+      ));
+      await refresh({ quiet: true });
+    } catch {
+      // The grid has already saved. Normal tab refreshes can retry the display updates.
+    }
   }
 
   if (loading) return <div className="grid min-h-screen place-items-center bg-[#02060c] text-white" aria-label="Loading team"><Loader2 className="h-8 w-8 animate-spin text-cyan-300" /></div>;
@@ -1795,7 +1802,13 @@ export default function SportsTeamManagerDashboard({ initialMemberships = [] }) 
         </div>
       </Drawer> : null}
 
-      {statDrawer ? <Drawer title="Add historical stats" onClose={() => setStatDrawer(false)}><div className="space-y-3"><div className="grid grid-cols-2 gap-2"><Select label="Player" value={statForm.player} onChange={(value) => setStatForm((v) => ({ ...v, player: value }))} className="col-span-2"><option value="">Choose player</option>{players.map((player) => <option key={player.id} value={player.id}>#{player.jersey_number || "—"} {player.display_name}</option>)}</Select><Select label="Bucket" value={statForm.scope} onChange={(value) => setStatForm((v) => ({ ...v, scope: value }))}><option value="LEAGUE">League</option><option value="TOURNAMENT">Tournament</option><option value="OTHER">Other</option></Select><Input label="Games" value={statForm.games} onChange={(value) => setStatForm((v) => ({ ...v, games: value }))} />{[["pa","PA"],["ab","AB"],["hits","H"],["doubles","2B"],["triples","3B"],["home_runs","HR"],["walks","BB"],["sac_flies","SF"],["rbi","RBI"],["runs","R"]].map(([key, label]) => <Input key={key} label={label} value={statForm[key]} onChange={(value) => setStatForm((v) => ({ ...v, [key]: value }))} />)}<Input label="Note" value={statForm.note} onChange={(value) => setStatForm((v) => ({ ...v, note: value }))} className="col-span-2" /></div><div className="rounded-xl border border-amber-300/15 bg-amber-300/[.04] p-3 text-[9px] text-amber-100">Manual history stays auditable and is added to Game Book statistics. It is never rewritten as if SyncWorks scored those games live.</div><Btn primary className="w-full" onClick={saveStatEntry} disabled={!statForm.player || busy}><Check className="mr-1 inline h-4 w-4" />Add to stats</Btn></div></Drawer> : null}
+      {statDrawer ? <Drawer wide title="Adjust player stats" onClose={() => setStatDrawer(false)}>
+        <EditableStatsGrid
+          teamId={team.id}
+          initialScope={statsScope === "TOURNAMENT" ? "TOURNAMENT" : "LEAGUE"}
+          onSaved={handleStatsGridSaved}
+        />
+      </Drawer> : null}
     </div>
   );
 }
