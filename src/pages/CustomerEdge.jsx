@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Activity, AlertTriangle, BarChart3, ChevronRight, LockKeyhole, RefreshCw, Settings2, ShieldCheck, SlidersHorizontal, WalletCards, Wifi, X, Zap } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, ChevronRight, LockKeyhole, RefreshCw, Settings2, SlidersHorizontal, WalletCards, Wifi, X, Zap } from "lucide-react";
 
 import api from "../api/client";
 import DashboardShell from "../components/dashboard/DashboardShell";
