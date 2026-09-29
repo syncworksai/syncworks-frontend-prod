@@ -271,6 +271,11 @@ export async function deleteSportsGameBook(id) {
   return data;
 }
 
+export async function editFinalSportsGame(id, payload) {
+  const { data } = await api.post(`/sports/games/${id}/edit-final/`, payload);
+  return data;
+}
+
 export async function reopenSportsGame(id) {
   const { data } = await api.post(`/sports/games/${id}/reopen/`, {});
   return data;
