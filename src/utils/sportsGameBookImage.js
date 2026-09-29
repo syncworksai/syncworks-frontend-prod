@@ -159,7 +159,10 @@ export async function saveGameBookImage({
   ctx.fillStyle = "#64748b";
   ctx.fillText([dateText, game.venue_name].filter(Boolean).join(" · "), width / 2, 300);
 
-  const inningGrid = new Map(list(game.inning_grid || innings).map((row) => [num(row.inning), row]));
+  const inningGrid = new Map([
+    ...list(innings),
+    ...list(game.inning_grid),
+  ].map((row) => [num(row.inning), row]));
   const left = 70;
   const right = width - 70;
   drawRoundedRect(ctx, left, top, right - left, scoreHeight, 24, "rgba(7,17,31,.92)", "rgba(148,163,184,.18)");
