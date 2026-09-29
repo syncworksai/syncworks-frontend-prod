@@ -38,7 +38,7 @@ export default function InteractiveStatsBoard({ rows, scope, onScope, managerVie
   return <section className="rounded-[1.35rem] border border-white/10 bg-[#07111f]/95 p-3 sm:p-4">
     <div className="flex items-start justify-between gap-3">
       <div><h2 className="text-sm font-black text-white">Stats grid</h2><p className="mt-1 text-[10px] leading-4 text-slate-500">MLB-style sheet: tap any column header to rank the entire roster. Tap again to reverse the sort.</p></div>
-      {managerView?<button type="button" onClick={onAdd} className="min-h-10 shrink-0 rounded-xl bg-amber-300 px-3 text-[10px] font-black text-slate-950"><Plus className="mr-1 inline h-4 w-4"/>Add history</button>:<Trophy className="h-4 w-4 text-amber-300"/>}
+      {managerView?<button type="button" onClick={onAdd} className="min-h-10 shrink-0 rounded-xl bg-amber-300 px-3 text-[10px] font-black text-slate-950"><Plus className="mr-1 inline h-4 w-4"/>Adjust stats</button>:<Trophy className="h-4 w-4 text-amber-300"/>}
     </div>
 
     <div className="mt-3">
