@@ -14,6 +14,13 @@ function responseData(response) {
   return response?.data ?? response ?? null;
 }
 
+export function isProfileVersionConflict(error) {
+  return (
+    Number(error?.status) === 409 &&
+    error?.payload?.code === "profile_version_conflict"
+  );
+}
+
 function normalizedError(error, fallbackMessage) {
   const status = getApiErrorStatus(error);
   const detail =
@@ -42,11 +49,25 @@ export async function getHealthAthleteProfile() {
   }
 }
 
-export async function updateHealthAthleteProfile(patch, { queueOnFailure = true } = {}) {
+export async function updateHealthAthleteProfile(
+  patch,
+  {
+    expectedProfileVersion = null,
+    queueOnFailure = true,
+  } = {}
+) {
   try {
     const response = await api.patch(
       "/health/profile/",
-      patch
+      {
+        ...patch,
+        ...(Number.isInteger(expectedProfileVersion)
+          ? {
+              expected_profile_version:
+                expectedProfileVersion,
+            }
+          : {}),
+      }
     );
     return responseData(response);
   } catch (error) {
@@ -65,11 +86,21 @@ export async function updateHealthAthleteProfile(patch, { queueOnFailure = true 
 export async function runHealthPlanControl({
   action,
   confirmed = false,
+  expectedProfileVersion = null,
 } = {}) {
   try {
     const response = await api.post(
       "/health/plan-control/",
-      { action, confirmed }
+      {
+        action,
+        confirmed,
+        ...(Number.isInteger(expectedProfileVersion)
+          ? {
+              expected_profile_version:
+                expectedProfileVersion,
+            }
+          : {}),
+      }
     );
     return responseData(response);
   } catch (error) {
@@ -82,13 +113,22 @@ export async function runHealthPlanControl({
 
 export async function updateHealthSimulationPreferences(
   simulationPreferences,
-  { queueOnFailure = true } = {}
+  {
+    expectedProfileVersion = null,
+    queueOnFailure = true,
+  } = {}
 ) {
   try {
     const response = await api.patch(
       "/health/simulation-preferences/",
       {
         simulation_preferences: simulationPreferences,
+        ...(Number.isInteger(expectedProfileVersion)
+          ? {
+              expected_profile_version:
+                expectedProfileVersion,
+            }
+          : {}),
       }
     );
     return responseData(response);
