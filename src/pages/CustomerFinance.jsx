@@ -9,7 +9,9 @@ import {
   Building2,
   CalendarClock,
   CreditCard,
+  CheckCircle2,
   Landmark,
+  LockKeyhole,
   Plus,
   RefreshCw,
   ShieldCheck,
@@ -17,6 +19,7 @@ import {
   Target,
   TrendingDown,
   TrendingUp,
+  Users,
   Wallet,
   X,
 } from "lucide-react";
@@ -39,6 +42,10 @@ const EMPTY_MANUAL = {
   minimum_payment: "",
   apr: "",
   payoff_target_date: "",
+  promo_apr: "",
+  promo_apr_end_date: "",
+  account_status: "OPEN",
+  paid_this_cycle: false,
   account_kind: "CHECKING",
   credit_limit: "",
   target_amount: "",
@@ -155,6 +162,8 @@ export default function CustomerFinance() {
   const hasFinanceAccess = Boolean(isGod || moduleAccess?.finance || moduleAccess?.money || moduleAccess?.customer_finance || moduleAccess?.customerFinance);
   const [dashboard, setDashboard] = useState(null);
   const [intelligence, setIntelligence] = useState(null);
+  const [householdFinance, setHouseholdFinance] = useState(null);
+  const [extraMonthly, setExtraMonthly] = useState("0");
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -163,19 +172,33 @@ export default function CustomerFinance() {
   const [manual, setManual] = useState(EMPTY_MANUAL);
   const [savingManual, setSavingManual] = useState(false);
 
-  const loadFinance = async () => {
+  const loadFinance = async (extraOverride = null) => {
     setLoading(true);
     setError("");
+    const extra = Math.max(0, Number(extraOverride ?? extraMonthly) || 0);
     try {
-      const [summaryResult, txResult, intelligenceResult] = await Promise.allSettled([
+      const [summaryResult, txResult, intelligenceResult, householdResult] = await Promise.allSettled([
         api.get(`${FINANCE_API}/dashboard/`),
         api.get(`${FINANCE_API}/transactions/`),
-        api.get(`${FINANCE_API}/automation/`),
+        api.get(`${FINANCE_API}/automation/`, { params: { extra_monthly: extra } }),
+        api.get("/household/households/"),
       ]);
       if (summaryResult.status !== "fulfilled") throw summaryResult.reason;
       setDashboard(summaryResult.value?.data || {});
       setTransactions(txResult.status === "fulfilled" ? listFrom(txResult.value?.data).slice(0, 10) : []);
       setIntelligence(intelligenceResult.status === "fulfilled" ? intelligenceResult.value?.data || {} : null);
+
+      const households = householdResult.status === "fulfilled" ? listFrom(householdResult.value?.data) : [];
+      if (households[0]?.id) {
+        try {
+          const response = await api.get(`/household/households/${households[0].id}/finance/`, { params: { extra_monthly: extra } });
+          setHouseholdFinance(response?.data || null);
+        } catch {
+          setHouseholdFinance(null);
+        }
+      } else {
+        setHouseholdFinance(null);
+      }
     } catch (err) {
       setError(err?.response?.data?.detail || err?.message || "Finance could not load yet.");
     } finally {
@@ -216,7 +239,7 @@ export default function CustomerFinance() {
     setSyncing(true);
     setError("");
     try {
-      await api.post(`${FINANCE_API}/automation/refresh/`, {});
+      await api.post(`${FINANCE_API}/automation/refresh/`, { extra_monthly: Math.max(0, Number(extraMonthly) || 0) });
       await loadFinance();
     } catch (err) {
       setError(err?.response?.data?.detail || "Finance refresh needs attention.");
@@ -231,7 +254,22 @@ export default function CustomerFinance() {
       if (manual.type === "ACCOUNT") {
         await api.post(`${FINANCE_API}/accounts/`, { name: manual.name, kind: manual.account_kind, current_balance: manual.balance || null, credit_limit: manual.credit_limit || null, is_manual: true });
       } else if (manual.type === "DEBT") {
-        await api.post(`${FINANCE_API}/liabilities/`, { name: manual.name, kind: manual.account_kind, outstanding_balance: manual.balance || null, minimum_payment: manual.minimum_payment || null, next_payment_amount: manual.minimum_payment || null, next_payment_date: manual.due_date || null, apr: manual.apr || null, payoff_target_date: manual.payoff_target_date || null, is_manual: true });
+        if (manual.account_kind === "CREDIT_CARD") {
+          await api.post(`${FINANCE_API}/automation/manual-card/`, {
+            name: manual.name,
+            balance: manual.balance || 0,
+            credit_limit: manual.credit_limit || null,
+            minimum_payment: manual.minimum_payment || null,
+            next_payment_date: manual.due_date || null,
+            apr: manual.apr || null,
+            promo_apr: manual.promo_apr || null,
+            promo_apr_end_date: manual.promo_apr_end_date || null,
+            account_status: manual.account_status || "OPEN",
+            paid_this_cycle: !!manual.paid_this_cycle,
+          });
+        } else {
+          await api.post(`${FINANCE_API}/liabilities/`, { name: manual.name, kind: manual.account_kind, outstanding_balance: manual.balance || null, minimum_payment: manual.minimum_payment || null, next_payment_amount: manual.minimum_payment || null, next_payment_date: manual.due_date || null, apr: manual.apr || null, payoff_target_date: manual.payoff_target_date || null, is_manual: true });
+        }
       } else if (manual.type === "GOAL") {
         await api.post(`${FINANCE_API}/goals/`, { name: manual.name, kind: "SAVINGS", target_amount: manual.target_amount || null, current_amount: manual.balance || 0, target_date: manual.target_date || null, active: true });
       } else if (manual.type === "BUDGET") {
@@ -259,6 +297,10 @@ export default function CustomerFinance() {
   const summary = intelligence?.summary || {};
   const budgets = intelligence?.budgets || [];
   const avalanche = intelligence?.debt_strategy?.avalanche || [];
+  const personalPlan = intelligence?.plan_1 || {};
+  const householdPlan = householdFinance?.plan_1 || null;
+  const activePlan = householdPlan || personalPlan;
+  const householdSummary = householdFinance?.summary || null;
   const actions = intelligence?.actions || [];
   const alerts = intelligence?.alerts || [];
   const safeToSpend = intelligence ? Number(summary.safe_to_spend_now || 0) : Math.max(0, Number(net.cash || 0) - Number(upcoming.total_due || 0));
@@ -299,6 +341,55 @@ export default function CustomerFinance() {
           <MetricCard label="Total debt" value={money(net.debt)} detail={`${liabilities.length} tracked liabilities`} tone="rose" />
           <MetricCard label="Month cash flow" value={money(month.cash_flow)} detail={`${money(month.income)} in • ${money(month.spending)} out`} tone={Number(month.cash_flow || 0) >= 0 ? "emerald" : "rose"} />
         </div>
+
+        <Panel
+          title="Debt Plan 1"
+          subtitle={householdFinance ? `${householdFinance.household?.name || "Household"} • privacy-aware combined plan` : "My debt plan"}
+          right={<TrendingDown className="h-5 w-5 text-cyan-200" />}
+        >
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricCard label="Debt in this plan" value={money(activePlan?.total_debt)} detail={householdFinance ? `${householdSummary?.ai_plan_members || 0} member(s) allowed in AI plan` : "Your tracked liabilities"} tone="rose" />
+            <MetricCard label="Known minimums" value={money(activePlan?.known_minimum_payments)} detail="Required payments captured so far" tone="amber" />
+            <MetricCard label="Plan data complete" value={`${Number(activePlan?.data_completeness_percent ?? 0)}%`} detail={activePlan?.missing_data?.length ? `${activePlan.missing_data.length} account(s) need details` : "APR + minimum data ready"} tone={activePlan?.missing_data?.length ? "amber" : "emerald"} />
+            <MetricCard label="Extra monthly" value={money(activePlan?.extra_monthly)} detail="Amount rolled onto the current target" tone="violet" />
+          </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_280px]">
+            <div>
+              {activePlan?.first_target ? <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/[.06] p-4">
+                <div className="text-[10px] font-black uppercase tracking-[.16em] text-cyan-200">Current target</div>
+                <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <div className="text-xl font-black text-white">{activePlan.first_target.name}</div>
+                    <div className="mt-1 text-xs text-slate-400">{activePlan.first_target.owner_name ? `${activePlan.first_target.owner_name} • ` : ""}{activePlan.first_target.apr != null ? `${activePlan.first_target.apr}% APR` : "APR still needed"}{activePlan.first_target.utilization_percent != null ? ` • ${activePlan.first_target.utilization_percent}% utilized` : ""}</div>
+                  </div>
+                  <div className="text-right"><div className="text-2xl font-black text-rose-100">{money(activePlan.first_target.balance)}</div><div className="text-[10px] text-slate-500">target payment {money(activePlan.target_monthly_payment)}</div></div>
+                </div>
+                <p className="mt-3 text-xs leading-5 text-slate-300">{activePlan.first_target.priority_reason}</p>
+              </div> : <EmptyState>Add or connect debts to activate Plan 1.</EmptyState>}
+
+              {activePlan?.priority?.length ? <div className="mt-3 space-y-2">{activePlan.priority.slice(0, 6).map((item) => <div key={`${item.user_id || "me"}-${item.id}`} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 p-3"><div className="min-w-0"><div className="text-[10px] font-black uppercase tracking-wider text-slate-500">#{item.rank} {item.owner_name ? `• ${item.owner_name}` : ""}</div><div className="truncate text-sm font-black text-white">{item.name}</div><div className="mt-1 text-[11px] text-slate-500">{item.apr != null ? `${item.apr}% APR` : "APR missing"}{item.minimum_payment != null ? ` • min ${money(item.minimum_payment)}` : " • minimum missing"}</div></div><div className="font-black text-rose-100">{money(item.balance)}</div></div>)}</div> : null}
+            </div>
+
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-violet-400/15 bg-violet-500/[.05] p-4">
+                <div className="text-xs font-black text-white">Set extra monthly payoff</div>
+                <p className="mt-1 text-[11px] leading-5 text-slate-400">This does not move money. It recalculates the plan so you can follow the same target each month.</p>
+                <div className="mt-3 flex gap-2"><input type="number" min="0" step="25" value={extraMonthly} onChange={(e) => setExtraMonthly(e.target.value)} className="h-11 min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-950 px-3 text-sm text-white outline-none"/><button type="button" onClick={() => loadFinance(extraMonthly)} disabled={loading} className="rounded-2xl bg-violet-500 px-4 text-xs font-black text-white disabled:opacity-50">Apply</button></div>
+              </div>
+              {activePlan?.missing_data?.length ? <div className="rounded-2xl border border-amber-400/15 bg-amber-500/[.05] p-4"><div className="text-xs font-black text-amber-100">Finish these details</div><div className="mt-2 space-y-2">{activePlan.missing_data.slice(0, 5).map((item) => <div key={`missing-${item.id}-${item.owner_name || ""}`} className="text-[11px] leading-5 text-slate-300"><b>{item.owner_name ? `${item.owner_name}: ` : ""}{item.name}</b> — {item.missing.join(", ")}</div>)}</div></div> : <div className="flex items-start gap-2 rounded-2xl border border-emerald-400/15 bg-emerald-500/[.05] p-4 text-xs text-emerald-100"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />Plan data is complete enough to rank the tracked debts.</div>}
+              {activePlan?.promo_watch?.length ? <div className="rounded-2xl border border-fuchsia-400/15 bg-fuchsia-500/[.05] p-4"><div className="text-xs font-black text-fuchsia-100">Promo APR watch</div>{activePlan.promo_watch.map((promo) => <div key={`promo-${promo.id}`} className="mt-2 text-[11px] leading-5 text-slate-300"><b>{promo.name}</b> • ends {dateLabel(promo.promo_apr_end_date)} • roughly {money(promo.estimated_monthly_to_clear)}/mo to clear at the current balance</div>)}</div> : null}
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">{(activePlan?.rules || []).map((rule, index) => <div key={rule} className="rounded-xl border border-white/10 bg-white/[.025] p-3 text-[11px] leading-5 text-slate-400"><span className="font-black text-cyan-200">{index + 1}.</span> {rule}</div>)}</div>
+        </Panel>
+
+        {householdFinance ? <Panel title="Household Finance visibility" subtitle="Each member owns their own Finance profile. Combined numbers only use what that person allowed." right={<Users className="h-5 w-5 text-emerald-200" />}>
+          <div className="grid gap-3 sm:grid-cols-3"><MetricCard label="Visible household debt" value={money(householdSummary?.visible_total_debt)} detail={`${householdSummary?.shared_summary_members || 0} of ${householdSummary?.active_members || 0} member summaries visible`} tone="rose" /><MetricCard label="Visible minimums" value={money(householdSummary?.visible_known_minimum_payments)} detail="Only shared/owned finance" tone="amber" /><MetricCard label="Visible cash" value={money(householdSummary?.visible_available_cash)} detail="Private accounts remain excluded" tone="emerald" /></div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">{(householdFinance.members || []).map((member) => <div key={member.user_id} className="rounded-2xl border border-white/10 p-3"><div className="flex items-center justify-between gap-3"><div><div className="text-sm font-black text-white">{member.display_name}{member.is_self ? " • You" : ""}</div><div className="mt-1 text-[11px] text-slate-500">{member.privacy_status === "PRIVATE" ? "Finance private" : member.privacy_status === "SHARED" ? "Finance summary shared" : "Your finance"}</div></div>{member.privacy_status === "PRIVATE" ? <LockKeyhole className="h-5 w-5 text-slate-500" /> : <ShieldCheck className="h-5 w-5 text-emerald-300" />}</div></div>)}</div>
+          <button type="button" onClick={() => nav("/customer/family")} className="mt-3 min-h-10 rounded-2xl border border-white/10 bg-white/[.03] px-4 text-xs font-black text-slate-200">Manage family & Finance sharing</button>
+        </Panel> : null}
 
         <Panel title="SYNC financial decision briefing" subtitle="Facts first, then the next best actions." right={<Bot className="h-5 w-5 text-violet-200" />}>
           {alerts.length ? <div className="grid gap-2 sm:grid-cols-2">{alerts.map((item) => <div key={item.code} className="rounded-2xl border border-amber-400/15 bg-amber-500/[.05] p-3 text-sm text-slate-300"><div className="text-[10px] font-black uppercase tracking-wider text-amber-200">{item.severity}</div><div className="mt-1">{item.message}</div></div>)}</div> : <div className="flex items-center gap-3 rounded-2xl border border-emerald-400/15 bg-emerald-500/[.05] p-4 text-sm text-emerald-100"><ShieldCheck className="h-5 w-5" />No major finance alerts are visible from current data.</div>}
