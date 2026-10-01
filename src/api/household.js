@@ -6,6 +6,7 @@ export async function getHouseholds(){ const {data}=await api.get("/household/ho
 export async function createHousehold(payload){ const {data}=await api.post("/household/households/",payload); return data; }
 export async function updateHousehold(id,payload){ const {data}=await api.patch(`/household/households/${id}/`,payload); return data; }
 export async function syncHouseholdMembers(id){ const {data}=await api.post(`/household/households/${id}/sync_members/`); return data; }
+export async function getHouseholdFinance(id, extraMonthly = 0){ const {data}=await api.get(`/household/households/${id}/finance/`, { params: { extra_monthly: extraMonthly || 0 } }); return data; }
 export async function getHouseholdSettings(){ const {data}=await api.get("/household/member-settings/"); return list(data); }
 export async function updateHouseholdSettings(id,payload){ const {data}=await api.patch(`/household/member-settings/${id}/`,payload); return data; }
 export async function getHouseholdTasks(){ const {data}=await api.get("/household/tasks/"); return list(data); }
