@@ -12,8 +12,10 @@ import {
   CheckCircle2,
   Landmark,
   LockKeyhole,
+  LoaderCircle,
   Plus,
   RefreshCw,
+  Send,
   ShieldCheck,
   Sparkles,
   Target,
@@ -25,6 +27,7 @@ import {
 } from "lucide-react";
 
 import api from "../api/client";
+import { getSyncAiErrorMessage, sendSyncAiMessage } from "../api/syncAi";
 import { useAuth } from "../auth/AuthContext";
 import ModeBar from "../components/ModeBar";
 
@@ -171,6 +174,12 @@ export default function CustomerFinance() {
   const [manualOpen, setManualOpen] = useState(false);
   const [manual, setManual] = useState(EMPTY_MANUAL);
   const [savingManual, setSavingManual] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatSending, setChatSending] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
 
   const loadFinance = async (extraOverride = null) => {
     setLoading(true);
@@ -244,6 +253,88 @@ export default function CustomerFinance() {
     } catch (err) {
       setError(err?.response?.data?.detail || "Finance refresh needs attention.");
     } finally { setSyncing(false); }
+  };
+
+  const sendFinanceChat = async (raw = chatInput) => {
+    const question = String(raw || "").trim();
+    if (!question || chatSending) return;
+    setChatSending(true);
+    setError("");
+    const userMessage = { role: "user", text: question, id: `u-${Date.now()}` };
+    setChatMessages((current) => [...current, userMessage].slice(-10));
+    setChatInput("");
+    try {
+      const result = await sendSyncAiMessage({
+        workspace: "personal",
+        message: `You are answering from the SyncWorks Personal Finance command center. Focus on the user's current Finance records, Debt Plan 1, minimum payments, cash flow, budgets, promo APR deadlines, and missing finance data. Be explicit when the app has no stored record instead of assuming data from outside SyncWorks. User question: ${question}`,
+      });
+      setChatMessages((current) => [...current, { role: "assistant", text: result?.message || "SYNC returned no text.", id: `a-${Date.now()}` }].slice(-10));
+    } catch (err) {
+      setChatMessages((current) => [...current, { role: "assistant", text: getSyncAiErrorMessage(err), id: `e-${Date.now()}` }].slice(-10));
+    } finally {
+      setChatSending(false);
+    }
+  };
+
+  const importDebtList = async () => {
+    if (!bulkText.trim()) return setError("Paste a debt import package first.");
+    setBulkImporting(true);
+    setError("");
+    try {
+      const parsed = JSON.parse(bulkText);
+      const rows = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.debts) ? parsed.debts : [];
+      if (!rows.length) throw new Error("The import package must contain a debts array.");
+      if (rows.length > 50) throw new Error("Import 50 debts or fewer at a time.");
+
+      for (const row of rows) {
+        const name = String(row?.name || "").trim();
+        if (!name) throw new Error("Every debt needs a name.");
+        const owner = String(row?.owner || "self").trim().toLowerCase();
+        if (!["", "self", "me", "mine"].includes(owner)) {
+          throw new Error(`${name} is marked for ${row.owner}. Sign into that person's SyncWorks profile to import their private debt.`);
+        }
+        const kind = String(row?.kind || "CREDIT_CARD").trim().toUpperCase();
+        if (kind === "CREDIT_CARD") {
+          await api.post(`${FINANCE_API}/automation/manual-card/`, {
+            name,
+            balance: row.balance ?? 0,
+            credit_limit: row.credit_limit ?? null,
+            minimum_payment: row.minimum_payment ?? null,
+            next_payment_date: row.next_payment_date || row.due_date || null,
+            apr: row.apr ?? null,
+            promo_apr: row.promo_apr ?? null,
+            promo_apr_end_date: row.promo_apr_end_date || null,
+            account_status: String(row.account_status || "OPEN").toUpperCase(),
+            paid_this_cycle: row.paid_this_cycle === true,
+          });
+        } else {
+          await api.post(`${FINANCE_API}/liabilities/`, {
+            name,
+            kind,
+            outstanding_balance: row.balance ?? null,
+            minimum_payment: row.minimum_payment ?? null,
+            next_payment_amount: row.minimum_payment ?? null,
+            next_payment_date: row.next_payment_date || row.due_date || null,
+            apr: row.apr ?? null,
+            payoff_target_date: row.payoff_target_date || null,
+            is_manual: true,
+            metadata: {
+              source: "bulk_finance_import",
+              account_status: String(row.account_status || "OPEN").toUpperCase(),
+              paid_this_cycle: row.paid_this_cycle === true,
+            },
+          });
+        }
+      }
+
+      setBulkOpen(false);
+      setBulkText("");
+      await loadFinance();
+    } catch (err) {
+      setError(err?.response?.data?.detail || err?.message || "SyncWorks could not import that debt list.");
+    } finally {
+      setBulkImporting(false);
+    }
   };
 
   const saveManual = async () => {
@@ -327,12 +418,26 @@ export default function CustomerFinance() {
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={connectBank} disabled={syncing} className="min-h-11 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 text-sm font-black disabled:opacity-50"><Building2 className="mr-2 inline h-4 w-4" />Connect institution</button>
               <button type="button" onClick={() => setManualOpen(true)} className="min-h-11 rounded-2xl border border-white/10 bg-white/[.04] px-4 text-sm font-black"><Plus className="mr-2 inline h-4 w-4" />Add manually</button>
+              <button type="button" onClick={() => setBulkOpen(true)} className="min-h-11 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 text-sm font-black text-violet-100">Import debt list</button>
               <button type="button" onClick={syncAll} disabled={syncing || loading} className="min-h-11 rounded-2xl border border-white/10 bg-white/[.04] px-4 text-sm font-black text-slate-300"><RefreshCw className={`mr-2 inline h-4 w-4 ${syncing ? "animate-spin" : ""}`} />Refresh + analyze</button>
             </div>
           </div>
         </section>
 
         {error ? <div className="flex items-start gap-3 rounded-2xl border border-amber-400/20 bg-amber-500/[.08] p-4 text-sm text-amber-100"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>{error}</span></div> : null}
+
+        {liabilities.length === 0 ? <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/[.06] p-4 text-sm leading-6 text-slate-300"><b className="text-cyan-100">No debt records are stored in this SyncWorks profile yet.</b> Information shared in a ChatGPT conversation is separate from the SyncWorks production database. Use <b>Import debt list</b> to bring an existing list in at once, or connect an institution after bank linking is configured.</div> : null}
+
+        <Panel title="Ask SYNC Finance" subtitle="Chat directly with your current SyncWorks Finance records and Debt Plan 1." right={<Bot className="h-5 w-5 text-cyan-200" />}>
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {["What is my Debt Plan 1?", "What should I pay next?", "What finance data is missing?", "What happens if I add $500 extra each month?"].map((prompt) => <button key={prompt} type="button" onClick={() => sendFinanceChat(prompt)} disabled={chatSending} className="shrink-0 rounded-full border border-white/10 bg-white/[.03] px-3 py-2 text-[11px] font-black text-slate-300 disabled:opacity-40">{prompt}</button>)}
+          </div>
+          {chatMessages.length ? <div className="mt-2 max-h-72 space-y-2 overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-3">{chatMessages.map((message) => <div key={message.id} className={`rounded-2xl p-3 text-sm leading-6 ${message.role === "user" ? "ml-8 bg-cyan-500/10 text-cyan-50" : "mr-8 bg-violet-500/10 text-slate-200"}`}><div className="mb-1 text-[9px] font-black uppercase tracking-[.16em] text-slate-500">{message.role === "user" ? "You" : "SYNC Finance"}</div>{message.text}</div>)}</div> : <div className="mt-2 rounded-2xl border border-dashed border-white/10 p-3 text-xs leading-5 text-slate-500">Ask about balances, payoff order, monthly cash flow, due dates, credit utilization, or missing data. SYNC reads the Finance data stored in your account.</div>}
+          <div className="mt-3 flex items-end gap-2">
+            <textarea value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendFinanceChat(); } }} rows={2} placeholder="Ask SYNC about your finances…" className="min-h-12 flex-1 resize-none rounded-2xl border border-white/10 bg-slate-950 px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/40"/>
+            <button type="button" onClick={() => sendFinanceChat()} disabled={chatSending || !chatInput.trim()} className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-cyan-500 to-violet-600 text-white disabled:opacity-40">{chatSending ? <LoaderCircle className="h-5 w-5 animate-spin"/> : <Send className="h-5 w-5"/>}</button>
+          </div>
+        </Panel>
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <MetricCard label="Safe to spend" value={money(safeToSpend)} detail="Cash after known 30-day obligations" tone={safeToSpend > 0 ? "emerald" : "rose"} />
@@ -438,6 +543,8 @@ export default function CustomerFinance() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><MetricCard label="Institutions" value={connections.length} detail="Bank/card connections" /><MetricCard label="Budgets" value={budgets.length} detail="Active monthly guardrails" tone="violet" /><MetricCard label="Budget headroom" value={money(summary.budget_headroom_remaining)} detail="Remaining across active budgets" tone="emerald" /><MetricCard label="Automation" value="SYNC" detail="Refresh → infer → analyze → act" tone="emerald" /></div>
         </Panel>
       </main>
+
+      {bulkOpen ? <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/75 sm:items-center sm:p-4"><div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-[2rem] border border-violet-400/20 bg-[#07111f] p-5 sm:rounded-[2rem]"><div className="flex items-start justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-violet-200">Bulk Finance import</div><h2 className="mt-1 text-xl font-black">Import your debt list</h2><p className="mt-2 text-xs leading-5 text-slate-400">This imports only into the profile currently signed in. A spouse or household member must import their own private debts while signed into their account.</p></div><button type="button" onClick={() => setBulkOpen(false)} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10"><X className="h-5 w-5"/></button></div><textarea value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={14} spellCheck={false} placeholder={'{"debts":[{"owner":"self","name":"Visa","kind":"CREDIT_CARD","balance":2500,"credit_limit":5000,"minimum_payment":75,"apr":24.99}]}' } className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 p-3 font-mono text-xs leading-5 text-white outline-none focus:border-violet-400/40"/><div className="mt-3 rounded-2xl border border-amber-400/15 bg-amber-500/[.05] p-3 text-xs leading-5 text-slate-400">Review the list before importing. SyncWorks will create these records in the signed-in user's Finance profile; it will not transfer another household member's private debt into your profile.</div><button type="button" disabled={bulkImporting || !bulkText.trim()} onClick={importDebtList} className="mt-4 min-h-12 w-full rounded-2xl bg-gradient-to-r from-violet-500 to-cyan-500 text-sm font-black text-white disabled:opacity-40">{bulkImporting ? "Importing…" : "Import debts"}</button></div></div> : null}
 
       {manualOpen ? <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 sm:items-center sm:p-4"><div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-[2rem] border border-white/10 bg-[#07111f] p-5 sm:rounded-[2rem]"><div className="flex items-center justify-between"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">Manual financial record</div><h2 className="mt-1 text-xl font-black">Add what cannot connect</h2></div><button type="button" onClick={() => setManualOpen(false)} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10"><X className="h-5 w-5" /></button></div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
