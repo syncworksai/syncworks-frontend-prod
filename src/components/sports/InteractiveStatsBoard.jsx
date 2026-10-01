@@ -56,11 +56,41 @@ export default function InteractiveStatsBoard({ rows, scope, onScope, managerVie
       {["ALL","LEAGUE","TOURNAMENT"].map((value)=><button key={value} type="button" onClick={()=>onScope?.(value)} className={"shrink-0 rounded-full px-3 py-1.5 text-[9px] font-black "+(scope===value?"bg-cyan-300 text-slate-950":"border border-white/10 text-slate-400")}>{value==="ALL"?"Combined":value[0]+value.slice(1).toLowerCase()}</button>)}
     </div>
 
-    <div className="mt-3 overflow-x-auto rounded-xl border border-white/10 bg-[#050b14]">
-      <table className="min-w-[1120px] border-collapse text-right text-[9px]">
+    <div className="mt-3 space-y-2 lg:hidden">
+      {sorted.map((row,index)=><article key={row.player?.id} className="rounded-xl border border-white/10 bg-[#050b14] p-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5"><span className="text-[8px] font-black text-cyan-300">#{index+1}</span><b className="truncate text-[11px] text-white">#{row.player?.jersey_number||"—"} {row.player?.display_name}</b></div>
+            <div className="mt-0.5 text-[8px] text-slate-600">{row.player?.primary_position||"—"} · {scope==="ALL"?"Combined":scope[0]+scope.slice(1).toLowerCase()}</div>
+          </div>
+          <div className="rounded-lg border border-cyan-300/15 bg-cyan-300/[.05] px-2.5 py-1.5 text-right">
+            <div className="text-[7px] font-black uppercase text-slate-500">AVG</div>
+            <div className="text-base font-black text-cyan-100">{pct(row.avg)}</div>
+          </div>
+        </div>
+        <div className="mt-2 grid grid-cols-6 gap-1">
+          {[
+            ["H/AB",`${num(row.h)}/${num(row.ab)}`],
+            ["OPS",pct(row.ops)],
+            ["RBI",num(row.rbi)],
+            ["HR",num(row.hr)],
+            ["R",num(row.runs)],
+            ["G",num(row.g)],
+          ].map(([label,value])=><button key={label} type="button" onClick={()=>sortBy(label==="H/AB"?"h":label.toLowerCase()==="r"?"runs":label.toLowerCase())} className="min-w-0 rounded-lg border border-white/8 bg-white/[.025] px-1 py-1.5 text-center">
+            <div className="text-[6px] font-black uppercase tracking-wide text-slate-600">{label}</div>
+            <div className="mt-0.5 truncate text-[10px] font-black text-slate-200">{value}</div>
+          </button>)}
+        </div>
+      </article>)}
+      {!sorted.length?<div className="rounded-xl border border-dashed border-white/10 p-6 text-center text-xs text-slate-500">No stats recorded yet.</div>:null}
+      <div className="px-1 text-[8px] leading-4 text-slate-600">Mobile view keeps the important game stats readable without shrinking the whole desktop table. Use Adjust stats for the full editable grid.</div>
+    </div>
+
+    <div className="mt-3 hidden overflow-x-auto rounded-xl border border-white/10 bg-[#050b14] lg:block">
+      <table className="min-w-[1120px] w-full border-collapse text-right text-[9px] xl:text-[10px]">
         <thead className="sticky top-0 z-20 bg-[#091421] text-slate-500">
           <tr>
-            <th className="sticky left-0 z-30 min-w-[12rem] border-r border-white/10 bg-[#091421] px-3 py-2 text-left">PLAYER</th>
+            <th className="sticky left-0 z-30 min-w-[13rem] border-r border-white/10 bg-[#091421] px-3 py-2 text-left">PLAYER</th>
             {COLUMNS.map(([key,label])=><th key={key} className={"border-l border-white/5 px-2 py-2 "+(sortKey===key?"bg-cyan-300/10 text-cyan-100":"")}>
               <button type="button" onClick={()=>sortBy(key)} className="inline-flex min-h-8 w-full items-center justify-end gap-1 font-black">{label}{sortKey===key?(sortDirection==="desc"?<ArrowDown className="h-3 w-3"/>:<ArrowUp className="h-3 w-3"/>):null}</button>
             </th>)}
@@ -77,6 +107,6 @@ export default function InteractiveStatsBoard({ rows, scope, onScope, managerVie
         </tbody>
       </table>
     </div>
-    <div className="mt-2 text-[8px] text-slate-600">Swipe the sheet left/right on mobile. Player names stay pinned while you compare columns.</div>
+    <div className="mt-2 hidden text-[8px] text-slate-600 lg:block">Desktop view uses the full sortable roster sheet. Player names stay pinned while you compare every column.</div>
   </section>;
 }
