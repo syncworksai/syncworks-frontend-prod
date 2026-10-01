@@ -1180,7 +1180,7 @@ export default function SportsTeamManagerDashboard({ initialMemberships = [] }) 
   return (
     <div className="min-h-screen bg-[#02060c] pb-24 text-slate-100">
       
-      <main className="mx-auto max-w-7xl space-y-3 px-3 py-3 sm:px-5">
+      <main className="mx-auto w-full max-w-[1800px] space-y-3 px-3 py-3 sm:px-5 lg:px-6 xl:px-8">
         <div className="flex items-center justify-between gap-2">
           <Btn onClick={() => navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4" />Social</Btn>
           <div className="flex items-center gap-2"><button type="button" onClick={() => setChatOpen(true)} className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-[9px] font-black uppercase tracking-wide text-cyan-100">Chat</button>{managed ? <button type="button" onClick={() => setPreviewPlayerView((value) => !value)} className="rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-2 text-[9px] font-black uppercase tracking-wide text-violet-100">{previewPlayerView ? "Back to manager" : "Preview player"}</button> : null}<button type="button" onClick={() => refresh()} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10"><RefreshCw className="h-4 w-4" /></button></div>
@@ -1215,7 +1215,52 @@ export default function SportsTeamManagerDashboard({ initialMemberships = [] }) 
           {nextDayGames.length ? <div className="mt-3"><UpcomingGameDayCard games={nextDayGames} onOpen={(game)=>navigate(`/connect/groups/${group.id}/sports/games/${game.id}`)} /></div> : null}
         </section>
 
-        <div className="hidden gap-1.5 overflow-x-auto pb-1 lg:flex">{TABS.filter((name)=>name!=="Rewards"||managerView).map((name) => <button key={name} type="button" onClick={() => setTab(name)} className={cx("min-h-9 shrink-0 rounded-full px-3 text-[10px] font-black", tab === name ? "bg-white text-slate-950" : "border border-white/10 text-slate-400")}>{name}</button>)}</div>
+        <div className="lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start lg:gap-4">
+          <aside className="hidden lg:block">
+            <div className="sticky top-4 overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#07111f]/95 shadow-[0_20px_55px_rgba(0,0,0,.28)]">
+              <div className="border-b border-white/10 bg-gradient-to-br from-cyan-300/[.07] via-transparent to-violet-300/[.06] p-4">
+                <div className="text-[9px] font-black uppercase tracking-[.16em] text-cyan-300">Team workspace</div>
+                <div className="mt-1 truncate text-sm font-black text-white">{group.name}</div>
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                  <div className="rounded-lg border border-white/10 bg-black/20 p-2 text-center">
+                    <div className="text-[7px] font-black uppercase text-slate-500">Record</div>
+                    <div className="mt-0.5 text-sm font-black text-white">{num(record.wins)}-{num(record.losses)}</div>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-black/20 p-2 text-center">
+                    <div className="text-[7px] font-black uppercase text-slate-500">Roster</div>
+                    <div className="mt-0.5 text-sm font-black text-white">{players.length}</div>
+                  </div>
+                </div>
+              </div>
+              <nav className="space-y-1 p-2">
+                {TABS.filter((name)=>name!=="Rewards"||managerView).map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => setTab(name)}
+                    className={cx(
+                      "flex min-h-11 w-full items-center justify-between rounded-xl px-3 text-left text-[11px] font-black transition",
+                      tab === name
+                        ? "bg-cyan-300 text-slate-950 shadow-[0_0_22px_rgba(34,211,238,.16)]"
+                        : "text-slate-300 hover:bg-white/[.045] hover:text-white",
+                    )}
+                  >
+                    <span>{name}</span>
+                    <span className={cx("text-[9px]", tab === name ? "text-slate-700" : "text-slate-600")}>→</span>
+                  </button>
+                ))}
+              </nav>
+              <div className="border-t border-white/10 p-2">
+                {liveGame ? (
+                  <button type="button" onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${liveGame.id}`)} className="min-h-11 w-full rounded-xl bg-emerald-300 px-3 text-[10px] font-black text-slate-950">Resume live Game Book</button>
+                ) : nextGame ? (
+                  <button type="button" onClick={() => navigate(`/connect/groups/${group.id}/sports/games/${nextGame.id}`)} className="min-h-11 w-full rounded-xl border border-cyan-300/20 bg-cyan-300/[.06] px-3 text-[10px] font-black text-cyan-100">Open next game</button>
+                ) : null}
+              </div>
+            </div>
+          </aside>
+
+          <div className="min-w-0 space-y-3">
 
         {tab === "Overview" ? <div className="grid gap-3 lg:grid-cols-[1fr_1fr_.92fr]">
           <Card title="Season command" body={managerView ? "Manager controls. Players see the same team data without edit access." : "Your team, schedule, lineup, stats and dues in one place."}>
@@ -1705,6 +1750,8 @@ export default function SportsTeamManagerDashboard({ initialMemberships = [] }) 
             </div>
           ) : null}
         </div> : null}
+          </div>
+        </div>
       </main>
 
       <SportsTeamMobileNav
