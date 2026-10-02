@@ -7,6 +7,7 @@ actor SyncWorksAPI {
 
     private let session: URLSession
     private let decoder: JSONDecoder
+    private let encoder = JSONEncoder()
     private var bearerToken: String?
 
     init(session: URLSession = .shared) {
@@ -42,6 +43,19 @@ actor SyncWorksAPI {
 
     func get<T: Decodable>(_ path: String, as type: T.Type = T.self) async throws -> T {
         let request = try makeRequest(path: path, method: "GET")
+        let (data, response) = try await session.data(for: request)
+        try validate(response)
+        return try decoder.decode(T.self, from: data)
+    }
+
+    func post<Body: Encodable, T: Decodable>(
+        _ path: String,
+        body: Body,
+        as type: T.Type = T.self
+    ) async throws -> T {
+        var request = try makeRequest(path: path, method: "POST")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try encoder.encode(body)
         let (data, response) = try await session.data(for: request)
         try validate(response)
         return try decoder.decode(T.self, from: data)
