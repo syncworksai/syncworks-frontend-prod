@@ -1852,7 +1852,7 @@ export default function SportsTeamManagerDashboard({ initialMemberships = [] }) 
       {statDrawer ? <Drawer wide title="Adjust player stats" onClose={() => setStatDrawer(false)}>
         <EditableStatsGrid
           teamId={team.id}
-          initialScope={statsScope === "TOURNAMENT" ? "TOURNAMENT" : "LEAGUE"}
+          initialScope={statsScope === "TOURNAMENT" ? "TOURNAMENT" : statsScope === "LEAGUE" ? "LEAGUE" : "COMBINED"}
           onSaved={handleStatsGridSaved}
         />
       </Drawer> : null}
