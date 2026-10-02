@@ -21,8 +21,12 @@ actor NativeAuthService {
     }
 
     func isSignedIn() async -> Bool {
-        guard let token = try? await session.load() else { return false }
-        return !(token?.isEmpty ?? true)
+        do {
+            let token = try await session.load()
+            return !(token?.isEmpty ?? true)
+        } catch {
+            return false
+        }
     }
 
     func signIn(identifier: String, password: String) async throws {
