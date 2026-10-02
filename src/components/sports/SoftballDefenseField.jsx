@@ -1,5 +1,7 @@
 import React from "react";
 
+import { SOFTBALL_FIELD_DESKTOP, SOFTBALL_FIELD_MOBILE } from "./softballFieldBackgrounds";
+
 const cx = (...values) => values.filter(Boolean).join(" ");
 const COORDS = {
   LF: [13, 23], LC: [32, 13], CF: [50, 10], RC: [68, 13], RF: [87, 23], OF: [50, 18],
@@ -46,17 +48,22 @@ export default function SoftballDefenseField({
         </div>
         <div className="shrink-0 rounded-lg border border-emerald-300/20 bg-emerald-300/[.06] px-2 py-1 text-[9px] font-black text-emerald-100">{byPosition.size} positions filled</div>
       </div>
-      <div className={cx("relative mx-auto overflow-hidden rounded-t-[50%] rounded-b-[1.25rem] border border-emerald-300/20 bg-[radial-gradient(ellipse_at_50%_68%,rgba(168,112,54,.78)_0_20%,transparent_20.5%),radial-gradient(ellipse_at_50%_58%,rgba(7,74,41,.98)_0_52%,rgba(4,46,29,.98)_74%,rgba(3,29,24,1)_100%)] shadow-[inset_0_0_40px_rgba(0,0,0,.35)]", compact ? "h-60" : "h-80")}>
-        <div className="absolute left-1/2 top-[68%] h-[34%] w-[34%] -translate-x-1/2 -translate-y-1/2 rotate-45 border-[5px] border-amber-100/15 bg-amber-100/[.035]" />
-        <div className="absolute left-1/2 top-[68%] h-[26%] w-[26%] -translate-x-1/2 -translate-y-1/2 rotate-45 border border-white/18" />
-        <div className="absolute bottom-[10%] left-1/2 h-[72%] w-px origin-bottom -rotate-[38deg] bg-white/25" />
-        <div className="absolute bottom-[10%] right-1/2 h-[72%] w-px origin-bottom rotate-[38deg] bg-white/25" />
-        <div className="absolute left-1/2 top-[61%] h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border border-amber-100/25 bg-amber-100/[.12]" />
-        <div className="absolute left-1/2 top-[80%] h-4 w-4 -translate-x-1/2 rotate-45 border border-white/40 bg-white/25" />
-        <div className="absolute left-[36.5%] top-[66%] h-3 w-3 -translate-x-1/2 rotate-45 border border-white/35 bg-white/20" />
-        <div className="absolute left-[63.5%] top-[66%] h-3 w-3 -translate-x-1/2 rotate-45 border border-white/35 bg-white/20" />
-        <div className="absolute left-1/2 top-[51.5%] h-3 w-3 -translate-x-1/2 rotate-45 border border-white/35 bg-white/20" />
-        <div className="absolute left-3 top-3 rounded-full border border-emerald-200/15 bg-black/20 px-2 py-1 text-[7px] font-black uppercase tracking-[.12em] text-emerald-100/70">Softball field</div>
+      <div className={cx(
+        "relative mx-auto overflow-hidden rounded-[1.35rem] border border-cyan-300/20 bg-[#02060c] shadow-[inset_0_0_45px_rgba(0,0,0,.4),0_18px_45px_rgba(0,0,0,.22)]",
+        compact ? "h-[26rem] md:h-72" : "h-[34rem] sm:h-[38rem] md:h-[30rem]",
+      )}>
+        <picture className="absolute inset-0">
+          <source media="(min-width: 768px)" srcSet={SOFTBALL_FIELD_DESKTOP} />
+          <img
+            src={SOFTBALL_FIELD_MOBILE}
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full object-cover object-center"
+          />
+        </picture>
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(2,6,12,.1),rgba(2,6,12,.03)_38%,rgba(2,6,12,.28)_100%)]" />
+        <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_50px_rgba(2,6,12,.36)]" />
+        <div className="absolute left-3 top-3 rounded-full border border-cyan-200/20 bg-[#02060c]/72 px-2 py-1 text-[7px] font-black uppercase tracking-[.12em] text-cyan-100/80 backdrop-blur">SyncWorks field</div>
         {[...byPosition.entries()].map(([position, spots]) => {
           const coords = COORDS[position];
           const spot = spots[0];
@@ -67,7 +74,7 @@ export default function SoftballDefenseField({
             key={position} type="button" disabled={!onEditPosition}
             onClick={() => onEditPosition(position)}
             aria-label={`${position}: ${name}${onEditPosition ? ". Edit position." : ""}`}
-            className={cx("absolute z-10 -translate-x-1/2 -translate-y-1/2", onEditPosition && "cursor-pointer")}
+            className={cx("absolute z-20 -translate-x-1/2 -translate-y-1/2", onEditPosition && "cursor-pointer")}
             style={{ left: `${coords[0]}%`, top: `${coords[1]}%` }}
           >
             <div className="max-w-[5.9rem] rounded-lg border border-cyan-200/25 bg-[#03101a]/95 px-1.5 py-1 text-center shadow-lg backdrop-blur" style={halo(spot)}>
@@ -80,7 +87,7 @@ export default function SoftballDefenseField({
         })}
         {showMiddle && !hasMiddle ? <button
           type="button" disabled={!onEditPosition} onClick={() => onEditPosition?.("MM")}
-          className="absolute left-1/2 top-[38%] z-10 -translate-x-1/2 -translate-y-1/2 rounded-lg border border-dashed border-amber-300/65 bg-[#06131a]/95 px-2.5 py-1.5 text-center text-amber-100"
+          className="absolute left-1/2 top-[38%] z-20 -translate-x-1/2 -translate-y-1/2 rounded-lg border border-dashed border-amber-300/65 bg-[#06131a]/95 px-2.5 py-1.5 text-center text-amber-100"
         ><span className="block text-[8px] font-black">MM</span><span className="block whitespace-nowrap text-[8px]">{onEditPosition ? "Tap to assign" : "Unassigned"}</span></button> : null}
         {!defensive.length ? <div className="absolute inset-0 grid place-items-center text-xs text-slate-400">Set defensive positions to build the field.</div> : null}
       </div>
