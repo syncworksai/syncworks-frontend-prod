@@ -207,6 +207,40 @@ export async function getSportsGame(id) {
   return data;
 }
 
+/** Private original photos of handwritten game books. Staff access only. */
+export async function getSportsScorebookPages(gameId) {
+  const { data } = await api.get("/sports/games/" + gameId + "/scorebook-pages/", { timeout: 45000 });
+  return list(data);
+}
+
+export async function uploadSportsScorebookPage(gameId, photo, notes = "") {
+  const body = new FormData();
+  body.append("photo", photo);
+  body.append("notes", notes);
+  const { data } = await api.post("/sports/games/" + gameId + "/scorebook-pages/", body, {
+    headers: { "Content-Type": "multipart/form-data" },
+    timeout: 90000,
+  });
+  return data;
+}
+
+export async function getSportsScorebookImage(gameId, pageId) {
+  const { data } = await api.get("/sports/games/" + gameId + "/scorebook-pages/" + pageId + "/image/", {
+    responseType: "blob",
+    timeout: 90000,
+  });
+  return data;
+}
+
+export async function updateSportsScorebookPage(gameId, pageId, payload) {
+  const { data } = await api.patch("/sports/games/" + gameId + "/scorebook-pages/" + pageId + "/", payload);
+  return data;
+}
+
+export async function removeSportsScorebookPage(gameId, pageId) {
+  await api.delete("/sports/games/" + gameId + "/scorebook-pages/" + pageId + "/");
+}
+
 export async function createSportsGame(payload) {
   const { data } = await api.post("/sports/games/", payload);
   return data;
