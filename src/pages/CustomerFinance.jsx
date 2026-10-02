@@ -574,7 +574,7 @@ export default function CustomerFinance() {
                 <div className="text-[10px] font-black uppercase tracking-[.16em] text-cyan-200">Current target</div>
                 <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
                   <div>
-                    <div className="text-base font-black text-white">{activePlan.first_target.name}</div>
+                    <div className="flex items-center gap-2"><div className="text-base font-black text-white">{activePlan.first_target.name}</div>{liabilities.find((row) => Number(row.id) === Number(activePlan.first_target.id)) ? <button type="button" onClick={() => openDebtEdit(liabilities.find((row) => Number(row.id) === Number(activePlan.first_target.id)))} className="grid h-7 w-7 place-items-center rounded-md border border-white/10 bg-white/[.03] text-slate-300" aria-label={`Edit ${activePlan.first_target.name}`}><Pencil className="h-3 w-3"/></button> : null}</div>
                     <div className="mt-1 text-xs text-slate-400">{activePlan.first_target.owner_name ? `${activePlan.first_target.owner_name} • ` : ""}{activePlan.first_target.apr != null ? `${activePlan.first_target.apr}% APR` : "APR still needed"}{activePlan.first_target.utilization_percent != null ? ` • ${activePlan.first_target.utilization_percent}% utilized` : ""}</div>
                   </div>
                   <div className="text-right"><div className="text-xl font-black text-rose-100">{money(activePlan.first_target.balance)}</div><div className="text-[10px] text-slate-500">target payment {money(activePlan.target_monthly_payment)}</div></div>
