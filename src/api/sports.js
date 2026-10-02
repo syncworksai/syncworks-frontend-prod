@@ -22,7 +22,9 @@ export async function updateSportsTeam(id, payload) {
 }
 
 export async function getPlayerCenter(id) {
-  const { data } = await api.get(`/sports/teams/${id}/player-center/`);
+  // Player Center includes current stats, availability, dues and league context.
+  // Give Render cold starts more room while the server endpoint remains bounded.
+  const { data } = await api.get(`/sports/teams/${id}/player-center/`, { timeout: 45000 });
   return data;
 }
 
