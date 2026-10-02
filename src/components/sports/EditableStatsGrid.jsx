@@ -191,7 +191,7 @@ export default function EditableStatsGrid({ teamId, initialScope = "COMBINED", o
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-white/10 bg-[#050b14]">
-          <table className="min-w-[1380px] border-collapse text-center text-[9px]">
+          <table className="min-w-[1480px] border-collapse text-center text-[9px]">
             <thead className="sticky top-0 z-30 bg-[#091421] text-slate-500">
               <tr>
                 <th className="sticky left-0 z-40 min-w-[13rem] border-r border-white/10 bg-[#091421] px-3 py-2 text-left">PLAYER / SAVE</th>
