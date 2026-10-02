@@ -1,0 +1,35 @@
+name: SyncWorksApple
+options:
+  bundleIdPrefix: com.syncworks
+  deploymentTarget:
+    iOS: "18.0"
+settings:
+  base:
+    SWIFT_VERSION: 5.10
+targets:
+  SyncWorksApple:
+    type: application
+    platform: iOS
+    sources:
+      - path: SyncWorksApple
+        excludes:
+          - Info.plist
+          - "**/*.md"
+          - CarPlay/SyncWorksCarPlay.entitlements.example
+          - CarPlay/CarPlaySceneConfiguration.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.syncworks.app
+        INFOPLIST_KEY_CFBundleDisplayName: SyncWorks
+    info:
+      path: SyncWorksApple/Info.plist
+      properties:
+        CFBundleDisplayName: SyncWorks
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+          UISceneConfigurations:
+            CPTemplateApplicationSceneSessionRoleApplication:
+              - UISceneClassName: CPTemplateApplicationScene
+                UISceneConfigurationName: CarPlay
+                UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).CarPlaySceneDelegate

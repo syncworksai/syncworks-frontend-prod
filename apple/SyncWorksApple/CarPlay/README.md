@@ -1,0 +1,1 @@
+SYNC Drive owns only the vehicle-safe UI. The CarPlay scene should render system templates, limit list length, keep hierarchy shallow, and never require typing/setup while connected. Voice actions should return concise spoken text and a small set of explicit actions such as navigation or refresh.
