@@ -35,13 +35,13 @@ export default function PlayerStatSplits({ progress }) {
     {rows.length ? <div className="overflow-x-auto rounded-xl border border-white/10">
       <table className="w-full min-w-[630px] border-collapse text-center text-[10px]">
         <thead className="bg-white/[.05] text-[9px] font-bold uppercase text-slate-400"><tr>
-          {["Period", "G", "AB", "H", "AVG", "OBP", "SLG", "OPS", "2B", "3B", "HR", "RBI", "R"].map(label=>
+          {["Period", "G", "AB", "H", "AVG", "OBP", "SLG", "OPS", "2B", "3B", "HR", "BB", "SF", "GIDP", "RBI", "R"].map(label=>
             <th key={label} className="whitespace-nowrap px-2 py-2 text-left first:sticky first:left-0 first:bg-[#132033]">{label}</th>
           )}
         </tr></thead>
         <tbody>{rows.map((row,index)=><tr key={String(row.label)+"-"+index} className="border-t border-white/10">
           <td className="sticky left-0 min-w-[7rem] bg-[#0b1525] px-2 py-2 text-left font-bold text-white">{row.label}{row.historical?<span className="ml-1 text-[8px] text-slate-400">history</span>:null}</td>
-          {[num(row.g),num(row.ab),num(row.h),pct(row.avg),pct(row.obp),pct(row.slg),pct(row.ops),num(row.double),num(row.triple),num(row.hr),num(row.rbi),num(row.runs)].map((v,j)=>
+          {[num(row.g),num(row.ab),num(row.h),pct(row.avg),pct(row.obp),pct(row.slg),pct(row.ops),num(row.double),num(row.triple),num(row.hr),num(row.bb),num(row.sf),num(row.gidp),num(row.rbi),num(row.runs)].map((v,j)=>
             <td key={j} className={`px-2 py-2 text-left ${j===6?"font-black text-cyan-200":"text-slate-200"}`}>{v}</td>
           )}
         </tr>)}</tbody>
