@@ -13,16 +13,19 @@ targets:
     sources:
       - path: SyncWorksApple
         excludes:
+          - Info.plist
+          - "**/*.md"
           - CarPlay/SyncWorksCarPlay.entitlements.example
           - CarPlay/CarPlaySceneConfiguration.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.syncworks.app
         INFOPLIST_KEY_CFBundleDisplayName: SyncWorks
-        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
     info:
       path: SyncWorksApple/Info.plist
       properties:
+        CFBundleDisplayName: SyncWorks
+        UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: true
           UISceneConfigurations:
