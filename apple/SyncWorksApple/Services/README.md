@@ -1,0 +1,1 @@
+Native services intentionally depend only on Foundation/UIKit/CarPlay. Avoid coupling CarPlay to React view-models. Authentication is owned by the iPhone host and shared to the CarPlay scene through Keychain; the vehicle UI never asks for credentials.
