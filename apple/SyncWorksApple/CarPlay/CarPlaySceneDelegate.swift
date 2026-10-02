@@ -1,11 +1,11 @@
 import CarPlay
 import Foundation
-import MapKit
 import UIKit
 
 final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     private var interfaceController: CPInterfaceController?
     private let snapshotService: DriveSnapshotProviding = DriveSnapshotService()
+    private let maps = AppleMapsNavigator()
     private var snapshot: DriveSnapshot = .empty
 
     func templateApplicationScene(
@@ -35,7 +35,6 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
             makeWorkTemplate(),
             makeSyncTemplate()
         ])
-        tabs.title = "SYNC Drive"
         interfaceController?.setRootTemplate(tabs, animated: true, completion: nil)
     }
 
@@ -44,16 +43,20 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         if snapshot.events.isEmpty {
             rows = [CPListItem(text: "No upcoming items", detailText: "Your day is clear in SyncWorks")]
         } else {
-            rows = snapshot.events.prefix(6).map { event in
+            rows = snapshot.events.prefix(DriveConstants.maximumVisibleItems).map { event in
                 let item = CPListItem(text: event.title, detailText: eventDetail(event))
                 item.handler = { [weak self] _, completion in
-                    self?.openMaps(address: event.address)
+                    self?.maps.open(address: event.address)
                     completion()
                 }
                 return item
             }
         }
-        return CPListTemplate(title: "Today", sections: [CPListSection(items: rows)])
+
+        let template = CPListTemplate(title: "Today", sections: [CPListSection(items: rows)])
+        template.tabTitle = "Today"
+        template.tabImage = UIImage(systemName: "calendar")
+        return template
     }
 
     private func makeMessagesTemplate() -> CPListTemplate {
@@ -61,34 +64,59 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         if snapshot.messages.isEmpty {
             rows = [CPListItem(text: "No new messages", detailText: "SYNC will surface important conversations here")]
         } else {
-            rows = snapshot.messages.prefix(6).map { message in
-                CPListItem(
-                    text: message.senderName,
-                    detailText: message.preview
-                )
+            rows = snapshot.messages.prefix(DriveConstants.maximumVisibleItems).map { message in
+                let detail = DriveFormatting.compact(parts: [
+                    message.status,
+                    message.latestMessage
+                ])
+                return CPListItem(text: message.displayTitle, detailText: detail)
             }
         }
-        return CPListTemplate(title: "Messages", sections: [CPListSection(items: rows)])
+
+        let title = snapshot.unreadCount > 0 ? "Messages (\(snapshot.unreadCount))" : "Messages"
+        let template = CPListTemplate(title: title, sections: [CPListSection(items: rows)])
+        template.tabTitle = "Messages"
+        template.tabImage = UIImage(systemName: "message.fill")
+        return template
     }
 
     private func makeWorkTemplate() -> CPListTemplate {
         let rows: [CPListItem]
         if snapshot.workItems.isEmpty {
-            rows = [CPListItem(text: "No next job", detailText: "Jobs and service requests will appear here")]
+            rows = [CPListItem(text: "No open requests", detailText: "Jobs and service requests will appear here")]
         } else {
-            rows = snapshot.workItems.prefix(6).map { work in
+            rows = snapshot.workItems.prefix(DriveConstants.maximumVisibleItems).map { work in
                 let item = CPListItem(text: work.title, detailText: work.subtitle ?? work.status)
                 item.handler = { [weak self] _, completion in
-                    self?.openMaps(address: work.address)
+                    self?.maps.open(address: work.address)
                     completion()
                 }
                 return item
             }
         }
-        return CPListTemplate(title: "Next", sections: [CPListSection(items: rows)])
+
+        let template = CPListTemplate(title: "Next", sections: [CPListSection(items: rows)])
+        template.tabTitle = "Next"
+        template.tabImage = UIImage(systemName: "location.fill")
+        return template
     }
 
     private func makeSyncTemplate() -> CPListTemplate {
+        let rows: [CPListItem]
+        if let attention = snapshot.attention.first {
+            let next = CPListItem(text: attention.title, detailText: attention.detail)
+            rows = [next, makeTalkToSyncItem()]
+        } else {
+            rows = [makeTalkToSyncItem()]
+        }
+
+        let template = CPListTemplate(title: "SYNC", sections: [CPListSection(items: rows)])
+        template.tabTitle = "SYNC"
+        template.tabImage = UIImage(systemName: "waveform")
+        return template
+    }
+
+    private func makeTalkToSyncItem() -> CPListItem {
         let sync = CPListItem(
             text: "Talk to SYNC",
             detailText: "Ask about your day, messages, schedule, or next stop"
@@ -97,32 +125,19 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
             self?.showVoiceInfo()
             completion()
         }
-        return CPListTemplate(title: "SYNC", sections: [CPListSection(items: [sync])])
+        return sync
     }
 
     private func eventDetail(_ event: DriveEvent) -> String? {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        formatter.dateStyle = .none
-        var pieces: [String] = []
-        if let startAt = event.startAt { pieces.append(formatter.string(from: startAt)) }
-        if let locationName = event.locationName, !locationName.isEmpty { pieces.append(locationName) }
-        return pieces.isEmpty ? event.status : pieces.joined(separator: " • ")
-    }
-
-    private func openMaps(address: String?) {
-        guard let address, !address.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        let item = MKMapItem(placemark: MKPlacemark(coordinate: CLLocationCoordinate2D(latitude: 0, longitude: 0)))
-        item.name = address
-        let encoded = address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? address
-        if let url = URL(string: "http://maps.apple.com/?q=\(encoded)") {
-            UIApplication.shared.open(url)
-        }
+        DriveFormatting.compact(parts: [
+            event.startAt.map { DriveFormatting.time.string(from: $0) },
+            event.locationName
+        ])
     }
 
     private func showVoiceInfo() {
         let alert = CPAlertTemplate(
-            titleVariants: ["SYNC voice is ready for native intent wiring"],
+            titleVariants: ["SYNC voice setup is ready for the CarPlay entitlement build"],
             actions: [CPAlertAction(title: "OK", style: .default, handler: { _ in })]
         )
         interfaceController?.presentTemplate(alert, animated: true, completion: nil)
