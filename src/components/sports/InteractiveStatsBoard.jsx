@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, Plus, Trophy } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, Share2, Trophy } from "lucide-react";
 
 const num = (value) => Number(value || 0);
 const pct = (value) => num(value).toFixed(3).replace(/^0(?=\.)/, "");
@@ -13,7 +13,7 @@ const COLUMNS = [
 ];
 const MAP = Object.fromEntries(COLUMNS.map(([key,label,format])=>[key,{key,label,format}]));
 
-export default function InteractiveStatsBoard({ rows, scope, onScope, managerView, onAdd }) {
+export default function InteractiveStatsBoard({ rows, scope, onScope, managerView, onAdd, onShare, shareBusy = false }) {
   const [sortKey,setSortKey] = useState("ops");
   const [sortDirection,setSortDirection] = useState("desc");
   const cleanRows = Array.isArray(rows) ? rows : [];
@@ -38,7 +38,10 @@ export default function InteractiveStatsBoard({ rows, scope, onScope, managerVie
   return <section className="rounded-[1.35rem] border border-white/10 bg-[#07111f]/95 p-3 sm:p-4">
     <div className="flex items-start justify-between gap-3">
       <div><h2 className="text-sm font-black text-white">Stats grid</h2><p className="mt-1 text-[10px] leading-4 text-slate-500">MLB-style sheet: tap any column header to rank the entire roster. Tap again to reverse the sort.</p></div>
-      {managerView?<button type="button" onClick={onAdd} className="min-h-10 shrink-0 rounded-xl bg-amber-300 px-3 text-[10px] font-black text-slate-950"><Plus className="mr-1 inline h-4 w-4"/>Adjust stats</button>:<Trophy className="h-4 w-4 text-amber-300"/>}
+      <div className="flex shrink-0 items-center gap-2">
+        <button type="button" disabled={shareBusy} onClick={onShare} className="min-h-10 rounded-xl border border-cyan-300/25 bg-cyan-300/[.07] px-3 text-[10px] font-black text-cyan-100 disabled:opacity-40"><Share2 className="mr-1 inline h-4 w-4"/>{shareBusy ? "Sharing…" : "Share"}</button>
+        {managerView?<button type="button" onClick={onAdd} className="min-h-10 rounded-xl bg-amber-300 px-3 text-[10px] font-black text-slate-950"><Plus className="mr-1 inline h-4 w-4"/>Adjust stats</button>:<Trophy className="h-4 w-4 text-amber-300"/>}
+      </div>
     </div>
 
     <div className="mt-3">
