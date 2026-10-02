@@ -268,7 +268,7 @@ export default function SportsPlayerDashboard() {
 
   if (loading) return <div className="grid min-h-screen place-items-center bg-[#02060c] text-white" aria-label="Loading player dashboard"><Loader2 className="h-7 w-7 animate-spin text-cyan-300"/></div>;
 
-  if (!team || !center) return <div className="min-h-screen bg-[#02060c] p-3 text-white"><Card title="Team unavailable"><div className="text-xs text-slate-500">{error || "This team could not be loaded."}</div><Btn className="mt-3" onClick={()=>navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4"/>Back to Social</Btn></Card></div>;
+  if (!team || !center) return <div className="min-h-screen bg-[#02060c] p-3 text-white"><Card title="Team unavailable"><div className="text-xs text-slate-500">{error || "This team could not be loaded."}</div><div className="mt-3 grid grid-cols-2 gap-2"><Btn primary onClick={refresh}>Try again</Btn><Btn onClick={()=>navigate("/connect")}><ArrowLeft className="mr-1 inline h-4 w-4"/>Back to Social</Btn></div></Card></div>;
 
   if (!player) return <div className="min-h-screen bg-[#02060c] pb-28 text-white">
     
