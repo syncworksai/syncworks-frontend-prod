@@ -80,17 +80,17 @@ function MetricCard({ label, value, detail, tone = "cyan" }) {
     violet: "border-violet-400/20 from-violet-500/[.10]",
   };
   return (
-    <div className={`rounded-[1.5rem] border bg-gradient-to-br ${tones[tone] || tones.cyan} to-transparent p-4`}>
-      <div className="text-[10px] font-black uppercase tracking-[.16em] text-slate-400">{label}</div>
-      <div className="mt-2 text-2xl font-black text-white">{value}</div>
-      <div className="mt-1 text-xs leading-5 text-slate-400">{detail}</div>
+    <div className={`rounded-[1.15rem] border bg-gradient-to-br ${tones[tone] || tones.cyan} to-transparent p-3`}>
+      <div className="text-[9px] font-black uppercase tracking-[.14em] text-slate-400">{label}</div>
+      <div className="mt-1 text-xl font-black leading-tight text-white sm:text-2xl">{value}</div>
+      <div className="mt-1 text-[11px] leading-4 text-slate-400">{detail}</div>
     </div>
   );
 }
 
 function Panel({ title, subtitle, right, children }) {
   return (
-    <section className="rounded-[1.75rem] border border-white/10 bg-slate-950/55 p-4 sm:p-5">
+    <section className="rounded-[1.35rem] border border-white/10 bg-slate-950/55 p-3 sm:p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-base font-black text-white">{title}</h2>
@@ -127,7 +127,7 @@ function FinanceSignupScreen({ onBack }) {
           <div className="text-xs font-black uppercase tracking-[.16em] text-slate-400">Personal Finance</div>
           <div className="mt-3 flex items-end gap-2"><span className="text-5xl font-black text-white">$2.99</span><span className="pb-2 text-sm text-slate-400">/month</span></div>
           <div className="mt-2 text-sm font-bold text-emerald-200">30 days free</div>
-          <a href={STRIPE_FINANCE_CHECKOUT_URL} target="_blank" rel="noreferrer" className="mt-5 flex min-h-12 items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 px-4 text-sm font-black text-white">Start free trial</a>
+          <a href={STRIPE_FINANCE_CHECKOUT_URL} target="_blank" rel="noreferrer" className="mt-5 flex min-h-12 items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 px-3 text-xs font-black text-white">Start free trial</a>
           <button type="button" onClick={onBack} className="mt-3 min-h-11 w-full rounded-2xl border border-white/10 bg-white/[.03] text-sm font-black text-slate-200">Back to Personal</button>
         </div>
       </div>
@@ -180,22 +180,33 @@ export default function CustomerFinance() {
   const [chatInput, setChatInput] = useState("");
   const [chatSending, setChatSending] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
+  const [plaidStatus, setPlaidStatus] = useState(null);
+  const [editLiability, setEditLiability] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [linkerOpen, setLinkerOpen] = useState(false);
+  const [matchData, setMatchData] = useState({ manual: [], connected: [] });
+  const [linkManualId, setLinkManualId] = useState("");
+  const [linkConnectedId, setLinkConnectedId] = useState("");
+  const [linkingAccount, setLinkingAccount] = useState(false);
 
   const loadFinance = async (extraOverride = null) => {
     setLoading(true);
     setError("");
     const extra = Math.max(0, Number(extraOverride ?? extraMonthly) || 0);
     try {
-      const [summaryResult, txResult, intelligenceResult, householdResult] = await Promise.allSettled([
+      const [summaryResult, txResult, intelligenceResult, householdResult, plaidResult] = await Promise.allSettled([
         api.get(`${FINANCE_API}/dashboard/`),
         api.get(`${FINANCE_API}/transactions/`),
         api.get(`${FINANCE_API}/automation/`, { params: { extra_monthly: extra } }),
         api.get("/household/households/"),
+        api.get(`${FINANCE_API}/connections/plaid/status/`),
       ]);
       if (summaryResult.status !== "fulfilled") throw summaryResult.reason;
       setDashboard(summaryResult.value?.data || {});
       setTransactions(txResult.status === "fulfilled" ? listFrom(txResult.value?.data).slice(0, 10) : []);
       setIntelligence(intelligenceResult.status === "fulfilled" ? intelligenceResult.value?.data || {} : null);
+      setPlaidStatus(plaidResult.status === "fulfilled" ? plaidResult.value?.data || null : null);
 
       const households = householdResult.status === "fulfilled" ? listFrom(householdResult.value?.data) : [];
       if (households[0]?.id) {
@@ -218,8 +229,12 @@ export default function CustomerFinance() {
   useEffect(() => { if (hasFinanceAccess) loadFinance(); }, [hasFinanceAccess]);
 
   const connectBank = async () => {
-    setSyncing(true);
     setError("");
+    if (plaidStatus?.configured === false) {
+      setError("Bank linking is built but the production Plaid credentials are not configured yet. Manual records and debt planning still work; Plaid must be configured before Connect institution can open.");
+      return;
+    }
+    setSyncing(true);
     try {
       await loadPlaidScript();
       const tokenResponse = await api.post(`${FINANCE_API}/connections/plaid/link-token/`, {});
@@ -337,6 +352,99 @@ export default function CustomerFinance() {
     }
   };
 
+  const openDebtEdit = (item) => {
+    const account = accounts.find((row) => Number(row.id) === Number(item.account));
+    setEditLiability(item);
+    setEditForm({
+      name: item.name || "",
+      balance: item.outstanding_balance ?? "",
+      minimum_payment: item.minimum_payment ?? item.next_payment_amount ?? "",
+      next_payment_date: item.next_payment_date || "",
+      apr: item.apr ?? "",
+      credit_limit: account?.credit_limit ?? item?.metadata?.credit_limit ?? "",
+      account_status: item?.metadata?.account_status || "OPEN",
+      promo_apr: item?.metadata?.promo_apr ?? "",
+      promo_apr_end_date: item?.metadata?.promo_apr_end_date || "",
+      paid_this_cycle: item?.metadata?.paid_this_cycle === true,
+    });
+  };
+
+  const saveDebtEdit = async () => {
+    if (!editLiability) return;
+    setSavingEdit(true);
+    setError("");
+    try {
+      const metadata = {
+        ...(editLiability.metadata || {}),
+        account_status: editForm.account_status || "OPEN",
+        paid_this_cycle: !!editForm.paid_this_cycle,
+      };
+      if (editForm.promo_apr !== "") metadata.promo_apr = String(editForm.promo_apr);
+      else delete metadata.promo_apr;
+      if (editForm.promo_apr_end_date) metadata.promo_apr_end_date = editForm.promo_apr_end_date;
+      else delete metadata.promo_apr_end_date;
+      if (editForm.credit_limit !== "") metadata.credit_limit = String(editForm.credit_limit);
+
+      await api.patch(`${FINANCE_API}/liabilities/${editLiability.id}/`, {
+        name: editForm.name,
+        outstanding_balance: editForm.balance === "" ? null : editForm.balance,
+        minimum_payment: editForm.minimum_payment === "" ? null : editForm.minimum_payment,
+        next_payment_amount: editForm.minimum_payment === "" ? null : editForm.minimum_payment,
+        next_payment_date: editForm.next_payment_date || null,
+        apr: editForm.apr === "" ? null : editForm.apr,
+        metadata,
+      });
+
+      if (editLiability.account) {
+        const account = accounts.find((row) => Number(row.id) === Number(editLiability.account));
+        await api.patch(`${FINANCE_API}/accounts/${editLiability.account}/`, {
+          name: editForm.name,
+          current_balance: editForm.balance === "" ? null : editForm.balance,
+          credit_limit: editForm.credit_limit === "" ? null : editForm.credit_limit,
+          metadata: { ...(account?.metadata || {}), ...metadata },
+        });
+      }
+      setEditLiability(null);
+      await loadFinance();
+    } catch (err) {
+      setError(err?.response?.data?.detail || "SyncWorks could not update that debt.");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const openAccountLinker = async () => {
+    setError("");
+    try {
+      const response = await api.get(`${FINANCE_API}/automation/account-match-candidates/`);
+      const data = response?.data || { manual: [], connected: [] };
+      setMatchData(data);
+      setLinkManualId(data.manual?.[0]?.id ? String(data.manual[0].id) : "");
+      setLinkConnectedId(data.connected?.[0]?.id ? String(data.connected[0].id) : "");
+      setLinkerOpen(true);
+    } catch (err) {
+      setError(err?.response?.data?.detail || "SyncWorks could not load account matching.");
+    }
+  };
+
+  const linkExistingAccount = async () => {
+    if (!linkManualId || !linkConnectedId) return;
+    setLinkingAccount(true);
+    setError("");
+    try {
+      await api.post(`${FINANCE_API}/automation/link-connected-account/`, {
+        manual_account_id: Number(linkManualId),
+        connected_account_id: Number(linkConnectedId),
+      });
+      setLinkerOpen(false);
+      await loadFinance();
+    } catch (err) {
+      setError(err?.response?.data?.detail || "SyncWorks could not link those accounts.");
+    } finally {
+      setLinkingAccount(false);
+    }
+  };
+
   const saveManual = async () => {
     if (!manual.name.trim()) return setError("Give this financial item a name first.");
     setSavingManual(true);
@@ -407,19 +515,19 @@ export default function CustomerFinance() {
   return (
     <div className="min-h-screen bg-[#030712] text-white">
       <ModeBar />
-      <main className="mx-auto w-full max-w-7xl space-y-4 px-3 pb-28 pt-4 sm:px-5 lg:px-8">
-        <section className="relative overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_85%_15%,rgba(34,211,238,.13),transparent_28%),radial-gradient(circle_at_65%_80%,rgba(139,92,246,.12),transparent_32%),linear-gradient(145deg,#07111f,#020617)] p-5 sm:p-7">
-          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <main className="mx-auto w-full max-w-[1480px] space-y-3 px-2.5 pb-28 pt-3 sm:px-4 lg:px-6">
+        <section className="relative overflow-hidden rounded-[1.4rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_85%_15%,rgba(34,211,238,.13),transparent_28%),radial-gradient(circle_at_65%_80%,rgba(139,92,246,.12),transparent_32%),linear-gradient(145deg,#07111f,#020617)] p-3 sm:p-4">
+          <div className="relative flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <button type="button" onClick={() => nav("/customer/dashboard")} className="mb-4 inline-flex items-center gap-2 text-xs font-black text-slate-400"><ArrowLeft className="h-4 w-4" /> Personal</button>
-              <div className="flex items-center gap-3"><div className="grid h-12 w-12 place-items-center rounded-2xl border border-cyan-400/20 bg-cyan-500/10"><Landmark className="h-6 w-6 text-cyan-200" /></div><div><div className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-200">Personal Finance</div><h1 className="text-2xl font-black sm:text-4xl">Financial Command Center</h1></div></div>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">One financial picture. SYNC keeps the data together, protects known obligations, watches budgets and tells you what deserves attention next.</p>
+              <div className="flex items-center gap-2.5"><div className="grid h-10 w-10 place-items-center rounded-xl border border-cyan-400/20 bg-cyan-500/10"><Landmark className="h-5 w-5 text-cyan-200" /></div><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-200">Personal Finance</div><h1 className="text-xl font-black sm:text-2xl">Financial Command Center</h1></div></div>
+              <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-400">One financial picture. SYNC keeps the data together, protects known obligations, watches budgets and tells you what deserves attention next.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={connectBank} disabled={syncing} className="min-h-11 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 text-sm font-black disabled:opacity-50"><Building2 className="mr-2 inline h-4 w-4" />Connect institution</button>
-              <button type="button" onClick={() => setManualOpen(true)} className="min-h-11 rounded-2xl border border-white/10 bg-white/[.04] px-4 text-sm font-black"><Plus className="mr-2 inline h-4 w-4" />Add manually</button>
-              <button type="button" onClick={() => setBulkOpen(true)} className="min-h-11 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 text-sm font-black text-violet-100">Import debt list</button>
-              <button type="button" onClick={syncAll} disabled={syncing || loading} className="min-h-11 rounded-2xl border border-white/10 bg-white/[.04] px-4 text-sm font-black text-slate-300"><RefreshCw className={`mr-2 inline h-4 w-4 ${syncing ? "animate-spin" : ""}`} />Refresh + analyze</button>
+              <button type="button" onClick={connectBank} disabled={syncing} className="min-h-10 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-3 text-xs font-black disabled:opacity-50"><Building2 className="mr-2 inline h-4 w-4" />{plaidStatus?.configured === false ? "Bank setup needed" : "Connect institution"}</button>
+              <button type="button" onClick={() => setManualOpen(true)} className="min-h-10 rounded-xl border border-white/10 bg-white/[.04] px-3 text-xs font-black"><Plus className="mr-2 inline h-4 w-4" />Add manually</button>
+              <button type="button" onClick={() => setBulkOpen(true)} className="min-h-10 rounded-xl border border-violet-400/20 bg-violet-500/10 px-3 text-xs font-black text-violet-100">Import debt list</button>
+              <button type="button" onClick={syncAll} disabled={syncing || loading} className="min-h-10 rounded-xl border border-white/10 bg-white/[.04] px-3 text-xs font-black text-slate-300"><RefreshCw className={`mr-2 inline h-4 w-4 ${syncing ? "animate-spin" : ""}`} />Refresh + analyze</button>
             </div>
           </div>
         </section>
@@ -439,7 +547,7 @@ export default function CustomerFinance() {
           </div>
         </Panel>
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
           <MetricCard label="Safe to spend" value={money(safeToSpend)} detail="Cash after known 30-day obligations" tone={safeToSpend > 0 ? "emerald" : "rose"} />
           <MetricCard label="Available cash" value={money(net.cash)} detail={`${accounts.filter((a) => ["CHECKING", "SAVINGS"].includes(a.kind)).length} cash accounts`} />
           <MetricCard label="Due next 30 days" value={money(upcoming.total_due)} detail="Bills + debt payments" tone="amber" />
@@ -516,8 +624,8 @@ export default function CustomerFinance() {
           <Panel title="Accounts" subtitle="Connected and manually tracked cash, cards and other accounts." right={<span className="text-xs font-black text-slate-400">{accounts.length} total</span>}>
             {accounts.length ? <div className="space-y-2">{accounts.map((account) => <div key={account.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 p-3"><div className="flex min-w-0 items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-white/[.04]">{account.kind === "CREDIT_CARD" ? <CreditCard className="h-5 w-5 text-amber-200" /> : <Banknote className="h-5 w-5 text-cyan-200" />}</div><div><div className="text-sm font-black text-white">{account.name}</div><div className="text-[11px] text-slate-500">{String(account.kind || "OTHER").replaceAll("_", " ")}{account.is_manual ? " • manual" : " • connected"}</div></div></div><div className="font-black text-white">{money(account.current_balance)}</div></div>)}</div> : <EmptyState>No financial accounts yet.</EmptyState>}
           </Panel>
-          <Panel title="Credit & debt" subtitle="Balances, minimums, APR and payoff targets." right={credit.utilization_percent != null ? <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-black text-slate-300">{credit.utilization_percent}% utilization</span> : null}>
-            {liabilities.length ? <div className="space-y-2">{liabilities.slice(0, 8).map((item) => <div key={item.id} className="rounded-2xl border border-white/10 p-3"><div className="flex justify-between gap-3"><div><div className="text-sm font-black text-white">{item.name}</div><div className="text-[11px] text-slate-500">{String(item.kind || "OTHER").replaceAll("_", " ")}{item.apr ? ` • ${item.apr}% APR` : ""}</div></div><div className="text-right"><div className="font-black text-rose-100">{money(item.outstanding_balance)}</div><div className="text-[10px] text-slate-500">min {money(item.minimum_payment)}</div></div></div></div>)}</div> : <EmptyState>No debt tracked yet.</EmptyState>}
+          <Panel title="Credit & debt" subtitle="Tap Edit to keep balances, APRs, limits and minimums current." right={credit.utilization_percent != null ? <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-black text-slate-300">{credit.utilization_percent}% utilization</span> : null}>
+            {liabilities.length ? <div className="grid gap-2 sm:grid-cols-2">{liabilities.slice(0, 10).map((item) => <div key={item.id} className="rounded-xl border border-white/10 p-2.5"><div className="flex items-center justify-between gap-2"><div className="min-w-0"><div className="truncate text-xs font-black text-white">{item.name}</div><div className="mt-0.5 text-[10px] text-slate-500">{String(item.kind || "OTHER").replaceAll("_", " ")}{item.apr ? ` • ${item.apr}% APR` : " • APR missing"}</div></div><div className="text-right"><div className="text-sm font-black text-rose-100">{money(item.outstanding_balance)}</div><div className="text-[9px] text-slate-500">min {money(item.minimum_payment)}</div></div><button type="button" onClick={() => openDebtEdit(item)} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[.03] text-slate-300" aria-label={`Edit ${item.name}`}><Pencil className="h-3.5 w-3.5"/></button></div></div>)}</div> : <EmptyState>No debt tracked yet.</EmptyState>}
           </Panel>
         </div>
 
@@ -539,10 +647,15 @@ export default function CustomerFinance() {
           </Panel>
         </div>
 
-        <Panel title="Connections & automation" subtitle="Connected data + manual records feed the same financial intelligence layer." right={<Wallet className="h-5 w-5 text-cyan-200" />}>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><MetricCard label="Institutions" value={connections.length} detail="Bank/card connections" /><MetricCard label="Budgets" value={budgets.length} detail="Active monthly guardrails" tone="violet" /><MetricCard label="Budget headroom" value={money(summary.budget_headroom_remaining)} detail="Remaining across active budgets" tone="emerald" /><MetricCard label="Automation" value="SYNC" detail="Refresh → infer → analyze → act" tone="emerald" /></div>
+        <Panel title="Connections & automation" subtitle="Connected data + manual records feed the same Finance record. Link a connected account to an existing manual entry instead of creating a duplicate." right={<Wallet className="h-5 w-5 text-cyan-200" />}>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4"><MetricCard label="Institutions" value={connections.length} detail={plaidStatus?.configured === false ? "Plaid production setup required" : "Bank/card connections"} /><MetricCard label="Budgets" value={budgets.length} detail="Active monthly guardrails" tone="violet" /><MetricCard label="Budget headroom" value={money(summary.budget_headroom_remaining)} detail="Remaining across active budgets" tone="emerald" /><MetricCard label="Automation" value="SYNC" detail="Refresh → infer → analyze" tone="emerald" /></div>
+          <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={openAccountLinker} className="min-h-10 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 text-xs font-black text-cyan-100"><Link2 className="mr-2 inline h-4 w-4"/>Link connected to existing</button>{plaidStatus?.configured === false ? <span className="self-center text-[11px] text-amber-200">Bank linking code is ready; Plaid credentials are still missing from production.</span> : null}</div>
         </Panel>
       </main>
+
+      {editLiability ? <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/75 sm:items-center sm:p-4"><div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-[1.5rem] border border-cyan-400/20 bg-[#07111f] p-4 sm:rounded-[1.5rem]"><div className="flex items-start justify-between gap-3"><div><div className="text-[9px] font-black uppercase tracking-[.16em] text-cyan-200">Edit Finance record</div><h2 className="mt-1 text-lg font-black">{editLiability.name}</h2></div><button type="button" onClick={() => setEditLiability(null)} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10"><X className="h-4 w-4"/></button></div><div className="mt-4 grid gap-2 sm:grid-cols-2"><Field label="Name" wide><input value={editForm.name || ""} onChange={(e)=>setEditForm({...editForm,name:e.target.value})} className={inputClass}/></Field><Field label="Balance"><input type="number" value={editForm.balance ?? ""} onChange={(e)=>setEditForm({...editForm,balance:e.target.value})} className={inputClass}/></Field><Field label="Credit limit"><input type="number" value={editForm.credit_limit ?? ""} onChange={(e)=>setEditForm({...editForm,credit_limit:e.target.value})} className={inputClass}/></Field><Field label="Minimum"><input type="number" value={editForm.minimum_payment ?? ""} onChange={(e)=>setEditForm({...editForm,minimum_payment:e.target.value})} className={inputClass}/></Field><Field label="APR %"><input type="number" step="0.01" value={editForm.apr ?? ""} onChange={(e)=>setEditForm({...editForm,apr:e.target.value})} className={inputClass}/></Field><Field label="Next payment"><input type="date" value={editForm.next_payment_date || ""} onChange={(e)=>setEditForm({...editForm,next_payment_date:e.target.value})} className={inputClass}/></Field><Field label="Status"><select value={editForm.account_status || "OPEN"} onChange={(e)=>setEditForm({...editForm,account_status:e.target.value})} className={inputClass}><option value="OPEN">Open</option><option value="CLOSED">Closed</option><option value="COLLECTION">Collection</option></select></Field><Field label="Promo APR %"><input type="number" step="0.01" value={editForm.promo_apr ?? ""} onChange={(e)=>setEditForm({...editForm,promo_apr:e.target.value})} className={inputClass}/></Field><Field label="Promo ends"><input type="date" value={editForm.promo_apr_end_date || ""} onChange={(e)=>setEditForm({...editForm,promo_apr_end_date:e.target.value})} className={inputClass}/></Field><Field label="Paid this cycle"><label className="mt-1 flex h-11 items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-3 text-xs text-slate-300"><input type="checkbox" checked={!!editForm.paid_this_cycle} onChange={(e)=>setEditForm({...editForm,paid_this_cycle:e.target.checked})}/> Paid</label></Field></div><button type="button" disabled={savingEdit} onClick={saveDebtEdit} className="mt-4 min-h-11 w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-xs font-black disabled:opacity-50">{savingEdit ? "Saving…" : "Save changes"}</button></div></div> : null}
+
+      {linkerOpen ? <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/75 sm:items-center sm:p-4"><div className="w-full max-w-xl rounded-t-[1.5rem] border border-cyan-400/20 bg-[#07111f] p-4 sm:rounded-[1.5rem]"><div className="flex items-start justify-between gap-3"><div><div className="text-[9px] font-black uppercase tracking-[.16em] text-cyan-200">Match accounts</div><h2 className="mt-1 text-lg font-black">Link bank data to an existing record</h2><p className="mt-1 text-xs leading-5 text-slate-400">The existing manual card stays as the Finance record; live provider IDs, balances and transactions attach to it.</p></div><button type="button" onClick={()=>setLinkerOpen(false)} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/10"><X className="h-4 w-4"/></button></div>{matchData.connected?.length && matchData.manual?.length ? <div className="mt-4 grid gap-3"><Field label="Connected account"><select value={linkConnectedId} onChange={(e)=>setLinkConnectedId(e.target.value)} className={inputClass}>{matchData.connected.map((item)=><option key={item.id} value={item.id}>{item.name}{item.mask ? ` ••••${item.mask}` : ""} — {money(item.current_balance)}</option>)}</select></Field><Field label="Existing Finance record"><select value={linkManualId} onChange={(e)=>setLinkManualId(e.target.value)} className={inputClass}>{matchData.manual.map((item)=><option key={item.id} value={item.id}>{item.name} — {money(item.current_balance)}</option>)}</select></Field><button type="button" disabled={linkingAccount} onClick={linkExistingAccount} className="min-h-11 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-xs font-black disabled:opacity-50">{linkingAccount ? "Linking…" : "Link accounts"}</button></div> : <div className="mt-4 rounded-xl border border-dashed border-white/10 p-4 text-sm text-slate-400">{plaidStatus?.configured === false ? "No connected bank accounts are available yet because Plaid production setup is incomplete." : "You need both a connected provider account and an existing manual Finance account before they can be matched."}</div>}</div></div> : null}
 
       {bulkOpen ? <div className="fixed inset-0 z-[85] flex items-end justify-center bg-black/75 sm:items-center sm:p-4"><div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-[2rem] border border-violet-400/20 bg-[#07111f] p-5 sm:rounded-[2rem]"><div className="flex items-start justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-violet-200">Bulk Finance import</div><h2 className="mt-1 text-xl font-black">Import your debt list</h2><p className="mt-2 text-xs leading-5 text-slate-400">This imports only into the profile currently signed in. A spouse or household member must import their own private debts while signed into their account.</p></div><button type="button" onClick={() => setBulkOpen(false)} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10"><X className="h-5 w-5"/></button></div><textarea value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={14} spellCheck={false} placeholder={'{"debts":[{"owner":"self","name":"Visa","kind":"CREDIT_CARD","balance":2500,"credit_limit":5000,"minimum_payment":75,"apr":24.99}]}' } className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 p-3 font-mono text-xs leading-5 text-white outline-none focus:border-violet-400/40"/><div className="mt-3 rounded-2xl border border-amber-400/15 bg-amber-500/[.05] p-3 text-xs leading-5 text-slate-400">Review the list before importing. SyncWorks will create these records in the signed-in user's Finance profile; it will not transfer another household member's private debt into your profile.</div><button type="button" disabled={bulkImporting || !bulkText.trim()} onClick={importDebtList} className="mt-4 min-h-12 w-full rounded-2xl bg-gradient-to-r from-violet-500 to-cyan-500 text-sm font-black text-white disabled:opacity-40">{bulkImporting ? "Importing…" : "Import debts"}</button></div></div> : null}
 
