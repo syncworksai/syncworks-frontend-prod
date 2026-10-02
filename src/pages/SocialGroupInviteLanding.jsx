@@ -3,14 +3,21 @@ import { CheckCircle2, Copy, KeyRound, Link2, Loader2, LogIn, Share2, ShieldChec
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthContext";
-import { joinGroupAsPlayer, previewGroupInviteLink } from "../api/social";
+import { getMemberships, joinGroupAsPlayer, previewGroupInviteLink } from "../api/social";
 
 const errorText = (error) => error?.response?.data?.detail || error?.message || "Unable to complete your request.";
+
+function safeNextPath(value) {
+  const raw = String(value || "").trim();
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "";
+  return raw;
+}
 
 export default function SocialGroupInviteLanding() {
   const { token } = useParams();
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const nextPath = safeNextPath(params.get("next"));
   const { user, booting } = useAuth();
   const [preview, setPreview] = useState(null);
   const [mode, setMode] = useState(params.get("mode") === "player" ? "PLAYER" : "");
@@ -32,6 +39,21 @@ export default function SocialGroupInviteLanding() {
     return () => { active = false; };
   }, [token]);
 
+  useEffect(() => {
+    if (!user?.id || !preview?.group?.id || !nextPath) return undefined;
+    let active = true;
+    getMemberships()
+      .then((rows) => {
+        if (!active) return;
+        const alreadyMember = (Array.isArray(rows) ? rows : []).some(
+          (row) => Number(row.group) === Number(preview.group.id) && row.status === "ACTIVE",
+        );
+        if (alreadyMember) navigate(nextPath, { replace: true });
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [user?.id, preview?.group?.id, nextPath, navigate]);
+
   async function joinPlayer() {
     if (!password || busy) return;
     setBusy(true); setError("");
@@ -39,6 +61,10 @@ export default function SocialGroupInviteLanding() {
       const data = await joinGroupAsPlayer(token, password);
       setDone(data);
       setPassword("");
+      if (nextPath) {
+        navigate(nextPath, { replace: true });
+        return;
+      }
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -63,7 +89,8 @@ export default function SocialGroupInviteLanding() {
   if (loading || booting) {
     return <div className="grid min-h-screen place-items-center bg-[#02060c] text-cyan-200"><Loader2 className="h-7 w-7 animate-spin"/></div>;
   }
-  const next = encodeURIComponent("/social/invite/" + token + "?mode=player");
+  const returnPath = "/social/invite/" + token + "?mode=player" + (nextPath ? "&next=" + encodeURIComponent(nextPath) : "");
+  const next = encodeURIComponent(returnPath);
   const fanPath = "/social/fan/" + token;
 
   return (
@@ -111,7 +138,7 @@ export default function SocialGroupInviteLanding() {
               <CheckCircle2 className="h-7 w-7 text-emerald-300"/>
               <h2 className="mt-2 text-lg font-black text-white">You're on the team!</h2>
               <p className="mt-1 text-xs leading-5 text-slate-300">Your team dashboard is ready. From there, connect your existing player card by account email or add yourself to the roster, then access your schedule, stats and chat.</p>
-              <button type="button" onClick={()=>navigate(done.route || "/connect", { replace: true })} className="mt-3 min-h-12 w-full rounded-xl bg-emerald-300 px-4 text-sm font-black text-slate-950">Open my team dashboard</button>
+              <button type="button" onClick={()=>navigate(nextPath || done.route || "/connect", { replace: true })} className="mt-3 min-h-12 w-full rounded-xl bg-emerald-300 px-4 text-sm font-black text-slate-950">{nextPath ? "Open team stats" : "Open my team dashboard"}</button>
               {done.route ? <button type="button" onClick={()=>navigate("/connect/groups/"+preview.group.id, { replace: true })} className="mt-2 min-h-11 w-full rounded-xl border border-emerald-300/25 px-4 text-xs font-bold text-emerald-100">Visit team group &amp; updates</button> : null}
             </div> : null}
           </> : null}
