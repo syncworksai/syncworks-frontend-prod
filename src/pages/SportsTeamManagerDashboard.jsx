@@ -44,6 +44,7 @@ import PlayerBookAuditCard from "../components/sports/PlayerBookAuditCard";
 import WeeklyAvailabilityCard from "../components/sports/WeeklyAvailabilityCard";
 import UpcomingGameDayCard, { firstUpcomingGameDay } from "../components/sports/UpcomingGameDayCard";
 import PracticeModeCard from "../components/sports/PracticeModeCard";
+import { shareStatsImage } from "../utils/sportsStatsShareImage";
 import { useAuth } from "../auth/AuthContext";
 import { acceptMembership, createEventResponse, createGroupInviteLink, getEventResponses, getGroups, getMemberships, inviteMember, setMembershipRole, uploadGroupLogo, updateEventResponse } from "../api/social";
 import {
@@ -241,7 +242,10 @@ export default function SportsTeamManagerDashboard({ initialMemberships = [] }) 
   const [badgeRings, setBadgeRings] = useState({});
   const [fees, setFees] = useState([]);
   const [assignments, setAssignments] = useState([]);
-  const [statsScope, setStatsScope] = useState("ALL");
+  const [statsScope, setStatsScope] = useState(() => {
+    const requested = String(searchParams.get("scope") || "ALL").toUpperCase();
+    return ["ALL", "LEAGUE", "TOURNAMENT"].includes(requested) ? requested : "ALL";
+  });
   const [scopedStats, setScopedStats] = useState([]);
   const [advancedAnalytics, setAdvancedAnalytics] = useState(null);
   const [previewPlayerView, setPreviewPlayerView] = useState(false);
@@ -253,6 +257,7 @@ export default function SportsTeamManagerDashboard({ initialMemberships = [] }) 
   const [teamInviteUrl, setTeamInviteUrl] = useState("");
   const [teamInviteLoading, setTeamInviteLoading] = useState(false);
   const [shareStatus, setShareStatus] = useState("");
+  const [statsShareBusy, setStatsShareBusy] = useState(false);
   const [playerInviteEmails, setPlayerInviteEmails] = useState({});
   const [playerInviteUrls, setPlayerInviteUrls] = useState({});
   const [selectedMemberByPlayer, setSelectedMemberByPlayer] = useState({});
@@ -560,6 +565,42 @@ export default function SportsTeamManagerDashboard({ initialMemberships = [] }) 
       }
     }
     await copyInviteUrl(url);
+  }
+
+  async function quickShareStats() {
+    if (!group || !team || statsShareBusy) return;
+    setStatsShareBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const statsPath = `/connect/groups/${group.id}/sports?tab=Stats&scope=${statsScope}`;
+      let shareUrl = window.location.origin + statsPath;
+
+      if (managerView) {
+        const invite = await createGroupInviteLink(Number(group.id), "MEMBER");
+        const next = encodeURIComponent(statsPath);
+        shareUrl = window.location.origin + "/social/invite/" + invite.token + "?mode=player&next=" + next;
+      }
+
+      const result = await shareStatsImage({
+        teamName: group.name,
+        scope: statsScope,
+        rows: scopedStats.length ? scopedStats : list(dashboard?.player_stats),
+        url: shareUrl,
+      });
+
+      if (result.downloaded) {
+        setNotice(managerView
+          ? "Stats image saved. The team invite link was copied too — paste it with the image on Facebook."
+          : "Stats image saved. The stats link was copied too.");
+      } else {
+        setNotice("Stats shared with a link back to this Stats page.");
+      }
+    } catch (err) {
+      if (err?.name !== "AbortError") setError(errorText(err));
+    } finally {
+      setStatsShareBusy(false);
+    }
   }
 
   async function approveTeamRequest(membership) {
@@ -1623,7 +1664,7 @@ export default function SportsTeamManagerDashboard({ initialMemberships = [] }) 
               </div>
             </div>
           </Card> : null}
-          <InteractiveStatsBoard rows={scopedStats} scope={statsScope} onScope={setStatsScope} managerView={managerView} onAdd={() => setStatDrawer(true)} />
+          <InteractiveStatsBoard rows={scopedStats} scope={statsScope} onScope={setStatsScope} managerView={managerView} onAdd={() => setStatDrawer(true)} onShare={quickShareStats} shareBusy={statsShareBusy} />
         </div> : null}
 
         {tab === "Dues" ? <div className="grid gap-3 lg:grid-cols-[1.2fr_.8fr]">
