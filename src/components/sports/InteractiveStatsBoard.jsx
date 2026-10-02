@@ -9,7 +9,7 @@ const COLUMNS = [
   ["avg","AVG",pct], ["obp","OBP",pct], ["slg","SLG",pct], ["ops","OPS",pct],
   ["h","H",(v)=>num(v)], ["single","1B",(v)=>num(v)], ["double","2B",(v)=>num(v)],
   ["triple","3B",(v)=>num(v)], ["hr","HR",(v)=>num(v)], ["rbi","RBI",(v)=>num(v)],
-  ["runs","R",(v)=>num(v)], ["bb","BB",(v)=>num(v)], ["sf","SF",(v)=>num(v)], ["tb","TB",(v)=>num(v)],
+  ["runs","R",(v)=>num(v)], ["bb","BB",(v)=>num(v)], ["sf","SF",(v)=>num(v)], ["gidp","GIDP",(v)=>num(v)], ["tb","TB",(v)=>num(v)],
 ];
 const MAP = Object.fromEntries(COLUMNS.map(([key,label,format])=>[key,{key,label,format}]));
 
@@ -79,6 +79,18 @@ export default function InteractiveStatsBoard({ rows, scope, onScope, managerVie
           ].map(([label,value])=><button key={label} type="button" onClick={()=>sortBy(label==="H/AB"?"h":label.toLowerCase()==="r"?"runs":label.toLowerCase())} className="min-w-0 rounded-lg border border-white/8 bg-white/[.025] px-1 py-1.5 text-center">
             <div className="text-[6px] font-black uppercase tracking-wide text-slate-600">{label}</div>
             <div className="mt-0.5 truncate text-[10px] font-black text-slate-200">{value}</div>
+          </button>)}
+        </div>
+        <div className="mt-1 grid grid-cols-5 gap-1">
+          {[
+            ["2B",num(row.double),"double"],
+            ["3B",num(row.triple),"triple"],
+            ["BB",num(row.bb),"bb"],
+            ["SF",num(row.sf),"sf"],
+            ["GIDP",num(row.gidp),"gidp"],
+          ].map(([label,value,key])=><button key={label} type="button" onClick={()=>sortBy(key)} className="min-w-0 rounded-lg border border-white/8 bg-black/20 px-1 py-1.5 text-center">
+            <div className="text-[6px] font-black uppercase tracking-wide text-slate-600">{label}</div>
+            <div className="mt-0.5 text-[9px] font-black text-slate-300">{value}</div>
           </button>)}
         </div>
       </article>)}

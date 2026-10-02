@@ -17,6 +17,7 @@ const EDITABLE = [
   ["home_runs", "hr", "HR"],
   ["walks", "bb", "BB"],
   ["sac_flies", "sf", "SF"],
+  ["double_plays", "gidp", "GIDP"],
   ["rbi", "rbi", "RBI"],
   ["runs", "runs", "R"],
 ];
@@ -46,8 +47,10 @@ function sameDraft(row, draft) {
   return EDITABLE.every(([field, key]) => num(row?.[key]) === num(draft?.[field]));
 }
 
-export default function EditableStatsGrid({ teamId, initialScope = "LEAGUE", onSaved }) {
-  const [scope, setScope] = useState(initialScope === "TOURNAMENT" ? "TOURNAMENT" : "LEAGUE");
+export default function EditableStatsGrid({ teamId, initialScope = "COMBINED", onSaved }) {
+  const [scope, setScope] = useState(
+    initialScope === "TOURNAMENT" ? "TOURNAMENT" : initialScope === "LEAGUE" ? "LEAGUE" : "COMBINED",
+  );
   const [rows, setRows] = useState([]);
   const [drafts, setDrafts] = useState({});
   const [loading, setLoading] = useState(true);
@@ -61,7 +64,7 @@ export default function EditableStatsGrid({ teamId, initialScope = "LEAGUE", onS
     setLoading(true);
     setError("");
     try {
-      const data = await getScopedTeamStats(teamId, targetScope);
+      const data = await getScopedTeamStats(teamId, targetScope === "COMBINED" ? "ALL" : targetScope);
       const nextRows = list(data?.rows);
       setRows(nextRows);
       setDrafts(Object.fromEntries(nextRows.map((row) => [Number(row.player?.id), draftFromRow(row)])));
@@ -150,13 +153,13 @@ export default function EditableStatsGrid({ teamId, initialScope = "LEAGUE", onS
           Every row starts with what SyncWorks has now. Type the total that should be in any counting-stat column and save the row. 1B, TB, AVG, OBP, SLG and OPS recalculate automatically.
         </p>
         <p className="mt-1 text-[9px] leading-4 text-slate-500">
-          Corrections stay auditable. The original Game Book is not deleted; the adjustment is carried into lineup stats, team leaders, League leaders and earned Power/Contact badges.
+          Corrections stay auditable. Combined edits fix season totals without inventing a League/Tournament split; scoped edits update that competition directly. The original Game Book is never deleted, and verified totals flow into lineup stats, leaders and earned Power/Contact badges.
         </p>
       </div>
 
       <div className="flex items-center justify-between gap-2">
         <div className="flex gap-1.5">
-          {["LEAGUE", "TOURNAMENT"].map((value) => (
+          {["COMBINED", "LEAGUE", "TOURNAMENT"].map((value) => (
             <button
               key={value}
               type="button"
@@ -164,7 +167,7 @@ export default function EditableStatsGrid({ teamId, initialScope = "LEAGUE", onS
               onClick={() => setScope(value)}
               className={`min-h-10 rounded-xl px-3 text-[9px] font-black ${scope === value ? "bg-cyan-300 text-slate-950" : "border border-white/10 text-slate-400"}`}
             >
-              {value === "LEAGUE" ? "League" : "Tournament"}
+              {value === "COMBINED" ? "Combined" : value === "LEAGUE" ? "League" : "Tournament"}
             </button>
           ))}
         </div>
@@ -188,7 +191,7 @@ export default function EditableStatsGrid({ teamId, initialScope = "LEAGUE", onS
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-white/10 bg-[#050b14]">
-          <table className="min-w-[1380px] border-collapse text-center text-[9px]">
+          <table className="min-w-[1480px] border-collapse text-center text-[9px]">
             <thead className="sticky top-0 z-30 bg-[#091421] text-slate-500">
               <tr>
                 <th className="sticky left-0 z-40 min-w-[13rem] border-r border-white/10 bg-[#091421] px-3 py-2 text-left">PLAYER / SAVE</th>
@@ -255,7 +258,7 @@ export default function EditableStatsGrid({ teamId, initialScope = "LEAGUE", onS
       )}
 
       <div className="text-[8px] leading-4 text-slate-600">
-        Swipe left/right on mobile. The player/save column stays pinned. Change League and Tournament separately so league-only leaderboards stay correct.
+        Swipe left/right on mobile. The player/save column stays pinned. Use Combined for verified season totals, then League or Tournament when you know the competition-specific split.
       </div>
     </div>
   );
