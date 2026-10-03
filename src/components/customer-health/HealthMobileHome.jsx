@@ -1,15 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Activity,
-  CalendarDays,
+  BrainCircuit,
   ChevronRight,
-  CircleGauge,
   Dumbbell,
-  Droplets,
   Footprints,
-  HeartPulse,
-  Mic2,
-  ShoppingBag,
+  Moon,
+  Scale,
+  SmilePlus,
   Sparkles,
   Utensils,
 } from "lucide-react";
@@ -19,7 +17,6 @@ import {
 } from "./healthWorkoutCloudSync";
 import {
   currentDayWorkout,
-  formatHealthDay,
   localYmd,
   shouldOfferPreviousWorkout,
 } from "./healthWorkoutDateLifecycle";
@@ -29,61 +26,45 @@ const num = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const pct = (value, goal) => {
-  if (!goal) return 0;
-  return Math.max(0, Math.min(100, Math.round((num(value) / num(goal)) * 100)));
-};
+const clampPct = (value) => Math.max(0, Math.min(100, Math.round(num(value))));
 
-function MiniStat({ icon: Icon, label, value, detail, onClick }) {
+function Ring({ value = 0, label = "", tone = "lime" }) {
+  const pct = clampPct(value);
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="rounded-2xl border border-white/10 bg-white/[0.025] p-3 text-left active:scale-[0.99]"
+    <div
+      className={`sw-health-ring sw-health-ring--${tone}`}
+      style={{ "--ring-progress": `${pct * 3.6}deg` }}
     >
-      <Icon className="h-4 w-4 text-cyan-300" />
-      <div className="mt-2 text-[9px] font-black uppercase tracking-[0.12em] text-slate-500">
-        {label}
-      </div>
-      <div className="mt-0.5 truncate text-[14px] font-black text-white">{value}</div>
-      <div className="mt-0.5 truncate text-[9px] text-slate-500">{detail}</div>
-    </button>
-  );
-}
-
-function QuickAction({ icon: Icon, label, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="min-w-[88px] rounded-2xl border border-white/10 bg-white/[0.025] p-3 text-left active:scale-[0.99]"
-    >
-      <Icon className="h-4 w-4 text-cyan-300" />
-      <div className="mt-2 text-[10px] font-black text-white">{label}</div>
-    </button>
-  );
-}
-
-function ProgressLine({ label, value, goal, suffix = "" }) {
-  const progress = pct(value, goal);
-  return (
-    <div>
-      <div className="flex items-center justify-between gap-3 text-[10px]">
-        <span className="font-black text-slate-400">{label}</span>
-        <span className="font-black text-white">
-          {Math.round(num(value))}{suffix}
-          <span className="font-semibold text-slate-600">
-            {goal ? ` / ${Math.round(num(goal))}${suffix}` : " / set goal"}
-          </span>
-        </span>
-      </div>
-      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-600"
-          style={{ width: `${progress}%` }}
-        />
+      <div className="sw-health-ring__inner">
+        <strong>{pct}%</strong>
+        <span>{label}</span>
       </div>
     </div>
+  );
+}
+
+function MetricBar({ label, value = 0, detail }) {
+  return (
+    <div className="sw-health-readiness-row">
+      <span>{label}</span>
+      <div className="sw-health-readiness-track">
+        <div style={{ width: `${clampPct(value)}%` }} />
+      </div>
+      <b>{detail}</b>
+    </div>
+  );
+}
+
+function QuickLog({ icon: Icon, label, active = false, onClick }) {
+  return (
+    <button
+      type="button"
+      className={`sw-health-quick-log ${active ? "is-active" : ""}`}
+      onClick={onClick}
+    >
+      <span className="sw-health-quick-log__icon"><Icon size={19} /></span>
+      <span>{label}</span>
+    </button>
   );
 }
 
@@ -94,6 +75,9 @@ export default function HealthMobileHome({
   decision = null,
   onOpen,
   onStartWorkout,
+  onShowInsights,
+  onQuickLog,
+  onEditDailyGoals,
 }) {
   const [dayKey, setDayKey] = useState(() => localYmd());
   const [previousWorkout, setPreviousWorkout] = useState(null);
@@ -122,36 +106,37 @@ export default function HealthMobileHome({
     [weekPlan, todayWorkout, dayKey]
   );
 
-  const workoutName = nextWorkout?.workout_name || "No workout planned";
-  const workoutMinutes = num(nextWorkout?.duration_minutes ?? nextWorkout?.minutes, 0);
-  const workoutExercises = Array.isArray(nextWorkout?.exercises)
-    ? nextWorkout.exercises.length
-    : 0;
-  const workoutFocus =
-    nextWorkout?.focus ||
-    nextWorkout?.note ||
-    nextWorkout?.muscle_focus ||
-    (nextWorkout ? "Planned session" : "Build today's session with SYNC");
+  const workoutName = nextWorkout?.workout_name || "Build Today's Plan";
+  const workoutMinutes = num(nextWorkout?.duration_minutes ?? nextWorkout?.minutes, 45);
+  const exercises = Array.isArray(nextWorkout?.exercises) ? nextWorkout.exercises : [];
+  const workoutExercises = exercises.length || num(nextWorkout?.exercise_count, 0);
+  const workoutSets = exercises.reduce(
+    (sum, exercise) => sum + num(exercise?.sets ?? exercise?.planned_sets, 0),
+    0
+  );
 
   const calories = num(snapshot?.calories ?? snapshot?.calories_today, 0);
-  const calorieGoal = num(snapshot?.calorie_goal ?? profile?.calorie_goal, 0);
+  const calorieGoal = num(snapshot?.calorie_goal ?? profile?.calorie_goal, 2400);
   const protein = num(snapshot?.protein_today ?? snapshot?.protein, 0);
-  const proteinGoal = num(snapshot?.protein_goal ?? profile?.protein_goal, 0);
-  const water = num(snapshot?.water ?? snapshot?.water_oz, 0);
-  const waterGoal = num(snapshot?.water_goal ?? snapshot?.water_goal_oz, 0);
+  const proteinGoal = num(snapshot?.protein_goal ?? profile?.protein_goal, 136);
+  const proteinRemaining = Math.max(0, Math.round(proteinGoal - protein));
   const steps = num(snapshot?.steps ?? snapshot?.steps_today, 0);
   const stepGoal = num(snapshot?.step_goal ?? profile?.step_goal, 10000);
-  const readiness = snapshot?.readiness || snapshot?.recovery_status || "Not logged";
+  const sleepHours = num(snapshot?.last_sleep_hours ?? snapshot?.sleep_hours, 0);
+  const sleepGoal = num(snapshot?.sleep_goal_hours ?? profile?.sleep_goal_hours, 8);
 
-  const completedPlanItems = weekPlan.filter((item) => item?.status === "Completed").length;
-  const scheduledPlanItems = weekPlan.filter((item) => item?.workout_name).length;
-  const calculatedPlanPct = scheduledPlanItems
-    ? Math.round((completedPlanItems / scheduledPlanItems) * 100)
-    : 0;
-  const planPct = Math.max(
-    0,
-    Math.min(100, num(snapshot?.plan_completion_percent, calculatedPlanPct))
-  );
+  const readinessRaw = snapshot?.readiness_score ?? snapshot?.readiness_percent;
+  const readiness = Number.isFinite(Number(readinessRaw))
+    ? clampPct(readinessRaw)
+    : snapshot?.readiness === "High"
+    ? 87
+    : snapshot?.readiness === "Medium"
+    ? 68
+    : 74;
+
+  const soreness = clampPct(snapshot?.soreness_score ?? (snapshot?.soreness ? 45 : 28));
+  const sleepQuality = clampPct(snapshot?.sleep_quality_score ?? (sleepHours >= sleepGoal ? 82 : 66));
+  const energy = clampPct(snapshot?.energy_score ?? (snapshot?.energy === "High" ? 88 : 76));
 
   const latestCompleted = useMemo(
     () =>
@@ -167,7 +152,6 @@ export default function HealthMobileHome({
 
   useEffect(() => {
     let cancelled = false;
-
     async function refreshDay() {
       setDayKey(localYmd());
       try {
@@ -176,23 +160,16 @@ export default function HealthMobileHome({
           if (!cancelled) setPreviousWorkout(null);
           return;
         }
-
         const lifecycle = shouldOfferPreviousWorkout(active);
         if (lifecycle.expired) {
           await archiveExpiredCloudWorkout(active);
           if (!cancelled) setPreviousWorkout(null);
           return;
         }
-
         if (lifecycle.ageDays === 1) {
-          setPreviousWorkout({
-            ...active,
-            session: lifecycle.session,
-            label: lifecycle.label,
-          });
+          setPreviousWorkout({ ...active, session: lifecycle.session, label: lifecycle.label });
           return;
         }
-
         if (!cancelled) setPreviousWorkout(null);
       } catch (error) {
         console.warn("Health mobile day rollover unavailable.", error);
@@ -221,238 +198,167 @@ export default function HealthMobileHome({
           previousWorkout.session?.id,
         workout_id:
           previousWorkout.workout_id || previousWorkout.session?.workout_id || "",
-        ymd:
-          previousWorkout.session?.scheduled_ymd ||
-          previousWorkout.session?.ymd ||
-          "",
+        ymd: previousWorkout.session?.scheduled_ymd || previousWorkout.session?.ymd || "",
         workout_name: previousWorkout.session?.workout_name || "Previous workout",
       }
     : null;
 
-  const latestWorkoutLabel =
-    latestCompleted?.workout_name || latestCompleted?.name || "No completed workout yet";
+  const insight =
+    snapshot?.trainer_insight ||
+    snapshot?.ai_coach_insight ||
+    (latestCompleted
+      ? `Your recent training is logged. I’ll use it to balance today’s intensity and avoid repeating the same muscle groups too soon.`
+      : "Build your first plan and I’ll adapt training, nutrition and recovery as you log your days.");
+
+  function openQuick(type, fallback) {
+    if (onQuickLog) {
+      onQuickLog(type);
+      return;
+    }
+    onOpen?.(fallback);
+  }
 
   return (
-    <section className="lg:hidden text-white">
-      <div className="rounded-[1.4rem] border border-cyan-300/15 bg-[linear-gradient(145deg,rgba(8,18,38,.95),rgba(3,8,20,.98))] p-4 shadow-[0_18px_48px_rgba(0,0,0,.3)]">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-[9px] font-black uppercase tracking-[0.18em] text-cyan-300">
-              {formatHealthDay(dayKey)}
-            </div>
-            <h1 className="mt-1 text-[23px] font-black tracking-tight text-white">
-              Health, {firstName}
-            </h1>
-            <p className="mt-1 text-[11px] leading-4 text-slate-500">
-              One place for training, fuel, recovery and progress.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => onOpen?.("questionnaire")}
-            className="h-9 shrink-0 rounded-xl border border-white/10 bg-white/[0.035] px-3 text-[10px] font-black text-slate-300"
-          >
-            Profile
-          </button>
+    <section className="sw-health-home lg:hidden text-white">
+      <section className="sw-health-hero">
+        <img
+          className="sw-health-hero__logo"
+          src="/health/syncworks-health-s-glow.png"
+          alt=""
+          aria-hidden="true"
+        />
+        <div className="sw-health-hero__copy">
+          <div className="sw-health-eyebrow">Ready to</div>
+          <h1>Level up?</h1>
+          <p>What’s the plan today, {firstName}?</p>
+          <span>Stronger habits. A healthier you.</span>
         </div>
+        <button type="button" className="sw-health-ai-pill" onClick={() => onOpen?.("coach-chat")}>
+          <BrainCircuit size={17} /> AI Coach <ChevronRight size={15} />
+        </button>
+      </section>
 
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          <MiniStat
-            icon={CircleGauge}
-            label="Readiness"
-            value={readiness}
-            detail="today"
-            onClick={() => onOpen?.("daily-goals")}
-          />
-          <MiniStat
-            icon={Utensils}
-            label="Protein"
-            value={proteinGoal ? `${Math.round(protein)}/${Math.round(proteinGoal)}g` : `${Math.round(protein)}g`}
-            detail={proteinGoal ? `${Math.max(0, Math.round(proteinGoal - protein))}g left` : "set goal"}
-            onClick={() => onOpen?.("nutrition-dashboard")}
-          />
-          <MiniStat
-            icon={Footprints}
-            label="Steps"
-            value={Math.round(steps).toLocaleString()}
-            detail={`${pct(steps, stepGoal)}% of goal`}
-            onClick={() => onOpen?.("daily-goals")}
-          />
+      <section className="sw-health-panel sw-health-quick-panel">
+        <div className="sw-health-section-head">
+          <span>Today at a glance</span>
+          <button type="button" onClick={onEditDailyGoals}>Log progress <ChevronRight size={13} /></button>
         </div>
-      </div>
+        <div className="sw-health-quick-grid">
+          <QuickLog icon={Dumbbell} label="Workout" active onClick={() => nextWorkout ? onStartWorkout?.(nextWorkout) : onOpen?.("plan-today")} />
+          <QuickLog icon={Utensils} label="Nutrition" onClick={() => openQuick("meal", "nutrition-coach")} />
+          <QuickLog icon={Footprints} label="Steps" onClick={() => openQuick("steps", "daily-goals")} />
+          <QuickLog icon={Moon} label="Sleep" onClick={() => openQuick("sleep", "sleep")} />
+          <QuickLog icon={Scale} label="Weight" onClick={() => openQuick("weight", "progress")} />
+          <QuickLog icon={SmilePlus} label="Mood" onClick={() => openQuick("mood", "daily-goals")} />
+        </div>
+      </section>
 
       {decision?.revised ? (
         <button
           type="button"
-          onClick={() =>
-            decision?.needsRebuild
-              ? onOpen?.("planner")
-              : onStartWorkout?.(decision?.workout)
-          }
-          className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-blue-400/25 bg-blue-500/[0.08] p-3 text-left"
+          onClick={() => decision?.needsRebuild ? onOpen?.("planner") : onStartWorkout?.(decision?.workout)}
+          className="sw-health-adaptive-alert"
         >
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-500/15 text-blue-200">
-            <Sparkles className="h-4 w-4" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-blue-300">
-              SYNC adjusted today
-            </span>
-            <span className="mt-0.5 block truncate text-[11px] font-black text-white">
-              {decision?.needsRebuild ? "Recovery-safe rebuild needed" : decision?.workout?.workout_name}
-            </span>
-          </span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-blue-300" />
+          <Sparkles size={17} />
+          <span><b>SYNC adjusted today</b>{decision?.reason || "Your plan was adapted around recovery."}</span>
+          <ChevronRight size={17} />
         </button>
       ) : null}
 
       {previousWorkout && resumePreviousWorkout ? (
-        <button
-          type="button"
-          onClick={() => onStartWorkout?.(resumePreviousWorkout)}
-          className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-amber-300/20 bg-amber-300/[0.055] p-3 text-left"
-        >
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-amber-300/10 text-amber-200">
-            <Activity className="h-4 w-4" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-amber-200">
-              {previousWorkout.label || "Yesterday - Incomplete"}
-            </span>
-            <span className="mt-0.5 block truncate text-[11px] font-black text-white">
-              {resumePreviousWorkout.workout_name}
-            </span>
-          </span>
-          <span className="text-[10px] font-black text-amber-100">Resume</span>
+        <button type="button" className="sw-health-resume" onClick={() => onStartWorkout?.(resumePreviousWorkout)}>
+          <Activity size={17} />
+          <span><b>{previousWorkout.label || "Yesterday — incomplete"}</b>{resumePreviousWorkout.workout_name}</span>
+          <strong>Resume</strong>
         </button>
       ) : null}
 
-      <section className="mt-3 rounded-[1.45rem] border border-blue-400/20 bg-[#06101f] p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-[9px] font-black uppercase tracking-[0.18em] text-cyan-300">
-              {todayWorkout ? "Today's workout" : nextWorkout ? "Next workout" : "Workout plan"}
-            </div>
-            <h2 className="mt-1 truncate text-[20px] font-black text-white">{workoutName}</h2>
-            <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-500">{workoutFocus}</p>
+      <section className="sw-health-panel sw-health-workout-card">
+        <div className="sw-health-workout-copy">
+          <div className="sw-health-eyebrow">Today’s workout</div>
+          <h2>{workoutName}</h2>
+          <div className="sw-health-workout-stats">
+            <div><b>{workoutExercises || 5}</b><span>Exercises</span></div>
+            <div><b>{workoutSets || 16}</b><span>Sets</span></div>
+            <div><b>{workoutMinutes || 45}</b><span>Min est.</span></div>
           </div>
           <button
             type="button"
-            onClick={() => onOpen?.("planner")}
-            className="h-8 shrink-0 rounded-xl border border-white/10 px-2.5 text-[9px] font-black text-slate-400"
+            className="sw-health-primary"
+            onClick={() => nextWorkout ? onStartWorkout?.(nextWorkout) : onOpen?.("plan-today")}
           >
-            Plan
+            {nextWorkout ? "Start workout" : "Build today’s workout"} <ChevronRight size={17} />
           </button>
         </div>
-
-        <div className="mt-3 flex items-center gap-2 text-[10px] font-bold text-slate-500">
-          <span>{workoutMinutes ? `${workoutMinutes} min` : "Flexible"}</span>
-          <span>•</span>
-          <span>{workoutExercises ? `${workoutExercises} exercises` : "Build session"}</span>
-          <span>•</span>
-          <span>{nextWorkout?.level || "Adaptive"}</span>
+        <div className="sw-health-workout-art">
+          <img src="/health/exercises/bench-press/bench-press-hero.png" alt="Bench press exercise" />
+          <span>Push<br /><small>Chest · Shoulders · Triceps</small></span>
         </div>
-
-        <button
-          type="button"
-          onClick={() =>
-            nextWorkout ? onStartWorkout?.(nextWorkout) : onOpen?.("plan-today")
-          }
-          className="mt-3 h-12 w-full rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-[13px] font-black text-white shadow-[0_10px_30px_rgba(37,99,235,.28)]"
-        >
-          {nextWorkout ? "START WORKOUT" : "BUILD TODAY'S WORKOUT"}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onOpen?.("workouts")}
-          className="mt-2 w-full text-[10px] font-black text-cyan-300"
-        >
-          Browse quick-start workouts
-        </button>
       </section>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-[10px] font-black text-white">Fuel today</div>
-            <button type="button" onClick={() => onOpen?.("nutrition-dashboard")} className="text-[9px] font-black text-cyan-300">Open</button>
+      <section className="sw-health-panel sw-health-readiness-card">
+        <div className="sw-health-section-title">Readiness & recovery</div>
+        <div className="sw-health-readiness-layout">
+          <Ring value={readiness} label="Readiness" />
+          <div className="sw-health-readiness-metrics">
+            <MetricBar label="Soreness" value={100 - soreness} detail={soreness < 45 ? "Low" : "Med"} />
+            <MetricBar label="Sleep quality" value={sleepQuality} detail={sleepQuality > 74 ? "Good" : "Fair"} />
+            <MetricBar label="Energy" value={energy} detail={energy > 80 ? "High" : "Good"} />
+            <button type="button" className="sw-health-secondary" onClick={() => onOpen?.("daily-goals")}>Check in now <ChevronRight size={16} /></button>
           </div>
-          <div className="mt-2 space-y-2.5">
-            <ProgressLine label="Calories" value={calories} goal={calorieGoal} />
-            <ProgressLine label="Protein" value={protein} goal={proteinGoal} suffix="g" />
+        </div>
+      </section>
+
+      <div className="sw-health-dual-grid">
+        <section className="sw-health-panel sw-health-mini-card">
+          <div className="sw-health-section-title">Nutrition</div>
+          <div className="sw-health-mini-body">
+            <Ring value={proteinGoal ? (protein / proteinGoal) * 100 : 0} label="Protein" />
+            <div><b>{proteinRemaining}g</b><span>protein remaining</span><small>{Math.round(calories).toLocaleString()} / {Math.round(calorieGoal).toLocaleString()} cal</small></div>
           </div>
+          <button type="button" className="sw-health-secondary" onClick={() => onOpen?.("nutrition-coach")}>Log meal <ChevronRight size={15} /></button>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-[10px] font-black text-white">Recovery</div>
-            <button type="button" onClick={() => onOpen?.("daily-goals")} className="text-[9px] font-black text-cyan-300">Open</button>
+        <section className="sw-health-panel sw-health-mini-card sw-health-sleep-card">
+          <div className="sw-health-section-title">Sleep & recovery</div>
+          <div className="sw-health-mini-body">
+            <Ring value={sleepGoal ? (sleepHours / sleepGoal) * 100 : 0} label="Sleep" tone="violet" />
+            <div><b>{sleepHours ? `${sleepHours.toFixed(1)}h` : "—"}</b><span>last night</span><small>{sleepGoal}h target</small></div>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <div>
-              <Droplets className="h-4 w-4 text-cyan-300" />
-              <div className="mt-1 text-[13px] font-black text-white">{waterGoal ? `${Math.round(water)}/${Math.round(waterGoal)}` : Math.round(water)}</div>
-              <div className="text-[8px] text-slate-500">oz water</div>
-            </div>
-            <div>
-              <HeartPulse className="h-4 w-4 text-cyan-300" />
-              <div className="mt-1 text-[13px] font-black text-white">{readiness}</div>
-              <div className="text-[8px] text-slate-500">readiness</div>
-            </div>
-          </div>
+          <button type="button" className="sw-health-secondary" onClick={() => onOpen?.("sleep")}>Sleep planner <ChevronRight size={15} /></button>
         </section>
       </div>
 
-      <section className="mt-3 rounded-2xl border border-blue-400/20 bg-gradient-to-br from-blue-500/[0.08] to-cyan-500/[0.035] p-3">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => onOpen?.("coach-chat")}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-cyan-300/30 bg-[#06101f] text-lg font-black text-cyan-300 shadow-[0_0_20px_rgba(34,211,238,.15)]"
-          >
-            S
-          </button>
-          <div className="min-w-0 flex-1">
-            <div className="text-[9px] font-black uppercase tracking-[0.15em] text-cyan-300">SYNC Coach</div>
-            <div className="mt-0.5 text-[11px] font-black text-white">Ask, adapt or get your briefing.</div>
-          </div>
-          <button
-            type="button"
-            onClick={() => onOpen?.("coach-chat")}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.035] text-cyan-300"
-            aria-label="Speak to SYNC"
-          >
-            <Mic2 className="h-4 w-4" />
-          </button>
+      <button type="button" className="sw-health-insight" onClick={() => onOpen?.("coach-chat")}>
+        <span className="sw-health-insight__icon"><BrainCircuit size={20} /></span>
+        <span><b>AI Coach insight</b>{insight}</span>
+        <ChevronRight size={18} />
+      </button>
+
+      <section className="sw-health-panel sw-health-week-card">
+        <div className="sw-health-section-head">
+          <span>This week</span>
+          <button type="button" onClick={() => onOpen?.("planner")}>Open plan <ChevronRight size={13} /></button>
+        </div>
+        <div className="sw-health-week-strip">
+          {[...weekPlan].slice(0, 5).map((item, index) => (
+            <button key={item?.id || index} type="button" onClick={() => item?.status !== "Completed" && onStartWorkout?.(item)}>
+              <small>{item?.day_label || String(item?.ymd || "").slice(5)}</small>
+              <b>{item?.workout_name || "Recovery"}</b>
+              <span className={item?.status === "Completed" ? "is-done" : ""}>{item?.status || "Planned"}</span>
+            </button>
+          ))}
+          {!weekPlan.length ? (
+            <button type="button" className="sw-health-empty-week" onClick={() => onOpen?.("questionnaire")}>
+              <Sparkles size={18} /><b>Build my plan</b><span>2-minute setup</span>
+            </button>
+          ) : null}
         </div>
       </section>
 
-      <section className="mt-3 rounded-2xl border border-white/10 bg-white/[0.025] p-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="text-[10px] font-black text-white">Progress</div>
-            <div className="mt-0.5 text-[9px] text-slate-500">
-              {scheduledPlanItems
-                ? `${completedPlanItems}/${scheduledPlanItems} planned sessions · ${planPct}%`
-                : "Your weekly trend builds as you train."}
-            </div>
-          </div>
-          <button type="button" onClick={() => onOpen?.("progress")} className="text-[9px] font-black text-cyan-300">View</button>
-        </div>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
-          <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-600" style={{ width: `${planPct}%` }} />
-        </div>
-        <div className="mt-2 truncate text-[9px] text-slate-600">Latest: {latestWorkoutLabel}</div>
-      </section>
-
-      <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <QuickAction icon={CalendarDays} label="Plan" onClick={() => onOpen?.("planner")} />
-        <QuickAction icon={Utensils} label="Nutrition" onClick={() => onOpen?.("nutrition-dashboard")} />
-        <QuickAction icon={Activity} label="Progress" onClick={() => onOpen?.("progress")} />
-        <QuickAction icon={Dumbbell} label="Workouts" onClick={() => onOpen?.("workouts")} />
-        <QuickAction icon={ShoppingBag} label="Shop" onClick={() => onOpen?.("shop")} />
-        <QuickAction icon={Sparkles} label="SYNC" onClick={() => onOpen?.("coach-chat")} />
+      <div className="sw-health-home-actions">
+        <button type="button" onClick={() => onOpen?.("questionnaire")}><Sparkles size={15} /> Build / adjust plan</button>
+        <button type="button" onClick={onShowInsights || (() => onOpen?.("progress"))}>View progress <ChevronRight size={14} /></button>
       </div>
     </section>
   );

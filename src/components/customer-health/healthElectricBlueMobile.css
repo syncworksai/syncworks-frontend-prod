@@ -1,135 +1,304 @@
-/* SyncWorks Health — compact electric-blue mobile UX override */
+/* SyncWorks Health — unified obsidian / electric health experience */
 .health-obsidian-electric {
-  --sw-health-green: #34dfff;
-  --sw-health-green-bright: #72eaff;
-  --sw-health-green-deep: #2563eb;
-  --sw-health-green-muted: #8defff;
-  --sw-health-border: rgba(52, 223, 255, 0.18);
-  --sw-health-border-strong: rgba(52, 223, 255, 0.46);
-  --sw-health-glow: rgba(52, 223, 255, 0.18);
-  --sw-health-glow-strong: rgba(37, 99, 235, 0.34);
+  --sw-health-green: #a6ff00;
+  --sw-health-green-bright: #c6ff52;
+  --sw-health-green-deep: #6fae00;
+  --sw-health-cyan: #22d3ee;
+  --sw-health-blue: #2587ff;
+  --sw-health-violet: #7c3aed;
+  --sw-health-panel: rgba(4, 10, 21, 0.95);
+  --sw-health-border: rgba(37, 135, 255, 0.32);
+  --sw-health-border-strong: rgba(34, 211, 238, 0.62);
+  --sw-health-glow: rgba(37, 135, 255, 0.2);
+  --sw-health-glow-strong: rgba(124, 58, 237, 0.28);
   background:
-    radial-gradient(circle at 85% 8%, rgba(52,223,255,0.08), transparent 18rem),
-    radial-gradient(circle at 10% 38%, rgba(37,99,235,0.08), transparent 20rem),
-    linear-gradient(180deg, #020617 0%, #030712 52%, #02040b 100%) !important;
+    radial-gradient(circle at 88% 6%, rgba(37,135,255,.13), transparent 19rem),
+    radial-gradient(circle at 9% 30%, rgba(124,58,237,.08), transparent 24rem),
+    linear-gradient(180deg, #01040a 0%, #020817 48%, #01030a 100%) !important;
 }
 
 .health-obsidian-electric :where(section, article)[class*="rounded-"] {
-  border-color: rgba(52,223,255,0.16) !important;
-  background: linear-gradient(145deg, rgba(7,16,30,0.98), rgba(3,8,18,0.995)) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.025), 0 12px 34px rgba(0,0,0,.34) !important;
+  border-color: rgba(37,135,255,.22) !important;
+  background: linear-gradient(145deg, rgba(7,16,30,.98), rgba(3,8,18,.995)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025), 0 12px 34px rgba(0,0,0,.34) !important;
 }
 
 .health-obsidian-electric :where(section, article)[class*="rounded-"]::after {
-  background: linear-gradient(90deg, transparent, rgba(52,223,255,.9), transparent) !important;
-  filter: drop-shadow(0 0 8px rgba(52,223,255,.44)) !important;
-}
-
-.health-obsidian-electric [class*="text-lime-"],
-.health-obsidian-electric [class*="text-emerald-"],
-.health-obsidian-electric [class*="text-fuchsia-"],
-.health-obsidian-electric [class*="text-violet-"],
-.health-obsidian-electric [class*="text-purple-"] {
-  color: #7dd3fc !important;
-}
-
-.health-obsidian-electric [class*="border-lime-"],
-.health-obsidian-electric [class*="border-emerald-"],
-.health-obsidian-electric [class*="border-fuchsia-"],
-.health-obsidian-electric [class*="border-violet-"],
-.health-obsidian-electric [class*="border-purple-"] {
-  border-color: rgba(52,223,255,.30) !important;
-}
-
-.health-obsidian-electric [class*="bg-lime-"],
-.health-obsidian-electric [class*="bg-emerald-"],
-.health-obsidian-electric [class*="bg-fuchsia-"],
-.health-obsidian-electric [class*="bg-violet-"],
-.health-obsidian-electric [class*="bg-purple-"] {
-  background-color: rgba(37,99,235,.10) !important;
+  background: linear-gradient(90deg, transparent, rgba(34,211,238,.9), transparent) !important;
+  filter: drop-shadow(0 0 8px rgba(34,211,238,.44)) !important;
 }
 
 .health-obsidian-electric button[class*="bg-gradient"],
-.health-obsidian-electric a[class*="bg-gradient"],
-.health-obsidian-electric button[class*="from-cyan"],
-.health-obsidian-electric button[class*="from-emerald"],
-.health-obsidian-electric button[class*="from-lime"] {
-  border: 1px solid rgba(125,211,252,.46) !important;
+.health-obsidian-electric a[class*="bg-gradient"] {
+  border: 1px solid rgba(166,255,0,.6) !important;
   color: #fff !important;
-  background: linear-gradient(135deg, #06b6d4 0%, #2563eb 55%, #4f46e5 100%) !important;
-  box-shadow: 0 8px 22px rgba(37,99,235,.24), inset 0 1px 0 rgba(255,255,255,.18) !important;
+  background: linear-gradient(135deg, rgba(77,117,0,.96), rgba(20,54,6,.96)) !important;
+  box-shadow: 0 0 22px rgba(166,255,0,.2), inset 0 1px 0 rgba(255,255,255,.16) !important;
 }
 
 .health-obsidian-electric .health-workout-start-button {
-  border-color: rgba(125,211,252,.72) !important;
+  border-color: rgba(166,255,0,.72) !important;
   color: #fff !important;
-  background: linear-gradient(135deg, #22d3ee 0%, #2563eb 58%, #4338ca 100%) !important;
-  box-shadow: 0 0 22px rgba(34,211,238,.22), 0 12px 30px rgba(37,99,235,.22) !important;
+  background: linear-gradient(135deg, #77b900 0%, #315800 100%) !important;
+  box-shadow: 0 0 22px rgba(166,255,0,.24), 0 12px 30px rgba(0,0,0,.3) !important;
 }
 
+/* New unified mobile home */
+.sw-health-home {
+  --panel-edge: linear-gradient(130deg, rgba(34,211,238,.92), rgba(37,135,255,.6) 55%, rgba(124,58,237,.86));
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding-bottom: 1rem;
+}
+
+.sw-health-home button { -webkit-tap-highlight-color: transparent; }
+
+.sw-health-hero {
+  position: relative;
+  min-height: 180px;
+  overflow: hidden;
+  border-radius: 1.45rem;
+  border: 1px solid rgba(37,135,255,.28);
+  background:
+    linear-gradient(90deg, rgba(1,4,10,.99) 0%, rgba(1,5,13,.96) 51%, rgba(3,12,28,.82) 100%),
+    radial-gradient(circle at 76% 40%, rgba(37,135,255,.18), transparent 30%);
+  box-shadow: 0 18px 45px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.04);
+  padding: 1.25rem 1.05rem 1rem;
+}
+
+.sw-health-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -10% -48% 35%;
+  height: 160px;
+  background: radial-gradient(ellipse, rgba(166,255,0,.12), transparent 62%);
+  pointer-events: none;
+}
+
+.sw-health-hero__logo {
+  position: absolute;
+  right: -20px;
+  top: 14px;
+  width: 190px;
+  height: 190px;
+  object-fit: contain;
+  opacity: .24;
+  filter: saturate(1.4) hue-rotate(16deg) drop-shadow(0 0 20px rgba(37,135,255,.28));
+}
+
+.sw-health-hero__copy { position: relative; z-index: 2; max-width: 74%; }
+.sw-health-eyebrow,
+.sw-health-section-title,
+.sw-health-section-head > span {
+  color: #62e8ff;
+  font-size: .65rem;
+  line-height: 1;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .15em;
+}
+.sw-health-hero h1 {
+  margin: .3rem 0 .15rem;
+  color: #fff;
+  font-size: clamp(2rem, 9vw, 3.25rem);
+  line-height: .92;
+  font-weight: 1000;
+  text-transform: uppercase;
+  letter-spacing: -.045em;
+  text-shadow: 0 0 18px rgba(37,135,255,.2);
+}
+.sw-health-hero p { margin: .55rem 0 0; color: #d7e0ec; font-size: .86rem; font-weight: 650; }
+.sw-health-hero__copy > span { display: block; margin-top: .65rem; color: #8390a4; font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; }
+.sw-health-ai-pill {
+  position: absolute;
+  z-index: 3;
+  right: .8rem;
+  top: .8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  height: 2.2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(34,211,238,.65);
+  background: rgba(2,10,24,.82);
+  padding: 0 .7rem;
+  color: #fff;
+  font-size: .62rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  box-shadow: 0 0 22px rgba(37,135,255,.18);
+}
+
+.sw-health-panel {
+  position: relative;
+  margin-top: .7rem;
+  border: 1px solid transparent;
+  border-radius: 1.35rem;
+  background:
+    linear-gradient(#040b17,#030712) padding-box,
+    var(--panel-edge) border-box;
+  box-shadow: 0 14px 36px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.025);
+  overflow: hidden;
+}
+
+.sw-health-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+}
+.sw-health-section-head button {
+  display: inline-flex;
+  align-items: center;
+  gap: .18rem;
+  color: #48ccff;
+  font-size: .58rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.sw-health-quick-panel { padding: .78rem; }
+.sw-health-quick-grid { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: .36rem; margin-top: .65rem; }
+.sw-health-quick-log {
+  min-width: 0;
+  border-radius: .9rem;
+  border: 1px solid rgba(148,163,184,.17);
+  background: rgba(255,255,255,.025);
+  padding: .48rem .15rem .42rem;
+  color: #b6c0cd;
+  text-align: center;
+}
+.sw-health-quick-log__icon {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  margin: 0 auto .25rem;
+  place-items: center;
+  border-radius: .72rem;
+  background: rgba(255,255,255,.025);
+  color: #dbe3ee;
+}
+.sw-health-quick-log > span:last-child { display:block; overflow:hidden; text-overflow:ellipsis; font-size:.49rem; font-weight:850; text-transform:uppercase; letter-spacing:.04em; }
+.sw-health-quick-log.is-active { border-color: rgba(166,255,0,.68); color: #c7ff58; box-shadow: inset 0 0 18px rgba(166,255,0,.08), 0 0 16px rgba(166,255,0,.12); }
+.sw-health-quick-log.is-active .sw-health-quick-log__icon { color:#b7ff22; background:rgba(166,255,0,.08); }
+
+.sw-health-adaptive-alert,
+.sw-health-resume,
+.sw-health-insight {
+  width: 100%;
+  margin-top: .65rem;
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(124,58,237,.4);
+  background: linear-gradient(110deg, rgba(37,135,255,.08), rgba(124,58,237,.11));
+  padding: .75rem .8rem;
+  color: #dce7f6;
+  text-align: left;
+}
+.sw-health-adaptive-alert > span,
+.sw-health-resume > span,
+.sw-health-insight > span { min-width:0; flex:1; font-size:.64rem; line-height:1.35; color:#9aa8bb; }
+.sw-health-adaptive-alert b,
+.sw-health-resume b,
+.sw-health-insight b { display:block; margin-bottom:.12rem; color:#fff; font-size:.62rem; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
+.sw-health-resume { border-color: rgba(251,191,36,.25); background: rgba(251,191,36,.045); }
+.sw-health-resume > strong { color:#fde68a; font-size:.65rem; }
+
+.sw-health-workout-card { display:grid; grid-template-columns: 58% 42%; min-height: 235px; }
+.sw-health-workout-copy { position:relative; z-index:2; padding:1rem .85rem; }
+.sw-health-workout-copy h2 { margin:.35rem 0 .75rem; font-size:1.5rem; line-height:.98; font-weight:1000; text-transform:uppercase; letter-spacing:-.035em; }
+.sw-health-workout-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:.35rem; }
+.sw-health-workout-stats div { min-width:0; }
+.sw-health-workout-stats b { display:block; color:#fff; font-size:1.35rem; line-height:1; }
+.sw-health-workout-stats span { display:block; margin-top:.22rem; color:#8b98aa; font-size:.48rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+.sw-health-workout-art { position:relative; min-height:235px; overflow:hidden; background:radial-gradient(circle at center,rgba(37,135,255,.14),transparent 58%); }
+.sw-health-workout-art::before { content:""; position:absolute; z-index:1; inset:0; background:linear-gradient(90deg,#040b17 0%,transparent 35%,rgba(3,7,18,.1) 100%); }
+.sw-health-workout-art img { width:100%; height:100%; object-fit:cover; object-position:center; filter:saturate(.95) contrast(1.08); }
+.sw-health-workout-art > span { position:absolute; z-index:2; right:.55rem; bottom:.55rem; color:#5fe2ff; font-size:.6rem; font-weight:900; text-transform:uppercase; letter-spacing:.12em; text-align:right; }
+.sw-health-workout-art small { color:#a4afbf; font-size:.42rem; letter-spacing:.04em; }
+.sw-health-primary {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:.25rem;
+  width:100%;
+  min-height:2.6rem;
+  margin-top:.85rem;
+  border:1px solid #a6ff00;
+  border-radius:.8rem;
+  background:linear-gradient(180deg,rgba(89,137,0,.8),rgba(27,59,0,.84));
+  color:#fff;
+  font-size:.68rem;
+  font-weight:950;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  box-shadow:0 0 18px rgba(166,255,0,.22), inset 0 0 14px rgba(166,255,0,.08);
+}
+
+.sw-health-readiness-card { padding:.8rem; }
+.sw-health-readiness-layout { display:grid; grid-template-columns: 33% 67%; align-items:center; gap:.5rem; margin-top:.7rem; }
+.sw-health-ring { --ring-color:#a6ff00; width:88px; aspect-ratio:1; margin:auto; border-radius:50%; background:conic-gradient(var(--ring-color) var(--ring-progress),rgba(255,255,255,.07) 0); padding:7px; box-shadow:0 0 20px rgba(166,255,0,.15); }
+.sw-health-ring--violet { --ring-color:#7c5cff; box-shadow:0 0 20px rgba(124,92,255,.16); }
+.sw-health-ring__inner { width:100%; height:100%; display:grid; place-content:center; border-radius:50%; background:#050b16; text-align:center; box-shadow:inset 0 0 16px rgba(0,0,0,.55); }
+.sw-health-ring__inner strong { font-size:1.32rem; line-height:1; }
+.sw-health-ring__inner span { margin-top:.18rem; color:#8d9aae; font-size:.45rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+.sw-health-readiness-metrics { min-width:0; }
+.sw-health-readiness-row { display:grid; grid-template-columns: 4.55rem 1fr 2.2rem; align-items:center; gap:.35rem; margin-bottom:.48rem; }
+.sw-health-readiness-row > span,.sw-health-readiness-row > b { color:#d6deea; font-size:.49rem; font-weight:850; text-transform:uppercase; letter-spacing:.06em; }
+.sw-health-readiness-row > b { text-align:right; color:#fff; }
+.sw-health-readiness-track { height:5px; overflow:hidden; border-radius:999px; background:rgba(255,255,255,.08); }
+.sw-health-readiness-track > div { height:100%; border-radius:999px; background:linear-gradient(90deg,#86d500,#b8ff24); box-shadow:0 0 8px rgba(166,255,0,.25); }
+.sw-health-secondary { display:flex; align-items:center; justify-content:center; gap:.25rem; width:100%; min-height:2rem; border-radius:.65rem; border:1px solid rgba(148,163,184,.34); color:#fff; font-size:.56rem; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
+
+.sw-health-dual-grid { display:grid; grid-template-columns:1fr 1fr; gap:.55rem; }
+.sw-health-mini-card { padding:.72rem; }
+.sw-health-mini-body { display:grid; grid-template-columns:auto 1fr; align-items:center; gap:.55rem; margin:.65rem 0; }
+.sw-health-mini-card .sw-health-ring { width:67px; padding:5px; }
+.sw-health-mini-card .sw-health-ring__inner strong { font-size:.9rem; }
+.sw-health-mini-body > div:last-child b { display:block; font-size:1.05rem; line-height:1; }
+.sw-health-mini-body > div:last-child span { display:block; margin-top:.18rem; color:#9aa8bb; font-size:.48rem; text-transform:uppercase; }
+.sw-health-mini-body > div:last-child small { display:block; margin-top:.5rem; color:#7a8798; font-size:.48rem; }
+.sw-health-sleep-card { background:linear-gradient(#050914,#050713) padding-box,linear-gradient(135deg,rgba(37,135,255,.75),rgba(124,58,237,.9)) border-box; }
+
+.sw-health-insight { border-color:rgba(124,58,237,.55); }
+.sw-health-insight__icon { display:grid; width:2.25rem; height:2.25rem; flex:none; place-items:center; border-radius:.75rem; color:#b58cff; background:rgba(124,58,237,.12); box-shadow:0 0 14px rgba(124,58,237,.18); }
+
+.sw-health-week-card { padding:.78rem; }
+.sw-health-week-strip { display:flex; gap:.42rem; margin-top:.65rem; overflow-x:auto; padding-bottom:.15rem; scrollbar-width:none; }
+.sw-health-week-strip::-webkit-scrollbar { display:none; }
+.sw-health-week-strip > button { width:104px; min-width:104px; min-height:94px; border-radius:.85rem; border:1px solid rgba(37,135,255,.25); background:linear-gradient(160deg,rgba(7,18,36,.96),rgba(3,7,16,.98)); padding:.58rem; text-align:left; }
+.sw-health-week-strip small { display:block; color:#57dcff; font-size:.48rem; font-weight:900; text-transform:uppercase; }
+.sw-health-week-strip b { display:-webkit-box; margin-top:.4rem; overflow:hidden; color:#fff; font-size:.66rem; line-height:1.1; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.sw-health-week-strip span { display:block; margin-top:.55rem; color:#78869a; font-size:.48rem; }
+.sw-health-week-strip span.is-done { color:#b7ff31; }
+.sw-health-empty-week { display:grid !important; place-content:center; text-align:center !important; color:#b7ff31; }
+
+.sw-health-home-actions { display:grid; grid-template-columns:1.15fr .85fr; gap:.5rem; margin-top:.7rem; }
+.sw-health-home-actions button { display:flex; min-height:2.55rem; align-items:center; justify-content:center; gap:.25rem; border-radius:.85rem; border:1px solid rgba(37,135,255,.32); background:rgba(37,135,255,.06); color:#dfe7f2; font-size:.58rem; font-weight:900; text-transform:uppercase; letter-spacing:.055em; }
+.sw-health-home-actions button:first-child { border-color:rgba(166,255,0,.45); color:#dfff9c; background:rgba(166,255,0,.055); }
+
 @media (max-width: 767px) {
-  .health-obsidian-electric {
-    font-size: 14px;
-  }
+  .health-obsidian-electric { font-size: 14px; }
+  .health-obsidian-electric main { padding-left:.55rem !important; padding-right:.55rem !important; padding-top:.55rem !important; }
+  .health-obsidian-electric button { min-height:38px; }
+  .sw-health-hero { min-height:170px; }
+}
 
-  .health-obsidian-electric main {
-    padding-left: .65rem !important;
-    padding-right: .65rem !important;
-  }
-
-  .health-obsidian-electric :where(section, article)[class*="rounded-"] {
-    border-radius: 1rem !important;
-  }
-
-  .health-obsidian-electric :where(section, article)[class*="p-5"] {
-    padding: .85rem !important;
-  }
-
-  .health-obsidian-electric :where(section, article)[class*="p-4"] {
-    padding: .75rem !important;
-  }
-
-  .health-obsidian-electric h1[class*="text-3xl"] {
-    font-size: 1.45rem !important;
-    line-height: 1.15 !important;
-  }
-
-  .health-obsidian-electric h2[class*="text-2xl"],
-  .health-obsidian-electric h3[class*="text-2xl"] {
-    font-size: 1.15rem !important;
-    line-height: 1.25 !important;
-  }
-
-  .health-obsidian-electric h2[class*="text-xl"],
-  .health-obsidian-electric h3[class*="text-xl"] {
-    font-size: 1rem !important;
-  }
-
-  .health-obsidian-electric p[class*="text-sm"] {
-    font-size: .75rem !important;
-    line-height: 1.2rem !important;
-  }
-
-  .health-obsidian-electric button {
-    min-height: 38px !important;
-  }
-
-  .health-obsidian-electric button[class*="h-11"] {
-    height: 2.45rem !important;
-  }
-
-  .health-obsidian-electric button[class*="h-10"] {
-    height: 2.25rem !important;
-  }
-
-  .health-obsidian-electric [class*="gap-5"] { gap: .75rem !important; }
-  .health-obsidian-electric [class*="gap-4"] { gap: .65rem !important; }
-  .health-obsidian-electric [class*="mt-5"] { margin-top: .85rem !important; }
-  .health-obsidian-electric [class*="mt-4"] { margin-top: .7rem !important; }
-
-  .health-obsidian-electric .health-mobile-priority-action {
-    position: sticky;
-    bottom: calc(5.4rem + env(safe-area-inset-bottom));
-    z-index: 85;
-  }
+@media (max-width: 390px) {
+  .sw-health-quick-grid { gap:.25rem; }
+  .sw-health-quick-log { padding-inline:.05rem; }
+  .sw-health-quick-log__icon { width:1.8rem; height:1.8rem; }
+  .sw-health-workout-card { grid-template-columns:62% 38%; }
+  .sw-health-workout-copy { padding:.85rem .65rem; }
+  .sw-health-workout-copy h2 { font-size:1.28rem; }
+  .sw-health-readiness-layout { grid-template-columns:31% 69%; }
+  .sw-health-ring { width:78px; }
+  .sw-health-readiness-row { grid-template-columns:4rem 1fr 1.85rem; gap:.25rem; }
+  .sw-health-mini-card { padding:.62rem; }
+  .sw-health-mini-card .sw-health-ring { width:58px; }
 }

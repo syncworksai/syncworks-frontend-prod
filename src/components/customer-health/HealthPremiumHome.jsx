@@ -31,6 +31,9 @@ export default function HealthPremiumHome({
   progressLogs = [],
   onOpen,
   onStartWorkout,
+  onShowInsights,
+  onQuickLog,
+  onEditDailyGoals,
 }) {
   const [cloudHistory, setCloudHistory] = useState([]);
   const [isMobile, setIsMobile] = useState(() =>
@@ -202,6 +205,9 @@ export default function HealthPremiumHome({
         decision={decision}
         onOpen={onOpen}
         onStartWorkout={guardedStartWorkout}
+        onShowInsights={onShowInsights}
+        onQuickLog={onQuickLog}
+        onEditDailyGoals={onEditDailyGoals}
       />
     );
   }
