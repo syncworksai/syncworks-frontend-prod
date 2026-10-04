@@ -1,11 +1,11 @@
 // src/components/customer-health/HealthPremiumHome.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import HealthDashboard from "./HealthDashboard";
 import HealthMobileHome from "./HealthMobileHome";
 import { loadCloudWorkoutHistory } from "./healthWorkoutCloudSync";
 import { currentDayWorkout, localYmd } from "./healthWorkoutDateLifecycle";
 import { chooseRecoverySafeWorkout } from "./healthWorkoutRecoveryGuard";
 import "./healthElectricBlueMobile.css";
+import "./healthDashboardReference.css";
 
 function workoutLabel(workout = {}) {
   return String(
@@ -28,7 +28,6 @@ export default function HealthPremiumHome({
   profile = {},
   snapshot = {},
   history = [],
-  progressLogs = [],
   onOpen,
   onStartWorkout,
   onShowInsights,
@@ -36,21 +35,6 @@ export default function HealthPremiumHome({
   onEditDailyGoals,
 }) {
   const [cloudHistory, setCloudHistory] = useState([]);
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined"
-      ? window.matchMedia("(max-width: 1023px)").matches
-      : false
-  );
-
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-
-    const media = window.matchMedia("(max-width: 1023px)");
-    const update = () => setIsMobile(media.matches);
-    update();
-    media.addEventListener?.("change", update);
-    return () => media.removeEventListener?.("change", update);
-  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -183,6 +167,7 @@ export default function HealthPremiumHome({
         onOpen?.("planner");
         return;
       }
+
       onStartWorkout?.({
         ...decision.workout,
         ymd: localYmd(),
@@ -196,63 +181,17 @@ export default function HealthPremiumHome({
     onStartWorkout?.(requestedWorkout);
   }
 
-  if (isMobile) {
-    return (
-      <HealthMobileHome
-        profile={profile}
-        snapshot={guardedSnapshot}
-        history={history}
-        decision={decision}
-        onOpen={onOpen}
-        onStartWorkout={guardedStartWorkout}
-        onShowInsights={onShowInsights}
-        onQuickLog={onQuickLog}
-        onEditDailyGoals={onEditDailyGoals}
-      />
-    );
-  }
-
   return (
-    <div className="space-y-3">
-      {decision?.revised ? (
-        <section className="rounded-[1.25rem] border border-cyan-300/25 bg-cyan-300/[0.07] p-3 sm:p-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="text-[9px] font-black uppercase tracking-[0.16em] text-cyan-200">
-                AI revised plan
-              </div>
-              <div className="mt-1 text-base font-black text-white sm:text-lg">
-                {decision.needsRebuild
-                  ? "Today's workout needs a recovery-safe rebuild"
-                  : `${workoutLabel(decision.workout)} replaces today's repeated muscle focus`}
-              </div>
-              <div className="mt-1 text-[11px] leading-4 text-slate-300 sm:text-xs sm:leading-5">
-                {decision.reason}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() =>
-                decision.needsRebuild
-                  ? onOpen?.("planner")
-                  : guardedStartWorkout(decision.workout)
-              }
-              className="h-10 shrink-0 rounded-xl border border-cyan-300/35 bg-cyan-300/15 px-4 text-xs font-black text-cyan-100"
-            >
-              {decision.needsRebuild ? "Rebuild Today" : "Start Revised Workout"}
-            </button>
-          </div>
-        </section>
-      ) : null}
-
-      <HealthDashboard
-        profile={profile}
-        snapshot={guardedSnapshot}
-        history={history}
-        progressLogs={progressLogs}
-        onOpen={onOpen}
-        onStartWorkout={guardedStartWorkout}
-      />
-    </div>
+    <HealthMobileHome
+      profile={profile}
+      snapshot={guardedSnapshot}
+      history={history}
+      decision={decision}
+      onOpen={onOpen}
+      onStartWorkout={guardedStartWorkout}
+      onShowInsights={onShowInsights}
+      onQuickLog={onQuickLog}
+      onEditDailyGoals={onEditDailyGoals}
+    />
   );
 }
