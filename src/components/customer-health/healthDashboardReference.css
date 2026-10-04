@@ -1,28 +1,28 @@
-/* SyncWorks Health dashboard reference pass — aligns web + mobile with the approved electric-blue/lime concept. */
+/* SyncWorks Health dashboard reference + core-flow pass */
 
 .sw-health-home {
   width: 100%;
-  max-width: 980px;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 0 0 1.2rem;
+  padding: 0 0 1.5rem;
   color: #fff;
 }
 
 .sw-health-hero {
-  min-height: 250px;
-  border-radius: 1.35rem;
+  min-height: 260px;
+  border-radius: 1.6rem;
 }
 
 .sw-health-hero__logo {
-  width: 245px;
-  height: 245px;
-  right: 8%;
-  top: 16px;
+  width: 270px;
+  height: 270px;
+  right: 7%;
+  top: 6px;
   opacity: .34;
 }
 
-.sw-health-hero__copy { max-width: 56%; }
-.sw-health-hero h1 { font-size: clamp(2.75rem, 7vw, 4.75rem); }
+.sw-health-hero__copy { max-width: 58%; }
+.sw-health-hero h1 { font-size: clamp(2.75rem, 7vw, 4.9rem); }
 .sw-health-hero p { font-size: 1rem; }
 
 .sw-health-reference-quote {
@@ -34,10 +34,213 @@
   text-transform: uppercase;
 }
 
-.sw-health-workout-card { min-height: 270px; }
-.sw-health-workout-art { min-height: 270px; }
-.sw-health-workout-copy h2 { font-size: clamp(1.75rem, 4vw, 2.7rem); }
-.sw-health-workout-stats b { font-size: 1.65rem; }
+.sw-health-hero-actions {
+  position: absolute;
+  z-index: 4;
+  right: .85rem;
+  top: .8rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .45rem;
+}
+
+.sw-health-hero-actions .sw-health-ai-pill {
+  position: static;
+}
+
+.sw-health-voice-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  min-height: 2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(124,92,255,.42);
+  background: rgba(5,10,25,.82);
+  padding: 0 .7rem;
+  color: #c5b7ff;
+  font-size: .56rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+
+.sw-health-core-flow {
+  padding: .95rem;
+}
+
+.sw-health-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: .65rem;
+  margin-top: .8rem;
+}
+
+.sw-health-flow-action {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto auto;
+  align-items: center;
+  gap: .7rem;
+  min-width: 0;
+  min-height: 92px;
+  border: 1px solid rgba(37,135,255,.2);
+  border-radius: 1rem;
+  background: linear-gradient(145deg,rgba(6,16,31,.94),rgba(2,7,16,.98));
+  padding: .8rem;
+  color: #fff;
+  text-align: left;
+}
+
+.sw-health-flow-action.is-featured {
+  border-color: rgba(166,255,0,.38);
+  box-shadow: inset 0 0 24px rgba(166,255,0,.035),0 0 18px rgba(166,255,0,.06);
+}
+
+.sw-health-flow-icon {
+  display: grid;
+  width: 2.8rem;
+  height: 2.8rem;
+  place-items: center;
+  border-radius: .85rem;
+  border: 1px solid rgba(34,211,238,.24);
+  background: rgba(34,211,238,.07);
+  color: #61e7ff;
+}
+
+.sw-health-flow-action.is-featured .sw-health-flow-icon {
+  border-color: rgba(166,255,0,.35);
+  background: rgba(166,255,0,.08);
+  color: #b8ff28;
+}
+
+.sw-health-flow-copy { min-width: 0; }
+.sw-health-flow-copy small {
+  display:block;
+  color:#5fdfff;
+  font-size:.52rem;
+  font-weight:900;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.sw-health-flow-copy b {
+  display:block;
+  margin-top:.15rem;
+  color:#fff;
+  font-size:.9rem;
+  font-weight:950;
+}
+.sw-health-flow-copy span {
+  display:block;
+  margin-top:.2rem;
+  color:#8593a7;
+  font-size:.62rem;
+  line-height:1.35;
+}
+.sw-health-flow-status {
+  border-radius:999px;
+  background:rgba(255,255,255,.045);
+  padding:.28rem .45rem;
+  color:#b7ff22;
+  font-size:.55rem;
+  font-weight:900;
+  white-space:nowrap;
+}
+
+.sw-health-desktop-grid {
+  display: grid;
+  grid-template-columns: minmax(0,1.75fr) minmax(290px,.85fr);
+  gap: .75rem;
+  align-items: stretch;
+}
+
+.sw-health-workout-card {
+  min-height: 360px;
+}
+
+.sw-health-workout-art {
+  min-height: 360px;
+  max-height: 420px;
+}
+
+.sw-health-workout-art img {
+  object-position: center 34%;
+}
+
+.sw-health-profile-card {
+  padding: 1rem;
+}
+
+.sw-health-metric-grid {
+  display:grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap:.55rem;
+  margin-top:.8rem;
+}
+
+.sw-health-metric-grid > div {
+  min-width:0;
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:.8rem;
+  background:rgba(255,255,255,.025);
+  padding:.65rem;
+}
+.sw-health-metric-grid small {
+  display:block;
+  color:#718096;
+  font-size:.5rem;
+  font-weight:900;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+}
+.sw-health-metric-grid b {
+  display:block;
+  margin-top:.2rem;
+  color:#fff;
+  font-size:1rem;
+  line-height:1.15;
+}
+.sw-health-metric-grid b.is-text {
+  font-size:.72rem;
+  line-height:1.3;
+}
+.sw-health-build-plan { margin-top:.75rem; }
+
+.sw-health-nutrition-summary > b {
+  display:block;
+  font-size:1.2rem;
+}
+.sw-health-nutrition-summary > b small {
+  color:#7e8ca1;
+  font-size:.62rem;
+  font-weight:800;
+}
+.sw-health-nutrition-summary > span {
+  display:block;
+  margin-top:.18rem;
+  color:#a8b6c7;
+  font-size:.64rem;
+}
+.sw-health-macro-row {
+  display:flex;
+  flex-wrap:wrap;
+  gap:.35rem;
+  margin-top:.55rem;
+}
+.sw-health-macro-row em {
+  border-radius:999px;
+  background:rgba(255,255,255,.045);
+  padding:.22rem .4rem;
+  color:#8fe7ff;
+  font-size:.5rem;
+  font-style:normal;
+  font-weight:900;
+}
+
+.sw-health-card-actions {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:.45rem;
+}
 
 .sw-health-shell-tabs {
   display: grid;
@@ -73,26 +276,67 @@
   box-shadow: inset 0 0 18px rgba(166,255,0,.06), 0 0 14px rgba(166,255,0,.08);
 }
 
+.sw-health-empty-week {
+  display:flex;
+  min-width:220px;
+  flex:1 1 100%;
+  align-items:center;
+  gap:.55rem;
+  border:1px dashed rgba(166,255,0,.28);
+  border-radius:.9rem;
+  padding:.75rem;
+  color:#b8ff28;
+  text-align:left;
+}
+.sw-health-empty-week b { color:#fff; font-size:.7rem; }
+.sw-health-empty-week span { color:#8391a5; font-size:.56rem; }
+
 @media (min-width: 1024px) {
-  .sw-health-home { max-width: 1180px; }
-  .sw-health-hero { min-height: 330px; padding: 2.2rem 2rem 1.8rem; }
-  .sw-health-hero__copy { max-width: 52%; }
-  .sw-health-hero__logo { width: 360px; height: 360px; right: 9%; top: -2px; }
-  .sw-health-ai-pill { right: 1.35rem; top: 1.25rem; height: 2.7rem; padding: 0 1rem; font-size: .72rem; }
+  .sw-health-home { max-width: 1320px; }
+  .sw-health-hero { min-height: 330px; padding: 2.3rem 2.1rem 1.9rem; }
+  .sw-health-hero__copy { max-width: 48%; }
+  .sw-health-hero__logo { width: 380px; height: 380px; right: 8%; top: -14px; }
+  .sw-health-hero-actions { right:1.35rem; top:1.25rem; }
+  .sw-health-ai-pill { height: 2.7rem; padding: 0 1rem; font-size: .72rem; }
+  .sw-health-voice-pill { min-height:2.25rem; padding:0 .85rem; font-size:.6rem; }
+
+  .sw-health-core-flow { padding:1.15rem; }
+  .sw-health-flow-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .sw-health-flow-action { grid-template-columns:auto minmax(0,1fr) auto; min-height:118px; }
+  .sw-health-flow-action > svg:last-child { display:none; }
+  .sw-health-flow-status { align-self:flex-start; }
+
   .sw-health-quick-panel { padding: 1rem 1.15rem; }
   .sw-health-quick-grid { gap: .7rem; }
   .sw-health-quick-log { min-height: 92px; padding: .8rem .25rem .65rem; }
   .sw-health-quick-log__icon { width: 2.75rem; height: 2.75rem; }
   .sw-health-quick-log > span:last-child { font-size: .62rem; }
-  .sw-health-workout-card { grid-template-columns: 50% 50%; min-height: 330px; }
-  .sw-health-workout-copy { padding: 1.5rem 1.35rem; }
-  .sw-health-workout-art { min-height: 330px; }
+
+  .sw-health-workout-card { grid-template-columns: 52% 48%; min-height: 360px; }
+  .sw-health-workout-copy { padding: 1.55rem 1.4rem; }
+  .sw-health-workout-copy h2 { font-size: clamp(2rem,3vw,3rem); }
+  .sw-health-workout-stats b { font-size: 1.75rem; }
+  .sw-health-workout-art { min-height: 360px; max-height:360px; }
+
+  .sw-health-profile-card { padding:1.15rem; }
   .sw-health-readiness-card { padding: 1.15rem 1.25rem; }
-  .sw-health-readiness-layout { grid-template-columns: 28% 72%; }
+  .sw-health-readiness-layout { grid-template-columns: 24% 76%; }
   .sw-health-ring { width: 126px; }
   .sw-health-dual-grid { gap: .75rem; }
   .sw-health-mini-card { padding: 1rem 1.15rem; }
-  .sw-health-shell-tabs { max-width: 720px; margin-left: auto; margin-right: auto; }
+  .sw-health-shell-tabs { max-width: 820px; margin-left: auto; margin-right: auto; }
+}
+
+@media (min-width: 1280px) {
+  .sw-health-hero { min-height:360px; }
+  .sw-health-desktop-grid { grid-template-columns:minmax(0,2fr) minmax(340px,.8fr); }
+  .sw-health-workout-card,.sw-health-workout-art { min-height:390px; }
+  .sw-health-workout-art { max-height:390px; }
+}
+
+@media (max-width: 900px) {
+  .sw-health-desktop-grid { grid-template-columns:1fr; }
+  .sw-health-flow-grid { grid-template-columns:1fr 1fr; }
 }
 
 @media (max-width: 640px) {
@@ -102,5 +346,11 @@
   .sw-health-hero__logo { width: 205px; height: 205px; right: -10px; top: 18px; }
   .sw-health-hero h1 { font-size: clamp(2.15rem, 12vw, 3.25rem); }
   .sw-health-reference-quote { max-width: 76%; font-size: .54rem; }
+  .sw-health-voice-pill { display:none; }
+  .sw-health-flow-grid { grid-template-columns:1fr; }
+  .sw-health-flow-action { min-height:78px; }
+  .sw-health-desktop-grid { grid-template-columns:1fr; }
+  .sw-health-metric-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .sw-health-card-actions { grid-template-columns:1fr; }
   .sw-health-shell-tab { min-height: 2.9rem; font-size: .47rem; }
 }
