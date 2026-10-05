@@ -35,6 +35,19 @@ const ELEVENLABS_EVENT_ALIASES = {
   pain_warning: "pain_response",
   safety_warning: "form_warning",
   workout_debrief: "workout_completed",
+  trainer_detail: "exercise_intro",
+  movement_setup: "exercise_intro",
+  muscle_focus: "exercise_intro",
+  form_correction: "form_warning",
+  effort_coaching: "mid_set_encouragement",
+  workout_rationale: "exercise_intro",
+  mid_set_motivation: "mid_set_encouragement",
+  mid_set_cue: "mid_set_encouragement",
+  exercise_complete: "set_completed",
+  progression_feedback: "hold_weight",
+  workout_transition: "exercise_intro",
+  finish_workout: "workout_completed",
+  pr_celebration: "set_completed",
 };
 
 function normalizeElevenLabsEventType(eventType) {
@@ -257,7 +270,12 @@ export function speakCoachText({
     return speakWithBrowser({ text: cleanText, voicePreference: fallbackVoicePreference, rate, pitch, volume, cancelFirst });
   }
   playElevenLabsSpeech({ text: cleanText, eventType, energy: selectedEnergy, voiceKey: selectedVoiceKey, volume, cancelFirst }).catch((error) => {
-    console.warn("ElevenLabs coach voice unavailable; using Australian female browser fallback.", error);
+    console.warn(
+      allowBrowserFallback
+        ? "ElevenLabs coach voice unavailable; using Australian female browser fallback."
+        : "ElevenLabs personal trainer voice unavailable; browser fallback is disabled for Trainer Mode.",
+      error
+    );
     if (allowBrowserFallback) {
       speakWithBrowser({ text: cleanText, voicePreference: fallbackVoicePreference, rate, pitch, volume, cancelFirst: false });
     }
