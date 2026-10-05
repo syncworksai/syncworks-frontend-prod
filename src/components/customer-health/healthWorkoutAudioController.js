@@ -17,6 +17,7 @@ const PLAY_ONCE_EVENTS = new Set([
   "workout_completed",
   "workout_debrief",
 ]);
+const WORKOUT_MODE_KEY = "sw_health_workout_mode_v1";
 
 let currentMessage = null;
 let currentTimer = null;
@@ -34,6 +35,27 @@ function cleanText(value) {
 function normalizePriority(value) {
   const key = String(value || "normal").toLowerCase();
   return PRIORITY[key] ? key : "normal";
+}
+
+function readWorkoutMode() {
+  if (typeof document !== "undefined") {
+    const dataMode = String(
+      document.body?.dataset?.healthWorkoutMode || ""
+    ).trim();
+    if (dataMode) return dataMode;
+  }
+
+  if (typeof window !== "undefined") {
+    try {
+      return String(
+        window.localStorage.getItem(WORKOUT_MODE_KEY) || ""
+      ).trim();
+    } catch {
+      return "";
+    }
+  }
+
+  return "";
 }
 
 function hashText(value) {
@@ -103,15 +125,19 @@ function playNext() {
   markRecent(next.id);
 
   const eventType = next.options.eventType || "coach_message";
-  const provider = next.options.provider ||
-    (shouldUseElevenLabs(eventType) ? "elevenlabs" : "browser");
+  const audioMode = normalizeWorkoutAudioMode(next.options.audioMode);
+  const trainerMode = audioMode === "trainer" || readWorkoutMode() === "trainer";
+  const provider = trainerMode
+    ? "elevenlabs"
+    : next.options.provider ||
+      (shouldUseElevenLabs(eventType, audioMode) ? "elevenlabs" : "browser");
 
   announceCoachAudioState({
     status: "speaking",
     id: next.id,
     eventType,
     provider,
-    audioMode: next.options.audioMode || "basic",
+    audioMode,
     focusMode: Boolean(next.options.focusMode),
     musicCompatible: next.options.musicCompatible !== false,
   });
@@ -119,6 +145,9 @@ function playNext() {
   const started = speakCoachText({
     ...next.options,
     provider,
+    browserFallback: trainerMode
+      ? false
+      : next.options.browserFallback,
     text: next.text,
     cancelFirst: true,
   });
@@ -175,9 +204,19 @@ export function playWorkoutCoachMessage({
 } = {}) {
   const clean = cleanText(text);
   const eventType = options.eventType || "coach_message";
-  const normalizedAudioMode = normalizeWorkoutAudioMode(
-    options.audioMode
-  );
+  const workoutMode = readWorkoutMode();
+  const requestedAudioMode = normalizeWorkoutAudioMode(options.audioMode);
+  const trainerMode =
+    workoutMode === "trainer" || requestedAudioMode === "trainer";
+  const normalizedAudioMode = trainerMode
+    ? "trainer"
+    : requestedAudioMode;
+
+  // Gym Log is intentionally silent. Logging remains free without any paid
+  // trainer behavior running behind the scenes.
+  if (workoutMode === "gym_log") {
+    return false;
+  }
 
   if (
     !clean ||
@@ -219,8 +258,15 @@ export function playWorkoutCoachMessage({
     options: {
       ...options,
       ...premiumDelivery,
-      provider: options.provider ||
-        (shouldUseElevenLabs(eventType) ? "elevenlabs" : "browser"),
+      provider: trainerMode
+        ? "elevenlabs"
+        : options.provider ||
+          (shouldUseElevenLabs(eventType, normalizedAudioMode)
+            ? "elevenlabs"
+            : "browser"),
+      browserFallback: trainerMode
+        ? false
+        : options.browserFallback,
       audioMode: normalizedAudioMode,
       eventType,
     },
@@ -258,6 +304,41 @@ export function stopWorkoutCoachAudio({
   }
 }
 
+export function setActiveWorkoutMode(mode = "") {
+  const normalized =
+    mode === "trainer" || mode === "gym_log" ? mode : "";
+
+  if (typeof document !== "undefined") {
+    if (normalized) {
+      document.body.dataset.healthWorkoutMode = normalized;
+    } else {
+      delete document.body.dataset.healthWorkoutMode;
+    }
+  }
+
+  if (typeof window !== "undefined") {
+    try {
+      if (normalized) {
+        window.localStorage.setItem(WORKOUT_MODE_KEY, normalized);
+      } else {
+        window.localStorage.removeItem(WORKOUT_MODE_KEY);
+      }
+    } catch {
+      // Mode persistence is best effort.
+    }
+  }
+
+  if (normalized === "gym_log") {
+    stopWorkoutCoachAudio();
+  }
+
+  return normalized;
+}
+
+export function getActiveWorkoutMode() {
+  return readWorkoutMode();
+}
+
 export function getWorkoutCoachAudioState() {
   return {
     currentCoachMessageId: currentMessage?.id || "",
@@ -271,5 +352,6 @@ export function getWorkoutCoachAudioState() {
     audioUnlocked,
     isSpeaking: Boolean(currentMessage),
     provider: currentMessage?.options?.provider || "",
+    workoutMode: readWorkoutMode(),
   };
 }
