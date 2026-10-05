@@ -20,10 +20,10 @@ export const AUDIO_MODE_PROFILES = {
   },
   trainer: {
     id: "trainer",
-    label: "Full Trainer",
+    label: "Personal Trainer",
     description:
-      "Detailed setup, movement, muscle, pacing, and rationale coaching with high-priority interruptions.",
-    allows_music: false,
+      "Premium voice coaching for briefing, exercise setup, sets, rest, progression, motivation, and the workout debrief.",
+    allows_music: true,
     focus_mode: true,
     detail_level: "detailed",
   },
@@ -58,7 +58,11 @@ const TRAINER_ONLY_EVENTS = new Set([
 export const ELEVENLABS_PREMIUM_EVENTS = new Set([
   "workout_welcome",
   "preworkout_briefing",
+  "warmup_complete",
   "exercise_intro",
+  "set_start",
+  "rest_start",
+  "rest_cue",
   "exercise_swap",
   "exercise_added",
   "pain_warning",
@@ -128,7 +132,11 @@ export function buildPremiumCoachDelivery({
   };
 }
 
-export function shouldUseElevenLabs(eventType) {
+export function shouldUseElevenLabs(eventType, audioMode = "") {
+  if (normalizeWorkoutAudioMode(audioMode) === "trainer") {
+    return true;
+  }
+
   return ELEVENLABS_PREMIUM_EVENTS.has(
     String(eventType || "").toLowerCase()
   );
