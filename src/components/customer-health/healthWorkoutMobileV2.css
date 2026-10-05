@@ -1,43 +1,100 @@
+/* Mobile workout cockpit: Trainer Mode + Gym Log
+ * Active workouts must completely replace global Personal chrome. The user
+ * should see the workout, not the app dashboard, notifications, Game Book, or
+ * floating SYNC controls while training.
+ */
+
+.health-active-workout-root {
+  z-index: 2147483000 !important;
+}
+
 @media (max-width: 639px) {
   .health-active-workout-root {
+    inset: 0 !important;
     background: #020617 !important;
+    isolation: isolate;
+  }
+
+  .health-active-workout-shell {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    background:
+      radial-gradient(circle at 50% -8%, rgba(34,211,238,.10), transparent 25rem),
+      linear-gradient(180deg,#04101d 0%,#020617 42%,#01040a 100%) !important;
   }
 
   .health-active-workout-header {
-    margin-top: calc(4.35rem + env(safe-area-inset-top)) !important;
-    padding: .35rem .65rem !important;
-    border-bottom-color: rgba(34, 211, 238, .10) !important;
+    margin-top: 0 !important;
+    padding: calc(env(safe-area-inset-top) + .45rem) .7rem .5rem !important;
+    border-bottom-color: rgba(34, 211, 238, .14) !important;
+    background: rgba(2, 6, 23, .96) !important;
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
   }
 
+  /* The mobile workout only needs the identity/target row plus finish/exit. */
   .health-active-workout-header > * {
     display: none !important;
   }
 
   .health-active-workout-header > div:first-child {
     display: flex !important;
-    justify-content: flex-end !important;
-    min-height: 2.25rem;
+    min-height: 3rem !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: .65rem !important;
   }
 
   .health-active-workout-header > div:first-child > div:first-child {
-    display: none !important;
+    display: block !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+
+  .health-active-workout-header > div:first-child > div:first-child > div:first-child {
+    font-size: .52rem !important;
+    line-height: 1.1 !important;
+    letter-spacing: .13em !important;
+    color: #67e8f9 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .health-active-workout-header > div:first-child > div:first-child :is(h1,h2,h3) {
+    margin-top: .2rem !important;
+    max-width: 100% !important;
+    font-size: 1rem !important;
+    line-height: 1.15 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   .health-active-workout-header > div:first-child > div:last-child {
     display: flex !important;
+    flex: 0 0 auto !important;
+    gap: .35rem !important;
+    align-items: center !important;
   }
 
   .health-active-workout-header > div:first-child > div:last-child button {
-    height: 2.25rem !important;
+    min-height: 2.4rem !important;
+    height: 2.4rem !important;
     border-radius: .75rem !important;
-    padding-left: .75rem !important;
-    padding-right: .75rem !important;
+    padding-left: .7rem !important;
+    padding-right: .7rem !important;
     font-size: .55rem !important;
+    white-space: nowrap !important;
   }
 
   .health-active-workout-main {
+    width: 100% !important;
+    max-width: none !important;
     scrollbar-width: none;
-    padding: .45rem .55rem calc(11.6rem + env(safe-area-inset-bottom)) !important;
+    padding: .6rem .6rem calc(5.7rem + env(safe-area-inset-bottom)) !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .health-active-workout-main::-webkit-scrollbar {
@@ -45,9 +102,16 @@
   }
 
   .health-active-workout-root #health-workout-command-center {
-    border-radius: 1.05rem;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    border-radius: 1.2rem !important;
+    border-color: rgba(34,211,238,.24) !important;
+    box-shadow: 0 16px 48px rgba(0,0,0,.38) !important;
   }
 
+  /* Compact Panel is the workout. Hide old analytics/recommendation cards on
+     mobile so there is one obvious flow between sets. */
   .health-active-workout-main #health-workout-command-center ~ * {
     display: none !important;
   }
@@ -56,31 +120,27 @@
     display: block !important;
   }
 
-  /* Every workout sheet/drawer must sit above the Personal nav, SYNC orb,
-     notification bubble, and coach microphone. */
+  /* Workout sheets must remain above the workout cockpit itself. */
   .health-active-workout-main #health-workout-command-center ~ div.fixed.inset-0,
   .health-active-workout-root div.fixed.inset-0 {
     display: flex !important;
-    z-index: 520 !important;
-    padding-bottom: calc(.65rem + env(safe-area-inset-bottom)) !important;
+    z-index: 2147483200 !important;
+    padding-bottom: max(.5rem, env(safe-area-inset-bottom)) !important;
   }
 
   .health-active-workout-main #health-workout-command-center ~ div.fixed.inset-0 > section,
   .health-active-workout-root div.fixed.inset-0 > section {
-    z-index: 521 !important;
-    max-height: calc(100dvh - max(.6rem, env(safe-area-inset-top)) - max(.6rem, env(safe-area-inset-bottom))) !important;
+    z-index: 2147483201 !important;
+    max-height: calc(100dvh - max(.5rem, env(safe-area-inset-top)) - max(.5rem, env(safe-area-inset-bottom))) !important;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Hide the workout action dock while any workout modal/drawer is open so
-     the user sees one interaction layer at a time. */
   .health-active-workout-root:has(div.fixed.inset-0) .health-workout-action-dock {
     visibility: hidden !important;
     pointer-events: none !important;
   }
 
-  /* Save Set / Back remain reachable on the set-completion sheet. */
   .health-active-workout-main #health-workout-command-center ~ div.fixed.inset-0 > section > div:last-child {
     position: sticky !important;
     bottom: 0 !important;
@@ -91,8 +151,8 @@
     backdrop-filter: blur(14px);
   }
 
-  /* Exercise art should read as the actual movement rather than a tiny poster
-     floating in a large black frame. */
+  /* Exercise art should read as the movement rather than a poster floating in
+     an empty frame. */
   #health-workout-command-center button:has(> img) {
     height: 8.25rem !important;
     background: #030712 !important;
@@ -106,14 +166,26 @@
   }
 
   .health-active-workout-root .health-workout-action-dock {
-    bottom: calc(5.7rem + env(safe-area-inset-bottom)) !important;
-    padding-left: .5rem;
-    padding-right: .5rem;
-    padding-top: .3rem;
-    padding-bottom: .25rem;
+    position: fixed !important;
+    z-index: 2147483100 !important;
+    right: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    padding: .45rem .55rem calc(.45rem + env(safe-area-inset-bottom)) !important;
+    background: linear-gradient(180deg,rgba(2,6,23,.08),rgba(2,6,23,.96) 24%,#020617 100%) !important;
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
   }
 
+  /* Legacy bottom bar from the old Focus implementation. */
   .health-active-workout-shell > div[class*="bottom-[calc(70px"] {
+    display: none !important;
+  }
+
+  /* Gym Log intentionally has no coach-specific surface. */
+  body[data-health-workout-mode="gym_log"] .health-active-workout-root [class*="coach-voice"],
+  body[data-health-workout-mode="gym_log"] .health-active-workout-root [data-trainer-only="true"] {
     display: none !important;
   }
 }
