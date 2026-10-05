@@ -1,0 +1,120 @@
+/* SyncWorks Health subpage / drawer shell
+ * Keeps every Health workflow above the global Personal chrome and gives
+ * mobile drawers the same safe-area, spacing, and obsidian treatment.
+ */
+
+.health-obsidian-electric .sw-health-drawer-layer {
+  z-index: 1300 !important;
+}
+
+.health-obsidian-electric .sw-health-drawer-panel {
+  background:
+    radial-gradient(circle at 92% 0%, rgba(34, 211, 238, 0.09), transparent 25rem),
+    radial-gradient(circle at 8% 18%, rgba(166, 255, 0, 0.055), transparent 22rem),
+    linear-gradient(180deg, #06111f 0%, #020712 52%, #01040a 100%);
+  border-color: rgba(34, 211, 238, 0.2) !important;
+  box-shadow: -32px 0 90px rgba(0, 0, 0, 0.62);
+}
+
+.health-obsidian-electric .sw-health-drawer-header {
+  background:
+    linear-gradient(180deg, rgba(7, 17, 31, 0.985), rgba(3, 10, 20, 0.97));
+  border-color: rgba(34, 211, 238, 0.13) !important;
+}
+
+.health-obsidian-electric .sw-health-drawer-brand {
+  color: #67e8f9;
+  letter-spacing: 0.18em;
+}
+
+.health-obsidian-electric .sw-health-drawer-back {
+  border-color: rgba(34, 211, 238, 0.22) !important;
+  background: rgba(34, 211, 238, 0.07) !important;
+  color: #e8fbff !important;
+}
+
+.health-obsidian-electric .sw-health-drawer-body {
+  background:
+    radial-gradient(circle at 50% -10%, rgba(37, 135, 255, 0.05), transparent 25rem),
+    transparent;
+}
+
+/*
+ * Health drawers are mounted inside CustomerHealth while the global Personal
+ * nav, notifications, Game Book resume banner, and SYNC mic live outside it.
+ * Keep Health workflows above that global chrome while they are open.
+ */
+.health-obsidian-electric
+  [class*="fixed"][class*="inset-0"]:not(.pointer-events-none) {
+  z-index: 1300 !important;
+}
+
+@media (max-width: 767px) {
+  .health-obsidian-electric .sw-health-drawer-panel {
+    width: 100%;
+    max-width: none;
+    border-left: 0 !important;
+  }
+
+  .health-obsidian-electric .sw-health-drawer-header {
+    padding-top: calc(env(safe-area-inset-top) + 0.75rem) !important;
+  }
+
+  .health-obsidian-electric .sw-health-drawer-body {
+    padding: 0.9rem !important;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem) !important;
+  }
+
+  /* Custom full-screen Health surfaces that do not use HealthDrawer yet. */
+  .health-obsidian-electric
+    [class*="fixed"][class*="inset-0"]:not(.pointer-events-none)
+    > section[class*="h-[100dvh]"]
+    > header:first-child,
+  .health-obsidian-electric
+    [class*="fixed"][class*="inset-0"]:not(.pointer-events-none)
+    > section[class*="h-full"]
+    > header:first-child,
+  .health-obsidian-electric
+    [class*="fixed"][class*="inset-0"]:not(.pointer-events-none)
+    > section
+    > [class*="sticky"][class*="top-0"]:first-child {
+    padding-top: calc(env(safe-area-inset-top) + 0.75rem) !important;
+  }
+
+  /* Coach chat: move controls onto their own row instead of crushing title. */
+  .health-obsidian-electric
+    section[class*="max-w-2xl"][class*="h-[100dvh]"]
+    > header
+    > div:first-child {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .health-obsidian-electric
+    section[class*="max-w-2xl"][class*="h-[100dvh]"]
+    > header
+    > div:first-child
+    > div:last-child {
+    width: 100%;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .health-obsidian-electric
+    section[class*="max-w-2xl"][class*="h-[100dvh]"]
+    > header
+    > div:first-child
+    > div:last-child
+    button {
+    min-height: 38px;
+    max-width: 100%;
+  }
+
+  /* Prevent legacy drawer headers / titles from sitting behind the iOS clock. */
+  .health-obsidian-electric
+    [class*="fixed"][class*="inset-0"]:not(.pointer-events-none)
+    :where(h1, h2) {
+    scroll-margin-top: calc(env(safe-area-inset-top) + 4.5rem);
+  }
+}
