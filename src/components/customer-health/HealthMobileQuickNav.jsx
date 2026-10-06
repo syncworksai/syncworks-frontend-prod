@@ -26,9 +26,10 @@ function NavButton({ icon: Icon, label, active = false, onClick }) {
 }
 
 /**
- * While the user is inside Health, the fixed navigation should describe the
- * Health product—not the underlying Personal dashboard. Drawers and active
- * workouts intentionally sit above this layer.
+ * Health owns its mobile navigation while the user is inside the Health
+ * product. iPhone Safari can report a layout viewport wider than the old
+ * 767px cutoff, so Health uses the tablet/mobile cutoff (<1024px) instead.
+ * Drawers and active workouts intentionally sit above this layer.
  */
 export default function HealthMobileQuickNav({
   onOpen,
@@ -37,7 +38,7 @@ export default function HealthMobileQuickNav({
   return (
     <>
       <style>{`
-        @media (max-width: 767px) {
+        @media (max-width: 1023px) {
           .health-obsidian-electric .sw-health-shell-tabs {
             display: none !important;
           }
@@ -47,7 +48,7 @@ export default function HealthMobileQuickNav({
       <nav
         data-syncworks-module-nav="health"
         aria-label="Health navigation"
-        className="fixed inset-x-3 bottom-[calc(.6rem+env(safe-area-inset-bottom))] z-[850] mx-auto hidden h-[76px] max-w-[760px] grid-cols-5 gap-1 rounded-[1.55rem] border border-cyan-300/25 bg-[#020916]/[.97] p-1.5 shadow-[0_18px_55px_rgba(0,0,0,.72),inset_0_1px_0_rgba(255,255,255,.035)] backdrop-blur-2xl max-md:grid"
+        className="fixed inset-x-3 bottom-[calc(.6rem+env(safe-area-inset-bottom))] z-[2147481000] mx-auto grid h-[76px] max-w-[760px] grid-cols-5 gap-1 rounded-[1.55rem] border border-cyan-300/25 bg-[#020916]/[.97] p-1.5 shadow-[0_18px_55px_rgba(0,0,0,.72),inset_0_1px_0_rgba(255,255,255,.035)] backdrop-blur-2xl lg:hidden"
       >
         <NavButton
           icon={HeartPulse}
