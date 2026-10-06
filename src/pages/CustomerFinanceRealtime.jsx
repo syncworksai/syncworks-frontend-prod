@@ -3,7 +3,7 @@ import { CheckCircle2, CreditCard, LoaderCircle, X } from "lucide-react";
 
 import api from "../api/client";
 import DebtPaymentDrawer from "../components/finance/DebtPaymentDrawer";
-import CustomerFinance from "./CustomerFinance";
+import CustomerFinanceBase from "./CustomerFinanceBase";
 
 const FINANCE_API = "/personal-finance";
 
@@ -55,7 +55,7 @@ export default function CustomerFinanceRealtime() {
 
   return (
     <>
-      <CustomerFinance key={refreshKey} />
+      <CustomerFinanceBase key={refreshKey} />
 
       {liabilities.length ? (
         <button
