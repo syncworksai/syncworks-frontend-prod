@@ -155,8 +155,9 @@ export default function SboSetupReadiness({
   return (
     <section
       id="business-readiness"
-      className="overflow-hidden rounded-[2rem] border border-cyan-500/20 bg-slate-950/65 shadow-[0_0_60px_rgba(34,211,238,0.08)]"
+      className="sw-sbo-setup-readiness overflow-hidden rounded-[2rem] border border-cyan-500/20 bg-slate-950/65 shadow-[0_0_60px_rgba(34,211,238,0.08)]"
     >
+      <style>{`@media (max-width: 1023px) { #business-readiness ~ * { display: none !important; } }`}</style>
       <div className="relative overflow-hidden border-b border-slate-800 p-5 md:p-6">
         <div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-cyan-500/12 blur-3xl" />
         <div className="absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-fuchsia-500/10 blur-3xl" />
@@ -175,8 +176,8 @@ export default function SboSetupReadiness({
                   : "Finish setup to start converting customers"}
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-                Every item opens the exact screen needed to complete it. Readiness
-                updates from live business, catalog, and payment data.
+                Complete these once so SyncWorks can configure Marketplace matching,
+                scheduling, payments and invoicing around how your business works.
               </p>
             </div>
 
@@ -199,7 +200,7 @@ export default function SboSetupReadiness({
 
           <div className="mt-5">
             <div className="flex items-center justify-between gap-3 text-xs">
-              <span className="font-bold text-slate-300">Profile completion</span>
+              <span className="font-bold text-slate-300">Business setup completion</span>
               <span className="font-black text-cyan-200">
                 {loading ? "..." : `${percent}%`}
               </span>
