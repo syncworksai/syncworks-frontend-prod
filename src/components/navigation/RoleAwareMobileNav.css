@@ -1,3 +1,4 @@
+@media(max-width:1023px){.sw-modebar{padding-top:env(safe-area-inset-top)}}
 .sw-role-mobile-nav{position:fixed;left:.55rem;right:.55rem;bottom:calc(.45rem + env(safe-area-inset-bottom));z-index:70;border:1px solid rgba(56,189,248,.22);border-radius:1.25rem;padding:.28rem .34rem .24rem;background:radial-gradient(circle at 50% 0%,rgba(34,211,238,.1),transparent 48%),rgba(2,6,23,.96);box-shadow:0 16px 42px rgba(2,6,23,.7),0 0 26px rgba(34,211,238,.07);backdrop-filter:blur(20px)}
 .sw-role-mobile-nav-grid{display:grid;grid-template-columns:1fr 1fr 1.08fr 1fr 1fr;align-items:end;gap:.1rem}
 .sw-role-mobile-nav-grid>button{position:relative;display:flex;min-width:0;min-height:3rem;flex-direction:column;align-items:center;justify-content:center;gap:.18rem;border:0;border-radius:.85rem;background:transparent;color:#64748b;font-size:.54rem;font-weight:900;letter-spacing:.01em}
