@@ -143,13 +143,13 @@ export function MobileNavSettings() {
 
   return (
     <section className="sw-nav-settings-card">
-      <div className="sw-nav-settings-head"><span>Mobile quick access</span><h3>Customize your sticky buttons</h3><p>The glowing center action stays fixed. Choose the four surrounding shortcuts.</p></div>
+      <div className="sw-nav-settings-head"><span>Mobile quick access</span><h3>Customize your sticky buttons</h3><p>The center action stays fixed. Choose the four surrounding shortcuts.</p></div>
       <div className="sw-nav-settings-scopes">
         {["CUSTOMER", "SBO", "EMPLOYEE", "PM"].map((item) => <button key={item} type="button" className={scope === item ? "active" : ""} onClick={() => setScope(item)}>{item === "CUSTOMER" ? "Personal" : item === "SBO" ? "Business" : item === "PM" ? "Property" : "Employee"}</button>)}
       </div>
       <div className="sw-nav-settings-preview">
         {items.slice(0, 2).map((itemId) => <PreviewItem key={`left-${itemId}`} itemId={itemId} />)}
-        <div className={`sw-nav-settings-center-preview ${center?.sync ? "sync" : ""}`}><div className="sw-nav-settings-center-orb">{<img src="/brand/syncworks-start-logo.png" alt="" />}</div><span>{center?.label || "Action"}</span></div>
+        <div className={`sw-nav-settings-center-preview ${center?.sync ? "sync" : ""}`}><div className="sw-nav-settings-center-orb"><img src="/brand/syncworks-start-logo.png" alt="" /></div><span>{center?.label || "Action"}</span></div>
         {items.slice(2, 4).map((itemId) => <PreviewItem key={`right-${itemId}`} itemId={itemId} />)}
       </div>
       <div className="sw-nav-settings-grid">
@@ -241,26 +241,31 @@ export default function RoleAwareMobileNav() {
     navigate(center.route);
   }
 
+  const showLiveGame =
+    navMode === "CUSTOMER" &&
+    liveGame &&
+    pathname !== `/connect/groups/${String(liveGame.groupId)}/sports/games/${String(liveGame.gameId)}`;
+
   return (
     <>
-      {liveGame && pathname !== `/connect/groups/${String(liveGame.groupId)}/sports/games/${String(liveGame.gameId)}` ? (
+      {showLiveGame ? (
         <button
           type="button"
           onClick={() => navigate(`/connect/groups/${liveGame.groupId}/sports/games/${liveGame.gameId}`)}
-          className="fixed bottom-[6.7rem] left-1/2 z-[90] -translate-x-1/2 rounded-full border border-emerald-300/30 bg-[#04150f]/95 px-4 py-2 text-[10px] font-black text-emerald-100 shadow-[0_10px_35px_rgba(16,185,129,.25)] backdrop-blur lg:hidden"
+          className="fixed bottom-[5.8rem] left-1/2 z-[90] -translate-x-1/2 whitespace-nowrap rounded-full border border-emerald-300/30 bg-[#04150f]/95 px-4 py-2 text-[10px] font-black text-emerald-100 shadow-[0_10px_35px_rgba(16,185,129,.25)] backdrop-blur lg:hidden"
         >
           ● LIVE · Resume Game Book
         </button>
       ) : null}
       <nav className="sw-role-mobile-nav lg:hidden" aria-label="Mobile quick navigation">
-      <div className="sw-role-mobile-nav-grid">
-        {renderedItems.slice(0, 2).map((item) => <NavButton key={item.id} item={item} onClick={() => navigate(item.target)} />)}
-        <button type="button" className={`sw-role-mobile-nav-center ${center.sync ? "is-sync" : ""}`} onClick={openCenter} aria-label={center.sync ? "Open SYNC assistant" : `New ${center.label}`}>
-          <span className="sw-role-mobile-nav-center-orb">{<img src="/brand/syncworks-start-logo.png" alt="" />}</span>
-          <span>{center.label}</span>
-        </button>
-        {renderedItems.slice(2, 4).map((item) => <NavButton key={item.id} item={item} onClick={() => navigate(item.target)} />)}
-      </div>
+        <div className="sw-role-mobile-nav-grid">
+          {renderedItems.slice(0, 2).map((item) => <NavButton key={item.id} item={item} onClick={() => navigate(item.target)} />)}
+          <button type="button" className={`sw-role-mobile-nav-center ${center.sync ? "is-sync" : ""}`} onClick={openCenter} aria-label={center.sync ? "Open SYNC assistant" : `New ${center.label}`}>
+            <span className="sw-role-mobile-nav-center-orb"><img src="/brand/syncworks-start-logo.png" alt="" /></span>
+            <span>{center.label}</span>
+          </button>
+          {renderedItems.slice(2, 4).map((item) => <NavButton key={item.id} item={item} onClick={() => navigate(item.target)} />)}
+        </div>
       </nav>
     </>
   );

@@ -21,6 +21,7 @@ function contextualPrompt(pathname) {
   if (pathname.startsWith("/customer/traffic")) return "Review my live traffic and upcoming schedule. Tell me about delays, leave-by times and anything that may affect my day.";
   if (pathname.startsWith("/customer/weather")) return "Review my weather and connected schedule. Tell me what weather could affect today and read the important updates aloud.";
   if (pathname.startsWith("/customer/discover")) return "Help me with what is nearby and relevant to what I am doing today. Use my connected context and tell me the best next options.";
+  if (pathname.startsWith("/sbo")) return "Review this business workspace. Tell me what needs attention next across requests, schedule, customers, invoices and business setup.";
   return "Review this part of my SyncWorks account and my connected day. Tell me what matters next and read the important information aloud.";
 }
 
@@ -46,6 +47,7 @@ export default function SyncAssistantLauncher() {
   }, []);
 
   const hiddenForSports = /^\/connect\/groups\/[^/]+\/sports(?:\/|$)/.test(location.pathname);
+  const isBusinessPath = location.pathname.startsWith("/sbo");
 
   useEffect(() => {
     if (hiddenForSports || HIDDEN_PREFIXES.some((prefix) => location.pathname.startsWith(prefix))) return;
@@ -66,7 +68,7 @@ export default function SyncAssistantLauncher() {
 
   return (
     <>
-      <div className="fixed bottom-24 right-4 z-[80] flex flex-col items-end gap-3 lg:bottom-6 lg:right-6">
+      <div className={`fixed bottom-24 right-4 z-[80] flex flex-col items-end gap-3 lg:bottom-6 lg:right-6 ${isBusinessPath ? "hidden lg:flex" : ""}`}>
         <button
           type="button"
           onClick={() => setAlertsOpen(true)}
