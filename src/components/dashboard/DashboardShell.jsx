@@ -37,7 +37,7 @@ export default function DashboardShell({
 
       <main
         className={cx(
-          "relative mx-auto px-3 pb-36 pt-3 sm:px-4 sm:pt-4 lg:px-6 lg:pb-8 lg:pt-4 xl:px-8",
+          "relative mx-auto px-3 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-3 sm:px-4 sm:pt-4 lg:px-6 lg:pb-8 lg:pt-4 xl:px-8",
           maxWidth,
           className
         )}
