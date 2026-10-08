@@ -6,7 +6,6 @@ import { getIdentityProfile } from "../api/identity";
 import { useAuth } from "../auth/AuthContext";
 import CustomerDashboard from "./CustomerDashboard.jsx";
 import CustomerMobileHome from "../components/customer/CustomerMobileHome";
-import CalendarDailySnapshot from "../components/calendar/CalendarDailySnapshot";
 import SyncAssistantStickyDock from "../components/sync/SyncAssistantStickyDock";
 
 const DAY_TRADING_EMAIL = "jacoblord7@outlook.com";
@@ -123,8 +122,6 @@ export default function CustomerDashboardResponsive() {
         onOpenHealth={() => nav("/customer/health")}
         onOpenAudioSummary={playBriefing}
       />
-
-      <CalendarDailySnapshot compact title="Today · Calendar" className="mt-3" />
 
       {dayTradingEnabled ? (
         <button type="button" onClick={() => nav("/customer/day-trading-futures")} className="mt-3 flex w-full items-center gap-3 rounded-[1.2rem] border border-emerald-400/25 bg-emerald-500/[.07] p-3 text-left shadow-[0_0_28px_rgba(16,185,129,.08)]">
