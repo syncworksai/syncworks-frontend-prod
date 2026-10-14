@@ -5,6 +5,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { getGroups, getMemberships, updateGroup } from "../api/social";
 import { getSportsTeams } from "../api/sports";
+import TeamExecutionTrend from "../components/sports/TeamExecutionTrend";
 import WayAnalyticsPanel from "../components/sports/WayAnalyticsPanel";
 import SportsPlayerDashboard from "./SportsPlayerDashboard";
 import SportsPlaybook from "./SportsPlaybook";
@@ -20,14 +21,9 @@ function PlaybookEntry({ group, onOpen, onAnalytics, canRename, onRename }) {
     <div className="bg-[#02060c] px-3 pt-3 text-slate-100 sm:px-5">
       <section className="mx-auto max-w-6xl overflow-hidden rounded-[1.45rem] border border-cyan-300/20 bg-[radial-gradient(circle_at_85%_0%,rgba(34,211,238,.13),transparent_30%),radial-gradient(circle_at_0%_100%,rgba(139,92,246,.12),transparent_34%),linear-gradient(145deg,#07111f,#07101c)] shadow-[0_16px_50px_rgba(0,0,0,.35)]">
         <button type="button" onClick={onOpen} className="flex w-full items-center gap-3 p-3.5 text-left sm:p-4">
-          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-cyan-300/25 bg-cyan-300/[.08] text-cyan-200 shadow-[0_0_24px_rgba(34,211,238,.09)]">
-            <BookOpen className="h-5 w-5" />
-          </div>
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-cyan-300/25 bg-cyan-300/[.08] text-cyan-200 shadow-[0_0_24px_rgba(34,211,238,.09)]"><BookOpen className="h-5 w-5" /></div>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[8px] font-black uppercase tracking-[.18em] text-cyan-300">Team standard</span>
-              <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[.035] px-2 py-0.5 text-[7px] font-black uppercase tracking-[.11em] text-slate-400"><Lock className="h-2.5 w-2.5" />Team only</span>
-            </div>
+            <div className="flex flex-wrap items-center gap-2"><span className="text-[8px] font-black uppercase tracking-[.18em] text-cyan-300">Team standard</span><span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[.035] px-2 py-0.5 text-[7px] font-black uppercase tracking-[.11em] text-slate-400"><Lock className="h-2.5 w-2.5" />Team only</span></div>
             <div className="mt-1 truncate text-base font-black tracking-tight text-white">The Way We Play</div>
             <div className="mt-0.5 text-[9px] leading-4 text-slate-500">Trust · Execution · Accountability · Team</div>
           </div>
@@ -36,7 +32,7 @@ function PlaybookEntry({ group, onOpen, onAnalytics, canRename, onRename }) {
         </button>
         <div className="grid grid-cols-[1fr_auto] gap-2 border-t border-white/8 px-3 py-2 sm:grid-cols-[1fr_auto_auto] sm:px-4">
           <div className="self-center text-[8px] leading-4 text-slate-600">Private to active {group?.name || "team"} members. Team identity stays attached even if the name changes.</div>
-          <button type="button" onClick={onAnalytics} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-violet-300/20 bg-violet-300/[.06] px-3 text-[8px] font-black uppercase tracking-wide text-violet-100"><BarChart3 className="h-3.5 w-3.5" />Analytics</button>
+          <button type="button" onClick={onAnalytics} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-violet-300/20 bg-violet-300/[.06] px-3 text-[8px] font-black uppercase tracking-wide text-violet-100"><BarChart3 className="h-3.5 w-3.5" />Execution</button>
           {canRename ? <button type="button" onClick={onRename} className="hidden min-h-9 items-center justify-center gap-1.5 rounded-xl border border-white/10 px-3 text-[8px] font-black uppercase tracking-wide text-slate-400 sm:inline-flex"><Pencil className="h-3 w-3" />Edit team name</button> : null}
         </div>
       </section>
@@ -122,16 +118,10 @@ export default function SportsTeamDashboard() {
   }, [groupId, user?.id]);
 
   const membership = useMemo(
-    () => memberships.find((row) =>
-      Number(row.group) === Number(groupId)
-      && Number(row.user) === Number(user?.id)
-      && row.status === "ACTIVE"
-    ),
+    () => memberships.find((row) => Number(row.group) === Number(groupId) && Number(row.user) === Number(user?.id) && row.status === "ACTIVE"),
     [memberships, groupId, user?.id],
   );
 
-  // The persisted SportsTeam flag is the durable identity. The name check remains only
-  // as a rollout fallback until the backend data migration reaches production.
   const playbookEnabled = Boolean(team?.badge_rules?.way_we_play_enabled) || legacyWayWePlayGroup(group);
   const readingPlaybook = searchParams.get("playbook") === "1";
   const readingAnalytics = searchParams.get("analytics") === "1";
@@ -167,6 +157,13 @@ export default function SportsTeamDashboard() {
         canRename={canRename}
         onRename={() => setRenameOpen(true)}
       />
+      <div className="bg-[#02060c] px-3 pt-3 sm:px-5">
+        <TeamExecutionTrend
+          team={team}
+          canManage={canRename}
+          onOpenAnalytics={() => navigate(`${teamPath}?analytics=1`)}
+        />
+      </div>
       {dashboard}
       {renameOpen ? <TeamNameEditor group={group} onClose={() => setRenameOpen(false)} onSaved={(updated) => { setGroup(updated); setRenameOpen(false); }} /> : null}
     </>
