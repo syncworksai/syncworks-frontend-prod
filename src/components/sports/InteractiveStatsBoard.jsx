@@ -1,8 +1,11 @@
 import React, { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Share2, Trophy } from "lucide-react";
 
+import { aggregateTeamRates, rateBenchmarkClasses, rateBenchmarkStatus } from "../../utils/teamStatBenchmark";
+
 const num = (value) => Number(value || 0);
 const pct = (value) => num(value).toFixed(3).replace(/^0(?=\.)/, "");
+const RATE_KEYS = new Set(["avg", "obp", "slg", "ops"]);
 
 const COLUMNS = [
   ["g","G",(v)=>num(v)], ["pa","PA",(v)=>num(v)], ["ab","AB",(v)=>num(v)],
@@ -13,10 +16,21 @@ const COLUMNS = [
 ];
 const MAP = Object.fromEntries(COLUMNS.map(([key,label,format])=>[key,{key,label,format}]));
 
+function RatePill({ statKey, value, teamRates, compact = false }) {
+  const status = rateBenchmarkStatus(value, teamRates?.[statKey]);
+  return (
+    <div className={`rounded-lg border text-center ${compact ? "px-1 py-1.5" : "px-2.5 py-1.5"} ${rateBenchmarkClasses(status)}`}>
+      <div className="text-[6px] font-black uppercase tracking-wide opacity-65">{MAP[statKey]?.label || statKey.toUpperCase()}</div>
+      <div className={`${compact ? "text-[10px]" : "text-base"} mt-0.5 font-black`}>{pct(value)}</div>
+    </div>
+  );
+}
+
 export default function InteractiveStatsBoard({ rows, scope, onScope, managerView, onAdd, onShare, shareBusy = false }) {
   const [sortKey,setSortKey] = useState("ops");
   const [sortDirection,setSortDirection] = useState("desc");
   const cleanRows = Array.isArray(rows) ? rows : [];
+  const teamRates = useMemo(() => aggregateTeamRates(cleanRows), [cleanRows]);
 
   const sorted = useMemo(() => [...cleanRows].sort((a,b)=>{
     const av=num(a?.[sortKey]); const bv=num(b?.[sortKey]);
@@ -37,12 +51,17 @@ export default function InteractiveStatsBoard({ rows, scope, onScope, managerVie
 
   return <section className="rounded-[1.35rem] border border-white/10 bg-[#07111f]/95 p-3 sm:p-4">
     <div className="flex items-start justify-between gap-3">
-      <div><h2 className="text-sm font-black text-white">Stats grid</h2><p className="mt-1 text-[10px] leading-4 text-slate-500">MLB-style sheet: tap any column header to rank the entire roster. Tap again to reverse the sort.</p></div>
+      <div><h2 className="text-sm font-black text-white">Stats grid</h2><p className="mt-1 text-[10px] leading-4 text-slate-500">Traditional stats stay visible. Rate-stat colors move with the team: red is below team average, yellow is team average through +.049, green is +.050 or better.</p></div>
       <div className="flex shrink-0 items-center gap-2">
         <button type="button" disabled={shareBusy} onClick={onShare} className="min-h-10 rounded-xl border border-cyan-300/25 bg-cyan-300/[.07] px-3 text-[10px] font-black text-cyan-100 disabled:opacity-40"><Share2 className="mr-1 inline h-4 w-4"/>{shareBusy ? "Sharing…" : "Share"}</button>
         {managerView?<button type="button" onClick={onAdd} className="min-h-10 rounded-xl bg-amber-300 px-3 text-[10px] font-black text-slate-950"><Plus className="mr-1 inline h-4 w-4"/>Adjust stats</button>:<Trophy className="h-4 w-4 text-amber-300"/>}
       </div>
     </div>
+
+    <div className="mt-3 grid grid-cols-4 gap-1.5">
+      {["avg","obp","slg","ops"].map((key)=><div key={key} className="rounded-xl border border-white/8 bg-black/15 p-2 text-center"><div className="text-[6px] font-black uppercase tracking-wide text-slate-600">TEAM {MAP[key].label}</div><div className="mt-0.5 text-sm font-black text-white">{pct(teamRates[key])}</div></div>)}
+    </div>
+    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[7px] font-black uppercase tracking-wide"><span className="rounded-full border border-rose-300/25 bg-rose-300/10 px-2 py-1 text-rose-100">Red · below team avg</span><span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-2 py-1 text-amber-100">Yellow · avg to +.049</span><span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-2 py-1 text-emerald-100">Green · +.050 or better</span></div>
 
     <div className="mt-3">
       <div className="mb-1.5 flex items-center gap-1 text-[8px] font-black uppercase tracking-[.14em] text-amber-300"><Trophy className="h-3.5 w-3.5"/>Leaders</div>
@@ -66,29 +85,17 @@ export default function InteractiveStatsBoard({ rows, scope, onScope, managerVie
             <div className="flex items-center gap-1.5"><span className="text-[8px] font-black text-cyan-300">#{index+1}</span><b className="truncate text-[11px] text-white">#{row.player?.jersey_number||"—"} {row.player?.display_name}</b></div>
             <div className="mt-0.5 text-[8px] text-slate-600">{row.player?.primary_position||"—"} · {scope==="ALL"?"Combined":scope[0]+scope.slice(1).toLowerCase()}</div>
           </div>
-          <div className="rounded-lg border border-cyan-300/15 bg-cyan-300/[.05] px-2.5 py-1.5 text-right">
-            <div className="text-[7px] font-black uppercase text-slate-500">AVG</div>
-            <div className="text-base font-black text-cyan-100">{pct(row.avg)}</div>
-          </div>
+          <RatePill statKey="avg" value={row.avg} teamRates={teamRates} />
         </div>
-        <div className="mt-2 grid grid-cols-6 gap-1">
-          {[
-            ["H/AB",`${num(row.h)}/${num(row.ab)}`],
-            ["OPS",pct(row.ops)],
-            ["RBI",num(row.rbi)],
-            ["HR",num(row.hr)],
-            ["R",num(row.runs)],
-            ["G",num(row.g)],
-          ].map(([label,value])=><button key={label} type="button" onClick={()=>sortBy(label==="H/AB"?"h":label.toLowerCase()==="r"?"runs":label.toLowerCase())} className="min-w-0 rounded-lg border border-white/8 bg-white/[.025] px-1 py-1.5 text-center">
-            <div className="text-[6px] font-black uppercase tracking-wide text-slate-600">{label}</div>
-            <div className="mt-0.5 truncate text-[10px] font-black text-slate-200">{value}</div>
-          </button>)}
+        <div className="mt-2 grid grid-cols-4 gap-1">
+          {["obp","slg","ops"].map((key)=><button key={key} type="button" onClick={()=>sortBy(key)} className="min-w-0"><RatePill statKey={key} value={row[key]} teamRates={teamRates} compact /></button>)}
+          <button type="button" onClick={()=>sortBy("h")} className="min-w-0 rounded-lg border border-white/8 bg-white/[.025] px-1 py-1.5 text-center"><div className="text-[6px] font-black uppercase tracking-wide text-slate-600">H/AB</div><div className="mt-0.5 truncate text-[10px] font-black text-slate-200">{num(row.h)}/{num(row.ab)}</div></button>
         </div>
         <div className="mt-1 grid grid-cols-5 gap-1">
           {[
-            ["2B",num(row.double),"double"],
-            ["3B",num(row.triple),"triple"],
-            ["BB",num(row.bb),"bb"],
+            ["RBI",num(row.rbi),"rbi"],
+            ["HR",num(row.hr),"hr"],
+            ["R",num(row.runs),"runs"],
             ["SF",num(row.sf),"sf"],
             ["GIDP",num(row.gidp),"gidp"],
           ].map(([label,value,key])=><button key={label} type="button" onClick={()=>sortBy(key)} className="min-w-0 rounded-lg border border-white/8 bg-black/20 px-1 py-1.5 text-center">
@@ -98,7 +105,7 @@ export default function InteractiveStatsBoard({ rows, scope, onScope, managerVie
         </div>
       </article>)}
       {!sorted.length?<div className="rounded-xl border border-dashed border-white/10 p-6 text-center text-xs text-slate-500">No stats recorded yet.</div>:null}
-      <div className="px-1 text-[8px] leading-4 text-slate-600">Mobile view keeps the important game stats readable without shrinking the whole desktop table. Use Adjust stats for the full editable grid.</div>
+      <div className="px-1 text-[8px] leading-4 text-slate-600">Rate colors are relative to this team and this selected split. Counting stats remain neutral because +.050 only has meaning for rate statistics.</div>
     </div>
 
     <div className="mt-3 hidden overflow-x-auto rounded-xl border border-white/10 bg-[#050b14] lg:block">
@@ -116,12 +123,16 @@ export default function InteractiveStatsBoard({ rows, scope, onScope, managerVie
             <td className="sticky left-0 z-10 border-r border-white/10 bg-[#07111f] px-3 py-2 text-left">
               <div className="flex items-center gap-2"><span className="w-5 text-[8px] font-black text-cyan-300">#{index+1}</span><div className="min-w-0"><b className="block truncate text-[10px] text-white">#{row.player?.jersey_number||"—"} {row.player?.display_name}</b><span className="text-[7px] text-slate-600">{row.player?.primary_position||"—"}</span></div></div>
             </td>
-            {COLUMNS.map(([key,,format])=><td key={key} className={"border-l border-white/5 px-2 py-2 font-black "+(sortKey===key?"bg-cyan-300/[.05] text-cyan-100":"text-slate-300")}>{format(row?.[key])}</td>)}
+            {COLUMNS.map(([key,,format])=>{
+              const rateStatus = RATE_KEYS.has(key) ? rateBenchmarkStatus(row?.[key], teamRates[key]) : "neutral";
+              const rateClass = RATE_KEYS.has(key) ? rateBenchmarkClasses(rateStatus, { subtle: true }) : "text-slate-300";
+              return <td key={key} className={`border-l border-white/5 px-2 py-2 font-black ${RATE_KEYS.has(key) ? `border ${rateClass}` : sortKey===key?"bg-cyan-300/[.05] text-cyan-100":rateClass}`}>{format(row?.[key])}</td>;
+            })}
           </tr>)}
           {!sorted.length?<tr><td colSpan={COLUMNS.length+1} className="p-6 text-center text-xs text-slate-500">No stats recorded yet.</td></tr>:null}
         </tbody>
       </table>
     </div>
-    <div className="mt-2 hidden text-[8px] text-slate-600 lg:block">Desktop view uses the full sortable roster sheet. Player names stay pinned while you compare every column.</div>
+    <div className="mt-2 hidden text-[8px] text-slate-600 lg:block">Team-relative coloring updates automatically whenever the roster totals change.</div>
   </section>;
 }

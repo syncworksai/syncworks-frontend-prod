@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Camera, Crosshair, Flame, Footprints, LockKeyhole, Medal, Pencil, ShieldCheck, Trophy, Zap } from "lucide-react";
 
+import { getScopedTeamStats } from "../../api/sports";
+import { getExecutionTotals, getQabTotals } from "../../api/wayAnalytics";
+import { aggregateTeamRates, rateBenchmarkClasses, rateBenchmarkStatus } from "../../utils/teamStatBenchmark";
+
 const BADGE_META = {
   POWER: { title: "Power", icon: Zap, tone: "#FBBF24", description: "Extra-base hitting" },
   CONTACT: { title: "Contact", icon: Crosshair, tone: "#22D3EE", description: "Consistent hitting" },
@@ -30,8 +34,25 @@ const STYLE = {
   },
 };
 
-const pretty = (value) => Number(value || 0).toFixed(3).replace(/^0(?=\.)/, "");
+const pretty = (value) => value == null ? "—" : Number(value || 0).toFixed(3).replace(/^0(?=\.)/, "");
+const prettyQab = (value) => value == null ? "—" : Number(value).toFixed(2);
 const initials = (name) => String(name || "P").trim().split(/\s+/).slice(0, 2).map((word) => word[0] || "").join("").toUpperCase();
+
+function qabClasses(status) {
+  if (status === "green") return "border-emerald-300/35 bg-emerald-300/10 text-emerald-100";
+  if (status === "yellow") return "border-amber-300/35 bg-amber-300/10 text-amber-100";
+  if (status === "red") return "border-rose-300/35 bg-rose-300/10 text-rose-100";
+  return "border-white/10 bg-white/[.025] text-slate-300";
+}
+
+function RateTile({ label, value, teamAverage }) {
+  const status = value == null || teamAverage == null ? "neutral" : rateBenchmarkStatus(value, teamAverage);
+  return <div className={`rounded-lg border p-1.5 text-center ${rateBenchmarkClasses(status)}`}><div className="text-[7px] font-black uppercase tracking-wide opacity-65">{label}</div><div className="mt-0.5 text-sm font-black sm:text-base">{pretty(value)}</div></div>;
+}
+
+function QabTile({ value, status }) {
+  return <div className={`rounded-lg border p-1.5 text-center ${qabClasses(status)}`}><div className="text-[7px] font-black uppercase tracking-wide opacity-65">QAB AVG</div><div className="mt-0.5 text-sm font-black sm:text-base">{prettyQab(value)}</div></div>;
+}
 
 export function SportsPlayerPhoto({ player, profile, size = "md", className = "" }) {
   const url = profile?.profile_photo_url || profile?.card_photo_url || "";
@@ -88,7 +109,8 @@ export function BadgeTile({ badge, compact = false }) {
   </div>;
 }
 
-export default function PlayerCollectibleCard({ player, profile, progress, teamName, onEdit, compact = false }) {
+export default function PlayerCollectibleCard({ player, profile, progress, teamName, onEdit, compact = false, teamRates = null, wayMetrics = null, teamExecutionAverage = null }) {
+  const [autoMetrics, setAutoMetrics] = useState({ teamRates: null, wayMetrics: null, teamExecutionAverage: null });
   const theme = STYLE[profile?.card_style] || STYLE.CLASSIC;
   const badges = progress?.badges || [
     { key: "POWER" }, { key: "CONTACT" }, { key: "SPEED" }, { key: "CLUTCH" },
@@ -96,6 +118,42 @@ export default function PlayerCollectibleCard({ player, profile, progress, teamN
   const earned = progress?.achieved_count || 0;
   const ring = earned ? progress.card_border : theme.border;
   const row = progress?.season_totals || {};
+
+  useEffect(() => {
+    const teamId = Number(player?.team || 0);
+    const playerId = Number(player?.id || 0);
+    if (!teamId || !playerId || (teamRates && wayMetrics && teamExecutionAverage != null)) return;
+    let alive = true;
+    Promise.allSettled([
+      getScopedTeamStats(teamId, "ALL"),
+      getExecutionTotals(teamId),
+      getQabTotals(teamId),
+    ]).then(([statsResult, executionResult, qabResult]) => {
+      if (!alive) return;
+      const statRows = statsResult.status === "fulfilled" ? (statsResult.value?.rows || []) : [];
+      const executionRows = executionResult.status === "fulfilled" ? (executionResult.value?.rows || []) : [];
+      const qabRows = qabResult.status === "fulfilled" ? (qabResult.value?.rows || []) : [];
+      const execution = executionRows.find((item) => Number(item?.player?.id) === playerId) || null;
+      const qab = qabRows.find((item) => Number(item?.player?.id) === playerId) || null;
+      setAutoMetrics({
+        teamRates: statRows.length ? aggregateTeamRates(statRows) : null,
+        teamExecutionAverage: executionResult.status === "fulfilled" ? executionResult.value?.team?.execution_average ?? null : null,
+        wayMetrics: {
+          execution_average: execution?.execution_average ?? null,
+          execution_points: execution?.execution_points ?? null,
+          qab_average: qab?.qab_average ?? null,
+          qab_points: qab?.qab_points ?? null,
+          qab_status: qab?.status || "incomplete",
+        },
+      });
+    });
+    return () => { alive = false; };
+  }, [player?.team, player?.id, teamRates, wayMetrics, teamExecutionAverage]);
+
+  const effectiveRates = teamRates || autoMetrics.teamRates;
+  const effectiveWay = wayMetrics || autoMetrics.wayMetrics;
+  const effectiveTeamExecution = teamExecutionAverage ?? autoMetrics.teamExecutionAverage;
+
   return <article
     className="relative isolate overflow-hidden rounded-[1.6rem] border-[2px] p-[3px]"
     style={{ borderColor: ring, boxShadow: earned ? `0 0 22px ${ring}44,0 0 3px ${ring}85` : `0 0 10px ${theme.border}23` }}
@@ -126,11 +184,23 @@ export default function PlayerCollectibleCard({ player, profile, progress, teamN
           </div>
         </div>
       </div>
-      <div className="mt-3 grid grid-cols-4 gap-1.5 border-y border-white/10 py-3 text-center">
-        {[["AVG",pretty(row.avg)],["OPS",pretty(row.ops)],["H",Number(row.h || 0)],["RBI",Number(row.rbi || 0)]].map(([label,value])=>
-          <div key={label}><div className="text-[9px] font-black uppercase tracking-widest text-slate-400">{label}</div><div className="mt-1 text-sm font-black text-white sm:text-lg">{value}</div></div>
-        )}
+
+      <div className="mt-3 border-y border-white/10 py-3">
+        <div className="grid grid-cols-4 gap-1.5">
+          <RateTile label="AVG" value={row.avg} teamAverage={effectiveRates?.avg} />
+          <RateTile label="OBP" value={row.obp} teamAverage={effectiveRates?.obp} />
+          <RateTile label="SLG" value={row.slg} teamAverage={effectiveRates?.slg} />
+          <RateTile label="OPS" value={row.ops} teamAverage={effectiveRates?.ops} />
+        </div>
+        <div className="mt-1.5 grid grid-cols-4 gap-1.5">
+          <RateTile label="EXE%" value={effectiveWay?.execution_average} teamAverage={effectiveTeamExecution} />
+          <QabTile value={effectiveWay?.qab_average} status={effectiveWay?.qab_status} />
+          <div className="rounded-lg border border-white/10 bg-black/20 p-1.5 text-center text-slate-200"><div className="text-[7px] font-black uppercase tracking-wide text-slate-500">H</div><div className="mt-0.5 text-sm font-black sm:text-base">{Number(row.h || 0)}</div></div>
+          <div className="rounded-lg border border-white/10 bg-black/20 p-1.5 text-center text-slate-200"><div className="text-[7px] font-black uppercase tracking-wide text-slate-500">RBI</div><div className="mt-0.5 text-sm font-black sm:text-base">{Number(row.rbi || 0)}</div></div>
+        </div>
+        {!compact ? <div className="mt-2 text-center text-[7px] font-bold uppercase tracking-wide text-slate-500">Rate colors: red below team avg · yellow avg to +.049 · green +.050 or better · QAB uses the 1–3 standard</div> : null}
       </div>
+
       <div className={`mt-3 grid ${compact ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2"} gap-2`}>
         {badges.map((badge)=><BadgeTile key={badge.key} badge={badge} compact={compact} />)}
       </div>
