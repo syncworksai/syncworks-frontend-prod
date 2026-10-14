@@ -20,6 +20,16 @@ export async function rateWayPlayer(teamId, payload) {
   return data;
 }
 
+export async function getExecutionTotals(teamId) {
+  const { data } = await api.get(`/sports/way-analytics/${teamId}/execution-totals/`, { timeout: 45000 });
+  return data;
+}
+
+export async function saveExecutionTotal(teamId, payload) {
+  const { data } = await api.post(`/sports/way-analytics/${teamId}/execution-totals/`, payload, { timeout: 45000 });
+  return data;
+}
+
 export async function saveWayWeekTarget(teamId, payload) {
   const { data } = await api.post(`/sports/way-analytics/${teamId}/week-target/`, payload, { timeout: 45000 });
   return data;
