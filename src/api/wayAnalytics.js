@@ -35,6 +35,8 @@ export async function getQABTotals(teamId) {
   return data;
 }
 
+export const getQabTotals = getQABTotals;
+
 export async function saveQABTotal(teamId, payload) {
   const { data } = await api.post(`/sports/way-qab/`, { team: teamId, ...payload }, { timeout: 45000 });
   return data;
