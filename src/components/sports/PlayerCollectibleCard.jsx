@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Camera, Crosshair, Flame, Footprints, LockKeyhole, Medal, Pencil, ShieldCheck, Trophy, Zap } from "lucide-react";
 
+import { rateBenchmarkClasses, rateBenchmarkStatus } from "../../utils/teamStatBenchmark";
+
 const BADGE_META = {
   POWER: { title: "Power", icon: Zap, tone: "#FBBF24", description: "Extra-base hitting" },
   CONTACT: { title: "Contact", icon: Crosshair, tone: "#22D3EE", description: "Consistent hitting" },
@@ -31,7 +33,24 @@ const STYLE = {
 };
 
 const pretty = (value) => Number(value || 0).toFixed(3).replace(/^0(?=\.)/, "");
+const prettyQab = (value) => value == null ? "—" : Number(value).toFixed(2);
 const initials = (name) => String(name || "P").trim().split(/\s+/).slice(0, 2).map((word) => word[0] || "").join("").toUpperCase();
+
+function qabClasses(status) {
+  if (status === "green") return "border-emerald-300/35 bg-emerald-300/10 text-emerald-100";
+  if (status === "yellow") return "border-amber-300/35 bg-amber-300/10 text-amber-100";
+  if (status === "red") return "border-rose-300/35 bg-rose-300/10 text-rose-100";
+  return "border-white/10 bg-white/[.025] text-slate-300";
+}
+
+function RateTile({ label, value, teamAverage }) {
+  const status = rateBenchmarkStatus(value, teamAverage);
+  return <div className={`rounded-lg border p-1.5 text-center ${rateBenchmarkClasses(status)}`}><div className="text-[7px] font-black uppercase tracking-wide opacity-65">{label}</div><div className="mt-0.5 text-sm font-black sm:text-base">{pretty(value)}</div></div>;
+}
+
+function QabTile({ value, status }) {
+  return <div className={`rounded-lg border p-1.5 text-center ${qabClasses(status)}`}><div className="text-[7px] font-black uppercase tracking-wide opacity-65">QAB AVG</div><div className="mt-0.5 text-sm font-black sm:text-base">{prettyQab(value)}</div></div>;
+}
 
 export function SportsPlayerPhoto({ player, profile, size = "md", className = "" }) {
   const url = profile?.profile_photo_url || profile?.card_photo_url || "";
@@ -88,7 +107,7 @@ export function BadgeTile({ badge, compact = false }) {
   </div>;
 }
 
-export default function PlayerCollectibleCard({ player, profile, progress, teamName, onEdit, compact = false }) {
+export default function PlayerCollectibleCard({ player, profile, progress, teamName, onEdit, compact = false, teamRates = null, wayMetrics = null, teamExecutionAverage = null }) {
   const theme = STYLE[profile?.card_style] || STYLE.CLASSIC;
   const badges = progress?.badges || [
     { key: "POWER" }, { key: "CONTACT" }, { key: "SPEED" }, { key: "CLUTCH" },
@@ -126,11 +145,23 @@ export default function PlayerCollectibleCard({ player, profile, progress, teamN
           </div>
         </div>
       </div>
-      <div className="mt-3 grid grid-cols-4 gap-1.5 border-y border-white/10 py-3 text-center">
-        {[["AVG",pretty(row.avg)],["OPS",pretty(row.ops)],["H",Number(row.h || 0)],["RBI",Number(row.rbi || 0)]].map(([label,value])=>
-          <div key={label}><div className="text-[9px] font-black uppercase tracking-widest text-slate-400">{label}</div><div className="mt-1 text-sm font-black text-white sm:text-lg">{value}</div></div>
-        )}
+
+      <div className="mt-3 border-y border-white/10 py-3">
+        <div className="grid grid-cols-4 gap-1.5">
+          <RateTile label="AVG" value={row.avg} teamAverage={teamRates?.avg} />
+          <RateTile label="OBP" value={row.obp} teamAverage={teamRates?.obp} />
+          <RateTile label="SLG" value={row.slg} teamAverage={teamRates?.slg} />
+          <RateTile label="OPS" value={row.ops} teamAverage={teamRates?.ops} />
+        </div>
+        <div className="mt-1.5 grid grid-cols-4 gap-1.5">
+          <RateTile label="EXE%" value={wayMetrics?.execution_average} teamAverage={teamExecutionAverage} />
+          <QabTile value={wayMetrics?.qab_average} status={wayMetrics?.qab_status} />
+          <div className="rounded-lg border border-white/10 bg-black/20 p-1.5 text-center text-slate-200"><div className="text-[7px] font-black uppercase tracking-wide text-slate-500">H</div><div className="mt-0.5 text-sm font-black sm:text-base">{Number(row.h || 0)}</div></div>
+          <div className="rounded-lg border border-white/10 bg-black/20 p-1.5 text-center text-slate-200"><div className="text-[7px] font-black uppercase tracking-wide text-slate-500">RBI</div><div className="mt-0.5 text-sm font-black sm:text-base">{Number(row.rbi || 0)}</div></div>
+        </div>
+        {!compact ? <div className="mt-2 text-center text-[7px] font-bold uppercase tracking-wide text-slate-500">Rate colors: red below team avg · yellow avg to +.049 · green +.050 or better · QAB uses the 1–3 standard</div> : null}
       </div>
+
       <div className={`mt-3 grid ${compact ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2"} gap-2`}>
         {badges.map((badge)=><BadgeTile key={badge.key} badge={badge} compact={compact} />)}
       </div>
