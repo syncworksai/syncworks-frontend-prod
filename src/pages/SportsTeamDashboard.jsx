@@ -5,6 +5,8 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { getGroups, getMemberships, updateGroup } from "../api/social";
 import { getSportsTeams } from "../api/sports";
+import CoachBox from "../components/sports/CoachBox";
+import PlayerDevelopmentCard from "../components/sports/PlayerDevelopmentCard";
 import TeamExecutionTrend from "../components/sports/TeamExecutionTrend";
 import WayAnalyticsPanel from "../components/sports/WayAnalyticsPanel";
 import SportsPlayerDashboard from "./SportsPlayerDashboard";
@@ -12,7 +14,8 @@ import SportsPlaybook from "./SportsPlaybook";
 import SportsTeamManagerDashboard from "./SportsTeamManagerDashboard";
 
 const MANAGEMENT_ROLES = new Set(["OWNER", "DIRECTOR", "MANAGER", "SCOREKEEPER"]);
-const RENAME_ROLES = new Set(["OWNER", "DIRECTOR", "MANAGER"]);
+const COACH_ROLES = new Set(["OWNER", "DIRECTOR", "MANAGER"]);
+const RENAME_ROLES = COACH_ROLES;
 const normalize = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
 const legacyWayWePlayGroup = (group) => normalize(group?.name).includes("bed springs baptist");
 
@@ -127,6 +130,7 @@ export default function SportsTeamDashboard() {
   const readingAnalytics = searchParams.get("analytics") === "1";
   const teamPath = `/connect/groups/${groupId}/sports`;
   const canRename = RENAME_ROLES.has(membership?.role);
+  const isCoach = COACH_ROLES.has(membership?.role);
 
   if (loading) {
     return <div className="grid min-h-screen place-items-center bg-[#02060c] text-cyan-200"><Loader2 className="h-7 w-7 animate-spin" /></div>;
@@ -160,9 +164,12 @@ export default function SportsTeamDashboard() {
       <div className="bg-[#02060c] px-3 pt-3 sm:px-5">
         <TeamExecutionTrend
           team={team}
-          canManage={canRename}
+          canManage={isCoach}
           onOpenAnalytics={() => navigate(`${teamPath}?analytics=1`)}
         />
+      </div>
+      <div className="bg-[#02060c] px-3 pt-3 sm:px-5">
+        {isCoach ? <CoachBox team={team} canManage /> : <PlayerDevelopmentCard team={team} />}
       </div>
       {dashboard}
       {renameOpen ? <TeamNameEditor group={group} onClose={() => setRenameOpen(false)} onSaved={(updated) => { setGroup(updated); setRenameOpen(false); }} /> : null}
