@@ -1,9 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { Camera, Crosshair, Flame, Footprints, LockKeyhole, Medal, Pencil, ShieldCheck, Trophy, Zap } from "lucide-react";
+import { Crosshair, Flame, Footprints, LockKeyhole, Medal, Pencil, ShieldCheck, Trophy, Zap } from "lucide-react";
 
 import { getScopedTeamStats } from "../../api/sports";
-import { getExecutionTotals, getQabTotals, getSituationalSplits } from "../../api/wayAnalytics";
+import { getCoachBox, getExecutionTotals, getQabTotals, getSituationalSplits } from "../../api/wayAnalytics";
 import { aggregateTeamRates, rateBenchmarkClasses, rateBenchmarkStatus } from "../../utils/teamStatBenchmark";
+
+const coachBoxCache = new Map();
+const cachedCoachBox = (teamId) => {
+  const key = Number(teamId || 0);
+  if (!coachBoxCache.has(key)) {
+    coachBoxCache.set(key, getCoachBox(key).catch((error) => { coachBoxCache.delete(key); throw error; }));
+  }
+  return coachBoxCache.get(key);
+};
 
 const BADGE_META = {
   POWER: { title: "Power", icon: Zap, tone: "#FBBF24", description: "Extra-base hitting" },
@@ -12,30 +21,15 @@ const BADGE_META = {
   CLUTCH: { title: "Clutch", icon: Flame, tone: "#C084FC", description: "Verified late-game hits" },
 };
 const STYLE = {
-  CLASSIC: {
-    label: "Classic Gold", border: "#D4AF37",
-    background: "radial-gradient(ellipse at 90% 0%,rgba(234,179,8,.16),transparent 50%),linear-gradient(145deg,#211a15,#0b1221 58%,#12151f)",
-    text: "#FDE68A",
-  },
-  NEON: {
-    label: "Neon Night", border: "#22D3EE",
-    background: "radial-gradient(ellipse at 80% 10%,rgba(139,92,246,.24),transparent 48%),radial-gradient(ellipse at 0 100%,rgba(34,211,238,.18),transparent 55%),#07111f",
-    text: "#CFFAFE",
-  },
-  DIAMOND: {
-    label: "Diamond", border: "#A78BFA",
-    background: "radial-gradient(ellipse at 85% 0%,rgba(167,139,250,.25),transparent 50%),linear-gradient(145deg,#1b1730,#061321)",
-    text: "#E9D5FF",
-  },
-  MIDNIGHT: {
-    label: "Midnight", border: "#94A3B8",
-    background: "linear-gradient(130deg,#1e293b,#030712 66%,#121a2a)",
-    text: "#E2E8F0",
-  },
+  CLASSIC: { label: "Classic Gold", border: "#D4AF37", background: "radial-gradient(ellipse at 90% 0%,rgba(234,179,8,.16),transparent 50%),linear-gradient(145deg,#211a15,#0b1221 58%,#12151f)", text: "#FDE68A" },
+  NEON: { label: "Neon Night", border: "#22D3EE", background: "radial-gradient(ellipse at 80% 10%,rgba(139,92,246,.24),transparent 48%),radial-gradient(ellipse at 0 100%,rgba(34,211,238,.18),transparent 55%),#07111f", text: "#CFFAFE" },
+  DIAMOND: { label: "Diamond", border: "#A78BFA", background: "radial-gradient(ellipse at 85% 0%,rgba(167,139,250,.25),transparent 50%),linear-gradient(145deg,#1b1730,#061321)", text: "#E9D5FF" },
+  MIDNIGHT: { label: "Midnight", border: "#94A3B8", background: "linear-gradient(130deg,#1e293b,#030712 66%,#121a2a)", text: "#E2E8F0" },
 };
 
 const pretty = (value) => value == null ? "—" : Number(value || 0).toFixed(3).replace(/^0(?=\.)/, "");
 const prettyQab = (value) => value == null ? "—" : Number(value).toFixed(2);
+const prettyRuns = (value) => Number(value || 0).toFixed(2);
 const initials = (name) => String(name || "P").trim().split(/\s+/).slice(0, 2).map((word) => word[0] || "").join("").toUpperCase();
 
 function qabClasses(status) {
@@ -55,20 +49,18 @@ function QabTile({ value, status }) {
 }
 
 function SituationTile({ label, metric }) {
-  return <div className={`rounded-lg border p-1.5 text-center ${qabClasses(metric?.band || "neutral")}`}>
-    <div className="text-[7px] font-black uppercase tracking-wide opacity-65">{label}</div>
-    <div className="mt-0.5 text-sm font-black sm:text-base">{pretty(metric?.rate)}</div>
-    <div className="text-[6px] font-bold opacity-60">{metric?.ab ? `${metric.h}/${metric.ab}` : "—"}</div>
-  </div>;
+  return <div className={`rounded-lg border p-1.5 text-center ${qabClasses(metric?.band || "neutral")}`}><div className="text-[7px] font-black uppercase tracking-wide opacity-65">{label}</div><div className="mt-0.5 text-sm font-black sm:text-base">{pretty(metric?.rate)}</div><div className="text-[6px] font-bold opacity-60">{metric?.ab ? `${metric.h}/${metric.ab}` : "—"}</div></div>;
 }
 
 function SituationalIndexTile({ value }) {
   const band = value == null ? "neutral" : Number(value) >= 107.5 ? "green" : Number(value) >= 100 ? "yellow" : "red";
-  return <div className={`rounded-lg border p-1.5 text-center ${qabClasses(band)}`}>
-    <div className="text-[7px] font-black uppercase tracking-wide opacity-65">SIT+</div>
-    <div className="mt-0.5 text-sm font-black sm:text-base">{value == null ? "—" : Number(value).toFixed(1)}</div>
-    <div className="text-[6px] font-bold opacity-60">100 team avg</div>
-  </div>;
+  return <div className={`rounded-lg border p-1.5 text-center ${qabClasses(band)}`}><div className="text-[7px] font-black uppercase tracking-wide opacity-65">SIT+</div><div className="mt-0.5 text-sm font-black sm:text-base">{value == null ? "—" : Number(value).toFixed(1)}</div><div className="text-[6px] font-bold opacity-60">100 team avg</div></div>;
+}
+
+function BandBadge({ band }) {
+  const key = band?.key || "LOWER";
+  const tones = { TOP: "border-cyan-300/30 bg-cyan-300/10 text-cyan-100", MIDDLE: "border-amber-300/30 bg-amber-300/10 text-amber-100", LOWER: "border-violet-300/30 bg-violet-300/10 text-violet-100" };
+  return <span className={`rounded-full border px-2 py-1 text-[7px] font-black uppercase tracking-[.12em] ${tones[key] || tones.LOWER}`}>{band?.label || "Lineup role"}</span>;
 }
 
 export function SportsPlayerPhoto({ player, profile, size = "md", className = "" }) {
@@ -95,7 +87,7 @@ export function BadgeTile({ badge, compact = false }) {
 }
 
 export default function PlayerCollectibleCard({ player, profile, progress, teamName, onEdit, compact = false, teamRates = null, wayMetrics = null, teamExecutionAverage = null, situationalMetrics = null }) {
-  const [autoMetrics, setAutoMetrics] = useState({ teamRates: null, wayMetrics: null, teamExecutionAverage: null, teamBattingRates: null, situational: null });
+  const [autoMetrics, setAutoMetrics] = useState({ teamRates: null, wayMetrics: null, teamExecutionAverage: null, teamBattingRates: null, situational: null, development: null });
   const theme = STYLE[profile?.card_style] || STYLE.CLASSIC;
   const badges = progress?.badges || [{ key: "POWER" }, { key: "CONTACT" }, { key: "SPEED" }, { key: "CLUTCH" }];
   const earned = progress?.achieved_count || 0;
@@ -107,20 +99,23 @@ export default function PlayerCollectibleCard({ player, profile, progress, teamN
     const playerId = Number(player?.id || 0);
     if (!teamId || !playerId) return;
     let alive = true;
-    Promise.allSettled([getScopedTeamStats(teamId, "ALL"), getExecutionTotals(teamId), getQabTotals(teamId), getSituationalSplits(teamId)]).then(([statsResult, executionResult, qabResult, situationalResult]) => {
+    Promise.allSettled([getScopedTeamStats(teamId, "ALL"), getExecutionTotals(teamId), getQabTotals(teamId), getSituationalSplits(teamId), cachedCoachBox(teamId)]).then(([statsResult, executionResult, qabResult, situationalResult, coachResult]) => {
       if (!alive) return;
       const statRows = statsResult.status === "fulfilled" ? (statsResult.value?.rows || []) : [];
       const executionRows = executionResult.status === "fulfilled" ? (executionResult.value?.rows || []) : [];
       const qabRows = qabResult.status === "fulfilled" ? (qabResult.value?.rows || []) : [];
       const situationRows = situationalResult.status === "fulfilled" ? (situationalResult.value?.rows || []) : [];
+      const coachRows = coachResult.status === "fulfilled" ? (coachResult.value?.rows || []) : [];
       const execution = executionRows.find((item) => Number(item?.player?.id) === playerId) || null;
       const qab = qabRows.find((item) => Number(item?.player?.id) === playerId) || null;
       const situational = situationRows.find((item) => Number(item?.player?.id) === playerId) || null;
+      const development = coachRows.find((item) => Number(item?.player?.id) === playerId) || null;
       setAutoMetrics({
         teamRates: statRows.length ? aggregateTeamRates(statRows) : null,
         teamExecutionAverage: executionResult.status === "fulfilled" ? executionResult.value?.team?.execution_average ?? null : null,
         teamBattingRates: situationalResult.status === "fulfilled" ? situationalResult.value?.team?.season_batting ?? null : null,
         situational,
+        development,
         wayMetrics: {
           execution_average: execution?.execution_average ?? null,
           execution_points: execution?.execution_points ?? null,
@@ -137,6 +132,7 @@ export default function PlayerCollectibleCard({ player, profile, progress, teamN
   const effectiveWay = wayMetrics || autoMetrics.wayMetrics;
   const effectiveTeamExecution = teamExecutionAverage ?? autoMetrics.teamExecutionAverage;
   const effectiveSituation = situationalMetrics || autoMetrics.situational;
+  const development = autoMetrics.development;
   const effectiveBatting = effectiveSituation?.season_batting;
   const teamBatting = autoMetrics.teamBattingRates;
   const effectiveAvg = effectiveBatting?.avg ?? row.avg;
@@ -155,21 +151,20 @@ export default function PlayerCollectibleCard({ player, profile, progress, teamN
       </div>
 
       <div className="mt-3 border-y border-white/10 py-3">
-        <div className="grid grid-cols-4 gap-1.5">
-          <RateTile label={effectiveBatting?.games ? `AVG ${effectiveBatting.games}G` : "AVG"} value={effectiveAvg} teamAverage={teamBatting?.avg ?? effectiveRates?.avg} />
-          <RateTile label="OBP" value={effectiveObp} teamAverage={teamBatting?.obp ?? effectiveRates?.obp} />
-          <RateTile label="SLG" value={effectiveSlg} teamAverage={teamBatting?.slg ?? effectiveRates?.slg} />
-          <RateTile label="OPS" value={effectiveOps} teamAverage={teamBatting?.ops ?? effectiveRates?.ops} />
-        </div>
-        <div className="mt-1.5 grid grid-cols-4 gap-1.5">
-          <RateTile label="EXE%" value={effectiveWay?.execution_average} teamAverage={effectiveTeamExecution} />
-          <QabTile value={effectiveWay?.qab_average} status={effectiveWay?.qab_status} />
-          <div className="rounded-lg border border-white/10 bg-black/20 p-1.5 text-center text-slate-200"><div className="text-[7px] font-black uppercase tracking-wide text-slate-500">H</div><div className="mt-0.5 text-sm font-black sm:text-base">{Number(effectiveHits || 0)}</div></div>
-          <div className="rounded-lg border border-white/10 bg-black/20 p-1.5 text-center text-slate-200"><div className="text-[7px] font-black uppercase tracking-wide text-slate-500">RBI</div><div className="mt-0.5 text-sm font-black sm:text-base">{Number(row.rbi || 0)}</div></div>
-        </div>
+        <div className="grid grid-cols-4 gap-1.5"><RateTile label={effectiveBatting?.games ? `AVG ${effectiveBatting.games}G` : "AVG"} value={effectiveAvg} teamAverage={teamBatting?.avg ?? effectiveRates?.avg} /><RateTile label="OBP" value={effectiveObp} teamAverage={teamBatting?.obp ?? effectiveRates?.obp} /><RateTile label="SLG" value={effectiveSlg} teamAverage={teamBatting?.slg ?? effectiveRates?.slg} /><RateTile label="OPS" value={effectiveOps} teamAverage={teamBatting?.ops ?? effectiveRates?.ops} /></div>
+        <div className="mt-1.5 grid grid-cols-4 gap-1.5"><RateTile label="EXE%" value={effectiveWay?.execution_average} teamAverage={effectiveTeamExecution} /><QabTile value={effectiveWay?.qab_average} status={effectiveWay?.qab_status} /><div className="rounded-lg border border-white/10 bg-black/20 p-1.5 text-center text-slate-200"><div className="text-[7px] font-black uppercase tracking-wide text-slate-500">H</div><div className="mt-0.5 text-sm font-black sm:text-base">{Number(effectiveHits || 0)}</div></div><div className="rounded-lg border border-white/10 bg-black/20 p-1.5 text-center text-slate-200"><div className="text-[7px] font-black uppercase tracking-wide text-slate-500">RBI</div><div className="mt-0.5 text-sm font-black sm:text-base">{Number(row.rbi || 0)}</div></div></div>
         <div className="mt-1.5 grid grid-cols-4 gap-1.5"><SituationalIndexTile value={effectiveSituation?.situational_index} /><SituationTile label="EMPTY" metric={effectiveSituation?.bases_empty} /><SituationTile label="2 OUT" metric={effectiveSituation?.two_out} /><SituationTile label="ROB" metric={effectiveSituation?.runners_on} /></div>
-        {!compact ? <div className="mt-2 text-center text-[7px] font-bold uppercase tracking-wide text-slate-500">AVG / OBP / SLG / OPS use the season batting snapshot when available · RBI/runs remain detailed-book stats · QAB stays visible but is bypassed in the current historical evaluation · SIT+ uses the six-game situational sample</div> : null}
+        {!compact ? <div className="mt-2 text-center text-[7px] font-bold uppercase tracking-wide text-slate-500">SIT+ = situational hitting · EXE = total team-value execution · QAB = coach eye-test tracked prospectively</div> : null}
       </div>
+
+      {!compact && development ? <section className="mt-3 rounded-2xl border border-cyan-300/15 bg-black/25 p-3">
+        <div className="flex flex-wrap items-center gap-2"><BandBadge band={development.lineup_band} />{development.suggested_slot ? <span className="rounded-full border border-white/10 px-2 py-1 text-[7px] font-black text-slate-400">Model slot #{development.suggested_slot}</span> : null}<span className="text-[9px] font-black text-amber-100">{development.effective_role}</span></div>
+        <p className="mt-1.5 text-[9px] leading-4 text-slate-400">{development.role_reason}</p>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2"><div className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.045] p-2.5"><div className="text-[7px] font-black uppercase tracking-wide text-emerald-300">Best current value</div><div className="mt-1 text-[10px] font-black text-white">{development.strength?.label || "Building sample"} {development.strength?.value != null ? `· ${pretty(development.strength.value)}` : ""}</div></div><div className="rounded-xl border border-amber-300/15 bg-amber-300/[.045] p-2.5"><div className="text-[7px] font-black uppercase tracking-wide text-amber-300">Next improvement</div><div className="mt-1 text-[10px] font-black text-white">{development.focus?.label || "Building sample"}</div>{development.focus?.current != null ? <div className="mt-1 text-[8px] text-slate-400">{pretty(development.focus.current)} → {pretty(development.focus.target)}</div> : null}</div></div>
+        <div className="mt-2 rounded-xl border border-white/8 bg-white/[.02] p-2.5"><div className="text-[7px] font-black uppercase tracking-wide text-slate-500">What to do</div><p className="mt-1 text-[9px] leading-4 text-slate-300">{development.focus?.action}</p></div>
+        <div className="mt-2 grid grid-cols-2 gap-2"><div className="rounded-xl border border-cyan-300/15 bg-cyan-300/[.045] p-2.5"><div className="text-[7px] font-black uppercase tracking-wide text-cyan-300">If it improves</div><div className="mt-1 text-[11px] font-black text-white">+{prettyRuns(development.focus?.projected_runs_per_game_low)}–{prettyRuns(development.focus?.projected_runs_per_game_high)} runs/g</div><div className="mt-1 text-[7px] text-slate-500">+{Number(development.focus?.projected_events_per_10_games || 0).toFixed(1)} {development.focus?.event_label || "events"}/10G</div></div><div className="rounded-xl border border-rose-300/15 bg-rose-300/[.04] p-2.5"><div className="text-[7px] font-black uppercase tracking-wide text-rose-300">If strength falls .050</div>{development.downside ? <><div className="mt-1 text-[11px] font-black text-white">−{prettyRuns(development.downside.projected_runs_lost_per_game_low)}–{prettyRuns(development.downside.projected_runs_lost_per_game_high)} runs/g</div><div className="mt-1 text-[7px] text-slate-500">−{Number(development.downside.lost_events_per_10_games || 0).toFixed(1)} {development.downside.event_label || "events"}/10G</div></> : <div className="mt-1 text-[8px] text-slate-500">Need more data</div>}</div></div>
+        <div className="mt-2 text-[9px] leading-4 text-slate-400">{development.player_message}</div>
+      </section> : null}
 
       <div className={`mt-3 grid ${compact ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2"} gap-2`}>{badges.map((badge)=><BadgeTile key={badge.key} badge={badge} compact={compact} />)}</div>
       {!compact ? <p className="mt-3 text-center text-[9px] leading-4 text-slate-400">Colored glowing borders mark earned goals. Speed and Clutch require staff-verified moments in a finished game.</p> : null}
