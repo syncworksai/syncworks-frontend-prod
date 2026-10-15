@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Camera, Crosshair, Flame, Footprints, LockKeyhole, Medal, Pencil, ShieldCheck, Trophy, Zap } from "lucide-react";
 
 import { getScopedTeamStats } from "../../api/sports";
-import { getExecutionTotals, getQabTotals, getSituationalSplits } from "../../api/wayAnalytics";
+import { getExecutionTotals, getSituationalSplits } from "../../api/wayAnalytics";
 import { aggregateTeamRates, rateBenchmarkClasses, rateBenchmarkStatus } from "../../utils/teamStatBenchmark";
 
 const BADGE_META = {
@@ -35,10 +35,9 @@ const STYLE = {
 };
 
 const pretty = (value) => value == null ? "—" : Number(value || 0).toFixed(3).replace(/^0(?=\.)/, "");
-const prettyQab = (value) => value == null ? "—" : Number(value).toFixed(2);
 const initials = (name) => String(name || "P").trim().split(/\s+/).slice(0, 2).map((word) => word[0] || "").join("").toUpperCase();
 
-function qabClasses(status) {
+function metricClasses(status) {
   if (status === "green") return "border-emerald-300/35 bg-emerald-300/10 text-emerald-100";
   if (status === "yellow") return "border-amber-300/35 bg-amber-300/10 text-amber-100";
   if (status === "red") return "border-rose-300/35 bg-rose-300/10 text-rose-100";
@@ -50,12 +49,8 @@ function RateTile({ label, value, teamAverage }) {
   return <div className={`rounded-lg border p-1.5 text-center ${rateBenchmarkClasses(status)}`}><div className="text-[7px] font-black uppercase tracking-wide opacity-65">{label}</div><div className="mt-0.5 text-sm font-black sm:text-base">{pretty(value)}</div></div>;
 }
 
-function QabTile({ value, status }) {
-  return <div className={`rounded-lg border p-1.5 text-center ${qabClasses(status)}`}><div className="text-[7px] font-black uppercase tracking-wide opacity-65">QAB AVG</div><div className="mt-0.5 text-sm font-black sm:text-base">{prettyQab(value)}</div></div>;
-}
-
 function SituationTile({ label, metric }) {
-  return <div className={`rounded-lg border p-1.5 text-center ${qabClasses(metric?.band || "neutral")}`}>
+  return <div className={`rounded-lg border p-1.5 text-center ${metricClasses(metric?.band || "neutral")}`}>
     <div className="text-[7px] font-black uppercase tracking-wide opacity-65">{label}</div>
     <div className="mt-0.5 text-sm font-black sm:text-base">{pretty(metric?.rate)}</div>
     <div className="text-[6px] font-bold opacity-60">{metric?.ab ? `${metric.h}/${metric.ab}` : "—"}</div>
@@ -64,7 +59,7 @@ function SituationTile({ label, metric }) {
 
 function SituationalIndexTile({ value }) {
   const band = value == null ? "neutral" : Number(value) >= 107.5 ? "green" : Number(value) >= 100 ? "yellow" : "red";
-  return <div className={`rounded-lg border p-1.5 text-center ${qabClasses(band)}`}>
+  return <div className={`rounded-lg border p-1.5 text-center ${metricClasses(band)}`}>
     <div className="text-[7px] font-black uppercase tracking-wide opacity-65">SIT+</div>
     <div className="mt-0.5 text-sm font-black sm:text-base">{value == null ? "—" : Number(value).toFixed(1)}</div>
     <div className="text-[6px] font-bold opacity-60">100 team avg</div>
@@ -144,16 +139,13 @@ export default function PlayerCollectibleCard({ player, profile, progress, teamN
     Promise.allSettled([
       getScopedTeamStats(teamId, "ALL"),
       getExecutionTotals(teamId),
-      getQabTotals(teamId),
       getSituationalSplits(teamId),
-    ]).then(([statsResult, executionResult, qabResult, situationalResult]) => {
+    ]).then(([statsResult, executionResult, situationalResult]) => {
       if (!alive) return;
       const statRows = statsResult.status === "fulfilled" ? (statsResult.value?.rows || []) : [];
       const executionRows = executionResult.status === "fulfilled" ? (executionResult.value?.rows || []) : [];
-      const qabRows = qabResult.status === "fulfilled" ? (qabResult.value?.rows || []) : [];
       const situationRows = situationalResult.status === "fulfilled" ? (situationalResult.value?.rows || []) : [];
       const execution = executionRows.find((item) => Number(item?.player?.id) === playerId) || null;
-      const qab = qabRows.find((item) => Number(item?.player?.id) === playerId) || null;
       const situational = situationRows.find((item) => Number(item?.player?.id) === playerId) || null;
       setAutoMetrics({
         teamRates: statRows.length ? aggregateTeamRates(statRows) : null,
@@ -162,9 +154,6 @@ export default function PlayerCollectibleCard({ player, profile, progress, teamN
         wayMetrics: {
           execution_average: execution?.execution_average ?? null,
           execution_points: execution?.execution_points ?? null,
-          qab_average: qab?.qab_average ?? null,
-          qab_points: qab?.qab_points ?? null,
-          qab_status: qab?.status || "incomplete",
         },
       });
     });
@@ -214,9 +203,8 @@ export default function PlayerCollectibleCard({ player, profile, progress, teamN
           <RateTile label="SLG" value={row.slg} teamAverage={effectiveRates?.slg} />
           <RateTile label="OPS" value={row.ops} teamAverage={effectiveRates?.ops} />
         </div>
-        <div className="mt-1.5 grid grid-cols-4 gap-1.5">
+        <div className="mt-1.5 grid grid-cols-3 gap-1.5">
           <RateTile label="EXE%" value={effectiveWay?.execution_average} teamAverage={effectiveTeamExecution} />
-          <QabTile value={effectiveWay?.qab_average} status={effectiveWay?.qab_status} />
           <div className="rounded-lg border border-white/10 bg-black/20 p-1.5 text-center text-slate-200"><div className="text-[7px] font-black uppercase tracking-wide text-slate-500">H</div><div className="mt-0.5 text-sm font-black sm:text-base">{Number(row.h || 0)}</div></div>
           <div className="rounded-lg border border-white/10 bg-black/20 p-1.5 text-center text-slate-200"><div className="text-[7px] font-black uppercase tracking-wide text-slate-500">RBI</div><div className="mt-0.5 text-sm font-black sm:text-base">{Number(row.rbi || 0)}</div></div>
         </div>
@@ -226,7 +214,7 @@ export default function PlayerCollectibleCard({ player, profile, progress, teamN
           <SituationTile label="2 OUT" metric={effectiveSituation?.two_out} />
           <SituationTile label="ROB" metric={effectiveSituation?.runners_on} />
         </div>
-        {!compact ? <div className="mt-2 text-center text-[7px] font-bold uppercase tracking-wide text-slate-500">Rate colors: red below team avg · yellow avg to +.049 · green +.050 or better · QAB uses 1–3 · SIT+ uses the six-game situational sample</div> : null}
+        {!compact ? <div className="mt-2 text-center text-[7px] font-bold uppercase tracking-wide text-slate-500">Rate colors: red below team avg · yellow avg to +.049 · green +.050 or better · SIT+ uses the six-game situational sample</div> : null}
       </div>
 
       <div className={`mt-3 grid ${compact ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2"} gap-2`}>
