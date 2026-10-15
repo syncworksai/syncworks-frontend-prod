@@ -127,7 +127,7 @@ export function BadgeTile({ badge, compact = false }) {
 }
 
 export default function PlayerCollectibleCard({ player, profile, progress, teamName, onEdit, compact = false, teamRates = null, wayMetrics = null, teamExecutionAverage = null, situationalMetrics = null }) {
-  const [autoMetrics, setAutoMetrics] = useState({ teamRates: null, wayMetrics: null, teamExecutionAverage: null, situational: null });
+  const [autoMetrics, setAutoMetrics] = useState({ teamRates: null, wayMetrics: null, teamExecutionAverage: null, teamBattingAverage: null, situational: null });
   const theme = STYLE[profile?.card_style] || STYLE.CLASSIC;
   const badges = progress?.badges || [
     { key: "POWER" }, { key: "CONTACT" }, { key: "SPEED" }, { key: "CLUTCH" },
@@ -139,7 +139,7 @@ export default function PlayerCollectibleCard({ player, profile, progress, teamN
   useEffect(() => {
     const teamId = Number(player?.team || 0);
     const playerId = Number(player?.id || 0);
-    if (!teamId || !playerId || (teamRates && wayMetrics && teamExecutionAverage != null && situationalMetrics)) return;
+    if (!teamId || !playerId) return;
     let alive = true;
     Promise.allSettled([
       getScopedTeamStats(teamId, "ALL"),
@@ -158,6 +158,7 @@ export default function PlayerCollectibleCard({ player, profile, progress, teamN
       setAutoMetrics({
         teamRates: statRows.length ? aggregateTeamRates(statRows) : null,
         teamExecutionAverage: executionResult.status === "fulfilled" ? executionResult.value?.team?.execution_average ?? null : null,
+        teamBattingAverage: situationalResult.status === "fulfilled" ? situationalResult.value?.team?.season_batting?.avg ?? null : null,
         situational,
         wayMetrics: {
           execution_average: execution?.execution_average ?? null,
@@ -169,12 +170,16 @@ export default function PlayerCollectibleCard({ player, profile, progress, teamN
       });
     });
     return () => { alive = false; };
-  }, [player?.team, player?.id, teamRates, wayMetrics, teamExecutionAverage, situationalMetrics]);
+  }, [player?.team, player?.id]);
 
   const effectiveRates = teamRates || autoMetrics.teamRates;
   const effectiveWay = wayMetrics || autoMetrics.wayMetrics;
   const effectiveTeamExecution = teamExecutionAverage ?? autoMetrics.teamExecutionAverage;
   const effectiveSituation = situationalMetrics || autoMetrics.situational;
+  const effectiveBatting = effectiveSituation?.season_batting;
+  const effectiveAvg = effectiveBatting?.avg ?? row.avg;
+  const effectiveHits = effectiveBatting?.h ?? row.h;
+  const effectiveTeamAvg = autoMetrics.teamBattingAverage ?? effectiveRates?.avg;
 
   return <article
     className="relative isolate overflow-hidden rounded-[1.6rem] border-[2px] p-[3px]"
@@ -209,7 +214,7 @@ export default function PlayerCollectibleCard({ player, profile, progress, teamN
 
       <div className="mt-3 border-y border-white/10 py-3">
         <div className="grid grid-cols-4 gap-1.5">
-          <RateTile label="AVG" value={row.avg} teamAverage={effectiveRates?.avg} />
+          <RateTile label={effectiveBatting?.games ? `AVG ${effectiveBatting.games}G` : "AVG"} value={effectiveAvg} teamAverage={effectiveTeamAvg} />
           <RateTile label="OBP" value={row.obp} teamAverage={effectiveRates?.obp} />
           <RateTile label="SLG" value={row.slg} teamAverage={effectiveRates?.slg} />
           <RateTile label="OPS" value={row.ops} teamAverage={effectiveRates?.ops} />
@@ -217,7 +222,7 @@ export default function PlayerCollectibleCard({ player, profile, progress, teamN
         <div className="mt-1.5 grid grid-cols-4 gap-1.5">
           <RateTile label="EXE%" value={effectiveWay?.execution_average} teamAverage={effectiveTeamExecution} />
           <QabTile value={effectiveWay?.qab_average} status={effectiveWay?.qab_status} />
-          <div className="rounded-lg border border-white/10 bg-black/20 p-1.5 text-center text-slate-200"><div className="text-[7px] font-black uppercase tracking-wide text-slate-500">H</div><div className="mt-0.5 text-sm font-black sm:text-base">{Number(row.h || 0)}</div></div>
+          <div className="rounded-lg border border-white/10 bg-black/20 p-1.5 text-center text-slate-200"><div className="text-[7px] font-black uppercase tracking-wide text-slate-500">H</div><div className="mt-0.5 text-sm font-black sm:text-base">{Number(effectiveHits || 0)}</div></div>
           <div className="rounded-lg border border-white/10 bg-black/20 p-1.5 text-center text-slate-200"><div className="text-[7px] font-black uppercase tracking-wide text-slate-500">RBI</div><div className="mt-0.5 text-sm font-black sm:text-base">{Number(row.rbi || 0)}</div></div>
         </div>
         <div className="mt-1.5 grid grid-cols-4 gap-1.5">
@@ -226,7 +231,7 @@ export default function PlayerCollectibleCard({ player, profile, progress, teamN
           <SituationTile label="2 OUT" metric={effectiveSituation?.two_out} />
           <SituationTile label="ROB" metric={effectiveSituation?.runners_on} />
         </div>
-        {!compact ? <div className="mt-2 text-center text-[7px] font-bold uppercase tracking-wide text-slate-500">Rate colors: red below team avg · yellow avg to +.049 · green +.050 or better · QAB uses 1–3 · SIT+ uses the six-game situational sample</div> : null}
+        {!compact ? <div className="mt-2 text-center text-[7px] font-bold uppercase tracking-wide text-slate-500">AVG uses the current batting snapshot when available · OBP/SLG/OPS remain detailed-book stats · QAB stays visible but is bypassed in the current historical evaluation · SIT+ uses the six-game situational sample</div> : null}
       </div>
 
       <div className={`mt-3 grid ${compact ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2"} gap-2`}>
