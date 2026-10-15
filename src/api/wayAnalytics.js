@@ -57,6 +57,21 @@ export async function saveSituationalSplit(teamId, payload) {
   return data;
 }
 
+export async function getCoachBox(teamId) {
+  const { data } = await api.get(`/sports/way-coach/${teamId}/`, { timeout: 45000 });
+  return data;
+}
+
+export async function snapshotCoachBox(teamId, payload = {}) {
+  const { data } = await api.post(`/sports/way-coach/${teamId}/snapshot/`, payload, { timeout: 45000 });
+  return data;
+}
+
+export async function saveCoachBoxPlayer(teamId, payload) {
+  const { data } = await api.post(`/sports/way-coach/${teamId}/save-player/`, payload, { timeout: 45000 });
+  return data;
+}
+
 export async function saveWayWeekTarget(teamId, payload) {
   const { data } = await api.post(`/sports/way-analytics/${teamId}/week-target/`, payload, { timeout: 45000 });
   return data;
