@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BarChart3, BookOpen, Loader2, Lock, Pencil, Save, X } from "lucide-react";
+import { ArrowRight, BarChart3, BookOpen, Loader2, Lock, Pencil, Save, Users, X } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthContext";
@@ -76,6 +76,14 @@ function TeamNameEditor({ group, onClose, onSaved }) {
   );
 }
 
+function CoachBoxButton({ onOpen }) {
+  return <button type="button" onClick={onOpen} className="mx-auto flex w-full max-w-6xl items-center gap-3 rounded-[1.1rem] border border-violet-300/18 bg-[linear-gradient(135deg,rgba(139,92,246,.09),rgba(34,211,238,.035))] p-3 text-left text-white transition hover:border-violet-300/30 hover:bg-violet-300/[.08]">
+    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-violet-300/20 bg-violet-300/10 text-violet-200"><Users className="h-5 w-5" /></div>
+    <div className="min-w-0 flex-1"><div className="text-[8px] font-black uppercase tracking-[.16em] text-violet-300">Coach only</div><div className="mt-0.5 text-sm font-black">Open Coach Box</div><div className="mt-0.5 text-[8px] leading-4 text-slate-500">Set availability, rebuild the best 10, review player roles and weekly development.</div></div>
+    <ArrowRight className="h-4 w-4 shrink-0 text-violet-200" />
+  </button>;
+}
+
 function TeamResourceDenied({ onBack, wrongTeam = false }) {
   return (
     <div className="grid min-h-dvh place-items-center bg-[#02060c] px-4 text-white">
@@ -99,6 +107,7 @@ export default function SportsTeamDashboard() {
   const [team, setTeam] = useState(null);
   const [loading, setLoading] = useState(true);
   const [renameOpen, setRenameOpen] = useState(false);
+  const [coachBoxOpen, setCoachBoxOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -119,6 +128,18 @@ export default function SportsTeamDashboard() {
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [groupId, user?.id]);
+
+  useEffect(() => {
+    if (!coachBoxOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event) => { if (event.key === "Escape") setCoachBoxOpen(false); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [coachBoxOpen]);
 
   const membership = useMemo(
     () => memberships.find((row) => Number(row.group) === Number(groupId) && Number(row.user) === Number(user?.id) && row.status === "ACTIVE"),
@@ -169,9 +190,20 @@ export default function SportsTeamDashboard() {
         />
       </div>
       <div className="bg-[#02060c] px-3 pt-3 sm:px-5">
-        {isCoach ? <CoachBox team={team} canManage /> : <PlayerDevelopmentCard team={team} />}
+        {isCoach ? <CoachBoxButton onOpen={() => setCoachBoxOpen(true)} /> : <PlayerDevelopmentCard team={team} />}
       </div>
       {dashboard}
+
+      {coachBoxOpen && isCoach ? <div className="fixed inset-0 z-[700] bg-black/75 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) setCoachBoxOpen(false); }}>
+        <aside className="absolute inset-y-0 right-0 w-full overflow-y-auto border-l border-violet-300/20 bg-[#02060c] shadow-[-24px_0_70px_rgba(0,0,0,.5)] sm:max-w-[1100px]">
+          <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-white/10 bg-[#02060c]/95 px-3 py-2.5 backdrop-blur-xl sm:px-4">
+            <div className="flex min-w-0 items-center gap-2.5"><div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-violet-300/20 bg-violet-300/10 text-violet-200"><Users className="h-4 w-4" /></div><div className="min-w-0"><div className="text-[7px] font-black uppercase tracking-[.16em] text-violet-300">Coach only</div><div className="truncate text-sm font-black text-white">Coach Box · {group?.name || "Team"}</div></div></div>
+            <button type="button" onClick={() => setCoachBoxOpen(false)} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[.035] text-slate-300" aria-label="Close Coach Box"><X className="h-4 w-4" /></button>
+          </div>
+          <div className="p-2.5 sm:p-4"><CoachBox team={team} canManage /></div>
+        </aside>
+      </div> : null}
+
       {renameOpen ? <TeamNameEditor group={group} onClose={() => setRenameOpen(false)} onSaved={(updated) => { setGroup(updated); setRenameOpen(false); }} /> : null}
     </>
   );
