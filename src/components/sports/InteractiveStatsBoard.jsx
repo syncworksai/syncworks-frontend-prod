@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Share2, Trophy } from "lucide-react";
 
 import SituationalExecutionPanel from "./SituationalExecutionPanel";
+import { getSituationalSplits } from "../../api/wayAnalytics";
 import { aggregateTeamRates, rateBenchmarkClasses, rateBenchmarkStatus } from "../../utils/teamStatBenchmark";
 
 const num = (value) => Number(value || 0);
@@ -30,19 +31,57 @@ function RatePill({ statKey, value, teamRates, compact = false }) {
 export default function InteractiveStatsBoard({ rows, scope, onScope, managerView, onAdd, onShare, shareBusy = false }) {
   const [sortKey,setSortKey] = useState("ops");
   const [sortDirection,setSortDirection] = useState("desc");
+  const [snapshotRows,setSnapshotRows] = useState([]);
   const cleanRows = Array.isArray(rows) ? rows : [];
-  const teamRates = useMemo(() => aggregateTeamRates(cleanRows), [cleanRows]);
   const teamId = useMemo(() => Number(cleanRows.find((row)=>row?.player?.team)?.player?.team || 0), [cleanRows]);
 
-  const sorted = useMemo(() => [...cleanRows].sort((a,b)=>{
+  useEffect(()=>{
+    if (!teamId) { setSnapshotRows([]); return; }
+    let alive=true;
+    getSituationalSplits(teamId).then((payload)=>{
+      if (alive) setSnapshotRows(Array.isArray(payload?.rows) ? payload.rows : []);
+    }).catch(()=>{ if (alive) setSnapshotRows([]); });
+    return ()=>{ alive=false; };
+  },[teamId]);
+
+  const displayRows = useMemo(()=>{
+    if (scope !== "ALL" || !snapshotRows.length) return cleanRows;
+    const byPlayer = new Map(snapshotRows.map((row)=>[Number(row?.player?.id),row?.season_batting]));
+    return cleanRows.map((row)=>{
+      const batting=byPlayer.get(Number(row?.player?.id));
+      if (!batting || !Number(batting.ab || 0)) return row;
+      return {
+        ...row,
+        g:Number(batting.games ?? row.g ?? 0),
+        pa:Number(batting.pa ?? row.pa ?? 0),
+        ab:Number(batting.ab ?? row.ab ?? 0),
+        h:Number(batting.h ?? row.h ?? 0),
+        single:Number(batting.single ?? row.single ?? 0),
+        double:Number(batting.double ?? row.double ?? 0),
+        triple:Number(batting.triple ?? row.triple ?? 0),
+        hr:Number(batting.hr ?? row.hr ?? 0),
+        bb:Number(batting.bb ?? row.bb ?? 0),
+        sf:Number(batting.sf ?? row.sf ?? 0),
+        tb:Number(batting.tb ?? row.tb ?? 0),
+        avg:Number(batting.avg ?? row.avg ?? 0),
+        obp:Number(batting.obp ?? row.obp ?? 0),
+        slg:Number(batting.slg ?? row.slg ?? 0),
+        ops:Number(batting.ops ?? row.ops ?? 0),
+        _battingSnapshot:true,
+      };
+    });
+  },[cleanRows,scope,snapshotRows]);
+
+  const teamRates = useMemo(() => aggregateTeamRates(displayRows), [displayRows]);
+  const sorted = useMemo(() => [...displayRows].sort((a,b)=>{
     const av=num(a?.[sortKey]); const bv=num(b?.[sortKey]);
     const delta=sortDirection==="desc" ? bv-av : av-bv;
     if (delta) return delta;
     return String(a?.player?.display_name||"").localeCompare(String(b?.player?.display_name||""));
-  }),[cleanRows,sortKey,sortDirection]);
+  }),[displayRows,sortKey,sortDirection]);
 
   const leaders = ["avg","ops","h","hr","rbi"].map((key)=>{
-    const leader=[...cleanRows].sort((a,b)=>num(b?.[key])-num(a?.[key])||num(b?.pa)-num(a?.pa))[0]||null;
+    const leader=[...displayRows].sort((a,b)=>num(b?.[key])-num(a?.[key])||num(b?.pa)-num(a?.pa))[0]||null;
     return {key,leader};
   });
 
@@ -55,7 +94,7 @@ export default function InteractiveStatsBoard({ rows, scope, onScope, managerVie
     {teamId ? <SituationalExecutionPanel teamId={teamId} managerView={managerView} /> : null}
     <section className="rounded-[1.35rem] border border-white/10 bg-[#07111f]/95 p-3 sm:p-4">
       <div className="flex items-start justify-between gap-3">
-        <div><h2 className="text-sm font-black text-white">Stats grid</h2><p className="mt-1 text-[10px] leading-4 text-slate-500">Traditional stats stay visible. Rate-stat colors move with the team: red is below team average, yellow is team average through +.049, green is +.050 or better.</p></div>
+        <div><h2 className="text-sm font-black text-white">Stats grid</h2><p className="mt-1 text-[10px] leading-4 text-slate-500">Combined AVG/OBP/SLG/OPS uses the coach-authoritative season batting snapshot when available. RBI, runs, sacrifices and double plays stay on the detailed book until entered.</p></div>
         <div className="flex shrink-0 items-center gap-2">
           <button type="button" disabled={shareBusy} onClick={onShare} className="min-h-10 rounded-xl border border-cyan-300/25 bg-cyan-300/[.07] px-3 text-[10px] font-black text-cyan-100 disabled:opacity-40"><Share2 className="mr-1 inline h-4 w-4"/>{shareBusy ? "Sharing…" : "Share"}</button>
           {managerView?<button type="button" onClick={onAdd} className="min-h-10 rounded-xl bg-amber-300 px-3 text-[10px] font-black text-slate-950"><Plus className="mr-1 inline h-4 w-4"/>Adjust stats</button>:<Trophy className="h-4 w-4 text-amber-300"/>}
@@ -65,7 +104,7 @@ export default function InteractiveStatsBoard({ rows, scope, onScope, managerVie
       <div className="mt-3 grid grid-cols-4 gap-1.5">
         {["avg","obp","slg","ops"].map((key)=><div key={key} className="rounded-xl border border-white/8 bg-black/15 p-2 text-center"><div className="text-[6px] font-black uppercase tracking-wide text-slate-600">TEAM {MAP[key].label}</div><div className="mt-0.5 text-sm font-black text-white">{pct(teamRates[key])}</div></div>)}
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[7px] font-black uppercase tracking-wide"><span className="rounded-full border border-rose-300/25 bg-rose-300/10 px-2 py-1 text-rose-100">Red · below team avg</span><span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-2 py-1 text-amber-100">Yellow · avg to +.049</span><span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-2 py-1 text-emerald-100">Green · +.050 or better</span></div>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[7px] font-black uppercase tracking-wide"><span className="rounded-full border border-rose-300/25 bg-rose-300/10 px-2 py-1 text-rose-100">Red · below team avg</span><span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-2 py-1 text-amber-100">Yellow · avg to +.049</span><span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-2 py-1 text-emerald-100">Green · +.050 or better</span>{scope==="ALL"&&snapshotRows.length?<span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-cyan-100">8-game batting snapshot active</span>:null}</div>
 
       <div className="mt-3">
         <div className="mb-1.5 flex items-center gap-1 text-[8px] font-black uppercase tracking-[.14em] text-amber-300"><Trophy className="h-3.5 w-3.5"/>Leaders</div>
@@ -87,7 +126,7 @@ export default function InteractiveStatsBoard({ rows, scope, onScope, managerVie
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
               <div className="flex items-center gap-1.5"><span className="text-[8px] font-black text-cyan-300">#{index+1}</span><b className="truncate text-[11px] text-white">#{row.player?.jersey_number||"—"} {row.player?.display_name}</b></div>
-              <div className="mt-0.5 text-[8px] text-slate-600">{row.player?.primary_position||"—"} · {scope==="ALL"?"Combined":scope[0]+scope.slice(1).toLowerCase()}</div>
+              <div className="mt-0.5 text-[8px] text-slate-600">{row.player?.primary_position||"—"} · {scope==="ALL"?"Combined":scope[0]+scope.slice(1).toLowerCase()}{row._battingSnapshot?" · snapshot":""}</div>
             </div>
             <RatePill statKey="avg" value={row.avg} teamRates={teamRates} />
           </div>
@@ -96,42 +135,20 @@ export default function InteractiveStatsBoard({ rows, scope, onScope, managerVie
             <button type="button" onClick={()=>sortBy("h")} className="min-w-0 rounded-lg border border-white/8 bg-white/[.025] px-1 py-1.5 text-center"><div className="text-[6px] font-black uppercase tracking-wide text-slate-600">H/AB</div><div className="mt-0.5 truncate text-[10px] font-black text-slate-200">{num(row.h)}/{num(row.ab)}</div></button>
           </div>
           <div className="mt-1 grid grid-cols-5 gap-1">
-            {[
-              ["RBI",num(row.rbi),"rbi"],
-              ["HR",num(row.hr),"hr"],
-              ["R",num(row.runs),"runs"],
-              ["SF",num(row.sf),"sf"],
-              ["GIDP",num(row.gidp),"gidp"],
-            ].map(([label,value,key])=><button key={label} type="button" onClick={()=>sortBy(key)} className="min-w-0 rounded-lg border border-white/8 bg-black/20 px-1 py-1.5 text-center">
-              <div className="text-[6px] font-black uppercase tracking-wide text-slate-600">{label}</div>
-              <div className="mt-0.5 text-[9px] font-black text-slate-300">{value}</div>
-            </button>)}
+            {[["RBI",num(row.rbi),"rbi"],["HR",num(row.hr),"hr"],["R",num(row.runs),"runs"],["SF",num(row.sf),"sf"],["GIDP",num(row.gidp),"gidp"]].map(([label,value,key])=><button key={label} type="button" onClick={()=>sortBy(key)} className="min-w-0 rounded-lg border border-white/8 bg-black/20 px-1 py-1.5 text-center"><div className="text-[6px] font-black uppercase tracking-wide text-slate-600">{label}</div><div className="mt-0.5 text-[9px] font-black text-slate-300">{value}</div></button>)}
           </div>
         </article>)}
         {!sorted.length?<div className="rounded-xl border border-dashed border-white/10 p-6 text-center text-xs text-slate-500">No stats recorded yet.</div>:null}
-        <div className="px-1 text-[8px] leading-4 text-slate-600">Rate colors are relative to this team and this selected split. Counting stats remain neutral because +.050 only has meaning for rate statistics.</div>
+        <div className="px-1 text-[8px] leading-4 text-slate-600">Rate colors are relative to this team and selected split. Combined batting rates can use the season snapshot; league/tournament splits stay on detailed Game Book data.</div>
       </div>
 
       <div className="mt-3 hidden overflow-x-auto rounded-xl border border-white/10 bg-[#050b14] lg:block">
         <table className="min-w-[1120px] w-full border-collapse text-right text-[9px] xl:text-[10px]">
-          <thead className="sticky top-0 z-20 bg-[#091421] text-slate-500">
-            <tr>
-              <th className="sticky left-0 z-30 min-w-[13rem] border-r border-white/10 bg-[#091421] px-3 py-2 text-left">PLAYER</th>
-              {COLUMNS.map(([key,label])=><th key={key} className={"border-l border-white/5 px-2 py-2 "+(sortKey===key?"bg-cyan-300/10 text-cyan-100":"")}>
-                <button type="button" onClick={()=>sortBy(key)} className="inline-flex min-h-8 w-full items-center justify-end gap-1 font-black">{label}{sortKey===key?(sortDirection==="desc"?<ArrowDown className="h-3 w-3"/>:<ArrowUp className="h-3 w-3"/>):null}</button>
-              </th>)}
-            </tr>
-          </thead>
+          <thead className="sticky top-0 z-20 bg-[#091421] text-slate-500"><tr><th className="sticky left-0 z-30 min-w-[13rem] border-r border-white/10 bg-[#091421] px-3 py-2 text-left">PLAYER</th>{COLUMNS.map(([key,label])=><th key={key} className={"border-l border-white/5 px-2 py-2 "+(sortKey===key?"bg-cyan-300/10 text-cyan-100":"")}><button type="button" onClick={()=>sortBy(key)} className="inline-flex min-h-8 w-full items-center justify-end gap-1 font-black">{label}{sortKey===key?(sortDirection==="desc"?<ArrowDown className="h-3 w-3"/>:<ArrowUp className="h-3 w-3"/>):null}</button></th>)}</tr></thead>
           <tbody>
             {sorted.map((row,index)=><tr key={row.player?.id} className="border-t border-white/5 hover:bg-white/[.025]">
-              <td className="sticky left-0 z-10 border-r border-white/10 bg-[#07111f] px-3 py-2 text-left">
-                <div className="flex items-center gap-2"><span className="w-5 text-[8px] font-black text-cyan-300">#{index+1}</span><div className="min-w-0"><b className="block truncate text-[10px] text-white">#{row.player?.jersey_number||"—"} {row.player?.display_name}</b><span className="text-[7px] text-slate-600">{row.player?.primary_position||"—"}</span></div></div>
-              </td>
-              {COLUMNS.map(([key,,format])=>{
-                const rateStatus = RATE_KEYS.has(key) ? rateBenchmarkStatus(row?.[key], teamRates[key]) : "neutral";
-                const rateClass = RATE_KEYS.has(key) ? rateBenchmarkClasses(rateStatus, { subtle: true }) : "text-slate-300";
-                return <td key={key} className={`border-l border-white/5 px-2 py-2 font-black ${RATE_KEYS.has(key) ? `border ${rateClass}` : sortKey===key?"bg-cyan-300/[.05] text-cyan-100":rateClass}`}>{format(row?.[key])}</td>;
-              })}
+              <td className="sticky left-0 z-10 border-r border-white/10 bg-[#07111f] px-3 py-2 text-left"><div className="flex items-center gap-2"><span className="w-5 text-[8px] font-black text-cyan-300">#{index+1}</span><div className="min-w-0"><b className="block truncate text-[10px] text-white">#{row.player?.jersey_number||"—"} {row.player?.display_name}</b><span className="text-[7px] text-slate-600">{row.player?.primary_position||"—"}{row._battingSnapshot?" · 8G snapshot":""}</span></div></div></td>
+              {COLUMNS.map(([key,,format])=>{ const rateStatus=RATE_KEYS.has(key)?rateBenchmarkStatus(row?.[key],teamRates[key]):"neutral"; const rateClass=RATE_KEYS.has(key)?rateBenchmarkClasses(rateStatus,{subtle:true}):"text-slate-300"; return <td key={key} className={`border-l border-white/5 px-2 py-2 font-black ${RATE_KEYS.has(key)?`border ${rateClass}`:sortKey===key?"bg-cyan-300/[.05] text-cyan-100":rateClass}`}>{format(row?.[key])}</td>; })}
             </tr>)}
             {!sorted.length?<tr><td colSpan={COLUMNS.length+1} className="p-6 text-center text-xs text-slate-500">No stats recorded yet.</td></tr>:null}
           </tbody>
