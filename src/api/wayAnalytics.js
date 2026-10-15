@@ -47,6 +47,16 @@ export async function saveQABBands(teamId, payload) {
   return data;
 }
 
+export async function getSituationalSplits(teamId) {
+  const { data } = await api.get(`/sports/way-situational/${teamId}/`, { timeout: 45000 });
+  return data;
+}
+
+export async function saveSituationalSplit(teamId, payload) {
+  const { data } = await api.post(`/sports/way-situational/${teamId}/save-player/`, payload, { timeout: 45000 });
+  return data;
+}
+
 export async function saveWayWeekTarget(teamId, payload) {
   const { data } = await api.post(`/sports/way-analytics/${teamId}/week-target/`, payload, { timeout: 45000 });
   return data;
