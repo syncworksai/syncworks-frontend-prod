@@ -74,6 +74,7 @@ export default function TeamExecutionTrend({ team, canManage = false, onOpenAnal
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [team?.id]);
 
   const weeks = useMemo(() => data?.weeks || [], [data]);
+  const chartWeeks = useMemo(() => weeks.map((row) => ({ ...row, execution_score_plot: row?.team_execution_score ?? row?.team_player_score ?? null })), [weeks]);
   const latestActual = useMemo(() => [...weeks].reverse().find((row) => hasValue(row?.actual_runs_per_game)) || null, [weeks]);
   const latestExpected = useMemo(() => [...weeks].reverse().find((row) => hasValue(row?.expected_runs_per_game)) || null, [weeks]);
   const latestExecution = useMemo(() => [...weeks].reverse().find((row) => hasValue(row?.team_execution_score ?? row?.team_player_score)) || null, [weeks]);
@@ -141,9 +142,9 @@ export default function TeamExecutionTrend({ team, canManage = false, onOpenAnal
           <span className="ml-auto text-[7px] font-bold uppercase tracking-wide text-slate-600">Click any metric to show / hide</span>
         </div>
         <div className="h-64 w-full">
-          {loading ? <div className="grid h-full place-items-center text-xs text-slate-600">Loading team trend…</div> : weeks.length ? (
+          {loading ? <div className="grid h-full place-items-center text-xs text-slate-600">Loading team trend…</div> : chartWeeks.length ? (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={weeks} margin={{ top: 18, right: 12, left: 4, bottom: 4 }}>
+              <LineChart data={chartWeeks} margin={{ top: 18, right: 12, left: 4, bottom: 4 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,.12)" />
                 <XAxis dataKey="label" tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} />
                 <YAxis
@@ -174,8 +175,8 @@ export default function TeamExecutionTrend({ team, canManage = false, onOpenAnal
                 {visible.expected ? <Line yAxisId="runs" type="monotone" dataKey="expected_runs_per_game" name="Expected runs/game" stroke="#fbbf24" strokeWidth={2.25} strokeDasharray="5 4" connectNulls dot={{ r: 4 }} activeDot={{ r: 6 }}>
                   <LabelList dataKey="expected_runs_per_game" position="bottom" fill="#fbbf24" fontSize={9} formatter={(value) => hasValue(value) ? Number(value).toFixed(1) : ""} />
                 </Line> : null}
-                {visible.execution ? <Line yAxisId="score" type="monotone" dataKey="team_execution_score" name="Execution Score" stroke="#a78bfa" strokeWidth={2.5} connectNulls dot={{ r: 4 }} activeDot={{ r: 6 }}>
-                  <LabelList dataKey="team_execution_score" position="top" fill="#c4b5fd" fontSize={9} formatter={(value) => hasValue(value) ? Number(value).toFixed(0) : ""} />
+                {visible.execution ? <Line yAxisId="score" type="monotone" dataKey="execution_score_plot" name="Execution Score" stroke="#a78bfa" strokeWidth={2.5} connectNulls dot={{ r: 4 }} activeDot={{ r: 6 }}>
+                  <LabelList dataKey="execution_score_plot" position="top" fill="#c4b5fd" fontSize={9} formatter={(value) => hasValue(value) ? Number(value).toFixed(0) : ""} />
                 </Line> : null}
               </LineChart>
             </ResponsiveContainer>
