@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { BarChart3, ChevronDown, ChevronUp, Pencil, RefreshCw, RotateCcw, Save, Target, TrendingUp, Users, X } from "lucide-react";
+import { BarChart3, ChevronDown, ChevronUp, Copy, Pencil, RefreshCw, RotateCcw, Save, Target, TrendingDown, TrendingUp, Users, X } from "lucide-react";
 
 import { getCoachBox, saveCoachBoxPlayer, snapshotCoachBox } from "../../api/wayAnalytics";
 
@@ -11,6 +11,23 @@ const fmtWeek = (value) => {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 };
 const errorText = (error) => error?.response?.data?.detail || error?.message || "Coach Box could not be updated.";
+
+const bandForSlot = (slot) => {
+  const n = Number(slot || 10);
+  if (n <= 3) return { key: "TOP", label: "Top of order", slots: "1–3", tone: "cyan" };
+  if (n <= 7) return { key: "MIDDLE", label: "Middle of order", slots: "4–7", tone: "amber" };
+  return { key: "LOWER", label: "Lower part", slots: "8–10", tone: "violet" };
+};
+
+function BandBadge({ band }) {
+  const key = band?.key || "LOWER";
+  const tones = {
+    TOP: "border-cyan-300/25 bg-cyan-300/10 text-cyan-100",
+    MIDDLE: "border-amber-300/25 bg-amber-300/10 text-amber-100",
+    LOWER: "border-violet-300/25 bg-violet-300/10 text-violet-100",
+  };
+  return <span className={`rounded-full border px-2 py-0.5 text-[7px] font-black uppercase tracking-[.13em] ${tones[key] || tones.LOWER}`}>{band?.label || "Lower part"}</span>;
+}
 
 function Metric({ label, value, sub, tone = "slate" }) {
   const tones = {
@@ -27,61 +44,44 @@ function Metric({ label, value, sub, tone = "slate" }) {
   </div>;
 }
 
+function LineupPlayer({ item, onUnavailable }) {
+  const band = bandForSlot(item.displaySlot);
+  return <div className="relative rounded-xl border border-white/8 bg-[#06101d] p-2.5 pr-9">
+    <button type="button" onClick={() => onUnavailable?.(item.player?.id)} className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-lg border border-rose-300/15 bg-rose-300/[.05] text-rose-200 hover:bg-rose-300/10" aria-label={`Mark ${item.player?.display_name || "player"} unavailable`} title="Unavailable today"><X className="h-3.5 w-3.5" /></button>
+    <div className="flex items-center gap-2">
+      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-cyan-300 text-[10px] font-black text-slate-950">{item.displaySlot}</span>
+      <div className="min-w-0"><div className="truncate text-[10px] font-black text-white">{item.player?.display_name}</div><div className="truncate text-[7px] font-bold uppercase tracking-wide text-slate-500">{item.role}</div></div>
+    </div>
+    <div className="mt-2"><BandBadge band={band} /></div>
+  </div>;
+}
+
 function LineupDraft({ rows, unavailableIds, onToggleUnavailable }) {
   const unavailable = new Set((unavailableIds || []).map(Number));
   const available = (rows || []).filter((item) => !unavailable.has(Number(item.player?.id)));
-  const top = available.slice(0, 10).map((item, index) => ({ ...item, displaySlot: index + 1 }));
+  const active = available.slice(0, 10).map((item, index) => ({ ...item, displaySlot: index + 1 }));
   const depth = available.slice(10);
   const out = (rows || []).filter((item) => unavailable.has(Number(item.player?.id)));
-  if (!top.length && !out.length) return null;
+  const groups = [
+    { title: "Top of order", range: "1–3", items: active.filter((item) => item.displaySlot <= 3), tone: "text-cyan-300" },
+    { title: "Middle of order", range: "4–7", items: active.filter((item) => item.displaySlot >= 4 && item.displaySlot <= 7), tone: "text-amber-300" },
+    { title: "Lower part", range: "8–10", items: active.filter((item) => item.displaySlot >= 8), tone: "text-violet-300" },
+  ];
+  if (!active.length && !out.length) return null;
 
   return <section className="rounded-[1.2rem] border border-cyan-300/15 bg-black/20 p-3">
-    <div className="flex items-start justify-between gap-3">
-      <div>
-        <div className="text-[8px] font-black uppercase tracking-[.16em] text-cyan-300">Efficiency order</div>
-        <h3 className="mt-1 text-sm font-black text-white">Best available 10-player offensive order</h3>
-        <p className="mt-1 text-[9px] leading-4 text-slate-500">Tap the X on anyone who is out. The next-best available player immediately slides into the 10. This does not change the roster.</p>
-      </div>
-      <BarChart3 className="h-5 w-5 shrink-0 text-cyan-200" />
-    </div>
-
-    <div className="mt-3 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-5">
-      {top.map((item) => <div key={item.player?.id} className="relative rounded-xl border border-white/8 bg-[#06101d] p-2.5 pr-9">
-        <button
-          type="button"
-          onClick={() => onToggleUnavailable?.(item.player?.id)}
-          className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-lg border border-rose-300/15 bg-rose-300/[.05] text-rose-200 hover:bg-rose-300/10"
-          aria-label={`Mark ${item.player?.display_name || "player"} unavailable`}
-          title="Unavailable today"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-        <div className="flex items-center gap-2">
-          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-cyan-300 text-[10px] font-black text-slate-950">{item.displaySlot}</span>
-          <div className="min-w-0">
-            <div className="truncate text-[10px] font-black text-white">{item.player?.display_name}</div>
-            <div className="truncate text-[7px] font-bold uppercase tracking-wide text-slate-500">{item.role}</div>
-          </div>
-        </div>
-      </div>)}
-    </div>
-
+    <div className="flex items-start justify-between gap-3"><div><div className="text-[8px] font-black uppercase tracking-[.16em] text-cyan-300">Efficiency order</div><h3 className="mt-1 text-sm font-black text-white">Best available 10-player offensive order</h3><p className="mt-1 text-[9px] leading-4 text-slate-500">Top creates traffic. Middle converts traffic. Lower protects outs, extends innings and turns the lineup over. X an unavailable player and the next-best option moves up automatically.</p></div><BarChart3 className="h-5 w-5 shrink-0 text-cyan-200" /></div>
+    <div className="mt-3 space-y-2">{groups.map((group) => group.items.length ? <div key={group.title} className="rounded-xl border border-white/8 bg-white/[.015] p-2"><div className={`mb-2 text-[8px] font-black uppercase tracking-[.14em] ${group.tone}`}>{group.title} · {group.range}</div><div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-4">{group.items.map((item) => <LineupPlayer key={item.player?.id} item={item} onUnavailable={onToggleUnavailable} />)}</div></div> : null)}</div>
     {depth.length ? <div className="mt-2 rounded-lg border border-white/8 bg-white/[.02] px-2.5 py-2 text-[8px] leading-4 text-slate-500"><b className="text-slate-300">Next best options:</b> {depth.map((item) => item.player?.display_name).filter(Boolean).join(" · ")}</div> : null}
-
-    {out.length ? <div className="mt-2 rounded-xl border border-rose-300/15 bg-rose-300/[.04] p-2.5">
-      <div className="flex items-center justify-between gap-2">
-        <div className="text-[7px] font-black uppercase tracking-[.14em] text-rose-200">Unavailable for this lineup</div>
-        <button type="button" onClick={() => out.forEach((item) => onToggleUnavailable?.(item.player?.id, true))} className="inline-flex items-center gap-1 text-[7px] font-black uppercase tracking-wide text-slate-400"><RotateCcw className="h-3 w-3" />Restore all</button>
-      </div>
-      <div className="mt-2 flex flex-wrap gap-1.5">{out.map((item) => <button key={item.player?.id} type="button" onClick={() => onToggleUnavailable?.(item.player?.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/20 px-2 py-1.5 text-[8px] font-bold text-slate-300"><RotateCcw className="h-3 w-3" />{item.player?.display_name}</button>)}</div>
-    </div> : null}
+    {out.length ? <div className="mt-2 rounded-xl border border-rose-300/15 bg-rose-300/[.04] p-2.5"><div className="flex items-center justify-between gap-2"><div className="text-[7px] font-black uppercase tracking-[.14em] text-rose-200">Unavailable for this lineup</div><button type="button" onClick={() => out.forEach((item) => onToggleUnavailable?.(item.player?.id, true))} className="inline-flex items-center gap-1 text-[7px] font-black uppercase tracking-wide text-slate-400"><RotateCcw className="h-3 w-3" />Restore all</button></div><div className="mt-2 flex flex-wrap gap-1.5">{out.map((item) => <button key={item.player?.id} type="button" onClick={() => onToggleUnavailable?.(item.player?.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/20 px-2 py-1.5 text-[8px] font-bold text-slate-300"><RotateCcw className="h-3 w-3" />{item.player?.display_name}</button>)}</div></div> : null}
   </section>;
 }
 
-function PlayerCoachCard({ row, weekOf, onSaved }) {
+function PlayerCoachCard({ row, weekOf, onSaved, distinctions }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   const [role, setRole] = useState(row?.effective_role || row?.recommended_role || "");
   const [slots, setSlots] = useState(row?.effective_slots || row?.recommended_slots || "");
@@ -96,6 +96,7 @@ function PlayerCoachCard({ row, weekOf, onSaved }) {
   }, [row?.player?.id, row?.effective_role, row?.effective_slots, row?.focus?.key, row?.coach_note]);
 
   const focusRow = row?.focus || {};
+  const downside = row?.downside || null;
   const history = Array.isArray(row?.history) ? row.history : [];
 
   async function save() {
@@ -111,43 +112,38 @@ function PlayerCoachCard({ row, weekOf, onSaved }) {
       });
       onSaved?.(result.saved);
       setEditing(false);
-    } catch (err) {
-      setError(errorText(err));
-    } finally {
-      setBusy(false);
-    }
+    } catch (err) { setError(errorText(err)); }
+    finally { setBusy(false); }
+  }
+
+  async function copyMessage() {
+    if (!row.player_message || !navigator?.clipboard) return;
+    await navigator.clipboard.writeText(row.player_message);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
   }
 
   return <article className="overflow-hidden rounded-[1.2rem] border border-white/10 bg-[#050b14]">
     <button type="button" onClick={() => setOpen((value) => !value)} className="w-full p-3 text-left">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><b className="truncate text-sm text-white">{row.player?.display_name}</b><span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-0.5 text-[7px] font-black uppercase tracking-wide text-cyan-100">{row.effective_slots}</span>{row.has_override ? <span className="rounded-full border border-violet-300/20 bg-violet-300/10 px-2 py-0.5 text-[7px] font-black uppercase tracking-wide text-violet-100">Coach adjusted</span> : null}</div><div className="mt-1 text-[10px] font-black text-amber-100">{row.effective_role}</div><div className="mt-1 line-clamp-2 text-[9px] leading-4 text-slate-500">{row.role_reason}</div></div>
-        {open ? <ChevronUp className="h-4 w-4 shrink-0 text-slate-500" /> : <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />}
-      </div>
-      <div className="mt-2 grid grid-cols-4 gap-1.5">
-        <Metric label="AVG" value={fmtRate(row.season_batting?.avg)} tone="cyan" />
-        <Metric label="SIT+" value={row.situational_index == null ? "—" : Number(row.situational_index).toFixed(1)} tone="violet" />
-        <Metric label="EXE" value={fmtRate(row.execution_average)} tone="green" />
-        <Metric label="Gain" value={`+${fmtRuns(focusRow.projected_runs_per_game_low)}–${fmtRuns(focusRow.projected_runs_per_game_high)}`} sub="team runs/game" tone="amber" />
-      </div>
+      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><b className="truncate text-sm text-white">{row.player?.display_name}</b><BandBadge band={row.lineup_band} />{row.suggested_slot ? <span className="rounded-full border border-white/10 px-2 py-0.5 text-[7px] font-black text-slate-400">#{row.suggested_slot}</span> : null}{row.has_override ? <span className="rounded-full border border-violet-300/20 bg-violet-300/10 px-2 py-0.5 text-[7px] font-black uppercase tracking-wide text-violet-100">Coach adjusted</span> : null}</div><div className="mt-1 text-[10px] font-black text-amber-100">{row.effective_role}</div><div className="mt-1 line-clamp-2 text-[9px] leading-4 text-slate-500">{row.role_reason}</div></div>{open ? <ChevronUp className="h-4 w-4 shrink-0 text-slate-500" /> : <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />}</div>
+      <div className="mt-2 grid grid-cols-4 gap-1.5"><Metric label="AVG" value={fmtRate(row.season_batting?.avg)} tone="cyan" /><Metric label="SIT+" value={row.situational_index == null ? "—" : Number(row.situational_index).toFixed(1)} tone="violet" /><Metric label="EXE" value={fmtRate(row.execution_average)} tone="green" /><Metric label="Upside" value={`+${fmtRuns(focusRow.projected_runs_per_game_low)}–${fmtRuns(focusRow.projected_runs_per_game_high)}`} sub="runs/game" tone="amber" /></div>
     </button>
 
     {open ? <div className="border-t border-white/8 p-3">
-      <div className="grid gap-2 lg:grid-cols-3">
-        <div className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.05] p-3"><div className="text-[7px] font-black uppercase tracking-[.14em] text-emerald-300">Best current value</div><div className="mt-1 text-xs font-black text-white">{row.strength?.label || "Need more data"}</div>{row.strength?.value != null ? <div className="mt-1 text-sm font-black text-emerald-100">{fmtRate(row.strength.value)}</div> : null}</div>
-        <div className="rounded-xl border border-amber-300/15 bg-amber-300/[.05] p-3"><div className="text-[7px] font-black uppercase tracking-[.14em] text-amber-300">Next lever</div><div className="mt-1 text-xs font-black text-white">{focusRow.label}</div><div className="mt-1 text-[9px] text-slate-400">{focusRow.current == null ? "Need more data" : `${fmtRate(focusRow.current)} → target ${fmtRate(focusRow.target)}`}</div></div>
-        <div className="rounded-xl border border-cyan-300/15 bg-cyan-300/[.05] p-3"><div className="text-[7px] font-black uppercase tracking-[.14em] text-cyan-300">Modeled upside</div><div className="mt-1 text-xs font-black text-white">+{fmtRuns(focusRow.projected_runs_per_game_low)}–{fmtRuns(focusRow.projected_runs_per_game_high)} runs/game</div><div className="mt-1 text-[9px] text-slate-400">~+{Number(focusRow.projected_runs_per_10_games_low || 0).toFixed(1)}–{Number(focusRow.projected_runs_per_10_games_high || 0).toFixed(1)} team runs / 10 games</div></div>
+      <div className="rounded-xl border border-white/8 bg-black/20 p-2.5 text-[8px] leading-4 text-slate-500"><b className="text-violet-200">SIT+</b> = situational hitting effectiveness. <b className="text-emerald-200">EXE</b> = whether the total decision/action made us better. <b className="text-amber-200">QAB</b> = coach eye-test of the at-bat, collected prospectively. Two-out results matter, but rally creation and runners-on conversion carry more weight.</div>
+      <div className="mt-2 grid gap-2 lg:grid-cols-4">
+        <div className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.05] p-3"><div className="text-[7px] font-black uppercase tracking-[.14em] text-emerald-300">Best current value</div><div className="mt-1 text-xs font-black text-white">{row.strength?.label || "Need more data"}</div>{row.strength?.value != null ? <div className="mt-1 text-sm font-black text-emerald-100">{fmtRate(row.strength.value)}</div> : null}{row.strength?.baseline != null ? <div className="mt-1 text-[8px] text-slate-500">Team {fmtRate(row.strength.baseline)}</div> : null}</div>
+        <div className="rounded-xl border border-amber-300/15 bg-amber-300/[.05] p-3"><div className="text-[7px] font-black uppercase tracking-[.14em] text-amber-300">What needs work</div><div className="mt-1 text-xs font-black text-white">{focusRow.label || "Need more data"}</div><div className="mt-1 text-[9px] text-slate-400">{focusRow.current == null ? "Need more data" : `${fmtRate(focusRow.current)} → ${fmtRate(focusRow.target)}`}</div></div>
+        <div className="rounded-xl border border-cyan-300/15 bg-cyan-300/[.05] p-3"><div className="flex items-center gap-1 text-[7px] font-black uppercase tracking-[.14em] text-cyan-300"><TrendingUp className="h-3 w-3" />If X improves</div><div className="mt-1 text-xs font-black text-white">+{fmtRuns(focusRow.projected_runs_per_game_low)}–{fmtRuns(focusRow.projected_runs_per_game_high)} runs/game</div><div className="mt-1 text-[8px] text-slate-400">+{Number(focusRow.projected_events_per_10_games || 0).toFixed(1)} {focusRow.event_label || "successful opportunities"} / 10 games</div></div>
+        <div className="rounded-xl border border-rose-300/15 bg-rose-300/[.045] p-3"><div className="flex items-center gap-1 text-[7px] font-black uppercase tracking-[.14em] text-rose-300"><TrendingDown className="h-3 w-3" />If strength falls .050</div>{downside ? <><div className="mt-1 text-xs font-black text-white">−{fmtRuns(downside.projected_runs_lost_per_game_low)}–{fmtRuns(downside.projected_runs_lost_per_game_high)} runs/game</div><div className="mt-1 text-[8px] text-slate-400">−{Number(downside.lost_events_per_10_games || 0).toFixed(1)} {downside.event_label || "successful opportunities"} / 10 games</div></> : <div className="mt-1 text-[9px] text-slate-500">Need more data.</div>}</div>
       </div>
-
       <div className="mt-2 rounded-xl border border-white/10 bg-white/[.025] p-3"><div className="flex items-center gap-1 text-[7px] font-black uppercase tracking-[.14em] text-slate-500"><Target className="h-3 w-3" />What to coach</div><p className="mt-1 text-[10px] leading-5 text-slate-300">{focusRow.action}</p></div>
-
+      <div className="mt-2 rounded-xl border border-cyan-300/12 bg-cyan-300/[.035] p-3"><div className="flex items-center justify-between gap-2"><div className="text-[7px] font-black uppercase tracking-[.14em] text-cyan-300">Player-ready analysis</div><button type="button" onClick={copyMessage} className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-[7px] font-black text-slate-300"><Copy className="h-3 w-3" />{copied ? "Copied" : "Copy"}</button></div><p className="mt-1 text-[10px] leading-5 text-slate-300">{row.player_message}</p></div>
       {row.coach_note ? <div className="mt-2 rounded-xl border border-violet-300/15 bg-violet-300/[.05] p-3"><div className="text-[7px] font-black uppercase tracking-[.14em] text-violet-300">Private coach note</div><p className="mt-1 text-[10px] leading-5 text-violet-100">{row.coach_note}</p></div> : null}
-
-      {history.length ? <div className="mt-3"><div className="text-[7px] font-black uppercase tracking-[.14em] text-slate-500">Week-to-week</div><div className="mt-1.5 flex gap-1.5 overflow-x-auto pb-1">{history.map((item, index) => <div key={`${item.week_of}-${index}`} className="min-w-[10rem] rounded-xl border border-white/8 bg-black/20 p-2"><div className="text-[8px] font-black text-cyan-200">Week of {fmtWeek(item.week_of)}</div><div className="mt-1 text-[8px] font-bold text-slate-300">{item.role} · {item.slots}</div><div className="mt-1 text-[7px] text-slate-500">Focus: {item.focus_label || item.focus_key || "—"}</div><div className="mt-1 text-[7px] text-amber-200">+{fmtRuns(item.projected_runs_per_game_low)}–{fmtRuns(item.projected_runs_per_game_high)} runs/g</div></div>)}</div></div> : null}
-
+      {history.length ? <div className="mt-3"><div className="text-[7px] font-black uppercase tracking-[.14em] text-slate-500">Week-to-week</div><div className="mt-1.5 flex gap-1.5 overflow-x-auto pb-1">{history.map((item, index) => <div key={`${item.week_of}-${index}`} className="min-w-[11rem] rounded-xl border border-white/8 bg-black/20 p-2"><div className="text-[8px] font-black text-cyan-200">Week of {fmtWeek(item.week_of)}</div><div className="mt-1 text-[8px] font-bold text-slate-300">{item.lineup_band?.label || item.role} · {item.slots}</div><div className="mt-1 text-[7px] text-slate-500">Focus: {item.focus_label || item.focus_key || "—"}</div><div className="mt-1 text-[7px] text-amber-200">+{fmtRuns(item.projected_runs_per_game_low)}–{fmtRuns(item.projected_runs_per_game_high)} runs/g</div></div>)}</div></div> : null}
       <div className="mt-3 flex items-center justify-end gap-2"><button type="button" onClick={() => setEditing((value) => !value)} className="min-h-9 rounded-xl border border-white/10 px-3 text-[9px] font-black text-slate-300"><Pencil className="mr-1 inline h-3.5 w-3.5" />Adjust plan</button></div>
       {editing ? <div className="mt-2 rounded-xl border border-violet-300/15 bg-violet-300/[.04] p-3">
-        <div className="grid gap-2 sm:grid-cols-2"><label><span className="mb-1 block text-[7px] font-black uppercase tracking-wide text-slate-500">Lineup role</span><input value={role} onChange={(event) => setRole(event.target.value)} className="h-10 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-xs text-white outline-none" /></label><label><span className="mb-1 block text-[7px] font-black uppercase tracking-wide text-slate-500">Best slots / range</span><input value={slots} onChange={(event) => setSlots(event.target.value)} className="h-10 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-xs text-white outline-none" /></label></div>
+        <div className="grid gap-2 sm:grid-cols-2"><label><span className="mb-1 block text-[7px] font-black uppercase tracking-wide text-slate-500">Player archetype / role</span><input value={role} onChange={(event) => setRole(event.target.value)} className="h-10 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-xs text-white outline-none" /></label><label><span className="mb-1 block text-[7px] font-black uppercase tracking-wide text-slate-500">Preferred slots / range</span><input value={slots} onChange={(event) => setSlots(event.target.value)} className="h-10 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-xs text-white outline-none" /></label></div>
         <label className="mt-2 block"><span className="mb-1 block text-[7px] font-black uppercase tracking-wide text-slate-500">Development focus</span><select value={focus} onChange={(event) => setFocus(event.target.value)} className="h-10 w-full rounded-xl border border-white/10 bg-[#050b14] px-3 text-xs text-white outline-none">{(row.focus_options || []).map((item) => <option key={item.key} value={item.key}>{item.label} · {item.current == null ? "—" : fmtRate(item.current)} → {item.target == null ? "—" : fmtRate(item.target)}</option>)}</select></label>
         <label className="mt-2 block"><span className="mb-1 block text-[7px] font-black uppercase tracking-wide text-slate-500">Private coach note</span><textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-xs text-white outline-none" placeholder="What did you see? What do we want this player working on this week?" /></label>
         {error ? <div className="mt-2 text-[9px] text-rose-200">{error}</div> : null}
@@ -180,10 +176,7 @@ export default function CoachBox({ team, canManage = true }) {
         try { setData(await getCoachBox(teamId)); return; } catch (fallback) { setError(errorText(fallback)); return; }
       }
       setError(errorText(err));
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+    } finally { setLoading(false); setRefreshing(false); }
   }
 
   useEffect(() => { setLoading(true); setUnavailableIds([]); load({ snapshot: canManage }); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [teamId, canManage]);
@@ -198,26 +191,19 @@ export default function CoachBox({ team, canManage = true }) {
   function toggleUnavailable(playerId, restoringAll = false) {
     const id = Number(playerId);
     if (!id) return;
-    if (restoringAll) {
-      setUnavailableIds([]);
-      return;
-    }
+    if (restoringAll) { setUnavailableIds([]); return; }
     setUnavailableIds((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
   }
 
   if (!teamId || !canManage) return null;
   return <section className="mx-auto max-w-6xl rounded-[1.45rem] border border-violet-300/18 bg-[radial-gradient(circle_at_100%_0%,rgba(139,92,246,.14),transparent_30%),linear-gradient(145deg,#07111f,#040a12)] p-3.5 text-white shadow-[0_16px_50px_rgba(0,0,0,.28)] sm:p-4">
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0"><div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[.17em] text-violet-300"><Users className="h-3.5 w-3.5" />Coach only</div><h2 className="mt-1 text-lg font-black tracking-tight">Coach Box</h2><p className="mt-1 max-w-3xl text-[10px] leading-5 text-slate-400">Build the best available order, identify each player’s role, and track the one improvement most likely to unlock more team runs.</p></div>
-      <button type="button" disabled={refreshing} onClick={() => { setRefreshing(true); load({ snapshot: true }); }} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[.035] text-slate-300 disabled:opacity-40" aria-label="Refresh Coach Box"><RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /></button>
-    </div>
-
+    <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[.17em] text-violet-300"><Users className="h-3.5 w-3.5" />Coach only</div><h2 className="mt-1 text-lg font-black tracking-tight">Coach Box</h2><p className="mt-1 max-w-3xl text-[10px] leading-5 text-slate-400">Top creates traffic. Middle converts it. Lower protects the inning and turns us back over. Open each player for strengths, the next lever, upside, downside and a player-ready message.</p></div><button type="button" disabled={refreshing} onClick={() => { setRefreshing(true); load({ snapshot: true }); }} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[.035] text-slate-300 disabled:opacity-40" aria-label="Refresh Coach Box"><RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /></button></div>
     {loading ? <div className="mt-4 rounded-xl border border-white/10 p-5 text-center text-xs text-slate-500">Building this week’s coach plan…</div> : null}
     {error ? <div className="mt-3 rounded-xl border border-rose-300/20 bg-rose-300/10 p-3 text-[10px] text-rose-100">{error}</div> : null}
     {!loading && data ? <div className="mt-4 space-y-3">
       <LineupDraft rows={order} unavailableIds={unavailableIds} onToggleUnavailable={toggleUnavailable} />
       <div className="grid grid-cols-3 gap-1.5"><Metric label="Team AVG" value={fmtRate(data.team?.season_batting?.avg)} tone="cyan" /><Metric label="Team EXE" value={fmtRate(data.team?.execution_average)} tone="green" /><Metric label="Week" value={fmtWeek(data.week_of)} tone="violet" /></div>
-      <div className="space-y-2">{enrichedRows.map((row) => <PlayerCoachCard key={row.player?.id} row={row} weekOf={data.week_of} onSaved={replaceRow} />)}</div>
+      <div className="space-y-2">{enrichedRows.map((row) => <PlayerCoachCard key={row.player?.id} row={row} weekOf={data.week_of} onSaved={replaceRow} distinctions={data.metric_distinction} />)}</div>
       <div className="rounded-xl border border-white/8 bg-black/20 p-3 text-[8px] leading-4 text-slate-500"><TrendingUp className="mr-1 inline h-3.5 w-3.5 text-amber-300" />{data.projection_note}</div>
     </div> : null}
   </section>;
