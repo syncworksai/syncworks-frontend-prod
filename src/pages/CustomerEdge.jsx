@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Activity, AlertTriangle, BarChart3, ChevronRight, LockKeyhole, RefreshCw, Settings2, SlidersHorizontal, WalletCards, Wifi, X, Zap } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, ChevronRight, LockKeyhole, RefreshCw, Settings2, SlidersHorizontal, Target, TrendingUp, Trophy, WalletCards, Wifi, X, Zap } from "lucide-react";
 
 import api from "../api/client";
 import DashboardShell from "../components/dashboard/DashboardShell";
@@ -24,15 +24,27 @@ function formatDateTime(value) {
   return date.toLocaleString([], { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
+function formatDate(value) {
+  if (!value) return "—";
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+}
+
 function money(cents) {
   const value = Number(cents || 0) / 100;
   return value ? `$${value.toFixed(value % 1 ? 2 : 0)}` : "$0";
 }
 
-function Metric({ label, value, detail }) {
+function signedMoney(cents) {
+  const value = Number(cents || 0);
+  return `${value >= 0 ? "+" : "-"}${money(Math.abs(value))}`;
+}
+
+function Metric({ label, value, detail, tone = "text-white" }) {
   return <div className="min-w-0 rounded-lg border border-white/10 bg-white/[.03] px-2 py-2">
     <div className="truncate text-[8px] font-black uppercase tracking-[.11em] text-slate-500">{label}</div>
-    <div className="mt-0.5 truncate text-base font-black leading-none text-white sm:text-lg">{value}</div>
+    <div className={`mt-0.5 truncate text-base font-black leading-none sm:text-lg ${tone}`}>{value}</div>
     {detail ? <div className="mt-1 truncate text-[8px] text-slate-500">{detail}</div> : null}
   </div>;
 }
@@ -41,11 +53,19 @@ function priceText(value) {
   return value === null || value === undefined ? "—" : `${value}¢`;
 }
 
+function estimatedFeeCents(contracts, priceCents) {
+  const count = Number(contracts || 0);
+  const price = Number(priceCents || 0);
+  if (!count || price <= 0 || price >= 100) return 0;
+  const p = price / 100;
+  return Math.ceil(0.07 * count * p * (1 - p) * 100 - 1e-9);
+}
+
 function TickerItem({ game, sport }) {
   const away = game.away?.code || game.away?.name;
   const home = game.home?.code || game.home?.name;
   const live = Boolean(game.is_live);
-  return <div className="min-w-[158px] rounded-lg border border-white/10 bg-black/20 px-2.5 py-2">
+  return <div className="min-w-[168px] rounded-lg border border-white/10 bg-black/20 px-2.5 py-2">
     <div className="flex items-center justify-between gap-2">
       <div className="truncate text-[10px] font-black text-white">{away} <span className="text-slate-600">@</span> {home}</div>
       <span className={`text-[7px] font-black uppercase ${live ? "text-emerald-300" : "text-slate-500"}`}>{live ? "LIVE" : sport}</span>
@@ -59,52 +79,95 @@ function TickerItem({ game, sport }) {
 
 function adaptSignal(item, minEdge, observedAt) {
   const edge = Number(item.edge_pct || 0);
+  const market = Number(item.market_price_cents || 0);
+  const model = Number(item.model_probability_pct || 0);
   const yellowFloor = Math.max(3, Math.min(6, minEdge / 2));
   let signal = item.signal || "RED";
   if (!item.signal) signal = edge >= minEdge ? "GREEN" : edge >= yellowFloor ? "YELLOW" : "RED";
-  const action = signal === "GREEN" ? (edge >= Math.max(10, minEdge + 2) ? "PRIME" : "EDGE") : signal === "YELLOW" ? "WATCH" : "PASS";
+  const action = signal === "GREEN" ? (edge >= Math.max(10, minEdge + 2) ? "STRONG BUY" : "BUY") : signal === "YELLOW" ? "WATCH" : "PASS";
+  const oneContractFee = estimatedFeeCents(1, market);
+  const netEdge = Number((model - market - oneContractFee).toFixed(1));
+  const plan = item.stake_plan || {};
+  const planCost = Number(plan.estimated_cost_cents || 0);
+  const planPayout = Number(plan.gross_payout_cents || 0);
+  const planEv = planCost > 0 ? Math.round((model / 100) * planPayout - planCost) : 0;
   return {
     ...item,
     id: item.id || item.market_ticker || `${item.sport || "EDGE"}-${item.event_key || item.matchup}-${item.team_code || item.side}`,
     signal,
     action,
-    market: item.market_price_cents,
-    model: item.model_probability_pct,
+    market,
+    model,
     edge,
-    score: item.opportunity_score,
+    netEdge,
+    planEv,
+    score: Number(item.opportunity_score || 0),
     maxEntry: item.max_entry_cents,
     gameState: item.game_state,
     observedAt,
   };
 }
 
-function SignalRow({ item, onOpen, priority = false }) {
+function SignalRow({ item, onOpen, priority = false, rank }) {
   const plan = item.stake_plan || {};
   const hasPlan = Number(plan.contracts || 0) > 0;
   const tone = priority ? "border-emerald-300/60 bg-emerald-500/[.11] shadow-[0_0_18px_rgba(57,255,136,0.12)]" : signalTone[item.signal] || signalTone.RED;
-  return <button type="button" onClick={() => onOpen(item)} className={`w-full rounded-lg border px-2.5 py-2 text-left transition active:scale-[.995] ${tone}`}>
-    <div className="flex items-start justify-between gap-2">
-      <div className="min-w-0">
-        <div className={`flex flex-wrap items-center gap-1 text-[8px] font-black uppercase tracking-[.12em] ${signalText[item.signal]}`}>
-          <span>{item.sport || "MLB"} • {item.action}</span>
-          {item.primary_price_band ? <span className="rounded border border-cyan-300/20 bg-cyan-500/10 px-1 py-0.5 text-[7px] text-cyan-100">25–45¢ band</span> : null}
-          {priority ? <span className="rounded border border-emerald-300/25 bg-emerald-500/10 px-1 py-0.5 text-[7px] text-emerald-100">Top edge</span> : null}
+  return <button type="button" onClick={() => onOpen(item)} className={`w-full rounded-xl border px-2.5 py-2.5 text-left transition active:scale-[.995] ${tone}`}>
+    <div className="flex items-start gap-2">
+      <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-[10px] font-black ${priority ? "border-emerald-300/35 bg-emerald-500/15 text-emerald-100" : "border-white/10 bg-black/20 text-slate-400"}`}>#{rank}</div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className={`flex flex-wrap items-center gap-1 text-[8px] font-black uppercase tracking-[.11em] ${signalText[item.signal]}`}>
+              <span>{item.action}</span>
+              {item.primary_price_band ? <span className="rounded border border-cyan-300/20 bg-cyan-500/10 px-1 py-0.5 text-[7px] text-cyan-100">VALUE BAND</span> : null}
+              {priority ? <span className="rounded border border-emerald-300/25 bg-emerald-500/10 px-1 py-0.5 text-[7px] text-emerald-100">BEST VALUE</span> : null}
+            </div>
+            <div className="mt-0.5 truncate text-[12px] font-black text-white sm:text-sm">{item.side} <span className="font-medium text-slate-500">• {item.matchup}</span></div>
+          </div>
+          <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" />
         </div>
-        <div className="mt-0.5 truncate text-[12px] font-black text-white sm:text-sm">{item.matchup} <span className="text-slate-500">•</span> {item.side}</div>
+
+        <div className="mt-1.5 grid grid-cols-4 gap-1 border-t border-white/[.06] pt-1.5">
+          <div><div className="text-[7px] font-black uppercase text-slate-600">Buy now</div><div className="text-[11px] font-black text-white">{item.market}¢</div></div>
+          <div><div className="text-[7px] font-black uppercase text-slate-600">Our fair</div><div className="text-[11px] font-black text-cyan-200">{item.model}%</div></div>
+          <div><div className="text-[7px] font-black uppercase text-slate-600">Gap</div><div className={`text-[11px] font-black ${signalText[item.signal]}`}>{item.edge >= 0 ? "+" : ""}{item.edge} pts</div></div>
+          <div><div className="text-[7px] font-black uppercase text-slate-600">Plan</div><div className="text-[11px] font-black text-white">{hasPlan ? money(plan.estimated_cost_cents) : "—"}</div></div>
+        </div>
+
+        <div className="mt-1.5 flex items-center justify-between gap-2 text-[8px] text-slate-500">
+          <span className="truncate">{item.gameState}</span>
+          <span className={`shrink-0 font-black ${item.planEv > 0 ? "text-emerald-300" : "text-slate-500"}`}>{hasPlan ? `Model EV ${signedMoney(item.planEv)}` : `Max buy ${priceText(item.maxEntry)}`}</span>
+        </div>
       </div>
-      <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" />
+    </div>
+  </button>;
+}
+
+function BestPickCard({ item, onOpen }) {
+  if (!item) return null;
+  const plan = item.stake_plan || {};
+  const hasPlan = Number(plan.contracts || 0) > 0;
+  return <button type="button" onClick={() => onOpen(item)} className="w-full rounded-2xl border border-emerald-300/35 bg-gradient-to-br from-emerald-500/[.13] via-cyan-500/[.06] to-transparent p-3 text-left shadow-[0_0_28px_rgba(16,185,129,0.08)]">
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[.14em] text-emerald-200"><Trophy className="h-3 w-3" /> Best EDGE value right now</div>
+        <div className="mt-1 truncate text-lg font-black text-white sm:text-xl">{item.side}</div>
+        <div className="truncate text-[10px] text-slate-400">{item.matchup} • {item.gameState}</div>
+      </div>
+      <div className="rounded-lg border border-emerald-300/30 bg-emerald-500/10 px-2 py-1 text-[9px] font-black text-emerald-100">{item.action}</div>
     </div>
 
-    <div className="mt-1.5 grid grid-cols-4 gap-1 border-t border-white/[.06] pt-1.5">
-      <div><div className="text-[7px] font-black uppercase text-slate-600">Ask</div><div className="text-[11px] font-black text-white">{item.market}¢</div></div>
-      <div><div className="text-[7px] font-black uppercase text-slate-600">Fair</div><div className="text-[11px] font-black text-cyan-200">{item.model}%</div></div>
-      <div><div className="text-[7px] font-black uppercase text-slate-600">Edge</div><div className={`text-[11px] font-black ${signalText[item.signal]}`}>{item.edge >= 0 ? "+" : ""}{item.edge}%</div></div>
-      <div><div className="text-[7px] font-black uppercase text-slate-600">Risk</div><div className="text-[11px] font-black text-white">{hasPlan ? money(plan.estimated_cost_cents) : "—"}</div></div>
+    <div className="mt-3 grid grid-cols-4 gap-1.5">
+      <Metric label="Market asks" value={`${item.market}¢`} />
+      <Metric label="Our fair" value={`${item.model}%`} tone="text-cyan-200" />
+      <Metric label="Price gap" value={`${item.edge >= 0 ? "+" : ""}${item.edge}`} detail="percentage pts" tone="text-emerald-300" />
+      <Metric label="Max buy" value={priceText(item.maxEntry)} detail="do not chase" />
     </div>
 
-    <div className="mt-1 flex items-center justify-between gap-2 text-[8px] text-slate-500">
-      <span className="truncate">{item.gameState}</span>
-      <span className="shrink-0">{hasPlan ? `Pays ${money(plan.gross_payout_cents)} • +${money(plan.profit_if_correct_cents)}` : "No stake until edge qualifies"}</span>
+    <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/[.07] bg-black/20 px-2.5 py-2 text-[9px]">
+      <span className="text-slate-400">Market is <span className="font-black text-white">{Math.abs(item.edge).toFixed(1)} points {item.edge >= 0 ? "below" : "above"}</span> our no-vig fair estimate.</span>
+      <span className={`font-black ${item.planEv > 0 ? "text-emerald-300" : "text-slate-400"}`}>{hasPlan ? `${money(plan.estimated_cost_cents)} risk • model EV ${signedMoney(item.planEv)}` : "Watch only"}</span>
     </div>
   </button>;
 }
@@ -118,18 +181,28 @@ function SignalDrawer({ item, onClose, priority = false }) {
       <div className="mx-auto mb-2 h-1 w-9 rounded-full bg-white/20 sm:hidden" />
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className={`text-[8px] font-black uppercase tracking-[.14em] ${signalText[item.signal]}`}>{item.sport || "MLB"} • {item.action}{priority ? " • TOP EDGE" : ""}</div>
-          <h2 className="mt-1 text-lg font-black text-white">{item.matchup}</h2>
-          <div className="mt-0.5 text-[10px] text-slate-400">{item.side} • {item.gameState}</div>
+          <div className={`text-[8px] font-black uppercase tracking-[.14em] ${signalText[item.signal]}`}>{item.sport || "MLB"} • {item.action}{priority ? " • BEST VALUE" : ""}</div>
+          <h2 className="mt-1 text-lg font-black text-white">{item.side}</h2>
+          <div className="mt-0.5 text-[10px] text-slate-400">{item.matchup} • {item.gameState}</div>
         </div>
         <button type="button" onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[.04] text-slate-300"><X className="h-3.5 w-3.5" /></button>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-1.5">
-        <Metric label="Kalshi ask" value={`${item.market}¢`} />
+      <div className="mt-3 grid grid-cols-4 gap-1.5">
+        <Metric label="Ask" value={`${item.market}¢`} />
         <Metric label="Fair" value={`${item.model}%`} />
-        <Metric label="Edge" value={`${item.edge >= 0 ? "+" : ""}${item.edge}%`} />
+        <Metric label="Gap" value={`${item.edge >= 0 ? "+" : ""}${item.edge}`} detail="pts" />
+        <Metric label="Max buy" value={priceText(item.maxEntry)} />
       </div>
+
+      <section className="mt-3 rounded-xl border border-cyan-300/15 bg-cyan-500/[.04] p-3">
+        <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[.13em] text-cyan-200"><Target className="h-3 w-3" /> What the strategy sees</div>
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
+          <Metric label="Raw edge" value={`${item.edge >= 0 ? "+" : ""}${item.edge} pts`} />
+          <Metric label="After 1-contract fee" value={`${item.netEdge >= 0 ? "+" : ""}${item.netEdge} pts`} />
+        </div>
+        <div className="mt-2 text-[9px] leading-4 text-slate-400">We compare the Kalshi YES ask with the no-vig reference win probability. Lower market price + higher fair probability = a larger value gap. Do not chase above the max-buy price.</div>
+      </section>
 
       {hasPlan ? <section className="mt-3 rounded-xl border border-emerald-300/20 bg-emerald-500/[.06] p-3">
         <div className="flex items-center justify-between gap-2">
@@ -139,9 +212,10 @@ function SignalDrawer({ item, onClose, priority = false }) {
           </div>
           {item.primary_price_band ? <div className="rounded-lg border border-cyan-300/20 bg-cyan-500/10 px-2 py-1 text-[8px] font-black text-cyan-100">VALUE BAND</div> : null}
         </div>
-        <div className="mt-2 grid grid-cols-3 gap-1.5">
-          <Metric label="If correct" value={money(plan.gross_payout_cents)} />
-          <Metric label="Profit" value={`+${money(plan.profit_if_correct_cents)}`} />
+        <div className="mt-2 grid grid-cols-4 gap-1.5">
+          <Metric label="Pays" value={money(plan.gross_payout_cents)} />
+          <Metric label="Profit if win" value={`+${money(plan.profit_if_correct_cents)}`} />
+          <Metric label="Model EV" value={signedMoney(item.planEv)} tone={item.planEv > 0 ? "text-emerald-300" : "text-slate-300"} />
           <Metric label="Each risks" value={money(plan.per_person_cost_cents)} />
         </div>
         <div className="mt-2 text-[9px] leading-4 text-slate-500">{plan.fee_note}</div>
@@ -152,7 +226,7 @@ function SignalDrawer({ item, onClose, priority = false }) {
         <div className="mt-1.5 space-y-1.5">{item.why?.length ? item.why.map((reason) => <div key={reason} className="rounded-lg border border-white/10 bg-white/[.025] px-2.5 py-2 text-[10px] leading-4 text-slate-300">{reason}</div>) : <div className="text-[10px] text-slate-500">No detailed factors returned.</div>}</div>
       </div>
 
-      <div className="mt-3 rounded-xl border border-rose-400/15 bg-rose-500/[.04] p-2.5 text-[9px] leading-4 text-slate-400"><span className="font-black text-rose-200">Risk:</span> prices and odds can change before execution. The full amount risked can be lost. These are research/paper signals, not guaranteed outcomes.</div>
+      <div className="mt-3 rounded-xl border border-rose-400/15 bg-rose-500/[.04] p-2.5 text-[9px] leading-4 text-slate-400"><span className="font-black text-rose-200">Risk:</span> this is a model-derived value ranking, not a guaranteed winner. Prices and reference odds can change before execution and the full amount risked can be lost.</div>
     </aside>
   </div>;
 }
@@ -198,10 +272,11 @@ export default function CustomerEdge() {
       const response = await api.get(endpoints[requestedSport], { params: { minimum_edge: minEdge } });
       setLiveBoard(response.data);
       setLastLiveRefresh(new Date());
-    } catch {
+      if (!silent) setMessage("");
+    } catch (error) {
       if (!silent) {
         setLiveBoard(null);
-        setMessage(`${requestedSport} data is temporarily unavailable.`);
+        setMessage(error?.response?.data?.detail || `${requestedSport} feed could not load. Tap refresh to retry.`);
       }
     } finally {
       if (!silent) setLiveLoading(false);
@@ -263,22 +338,25 @@ export default function CustomerEdge() {
   const observedAt = lastLiveRefresh?.toISOString?.() || null;
   const liveSignals = useMemo(() => (liveBoard?.signals || []).map((item) => adaptSignal(item, minEdge, observedAt)).sort((a, b) => {
     const rank = { GREEN: 3, YELLOW: 2, RED: 1 };
-    return (rank[b.signal] - rank[a.signal]) || (Number(b.primary_price_band) - Number(a.primary_price_band)) || (b.edge - a.edge) || (b.score - a.score);
+    return (rank[b.signal] - rank[a.signal]) || (Number(b.primary_price_band) - Number(a.primary_price_band)) || (b.netEdge - a.netEdge) || (b.edge - a.edge) || (b.score - a.score);
   }), [liveBoard, minEdge, observedAt]);
 
   const greenSignals = liveSignals.filter((item) => item.signal === "GREEN");
   const watchSignals = liveSignals.filter((item) => item.signal === "YELLOW");
   const valueBandSignals = liveSignals.filter((item) => item.primary_price_band && item.signal !== "RED");
-  const visibleSignals = liveSignals.slice(0, 16);
-  const topEdgeId = greenSignals[0]?.id ?? null;
+  const actionableSignals = liveSignals.filter((item) => item.signal !== "RED");
+  const visibleSignals = (actionableSignals.length ? actionableSignals : liveSignals).slice(0, 16);
+  const bestSignal = greenSignals[0] || watchSignals[0] || liveSignals[0] || null;
+  const topEdgeId = bestSignal?.id ?? null;
+  const slateDate = liveBoard?.slate_date;
 
   return <DashboardShell><main className="mx-auto w-full max-w-[1320px] space-y-2 px-2 pb-28 pt-2 sm:space-y-3 sm:px-4 lg:px-6">
     <section className="rounded-xl border border-cyan-400/20 bg-slate-950/70 p-2.5 sm:p-3">
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[.16em] text-cyan-200"><Zap className="h-3 w-3" /> EDGE Sports</div>
-          <h1 className="mt-0.5 truncate text-lg font-black text-white sm:text-2xl">Find mispriced football contracts.</h1>
-          <div className="mt-0.5 text-[9px] text-slate-500">$100 pool • 4 × $25 • 25–45¢ primary band • $5 normal / $7.50 strong edge</div>
+          <h1 className="mt-0.5 truncate text-lg font-black text-white sm:text-2xl">Best value picks, ranked.</h1>
+          <div className="mt-0.5 text-[9px] text-slate-500">Market price vs no-vig fair probability • 25–45¢ value band • never chase above max buy</div>
         </div>
         <button type="button" onClick={() => loadLiveBoard()} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[.04] text-slate-300"><RefreshCw className="h-3.5 w-3.5" /></button>
       </div>
@@ -294,31 +372,38 @@ export default function CustomerEdge() {
     </nav>
 
     {view === "LIVE" ? <>
+      {slateDate ? <div className="flex items-center justify-between rounded-lg border border-white/[.07] bg-white/[.025] px-2.5 py-1.5 text-[8px] text-slate-500">
+        <span>{liveBoard?.slate_is_upcoming ? "Next available slate" : "Current slate"}: <span className="font-black text-slate-300">{formatDate(slateDate)}</span></span>
+        <span>{formatDateTime(observedAt)}</span>
+      </div> : null}
+
+      {bestSignal ? <BestPickCard item={bestSignal} onOpen={setSelectedSignal} /> : null}
+
       <section className="grid grid-cols-4 gap-1">
-        <Metric label="Prime" value={String(greenSignals.length)} detail={`≥+${minEdge}%`} />
-        <Metric label="Watch" value={String(watchSignals.length)} />
-        <Metric label="25–45¢" value={String(valueBandSignals.length)} detail="value band" />
-        <Metric label="Games" value={String(liveGames.length)} detail={sport} />
+        <Metric label="Best pick" value={bestSignal?.team_code || "—"} detail={bestSignal?.action || "scanning"} tone={bestSignal?.signal === "GREEN" ? "text-emerald-300" : "text-white"} />
+        <Metric label="Buy price" value={bestSignal ? `${bestSignal.market}¢` : "—"} detail={bestSignal ? `max ${priceText(bestSignal.maxEntry)}` : ""} />
+        <Metric label="Our fair" value={bestSignal ? `${bestSignal.model}%` : "—"} detail="no-vig estimate" tone="text-cyan-200" />
+        <Metric label="Price gap" value={bestSignal ? `${bestSignal.edge >= 0 ? "+" : ""}${bestSignal.edge}` : "—"} detail={bestSignal ? "percentage pts" : `${liveGames.length} games`} tone={bestSignal?.edge > 0 ? "text-emerald-300" : "text-white"} />
       </section>
 
       <section className="rounded-xl border border-white/10 bg-slate-950/55 p-2">
         <div className="mb-1.5 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-[.13em] text-emerald-200"><Wifi className="h-3 w-3" /> {sport} slate</div>
-          <span className="text-[8px] text-slate-600">{formatDateTime(observedAt)}</span>
+          <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-[.13em] text-emerald-200"><Wifi className="h-3 w-3" /> {sport} slate • {liveGames.length} games</div>
+          <div className="flex items-center gap-2 text-[8px] text-slate-600"><span>{greenSignals.length} buy</span><span>{watchSignals.length} watch</span><span>{valueBandSignals.length} value band</span></div>
         </div>
-        {liveLoading ? <div className="p-2 text-[10px] text-slate-500">Loading {sport}…</div> : liveGames.length ? <div className="flex gap-1.5 overflow-x-auto pb-1">{liveGames.slice(0, 20).map((game) => <TickerItem key={game.game_pk} game={game} sport={sport} />)}</div> : <div className="p-2 text-[10px] text-slate-500">No games found in the current slate window.</div>}
+        {liveLoading ? <div className="p-2 text-[10px] text-slate-500">Loading {sport}…</div> : liveGames.length ? <div className="flex gap-1.5 overflow-x-auto pb-1">{liveGames.slice(0, 20).map((game) => <TickerItem key={game.game_pk} game={game} sport={sport} />)}</div> : <div className="p-2 text-[10px] text-slate-500">No games found in the current or next slate window.</div>}
       </section>
 
       <section className="space-y-1.5">
         <div className="flex items-end justify-between gap-2 px-0.5">
           <div>
-            <div className="text-[8px] font-black uppercase tracking-[.13em] text-cyan-200">Value scanner</div>
-            <h2 className="text-sm font-black text-white">Best price gaps first</h2>
+            <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-[.13em] text-cyan-200"><TrendingUp className="h-3 w-3" /> Ranked value scanner</div>
+            <h2 className="text-sm font-black text-white">Best choices first</h2>
           </div>
           <div className="text-right text-[8px] leading-3 text-slate-600">{liveBoard?.source || "Kalshi"}<br />{liveBoard?.model?.version || ""}</div>
         </div>
 
-        {visibleSignals.length ? <div className="space-y-1">{visibleSignals.map((item) => <SignalRow key={item.id} item={item} priority={item.id === topEdgeId} onOpen={setSelectedSignal} />)}</div> : <div className="rounded-xl border border-dashed border-white/10 p-4 text-[10px] text-slate-500">{liveLoading ? "Scanning…" : `No matched ${sport} signals. Games without a matched Kalshi market or usable reference odds are skipped.`}</div>}
+        {visibleSignals.length ? <div className="space-y-1">{visibleSignals.map((item, index) => <SignalRow key={item.id} item={item} rank={index + 1} priority={item.id === topEdgeId} onOpen={setSelectedSignal} />)}</div> : <div className="rounded-xl border border-dashed border-white/10 p-4 text-[10px] text-slate-500">{liveLoading ? "Scanning…" : liveGames.length ? `Games loaded, but no ${sport} contracts currently have both a matched Kalshi market and usable reference moneyline. Keep this screen open; it refreshes automatically.` : `No ${sport} slate is available in the current window.`}</div>}
       </section>
     </> : null}
 
@@ -344,7 +429,7 @@ export default function CustomerEdge() {
       </section>
 
       <section className="lg:col-span-2 rounded-xl border border-rose-400/15 bg-rose-500/[.04] p-3">
-        <div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-300" /><p className="text-[9px] leading-4 text-slate-400"><span className="font-black text-white">Risk:</span> EDGE is experimental. Reference odds, Kalshi prices, spreads, liquidity and fees can change. Paper results can differ from live execution. Only risk capital you can afford to lose.</p></div>
+        <div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-300" /><p className="text-[9px] leading-4 text-slate-400"><span className="font-black text-white">Risk:</span> EDGE ranks estimated value, not certainty. Reference odds, Kalshi prices, spreads, liquidity and fees can change. Paper results can differ from live execution. Only risk capital you can afford to lose.</p></div>
       </section>
     </div> : null}
 
