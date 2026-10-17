@@ -12,7 +12,9 @@ import {
   flushHealthProfileSyncQueue,
   getHealthAthleteProfile,
   updateHealthAthleteProfile,
+  isProfileVersionConflict,
 } from "../../api/healthProfiles";
+import HealthSyncStatus from "./HealthSyncStatus";
 import {
   getPendingHealthProfileSyncs,
   subscribeHealthProfileSync,
@@ -47,6 +49,10 @@ export default function HealthAthleteProfileCard({
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState("");
+  const [syncStatus, setSyncStatus] = useState("loading");
+  const [profileVersion, setProfileVersion] = useState(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState("");
+  const [conflictProfile, setConflictProfile] = useState(null);
   const [pendingSyncCount, setPendingSyncCount] = useState(
     () => getPendingHealthProfileSyncs().length
   );
@@ -95,6 +101,15 @@ export default function HealthAthleteProfileCard({
             serverProfile.measurements || {}
           )
         );
+        setProfileVersion(
+          Number(serverProfile.profile_version || 0)
+        );
+        setLastSyncedAt(
+          serverProfile.updated_at ||
+            new Date().toISOString()
+        );
+        setSyncStatus("synced");
+        setConflictProfile(null);
 
         onCoachUpdate?.({
           ...serverProfile,
@@ -103,6 +118,9 @@ export default function HealthAthleteProfileCard({
       } catch (error) {
         if (!mountedRef.current) return;
 
+        setSyncStatus(
+          error?.networkLike ? "offline" : "error"
+        );
         setProfileError(
           error?.networkLike
             ? "Server profile is temporarily unavailable. Local Health data is still available."
@@ -197,12 +215,16 @@ export default function HealthAthleteProfileCard({
     };
 
     setSavingProfile(true);
+    setSyncStatus("saving");
     setProfileError("");
+    setConflictProfile(null);
     onCoachUpdate?.(localPatch);
 
     try {
       const serverProfile =
-        await updateHealthAthleteProfile(apiPatch);
+        await updateHealthAthleteProfile(apiPatch, {
+          expectedProfileVersion: profileVersion,
+        });
 
       if (!mountedRef.current) return;
 
@@ -211,6 +233,14 @@ export default function HealthAthleteProfileCard({
         ...serverProfile,
         athlete_profile_source: "server",
       });
+      setProfileVersion(
+        Number(serverProfile.profile_version || 0)
+      );
+      setLastSyncedAt(
+        serverProfile.updated_at ||
+          new Date().toISOString()
+      );
+      setSyncStatus("synced");
       setSaved(true);
       window.setTimeout(() => setSaved(false), 2400);
     } catch (error) {
@@ -232,6 +262,38 @@ export default function HealthAthleteProfileCard({
         setSavingProfile(false);
       }
     }
+  }
+
+  function reloadConflictProfile() {
+    if (!conflictProfile) return;
+
+    setDateOfBirth(conflictProfile.date_of_birth || "");
+    setSport(
+      conflictProfile.primary_sport || "General Fitness"
+    );
+    setTrainingExperience(
+      conflictProfile.training_experience || "beginner"
+    );
+    setMeasurements(
+      normalizeMeasurements(
+        conflictProfile.measurements || {}
+      )
+    );
+    setProfileVersion(
+      Number(conflictProfile.profile_version || 0)
+    );
+    setLastSyncedAt(
+      conflictProfile.updated_at ||
+        new Date().toISOString()
+    );
+    setConflictProfile(null);
+    setProfileError("");
+    setSyncStatus("synced");
+
+    onCoachUpdate?.({
+      ...conflictProfile,
+      athlete_profile_source: "server",
+    });
   }
 
   return (
@@ -261,6 +323,12 @@ export default function HealthAthleteProfileCard({
             : "Edit"}
         </button>
       </div>
+
+      <HealthSyncStatus
+        status={syncStatus}
+        profileVersion={profileVersion}
+        lastSyncedAt={lastSyncedAt}
+      />
 
       <div className="mt-4 grid grid-cols-3 gap-2">
         <div className="rounded-xl border border-white/10 bg-black/20 p-3">
@@ -482,6 +550,16 @@ export default function HealthAthleteProfileCard({
             <div className="rounded-xl border border-amber-300/20 bg-amber-300/[0.06] p-3 text-[10px] font-bold leading-4 text-amber-100">
               {profileError}
             </div>
+          ) : null}
+
+          {conflictProfile ? (
+            <button
+              type="button"
+              onClick={reloadConflictProfile}
+              className="h-11 w-full rounded-xl border border-rose-300/30 bg-rose-300/10 text-xs font-black text-rose-100"
+            >
+              Reload Newer Server Profile
+            </button>
           ) : null}
 
           {pendingSyncCount > 0 ? (
