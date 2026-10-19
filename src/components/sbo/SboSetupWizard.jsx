@@ -953,9 +953,9 @@ export default function SboSetupWizard({
                 <div className="rounded-3xl border border-cyan-500/25 bg-slate-950/65 p-4">
                   <div className="text-xl font-black text-slate-100">Next: activate your business</div>
                   <ol className="mt-4 space-y-3 text-sm text-slate-300">
-                    <li>1. Connect Stripe payouts in Finance if you will accept online payments.</li>
-                    <li>2. Add a priced service in your Catalog.</li>
-                    <li>3. Check Business readiness on your dashboard.</li>
+                    <li>1. Activate the Business plan and add your billing card in Finance.</li>
+                    <li>2. Complete Stripe Connect to accept payments and receive payouts.</li>
+                    <li>3. Add a priced service in your Catalog and review dashboard readiness.</li>
                     <li>4. Test a customer request, invoice and payment before launch.</li>
                   </ol>
                   <p className="mt-4 text-xs leading-5 text-cyan-200">
