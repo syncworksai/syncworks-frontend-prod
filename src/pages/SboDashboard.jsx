@@ -632,6 +632,8 @@ export default function SboDashboard() {
     { label: "Inbox", icon: "💬", onClick: () => navigate("/inbox"), badge: "0" },
     { label: "Calendar", icon: "◷", onClick: () => navigate("/calendar") },
     { label: "Customers", icon: "◉", onClick: () => navigate("/sbo/customers") },
+    { label: "Tech Board", icon: "▦", onClick: () => navigate("/sbo/tech-board") },
+    { label: "Quick Intake", icon: "✚", onClick: () => navigate("/sbo/quick-intake") },
     { label: "Leads", icon: "◎", onClick: () => navigate("/sbo/leads") },
     { label: "Employees", icon: "👥", onClick: () => navigate("/team/invites") },
     { label: "Partners", icon: "◇", onClick: () => navigate("/sbo/partners") },
@@ -664,6 +666,12 @@ export default function SboDashboard() {
         <div className="flex flex-wrap gap-2">
           <Button tone="fuchsia" onClick={() => navigate("/sbo/growth")}>
             Social Media
+          </Button>
+          <Button tone="cyan" onClick={() => navigate("/sbo/quick-intake")}>
+            + Phone Ticket
+          </Button>
+          <Button tone="slate" onClick={() => navigate("/sbo/tech-board")}>
+            Tech Board
           </Button>
           <Button tone="cyan" onClick={() => navigate("/tickets?view=new")}>
             Job Requests
