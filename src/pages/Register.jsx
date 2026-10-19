@@ -424,6 +424,7 @@ function Welcome({
   onBusiness,
   onInfo,
   onUpdates,
+  businessFirst = false,
 }) {
   return (
     <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-5 shadow-2xl">
@@ -437,26 +438,31 @@ function Welcome({
         </h1>
 
         <p className="mt-2 text-sm leading-6 text-slate-400">
-          Your free Personal account is ready. You can explore SyncWorks or add
-          more tools whenever you need them.
+          {businessFirst
+            ? "Your account is ready. Add your business next, then follow the guided setup to start receiving requests."
+            : "Your free Personal account is ready. You can explore SyncWorks or add more tools whenever you need them."}
         </p>
       </div>
 
       <div className="mt-6 space-y-3">
         <button
           type="button"
-          onClick={onContinue}
-          className="w-full rounded-2xl bg-cyan-400 px-4 py-3 font-black text-black"
+          onClick={onBusiness}
+          className={businessFirst
+            ? "w-full rounded-2xl bg-cyan-400 px-4 py-3 font-black text-black"
+            : "w-full rounded-2xl border border-cyan-400/40 bg-cyan-500/10 px-4 py-3 font-bold text-cyan-100"}
         >
-          Enter SyncWorks
+          {businessFirst ? "Continue Business Setup" : "Add My Business"}
         </button>
 
         <button
           type="button"
-          onClick={onBusiness}
-          className="w-full rounded-2xl border border-cyan-400/40 bg-cyan-500/10 px-4 py-3 font-bold text-cyan-100"
+          onClick={onContinue}
+          className={businessFirst
+            ? "w-full rounded-2xl border border-slate-700 px-4 py-3 font-semibold text-slate-200"
+            : "w-full rounded-2xl bg-cyan-400 px-4 py-3 font-black text-black"}
         >
-          Add My Business
+          {businessFirst ? "Go to Personal Instead" : "Enter SyncWorks"}
         </button>
 
         <div className="grid grid-cols-2 gap-3">
@@ -496,6 +502,7 @@ export default function Register() {
   const queryParams = new URLSearchParams(location.search);
   const returnTo = safeReturnPath(queryParams.get("next"));
   const invitedEmail = normalizeEmail(queryParams.get("email"));
+  const onboardingIntent = queryParams.get("business") === "1";
 
   const [stage, setStage] = useState("EMAIL");
   const [loading, setLoading] = useState(false);
@@ -758,6 +765,7 @@ export default function Register() {
         return;
       }
       setStage("WELCOME");
+      if (onboardingIntent) setBusinessOpen(true);
     } catch (err) {
       setError(getErrorMessage(err, "Unable to create your account."));
     } finally {
@@ -845,7 +853,7 @@ export default function Register() {
 
       setBusinessOpen(false);
 
-      navigate("/sbo/settings?return=/sbo", {
+      navigate("/sbo/settings/general?setup=1&return=%2Fsbo", {
         replace: true,
       });
     } catch (err) {
@@ -863,6 +871,7 @@ export default function Register() {
             firstName={account.firstName}
             onContinue={() => navigate(returnTo, { replace: true })}
             onBusiness={() => setBusinessOpen(true)}
+            businessFirst={onboardingIntent}
             onInfo={() => setInfoOpen(true)}
             onUpdates={() => setUpdatesOpen(true)}
           />
@@ -901,7 +910,7 @@ export default function Register() {
               </div>
 
               <h1 className="mt-1 text-2xl font-black">
-                Create your account
+                {onboardingIntent ? "Set up your business" : "Create your account"}
               </h1>
             </div>
 
@@ -916,7 +925,9 @@ export default function Register() {
           </div>
 
           <p className="mt-2 text-sm leading-6 text-slate-400">
-            Start free with Personal. Add a business or other modules later.
+            {onboardingIntent
+              ? "First, verify your email and create one secure login. Next, add your business and choose the services you offer."
+              : "Start free with Personal. Add a business or other modules later."}
           </p>
         </header>
 
@@ -1144,7 +1155,7 @@ export default function Register() {
                 disabled={loading}
                 className="w-full rounded-2xl bg-cyan-400 px-4 py-3 font-black text-black disabled:opacity-50"
               >
-                {loading ? "Creating Account..." : "Create Free Personal Account"}
+                {loading ? "Creating Account..." : onboardingIntent ? "Create Account & Continue" : "Create Free Personal Account"}
               </button>
             </form>
           ) : null}
