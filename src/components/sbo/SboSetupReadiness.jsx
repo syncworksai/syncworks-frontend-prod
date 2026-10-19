@@ -4,6 +4,7 @@ import {
   BadgeCheck,
   CircleAlert,
   CreditCard,
+  WalletCards,
   MapPinned,
   PackageCheck,
   Radio,
@@ -123,12 +124,34 @@ export default function SboSetupReadiness({
       onClick: onOpenMarketplace,
     },
     {
-      key: "payments",
+      key: "subscription",
+      icon: BadgeCheck,
+      label: "Business plan",
+      value: setupState?.subscriptionActive
+        ? "Your Business subscription is active."
+        : "Activate your Business subscription in Finance.",
+      ok: !!setupState?.subscriptionActive,
+      actionLabel: setupState?.subscriptionActive ? "View" : "Activate",
+      onClick: onOpenPayments,
+    },
+    {
+      key: "billing-method",
       icon: CreditCard,
-      label: "Stripe payments",
+      label: "Billing card",
+      value: setupState?.billingMethodReady
+        ? "A card is saved for your Business charges."
+        : "Add a card for your Business plan and platform fees.",
+      ok: !!setupState?.billingMethodReady,
+      actionLabel: setupState?.billingMethodReady ? "View" : "Add card",
+      onClick: onOpenPayments,
+    },
+    {
+      key: "payments",
+      icon: WalletCards,
+      label: "Customer payments & payouts",
       value: setupState?.stripeConnected
-        ? "Payments are connected and ready."
-        : "Connect payouts before accepting online payments.",
+        ? "Stripe Connect verification, charges, and payouts are ready."
+        : "Complete Stripe Connect verification before taking online payments.",
       ok: !!setupState?.stripeConnected,
       actionLabel: setupState?.stripeConnected ? "View" : "Connect",
       onClick: onOpenPayments,
@@ -176,8 +199,8 @@ export default function SboSetupReadiness({
                   : "Finish setup to start converting customers"}
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-                Complete these once so SyncWorks can configure Marketplace matching,
-                scheduling, payments and invoicing around how your business works.
+                Finish these requirements so your Marketplace profile, subscription,
+                billing and Stripe payouts are all verified before launch.
               </p>
             </div>
 
