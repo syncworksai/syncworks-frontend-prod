@@ -582,7 +582,7 @@ export default function SboSetupWizard({
       setStep(0);
       return;
     }
-    if (!city.trim() || !/^\\d{5}$/.test(baseZip.trim()) || !normalizeStateCode(state) || (businessPresenceMode !== "online" && Number(radius || 0) <= 0)) {
+    if (!city.trim() || !/^\d{5}$/.test(baseZip.trim()) || !normalizeStateCode(state) || (businessPresenceMode !== "online" && Number(radius || 0) <= 0)) {
       setError("Finish your city, state, five-digit ZIP, and service area before activating.");
       setStep(1);
       return;
@@ -619,7 +619,7 @@ export default function SboSetupWizard({
     step === 0
       ? !!name.trim()
       : step === 1
-      ? !!city.trim() && /^\\d{5}$/.test(baseZip.trim()) && !!normalizeStateCode(state).trim() && (businessPresenceMode === "online" || Number(radius || 0) > 0)
+      ? !!city.trim() && /^\d{5}$/.test(baseZip.trim()) && !!normalizeStateCode(state).trim() && (businessPresenceMode === "online" || Number(radius || 0) > 0)
       : step === 2
       ? selectedServiceIds.length > 0
       : true;
