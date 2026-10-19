@@ -1,178 +1,29 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React,{useEffect,useMemo,useState} from "react";
+import {useNavigate} from "react-router-dom";
+import api from "../../api/client";
 import DashboardShell from "../../components/dashboard/DashboardShell";
-import GlassCard from "../../components/dashboard/GlassCard";
-import SidebarNav from "../../components/dashboard/SidebarNav";
-import Button from "../../components/ui/Button";
-import { useAuth } from "../../auth/AuthContext";
-import {
-  readBusinessCustomers,
-  removeBusinessCustomer,
-} from "../../utils/savedCustomers";
 
-function safeList(data) {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data.results)) return data.results;
-  return [];
-}
-
-export default function SboCustomers() {
-  const navigate = useNavigate();
-  const { myBusinesses, activeBusinessId } = useAuth();
-  const [customers, setCustomers] = useState([]);
-  const [query, setQuery] = useState("");
-
-  const activeBusiness = useMemo(() => {
-    const found = safeList(myBusinesses).find(
-      (item) =>
-        String(item?.id || item?.business_id || item?.business?.id || "") ===
-        String(activeBusinessId || "")
-    );
-    return found?.business || found || null;
-  }, [myBusinesses, activeBusinessId]);
-
-  const businessId = activeBusiness?.id || activeBusiness?.business_id || activeBusinessId || "";
-
-  useEffect(() => {
-    const refresh = () => setCustomers(readBusinessCustomers(businessId));
-    refresh();
-    window.addEventListener("sw:businessCustomersChanged", refresh);
-    return () => window.removeEventListener("sw:businessCustomersChanged", refresh);
-  }, [businessId]);
-
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return customers;
-    return customers.filter((customer) =>
-      [customer.name, customer.email, customer.phone, customer.city, customer.service_zip]
-        .join(" ")
-        .toLowerCase()
-        .includes(needle)
-    );
-  }, [customers, query]);
-
-  const repeatCount = customers.filter((customer) => Number(customer.ticket_count || 0) > 1).length;
-
-  const navItems = [
-    { label: "Dashboard", icon: "⌂", onClick: () => navigate("/sbo") },
-    { label: "Job Requests", icon: "▤", onClick: () => navigate("/tickets?view=new") },
-    { label: "Inbox", icon: "💬", onClick: () => navigate("/inbox"), badge: "0" },
-    { label: "Calendar", icon: "◷", onClick: () => navigate("/calendar") },
-    { label: "Customers", icon: "◉", active: true, onClick: () => navigate("/sbo/customers") },
-    { label: "Leads", icon: "◎", onClick: () => navigate("/sbo/leads") },
-    { label: "Employees", icon: "👥", onClick: () => navigate("/team/invites") },
-    { label: "Product Settings", icon: "⚙", onClick: () => navigate("/sbo/catalog") },
-    { label: "Finance", icon: "$", onClick: () => navigate("/sbo/finance") },
-    { label: "Social Media", icon: "✦", onClick: () => navigate("/sbo/growth") },
-    { label: "Reports", icon: "↗", onClick: () => navigate("/sbo/reports") },
-    { label: "Settings", icon: "⚙", onClick: () => navigate("/sbo/settings?return=%2Fsbo") },
-  ];
-
-  return (
-    <DashboardShell
-      title="Customers"
-      subtitle={activeBusiness?.name || "Customer CRM Lite"}
-      modeBarTitle="Customers"
-      modeBarSubtitle="Repeat customers • saved contacts • quick ticket intake"
-      bottomNavItems={[
-        { label: "Home", icon: "⌂", onClick: () => navigate("/sbo") },
-        { label: "Requests", icon: "▤", onClick: () => navigate("/tickets?view=new") },
-        { label: "Leads", icon: "◎", onClick: () => navigate("/sbo/leads") },
-        { label: "Settings", icon: "⚙", onClick: () => navigate("/sbo/settings?return=%2Fsbo") },
-      ]}
-      bottomCenterAction={{ label: "New Ticket", onClick: () => navigate("/sbo/new-ticket") }}
-    >
-      <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <SidebarNav title="Business OS" subtitle="Customers" items={navItems} />
-
-        <div className="space-y-5">
-          <GlassCard title="Customer CRM Lite" subtitle="Saved automatically from business-created tickets." tone="cyan">
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/10 p-5">
-                <div className="text-xs text-cyan-200">Saved Customers</div>
-                <div className="mt-2 text-3xl font-black text-white">{customers.length}</div>
-              </div>
-              <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-5">
-                <div className="text-xs text-emerald-200">Repeat Customers</div>
-                <div className="mt-2 text-3xl font-black text-white">{repeatCount}</div>
-              </div>
-              <div className="rounded-3xl border border-fuchsia-500/20 bg-fuchsia-500/10 p-5">
-                <div className="text-xs text-fuchsia-200">Recent Records</div>
-                <div className="mt-2 text-3xl font-black text-white">{Math.min(customers.length, 30)}</div>
-              </div>
-            </div>
-
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search name, email, phone, city, or ZIP"
-                className="min-h-11 flex-1 rounded-2xl border border-slate-800 bg-slate-950/75 px-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-500/50"
-              />
-              <Button tone="cyan" onClick={() => navigate("/sbo/new-ticket")}>
-                + Create customer ticket
-              </Button>
-            </div>
-          </GlassCard>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            {filtered.map((customer) => (
-              <div key={customer.id} className="rounded-[1.75rem] border border-slate-800 bg-slate-950/55 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="truncate text-base font-black text-white">
-                      {customer.name || "Unnamed customer"}
-                    </div>
-                    <div className="mt-1 text-xs text-slate-400">
-                      {customer.phone || customer.email || "No contact information"}
-                    </div>
-                  </div>
-                  <span className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-black text-cyan-200">
-                    {customer.ticket_count || 1} ticket{Number(customer.ticket_count || 1) === 1 ? "" : "s"}
-                  </span>
-                </div>
-
-                <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/70 p-3 text-xs leading-5 text-slate-400">
-                  {[customer.address, customer.city, customer.state, customer.service_zip]
-                    .filter(Boolean)
-                    .join(", ") || "No saved service address"}
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => navigate("/sbo/new-ticket")}
-                    className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-xs font-black text-cyan-100"
-                  >
-                    Create ticket
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = removeBusinessCustomer(businessId, customer.id);
-                      setCustomers(next);
-                    }}
-                    className="rounded-xl border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-xs font-black text-rose-200"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {!filtered.length ? (
-            <div className="rounded-[2rem] border border-dashed border-slate-700 bg-slate-950/35 p-8 text-center">
-              <div className="text-3xl">👥</div>
-              <div className="mt-3 text-sm font-black text-white">No saved customers yet</div>
-              <div className="mt-1 text-xs leading-5 text-slate-500">
-                Create a phone, text, email, or walk-in ticket and the customer will be saved automatically.
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </DashboardShell>
-  );
+const field="min-h-10 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 text-sm text-white";
+const blank={name:"",email:"",phone:"",service_address:"",city:"",state:"",service_zip:""};
+const cols=[["name","Customer"],["phone","Phone"],["email","Email"],["service_address","Address"],["ticket_count","Jobs"],["completed_ticket_count","Completed"],["lifetime_revenue","Paid revenue"]];
+const errorText=e=>e?.response?.data?.detail||JSON.stringify(e?.response?.data||{})||e?.message||"Request failed";
+export default function SboCustomers(){
+ const navigate=useNavigate(),[rows,setRows]=useState([]),[query,setQuery]=useState(""),[loading,setLoading]=useState(true),[error,setError]=useState(""),[editing,setEditing]=useState(null),[draft,setDraft]=useState(blank),[saving,setSaving]=useState(false),[sort,setSort]=useState("name"),[desc,setDesc]=useState(false);
+ const [bizId,setBizId]=useState(()=>localStorage.getItem("sw_active_business_id")||"");
+ async function refresh(){if(!bizId)return;setLoading(true);setError("");try{const result=await api.get("/business-customers/",{headers:{"X-Business-Id":bizId},params:{page_size:200}});setRows(Array.isArray(result.data)?result.data:result.data.results||[])}catch(e){setError(errorText(e))}finally{setLoading(false)}}
+ useEffect(()=>{refresh()},[bizId]);
+ const shown=useMemo(()=>rows.filter(r=>[r.name,r.phone,r.email,r.city,r.service_address,r.service_zip].join(" ").toLowerCase().includes(query.toLowerCase())).sort((a,b)=>{const x=a[sort]??"",y=b[sort]??"";const v=typeof x==="number"&&typeof y==="number"?x-y:String(x).localeCompare(String(y),undefined,{numeric:true});return desc?-v:v}),[rows,query,sort,desc]);
+ const repeat=rows.filter(r=>Number(r.ticket_count)>1).length;
+ const chooseSort=k=>{if(k===sort)setDesc(!desc);else{setSort(k);setDesc(false)}};
+ function start(row){setEditing(row?.id||"new");setDraft(row?Object.fromEntries(Object.keys(blank).map(k=>[k,row[k]||""])):blank)}
+ async function save(){setSaving(true);setError("");try{const hdr={headers:{"X-Business-Id":bizId}};if(editing==="new")await api.post("/business-customers/resolve/",draft,hdr);else await api.patch(`/business-customers/${editing}/`,draft,hdr);setEditing(null);await refresh()}catch(e){setError(errorText(e))}finally{setSaving(false)}}
+ function exportCsv(){const csv=[cols.map(c=>c[1]),...shown.map(r=>cols.map(([k])=>String(r[k]??"")))].map(r=>r.map(v=>`"${v.replaceAll('"','""')}"`).join(",")).join("\r\n");const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="syncworks-customers.csv";a.click();URL.revokeObjectURL(url)}
+ return <DashboardShell modeBarTitle="Business Customers" modeBarSubtitle="Shared Customer 360 database"><div className="mx-auto max-w-7xl space-y-4 pb-24">
+ <header className="rounded-3xl border border-cyan-400/20 bg-slate-900 p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-black text-white">Customer 360</h1><p className="text-xs text-slate-400">Server-backed, shared across the business team. Not browser-only.</p></div><div className="flex flex-wrap gap-2"><button onClick={()=>start(null)} className="rounded-xl bg-cyan-500 px-4 py-2 text-sm font-bold text-slate-950">+ Customer</button><button onClick={()=>navigate("/sbo/quick-intake")} className="rounded-xl border border-cyan-500 px-4 py-2 text-sm font-bold text-cyan-200">+ Phone ticket</button><button onClick={exportCsv} className="rounded-xl border border-slate-600 px-4 py-2 text-sm text-white">Export CSV</button></div></div>
+ <div className="mt-4 grid gap-2 sm:grid-cols-3">{[["Saved customers",rows.length],["Repeat customers",repeat],["Customer records shown",shown.length]].map(([k,v])=><div key={k} className="rounded-xl bg-slate-950 p-3"><div className="text-xs text-slate-400">{k}</div><div className="text-2xl font-black text-white">{v}</div></div>)}</div><input className={field+" mt-4"} value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search customers, phone, email, address, ZIP" /></header>
+ {error?<div className="rounded-xl border border-rose-500/30 p-3 text-sm text-rose-200">{error}</div>:null}
+ {editing?<section className="rounded-2xl border border-cyan-500/25 bg-slate-900 p-4"><h2 className="mb-3 font-black text-white">{editing==="new"?"Add customer":"Edit customer"}</h2><div className="grid gap-3 sm:grid-cols-2">{Object.entries({name:"Name",phone:"Phone",email:"Email",service_address:"Service address",city:"City",state:"State",service_zip:"ZIP"}).map(([k,v])=><label key={k}><span className="mb-1 block text-xs text-slate-400">{v}</span><input className={field} value={draft[k]||""} onChange={e=>setDraft(d=>({...d,[k]:e.target.value}))}/></label>)}</div><div className="mt-3 flex gap-2"><button disabled={saving} onClick={save} className="rounded-xl bg-cyan-500 px-4 py-2 font-bold text-slate-950">Save</button><button onClick={()=>setEditing(null)} className="rounded-xl border border-slate-600 px-4 py-2 text-white">Cancel</button></div></section>:null}
+ <div className="overflow-x-auto rounded-2xl border border-slate-700 bg-slate-950"><table className="min-w-[850px] w-full text-left text-sm"><thead className="bg-slate-900"><tr>{cols.map(([k,label])=><th key={k} className="whitespace-nowrap p-3"><button className="text-left text-slate-300" onClick={()=>chooseSort(k)}>{label} {sort===k?(desc?"↓":"↑"):""}</button></th>)}<th className="p-3 text-slate-300">Actions</th></tr></thead><tbody>{shown.map(row=><tr key={row.id} className="border-t border-slate-800 text-slate-200">{cols.map(([k])=><td key={k} className="max-w-[230px] truncate p-3">{k==="lifetime_revenue"?`$${Number(row[k]||0).toFixed(2)}`:row[k]??"—"}</td>)}<td className="whitespace-nowrap p-2"><button className="mr-2 text-cyan-300" onClick={()=>start(row)}>Edit</button><button className="text-violet-300" onClick={()=>navigate("/sbo/quick-intake")}>Ticket</button></td></tr>)}</tbody></table>{loading?<div className="p-5 text-sm text-slate-400">Loading shared customers…</div>:!shown.length?<div className="p-5 text-sm text-slate-400">No matching customers yet. Add the first customer or create a phone ticket.</div>:null}</div>
+ <p className="text-xs text-amber-200">Outstanding invoice balances and payment aging will appear after invoice-to-customer reconciliation is verified. We will not display guessed balances.</p>
+ </div></DashboardShell>
 }
