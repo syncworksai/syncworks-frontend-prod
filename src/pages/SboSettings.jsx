@@ -5,6 +5,7 @@ import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import ModeBar from "../components/ModeBar";
 import BusinessPicker from "../components/BusinessPicker";
+import SboSetupWizard from "../components/sbo/SboSetupWizard";
 import BusinessDigitalCardPreview from "../components/business/BusinessDigitalCardPreview";
 import BusinessServiceAreasEditor, { normalizeServiceAreas } from "../components/business/BusinessServiceAreasEditor";
 import BusinessServiceOfferingsEditor from "../components/business/BusinessServiceOfferingsEditor";
@@ -538,6 +539,7 @@ export default function SboSettings() {
   const navigate = useNavigate();
   const location = useLocation();
   const { activeBusinessId, reloadBusinesses } = useAuth();
+  const [wizardOpen, setWizardOpen] = useState(() => new URLSearchParams(location.search).get("setup") === "1");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -582,6 +584,10 @@ export default function SboSettings() {
 
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
+
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get("setup") === "1") setWizardOpen(true);
+  }, [location.search]);
 
   const returnTo = useMemo(() => {
     const qs = new URLSearchParams(location.search || "");
@@ -767,6 +773,17 @@ export default function SboSettings() {
     };
   }
 
+  async function saveWizardBusiness(payload) {
+    if (!activeBusinessId) throw new Error("Select a business before setup.");
+    await api.patch(`/businesses/${activeBusinessId}/`, payload);
+  }
+
+  async function finishWizard() {
+    await Promise.resolve(reloadBusinesses?.()).catch(() => {});
+    setWizardOpen(false);
+    navigate("/sbo");
+  }
+
   async function saveSettings() {
     if (!activeBusinessId) return;
 
@@ -862,6 +879,9 @@ export default function SboSettings() {
         rightActions={
           <div className="flex flex-wrap gap-2">
             <BusinessPicker />
+            <SmallButton tone="fuchsia" onClick={() => setWizardOpen(true)} disabled={loading || !activeBusinessId}>
+              Guided Setup
+            </SmallButton>
             <SmallButton tone="slate" onClick={() => navigate(returnTo)}>
               Back
             </SmallButton>
@@ -1199,6 +1219,17 @@ export default function SboSettings() {
           {SETTINGS_SECTIONS[currentSectionIndex]?.label}
         </div>
       </div>
+      {!loading && business && activeBusinessId ? (
+        <SboSetupWizard
+          open={wizardOpen}
+          onClose={() => setWizardOpen(false)}
+          businessId={activeBusinessId}
+          business={business}
+          categories={categories}
+          onSaveBusiness={saveWizardBusiness}
+          onDone={finishWizard}
+        />
+      ) : null}
     </div>
   );
 }
