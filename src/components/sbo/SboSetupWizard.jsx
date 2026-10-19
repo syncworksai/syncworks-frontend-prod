@@ -350,8 +350,7 @@ export default function SboSetupWizard({
       { key: "basics", label: "1. Business Basics" },
       { key: "area", label: "2. Service Area" },
       { key: "services", label: "3. Services" },
-      { key: "goals", label: "4. Revenue + Goals" },
-      { key: "finish", label: "5. Finish" },
+      { key: "finish", label: "4. Activate" },
     ],
     []
   );
@@ -381,9 +380,6 @@ export default function SboSetupWizard({
   const [selectedServiceIds, setSelectedServiceIds] = useState([]);
   const [serviceQuery, setServiceQuery] = useState("");
 
-  const [oldDataStatus, setOldDataStatus] = useState("LATER");
-  const [baselineRevenue, setBaselineRevenue] = useState("");
-  const [targetRevenue, setTargetRevenue] = useState("");
 
   const serviceRows = useMemo(
     () => buildSelectableServiceGroups(categories),
@@ -459,9 +455,6 @@ export default function SboSetupWizard({
       : [];
     setSelectedServiceIds(localServices.length ? localServices : businessServiceIds);
 
-    setOldDataStatus(local.oldDataStatus || "LATER");
-    setBaselineRevenue(String(local.baselineRevenue || ""));
-    setTargetRevenue(String(local.targetRevenue || ""));
   }, [open, businessId, business]);
 
   if (!open) return null;
@@ -483,9 +476,6 @@ export default function SboSetupWizard({
       businessPresenceMode,
       acceptsMarketplace,
       selectedServices: selectedServiceIds,
-      oldDataStatus,
-      baselineRevenue,
-      targetRevenue,
       updatedAt: new Date().toISOString(),
     };
 
@@ -577,16 +567,6 @@ export default function SboSetupWizard({
       return saveBusinessStep(servicesPayload(), "Services saved.");
     }
 
-    if (currentStep === 3) {
-      persistLocal();
-      setError("");
-      setWarning(
-        "Revenue goals and import preference are stored locally until backend fields are added for them."
-      );
-      setSuccess("Revenue + goals snapshot saved.");
-      return true;
-    }
-
     return true;
   }
 
@@ -597,6 +577,22 @@ export default function SboSetupWizard({
   }
 
   async function handleFinish() {
+    if (!name.trim()) {
+      setError("Enter your business name first.");
+      setStep(0);
+      return;
+    }
+    if (!city.trim() || !/^\\d{5}$/.test(baseZip.trim()) || !normalizeStateCode(state) || (businessPresenceMode !== "online" && Number(radius || 0) <= 0)) {
+      setError("Finish your city, state, five-digit ZIP, and service area before activating.");
+      setStep(1);
+      return;
+    }
+    if (!selectedServiceIds.length) {
+      setError("Choose at least one service you offer.");
+      setStep(2);
+      return;
+    }
+
     const combinedPayload = {
       ...basicsPayload(),
       ...areaPayload(),
@@ -623,11 +619,9 @@ export default function SboSetupWizard({
     step === 0
       ? !!name.trim()
       : step === 1
-      ? !!baseZip.trim() && !!normalizeStateCode(state).trim()
+      ? !!city.trim() && /^\\d{5}$/.test(baseZip.trim()) && !!normalizeStateCode(state).trim() && (businessPresenceMode === "online" || Number(radius || 0) > 0)
       : step === 2
       ? selectedServiceIds.length > 0
-      : step === 3
-      ? true
       : true;
 
   return (
@@ -637,10 +631,10 @@ export default function SboSetupWizard({
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-3xl font-black tracking-tight text-white">
-                Business Setup Wizard
+                Set Up Your Business
               </div>
               <div className="mt-1 text-sm text-slate-400">
-                PowerPoint-style setup so SBOs can get market-ready fast.
+                Four short steps. Save as you go, then finish activation from your dashboard.
               </div>
             </div>
 
@@ -942,76 +936,31 @@ export default function SboSetupWizard({
 
           {step === 3 ? (
             <Card
-              title="Revenue + Goals"
-              subtitle="These values are saved locally right now so the setup can still feel complete."
-            >
-              <div className="grid gap-3 md:grid-cols-2">
-                <Input
-                  label="Baseline Monthly Revenue"
-                  value={baselineRevenue}
-                  onChange={setBaselineRevenue}
-                  type="number"
-                  placeholder="5000"
-                />
-                <Input
-                  label="Target Monthly Revenue"
-                  value={targetRevenue}
-                  onChange={setTargetRevenue}
-                  type="number"
-                  placeholder="10000"
-                />
-              </div>
-
-              <div className="mt-3">
-                <Select
-                  label="Import Old Data"
-                  value={oldDataStatus}
-                  onChange={setOldDataStatus}
-                  options={[
-                    { value: "LATER", label: "I’ll import later" },
-                    { value: "YES", label: "Yes, I want to import old data" },
-                    { value: "NONE", label: "No old data to import" },
-                  ]}
-                />
-              </div>
-
-              <div className="mt-4 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
-                Revenue goals and import preference are being saved locally in the browser
-                until backend fields are added for them.
-              </div>
-            </Card>
-          ) : null}
-
-          {step === 4 ? (
-            <Card
-              title="Finish Setup"
-              subtitle="This business is almost ready to operate inside SyncWorks."
+              title="You're almost ready"
+              subtitle="We will save your business profile now. Payments and the catalog are the last two activation tasks."
             >
               <div className="grid gap-4 lg:grid-cols-2">
                 <div className="rounded-3xl border border-fuchsia-500/25 bg-slate-950/65 p-4">
-                  <div className="text-2xl font-black text-slate-100">What is saved now</div>
+                  <div className="text-xl font-black text-slate-100">Saved when you finish</div>
                   <ul className="mt-4 space-y-3 text-sm text-slate-300">
-                    <li>• Business basics</li>
-                    <li>• Service area</li>
-                    <li>• Marketplace status</li>
-                    <li>• Broad service types selected</li>
+                    <li>• Business contact details</li>
+                    <li>• City, state, ZIP and service area</li>
+                    <li>• {selectedServiceIds.length} service type(s) for matching</li>
+                    <li>• Marketplace requests {acceptsMarketplace ? "enabled" : "paused"}</li>
                   </ul>
                 </div>
 
                 <div className="rounded-3xl border border-cyan-500/25 bg-slate-950/65 p-4">
-                  <div className="text-2xl font-black text-slate-100">Setup snapshot</div>
-                  <ul className="mt-4 space-y-3 text-sm text-slate-300">
-                    <li>• {selectedServiceIds.length} service type(s) selected</li>
-                    <li>
-                      • Baseline revenue{" "}
-                      {baselineRevenue ? `$${Number(baselineRevenue || 0).toLocaleString()}` : "not set"}
-                    </li>
-                    <li>
-                      • Revenue goal{" "}
-                      {targetRevenue ? `$${Number(targetRevenue || 0).toLocaleString()}` : "not set"}
-                    </li>
-                    <li>• Import preference: {oldDataStatus || "LATER"}</li>
-                  </ul>
+                  <div className="text-xl font-black text-slate-100">Next: activate your business</div>
+                  <ol className="mt-4 space-y-3 text-sm text-slate-300">
+                    <li>1. Connect Stripe payouts in Finance if you will accept online payments.</li>
+                    <li>2. Add a priced service in your Catalog.</li>
+                    <li>3. Check Business readiness on your dashboard.</li>
+                    <li>4. Test a customer request, invoice and payment before launch.</li>
+                  </ol>
+                  <p className="mt-4 text-xs leading-5 text-cyan-200">
+                    Finishing this step saves your profile; it does not claim payment activation or guarantee new leads.
+                  </p>
                 </div>
               </div>
             </Card>
