@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ArrowRight, Building2, CheckCircle2, ClipboardList, Mail, Plus, RefreshCw,
-  Send, CalendarClock, Phone, Target, X,
+  Building2, CheckCircle2, ClipboardList, Mail, Plus, RefreshCw, Send, X,
 } from "lucide-react";
 import api from "../../api/client";
 
@@ -127,6 +126,16 @@ export default function GodModeProspects() {
     } catch (e) { setError(errorText(e, "Unable to log activity.")); }
     finally { setBusy(""); }
   }
+  async function copyLink() {
+    if (!selected?.signup_url) return;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard not available");
+      await navigator.clipboard.writeText(selected.signup_url);
+      setMessage("Signup link copied. No invitation has been sent.");
+    } catch {
+      setError("Clipboard unavailable. Use the Send invitation action or copy the URL from the prospect ticket.");
+    }
+  }
   function changeDraft(key, value) { setDraft((old) => ({...old, [key]: value})); }
 
   return (
@@ -186,7 +195,7 @@ export default function GodModeProspects() {
               <Field label="Business needs"><input key={selected.id+"needs"} defaultValue={(selected.interests || []).join(", ")} placeholder="Scheduling, dispatch, route planning..." className={inputClass} onBlur={(e) => {const next=e.target.value.split(",").map((v)=>v.trim()).filter(Boolean);if(JSON.stringify(next)!==JSON.stringify(selected.interests||[]))patchProspect({interests:next});}}/></Field>
               <div className="flex flex-wrap gap-2">
                 <button type="button" disabled={!!busy || !selected.email} onClick={sendInvite} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-3 text-sm font-black text-slate-950 disabled:opacity-40"><Send className="h-4 w-4"/> Send invitation</button>
-                <button type="button" onClick={() => navigator.clipboard?.writeText(selected.signup_url || "")} disabled={!selected.email} className={btn}><Mail className="h-4 w-4"/> Copy link</button>
+                <button type="button" onClick={copyLink} disabled={!selected.email} className={btn}><Mail className="h-4 w-4"/> Copy link</button>
               </div>
               <div className="text-xs leading-5 text-slate-400">Signed up: <b className="text-white">{selected.signed_up ? "Yes, verified account" : "Not yet confirmed"}</b> · Last invitation: {formatDate(selected.last_invited_at)}. Email sending records provider acceptance, not inbox delivery or open tracking.</div>
               <div className="border-t border-slate-800 pt-3">
