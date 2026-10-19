@@ -13,12 +13,14 @@ import NewsReelManager from "../components/platform/NewsReelManager";
 import SupportRequestsManager from "../components/platform/SupportRequestsManager";
 import AdsOrdersManager from "../components/platform/AdsOrdersManager";
 import GodModeAffiliates from "./platform/GodModeAffiliates";
+import GodModeProspects from "./platform/GodModeProspects";
 
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "growth_os", label: "Growth OS" },
   { id: "users", label: "Users" },
   { id: "businesses", label: "Businesses" },
+  { id: "prospects", label: "Prospects" },
   { id: "billing", label: "Billing" },
   { id: "requests", label: "Requests" },
   { id: "ads", label: "Ads Orders" },
@@ -1458,6 +1460,7 @@ export default function PlatformDashboard() {
         {tab === "growth_os" ? <PlatformGrowthEngineTab /> : null}
         {tab === "users" ? <UsersManager /> : null}
         {tab === "businesses" ? <BusinessesManager /> : null}
+        {tab === "prospects" ? <GodModeProspects /> : null}
         {tab === "billing" ? <BillingManager /> : null}
         {tab === "requests" ? <SupportRequestsManager embedded /> : null}
         {tab === "ads" ? <AdsOrdersManager /> : null}
