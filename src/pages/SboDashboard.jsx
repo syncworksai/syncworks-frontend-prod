@@ -460,6 +460,8 @@ export default function SboDashboard() {
   const [kpiRows, setKpiRows] = useState([]);
   const [ticketRows, setTicketRows] = useState([]);
   const [billingStatus, setBillingStatus] = useState(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+  const [connectStatus, setConnectStatus] = useState(null);
   const [catalogRows, setCatalogRows] = useState([]);
   const [localBaseline, setLocalBaseline] = useState({});
 
@@ -483,12 +485,14 @@ export default function SboDashboard() {
     setErr("");
 
     try {
-      const [kpiRes, ticketsRes, billingRes, catalogRes] =
+      const [kpiRes, ticketsRes, billingRes, catalogRes, subscriptionRes, connectRes] =
         await Promise.allSettled([
           api.get("/kpis/business/", { params: { days: 30 } }),
           api.get("/tickets/"),
           api.get("/billing/status/"),
           api.get("/service-catalog/", { params: { active_only: true } }),
+          api.get("/billing/subscription/status/"),
+          api.get("/connect/express/status/"),
         ]);
 
       setKpiRows(kpiRes.status === "fulfilled" ? safeList(kpiRes.value?.data) : []);
@@ -503,6 +507,8 @@ export default function SboDashboard() {
           ? safeList(catalogRes.value?.data)
           : []
       );
+      setSubscriptionStatus(subscriptionRes.status === "fulfilled" ? subscriptionRes.value?.data || null : null);
+      setConnectStatus(connectRes.status === "fulfilled" ? connectRes.value?.data || null : null);
 
       try {
         const saved = JSON.parse(localStorage.getItem(baselineKey(activeBusinessId)) || "{}");
@@ -580,11 +586,16 @@ export default function SboDashboard() {
     const businessPresenceMode = String(
       biz?.business_presence_mode || ""
     ).trim();
-    const stripeConnected = !!(
+    const subscriptionActive = !!subscriptionStatus?.subscription_active;
+    const billingMethodReady = !!(
       billingStatus?.stripe_setup_complete ||
-      billingStatus?.stripe_connected ||
-      billingStatus?.connect_onboarding_complete ||
-      billingStatus?.charges_enabled
+      billingStatus?.has_payment_method ||
+      billingStatus?.payment_method_ready
+    );
+    const stripeConnected = !!(
+      connectStatus?.onboarding_completed &&
+      connectStatus?.charges_enabled &&
+      connectStatus?.payouts_enabled
     );
     const catalogReady = catalogRows.length > 0;
 
@@ -593,6 +604,8 @@ export default function SboDashboard() {
       hasZip: !!baseZip,
       hasRadius: businessPresenceMode === "online" ? true : radius > 0,
       acceptsMarketplace,
+      subscriptionActive,
+      billingMethodReady,
       stripeConnected,
       catalogReady,
       servicesCount: servicesOffered.length,
@@ -601,7 +614,7 @@ export default function SboDashboard() {
       isOnline: businessPresenceMode === "online",
       catalogCount: catalogRows.length,
     };
-  }, [activeBusiness, billingStatus, catalogRows]);
+  }, [activeBusiness, billingStatus, subscriptionStatus, connectStatus, catalogRows]);
 
   function openSettingsSection(section, extra = "") {
     const qs = new URLSearchParams();
