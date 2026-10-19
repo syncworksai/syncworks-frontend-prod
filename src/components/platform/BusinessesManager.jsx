@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Clock3, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
 import api from "../../api/client";
+import { useNavigate } from "react-router-dom";
 
 const CHECK_LABELS = {
   email: "Email",
@@ -116,6 +117,7 @@ function VerificationQueue() {
 }
 
 export default function BusinessesManager() {
+  const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [items, setItems] = useState([]);
   const [msg, setMsg] = useState("");
@@ -172,7 +174,7 @@ export default function BusinessesManager() {
             <div key={b.id} className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <div><div className="font-semibold">{b.name}</div><div className="mt-1 text-xs text-slate-500">Members: {b.members_count ?? "-"} • Card: <b>{b.stripe_setup_complete ? "Yes" : "No"}</b> • Locked: <b className={b.is_locked ? "text-rose-300" : "text-emerald-300"}>{b.is_locked ? "Yes" : "No"}</b>{b.lock_reason ? <span> • {b.lock_reason}</span> : null}</div>{(b.next_due_date || b.grace_until) ? <div className="mt-1 text-xs text-slate-500">Due: {b.next_due_date || "-"} • Grace: {b.grace_until || "-"}</div> : null}</div>
-                <div className="flex flex-wrap gap-2"><button className="rounded-xl border border-indigo-500/40 bg-indigo-500/20 px-3 py-2 text-xs hover:bg-indigo-500/30" onClick={() => message(b.id)}>Message</button>{!b.is_locked ? <button className="rounded-xl border border-rose-500/40 bg-rose-500/20 px-3 py-2 text-xs hover:bg-rose-500/30" onClick={() => lock(b.id)}>Lock</button> : <button className="rounded-xl border border-emerald-500/40 bg-emerald-500/20 px-3 py-2 text-xs hover:bg-emerald-500/30" onClick={() => unlock(b.id)}>Unlock</button>}</div>
+                <div className="flex flex-wrap gap-2"><button className="rounded-xl border border-cyan-500/40 bg-cyan-500/20 px-3 py-2 text-xs hover:bg-cyan-500/30" onClick={() => navigate(`/platform/business-assist?support_business=${b.id}`)}>Assist / Add Ticket</button><button className="rounded-xl border border-violet-500/40 bg-violet-500/20 px-3 py-2 text-xs hover:bg-violet-500/30" onClick={() => navigate(`/platform/business-tech-board?support_business=${b.id}`)}>View Tech Board</button><button className="rounded-xl border border-indigo-500/40 bg-indigo-500/20 px-3 py-2 text-xs hover:bg-indigo-500/30" onClick={() => message(b.id)}>Message</button>{!b.is_locked ? <button className="rounded-xl border border-rose-500/40 bg-rose-500/20 px-3 py-2 text-xs hover:bg-rose-500/30" onClick={() => lock(b.id)}>Lock</button> : <button className="rounded-xl border border-emerald-500/40 bg-emerald-500/20 px-3 py-2 text-xs hover:bg-emerald-500/30" onClick={() => unlock(b.id)}>Unlock</button>}</div>
               </div>
             </div>
           ))}
