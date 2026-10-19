@@ -34,7 +34,7 @@ export default function BusinessQuickIntake(){
   const matches=useMemo(()=>customers.filter(c=>[c.name,c.phone,c.email].join(" ").toLowerCase().includes(search.toLowerCase())).slice(0,6),[customers,search]);
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   function choose(c){setForm(f=>({...f,customer_name:c.name||"",phone:c.phone||"",email:c.email||"",service_address:c.service_address||""}));setSearch("");}
-  async function submit(e){e.preventDefault();setSaving(true);setError("");setSuccess(null);
+  async function submit(e){e.preventDefault();setError("");setSuccess(null);if(![form.customer_name,form.phone,form.email].some(x=>String(x||"").trim())){setError("Enter a customer name, phone number, or email before creating a ticket.");return;}setSaving(true);
     try{
       const body={...form,assigned_member_id:form.assigned_member_id?Number(form.assigned_member_id):null,scheduled_start:form.scheduled_start?new Date(form.scheduled_start).toISOString():null};
       const res=await api.post(`${base}/quick-intake/`,body,supportMode?{}:{headers:{"X-Business-Id":businessId}});
