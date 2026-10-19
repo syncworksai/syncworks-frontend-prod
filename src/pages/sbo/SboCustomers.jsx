@@ -5,7 +5,7 @@ import DashboardShell from "../../components/dashboard/DashboardShell";
 
 const field="min-h-10 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 text-sm text-white";
 const blank={name:"",email:"",phone:"",service_address:"",city:"",state:"",service_zip:""};
-const cols=[["name","Customer"],["phone","Phone"],["email","Email"],["service_address","Address"],["ticket_count","Jobs"],["completed_ticket_count","Completed"],["lifetime_revenue","Paid revenue"]];
+const cols=[["name","Customer"],["phone","Phone"],["email","Email"],["service_address","Address"],["ticket_count","Jobs"],["completed_ticket_count","Completed"],["lifetime_revenue","Lifetime revenue"]];
 const errorText=e=>e?.response?.data?.detail||JSON.stringify(e?.response?.data||{})||e?.message||"Request failed";
 export default function SboCustomers(){
  const navigate=useNavigate(),[rows,setRows]=useState([]),[query,setQuery]=useState(""),[loading,setLoading]=useState(true),[error,setError]=useState(""),[editing,setEditing]=useState(null),[draft,setDraft]=useState(blank),[saving,setSaving]=useState(false),[sort,setSort]=useState("name"),[desc,setDesc]=useState(false);
