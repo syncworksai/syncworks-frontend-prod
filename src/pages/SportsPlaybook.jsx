@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import THE_WAY_WE_PLAY_COVER from "../assets/theWayWePlayCover";
+import DefensiveZonePlaybook from "./DefensiveZonePlaybook";
 
 const pages = [
   {
@@ -394,6 +395,7 @@ function ReaderPage({ page }) {
 }
 
 export default function SportsPlaybook({ group, groupId, onClose }) {
+  const [coverageOpen, setCoverageOpen] = useState(false);
   const storageKey = `sw_way_we_play_${groupId}_page`;
   const [pageIndex, setPageIndex] = useState(() => {
     const saved = Number(localStorage.getItem(storageKey));
@@ -480,6 +482,7 @@ export default function SportsPlaybook({ group, groupId, onClose }) {
             <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-[.16em] text-cyan-300"><Lock className="h-3 w-3" />Team only · {group?.name || "Team"}</div>
             <div className="mt-0.5 truncate text-xs font-black text-white">{currentLabel}</div>
           </div>
+          <button type="button" onClick={() => setCoverageOpen(value => !value)} className={cx("min-h-10 rounded-xl border px-3 text-[10px] font-black", coverageOpen ? "border-amber-300 bg-amber-300 text-slate-950" : "border-amber-300/30 bg-amber-300/10 text-amber-100")}>{coverageOpen ? "Read book" : "Coverage Lab"}</button>
           <button type="button" onClick={() => setTocOpen(true)} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[.035]" aria-label="Table of contents"><List className="h-4 w-4" /></button>
           <button type="button" onClick={sharePlaybook} className="grid h-10 w-10 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/[.07] text-cyan-100" aria-label="Share playbook"><Share2 className="h-4 w-4" /></button>
         </div>
@@ -487,6 +490,7 @@ export default function SportsPlaybook({ group, groupId, onClose }) {
       </header>
 
       <main className="mx-auto max-w-5xl px-3 py-4 sm:px-5">
+        {coverageOpen ? <DefensiveZonePlaybook /> : <>
         <section className="relative overflow-hidden rounded-[1.65rem] border border-white/10 bg-[radial-gradient(circle_at_75%_0%,rgba(34,211,238,.08),transparent_30%),linear-gradient(145deg,#07111f,#050a12)] shadow-2xl">
           {pageIndex === 0 ? (
             <div className="relative min-h-[69dvh]">
@@ -509,6 +513,7 @@ export default function SportsPlaybook({ group, groupId, onClose }) {
           <button type="button" disabled={pageIndex === total - 1} onClick={() => changePage(pageIndex + 1)} className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-cyan-300 text-xs font-black text-slate-950 disabled:opacity-30">Next<ChevronRight className="h-4 w-4" /></button>
         </div>
         <div className="mt-3 flex items-center justify-center gap-2 text-[9px] text-slate-600"><span>Swipe pages on mobile</span><span>·</span><button type="button" onClick={copyPlaybook} className="inline-flex items-center gap-1 font-black text-slate-400"><Copy className="h-3 w-3" />Copy team link</button></div>
+        </>}
       </main>
 
       {shareStatus ? <div className="fixed bottom-[calc(5.3rem+env(safe-area-inset-bottom))] left-1/2 z-[90] -translate-x-1/2 rounded-full border border-cyan-300/20 bg-[#07111f] px-4 py-2 text-[10px] font-black text-cyan-100 shadow-2xl">{shareStatus}</div> : null}
