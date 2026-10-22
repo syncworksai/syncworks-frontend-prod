@@ -196,7 +196,7 @@ export default function SportsTeamDashboard() {
 
       {coachBoxOpen && isCoach ? <div className="fixed inset-0 z-[700] bg-black/75 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) setCoachBoxOpen(false); }}>
         <aside className="absolute inset-y-0 right-0 w-full overflow-y-auto border-l border-violet-300/20 bg-[#02060c] shadow-[-24px_0_70px_rgba(0,0,0,.5)] sm:max-w-[1100px]">
-          <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-white/10 bg-[#02060c]/95 px-3 py-2.5 backdrop-blur-xl sm:px-4">
+          <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-white/10 bg-[#02060c]/95 px-3 pb-2.5 pt-[max(3.75rem,env(safe-area-inset-top))] backdrop-blur-xl sm:px-4 sm:pt-3">
             <div className="flex min-w-0 items-center gap-2.5"><div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-violet-300/20 bg-violet-300/10 text-violet-200"><Users className="h-4 w-4" /></div><div className="min-w-0"><div className="text-[7px] font-black uppercase tracking-[.16em] text-violet-300">Coach only</div><div className="truncate text-sm font-black text-white">Coach Box · {group?.name || "Team"}</div></div></div>
             <button type="button" onClick={() => setCoachBoxOpen(false)} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[.035] text-slate-300" aria-label="Close Coach Box"><X className="h-4 w-4" /></button>
           </div>
