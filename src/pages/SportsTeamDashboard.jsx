@@ -164,7 +164,7 @@ export default function SportsTeamDashboard() {
     if (readingAnalytics) {
       return <WayAnalyticsPanel team={team} group={group} onClose={() => navigate(teamPath, { replace: true })} />;
     }
-    return <SportsPlaybook group={group} groupId={groupId} onClose={() => navigate(teamPath, { replace: true })} />;
+    return <SportsPlaybook group={group} groupId={groupId} canCoach={isCoach} coachId={user?.id} onClose={() => navigate(teamPath, { replace: true })} />;
   }
 
   const dashboard = MANAGEMENT_ROLES.has(membership?.role)
