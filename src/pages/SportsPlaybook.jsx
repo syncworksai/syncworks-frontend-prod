@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 
 import THE_WAY_WE_PLAY_COVER from "../assets/theWayWePlayCover";
-import DefensiveZonePlaybook from "./DefensiveZonePlaybook";
+import DefensiveScenarioStudio from "./DefensiveScenarioStudio";
 
 const pages = [
   {
@@ -490,7 +490,7 @@ export default function SportsPlaybook({ group, groupId, onClose }) {
       </header>
 
       <main className="mx-auto max-w-5xl px-3 py-4 sm:px-5">
-        {coverageOpen ? <DefensiveZonePlaybook /> : <>
+        {coverageOpen ? <DefensiveScenarioStudio /> : <>
         <section className="relative overflow-hidden rounded-[1.65rem] border border-white/10 bg-[radial-gradient(circle_at_75%_0%,rgba(34,211,238,.08),transparent_30%),linear-gradient(145deg,#07111f,#050a12)] shadow-2xl">
           {pageIndex === 0 ? (
             <div className="relative min-h-[69dvh]">
