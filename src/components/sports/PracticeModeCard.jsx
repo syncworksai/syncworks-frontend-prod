@@ -22,7 +22,7 @@ const BASES=[
 
 function Stat({label,value,sub}){return <div className="rounded-xl border border-white/10 bg-black/20 p-2"><div className="text-[7px] font-black uppercase tracking-wide text-slate-500">{label}</div><div className="mt-1 text-lg font-black text-white">{value}</div>{sub?<div className="text-[8px] text-slate-500">{sub}</div>:null}</div>;}
 
-export default function PracticeModeCard({teamId,playerId="",players=[],managerView=false}){
+export default function PracticeModeCard({teamId,playerId="",players=[],managerView=false,resultsOnly=false}){
   const [selectedPlayer,setSelectedPlayer]=useState(playerId?String(playerId):"");
   const [sessions,setSessions]=useState([]);
   const [summary,setSummary]=useState(null);
@@ -33,6 +33,7 @@ export default function PracticeModeCard({teamId,playerId="",players=[],managerV
   const [rep,setRep]=useState({objective:"QUALITY_AB",outs_before:0,base_state:"",result:"1B",runners_advanced:0,rbi:0,successful:true,notes:""});
 
   const effectivePlayer=selectedPlayer||String(playerId||"");
+  const qabStats=useMemo(()=>{const rows=summary?.objectives||[];const attempts=rows.reduce((a,r)=>a+Number(r.practice_attempts||0),0);const wins=rows.reduce((a,r)=>a+(Number(r.practice_rate)||0)*Number(r.practice_attempts||0),0);return {attempts,rate:attempts?Math.round(wins/attempts*100):null};},[summary]);
   const recent=useMemo(()=>sessions.find((row)=>String(row.id)===String(activeSession?.id))||activeSession,[sessions,activeSession]);
 
   async function refresh(target=effectivePlayer){
@@ -91,7 +92,7 @@ export default function PracticeModeCard({teamId,playerId="",players=[],managerV
 
   return <section className="space-y-3 rounded-[1.45rem] border border-emerald-300/15 bg-[radial-gradient(circle_at_top_right,rgba(52,211,153,.08),transparent_38%),#07111f] p-3.5">
     <div className="flex items-start justify-between gap-3">
-      <div><div className="flex items-center gap-2 text-sm font-black text-white"><Target className="h-4 w-4 text-emerald-300"/>Practice mode</div><p className="mt-1 text-[10px] leading-4 text-slate-400">Log BP and “situations” reps using the same context as the live Game Book, then compare practice success to game performance.</p></div>
+      <div><div className="flex items-center gap-2 text-sm font-black text-white"><Target className="h-4 w-4 text-emerald-300"/>{resultsOnly?"Batting practice results":"Batting practice / QAB"}</div><p className="mt-1 text-[10px] leading-4 text-slate-400">Log BP and “situations” reps using the same context as the live Game Book, then compare practice success to game performance.</p></div>
       <Activity className="h-5 w-5 text-cyan-300"/>
     </div>
 
@@ -105,22 +106,23 @@ export default function PracticeModeCard({teamId,playerId="",players=[],managerV
     {notice?<div className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-2 text-[10px] text-emerald-100">{notice}</div>:null}
 
     {effectivePlayer&&summary?<>
-      <div className="grid grid-cols-4 gap-1.5">
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
         <Stat label="Practice AVG" value={pct(summary.practice?.avg)} sub={summary.practice?.reps+" reps"}/>
         <Stat label="Live AVG" value={pct(summary.live?.avg)} sub={summary.live?.pa+" tracked PA"}/>
         <Stat label="BP 2-out" value={pct(summary.practice?.two_out_avg)} sub={summary.practice?.two_out_reps+" reps"}/>
         <Stat label="Live 2-out" value={pct(summary.live?.two_out_avg)} sub={summary.live?.two_out_pa+" PA"}/>
+        <Stat label="QAB / goal rate" value={qabStats.rate===null?"—":qabStats.rate+"%"} sub={qabStats.attempts+" objective attempts"}/>
       </div>
 
       {(summary.recommendations||[]).length?<div className="rounded-xl border border-amber-300/20 bg-amber-300/[.05] p-3"><div className="text-[8px] font-black uppercase tracking-wide text-amber-300">Training recommendations</div><div className="mt-2 space-y-2">{summary.recommendations.map((row,index)=><div key={index} className="rounded-lg border border-white/10 bg-black/15 p-2"><b className="text-[10px] text-white">{row.title}</b><div className="mt-0.5 text-[9px] leading-4 text-slate-400">{row.reason}</div></div>)}</div></div>:null}
 
       <div className="overflow-x-auto rounded-xl border border-white/10"><table className="min-w-[760px] w-full text-[9px]"><thead className="bg-white/[.035] text-slate-500"><tr><th className="p-2 text-left">SITUATION</th><th>BP ATT</th><th>BP AVG</th><th>BP SUCCESS</th><th>GAME ATT</th><th>GAME AVG</th><th>GAME SUCCESS</th></tr></thead><tbody>{(summary.objectives||[]).map((row)=><tr key={row.key} className="border-t border-white/10"><td className="p-2 font-black text-white">{row.label}</td><td className="text-center">{row.practice_attempts}</td><td className="text-center font-black text-cyan-100">{pct(row.practice_avg)}</td><td className="text-center">{row.practice_rate==null?"—":Math.round(row.practice_rate*100)+"%"}</td><td className="text-center">{row.live_attempts}</td><td className="text-center font-black text-amber-100">{pct(row.live_avg)}</td><td className="text-center">{row.live_rate==null?"—":Math.round(row.live_rate*100)+"%"}</td></tr>)}</tbody></table></div>
-      <div className="text-[8px] leading-4 text-slate-600">{summary.tracking_note}</div>
+      <div className="text-[8px] leading-4 text-slate-600">{summary.tracking_note} QAB/goal rate represents situational-objective success, not batting average or official at-bats.</div>
     </>:effectivePlayer&&!busy?<div className="rounded-xl border border-dashed border-white/10 p-4 text-center text-[10px] text-slate-500">Start the first BP session to build practice history.</div>:null}
 
-    {effectivePlayer?<div className="grid grid-cols-2 gap-2"><button type="button" disabled={busy} onClick={()=>startSession("BP")} className="min-h-11 rounded-xl border border-cyan-300/25 bg-cyan-300/10 text-[10px] font-black text-cyan-100"><Plus className="mr-1 inline h-4 w-4"/>New BP</button><button type="button" disabled={busy} onClick={()=>startSession("SITUATIONS")} className="min-h-11 rounded-xl bg-emerald-300 text-[10px] font-black text-slate-950"><Crosshair className="mr-1 inline h-4 w-4"/>Situations</button></div>:null}
+    {!resultsOnly&&effectivePlayer?<div className="grid grid-cols-2 gap-2"><button type="button" disabled={busy} onClick={()=>startSession("BP")} className="min-h-11 rounded-xl border border-cyan-300/25 bg-cyan-300/10 text-[10px] font-black text-cyan-100"><Plus className="mr-1 inline h-4 w-4"/>New BP</button><button type="button" disabled={busy} onClick={()=>startSession("SITUATIONS")} className="min-h-11 rounded-xl bg-emerald-300 text-[10px] font-black text-slate-950"><Crosshair className="mr-1 inline h-4 w-4"/>Situations</button></div>:null}
 
-    {recent?<div className="rounded-xl border border-emerald-300/15 bg-black/15 p-3">
+    {!resultsOnly&&recent?<div className="rounded-xl border border-emerald-300/15 bg-black/15 p-3">
       <div className="flex items-center justify-between gap-2"><div><div className="text-[8px] font-black uppercase tracking-wide text-emerald-300">Active / recent session</div><b className="text-xs text-white">{recent.title||recent.kind}</b></div><span className="rounded-full border border-white/10 px-2 py-1 text-[8px] text-slate-400">{recent.rep_count||recent.reps?.length||0} reps</span></div>
       <div className="mt-3 grid grid-cols-2 gap-2">
         <label className="text-[8px] font-black uppercase text-slate-500">Objective<select value={rep.objective} onChange={(e)=>setRep({...rep,objective:e.target.value})} className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#050b14] px-2 text-xs text-white">{OBJECTIVES.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
