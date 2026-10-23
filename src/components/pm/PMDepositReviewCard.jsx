@@ -6,7 +6,7 @@ const input="min-h-9 w-full rounded-lg border border-slate-700 bg-slate-950 px-2
 export default function PMDepositReviewCard({tenantId,tenant,workspaceId,depositStatus}){
  const review=depositStatus?.deposit_review||null;
  const special=Boolean(
-  String(tenant?.last_name||"").toLowerCase()==="english"&&
+  String(tenant?.last_name||tenant?.full_name||"").toLowerCase().includes("english")&&
   String(tenant?.property_name||"").toLowerCase().includes("roxana")
  );
  const [form,setForm]=useState({paperwork_amount:"",reported_transfer_amount:"",description:"",source_note:""});
