@@ -150,12 +150,18 @@ export default function PropertyManagerDashboard() {
     finally { setLoading(false); }
   }
   useEffect(() => { load(); }, []);
-  useEffect(() => { if (!data?.workspace?.id) return; let active=true;
-    api.get("/pm-hub/properties/",{headers:{"X-PM-Workspace-ID":String(data.workspace.id)}})
-      .then(r=>{if(active)setAllProperties(list(r.data));})
-      .catch(()=>{if(active)setAllProperties([]);});
-    return ()=>{active=false;};
-  },[data?.workspace?.id]);
+  useEffect(() => {
+    if (!data?.workspace?.id) return undefined;
+    let active=true;
+    const timer=window.setTimeout(()=>{
+      api.get("/pm-hub/properties/search/",{
+        headers:{"X-PM-Workspace-ID":String(data.workspace.id)},
+        params:{q:propertySearch.trim()},
+      }).then(r=>{if(active)setAllProperties(r.data.matches||[]);})
+        .catch(()=>{if(active)setAllProperties([]);});
+    },propertySearch?180:0);
+    return ()=>{active=false;window.clearTimeout(timer);};
+  },[data?.workspace?.id,propertySearch]);
 
 
   // Property records and tenant-account names are separate entities; never invent a property record.
@@ -201,7 +207,7 @@ export default function PropertyManagerDashboard() {
   const firstProperty = data?.properties?.[0];
   const operationCounts = data?.operations_summary || {};
   const priorityItems = data?.priority_queue || [];
-  const matchingProperties = allProperties.filter(p => [p.name,p.address,p.city].some(v => String(v||"").toLowerCase().includes(propertySearch.trim().toLowerCase())));
+  const matchingProperties = allProperties;
   const chartData = useMemo(() => (financials.monthly || []).map((item) => ({ ...item, charges: Number(item.charges || 0), payments: Number(item.payments || 0) })), [financials.monthly]);
   const occupancyData = useMemo(() => [{ name: "Occupied", value: Number(kpis.occupied_units || 0) }, { name: "Available", value: Math.max(0, Number(kpis.units || 0) - Number(kpis.occupied_units || 0)) }], [kpis.occupied_units, kpis.units]);
   const nonZeroAttention = (data?.attention || []).filter((item) => Number(item.count) > 0);
