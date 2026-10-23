@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   getTenantPortalAccount,
   getTenantPortalCommunications,
+  getTenantDocumentRequests,
   sendTenantMaintenanceRequest,
   sendTenantPortalMessage,
 } from "../api/pmTenantPortal";
@@ -87,6 +88,7 @@ export default function TenantDashboard() {
   const [maintenanceOpen, setMaintenanceOpen] = useState(false);
   const [messageForm, setMessageForm] = useState(emptyMessage);
   const [maintenanceForm, setMaintenanceForm] = useState(emptyMaintenance);
+  const [documentActions, setDocumentActions] = useState([]);
 
   const applyPortalResults = useCallback(([accountResult, portalResult]) => {
     if (accountResult.status === "fulfilled") {
@@ -111,6 +113,7 @@ export default function TenantDashboard() {
     setLoading(true);
     setError("");
     applyPortalResults(await requestTenantPortalData());
+    try { const d=await getTenantDocumentRequests(); setDocumentActions(d.requests || []); } catch { setDocumentActions([]); }
   }, [applyPortalResults]);
 
   useEffect(() => {
@@ -122,6 +125,8 @@ export default function TenantDashboard() {
       active = false;
     };
   }, [applyPortalResults]);
+
+  useEffect(() => { let mounted=true; getTenantDocumentRequests().then(d=>{if(mounted)setDocumentActions(d.requests||[]);}).catch(()=>{if(mounted)setDocumentActions([]);}); return ()=>{mounted=false;}; }, []);
 
   async function sendMessage(event) {
     event.preventDefault();
@@ -249,6 +254,16 @@ export default function TenantDashboard() {
               </Card>
             </div>
 
+            {documentActions.length ? <Card title="Required Documents & Actions" subtitle="What your property manager needs from you">
+              <div className="grid gap-2 sm:grid-cols-2">{documentActions.filter(x=>!["VERIFIED","CANCELED"].includes(x.status)).map(action=><article key={action.id} className="rounded-xl border border-cyan-400/20 bg-black/25 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-1"><div className="text-xs font-black text-white">{action.title}</div><Pill tone="blue">{label(action.status)}</Pill></div>
+                <p className="mt-1 text-[11px] text-slate-300">{action.instructions || "Contact management for instructions."}</p>
+                <p className="mt-2 text-[10px] text-slate-400">{action.due_date ? `Requested by ${fmtDate(action.due_date)} · ` : ""}{label(action.action)}</p>
+                <button type="button" onClick={()=>{setMessageForm({subject:`Document request: ${action.title}`,body:`Regarding your document request #${action.id}: `});setMessageOpen(true);}} className="mt-2 min-h-9 rounded-lg border border-cyan-400/35 px-3 text-[11px] font-bold text-cyan-100">Message management</button>
+              </article>)}</div>
+              {!documentActions.some(x=>!["VERIFIED","CANCELED"].includes(x.status))?<p className="text-xs text-emerald-200">No open document requests.</p>:null}
+              <p className="mt-3 text-[10px] text-slate-500">For an official signature, request the approved secure signing method from property management. The portal does not yet capture electronic signatures.</p>
+            </Card> : null}
             <div className="mt-4 grid gap-4 lg:grid-cols-[1.35fr_.65fr]">
               <Card title="Tenant Ledger" subtitle="Charges, payments, credits, and adjustments recorded by management" right={<Pill>{ledger.length} entries</Pill>}>
                 {ledger.length ? <div className="space-y-3">{ledger.map((entry) => {
