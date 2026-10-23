@@ -11,7 +11,9 @@ const fundingKinds = [["NONE","No rental assistance"],["HOUSING_VOUCHER","Housin
 const evidenceStates = [["UNKNOWN","Unknown"],["REPORTED","Reported"],["DOCUMENTED","Documented"],["DISPUTED","Disputed"],["RECONCILED","Reconciled"]];
 const balanceKinds = [["TENANT_AR","Tenant outstanding rent / fees"],["ASSISTANCE_AR","Assistance administrator receivable"],["FORMER_MANAGER_FUNDS","Funds held by prior manager"],["SECURITY_DEPOSIT","Security deposit / escrow"],["PREPAID_RENT","Prepaid rent"],["REPAIR_ADVANCE","Repair advance balance"],["OTHER","Other"]];
 const taskStates = [["NOT_STARTED","Not started"],["REQUESTED","Requested"],["RECEIVED","Received"],["VERIFIED","Verified"],["NOT_APPLICABLE","Not applicable"]];
-const segments = [["setup","1. Setup"],["documents","2. Documents"],["balances","3. Money"],["review","4. Review"]];
+const segments = [["setup","Setup"],["people","People"],["documents","Docs"],["balances","Money"],["rent","Rent"],["review","Review"]];
+const channelKinds = [["DIRECT","Direct / traditional lease"],["FURNISHED_FINDER","Furnished Finder / mid-term"],["CORPORATE","Corporate housing"],["OTHER","Other source"]];
+const managerKinds = [["OWNER_MANAGED","Owner managed"],["THIRD_PARTY_MANAGER","Managed for an owner"]];
 const errorMessage = (error) => error?.response?.data?.detail || "Could not save these details.";
 const initialBalance = () => ({id: String(Date.now()) + String(Math.random()).slice(2,6),type:"TENANT_AR",amount:"",period:"",counterparty:"",evidence_status:"UNKNOWN",source_note:""});
 
@@ -33,6 +35,13 @@ function PMHandoffWizardContent(){
   const [checklist,setChecklist]=useState([]);
   const [progress,setProgress]=useState({completed:0,total:0});
   const [documents,setDocuments]=useState([]);
+  const [tenants,setTenants]=useState([]);
+  const [owners,setOwners]=useState([]);
+  const [tenantForm,setTenantForm]=useState({first_name:"",last_name:"",email:"",phone:""});
+  const [ownerForm,setOwnerForm]=useState({name:"",email:"",phone:""});
+  const [intakeDocumentId,setIntakeDocumentId]=useState("");
+  const [intakeDraft,setIntakeDraft]=useState(null);
+  const [intakeFields,setIntakeFields]=useState({});
   const [stage,setStage]=useState("setup");
   const [busy,setBusy]=useState(false);
   const [loading,setLoading]=useState(true);
@@ -65,13 +74,16 @@ function PMHandoffWizardContent(){
     Promise.all([
       api.get(`/pm-hub/properties/${propertyId}/handoff/`,{headers:h}),
       api.get("/pm-hub/property-documents/",{headers:h,params:{property_id:propertyId}}),
-    ]).then(([r,d])=>{
+      api.get("/pm-hub/tenants/",{headers:h}),
+      api.get("/pm-hub/property-owners/",{headers:h,params:{property_id:propertyId}}),
+    ]).then(([r,d,t,o])=>{
       if(!active)return;
       setHandoff(r.data.handoff);setDraft(r.data.handoff);
       setFinancial(r.data.handoff.opening_balances || []);
       setTaskDrafts(r.data.handoff.tasks || {});
       setChecklist(r.data.checklist || []);setProgress(r.data.progress || {});
       setDocuments(list(d.data));
+      setTenants(list(t.data));setOwners(list(o.data));
     }).catch((e)=>{if(active)setError(errorMessage(e));}).finally(()=>{if(active)setLoading(false);});
     return ()=>{active=false;};
   },[propertyId,workspace?.id]);
@@ -108,10 +120,11 @@ function PMHandoffWizardContent(){
   async function saveSetup(){
     const payload={
       case_kind:draft.case_kind,effective_date:draft.effective_date,
+      rental_channel:draft.rental_channel,management_model:draft.management_model,
       former_manager:draft.former_manager,assistance:draft.assistance,notes:draft.notes,
     };
     const done=await patch(payload,"Setup saved.");
-    if(done)setStage("documents");
+    if(done)setStage("people");
   }
   function taskSet(key,field,value){
     setTaskDrafts(current=>({...current,[key]:{status:"NOT_STARTED",note:"",document_id:null,...current[key],[field]:value}}));
@@ -123,6 +136,59 @@ function PMHandoffWizardContent(){
   function addBalance(){setFinancial(rows=>[...rows,initialBalance()]);}
   function editBalance(id,key,value){setFinancial(rows=>rows.map(r=>r.id===id?{...r,[key]:value}:r));}
   function removeBalance(id){setFinancial(rows=>rows.filter(r=>r.id!==id));}
+  async function reloadPeople(){
+    const [t,o]=await Promise.all([
+      api.get("/pm-hub/tenants/",{headers}),
+      api.get("/pm-hub/property-owners/",{headers,params:{property_id:propertyId}}),
+    ]);
+    setTenants(list(t.data));setOwners(list(o.data));
+  }
+  async function addTenant(e){
+    e.preventDefault();if(!tenantForm.first_name.trim()||!tenantForm.email.trim())return;
+    setBusy(true);setError("");setNotice("");
+    const existing=tenants.find(t=>String(t.email).toLowerCase()===tenantForm.email.trim().toLowerCase());
+    if(existing){setError("A tenant with this email already exists. Use the existing record instead.");setBusy(false);return;}
+    try{
+      await api.post("/pm-hub/tenants/",{...tenantForm,property_name:property?.name||""},{headers});
+      await reloadPeople();setTenantForm({first_name:"",last_name:"",email:"",phone:""});
+      setNotice("Tenant record created. No portal invitation has been sent.");
+    }catch(e){setError(errorMessage(e));}finally{setBusy(false);}
+  }
+  async function inviteTenant(tenant){
+    if(!window.confirm(`Send a tenant portal onboarding invitation to ${tenant.email}?`))return;
+    setBusy(true);setError("");setNotice("");
+    try{
+      await api.post(`/pm-hub/tenants/${tenant.id}/send-invite/`,{mode:"TENANT_ONBOARDING"},{headers});
+      await reloadPeople();setNotice("Onboarding invitation sent to the existing tenant email.");
+    }catch(e){setError(errorMessage(e));}finally{setBusy(false);}
+  }
+  async function addOwner(e){
+    e.preventDefault();if(!ownerForm.name.trim())return;
+    setBusy(true);setError("");setNotice("");
+    try{
+      await api.post("/pm-hub/property-owners/",{...ownerForm,owner_type:"INDIVIDUAL",properties:[Number(propertyId)]},{headers});
+      await reloadPeople();setOwnerForm({name:"",email:"",phone:""});
+      setNotice("Property owner record created. Portal invitations are not sent automatically.");
+    }catch(e){setError(errorMessage(e));}finally{setBusy(false);}
+  }
+  async function extractDocument(){
+    if(!intakeDocumentId)return;
+    setBusy(true);setError("");setNotice("");setIntakeDraft(null);
+    try{
+      const r=await api.post(`/pm-hub/properties/${propertyId}/documents/${intakeDocumentId}/intake/`,{}, {headers});
+      setIntakeDraft(r.data);setIntakeFields(Object.fromEntries(Object.entries(r.data.suggestions||{}).map(([k,v])=>[k,v.value])));
+      setNotice("Document read. Review every suggested value before saving.");
+    }catch(e){setError(errorMessage(e));}finally{setBusy(false);}
+  }
+  async function confirmExtracted(){
+    if(!intakeDocumentId || !intakeDraft)return;
+    setBusy(true);setError("");
+    try{
+      await api.patch(`/pm-hub/properties/${propertyId}/documents/${intakeDocumentId}/intake/`,{verified_fields:intakeFields},{headers});
+      setNotice("Reviewed fields attached to the document. Original tenant, lease and financial ledgers are unchanged.");
+      setIntakeDraft(null);
+    }catch(e){setError(errorMessage(e));}finally{setBusy(false);}
+  }
   async function saveBalances(){
     const valid=financial.filter(x=>String(x.amount).trim()!=="");
     const ok=await patch({opening_balances:valid},"Opening-balance evidence saved. No rent or payment ledger changes.");
@@ -158,6 +224,8 @@ function PMHandoffWizardContent(){
           <div className="grid gap-2 sm:grid-cols-2">
             <Field label="Type of setup"><select className={input} value={draft.case_kind} onChange={e=>setDraft({...draft,case_kind:e.target.value})}>{caseKinds.map(([v,l])=><option value={v} key={v}>{l}</option>)}</select></Field>
             <Field label="Effective management / ownership date"><input type="date" className={input} value={draft.effective_date} onChange={e=>setDraft({...draft,effective_date:e.target.value})}/></Field>
+            <Field label="Rental source / channel"><select className={input} value={draft.rental_channel||"DIRECT"} onChange={e=>setDraft({...draft,rental_channel:e.target.value})}>{channelKinds.map(([v,label])=><option key={v} value={v}>{label}</option>)}</select></Field>
+            <Field label="How will it be managed?"><select className={input} value={draft.management_model||"OWNER_MANAGED"} onChange={e=>setDraft({...draft,management_model:e.target.value})}>{managerKinds.map(([v,label])=><option key={v} value={v}>{label}</option>)}</select></Field>
           </div>
         </Panel>
         <Panel title="Former manager or owner" description="Optional for clean starts. Keep this party separate from the legal property owner and rental-assistance administrator.">
@@ -184,8 +252,47 @@ function PMHandoffWizardContent(){
         <button type="button" disabled={busy} onClick={saveSetup} className="min-h-11 w-full rounded-xl bg-cyan-400 px-3 text-sm font-black text-slate-950 disabled:opacity-50">{busy?"Saving…":"Save & view checklist →"}</button>
       </div>:null}
 
+      {stage==="people"?<div className="space-y-3">
+        <Panel title="People & portal onboarding" description="Find an existing tenant or owner first. New profile records are not the same as verified identities or activated logins.">
+          <div className="space-y-2">
+            <h3 className="text-xs font-black text-cyan-100">Existing tenants</h3>
+            {tenants.filter(t=>String(t.property_name||"").toLowerCase()===String(property?.name||"").toLowerCase()).map(t=><div key={t.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-700 p-2.5"><div className="min-w-0"><div className="truncate text-xs font-bold">{t.full_name||[t.first_name,t.last_name].join(" ")}</div><div className="text-[10px] text-slate-400">{t.email} · {t.status}</div></div><button type="button" disabled={busy||t.status==="CONNECTED"} onClick={()=>inviteTenant(t)} className="min-h-9 shrink-0 rounded-lg border border-cyan-400/30 px-3 text-[11px] font-bold text-cyan-100 disabled:opacity-40">{t.status==="CONNECTED"?"Connected":"Send invite"}</button></div>)}
+          </div>
+          <form onSubmit={addTenant} className="mt-4 space-y-2 rounded-lg border border-slate-700 p-3">
+            <div className="text-xs font-black">Create a tenant profile (only if missing)</div>
+            <div className="grid gap-2 sm:grid-cols-2">{[["first_name","First name"],["last_name","Last name"],["email","Email"],["phone","Phone"]].map(([k,label])=><Field label={label} key={k}><input className={input} required={k==="first_name"||k==="email"} type={k==="email"?"email":"text"} value={tenantForm[k]} onChange={e=>setTenantForm(v=>({...v,[k]:e.target.value}))}/></Field>)}</div>
+            <button type="submit" disabled={busy} className="min-h-10 w-full rounded-lg border border-cyan-400/40 bg-cyan-500/10 text-xs font-black text-cyan-100">Create tenant record</button>
+          </form>
+        </Panel>
+        <Panel title="Property owner / investor" description="Create or connect ownership records without giving access to sensitive financial information automatically.">
+          {owners.map(o=><div key={o.id} className="mt-1 rounded-lg border border-slate-700 p-2 text-xs">{o.name} · {o.email||"No email"} · {o.owner_type}</div>)}
+          <form onSubmit={addOwner} className="mt-3 grid gap-2 sm:grid-cols-2">
+            {[[ "name","Owner name"],["email","Owner email"],["phone","Phone"]].map(([k,label])=><Field key={k} label={label}><input className={input} type={k==="email"?"email":"text"} value={ownerForm[k]} onChange={e=>setOwnerForm(v=>({...v,[k]:e.target.value}))}/></Field>)}
+            <button type="submit" disabled={busy} className="min-h-10 self-end rounded-xl bg-cyan-400 px-3 text-xs font-black text-slate-950">Save ownership contact</button>
+          </form>
+          <p className="mt-2 text-[11px] text-slate-400">Investor portal access requires a separate authenticated invitation/connection and appropriate permissions. Saving a contact does not create login credentials.</p>
+        </Panel>
+        <button type="button" onClick={()=>setStage("documents")} className="min-h-11 w-full rounded-xl border border-cyan-400/45 text-xs font-black text-cyan-100">Next: paperwork →</button>
+      </div>:null}
+
       {stage==="documents"?<Panel title="Transfer paperwork & verification" description="Track what is missing, requested, received or verified. A file being uploaded is not proof an external administrator approved it.">
         <div className="mb-3 flex flex-wrap gap-2"><button type="button" onClick={()=>navigate(`/pm/properties/${propertyId}?tab=documents`)} className="rounded-xl border border-cyan-500/40 px-3 py-2 text-xs font-black text-cyan-100">Open property document library ↗</button>{draft.assistance.administrator_website?.startsWith("https://")?<LinkOut href={draft.assistance.administrator_website}>Open administrator website</LinkOut>:null}</div>
+        <div className="mb-3 rounded-xl border border-slate-700 bg-black/20 p-3">
+          <h3 className="text-xs font-black text-cyan-100">Extract information from an uploaded document</h3>
+          <p className="mt-1 text-[11px] text-slate-400">Selectable-text PDF, Word or TXT. Extraction creates suggestions only; the user must confirm them. Scanned images are not supported yet.</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <select aria-label="Select document to extract" className={input+" min-w-0 flex-1"} value={intakeDocumentId} onChange={e=>{setIntakeDocumentId(e.target.value);setIntakeDraft(null);}}><option value="">Choose an uploaded document</option>{documents.filter(d=>d.document_url).map(d=><option key={d.id} value={d.id}>{d.title}</option>)}</select>
+            <button type="button" onClick={extractDocument} disabled={!intakeDocumentId||busy} className="min-h-10 rounded-lg border border-cyan-400/40 px-3 text-xs font-bold text-cyan-100 disabled:opacity-40">{busy?"Reading…":"Read document"}</button>
+          </div>
+          {intakeDraft?<div className="mt-3 space-y-2 rounded-lg border border-amber-400/25 bg-amber-500/5 p-3">
+            <div className="text-xs font-black text-amber-100">Review extracted suggestions against the source</div>
+            {Object.keys(intakeDraft.suggestions||{}).length?Object.entries(intakeDraft.suggestions).map(([key,item])=><Field key={key} label={key.replaceAll("_"," ")+" · page "+(item.candidates?.[0]?.page||"?")}>
+              <input className={input} value={intakeFields[key]??""} onChange={e=>setIntakeFields(f=>({...f,[key]:e.target.value}))}/>
+              <span className="mt-1 block text-[10px] text-slate-400">{item.candidates?.[0]?.context||"Review source document"}</span>
+            </Field>):<p className="text-xs text-slate-400">No reliable labeled rent or lease fields found. Fill them manually in your existing property and lease records.</p>}
+            <button type="button" disabled={busy} onClick={confirmExtracted} className="min-h-10 w-full rounded-lg bg-cyan-400 px-3 text-xs font-black text-slate-950">Save reviewed fields to document</button>
+          </div>:null}
+        </div>
         {[["Property and tenant records",taskGroups.base],["Assistance program and payment change",taskGroups.assisted]].map(([group,items])=>items.length?<div key={group} className="mb-4"><h3 className="mb-2 text-xs font-black text-cyan-200">{group}</h3><div className="space-y-2">{items.map(t=>{
           const task=taskDrafts[t.key]||{status:"NOT_STARTED",note:"",document_id:null};
           return <div key={t.key} className="rounded-lg border border-slate-700 bg-black/20 p-2.5">
@@ -216,6 +323,14 @@ function PMHandoffWizardContent(){
         <p className="mt-3 text-[11px] leading-5 text-slate-400">A claimed deposit application while the tenant is still occupying the unit needs independent confirmation and legal review. Record it as disputed or reported, not automatically as rent paid.</p>
       </Panel>:null}
 
+      {stage==="rent"?<Panel title="Rent history & increases" description="Do not overwrite an older lease or incorrectly reassign assistance-provider rent to the resident.">
+        <p className="text-xs leading-5 text-slate-300">Record initial contract rent from the signed lease, compare each month's payer split, then open a proposal for future changes. A new rent amount must be signed or approved where required before being used.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button type="button" onClick={()=>navigate(`/pm/payments?property=${propertyId}`)} className="min-h-10 rounded-lg border border-slate-600 px-3 text-xs font-black text-slate-100">Review historical charges</button>
+          <button type="button" onClick={()=>navigate(`/pm/rent-increases?property=${propertyId}`)} className="min-h-10 rounded-lg bg-cyan-400 px-3 text-xs font-black text-slate-950">Open rent increase planner</button>
+        </div>
+        <button type="button" onClick={()=>setStage("review")} className="mt-3 min-h-10 w-full rounded-lg border border-cyan-400/35 text-xs font-black text-cyan-100">Next: review readiness →</button>
+      </Panel>:null}
       {stage==="review"?<Panel title="Ready to manage?" description="Review the transition before completing the case. This does not submit anything to an outside housing administrator.">
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="rounded-lg border border-slate-700 p-3"><div className="text-xs font-black">Paperwork verified</div><div className="mt-1 text-xl font-black">{progress.completed} / {progress.total}</div></div>
