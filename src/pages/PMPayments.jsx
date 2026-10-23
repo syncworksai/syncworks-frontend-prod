@@ -158,24 +158,15 @@ export default function PMPayments() {
   const auditTolerance = 0.01;
 
 
-  const isRoxana = /roxana/i.test(String(selectedTenant?.property_name || ""));
-  const roxanaAllocations = {
-    "2026-06": { tenant: "1407.00", housing: "78.00", note: "June HAP $78 reported by MHA; confirm tenant allocation" },
-    "2026-07": { tenant: "1407.00", housing: "78.00", note: "July $78 HAP held by MHA; verify tenant allocation" },
-    "2026-08": { tenant: "1485.00", housing: "0.00", note: "August 2026 MHA confirms tenant responsible for full rent" },
-    "2026-09": { tenant: "1108.00", housing: "377.00", note: "September 2026 MHA rent determination letter" },
-    "2026-10": { tenant: "1108.00", housing: "0.00", note: "October HAP abated; do not transfer housing obligation to tenant", excluded: "MHA share of $377 is abated; the HAP contract status remains disputed" },
-  };
-
   function startReconcile(monthly) {
-    const recommended = isRoxana ? roxanaAllocations[monthly.key] : null;
-    const contract = recommended ? "1485.00" : String(auditExpected || monthly.rent || "0.00");
+    // Never reuse today's Section 8 split for a historical month.
+    const contract = String(auditExpected || monthly.rent || "0.00");
     setRecon({
       month: monthly.key, contract_rent: contract,
-      tenant_portion: recommended?.tenant || String(monthly.tenant || "0.00"),
-      housing_portion: recommended?.housing || String(monthly.housing || "0.00"),
-      exclusion_reason: recommended?.excluded || "",
-      source_note: recommended?.note || "Manual reconciliation against lease and payer documentation",
+      tenant_portion: String(monthly.tenant || "0.00"),
+      housing_portion: String(monthly.housing || "0.00"),
+      exclusion_reason: "",
+      source_note: "",
     });
     setReconPreview(null);
     setReconConfirmed(false);
@@ -318,9 +309,7 @@ export default function PMPayments() {
           </label>
           <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {monthlyAudit.map((m) => {
-              const known = isRoxana ? roxanaAllocations[m.key] : null;
-              const expectation = known ? Number(known.tenant) + Number(known.housing) : auditExpected;
-              const mismatch = m.rent <= auditTolerance || (expectation > 0 && Math.abs(m.rent - expectation) > auditTolerance) || (known && (Math.abs(m.tenant - Number(known.tenant)) > auditTolerance || Math.abs(m.housing - Number(known.housing)) > auditTolerance));
+              const mismatch = m.rent <= auditTolerance || (auditExpected > 0 && Math.abs(m.rent - auditExpected) > auditTolerance);
               return <article key={m.key} className={`rounded-xl border p-2.5 ${mismatch ? "border-amber-400/35 bg-amber-500/5" : "border-slate-700 bg-slate-950/55"}`}>
                 <div className="flex items-center justify-between gap-2"><div className="font-black text-sm text-white">{m.label}</div><span className={`text-[10px] font-bold ${mismatch ? "text-amber-200" : "text-emerald-300"}`}>{mismatch ? "Review charges" : "Recorded"}</span></div>
                 <div className="mt-2 grid grid-cols-2 gap-1.5 text-[11px]">
@@ -329,7 +318,7 @@ export default function PMPayments() {
                   <div><div className="text-slate-500">Late fees</div><div className="font-bold">{money(m.late)}</div></div>
                   <div><div className="text-slate-500">Payments posted*</div><div className="font-bold text-emerald-300">{money(m.collected)}</div></div>
                 </div>
-                {known ? <div className="mt-2 text-[10px] leading-4 text-slate-400">{known.note}</div> : null}
+                
                 <button type="button" onClick={() => startReconcile(m)} className="mt-2 min-h-9 w-full rounded-lg border border-cyan-500/35 bg-cyan-500/10 px-2 py-1.5 text-[11px] font-black text-cyan-100 hover:bg-cyan-500/20">Review / correct rent</button>
               </article>;
             })}
@@ -350,7 +339,7 @@ export default function PMPayments() {
 
       {drawer === "reconcile" && recon ? <Drawer title={`Review ${recon.month} Rent`} onClose={closeDrawer}>
         <div className="space-y-3 pb-5 text-sm">
-          <p className="rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100">Preview first. This will adjust rent charges only. Existing tenant payments, late fees, deposits and Adair/MHA disputes are not changed.</p>
+          <p className="rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100">Use the payer split that applied to this month, not the current split. If MHA assistance was abated, do not transfer its portion to the tenant. Preview before applying; existing payments, late fees and deposits are unchanged.</p>
           <div className="grid grid-cols-2 gap-2">
             <Field label="Month"><div className="rounded-lg border border-slate-700 px-3 py-2 text-sm">{recon.month}</div></Field>
             <Field label="Contract rent"><input className={inputClass} inputMode="decimal" value={recon.contract_rent} onChange={(e) => changeRecon("contract_rent", e.target.value)} /></Field>
