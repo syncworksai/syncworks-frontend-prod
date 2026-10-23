@@ -315,7 +315,7 @@ export default function PMPayments() {
                 <div className="mt-2 grid grid-cols-2 gap-1.5 text-[11px]">
                   <div><div className="text-slate-500">Tenant charge</div><div className="font-bold">{money(m.tenant)}</div></div>
                   <div><div className="text-slate-500">Housing charge</div><div className="font-bold">{money(m.housing)}</div></div>
-                  <div><div className="text-slate-500">Late fees</div><div className="font-bold">{money(m.late)}</div></div>
+                  <div><div className="text-slate-500">Late fees</div><div className="font-bold">{money(m.late)}{m.late === 0 && m.rent > 0 ? <span className="ml-1 text-[9px] font-medium text-amber-300">Check rules</span> : null}</div></div>
                   <div><div className="text-slate-500">Payments posted*</div><div className="font-bold text-emerald-300">{money(m.collected)}</div></div>
                 </div>
                 
@@ -323,7 +323,7 @@ export default function PMPayments() {
               </article>;
             })}
           </div>
-          <p className="mt-2 text-[10px] text-slate-500">*Payments posted during a month may pay an older balance. Review payment allocation before determining delinquency.</p>
+          <p className="mt-2 text-[10px] text-slate-500">*Payments posted during a month may pay an older balance. A month with no late fee is a review flag, not proof a fee is owed. Verify lease/grace dates and prior receipts before adding one.</p>
           <p className="mt-2 text-[10px] leading-relaxed text-slate-400 sm:text-xs">Review historical Section 8 portions by month before editing. A charge does not mean a payment was received. MHA abatement, funds paid to a former manager, disputed payments, and tenant security deposits must not be marked paid without proof. Existing late fees are preserved; any missing late fee requires a lease and payment-date check.</p>
         </section> : null}
 
