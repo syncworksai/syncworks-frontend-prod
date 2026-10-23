@@ -3,21 +3,22 @@ import { useLocation, useNavigate } from "react-router-dom";
 import api from "../../api/client";
 
 const navItems = [
-  ["Dashboard", "/pm", "home"],
+  ["PORTFOLIO", "", "", "section"],
+  ["Owner Dashboard", "/pm", "home"],
+  ["Properties", "/pm/properties", "building"],
+  ["Investors & Payouts", "/pm/investors", "money"],
+  ["Payments", "/pm/payments", "money"],
+  ["WORKFLOWS", "", "", "section"],
+  ["Takeovers", "/pm/handoff", "folder"],
+  ["Documents & Signatures", "/pm/document-requests", "folder"],
+  ["Rent Increases", "/pm/rent-increases", "calendar"],
+  ["Tenants", "/pm/tenants", "users"],
+  ["Schedule", "/pm/calendar", "calendar"],
+  ["PEOPLE & TEAM", "", "", "section"],
+  ["Team & Assignments", "/pm/team", "team"],
+  ["Employee Directory", "/pm/employees", "users"],
   ["Messages", "/pm/settings?view=messages", "messages"],
   ["Leads", "/pm/settings?view=leads", "users"],
-  ["Make Ready", "/pm/settings?view=make-ready", "wrench"],
-  ["Projects", "/pm/projects", "folder"],
-  ["Properties", "/pm/properties", "building"],
-  ["Takeovers", "/pm/handoff", "folder"],
-  ["Document Requests", "/pm/document-requests", "folder"],
-  ["Rent Increases", "/pm/rent-increases", "money"],
-  ["Leasing", "/pm/leasing", "leasing"],
-  ["Tenants", "/pm/tenants", "users"],
-  ["Payments", "/pm/payments", "money"],
-  ["Work Orders", "/pm/work-orders", "wrench"],
-  ["Schedule", "/pm/calendar", "calendar"],
-  ["Team", "/pm/employees", "team"],
   ["Settings", "/pm/settings", "settings"],
 ];
 
@@ -35,6 +36,8 @@ const pageMeta = {
   "/pm/work-orders": ["Work Orders", "Prioritize maintenance requests and operational follow-through."],
   "/pm/calendar": ["Property Schedule", "Coordinate projects, inspections, maintenance, showings, and events."],
   "/pm/employees": ["PM Team", "Manage employees, assignments, access, and responsibility."],
+  "/pm/team": ["Team & Assignments", "Roles, property access, invitations and delegated workflows."],
+  "/pm/investors": ["Investors & Payouts", "Owner portal invitations, property statements and investor documents."],
   "/pm/settings": ["Portfolio Settings", "Control portfolio identity, communication, and operating preferences."],
 };
 
@@ -96,10 +99,11 @@ export default function PMShell({ children }) {
       <img src="/brands/syncworks new logo.jpg" alt="SyncWorks" className="h-11 w-11 rounded-2xl border border-cyan-400/20 object-cover shadow-[0_0_28px_rgba(34,211,238,0.16)]" />
       <div><div className="font-black tracking-wide text-white">SyncWorks</div><div className="mt-1 text-[9px] font-black uppercase tracking-[0.22em] text-cyan-300">Property Manager</div></div>
     </button>
-    <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 py-5">{navItems.map(([label, path, icon]) => {
+    <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 py-5">{navItems.map(([label, path, icon, kind]) => {
+      if (kind === "section") return <div key={label} className="px-3 pt-4 pb-1 text-[9px] font-black uppercase tracking-[0.18em] text-slate-500">{label}</div>;
       const active = activeFor(pathname, location.search, path);
-      return <button key={path} type="button" onClick={() => nav(path)} className={`flex min-h-12 w-full items-center gap-3 rounded-2xl border px-3.5 text-left text-sm font-semibold transition ${active ? "border-cyan-400/45 bg-gradient-to-r from-fuchsia-500/15 to-cyan-500/15 text-white shadow-[0_0_26px_rgba(34,211,238,0.12)]" : "border-transparent text-slate-400 hover:border-cyan-500/15 hover:bg-cyan-500/5 hover:text-cyan-100"}`}>
-        <span className={`flex h-8 w-8 items-center justify-center rounded-xl border ${active ? "border-cyan-300/35 bg-cyan-500/10 text-cyan-200" : "border-slate-700 text-slate-400"}`}><Icon name={icon} /></span>{label}
+      return <button key={path} type="button" onClick={() => nav(path)} className={`flex min-h-10 w-full items-center gap-2.5 rounded-xl border px-2.5 text-left text-xs font-semibold transition ${active ? "border-cyan-400/45 bg-gradient-to-r from-fuchsia-500/15 to-cyan-500/15 text-white shadow-[0_0_26px_rgba(34,211,238,0.12)]" : "border-transparent text-slate-400 hover:border-cyan-500/15 hover:bg-cyan-500/5 hover:text-cyan-100"}`}>
+        <span className={`flex h-7 w-7 items-center justify-center rounded-lg border ${active ? "border-cyan-300/35 bg-cyan-500/10 text-cyan-200" : "border-slate-700 text-slate-400"}`}><Icon name={icon} /></span>{label}
       </button>;
     })}</nav>
     <div className="m-3 rounded-2xl border border-fuchsia-500/20 bg-gradient-to-br from-cyan-500/5 to-fuchsia-500/10 p-4"><div className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Current Portfolio</div><div className="mt-2 truncate text-sm font-bold text-white">{workspaceName}</div></div>
