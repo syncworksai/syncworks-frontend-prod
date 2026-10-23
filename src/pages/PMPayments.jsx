@@ -16,7 +16,7 @@ const ledgerFilters = [
   ["CREDITS", "Payments & Credits"],
   ["LATE_FEE", "Late Fees"],
   ["TENANT", "Tenant"],
-  ["HOUSING", "Housing / Section 8"],
+  ["HOUSING", "Assistance administrator"],
 ];
 
 function Field({ label, children }) {
@@ -189,7 +189,7 @@ export default function PMPayments() {
 
 
   function startReconcile(monthly) {
-    // Never reuse today's Section 8 split for a historical month.
+    // Never reuse today's assistance allocation for a historical month.
     const contract = String(auditExpected || monthly.rent || "0.00");
     setRecon({
       month: monthly.key, contract_rent: contract,
@@ -346,7 +346,7 @@ export default function PMPayments() {
     <div className="grid gap-4 pb-6">
       {drawerError ? <div role="alert" className="rounded-2xl border border-rose-400/35 bg-rose-500/10 p-3 text-sm font-semibold text-rose-100">{drawerError}</div> : null}
       <Field label="Tenant"><select className={inputClass} value={model.tenant || ""} disabled={Boolean(model.id)} onChange={(e) => { setter({ ...model, tenant: e.target.value }); setDrawerError(""); }}><option value="">Choose tenant</option>{tenants.map((t) => <option key={t.id} value={t.id}>{t.full_name} · {t.property_name || "No property"}</option>)}</select></Field>
-      <Field label="Who owes / paid this?"><div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-2">{["TENANT", "HOUSING"].map((v) => <button type="button" key={v} onClick={() => setter({ ...model, payer: v })} className={`min-w-0 rounded-2xl border p-3 text-sm font-black transition ${model.payer === v ? "border-cyan-300 bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-950/30" : "border-slate-600 bg-slate-800/80 text-white hover:border-cyan-400/60"}`}>{v === "TENANT" ? "Tenant" : "Housing / Section 8"}</button>)}</div></Field>
+      <Field label="Who owes / paid this?"><div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-2">{["TENANT", "HOUSING"].map((v) => <button type="button" key={v} onClick={() => setter({ ...model, payer: v })} className={`min-w-0 rounded-2xl border p-3 text-sm font-black transition ${model.payer === v ? "border-cyan-300 bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-950/30" : "border-slate-600 bg-slate-800/80 text-white hover:border-cyan-400/60"}`}>{v === "TENANT" ? "Tenant" : "Assistance administrator"}</button>)}</div></Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><Field label="Date"><input type="date" className={inputClass} value={model.entry_date || today} onChange={(e) => setter({ ...model, entry_date: e.target.value })}/></Field><Field label="Type"><select className={inputClass} value={model.entry_type} onChange={(e) => setter({ ...model, entry_type: e.target.value })}>{["CHARGE", "PAYMENT", "CREDIT", "ADJUSTMENT"].map((v) => <option key={v}>{v}</option>)}</select></Field></div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><Field label="Amount"><input className={inputClass} inputMode="decimal" value={model.amount || ""} onChange={(e) => setter({ ...model, amount: e.target.value })}/></Field><Field label="Category"><select className={inputClass} value={String(model.category || "RENT").replace("RENT_TENANT", "RENT").replace("RENT_HOUSING", "RENT")} onChange={(e) => setter({ ...model, category: e.target.value })}>{["RENT", "LATE_FEE", "SECURITY_DEPOSIT", "UTILITY", "REPAIR", "OTHER"].map((v) => <option key={v}>{v}</option>)}</select></Field></div>
       {model.entry_type === "PAYMENT" && model.payer !== "HOUSING" ? <Field label="Payment method"><select className={inputClass} value={model.payment_method || "CASH"} onChange={(e) => setter({ ...model, payment_method: e.target.value })}>{paymentMethods.filter((v) => v !== "HOUSING_AUTHORITY").map((v) => <option key={v}>{v}</option>)}</select></Field> : null}
@@ -399,7 +399,7 @@ export default function PMPayments() {
             })}
           </div>
           <p className="mt-2 text-[10px] text-slate-500">*Payments posted during a month may pay an older balance. A month with no late fee is a review flag, not proof a fee is owed. Verify lease/grace dates and prior receipts before adding one.</p>
-          <p className="mt-2 text-[10px] leading-relaxed text-slate-400 sm:text-xs">Review historical Section 8 portions by month before editing. A charge does not mean a payment was received. MHA abatement, funds paid to a former manager, disputed payments, and tenant security deposits must not be marked paid without proof. Existing late fees are preserved; any missing late fee requires a lease and payment-date check.</p>
+          <p className="mt-2 text-[10px] leading-relaxed text-slate-400 sm:text-xs">Review historical assistance-provider portions by month before editing. A charge does not mean a payment was received. Assistance abatement, funds paid to a previous manager, disputed payments, and tenant security deposits must not be marked paid without proof. Existing late fees are preserved; any missing late fee requires a lease and payment-date check.</p>
         </section> : null}
 
         {filterTenant ? <section className="rounded-xl border border-cyan-500/20 bg-[#07111f]/90 p-2.5 sm:rounded-2xl sm:p-4" aria-label="Payment application and external reconciliation">
@@ -410,18 +410,18 @@ export default function PMPayments() {
               <div className="rounded-lg border border-fuchsia-400/25 bg-fuchsia-500/5 p-2.5"><div className="text-[10px] text-slate-400">Open housing charges*</div><div className="mt-1 font-black text-fuchsia-200">{money(allocation.housing_unpaid)}</div></div>
             </div>
             <div className="mt-2 max-h-56 space-y-1.5 overflow-y-auto">
-              {allocation.allocations?.slice().reverse().slice(0, 24).map((item, i) => <div key={`${item.source_id}-${item.charge_id}-${i}`} className="flex items-center justify-between gap-2 rounded-lg border border-slate-700/70 bg-black/20 px-2.5 py-2 text-[11px]"><div className="min-w-0"><div className="font-semibold">{item.source_date} → {item.charge_month} {item.category === "LATE_FEE" ? "late fee" : "charge"}</div><div className="text-[10px] text-slate-500">{item.payer === "HOUSING" ? "MHA / housing" : "Tenant"} · {item.source_type === "PAYMENT" ? "Payment" : "Credit"}</div></div><strong className="shrink-0 text-emerald-300">{money(item.amount)}</strong></div>)}
+              {allocation.allocations?.slice().reverse().slice(0, 24).map((item, i) => <div key={`${item.source_id}-${item.charge_id}-${i}`} className="flex items-center justify-between gap-2 rounded-lg border border-slate-700/70 bg-black/20 px-2.5 py-2 text-[11px]"><div className="min-w-0"><div className="font-semibold">{item.source_date} → {item.charge_month} {item.category === "LATE_FEE" ? "late fee" : "charge"}</div><div className="text-[10px] text-slate-500">{item.payer === "HOUSING" ? "Assistance provider" : "Tenant"} · {item.source_type === "PAYMENT" ? "Payment" : "Credit"}</div></div><strong className="shrink-0 text-emerald-300">{money(item.amount)}</strong></div>)}
               {!allocation.allocations?.length ? <p className="rounded-lg border border-dashed border-slate-700 p-3 text-xs text-slate-400">No payment allocations to display yet.</p> : null}
             </div>
             {Number(allocation.unapplied_tenant_receipts || 0) > 0 ? <p className="mt-2 text-[11px] text-amber-200">Unallocated tenant payments/credits: {money(allocation.unapplied_tenant_receipts)}. Review missing charges before treating this as overpayment.</p> : null}
             {allocation.late_fee_review?.some((m) => m.review_late_fee) ? <div className="mt-2 rounded-lg border border-amber-400/25 bg-amber-500/5 p-2.5"><div className="text-xs font-black text-amber-100">Late fees to investigate</div><p className="mt-1 text-[11px] leading-4 text-slate-300">Tenant rent appears unpaid at the configured grace date for the periods below. Review signed lease terms and backdated payments before assessing a fee.</p><div className="mt-2 flex flex-wrap gap-1.5">{allocation.late_fee_review.filter((m) => m.review_late_fee).map((m) => <button key={m.month} type="button" className="rounded-lg border border-amber-400/35 px-2.5 py-1.5 text-[11px] font-black text-amber-100" onClick={() => openLateReview(m.month)}>Review {m.month} →</button>)}</div></div> : null}
           </> : <p className="mt-2 text-[11px] text-slate-400">Payment allocation audit is unavailable. Ledger entries are shown below.</p>}
-          <div className="mt-3 flex items-center justify-between gap-2"><div className="text-xs font-black text-white">MHA, former manager & deposit evidence</div><span className="text-[10px] text-slate-400">{externalRecords.length} records</span></div>
+          <div className="mt-3 flex items-center justify-between gap-2"><div className="text-xs font-black text-white">Assistance, former manager & deposits</div><span className="text-[10px] text-slate-400">{externalRecords.length} records</span></div>
           <p className="mt-1 text-[10px] leading-4 text-slate-400">Reported or disputed funds are not marked received and do not change the tenant's debt. Deposit collection and application require separate proof.</p>
           {depositStatus ? <div className="mt-2 rounded-lg border border-amber-400/20 bg-amber-500/5 p-2.5">
             <div className="text-[11px] font-black text-amber-100">Security deposit account (separate from rent)</div>
             <div className="mt-1 grid grid-cols-3 gap-1.5 text-[10px]"><div>Received<strong className="mt-0.5 block text-xs text-white">{money(depositStatus.deposit_received)}</strong></div><div>Held<strong className="mt-0.5 block text-xs text-white">{money(depositStatus.deposit_held)}</strong></div><div>Applied<strong className="mt-0.5 block text-xs text-white">{money(depositStatus.deposit_applied)}</strong></div></div>
-            <p className="mt-1.5 text-[10px] leading-4 text-slate-400">An external claim that the deposit was transferred or applied does not update these numbers. Verify Adair's transfer, tenant agreement and any existing ledger credit before making a new adjustment.</p>
+            <p className="mt-1.5 text-[10px] leading-4 text-slate-400">An external claim that the deposit was transferred or applied does not update these numbers. Verify the former manager's transfer, tenant agreement and any existing ledger credit before making a new adjustment.</p>
           </div> : null}
           <div className="mt-2 grid gap-1.5 sm:grid-cols-2">{externalRecords.slice().reverse().map((row) => <article key={row.id} className="rounded-lg border border-slate-700/70 bg-black/20 p-2.5"><div className="flex items-center justify-between gap-2"><span className="text-[10px] font-bold text-slate-200">{row.category.replaceAll("_", " ")}</span><span className="shrink-0 text-xs font-black">{money(row.amount)}</span></div><div className="mt-1 text-[10px] text-slate-400">{row.period} · {row.evidence_status}</div><p className="mt-1 text-[11px] leading-4 text-slate-300">{row.note}</p></article>)}</div>
         </section> : null}
@@ -438,7 +438,7 @@ export default function PMPayments() {
 
       {drawer === "lateReview" && lateForm ? <Drawer title={`Late fee: ${lateForm.month}`} onClose={closeDrawer}>
         <div className="space-y-3 pb-6 text-sm">
-          <p className="rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100">A past-due balance alone does not prove a late fee is owed. Confirm the actual lease due date, grace period, permitted fee amount, and payment history. MHA's unpaid share is never used for this test.</p>
+          <p className="rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100">A past-due balance alone does not prove a late fee is owed. Confirm the actual lease due date, grace period, permitted fee amount, and payment history. The assistance administrator's unpaid share is never used for this test.</p>
           <div className="grid grid-cols-2 gap-2">
             <Field label="Fee amount from lease"><input className={inputClass} inputMode="decimal" value={lateForm.amount} onChange={(e) => { setLatePreview(null); setLateAgreed(false); setLateForm((x) => ({ ...x, amount: e.target.value })); }} /></Field>
             <Field label="Due day"><input type="number" min="1" max="28" className={inputClass} value={lateForm.due_day} onChange={(e) => { setLatePreview(null); setLateAgreed(false); setLateForm((x) => ({ ...x, due_day: e.target.value })); }} /></Field>
@@ -454,23 +454,23 @@ export default function PMPayments() {
       </Drawer> : null}
       {drawer === "external" ? <Drawer title="Record external payment evidence" onClose={closeDrawer}>
         <div className="space-y-3 pb-6 text-sm">
-          <div className="rounded-xl border border-amber-400/25 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100">Use this for money MHA says it sent to Adair, amounts on hold, Adair owner distributions, or an unverified security deposit. It is not a rent payment and will not reduce the balance.</div>
+          <div className="rounded-xl border border-amber-400/25 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100">Record payments an assistance administrator reports sending to a former manager, held funds, former-manager distributions, or disputed deposits. It is not a rent payment and will not reduce the balance.</div>
           <Field label="Type"><select className={inputClass} value={externalForm.category} onChange={(e) => setExternalForm((x) => ({ ...x, category: e.target.value }))}>
-            {[["HAP_PAID_TO_FORMER_MANAGER", "MHA paid former manager"], ["HAP_ON_HOLD", "MHA payment held"], ["HAP_RETURN_CLAIM", "Former manager says HAP returned"], ["FORMER_MANAGER_DISTRIBUTION", "Former manager paid owner"], ["TENANT_PAID_FORMER_MANAGER", "Tenant paid former manager"], ["DEPOSIT_COLLECTION_CLAIM", "Deposit reportedly collected"], ["DEPOSIT_TRANSFER_CLAIM", "Deposit reportedly transferred"], ["DEPOSIT_APPLIED_CLAIM", "Deposit reportedly applied to rent"], ["OTHER_UNVERIFIED", "Other external amount"]].map(([v, name]) => <option value={v} key={v}>{name}</option>)}
+            {[["HAP_PAID_TO_FORMER_MANAGER", "Assistance paid former manager"], ["HAP_ON_HOLD", "Assistance payment held"], ["HAP_RETURN_CLAIM", "Former manager reports payment returned"], ["FORMER_MANAGER_DISTRIBUTION", "Former manager paid owner"], ["TENANT_PAID_FORMER_MANAGER", "Tenant paid former manager"], ["DEPOSIT_COLLECTION_CLAIM", "Deposit reportedly collected"], ["DEPOSIT_TRANSFER_CLAIM", "Deposit reportedly transferred"], ["DEPOSIT_APPLIED_CLAIM", "Deposit reportedly applied to rent"], ["OTHER_UNVERIFIED", "Other external amount"]].map(([v, name]) => <option value={v} key={v}>{name}</option>)}
           </select></Field>
           <div className="grid grid-cols-2 gap-2">
             <Field label="Period"><input type="month" className={inputClass} value={externalForm.period} onChange={(e) => setExternalForm((x) => ({ ...x, period: e.target.value }))}/></Field>
             <Field label="Amount"><input inputMode="decimal" className={inputClass} placeholder="0.00" value={externalForm.amount} onChange={(e) => setExternalForm((x) => ({ ...x, amount: e.target.value }))}/></Field>
           </div>
           <Field label="Evidence"><select className={inputClass} value={externalForm.evidence_status} onChange={(e) => setExternalForm((x) => ({ ...x, evidence_status: e.target.value }))}>{["UNVERIFIED", "REPORTED", "DOCUMENTED", "DISPUTED", "RESOLVED"].map((v) => <option value={v} key={v}>{v}</option>)}</select></Field>
-          <Field label="Source / explanation"><textarea rows={3} className={inputClass} value={externalForm.note} placeholder="E.g., per MHA email dated…, Adair ledger not received" onChange={(e) => setExternalForm((x) => ({ ...x, note: e.target.value }))} /></Field>
+          <Field label="Source / explanation"><textarea rows={3} className={inputClass} value={externalForm.note} placeholder="E.g., administrator statement dated…, previous manager ledger pending" onChange={(e) => setExternalForm((x) => ({ ...x, note: e.target.value }))} /></Field>
           {externalError ? <div role="alert" className="rounded-lg border border-rose-400/30 bg-rose-500/10 p-3 text-xs text-rose-200">{externalError}</div> : null}
           <button type="button" disabled={externalBusy} onClick={saveExternalEvidence} className="min-h-11 w-full rounded-xl bg-cyan-400 px-3 font-black text-slate-950 disabled:opacity-40">{externalBusy ? "Saving…" : "Save evidence (no balance change)"}</button>
         </div>
       </Drawer> : null}
       {drawer === "reconcile" && recon ? <Drawer title={`Review ${recon.month} Rent`} onClose={closeDrawer}>
         <div className="space-y-3 pb-5 text-sm">
-          <p className="rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100">Use the payer split that applied to this month, not the current split. If MHA assistance was abated, do not transfer its portion to the tenant. Preview before applying; existing payments, late fees and deposits are unchanged.</p>
+          <p className="rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100">Use the payer split that applied to this month, not the current split. If assistance was abated, do not transfer its portion to the tenant. Preview before applying; existing payments, late fees and deposits are unchanged.</p>
           <div className="grid grid-cols-2 gap-2">
             <Field label="Month"><div className="rounded-lg border border-slate-700 px-3 py-2 text-sm">{recon.month}</div></Field>
             <Field label="Contract rent"><input className={inputClass} inputMode="decimal" value={recon.contract_rent} onChange={(e) => changeRecon("contract_rent", e.target.value)} /></Field>
