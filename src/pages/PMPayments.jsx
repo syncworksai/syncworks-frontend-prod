@@ -381,7 +381,7 @@ export default function PMPayments() {
               ["Tenant paid",collectedByPayer.tenant],
               ["Housing paid",collectedByPayer.housing],
               ["Tenant owed · posted",payer.buckets?.tenant_owes],
-              ["Housing owed · posted",payer.buckets?.housing_owes],
+              ["Housing not received · posted",payer.buckets?.housing_owes],
             ].map(([label,value])=><div key={label} className="rounded-lg border border-slate-700 bg-black/20 p-2.5">
               <div className="text-[10px] text-slate-400">{label}</div><div className="mt-1 text-base font-black text-white">{money(value)}</div>
             </div>)}
