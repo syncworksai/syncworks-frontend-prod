@@ -3,18 +3,20 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import api from "../api/client";
 import PMPropertyPaperworkDock from "../components/pm/PMPropertyPaperworkDock";
 import PMPropertyDetailsDrawer from "../components/pm/PMPropertyDetailsDrawer";
+import PMProperty360Snapshot from "../components/pm/PMProperty360Snapshot";
 
 const list = (data) => Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
 const money = (value) => Number(value || 0).toLocaleString("en-US", { style: "currency", currency: "USD" });
 const tabs = ["overview", "units", "tenants", "ledger", "maintenance", "projects", "messages", "documents", "reports"];
+const tabLabels = {overview:"Overview",units:"Units",tenants:"Tenants",ledger:"Money",maintenance:"Work",projects:"Projects",messages:"Inbox",documents:"Files",reports:"Owners"};
 
 function Panel({ title, subtitle, action, children }) {
-  return <section className="rounded-[28px] border border-cyan-500/15 bg-[#07111f]/92"><div className="flex flex-wrap items-start justify-between gap-3 border-b border-cyan-500/10 px-5 py-4"><div><h2 className="text-lg font-black text-white">{title}</h2>{subtitle ? <p className="mt-1 text-xs text-slate-500">{subtitle}</p> : null}</div>{action}</div><div className="p-5">{children}</div></section>;
+  return <section className="rounded-xl border border-cyan-500/15 bg-[#07111f]"><div className="flex flex-wrap items-start justify-between gap-2 border-b border-cyan-500/10 px-3 py-3"><div><h2 className="text-sm font-black text-white">{title}</h2>{subtitle ? <p className="mt-1 text-[11px] text-slate-500">{subtitle}</p> : null}</div>{action}</div><div className="p-3">{children}</div></section>;
 }
 
 function Button({ children, onClick, tone = "dark" }) {
   const style = tone === "cyan" ? "bg-cyan-400 text-slate-950" : tone === "purple" ? "border-fuchsia-400/30 bg-fuchsia-500/15 text-fuchsia-100" : tone === "amber" ? "border-amber-400/30 bg-amber-500/10 text-amber-100" : "border-slate-700 bg-black/25 text-slate-200";
-  return <button type="button" onClick={onClick} className={`min-h-11 rounded-2xl border border-transparent px-4 text-sm font-black ${style}`}>{children}</button>;
+  return <button type="button" onClick={onClick} className={`min-h-9 rounded-lg border border-transparent px-3 text-[11px] font-black ${style}`}>{children}</button>;
 }
 
 function Badge({ children, tone = "cyan" }) {
@@ -51,12 +53,18 @@ export default function PMPropertyDetail() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingStatus, setSavingStatus] = useState(false);
+  const [summary, setSummary] = useState(null);
+  const [summaryError, setSummaryError] = useState("");
+  const [summaryLoading, setSummaryLoading] = useState(true);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
   async function load() {
     setLoading(true);
     setError("");
+    setSummaryLoading(true);
+    setSummaryError("");
+    setSummary(null);
     try {
       const ws = (await api.get("/pm-hub/workspaces/current/")).data;
       setWorkspace(ws);
@@ -71,8 +79,11 @@ export default function PMPropertyDetail() {
         api.get("/pm-hub/work-orders/", { headers, params: { property_id: propertyId } }),
         api.get("/pm-hub/occupancies/", { headers }),
         api.get("/pm-hub/tenant-cases/", { headers }),
+        api.get(`/pm-hub/properties/${propertyId}/360/`, { headers }),
       ]);
-      const values = requests.map((result) => result.status === "fulfilled" ? list(result.value.data) : []);
+      const values = requests.slice(0,7).map((result) => result.status === "fulfilled" ? list(result.value.data) : []);
+      if (requests[7].status === "fulfilled") setSummary(requests[7].value.data);
+      else setSummaryError(requests[7].reason?.response?.data?.detail || "Summary is unavailable");
       setUnits(values[0].filter((item) => Number(item.property) === Number(propertyId)));
       const propertyTenants = values[1].filter((item) => String(item.property_name || "").toLowerCase() === String(propertyRes.data.name || "").toLowerCase());
       setTenants(propertyTenants);
@@ -86,6 +97,7 @@ export default function PMPropertyDetail() {
       setError(caught?.response?.data?.detail || "Could not load this property.");
     } finally {
       setLoading(false);
+      setSummaryLoading(false);
     }
   }
 
@@ -150,18 +162,40 @@ export default function PMPropertyDetail() {
   if (loading) return <main className="px-4 py-10 sm:px-6"><div className="rounded-[28px] border border-cyan-500/15 bg-[#07111f] p-10 text-center text-sm text-slate-500">Loading property command center...</div></main>;
   if (error || !property) return <main className="space-y-4 px-4 py-6 sm:px-6"><div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 text-rose-100">{error || "Property not found."}</div><Button onClick={() => nav("/pm/properties")}>Back to Properties</Button></main>;
 
-  return <main className="min-w-0 space-y-5 overflow-x-hidden px-4 pb-[calc(10rem+var(--sw-ios-safe-bottom))] pt-6 sm:px-6">
+  return <main className="min-w-0 space-y-3 overflow-x-hidden px-3 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-3 sm:px-6">
     {notice ? <div className="rounded-2xl border border-cyan-400/25 bg-cyan-500/10 p-4 text-sm text-cyan-100">{notice}</div> : null}
-    <section className="overflow-hidden rounded-[32px] border border-cyan-400/20 bg-gradient-to-br from-cyan-500/14 via-[#07111f] to-fuchsia-500/12 p-5 lg:p-7">
-      <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-        <div><div className="flex flex-wrap items-center gap-2"><Badge tone={property.status === "AT_RISK" ? "rose" : property.status === "WATCH" ? "amber" : "green"}>{String(property.status).replaceAll("_", " ")}</Badge><Badge tone={occupancyState === "Occupied" ? "green" : occupancyState.includes("Make Ready") ? "amber" : "cyan"}>{occupancyState}</Badge>{evictionCase ? <Badge tone="rose">Eviction case open</Badge> : null}{collectionsCase ? <Badge tone="amber">Collections</Badge> : null}<span className="text-xs text-slate-500">Property #{property.id}</span></div><h2 className="mt-3 text-3xl font-black text-white sm:text-4xl">{property.name}</h2><p className="mt-2 text-sm text-slate-400">{[property.address, property.city, property.state, property.zip].filter(Boolean).join(", ")}</p><div className="mt-5 flex flex-wrap gap-2"><Button tone="cyan" onClick={() => nav(`/pm/work-orders?property=${propertyId}&create=1`)}>+ Maintenance</Button><Button onClick={() => nav(`/pm/tenants?property=${propertyId}`)}>+ Add Tenant</Button><Button onClick={() => nav(`/pm/settings?view=messages&property=${propertyId}`)}>Message</Button><Button tone="purple" onClick={() => nav(`/pm/projects?property=${propertyId}&create=1`)}>+ Project</Button><Button onClick={() => nav(`/pm/payments?property=${propertyId}&add=1`)}>+ Ledger Entry</Button><Button tone="cyan" onClick={() => setDetailsOpen(true)}>Property Details</Button><Button tone="cyan" onClick={() => nav(`/pm/handoff?property=${propertyId}`)}>Property takeover / setup</Button><Button onClick={() => setTab("overview")}>Move-In Checklist</Button><Button tone="amber" onClick={() => setTab("overview")}>Move-Out Checklist</Button><Button tone="purple" onClick={() => setTab("documents")}>Documents & Photos</Button></div></div>
-        <div className="rounded-3xl border border-cyan-500/15 bg-black/25 p-5"><div className="flex items-center justify-between"><div><div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Property health</div><div className="mt-2 text-4xl font-black text-white">{healthScore}</div></div><div className="text-right"><label className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Operational status</label><select disabled={savingStatus} value={property.status || "HEALTHY"} onChange={(event) => changeStatus(event.target.value)} className="mt-2 block min-h-11 rounded-2xl border border-slate-700 bg-[#07111f] px-3 text-sm font-black text-white"><option value="HEALTHY">Healthy</option><option value="WATCH">Watch</option><option value="AT_RISK">At Risk</option></select></div></div><div className="mt-5 grid grid-cols-2 gap-3">{[["Occupancy", `${Math.round(occupancy)}%`], ["Balance", money(balance)], ["Open work", openOrders.length], ["Projects", activeProjects.length]].map(([label, value]) => <div key={label} className="rounded-2xl border border-slate-800 bg-black/25 p-3"><div className="text-[9px] uppercase tracking-[0.15em] text-slate-500">{label}</div><div className="mt-2 text-xl font-black text-white">{value}</div></div>)}</div></div>
-      </div>
+    <PMProperty360Snapshot data={summary} loading={summaryLoading} error={summaryError} property={property}
+      reload={load} navigate={nav} openTab={(next) => { setTab(next); nav(`/pm/properties/${propertyId}?tab=${next}`); }}
+      onDetails={() => setDetailsOpen(true)} />
+    <section className="flex items-center justify-between gap-2 rounded-xl border border-slate-700/70 bg-[#07111f] px-3 py-2">
+      <label htmlFor="pm-property-operational-status" className="text-[11px] text-slate-400">Operational status</label>
+      <select id="pm-property-operational-status" value={property.status || "HEALTHY"} disabled={savingStatus}
+        onChange={event => changeStatus(event.target.value)}
+        className="min-h-9 rounded-lg border border-slate-600 bg-slate-950 px-2 text-[11px] font-bold text-white">
+        <option value="HEALTHY">Healthy</option><option value="WATCH">Watch</option><option value="AT_RISK">At risk</option>
+      </select>
     </section>
 
-    <div className="flex gap-2 overflow-x-auto rounded-2xl border border-cyan-500/15 bg-[#07111f]/90 p-2">{tabs.map((item) => <button key={item} type="button" onClick={() => setTab(item)} className={`whitespace-nowrap rounded-xl px-4 py-2.5 text-xs font-black capitalize ${tab === item ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>{item}</button>)}</div>
+    <nav aria-label="Property 360 sections" className="sticky top-[max(4rem,env(safe-area-inset-top))] z-20 flex gap-1.5 overflow-x-auto rounded-xl border border-cyan-500/15 bg-[#07111f]/95 p-1.5 backdrop-blur">{tabs.map((item) => <button key={item} type="button" onClick={() => { setTab(item); nav(`/pm/properties/${propertyId}?tab=${item}`); }} className={`min-h-9 shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-black ${tab === item ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>{tabLabels[item]}</button>)}</nav>
 
-    {tab === "overview" ? <div className="space-y-5"><div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]"><Panel title="Property Profile & Health" subtitle="Start here before triaging maintenance, tenants, messages, or paperwork." action={<Button tone="cyan" onClick={() => setDetailsOpen(true)}>Edit Details & Inventory</Button>}><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[["Health score", healthScore], ["Lifecycle", occupancyState], ["Open maintenance", openOrders.length], ["Outstanding balance", money(balance)]].map(([label, value]) => <div key={label} className="rounded-2xl border border-slate-800 bg-black/25 p-4"><div className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">{label}</div><div className="mt-2 text-xl font-black text-white">{value}</div></div>)}</div><div className="mt-5 rounded-2xl border border-slate-800 bg-black/20 p-4 text-sm text-slate-400"><span className="font-black text-white">Internal notes:</span> {property.notes || "No property notes have been added."}</div></Panel><Panel title="Triage & Attention" subtitle="Items that need the PM company’s next action."><div className="space-y-3">{evictionCase ? <button type="button" onClick={() => nav(`/pm/settings?view=messages&tab=occupancy`)} className="w-full rounded-2xl border border-rose-500/25 bg-rose-500/10 p-4 text-left text-rose-100"><div className="font-black">Former tenant has an active eviction case</div></button> : null}{makeReadyOrder ? <button type="button" onClick={() => nav(`/pm/settings?view=make-ready&property=${propertyId}`)} className="w-full rounded-2xl border border-fuchsia-500/25 bg-fuchsia-500/10 p-4 text-left text-fuchsia-100"><div className="font-black">Property is in Make Ready</div></button> : null}{openOrders.length ? <button type="button" onClick={() => setTab("maintenance")} className="w-full rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4 text-left text-amber-100"><div className="font-black">{openOrders.length} open maintenance item{openOrders.length === 1 ? "" : "s"}</div></button> : null}{balance > 0 ? <button type="button" onClick={() => setTab("ledger")} className="w-full rounded-2xl border border-rose-500/25 bg-rose-500/10 p-4 text-left text-rose-100"><div className="font-black">{money(balance)} outstanding</div></button> : null}{!evictionCase && !makeReadyOrder && !openOrders.length && !balance ? <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-4 text-emerald-100">No immediate attention items.</div> : null}</div></Panel></div><div className="grid gap-5 xl:grid-cols-2"><Checklist title="Move-In Checklist" subtitle="Everything needed before a tenant takes possession." items={moveInItems} action={<Button onClick={() => setTab("documents")}>Documents</Button>} /><Checklist title="Move-Out & Make-Ready Checklist" subtitle="Preserve the former tenant record while preparing the property for the next resident." items={moveOutItems} action={<Button tone="amber" onClick={() => nav(`/pm/settings?view=make-ready&property=${propertyId}`)}>Make Ready</Button>} /></div></div> : null}
+    {tab === "overview" ? <div className="space-y-3">
+      <section className="rounded-xl border border-slate-700 bg-[#07111f] p-3">
+        <div className="flex items-center justify-between gap-2">
+          <div><h2 className="text-sm font-black text-white">Lifecycle & property details</h2>
+          <p className="mt-1 text-[11px] text-slate-400">Records, inspections and operational checklists</p></div>
+          <Button tone="cyan" onClick={() => setDetailsOpen(true)}>Edit profile</Button>
+        </div>
+        <p className="mt-3 rounded-lg border border-slate-800 bg-black/20 p-3 text-xs text-slate-400">{property.notes || "No internal property notes on file."}</p>
+      </section>
+      <details className="rounded-xl border border-cyan-500/20 bg-[#07111f] p-3">
+        <summary className="cursor-pointer text-sm font-black text-cyan-100">Move-in checklist · {moveInItems.filter(x=>x.done).length}/{moveInItems.length}</summary>
+        <div className="mt-3"><Checklist title="Move-in readiness" subtitle="Complete each item and verify supporting evidence." items={moveInItems} action={<Button onClick={() => setTab("documents")}>Documents</Button>} /></div>
+      </details>
+      <details className="rounded-xl border border-cyan-500/20 bg-[#07111f] p-3">
+        <summary className="cursor-pointer text-sm font-black text-cyan-100">Move-out & make-ready · {moveOutItems.filter(x=>x.done).length}/{moveOutItems.length}</summary>
+        <div className="mt-3"><Checklist title="Move-out readiness" subtitle="Preserve historical tenancy and deposits." items={moveOutItems} action={<Button tone="amber" onClick={() => nav(`/pm/settings?view=make-ready&property=${propertyId}`)}>Make ready</Button>} /></div>
+      </details>
+    </div> : null}
 
     {tab === "units" ? <Panel title="Units & Availability" action={<div className="flex flex-wrap gap-2"><Button tone="cyan" onClick={() => nav(`/pm/leasing?property=${propertyId}&tab=units`)}>Add Unit</Button><Button onClick={() => setDetailsOpen(true)}>Inventory</Button></div>}>{units.length ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{units.map((unit) => <article key={unit.id} className="rounded-2xl border border-slate-800 bg-black/25 p-4"><div className="flex items-start justify-between"><div><div className="font-black text-white">{unit.label}</div><div className="mt-1 text-xs text-slate-500">{unit.bedrooms || 0} bed · {unit.bathrooms || 0} bath</div></div><Badge>{String(unit.availability || "AVAILABLE").replaceAll("_", " ")}</Badge></div><div className="mt-4 text-sm text-slate-400">Market rent: <strong className="text-white">{money(unit.market_rent)}</strong></div></article>)}</div> : <Empty text="No units have been added." />}</Panel> : null}
     {tab === "tenants" ? <Panel title="Current & Former Tenant Records" action={<Button tone="cyan" onClick={() => nav(`/pm/tenants?property=${propertyId}`)}>Add Tenant</Button>}>{tenants.length ? <div className="space-y-3">{tenants.map((tenant) => <article key={tenant.id} className="rounded-2xl border border-slate-800 bg-black/25 p-4"><div className="flex items-start justify-between gap-3"><div><div className="font-black text-white">{tenant.full_name || `${tenant.first_name} ${tenant.last_name}`}</div><div className="mt-1 text-xs text-slate-500">{tenant.email} · {tenant.unit_label || "Unit not assigned"}</div></div><Badge tone={tenant.status === "INACTIVE" ? "amber" : "green"}>{tenant.status || "ACTIVE"}</Badge></div></article>)}</div> : <Empty text="No tenant record is connected to this property." />}</Panel> : null}
