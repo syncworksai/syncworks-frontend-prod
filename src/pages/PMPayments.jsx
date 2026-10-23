@@ -71,6 +71,7 @@ export default function PMPayments() {
   const [reconError, setReconError] = useState("");
   const [allocation, setAllocation] = useState(null);
   const [externalRecords, setExternalRecords] = useState([]);
+  const [depositStatus, setDepositStatus] = useState(null);
   const [externalBusy, setExternalBusy] = useState(false);
   const [externalError, setExternalError] = useState("");
   const [lateForm, setLateForm] = useState(null);
@@ -124,17 +125,18 @@ export default function PMPayments() {
   useEffect(() => {
     let live = true;
     if (!filterTenant || !workspace?.id) {
-      setAllocation(null); setExternalRecords([]); return undefined;
+      setAllocation(null); setExternalRecords([]); setDepositStatus(null); return undefined;
     }
     const id = filterTenant;
     const h = { "X-PM-Workspace-ID": String(workspace.id) };
     Promise.all([
       api.get(`/pm-hub/billing/tenants/${id}/allocations/`, { headers: h }),
       api.get(`/pm-hub/billing/tenants/${id}/external-evidence/`, { headers: h }),
-    ]).then(([a, e]) => {
-      if (live) { setAllocation(a.data); setExternalRecords(e.data?.records || []); }
+      api.get(`/pm-hub/billing/tenants/${id}/deposit-status/`, { headers: h }),
+    ]).then(([a, e, d]) => {
+      if (live) { setAllocation(a.data); setExternalRecords(e.data?.records || []); setDepositStatus(d.data); }
     }).catch(() => {
-      if (live) { setAllocation(null); setExternalRecords([]); }
+      if (live) { setAllocation(null); setExternalRecords([]); setDepositStatus(null); }
     });
     return () => { live = false; };
   }, [filterTenant, workspace?.id, entries]);
@@ -416,6 +418,11 @@ export default function PMPayments() {
           </> : <p className="mt-2 text-[11px] text-slate-400">Payment allocation audit is unavailable. Ledger entries are shown below.</p>}
           <div className="mt-3 flex items-center justify-between gap-2"><div className="text-xs font-black text-white">MHA, former manager & deposit evidence</div><span className="text-[10px] text-slate-400">{externalRecords.length} records</span></div>
           <p className="mt-1 text-[10px] leading-4 text-slate-400">Reported or disputed funds are not marked received and do not change the tenant's debt. Deposit collection and application require separate proof.</p>
+          {depositStatus ? <div className="mt-2 rounded-lg border border-amber-400/20 bg-amber-500/5 p-2.5">
+            <div className="text-[11px] font-black text-amber-100">Security deposit account (separate from rent)</div>
+            <div className="mt-1 grid grid-cols-3 gap-1.5 text-[10px]"><div>Received<strong className="mt-0.5 block text-xs text-white">{money(depositStatus.deposit_received)}</strong></div><div>Held<strong className="mt-0.5 block text-xs text-white">{money(depositStatus.deposit_held)}</strong></div><div>Applied<strong className="mt-0.5 block text-xs text-white">{money(depositStatus.deposit_applied)}</strong></div></div>
+            <p className="mt-1.5 text-[10px] leading-4 text-slate-400">An external claim that the deposit was transferred or applied does not update these numbers. Verify Adair's transfer, tenant agreement and any existing ledger credit before making a new adjustment.</p>
+          </div> : null}
           <div className="mt-2 grid gap-1.5 sm:grid-cols-2">{externalRecords.slice().reverse().map((row) => <article key={row.id} className="rounded-lg border border-slate-700/70 bg-black/20 p-2.5"><div className="flex items-center justify-between gap-2"><span className="text-[10px] font-bold text-slate-200">{row.category.replaceAll("_", " ")}</span><span className="shrink-0 text-xs font-black">{money(row.amount)}</span></div><div className="mt-1 text-[10px] text-slate-400">{row.period} · {row.evidence_status}</div><p className="mt-1 text-[11px] leading-4 text-slate-300">{row.note}</p></article>)}</div>
         </section> : null}
 
