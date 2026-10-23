@@ -82,6 +82,10 @@ import PropertyManagerDashboard from "./pages/PropertyManagerDashboard";
 import PropertyManagerCalendar from "./pages/PropertyManagerCalendar";
 import PMEmployees from "./pages/PMEmployees";
 import PMPropertyDetail from "./pages/PMPropertyDetail";
+import PMPropertyCreate from "./pages/PMPropertyCreate";
+import PMHandoffWizard from "./pages/PMHandoffWizard";
+import PMPropertiesIndex from "./pages/PMPropertiesIndex";
+import PMPayments from "./pages/PMPayments";
 import EmployeeInvite from "./pages/EmployeeInvite";
 import EmployeeTechnicianDashboard from "./pages/EmployeeTechnicianDashboard";
 import TenantDashboard from "./pages/TenantDashboard";
@@ -206,6 +210,10 @@ export default function App() {
         <Route path="/pm" element={<ProtectedRoute><PropertyManagerDashboard /></ProtectedRoute>} />
         <Route path="/pm/calendar" element={<ProtectedRoute><PropertyManagerCalendar /></ProtectedRoute>} />
         <Route path="/pm/employees" element={<ProtectedRoute><PMEmployees /></ProtectedRoute>} />
+        <Route path="/pm/properties" element={<ProtectedRoute><PMPropertiesIndex /></ProtectedRoute>} />
+        <Route path="/pm/properties/new" element={<ProtectedRoute><PMPropertyCreate /></ProtectedRoute>} />
+        <Route path="/pm/handoff" element={<ProtectedRoute><PMHandoffWizard /></ProtectedRoute>} />
+        <Route path="/pm/payments" element={<ProtectedRoute><PMPayments /></ProtectedRoute>} />
         <Route path="/pm/properties/:propertyId" element={<ProtectedRoute><PMPropertyDetail /></ProtectedRoute>} />
         <Route path="/tenant" element={<ProtectedRoute><TenantDashboard /></ProtectedRoute>} />
         <Route path="/tenant/accept" element={<ProtectedRoute><TenantAcceptInvite /></ProtectedRoute>} />
