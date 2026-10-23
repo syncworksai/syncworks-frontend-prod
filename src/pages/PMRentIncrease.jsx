@@ -18,6 +18,9 @@ export default function PMRentIncrease(){
  const [propertyId,setPropertyId]=useState(params.get("property")||"");
  const [form,setForm]=useState({tenant_id:"",current_rent:"",requested_rent:"",proposed_effective_date:"",notice_date:"",hap_anniversary_date:"",administrator:"",notes:""});
  const [editing,setEditing]=useState({});const [busy,setBusy]=useState(false);
+ const [original,setOriginal]=useState({amount:"",effective_date:"",source_note:"",source_document_id:""});
+ const [originalPreview,setOriginalPreview]=useState(null);
+ const [originalAgreed,setOriginalAgreed]=useState(false);
  const [error,setError]=useState("");const [notice,setNotice]=useState("");
  useEffect(()=>{let live=true;(async()=>{try{
  const w=(await api.get("/pm-hub/workspaces/current/")).data;
@@ -40,7 +43,29 @@ export default function PMRentIncrease(){
  useEffect(()=>{if(!tenant)return;
  const lease=leases.filter(l=>String(l.tenant)===String(tenant.id)).sort((a,b)=>String(b.start_date).localeCompare(String(a.start_date)))[0];
  setForm(f=>({...f,current_rent:String(lease?.monthly_rent||tenant.monthly_rent||""),administrator:String(lease?.housing_authority||"")}));
+ setOriginal({amount:String(lease?.monthly_rent||tenant.monthly_rent||""),effective_date:lease?.start_date||tenant.lease_start||"",source_note:"",source_document_id:""});
+ setOriginalPreview(null);setOriginalAgreed(false);
  },[form.tenant_id,leases,tenants]);
+ async function auditOriginal(apply=false){
+   if(!form.tenant_id)return;
+   if(apply && (!originalPreview||!originalAgreed))return;
+   setBusy(true);setError("");setNotice("");
+   try{
+     const r=await api.post(`/pm-hub/billing/tenants/${form.tenant_id}/original-lease-rent/`,{
+       contract_rent:original.amount,effective_date:original.effective_date,
+       source_note:original.source_note,source_document_id:original.source_document_id||null,
+       apply,confirmed:apply&&originalAgreed,
+     },{headers:{"X-PM-Workspace-ID":String(ws.id)}});
+     if(apply){
+       setOriginalPreview(null);setOriginalAgreed(false);
+       setNotice("Original lease amount updated. No historical charge or receipt was changed. Review monthly differences before fixing posted charges.");
+       const h={"X-PM-Workspace-ID":String(ws.id)};
+       const lr=await api.get("/pm-hub/leases/",{headers:h});
+       setLeases(list(lr.data));
+     }else setOriginalPreview(r.data.preview);
+   }catch(e){setError(e?.response?.data?.detail||"Unable to review original lease amount.");}
+   finally{setBusy(false);}
+ }
  const patch=(field,value)=>setForm(p=>({...p,[field]:value}));
  const patchEdit=(field,value)=>setEditing(p=>({...p,[field]:value}));
  async function load(){
@@ -74,7 +99,26 @@ export default function PMRentIncrease(){
   <section className="rounded-xl border border-cyan-500/20 bg-[#07111f] p-3">
     <Field label="Property"><select className={input} value={propertyId} onChange={e=>{setPropertyId(e.target.value);setParams(e.target.value?{property:e.target.value}:{});setSelected(null);setPlans([]);}}><option value="">Choose a property</option>{properties.map(p=><option value={p.id} key={p.id}>{p.name} — {p.address}</option>)}</select></Field>
   </section>
-  {propertyId?<><section className="rounded-xl border border-cyan-500/20 bg-[#07111f] p-3 sm:p-5">
+  {propertyId?<><section className="rounded-xl border border-amber-400/25 bg-[#07111f] p-3 sm:p-5">
+    <h2 className="text-sm font-black text-amber-100">Original contract rent audit</h2>
+    <p className="mt-1 text-xs leading-5 text-slate-400">Correct only the ORIGINAL signed lease amount. This does not backdate new rent increases, change third-party shares, or overwrite tenant payments.</p>
+    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      <Field label="Tenant"><select className={input} value={form.tenant_id} onChange={e=>patch("tenant_id",e.target.value)}><option value="">Choose existing tenant</option>{(matching.length?matching:tenants).map(t=><option key={t.id} value={t.id}>{t.full_name||[t.first_name,t.last_name].join(" ")} · {t.property_name||"unlinked"}</option>)}</select></Field>
+      <Field label="Original contract rent"><input className={input} inputMode="decimal" value={original.amount} onChange={e=>{setOriginal(o=>({...o,amount:e.target.value}));setOriginalPreview(null);}}/></Field>
+      <Field label="Original signed lease start"><input className={input} type="date" value={original.effective_date} onChange={e=>{setOriginal(o=>({...o,effective_date:e.target.value}));setOriginalPreview(null);}}/></Field>
+      <Field label="Supporting signed lease"><select className={input} value={original.source_document_id} onChange={e=>{setOriginal(o=>({...o,source_document_id:e.target.value}));setOriginalPreview(null);}}><option value="">Specify in note if document not uploaded</option>{documents.map(d=><option value={d.id} key={d.id}>{d.title}</option>)}</select></Field>
+    </div>
+    <Field label="Lease evidence / reason for correction"><textarea rows={2} className={input+" mt-2"} value={original.source_note} onChange={e=>{setOriginal(o=>({...o,source_note:e.target.value}));setOriginalPreview(null);}} placeholder="Original signed lease establishes rent of $... effective ..." /></Field>
+    <button type="button" disabled={!form.tenant_id||busy} onClick={()=>auditOriginal(false)} className="mt-3 min-h-10 w-full rounded-xl border border-amber-400/35 px-3 text-xs font-black text-amber-100 disabled:opacity-40">Preview original rent correction</button>
+    {originalPreview?<div className="mt-3 rounded-lg border border-amber-400/25 bg-amber-500/5 p-3">
+      <div className="text-xs font-bold text-amber-100">Current original: ${originalPreview.old_original_rent} → proposed: ${originalPreview.proposed_original_rent}</div>
+      <p className="mt-1 text-[11px] text-slate-400">Existing rent entries are not rewritten. Discrepancies below require a separate month-by-month review.</p>
+      <div className="mt-2 max-h-48 space-y-1 overflow-y-auto">{(originalPreview.monthly_review||[]).map(m=><div key={m.month} className="flex items-center justify-between gap-2 border-b border-slate-700/50 py-1 text-[11px]"><span>{m.month}: {m.status.replaceAll("_"," ")}</span><span>Posted ${m.posted_net_rent_charges} · difference ${m.variance}</span></div>)}</div>
+      <label className="mt-3 flex items-start gap-2 text-xs"><input type="checkbox" checked={originalAgreed} onChange={e=>setOriginalAgreed(e.target.checked)} /><span>I verified this is the ORIGINAL signed lease rent and date, not a rent increase. I understand that posted rent charges and payment receipts remain unchanged.</span></label>
+      <button type="button" disabled={!originalAgreed||busy} onClick={()=>auditOriginal(true)} className="mt-3 min-h-11 w-full rounded-lg bg-cyan-400 px-3 text-xs font-black text-slate-950 disabled:opacity-40">Confirm original lease rent</button>
+    </div>:null}
+  </section>
+  <section className="rounded-xl border border-cyan-500/20 bg-[#07111f] p-3 sm:p-5">
     <h2 className="text-sm font-black">New rent proposal</h2><p className="mt-1 text-xs text-slate-400">The original lease and assistance contract determine allowable timing. Voucher changes generally require administrator review.</p>
     <form onSubmit={create} className="mt-3 space-y-3">
       <div className="grid gap-2 sm:grid-cols-2">
