@@ -112,7 +112,7 @@ export default function PMLeaseBuilder(){
   setBusy(true);setErr("");setMsg("");
   try{
    const r=await api.post(`/pm-hub/billing/tenants/${tenantId}/lease-builder/`,{
-    apply:true,confirmed:true,through_date:new Date().toISOString().slice(0,10)},{headers});
+    apply:true,confirmed:true,preview_token:preview.preview_token,through_date:new Date().toISOString().slice(0,10)},{headers});
    setPreview(null);setReady(false);setMsg(`Posted ${r.data.created_entry_ids?.length||0} balancing rent adjustments. Payments and late fees remain unchanged.`);
    await loadTenant(tenantId);
   }catch(e){setErr(errmsg(e));}finally{setBusy(false);}
