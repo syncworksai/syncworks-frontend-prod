@@ -69,6 +69,11 @@ export default function PMPayments() {
   const [reconConfirmed, setReconConfirmed] = useState(false);
   const [reconBusy, setReconBusy] = useState(false);
   const [reconError, setReconError] = useState("");
+  const [allocation, setAllocation] = useState(null);
+  const [externalRecords, setExternalRecords] = useState([]);
+  const [externalBusy, setExternalBusy] = useState(false);
+  const [externalError, setExternalError] = useState("");
+  const [externalForm, setExternalForm] = useState({ category: "HAP_PAID_TO_FORMER_MANAGER", period: today.slice(0, 7), amount: "", evidence_status: "REPORTED", note: "" });
   const [drawer, setDrawer] = useState(params.get("add") === "1" ? "entry" : "");
   const [entry, setEntry] = useState({ ...blankEntry, tenant: params.get("tenant") || "" });
   const [editing, setEditing] = useState(null);
@@ -111,6 +116,24 @@ export default function PMPayments() {
 
   useEffect(() => { load(); }, []);
   useEffect(() => { loadPayer(filterTenant); }, [filterTenant, workspace?.id]);
+  useEffect(() => {
+    let live = true;
+    if (!filterTenant || !workspace?.id) {
+      setAllocation(null); setExternalRecords([]); return undefined;
+    }
+    const id = filterTenant;
+    const h = { "X-PM-Workspace-ID": String(workspace.id) };
+    Promise.all([
+      api.get(`/pm-hub/billing/tenants/${id}/allocations/`, { headers: h }),
+      api.get(`/pm-hub/billing/tenants/${id}/external-evidence/`, { headers: h }),
+    ]).then(([a, e]) => {
+      if (live) { setAllocation(a.data); setExternalRecords(e.data?.records || []); }
+    }).catch(() => {
+      if (live) { setAllocation(null); setExternalRecords([]); }
+    });
+    return () => { live = false; };
+  }, [filterTenant, workspace?.id, entries]);
+
   useEffect(() => { setSelectedIds([]); }, [filterTenant, propertyFilter, ledgerFilter]);
 
   const properties = useMemo(() => {
@@ -202,6 +225,23 @@ export default function PMPayments() {
     } catch (err) {
       setReconError(err?.response?.data?.detail || "Unable to reconcile the month. Please check the amounts and try again.");
     } finally { setReconBusy(false); }
+  }
+
+
+  async function saveExternalEvidence() {
+    if (!filterTenant || !workspace || externalBusy) return;
+    setExternalError(""); setExternalBusy(true);
+    try {
+      const response = await api.post(`/pm-hub/billing/tenants/${filterTenant}/external-evidence/`, externalForm, { headers });
+      setExternalRecords(response.data?.records || []);
+      setExternalForm((old) => ({ ...old, amount: "", note: "" }));
+      setMessage("External payment evidence recorded for review. No tenant or housing balance was changed.");
+      setDrawer("");
+    } catch (err) {
+      setExternalError(err?.response?.data?.detail || "Could not save the evidence record.");
+    } finally {
+      setExternalBusy(false);
+    }
   }
 
   function selectTenant(id) {
@@ -327,6 +367,25 @@ export default function PMPayments() {
           <p className="mt-2 text-[10px] leading-relaxed text-slate-400 sm:text-xs">Review historical Section 8 portions by month before editing. A charge does not mean a payment was received. MHA abatement, funds paid to a former manager, disputed payments, and tenant security deposits must not be marked paid without proof. Existing late fees are preserved; any missing late fee requires a lease and payment-date check.</p>
         </section> : null}
 
+        {filterTenant ? <section className="rounded-xl border border-cyan-500/20 bg-[#07111f]/90 p-2.5 sm:rounded-2xl sm:p-4" aria-label="Payment application and external reconciliation">
+          <div className="flex items-center justify-between gap-2"><div><h2 className="text-sm font-black text-cyan-100 sm:text-lg">Payment trail & oldest-first application</h2><p className="mt-0.5 text-[10px] text-slate-400 sm:text-xs">Receipt dates never change. Each verified payment goes against the oldest eligible amount owed by its payer.</p></div><button type="button" className="min-h-9 shrink-0 rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/10 px-2.5 text-[11px] font-black text-fuchsia-100" onClick={() => { setExternalError(""); setDrawer("external"); }}>+ Track funds</button></div>
+          {allocation ? <>
+            <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-lg border border-cyan-400/25 bg-cyan-500/5 p-2.5"><div className="text-[10px] text-slate-400">Open tenant charges*</div><div className="mt-1 font-black text-cyan-200">{money(allocation.tenant_unpaid)}</div></div>
+              <div className="rounded-lg border border-fuchsia-400/25 bg-fuchsia-500/5 p-2.5"><div className="text-[10px] text-slate-400">Open housing charges*</div><div className="mt-1 font-black text-fuchsia-200">{money(allocation.housing_unpaid)}</div></div>
+            </div>
+            <div className="mt-2 max-h-56 space-y-1.5 overflow-y-auto">
+              {allocation.allocations?.slice().reverse().slice(0, 24).map((item, i) => <div key={`${item.source_id}-${item.charge_id}-${i}`} className="flex items-center justify-between gap-2 rounded-lg border border-slate-700/70 bg-black/20 px-2.5 py-2 text-[11px]"><div className="min-w-0"><div className="font-semibold">{item.source_date} → {item.charge_month} {item.category === "LATE_FEE" ? "late fee" : "charge"}</div><div className="text-[10px] text-slate-500">{item.payer === "HOUSING" ? "MHA / housing" : "Tenant"} · {item.source_type === "PAYMENT" ? "Payment" : "Credit"}</div></div><strong className="shrink-0 text-emerald-300">{money(item.amount)}</strong></div>)}
+              {!allocation.allocations?.length ? <p className="rounded-lg border border-dashed border-slate-700 p-3 text-xs text-slate-400">No payment allocations to display yet.</p> : null}
+            </div>
+            {Number(allocation.unapplied_tenant_receipts || 0) > 0 ? <p className="mt-2 text-[11px] text-amber-200">Unallocated tenant payments/credits: {money(allocation.unapplied_tenant_receipts)}. Review missing charges before treating this as overpayment.</p> : null}
+            {allocation.late_fee_review?.some((m) => m.review_late_fee) ? <div className="mt-2 rounded-lg border border-amber-400/25 bg-amber-500/5 p-2.5"><div className="text-xs font-black text-amber-100">Late fees to investigate</div><p className="mt-1 text-[11px] leading-4 text-slate-300">{allocation.late_fee_review.filter((m) => m.review_late_fee).map((m) => m.month).join(", ")}. Tenant rent appears unpaid at the configured grace date, but fees are not automatically posted. Check the signed lease, fee rules, and late/postdated receipts first.</p></div> : null}
+          </> : <p className="mt-2 text-[11px] text-slate-400">Payment allocation audit is unavailable. Ledger entries are shown below.</p>}
+          <div className="mt-3 flex items-center justify-between gap-2"><div className="text-xs font-black text-white">MHA, former manager & deposit evidence</div><span className="text-[10px] text-slate-400">{externalRecords.length} records</span></div>
+          <p className="mt-1 text-[10px] leading-4 text-slate-400">Reported or disputed funds are not marked received and do not change the tenant's debt. Deposit collection and application require separate proof.</p>
+          <div className="mt-2 grid gap-1.5 sm:grid-cols-2">{externalRecords.slice().reverse().map((row) => <article key={row.id} className="rounded-lg border border-slate-700/70 bg-black/20 p-2.5"><div className="flex items-center justify-between gap-2"><span className="text-[10px] font-bold text-slate-200">{row.category.replaceAll("_", " ")}</span><span className="shrink-0 text-xs font-black">{money(row.amount)}</span></div><div className="mt-1 text-[10px] text-slate-400">{row.period} · {row.evidence_status}</div><p className="mt-1 text-[11px] leading-4 text-slate-300">{row.note}</p></article>)}</div>
+        </section> : null}
+
         <section className="rounded-2xl border border-cyan-500/15 bg-[#07111f]/90 p-3 sm:rounded-[28px] sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3"><div><h2 className="text-lg font-black sm:text-xl">{filterTenant ? `${selectedTenant?.full_name || "Tenant"} ledger` : "Select a tenant"}</h2>{filterTenant ? <p className="mt-1 text-xs text-slate-400">Showing {visibleEntries.length} of {tenantEntries.length} ledger entries</p> : null}</div>{filterTenant ? <button onClick={() => openEntry(filterTenant)} className="rounded-xl bg-cyan-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-cyan-300 sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm">+ Add Entry</button> : null}</div>
           {filterTenant ? <>
@@ -337,6 +396,22 @@ export default function PMPayments() {
         </section>
       </main>
 
+      {drawer === "external" ? <Drawer title="Record external payment evidence" onClose={closeDrawer}>
+        <div className="space-y-3 pb-6 text-sm">
+          <div className="rounded-xl border border-amber-400/25 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100">Use this for money MHA says it sent to Adair, amounts on hold, Adair owner distributions, or an unverified security deposit. It is not a rent payment and will not reduce the balance.</div>
+          <Field label="Type"><select className={inputClass} value={externalForm.category} onChange={(e) => setExternalForm((x) => ({ ...x, category: e.target.value }))}>
+            {[["HAP_PAID_TO_FORMER_MANAGER", "MHA paid former manager"], ["HAP_ON_HOLD", "MHA payment held"], ["HAP_RETURN_CLAIM", "Former manager says HAP returned"], ["FORMER_MANAGER_DISTRIBUTION", "Former manager paid owner"], ["TENANT_PAID_FORMER_MANAGER", "Tenant paid former manager"], ["DEPOSIT_COLLECTION_CLAIM", "Deposit reportedly collected"], ["DEPOSIT_TRANSFER_CLAIM", "Deposit reportedly transferred"], ["DEPOSIT_APPLIED_CLAIM", "Deposit reportedly applied to rent"], ["OTHER_UNVERIFIED", "Other external amount"]].map(([v, name]) => <option value={v} key={v}>{name}</option>)}
+          </select></Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Period"><input type="month" className={inputClass} value={externalForm.period} onChange={(e) => setExternalForm((x) => ({ ...x, period: e.target.value }))}/></Field>
+            <Field label="Amount"><input inputMode="decimal" className={inputClass} placeholder="0.00" value={externalForm.amount} onChange={(e) => setExternalForm((x) => ({ ...x, amount: e.target.value }))}/></Field>
+          </div>
+          <Field label="Evidence"><select className={inputClass} value={externalForm.evidence_status} onChange={(e) => setExternalForm((x) => ({ ...x, evidence_status: e.target.value }))}>{["UNVERIFIED", "REPORTED", "DOCUMENTED", "DISPUTED", "RESOLVED"].map((v) => <option value={v} key={v}>{v}</option>)}</select></Field>
+          <Field label="Source / explanation"><textarea rows={3} className={inputClass} value={externalForm.note} placeholder="E.g., per MHA email dated…, Adair ledger not received" onChange={(e) => setExternalForm((x) => ({ ...x, note: e.target.value }))} /></Field>
+          {externalError ? <div role="alert" className="rounded-lg border border-rose-400/30 bg-rose-500/10 p-3 text-xs text-rose-200">{externalError}</div> : null}
+          <button type="button" disabled={externalBusy} onClick={saveExternalEvidence} className="min-h-11 w-full rounded-xl bg-cyan-400 px-3 font-black text-slate-950 disabled:opacity-40">{externalBusy ? "Saving…" : "Save evidence (no balance change)"}</button>
+        </div>
+      </Drawer> : null}
       {drawer === "reconcile" && recon ? <Drawer title={`Review ${recon.month} Rent`} onClose={closeDrawer}>
         <div className="space-y-3 pb-5 text-sm">
           <p className="rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100">Use the payer split that applied to this month, not the current split. If MHA assistance was abated, do not transfer its portion to the tenant. Preview before applying; existing payments, late fees and deposits are unchanged.</p>
