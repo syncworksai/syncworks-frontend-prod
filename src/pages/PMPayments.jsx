@@ -62,6 +62,8 @@ export default function PMPayments() {
   const [filterTenant, setFilterTenant] = useState(params.get("tenant") || "");
   const [propertyFilter, setPropertyFilter] = useState(params.get("property") || "");
   const [ledgerFilter, setLedgerFilter] = useState("ALL");
+  const [auditExpectedRent, setAuditExpectedRent] = useState("");
+  const [auditMonthsBack, setAuditMonthsBack] = useState(0);
   const [drawer, setDrawer] = useState(params.get("add") === "1" ? "entry" : "");
   const [entry, setEntry] = useState({ ...blankEntry, tenant: params.get("tenant") || "" });
   const [editing, setEditing] = useState(null);
@@ -126,6 +128,29 @@ export default function PMPayments() {
   const visibleEntries = useMemo(() => tenantEntries.filter((r) => matchesLedgerFilter(r, ledgerFilter)), [tenantEntries, ledgerFilter]);
   const summaryMap = useMemo(() => new Map((billing.tenants || []).map((r) => [String(r.tenant_id), r])), [billing]);
   const filterCounts = useMemo(() => Object.fromEntries(ledgerFilters.map(([key]) => [key, tenantEntries.filter((r) => matchesLedgerFilter(r, key)).length])), [tenantEntries]);
+
+
+  // Read-only reconciliation view: charges are NOT evidence that money was paid.
+  const monthlyAudit = useMemo(() => {
+    const start = new Date();
+    start.setDate(1);
+    start.setMonth(start.getMonth() - 5 - auditMonthsBack * 6);
+    const moneySum = (rows) => rows.reduce((sum, row) => sum + (["PAYMENT", "CREDIT"].includes(String(row.entry_type).toUpperCase()) ? -Number(row.amount || 0) : Number(row.amount || 0)), 0);
+    return Array.from({ length: 6 }, (_, i) => {
+      const month = new Date(start.getFullYear(), start.getMonth() + i, 1);
+      const key = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+      const rows = tenantEntries.filter((r) => String(r.entry_date || "").startsWith(key));
+      const rent = rows.filter((r) => ["RENT", "RENT_TENANT", "RENT_HOUSING"].includes(String(r.category).toUpperCase()) && r.entry_type !== "PAYMENT");
+      const tenantRent = rent.filter((r) => bucketFor(r) === "TENANT");
+      const housingRent = rent.filter((r) => bucketFor(r) === "HOUSING");
+      const late = rows.filter((r) => String(r.category).toUpperCase() === "LATE_FEE" && r.entry_type !== "PAYMENT");
+      const payments = rows.filter((r) => r.entry_type === "PAYMENT");
+      const collected = payments.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      return { key, label: month.toLocaleDateString("en-US", { month: "short", year: "numeric" }), rent: moneySum(rent), tenant: moneySum(tenantRent), housing: moneySum(housingRent), late: moneySum(late), collected, paymentCount: payments.length };
+    });
+  }, [tenantEntries, auditMonthsBack]);
+  const auditExpected = Number(auditExpectedRent || payer.profile?.contract_rent || selectedTenant?.monthly_rent || 0);
+  const auditTolerance = 0.01;
 
   function selectTenant(id) {
     const v = String(id || "");
@@ -221,6 +246,23 @@ export default function PMPayments() {
           {filterTenant ? <div className="mt-3 grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3"><div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-2.5 sm:rounded-2xl sm:p-4"><div className="text-[10px] text-slate-400 sm:text-xs">Tenant owes</div><div className="mt-1 text-base font-black text-cyan-300 sm:text-2xl">{money(payer.buckets?.tenant_owes)}</div></div><div className="rounded-xl border border-fuchsia-500/30 bg-fuchsia-500/5 p-2.5 sm:rounded-2xl sm:p-4"><div className="text-[10px] text-slate-400 sm:text-xs">Housing owes</div><div className="mt-1 text-base font-black text-fuchsia-300 sm:text-2xl">{money(payer.buckets?.housing_owes)}</div></div><div className="rounded-xl border border-slate-600 bg-slate-900/50 p-2.5 sm:rounded-2xl sm:p-4"><div className="text-[10px] text-slate-400 sm:text-xs">Total balance</div><div className="mt-1 text-base font-black sm:text-2xl">{money(payer.buckets?.total_balance)}</div></div></div> : null}
           <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3 md:grid-cols-2 xl:grid-cols-3">{tenantRows.map((t) => { const a = summaryMap.get(String(t.id)) || {}; return <button key={t.id} onClick={() => selectTenant(t.id)} className={`rounded-xl border p-3 text-left transition sm:rounded-2xl sm:p-4 ${String(filterTenant) === String(t.id) ? "border-cyan-300 bg-cyan-500/15 shadow-lg shadow-cyan-950/20" : "border-slate-700 bg-slate-900/40 hover:border-cyan-500/40"}`}><div className="truncate text-sm font-black sm:text-base">{t.full_name}</div><div className="mt-0.5 truncate text-[11px] text-slate-400 sm:mt-1 sm:text-xs">{t.property_name || "No property"}</div><div className="mt-2 text-xs font-semibold sm:mt-3 sm:text-sm">Balance {money(a.balance)}</div></button>; })}</div>
         </section>
+
+        {filterTenant ? <section className="rounded-xl border border-cyan-500/20 bg-[#07111f]/90 p-2.5 sm:rounded-2xl sm:p-4" aria-label="Monthly ledger reconciliation">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div><h2 className="text-sm font-black text-cyan-100 sm:text-lg">Monthly reconciliation</h2><p className="text-[10px] text-slate-400 sm:text-xs">Read-only checks • no payment or late-fee changes</p></div>
+            <div className="flex items-center gap-1.5"><button type="button" className="rounded-lg border border-slate-600 px-2 py-1 text-xs" onClick={() => setAuditMonthsBack((x) => Math.min(x + 1, 12))}>Older</button><button type="button" className="rounded-lg border border-slate-600 px-2 py-1 text-xs disabled:opacity-40" disabled={!auditMonthsBack} onClick={() => setAuditMonthsBack((x) => Math.max(0, x - 1))}>Newer</button></div>
+          </div>
+          <label className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-300">Contract rent for comparison
+            <input aria-label="Expected contract rent" inputMode="decimal" className="w-28 rounded-lg border border-slate-600 bg-slate-950 px-2 py-1.5 text-xs text-white" value={auditExpectedRent} placeholder={String(payer.profile?.contract_rent || selectedTenant?.monthly_rent || "")} onChange={(e) => setAuditExpectedRent(e.target.value)} />
+          </label>
+          <div className="mt-2 overflow-x-auto rounded-lg border border-slate-700">
+            <table className="w-full min-w-[460px] text-left text-[11px] sm:text-xs">
+              <thead className="bg-slate-800/70 text-slate-300"><tr><th className="px-2 py-2">Month</th><th className="px-2 py-2 text-right">Tenant</th><th className="px-2 py-2 text-right">Housing</th><th className="px-2 py-2 text-right">Rent total</th><th className="px-2 py-2 text-right">Late fees</th><th className="px-2 py-2 text-right">Recorded paid</th><th className="px-2 py-2">Review</th></tr></thead>
+              <tbody>{monthlyAudit.map((m) => <tr key={m.key} className="border-t border-slate-700/70"><td className="whitespace-nowrap px-2 py-2 font-bold">{m.label}</td><td className="px-2 py-2 text-right">{money(m.tenant)}</td><td className="px-2 py-2 text-right">{money(m.housing)}</td><td className="px-2 py-2 text-right">{money(m.rent)}</td><td className="px-2 py-2 text-right">{money(m.late)}</td><td className="px-2 py-2 text-right">{money(m.collected)}</td><td className="px-2 py-2">{m.rent <= auditTolerance ? <span className="text-amber-300">No rent charge</span> : auditExpected > 0 && Math.abs(m.rent - auditExpected) > auditTolerance ? <span className="text-amber-300">Split mismatch</span> : <span className="text-emerald-300">Rent recorded</span>}</td></tr>)}</tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-[10px] leading-relaxed text-slate-400 sm:text-xs">Review historical Section 8 portions by month before editing. A charge does not mean a payment was received. MHA abatement, funds paid to a former manager, disputed payments, and tenant security deposits must not be marked paid without proof. Existing late fees are preserved; any missing late fee requires a lease and payment-date check.</p>
+        </section> : null}
 
         <section className="rounded-2xl border border-cyan-500/15 bg-[#07111f]/90 p-3 sm:rounded-[28px] sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3"><div><h2 className="text-lg font-black sm:text-xl">{filterTenant ? `${selectedTenant?.full_name || "Tenant"} ledger` : "Select a tenant"}</h2>{filterTenant ? <p className="mt-1 text-xs text-slate-400">Showing {visibleEntries.length} of {tenantEntries.length} ledger entries</p> : null}</div>{filterTenant ? <button onClick={() => openEntry(filterTenant)} className="rounded-xl bg-cyan-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-cyan-300 sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm">+ Add Entry</button> : null}</div>
