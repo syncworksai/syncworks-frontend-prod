@@ -40,6 +40,7 @@ function PMHandoffWizardContent(){
   const [tenantForm,setTenantForm]=useState({first_name:"",last_name:"",email:"",phone:""});
   const [ownerForm,setOwnerForm]=useState({name:"",email:"",phone:""});
   const [intakeDocumentId,setIntakeDocumentId]=useState("");
+  const [officialForms,setOfficialForms]=useState([]);
   const [intakeDraft,setIntakeDraft]=useState(null);
   const [intakeFields,setIntakeFields]=useState({});
   const [stage,setStage]=useState("setup");
@@ -90,6 +91,18 @@ function PMHandoffWizardContent(){
 
   const property=properties.find(x=>String(x.id)===propertyId);
   const headers=workspace?.id?{"X-PM-Workspace-ID":String(workspace.id)}:{};
+  useEffect(()=>{
+    if(!workspace?.id || !propertyId || !draft)return;
+    let alive=true;
+    const h={"X-PM-Workspace-ID":String(workspace.id)};
+    const p=properties.find(x=>String(x.id)===propertyId);
+    api.get("/pm-hub/assistance/forms/",{
+      headers:h,
+      params:{state:p?.state||"",administrator:draft.assistance?.administrator||"",
+              assistance_type:draft.assistance?.type||"NONE",rental_channel:draft.rental_channel||"DIRECT"}
+    }).then(r=>{if(alive)setOfficialForms(r.data.forms||[]);}).catch(()=>{if(alive)setOfficialForms([]);});
+    return ()=>{alive=false;};
+  },[workspace?.id,propertyId,properties,draft?.assistance?.administrator,draft?.assistance?.type,draft?.rental_channel]);
   const isAssisted=draft?.assistance?.type && draft.assistance.type!=="NONE";
   const taskGroups=useMemo(()=>{
     const base=checklist.filter(t=>!t.key.startsWith("provider_"));
@@ -277,6 +290,15 @@ function PMHandoffWizardContent(){
 
       {stage==="documents"?<Panel title="Transfer paperwork & verification" description="Track what is missing, requested, received or verified. A file being uploaded is not proof an external administrator approved it.">
         <div className="mb-3 flex flex-wrap gap-2"><button type="button" onClick={()=>navigate(`/pm/properties/${propertyId}?tab=documents`)} className="rounded-xl border border-cyan-500/40 px-3 py-2 text-xs font-black text-cyan-100">Open property document library ↗</button>{draft.assistance.administrator_website?.startsWith("https://")?<LinkOut href={draft.assistance.administrator_website}>Open administrator website</LinkOut>:null}</div>
+        {officialForms.length?<div className="mb-3 rounded-xl border border-cyan-400/25 bg-cyan-500/5 p-3">
+          <h3 className="text-xs font-black text-cyan-100">Relevant official forms & templates</h3>
+          <p className="mt-1 text-[11px] text-slate-400">Reference documents from the issuer. Check they are current; downloading does not submit or electronically sign them.</p>
+          <div className="mt-2 space-y-2">{officialForms.map(f=><div key={f.key} className="rounded-lg border border-slate-700 bg-black/20 p-2.5">
+            <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-cyan-200 underline underline-offset-2">{f.name} ↗</a>
+            <div className="mt-1 text-[10px] text-slate-400">{(f.roles||[]).map(r=>r.replaceAll("_"," ").toLowerCase()).join(" · ")}{f.notice_days?` · At least ${f.notice_days} days of notice`:""}</div>
+            {f.notes?<p className="mt-1 text-[10px] text-amber-200">{f.notes}</p>:null}
+          </div>)}</div>
+        </div>:null}
         <div className="mb-3 rounded-xl border border-slate-700 bg-black/20 p-3">
           <h3 className="text-xs font-black text-cyan-100">Extract information from an uploaded document</h3>
           <p className="mt-1 text-[11px] text-slate-400">Selectable-text PDF, Word or TXT. Extraction creates suggestions only; the user must confirm them. Scanned images are not supported yet.</p>
