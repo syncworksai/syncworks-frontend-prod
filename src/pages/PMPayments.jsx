@@ -329,7 +329,9 @@ export default function PMPayments() {
       await load();
       await loadPayer(model.tenant);
     } catch (err) {
-      setDrawerError(err?.response?.data?.detail || "Could not save ledger entry.");
+      const data=err?.response?.data;
+      const explanation=typeof data?.detail==="string"?data.detail:(data&&typeof data==="object"?Object.entries(data).map(([k,v])=>`${k}: ${Array.isArray(v)?v.join("; "):String(v)}`).join(" · "):"");
+      setDrawerError(explanation || "Could not save ledger entry. Check the tenant, date, amount and payer.");
     } finally { setBusy(false); }
   }
 
