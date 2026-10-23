@@ -106,6 +106,7 @@ export default function EmployeeLiveOperations() {
     <div className="min-h-screen bg-[#020617] pb-28 text-slate-100">
       <ModeBar title="Employee" subtitle="Live field operations" rightActions={<button onClick={load} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-slate-950"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /></button>} />
       <main className="mx-auto max-w-6xl space-y-4 px-4 py-5">
+        <button type="button" onClick={() => nav("/pm/staff")} className="min-h-11 w-full rounded-xl border border-cyan-400/25 bg-cyan-500/10 px-3 text-left text-xs font-black text-cyan-100">Property management team assignments →</button>
         <section className="rounded-[2rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_88%_8%,rgba(14,165,233,.16),transparent_30%),rgba(2,6,23,.94)] p-5 sm:p-7">
           <div className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-200">SYNC Field Assistant</div><h1 className="mt-2 text-3xl font-black text-white">Know what you're doing, where you're going, and what can slow you down.</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">Today's jobs combine your work clock, live traffic when available, travel estimates, weather at each stop, SLA risk and directions. The clock follows the assigned job so the office can see real progress without calling the technician.</p>
         </section>
