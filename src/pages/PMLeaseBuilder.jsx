@@ -73,7 +73,8 @@ export default function PMLeaseBuilder(){
     tenant_portion:leaseForm.section8?leaseForm.tenant_portion:leaseForm.monthly_rent,
     assistance_portion:leaseForm.section8?leaseForm.assistance_portion:"0",
     end_date:leaseForm.end_date||null,
-    converts_to_month_to_month:Boolean(leaseForm.converts_to_month_to_month)
+    converts_to_month_to_month:Boolean(leaseForm.converts_to_month_to_month),
+    source_note:config?.source_note||""
    };
    if(Number(data.tenant_portion)+Number(data.assistance_portion)!==Number(data.monthly_rent))
     throw new Error("Tenant + housing must equal total rent.");
