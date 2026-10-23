@@ -16,7 +16,6 @@ const navItems = [
   ["Schedule", "/pm/calendar", "calendar"],
   ["PEOPLE & TEAM", "", "", "section"],
   ["Team & Assignments", "/pm/team", "team"],
-  ["Employee Directory", "/pm/employees", "users"],
   ["Messages", "/pm/settings?view=messages", "messages"],
   ["Leads", "/pm/settings?view=leads", "users"],
   ["Settings", "/pm/settings", "settings"],
