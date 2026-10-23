@@ -84,6 +84,7 @@ import PMEmployees from "./pages/PMEmployees";
 import PMPropertyDetail from "./pages/PMPropertyDetail";
 import PMPropertyCreate from "./pages/PMPropertyCreate";
 import PMHandoffWizard from "./pages/PMHandoffWizard";
+import PMRentIncrease from "./pages/PMRentIncrease";
 import PMPropertiesIndex from "./pages/PMPropertiesIndex";
 import PMTenantsIndex from "./pages/PMTenantsIndex";
 import PMPayments from "./pages/PMPayments";
@@ -214,6 +215,7 @@ export default function App() {
         <Route path="/pm/properties" element={<ProtectedRoute><PMPropertiesIndex /></ProtectedRoute>} />
         <Route path="/pm/properties/new" element={<ProtectedRoute><PMPropertyCreate /></ProtectedRoute>} />
         <Route path="/pm/handoff" element={<ProtectedRoute><PMHandoffWizard /></ProtectedRoute>} />
+        <Route path="/pm/rent-increases" element={<ProtectedRoute><PMRentIncrease /></ProtectedRoute>} />
         <Route path="/pm/payments" element={<ProtectedRoute><PMPayments /></ProtectedRoute>} />
         <Route path="/pm/tenants" element={<ProtectedRoute><PMTenantsIndex /></ProtectedRoute>} />
         <Route path="/pm/properties/:propertyId" element={<ProtectedRoute><PMPropertyDetail /></ProtectedRoute>} />
