@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import api from "../api/client";
 import PMHeader from "../components/pm/PMHeader";
@@ -53,6 +53,7 @@ function normalizeError(error) {
 
 export default function PMPropertyCreate() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const [workspace, setWorkspace] = useState(null);
   const [loadingWorkspace, setLoadingWorkspace] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -97,7 +98,7 @@ export default function PMPropertyCreate() {
         setSaving(false);
         return;
       }
-      navigate(`/pm/properties/${propertyId}`, { replace: true });
+      navigate(params.get("next") === "handoff" ? `/pm/handoff?property=${propertyId}` : `/pm/properties/${propertyId}`, { replace: true });
     } catch (caught) {
       setError(normalizeError(caught));
       setSaving(false);
@@ -109,7 +110,7 @@ export default function PMPropertyCreate() {
     <main className="relative z-10 mx-auto max-w-5xl px-4 pb-[calc(13rem+env(safe-area-inset-bottom))] pt-6">
       <form onSubmit={saveProperty} className="space-y-5">
         <section className="rounded-[28px] border border-blue-500/20 bg-[#07111f]/95 p-5 sm:p-6">
-          <div className="mb-5"><div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Portfolio record</div><h1 className="mt-2 text-2xl font-semibold tracking-tight">Property information</h1><p className="mt-2 text-sm leading-6 text-slate-400">Enter it once here. These details will carry into the property profile, leasing, MHA/Section 8 paperwork, inspections, and future document builders.</p></div>
+          <div className="mb-5"><div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Portfolio record</div><h1 className="mt-2 text-2xl font-semibold tracking-tight">Property information</h1><p className="mt-2 text-sm leading-6 text-slate-400">Enter it once here. These details will carry into the property profile, leasing, rental-assistance paperwork when applicable, inspections, and document builders.</p></div>
           {error ? <div className="mb-5 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm leading-5 text-rose-100">{error}{!workspace?.id ? <button type="button" onClick={() => navigate("/pm/settings")} className="mt-3 block rounded-xl border border-rose-300/30 px-3 py-2 text-xs font-bold">Open Portfolio Settings</button> : null}{createdPropertyId ? <button type="button" onClick={() => navigate(`/pm/properties/${createdPropertyId}`)} className="mt-3 block rounded-xl border border-rose-300/30 px-3 py-2 text-xs font-bold">Open Created Property</button> : null}</div> : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2"><Field label="Property name" required hint="Example: Roxana or Oak Ridge Apartments"><input className={controlClass} value={form.name} onChange={(event) => update("name", event.target.value)} placeholder="Property name" /></Field></div>
