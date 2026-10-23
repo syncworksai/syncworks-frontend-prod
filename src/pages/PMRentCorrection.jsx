@@ -187,9 +187,9 @@ export default function PMRentCorrection(){
          <div className="grid grid-cols-2 gap-2 text-xs"><div>Tenant adjustment: <strong>{money(reviewed.tenant_charge_adjustment)}</strong></div><div>MHA adjustment: <strong>{money(reviewed.housing_charge_adjustment)}</strong></div></div>
          <p className="text-[11px] text-slate-400">Existing monthly receipts: {money(reviewed.posted_tenant_payments_in_month)}. Existing late fees: {money(reviewed.preserved_late_fees)}. No receipt or fee will be removed.</p>
          {activeNoChange?<p className="text-xs font-black text-emerald-200">Already billed correctly. Nothing new needs saving for this month.</p>:<>
-         {mismatched?<p className="text-[11px] text-amber-200">This allocation conflicts with prior MHA correspondence. Only apply it once you have verified the updated assistance determination. Note the source above.</p>:null}
+         {mismatched?<p className="text-[11px] text-amber-200">This allocation conflicts with prior MHA correspondence. To post it, replace the default source note with the date and details of the updated MHA determination. You can always save the proposed table as a draft without posting charges.</p>:null}
          <label className="flex items-start gap-2 text-xs text-slate-200"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>I verified this monthly split and authorize the exact correction shown. This does not mark MHA or tenant payments as received.</label>
-         <button type="button" disabled={!confirmed||busy||note.trim().length<12} onClick={apply} className="min-h-10 w-full rounded-lg bg-cyan-400 text-xs font-black text-slate-950 disabled:opacity-40">{busy?"Saving…":"Save verified month"}</button>
+         <button type="button" disabled={!confirmed||busy||note.trim().length<12||(mismatched&&note.trim()===sourceDefault)} onClick={apply} className="min-h-10 w-full rounded-lg bg-cyan-400 text-xs font-black text-slate-950 disabled:opacity-40">{busy?"Saving…":"Save verified month"}</button>
          </>}
        </div>:null}
        <div className="mt-3 flex flex-wrap gap-2">
