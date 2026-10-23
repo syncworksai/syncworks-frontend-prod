@@ -8,6 +8,7 @@ const Panel=({title,children,sub})=><section className="rounded-xl border border
 export default function PMInvestorPortfolio(){
  const nav=useNavigate();const [portfolios,setPortfolios]=useState([]),[code,setCode]=useState(""),[messages,setMessages]=useState([]),[err,setErr]=useState(""),[notice,setNotice]=useState(""),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false);
  const [form,setForm]=useState({grant_id:"",property_id:"",subject:"",body:""});
+ const [upload,setUpload]=useState({grant_id:"",property_id:"",category:"OTHER",title:"",file:null});
  async function load(){
   setLoading(true);
   try{
@@ -23,6 +24,13 @@ export default function PMInvestorPortfolio(){
  async function message(e){e.preventDefault();setBusy(true);setErr("");try{
   await api.post("/pm-hub/access/investors/messages/",form);setNotice("Your message was added to the property management inbox.");setForm({...form,subject:"",body:""});await load();
  }catch(e){setErr(e?.response?.data?.detail||"Unable to send message.");}finally{setBusy(false);}}
+ async function submitFile(e){e.preventDefault();if(!upload.file)return;setBusy(true);setErr("");try{
+  const formData=new FormData();formData.append("grant_id",upload.grant_id);formData.append("property_id",upload.property_id);
+  formData.append("category",upload.category);formData.append("title",upload.title);formData.append("file",upload.file);
+  await api.post("/pm-hub/access/investors/upload/",formData);
+  setUpload({...upload,title:"",file:null});
+  setNotice("Document uploaded for property manager review. It is not yet approved or shared.");
+ }catch(e){setErr(e?.response?.data?.detail||"Unable to upload document.");}finally{setBusy(false);}}
  const all=portfolios.flatMap(p=>p.properties.map(property=>({...property,grant_id:p.grant_id,company:p.company})));
  return <div className="min-h-screen bg-[#040914] text-slate-100"><ModeBar/><main className="mx-auto max-w-6xl space-y-3 px-3 py-3 pb-28 sm:px-5">
   <div className="flex items-start justify-between gap-2"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-fuchsia-300">My ownership</div><h1 className="text-xl font-black">Investor Portfolio</h1><p className="mt-1 text-xs text-slate-400">Property health, manager updates, shared documents, and owner payouts.</p></div><button type="button" onClick={()=>nav("/investor")} className="rounded-lg border border-slate-700 px-3 py-2 text-xs">Investor home</button></div>
@@ -42,6 +50,15 @@ export default function PMInvestorPortfolio(){
     {portfolio.documents?.length?<div className="space-y-2">{portfolio.documents.map(d=><div key={d.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-700 p-2.5"><div><div className="text-xs font-bold">{d.title}</div><p className="text-[10px] text-slate-400">{d.category.replaceAll("_"," ")}</p></div><button type="button" onClick={async()=>{try{const r=await api.get(`/pm-hub/access/investors/files/${d.id}/`,{responseType:"blob"});const url=URL.createObjectURL(r.data);const a=document.createElement("a");a.href=url;a.download=(d.title||"property-document").replaceAll("/","-");document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){setErr("Document could not be retrieved. Please contact management.");}}} className="rounded-lg border border-cyan-400/30 px-3 py-1.5 text-xs text-cyan-200">View</button></div>)}</div>:<p className="text-xs text-slate-400">No documents shared yet.</p>}
    </Panel>
   </div>)}
+  {portfolios.length?<Panel title="Send a document to your property manager" sub="Property-specific uploads are private drafts until your manager reviews them. Please avoid unnecessary tax IDs or sensitive records.">
+   <form onSubmit={submitFile} className="grid gap-2 sm:grid-cols-2">
+     <select required className={input} value={upload.grant_id&&upload.property_id?`${upload.grant_id}:${upload.property_id}`:""} onChange={e=>{const [g,p]=e.target.value.split(":");setUpload({...upload,grant_id:g||"",property_id:p||""});}}><option value="">Choose owned property</option>{all.map(p=><option key={p.grant_id+"-"+p.id} value={`${p.grant_id}:${p.id}`}>{p.name} · {p.company}</option>)}</select>
+     <select className={input} value={upload.category} onChange={e=>setUpload({...upload,category:e.target.value})}>{[["OTHER","Other owner document"],["OWNERSHIP","Ownership record"],["INSURANCE","Insurance"],["OPERATING_STATEMENT","Operating statement"]].map(([v,l])=><option value={v} key={v}>{l}</option>)}</select>
+     <input className={input} required placeholder="Document title" value={upload.title} onChange={e=>setUpload({...upload,title:e.target.value})}/>
+     <input type="file" accept=".pdf,.docx,.png,.jpg,.jpeg" className={input} required onChange={e=>setUpload({...upload,file:e.target.files?.[0]||null})}/>
+     <button disabled={busy||!upload.file} className="sm:col-span-2 min-h-10 rounded-lg bg-cyan-400 text-xs font-black text-slate-950 disabled:opacity-40">Upload for manager review</button>
+   </form>
+  </Panel>:null}
   {portfolios.length?<Panel title="Message property management" sub="Contact the management team without leaving your portfolio.">
    <form onSubmit={message} className="space-y-2"><label className="block text-xs">Property<select className={input+" mt-1"} required value={form.grant_id&&form.property_id?`${form.grant_id}:${form.property_id}`:""} onChange={e=>{const [grant,property]=e.target.value.split(":");setForm({...form,property_id:property||"",grant_id:grant||""});}}><option value="">Select your property</option>{all.map(p=><option key={p.company+"-"+p.id} value={`${p.grant_id}:${p.id}`}>{p.name} · {p.company}</option>)}</select></label><input required className={input} value={form.subject} onChange={e=>setForm({...form,subject:e.target.value})} placeholder="Subject"/><textarea className={input} rows={3} required value={form.body} onChange={e=>setForm({...form,body:e.target.value})} placeholder="Your message to the PM company"/><button disabled={busy} className="min-h-10 w-full rounded-lg bg-cyan-400 text-xs font-black text-slate-950 disabled:opacity-40">Send message</button></form>
    {messages.length?<p className="mt-2 text-[11px] text-slate-400">{messages.length} existing investor conversation(s)</p>:null}
