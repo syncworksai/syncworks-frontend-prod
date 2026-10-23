@@ -165,6 +165,8 @@ export default function PMPayments() {
     return String(tenant?.property_id || tenant?.property_name) === String(propertyFilter);
   }), [entries, tenants, filterTenant, propertyFilter]);
   const visibleEntries = useMemo(() => tenantEntries.filter((r) => matchesLedgerFilter(r, ledgerFilter)), [tenantEntries, ledgerFilter]);
+  const collectedByPayer=useMemo(()=>tenantEntries.filter(r=>r.entry_type==="PAYMENT")
+    .reduce((acc,row)=>{const b=bucketFor(row);if(b==="HOUSING")acc.housing+=Number(row.amount||0);else if(b==="TENANT")acc.tenant+=Number(row.amount||0);return acc;},{tenant:0,housing:0}),[tenantEntries]);
   const summaryMap = useMemo(() => new Map((billing.tenants || []).map((r) => [String(r.tenant_id), r])), [billing]);
   const filterCounts = useMemo(() => Object.fromEntries(ledgerFilters.map(([key]) => [key, tenantEntries.filter((r) => matchesLedgerFilter(r, key)).length])), [tenantEntries]);
 
@@ -374,6 +376,17 @@ export default function PMPayments() {
 
         <section className="rounded-2xl border border-cyan-500/15 bg-[#07111f]/90 p-3 sm:rounded-[28px] sm:p-5">
           <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-2 sm:gap-3"><Field label="Property"><select className={inputClass} value={propertyFilter} onChange={(e) => { setPropertyFilter(e.target.value); selectTenant(""); }}><option value="">All properties</option>{properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Field><Field label="Tenant"><select className={inputClass} value={filterTenant} onChange={(e) => selectTenant(e.target.value)}><option value="">Choose tenant</option>{tenantRows.map((t) => <option key={t.id} value={t.id}>{t.full_name}{t.status === "INACTIVE" ? " · Former" : ""}</option>)}</select></Field></div>
+          {filterTenant ? <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[
+              ["Tenant paid",collectedByPayer.tenant],
+              ["Housing paid",collectedByPayer.housing],
+              ["Tenant owed · posted",payer.buckets?.tenant_owes],
+              ["Housing owed · posted",payer.buckets?.housing_owes],
+            ].map(([label,value])=><div key={label} className="rounded-lg border border-slate-700 bg-black/20 p-2.5">
+              <div className="text-[10px] text-slate-400">{label}</div><div className="mt-1 text-base font-black text-white">{money(value)}</div>
+            </div>)}
+          </div> : null}
+          {filterTenant ? <p className="mt-2 text-[10px] text-amber-200">Totals include posted records only; missing rent months must be reviewed and billed in Lease Builder before this is a complete amount owed.</p> : null}
           {filterTenant ? <div className="mt-3 grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3"><div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-2.5 sm:rounded-2xl sm:p-4"><div className="text-[10px] text-slate-400 sm:text-xs">Tenant (posted)</div><div className="mt-1 text-base font-black text-cyan-300 sm:text-2xl">{money(payer.buckets?.tenant_owes)}</div></div><div className="rounded-xl border border-fuchsia-500/30 bg-fuchsia-500/5 p-2.5 sm:rounded-2xl sm:p-4"><div className="text-[10px] text-slate-400 sm:text-xs">Housing (unreconciled)</div><div className="mt-1 text-base font-black text-fuchsia-300 sm:text-2xl">{money(payer.buckets?.housing_owes)}</div></div><div className="rounded-xl border border-slate-600 bg-slate-900/50 p-2.5 sm:rounded-2xl sm:p-4"><div className="text-[10px] text-slate-400 sm:text-xs">Posted balance</div><div className="mt-1 text-base font-black sm:text-2xl">{money(payer.buckets?.total_balance)}</div></div></div> : null}
           <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3 md:grid-cols-2 xl:grid-cols-3">{tenantRows.map((t) => { const a = summaryMap.get(String(t.id)) || {}; return <button key={t.id} onClick={() => selectTenant(t.id)} className={`rounded-xl border p-3 text-left transition sm:rounded-2xl sm:p-4 ${String(filterTenant) === String(t.id) ? "border-cyan-300 bg-cyan-500/15 shadow-lg shadow-cyan-950/20" : "border-slate-700 bg-slate-900/40 hover:border-cyan-500/40"}`}><div className="truncate text-sm font-black sm:text-base">{t.full_name}</div><div className="mt-0.5 truncate text-[11px] text-slate-400 sm:mt-1 sm:text-xs">{t.property_name || "No property"}</div><div className="mt-2 text-xs font-semibold sm:mt-3 sm:text-sm">Balance {money(a.balance)}</div></button>; })}</div>
         </section>
