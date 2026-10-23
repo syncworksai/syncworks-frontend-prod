@@ -24,6 +24,7 @@ export default function PMRentCorrection(){
  const [rows,setRows]=useState([]),[checks,setChecks]=useState({}),[loading,setLoading]=useState(true);
  const [active,setActive]=useState(null),[note,setNote]=useState(sourceDefault),[confirmed,setConfirmed]=useState(false);
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
+ const [draftSaved,setDraftSaved]=useState(false);
  const headers=ws?{"X-PM-Workspace-ID":String(ws.id)}:{};
  const tenant=tenants.find(x=>String(x.id)===String(selectedId));
  const name=tenant?[tenant.first_name,tenant.last_name].filter(Boolean).join(" "):"";
@@ -54,12 +55,21 @@ export default function PMRentCorrection(){
  },[selectedId,ws?.id]);
  useEffect(()=>{
   if(!tenant)return;
+  let alive=true;
   const defaultRows=isRoxana?ownerSchedule.map(r=>({...r})):
     [{month:new Date().toISOString().slice(0,7),rent:String(lease?.monthly_rent||tenant.monthly_rent||""),mha:String(lease?.assistance_portion||0),status:"REQUIRES_VERIFICATION"}];
-  setRows(defaultRows);setChecks({});setActive(null);setConfirmed(false);setNotice("");
- },[selectedId,tenant?.property_name,lease?.id]);
+  setRows(defaultRows);setChecks({});setActive(null);setConfirmed(false);setDraftSaved(false);setNotice("");
+  if(ws?.id)api.get(`/pm-hub/billing/tenants/${selectedId}/simple-schedule/`,
+    {headers:{"X-PM-Workspace-ID":String(ws.id)}}).then(result=>{
+     if(!alive||!result.data?.schedule?.months?.length)return;
+     const saved=result.data.schedule;
+     setRows(saved.months.map(x=>({month:x.month,rent:x.rent,mha:x.mha,status:x.source_status||"PROPOSED"})));
+     setNote(saved.source_note||sourceDefault);setDraftSaved(true);
+   }).catch(()=>{});
+  return()=>{alive=false};
+ },[selectedId,tenant?.property_name,lease?.id,ws?.id]);
  const update=(month,key,value)=>{setRows(old=>old.map(x=>x.month===month?{...x,[key]:value}:x));
-   setChecks(old=>{const n={...old};delete n[month];return n;});setActive(null);setConfirmed(false);setNotice("");};
+   setChecks(old=>{const n={...old};delete n[month];return n;});setActive(null);setConfirmed(false);setDraftSaved(false);setNotice("");};
  const makePayload=r=>{
     const abated=isRoxana&&r.month==="2026-10";
     return {month:r.month,contract_rent:String(q(r.rent)),
@@ -90,6 +100,18 @@ export default function PMRentCorrection(){
    },220);
    return()=>{alive=false;clearTimeout(timer);};
  },[selectedId,ws?.id,rows.map(r=>r.month+":"+r.rent+":"+r.mha).join("|"),isRoxana]);
+ async function saveDraft(){
+  if(!ws?.id||!selectedId||rows.some(r=>!validRow(r))){
+    setError("Check that each month has valid rent and housing amounts before saving.");return;
+  }
+  setBusy(true);setError("");setNotice("");
+  try{
+   const response=await api.patch(`/pm-hub/billing/tenants/${selectedId}/simple-schedule/`,
+     {months:rows,source_note:note},{headers:{"X-PM-Workspace-ID":String(ws.id)}});
+   setDraftSaved(true);setNotice(response.data.detail||"Monthly rent schedule draft saved. Ledger unchanged.");
+  }catch(e){setError(errText(e));}
+  finally{setBusy(false);}
+ }
  async function review(r){
   if(!selectedId||!ws||!validRow(r)||!canPostMonth(r)){
     setError("Choose an eligible month and enter a valid total rent and housing portion.");return;
@@ -137,7 +159,8 @@ export default function PMRentCorrection(){
        <strong>Source conflict to review:</strong> Your proposed schedule uses $344 MHA for August–October. MHA previously stated August $0, September $377, and an October abatement. Those months remain marked for verification; October's MHA amount is displayed for comparison but excluded from billing. February was managed by Adair and is shown for reference only.
      </div>:null}
     <section className={box}>
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-black">Monthly rent · {name}</h2><span className="text-[10px] text-slate-400">Edit amount → Review → Save</span></div>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-sm font-black">Monthly rent · {name}</h2><p className="mt-0.5 text-[10px] text-slate-400">{draftSaved?"Schedule draft saved":"Unsaved proposed schedule"} · Edit amount → Save draft → Review individual charges</p></div>
+       <button type="button" disabled={busy||rows.some(r=>!validRow(r))} onClick={saveDraft} className="min-h-10 rounded-lg bg-cyan-400 px-3 text-[11px] font-black text-slate-950 disabled:opacity-40">{busy?"Saving…":"Save table draft"}</button></div>
       <div className="overflow-x-auto">
       <table className="w-full min-w-[550px] text-left text-xs"><thead><tr className="border-b border-slate-700 text-[10px] text-slate-400">
        <th className="py-2 pr-2">Month</th><th className="p-2">Total rent</th><th className="p-2">MHA share</th><th className="p-2">Tenant share</th><th className="p-2">Ledger</th></tr></thead>
@@ -157,7 +180,7 @@ export default function PMRentCorrection(){
     </section>
     <section className={box}>
        <label className="block text-[11px] font-bold text-slate-300">Source / verification note
-        <textarea className={field+" mt-1 min-h-16"} rows={2} value={note} onChange={e=>{setNote(e.target.value);setActive(null);setConfirmed(false);}}/>
+        <textarea className={field+" mt-1 min-h-16"} rows={2} value={note} onChange={e=>{setNote(e.target.value);setActive(null);setConfirmed(false);setDraftSaved(false);}}/>
        </label>
        {active&&reviewed?<div className="mt-3 space-y-2 rounded-xl border border-cyan-400/25 bg-cyan-500/5 p-3">
          <h3 className="text-sm font-black">{active.month} · Change preview</h3>
