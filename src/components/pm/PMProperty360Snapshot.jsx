@@ -2,7 +2,7 @@ import React from "react";
 import { AlertTriangle, ArrowRight, Building2, ClipboardList, FileText, Handshake,
   Home, MessageSquare, Receipt, ShieldAlert, Users, Wallet, Wrench } from "lucide-react";
 
-const cash = n => Number(n || 0).toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0});
+const cash = n => Number(n || 0).toLocaleString("en-US",{style:"currency",currency:"USD",minimumFractionDigits:2,maximumFractionDigits:2});
 const healthTone = status => status==="AT_RISK"?"text-rose-200 bg-rose-500/10 border-rose-500/30":status==="WATCH"?"text-amber-200 bg-amber-500/10 border-amber-500/30":"text-emerald-200 bg-emerald-500/10 border-emerald-500/30";
 const navTiles=[
   {key:"tenants",label:"Tenants & leases",hint:"People and agreements",icon:Users},
