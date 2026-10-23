@@ -214,6 +214,10 @@ export default function PropertyManagerDashboard() {
         <button type="button" onClick={() => nav(ledgerAlerts.missing.length ? `/pm/payments?tenant=${encodeURIComponent(ledgerAlerts.missing[0].tenant)}` : "/pm/tenants")} className="shrink-0 rounded-lg border border-amber-400/40 px-2.5 py-2 text-[10px] font-black text-amber-100">Review →</button>
       </div>
     </Card> : null}
+    {(data?.rent_change_deadlines || []).length ? <Card className="border-cyan-500/25 bg-cyan-500/5 p-2.5 sm:p-4">
+      <div className="flex items-center justify-between gap-2"><div><div className="text-xs font-black text-cyan-100">Upcoming rent reviews</div><p className="mt-0.5 text-[10px] text-slate-400">Prepare early; do not charge proposed increases before approval.</p></div><button type="button" onClick={() => nav("/pm/rent-increases")} className="min-h-9 shrink-0 rounded-lg border border-cyan-400/35 px-2.5 text-[11px] font-black text-cyan-100">Open planner →</button></div>
+      <div className="mt-2 grid gap-1.5 sm:grid-cols-2">{data.rent_change_deadlines.slice(0,4).map((d) => <button type="button" key={d.id} onClick={() => nav(d.href)} className="flex items-center justify-between gap-2 rounded-lg border border-slate-700/70 bg-black/20 p-2.5 text-left text-[11px]"><span>Tenant #{d.tenant_id} · {d.status.replaceAll("_"," ")}</span><span className={d.overdue?"font-bold text-amber-200":"font-bold text-cyan-200"}>{d.overdue?"Past due ":"Submit by "}{d.submit_by}</span></button>)}</div>
+    </Card> : null}
     <div className="grid grid-cols-2 gap-2 md:grid-cols-4 2xl:grid-cols-8">{dashboardKpis.map(([label, value, hint, tone, Icon, href]) => <Kpi key={label} label={label} value={loading ? "—" : value} hint={hint} tone={tone} icon={Icon} onClick={() => nav(href)} />)}</div>
 
     <div className="grid gap-4 xl:grid-cols-[1.55fr_.65fr]">
