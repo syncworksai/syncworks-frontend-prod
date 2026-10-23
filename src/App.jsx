@@ -81,6 +81,10 @@ import InboxPage from "./pages/InboxPage";
 import PropertyManagerDashboard from "./pages/PropertyManagerDashboard";
 import PropertyManagerCalendar from "./pages/PropertyManagerCalendar";
 import PMEmployees from "./pages/PMEmployees";
+import PMStaffDashboard from "./pages/PMStaffDashboard";
+import PMTeamOwner from "./pages/PMTeamOwner";
+import PMInvestorManagement from "./pages/PMInvestorManagement";
+import PMInvestorPortfolio from "./pages/PMInvestorPortfolio";
 import PMPropertyDetail from "./pages/PMPropertyDetail";
 import PMPropertyCreate from "./pages/PMPropertyCreate";
 import PMHandoffWizard from "./pages/PMHandoffWizard";
@@ -213,6 +217,9 @@ export default function App() {
         <Route path="/pm" element={<ProtectedRoute><PropertyManagerDashboard /></ProtectedRoute>} />
         <Route path="/pm/calendar" element={<ProtectedRoute><PropertyManagerCalendar /></ProtectedRoute>} />
         <Route path="/pm/employees" element={<ProtectedRoute><PMEmployees /></ProtectedRoute>} />
+        <Route path="/pm/team" element={<ProtectedRoute><PMTeamOwner /></ProtectedRoute>} />
+        <Route path="/pm/staff" element={<ProtectedRoute><PMStaffDashboard /></ProtectedRoute>} />
+        <Route path="/pm/investors" element={<ProtectedRoute><PMInvestorManagement /></ProtectedRoute>} />
         <Route path="/pm/properties" element={<ProtectedRoute><PMPropertiesIndex /></ProtectedRoute>} />
         <Route path="/pm/properties/new" element={<ProtectedRoute><PMPropertyCreate /></ProtectedRoute>} />
         <Route path="/pm/handoff" element={<ProtectedRoute><PMHandoffWizard /></ProtectedRoute>} />
@@ -225,6 +232,7 @@ export default function App() {
         <Route path="/tenant/accept" element={<ProtectedRoute><TenantAcceptInvite /></ProtectedRoute>} />
         <Route path="/tenant/invite" element={<ProtectedRoute><TenantAcceptInvite /></ProtectedRoute>} />
         <Route path="/investor" element={<ProtectedRoute><InvestorDashboard /></ProtectedRoute>} />
+        <Route path="/investor/properties" element={<ProtectedRoute><PMInvestorPortfolio /></ProtectedRoute>} />
         <Route path="/investor/accept" element={<ProtectedRoute><InvestorAcceptInvite /></ProtectedRoute>} />
         <Route path="/tickets" element={<ProtectedRoute><TicketsBoard /></ProtectedRoute>} />
         <Route path="/tickets/new" element={<ProtectedRoute><Navigate to="/customer/new-request" replace /></ProtectedRoute>} />
