@@ -143,7 +143,7 @@ export default function PMLeaseBuilder(){
   <Box title="Select lease and resident"><select className={field} aria-label="Resident" value={tenantId} onChange={e=>setParams(e.target.value?{tenant:e.target.value}:{})}><option value="">Choose tenant</option>{tenants.map(t=><option key={t.id} value={t.id}>{t.first_name} {t.last_name} · {t.property_name}</option>)}</select></Box>
   {tenantId&&leaseForm?<><section className="grid grid-cols-2 gap-2 sm:grid-cols-4">{[
     ["Tenant received",currentTotals.tenant_paid_recorded],["Housing received",currentTotals.housing_paid_recorded],
-    ["Tenant outstanding",currentTotals.tenant_owed],["Housing outstanding",currentTotals.housing_owed]
+    ["Tenant outstanding",currentTotals.tenant_owed],["Housing not received",currentTotals.housing_owed]
   ].map(([k,v])=><div key={k} className="rounded-xl border border-cyan-400/20 bg-[#07111f] p-2.5"><div className="text-[10px] text-slate-400">{k}</div><div className="mt-1 text-lg font-black">{usd(v)}</div></div>)}</section>
   <p className="text-[10px] text-amber-200">Totals above are POSTED transactions only. Missing monthly rent charges will understate owed amounts until reconciliation is applied. MHA transfers to a former manager, abatements and security deposits are not payments received.</p>
   <Box title="1 · Build or correct the lease" desc="The original lease start, actual billing start, and management takeover may be different dates. Do not create a duplicate lease for an existing tenancy.">
