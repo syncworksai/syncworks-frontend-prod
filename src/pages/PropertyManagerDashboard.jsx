@@ -96,7 +96,7 @@ function Header({ eyebrow, title, detail, action }) {
   return <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/[.06] px-4 py-3.5 sm:px-5"><div><div className="text-[9px] font-black uppercase tracking-[.2em] text-cyan-300">{eyebrow}</div><h2 className="mt-1 text-base font-black text-white sm:text-lg">{title}</h2>{detail ? <p className="mt-1 text-[11px] text-slate-500">{detail}</p> : null}</div>{action}</div>;
 }
 function Kpi({ label, value, hint, tone, icon: Icon, onClick }) {
-  return <button type="button" onClick={onClick} className={`group relative min-h-[118px] overflow-hidden rounded-[22px] border p-4 text-left transition hover:-translate-y-0.5 hover:brightness-125 focus:outline-none focus:ring-2 focus:ring-cyan-300/60 ${tones[tone] || tones.cyan}`}><div className="absolute -right-6 -top-8 h-24 w-24 rounded-full bg-current opacity-[.05] blur-xl" /><div className="flex items-start justify-between gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl border border-current/20 bg-black/20">{React.createElement(Icon, { className: "h-4 w-4" })}</span><ChevronRight className="h-4 w-4 opacity-40 transition group-hover:translate-x-0.5 group-hover:opacity-100" /></div><div className="mt-3 flex items-end justify-between gap-2"><div><div className="text-2xl font-black tracking-tight text-white">{value}</div><div className="mt-0.5 text-[9px] font-black uppercase tracking-[.14em] opacity-80">{label}</div></div><span className="max-w-[88px] text-right text-[9px] leading-3 opacity-55">{hint}</span></div></button>;
+  return <button type="button" onClick={onClick} className={`group relative min-h-[90px] overflow-hidden rounded-xl border p-2.5 text-left transition hover:-translate-y-0.5 hover:brightness-125 focus:outline-none focus:ring-2 focus:ring-cyan-300/60 ${tones[tone] || tones.cyan}`}><div className="absolute -right-6 -top-8 h-24 w-24 rounded-full bg-current opacity-[.05] blur-xl" /><div className="flex items-start justify-between gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg border border-current/20 bg-black/20 sm:h-9 sm:w-9">{React.createElement(Icon, { className: "h-4 w-4" })}</span><ChevronRight className="h-4 w-4 opacity-40 transition group-hover:translate-x-0.5 group-hover:opacity-100" /></div><div className="mt-1.5 flex items-end justify-between gap-1.5 sm:mt-3"><div><div className="text-lg font-black tracking-tight text-white sm:text-2xl">{value}</div><div className="mt-0.5 text-[9px] font-black uppercase tracking-[.14em] opacity-80">{label}</div></div><span className="hidden max-w-[88px] text-right text-[9px] leading-3 opacity-55 sm:inline">{hint}</span></div></button>;
 }
 function Empty({ children }) { return <div className="rounded-2xl border border-dashed border-slate-700/80 bg-black/15 px-4 py-7 text-center text-xs text-slate-500">{children}</div>; }
 function ChartTooltip({ active, payload, label }) {
@@ -131,6 +131,7 @@ export default function PropertyManagerDashboard() {
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
   const [operationsOpen, setOperationsOpen] = useState(false);
+  const [ledgerAlerts, setLedgerAlerts] = useState({ missing: [], unlinkedTenants: 0 });
   async function load() {
     setLoading(true); setError("");
     try { setData((await api.get("/pm-hub/dashboard/command-center/")).data); }
@@ -143,6 +144,41 @@ export default function PropertyManagerDashboard() {
     finally { setLoading(false); }
   }
   useEffect(() => { load(); }, []);
+
+
+  // Property records and tenant-account names are separate entities; never invent a property record.
+  useEffect(() => {
+    const workspaceId = data?.workspace?.id;
+    if (!workspaceId) return undefined;
+    let live = true;
+    const headers = { "X-PM-Workspace-ID": String(workspaceId) };
+    Promise.all([
+      api.get("/pm-hub/tenants/", { headers }),
+      api.get("/pm-hub/ledger/", { headers }),
+    ]).then(([tenantResponse, ledgerResponse]) => {
+      if (!live) return;
+      const tenants = list(tenantResponse.data);
+      const ledger = list(ledgerResponse.data);
+      const today = new Date();
+      const months = [0, 1].map((back) => {
+        const d = new Date(today.getFullYear(), today.getMonth() - back, 1);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      });
+      const missing = [];
+      for (const t of tenants.filter((row) => row.status !== "INACTIVE")) {
+        for (const month of months) {
+          const rows = ledger.filter((e) => String(e.tenant) === String(t.id) && String(e.entry_date || "").startsWith(month));
+          const payments = rows.some((e) => e.entry_type === "PAYMENT");
+          const rent = rows.some((e) => e.entry_type === "CHARGE" && ["RENT", "RENT_TENANT", "RENT_HOUSING"].includes(e.category));
+          if (payments && !rent) missing.push({ tenant: t.id, name: t.full_name || [t.first_name, t.last_name].filter(Boolean).join(" "), month });
+        }
+      }
+      const unlinkedTenants = Number(data?.kpis?.properties || 0) === 0
+        ? tenants.filter((t) => t.property_name && t.status !== "INACTIVE").length : 0;
+      setLedgerAlerts({ missing, unlinkedTenants });
+    }).catch(() => { if (live) setLedgerAlerts({ missing: [], unlinkedTenants: 0 }); });
+    return () => { live = false; };
+  }, [data?.workspace?.id, data?.financials?.month_charges]);
 
   const kpis = data?.kpis || {};
   const financials = data?.financials || {};
@@ -166,9 +202,18 @@ export default function PropertyManagerDashboard() {
   ];
 
   return <PMShell><main className="space-y-4 px-3 py-4 sm:px-5">
-    <Card className="overflow-hidden bg-[radial-gradient(circle_at_12%_20%,rgba(34,211,238,.16),transparent_30%),radial-gradient(circle_at_88%_0%,rgba(217,70,239,.16),transparent_32%),#07111f] p-4 sm:p-5"><div className="flex flex-wrap items-center justify-between gap-4"><div className="flex items-center gap-4"><div className="relative grid h-14 w-14 place-items-center rounded-2xl border border-cyan-300/25 bg-cyan-500/10"><BarChart3 className="h-6 w-6 text-cyan-200" /><span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[#07111f] bg-emerald-400" /></div><div><div className="text-[9px] font-black uppercase tracking-[.2em] text-cyan-300">Live portfolio pulse</div><div className="mt-1 flex flex-wrap items-baseline gap-2"><h2 className="text-xl font-black text-white">{data?.workspace?.name || "Your portfolio"}</h2><span className={`rounded-full border px-2.5 py-1 text-[9px] font-black ${Number(data?.health?.score || 0) >= 85 ? tones.emerald : tones.amber}`}>{data?.health?.score ?? "—"} health</span></div><p className="mt-1 text-xs text-slate-400">Revenue, residents, work, cases, messages, and this week—one operating view.</p></div></div><div className="flex flex-wrap gap-2"><button type="button" onClick={load} disabled={loading} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-black/20 text-slate-300 disabled:opacity-40" aria-label="Refresh command center"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /></button><button type="button" onClick={() => nav("/pm/settings?view=leads&connect=email")} className={`inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 text-xs font-black ${email.pm_routing_enabled ? tones.emerald : tones.fuchsia}`}><Mail className="h-4 w-4" />{email.pm_routing_enabled ? `${email.account_count} email routed` : "Connect email"}</button><button type="button" onClick={() => setOperationsOpen(true)} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-fuchsia-400 px-4 text-xs font-black text-slate-950"><Plus className="h-4 w-4" />Quick operations</button></div></div></Card>
+    <Card className="overflow-hidden bg-[radial-gradient(circle_at_12%_20%,rgba(34,211,238,.16),transparent_30%),radial-gradient(circle_at_88%_0%,rgba(217,70,239,.16),transparent_32%),#07111f] p-2.5 sm:p-5"><div className="flex flex-wrap items-center justify-between gap-2 sm:gap-4"><div className="flex items-center gap-2.5 sm:gap-4"><div className="relative grid h-10 w-10 flex-none place-items-center rounded-xl sm:h-14 sm:w-14 sm:rounded-2xl border border-cyan-300/25 bg-cyan-500/10"><BarChart3 className="h-6 w-6 text-cyan-200" /><span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[#07111f] bg-emerald-400" /></div><div><div className="text-[9px] font-black uppercase tracking-[.2em] text-cyan-300">Live portfolio pulse</div><div className="mt-1 flex flex-wrap items-baseline gap-2"><h2 className="text-xl font-black text-white">{data?.workspace?.name || "Your portfolio"}</h2><span className={`rounded-full border px-2.5 py-1 text-[9px] font-black ${Number(data?.health?.score || 0) >= 85 ? tones.emerald : tones.amber}`}>{data?.health?.score ?? "—"} health</span></div><p className="mt-1 hidden text-xs text-slate-400 sm:block">Revenue, residents, work, cases, messages, and this week—one operating view.</p></div></div><div className="flex flex-wrap gap-2"><button type="button" onClick={load} disabled={loading} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-black/20 text-slate-300 disabled:opacity-40" aria-label="Refresh command center"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /></button><button type="button" onClick={() => nav("/pm/settings?view=leads&connect=email")} className={`hidden min-h-10 items-center gap-2 rounded-xl border px-3 text-xs font-black sm:inline-flex ${email.pm_routing_enabled ? tones.emerald : tones.fuchsia}`}><Mail className="h-4 w-4" />{email.pm_routing_enabled ? `${email.account_count} email routed` : "Connect email"}</button><button type="button" onClick={() => setOperationsOpen(true)} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-fuchsia-400 px-4 text-xs font-black text-slate-950"><Plus className="h-4 w-4" />Quick operations</button></div></div></Card>
     {error ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-400/30 bg-rose-500/10 p-4 text-sm text-rose-100"><span>{error}</span><button type="button" onClick={load} className="rounded-xl border border-rose-300/30 px-3 py-2 text-xs font-black">Try again</button></div> : null}
-    <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 2xl:grid-cols-8">{dashboardKpis.map(([label, value, hint, tone, Icon, href]) => <Kpi key={label} label={label} value={loading ? "—" : value} hint={hint} tone={tone} icon={Icon} onClick={() => nav(href)} />)}</div>
+    {(ledgerAlerts.missing.length > 0 || ledgerAlerts.unlinkedTenants > 0) ? <Card className="border-amber-400/30 bg-amber-500/5 p-2.5 sm:p-4">
+      <div className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 flex-none text-amber-300" />
+        <div className="min-w-0 flex-1"><div className="text-xs font-black text-amber-100">Ledger needs review</div>
+          {ledgerAlerts.missing.length ? <p className="mt-1 text-[11px] text-slate-300">{ledgerAlerts.missing.map((m) => `${m.name} (${m.month})`).join(", ")}: payment posted without a rent charge in the same month. This is a review flag, not a confirmed delinquency.</p> : null}
+          {ledgerAlerts.unlinkedTenants ? <p className="mt-1 text-[11px] text-slate-300">{ledgerAlerts.unlinkedTenants} tenant account(s) have a property name but no registered portfolio property. Link the correct property record rather than adding a duplicate.</p> : null}
+        </div>
+        <button type="button" onClick={() => nav(ledgerAlerts.missing.length ? `/pm/payments?tenant=${encodeURIComponent(ledgerAlerts.missing[0].tenant)}` : "/pm/tenants")} className="shrink-0 rounded-lg border border-amber-400/40 px-2.5 py-2 text-[10px] font-black text-amber-100">Review →</button>
+      </div>
+    </Card> : null}
+    <div className="grid grid-cols-2 gap-2 md:grid-cols-4 2xl:grid-cols-8">{dashboardKpis.map(([label, value, hint, tone, Icon, href]) => <Kpi key={label} label={label} value={loading ? "—" : value} hint={hint} tone={tone} icon={Icon} onClick={() => nav(href)} />)}</div>
 
     <div className="grid gap-4 xl:grid-cols-[1.55fr_.65fr]">
       <Card><Header eyebrow="Financial performance" title="Revenue & collections" detail="Posted charges compared with payments received." action={<button type="button" onClick={() => nav("/pm/payments")} className="text-[10px] font-black text-cyan-300">Open ledger →</button>} /><div className="grid gap-3 p-4 sm:grid-cols-3">{[["Collected", financials.month_revenue, "emerald"], ["Collection rate", `${financials.collection_rate || 0}%`, "cyan"], ["Outstanding", financials.outstanding_balance, "amber"]].map(([label, value, tone], index) => <div key={label} className={`rounded-2xl border p-3 ${tones[tone]}`}><div className="text-[9px] font-black uppercase tracking-wider opacity-75">{label}</div><div className="mt-2 text-xl font-black text-white">{index === 1 ? value : money(value)}</div></div>)}</div><div className="h-52 px-2 pb-3 sm:h-60 sm:px-4"><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}><defs><linearGradient id="pmPayments" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#34d399" stopOpacity={0.38} /><stop offset="100%" stopColor="#34d399" stopOpacity={0} /></linearGradient><linearGradient id="pmCharges" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#22d3ee" stopOpacity={0.24} /><stop offset="100%" stopColor="#22d3ee" stopOpacity={0} /></linearGradient></defs><CartesianGrid stroke="rgba(148,163,184,.09)" vertical={false} /><XAxis dataKey="month" stroke="#64748b" tickLine={false} axisLine={false} fontSize={10} /><YAxis stroke="#64748b" tickLine={false} axisLine={false} fontSize={9} tickFormatter={(value) => `$${Math.round(value / 1000)}k`} /><Tooltip content={<ChartTooltip />} /><Area type="monotone" dataKey="charges" name="Charges" stroke="#22d3ee" strokeWidth={2} fill="url(#pmCharges)" /><Area type="monotone" dataKey="payments" name="Payments" stroke="#34d399" strokeWidth={2.5} fill="url(#pmPayments)" /></AreaChart></ResponsiveContainer></div></Card>
