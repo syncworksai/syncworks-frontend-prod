@@ -1,4 +1,4 @@
-import React,{useCallback,useEffect,useMemo,useState} from "react";
+import React,{useEffect,useState} from "react";
 import {useNavigate,useSearchParams} from "react-router-dom";
 import api from "../api/client";
 import PMShell from "../components/pm/PMShell";
@@ -68,6 +68,28 @@ export default function PMRentCorrection(){
       exclusion_reason:abated?"October assistance abatement reported by MHA. Not billed or collected pending agency clearance.":"",
       source_note:note.trim()};
  };
+ useEffect(()=>{
+   if(!selectedId||!ws?.id||!rows.length)return;
+   let alive=true;
+   const timer=setTimeout(async()=>{
+    try{
+     const results=await Promise.all(rows.filter(r=>canPostMonth(r)&&validRow(r)).map(async r=>{
+      try{
+       const out=await api.post(`/pm-hub/billing/tenants/${selectedId}/reconcile-month/`,
+        {month:r.month,contract_rent:String(q(r.rent)),
+         tenant_portion:String(q(Number(r.rent)-Number(r.mha))),
+         housing_portion:String(isRoxana&&r.month==="2026-10"?0:q(r.mha)),
+         exclusion_reason:isRoxana&&r.month==="2026-10"?"MHA October abatement reported; amount not charged":"",
+         source_note:"Read-only monthly billing comparison against recorded charges."},
+        {headers:{"X-PM-Workspace-ID":String(ws.id)}});
+       return [r.month,out.data];
+      }catch(e){return [r.month,null];}
+     }));
+     if(alive)setChecks(old=>({...old,...Object.fromEntries(results.filter(([,v])=>v))}));
+    }catch(e){/* keep the manual Review option available */}
+   },220);
+   return()=>{alive=false;clearTimeout(timer);};
+ },[selectedId,ws?.id,rows.map(r=>r.month+":"+r.rent+":"+r.mha).join("|"),isRoxana]);
  async function review(r){
   if(!selectedId||!ws||!validRow(r)||!canPostMonth(r)){
     setError("Choose an eligible month and enter a valid total rent and housing portion.");return;
@@ -127,7 +149,7 @@ export default function PMRentCorrection(){
          <td className="p-1.5 font-black text-cyan-200">{validRow(r)?money(q(Number(r.rent)-Number(r.mha))):"Check split"}</td>
          <td className="p-1.5">{blocked?<span className="text-[10px] text-slate-500">Adair</span>:
            unchanged?<span className="text-[10px] font-bold text-emerald-200">Already billed ✓</span>:
-           <button type="button" disabled={busy||!validRow(r)} onClick={()=>review(r)} className="min-h-9 rounded-lg border border-cyan-400/35 bg-cyan-500/10 px-2.5 text-[11px] font-bold text-cyan-100 disabled:opacity-40">Review</button>}
+           <div className="flex flex-col items-start gap-1"><button type="button" disabled={busy||!validRow(r)} onClick={()=>review(r)} className="min-h-9 rounded-lg border border-cyan-400/35 bg-cyan-500/10 px-2.5 text-[11px] font-bold text-cyan-100 disabled:opacity-40">Review</button>{result?<span className="text-[9px] text-amber-200">Correction needed</span>:null}</div>}
          </td>
         </tr>})}</tbody></table>
       </div>
