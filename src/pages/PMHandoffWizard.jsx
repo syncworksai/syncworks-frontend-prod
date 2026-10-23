@@ -162,7 +162,7 @@ function PMHandoffWizardContent(){
     const existing=tenants.find(t=>String(t.email).toLowerCase()===tenantForm.email.trim().toLowerCase());
     if(existing){setError("A tenant with this email already exists. Use the existing record instead.");setBusy(false);return;}
     try{
-      await api.post("/pm-hub/tenants/",{...tenantForm,property_name:property?.name||""},{headers});
+      await api.post("/pm-hub/tenants/",{...tenantForm,property:Number(propertyId),property_name:property?.name||""},{headers});
       await reloadPeople();setTenantForm({first_name:"",last_name:"",email:"",phone:""});
       setNotice("Tenant record created. No portal invitation has been sent.");
     }catch(e){setError(errorMessage(e));}finally{setBusy(false);}
