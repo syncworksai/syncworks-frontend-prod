@@ -75,6 +75,7 @@ export default function InvestorDashboard() {
         subtitle="Your portfolio view • Updates • PM Inbox"
         rightActions={
           <div className="flex gap-2 flex-wrap">
+            <Button tone="cyan" onClick={() => nav("/investor/properties")}>Managed Properties & Payouts</Button>
             <Button tone="slate" onClick={loadDashboard} disabled={loading}>
               Refresh
             </Button>
