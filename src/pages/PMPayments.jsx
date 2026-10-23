@@ -64,6 +64,11 @@ export default function PMPayments() {
   const [ledgerFilter, setLedgerFilter] = useState("ALL");
   const [auditExpectedRent, setAuditExpectedRent] = useState("");
   const [auditMonthsBack, setAuditMonthsBack] = useState(0);
+  const [recon, setRecon] = useState(null);
+  const [reconPreview, setReconPreview] = useState(null);
+  const [reconConfirmed, setReconConfirmed] = useState(false);
+  const [reconBusy, setReconBusy] = useState(false);
+  const [reconError, setReconError] = useState("");
   const [drawer, setDrawer] = useState(params.get("add") === "1" ? "entry" : "");
   const [entry, setEntry] = useState({ ...blankEntry, tenant: params.get("tenant") || "" });
   const [editing, setEditing] = useState(null);
@@ -151,6 +156,62 @@ export default function PMPayments() {
   }, [tenantEntries, auditMonthsBack]);
   const auditExpected = Number(auditExpectedRent || payer.profile?.contract_rent || selectedTenant?.monthly_rent || 0);
   const auditTolerance = 0.01;
+
+
+  const isRoxana = /roxana/i.test(String(selectedTenant?.property_name || ""));
+  const roxanaAllocations = {
+    "2026-06": { tenant: "1407.00", housing: "78.00", note: "June HAP $78 reported by MHA; confirm tenant allocation" },
+    "2026-07": { tenant: "1407.00", housing: "78.00", note: "July $78 HAP held by MHA; verify tenant allocation" },
+    "2026-08": { tenant: "1485.00", housing: "0.00", note: "August 2026 MHA confirms tenant responsible for full rent" },
+    "2026-09": { tenant: "1108.00", housing: "377.00", note: "September 2026 MHA rent determination letter" },
+    "2026-10": { tenant: "1108.00", housing: "0.00", note: "October HAP abated; do not transfer housing obligation to tenant", excluded: "MHA share of $377 is abated; the HAP contract status remains disputed" },
+  };
+
+  function startReconcile(monthly) {
+    const recommended = isRoxana ? roxanaAllocations[monthly.key] : null;
+    const contract = recommended ? "1485.00" : String(auditExpected || monthly.rent || "0.00");
+    setRecon({
+      month: monthly.key, contract_rent: contract,
+      tenant_portion: recommended?.tenant || String(monthly.tenant || "0.00"),
+      housing_portion: recommended?.housing || String(monthly.housing || "0.00"),
+      exclusion_reason: recommended?.excluded || "",
+      source_note: recommended?.note || "Manual reconciliation against lease and payer documentation",
+    });
+    setReconPreview(null);
+    setReconConfirmed(false);
+    setReconError("");
+    setDrawer("reconcile");
+  }
+
+  function changeRecon(key, value) {
+    setRecon((prev) => ({ ...prev, [key]: value }));
+    setReconPreview(null);
+    setReconConfirmed(false);
+    setReconError("");
+  }
+
+  async function runReconciliation(apply = false) {
+    if (!recon || !filterTenant || !workspace) return;
+    if (apply && (!reconPreview || !reconConfirmed)) return;
+    setReconBusy(true);
+    setReconError("");
+    try {
+      const result = await api.post(`/pm-hub/billing/tenants/${filterTenant}/reconcile-month/`, {
+        ...recon, apply, confirmed: apply && reconConfirmed,
+      }, { headers });
+      if (apply) {
+        setDrawer("");
+        setRecon(null);
+        setReconPreview(null);
+        setReconConfirmed(false);
+        setMessage(`${result.data.month} rent charges reconciled; payments and late fees preserved.`);
+        await load();
+        await loadPayer(filterTenant);
+      } else setReconPreview(result.data);
+    } catch (err) {
+      setReconError(err?.response?.data?.detail || "Unable to reconcile the month. Please check the amounts and try again.");
+    } finally { setReconBusy(false); }
+  }
 
   function selectTenant(id) {
     const v = String(id || "");
@@ -255,12 +316,25 @@ export default function PMPayments() {
           <label className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-300">Contract rent for comparison
             <input aria-label="Expected contract rent" inputMode="decimal" className="w-28 rounded-lg border border-slate-600 bg-slate-950 px-2 py-1.5 text-xs text-white" value={auditExpectedRent} placeholder={String(payer.profile?.contract_rent || selectedTenant?.monthly_rent || "")} onChange={(e) => setAuditExpectedRent(e.target.value)} />
           </label>
-          <div className="mt-2 overflow-x-auto rounded-lg border border-slate-700">
-            <table className="w-full min-w-[460px] text-left text-[11px] sm:text-xs">
-              <thead className="bg-slate-800/70 text-slate-300"><tr><th className="px-2 py-2">Month</th><th className="px-2 py-2 text-right">Tenant</th><th className="px-2 py-2 text-right">Housing</th><th className="px-2 py-2 text-right">Rent total</th><th className="px-2 py-2 text-right">Late fees</th><th className="px-2 py-2 text-right">Recorded paid</th><th className="px-2 py-2">Review</th></tr></thead>
-              <tbody>{monthlyAudit.map((m) => <tr key={m.key} className="border-t border-slate-700/70"><td className="whitespace-nowrap px-2 py-2 font-bold">{m.label}</td><td className="px-2 py-2 text-right">{money(m.tenant)}</td><td className="px-2 py-2 text-right">{money(m.housing)}</td><td className="px-2 py-2 text-right">{money(m.rent)}</td><td className="px-2 py-2 text-right">{money(m.late)}</td><td className="px-2 py-2 text-right">{money(m.collected)}</td><td className="px-2 py-2">{m.rent <= auditTolerance ? <span className="text-amber-300">No rent charge</span> : auditExpected > 0 && Math.abs(m.rent - auditExpected) > auditTolerance ? <span className="text-amber-300">Split mismatch</span> : <span className="text-emerald-300">Rent recorded</span>}</td></tr>)}</tbody>
-            </table>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {monthlyAudit.map((m) => {
+              const known = isRoxana ? roxanaAllocations[m.key] : null;
+              const expectation = known ? Number(known.tenant) + Number(known.housing) : auditExpected;
+              const mismatch = m.rent <= auditTolerance || (expectation > 0 && Math.abs(m.rent - expectation) > auditTolerance) || (known && (Math.abs(m.tenant - Number(known.tenant)) > auditTolerance || Math.abs(m.housing - Number(known.housing)) > auditTolerance));
+              return <article key={m.key} className={`rounded-xl border p-2.5 ${mismatch ? "border-amber-400/35 bg-amber-500/5" : "border-slate-700 bg-slate-950/55"}`}>
+                <div className="flex items-center justify-between gap-2"><div className="font-black text-sm text-white">{m.label}</div><span className={`text-[10px] font-bold ${mismatch ? "text-amber-200" : "text-emerald-300"}`}>{mismatch ? "Review charges" : "Recorded"}</span></div>
+                <div className="mt-2 grid grid-cols-2 gap-1.5 text-[11px]">
+                  <div><div className="text-slate-500">Tenant charge</div><div className="font-bold">{money(m.tenant)}</div></div>
+                  <div><div className="text-slate-500">Housing charge</div><div className="font-bold">{money(m.housing)}</div></div>
+                  <div><div className="text-slate-500">Late fees</div><div className="font-bold">{money(m.late)}</div></div>
+                  <div><div className="text-slate-500">Payments posted*</div><div className="font-bold text-emerald-300">{money(m.collected)}</div></div>
+                </div>
+                {known ? <div className="mt-2 text-[10px] leading-4 text-slate-400">{known.note}</div> : null}
+                <button type="button" onClick={() => startReconcile(m)} className="mt-2 min-h-9 w-full rounded-lg border border-cyan-500/35 bg-cyan-500/10 px-2 py-1.5 text-[11px] font-black text-cyan-100 hover:bg-cyan-500/20">Review / correct rent</button>
+              </article>;
+            })}
           </div>
+          <p className="mt-2 text-[10px] text-slate-500">*Payments posted during a month may pay an older balance. Review payment allocation before determining delinquency.</p>
           <p className="mt-2 text-[10px] leading-relaxed text-slate-400 sm:text-xs">Review historical Section 8 portions by month before editing. A charge does not mean a payment was received. MHA abatement, funds paid to a former manager, disputed payments, and tenant security deposits must not be marked paid without proof. Existing late fees are preserved; any missing late fee requires a lease and payment-date check.</p>
         </section> : null}
 
@@ -274,6 +348,30 @@ export default function PMPayments() {
         </section>
       </main>
 
+      {drawer === "reconcile" && recon ? <Drawer title={`Review ${recon.month} Rent`} onClose={closeDrawer}>
+        <div className="space-y-3 pb-5 text-sm">
+          <p className="rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100">Preview first. This will adjust rent charges only. Existing tenant payments, late fees, deposits and Adair/MHA disputes are not changed.</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Month"><div className="rounded-lg border border-slate-700 px-3 py-2 text-sm">{recon.month}</div></Field>
+            <Field label="Contract rent"><input className={inputClass} inputMode="decimal" value={recon.contract_rent} onChange={(e) => changeRecon("contract_rent", e.target.value)} /></Field>
+            <Field label="Tenant rent charge"><input className={inputClass} inputMode="decimal" value={recon.tenant_portion} onChange={(e) => changeRecon("tenant_portion", e.target.value)} /></Field>
+            <Field label="Housing rent charge"><input className={inputClass} inputMode="decimal" value={recon.housing_portion} onChange={(e) => changeRecon("housing_portion", e.target.value)} /></Field>
+          </div>
+          <Field label="Why any contract rent is not billable (abatement, etc.)"><textarea rows={2} className={inputClass} value={recon.exclusion_reason} onChange={(e) => changeRecon("exclusion_reason", e.target.value)} /></Field>
+          <Field label="Supporting document / explanation"><textarea rows={2} className={inputClass} value={recon.source_note} onChange={(e) => changeRecon("source_note", e.target.value)} /></Field>
+          {reconError ? <div role="alert" className="rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-xs text-rose-200">{reconError}</div> : null}
+          <button type="button" disabled={reconBusy} onClick={() => runReconciliation(false)} className="min-h-11 w-full rounded-xl border border-cyan-400/40 bg-cyan-500/15 px-3 text-xs font-black text-cyan-100 disabled:opacity-40">{reconBusy ? "Checking…" : "Preview changes"}</button>
+          {reconPreview ? <div className="space-y-2 rounded-xl border border-emerald-400/25 bg-emerald-500/5 p-3">
+            <div className="text-xs font-black text-emerald-200">Before → adjustment → proposed</div>
+            <div className="flex justify-between gap-2 text-xs"><span>Tenant rent: {money(reconPreview.recorded_tenant_charges)}</span><strong>{Number(reconPreview.tenant_charge_adjustment) >= 0 ? "+" : ""}{money(reconPreview.tenant_charge_adjustment)}</strong></div>
+            <div className="flex justify-between gap-2 text-xs"><span>Housing rent: {money(reconPreview.recorded_housing_charges)}</span><strong>{Number(reconPreview.housing_charge_adjustment) >= 0 ? "+" : ""}{money(reconPreview.housing_charge_adjustment)}</strong></div>
+            {Number(reconPreview.excluded_from_charges) > 0 ? <p className="text-xs text-amber-100">{money(reconPreview.excluded_from_charges)} of contract rent is excluded from charges; it is not added to the tenant's debt.</p> : null}
+            <p className="text-[11px] text-slate-300">Existing late fees {money(reconPreview.preserved_late_fees)} remain. Payments posted in this month remain unchanged.</p>
+            <label className="flex items-start gap-2 text-xs"><input type="checkbox" className="mt-0.5 h-4 w-4" checked={reconConfirmed} onChange={(e) => setReconConfirmed(e.target.checked)} /><span>I have verified this month's split against the lease/MHA records and understand that the rent ledger will change.</span></label>
+            <button type="button" disabled={!reconConfirmed || reconBusy} onClick={() => runReconciliation(true)} className="min-h-11 w-full rounded-xl bg-cyan-400 px-3 text-xs font-black text-slate-950 disabled:opacity-40">Apply verified corrections</button>
+          </div> : null}
+        </div>
+      </Drawer> : null}
       {drawer === "entry" ? <Drawer title="Add Ledger Entry" onClose={closeDrawer}>{entryForm(entry, setEntry, () => saveEntry(entry))}</Drawer> : null}
       {drawer === "edit" && editing ? <Drawer title="Edit Ledger Entry" onClose={closeDrawer}>{entryForm(editing, setEditing, () => saveEntry(editing, true))}</Drawer> : null}
       {drawer === "rules" ? <Drawer title="Lease & Billing Rules" width="max-w-4xl" onClose={closeDrawer}><PMBillingPolicyEditor workspace={workspace} tenant={selectedTenant} onRefresh={async () => { await load(); await loadPayer(filterTenant); }}/></Drawer> : null}
