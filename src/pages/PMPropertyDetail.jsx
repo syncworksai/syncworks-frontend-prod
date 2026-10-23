@@ -85,7 +85,8 @@ export default function PMPropertyDetail() {
       if (requests[7].status === "fulfilled") setSummary(requests[7].value.data);
       else setSummaryError(requests[7].reason?.response?.data?.detail || "Summary is unavailable");
       setUnits(values[0].filter((item) => Number(item.property) === Number(propertyId)));
-      const propertyTenants = values[1].filter((item) => String(item.property_name || "").toLowerCase() === String(propertyRes.data.name || "").toLowerCase());
+      const safeSummaryIds = new Set(requests[7].status === "fulfilled" ? (requests[7].value.data.tenants || []).map(x=>Number(x.id)) : []);
+      const propertyTenants = values[1].filter(item => Number(item.property)===Number(propertyId) || safeSummaryIds.has(Number(item.id)));
       setTenants(propertyTenants);
       setLedger(values[2]);
       setProjects(values[3].filter((item) => Number(item.property) === Number(propertyId)));
@@ -143,6 +144,17 @@ export default function PMPropertyDetail() {
     { label: "Property ready to list / move in", done: occupancyState === "Vacant" && !makeReadyOrder, onClick: () => nav(`/pm/settings?view=make-ready&property=${propertyId}`) },
   ];
 
+  async function confirmTenantLink(tenantId) {
+    if (!window.confirm("Link this EXISTING tenant to this property? Check the resident and original lease first. This will not change rent, payments, or deposit records.")) return;
+    setNotice("");
+    try {
+      await api.post(`/pm-hub/properties/${propertyId}/link-tenant/${tenantId}/`,{confirmed:true},
+        {headers:{"X-PM-Workspace-ID":String(workspace.id)}});
+      setNotice("Existing tenant linked. No financial history was changed.");
+      await load();
+    } catch(e) {setNotice(e?.response?.data?.detail || "Could not verify this tenant/property link.");}
+  }
+
   async function changeStatus(status) {
     if (!workspace || !property || status === property.status) return;
     setSavingStatus(true);
@@ -198,7 +210,10 @@ export default function PMPropertyDetail() {
     </div> : null}
 
     {tab === "units" ? <Panel title="Units & Availability" action={<div className="flex flex-wrap gap-2"><Button tone="cyan" onClick={() => nav(`/pm/leasing?property=${propertyId}&tab=units`)}>Add Unit</Button><Button onClick={() => setDetailsOpen(true)}>Inventory</Button></div>}>{units.length ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{units.map((unit) => <article key={unit.id} className="rounded-2xl border border-slate-800 bg-black/25 p-4"><div className="flex items-start justify-between"><div><div className="font-black text-white">{unit.label}</div><div className="mt-1 text-xs text-slate-500">{unit.bedrooms || 0} bed · {unit.bathrooms || 0} bath</div></div><Badge>{String(unit.availability || "AVAILABLE").replaceAll("_", " ")}</Badge></div><div className="mt-4 text-sm text-slate-400">Market rent: <strong className="text-white">{money(unit.market_rent)}</strong></div></article>)}</div> : <Empty text="No units have been added." />}</Panel> : null}
-    {tab === "tenants" ? <Panel title="Current & Former Tenant Records" action={<Button tone="cyan" onClick={() => nav(`/pm/tenants?property=${propertyId}`)}>Add Tenant</Button>}>{tenants.length ? <div className="space-y-3">{tenants.map((tenant) => <article key={tenant.id} className="rounded-2xl border border-slate-800 bg-black/25 p-4"><div className="flex items-start justify-between gap-3"><div><div className="font-black text-white">{tenant.full_name || `${tenant.first_name} ${tenant.last_name}`}</div><div className="mt-1 text-xs text-slate-500">{tenant.email} · {tenant.unit_label || "Unit not assigned"}</div></div><Badge tone={tenant.status === "INACTIVE" ? "amber" : "green"}>{tenant.status || "ACTIVE"}</Badge></div></article>)}</div> : <Empty text="No tenant record is connected to this property." />}</Panel> : null}
+    {tab === "tenants" ? <Panel title="Current & Former Tenant Records" action={<Button tone="cyan" onClick={() => nav(`/pm/tenants?property=${propertyId}`)}>Add Tenant</Button>}>{tenants.length ? <div className="space-y-3">{tenants.map((tenant) => <article key={tenant.id} className="rounded-2xl border border-slate-800 bg-black/25 p-4"><div className="flex items-start justify-between gap-3"><div><div className="font-black text-white">{tenant.full_name || `${tenant.first_name} ${tenant.last_name}`}</div><div className="mt-1 text-xs text-slate-500">{tenant.email} · {tenant.unit_label || "Unit not assigned"}</div>
+      {summary?.tenants?.find(x=>Number(x.id)===Number(tenant.id))?.link_status==="REVIEW_NAME_MATCH" ?
+        <button type="button" onClick={()=>confirmTenantLink(tenant.id)} className="mt-2 min-h-9 rounded-lg border border-amber-400/40 bg-amber-500/5 px-2.5 text-[11px] font-black text-amber-100">Verify & link existing tenant</button> : null}
+      </div><Badge tone={tenant.status === "INACTIVE" ? "amber" : "green"}>{tenant.status || "ACTIVE"}</Badge></div></article>)}</div> : <Empty text="No tenant record is connected to this property." />}</Panel> : null}
     {tab === "ledger" ? <Panel title="Tenant Ledger" action={<div className="flex flex-wrap gap-2"><Button tone="cyan" onClick={() => nav(`/pm/payments?property=${propertyId}&add=1`)}>+ Add Entry</Button><Button onClick={() => nav(`/pm/payments?property=${propertyId}`)}>Open Full Ledger</Button></div>}>{propertyLedger.length ? <div className="space-y-2">{propertyLedger.slice(0, 20).map((item) => <div key={item.id} className="flex items-center justify-between rounded-2xl border border-slate-800 bg-black/25 p-4"><div><div className="font-black text-white">{item.category || item.entry_type}</div><div className="mt-1 text-xs text-slate-500">{item.memo || item.reference || "Ledger entry"}</div></div><div className="font-black text-white">{money(item.amount)}</div></div>)}</div> : <Empty text="No ledger entries for the property’s tenant records." />}</Panel> : null}
     {tab === "maintenance" ? <Panel title="Maintenance & Work Orders" subtitle="Property-scoped work remains here even when the property is vacant." action={<Button tone="cyan" onClick={() => nav(`/pm/work-orders?property=${propertyId}&create=1`)}>Create Work Order</Button>}>{workOrders.length ? <div className="grid gap-3 md:grid-cols-2">{workOrders.map((item) => <article key={item.id} className="rounded-2xl border border-slate-800 bg-black/25 p-4"><div className="flex items-start justify-between gap-3"><div className="font-black text-white">{item.title}</div><Badge tone={item.priority === "URGENT" ? "rose" : "amber"}>{item.status}</Badge></div><p className="mt-2 text-sm text-slate-400">{item.description || "No description."}</p></article>)}</div> : <Empty text="No maintenance or work orders for this property." />}</Panel> : null}
     {tab === "projects" ? <Panel title="Property Projects" action={<Button tone="purple" onClick={() => nav(`/pm/projects?property=${propertyId}&create=1`)}>Create Project</Button>}>{projects.length ? <div className="space-y-3">{projects.map((item) => <article key={item.id} className="rounded-2xl border border-slate-800 bg-black/25 p-4"><div className="flex items-center justify-between"><div className="font-black text-white">{item.title}</div><Badge>{String(item.status).replaceAll("_", " ")}</Badge></div><div className="mt-2 text-xs text-slate-500">Progress {item.progress_percent || 0}% · Target {item.target_date || "not set"}</div></article>)}</div> : <Empty text="No projects are connected to this property." />}</Panel> : null}
