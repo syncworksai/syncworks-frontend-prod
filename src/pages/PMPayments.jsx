@@ -392,8 +392,9 @@ export default function PMPayments() {
         </section>
 
         {filterTenant ? <a href={`/pm/lease-builder?tenant=${filterTenant}`} className="flex min-h-11 items-center justify-between rounded-xl border border-cyan-400/35 bg-cyan-500/10 px-3 text-xs font-black text-cyan-100">Open Lease Builder · monthly bills, payer shares, late fees <span>→</span></a> : null}
-        {filterTenant ? <a href={`/pm/rent-correction?tenant=${filterTenant}`} className="flex min-h-11 items-center justify-between rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 text-xs font-black text-amber-100">Correct multiple months & payer splits <span>→</span></a> : null}
-        {filterTenant ? <section className="rounded-xl border border-cyan-500/20 bg-[#07111f]/90 p-2.5 sm:rounded-2xl sm:p-4" aria-label="Monthly ledger reconciliation">
+        {filterTenant ? <a href={`/pm/rent-correction?tenant=${filterTenant}`} className="flex min-h-11 items-center justify-between rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 text-xs font-black text-amber-100">Simple monthly rent table · Rent / MHA / Tenant <span>→</span></a> : null}
+        {filterTenant ? <details className="rounded-xl border border-cyan-500/20 bg-[#07111f]/90 p-2.5 sm:rounded-2xl sm:p-4" aria-label="Advanced monthly ledger audit">
+          <summary className="cursor-pointer text-[11px] font-black text-slate-300">Advanced month-by-month audit (optional) · Expand</summary>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div><h2 className="text-sm font-black text-cyan-100 sm:text-lg">Monthly reconciliation</h2><p className="text-[10px] text-slate-400 sm:text-xs">Read-only checks • no payment or late-fee changes</p></div>
             <div className="flex items-center gap-1.5"><button type="button" className="rounded-lg border border-slate-600 px-2 py-1 text-xs" onClick={() => setAuditMonthsBack((x) => Math.min(x + 1, 12))}>Older</button><button type="button" className="rounded-lg border border-slate-600 px-2 py-1 text-xs disabled:opacity-40" disabled={!auditMonthsBack} onClick={() => setAuditMonthsBack((x) => Math.max(0, x - 1))}>Newer</button></div>
@@ -419,7 +420,7 @@ export default function PMPayments() {
           </div>
           <p className="mt-2 text-[10px] text-slate-500">*Payments posted during a month may pay an older balance. A month with no late fee is a review flag, not proof a fee is owed. Verify lease/grace dates and prior receipts before adding one.</p>
           <p className="mt-2 text-[10px] leading-relaxed text-slate-400 sm:text-xs">Review historical assistance-provider portions by month before editing. A charge does not mean a payment was received. Assistance abatement, funds paid to a previous manager, disputed payments, and tenant security deposits must not be marked paid without proof. Existing late fees are preserved; any missing late fee requires a lease and payment-date check.</p>
-        </section> : null}
+        </details> : null}
 
         {filterTenant ? <section className="rounded-xl border border-cyan-500/20 bg-[#07111f]/90 p-2.5 sm:rounded-2xl sm:p-4" aria-label="Payment application and external reconciliation">
           <div className="flex items-center justify-between gap-2"><div><h2 className="text-sm font-black text-cyan-100 sm:text-lg">Payment trail & oldest-first application</h2><p className="mt-0.5 text-[10px] text-slate-400 sm:text-xs">Receipt dates never change. Each verified payment goes against the oldest eligible amount owed by its payer.</p></div><button type="button" className="min-h-9 shrink-0 rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/10 px-2.5 text-[11px] font-black text-fuchsia-100" onClick={() => { setExternalError(""); setDrawer("external"); }}>+ Track funds</button></div>
