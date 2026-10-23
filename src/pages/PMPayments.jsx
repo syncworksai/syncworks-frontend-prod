@@ -73,6 +73,11 @@ export default function PMPayments() {
   const [externalRecords, setExternalRecords] = useState([]);
   const [externalBusy, setExternalBusy] = useState(false);
   const [externalError, setExternalError] = useState("");
+  const [lateForm, setLateForm] = useState(null);
+  const [latePreview, setLatePreview] = useState(null);
+  const [lateAgreed, setLateAgreed] = useState(false);
+  const [lateBusy, setLateBusy] = useState(false);
+  const [lateError, setLateError] = useState("");
   const [externalForm, setExternalForm] = useState({ category: "HAP_PAID_TO_FORMER_MANAGER", period: today.slice(0, 7), amount: "", evidence_status: "REPORTED", note: "" });
   const [drawer, setDrawer] = useState(params.get("add") === "1" ? "entry" : "");
   const [entry, setEntry] = useState({ ...blankEntry, tenant: params.get("tenant") || "" });
@@ -244,6 +249,34 @@ export default function PMPayments() {
     }
   }
 
+
+  function openLateReview(month) {
+    setLateForm({
+      month,
+      amount: String(payer.profile?.late_fee_amount && Number(payer.profile.late_fee_amount) > 0 ? payer.profile.late_fee_amount : "50.00"),
+      due_day: String(payer.profile?.rent_due_day || 1),
+      grace_days: String(payer.profile?.grace_days ?? 0),
+      source_note: "",
+    });
+    setLatePreview(null); setLateAgreed(false); setLateError("");
+    setDrawer("lateReview");
+  }
+
+  async function auditLateFee(apply = false) {
+    if (!lateForm || !filterTenant) return;
+    setLateBusy(true); setLateError("");
+    try {
+      const r = await api.post(`/pm-hub/billing/tenants/${filterTenant}/verified-late-fee/`,
+        { ...lateForm, apply, lease_verified: apply && lateAgreed, confirmed: apply && lateAgreed }, { headers });
+      if (apply) {
+        setDrawer(""); setLatePreview(null); setLateForm(null);
+        setMessage(`${r.data.month}: verified late fee posted, with no duplicate rent charges or payments.`);
+        await load(); await loadPayer(filterTenant);
+      } else setLatePreview(r.data);
+    } catch (err) { setLateError(err?.response?.data?.detail || "Unable to review the fee."); }
+    finally { setLateBusy(false); }
+  }
+
   function selectTenant(id) {
     const v = String(id || "");
     setFilterTenant(v);
@@ -379,7 +412,7 @@ export default function PMPayments() {
               {!allocation.allocations?.length ? <p className="rounded-lg border border-dashed border-slate-700 p-3 text-xs text-slate-400">No payment allocations to display yet.</p> : null}
             </div>
             {Number(allocation.unapplied_tenant_receipts || 0) > 0 ? <p className="mt-2 text-[11px] text-amber-200">Unallocated tenant payments/credits: {money(allocation.unapplied_tenant_receipts)}. Review missing charges before treating this as overpayment.</p> : null}
-            {allocation.late_fee_review?.some((m) => m.review_late_fee) ? <div className="mt-2 rounded-lg border border-amber-400/25 bg-amber-500/5 p-2.5"><div className="text-xs font-black text-amber-100">Late fees to investigate</div><p className="mt-1 text-[11px] leading-4 text-slate-300">{allocation.late_fee_review.filter((m) => m.review_late_fee).map((m) => m.month).join(", ")}. Tenant rent appears unpaid at the configured grace date, but fees are not automatically posted. Check the signed lease, fee rules, and late/postdated receipts first.</p></div> : null}
+            {allocation.late_fee_review?.some((m) => m.review_late_fee) ? <div className="mt-2 rounded-lg border border-amber-400/25 bg-amber-500/5 p-2.5"><div className="text-xs font-black text-amber-100">Late fees to investigate</div><p className="mt-1 text-[11px] leading-4 text-slate-300">Tenant rent appears unpaid at the configured grace date for the periods below. Review signed lease terms and backdated payments before assessing a fee.</p><div className="mt-2 flex flex-wrap gap-1.5">{allocation.late_fee_review.filter((m) => m.review_late_fee).map((m) => <button key={m.month} type="button" className="rounded-lg border border-amber-400/35 px-2.5 py-1.5 text-[11px] font-black text-amber-100" onClick={() => openLateReview(m.month)}>Review {m.month} →</button>)}</div></div> : null}
           </> : <p className="mt-2 text-[11px] text-slate-400">Payment allocation audit is unavailable. Ledger entries are shown below.</p>}
           <div className="mt-3 flex items-center justify-between gap-2"><div className="text-xs font-black text-white">MHA, former manager & deposit evidence</div><span className="text-[10px] text-slate-400">{externalRecords.length} records</span></div>
           <p className="mt-1 text-[10px] leading-4 text-slate-400">Reported or disputed funds are not marked received and do not change the tenant's debt. Deposit collection and application require separate proof.</p>
@@ -396,6 +429,22 @@ export default function PMPayments() {
         </section>
       </main>
 
+      {drawer === "lateReview" && lateForm ? <Drawer title={`Late fee: ${lateForm.month}`} onClose={closeDrawer}>
+        <div className="space-y-3 pb-6 text-sm">
+          <p className="rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100">A past-due balance alone does not prove a late fee is owed. Confirm the actual lease due date, grace period, permitted fee amount, and payment history. MHA's unpaid share is never used for this test.</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Fee amount from lease"><input className={inputClass} inputMode="decimal" value={lateForm.amount} onChange={(e) => { setLatePreview(null); setLateAgreed(false); setLateForm((x) => ({ ...x, amount: e.target.value })); }} /></Field>
+            <Field label="Due day"><input type="number" min="1" max="28" className={inputClass} value={lateForm.due_day} onChange={(e) => { setLatePreview(null); setLateAgreed(false); setLateForm((x) => ({ ...x, due_day: e.target.value })); }} /></Field>
+            <Field label="Grace days"><input type="number" min="0" max="31" className={inputClass} value={lateForm.grace_days} onChange={(e) => { setLatePreview(null); setLateAgreed(false); setLateForm((x) => ({ ...x, grace_days: e.target.value })); }} /></Field>
+          </div>
+          <Field label="Signed lease clause and payment-date evidence"><textarea className={inputClass} rows={3} value={lateForm.source_note} onChange={(e) => { setLatePreview(null); setLateAgreed(false); setLateForm((x) => ({ ...x, source_note: e.target.value })); }} placeholder="E.g. Lease section X: $50 fee after due date; receipts reviewed..." /></Field>
+          {lateError ? <p role="alert" className="rounded-lg border border-rose-400/25 bg-rose-500/10 p-3 text-xs text-rose-200">{lateError}</p> : null}
+          <button type="button" onClick={() => auditLateFee(false)} disabled={lateBusy} className="min-h-11 w-full rounded-xl border border-cyan-400/40 bg-cyan-500/10 text-xs font-black text-cyan-100 disabled:opacity-40">Preview fee eligibility</button>
+          {latePreview ? <div className="space-y-2 rounded-xl border border-slate-700 p-3 text-xs"><p>Tenant rent unpaid at grace deadline: <strong>{money(latePreview.unpaid_tenant_rent_at_grace)}</strong></p><p>Proposed fee: <strong>{money(latePreview.fee)}</strong> · Effective {latePreview.fee_date}</p><p className={latePreview.eligible_for_review ? "text-amber-200" : "text-emerald-200"}>{latePreview.eligible_for_review ? "Eligible for documented review; confirm lease terms before posting." : "No late fee indicated by payment timing."}</p>{latePreview.eligible_for_review ? <>
+            <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 h-4 w-4" checked={lateAgreed} onChange={(e) => setLateAgreed(e.target.checked)}/><span>I verified the signed lease, due/grace dates, charge amount, and all receipts. I authorize this single monthly fee.</span></label>
+            <button type="button" onClick={() => auditLateFee(true)} disabled={!lateAgreed || lateBusy} className="min-h-11 w-full rounded-xl bg-cyan-400 text-xs font-black text-slate-950 disabled:opacity-40">Post verified late fee</button></> : null}</div> : null}
+        </div>
+      </Drawer> : null}
       {drawer === "external" ? <Drawer title="Record external payment evidence" onClose={closeDrawer}>
         <div className="space-y-3 pb-6 text-sm">
           <div className="rounded-xl border border-amber-400/25 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100">Use this for money MHA says it sent to Adair, amounts on hold, Adair owner distributions, or an unverified security deposit. It is not a rent payment and will not reduce the balance.</div>
