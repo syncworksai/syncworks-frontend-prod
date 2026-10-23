@@ -33,3 +33,8 @@ export async function sendTenantMaintenanceRequest(payload) {
   });
   return response.data;
 }
+ 
+export async function getTenantDocumentRequests() {
+  const response = await api.get("/pm-hub/document-requests/my/");
+  return response.data;
+}
