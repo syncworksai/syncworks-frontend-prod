@@ -105,6 +105,7 @@ export default function SboReports() {
   const [kpis, setKpis] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [leads, setLeads] = useState([]);
+  const [financial, setFinancial] = useState(null);
   const [source, setSource] = useState({
     hasKpis: false,
     hasTickets: false,
@@ -123,6 +124,7 @@ export default function SboReports() {
     setKpis([]);
     setTickets([]);
     setLeads([]);
+    setFinancial(null);
 
     if (!activeBusinessId) {
       setLoading(false);
@@ -134,9 +136,11 @@ export default function SboReports() {
         api.get("/kpis/business/", { params: { days } }),
         fetchPages("/tickets/"),
         fetchPages("/sales/leads/"),
+        api.get("/business-finance/summary/"),
       ]);
       if (!mounted) return;
-      const [kpi, ticket, lead] = responses;
+      const [kpi, ticket, lead, finance] = responses;
+      setFinancial(finance.status === "fulfilled" ? finance.value.data : null);
       setKpis(kpi.status === "fulfilled" ? asRows(kpi.value?.data) : []);
       setTickets(ticket.status === "fulfilled" ? ticket.value.rows : []);
       setLeads(lead.status === "fulfilled" ? lead.value.rows : []);
@@ -309,28 +313,28 @@ export default function SboReports() {
             <GlassCard title="Financial Health" subtitle="Separate income from actual profitability" tone="emerald">
               <div className="grid grid-cols-2 gap-2">
                 <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
-                  <div className="text-xs text-slate-400">Net profit</div>
-                  <div className="mt-1 text-xl font-black text-white">—</div>
+                  <div className="text-xs text-slate-400">Recorded Contribution</div>
+                  <div className="mt-1 text-xl font-black text-white">{loading ? "…" : money(financial?.recorded_contribution)}</div>
                 </div>
                 <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
-                  <div className="text-xs text-slate-400">Profit margin</div>
-                  <div className="mt-1 text-xl font-black text-white">—</div>
+                  <div className="text-xs text-slate-400">Recorded Margin</div>
+                  <div className="mt-1 text-xl font-black text-white">{loading ? "…" : financial?.recorded_margin_percent == null ? "—" : Number(financial.recorded_margin_percent).toFixed(1) + "%"}</div>
                 </div>
                 <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
-                  <div className="text-xs text-slate-400">Operating expenses</div>
-                  <div className="mt-1 text-xl font-black text-white">—</div>
+                  <div className="text-xs text-slate-400">Tracked Costs</div>
+                  <div className="mt-1 text-xl font-black text-white">{loading ? "…" : money(financial?.costs)}</div>
                 </div>
                 <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
-                  <div className="text-xs text-slate-400">AR dollar balance</div>
-                  <div className="mt-1 text-xl font-black text-white">—</div>
+                  <div className="text-xs text-slate-400">Overdue Expense Bills</div>
+                  <div className="mt-1 text-xl font-black text-white">{loading ? "…" : money(financial?.overdue_expenses)}</div>
                 </div>
               </div>
               <p className="mt-3 text-xs leading-5 text-amber-100">
-                A verified expense ledger, labor/material job costs, and invoice balances are not yet connected.
-                These values will not be estimated from revenue alone.
+                {financial ? (financial.reconciled ? "Owner-reconciled records for the current calendar month. " : "Provisional current calendar month. ") : "Financial ledger unavailable. "}
+                Collections less incurred costs are not audited net profit. Review and reconcile expenses before relying on the margin.
               </p>
-              <button type="button" onClick={() => navigate("/sbo/finance")} className="mt-3 inline-flex min-h-10 items-center gap-2 text-sm font-black text-cyan-200">
-                Open Finance <ArrowRight aria-hidden="true" className="h-4 w-4" />
+              <button type="button" onClick={() => navigate("/sbo/finance-intelligence")} className="mt-3 inline-flex min-h-10 items-center gap-2 text-sm font-black text-cyan-200">
+                Open Profit & Cash <ArrowRight aria-hidden="true" className="h-4 w-4" />
               </button>
             </GlassCard>
           </div>
