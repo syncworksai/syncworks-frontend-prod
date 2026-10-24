@@ -177,6 +177,7 @@ export default function SboReports() {
     { label: "Leads", icon: "◎", onClick: () => navigate("/sbo/leads") },
     { label: "Employees", icon: "👥", onClick: () => navigate("/team/invites") },
     { label: "Finance", icon: "$", onClick: () => navigate("/sbo/finance") },
+    { label: "Profit & Cash", icon: "▦", onClick: () => navigate("/sbo/finance-intelligence") },
     { label: "Intelligence", icon: "↗", active: true, onClick: () => navigate("/sbo/reports") },
     { label: "Settings", icon: "⚙", onClick: () => navigate("/sbo/settings?return=%2Fsbo") },
   ];
@@ -192,6 +193,7 @@ export default function SboReports() {
         { label: "Requests", icon: "▤", onClick: () => navigate("/tickets?view=new") },
         { label: "Leads", icon: "◎", onClick: () => navigate("/sbo/leads") },
         { label: "Finance", icon: "$", onClick: () => navigate("/sbo/finance") },
+    { label: "Profit & Cash", icon: "▦", onClick: () => navigate("/sbo/finance-intelligence") },
       ]}
       bottomCenterAction={{ label: "New", onClick: () => navigate("/tickets?view=new") }}
     >
@@ -421,6 +423,7 @@ export default function SboReports() {
           <GlassCard title="Explore Reports" subtitle="Open the underlying records to take action" tone="slate">
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               <Shortcut title="Finance" description="Payouts, invoice fees, and payments" onClick={() => navigate("/sbo/finance")} />
+              <Shortcut title="Profit & Cash" description="Expense ledger, job margins and cash-flow forecasts" onClick={() => navigate("/sbo/finance-intelligence")} />
               <Shortcut title="Lead Pipeline" description="Follow-ups, conversions, and sources" onClick={() => navigate("/sbo/leads")} />
               <Shortcut title="ZIP Leaderboard" description="Marketplace ranking by service area" onClick={() => navigate("/sbo/metrics/zip")} />
             </div>
