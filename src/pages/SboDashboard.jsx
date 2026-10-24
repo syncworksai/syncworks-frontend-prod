@@ -640,7 +640,7 @@ export default function SboDashboard() {
     { label: "Product Settings", icon: "⚙", onClick: () => navigate("/sbo/catalog") },
     { label: "Finance", icon: "$", onClick: () => navigate("/sbo/finance") },
     { label: "Social Media", icon: "✦", onClick: () => navigate("/sbo/growth") },
-    { label: "Reports", icon: "↗", onClick: () => navigate("/sbo/reports") },
+    { label: "Intelligence", icon: "↗", onClick: () => navigate("/sbo/reports") },
     { label: "Settings", icon: "⚙", onClick: () => navigate("/sbo/settings?return=%2Fsbo") },
   ];
 
@@ -808,6 +808,7 @@ export default function SboDashboard() {
             completedJobs={completedJobs}
             openTickets={openTickets}
             newCustomers={newCustomersApprox}
+            onOpenIntelligence={() => navigate("/sbo/reports")}
           />
 
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">

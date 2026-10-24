@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "check:encoding": "node scripts/check-encoding.mjs",
     "check:single-header": "node scripts/check-single-header.mjs",
-    "check:navigation": "node scripts/check-navigation-contract.mjs"
+    "check:navigation": "node scripts/check-navigation-contract.mjs",
+    "prebuild": "node --test scripts/check-business-intelligence.mjs"
   },
   "dependencies": {
     "axios": "^1.13.2",
