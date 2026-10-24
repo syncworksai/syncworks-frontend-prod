@@ -140,6 +140,7 @@ export default function SboFinance() {
     { label: "Finance", icon: "$", active: true, onClick: () => navigate("/sbo/finance") },
     { label: "Social Media", icon: "✦", onClick: () => navigate("/sbo/growth") },
     { label: "Reports", icon: "↗", onClick: () => navigate("/sbo/reports") },
+    { label: "Profit & Cash", icon: "▦", onClick: () => navigate("/sbo/finance-intelligence") },
     { label: "Settings", icon: "⚙", onClick: () => navigate("/sbo/settings?return=%2Fsbo") },
   ];
 
@@ -297,6 +298,7 @@ export default function SboFinance() {
         { label: "Home", icon: "⌂", onClick: () => navigate("/sbo") },
         { label: "Requests", icon: "▤", onClick: () => navigate("/tickets?view=new") },
         { label: "Reports", icon: "↗", onClick: () => navigate("/sbo/reports") },
+    { label: "Profit & Cash", icon: "▦", onClick: () => navigate("/sbo/finance-intelligence") },
         { label: "Settings", icon: "⚙", onClick: () => navigate("/sbo/settings?return=%2Fsbo") },
       ]}
       bottomCenterAction={{
@@ -330,6 +332,11 @@ export default function SboFinance() {
     >
       <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
         <SidebarNav title="Business OS" subtitle="Finance" items={navItems} />
+          <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
+            <div className="text-sm font-black text-emerald-100">New: Profit & Cash Workspace</div>
+            <div className="mt-1 text-xs leading-5 text-slate-300">Track labor, materials, expenses, job contribution, recorded margins, and planned cash events.</div>
+            <button type="button" onClick={() => navigate("/sbo/finance-intelligence")} className="mt-3 min-h-10 rounded-xl border border-cyan-400/25 bg-cyan-500/10 px-3 text-xs font-black text-cyan-100">Open Profit & Cash →</button>
+          </div>
 
         <div className="min-w-0 space-y-5">
           {error ? (
