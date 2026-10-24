@@ -18,7 +18,7 @@ const today = () => {
 const thisMonth = () => today().slice(0, 7);
 const expenseInitial = () => ({
   id: null, ticket: "", category: "OVERHEAD", status: "INCURRED", description: "",
-  quantity: "1", unit_cost: "", incurred_on: today(), due_on: "", vendor: "", notes: "",
+  quantity: "1", unit_cost: "", incurred_on: today(), due_on: "", paid_on: "", vendor: "", notes: "",
 });
 const forecastInitial = () => ({
   description: "", direction: "IN", amount: "", expected_on: today(), notes: "",
@@ -154,6 +154,7 @@ export default function BusinessFinanceIntelligence() {
       description: expenseDraft.description.trim(), vendor: expenseDraft.vendor.trim(),
       quantity: expenseDraft.quantity, unit_cost: expenseDraft.unit_cost,
       incurred_on: expenseDraft.incurred_on, due_on: expenseDraft.due_on || null,
+      paid_on: expenseDraft.status === "PAID" ? (expenseDraft.paid_on || null) : null,
       notes: expenseDraft.notes.trim(),
     };
   }
@@ -179,7 +180,7 @@ export default function BusinessFinanceIntelligence() {
       id: item.id, ticket: item.ticket ? String(item.ticket) : "",
       category: item.category, status: item.status, description: item.description,
       quantity: String(item.quantity), unit_cost: String(item.unit_cost),
-      incurred_on: item.incurred_on, due_on: item.due_on || "",
+      incurred_on: item.incurred_on, due_on: item.due_on || "", paid_on: item.paid_on || "",
       vendor: item.vendor || "", notes: item.notes || "",
     });
     setTab("expenses");
@@ -411,6 +412,12 @@ export default function BusinessFinanceIntelligence() {
                     <input className={inputClass} type="date" value={expenseDraft.due_on}
                       onChange={(e) => setExpenseDraft({ ...expenseDraft, due_on: e.target.value })} />
                   </Field>
+                  {expenseDraft.status === "PAID" ? (
+                    <Field label="Actual payment date (defaults to today)">
+                      <input className={inputClass} type="date" value={expenseDraft.paid_on}
+                        onChange={(e) => setExpenseDraft({ ...expenseDraft, paid_on: e.target.value })} />
+                    </Field>
+                  ) : null}
                   <Field label="Vendor / employee (optional)">
                     <input className={inputClass} maxLength={160} placeholder="Vendor or technician" value={expenseDraft.vendor}
                       onChange={(e) => setExpenseDraft({ ...expenseDraft, vendor: e.target.value })} />
