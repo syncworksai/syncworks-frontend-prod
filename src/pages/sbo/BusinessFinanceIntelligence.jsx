@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, ArrowRight, BarChart3, CheckCircle2, CircleDollarSign,
+  ArrowLeft, ArrowRight, CheckCircle2, CircleDollarSign,
   ClipboardCheck, Pencil, Plus, RefreshCw, ShieldCheck, Wallet,
 } from "lucide-react";
 
@@ -83,7 +83,6 @@ export default function BusinessFinanceIntelligence() {
   const [jobs, setJobs] = useState([]);
   const [cash, setCash] = useState(null);
   const [forecastEntries, setForecastEntries] = useState([]);
-  const [settings, setSettings] = useState(null);
   const [expenseDraft, setExpenseDraft] = useState(expenseInitial);
   const [forecastDraft, setForecastDraft] = useState(forecastInitial);
   const [cashDraft, setCashDraft] = useState({ opening_cash_balance: "", opening_cash_date: today() });
@@ -114,13 +113,10 @@ export default function BusinessFinanceIntelligence() {
     setForecastEntries(e.status === "fulfilled" ? rows(e.value.data) : []);
     if (f.status === "fulfilled") {
       const state = f.value.data;
-      setSettings(state);
       setCashDraft({
         opening_cash_balance: state.opening_cash_balance ?? "",
         opening_cash_date: state.opening_cash_date || today(),
       });
-    } else {
-      setSettings(null);
     }
     const rejected = responses.filter((r) => r.status === "rejected");
     if (rejected.length) {
@@ -133,7 +129,6 @@ export default function BusinessFinanceIntelligence() {
 
   const expenseTotal = useMemo(() => num(expenseDraft.quantity) * num(expenseDraft.unit_cost), [expenseDraft]);
   const recentExpenses = useMemo(() => expenses.filter((e) => e.incurred_on?.slice(0, 7) === month), [expenses, month]);
-  const selectedJob = (ticket) => jobs.find((j) => String(j.ticket) === String(ticket));
 
   async function perform(action, success) {
     setError("");
@@ -143,8 +138,10 @@ export default function BusinessFinanceIntelligence() {
       await action();
       setMessage(success);
       setLoadKey((key) => key + 1);
+      return true;
     } catch (e) {
       setError(formatError(e));
+      return false;
     } finally {
       setWorking(false);
     }
@@ -168,13 +165,13 @@ export default function BusinessFinanceIntelligence() {
       return;
     }
     const payload = expensePayload();
-    await perform(
+    const saved = await perform(
       () => expenseDraft.id
         ? api.patch("/business-finance/expenses/" + expenseDraft.id + "/", payload)
         : api.post("/business-finance/expenses/", payload),
       expenseDraft.id ? "Expense updated. Any affected job cost review was reopened." : "Expense added to this business.",
     );
-    setExpenseDraft(expenseInitial());
+    if (saved) setExpenseDraft(expenseInitial());
   }
 
   function editExpense(item) {
@@ -190,13 +187,13 @@ export default function BusinessFinanceIntelligence() {
 
   async function submitForecast(event) {
     event.preventDefault();
-    await perform(
+    const saved = await perform(
       () => api.post("/business-finance/forecast-items/", {
         ...forecastDraft, amount: forecastDraft.amount,
       }),
       "Planned cash event saved.",
     );
-    setForecastDraft(forecastInitial());
+    if (saved) setForecastDraft(forecastInitial());
   }
 
   async function submitOpening(event) {
@@ -215,10 +212,6 @@ export default function BusinessFinanceIntelligence() {
     setTab("expenses");
   }
 
-  const reconciledMonthEnd = () => {
-    const [year, monthNo] = month.split("-").map(Number);
-    return new Date(year, monthNo, 0).toLocaleDateString("en-CA");
-  };
   const reconciledThrough = () => {
     const [year, monthNo] = month.split("-").map(Number);
     const lastDay = new Date(year, monthNo, 0).getDate();
