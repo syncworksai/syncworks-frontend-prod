@@ -47,6 +47,7 @@ import BusinessTechBoard from "./pages/sbo/BusinessTechBoard";
 import SboLeads from "./pages/sbo/SboLeads";
 import SboReports from "./pages/sbo/SboReports";
 import SboFinance from "./pages/sbo/SboFinance";
+import BusinessFinanceIntelligence from "./pages/sbo/BusinessFinanceIntelligence";
 import SboInvoices from "./pages/sbo/SboInvoices";
 import SboBillingAutomation from "./pages/sbo/SboBillingAutomation";
 import SboPartners from "./pages/sbo/SboPartners";
@@ -176,6 +177,7 @@ export default function App() {
         <Route path="/sbo/leads" element={<ProtectedRoute><SboLeads /></ProtectedRoute>} />
         <Route path="/sbo/reports" element={<ProtectedRoute><SboReports /></ProtectedRoute>} />
         <Route path="/sbo/finance" element={<ProtectedRoute><SboFinance /></ProtectedRoute>} />
+        <Route path="/sbo/finance-intelligence" element={<ProtectedRoute><BusinessFinanceIntelligence /></ProtectedRoute>} />
         <Route path="/sbo/invoices" element={<ProtectedRoute><SboInvoices /></ProtectedRoute>} />
         <Route path="/sbo/partners" element={<ProtectedRoute><SboPartners /></ProtectedRoute>} />
 
