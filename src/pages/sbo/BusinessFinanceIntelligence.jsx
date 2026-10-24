@@ -530,6 +530,18 @@ export default function BusinessFinanceIntelligence() {
                 <Stat label={days + "-Day Outlook"} value={loading ? "…" : money(cash?.projected_cash_end)} sub="Known planned entries only" />
                 <Stat label="Scheduled Events" value={loading ? "…" : cash?.event_count ?? "—"} sub="Manual forecasts and unpaid expenses" />
               </div>
+              {cash?.checkpoints ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {[30, 60, 90].filter((horizon) => horizon <= days).map((horizon) => (
+                    <Stat
+                      key={horizon}
+                      label={horizon + "-day checkpoint"}
+                      value={money(cash.checkpoints[String(horizon)])}
+                      sub="Scheduled scenario balance"
+                    />
+                  ))}
+                </div>
+              ) : null}
               <GlassCard title="Starting Cash Position" subtitle="Enter an actual reconciled bank/cash snapshot. Forecasting cannot produce a balance without it." tone="emerald">
                 <form onSubmit={submitOpening} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
                   <Field label="Reconciled opening cash ($)">
