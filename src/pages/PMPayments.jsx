@@ -4,6 +4,7 @@ import api from "../api/client";
 import Button from "../components/ui/Button";
 import PMBillingPolicyEditor from "../components/pm/PMBillingPolicyEditor";
 import PMDepositReviewCard from "../components/pm/PMDepositReviewCard";
+import PMOwnerPaymentReview from "../components/pm/PMOwnerPaymentReview";
 
 const inputClass = "min-h-10 w-full rounded-xl border border-slate-700 bg-black/35 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400/70 sm:min-h-11 sm:rounded-2xl sm:px-3.5 sm:py-2.5";
 const list = (d) => (Array.isArray(d?.results) ? d.results : Array.isArray(d) ? d : []);
@@ -319,6 +320,7 @@ export default function PMPayments() {
   async function saveEntry(model, isEdit = false) {
     if (!model.tenant) return setDrawerError("Choose a tenant before saving this ledger entry.");
     if (!model.amount || Number(model.amount) <= 0) return setDrawerError("Enter an amount greater than $0 before saving.");
+    if (!model.entry_date) return setDrawerError("Enter the actual bank receipt date. An estimated month cannot be posted as a payment.");
     setBusy(true); setError(""); setDrawerError("");
     try {
       const payload = { ...model, category: categoryFor(model.payer, model.category), payment_method: model.entry_type === "PAYMENT" ? (model.payer === "HOUSING" ? "HOUSING_AUTHORITY" : model.payment_method) : "", workspace_id: workspace.id };
@@ -393,6 +395,13 @@ export default function PMPayments() {
           <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3 md:grid-cols-2 xl:grid-cols-3">{tenantRows.map((t) => { const a = summaryMap.get(String(t.id)) || {}; return <button key={t.id} onClick={() => selectTenant(t.id)} className={`rounded-xl border p-3 text-left transition sm:rounded-2xl sm:p-4 ${String(filterTenant) === String(t.id) ? "border-cyan-300 bg-cyan-500/15 shadow-lg shadow-cyan-950/20" : "border-slate-700 bg-slate-900/40 hover:border-cyan-500/40"}`}><div className="truncate text-sm font-black sm:text-base">{t.full_name}</div><div className="mt-0.5 truncate text-[11px] text-slate-400 sm:mt-1 sm:text-xs">{t.property_name || "No property"}</div><div className="mt-2 text-xs font-semibold sm:mt-3 sm:text-sm">Balance {money(a.balance)}</div></button>; })}</div>
         </section>
 
+        {filterTenant && workspace ? <PMOwnerPaymentReview tenantId={filterTenant} workspaceId={workspace.id} ledgerCount={entries.length}
+          onRecordPayment={() => {
+            openEntry(filterTenant);
+            setEntry({ ...blankEntry, tenant: filterTenant, entry_date: "", amount: "", entry_type: "PAYMENT",
+              category: "RENT_TENANT", payer: "TENANT",
+              memo: "March 2026 bank receipt; record exact date and amount. Do not include Adair's security-deposit transfer." });
+          }} /> : null}
         {filterTenant ? <a href={`/pm/lease-builder?tenant=${filterTenant}`} className="flex min-h-11 items-center justify-between rounded-xl border border-cyan-400/35 bg-cyan-500/10 px-3 text-xs font-black text-cyan-100">Open Lease Builder · monthly bills, payer shares, late fees <span>→</span></a> : null}
         {filterTenant ? <a href={`/pm/rent-correction?tenant=${filterTenant}`} className="flex min-h-11 items-center justify-between rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 text-xs font-black text-amber-100">Simple monthly rent table · Rent / MHA / Tenant <span>→</span></a> : null}
         {filterTenant ? <details className="rounded-xl border border-cyan-500/20 bg-[#07111f]/90 p-2.5 sm:rounded-2xl sm:p-4" aria-label="Advanced monthly ledger audit">
