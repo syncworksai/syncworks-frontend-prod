@@ -39,6 +39,7 @@ export default function SboKpiHero({
   completedJobs,
   openTickets,
   newCustomers,
+  onOpenIntelligence,
 }) {
   return (
     <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
@@ -48,6 +49,15 @@ export default function SboKpiHero({
           <div className="text-xs text-slate-400 mt-1">
             Revenue first, but balanced with the operational metrics that actually run the business.
           </div>
+          {onOpenIntelligence ? (
+            <button
+              type="button"
+              onClick={onOpenIntelligence}
+              className="mt-3 inline-flex min-h-9 items-center gap-2 text-xs font-black text-cyan-200 hover:text-cyan-100"
+            >
+              Open Business Intelligence →
+            </button>
+          ) : null}
         </div>
 
         <div className="text-xs px-3 py-1.5 rounded-full border border-cyan-500/25 bg-cyan-500/10 text-cyan-200">
@@ -56,7 +66,7 @@ export default function SboKpiHero({
       </div>
 
       <div className="mt-4 grid md:grid-cols-2 xl:grid-cols-4 gap-3">
-        <MiniKpi label="Revenue This Month" value={money(revenueThisMonth)} />
+        <MiniKpi label="Collected · Last 30 Days" value={money(revenueThisMonth)} />
         <MiniKpi label="Revenue Goal" value={revenueGoal ? money(revenueGoal) : "—"} />
         <MiniKpi
           label="Growth vs Baseline"
