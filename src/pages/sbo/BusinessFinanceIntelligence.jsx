@@ -356,7 +356,7 @@ export default function BusinessFinanceIntelligence() {
                 <button className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 text-left" onClick={() => setTab("forecast")}>
                   <CircleDollarSign className="mb-2 h-5 w-5 text-emerald-300" />
                   <div className="font-black text-white">Cash Runway</div>
-                  <div className="mt-1 text-xs text-slate-400">Current cash estimate: {money(cash?.estimated_cash_today)}</div>
+                  <div className="mt-1 text-xs text-slate-400">Cash scenario today: {money(cash?.estimated_cash_today)}</div>
                   <span className="mt-2 inline-flex items-center gap-1 text-xs font-black text-cyan-200">Open forecast <ArrowRight className="h-3.5 w-3.5" /></span>
                 </button>
               </div>
@@ -526,7 +526,7 @@ export default function BusinessFinanceIntelligence() {
           {tab === "forecast" ? (
             <>
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-                <Stat label="Cash Today (Estimated)" value={loading ? "…" : money(cash?.estimated_cash_today)} sub="Opening cash + confirmed receipts − paid costs" />
+                <Stat label="Scenario Cash Today" value={loading ? "…" : money(cash?.estimated_cash_today)} sub="Opening snapshot + gross recorded receipts − paid costs" />
                 <Stat label={days + "-Day Outlook"} value={loading ? "…" : money(cash?.projected_cash_end)} sub="Known planned entries only" />
                 <Stat label="Scheduled Events" value={loading ? "…" : cash?.event_count ?? "—"} sub="Manual forecasts and unpaid expenses" />
               </div>
@@ -542,7 +542,7 @@ export default function BusinessFinanceIntelligence() {
                   </Field>
                   <button type="submit" className={btnClass} disabled={working}>Save Cash Snapshot</button>
                 </form>
-                <p className="mt-3 text-[11px] leading-4 text-slate-500">Opening balance is a manual snapshot. Forecast uses future entered events and expenses with due dates; it does not assume new sales, payroll, rent or credit payments unless recorded.</p>
+                <p className="mt-3 text-[11px] leading-4 text-slate-500">Opening balance is a manual snapshot. Recorded receipts are gross, not necessarily bank-settled payouts after processor fees. For the clearest forecast, enter an up-to-date cash balance today. Future unentered sales, payroll, rent, credit payments and bank fees are not assumed.</p>
               </GlassCard>
 
               <GlassCard title="Add Future Cash Event" subtitle="Expected receipts or bills not otherwise captured by an expense due date. Avoid duplicate planned outflows." tone="cyan">
