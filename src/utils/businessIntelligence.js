@@ -7,13 +7,17 @@ export function asRows(data) {
   return [];
 }
 
-function positiveNumber(value) {
+function finiteNumber(value) {
   const number = Number(value);
-  return Number.isFinite(number) ? Math.max(0, number) : 0;
+  return Number.isFinite(number) ? number : 0;
 }
 
-function sum(rows, key) {
-  return rows.reduce((total, row) => total + positiveNumber(row?.[key]), 0);
+function positiveNumber(value) {
+  return Math.max(0, finiteNumber(value));
+}
+
+function sum(rows, key, signed = false) {
+  return rows.reduce((total, row) => total + (signed ? finiteNumber(row?.[key]) : positiveNumber(row?.[key])), 0);
 }
 
 function timestamp(value) {
@@ -68,7 +72,7 @@ export function calculateBusinessIntelligence({
   const kpiRows = asRows(kpis);
   const ticketRows = asRows(tickets);
   const leadRows = asRows(leads);
-  const revenue = hasKpis ? sum(kpiRows, "gmv_paid_cents") / 100 : null;
+  const revenue = hasKpis ? sum(kpiRows, "gmv_paid_cents", true) / 100 : null;
   const paidTickets = hasKpis ? sum(kpiRows, "tickets_paid_count") : null;
   const completedJobs = hasKpis ? sum(kpiRows, "tickets_completed_count") : null;
   const paidInvoices = hasKpis ? sum(kpiRows, "paid_invoice_count") : null;
@@ -129,7 +133,7 @@ export function calculateBusinessIntelligence({
     revenueSeries: hasKpis
       ? kpiRows.map((row) => ({
           day: String(row?.day || row?.date || "").slice(5),
-          revenue: positiveNumber(row?.gmv_paid_cents) / 100,
+          revenue: finiteNumber(row?.gmv_paid_cents) / 100,
           completed: positiveNumber(row?.tickets_completed_count),
         }))
       : [],
