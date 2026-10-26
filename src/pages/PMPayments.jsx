@@ -168,6 +168,14 @@ export default function PMPayments() {
   const visibleEntries = useMemo(() => tenantEntries.filter((r) => matchesLedgerFilter(r, ledgerFilter)), [tenantEntries, ledgerFilter]);
   const collectedByPayer=useMemo(()=>tenantEntries.filter(r=>r.entry_type==="PAYMENT")
     .reduce((acc,row)=>{const b=bucketFor(row);if(b==="HOUSING")acc.housing+=Number(row.amount||0);else if(b==="TENANT")acc.tenant+=Number(row.amount||0);return acc;},{tenant:0,housing:0}),[tenantEntries]);
+  // Documentary HAP claims stay separate from cash receipts and posted housing charges.
+  const externalHapBuckets = useMemo(() => externalRecords.reduce((totals, row) => {
+    const amount = Number(row.amount);
+    if (!Number.isFinite(amount) || amount <= 0 || row.evidence_status === "RESOLVED") return totals;
+    if (row.category === "HAP_ON_HOLD") totals.pendingFromAdministrator += amount;
+    if (row.category === "HAP_PAID_TO_FORMER_MANAGER") totals.formerManagerToTrace += amount;
+    return totals;
+  }, { pendingFromAdministrator: 0, formerManagerToTrace: 0 }), [externalRecords]);
   const summaryMap = useMemo(() => new Map((billing.tenants || []).map((r) => [String(r.tenant_id), r])), [billing]);
   const filterCounts = useMemo(() => Object.fromEntries(ledgerFilters.map(([key]) => [key, tenantEntries.filter((r) => matchesLedgerFilter(r, key)).length])), [tenantEntries]);
 
@@ -449,6 +457,20 @@ export default function PMPayments() {
           </> : <p className="mt-2 text-[11px] text-slate-400">Payment allocation audit is unavailable. Ledger entries are shown below.</p>}
           <div className="mt-3 flex items-center justify-between gap-2"><div className="text-xs font-black text-white">Assistance, former manager & deposits</div><span className="text-[10px] text-slate-400">{externalRecords.length} records</span></div>
           <p className="mt-1 text-[10px] leading-4 text-slate-400">Reported or disputed funds are not marked received and do not change the tenant's debt. Deposit collection and application require separate proof.</p>
+          {(externalHapBuckets.pendingFromAdministrator > 0 || externalHapBuckets.formerManagerToTrace > 0) ? <div className="mt-2 grid grid-cols-2 gap-2" aria-label="Housing assistance evidence breakdown">
+            <div className="rounded-lg border border-fuchsia-400/25 bg-fuchsia-500/5 p-2.5">
+              <div className="text-[10px] text-slate-300">HAP pending from administrator</div>
+              <div className="mt-1 text-base font-black text-fuchsia-200">{money(externalHapBuckets.pendingFromAdministrator)}</div>
+              <p className="mt-1 text-[10px] text-slate-400">Reported on hold · not received</p>
+            </div>
+            <div className="rounded-lg border border-amber-400/25 bg-amber-500/5 p-2.5">
+              <div className="text-[10px] text-slate-300">HAP paid to former manager · trace</div>
+              <div className="mt-1 text-base font-black text-amber-200">{money(externalHapBuckets.formerManagerToTrace)}</div>
+              <p className="mt-1 text-[10px] text-slate-400">Receipt, return or transfer unresolved</p>
+            </div>
+            <p className="col-span-2 text-[10px] leading-4 text-slate-400">Separate documentary claims, not owner-collected rent. The posted housing balance may include both categories; do not add these amounts again or treat them as a tenant charge.</p>
+          </div> : null}
+
           {depositStatus && filterTenant && workspace ? <PMDepositReviewCard
             tenantId={filterTenant} tenant={selectedTenant}
             workspaceId={workspace.id} depositStatus={depositStatus}
