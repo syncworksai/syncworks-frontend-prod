@@ -297,7 +297,7 @@ export default function SboMobileCommandCenter({
             <MobileMetric
               label="Collected"
               value={loadingValue ?? money(revenueThisMonth)}
-              hint={`${outstandingInvoices || 0} invoice(s) due`}
+              hint={`Last 30 days · ${outstandingInvoices || 0} invoiced ticket(s)`}
               tone="emerald"
               onClick={onOpenFinance}
             />
