@@ -12,6 +12,7 @@ import StatCard from "../components/dashboard/StatCard";
 import SboKpiHero from "../components/sbo/SboKpiHero";
 import SboKpiCharts from "../components/sbo/SboKpiCharts";
 import SboSetupReadiness from "../components/sbo/SboSetupReadiness";
+import SboFirstJobGuide from "../components/sbo/SboFirstJobGuide";
 import SboActionGrid from "../components/sbo/SboActionGrid";
 import SboUtilityCards from "../components/sbo/SboUtilityCards";
 import SboMobileCommandCenter from "../components/sbo/SboMobileCommandCenter";
@@ -634,6 +635,7 @@ export default function SboDashboard() {
     { label: "Customers", icon: "◉", onClick: () => navigate("/sbo/customers") },
     { label: "Tech Board", icon: "▦", onClick: () => navigate("/sbo/tech-board") },
     { label: "Quick Intake", icon: "✚", onClick: () => navigate("/sbo/quick-intake") },
+    { label: "Pilot Walkthrough", icon: "✓", onClick: () => navigate("/sbo/pilot") },
     { label: "Leads", icon: "◎", onClick: () => navigate("/sbo/leads") },
     { label: "Employees", icon: "👥", onClick: () => navigate("/team/invites") },
     { label: "Partners", icon: "◇", onClick: () => navigate("/sbo/partners") },
@@ -660,10 +662,13 @@ export default function SboDashboard() {
       bottomNavItems={bottomNavItems}
       bottomCenterAction={{
         label: "New",
-        onClick: () => navigate("/tickets?view=new"),
+        onClick: () => navigate("/sbo/quick-intake"),
       }}
       rightActions={
         <div className="flex flex-wrap gap-2">
+          <Button tone="slate" onClick={() => navigate("/sbo/pilot")}>
+            Test workflow
+          </Button>
           <Button tone="fuchsia" onClick={() => navigate("/sbo/growth")}>
             Social Media
           </Button>
@@ -713,6 +718,18 @@ export default function SboDashboard() {
             </div>
           ) : null}
 
+          <SboFirstJobGuide
+            loading={loading}
+            tickets={ticketRows}
+            onIntake={() => navigate("/sbo/quick-intake")}
+            onDispatch={() => navigate("/sbo/tech-board")}
+            onTickets={() => navigate("/tickets")}
+            onFinance={() => navigate("/sbo/finance")}
+            onReports={() => navigate("/sbo/reports")}
+            onPilot={() => navigate("/sbo/pilot")}
+            onTicket={(ticketId) => navigate(ticketId ? `/tickets/${ticketId}` : "/tickets")}
+          />
+
           <SboMobileCommandCenter
             businessName={businessName}
             loading={loading}
@@ -725,6 +742,8 @@ export default function SboDashboard() {
               ticketId ? navigate(`/tickets/${ticketId}`) : navigate("/tickets")
             }
             onOpenRequests={() => navigate("/tickets?view=new")}
+            onNewCall={() => navigate("/sbo/quick-intake")}
+            onDispatch={() => navigate("/sbo/tech-board")}
             onOpenCalendar={() => navigate("/calendar")}
             onOpenTeam={() => navigate("/team/invites")}
             onOpenCustomers={() => navigate("/sbo/customers")}
