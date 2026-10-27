@@ -122,7 +122,8 @@ function QuickAction({ icon, label, hint, onClick, primary = false }) {
 function TicketRow({ ticket, onOpen }) {
   const current = normalizedStatus(ticket?.status);
   const urgent = ["NEW", "NEEDS_QUOTE", "QUOTE_REJECTED"].includes(current);
-  const unassigned = !ticket?.assigned_member && !ticket?.assigned_member_id;
+  const unassigned = !["COMPLETED", "PAID", "CLOSED", "INVOICED", "CANCELLED", "VOID"].includes(current) &&
+    !ticket?.assigned_member && !ticket?.assigned_member_id;
 
   return (
     <button
@@ -168,6 +169,8 @@ export default function SboMobileCommandCenter({
   onRefresh,
   onOpenTicket,
   onOpenRequests,
+  onNewCall,
+  onDispatch,
   onOpenCalendar,
   onOpenTeam,
   onOpenCustomers,
@@ -185,7 +188,7 @@ export default function SboMobileCommandCenter({
           const current = normalizedStatus(ticket?.status);
           const unassigned = !ticket?.assigned_member && !ticket?.assigned_member_id;
           return (
-            unassigned ||
+            (unassigned && !["COMPLETED", "PAID", "CLOSED", "INVOICED", "CANCELLED", "VOID"].includes(current)) ||
             ["NEW", "NEEDS_QUOTE", "QUOTE_REJECTED", "INVOICED"].includes(current)
           );
         })
@@ -225,7 +228,7 @@ export default function SboMobileCommandCenter({
     () =>
       rows.filter(
         (ticket) =>
-          !["COMPLETED", "CANCELLED", "PAID", "CLOSED"].includes(
+          !["COMPLETED", "CANCELLED", "PAID", "CLOSED", "INVOICED", "VOID"].includes(
             normalizedStatus(ticket?.status)
           ) &&
           !ticket?.assigned_member &&
@@ -289,7 +292,7 @@ export default function SboMobileCommandCenter({
               value={loadingValue ?? unassignedJobs}
               hint="Needs a team member"
               tone="amber"
-              onClick={onOpenTeam}
+              onClick={onDispatch}
             />
             <MobileMetric
               label="Collected"
@@ -305,9 +308,9 @@ export default function SboMobileCommandCenter({
       <div className="grid grid-cols-2 gap-3">
         <QuickAction
           icon={Plus}
-          label="New request"
-          hint="Create or log work"
-          onClick={onOpenRequests}
+          label="Log a job"
+          hint="Customer + ticket in one form"
+          onClick={onNewCall}
           primary
         />
         <QuickAction
@@ -324,9 +327,9 @@ export default function SboMobileCommandCenter({
         />
         <QuickAction
           icon={Users}
-          label="Team"
+          label="Dispatch"
           hint="Assign technicians"
-          onClick={onOpenTeam}
+          onClick={onDispatch}
         />
         <QuickAction
           icon={Target}
