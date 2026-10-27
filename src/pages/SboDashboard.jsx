@@ -217,7 +217,7 @@ function RequestsOverviewCard({ tickets, onOpenTickets }) {
   return (
     <GlassCard
       title="Recent Job Requests"
-      subtitle="Live operational snapshot from your request pipeline."
+      subtitle="Recent visible tickets from the request pipeline."
       tone="cyan"
       right={
         <button
@@ -803,7 +803,7 @@ export default function SboDashboard() {
             <StatCard
               label="Revenue"
               value={safeMoney(revenueThisMonth)}
-              hint="Collected this month"
+              hint="Collected · last 30 days"
               icon="$"
               tone="fuchsia"
               onClick={() => navigate("/sbo/finance")}
