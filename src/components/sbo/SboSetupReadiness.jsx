@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -76,6 +76,7 @@ export default function SboSetupReadiness({
   onOpenPayments,
   onOpenCatalog,
 }) {
+  const [expanded, setExpanded] = useState(false);
   const items = [
     {
       key: "services",
@@ -180,7 +181,6 @@ export default function SboSetupReadiness({
       id="business-readiness"
       className="sw-sbo-setup-readiness overflow-hidden rounded-[2rem] border border-cyan-500/20 bg-slate-950/65 shadow-[0_0_60px_rgba(34,211,238,0.08)]"
     >
-      <style>{`@media (max-width: 1023px) { #business-readiness ~ * { display: none !important; } }`}</style>
       <div className="relative overflow-hidden border-b border-slate-800 p-5 md:p-6">
         <div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-cyan-500/12 blur-3xl" />
         <div className="absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-fuchsia-500/10 blur-3xl" />
@@ -195,12 +195,12 @@ export default function SboSetupReadiness({
                 {loading
                   ? "Checking your business setup..."
                   : ready
-                  ? "Ready to receive work"
-                  : "Finish setup to start converting customers"}
+                  ? "Marketplace and online payments ready"
+                  : "Complete marketplace and payment setup"}
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-                Finish these requirements so your Marketplace profile, subscription,
-                billing and Stripe payouts are all verified before launch.
+                Set up marketplace matching and online payments when needed. You can still log
+                your first customer and test the job workflow using Quick Intake.
               </p>
             </div>
 
@@ -241,6 +241,15 @@ export default function SboSetupReadiness({
             </div>
           </div>
 
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-controls="business-readiness-checks"
+            onClick={() => setExpanded((value) => !value)}
+            className="mt-4 inline-flex min-h-11 items-center justify-center rounded-2xl border border-slate-700 bg-slate-900/75 px-4 text-xs font-black text-cyan-200 hover:border-cyan-400/40"
+          >
+            {expanded ? "Hide setup checklist" : `Show all ${total} setup checks`}
+          </button>
           {!loading && nextItem ? (
             <button
               type="button"
@@ -261,7 +270,7 @@ export default function SboSetupReadiness({
         </div>
       </div>
 
-      <div className="grid gap-3 p-4 md:grid-cols-2 md:p-5 xl:grid-cols-3">
+      <div id="business-readiness-checks" className={cx(expanded ? "grid" : "hidden", "gap-3 p-4 md:grid-cols-2 md:p-5 xl:grid-cols-3")}>
         {items.map((item) => (
           <ReadinessItem key={item.key} {...item} />
         ))}

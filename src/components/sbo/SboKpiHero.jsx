@@ -73,7 +73,7 @@ export default function SboKpiHero({
           value={`${Number(growthPct || 0).toFixed(1)}%`}
           sub={baselineRevenue ? `Baseline ${money(baselineRevenue)}` : "Add setup baseline"}
         />
-        <MiniKpi label="New Customers" value={newCustomers} />
+        <MiniKpi label="Customers in visible ticket history" value={newCustomers} />
       </div>
 
       <div className="mt-4 grid md:grid-cols-4 gap-3">

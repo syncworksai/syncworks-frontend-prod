@@ -43,6 +43,7 @@ import SboCatalog from "./pages/SboCatalog";
 import BusinessInternalTicketCreator from "./pages/BusinessInternalTicketCreator";
 import SboCustomers from "./pages/sbo/SboCustomers";
 import BusinessQuickIntake from "./pages/sbo/BusinessQuickIntake";
+import BusinessPilotTest from "./pages/sbo/BusinessPilotTest";
 import BusinessTechBoard from "./pages/sbo/BusinessTechBoard";
 import SboLeads from "./pages/sbo/SboLeads";
 import SboReports from "./pages/sbo/SboReports";
@@ -171,6 +172,7 @@ export default function App() {
         <Route path="/sbo/new-ticket" element={<ProtectedRoute><BusinessInternalTicketCreator /></ProtectedRoute>} />
         <Route path="/sbo/customers" element={<ProtectedRoute><SboCustomers /></ProtectedRoute>} />
         <Route path="/sbo/quick-intake" element={<ProtectedRoute><BusinessQuickIntake /></ProtectedRoute>} />
+        <Route path="/sbo/pilot" element={<ProtectedRoute><BusinessPilotTest /></ProtectedRoute>} />
         <Route path="/sbo/tech-board" element={<ProtectedRoute><BusinessTechBoard /></ProtectedRoute>} />
         <Route path="/platform/business-assist" element={<PlatformRoute><BusinessQuickIntake /></PlatformRoute>} />
         <Route path="/platform/business-tech-board" element={<PlatformRoute><BusinessTechBoard /></PlatformRoute>} />
