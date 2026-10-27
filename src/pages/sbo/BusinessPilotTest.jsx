@@ -25,19 +25,26 @@ function storageKey(businessId) {
   return "sw_business_pilot_v1_" + (businessId || "not-selected");
 }
 function initial() {
-  return Object.fromEntries(TASKS.map((task) => [task.id, { result: "untested", note: "" }]));
+  return { ...Object.fromEntries(TASKS.map((task) => [task.id, { result: "untested", note: "" }])), __feedback: { hardest: "", pay: "", price: "", missing: "" } };
 }
 function safeLoad(businessId) {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey(businessId)) || "{}");
     const source = saved && typeof saved === "object" ? saved : {};
-    return Object.fromEntries(TASKS.map((task) => {
+    const loaded = Object.fromEntries(TASKS.map((task) => {
       const old = source[task.id] || {};
       return [task.id, {
         result: OPTIONS.some(([value]) => value === old.result) ? old.result : "untested",
         note: String(old.note || "").slice(0, 500),
       }];
     }));
+    loaded.__feedback = {
+      hardest: String(source.__feedback?.hardest || "").slice(0, 250),
+      pay: ["", "yes", "maybe", "no"].includes(source.__feedback?.pay) ? (source.__feedback?.pay || "") : "",
+      price: String(source.__feedback?.price || "").slice(0, 40),
+      missing: String(source.__feedback?.missing || "").slice(0, 250),
+    };
+    return loaded;
   } catch {
     return initial();
   }
@@ -59,6 +66,12 @@ export function pilotReport(data, businessId) {
     lines.push("");
   });
   lines.push("Interpretation: a tester's checked result is self-reported, not a verified API success.");
+  lines.push("Final feedback:");
+  lines.push("Hardest step: " + (data.__feedback?.hardest || "(none)"));
+  lines.push("Pay today? " + (data.__feedback?.pay || "(not answered)"));
+  lines.push("Monthly price suggested: " + (data.__feedback?.price || "(not answered)"));
+  lines.push("Missing before launch: " + (data.__feedback?.missing || "(none)"));
+  lines.push("");
   return lines.join("\n");
 }
 
@@ -192,6 +205,22 @@ export default function BusinessPilotTest() {
           <h2 className="text-lg font-black text-white">What to ask at the end</h2>
           <p className="mt-2 text-sm leading-6 text-slate-300">“Which step was hardest? What would you stop using another tool for? What is missing before you'd trust this for a paying customer? Would you pay for this today, and at what price?”</p>
           <p className="mt-2 text-xs text-slate-400">Ask these questions before pitching additional features. Test with a separate demo business or genuine authorized work; don't enter fake payments in a live account.</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label className="block space-y-1"><span className="text-xs font-bold text-slate-300">Hardest step</span>
+              <input maxLength={250} value={data.__feedback?.hardest || ""} onChange={(e) => update("__feedback", { hardest: e.target.value })} placeholder="What took the most effort?" className="min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 text-sm text-white" />
+            </label>
+            <label className="block space-y-1"><span className="text-xs font-bold text-slate-300">Would they pay today?</span>
+              <select value={data.__feedback?.pay || ""} onChange={(e) => update("__feedback", { pay: e.target.value })} className="min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 text-sm text-white">
+                <option value="">Not answered</option><option value="yes">Yes</option><option value="maybe">Maybe</option><option value="no">No</option>
+              </select>
+            </label>
+            <label className="block space-y-1"><span className="text-xs font-bold text-slate-300">Monthly price suggested</span>
+              <input maxLength={40} value={data.__feedback?.price || ""} onChange={(e) => update("__feedback", { price: e.target.value })} placeholder="Ask without naming a price" className="min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 text-sm text-white" />
+            </label>
+            <label className="block space-y-1"><span className="text-xs font-bold text-slate-300">What must be fixed before live use?</span>
+              <input maxLength={250} value={data.__feedback?.missing || ""} onChange={(e) => update("__feedback", { missing: e.target.value })} placeholder="One critical blocker" className="min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 text-sm text-white" />
+            </label>
+          </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" onClick={copyReport} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-cyan-500 px-4 text-sm font-black text-slate-950">
               <Copy className="h-4 w-4" /> Copy test report
