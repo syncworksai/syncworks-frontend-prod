@@ -117,7 +117,8 @@ function LoginPanel({ emailOrUser, setEmailOrUser, password, setPassword, err, l
 
       <div className="mt-5 flex flex-col gap-2 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
         <span>New to SyncWorks? <Link className="font-semibold text-cyan-300" to="/register">Create an account</Link></span>
-        <span>Tenant and investor access uses your invitation.</span>
+        <Link className="font-semibold text-cyan-300" to="/forgot-password">Forgot password?</Link>
+        <span className="text-xs sm:hidden">Invited users can sign in with the email used for their invitation.</span>
       </div>
     </div>
   );
