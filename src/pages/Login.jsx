@@ -175,7 +175,7 @@ export default function Login() {
       <header className="sticky top-0 z-40 border-b border-cyan-300/15 bg-[#05080f]/95 backdrop-blur-xl" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <a href="#top" className="inline-flex items-center gap-3 text-lg font-black tracking-tight sm:text-xl" aria-label="SyncWorks — back to top">
-            <img src="/brands/syncworks-cube-s.svg" alt="" className="h-10 w-10 rounded-xl border border-sky-400/25 object-contain shadow-[0_0_18px_rgba(22,139,255,.14)]" />
+            <img src="/brands/syncworks-icon-192.png" alt="" className="h-10 w-10 rounded-xl border border-sky-400/25 object-contain shadow-[0_0_18px_rgba(22,139,255,.14)]" />
             <span className="bg-gradient-to-r from-slate-100 via-cyan-200 to-violet-300 bg-clip-text text-transparent">SyncWorks</span>
           </a>
           <nav aria-label="Learn about SyncWorks" className="hidden items-center gap-5 text-sm text-slate-300 md:flex">
@@ -192,10 +192,10 @@ export default function Login() {
 
       <main id="top">
         <section className="relative overflow-hidden border-b border-white/10">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_55%_98%,rgba(22,139,255,0.15),transparent_42%),radial-gradient(ellipse_at_15%_80%,rgba(0,213,194,0.11),transparent_45%),radial-gradient(ellipse_at_86%_82%,rgba(134,76,255,0.16),transparent_44%),linear-gradient(to_bottom,#05080f,#070c15)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(5,8,15,.96)_0%,rgba(5,8,15,.86)_55%,rgba(5,8,15,.78)_100%),url('/brands/syncworks-water-hero.webp')] bg-cover bg-center" />
           <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.2fr_.8fr] lg:px-8 lg:py-24">
             <div>
-              <div className="mb-6 inline-flex items-center gap-3 rounded-2xl border border-sky-400/20 bg-[#0b1728]/80 px-4 py-3 shadow-[0_12px_44px_rgba(0,0,0,.3)]"><img src="/brands/syncworks-cube-s.svg" alt="" className="h-12 w-12 rounded-xl" /><div><span className="block text-base font-bold tracking-wide text-white">SyncWorks</span><span className="block text-xs tracking-[.12em] text-cyan-200">CONNECT · MANAGE · GROW</span></div></div>
+              <div className="mb-6 inline-flex items-center gap-3 rounded-2xl border border-sky-400/20 bg-[#0b1728]/80 px-4 py-3 shadow-[0_12px_44px_rgba(0,0,0,.3)]"><img src="/brands/syncworks-icon-192.png" alt="" className="h-12 w-12 rounded-xl" /><div><span className="block text-base font-bold tracking-wide text-white">SyncWorks</span><span className="block text-xs tracking-[.12em] text-cyan-200">CONNECT · MANAGE · GROW</span></div></div>
               <div className="flex flex-wrap gap-2 text-xs font-semibold">
                 <span className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1.5 text-cyan-200">One system</span>
                 <span className="rounded-full border border-blue-400/30 bg-blue-400/10 px-3 py-1.5 text-blue-200">One login</span>

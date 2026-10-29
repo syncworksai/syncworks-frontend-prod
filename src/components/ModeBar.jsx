@@ -1886,7 +1886,7 @@ export default function ModeBar({
             }}
           >
             <img
-              src="/brands/syncworks new logo.jpg"
+              src="/brands/syncworks-approved-cube.png"
               alt=""
               className="w-[820px] max-w-none select-none object-contain blur-[2px]"
               draggable={false}
@@ -1909,7 +1909,7 @@ export default function ModeBar({
 
         <div className="relative mx-auto max-w-7xl px-4 py-3">
           {sportsCompact ? <div className="flex min-h-14 items-center gap-3">
-            <img src="/brands/syncworks-cube-s.svg" alt="SyncWorks" className="h-12 w-12 shrink-0 rounded-2xl border border-cyan-500/30 bg-slate-950 object-cover"/>
+            <img src="/brands/syncworks-icon-192.png" alt="SyncWorks" className="h-12 w-12 shrink-0 rounded-2xl border border-cyan-500/30 bg-slate-950 object-cover"/>
             <div className="min-w-0 flex-1 truncate text-sm font-black uppercase tracking-[.19em] text-white sm:text-lg">SYNCWORKS</div>
             <div className="flex shrink-0 items-center gap-2">
               <NotificationsBell inline />
@@ -1918,7 +1918,7 @@ export default function ModeBar({
           </div> : <div className="flex items-center gap-3">
             <div className="flex min-w-0 items-center gap-3">
               <img
-                src="/brands/syncworks-cube-s.svg"
+                src="/brands/syncworks-icon-192.png"
                 alt="SyncWorks"
                 className="h-12 w-12 shrink-0 rounded-2xl border border-cyan-500/20 bg-slate-950/70 object-cover shadow-[0_0_40px_rgba(99,102,241,0.18)] md:h-16 md:w-16"
               />
