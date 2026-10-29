@@ -44,6 +44,9 @@ export default function AddBusiness() {
       const id=result?.data?.id;
       if (!id) throw new Error("Business was created but its ID was not returned. Refresh your Business list before retrying.");
       setCreatedId(id);
+      try { localStorage.setItem("sw_active_business_id",String(id)); } catch {}
+      try { setActiveBusinessId?.(id); } catch {}
+      await Promise.resolve(reloadBusinesses?.()).catch(()=>{});
       // A promo is only applied after the API explicitly confirms its status.
       const code=form.access_code.trim().toUpperCase();
       if (code) {
