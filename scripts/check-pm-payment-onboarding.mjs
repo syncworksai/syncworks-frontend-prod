@@ -38,7 +38,7 @@ test("saved five-stage migration appears in both Business and PM, with founder o
   assert.match(shared, /\/payment-migration\/review-test\//);
   assert.match(shared, /request_switch:true/);
   assert.match(shared, /founderView/);
-  assert.match(shared, /switch collections/i);
+  assert.match(shared, /Request switch review/);
   assert.match(shared, /NOT automatically switched/);
   assert.match(shared, /customer_charged/);
   assert.match(shared, /failed_or_refunded_handled/);
