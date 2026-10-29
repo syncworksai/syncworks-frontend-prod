@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import Login from "./Login";
 
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
@@ -11,7 +12,7 @@ import {
 } from "../api/platformAffiliates";
 
 const INPUT_CLASS =
-  "mt-1 w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-slate-100 outline-none placeholder:text-slate-600 focus:border-cyan-400/60";
+  "mt-1 w-full rounded-xl border border-slate-700/75 bg-slate-950 px-3 py-2.5 text-base text-slate-100 outline-none placeholder:text-slate-600 focus:border-cyan-400/60 sm:text-sm";
 
 function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
@@ -152,7 +153,7 @@ function Progress({ stage }) {
   const items = ["Email", "Verify", "Profile"];
 
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-3 gap-1.5">
       {items.map((label, index) => {
         const number = index + 1;
         const complete = number < active;
@@ -161,7 +162,7 @@ function Progress({ stage }) {
         return (
           <div
             key={label}
-            className={`rounded-2xl border p-2.5 text-center ${
+            className={`rounded-xl border p-2 text-center ${
               complete
                 ? "border-emerald-500/35 bg-emerald-500/10"
                 : current
@@ -170,7 +171,7 @@ function Progress({ stage }) {
             }`}
           >
             <div
-              className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-black ${
+              className={`mx-auto flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${
                 complete
                   ? "bg-emerald-400 text-black"
                   : current
@@ -181,7 +182,7 @@ function Progress({ stage }) {
               {complete ? "✓" : number}
             </div>
 
-            <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-300">
+            <div className="mt-1 text-[9px] font-semibold uppercase tracking-wider text-slate-300">
               {label}
             </div>
           </div>
@@ -502,6 +503,19 @@ function Welcome({
   );
 }
 
+function RegistrationBackdrop() {
+  return (
+    <>
+      <div className="fixed inset-0 overflow-hidden bg-[#05080f]" aria-hidden="true" inert="">
+        <div className="pointer-events-none h-full opacity-55 blur-[2px]">
+          <Login backgroundOnly />
+        </div>
+      </div>
+      <div className="pointer-events-none fixed inset-0 bg-[#020617]/55" aria-hidden="true" />
+    </>
+  );
+}
+
 export default function Register() {
   const {
     register,
@@ -521,6 +535,11 @@ export default function Register() {
   const chosenRole = ["personal", "business", "tenant", "investor"].includes(requestedRole)
     ? requestedRole : queryParams.get("business") === "1" ? "business" : "personal";
   const onboardingIntent = chosenRole === "business";
+  const roleSignupUrl = (role) => {
+    const params = new URLSearchParams(location.search);
+    params.set("role", role);
+    return `/register?${params.toString()}`;
+  };
 
   const [stage, setStage] = useState("EMAIL");
   const [loading, setLoading] = useState(false);
@@ -604,6 +623,21 @@ export default function Register() {
 
     return () => window.clearInterval(timer);
   }, [resendSeconds]);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function handleEscape(event) {
+      if (event.key === "Escape" && !infoOpen && !updatesOpen && !businessOpen && stage !== "WELCOME") {
+        navigate("/login");
+      }
+    }
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [navigate, infoOpen, updatesOpen, businessOpen, stage]);
 
   async function handleStartVerification(event) {
     event.preventDefault();
@@ -887,8 +921,9 @@ export default function Register() {
 
   if (stage === "WELCOME") {
     return (
-      <div className="min-h-screen bg-[#020617] px-4 py-8 text-slate-100">
-        <div className="mx-auto max-w-md">
+      <div className="relative flex min-h-dvh items-center justify-center px-3 py-5 text-slate-100">
+        <RegistrationBackdrop />
+        <div className="relative z-10 mx-auto max-h-[calc(100dvh-40px)] w-full max-w-md overflow-y-auto rounded-3xl border border-cyan-400/20 bg-[#07111f]/95 p-4 shadow-2xl">
           {error ? <p role="alert" className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">{error}</p> : null}
           <Welcome
             firstName={account.firstName}
@@ -925,40 +960,47 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] px-4 py-6 text-slate-100">
-      <div className="mx-auto max-w-md">
-        <header className="mb-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">
-                SyncWorks
+    <div className="relative flex min-h-dvh items-center justify-center px-3 py-3 text-slate-100 sm:px-6 sm:py-6">
+      <RegistrationBackdrop />
+      <div role="dialog" aria-modal="true" aria-labelledby="sw-registration-heading" className="relative z-10 max-h-[calc(100dvh-24px)] w-full max-w-[540px] overflow-y-auto rounded-[28px] border border-cyan-400/25 bg-[#07111f]/95 p-4 shadow-[0_24px_90px_rgba(0,0,0,.72)] sm:max-h-[calc(100dvh-48px)] sm:p-6">
+        <header className="mb-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <img src="/brands/syncworks-icon-192.png" alt="" className="h-10 w-10 shrink-0 rounded-xl border border-cyan-400/25 object-contain" />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.19em] text-cyan-300">SyncWorks · Secure signup</p>
+                <h1 id="sw-registration-heading" className="mt-0.5 text-xl font-bold tracking-tight text-white">
+                  {onboardingIntent ? "Business onboarding" : chosenRole === "tenant" ? "Tenant onboarding" : chosenRole === "investor" ? "Investor onboarding" : "Create your Personal account"}
+                </h1>
               </div>
-
-              <h1 className="mt-1 text-2xl font-black">
-                {onboardingIntent ? "Set up your business" : "Create your Personal account"}
-              </h1>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setInfoOpen(true)}
-              aria-label="Learn more"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-800 bg-slate-950 text-lg font-bold text-cyan-300"
-            >
-              i
-            </button>
+            <button type="button" onClick={() => navigate("/login")} aria-label="Close registration and return to SyncWorks home" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/70 text-lg text-slate-300 transition hover:border-cyan-400 hover:text-white">×</button>
           </div>
-
-          <p className="mt-2 text-sm leading-6 text-slate-400">
+          <p className="mt-3 text-xs leading-5 text-slate-400">
             {onboardingIntent
-              ? "First, verify your Personal email and create one secure login. Then add your business, with a separate business email if you prefer."
-              : (chosenRole === "tenant" || chosenRole === "investor")
-                ? "Every SyncWorks account starts with a free Personal profile. Verify your email, then use your secure invitation to connect your portal."
-                : "Start with a free Personal profile. Add Business, Tenant, or Investor access from the same login when needed."}
+              ? "Start with your free verified Personal profile. Then connect your business using its own contact email."
+              : chosenRole === "tenant" || chosenRole === "investor"
+                ? "Create your free Personal profile first. A secure invitation is required to connect this portal."
+                : "One free Personal profile and secure login. Add Business, Tenant, or Investor access when you need it."}
+          </p>
+          <nav aria-label="Select signup type" className="mt-4 grid grid-cols-4 gap-1.5">
+            {["personal", "business", "tenant", "investor"].map((role) => (
+              <Link
+                key={role}
+                to={roleSignupUrl(role)}
+                aria-current={chosenRole === role ? "page" : undefined}
+                className={`rounded-xl border px-1.5 py-2.5 text-center text-[11px] font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300 ${chosenRole === role ? "border-cyan-400/60 bg-cyan-400/15 text-cyan-100" : "border-slate-700/75 bg-slate-950/50 text-slate-400 hover:border-cyan-400/40 hover:text-white"}`}
+              >
+                {role === "personal" ? "Personal" : role === "business" ? "Business" : role === "tenant" ? "Tenant" : "Investor"}
+              </Link>
+            ))}
+          </nav>
+          <p className="mt-3 text-[11px] leading-4 text-slate-500">
+            Step 1: Personal account · Step 2: Connect your chosen workspace
           </p>
         </header>
 
-        <main className="rounded-3xl border border-slate-800 bg-slate-950/80 p-5 shadow-2xl">
+        <main className="rounded-2xl border border-slate-800/75 bg-[#040c19]/80 p-4 sm:p-5">
           <Progress stage={stage} />
 
           {error ? (
@@ -970,10 +1012,10 @@ export default function Register() {
           {stage === "EMAIL" ? (
             <form
               onSubmit={handleStartVerification}
-              className="mt-6 space-y-4"
+              className="mt-5 space-y-4"
             >
               <div>
-                <h2 className="text-xl font-black">Enter your email</h2>
+                <h2 className="text-lg font-semibold">Verify your personal email</h2>
                 <p className="mt-1 text-sm text-slate-400">
                   We will send a six-digit verification code.
                 </p>
@@ -1002,7 +1044,7 @@ export default function Register() {
           {stage === "VERIFY" ? (
             <form onSubmit={handleVerifyCode} className="mt-6 space-y-4">
               <div>
-                <h2 className="text-xl font-black">Check your email</h2>
+                <h2 className="text-lg font-semibold">Check your email</h2>
                 <p className="mt-1 text-sm text-slate-400">
                   Enter the code sent to {email}.
                 </p>
