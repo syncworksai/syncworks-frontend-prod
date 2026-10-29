@@ -851,6 +851,8 @@ export default function Register() {
       const businessId = response?.data?.id || response?.data?.pk;
       if (!businessId) throw new Error("Business creation could not be confirmed. Review your Business list before retrying.");
       setCreatedBusinessId(businessId);
+      try { localStorage.setItem("sw_active_business_id", String(businessId)); } catch {}
+      try { await Promise.resolve(reloadBusinesses?.()); } catch {}
       try {
         await redeemBusinessCode(businessId, business.accessCode || account.promoCode);
       } catch (promoError) {
