@@ -154,47 +154,26 @@ function ChangePasswordCard({ onOk, onErr }) {
     form.new_password.length < 8 ||
     form.new_password !== form.confirm_password;
 
+  const { logout } = useAuth();
+  const nav = useNavigate();
+
   async function submit() {
     if (form.new_password !== form.confirm_password) return onErr("New passwords do not match.");
     if (String(form.new_password || "").length < 8) return onErr("Password must be at least 8 characters.");
 
     setSaving(true);
     try {
-      const payloads = [
-        { current_password: form.current_password, new_password: form.new_password },
-        { old_password: form.current_password, new_password: form.new_password },
-        { currentPassword: form.current_password, newPassword: form.new_password },
-      ];
-
-      const tries = [
-        (p) => api.post("/auth/change-password/", p),
-        (p) => api.post("/auth/password/change/", p),
-        (p) => api.post("/auth/password/change-password/", p),
-        (p) => api.post("/auth/password/", p),
-        (p) => api.patch("/auth/me/", p),
-      ];
-
-      let lastErr = null;
-      for (const p of payloads) {
-        for (const fn of tries) {
-          try {
-            await fn(p);
-            setForm({ current_password: "", new_password: "", confirm_password: "" });
-            onOk("Password updated ✅");
-            setSaving(false);
-            return;
-          } catch (e) {
-            lastErr = e;
-          }
-        }
-      }
-
-      const detail =
-        lastErr?.response?.data?.detail ||
-        lastErr?.response?.data?.error ||
-        lastErr?.message ||
-        "Password update failed.";
-      onErr(detail);
+      await api.post("/auth/change-password/", {
+        current_password: form.current_password,
+        new_password: form.new_password,
+      });
+      setForm({ current_password: "", new_password: "", confirm_password: "" });
+      onOk("Password updated. Please sign in again.");
+      await logout();
+      nav("/login", { replace: true });
+    } catch (error) {
+      const details = error?.response?.data;
+      onErr(details?.current_password?.[0] || details?.new_password?.[0] || details?.detail || "Password update failed.");
     } finally {
       setSaving(false);
     }
