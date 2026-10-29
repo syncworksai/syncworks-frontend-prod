@@ -365,7 +365,7 @@ export default function GodModeProspects({ pilotOnly = false }) {
                   <select className={inputClass+" mt-3"} value={offerId} onChange={e=>setOfferId(e.target.value)}>
                     {PAID_OFFERS.map(item=><option value={item.id} key={item.id}>{item.label} — {item.description}</option>)}
                   </select>
-                  <button type="button" onClick={copyOfferDraft} className="mt-2 min-h-11 w-full rounded-xl border border-fuchsia-400/40 bg-slate-950 px-3 text-xs font-black text-fuchsia-200">
+                  <button type="button" onClick={copyOfferDraft} disabled={!!busy || selected.pilot_status!=="COMPLETE" || !selected.completion_notified} className="mt-2 min-h-11 w-full rounded-xl border border-fuchsia-400/40 bg-slate-950 px-3 text-xs font-black text-fuchsia-200 disabled:opacity-40">
                     Copy paid-feature offer draft (no send)
                   </button>
                 </div>
