@@ -586,7 +586,10 @@ export default function SboSettings() {
   const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
 
   useEffect(() => {
-    if (new URLSearchParams(location.search).get("setup") === "1") setWizardOpen(true);
+    const query = new URLSearchParams(location.search);
+    if (query.get("setup") === "1") setWizardOpen(true);
+    const target = query.get("section");
+    if (SETTINGS_SECTIONS.some(item => item.key === target)) setSection(target);
   }, [location.search]);
 
   const returnTo = useMemo(() => {
