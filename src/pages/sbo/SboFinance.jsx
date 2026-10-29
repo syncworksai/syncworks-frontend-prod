@@ -18,6 +18,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import api from "../../api/client";
+import PaymentMigrationChecklist from "../../components/payments/PaymentMigrationChecklist";
 import DashboardShell from "../../components/dashboard/DashboardShell";
 import GlassCard from "../../components/dashboard/GlassCard";
 import SidebarNav from "../../components/dashboard/SidebarNav";
@@ -351,6 +352,7 @@ export default function SboFinance() {
             </div>
           ) : null}
 
+          <PaymentMigrationChecklist />
           <section className="relative overflow-hidden rounded-[2rem] border border-cyan-500/20 bg-slate-950/70 p-5 shadow-[0_0_60px_rgba(34,211,238,0.08)] md:p-7">
             <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-500/15 blur-3xl" />
             <div className="absolute -bottom-24 left-1/3 h-64 w-64 rounded-full bg-violet-500/10 blur-3xl" />
