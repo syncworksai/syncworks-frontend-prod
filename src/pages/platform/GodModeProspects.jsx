@@ -9,6 +9,17 @@ const STATUSES = [
   ["DEMO", "Demo"], ["REGISTERED", "Signed up"], ["WON", "Won"],
   ["LOST", "Lost"],
 ];
+const PILOT_STAGES = [
+  ["NOT_STARTED", "Not started"], ["INVITED", "Invited"], ["ONBOARDING", "Onboarding"],
+  ["TESTING", "Testing"], ["BLOCKED", "Blocked"], ["COMPLETE", "Completed"],
+];
+const PILOT_CHECKS = [
+  ["signup", "Verified signup"], ["business", "Business profile created"],
+  ["settings", "Business settings saved and reloaded"], ["intake", "Customer + ticket intake"],
+  ["estimate", "Estimate and approval"], ["dispatch", "Technician dispatch and schedule"],
+  ["invoice", "Job completion and invoice"], ["payment", "Payment state verified"],
+  ["password_reset", "Password recovery tested"], ["feedback", "Tester feedback recorded"],
+];
 const INTERESTS = [
   "Scheduling", "Technician dispatch", "Skill matching", "Route planning",
   "Call intake", "Customer CRM", "Quotes & invoices", "Payments",
@@ -43,7 +54,7 @@ function dateToInput(value) {
   return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-export default function GodModeProspects() {
+export default function GodModeProspects({ pilotOnly = false }) {
   const [rows, setRows] = useState([]);
   const [metrics, setMetrics] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
@@ -51,6 +62,7 @@ export default function GodModeProspects() {
   const [draft, setDraft] = useState(emptyDraft);
   const [search, setSearch] = useState("");
   const [stage, setStage] = useState("ALL");
+  const [pilotFilter, setPilotFilter] = useState("ALL");
   const [note, setNote] = useState("");
   const [activityKind, setActivityKind] = useState("NOTE");
   const [busy, setBusy] = useState("");
@@ -75,9 +87,11 @@ export default function GodModeProspects() {
   const selected = rows.find((row) => row.id === selectedId) || null;
   const filtered = useMemo(() => rows.filter((row) =>
     (stage === "ALL" || row.status === stage) &&
+    (!pilotOnly || row.pilot_status !== "NOT_STARTED") &&
+    (pilotFilter === "ALL" || row.pilot_status === pilotFilter) &&
     [row.company_name, row.contact_name, row.email, row.phone, row.notes, row.next_action, ...(row.interests || [])]
       .join(" ").toLowerCase().includes(search.toLowerCase().trim())
-  ), [rows, search, stage]);
+  ), [rows, search, stage, pilotOnly, pilotFilter]);
 
   async function createProspect(e) {
     e.preventDefault();
@@ -143,8 +157,8 @@ export default function GodModeProspects() {
       <div className="rounded-[2rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_80%_0%,rgba(6,182,212,.11),transparent_50%),#071124] p-5 sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-200">God Mode / Acquisition Tickets</div>
-            <h2 className="mt-2 text-2xl font-black text-white sm:text-3xl">Business Prospects</h2>
+            <div className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-200">God Mode / {pilotOnly ? "Tester Launch" : "Acquisition Tickets"}</div>
+            <h2 className="mt-2 text-2xl font-black text-white sm:text-3xl">{pilotOnly ? "Business Tester Launch" : "Business Prospects"}</h2>
             <p className="mt-2 max-w-3xl text-sm text-slate-400">Your own sales queue, not a contractor's customer leads. Record requirements, invitations sent, follow-ups, registrations and wins. No prospect becomes an account until the owner signs up.</p>
           </div>
           <div className="flex gap-2">
@@ -155,6 +169,12 @@ export default function GodModeProspects() {
       </div>
       {error ? <p role="alert" className="rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</p> : null}
       {message ? <p role="status" className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">{message}</p> : null}
+      {pilotOnly ? <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Metric label="Onboarding" value={metrics?.pilot?.ONBOARDING} hint="Account setup"/>
+        <Metric label="Testing" value={metrics?.pilot?.TESTING} hint="Active testers"/>
+        <Metric label="Blocked" value={metrics?.pilot?.BLOCKED} hint="Needs intervention"/>
+        <Metric label="Completed" value={metrics?.pilot?.COMPLETE} hint="Checked and signed up"/>
+      </div> : null}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         <Metric label="Prospects" value={metrics?.total} hint="Acquisition tickets"/>
         <Metric label="Contacted" value={metrics?.contacted} hint="Some outreach recorded"/>
@@ -168,7 +188,10 @@ export default function GodModeProspects() {
           <div className="flex flex-col gap-2 sm:flex-row">
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search companies, contacts, needs..." aria-label="Search prospects" className={inputClass}/>
             <select value={stage} onChange={(e) => setStage(e.target.value)} aria-label="Filter by status" className={inputClass+" sm:w-44"}>
-              <option value="ALL">All stages</option>{STATUSES.map(([v,t]) => <option key={v} value={v}>{t}</option>)}
+              <option value="ALL">All sales stages</option>{STATUSES.map(([v,t]) => <option key={v} value={v}>{t}</option>)}
+            </select>
+            <select value={pilotFilter} onChange={e=>setPilotFilter(e.target.value)} aria-label="Filter by tester stage" className={inputClass+" sm:w-44"}>
+              <option value="ALL">All tester stages</option>{PILOT_STAGES.map(([value,label])=><option key={value} value={value}>{label}</option>)}
             </select>
           </div>
           {loading && !rows.length ? <div className="p-5 text-sm text-slate-400">Loading prospects...</div> : null}
@@ -176,7 +199,7 @@ export default function GodModeProspects() {
           {filtered.map((p) => <button key={p.id} type="button" onClick={() => setSelectedId(p.id)} className={`w-full rounded-2xl border p-4 text-left transition ${selectedId === p.id ? "border-cyan-400/60 bg-cyan-500/10" : "border-slate-800 bg-slate-950/70 hover:border-slate-600"}`}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0"><div className="flex items-center gap-2"><Building2 className="h-4 w-4 shrink-0 text-cyan-300"/><span className="truncate font-black text-white">#{p.id} {p.company_name}</span></div><div className="mt-1 truncate text-xs text-slate-400">{[p.contact_name, p.phone, p.email].filter(Boolean).join(" · ") || "Add contact details"}</div></div>
-              <span className="rounded-full border border-violet-400/25 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-200">{STATUSES.find(([v]) => v === p.status)?.[1] || p.status}</span>
+              <span className="rounded-full border border-violet-400/25 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-200">{STATUSES.find(([v]) => v === p.status)?.[1] || p.status}</span><span className="mt-1 block text-[10px] font-black text-cyan-200">{PILOT_STAGES.find(([v])=>v===p.pilot_status)?.[1] || "Not started"}</span>
             </div>
             <div className="mt-3 text-xs text-slate-300"><b className="text-cyan-200">Next:</b> {p.next_action || "Set next action"}</div>
             <div className="mt-2 text-[11px] text-slate-500">Follow-up: {formatDate(p.follow_up_at)} · Invited: {formatDate(p.last_invited_at)}</div>
@@ -193,6 +216,36 @@ export default function GodModeProspects() {
               </div>
               <Field label="Next action"><input key={selected.id+"action"} defaultValue={selected.next_action || ""} placeholder="Call, schedule demo, follow up..." className={inputClass} onBlur={(e) => {if(e.target.value!==selected.next_action)patchProspect({next_action:e.target.value});}}/></Field>
               <Field label="Business needs"><input key={selected.id+"needs"} defaultValue={(selected.interests || []).join(", ")} placeholder="Scheduling, dispatch, route planning..." className={inputClass} onBlur={(e) => {const next=e.target.value.split(",").map((v)=>v.trim()).filter(Boolean);if(JSON.stringify(next)!==JSON.stringify(selected.interests||[]))patchProspect({interests:next});}}/></Field>
+              <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/[.04] p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="text-sm font-black text-white">Tester onboarding & QA</h4>
+                  <span className="text-xs font-black text-cyan-200">{PILOT_CHECKS.filter(([key]) => selected.pilot_checks?.[key] === true).length}/10</span>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-slate-400">Checklist items are manually confirmed. A verified signup alone does not mean a completed test.</p>
+                <Field label="Pilot stage">
+                  <select disabled={!!busy} value={selected.pilot_status || "NOT_STARTED"}
+                    onChange={e=>patchProspect({pilot_status:e.target.value})} className={inputClass}>
+                    {PILOT_STAGES.map(([value,label])=><option key={value} value={value}>{label}</option>)}
+                  </select>
+                </Field>
+                <div className="mt-3 grid gap-2">
+                  {PILOT_CHECKS.map(([key,label])=>(
+                    <label key={key} className="flex min-h-10 items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/70 px-3 text-xs text-slate-200">
+                      <input type="checkbox" disabled={!!busy} checked={selected.pilot_checks?.[key]===true}
+                        onChange={e=>patchProspect({pilot_checks:{...selected.pilot_checks,[key]:e.target.checked}})}
+                        className="h-4 w-4 accent-cyan-400"/>
+                      {label}
+                    </label>
+                  ))}
+                </div>
+                <Field label="Tester feedback, problems, devices">
+                  <textarea key={selected.id+"pilot_feedback"} defaultValue={selected.pilot_feedback||""} rows={3} maxLength={4000}
+                    onBlur={e=>{if(e.target.value!==(selected.pilot_feedback||""))patchProspect({pilot_feedback:e.target.value});}}
+                    placeholder="Observed blockers, screenshots requested, next fix…"
+                    className={inputClass+" mt-1"}/>
+                </Field>
+                <p className="mt-2 text-[11px] text-slate-500">Saved centrally in this founder-only prospect record. Tester-side pilot notes remain on their device until shared.</p>
+              </div>
               <div className="flex flex-wrap gap-2">
                 <button type="button" disabled={!!busy || !selected.email} onClick={sendInvite} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-3 text-sm font-black text-slate-950 disabled:opacity-40"><Send className="h-4 w-4"/> Send invitation</button>
                 <button type="button" onClick={copyLink} disabled={!selected.email} className={btn}><Mail className="h-4 w-4"/> Copy link</button>

@@ -9,6 +9,8 @@ import IdentityOnboardingGate from "./components/identity/IdentityOnboardingGate
 import PlatformRoute from "./components/PlatformRoute";
 
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Register from "./pages/Register";
 import CustomerDashboard from "./pages/CustomerDashboardResponsive";
 import CustomerNewRequest from "./pages/CustomerNewRequest";
@@ -140,6 +142,8 @@ export default function App() {
       <Suspense fallback={<RouteLoading />}>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/register" element={<Register />} />
         <Route path="/gamecast/:token" element={<PublicGameCast />} />
         <Route path="/sports/invite/:token" element={<SportsInviteLanding />} />

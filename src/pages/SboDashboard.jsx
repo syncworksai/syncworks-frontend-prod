@@ -622,7 +622,7 @@ export default function SboDashboard() {
     qs.set("return", "/sbo");
     if (section) qs.set("section", section);
     const suffix = extra ? `&${extra}` : "";
-    navigate(`/sbo/settings?${qs.toString()}${suffix}`);
+    navigate(`/sbo/settings/general?${qs.toString()}${suffix}`);
   }
 
   const businessName = activeBusiness?.name || activeBusiness?.business_name || "";
@@ -681,7 +681,7 @@ export default function SboDashboard() {
           <Button tone="cyan" onClick={() => navigate("/tickets?view=new")}>
             Job Requests
           </Button>
-          <Button tone="slate" onClick={() => navigate("/sbo/settings?return=%2Fsbo&setup=1")}>
+          <Button tone="slate" onClick={() => navigate("/sbo/settings/general?return=%2Fsbo&setup=1")}>
             Setup
           </Button>
         </div>
@@ -875,8 +875,8 @@ export default function SboDashboard() {
 
           <SboUtilityCards
             onOpenSocial={() => navigate("/sbo/growth")}
-            onOpenImport={() => openSettingsSection("data", "intent=import")}
-            onOpenExport={() => openSettingsSection("data", "intent=export")}
+            onOpenImport={() => navigate("/sbo/customers")}
+            onOpenExport={() => navigate("/sbo/customers")}
             onOpenEmployeeInvite={() => navigate("/team/invites")}
             keeperUrl="https://www.keepertax.com/invite?referrer=Jacob898531"
             socialPaymentUrl="https://buy.stripe.com/28E9AT4aefLp4uJ0Kn2Nq0i"

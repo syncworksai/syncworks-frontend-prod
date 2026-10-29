@@ -586,7 +586,10 @@ export default function SboSettings() {
   const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
 
   useEffect(() => {
-    if (new URLSearchParams(location.search).get("setup") === "1") setWizardOpen(true);
+    const query = new URLSearchParams(location.search);
+    if (query.get("setup") === "1") setWizardOpen(true);
+    const target = query.get("section");
+    if (SETTINGS_SECTIONS.some(item => item.key === target)) setSection(target);
   }, [location.search]);
 
   const returnTo = useMemo(() => {
@@ -653,9 +656,11 @@ export default function SboSettings() {
   }
 
   async function saveAndContinue() {
-    await saveSettings();
-    const next = SETTINGS_SECTIONS[currentSectionIndex + 1];
-    if (next) goToSection(next.key);
+    const saved = await saveSettings();
+    if (saved) {
+      const next = SETTINGS_SECTIONS[currentSectionIndex + 1];
+      if (next) goToSection(next.key);
+    }
   }
 
   useEffect(() => {
@@ -785,16 +790,18 @@ export default function SboSettings() {
   }
 
   async function saveSettings() {
-    if (!activeBusinessId) return;
+    if (!activeBusinessId) {
+      setErr("Select a business before saving settings.");
+      return false;
+    }
 
     setSaving(true);
     setErr("");
     setOk("");
 
     try {
-      saveLocalSnapshot();
-
       await api.patch(`/businesses/${activeBusinessId}/`, basePayload());
+      try { saveLocalSnapshot(); } catch { /* Local planning snapshot is optional; server save remains authoritative. */ }
 
       const refreshed = await api.get(`/businesses/${activeBusinessId}/`);
       setBusiness(refreshed?.data || null);
@@ -802,12 +809,14 @@ export default function SboSettings() {
 
       Promise.resolve(reloadBusinesses?.()).catch(() => {});
       setOk("Settings saved.");
+      return true;
     } catch (e) {
       setErr(
         e?.response?.data?.detail ||
           JSON.stringify(e?.response?.data || {}) ||
           "Save failed."
       );
+      return false;
     } finally {
       setSaving(false);
     }
