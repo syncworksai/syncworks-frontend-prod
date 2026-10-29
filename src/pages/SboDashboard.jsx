@@ -875,7 +875,7 @@ export default function SboDashboard() {
 
           <SboUtilityCards
             onOpenSocial={() => navigate("/sbo/growth")}
-            onOpenImport={() => navigate("/sbo/customers")}
+            onOpenImport={() => navigate("/sbo/customers/import")}
             onOpenExport={() => navigate("/sbo/customers")}
             onOpenEmployeeInvite={() => navigate("/team/invites")}
             keeperUrl="https://www.keepertax.com/invite?referrer=Jacob898531"
