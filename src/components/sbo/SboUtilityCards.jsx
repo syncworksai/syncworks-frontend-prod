@@ -110,12 +110,12 @@ export default function SboUtilityCards({
       </UtilityCard>
 
       <UtilityCard
-        title="Customer Records"
-        subtitle="Add or manage customers in Customer 360. Bulk CSV import has not been verified for the pilot."
+        title="Import Customers"
+        subtitle="Move an existing customer list from your previous system into SyncWorks. Validate the CSV first, then confirm the import."
       >
         <div className="flex gap-2 flex-wrap">
           <Button tone="cyan" onClick={onOpenImport}>
-            Open Customer 360
+            Import Customers
           </Button>
           <Button tone="slate" onClick={onOpenEmployeeInvite}>
             Invite Employee
@@ -124,12 +124,12 @@ export default function SboUtilityCards({
       </UtilityCard>
 
       <UtilityCard
-        title="Customer CSV Export"
-        subtitle="Open Customer 360 and export its visible records to CSV. This is not a complete business backup."
+        title="Manage Customer Records"
+        subtitle="View, edit, and export the currently loaded Customer 360 records as CSV."
       >
         <div className="flex gap-2 flex-wrap">
           <Button tone="indigo" onClick={onOpenExport}>
-            Open Customer Export
+            Open Customer 360
           </Button>
         </div>
       </UtilityCard>
