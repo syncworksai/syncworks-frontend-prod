@@ -67,7 +67,7 @@ function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
-function LoginPanel({ emailOrUser, setEmailOrUser, password, setPassword, err, loading, onSubmit, onClose }) {
+function LoginPanel({ emailOrUser, setEmailOrUser, password, setPassword, err, loading, onSubmit, onClose, showClose = true }) {
   return (
     <div className="w-full rounded-[28px] border border-cyan-400/20 bg-[#07111f]/95 p-5 shadow-2xl shadow-cyan-950/40 backdrop-blur-xl sm:p-6">
       <div className="flex items-start justify-between gap-4">
@@ -76,9 +76,9 @@ function LoginPanel({ emailOrUser, setEmailOrUser, password, setPassword, err, l
           <h2 className="mt-2 text-2xl font-black text-white">Welcome back</h2>
           <p className="mt-1 text-sm text-slate-400">Sign in to open your SyncWorks command center.</p>
         </div>
-        <button type="button" onClick={onClose} className="rounded-xl border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800" aria-label="Close sign in">
+        {showClose && <button type="button" onClick={onClose} className="rounded-xl border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800" aria-label="Close sign in">
           Close
-        </button>
+        </button>}
       </div>
 
       <form className="mt-6 space-y-4" onSubmit={onSubmit}>
@@ -192,7 +192,7 @@ export default function Login() {
 
       <main id="top">
         <section className="relative overflow-hidden border-b border-white/10">
-          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(5,8,15,.96)_0%,rgba(5,8,15,.86)_55%,rgba(5,8,15,.78)_100%),url('/brands/syncworks-water-hero.webp')] bg-cover bg-center" />
+          <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: "linear-gradient(90deg,rgba(5,8,15,.96),rgba(5,8,15,.82)),url('/brands/syncworks-water-hero.webp')", backgroundSize: "cover, contain", backgroundPosition: "center, center bottom", backgroundRepeat: "no-repeat" }} />
           <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.2fr_.8fr] lg:px-8 lg:py-24">
             <div>
               <div className="mb-6 inline-flex items-center gap-3 rounded-2xl border border-sky-400/20 bg-[#0b1728]/80 px-4 py-3 shadow-[0_12px_44px_rgba(0,0,0,.3)]"><img src="/brands/syncworks-icon-192.png" alt="" className="h-12 w-12 rounded-xl" /><div><span className="block text-base font-bold tracking-wide text-white">SyncWorks</span><span className="block text-xs tracking-[.12em] text-cyan-200">CONNECT · MANAGE · GROW</span></div></div>
@@ -218,13 +218,11 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="grid content-start gap-3 sm:grid-cols-2 lg:grid-cols-1">
-              {["Request → schedule → complete → pay", "Lead → conversation → quote → customer", "Tenant issue → work order → vendor → resolution", "Calendar → travel → reminders → next action"].map((flow) => (
-                <div key={flow} className="group rounded-3xl border border-slate-500/20 bg-gradient-to-br from-[#111b2a]/95 to-[#130f24]/75 p-5 shadow-lg shadow-black/20 transition hover:border-sky-400/35 hover:shadow-[0_10px_32px_rgba(22,139,255,.08)]">
-                  <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-teal-300"><span className="inline-block h-1.5 w-1.5 rounded-full bg-teal-400" /> Connected workflow</div>
-                  <div className="mt-3 text-lg font-bold text-white">{flow}</div>
-                </div>
-              ))}
+            <div className="grid content-start gap-3">
+              <LoginPanel emailOrUser={emailOrUser} setEmailOrUser={setEmailOrUser} password={password} setPassword={setPassword} err={err} loading={loading} onSubmit={onSubmit} showClose={false} />
+              <div className="rounded-2xl border border-sky-400/15 bg-[#0c1726]/80 p-4 text-sm text-slate-300">
+                <span className="font-semibold text-teal-200">One account, every workspace.</span> Sign in to switch securely between Personal, Business, Properties and your other connected spaces.
+              </div>
             </div>
           </div>
         </section>
