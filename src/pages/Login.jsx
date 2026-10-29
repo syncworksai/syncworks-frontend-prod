@@ -171,43 +171,44 @@ export default function Login() {
   const selectedRole = ROLE_OPTIONS.find((role) => role.id === activeRole) || ROLE_OPTIONS[0];
 
   return (
-    <div className="min-h-screen bg-[#020712] text-slate-100">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#020712]/90 backdrop-blur-xl">
+    <div className="min-h-screen bg-[#05080f] text-slate-100">
+      <header className="sticky top-0 z-40 border-b border-cyan-300/15 bg-[#05080f]/95 backdrop-blur-xl" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <a href="#top" className="text-xl font-black tracking-tight sm:text-2xl">
-            <span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-fuchsia-400 bg-clip-text text-transparent">SyncWorks</span>
+          <a href="#top" className="inline-flex items-center gap-3 text-lg font-black tracking-tight sm:text-xl" aria-label="SyncWorks — back to top">
+            <img src="/brands/syncworks-cube-s.svg" alt="" className="h-10 w-10 rounded-xl border border-sky-400/25 object-contain shadow-[0_0_18px_rgba(22,139,255,.14)]" />
+            <span className="bg-gradient-to-r from-slate-100 via-cyan-200 to-violet-300 bg-clip-text text-transparent">SyncWorks</span>
           </a>
-          <nav className="hidden items-center gap-5 text-sm text-slate-300 md:flex">
+          <nav aria-label="Learn about SyncWorks" className="hidden items-center gap-5 text-sm text-slate-300 md:flex">
             <a href="#roles" className="hover:text-white">Who it helps</a>
             <a href="#platform" className="hover:text-white">What it does</a>
             <a href="#story" className="hover:text-white">Why it exists</a>
           </nav>
           <div className="flex items-center gap-2">
-            <Link to="/register" className="hidden rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800 sm:inline-flex">Create account</Link>
-            <button onClick={() => setSignInOpen(true)} className="rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-4 py-2 text-sm font-bold text-cyan-200 hover:bg-cyan-400/20">Sign in</button>
+            <Link to="/register" className="hidden rounded-xl border border-slate-600/60 bg-[#111827] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-sky-400/50 hover:bg-[#192638] sm:inline-flex">Create account</Link>
+            <button onClick={() => setSignInOpen(true)} type="button" className="rounded-xl border border-cyan-300/40 bg-cyan-400/10 px-4 py-2 text-sm font-bold text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-400/20">Sign in</button>
           </div>
         </div>
       </header>
 
       <main id="top">
         <section className="relative overflow-hidden border-b border-white/10">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(34,211,238,0.14),transparent_32%),radial-gradient(circle_at_85%_30%,rgba(217,70,239,0.12),transparent_30%),linear-gradient(to_bottom,#020712,#06101f)]" />
-          <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1.25fr_.75fr] lg:px-8 lg:py-28">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_13%_25%,rgba(22,139,255,0.13),transparent_36%),radial-gradient(circle_at_86%_18%,rgba(134,76,255,0.10),transparent_36%),radial-gradient(circle_at_70%_90%,rgba(0,213,194,0.06),transparent_48%),linear-gradient(to_bottom,#05080f,#080f1b)]" />
+          <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.2fr_.8fr] lg:px-8 lg:py-24">
             <div>
               <div className="flex flex-wrap gap-2 text-xs font-semibold">
                 <span className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1.5 text-cyan-200">One system</span>
                 <span className="rounded-full border border-blue-400/30 bg-blue-400/10 px-3 py-1.5 text-blue-200">One login</span>
                 <span className="rounded-full border border-fuchsia-400/30 bg-fuchsia-400/10 px-3 py-1.5 text-fuchsia-200">Every role connected</span>
               </div>
-              <h1 className="mt-6 max-w-4xl text-4xl font-black leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-7xl">
-                Your requests, properties, business, schedule, money, and life—<span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-fuchsia-400 bg-clip-text text-transparent">working together.</span>
+              <h1 className="mt-6 max-w-4xl text-4xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-[4.25rem]">
+                Everything connected.<br /> <span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-300 bg-clip-text text-transparent">One SyncWorks.</span>
               </h1>
               <p className="mt-6 max-w-3xl text-base leading-7 text-slate-300 sm:text-xl sm:leading-8">
-                SyncWorks is a connected operating system for people, service businesses, landlords, property managers, tenants, investors, and teams. It replaces scattered apps and missed handoffs with one shared workflow and an assistant that helps surface what matters next.
+                Bring your personal life, service business, properties, and teams into one connected workspace. Manage what matters, move between roles, and keep the next step in view.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link to="/register" className="rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500 px-6 py-3 text-center font-bold text-slate-950 hover:brightness-110">Start with SyncWorks</Link>
-                <a href="#roles" className="rounded-2xl border border-slate-700 bg-slate-900/60 px-6 py-3 text-center font-semibold text-slate-200 hover:bg-slate-800">See what it does for you</a>
+                <Link to="/register" className="rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500 px-6 py-3 text-center font-bold text-slate-950 hover:brightness-110">Create your account</Link>
+                <a href="#roles" className="rounded-2xl border border-slate-700 bg-slate-900/60 px-6 py-3 text-center font-semibold text-slate-200 hover:bg-slate-800">Explore the platform</a>
               </div>
               <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-400">
                 <Link className="hover:text-cyan-300" to="/tenant/accept">Accept tenant invitation</Link>
@@ -217,8 +218,8 @@ export default function Login() {
 
             <div className="grid content-start gap-3 sm:grid-cols-2 lg:grid-cols-1">
               {["Request → schedule → complete → pay", "Lead → conversation → quote → customer", "Tenant issue → work order → vendor → resolution", "Calendar → travel → reminders → next action"].map((flow) => (
-                <div key={flow} className="rounded-3xl border border-white/10 bg-white/[0.035] p-5 shadow-lg shadow-black/20">
-                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">Connected workflow</div>
+                <div key={flow} className="group rounded-3xl border border-slate-500/20 bg-gradient-to-br from-[#111b2a]/95 to-[#130f24]/75 p-5 shadow-lg shadow-black/20 transition hover:border-sky-400/35 hover:shadow-[0_10px_32px_rgba(22,139,255,.08)]">
+                  <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-teal-300"><span className="inline-block h-1.5 w-1.5 rounded-full bg-teal-400" /> Connected workflow</div>
                   <div className="mt-3 text-lg font-bold text-white">{flow}</div>
                 </div>
               ))}
