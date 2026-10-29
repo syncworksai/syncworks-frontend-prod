@@ -524,6 +524,7 @@ export default function Register() {
     resendEmailCode,
     resolveSignupCodes,
     reloadBusinesses,
+    user,
   } = useAuth();
 
   const navigate = useNavigate();
@@ -548,6 +549,10 @@ export default function Register() {
     return `/register?${params.toString()}`;
   };
 
+  const signedInTarget = isPropertyInvite ? claimPath(invitationFromLink) :
+    chosenRole === "pm" ? "/onboarding/property-management" :
+    chosenRole === "business" ? "/onboarding/business" :
+    chosenRole === "retail" || chosenRole === "food" ? `/onboarding/business?vertical=${chosenRole}` : "/customer";
   const [stage, setStage] = useState("EMAIL");
   const [loading, setLoading] = useState(false);
   const [codeLoading, setCodeLoading] = useState(false);
@@ -560,6 +565,9 @@ export default function Register() {
 
   const [email, setEmail] = useState("");
   const [inviteCode, setInviteCode] = useState(() => String(invitationFromLink).trim());
+  const signInPath = isPropertyInvite
+    ? `/login?next=${encodeURIComponent(claimPath(inviteCode))}&email=${encodeURIComponent(email || invitedEmail)}`
+    : "/login";
   const [challengeId, setChallengeId] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [registrationProof, setRegistrationProof] = useState("");
@@ -601,8 +609,8 @@ export default function Register() {
   }
 
   useEffect(() => {
-    if (isPropertyInvite && invitationFromLink) setInviteCode(String(invitationFromLink).trim());
-  }, [isPropertyInvite, invitationFromLink]);
+    setInviteCode(isPropertyInvite ? String(invitationFromLink).trim() : "");
+  }, [chosenRole, isPropertyInvite, invitationFromLink]);
 
   useEffect(() => {
     if (!email && invitedEmail) {
@@ -1036,6 +1044,12 @@ export default function Register() {
                 </p>
               </div>
 
+              {user ? <div className="rounded-xl border border-emerald-400/25 bg-emerald-400/10 p-3 text-xs text-emerald-100">
+                You are signed in as {user.email}. You can connect this workspace without registering again.
+                <Link to={isPropertyInvite ? claimPath(inviteCode) : signedInTarget}
+                  className="mt-2 block rounded-lg bg-emerald-300 px-3 py-2 text-center font-bold text-slate-950">Continue with my existing account</Link>
+                {isPropertyInvite ? <p className="mt-2 text-[11px]">Your email must match the invitation email. You will confirm the code on the next screen.</p> : null}
+              </div> : null}
               {isPropertyInvite ? <div className="rounded-xl border border-violet-400/25 bg-violet-400/5 p-3">
                 <Field label={chosenRole==="tenant" ? "Tenant invitation code" : "Property Owner / Partner invitation code"} value={inviteCode}
                   onChange={setInviteCode} placeholder="Code from your PM company's onboarding email" autoComplete="off"/>
@@ -1252,7 +1266,7 @@ export default function Register() {
           <div className="mt-5 border-t border-slate-800 pt-4 text-center text-sm text-slate-400">
             Already have an account?{" "}
             <Link
-              to="/login"
+              to={signInPath}
               className="font-semibold text-cyan-300 hover:text-cyan-200"
             >
               Sign in
