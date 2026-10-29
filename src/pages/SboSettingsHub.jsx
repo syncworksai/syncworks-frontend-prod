@@ -85,9 +85,9 @@ const CARDS = [
   },
   {
     icon: Database,
-    title: "Customer data & export",
-    detail: "Open shared Customer 360, manage records, and export the currently visible customers as CSV. Bulk imports are not yet verified.",
-    route: "/sbo/customers",
+    title: "Import existing customers",
+    detail: "Upload a customer CSV, preview rows and errors, then confirm the import to Customer 360. No customer invitations are sent.",
+    route: "/sbo/customers/import",
     tone: "slate",
   },
   {

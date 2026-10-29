@@ -722,6 +722,7 @@ export default function SboDashboard() {
             loading={loading}
             tickets={ticketRows}
             onIntake={() => navigate("/sbo/quick-intake")}
+            onImport={() => navigate("/sbo/customers/import")}
             onDispatch={() => navigate("/sbo/tech-board")}
             onTickets={() => navigate("/tickets")}
             onFinance={() => navigate("/sbo/finance")}
@@ -875,7 +876,7 @@ export default function SboDashboard() {
 
           <SboUtilityCards
             onOpenSocial={() => navigate("/sbo/growth")}
-            onOpenImport={() => navigate("/sbo/customers")}
+            onOpenImport={() => navigate("/sbo/customers/import")}
             onOpenExport={() => navigate("/sbo/customers")}
             onOpenEmployeeInvite={() => navigate("/team/invites")}
             keeperUrl="https://www.keepertax.com/invite?referrer=Jacob898531"
