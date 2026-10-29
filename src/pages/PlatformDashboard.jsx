@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import ModeBar from "../components/ModeBar";
 import api from "../api/client";
 
@@ -1439,7 +1440,14 @@ function Stat({ label, value }) {
 }
 
 export default function PlatformDashboard() {
-  const [tab, setTab] = useState("overview");
+  const [query, setQuery] = useSearchParams();
+  const requestedTab = query.get("tab");
+  const tab = TABS.some(item => item.id === requestedTab) ? requestedTab : "overview";
+  const setTab = (next) => {
+    const params = new URLSearchParams(query);
+    params.set("tab", next);
+    setQuery(params);
+  };
 
   return (
     <div className="min-h-screen text-slate-100 bg-[#05060a]">
