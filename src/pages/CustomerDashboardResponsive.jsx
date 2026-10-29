@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import "../styles/personalMidnight.css";
 import { Activity, Home, Inbox, LayoutGrid, MoreHorizontal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
@@ -95,7 +96,7 @@ export default function CustomerDashboardResponsive() {
 
   if (!phoneMode) {
     return (
-      <div data-sw-layout="landscape">
+      <div data-sw-layout="landscape" data-sw-visual="midnight">
         <CustomerDashboard />
         <SyncAssistantStickyDock displayName={firstName(user)} defaultMinimized />
       </div>
@@ -103,7 +104,7 @@ export default function CustomerDashboardResponsive() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#020617] px-3 pb-24 pt-3 text-slate-100" data-sw-layout="portrait">
+    <div className="min-h-dvh bg-[#020617] px-3 pb-24 pt-3 text-slate-100" data-sw-layout="portrait" data-sw-visual="midnight">
       <CustomerMobileHome
         displayName={firstName(user)}
         profilePhotoUrl={profilePhotoUrl}
@@ -131,10 +132,10 @@ export default function CustomerDashboardResponsive() {
         </button>
       ) : null}
 
-      <nav className="fixed inset-x-3 bottom-[max(.45rem,env(safe-area-inset-bottom))] z-[150] grid grid-cols-5 items-end rounded-[1.3rem] border border-white/10 bg-[#030817]/95 px-2 py-2 shadow-[0_-10px_50px_rgba(2,6,23,.8)] backdrop-blur-2xl">
+      <nav className="sw-personal-dock fixed inset-x-3 bottom-[max(.45rem,env(safe-area-inset-bottom))] z-[150] grid grid-cols-5 items-end rounded-[1.3rem] border border-white/10 bg-[#030817]/95 px-2 py-2 shadow-[0_-10px_50px_rgba(2,6,23,.8)] backdrop-blur-2xl">
         <button type="button" onClick={() => nav("/customer")} className="flex flex-col items-center gap-1 text-[9px] font-black text-cyan-200"><Home className="h-4 w-4" />Home</button>
         <button type="button" onClick={() => nav("/customer/marketplace")} className="flex flex-col items-center gap-1 text-[9px] font-black text-slate-400"><LayoutGrid className="h-4 w-4" />Services</button>
-        <button type="button" onClick={() => setDockOpen(true)} className="mx-auto -mt-7 flex flex-col items-center gap-1 text-[9px] font-black text-cyan-200" aria-label="Open SYNC Assistant"><span className="grid h-12 w-12 place-items-center rounded-full border border-cyan-300/60 bg-[radial-gradient(circle_at_36%_30%,rgba(56,189,248,.3),rgba(2,6,23,.96)_64%)] text-xl font-black italic text-cyan-300 shadow-[0_0_28px_rgba(34,211,238,.4),0_0_44px_rgba(124,58,237,.18)]">S</span>SYNC</button>
+        <button type="button" onClick={() => setDockOpen(true)} className="mx-auto -mt-7 flex flex-col items-center gap-1 text-[9px] font-black text-cyan-200" aria-label="Open SYNC Assistant"><span className="sw-cube-launcher grid h-12 w-12 place-items-center overflow-hidden rounded-2xl"><img src="/brands/syncworks-cube-s.svg" alt="" className="h-full w-full object-contain" /></span>SYNC</button>
         <button type="button" onClick={() => nav("/customer/inbox")} className="flex flex-col items-center gap-1 text-[9px] font-black text-slate-400"><Inbox className="h-4 w-4" />Inbox</button>
         <button type="button" onClick={() => nav("/customer/settings")} className="flex flex-col items-center gap-1 text-[9px] font-black text-slate-400"><MoreHorizontal className="h-4 w-4" />More</button>
       </nav>
