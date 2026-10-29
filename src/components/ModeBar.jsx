@@ -1907,7 +1907,7 @@ export default function ModeBar({
           <div className="absolute inset-0 bg-slate-950/72" />
         </div>
 
-        <div className="relative mx-auto max-w-7xl px-4 py-3">
+        <div className="relative mx-auto max-w-[1800px] px-4 py-2.5 sm:px-6">
           {sportsCompact ? <div className="flex min-h-14 items-center gap-3">
             <img src="/brands/syncworks-icon-192.png" alt="SyncWorks" className="h-12 w-12 shrink-0 rounded-2xl border border-cyan-500/30 bg-slate-950 object-contain object-center p-1.5"/>
             <div className="min-w-0 flex-1"><div className="truncate text-sm font-black uppercase tracking-[.14em] text-white sm:text-lg">SyncWorks</div><div className="truncate text-[11px] font-semibold text-cyan-200">{workspaceContext.name} · {workspacePage}</div></div>

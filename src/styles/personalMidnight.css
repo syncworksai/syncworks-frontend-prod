@@ -44,3 +44,17 @@
 [data-sw-visual="midnight"] .sw-personal-dock button[aria-label="Open SYNC Assistant"] {
   color:#81d5ff;
 }
+
+/* Customer visual refresh: polished midnight metallic cards, no behavior changes. */
+.sw-personal-panels > .grid > aside,
+.sw-personal-panels > .grid > main > section,
+.sw-personal-panels > .grid > div > section {
+ border-color:rgba(74,120,171,.25);
+ box-shadow:0 16px 40px rgba(0,0,0,.24),inset 0 1px rgba(157,199,255,.04);
+}
+.sw-personal-panels > .grid > aside {background:linear-gradient(160deg,#0b1422,#070c17);}
+.sw-personal-panels > .grid > main > section:first-child {
+ border-color:rgba(45,143,230,.27);
+ background:radial-gradient(ellipse at 100% 0%,rgba(135,86,234,.14),transparent 40%),radial-gradient(ellipse at 0% 100%,rgba(0,213,194,.09),transparent 40%),linear-gradient(135deg,#0a1728,#080c19);
+}
+.sw-personal-panels button:focus-visible {outline:2px solid #55d8ff;outline-offset:2px;}
