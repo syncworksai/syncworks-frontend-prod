@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
 const ROLE_OPTIONS = [
@@ -75,7 +75,7 @@ function cx(...parts) {
   return parts.filter(Boolean).join(" ");
 }
 
-function LoginPanel({ emailOrUser, setEmailOrUser, password, setPassword, err, loading, onSubmit, onClose, showClose = true }) {
+function LoginPanel({ emailOrUser, setEmailOrUser, password, setPassword, err, loading, onSubmit, onClose, signupPath = "/get-started", showClose = true }) {
   return (
     <div className="w-full rounded-[28px] border border-cyan-400/20 bg-[#07111f]/95 p-5 shadow-2xl shadow-cyan-950/40 backdrop-blur-xl sm:p-6">
       <div className="flex items-start justify-between gap-4">
@@ -124,7 +124,7 @@ function LoginPanel({ emailOrUser, setEmailOrUser, password, setPassword, err, l
       </form>
 
       <div className="mt-5 flex flex-col gap-2 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
-        <span>New to SyncWorks? <Link className="font-semibold text-cyan-300" to="/get-started">Choose an account</Link></span>
+        <span>New to SyncWorks? <Link className="font-semibold text-cyan-300" to={signupPath}>{signupPath.includes("role=") ? "Create account for invitation" : "Choose an account"}</Link></span>
         <Link className="font-semibold text-cyan-300" to="/forgot-password">Forgot password?</Link>
         <span className="text-xs sm:hidden">Invited users can sign in with the email used for their invitation.</span>
       </div>
@@ -135,10 +135,22 @@ function LoginPanel({ emailOrUser, setEmailOrUser, password, setPassword, err, l
 export default function Login({ backgroundOnly = false }) {
   const nav = useNavigate();
   const [searchParams] = useSearchParams();
-  const returnTo = safeReturnPath(searchParams.get("next"));
+  const location = useLocation();
+  const returnTo = safeReturnPath(searchParams.get("next") || location.state?.from);
+  const inviteRole = returnTo.startsWith("/tenant/accept") ? "tenant" : returnTo.startsWith("/investor/accept") ? "owner" : null;
+  const invitedCode = inviteRole ? (new URLSearchParams(returnTo.split("?")[1] || "")).get("code") || "" : "";
+
   const invitedEmail = String(searchParams.get("email") || "").trim().toLowerCase();
   const { login, user } = useAuth();
   const [emailOrUser, setEmailOrUser] = useState(invitedEmail);
+  const signupParams = new URLSearchParams();
+  if (inviteRole && invitedCode) {
+    signupParams.set("role", inviteRole);
+    signupParams.set("code", invitedCode);
+    const signUpEmail = String(emailOrUser || invitedEmail).trim();
+    if (signUpEmail.includes("@")) signupParams.set("email",signUpEmail);
+  }
+  const signupPath = inviteRole && invitedCode ? `/register?${signupParams.toString()}` : "/get-started";
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
@@ -193,7 +205,7 @@ export default function Login({ backgroundOnly = false }) {
           </nav>
           <div className="flex items-center gap-2">
             <Link to="/register?role=business" className="hidden rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-400/50 lg:inline-flex">Service business onboarding</Link>
-            <Link to="/register?role=personal" className="hidden rounded-xl border border-slate-600/60 bg-[#111827] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-sky-400/50 hover:bg-[#192638] sm:inline-flex">Get started</Link>
+            <Link to={signupPath === "/get-started" ? "/register?role=personal" : signupPath} className="hidden rounded-xl border border-slate-600/60 bg-[#111827] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-sky-400/50 hover:bg-[#192638] sm:inline-flex">Get started</Link>
             <button onClick={() => setSignInOpen(true)} type="button" className="rounded-xl border border-cyan-300/40 bg-cyan-400/10 px-4 py-2 text-sm font-bold text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-400/20">Sign in</button>
           </div>
         </div>
@@ -217,7 +229,7 @@ export default function Login({ backgroundOnly = false }) {
                 Bring your personal life, service business, properties, and teams into one connected workspace. Manage what matters, move between roles, and keep the next step in view.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link to="/register?role=personal" className="rounded-xl bg-gradient-to-r from-[#00C9F2] via-[#168BFF] to-[#8756EA] px-5 py-3 text-center text-sm font-bold text-slate-950 hover:brightness-110">Create Personal account</Link>
+                <Link to={signupPath === "/get-started" ? "/register?role=personal" : signupPath} className="rounded-xl bg-gradient-to-r from-[#00C9F2] via-[#168BFF] to-[#8756EA] px-5 py-3 text-center text-sm font-bold text-slate-950 hover:brightness-110">Create Personal account</Link>
                 <Link to="/register?role=business" className="rounded-xl border border-cyan-400/40 bg-[#112033] px-5 py-3 text-center text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/70 hover:bg-[#182b43]">Onboard a business</Link>
                 <button type="button" onClick={() => setSignInOpen(true)} className="rounded-2xl border border-cyan-400/35 bg-[#112033] px-6 py-3 text-center font-semibold text-cyan-100 transition hover:border-cyan-300/70 hover:bg-[#182b43]">Log in</button>
               </div>
@@ -238,7 +250,10 @@ export default function Login({ backgroundOnly = false }) {
             </div>
 
             <div className="grid content-start gap-3">
-              <LoginPanel emailOrUser={emailOrUser} setEmailOrUser={setEmailOrUser} password={password} setPassword={setPassword} err={err} loading={loading} onSubmit={onSubmit} showClose={false} />
+              {inviteRole && invitedCode ? <div className="rounded-xl border border-violet-400/30 bg-violet-400/10 p-3 text-xs leading-5 text-violet-100">
+                You have a pending {inviteRole === "tenant" ? "Tenant" : "Property Owner / Partner"} invitation. Sign in with the invited email, or create a free Personal account to connect it.
+              </div> : null}
+              <LoginPanel emailOrUser={emailOrUser} setEmailOrUser={setEmailOrUser} password={password} setPassword={setPassword} err={err} loading={loading} onSubmit={onSubmit} signupPath={signupPath} showClose={false} />
               <div className="rounded-2xl border border-sky-400/15 bg-[#0c1726]/80 p-4 text-sm text-slate-300">
                 <span className="font-semibold text-teal-200">One account, every workspace.</span> Sign in to switch securely between Personal, Business, Properties and your other connected spaces.
               </div>
@@ -302,7 +317,7 @@ export default function Login({ backgroundOnly = false }) {
       {signInOpen ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label="Sign in to SyncWorks" onMouseDown={(event) => { if (event.target === event.currentTarget) setSignInOpen(false); }}>
           <div className="max-h-[92vh] w-full overflow-y-auto sm:max-w-xl">
-            <LoginPanel emailOrUser={emailOrUser} setEmailOrUser={setEmailOrUser} password={password} setPassword={setPassword} err={err} loading={loading} onSubmit={onSubmit} onClose={() => setSignInOpen(false)} />
+            <LoginPanel emailOrUser={emailOrUser} setEmailOrUser={setEmailOrUser} password={password} setPassword={setPassword} err={err} loading={loading} onSubmit={onSubmit} signupPath={signupPath} onClose={() => setSignInOpen(false)} />
           </div>
         </div>
       ) : null}
