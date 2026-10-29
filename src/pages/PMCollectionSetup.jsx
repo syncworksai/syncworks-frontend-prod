@@ -119,6 +119,7 @@ export default function PMCollectionSetup() {
       {method==="STRIPE_CONNECT" ? <div className="rounded-2xl border border-indigo-400/30 bg-indigo-500/10 p-4 sm:p-5">
         <h2 className="text-lg font-black">2. Verify the bank receiving rent</h2>
         <p className="mt-2 text-sm leading-6 text-slate-300">Stripe handles identity verification and securely links the bank account. SyncWorks only receives account status; it does not store your routing or account number.</p>
+        <p className="mt-2 text-xs leading-5 text-amber-200">This currently creates or continues a SyncWorks-linked Stripe Express account. If you already use a separate Stripe or Square merchant account, keep your existing provider selected until a supported account-linking migration is available.</p>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
           {connectedReady ? <CheckCircle2 size={19} className="text-emerald-300"/> : <LockKeyhole size={19} className="text-amber-200"/>}
           <span>{connectedReady?"Stripe reports charges and payouts enabled":"Stripe account is not yet fully verified for charges and payouts"}</span>
