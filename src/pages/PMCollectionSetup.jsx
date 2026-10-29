@@ -4,6 +4,7 @@ import { Building2, CheckCircle2, CreditCard, ExternalLink, FileText, Landmark, 
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import PMShell from "../components/pm/PMShell";
+import PaymentMigrationChecklist from "../components/payments/PaymentMigrationChecklist";
 
 const OPTIONS = [
   { value: "STRIPE_CONNECT", label: "Connect my bank for SyncWorks payments", sub: "Stripe handles secure verification and direct deposits; no bank details are stored by SyncWorks.", icon: Landmark },
@@ -132,6 +133,7 @@ export default function PMCollectionSetup() {
         </label>
         <p className="mt-2 text-xs text-slate-400">Save again to record the acknowledgement. Bank-connection completion alone does not unlock tenant checkout.</p>
       </div> : null}
+      <PaymentMigrationChecklist businessId={businessId} isPM />
       <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 sm:p-5">
         <h2 className="text-lg font-black">What happens next?</h2>
         <div className="mt-3 space-y-2 text-sm text-slate-300">
