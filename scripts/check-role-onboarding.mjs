@@ -90,3 +90,14 @@ test("invitation links survive authentication redirects and preserve signup code
   assert.match(login,/signupPath=\{signupPath\}/);
   assert.match(login,/nav\(returnTo, \{ replace: true \}\)/);
 });
+
+test("owner-facing settings and portal use PM-scoped claims and clear labels",()=>{
+  const settings=read("src/pages/InvestorSettings.jsx");
+  const dashboard=read("src/pages/InvestorDashboard.jsx");
+  const portfolio=read("src/pages/PMInvestorPortfolio.jsx");
+  assert.match(settings,/Property Owner \/ Partner Settings/);
+  assert.match(settings,/\/pm-hub\/access\/investors\/accept\//);
+  assert.doesNotMatch(settings,/const paths = \["\/investor\/accept\//);
+  assert.match(dashboard,/Property Owner \/ Partner/);
+  assert.match(portfolio,/Property Owner \/ Partner Portal/);
+});
