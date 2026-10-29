@@ -131,7 +131,7 @@ function LoginPanel({ emailOrUser, setEmailOrUser, password, setPassword, err, l
   );
 }
 
-export default function Login() {
+export default function Login({ backgroundOnly = false }) {
   const nav = useNavigate();
   const [searchParams] = useSearchParams();
   const returnTo = safeReturnPath(searchParams.get("next"));
@@ -145,8 +145,8 @@ export default function Login() {
   const [activeRole, setActiveRole] = useState(ROLE_OPTIONS[0].id);
 
   useEffect(() => {
-    if (user) nav(returnTo, { replace: true });
-  }, [user, nav, returnTo]);
+    if (!backgroundOnly && user) nav(returnTo, { replace: true });
+  }, [user, nav, returnTo, backgroundOnly]);
 
   useEffect(() => {
     if (!signInOpen) return undefined;
@@ -191,7 +191,8 @@ export default function Login() {
             <a href="#story" className="hover:text-white">Why it exists</a>
           </nav>
           <div className="flex items-center gap-2">
-            <Link to="/get-started" className="hidden rounded-xl border border-slate-600/60 bg-[#111827] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-sky-400/50 hover:bg-[#192638] sm:inline-flex">Create account</Link>
+            <Link to="/register?role=business" className="hidden rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-400/50 lg:inline-flex">Business onboarding</Link>
+            <Link to="/register?role=personal" className="hidden rounded-xl border border-slate-600/60 bg-[#111827] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-sky-400/50 hover:bg-[#192638] sm:inline-flex">Get started</Link>
             <button onClick={() => setSignInOpen(true)} type="button" className="rounded-xl border border-cyan-300/40 bg-cyan-400/10 px-4 py-2 text-sm font-bold text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-400/20">Sign in</button>
           </div>
         </div>
@@ -208,20 +209,22 @@ export default function Login() {
                 <span className="rounded-full border border-blue-400/30 bg-blue-400/10 px-3 py-1.5 text-blue-200">One login</span>
                 <span className="rounded-full border border-fuchsia-400/30 bg-fuchsia-400/10 px-3 py-1.5 text-fuchsia-200">Every role connected</span>
               </div>
-              <h1 className="mt-6 max-w-4xl text-4xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-[4.25rem]">
+              <h1 className="mt-6 max-w-4xl text-3xl font-extrabold leading-[1.12] tracking-tight text-white sm:text-4xl lg:text-[3.55rem]">
                 Everything connected.<br /> <span className="bg-gradient-to-r from-[#55D8FF] via-[#168BFF] to-[#A078F5] bg-clip-text text-transparent">One SyncWorks.</span>
               </h1>
-              <p className="mt-6 max-w-3xl text-base leading-7 text-slate-300 sm:text-xl sm:leading-8">
+              <p className="mt-6 max-w-3xl text-sm leading-6 text-slate-300 sm:text-lg sm:leading-7">
                 Bring your personal life, service business, properties, and teams into one connected workspace. Manage what matters, move between roles, and keep the next step in view.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link to="/get-started" className="rounded-2xl bg-gradient-to-r from-[#00C9F2] via-[#168BFF] to-[#8756EA] px-6 py-3 text-center font-bold text-slate-950 hover:brightness-110">Create your account</Link>
+                <Link to="/register?role=personal" className="rounded-xl bg-gradient-to-r from-[#00C9F2] via-[#168BFF] to-[#8756EA] px-5 py-3 text-center text-sm font-bold text-slate-950 hover:brightness-110">Create Personal account</Link>
+                <Link to="/register?role=business" className="rounded-xl border border-cyan-400/40 bg-[#112033] px-5 py-3 text-center text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/70 hover:bg-[#182b43]">Onboard a business</Link>
                 <button type="button" onClick={() => setSignInOpen(true)} className="rounded-2xl border border-cyan-400/35 bg-[#112033] px-6 py-3 text-center font-semibold text-cyan-100 transition hover:border-cyan-300/70 hover:bg-[#182b43]">Log in</button>
               </div>
               <div className="mt-4 rounded-xl border border-slate-600/20 bg-[#08121f]/65 px-4 py-3 text-sm text-slate-300"><span className="font-bold text-cyan-200">New here?</span> Every account starts with a Personal profile. Then add Business, Tenant or Investor access using the same login. Your business email can be different.</div>
-              <div className="mt-5 grid grid-cols-2 gap-2" aria-label="Choose how to join SyncWorks">
+              <p className="mt-6 text-xs font-bold uppercase tracking-[0.16em] text-cyan-300">Choose how to join</p>
+              <div className="mt-2 grid grid-cols-2 gap-2" aria-label="Choose how to join SyncWorks">
                  {ONBOARDING_LINKS.map(([name,role,detail]) => (
-                   <Link key={role} to={`/register?role=${role}`} className="group rounded-xl border border-cyan-400/20 bg-[#0a1a2e]/85 px-3 py-3 transition hover:border-cyan-300/60 hover:bg-[#132740]">
+                   <Link key={role} to={`/register?role=${role}`} className="group rounded-xl border border-cyan-400/25 bg-[#0a1a2e]/90 px-4 py-3 transition hover:border-cyan-300/70 hover:bg-[#132740] focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300">
                      <span className="block text-sm font-bold text-white">{name} <span className="text-cyan-300">→</span></span>
                      <span className="mt-1 block text-[11px] leading-4 text-slate-400">{detail}</span>
                    </Link>
@@ -245,7 +248,7 @@ export default function Login() {
         <section id="roles" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
           <div className="max-w-3xl">
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-300">Choose your role</p>
-            <h2 className="mt-3 text-3xl font-black text-white sm:text-5xl">See what SyncWorks does for you.</h2>
+            <h2 className="mt-3 text-3xl font-black text-white sm:text-4xl">See what SyncWorks does for you.</h2>
             <p className="mt-4 text-slate-400">The platform changes around the person using it while the underlying information stays connected.</p>
           </div>
           <div className="mt-8 grid gap-5 lg:grid-cols-[.42fr_.58fr]">
@@ -271,7 +274,7 @@ export default function Login() {
         <section id="platform" className="border-y border-white/10 bg-[#050d19]">
           <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-fuchsia-300">The connected platform</p>
-            <h2 className="mt-3 max-w-4xl text-3xl font-black text-white sm:text-5xl">Everything stays attached to the same people, places, work, and timeline.</h2>
+            <h2 className="mt-3 max-w-4xl text-3xl font-black text-white sm:text-4xl">Everything stays attached to the same people, places, work, and timeline.</h2>
             <div className="mt-9 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {PLATFORM_GROUPS.map(([title, body]) => <article key={title} className="rounded-3xl border border-slate-800 bg-slate-950/55 p-5"><h3 className="text-lg font-bold text-white">{title}</h3><p className="mt-3 text-sm leading-6 text-slate-400">{body}</p></article>)}
             </div>
