@@ -3,6 +3,7 @@ import {
   Building2, CheckCircle2, ClipboardList, Mail, Plus, RefreshCw, Send, X,
 } from "lucide-react";
 import api from "../../api/client";
+import PaymentMigrationChecklist from "../../components/payments/PaymentMigrationChecklist";
 
 const STATUSES = [
   ["NEW", "New"], ["CONTACTED", "Contacted"], ["INVITED", "Invited"],
@@ -322,6 +323,7 @@ export default function GodModeProspects({ pilotOnly = false }) {
                     </div>
                   ))}
                 </div>
+                {selected.linked_business ? <PaymentMigrationChecklist key={selected.linked_business} businessId={selected.linked_business} founderView /> : <p className="mt-2 text-xs text-slate-500">Migration tracking is available after a verified Business account is linked.</p>}
                 <div className="mt-3 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3">
                   <h5 className="text-xs font-black text-amber-200">Optional marketplace route tests</h5>
                   <p className="mt-1 text-[11px] leading-4 text-slate-400">Record both customer experiences separately. These do not imply calendar availability or confirmed booking until the provider accepts.</p>
