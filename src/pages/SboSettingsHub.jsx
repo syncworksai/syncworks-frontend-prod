@@ -7,6 +7,7 @@ import {
   CircleHelp,
   CreditCard,
   Database,
+  ShieldCheck,
   MapPinned,
   PackageCheck,
   ReceiptText,
@@ -84,9 +85,16 @@ const CARDS = [
   },
   {
     icon: Database,
-    title: "Business data",
-    detail: "Import existing customers, tickets and invoices or export a backup of your SyncWorks business data.",
-    route: "/sbo/settings/general?section=data&return=%2Fsbo%2Fsettings",
+    title: "Customer data & export",
+    detail: "Open shared Customer 360, manage records, and export the currently visible customers as CSV. Bulk imports are not yet verified.",
+    route: "/sbo/customers",
+    tone: "slate",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Account security",
+    detail: "Change your password and review account access. Password recovery is available on the sign-in page.",
+    route: "/profile/legacy",
     tone: "slate",
   },
 ];
