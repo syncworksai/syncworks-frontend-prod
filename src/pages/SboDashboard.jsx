@@ -622,7 +622,7 @@ export default function SboDashboard() {
     qs.set("return", "/sbo");
     if (section) qs.set("section", section);
     const suffix = extra ? `&${extra}` : "";
-    navigate(`/sbo/settings?${qs.toString()}${suffix}`);
+    navigate(`/sbo/settings/general?${qs.toString()}${suffix}`);
   }
 
   const businessName = activeBusiness?.name || activeBusiness?.business_name || "";
@@ -681,7 +681,7 @@ export default function SboDashboard() {
           <Button tone="cyan" onClick={() => navigate("/tickets?view=new")}>
             Job Requests
           </Button>
-          <Button tone="slate" onClick={() => navigate("/sbo/settings?return=%2Fsbo&setup=1")}>
+          <Button tone="slate" onClick={() => navigate("/sbo/settings/general?return=%2Fsbo&setup=1")}>
             Setup
           </Button>
         </div>
