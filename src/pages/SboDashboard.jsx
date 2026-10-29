@@ -722,6 +722,7 @@ export default function SboDashboard() {
             loading={loading}
             tickets={ticketRows}
             onIntake={() => navigate("/sbo/quick-intake")}
+            onImport={() => navigate("/sbo/customers/import")}
             onDispatch={() => navigate("/sbo/tech-board")}
             onTickets={() => navigate("/tickets")}
             onFinance={() => navigate("/sbo/finance")}
