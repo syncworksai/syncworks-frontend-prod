@@ -15,7 +15,7 @@ const MODE_ROUTES = {
 };
 const EXTRA_ROUTES = [
   { label: "Tenant", to: "/tenant" },
-  { label: "Investor", to: "/investor" },
+  { label: "Property Owner", to: "/investor/properties" },
   { label: "Inbox", to: "/inbox" },
   { label: "Calendar", to: "/calendar" },
   { label: "Create Business", to: "/upgrade" },
