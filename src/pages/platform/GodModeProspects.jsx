@@ -13,13 +13,39 @@ const PILOT_STAGES = [
   ["NOT_STARTED", "Not started"], ["INVITED", "Invited"], ["ONBOARDING", "Onboarding"],
   ["TESTING", "Testing"], ["BLOCKED", "Blocked"], ["COMPLETE", "Completed"],
 ];
-const PILOT_CHECKS = [
-  ["signup", "Verified signup"], ["business", "Business profile created"],
-  ["settings", "Business settings saved and reloaded"], ["intake", "Customer + ticket intake"],
-  ["estimate", "Estimate and approval"], ["dispatch", "Technician dispatch and schedule"],
-  ["invoice", "Job completion and invoice"], ["payment", "Payment state verified"],
-  ["password_reset", "Password recovery tested"], ["feedback", "Tester feedback recorded"],
+const PILOT_GROUPS = [
+  { title: "Account & setup", items: [
+    ["signup", "Verified signup", "/platform?tab=businesses"],
+    ["business", "Business linked to correct owner", "/platform?tab=businesses"],
+    ["settings", "Settings save and reload verified", "/sbo/settings"],
+    ["password_reset", "Reset-password email and sign-in verified", "/forgot-password"],
+  ]},
+  { title: "Customer migration", items: [
+    ["customer_import", "Customer contacts added (manual or CSV)", "/sbo/customers/import"],
+    ["customer_dedup", "Duplicates reviewed against existing records", "/sbo/customers"],
+    ["customer_search", "Imported customer found in Quick Intake", "/sbo/quick-intake"],
+  ]},
+  { title: "Real job & money", items: [
+    ["intake", "Service ticket created for a customer", "/sbo/quick-intake"],
+    ["estimate", "Estimate and approval tested", "/tickets"],
+    ["dispatch", "Technician and schedule verified", "/sbo/tech-board"],
+    ["invoice", "Job completion and invoice verified", "/sbo/invoices"],
+    ["payment", "Payment state reconciled against processor", "/sbo/finance"],
+    ["billing_review", "Fee disclosure and invoice total reviewed", "/sbo/finance"],
+    ["payout_review", "Connect account and payout flow verified", "/sbo/settings"],
+  ]},
+  { title: "Pilot sign-off", items: [
+    ["mobile", "iPhone usability and navigation tested", "/sbo/pilot"],
+    ["feedback", "Owner feedback and blocker report recorded", "/sbo/pilot"],
+  ]},
 ];
+const PILOT_CHECKS = PILOT_GROUPS.flatMap(group => group.items);
+const PAID_OFFERS = [
+  { id:"sales", label:"Sales OS", route:"/sbo/sales", description:"Track leads and sales pipeline" },
+  { id:"growth", label:"Growth OS", route:"/sbo/growth", description:"Social media and marketing automation" },
+  { id:"pm", label:"Property Management", route:"/pm", description:"Properties, tenants and maintenance" },
+];
+
 const INTERESTS = [
   "Scheduling", "Technician dispatch", "Skill matching", "Route planning",
   "Call intake", "Customer CRM", "Quotes & invoices", "Payments",
@@ -66,6 +92,7 @@ export default function GodModeProspects({ pilotOnly = false }) {
   const [note, setNote] = useState("");
   const [activityKind, setActivityKind] = useState("NOTE");
   const [busy, setBusy] = useState("");
+  const [offerId, setOfferId] = useState("sales");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -115,7 +142,7 @@ export default function GodModeProspects({ pilotOnly = false }) {
     try {
       await api.patch(`/platform/prospects/${selected.id}/`, patch);
       await load();
-      setMessage("Prospect updated.");
+      setMessage("Prospect updated. The owner has not been notified.");
     } catch (e) { setError(errorText(e, "Could not save the changes.")); }
     finally { setBusy(""); }
   }
@@ -131,6 +158,27 @@ export default function GodModeProspects({ pilotOnly = false }) {
     } catch (e) { setError(errorText(e, "Could not send invitation.")); }
     finally { setBusy(""); }
   }
+  async function sendCompletion() {
+    if (!selected || selected.pilot_status !== "COMPLETE" || selected.completion_notified) return;
+    if (!window.confirm(`Send a one-time Business setup completion email to ${selected.email}? This is a transactional message, not a marketing offer.`)) return;
+    setBusy("complete-email"); setError(""); setMessage("");
+    try {
+      const result = await api.post(`/platform/prospects/${selected.id}/send-completion/`);
+      await load();
+      setMessage(result.data?.detail || "Completion notice requested.");
+    } catch (error) { setError(errorText(error, "Could not notify owner.")); }
+    finally { setBusy(""); }
+  }
+  async function copyOfferDraft() {
+    if (!selected) return;
+    const offer = PAID_OFFERS.find(item => item.id === offerId) || PAID_OFFERS[0];
+    const draft = `SUBJECT: Optional SyncWorks ${offer.label} — details for ${selected.company_name}\n\nHi ${selected.contact_name || "there"},\n\nYour Business workspace is available in SyncWorks. If you want to explore ${offer.label}, it offers ${offer.description.toLowerCase()}.\n\nWe can review the current price, features, and billing terms together before any enrollment. No add-on has been activated.\n\nReply if you'd like information.\n\n— SyncWorks\n\nMARKETING REVIEW REQUIRED BEFORE SENDING: add verified company postal address, unsubscribe method, clear ad identification and accurate plan terms. Never send without checking suppression preferences.`;
+    try {
+      await navigator.clipboard.writeText(draft);
+      setMessage("Optional feature message copied as a DRAFT. Nothing sent, billed, or enabled.");
+    } catch { setError("Clipboard not available. Copy the draft manually."); }
+  }
+
   async function logActivity() {
     if (!selected || !note.trim()) return;
     setBusy("activity"); setError(""); setMessage("");
@@ -159,7 +207,7 @@ export default function GodModeProspects({ pilotOnly = false }) {
           <div>
             <div className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-200">God Mode / {pilotOnly ? "Tester Launch" : "Acquisition Tickets"}</div>
             <h2 className="mt-2 text-2xl font-black text-white sm:text-3xl">{pilotOnly ? "Business Tester Launch" : "Business Prospects"}</h2>
-            <p className="mt-2 max-w-3xl text-sm text-slate-400">Your own sales queue, not a contractor's customer leads. Record requirements, invitations sent, follow-ups, registrations and wins. No prospect becomes an account until the owner signs up.</p>
+            <p className="mt-2 max-w-3xl text-sm text-slate-400">Your founder-only business onboarding control center. Track invitation, registration, CRM migration, first job, payout review and the next action. Test outcomes are confirmed manually, not guessed.</p>
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={load} disabled={loading} className={btn}><RefreshCw className="h-4 w-4" /> Refresh</button>
@@ -219,7 +267,7 @@ export default function GodModeProspects({ pilotOnly = false }) {
               <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/[.04] p-3">
                 <div className="flex items-center justify-between gap-2">
                   <h4 className="text-sm font-black text-white">Tester onboarding & QA</h4>
-                  <span className="text-xs font-black text-cyan-200">{PILOT_CHECKS.filter(([key]) => selected.pilot_checks?.[key] === true).length}/10</span>
+                  <span className="text-xs font-black text-cyan-200">{PILOT_CHECKS.filter(([key]) => selected.pilot_checks?.[key] === true).length}/{PILOT_CHECKS.length}</span>
                 </div>
                 <p className="mt-1 text-xs leading-5 text-slate-400">Checklist items are manually confirmed. A verified signup alone does not mean a completed test.</p>
                 <Field label="Pilot stage">
@@ -228,16 +276,32 @@ export default function GodModeProspects({ pilotOnly = false }) {
                     {PILOT_STAGES.map(([value,label])=><option key={value} value={value}>{label}</option>)}
                   </select>
                 </Field>
-                <div className="mt-3 grid gap-2">
-                  {PILOT_CHECKS.map(([key,label])=>(
-                    <label key={key} className="flex min-h-10 items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/70 px-3 text-xs text-slate-200">
-                      <input type="checkbox" disabled={!!busy} checked={selected.pilot_checks?.[key]===true}
-                        onChange={e=>patchProspect({pilot_checks:{...selected.pilot_checks,[key]:e.target.checked}})}
-                        className="h-4 w-4 accent-cyan-400"/>
-                      {label}
-                    </label>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800" role="progressbar" aria-valuenow={PILOT_CHECKS.filter(([key]) => selected.pilot_checks?.[key] === true).length} aria-valuemin={0} aria-valuemax={PILOT_CHECKS.length}>
+                  <div className="h-full bg-cyan-400 transition-all" style={{width:`${100*PILOT_CHECKS.filter(([key])=>selected.pilot_checks?.[key] === true).length/PILOT_CHECKS.length}%`}} />
+                </div>
+                <div className="mt-3 space-y-3">
+                  {PILOT_GROUPS.map(group=>(
+                    <div key={group.title} className="rounded-xl border border-slate-800 p-2">
+                      <div className="px-1 pb-2 text-xs font-black text-cyan-200">{group.title}</div>
+                      <div className="space-y-1">
+                        {group.items.map(([key,label,route])=>(
+                          <div key={key} className="flex min-h-10 items-center justify-between gap-2 rounded-lg bg-slate-900/70 px-2 py-1.5">
+                            <label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-slate-200">
+                              <input type="checkbox" disabled={!!busy} checked={selected.pilot_checks?.[key]===true}
+                                onChange={e=>patchProspect({pilot_checks:{...selected.pilot_checks,[key]:e.target.checked}})}
+                                className="h-4 w-4 shrink-0 accent-cyan-400"/>
+                              <span>{label}</span>
+                            </label>
+                            <a href={route} className="shrink-0 text-[11px] font-bold text-cyan-300 hover:underline">Open</a>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
+                {selected.linked_business && PILOT_CHECKS.some(([key])=>selected.pilot_checks?.[key]!==true) ? <div className="mt-2 rounded-xl bg-amber-500/10 p-3 text-xs text-amber-200">
+                  Next verification: {PILOT_CHECKS.find(([key])=>selected.pilot_checks?.[key]!==true)?.[1]}. Check it only after actually testing.
+                </div> : null}
                 <Field label="Tester feedback, problems, devices">
                   <textarea key={selected.id+"pilot_feedback"} defaultValue={selected.pilot_feedback||""} rows={3} maxLength={4000}
                     onBlur={e=>{if(e.target.value!==(selected.pilot_feedback||""))patchProspect({pilot_feedback:e.target.value});}}
@@ -245,6 +309,25 @@ export default function GodModeProspects({ pilotOnly = false }) {
                     className={inputClass+" mt-1"}/>
                 </Field>
                 <p className="mt-2 text-[11px] text-slate-500">Saved centrally in this founder-only prospect record. Tester-side pilot notes remain on their device until shared.</p>
+                <div className="mt-3 rounded-xl border border-indigo-500/25 bg-indigo-500/10 p-3">
+                  <div className="text-xs font-black text-white">Completion notification</div>
+                  <p className="mt-1 text-[11px] text-slate-300">Mark pilot Complete only after all checks pass. Sending a completion notice requires a separate confirmation; no message is sent by checking boxes.</p>
+                  <button type="button" onClick={sendCompletion} disabled={!!busy || selected.pilot_status!=="COMPLETE" || !selected.linked_business || selected.completion_notified || !selected.email}
+                    className="mt-3 min-h-11 w-full rounded-xl bg-indigo-400 px-3 text-xs font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-40">
+                    {selected.completion_notified?"Completion email already requested":"Send completion notice"}
+                  </button>
+                </div>
+                <div className="mt-3 rounded-xl border border-fuchsia-500/25 bg-fuchsia-500/10 p-3">
+                  <div className="text-xs font-black text-white">Optional add-on offers</div>
+                  <p className="mt-1 text-[11px] text-slate-300">Prepare a message, not a subscription or automatic marketing email. Confirm prices, consent/suppression and CAN-SPAM details before any outside sending.</p>
+                  <select className={inputClass+" mt-3"} value={offerId} onChange={e=>setOfferId(e.target.value)}>
+                    {PAID_OFFERS.map(item=><option value={item.id} key={item.id}>{item.label} — {item.description}</option>)}
+                  </select>
+                  <button type="button" onClick={copyOfferDraft} className="mt-2 min-h-11 w-full rounded-xl border border-fuchsia-400/40 bg-slate-950 px-3 text-xs font-black text-fuchsia-200">
+                    Copy paid-feature offer draft (no send)
+                  </button>
+                </div>
+
               </div>
               <div className="flex flex-wrap gap-2">
                 <button type="button" disabled={!!busy || !selected.email} onClick={sendInvite} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-3 text-sm font-black text-slate-950 disabled:opacity-40"><Send className="h-4 w-4"/> Send invitation</button>
