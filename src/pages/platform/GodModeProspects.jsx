@@ -294,6 +294,7 @@ export default function GodModeProspects({ pilotOnly = false }) {
                     {PILOT_STAGES.map(([value,label])=><option key={value} value={value}>{label}</option>)}
                   </select>
                 </Field>
+                <p className="mt-2 text-[11px] leading-4 text-amber-200">Founder checks are recorded here. Customer, invoice and payment steps must be tested in that business owner\'s own account; opening your personal Business workspace could show a different company.</p>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800" role="progressbar" aria-valuenow={PILOT_CHECKS.filter(([key]) => selected.pilot_checks?.[key] === true).length} aria-valuemin={0} aria-valuemax={PILOT_CHECKS.length}>
                   <div className="h-full bg-cyan-400 transition-all" style={{width:`${100*PILOT_CHECKS.filter(([key])=>selected.pilot_checks?.[key] === true).length/PILOT_CHECKS.length}%`}} />
                 </div>
@@ -310,7 +311,7 @@ export default function GodModeProspects({ pilotOnly = false }) {
                                 className="h-4 w-4 shrink-0 accent-cyan-400"/>
                               <span>{label}</span>
                             </label>
-                            <a href={route} className="shrink-0 text-[11px] font-bold text-cyan-300 hover:underline">Open</a>
+                            {route.startsWith("/platform") ? <a href={route} className="shrink-0 text-[11px] font-bold text-cyan-300 hover:underline">God Mode</a> : <span title={`Owner workflow: ${route}`} className="shrink-0 text-[10px] font-bold text-slate-400">Owner step</span>}
                           </div>
                         ))}
                       </div>
