@@ -506,12 +506,12 @@ function Welcome({
 function RegistrationBackdrop() {
   return (
     <>
-      <div className="fixed inset-0 overflow-hidden bg-[#05080f]" aria-hidden="true" inert="">
-        <div className="pointer-events-none h-full opacity-55 blur-[2px]">
+      <div className="fixed inset-0 overflow-hidden bg-[#05080f]" aria-hidden="true" inert>
+        <div className="pointer-events-none h-full opacity-75 blur-[1.5px]">
           <Login backgroundOnly />
         </div>
       </div>
-      <div className="pointer-events-none fixed inset-0 bg-[#020617]/55" aria-hidden="true" />
+      <div className="pointer-events-none fixed inset-0 bg-[#020617]/40" aria-hidden="true" />
     </>
   );
 }
