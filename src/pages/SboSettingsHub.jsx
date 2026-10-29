@@ -56,6 +56,14 @@ const CARDS = [
     tone: "fuchsia",
   },
   {
+    icon: CreditCard,
+    title: "Move payments in 5 safe steps",
+    detail: "Keep the current processor, compare actual costs, connect a receiving bank, audit a controlled payment, then request a switch only after approval.",
+    route: "/sbo/finance?section=payments",
+    tone: "emerald",
+    badge: "Onboarding",
+  },
+  {
     icon: ReceiptText,
     title: "Billing automation & receivables",
     detail: "Invoice delivery, payment terms, reminders, aging and overdue-customer guardrails.",

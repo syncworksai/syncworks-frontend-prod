@@ -956,7 +956,7 @@ export default function SboSetupWizard({
                     <li>1. Activate the Business plan and add your billing card in Finance.</li>
                     <li>2. Complete Stripe Connect to accept payments and receive payouts.</li>
                     <li>3. Add a priced service in your Catalog and review dashboard readiness.</li>
-                    <li>4. Test a customer request, invoice and payment before launch.</li>
+                    <li>4. Follow the five-step payment migration checklist in Finance: preserve current processor, compare fees, verify bank, test payment, and request a controlled switch.</li>
                   </ol>
                   <p className="mt-4 text-xs leading-5 text-cyan-200">
                     Finishing this step saves your profile; it does not claim payment activation or guarantee new leads.

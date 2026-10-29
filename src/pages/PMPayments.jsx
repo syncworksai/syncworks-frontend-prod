@@ -383,6 +383,11 @@ export default function PMPayments() {
           <div className="flex flex-wrap justify-between gap-3"><div><div className="hidden text-[10px] font-black uppercase tracking-[.18em] text-cyan-300 sm:block">Tenant accounting</div><h1 className="text-xl font-black sm:mt-2 sm:text-3xl"><span className="sm:hidden">Ledger</span><span className="hidden sm:inline">Ledger Command Center</span></h1><p className="mt-2 hidden text-sm text-slate-400 sm:block">Filter charges, payments, credits, late fees, and payer buckets without losing the tenant-level view.</p></div><div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:flex sm:flex-wrap"><button onClick={() => openEntry()} className="rounded-xl bg-cyan-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-cyan-300 sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm">+ Add Entry</button><button onClick={() => setDrawer("rules")} disabled={!filterTenant} className="rounded-xl border border-fuchsia-400/50 bg-fuchsia-500/15 px-3 py-2 text-xs font-black text-fuchsia-100 hover:bg-fuchsia-500/25 disabled:cursor-not-allowed disabled:opacity-40 sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm">Lease & Billing Rules</button></div></div>
         </section>
 
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-indigo-400/25 bg-indigo-500/10 p-3 sm:p-4">
+          <div><div className="text-sm font-black text-indigo-100">Online rent collection setup</div><p className="mt-1 text-xs text-slate-300">Choose a connected bank, existing processor, or manual payment method. Rent payment links remain disabled until payout and fee verification.</p></div>
+          <a href="/pm/payment-setup" className="inline-flex min-h-11 items-center rounded-xl bg-indigo-400 px-4 text-xs font-black text-slate-950">Payment & Bank Setup</a>
+        </div>
+
         {error ? <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm sm:rounded-2xl sm:p-4">{error}</div> : null}
         {message ? <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm sm:rounded-2xl sm:p-4">{message}</div> : null}
 

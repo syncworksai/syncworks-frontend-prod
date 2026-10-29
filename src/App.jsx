@@ -96,6 +96,7 @@ import PMHandoffWizard from "./pages/PMHandoffWizard";
 import PMDocumentCoordination from "./pages/PMDocumentCoordination";
 import PMRentIncrease from "./pages/PMRentIncrease";
 import PMRentCorrection from "./pages/PMRentCorrection";
+import PMCollectionSetup from "./pages/PMCollectionSetup";
 import PMLeaseBuilder from "./pages/PMLeaseBuilder";
 import PMPropertiesIndex from "./pages/PMPropertiesIndex";
 import PMTenantsIndex from "./pages/PMTenantsIndex";
@@ -240,6 +241,7 @@ export default function App() {
         <Route path="/pm/rent-correction" element={<ProtectedRoute><PMRentCorrection /></ProtectedRoute>} />
         <Route path="/pm/lease-builder" element={<ProtectedRoute><PMLeaseBuilder /></ProtectedRoute>} />
         <Route path="/pm/payments" element={<ProtectedRoute><PMPayments /></ProtectedRoute>} />
+        <Route path="/pm/payment-setup" element={<ProtectedRoute><PMCollectionSetup /></ProtectedRoute>} />
         <Route path="/pm/tenants" element={<ProtectedRoute><PMTenantsIndex /></ProtectedRoute>} />
         <Route path="/pm/properties/:propertyId" element={<ProtectedRoute><PMPropertyDetail /></ProtectedRoute>} />
         <Route path="/tenant" element={<ProtectedRoute><TenantDashboard /></ProtectedRoute>} />

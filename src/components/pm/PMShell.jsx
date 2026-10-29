@@ -8,6 +8,7 @@ const navItems = [
   ["Properties", "/pm/properties", "building"],
   ["Investors & Payouts", "/pm/investors", "money"],
   ["Payments", "/pm/payments", "money"],
+  ["Payment & Bank Setup", "/pm/payment-setup", "money"],
   ["Lease Builder", "/pm/lease-builder", "folder"],
   ["Rent Corrections", "/pm/rent-correction", "money"],
   ["WORKFLOWS", "", "", "section"],
