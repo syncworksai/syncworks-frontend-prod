@@ -52,3 +52,17 @@ test("existing account can create separate business without second login or unve
   assert.match(s,/subscription code was NOT confirmed/);
   assert.match(s,/\/sbo\/settings\/general\?setup=1/);
 });
+
+test("registration opens over the SyncWorks landing page and keeps Personal-first flow",()=>{
+  const signup=read("src/pages/Register.jsx");
+  const login=read("src/pages/Login.jsx");
+  assert.match(signup,/function RegistrationBackdrop/);
+  assert.match(signup,/<Login backgroundOnly \/>/);
+  assert.match(signup,/role="dialog" aria-modal="true"/);
+  assert.match(signup,/aria-label="Select signup type"/);
+  assert.match(signup,/roleSignupUrl\(role\)/);
+  assert.match(signup,/Step 1: Personal account/);
+  assert.match(login,/backgroundOnly = false/);
+  assert.match(login,/Onboard a business/);
+  assert.match(login,/Business onboarding/);
+});
