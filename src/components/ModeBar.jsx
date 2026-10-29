@@ -1909,7 +1909,7 @@ export default function ModeBar({
 
         <div className="relative mx-auto max-w-7xl px-4 py-3">
           {sportsCompact ? <div className="flex min-h-14 items-center gap-3">
-            <img src="/brands/syncworks-icon-192.png" alt="SyncWorks" className="h-12 w-12 shrink-0 rounded-2xl border border-cyan-500/30 bg-slate-950 object-cover"/>
+            <img src="/brands/syncworks-icon-192.png" alt="SyncWorks" className="h-12 w-12 shrink-0 rounded-2xl border border-cyan-500/30 bg-slate-950 object-contain object-center p-1.5"/>
             <div className="min-w-0 flex-1 truncate text-sm font-black uppercase tracking-[.19em] text-white sm:text-lg">SYNCWORKS</div>
             <div className="flex shrink-0 items-center gap-2">
               <NotificationsBell inline />
@@ -1920,7 +1920,7 @@ export default function ModeBar({
               <img
                 src="/brands/syncworks-icon-192.png"
                 alt="SyncWorks"
-                className="h-12 w-12 shrink-0 rounded-2xl border border-cyan-500/20 bg-slate-950/70 object-cover shadow-[0_0_40px_rgba(99,102,241,0.18)] md:h-16 md:w-16"
+                className="h-12 w-12 shrink-0 rounded-2xl border border-cyan-500/20 bg-slate-950/70 object-contain object-center p-1.5 shadow-[0_0_40px_rgba(99,102,241,0.18)] md:h-16 md:w-16 md:p-2"
               />
 
               <div className="min-w-0">
