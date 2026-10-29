@@ -16,7 +16,7 @@ test("public signup chooser links all four roles and keeps secure invite-only cl
   assert.match(page,/Property Owner \/ Partner/);
   assert.match(page,/\/onboarding\/property-management/);
   assert.match(page,/\/onboarding\/business/);
-  assert.match(page,/secure invitation/i);
+  assert.match(page,/invitation code/i);
   assert.match(app,/path="\/get-started" element=\{<GetStarted/);
   assert.match(app,/path="\/onboarding\/business" element=\{<ProtectedRoute><AddBusiness/);
   assert.match(app,/path="\/onboarding\/property-management"/);
@@ -72,7 +72,7 @@ test("registration opens over the SyncWorks landing page and keeps Personal-firs
   assert.match(signup,/Tenant invitation code/);
   assert.match(signup,/Property Owner \/ Partner invitation code/);
   assert.match(signup,/claimPath\(inviteCode\)/);
-  assert.match(signup,/role === "pm" \? isPM/);
+  assert.match(signup,/role==="pm" \? isPM/);
   const pm = read("src/pages/PMCompanySetup.jsx");
   assert.match(pm,/\/pm-hub\/workspaces\/current\//);
   const owner = read("src/pages/InvestorAcceptInvite.jsx");
