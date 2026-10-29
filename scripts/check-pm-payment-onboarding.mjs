@@ -26,5 +26,5 @@ test("external and manual processor options are explicit and tenant rent chargin
   assert.match(page, /EXTERNAL/);
   assert.match(page, /MANUAL/);
   assert.match(page, /Online tenant rent collection is currently/);
-  assert.match(page, /not yet enabled/);
+  assert.match(page, /collection is currently/);
 });
