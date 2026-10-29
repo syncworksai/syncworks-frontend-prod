@@ -21,6 +21,7 @@ const TABS = [
   { id: "users", label: "Users" },
   { id: "businesses", label: "Businesses" },
   { id: "prospects", label: "Prospects" },
+  { id: "testers", label: "Business Testers" },
   { id: "billing", label: "Billing" },
   { id: "requests", label: "Requests" },
   { id: "ads", label: "Ads Orders" },
@@ -1461,6 +1462,7 @@ export default function PlatformDashboard() {
         {tab === "users" ? <UsersManager /> : null}
         {tab === "businesses" ? <BusinessesManager /> : null}
         {tab === "prospects" ? <GodModeProspects /> : null}
+         {tab === "testers" ? <GodModeProspects pilotOnly /> : null}
         {tab === "billing" ? <BillingManager /> : null}
         {tab === "requests" ? <SupportRequestsManager embedded /> : null}
         {tab === "ads" ? <AdsOrdersManager /> : null}
