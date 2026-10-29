@@ -315,6 +315,10 @@ function BusinessDrawer({
           autoComplete="organization"
         />
 
+        <Field label="Business contact email" value={form.businessEmail}
+          onChange={(value) => update("businessEmail", value)} type="email"
+          placeholder="company@example.com" autoComplete="off" />
+        <p className="-mt-2 text-xs leading-5 text-slate-400">Optional. Leave blank to use your verified Personal email. Your business email is for company contact, not for signing in.</p>
         <Field
           label="Business phone"
           value={form.phone}
@@ -425,6 +429,8 @@ function Welcome({
   onInfo,
   onUpdates,
   businessFirst = false,
+  chosenRole = "personal",
+  onRoleContinue,
 }) {
   return (
     <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-5 shadow-2xl">
@@ -440,11 +446,19 @@ function Welcome({
         <p className="mt-2 text-sm leading-6 text-slate-400">
           {businessFirst
             ? "Your account is ready. Add your business next, then follow the guided setup to start receiving requests."
-            : "Your free Personal account is ready. You can explore SyncWorks or add more tools whenever you need them."}
+            : (chosenRole === "tenant" || chosenRole === "investor")
+              ? "Your Personal account is ready. Next, connect your invitation to access your secure portal."
+              : "Your free Personal account is ready. You can explore SyncWorks or add more tools whenever you need them."}
         </p>
       </div>
 
       <div className="mt-6 space-y-3">
+        {(chosenRole === "tenant" || chosenRole === "investor") ? (
+          <button type="button" onClick={onRoleContinue} className="w-full rounded-2xl bg-cyan-400 px-4 py-3 font-black text-black">
+            {chosenRole === "tenant" ? "Continue Tenant Setup" : "Continue Investor Setup"}
+            <span className="mt-1 block text-xs font-medium">Secure invitation required</span>
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={onBusiness}
@@ -465,6 +479,7 @@ function Welcome({
           {businessFirst ? "Go to Personal Instead" : "Enter SyncWorks"}
         </button>
 
+        <Link to="/get-started" className="block text-center text-xs font-bold text-cyan-300 hover:text-cyan-200">See all onboarding options</Link>
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
@@ -502,7 +517,10 @@ export default function Register() {
   const queryParams = new URLSearchParams(location.search);
   const returnTo = safeReturnPath(queryParams.get("next"));
   const invitedEmail = normalizeEmail(queryParams.get("email"));
-  const onboardingIntent = queryParams.get("business") === "1";
+  const requestedRole = String(queryParams.get("role") || "").trim().toLowerCase();
+  const chosenRole = ["personal", "business", "tenant", "investor"].includes(requestedRole)
+    ? requestedRole : queryParams.get("business") === "1" ? "business" : "personal";
+  const onboardingIntent = chosenRole === "business";
 
   const [stage, setStage] = useState("EMAIL");
   const [loading, setLoading] = useState(false);
@@ -533,6 +551,7 @@ export default function Register() {
 
   const [business, setBusiness] = useState({
     name: "",
+    businessEmail: "",
     phone: "",
     city: "",
     state: "",
@@ -818,7 +837,7 @@ export default function Register() {
 
       const response = await api.post("/businesses/", {
         name: business.name.trim(),
-        business_email: email,
+        business_email: normalizeEmail(business.businessEmail) || normalizeEmail(email),
         owner_name: `${account.firstName} ${account.lastName}`.trim(),
         phone: business.phone.trim(),
         city: business.city.trim(),
@@ -871,6 +890,8 @@ export default function Register() {
             firstName={account.firstName}
             onContinue={() => navigate(returnTo, { replace: true })}
             onBusiness={() => setBusinessOpen(true)}
+            chosenRole={chosenRole}
+            onRoleContinue={() => navigate(chosenRole === "tenant" ? "/tenant/accept" : "/investor/accept", { replace: true })}
             businessFirst={onboardingIntent}
             onInfo={() => setInfoOpen(true)}
             onUpdates={() => setUpdatesOpen(true)}
@@ -910,7 +931,7 @@ export default function Register() {
               </div>
 
               <h1 className="mt-1 text-2xl font-black">
-                {onboardingIntent ? "Set up your business" : "Create your account"}
+                {onboardingIntent ? "Set up your business" : "Create your Personal account"}
               </h1>
             </div>
 
@@ -926,8 +947,10 @@ export default function Register() {
 
           <p className="mt-2 text-sm leading-6 text-slate-400">
             {onboardingIntent
-              ? "First, verify your email and create one secure login. Next, add your business and choose the services you offer."
-              : "Start free with Personal. Add a business or other modules later."}
+              ? "First, verify your Personal email and create one secure login. Then add your business, with a separate business email if you prefer."
+              : (chosenRole === "tenant" || chosenRole === "investor")
+                ? "Every SyncWorks account starts with a free Personal profile. Verify your email, then use your secure invitation to connect your portal."
+                : "Start with a free Personal profile. Add Business, Tenant, or Investor access from the same login when needed."}
           </p>
         </header>
 
