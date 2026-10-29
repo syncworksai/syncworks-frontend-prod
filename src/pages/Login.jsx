@@ -49,6 +49,13 @@ const ROLE_OPTIONS = [
   },
 ];
 
+const ONBOARDING_LINKS = [
+  ["Personal", "personal", "Free profile and service requests"],
+  ["Business", "business", "Customers, jobs and employees"],
+  ["Tenant", "tenant", "Join your property by invitation"],
+  ["Investor", "investor", "Claim property access by invitation"],
+];
+
 const PLATFORM_GROUPS = [
   ["Find and request work", "Marketplace requests, service matching, ZIP-based routing, direct business requests, intake details, and agreements."],
   ["Operate the work", "Tickets, leads, quotes, jobs, scheduling, dispatch, team assignments, messaging, files, updates, and customer history."],
@@ -116,7 +123,7 @@ function LoginPanel({ emailOrUser, setEmailOrUser, password, setPassword, err, l
       </form>
 
       <div className="mt-5 flex flex-col gap-2 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
-        <span>New to SyncWorks? <Link className="font-semibold text-cyan-300" to="/register">Create an account</Link></span>
+        <span>New to SyncWorks? <Link className="font-semibold text-cyan-300" to="/get-started">Choose an account</Link></span>
         <Link className="font-semibold text-cyan-300" to="/forgot-password">Forgot password?</Link>
         <span className="text-xs sm:hidden">Invited users can sign in with the email used for their invitation.</span>
       </div>
@@ -184,7 +191,7 @@ export default function Login() {
             <a href="#story" className="hover:text-white">Why it exists</a>
           </nav>
           <div className="flex items-center gap-2">
-            <Link to="/register" className="hidden rounded-xl border border-slate-600/60 bg-[#111827] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-sky-400/50 hover:bg-[#192638] sm:inline-flex">Create account</Link>
+            <Link to="/get-started" className="hidden rounded-xl border border-slate-600/60 bg-[#111827] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-sky-400/50 hover:bg-[#192638] sm:inline-flex">Create account</Link>
             <button onClick={() => setSignInOpen(true)} type="button" className="rounded-xl border border-cyan-300/40 bg-cyan-400/10 px-4 py-2 text-sm font-bold text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-400/20">Sign in</button>
           </div>
         </div>
@@ -208,11 +215,19 @@ export default function Login() {
                 Bring your personal life, service business, properties, and teams into one connected workspace. Manage what matters, move between roles, and keep the next step in view.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link to="/register" className="rounded-2xl bg-gradient-to-r from-[#00C9F2] via-[#168BFF] to-[#8756EA] px-6 py-3 text-center font-bold text-slate-950 hover:brightness-110">Create your account</Link>
+                <Link to="/get-started" className="rounded-2xl bg-gradient-to-r from-[#00C9F2] via-[#168BFF] to-[#8756EA] px-6 py-3 text-center font-bold text-slate-950 hover:brightness-110">Create your account</Link>
                 <button type="button" onClick={() => setSignInOpen(true)} className="rounded-2xl border border-cyan-400/35 bg-[#112033] px-6 py-3 text-center font-semibold text-cyan-100 transition hover:border-cyan-300/70 hover:bg-[#182b43]">Log in</button>
               </div>
-              <div className="mt-4 rounded-xl border border-slate-600/20 bg-[#08121f]/65 px-4 py-3 text-sm text-slate-300"><span className="font-bold text-cyan-200">New here?</span> Create one secure login, choose Personal or Business, and follow the guided setup. You can connect other services after your account is ready.</div>
-              <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-400">
+              <div className="mt-4 rounded-xl border border-slate-600/20 bg-[#08121f]/65 px-4 py-3 text-sm text-slate-300"><span className="font-bold text-cyan-200">New here?</span> Every account starts with a Personal profile. Then add Business, Tenant or Investor access using the same login. Your business email can be different.</div>
+              <div className="mt-5 grid grid-cols-2 gap-2" aria-label="Choose how to join SyncWorks">
+                 {ONBOARDING_LINKS.map(([name,role,detail]) => (
+                   <Link key={role} to={`/register?role=${role}`} className="group rounded-xl border border-cyan-400/20 bg-[#0a1a2e]/85 px-3 py-3 transition hover:border-cyan-300/60 hover:bg-[#132740]">
+                     <span className="block text-sm font-bold text-white">{name} <span className="text-cyan-300">→</span></span>
+                     <span className="mt-1 block text-[11px] leading-4 text-slate-400">{detail}</span>
+                   </Link>
+                 ))}
+               </div>
+               <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-400">
                 <Link className="hover:text-cyan-300" to="/tenant/accept">Accept tenant invitation</Link>
                 <Link className="hover:text-cyan-300" to="/investor/accept">Claim investor access</Link>
               </div>
@@ -246,7 +261,8 @@ export default function Login() {
               <p className="text-sm font-semibold text-cyan-300">{selectedRole.eyebrow}</p>
               <h3 className="mt-2 text-2xl font-black text-white sm:text-3xl">{selectedRole.label}</h3>
               <div className="mt-6 grid gap-3">
-                {selectedRole.items.map((item) => <div key={item} className="flex gap-3 rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm leading-6 text-slate-300"><span className="mt-1 text-cyan-300">◆</span><span>{item}</span></div>)}
+                <Link to="/get-started" className="inline-flex min-h-11 items-center rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 text-sm font-bold text-cyan-200">Start onboarding →</Link>
+                 {selectedRole.items.map((item) => <div key={item} className="flex gap-3 rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm leading-6 text-slate-300"><span className="mt-1 text-cyan-300">◆</span><span>{item}</span></div>)}
               </div>
             </div>
           </div>
