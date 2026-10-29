@@ -459,7 +459,7 @@ function Welcome({
             <span className="mt-1 block text-xs font-medium">Secure invitation required</span>
           </button>
         ) : null}
-        <button
+        {chosenRole !== "tenant" && chosenRole !== "investor" ? <button
           type="button"
           onClick={onBusiness}
           className={businessFirst
@@ -467,7 +467,7 @@ function Welcome({
             : "w-full rounded-2xl border border-cyan-400/40 bg-cyan-500/10 px-4 py-3 font-bold text-cyan-100"}
         >
           {businessFirst ? "Continue Business Setup" : "Add My Business"}
-        </button>
+        </button> : null}
 
         <button
           type="button"
@@ -476,7 +476,7 @@ function Welcome({
             ? "w-full rounded-2xl border border-slate-700 px-4 py-3 font-semibold text-slate-200"
             : "w-full rounded-2xl bg-cyan-400 px-4 py-3 font-black text-black"}
         >
-          {businessFirst ? "Go to Personal Instead" : "Enter SyncWorks"}
+          {businessFirst || chosenRole === "tenant" || chosenRole === "investor" ? "Go to Personal Instead" : "Enter SyncWorks"}
         </button>
 
         <Link to="/get-started" className="block text-center text-xs font-bold text-cyan-300 hover:text-cyan-200">See all onboarding options</Link>
