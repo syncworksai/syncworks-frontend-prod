@@ -12,6 +12,8 @@ import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Register from "./pages/Register";
+import GetStarted from "./pages/GetStarted";
+import AddBusiness from "./pages/AddBusiness";
 import CustomerDashboard from "./pages/CustomerDashboardResponsive";
 import CustomerNewRequest from "./pages/CustomerNewRequest";
 import CustomerMarketplaceAvailability from "./pages/CustomerMarketplaceAvailability";
@@ -147,6 +149,8 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/get-started" element={<GetStarted />} />
+        <Route path="/onboarding/business" element={<ProtectedRoute><AddBusiness /></ProtectedRoute>} />
         <Route path="/gamecast/:token" element={<PublicGameCast />} />
         <Route path="/sports/invite/:token" element={<SportsInviteLanding />} />
         <Route path="/sports/team-invite/:token" element={<SportsTeamInviteLanding />} />
