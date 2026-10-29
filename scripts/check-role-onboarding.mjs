@@ -79,3 +79,14 @@ test("registration opens over the SyncWorks landing page and keeps Personal-firs
   assert.match(owner,/\/pm-hub\/access\/investors\/accept\//);
   assert.match(owner,/URLSearchParams\(search\)/);
 });
+
+test("invitation links survive authentication redirects and preserve signup code",()=>{
+  const login=read("src/pages/Login.jsx");
+  const protectedRoute=read("src/components/ProtectedRoute.jsx");
+  assert.match(protectedRoute,/location\.pathname \+ location\.search/);
+  assert.match(login,/location\.state\?\.from/);
+  assert.match(login,/inviteRole/);
+  assert.match(login,/signupParams\.set\("code", invitedCode\)/);
+  assert.match(login,/signupPath=\{signupPath\}/);
+  assert.match(login,/nav\(returnTo, \{ replace: true \}\)/);
+});
