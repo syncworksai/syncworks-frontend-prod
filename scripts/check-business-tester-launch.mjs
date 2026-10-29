@@ -37,3 +37,15 @@ test("founder God Mode has a separate tester queue and manual checkpoints", () =
   assert.match(prospects, /password_reset/);
   assert.match(prospects, /tester stage/i);
 });
+
+test("root onboarding tracks customer migration, billing review and opt-in completion notice", () => {
+  const app = read("src/pages/platform/GodModeProspects.jsx");
+  for (const key of ["customer_import", "customer_dedup", "customer_search", "billing_review", "payout_review", "mobile"]) {
+    assert.match(app, new RegExp(key));
+  }
+  assert.match(app, /send-completion\//);
+  assert.match(app, /completion_notified/);
+  assert.match(app, /Copy paid-feature offer draft \(no send\)/);
+  assert.match(app, /Confirm prices, consent\/suppression and CAN-SPAM/);
+  assert.match(app, /Pilot groups|PILOT_GROUPS/);
+});
