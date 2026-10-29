@@ -1,0 +1,20 @@
+/* Personal-dashboard design pilot. Intentionally scoped: no CRM or other role changes. */
+[data-sw-visual="midnight"] {
+  --sw-bg:#05080f;--sw-panel:#0c1421;--sw-panel-raised:#131f2d;--sw-blue:#168bff;--sw-teal:#00d5c2;--sw-violet:#864cff;
+  background:#05080f!important;color:#edf4ff;
+  min-height:100dvh;
+}
+[data-sw-visual="midnight"] [data-sw-shell="dashboard"]{background:#05080f!important}
+[data-sw-visual="midnight"] [data-sw-shell="dashboard"]>.pointer-events-none>.absolute:first-child{background:#05080f!important}
+[data-sw-visual="midnight"] [data-sw-shell="dashboard"]>.pointer-events-none>.absolute:nth-child(2){
+  background:radial-gradient(ellipse 70% 34% at 50% -6%,rgba(22,139,255,.115),transparent 78%),radial-gradient(ellipse 40% 42% at 100% 15%,rgba(134,76,255,.065),transparent 78%)!important
+}
+[data-sw-visual="midnight"] .sw-modebar{background:rgba(5,8,15,.95)!important;border-bottom-color:rgba(74,108,154,.3)!important}
+[data-sw-visual="midnight"] .sw-modebar .absolute.inset-0.bg-slate-950\/72{background:rgba(5,8,15,.89)!important}
+[data-sw-visual="midnight"] [class*="bg-[#020617]"]{background-color:#05080f!important}
+[data-sw-visual="midnight"] [class*="bg-[#030817]"]{background-color:rgba(10,18,30,.96)!important}
+[data-sw-visual="midnight"] [class*="bg-slate-900"],[data-sw-visual="midnight"] [class*="bg-slate-950"]{border-color:rgba(79,114,158,.21)}
+[data-sw-visual="midnight"] button:focus-visible{outline:2px solid #168bff;outline-offset:3px}
+[data-sw-visual="midnight"] .sw-personal-dock{border-color:rgba(47,115,181,.37)!important;background:rgba(8,16,28,.97)!important;box-shadow:0 -12px 42px rgba(0,0,0,.55),0 0 20px rgba(22,139,255,.06)!important}
+[data-sw-visual="midnight"] .sw-cube-launcher{background:#05080f;border:1px solid rgba(0,213,194,.45);box-shadow:0 0 20px rgba(22,139,255,.18)}
+@media (prefers-reduced-motion:reduce){[data-sw-visual="midnight"] *{scroll-behavior:auto!important}}
