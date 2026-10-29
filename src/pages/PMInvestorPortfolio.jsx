@@ -14,7 +14,7 @@ export default function PMInvestorPortfolio(){
   try{
    const [p,m]=await Promise.all([api.get("/pm-hub/access/investors/portfolio/"),api.get("/pm-hub/access/investors/messages/")]);
    setPortfolios(p.data.portfolios||[]);setMessages(m.data.messages||[]);
-  }catch(e){setErr(e?.response?.data?.detail||"Unable to load investor portfolio.");}
+  }catch(e){setErr(e?.response?.data?.detail||"Unable to load your property-owner portal.");}
   finally{setLoading(false);}
  }
  useEffect(()=>{load();},[]);
@@ -33,7 +33,7 @@ export default function PMInvestorPortfolio(){
  }catch(e){setErr(e?.response?.data?.detail||"Unable to upload document.");}finally{setBusy(false);}}
  const all=portfolios.flatMap(p=>p.properties.map(property=>({...property,grant_id:p.grant_id,company:p.company})));
  return <div className="min-h-screen bg-[#040914] text-slate-100"><ModeBar/><main className="mx-auto max-w-6xl space-y-3 px-3 py-3 pb-28 sm:px-5">
-  <div className="flex items-start justify-between gap-2"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-fuchsia-300">My ownership</div><h1 className="text-xl font-black">Investor Portfolio</h1><p className="mt-1 text-xs text-slate-400">Property health, manager updates, shared documents, and owner payouts.</p></div><button type="button" onClick={()=>nav("/investor")} className="rounded-lg border border-slate-700 px-3 py-2 text-xs">Investor home</button></div>
+  <div className="flex items-start justify-between gap-2"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-fuchsia-300">My ownership</div><h1 className="text-xl font-black">Property Owner / Partner Portal</h1><p className="mt-1 text-xs text-slate-400">Property health, manager updates, shared documents, and owner payouts.</p></div><button type="button" onClick={()=>nav("/investor")} className="rounded-lg border border-slate-700 px-3 py-2 text-xs">Investor home</button></div>
   {err?<p role="alert" className="rounded-lg border border-rose-400/25 bg-rose-500/10 p-3 text-xs">{err}</p>:null}{notice?<p role="status" className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 p-3 text-xs">{notice}</p>:null}
   {loading?<p className="text-xs text-slate-400">Loading your portfolios…</p>:null}
   <Panel title="Connect to a management company" sub="Enter the one-time code sent privately by your property management company. The signed-in email must match the invitation."><form onSubmit={accept} className="flex gap-2"><input required className={input+" min-w-0 flex-1"} placeholder="Investor invitation code" value={code} onChange={e=>setCode(e.target.value)}/><button disabled={busy} className="rounded-lg bg-fuchsia-400 px-3 text-xs font-black text-slate-950 disabled:opacity-40">Connect</button></form></Panel>
@@ -61,7 +61,7 @@ export default function PMInvestorPortfolio(){
   </Panel>:null}
   {portfolios.length?<Panel title="Message property management" sub="Contact the management team without leaving your portfolio.">
    <form onSubmit={message} className="space-y-2"><label className="block text-xs">Property<select className={input+" mt-1"} required value={form.grant_id&&form.property_id?`${form.grant_id}:${form.property_id}`:""} onChange={e=>{const [grant,property]=e.target.value.split(":");setForm({...form,property_id:property||"",grant_id:grant||""});}}><option value="">Select your property</option>{all.map(p=><option key={p.company+"-"+p.id} value={`${p.grant_id}:${p.id}`}>{p.name} · {p.company}</option>)}</select></label><input required className={input} value={form.subject} onChange={e=>setForm({...form,subject:e.target.value})} placeholder="Subject"/><textarea className={input} rows={3} required value={form.body} onChange={e=>setForm({...form,body:e.target.value})} placeholder="Your message to the PM company"/><button disabled={busy} className="min-h-10 w-full rounded-lg bg-cyan-400 text-xs font-black text-slate-950 disabled:opacity-40">Send message</button></form>
-   {messages.length?<p className="mt-2 text-[11px] text-slate-400">{messages.length} existing investor conversation(s)</p>:null}
+   {messages.length?<p className="mt-2 text-[11px] text-slate-400">{messages.length} existing owner conversation(s)</p>:null}
   </Panel>:null}
  </main></div>;
 }
