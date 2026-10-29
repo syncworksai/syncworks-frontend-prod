@@ -530,6 +530,7 @@ export default function Register() {
   const [infoOpen, setInfoOpen] = useState(false);
   const [updatesOpen, setUpdatesOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
+  const [createdBusinessId, setCreatedBusinessId] = useState(null);
 
   const [email, setEmail] = useState("");
   const [challengeId, setChallengeId] = useState("");
@@ -797,22 +798,16 @@ export default function Register() {
 
     if (!businessId || !cleanCode) return;
 
-    try {
-      await api.post("/business-access-codes/redeem/", {
-        business_id: businessId,
-        code: cleanCode,
-      });
-    } catch (err) {
-      if ([404, 405].includes(err?.response?.status)) {
-        localStorage.setItem(
-          `sw_pending_business_access_code_${businessId}`,
-          cleanCode
-        );
-        return;
-      }
-
-      throw err;
+    // The authenticated, business-specific promo endpoint confirms the waiver
+    // (including SWFF26) instead of treating an unverified local code as applied.
+    const response = await api.post("/auth/upgrade-to-sbo-promo/", {
+      business_id: businessId,
+      code: cleanCode,
+    });
+    if (!response?.data?.subscriptions_exempt && cleanCode === "SWFF26") {
+      throw new Error("Business created but the SWFF26 subscription waiver was not confirmed.");
     }
+    return response?.data;
   }
 
   async function handleCreateBusiness(event) {
@@ -854,11 +849,17 @@ export default function Register() {
       });
 
       const businessId = response?.data?.id || response?.data?.pk;
-
-      await redeemBusinessCode(
-        businessId,
-        business.accessCode || account.promoCode
-      );
+      if (!businessId) throw new Error("Business creation could not be confirmed. Review your Business list before retrying.");
+      setCreatedBusinessId(businessId);
+      try {
+        await redeemBusinessCode(businessId, business.accessCode || account.promoCode);
+      } catch (promoError) {
+        // Creation succeeded. Do not let a second submit create a duplicate company.
+        setBusinessOpen(false);
+        setError("Business created, but the promotional code was not confirmed. Check it with SyncWorks support before relying on a lifetime waiver. " +
+          getErrorMessage(promoError, "Promotion could not be applied."));
+        return;
+      }
 
       if (businessId) {
         localStorage.setItem("sw_active_business_id", String(businessId));
@@ -886,10 +887,11 @@ export default function Register() {
     return (
       <div className="min-h-screen bg-[#020617] px-4 py-8 text-slate-100">
         <div className="mx-auto max-w-md">
+          {error ? <p role="alert" className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">{error}</p> : null}
           <Welcome
             firstName={account.firstName}
             onContinue={() => navigate(returnTo, { replace: true })}
-            onBusiness={() => setBusinessOpen(true)}
+            onBusiness={() => createdBusinessId ? navigate("/sbo/settings/general?setup=1&return=%2Fsbo", { replace:true }) : setBusinessOpen(true)}
             chosenRole={chosenRole}
             onRoleContinue={() => navigate(chosenRole === "tenant" ? "/tenant/accept" : "/investor/accept", { replace: true })}
             businessFirst={onboardingIntent}
