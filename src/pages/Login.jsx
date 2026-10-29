@@ -192,9 +192,10 @@ export default function Login() {
 
       <main id="top">
         <section className="relative overflow-hidden border-b border-white/10">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_13%_25%,rgba(22,139,255,0.13),transparent_36%),radial-gradient(circle_at_86%_18%,rgba(134,76,255,0.10),transparent_36%),radial-gradient(circle_at_70%_90%,rgba(0,213,194,0.06),transparent_48%),linear-gradient(to_bottom,#05080f,#080f1b)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_55%_98%,rgba(22,139,255,0.15),transparent_42%),radial-gradient(ellipse_at_15%_80%,rgba(0,213,194,0.11),transparent_45%),radial-gradient(ellipse_at_86%_82%,rgba(134,76,255,0.16),transparent_44%),linear-gradient(to_bottom,#05080f,#070c15)]" />
           <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.2fr_.8fr] lg:px-8 lg:py-24">
             <div>
+              <div className="mb-6 inline-flex items-center gap-3 rounded-2xl border border-sky-400/20 bg-[#0b1728]/80 px-4 py-3 shadow-[0_12px_44px_rgba(0,0,0,.3)]"><img src="/brands/syncworks-cube-s.svg" alt="" className="h-12 w-12 rounded-xl" /><div><span className="block text-base font-bold tracking-wide text-white">SyncWorks</span><span className="block text-xs tracking-[.12em] text-cyan-200">CONNECT · MANAGE · GROW</span></div></div>
               <div className="flex flex-wrap gap-2 text-xs font-semibold">
                 <span className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1.5 text-cyan-200">One system</span>
                 <span className="rounded-full border border-blue-400/30 bg-blue-400/10 px-3 py-1.5 text-blue-200">One login</span>
@@ -208,8 +209,9 @@ export default function Login() {
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link to="/register" className="rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500 px-6 py-3 text-center font-bold text-slate-950 hover:brightness-110">Create your account</Link>
-                <a href="#roles" className="rounded-2xl border border-slate-700 bg-slate-900/60 px-6 py-3 text-center font-semibold text-slate-200 hover:bg-slate-800">Explore the platform</a>
+                <button type="button" onClick={() => setSignInOpen(true)} className="rounded-2xl border border-cyan-400/35 bg-[#112033] px-6 py-3 text-center font-semibold text-cyan-100 transition hover:border-cyan-300/70 hover:bg-[#182b43]">Log in</button>
               </div>
+              <div className="mt-4 rounded-xl border border-slate-600/20 bg-[#08121f]/65 px-4 py-3 text-sm text-slate-300"><span className="font-bold text-cyan-200">New here?</span> Create one secure login, choose Personal or Business, and follow the guided setup. You can connect other services after your account is ready.</div>
               <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-400">
                 <Link className="hover:text-cyan-300" to="/tenant/accept">Accept tenant invitation</Link>
                 <Link className="hover:text-cyan-300" to="/investor/accept">Claim investor access</Link>
