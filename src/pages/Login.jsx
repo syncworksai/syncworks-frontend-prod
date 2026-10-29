@@ -11,7 +11,7 @@ const ROLE_OPTIONS = [
       "Organize portfolios, properties, units, tenants, prospects, leases, and document packets.",
       "Receive maintenance requests, create work orders, dispatch internal teams or vendors, and publish jobs to the marketplace.",
       "Track rent charges, payments, balances, Section 8 details, projects, deadlines, budgets, and status updates.",
-      "Invite tenants and investors into secure role-based portals without sharing logins.",
+      "Invite tenants and property owners/partners into secure role-based portals without sharing logins.",
     ],
   },
   {
@@ -41,7 +41,7 @@ const ROLE_OPTIONS = [
     label: "Teams & operators",
     eyebrow: "Give each person the right view and the right work",
     items: [
-      "Create owner, manager, dispatch, technician, accounting, tenant, and investor access without exposing unrelated data.",
+      "Create owner, manager, dispatch, technician, accounting and tenant access without exposing unrelated data.",
       "Keep assignments, messages, files, schedules, approvals, and payment status attached to the same workflow.",
       "Use notifications and automation to reduce missed follow-ups and keep work moving when the owner is unavailable.",
       "Let leadership see the full operation while every team member gets a focused mobile workspace.",
@@ -50,10 +50,11 @@ const ROLE_OPTIONS = [
 ];
 
 const ONBOARDING_LINKS = [
-  ["Personal", "personal", "Free profile and service requests"],
-  ["Business", "business", "Customers, jobs and employees"],
-  ["Tenant", "tenant", "Join your property by invitation"],
-  ["Investor", "investor", "Claim property access by invitation"],
+  ["Personal", "personal", "Free personal profile"],
+  ["Service Business", "business", "Jobs, customers and employees"],
+  ["Property Management", "pm", "PM company, Tenant and Owner / Partner"],
+  ["Retail & Shops", "retail", "Business profile; retail tools to follow"],
+  ["Restaurants & Food", "food", "Business profile; food tools to follow"],
 ];
 
 const PLATFORM_GROUPS = [
@@ -191,7 +192,7 @@ export default function Login({ backgroundOnly = false }) {
             <a href="#story" className="hover:text-white">Why it exists</a>
           </nav>
           <div className="flex items-center gap-2">
-            <Link to="/register?role=business" className="hidden rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-400/50 lg:inline-flex">Business onboarding</Link>
+            <Link to="/register?role=business" className="hidden rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-400/50 lg:inline-flex">Service business onboarding</Link>
             <Link to="/register?role=personal" className="hidden rounded-xl border border-slate-600/60 bg-[#111827] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-sky-400/50 hover:bg-[#192638] sm:inline-flex">Get started</Link>
             <button onClick={() => setSignInOpen(true)} type="button" className="rounded-xl border border-cyan-300/40 bg-cyan-400/10 px-4 py-2 text-sm font-bold text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-400/20">Sign in</button>
           </div>
@@ -220,7 +221,7 @@ export default function Login({ backgroundOnly = false }) {
                 <Link to="/register?role=business" className="rounded-xl border border-cyan-400/40 bg-[#112033] px-5 py-3 text-center text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/70 hover:bg-[#182b43]">Onboard a business</Link>
                 <button type="button" onClick={() => setSignInOpen(true)} className="rounded-2xl border border-cyan-400/35 bg-[#112033] px-6 py-3 text-center font-semibold text-cyan-100 transition hover:border-cyan-300/70 hover:bg-[#182b43]">Log in</button>
               </div>
-              <div className="mt-4 rounded-xl border border-slate-600/20 bg-[#08121f]/65 px-4 py-3 text-sm text-slate-300"><span className="font-bold text-cyan-200">New here?</span> Every account starts with a Personal profile. Then add Business, Tenant or Investor access using the same login. Your business email can be different.</div>
+              <div className="mt-4 rounded-xl border border-slate-600/20 bg-[#08121f]/65 px-4 py-3 text-sm text-slate-300"><span className="font-bold text-cyan-200">New here?</span> Every account starts with a Personal profile. Add Service Business, Property Management, Retail or Food workspaces under one login. Property invitations require a code.</div>
               <p className="mt-6 text-xs font-bold uppercase tracking-[0.16em] text-cyan-300">Choose how to join</p>
               <div className="mt-2 grid grid-cols-2 gap-2" aria-label="Choose how to join SyncWorks">
                  {ONBOARDING_LINKS.map(([name,role,detail]) => (
@@ -232,7 +233,7 @@ export default function Login({ backgroundOnly = false }) {
                </div>
                <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-400">
                 <Link className="hover:text-cyan-300" to="/tenant/accept">Accept tenant invitation</Link>
-                <Link className="hover:text-cyan-300" to="/investor/accept">Claim investor access</Link>
+                <Link className="hover:text-cyan-300" to="/investor/accept">Claim owner / partner access</Link>
               </div>
             </div>
 
