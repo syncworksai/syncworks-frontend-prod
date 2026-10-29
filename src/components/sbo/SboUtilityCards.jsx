@@ -110,12 +110,12 @@ export default function SboUtilityCards({
       </UtilityCard>
 
       <UtilityCard
-        title="Import Data"
-        subtitle="Bring in old tickets, customers, invoices, or exported records from prior tools. This routes to the safe setup/data workspace instead of a dead page."
+        title="Customer Records"
+        subtitle="Add or manage customers in Customer 360. Bulk CSV import has not been verified for the pilot."
       >
         <div className="flex gap-2 flex-wrap">
           <Button tone="cyan" onClick={onOpenImport}>
-            Import Workspace
+            Open Customer 360
           </Button>
           <Button tone="slate" onClick={onOpenEmployeeInvite}>
             Invite Employee
@@ -124,12 +124,12 @@ export default function SboUtilityCards({
       </UtilityCard>
 
       <UtilityCard
-        title="Export Data"
-        subtitle="Back up your business data and open the export-ready data workspace without breaking navigation."
+        title="Customer CSV Export"
+        subtitle="Open Customer 360 and export its visible records to CSV. This is not a complete business backup."
       >
         <div className="flex gap-2 flex-wrap">
           <Button tone="indigo" onClick={onOpenExport}>
-            Export Workspace
+            Open Customer Export
           </Button>
         </div>
       </UtilityCard>
