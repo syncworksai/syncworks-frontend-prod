@@ -40,6 +40,10 @@ const PILOT_GROUPS = [
   ]},
 ];
 const PILOT_CHECKS = PILOT_GROUPS.flatMap(group => group.items);
+const OPTIONAL_MARKETPLACE_CHECKS = [
+  ["direct_provider", "Customer selected a specific provider and provider accepted the request"],
+  ["marketplace_zip", "ZIP/category discovery only presented eligible providers"],
+];
 const PAID_OFFERS = [
   { id:"sales", label:"Sales OS", route:"/sbo/sales", description:"Track leads and sales pipeline" },
   { id:"growth", label:"Growth OS", route:"/sbo/growth", description:"Social media and marketing automation" },
@@ -317,6 +321,20 @@ export default function GodModeProspects({ pilotOnly = false }) {
                       </div>
                     </div>
                   ))}
+                </div>
+                <div className="mt-3 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3">
+                  <h5 className="text-xs font-black text-amber-200">Optional marketplace route tests</h5>
+                  <p className="mt-1 text-[11px] leading-4 text-slate-400">Record both customer experiences separately. These do not imply calendar availability or confirmed booking until the provider accepts.</p>
+                  <div className="mt-2 space-y-2">
+                    {OPTIONAL_MARKETPLACE_CHECKS.map(([key,label])=>(
+                      <label key={key} className="flex min-h-10 items-center gap-2 rounded-lg bg-slate-900/70 px-2 py-1.5 text-xs text-slate-200">
+                        <input type="checkbox" disabled={!!busy} checked={selected.pilot_checks?.[key]===true}
+                          onChange={e=>patchProspect({pilot_checks:{...selected.pilot_checks,[key]:e.target.checked}})}
+                          className="h-4 w-4 shrink-0 accent-cyan-400"/>
+                        {label}
+                      </label>
+                    ))}
+                  </div>
                 </div>
                 {selected.linked_business && PILOT_CHECKS.some(([key])=>selected.pilot_checks?.[key]!==true) ? <div className="mt-2 rounded-xl bg-amber-500/10 p-3 text-xs text-amber-200">
                   Next verification: {PILOT_CHECKS.find(([key])=>selected.pilot_checks?.[key]!==true)?.[1]}. Check it only after actually testing.
