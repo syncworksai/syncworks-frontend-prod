@@ -108,7 +108,7 @@ function LoginPanel({ emailOrUser, setEmailOrUser, password, setPassword, err, l
 
         <button
           disabled={loading}
-          className="w-full rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500 px-4 py-3 font-bold text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-2xl bg-gradient-to-r from-[#00C9F2] via-[#168BFF] to-[#8756EA] px-4 py-3 font-bold text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           type="submit"
         >
           {loading ? "Signing in…" : "Sign in to SyncWorks"}
@@ -202,13 +202,13 @@ export default function Login() {
                 <span className="rounded-full border border-fuchsia-400/30 bg-fuchsia-400/10 px-3 py-1.5 text-fuchsia-200">Every role connected</span>
               </div>
               <h1 className="mt-6 max-w-4xl text-4xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-[4.25rem]">
-                Everything connected.<br /> <span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-300 bg-clip-text text-transparent">One SyncWorks.</span>
+                Everything connected.<br /> <span className="bg-gradient-to-r from-[#55D8FF] via-[#168BFF] to-[#A078F5] bg-clip-text text-transparent">One SyncWorks.</span>
               </h1>
               <p className="mt-6 max-w-3xl text-base leading-7 text-slate-300 sm:text-xl sm:leading-8">
                 Bring your personal life, service business, properties, and teams into one connected workspace. Manage what matters, move between roles, and keep the next step in view.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link to="/register" className="rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500 px-6 py-3 text-center font-bold text-slate-950 hover:brightness-110">Create your account</Link>
+                <Link to="/register" className="rounded-2xl bg-gradient-to-r from-[#00C9F2] via-[#168BFF] to-[#8756EA] px-6 py-3 text-center font-bold text-slate-950 hover:brightness-110">Create your account</Link>
                 <button type="button" onClick={() => setSignInOpen(true)} className="rounded-2xl border border-cyan-400/35 bg-[#112033] px-6 py-3 text-center font-semibold text-cyan-100 transition hover:border-cyan-300/70 hover:bg-[#182b43]">Log in</button>
               </div>
               <div className="mt-4 rounded-xl border border-slate-600/20 bg-[#08121f]/65 px-4 py-3 text-sm text-slate-300"><span className="font-bold text-cyan-200">New here?</span> Create one secure login, choose Personal or Business, and follow the guided setup. You can connect other services after your account is ready.</div>
