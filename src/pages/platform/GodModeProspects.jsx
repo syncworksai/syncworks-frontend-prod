@@ -216,6 +216,36 @@ export default function GodModeProspects({ pilotOnly = false }) {
               </div>
               <Field label="Next action"><input key={selected.id+"action"} defaultValue={selected.next_action || ""} placeholder="Call, schedule demo, follow up..." className={inputClass} onBlur={(e) => {if(e.target.value!==selected.next_action)patchProspect({next_action:e.target.value});}}/></Field>
               <Field label="Business needs"><input key={selected.id+"needs"} defaultValue={(selected.interests || []).join(", ")} placeholder="Scheduling, dispatch, route planning..." className={inputClass} onBlur={(e) => {const next=e.target.value.split(",").map((v)=>v.trim()).filter(Boolean);if(JSON.stringify(next)!==JSON.stringify(selected.interests||[]))patchProspect({interests:next});}}/></Field>
+              <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/[.04] p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="text-sm font-black text-white">Tester onboarding & QA</h4>
+                  <span className="text-xs font-black text-cyan-200">{PILOT_CHECKS.filter(([key]) => selected.pilot_checks?.[key] === true).length}/10</span>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-slate-400">Checklist items are manually confirmed. A verified signup alone does not mean a completed test.</p>
+                <Field label="Pilot stage">
+                  <select disabled={!!busy} value={selected.pilot_status || "NOT_STARTED"}
+                    onChange={e=>patchProspect({pilot_status:e.target.value})} className={inputClass}>
+                    {PILOT_STAGES.map(([value,label])=><option key={value} value={value}>{label}</option>)}
+                  </select>
+                </Field>
+                <div className="mt-3 grid gap-2">
+                  {PILOT_CHECKS.map(([key,label])=>(
+                    <label key={key} className="flex min-h-10 items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/70 px-3 text-xs text-slate-200">
+                      <input type="checkbox" disabled={!!busy} checked={selected.pilot_checks?.[key]===true}
+                        onChange={e=>patchProspect({pilot_checks:{...selected.pilot_checks,[key]:e.target.checked}})}
+                        className="h-4 w-4 accent-cyan-400"/>
+                      {label}
+                    </label>
+                  ))}
+                </div>
+                <Field label="Tester feedback, problems, devices">
+                  <textarea key={selected.id+"pilot_feedback"} defaultValue={selected.pilot_feedback||""} rows={3} maxLength={4000}
+                    onBlur={e=>{if(e.target.value!==(selected.pilot_feedback||""))patchProspect({pilot_feedback:e.target.value});}}
+                    placeholder="Observed blockers, screenshots requested, next fix…"
+                    className={inputClass+" mt-1"}/>
+                </Field>
+                <p className="mt-2 text-[11px] text-slate-500">Saved centrally in this founder-only prospect record. Tester-side pilot notes remain on their device until shared.</p>
+              </div>
               <div className="flex flex-wrap gap-2">
                 <button type="button" disabled={!!busy || !selected.email} onClick={sendInvite} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-3 text-sm font-black text-slate-950 disabled:opacity-40"><Send className="h-4 w-4"/> Send invitation</button>
                 <button type="button" onClick={copyLink} disabled={!selected.email} className={btn}><Mail className="h-4 w-4"/> Copy link</button>
