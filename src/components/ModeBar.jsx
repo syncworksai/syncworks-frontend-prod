@@ -1189,8 +1189,8 @@ function MobileMenuDrawer({
 
               <div className="space-y-2">
                 <DrawerItem
-                  label="Investor"
-                  subtitle="Investor portal"
+                  label="Property Owner"
+                  subtitle="Owner / Partner portal"
                   active={
                     investorActive
                   }
@@ -1753,7 +1753,7 @@ export default function ModeBar({
   // Consistent location labels across modules; do not reuse a service business
   // name for PM, tenant, investor, platform administration, or personal modes.
   const workspaceContext = useMemo(() => {
-    if (pathname.startsWith("/investor")) return { name: customerName || "Investor", role: "Investor" };
+    if (pathname.startsWith("/investor")) return { name: customerName || "Investor", role: "Property Owner" };
     if (pathname.startsWith("/tenant")) return { name: customerName || "Tenant", role: "Tenant" };
     if (isHealthRoute) return { name: customerName || "Personal", role: "Health" };
     if (pathname.startsWith("/sales")) return { name: customerName || "Sales", role: "Sales OS" };
@@ -1767,7 +1767,7 @@ export default function ModeBar({
   const workspacePage = useMemo(() => {
     const exact = {
       "/customer": "Dashboard", "/sbo": "Dashboard", "/pm": "Dashboard",
-      "/investor": "Investor Dashboard", "/tenant": "Tenant Dashboard",
+      "/investor": "Property Owner Dashboard", "/tenant": "Tenant Dashboard",
       "/customer/health": "Health Dashboard", "/platform": "Admin Dashboard",
       "/customer/tickets": "Tickets", "/customer/finance": "Finance",
       "/calendar": "Calendar", "/customer/inbox": "Inbox",
@@ -1844,7 +1844,7 @@ export default function ModeBar({
   }
 
   function openInvestorPortal() {
-    nav("/investor");
+    nav("/investor/properties");
   }
 
   function openTenantPortal() {
