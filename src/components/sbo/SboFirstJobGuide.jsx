@@ -3,7 +3,7 @@ import { ArrowRight, CheckCircle2, ClipboardList, Play, Wrench } from "lucide-re
 import { hasPaidJob, pilotNextAction } from "../../utils/businessPilotWorkflow";
 
 export default function SboFirstJobGuide({
-  tickets, loading, onIntake, onDispatch, onTickets, onFinance, onReports, onPilot, onTicket,
+  tickets, loading, onIntake, onImport, onDispatch, onTickets, onFinance, onReports, onPilot, onTicket,
 }) {
   const rows = Array.isArray(tickets) ? tickets : [];
   const paid = hasPaidJob(rows);
@@ -40,6 +40,10 @@ export default function SboFirstJobGuide({
         <button type="button" onClick={onIntake}
           className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/75 px-4 text-sm font-bold text-white hover:border-cyan-400/40">
           + Log a customer call
+        </button>
+        <button type="button" onClick={onImport}
+          className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 text-sm font-bold text-emerald-200 hover:border-emerald-400">
+          Import existing customers
         </button>
       </div>
 
