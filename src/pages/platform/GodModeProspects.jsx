@@ -157,6 +157,25 @@ export default function GodModeProspects({ pilotOnly = false }) {
     } catch (e) { setError(errorText(e, "Could not send invitation.")); }
     finally { setBusy(""); }
   }
+  async function approveAndNotify() {
+    if (!selected || !selected.linked_business || !selected.email) return;
+    const missing = PILOT_CHECKS.filter(([key]) => selected.pilot_checks?.[key] !== true);
+    if (missing.length) { setError(`Finish ${missing.length} remaining verification steps before approving.`); return; }
+    if (!window.confirm(`Approve ${selected.company_name}'s full Business onboarding and email the verified business owner? No subscription will be started.`)) return;
+    setBusy("approve-and-notify"); setError(""); setMessage("");
+    try {
+      await api.patch(`/platform/prospects/${selected.id}/`, { pilot_status: "COMPLETE" });
+      try {
+        const email = await api.post(`/platform/prospects/${selected.id}/send-completion/`);
+        setMessage(email.data?.detail || "Onboarding approved and completion notification requested.");
+      } catch (mailError) {
+        setError("Onboarding was approved, but email could not be sent. Use Send completion notice to retry: " + errorText(mailError, "Mail provider error."));
+      }
+      await load();
+    } catch (e) { setError(errorText(e, "Unable to approve the onboarding checks.")); }
+    finally { setBusy(""); }
+  }
+
   async function sendCompletion() {
     if (!selected || selected.pilot_status !== "COMPLETE" || selected.completion_notified) return;
     if (!window.confirm(`Send a one-time Business setup completion email to ${selected.email}? This is a transactional message, not a marketing offer.`)) return;
@@ -308,6 +327,11 @@ export default function GodModeProspects({ pilotOnly = false }) {
                     className={inputClass+" mt-1"}/>
                 </Field>
                 <p className="mt-2 text-[11px] text-slate-500">Saved centrally in this founder-only prospect record. Tester-side pilot notes remain on their device until shared.</p>
+                {selected.pilot_status !== "COMPLETE" ? <button type="button" onClick={approveAndNotify}
+                  disabled={!!busy || !selected.linked_business || !selected.email || PILOT_CHECKS.some(([key])=>selected.pilot_checks?.[key]!==true)}
+                  className="mt-3 min-h-12 w-full rounded-xl bg-emerald-400 px-3 text-sm font-black text-slate-950 disabled:opacity-40">
+                  Approve setup & notify business owner
+                </button> : null}
                 <div className="mt-3 rounded-xl border border-indigo-500/25 bg-indigo-500/10 p-3">
                   <div className="text-xs font-black text-white">Completion notification</div>
                   <p className="mt-1 text-[11px] text-slate-300">Mark pilot Complete only after all checks pass. Sending a completion notice requires a separate confirmation; no message is sent by checking boxes.</p>
