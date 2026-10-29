@@ -29,7 +29,7 @@ export default function InvestorAcceptInvite() {
     try {
       await api.post("/pm-hub/access/investors/accept/", { code: c });
       setOk("Property Owner / Partner access linked to your management company.");
-      nav("/investor", { replace: true });
+      nav("/investor/properties", { replace: true });
     } catch (claimError) {
       setErr(claimError?.response?.data?.detail || "Invitation invalid, expired or sent to a different email.");
     } finally {
