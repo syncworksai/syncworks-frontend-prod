@@ -33,6 +33,16 @@ export default function BusinessQuickIntake(){
     });
     return()=>{mounted=false};
   },[base,businessId,supportMode]);
+  useEffect(()=>{
+    if(supportMode || !businessId)return;
+    let active=true;
+    const timer=setTimeout(()=>{
+      api.get("/business-customers/",{headers:{"X-Business-Id":businessId},params:{search:search.trim()||undefined}})
+        .then(response=>{if(active)setCustomers(Array.isArray(response.data)?response.data:(response.data?.results||[]))})
+        .catch(()=>{if(active&&search.trim())setCustomers([])});
+    },220);
+    return()=>{active=false;clearTimeout(timer)};
+  },[search,businessId,supportMode]);
   const matches=useMemo(()=>customers.filter(c=>[c.name,c.phone,c.email].join(" ").toLowerCase().includes(search.toLowerCase())).slice(0,6),[customers,search]);
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   function choose(c){setForm(f=>({...f,customer_name:c.name||"",phone:c.phone||"",email:c.email||"",service_address:c.service_address||""}));setSearch("");}
@@ -60,7 +70,7 @@ export default function BusinessQuickIntake(){
           </div>
         ) : null}
         {supportMode?<div className="mb-4 rounded-xl border border-violet-500/30 bg-violet-500/10 p-3 text-xs text-violet-200">Founder-assisted mode · actions are recorded under your own identity · no customer login or invitation is created.</div>:null}
-        <div className="relative mb-4"><label className="mb-1 block text-xs text-slate-400">Find existing customer</label><input className={input} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search shared customers by name, email or phone"/>{search&&matches.length?<div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-slate-700 bg-slate-900 shadow-lg">{matches.map(c=><button key={c.id} className="block w-full border-b border-slate-800 px-3 py-3 text-left text-sm text-white hover:bg-slate-800" onClick={()=>choose(c)}>{c.name||c.phone||c.email} · {c.ticket_count||0} previous tickets</button>)}</div>:null}</div>
+        <div className="relative mb-4"><label className="mb-1 block text-xs text-slate-400">Find existing customer</label><input className={input} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search all saved customers by name, email or phone"/>{search&&matches.length?<div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-slate-700 bg-slate-900 shadow-lg">{matches.map(c=><button key={c.id} className="block w-full border-b border-slate-800 px-3 py-3 text-left text-sm text-white hover:bg-slate-800" onClick={()=>choose(c)}>{c.name||c.phone||c.email} · {c.ticket_count||0} previous tickets</button>)}</div>:null}</div>
         <form className="grid gap-3 sm:grid-cols-2" onSubmit={submit}>
           {[["customer_name","Customer name"],["phone","Phone"],["email","Email"],["service_address","Service address"],["service_label","Service requested"]].map(([k,label])=><label key={k} className={k==="service_label"?"sm:col-span-2":""}><span className="mb-1 block text-xs text-slate-400">{label}</span><input className={input} required={k==="service_label"} value={form[k]} onChange={e=>set(k,e.target.value)}/></label>)}
           <label className="sm:col-span-2"><span className="mb-1 block text-xs text-slate-400">Problem and access notes</span><textarea className={input} rows={3} value={form.description} onChange={e=>set("description",e.target.value)}/></label>
