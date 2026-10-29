@@ -212,8 +212,8 @@ export default function CustomerDashboard() {
   }, [upcomingEvents, openTickets, businessConnected, pmConnected, tenantConnected, propertyRoute]);
 
   return (
-    <DashboardShell title="Dashboard" modeBarTitle="Dashboard" maxWidth="max-w-none" className="sw-personal-panels px-4 sm:px-6 lg:px-6 xl:px-8">
-      <div className="mb-3 flex items-center justify-between rounded-2xl border border-sky-400/20 bg-[#0B1423]/80 px-4 py-2.5 shadow-[inset_0_1px_rgba(85,216,255,.08)]" aria-label="Current workspace and page"><div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-[.17em] text-cyan-300">Personal Workspace</div><div className="truncate text-sm font-semibold text-slate-100">Dashboard</div></div><span className="hidden rounded-full border border-[#168BFF]/30 bg-[#168BFF]/10 px-3 py-1 text-[10px] font-bold text-[#78CBFF] sm:inline-flex">PERSONAL</span></div>
+    <DashboardShell title="Dashboard" modeBarTitle="Dashboard" maxWidth="max-w-none" className="sw-personal-panels sw-customer-v3 px-4 sm:px-6 lg:px-6 xl:px-8">
+      
       <div className="grid w-full grid-cols-[230px_minmax(0,1fr)_310px] items-start gap-5 pb-10 max-xl:grid-cols-[210px_minmax(0,1fr)]">
         <aside className="sticky top-4 rounded-[1.6rem] border border-sky-400/15 bg-[#090F1C]/90 p-3 shadow-[0_20px_60px_rgba(0,0,0,.25)] backdrop-blur-xl">
           <div className="px-3 pb-2 text-[9px] font-black uppercase tracking-[.18em] text-cyan-300/70">Personal workspace</div>
