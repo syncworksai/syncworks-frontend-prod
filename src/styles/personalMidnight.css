@@ -18,3 +18,29 @@
 [data-sw-visual="midnight"] .sw-personal-dock{border-color:rgba(47,115,181,.37)!important;background:rgba(8,16,28,.97)!important;box-shadow:0 -12px 42px rgba(0,0,0,.55),0 0 20px rgba(22,139,255,.06)!important}
 [data-sw-visual="midnight"] .sw-cube-launcher{background:#05080f;border:1px solid rgba(0,213,194,.45);box-shadow:0 0 20px rgba(22,139,255,.18)}
 @media (prefers-reduced-motion:reduce){[data-sw-visual="midnight"] *{scroll-behavior:auto!important}}
+
+/* Brand alignment: electric blue is the action color, teal signals progress,
+   and violet identifies secondary actions. Keep neutral cards readable. */
+[data-sw-visual="midnight"] {
+  --sw-action:#168bff;--sw-progress:#00d5c2;--sw-secondary:#8756ea;
+}
+[data-sw-visual="midnight"] [data-sw-shell="dashboard"] main > * {
+  --tw-ring-color:rgba(22,139,255,.25);
+}
+[data-sw-visual="midnight"] [data-sw-shell="dashboard"] button {
+  transition-property:background-color,border-color,box-shadow,transform;
+  transition-duration:180ms;
+}
+[data-sw-visual="midnight"] [data-sw-shell="dashboard"] button:hover {
+  border-color:rgba(50,165,255,.38);
+}
+[data-sw-visual="midnight"] [data-sw-shell="dashboard"] a:focus-visible,
+[data-sw-visual="midnight"] [data-sw-shell="dashboard"] button:focus-visible {
+  outline:2px solid #52b9ff;outline-offset:2px;
+}
+[data-sw-visual="midnight"] .sw-modebar {
+  box-shadow:inset 0 -1px rgba(22,139,255,.16),0 8px 32px rgba(0,0,0,.25);
+}
+[data-sw-visual="midnight"] .sw-personal-dock button[aria-label="Open SYNC Assistant"] {
+  color:#81d5ff;
+}
