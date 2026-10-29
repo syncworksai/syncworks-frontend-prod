@@ -9,6 +9,7 @@ import IdentityOnboardingGate from "./components/identity/IdentityOnboardingGate
 import PlatformRoute from "./components/PlatformRoute";
 
 import Login from "./pages/Login";
+import PMCompanySetup from "./pages/PMCompanySetup";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Register from "./pages/Register";
@@ -151,6 +152,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/get-started" element={<GetStarted />} />
         <Route path="/onboarding/business" element={<ProtectedRoute><AddBusiness /></ProtectedRoute>} />
+        <Route path="/onboarding/property-management" element={<ProtectedRoute><PMCompanySetup /></ProtectedRoute>} />
         <Route path="/gamecast/:token" element={<PublicGameCast />} />
         <Route path="/sports/invite/:token" element={<SportsInviteLanding />} />
         <Route path="/sports/team-invite/:token" element={<SportsTeamInviteLanding />} />

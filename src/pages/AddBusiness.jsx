@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Building2, ShieldCheck } from "lucide-react";
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
@@ -14,10 +14,13 @@ const errText = e => {
 
 export default function AddBusiness() {
   const nav = useNavigate();
+  const [params] = useSearchParams();
+  const vertical = ["retail","food"].includes(params.get("vertical")) ? params.get("vertical") : "service";
+  const verticalLabel = vertical === "retail" ? "Retail & Shops" : vertical === "food" ? "Restaurants & Food" : "Service Business";
   const { user, reloadBusinesses, setActiveBusinessId } = useAuth();
   const [form,setForm] = useState({
     name:"", business_email:"", phone:"", city:"", state:"", base_zip:"",
-    access_code:"", accepts_marketplace_tickets:true, accepts_fee:false,
+    access_code:"", accepts_marketplace_tickets:vertical==="service", accepts_fee:false,
   });
   const [saving,setSaving] = useState(false);
   const [createdId,setCreatedId] = useState(null);
@@ -39,7 +42,7 @@ export default function AddBusiness() {
         owner_name:[user?.first_name,user?.last_name].filter(Boolean).join(" "),
         phone:form.phone.trim(),city:form.city.trim(),state:form.state.trim().toUpperCase(),
         base_zip:form.base_zip.trim(),accepts_marketplace_tickets:form.accepts_marketplace_tickets,
-        service_radius_miles:25,business_presence_mode:"on_site",
+        service_radius_miles:25,business_presence_mode:vertical==="service"?"on_site":"in_person",
       });
       const id=result?.data?.id;
       if (!id) throw new Error("Business was created but its ID was not returned. Refresh your Business list before retrying.");
@@ -84,8 +87,8 @@ export default function AddBusiness() {
     <main className="mx-auto max-w-xl">
       <Link to="/get-started" className="text-sm font-bold text-cyan-300">← All onboarding options</Link>
       <div className="mt-6 rounded-3xl border border-cyan-400/25 bg-[#081525]/90 p-5 shadow-2xl sm:p-7">
-        <div className="flex items-center gap-3"><Building2 size={28} className="text-cyan-200"/><div><p className="text-xs uppercase tracking-widest text-cyan-300">Step 2 · Business</p><h1 className="text-2xl font-black">Add your business</h1></div></div>
-        <p className="mt-3 text-sm leading-6 text-slate-300">Your Personal login already exists. This company will have its own profile, customer-facing email, settings and team permissions—no second login needed.</p>
+        <div className="flex items-center gap-3"><Building2 size={28} className="text-cyan-200"/><div><p className="text-xs uppercase tracking-widest text-cyan-300">Step 2 · Business</p><h1 className="text-2xl font-black">Add your {verticalLabel} business</h1></div></div>
+        <p className="mt-3 text-sm leading-6 text-slate-300">Your Personal login already exists. Your {verticalLabel} company will have its own business profile, contact email and core business tools—no second login. A dedicated industry dashboard will follow.</p>
         <div className="mt-4 flex gap-2 rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3 text-sm text-emerald-100"><ShieldCheck size={17} className="shrink-0 mt-0.5"/> Personal sign-in: {user?.email||"verified account"}</div>
         {error?<p role="alert" className="mt-4 rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</p>:null}
         <form onSubmit={submit} className="mt-5 space-y-4">

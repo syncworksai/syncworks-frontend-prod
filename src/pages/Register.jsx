@@ -446,28 +446,28 @@ function Welcome({
 
         <p className="mt-2 text-sm leading-6 text-slate-400">
           {businessFirst
-            ? "Your account is ready. Add your business next, then follow the guided setup to start receiving requests."
+            ? chosenRole === "pm" ? "Your Personal account is ready. Add your dedicated PM workspace next." : "Your account is ready. Add your business next. Industry-specific dashboards for Retail and Food will follow."
             : (chosenRole === "tenant" || chosenRole === "investor")
-              ? "Your Personal account is ready. Next, connect your invitation to access your secure portal."
+              ? "Your Personal account is ready. Use the invitation code from your PM company's email to connect your property."
               : "Your free Personal account is ready. You can explore SyncWorks or add more tools whenever you need them."}
         </p>
       </div>
 
       <div className="mt-6 space-y-3">
-        {(chosenRole === "tenant" || chosenRole === "investor") ? (
+        {(chosenRole === "tenant" || chosenRole === "investor" || chosenRole === "owner") ? (
           <button type="button" onClick={onRoleContinue} className="w-full rounded-2xl bg-cyan-400 px-4 py-3 font-black text-black">
-            {chosenRole === "tenant" ? "Continue Tenant Setup" : "Continue Investor Setup"}
+            {chosenRole === "tenant" ? "Connect Tenant Portal" : "Connect Property Owner / Partner Portal"}
             <span className="mt-1 block text-xs font-medium">Secure invitation required</span>
           </button>
         ) : null}
-        {chosenRole !== "tenant" && chosenRole !== "investor" ? <button
+        {chosenRole !== "tenant" && chosenRole !== "investor" && chosenRole !== "owner" ? <button
           type="button"
           onClick={onBusiness}
           className={businessFirst
             ? "w-full rounded-2xl bg-cyan-400 px-4 py-3 font-black text-black"
             : "w-full rounded-2xl border border-cyan-400/40 bg-cyan-500/10 px-4 py-3 font-bold text-cyan-100"}
         >
-          {businessFirst ? "Continue Business Setup" : "Add My Business"}
+          {chosenRole === "pm" ? "Set Up Property Management" : businessFirst ? "Continue Business Setup" : "Add My Business"}
         </button> : null}
 
         <button
@@ -524,6 +524,7 @@ export default function Register() {
     resendEmailCode,
     resolveSignupCodes,
     reloadBusinesses,
+    user,
   } = useAuth();
 
   const navigate = useNavigate();
@@ -532,15 +533,26 @@ export default function Register() {
   const returnTo = safeReturnPath(queryParams.get("next"));
   const invitedEmail = normalizeEmail(queryParams.get("email"));
   const requestedRole = String(queryParams.get("role") || "").trim().toLowerCase();
-  const chosenRole = ["personal", "business", "tenant", "investor"].includes(requestedRole)
-    ? requestedRole : queryParams.get("business") === "1" ? "business" : "personal";
-  const onboardingIntent = chosenRole === "business";
+  const chosenRole = requestedRole === "investor" ? "owner" :
+    ["personal","business","pm","tenant","owner","retail","food"].includes(requestedRole)
+      ? requestedRole : queryParams.get("business") === "1" ? "business" : "personal";
+  const onboardingIntent = ["business","retail","food"].includes(chosenRole);
+  const isPropertyInvite = chosenRole === "tenant" || chosenRole === "owner";
+  const isPM = chosenRole === "pm" || isPropertyInvite;
+  const industryLabel = chosenRole === "retail" ? "Retail & Shops" : chosenRole === "food" ? "Restaurants & Food" : "Service Business";
+  const invitationFromLink = isPropertyInvite ? queryParams.get("code") || queryParams.get("invitation_code") || "" : "";
+  const claimPath = (code) => `${chosenRole === "tenant" ? "/tenant/accept" : "/investor/accept"}${code ? `?code=${encodeURIComponent(code.trim())}` : ""}`;
   const roleSignupUrl = (role) => {
     const params = new URLSearchParams(location.search);
     params.set("role", role);
+    if (role !== chosenRole) { params.delete("code"); params.delete("invitation_code"); }
     return `/register?${params.toString()}`;
   };
 
+  const signedInTarget = isPropertyInvite ? claimPath(invitationFromLink) :
+    chosenRole === "pm" ? "/onboarding/property-management" :
+    chosenRole === "business" ? "/onboarding/business" :
+    chosenRole === "retail" || chosenRole === "food" ? `/onboarding/business?vertical=${chosenRole}` : "/customer";
   const [stage, setStage] = useState("EMAIL");
   const [loading, setLoading] = useState(false);
   const [codeLoading, setCodeLoading] = useState(false);
@@ -552,6 +564,10 @@ export default function Register() {
   const [createdBusinessId, setCreatedBusinessId] = useState(null);
 
   const [email, setEmail] = useState("");
+  const [inviteCode, setInviteCode] = useState(() => String(invitationFromLink).trim());
+  const signInPath = isPropertyInvite
+    ? `/login?next=${encodeURIComponent(claimPath(inviteCode))}&email=${encodeURIComponent(email || invitedEmail)}`
+    : "/login";
   const [challengeId, setChallengeId] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [registrationProof, setRegistrationProof] = useState("");
@@ -577,7 +593,7 @@ export default function Register() {
     state: "",
     zip: "",
     accessCode: "",
-    acceptsMarketplace: true,
+    acceptsMarketplace: !["retail","food"].includes(chosenRole),
     acceptsFee: false,
   });
 
@@ -591,6 +607,10 @@ export default function Register() {
       setCodeResult(null);
     }
   }
+
+  useEffect(() => {
+    setInviteCode(isPropertyInvite ? String(invitationFromLink).trim() : "");
+  }, [chosenRole, isPropertyInvite, invitationFromLink]);
 
   useEffect(() => {
     if (!email && invitedEmail) {
@@ -818,6 +838,11 @@ export default function Register() {
         navigate(returnTo, { replace: true });
         return;
       }
+      // A URL code only prefills the next step. The backend checks invitation and invited email on acceptance.
+      if (isPropertyInvite && inviteCode.trim()) {
+        navigate(claimPath(inviteCode), { replace: true });
+        return;
+      }
       setStage("WELCOME");
       if (onboardingIntent) setBusinessOpen(true);
     } catch (err) {
@@ -874,8 +899,8 @@ export default function Register() {
         base_zip: business.zip.trim(),
         accepts_marketplace_tickets: business.acceptsMarketplace,
         service_radius_miles: 25,
-        business_presence_mode: "on_site",
-        signup_source: "post_registration_business",
+        business_presence_mode: ["retail","food"].includes(chosenRole) ? "in_person" : "on_site",
+        signup_source: chosenRole === "retail" ? "post_registration_retail" : chosenRole === "food" ? "post_registration_food" : "post_registration_business",
         platform_fee_bps: 100,
         understands_platform_fee: true,
         affiliate_code: affiliateCode || undefined,
@@ -928,10 +953,10 @@ export default function Register() {
           <Welcome
             firstName={account.firstName}
             onContinue={() => navigate(returnTo, { replace: true })}
-            onBusiness={() => createdBusinessId ? navigate("/sbo/settings/general?setup=1&return=%2Fsbo", { replace:true }) : setBusinessOpen(true)}
+            onBusiness={() => chosenRole === "pm" ? navigate("/onboarding/property-management", { replace:true }) : createdBusinessId ? navigate("/sbo/settings/general?setup=1&return=%2Fsbo", { replace:true }) : setBusinessOpen(true)}
             chosenRole={chosenRole}
-            onRoleContinue={() => navigate(chosenRole === "tenant" ? "/tenant/accept" : "/investor/accept", { replace: true })}
-            businessFirst={onboardingIntent}
+            onRoleContinue={() => navigate(claimPath(inviteCode), { replace: true })}
+            businessFirst={onboardingIntent || chosenRole === "pm"}
             onInfo={() => setInfoOpen(true)}
             onUpdates={() => setUpdatesOpen(true)}
           />
@@ -970,7 +995,7 @@ export default function Register() {
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.19em] text-cyan-300">SyncWorks · Secure signup</p>
                 <h1 id="sw-registration-heading" className="mt-0.5 text-xl font-bold tracking-tight text-white">
-                  {onboardingIntent ? "Business onboarding" : chosenRole === "tenant" ? "Tenant onboarding" : chosenRole === "investor" ? "Investor onboarding" : "Create your Personal account"}
+                  {chosenRole === "pm" ? "PM company onboarding" : chosenRole === "tenant" ? "Tenant onboarding" : chosenRole === "owner" ? "Property Owner / Partner" : onboardingIntent ? `${industryLabel} onboarding` : "Create your Personal account"}
                 </h1>
               </div>
             </div>
@@ -978,23 +1003,21 @@ export default function Register() {
           </div>
           <p className="mt-3 text-xs leading-5 text-slate-400">
             {onboardingIntent
-              ? "Start with your free verified Personal profile. Then connect your business using its own contact email."
-              : chosenRole === "tenant" || chosenRole === "investor"
-                ? "Create your free Personal profile first. A secure invitation is required to connect this portal."
-                : "One free Personal profile and secure login. Add Business, Tenant, or Investor access when you need it."}
+              ? `Start with your free verified Personal profile. Then connect your ${industryLabel.toLowerCase()} with its own company email.`
+              : isPropertyInvite ? "Create your free Personal profile first. Enter the code from your management company's onboarding email to connect the correct property."
+                : chosenRole === "pm" ? "Create a verified Personal login and a separate Property Management workspace."
+                : "One free Personal login for Service Business, Property Management, Retail, Food and more."}
           </p>
-          <nav aria-label="Select signup type" className="mt-4 grid grid-cols-4 gap-1.5">
-            {["personal", "business", "tenant", "investor"].map((role) => (
-              <Link
-                key={role}
-                to={roleSignupUrl(role)}
-                aria-current={chosenRole === role ? "page" : undefined}
-                className={`rounded-xl border px-1.5 py-2.5 text-center text-[11px] font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300 ${chosenRole === role ? "border-cyan-400/60 bg-cyan-400/15 text-cyan-100" : "border-slate-700/75 bg-slate-950/50 text-slate-400 hover:border-cyan-400/40 hover:text-white"}`}
-              >
-                {role === "personal" ? "Personal" : role === "business" ? "Business" : role === "tenant" ? "Tenant" : "Investor"}
-              </Link>
+          <nav aria-label="Select signup type" className="mt-4 grid grid-cols-5 gap-1">
+            {[["personal","Personal"],["business","Service"],["pm","Property"],["retail","Retail"],["food","Food"]].map(([role,label]) => (
+              <Link key={role} to={roleSignupUrl(role)} aria-current={(role==="pm" ? isPM : chosenRole===role) ? "page" : undefined}
+                className={`rounded-lg border px-1 py-2.5 text-center text-[10px] font-semibold ${(role==="pm" ? isPM : chosenRole===role) ? "border-cyan-400/60 bg-cyan-400/15 text-cyan-100" : "border-slate-700/75 bg-slate-950/50 text-slate-400 hover:border-cyan-400/40 hover:text-white"}`}>{label}</Link>
             ))}
           </nav>
+          {isPM ? <div className="mt-2 grid grid-cols-3 gap-1.5" aria-label="Property Management role">
+            {[["pm","PM company"],["tenant","Tenant"],["owner","Owner / Partner"]].map(([role,label])=><Link key={role} to={roleSignupUrl(role)}
+              aria-current={chosenRole===role ? "page":undefined} className={`rounded-lg border px-1 py-2 text-center text-[10px] font-semibold ${chosenRole===role ? "border-violet-400/60 bg-violet-400/15 text-violet-100" : "border-slate-700 text-slate-400"}`}>{label}</Link>)}
+          </div> : null}
           <p className="mt-3 text-[11px] leading-4 text-slate-500">
             Step 1: Personal account · Step 2: Connect your chosen workspace
           </p>
@@ -1021,6 +1044,17 @@ export default function Register() {
                 </p>
               </div>
 
+              {user ? <div className="rounded-xl border border-emerald-400/25 bg-emerald-400/10 p-3 text-xs text-emerald-100">
+                You are signed in as {user.email}. You can connect this workspace without registering again.
+                <Link to={isPropertyInvite ? claimPath(inviteCode) : signedInTarget}
+                  className="mt-2 block rounded-lg bg-emerald-300 px-3 py-2 text-center font-bold text-slate-950">Continue with my existing account</Link>
+                {isPropertyInvite ? <p className="mt-2 text-[11px]">Your email must match the invitation email. You will confirm the code on the next screen.</p> : null}
+              </div> : null}
+              {isPropertyInvite ? <div className="rounded-xl border border-violet-400/25 bg-violet-400/5 p-3">
+                <Field label={chosenRole==="tenant" ? "Tenant invitation code" : "Property Owner / Partner invitation code"} value={inviteCode}
+                  onChange={setInviteCode} placeholder="Code from your PM company's onboarding email" autoComplete="off"/>
+                <p className="mt-2 text-[11px] leading-4 text-slate-400">Invitation links prefill the code. Otherwise enter the code from your PM email. Only the invited email can claim access. A code is required to link a portal, not to create a free Personal account.</p>
+              </div> : null}
               <Field
                 label="Email address"
                 value={email}
@@ -1232,7 +1266,7 @@ export default function Register() {
           <div className="mt-5 border-t border-slate-800 pt-4 text-center text-sm text-slate-400">
             Already have an account?{" "}
             <Link
-              to="/login"
+              to={signInPath}
               className="font-semibold text-cyan-300 hover:text-cyan-200"
             >
               Sign in

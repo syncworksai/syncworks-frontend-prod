@@ -7,21 +7,25 @@ const read=path=>readFileSync(path,"utf8");
 test("public signup chooser links all four roles and keeps secure invite-only claims",()=>{
   const page=read("src/pages/GetStarted.jsx");
   const app=read("src/App.jsx");
-  for(const role of ["personal","business","tenant","investor"]) {
+  for(const role of ["personal","business","pm","retail","food"]) {
     assert.match(page,new RegExp('key:"'+role+'"'));
   }
   assert.match(page,/\/tenant\/accept/);
   assert.match(page,/\/investor\/accept/);
+  for(const role of ["pm","tenant","owner"]) assert.match(page,new RegExp('key:"'+role+'"'));
+  assert.match(page,/Property Owner \/ Partner/);
+  assert.match(page,/\/onboarding\/property-management/);
   assert.match(page,/\/onboarding\/business/);
-  assert.match(page,/secure invitation/i);
+  assert.match(page,/invitation code/i);
   assert.match(app,/path="\/get-started" element=\{<GetStarted/);
   assert.match(app,/path="\/onboarding\/business" element=\{<ProtectedRoute><AddBusiness/);
+  assert.match(app,/path="\/onboarding\/property-management"/);
 });
 
 test("landing page has direct signup CTAs for every role",()=>{
   const login=read("src/pages/Login.jsx");
   assert.match(login,/ONBOARDING_LINKS/);
-  for(const role of ["personal","business","tenant","investor"]) {
+  for(const role of ["personal","business","pm","retail","food"]) {
     assert.match(login,new RegExp('"'+role+'"'));
   }
   assert.match(login,/to="\/get-started"/);
@@ -34,7 +38,7 @@ test("new users create verified personal identity before role, business contact 
   assert.match(signup,/registration_proof: registrationProof/);
   assert.match(signup,/first_name: account.firstName\.trim\(\)/);
   assert.match(signup,/chosenRole === "tenant"/);
-  assert.match(signup,/chosenRole === "investor"/);
+  assert.match(signup,/chosenRole === "owner"/);
   assert.match(signup,/onRoleContinue/);
   assert.match(signup,/businessEmail/);
   assert.match(signup,/business_email: normalizeEmail\(business\.businessEmail\) \|\| normalizeEmail\(email\)/);
@@ -64,5 +68,14 @@ test("registration opens over the SyncWorks landing page and keeps Personal-firs
   assert.match(signup,/Step 1: Personal account/);
   assert.match(login,/backgroundOnly = false/);
   assert.match(login,/Onboard a business/);
-  assert.match(login,/Business onboarding/);
+  assert.match(login,/Service business onboarding/);
+  assert.match(signup,/Tenant invitation code/);
+  assert.match(signup,/Property Owner \/ Partner invitation code/);
+  assert.match(signup,/claimPath\(inviteCode\)/);
+  assert.match(signup,/role==="pm" \? isPM/);
+  const pm = read("src/pages/PMCompanySetup.jsx");
+  assert.match(pm,/\/pm-hub\/workspaces\/current\//);
+  const owner = read("src/pages/InvestorAcceptInvite.jsx");
+  assert.match(owner,/\/pm-hub\/access\/investors\/accept\//);
+  assert.match(owner,/URLSearchParams\(search\)/);
 });
