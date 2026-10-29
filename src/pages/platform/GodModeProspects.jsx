@@ -114,7 +114,6 @@ export default function GodModeProspects({ pilotOnly = false }) {
   const selected = rows.find((row) => row.id === selectedId) || null;
   const filtered = useMemo(() => rows.filter((row) =>
     (stage === "ALL" || row.status === stage) &&
-    (!pilotOnly || row.pilot_status !== "NOT_STARTED") &&
     (pilotFilter === "ALL" || row.pilot_status === pilotFilter) &&
     [row.company_name, row.contact_name, row.email, row.phone, row.notes, row.next_action, ...(row.interests || [])]
       .join(" ").toLowerCase().includes(search.toLowerCase().trim())
@@ -206,7 +205,7 @@ export default function GodModeProspects({ pilotOnly = false }) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-200">God Mode / {pilotOnly ? "Tester Launch" : "Acquisition Tickets"}</div>
-            <h2 className="mt-2 text-2xl font-black text-white sm:text-3xl">{pilotOnly ? "Business Tester Launch" : "Business Prospects"}</h2>
+            <h2 className="mt-2 text-2xl font-black text-white sm:text-3xl">{pilotOnly ? "Business Onboarding Control Center" : "Business Prospects"}</h2>
             <p className="mt-2 max-w-3xl text-sm text-slate-400">Your founder-only business onboarding control center. Track invitation, registration, CRM migration, first job, payout review and the next action. Test outcomes are confirmed manually, not guessed.</p>
           </div>
           <div className="flex gap-2">
