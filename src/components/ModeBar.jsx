@@ -1750,39 +1750,40 @@ export default function ModeBar({
         ?.phoneNumber
     );
 
-  const identityLeft =
-    useMemo(() => {
-      if (
-        mode === "CUSTOMER"
-      ) {
-        return (
-          customerName ||
-          "Personal"
-        );
-      }
+  // Consistent location labels across modules; do not reuse a service business
+  // name for PM, tenant, investor, platform administration, or personal modes.
+  const workspaceContext = useMemo(() => {
+    if (pathname.startsWith("/investor")) return { name: customerName || "Investor", role: "Investor" };
+    if (pathname.startsWith("/tenant")) return { name: customerName || "Tenant", role: "Tenant" };
+    if (isHealthRoute) return { name: customerName || "Personal", role: "Health" };
+    if (pathname.startsWith("/sales")) return { name: customerName || "Sales", role: "Sales OS" };
+    if (pathname.startsWith("/growth") || pathname.startsWith("/sbo/growth")) return { name: businessName || customerName || "Social Media", role: "Growth OS" };
+    if (mode === "PLATFORM") return { name: "Admin Dashboard", role: "Platform Admin" };
+    if (mode === "PM" || pathname.startsWith("/pm")) return { name: "Property Management", role: "PM" };
+    if (mode === "SBO" || mode === "EMPLOYEE") return { name: businessName || "Select a business", role: mode === "EMPLOYEE" ? "Employee" : "Business" };
+    return { name: customerName || "Personal", role: "Personal" };
+  }, [pathname, isHealthRoute, mode, customerName, businessName]);
 
-      if (
-        [
-          "SBO",
-          "EMPLOYEE",
-          "PM",
-          "PLATFORM",
-        ].includes(mode)
-      ) {
-        return (
-          businessName ||
-          (mode === "PLATFORM"
-            ? "SyncWorks Internal"
-            : "No Business Selected")
-        );
-      }
+  const workspacePage = useMemo(() => {
+    const exact = {
+      "/customer": "Dashboard", "/sbo": "Dashboard", "/pm": "Dashboard",
+      "/investor": "Investor Dashboard", "/tenant": "Tenant Dashboard",
+      "/customer/health": "Health Dashboard", "/platform": "Admin Dashboard",
+      "/customer/tickets": "Tickets", "/customer/finance": "Finance",
+      "/calendar": "Calendar", "/customer/inbox": "Inbox",
+      "/customer/settings": "Settings", "/sbo/customers": "Customers",
+      "/sbo/leads": "Leads", "/sbo/growth": "Social Media",
+      "/pm/properties": "Properties", "/pm/tenants": "Tenants",
+    };
+    if (exact[pathname]) return exact[pathname];
+    const supplied = String(title || "").trim();
+    if (supplied && supplied.toLowerCase() !== "syncworks") return supplied;
+    const last = pathname.split("/").filter(Boolean).pop() || "Dashboard";
+    if (/^\\d+$/.test(last)) return "Details";
+    return last.split("-").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+  }, [pathname, title]);
 
-      return "SyncWorks";
-    }, [
-      mode,
-      customerName,
-      businessName,
-    ]);
+  const identityLeft = workspaceContext.name;
 
   const identitySub =
     useMemo(() => {
@@ -1908,7 +1909,7 @@ export default function ModeBar({
 
         <div className="relative mx-auto max-w-7xl px-4 py-3">
           {sportsCompact ? <div className="flex min-h-14 items-center gap-3">
-            <img src={pathname === "/customer" ? "/brands/syncworks-cube-s.svg" : "/brands/syncworks new logo.jpg"} alt="SyncWorks" className="h-12 w-12 shrink-0 rounded-2xl border border-cyan-500/30 bg-slate-950 object-cover"/>
+            <img src="/brands/syncworks-cube-s.svg" alt="SyncWorks" className="h-12 w-12 shrink-0 rounded-2xl border border-cyan-500/30 bg-slate-950 object-cover"/>
             <div className="min-w-0 flex-1 truncate text-sm font-black uppercase tracking-[.19em] text-white sm:text-lg">SYNCWORKS</div>
             <div className="flex shrink-0 items-center gap-2">
               <NotificationsBell inline />
@@ -1917,7 +1918,7 @@ export default function ModeBar({
           </div> : <div className="flex items-center gap-3">
             <div className="flex min-w-0 items-center gap-3">
               <img
-                src={pathname === "/customer" ? "/brands/syncworks-cube-s.svg" : "/brands/syncworks new logo.jpg"}
+                src="/brands/syncworks-cube-s.svg"
                 alt="SyncWorks"
                 className="h-12 w-12 shrink-0 rounded-2xl border border-cyan-500/20 bg-slate-950/70 object-cover shadow-[0_0_40px_rgba(99,102,241,0.18)] md:h-16 md:w-16"
               />
@@ -1937,7 +1938,7 @@ export default function ModeBar({
                       roleBadgeTone
                     }
                   >
-                    {roleLabel}
+                    {workspaceContext.role}
                   </ModuleBadge>
                 </div>
 
