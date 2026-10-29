@@ -44,3 +44,26 @@
 [data-sw-visual="midnight"] .sw-personal-dock button[aria-label="Open SYNC Assistant"] {
   color:#81d5ff;
 }
+
+/* Customer command center v2: subtle, consistent metallic surfaces. */
+[data-sw-customer-command] > aside,
+[data-sw-customer-command] > section,
+[data-sw-customer-command] section {
+  border-color:rgba(74,111,157,.25);
+  background-image:linear-gradient(145deg,rgba(21,34,54,.24),rgba(4,9,20,.02) 68%);
+}
+[data-sw-customer-command] > aside {
+  border-color:rgba(44,114,177,.32);
+  box-shadow:inset 0 1px rgba(125,187,255,.06),0 14px 46px rgba(0,0,0,.2);
+}
+[data-sw-customer-command] > aside button[aria-current="page"],
+[data-sw-customer-command] > aside button:hover {
+  border-color:rgba(22,139,255,.48);
+}
+[data-sw-customer-command] section h2 {
+  letter-spacing:-.015em;
+}
+[data-sw-customer-command] section button:focus-visible {
+  outline:2px solid #55d8ff;
+  outline-offset:2px;
+}

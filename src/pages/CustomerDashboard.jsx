@@ -212,8 +212,8 @@ export default function CustomerDashboard() {
   }, [upcomingEvents, openTickets, businessConnected, pmConnected, tenantConnected, propertyRoute]);
 
   return (
-    <DashboardShell maxWidth="max-w-none" className="px-4 sm:px-6 lg:px-6 xl:px-8">
-      <div className="grid w-full grid-cols-[230px_minmax(0,1fr)_310px] items-start gap-5 pb-10 max-xl:grid-cols-[210px_minmax(0,1fr)]">
+    <DashboardShell title="Dashboard" maxWidth="max-w-none" className="px-4 sm:px-6 lg:px-6 xl:px-8">
+      <div data-sw-customer-command="true" className="grid w-full grid-cols-[230px_minmax(0,1fr)_310px] items-start gap-5 pb-10 max-xl:grid-cols-[210px_minmax(0,1fr)]">
         <aside className="sticky top-4 rounded-[1.6rem] border border-white/10 bg-slate-950/75 p-3 shadow-[0_20px_60px_rgba(0,0,0,.25)] backdrop-blur-xl">
           <div className="px-3 pb-2 text-[9px] font-black uppercase tracking-[.18em] text-cyan-300/70">Personal workspace</div>
           <div className="space-y-1">
