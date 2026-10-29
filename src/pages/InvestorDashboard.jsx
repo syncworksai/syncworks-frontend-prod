@@ -58,7 +58,7 @@ export default function InvestorDashboard() {
       setData(r.data);
     } catch (e) {
       setData(null);
-      setErr(e?.response?.data?.detail || e?.message || "Failed to load investor dashboard.");
+      setErr(e?.response?.data?.detail || e?.message || "Failed to load property-owner dashboard.");
     } finally {
       setLoading(false);
     }
@@ -71,7 +71,7 @@ export default function InvestorDashboard() {
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">
       <ModeBar
-        title="Investor"
+        title="Property Owner / Partner"
         subtitle="Your portfolio view • Updates • PM Inbox"
         rightActions={
           <div className="flex gap-2 flex-wrap">
@@ -115,7 +115,7 @@ export default function InvestorDashboard() {
           <div className="text-sm text-red-300 bg-red-900/20 border border-red-800 rounded-2xl p-3">
             {err}
             <div className="mt-2 text-xs text-slate-300">
-              If this says your investor is not linked, you must claim your profile using the connect code.
+              If your property records are not linked, use the invitation code sent by your management company.
             </div>
           </div>
         ) : null}
@@ -131,7 +131,7 @@ export default function InvestorDashboard() {
 
           <Card title="Open Items" subtitle="Work orders / notices (future rollup)" right={<Pill tone="cyan">Queued</Pill>}>
             <div className="text-3xl font-semibold">—</div>
-            <div className="text-xs text-slate-500 mt-1">Next: investor rollups (repairs, expenses, approvals).</div>
+            <div className="text-xs text-slate-500 mt-1">Future: owner-level summaries for repairs, expenses and approvals.</div>
           </Card>
 
           <Card title="Statements" subtitle="Monthly statements (future)" right={<Pill tone="cyan">Queued</Pill>}>
@@ -144,7 +144,7 @@ export default function InvestorDashboard() {
         <InvestorInbox />
 
         {/* properties list (light + clean) */}
-        <Card title="Your Properties" subtitle="Read-only portfolio list (from investor dashboard endpoint)">
+        <Card title="Your Properties" subtitle="Read-only portfolio list from your property management records">
           {loading ? (
             <div className="text-sm text-slate-400">Loading…</div>
           ) : (data?.properties || []).length === 0 ? (
@@ -174,7 +174,7 @@ export default function InvestorDashboard() {
         </Card>
 
         <div className="text-[11px] text-slate-500">
-          Investor is external to the PM company: role-based access only. PM tools stay in PM hub. Inbox lives here.
+          Property Owner / Partner access is separate from PM company administration. Only authorized records are available here.
         </div>
       </main>
     </div>
