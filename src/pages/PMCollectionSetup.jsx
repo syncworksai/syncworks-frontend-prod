@@ -88,7 +88,7 @@ export default function PMCollectionSetup() {
       <div className="rounded-3xl border border-cyan-400/25 bg-gradient-to-br from-cyan-500/10 via-slate-950 to-indigo-500/10 p-5">
         <div className="text-xs font-black uppercase tracking-[.15em] text-cyan-200">Property Management / Payments</div>
         <h1 className="mt-2 text-2xl font-black">How should rent payments reach you?</h1>
-        <p className="mt-2 text-sm leading-6 text-slate-300">Choose how your property-management company collects rent. The PM owner receives rent—not the tenant and not SyncWorks. We never ask you to type banking credentials into this page.</p>
+        <p className="mt-2 text-sm leading-6 text-slate-300">Choose how your property-management company collects rent. Rent must ultimately settle to the legally authorized landlord or PM collection/trust account—not the tenant or SyncWorks operating account. We never ask you to enter banking credentials into this page.</p>
         <button type="button" onClick={()=>nav("/pm/payments")} className="mt-3 min-h-10 rounded-xl border border-slate-700 px-3 text-xs font-black text-cyan-200">Back to rent ledger</button>
       </div>
       {!businessId ? <div role="alert" className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-100">
