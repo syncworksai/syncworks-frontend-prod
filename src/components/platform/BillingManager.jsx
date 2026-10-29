@@ -1,6 +1,7 @@
 // src/pages/godmode/BillingManager.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import api from "../../api/client";
+import CashFeeAgingConsole from "./CashFeeAgingConsole";
 
 export default function BillingManager() {
   const [data, setData] = useState(null);
@@ -142,6 +143,8 @@ export default function BillingManager() {
               </div>
             )}
           </div>
+
+          <CashFeeAgingConsole />
 
           {/* Cash Fee Invoices */}
           <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-5">
