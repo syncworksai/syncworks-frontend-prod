@@ -801,7 +801,7 @@ export default function SboSettings() {
 
     try {
       await api.patch(`/businesses/${activeBusinessId}/`, basePayload());
-      saveLocalSnapshot();
+      try { saveLocalSnapshot(); } catch { /* Local planning snapshot is optional; server save remains authoritative. */ }
 
       const refreshed = await api.get(`/businesses/${activeBusinessId}/`);
       setBusiness(refreshed?.data || null);
