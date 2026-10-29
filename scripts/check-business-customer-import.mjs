@@ -26,6 +26,14 @@ test("import links lead from dashboard, settings and Customer 360", () => {
   assert.match(read("src/pages/sbo/SboCustomers.jsx"), /navigate\("\/sbo\/customers\/import"\)/);
 });
 
+test("imported clients can be found in Customer 360 and phone intake", () => {
+  const customers = read("src/pages/sbo/SboCustomers.jsx");
+  const intake = read("src/pages/sbo/BusinessQuickIntake.jsx");
+  assert.match(customers, /search:query\.trim\(\)/);
+  assert.match(customers, /Load more customers/);
+  assert.match(intake, /search:search\.trim\(\)/);
+});
+
 test("import limits and no unsolicited invites are clearly disclosed", () => {
   const ui = read("src/pages/sbo/BusinessCustomerImport.jsx");
   assert.match(ui, /5 MB \/ 5,000/);
