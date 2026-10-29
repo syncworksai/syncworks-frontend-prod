@@ -17,7 +17,7 @@ const errText = e => {
   const d = e?.response?.data;
   return typeof d?.detail === "string" ? d.detail : Object.values(d || {}).flat().join(" · ") || e?.message || "Unable to save.";
 };
-const blank = { current_processor:"", current_monthly_fees:"", current_monthly_transactions:"", average_payout_days:"", monthly_reconciliation_hours:"", test_notes:"" };
+const blank = { current_processor:"", current_monthly_fees:"", current_monthly_transactions:"", monthly_other_provider_costs:"", monthly_returned_payments:"", monthly_unmatched_deposits:"", average_payout_days:"", monthly_reconciliation_hours:"", test_notes:"" };
 
 export default function PaymentMigrationChecklist({ businessId: specifiedId, founderView = false, isPM = false }) {
   const { activeBusinessId } = useAuth();
@@ -44,6 +44,9 @@ export default function PaymentMigrationChecklist({ businessId: specifiedId, fou
         current_processor:p.current_processor || "",
         current_monthly_fees:p.current_monthly_fees ?? "",
         current_monthly_transactions:p.current_monthly_transactions ?? "",
+        monthly_other_provider_costs:p.monthly_other_provider_costs ?? "",
+        monthly_returned_payments:p.monthly_returned_payments ?? "",
+        monthly_unmatched_deposits:p.monthly_unmatched_deposits ?? "",
         average_payout_days:p.average_payout_days ?? "",
         monthly_reconciliation_hours:p.monthly_reconciliation_hours ?? "",
         test_notes:p.test_notes || "",
@@ -65,7 +68,7 @@ export default function PaymentMigrationChecklist({ businessId: specifiedId, fou
       setPlan(p);
       setEvidence(p.test_evidence || {});
       setForm(old=>({...old,...Object.fromEntries(
-        ["current_processor","current_monthly_fees","current_monthly_transactions","average_payout_days","monthly_reconciliation_hours","test_notes"].map(key=>[key,p[key]??""])
+        ["current_processor","current_monthly_fees","current_monthly_transactions","monthly_other_provider_costs","monthly_returned_payments","monthly_unmatched_deposits","average_payout_days","monthly_reconciliation_hours","test_notes"].map(key=>[key,p[key]??""])
       )}));
     }catch(e){setError(errText(e));}
     finally{setBusy(false);}
@@ -116,14 +119,17 @@ export default function PaymentMigrationChecklist({ businessId: specifiedId, fou
                 ["current_processor","Current processor","Square, Stripe, bank, cash/check"],
                 ["current_monthly_fees","Monthly processing fees ($)","0.00"],
                 ["current_monthly_transactions","Monthly transactions","40"],
+                ["monthly_other_provider_costs","Other monthly processor fees ($)","8.00"],
+                ["monthly_returned_payments","Returned payments each month","0"],
+                ["monthly_unmatched_deposits","Unmatched bank deposits each month","0"],
                 ["average_payout_days","Average payout delay (days)","2.0"],
                 ["monthly_reconciliation_hours","Reconciliation time (hours/mo)","3.0"],
               ].map(([key,label,placeholder])=><label key={key} className="block text-[11px] font-bold text-slate-300">{label}
-                <input className={input+" mt-1"} type={key==="current_processor"?"text":"number"} min={key==="current_processor"?undefined:"0"} step={key==="current_monthly_fees"?"0.01":key==="current_monthly_transactions"?"1":"0.1"} value={form[key]} onChange={e=>setForm(old=>({...old,[key]:e.target.value}))} placeholder={placeholder}/>
+                <input className={input+" mt-1"} type={key==="current_processor"?"text":"number"} min={key==="current_processor"?undefined:"0"} step={key==="current_monthly_fees"?"0.01":["current_monthly_transactions","monthly_returned_payments","monthly_unmatched_deposits"].includes(key)?"1":"0.1"} value={form[key]} onChange={e=>setForm(old=>({...old,[key]:e.target.value}))} placeholder={placeholder}/>
               </label>)}
             </div>
-            <button type="button" disabled={busy||!plan.workspace_reviewed} onClick={()=>update({...Object.fromEntries(["current_processor","current_monthly_fees","current_monthly_transactions","average_payout_days","monthly_reconciliation_hours"].map(k=>[k,form[k]])),costs_reviewed:true},"Current processing costs recorded.")} className={btn+" mt-3"}>Save cost baseline & confirm review</button>
-          </> : <p className="text-xs text-slate-300">Processor: {plan.current_processor||"Not recorded"} · Monthly fees: {plan.current_monthly_fees||"—"} · Transactions: {plan.current_monthly_transactions??"—"} · Payout days: {plan.average_payout_days||"—"} · Reconciliation hours: {plan.monthly_reconciliation_hours||"—"}</p>}
+            <button type="button" disabled={busy||!plan.workspace_reviewed} onClick={()=>update({...Object.fromEntries(["current_processor","current_monthly_fees","current_monthly_transactions","monthly_other_provider_costs","monthly_returned_payments","monthly_unmatched_deposits","average_payout_days","monthly_reconciliation_hours"].map(k=>[k,form[k]])),costs_reviewed:true},"Current processing costs recorded.")} className={btn+" mt-3"}>Save cost baseline & confirm review</button>
+          </> : <p className="text-xs text-slate-300">Processor: {plan.current_processor||"Not recorded"} · Monthly fees: {plan.current_monthly_fees||"—"} · Other fees: {plan.monthly_other_provider_costs||"—"} · Returns: {plan.monthly_returned_payments??"—"} · Deposit mismatches: {plan.monthly_unmatched_deposits??"—"} · Total fees: {plan.total_monthly_provider_cost||"—"} · Transactions: {plan.current_monthly_transactions??"—"} · Payout days: {plan.average_payout_days||"—"} · Reconciliation hours: {plan.monthly_reconciliation_hours||"—"}</p>}
         </div> : null}
         {index===2 ? <div className="mt-3 space-y-2">
           <p className="text-xs text-slate-300">Method: {plan.selected_pm_payment_method==="UNCONFIGURED"?"Not selected":plan.selected_pm_payment_method}. Receiving-account capabilities: {plan.bank_ready?"Verified in processor snapshot":"Not verified"}.</p>
