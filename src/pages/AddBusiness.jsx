@@ -20,6 +20,7 @@ export default function AddBusiness() {
     access_code:"", accepts_marketplace_tickets:true, accepts_fee:false,
   });
   const [saving,setSaving] = useState(false);
+  const [createdId,setCreatedId] = useState(null);
   const [error,setError] = useState("");
   const set = (key,value)=>setForm(p=>({...p,[key]:value}));
 
@@ -42,14 +43,18 @@ export default function AddBusiness() {
       });
       const id=result?.data?.id;
       if (!id) throw new Error("Business was created but its ID was not returned. Refresh your Business list before retrying.");
-      // Preserve a successful create if promo redemption fails so no duplicate businesses are created.
+      setCreatedId(id);
+      // A promo is only applied after the API explicitly confirms its status.
       const code=form.access_code.trim().toUpperCase();
       if (code) {
         try {
-          await api.post("/business-access-codes/redeem/",{business_id:id,code});
+          const granted=await api.post("/auth/upgrade-to-sbo-promo/",{business_id:id,code});
+          if (code==="SWFF26" && !granted?.data?.subscriptions_exempt) {
+            throw new Error("The lifetime subscription waiver was not confirmed.");
+          }
         } catch(e) {
-          try { localStorage.setItem(`sw_pending_business_access_code_${id}`,code); } catch {}
-          setError("Business created. Your access code could not be confirmed; review it in Business billing settings.");
+          setError("Your business was created successfully, but the subscription code was NOT confirmed. Do not create a second business. " + errText(e));
+          return;
         }
       }
       try { localStorage.setItem("sw_active_business_id",String(id)); } catch {}
@@ -64,6 +69,14 @@ export default function AddBusiness() {
     <input className={cls} type={options.type||"text"} value={form[key]} onChange={e=>set(key,options.upper?e.target.value.toUpperCase():e.target.value)} required={options.required||false} autoComplete={options.autoComplete} maxLength={options.maxLength} placeholder={options.placeholder||""}/>
   </label>;
 
+  if (createdId) return <div className="min-h-dvh bg-[#030712] px-4 py-10 text-white">
+    <main className="mx-auto max-w-lg rounded-3xl border border-amber-400/25 bg-[#081525] p-6">
+      <h1 className="text-2xl font-black">Business created</h1>
+      <p className="mt-3 text-sm text-slate-300">Your Business profile exists. Complete your service settings next. If you entered a promo code, verify it before assuming the subscription is waived.</p>
+      {error ? <p role="alert" className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">{error}</p> : null}
+      <Link to="/sbo/settings/general?setup=1&return=%2Fsbo" className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-cyan-400 px-4 font-bold text-slate-950">Continue Business setup</Link>
+    </main>
+  </div>;
   return <div className="min-h-dvh bg-[#030712] px-4 py-8 text-white">
     <main className="mx-auto max-w-xl">
       <Link to="/get-started" className="text-sm font-bold text-cyan-300">← All onboarding options</Link>
