@@ -89,7 +89,7 @@ export default function InvestorSettings() {
         notify_push: typeof local.notify_push === "boolean" ? local.notify_push : true,
       }));
     } catch (e) {
-      setErr(e?.message || "Failed to load investor settings.");
+      setErr(e?.message || "Failed to load property-owner settings.");
     } finally {
       setLoading(false);
     }
@@ -103,7 +103,7 @@ export default function InvestorSettings() {
 
     try {
       writeLocal(form);
-      setOk("Investor settings saved. Returning…");
+      setOk("Property Owner settings saved. Returning…");
       redirectTimerRef.current = setTimeout(() => {
         nav(returnTo, { replace: true });
       }, 900);
@@ -122,30 +122,18 @@ export default function InvestorSettings() {
     try {
       const code = String(form.investor_code || "").trim();
       if (!code) {
-        setErr("Enter your investor claim code.");
+        setErr("Enter the invitation code from your management company.");
         return;
       }
 
-      const payload = { code };
-      const paths = ["/investor/accept/", "/investor/invites/accept/", "/pm/investors/accept/"];
+      await api.post("/pm-hub/access/investors/accept/", { code });
+      setOk("Property Owner / Partner portal linked. Redirecting…");
+      redirectTimerRef.current = setTimeout(() => {
+        nav("/investor/properties", { replace: true });
+      }, 700);
 
-      let lastErr = null;
-      for (const p of paths) {
-        try {
-          await api.post(p, payload);
-          setOk("Investor portal linked. Redirecting…");
-          redirectTimerRef.current = setTimeout(() => {
-            nav("/investor", { replace: true });
-          }, 700);
-          return;
-        } catch (e) {
-          lastErr = e;
-        }
-      }
-
-      throw lastErr || new Error("Unable to accept investor invite.");
     } catch (e) {
-      setErr(e?.response?.data?.detail || e?.message || "Unable to accept investor code.");
+      setErr(e?.response?.data?.detail || e?.message || "Unable to accept the property-owner invitation code.");
     } finally {
       setBusyCode(false);
     }
@@ -159,7 +147,7 @@ export default function InvestorSettings() {
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100">
       <ModeBar
-        title="Investor Settings"
+        title="Property Owner / Partner Settings"
         subtitle="Identity • Entity details • Notifications • Claim linking"
         rightActions={
           <Button tone="slate" onClick={() => nav(returnTo)}>
@@ -185,9 +173,9 @@ export default function InvestorSettings() {
           ) : null}
 
           <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4 mb-6">
-            <div className="font-semibold">Investor Profile</div>
+            <div className="font-semibold">Property Owner / Partner Profile</div>
             <div className="text-xs text-slate-400 mt-1">
-              Used for portfolio communications, statements, and investor visibility later.
+              Contact details for portfolio correspondence, owner statements and property reporting.
             </div>
 
             <div className="mt-4 grid md:grid-cols-2 gap-4">
@@ -205,7 +193,7 @@ export default function InvestorSettings() {
                   value={form.email}
                   onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
                   className="w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-sm"
-                  placeholder="investor@email.com"
+                  placeholder="owner@email.com"
                 />
               </Field>
 
@@ -259,13 +247,13 @@ export default function InvestorSettings() {
           </div>
 
           <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4 mb-6">
-            <div className="font-semibold">Investor Claim Code</div>
+            <div className="font-semibold">Property Owner Invitation Code</div>
             <div className="text-xs text-slate-400 mt-1">
-              If your investor portal is not linked yet, claim it here.
+              Paste the secure code sent by your PM company. The invited email must match your Personal account.
             </div>
 
             <div className="mt-4 grid md:grid-cols-[1fr_auto] gap-3 items-end">
-              <Field label="Investor Code" hint="Example: INV-7X29KQ">
+              <Field label="Owner / Partner Code" hint="From your management company email">
                 <input
                   value={form.investor_code}
                   onChange={(e) => setForm((p) => ({ ...p, investor_code: e.target.value }))}
@@ -315,7 +303,7 @@ export default function InvestorSettings() {
 
           <div className="mt-6 flex gap-2 flex-wrap">
             <Button tone="cyan" onClick={save} disabled={saving}>
-              {saving ? "Saving…" : "Save Investor Settings"}
+              {saving ? "Saving…" : "Save Property Owner Settings"}
             </Button>
             <Button tone="slate" onClick={load} disabled={loading || saving}>
               Reset
