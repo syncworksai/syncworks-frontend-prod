@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle, BellRing, BriefcaseBusiness, ChevronRight, ClipboardCheck,
@@ -57,6 +57,7 @@ export default function PlatformMobileDashboard({ activeTab, tabs, onChange }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
+  const closeMoreRef = useRef(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -89,9 +90,17 @@ export default function PlatformMobileDashboard({ activeTab, tabs, onChange }) {
   useEffect(() => { setMoreOpen(false); }, [activeTab]);
   useEffect(() => {
     if (!moreOpen) return undefined;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeMoreRef.current?.focus();
     function closeOnEscape(event) { if (event.key === "Escape") setMoreOpen(false); }
     window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+      previousFocus?.focus?.();
+    };
   }, [moreOpen]);
 
   const attention = useMemo(() => toList(alerts?.alerts).filter(item =>
@@ -192,14 +201,14 @@ export default function PlatformMobileDashboard({ activeTab, tabs, onChange }) {
         <span className="sw-god-mobile-cube"><img src="/brands/syncworks-icon-192.png" alt="" /></span><span>Pilot</span>
       </button>
       <button type="button" onClick={()=>go("billing")} aria-current={activeTab==="billing"?"page":undefined} className={activeTab==="billing"?"active":""}><CreditCard size={18} aria-hidden="true"/><span>Billing</span></button>
-      <button type="button" onClick={()=>setMoreOpen(true)} aria-expanded={moreOpen}><MoreHorizontal size={18} aria-hidden="true"/><span>More</span></button>
+      <button type="button" onClick={()=>setMoreOpen(true)} aria-controls="sw-god-more-panel" aria-expanded={moreOpen}><MoreHorizontal size={18} aria-hidden="true"/><span>More</span></button>
     </nav>
 
     {moreOpen ? <div className="sw-god-mobile-more-backdrop" role="presentation" onClick={()=>setMoreOpen(false)}>
-      <section role="dialog" aria-modal="true" aria-labelledby="sw-god-more-heading" onClick={e=>e.stopPropagation()}
+      <section id="sw-god-more-panel" role="dialog" aria-modal="true" aria-labelledby="sw-god-more-heading" onClick={e=>e.stopPropagation()}
         className="sw-god-mobile-more-panel">
         <div className="flex items-start justify-between gap-2"><div><p className="text-[10px] font-bold uppercase tracking-widest text-cyan-300">Founder tools</p><h2 id="sw-god-more-heading" className="mt-1 text-lg font-bold text-white">All God Mode modules</h2></div>
-          <button type="button" onClick={()=>setMoreOpen(false)} aria-label="Close God Mode menu"
+          <button ref={closeMoreRef} type="button" onClick={()=>setMoreOpen(false)} aria-label="Close God Mode menu"
             className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 text-slate-100"><X size={18}/></button></div>
         <div className="mt-4 grid grid-cols-2 gap-2">{tabs.map(item=><button key={item.id} type="button" onClick={()=>go(item.id)}
           aria-current={activeTab===item.id?"page":undefined}
