@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import {
   AlertTriangle, BellRing, BriefcaseBusiness, ChevronRight, ClipboardCheck,
   CreditCard, Home, MoreHorizontal, RefreshCw, ShieldCheck,
-  Ticket, UserRound, Users, X,
+  UserRound, Users, X,
 } from "lucide-react";
 import api from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -125,7 +125,7 @@ export default function PlatformMobileDashboard({ activeTab, tabs, onChange }) {
         <div className="relative z-10 mt-4 grid grid-cols-2 gap-2">
           <StatusTile label="Users" value={numberText(metrics?.users_total)} note="Accounts on SyncWorks" icon={UserRound} onClick={()=>go("users")}/>
           <StatusTile label="Businesses" value={numberText(metrics?.businesses_total)} note="Registered businesses" icon={BriefcaseBusiness} onClick={()=>go("businesses")}/>
-          <StatusTile label="Signups (30d)" value={numberText(metrics?.signups_last_30_days)} note="New users this month" icon={Ticket} onClick={()=>go("users")}/>
+          <StatusTile label="Signups (30d)" value={numberText(metrics?.signups_last_30_days)} note="New users in the last 30 days" icon={Users} onClick={()=>go("users")}/>
           <StatusTile label="Platform alerts" value={numberText(alertCount)} note={alerts ? "Reported by platform monitoring" : "Monitoring unavailable"} icon={AlertTriangle} tone={Number(alertCount)>0 ? "rose" : "emerald"} onClick={()=>go("requests")}/>
         </div>
       </header>
