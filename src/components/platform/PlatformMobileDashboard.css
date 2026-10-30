@@ -1,0 +1,148 @@
+/* God Mode phone cockpit: shares the Customer dashboard's midnight, glass and cube language. */
+.sw-god-mobile {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  padding-bottom: calc(6.25rem + env(safe-area-inset-bottom));
+}
+.sw-god-mobile::before {
+  content: "";
+  position: fixed;
+  z-index: -2;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 10%,rgba(14,165,233,.12),transparent 31%),
+    radial-gradient(circle at 88% 34%,rgba(139,92,246,.10),transparent 30%),
+    #020617;
+}
+.sw-god-mobile-hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(56,189,248,.24);
+  border-radius: 1.55rem;
+  background: linear-gradient(180deg,rgba(6,15,35,.96),rgba(2,6,23,.85));
+  box-shadow: 0 20px 60px rgba(2,6,23,.56),0 0 46px rgba(34,211,238,.06),inset 0 1px rgba(255,255,255,.035);
+}
+.sw-god-mobile-hero::before {
+  content: "";
+  position: absolute;
+  top: -8rem;
+  right: -7rem;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 999px;
+  background: conic-gradient(from 210deg,rgba(34,211,238,.27),rgba(59,130,246,.06),rgba(168,85,247,.21),rgba(34,211,238,.27));
+  filter: blur(32px);
+  pointer-events: none;
+}
+.sw-god-mobile-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  color: #67e8f9;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+}
+.sw-god-mobile-brand::before {
+  content: "";
+  width: .4rem;
+  height: .4rem;
+  flex: none;
+  border-radius: 50%;
+  background: #22d3ee;
+  box-shadow: 0 0 12px rgba(34,211,238,.7);
+}
+.sw-god-mobile-stat {
+  position: relative;
+  min-height: 100px;
+  background: rgba(3,10,26,.76);
+  backdrop-filter: blur(14px);
+  transition: transform .18s,border-color .18s;
+}
+.sw-god-mobile-stat:active,.sw-god-mobile-action:active { transform: scale(.985); }
+.sw-god-mobile-stat:hover,.sw-god-mobile-action:hover { border-color: rgba(56,189,248,.42); }
+.sw-god-mobile-panel {
+  border: 1px solid rgba(71,85,105,.55);
+  background: linear-gradient(180deg,rgba(8,16,36,.94),rgba(2,6,23,.88));
+  box-shadow: 0 14px 46px rgba(2,6,23,.3),inset 0 1px rgba(255,255,255,.025);
+}
+.sw-god-mobile-action {
+  border: 1px solid rgba(71,85,105,.72);
+  background: linear-gradient(155deg,rgba(15,23,42,.84),rgba(2,6,23,.9));
+  transition: transform .18s,border-color .18s;
+}
+.sw-god-mobile-dock {
+  position: fixed;
+  z-index: 240;
+  left: .75rem;
+  right: .75rem;
+  bottom: max(.45rem,env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: repeat(5,minmax(0,1fr));
+  align-items: end;
+  min-height: 70px;
+  padding: .6rem .35rem .45rem;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 1.35rem;
+  background: rgba(3,8,23,.96);
+  box-shadow: 0 -10px 50px rgba(2,6,23,.7);
+  backdrop-filter: blur(24px);
+}
+.sw-god-mobile-dock button {
+  display: flex;
+  min-width: 0;
+  min-height: 44px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .25rem;
+  font-size: .62rem;
+  font-weight: 750;
+  color: #94a3b8;
+}
+.sw-god-mobile-dock button.active,.sw-god-mobile-dock button:focus-visible { color: #67e8f9; }
+.sw-god-mobile-dock button:focus-visible { outline: 2px solid #67e8f9; outline-offset: 2px; border-radius: 12px; }
+.sw-god-mobile-dock .sw-god-mobile-dock-center { margin-top: -1.6rem; justify-content: center; color: #a5f3fc; }
+.sw-god-mobile-cube {
+  display: grid;
+  height: 48px;
+  width: 48px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(103,232,249,.4);
+  border-radius: 1rem;
+  background: rgba(5,17,34,.93);
+  box-shadow: 0 0 27px rgba(34,211,238,.15);
+}
+.sw-god-mobile-cube img { width: 100%; height: 100%; object-fit: contain; }
+.sw-god-mobile-more-backdrop {
+  position: fixed;
+  z-index: 360;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(0,0,0,.75);
+}
+.sw-god-mobile-more-panel {
+  width: 100%;
+  max-height: min(86dvh,760px);
+  overflow-y: auto;
+  padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom));
+  border: 1px solid rgba(56,189,248,.3);
+  border-radius: 1.7rem 1.7rem 0 0;
+  background: #071120;
+  box-shadow: 0 -20px 80px rgba(0,0,0,.65);
+}
+@media (min-width:1024px) {
+  .sw-god-mobile,.sw-god-mobile-dock,.sw-god-mobile-more-backdrop { display:none; }
+}
+@media (max-width:1023px) {
+  /* Never stack the generic Customer quick dock beneath the founder dock. */
+  body:has(.sw-god-mobile) .sw-role-mobile-nav { display:none !important; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .sw-god-mobile-stat,.sw-god-mobile-action { transition:none; }
+}
