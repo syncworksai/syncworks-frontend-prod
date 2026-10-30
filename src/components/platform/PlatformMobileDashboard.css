@@ -1,16 +1,8 @@
 /* God Mode phone cockpit: shares the Customer dashboard's midnight, glass and cube language. */
 .sw-god-mobile {
   position: relative;
-  isolation: isolate;
   min-width: 0;
   padding-bottom: 0;
-}
-.sw-god-mobile::before {
-  content: "";
-  position: fixed;
-  z-index: -2;
-  inset: 0;
-  pointer-events: none;
   background:
     radial-gradient(circle at 50% 10%,rgba(14,165,233,.12),transparent 31%),
     radial-gradient(circle at 88% 34%,rgba(139,92,246,.10),transparent 30%),
