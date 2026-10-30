@@ -5,6 +5,8 @@ import api from "../api/client";
 
 import PlatformTabs from "../components/platform/PlatformTabs";
 import PlatformOverviewTab from "../components/platform/PlatformOverviewTab";
+import PlatformMobileDashboard from "../components/platform/PlatformMobileDashboard";
+import GodModeBuildBacklog from "../components/platform/GodModeBuildBacklog";
 import PlatformGrowthEngineTab from "../components/platform/PlatformGrowthEngineTab";
 import UsersManager from "../components/platform/UsersManager";
 import BusinessesManager from "../components/platform/BusinessesManager";
@@ -1444,7 +1446,7 @@ function Stat({ label, value }) {
 export default function PlatformDashboard() {
   const [query, setQuery] = useSearchParams();
   const requestedTab = query.get("tab");
-  const tab = TABS.some(item => item.id === requestedTab) ? requestedTab : "overview";
+  const tab = requestedTab === "__build_backlog" || TABS.some(item => item.id === requestedTab) ? requestedTab : "overview";
   const setTab = (next) => {
     const params = new URLSearchParams(query);
     params.set("tab", next);
@@ -1452,22 +1454,26 @@ export default function PlatformDashboard() {
   };
 
   return (
-    <div className="min-h-screen text-slate-100 bg-[#05060a]">
+    <div className="min-h-screen min-w-0 overflow-x-hidden bg-[#05060a] text-slate-100" data-sw-god-mode="true">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-40 -left-40 w-[520px] h-[520px] rounded-full blur-3xl opacity-30 bg-cyan-500/30" />
         <div className="absolute -top-20 -right-40 w-[560px] h-[560px] rounded-full blur-3xl opacity-25 bg-fuchsia-500/25" />
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[880px] h-[320px] rounded-full blur-3xl opacity-20 bg-indigo-500/20" />
       </div>
 
-      <ModeBar
-        title="SyncWorks Admin"
-        subtitle="Platform console - performance, billing locks, ads, broadcasts, and support triage."
-      />
+      <div className="hidden lg:block">
+        <ModeBar
+          title="SyncWorks Admin"
+          subtitle="Platform console - performance, billing locks, ads, broadcasts, and support triage."
+        />
+      </div>
 
-      <main className="relative max-w-7xl mx-auto px-4 py-6 space-y-5">
-        <PlatformTabs tabs={TABS} active={tab} onChange={setTab} />
+      <main className="relative mx-auto w-full min-w-0 max-w-7xl space-y-4 px-3 pb-32 pt-3 sm:px-4 lg:space-y-5 lg:px-4 lg:py-6">
+        <PlatformMobileDashboard activeTab={tab} tabs={TABS} onChange={setTab} />
+        <div className="hidden lg:block"><PlatformTabs tabs={TABS} active={tab} onChange={setTab} /></div>
 
-        {tab === "overview" ? <PlatformOverviewTab /> : null}
+        {tab === "overview" ? <div className="hidden lg:block"><PlatformOverviewTab /></div> : null}
+        {tab === "__build_backlog" ? <div className="lg:hidden"><GodModeBuildBacklog /></div> : null}
         {tab === "growth_os" ? <PlatformGrowthEngineTab /> : null}
         {tab === "users" ? <UsersManager /> : null}
         {tab === "businesses" ? <BusinessesManager /> : null}
