@@ -1977,6 +1977,11 @@ export default function ModeBar({
               </div>
             </div>
 
+            <div className="hidden min-w-0 items-center gap-2 rounded-xl border border-sky-400/25 bg-[#0c1c2d]/85 px-3 py-2 text-xs sm:flex" aria-label="Current workspace and page">
+              <span className="shrink-0 font-extrabold uppercase tracking-wider text-[#55d8ff]">{workspaceContext.role}</span>
+              <span className="text-slate-600" aria-hidden="true">/</span>
+              <span className="max-w-[25vw] truncate font-semibold text-slate-100">{workspaceContext.name} · {workspacePage}</span>
+            </div>
             <div className="ml-auto flex items-center gap-2">
               {showBusinessPicker ? (
                 <BusinessPicker className="hidden md:block" />
