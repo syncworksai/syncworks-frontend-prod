@@ -39,5 +39,5 @@ test("Founder phone metrics use real APIs and do not pretend missing data is zer
 
 test("Global mobile dock does not overlap God Mode mobile dock", () => {
   const nav = read("src/components/navigation/RoleAwareMobileNav.jsx");
-  assert.match(nav, /pathname\.startsWith\("\/platform"\) \|\| pathname\.startsWith\("\/god-mode"\)/);
+  assert.match(nav, /pathname === "\/platform" \|\| pathname === "\/god-mode"/);
 });
