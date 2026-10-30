@@ -15,6 +15,7 @@ import SupportRequestsManager from "../components/platform/SupportRequestsManage
 import AdsOrdersManager from "../components/platform/AdsOrdersManager";
 import GodModeAffiliates from "./platform/GodModeAffiliates";
 import GodModeProspects from "./platform/GodModeProspects";
+import PilotReadinessPanel from "./platform/PilotReadinessPanel";
 
 const TABS = [
   { id: "overview", label: "Overview" },
@@ -23,6 +24,7 @@ const TABS = [
   { id: "businesses", label: "Businesses" },
   { id: "prospects", label: "Prospects" },
   { id: "testers", label: "Business Testers" },
+  { id: "pilot_readiness", label: "Pilot Readiness" },
   { id: "billing", label: "Billing" },
   { id: "requests", label: "Requests" },
   { id: "ads", label: "Ads Orders" },
@@ -1471,6 +1473,7 @@ export default function PlatformDashboard() {
         {tab === "businesses" ? <BusinessesManager /> : null}
         {tab === "prospects" ? <GodModeProspects /> : null}
          {tab === "testers" ? <GodModeProspects pilotOnly /> : null}
+         {tab === "pilot_readiness" ? <PilotReadinessPanel /> : null}
         {tab === "billing" ? <BillingManager /> : null}
         {tab === "requests" ? <SupportRequestsManager embedded /> : null}
         {tab === "ads" ? <AdsOrdersManager /> : null}
