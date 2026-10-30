@@ -78,7 +78,14 @@ export default function PlatformMobileDashboard({ activeTab, tabs, onChange }) {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (activeTab !== "overview") return undefined;
+    const media = window.matchMedia("(max-width: 1023px)");
+    if (media.matches) load();
+    const onResize = (event) => { if (event.matches) load(); };
+    media.addEventListener?.("change", onResize);
+    return () => media.removeEventListener?.("change", onResize);
+  }, [activeTab, load]);
   useEffect(() => { setMoreOpen(false); }, [activeTab]);
   useEffect(() => {
     if (!moreOpen) return undefined;
@@ -118,7 +125,7 @@ export default function PlatformMobileDashboard({ activeTab, tabs, onChange }) {
         <div className="relative z-10 mt-4 grid grid-cols-2 gap-2">
           <StatusTile label="Users" value={numberText(metrics?.users_total)} note="Accounts on SyncWorks" icon={UserRound} onClick={()=>go("users")}/>
           <StatusTile label="Businesses" value={numberText(metrics?.businesses_total)} note="Registered businesses" icon={BriefcaseBusiness} onClick={()=>go("businesses")}/>
-          <StatusTile label="Open tickets" value={numberText(alerts?.executive?.tickets_open)} note="Needs operational review" icon={Ticket} onClick={()=>go("requests")}/>
+          <StatusTile label="Signups (30d)" value={numberText(metrics?.signups_last_30_days)} note="New users this month" icon={Ticket} onClick={()=>go("users")}/>
           <StatusTile label="Platform alerts" value={numberText(alertCount)} note={alerts ? "Reported by platform monitoring" : "Monitoring unavailable"} icon={AlertTriangle} tone={Number(alertCount)>0 ? "rose" : "emerald"} onClick={()=>go("requests")}/>
         </div>
       </header>
