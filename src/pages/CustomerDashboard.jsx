@@ -214,8 +214,8 @@ export default function CustomerDashboard() {
   return (
     <DashboardShell title="Dashboard" modeBarTitle="Dashboard" maxWidth="max-w-none" className="sw-personal-panels sw-customer-v3 px-4 sm:px-6 lg:px-6 xl:px-8">
       
-      <div className="grid w-full grid-cols-[230px_minmax(0,1fr)_310px] items-start gap-5 pb-10 max-xl:grid-cols-[210px_minmax(0,1fr)]">
-        <aside className="sticky top-4 rounded-[1.6rem] border border-sky-400/15 bg-[#090F1C]/90 p-3 shadow-[0_20px_60px_rgba(0,0,0,.25)] backdrop-blur-xl">
+      <div className="grid w-full grid-cols-1 items-start gap-5 pb-10 lg:grid-cols-[210px_minmax(0,1fr)] 2xl:grid-cols-[230px_minmax(0,1fr)_310px]">
+        <aside className="hidden lg:block sticky top-4 rounded-[1.6rem] border border-sky-400/15 bg-[#090F1C]/90 p-3 shadow-[0_20px_60px_rgba(0,0,0,.25)] backdrop-blur-xl">
           <div className="px-3 pb-2 text-[9px] font-black uppercase tracking-[.18em] text-cyan-300/70">Personal workspace</div>
           <div className="space-y-1">
             <NavButton icon={Home} label="Home" active onClick={() => nav("/customer")} color="cyan" />
@@ -240,7 +240,7 @@ export default function CustomerDashboard() {
               <div><div className="text-[10px] font-black uppercase tracking-[.22em] text-cyan-200">Personal command center</div><h1 className="mt-2 text-3xl font-black text-white">Good afternoon, {firstName(user)}.</h1><p className="mt-2 max-w-2xl text-sm text-slate-400">Your day, destinations, money, health and connected life — prioritized in one place.</p></div>
               <div className="flex gap-2"><button type="button" onClick={() => nav("/customer/new-request")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-500/10 px-4 text-xs font-black text-cyan-100"><Sparkles className="h-4 w-4" />New request</button><button type="button" onClick={() => nav("/sync")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-violet-300/25 bg-violet-500/10 px-4 text-xs font-black text-violet-100">Ask SYNC</button></div>
             </div>
-            <div className="mt-5 grid grid-cols-4 gap-3 max-lg:grid-cols-2">
+            <div className="mt-5 grid grid-cols-2 gap-3 2xl:grid-cols-4">
               <Metric icon={CloudSun} label="Weather" value={weatherValue} detail={weatherDetail} color="sky" onClick={() => nav("/customer/weather")} />
               <Metric icon={MapPin} label="Next destination" value={nextDestination ? (nextDestination.title || "Event") : "No trip"} detail={nextDestination ? `${eventTime(nextDestination)} · ${eventLocation(nextDestination)}` : "Nothing with an address coming up"} color="cyan" onClick={() => nav("/calendar")} />
               <Metric icon={MapPinned} label="Leave by" value={nextDestination ? leaveBy(nextDestination) : "—"} detail={nextDestination ? "Open route for live traffic timing" : "Add an address to an event for routing"} color="rose" onClick={() => nav(nextDestination ? "/customer/traffic" : "/calendar")} />
@@ -272,7 +272,7 @@ export default function CustomerDashboard() {
           <AroundYouPanel />
         </main>
 
-        <aside className="sticky top-4 space-y-4 max-xl:col-start-2 max-xl:static max-xl:grid max-xl:grid-cols-2 max-xl:gap-4 max-xl:space-y-0">
+        <aside className="min-w-0 space-y-4 lg:col-start-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 2xl:col-start-auto 2xl:block 2xl:sticky 2xl:top-4 2xl:space-y-4">
           <section className="rounded-[1.6rem] border border-white/10 bg-slate-950/75 p-4 shadow-[0_20px_60px_rgba(0,0,0,.25)] backdrop-blur-xl">
             <div className="flex items-center justify-between gap-2"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-amber-200">Alerts</div><h2 className="mt-1 text-lg font-black text-white">Needs attention</h2></div><AlertTriangle className={`h-5 w-5 ${alertCount ? "text-rose-300" : "text-emerald-300"}`} /></div>
             <div className="mt-4 space-y-3">
