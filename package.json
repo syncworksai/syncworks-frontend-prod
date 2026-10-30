@@ -11,7 +11,7 @@
     "check:encoding": "node scripts/check-encoding.mjs",
     "check:single-header": "node scripts/check-single-header.mjs",
     "check:navigation": "node scripts/check-navigation-contract.mjs",
-    "prebuild": "node --test scripts/check-business-intelligence.mjs scripts/check-business-pilot.mjs scripts/check-business-tester-launch.mjs scripts/check-business-customer-import.mjs scripts/check-pm-payment-onboarding.mjs scripts/check-role-onboarding.mjs"
+    "prebuild": "node --test scripts/check-business-intelligence.mjs scripts/check-business-pilot.mjs scripts/check-business-tester-launch.mjs scripts/check-business-customer-import.mjs scripts/check-pm-payment-onboarding.mjs scripts/check-role-onboarding.mjs scripts/check-platform-pilot-readiness.mjs"
   },
   "dependencies": {
     "axios": "^1.13.2",
