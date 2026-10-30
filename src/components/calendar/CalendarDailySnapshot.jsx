@@ -178,7 +178,7 @@ export default function CalendarDailySnapshot({ compact = false, title = "Today 
         {[[blocks, "Blocks"], [taskCount, "Tasks"], [serviceCount, "Service"], [healthEvents.length, "Health"]].map(([value, label]) => <div key={label} className="rounded-xl border border-white/[.07] bg-black/20 p-2"><div className="text-sm font-black text-white">{loading && !events.length ? "·" : value}</div><div className="text-[8px] font-black uppercase tracking-wider text-slate-600">{label}</div></div>)}
       </div>
 
-      <div className={`mt-2 grid gap-2 ${compact ? "grid-cols-1" : "md:grid-cols-[minmax(0,1fr)_auto]"}`}>
+      <div className={`mt-2 grid gap-2 ${compact ? "grid-cols-1" : "2xl:grid-cols-[minmax(0,1fr)_auto]"}`}>
         <div className="rounded-xl border border-white/[.07] bg-black/20 p-2.5">
           <div className="text-[8px] font-black uppercase tracking-[.14em] text-slate-600">Next up</div>
           {nextEvent ? <>
