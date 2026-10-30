@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle, BellRing, BriefcaseBusiness, ChevronRight, ClipboardCheck,
-  CreditCard, Home, LayoutGrid, MoreHorizontal, RefreshCw, ShieldCheck,
+  CreditCard, Home, MoreHorizontal, RefreshCw, ShieldCheck,
   Ticket, UserRound, Users, X,
 } from "lucide-react";
 import api from "../../api/client";
