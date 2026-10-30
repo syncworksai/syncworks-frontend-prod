@@ -1753,12 +1753,13 @@ export default function ModeBar({
   // Consistent location labels across modules; do not reuse a service business
   // name for PM, tenant, investor, platform administration, or personal modes.
   const workspaceContext = useMemo(() => {
-    if (pathname.startsWith("/investor")) return { name: customerName || "Investor", role: "Property Owner" };
+    if (pathname.startsWith("/investor")) return { name: customerName || "Property Owner", role: "Property Owner" };
     if (pathname.startsWith("/tenant")) return { name: customerName || "Tenant", role: "Tenant" };
     if (isHealthRoute) return { name: customerName || "Personal", role: "Health" };
-    if (pathname.startsWith("/sales")) return { name: customerName || "Sales", role: "Sales OS" };
-    if (pathname.startsWith("/growth") || pathname.startsWith("/sbo/growth")) return { name: businessName || customerName || "Social Media", role: "Growth OS" };
-    if (mode === "PLATFORM") return { name: "Admin Dashboard", role: "Platform Admin" };
+    if (pathname.startsWith("/platform/sales") || pathname.startsWith("/sales")) return { name: customerName || "Sales", role: "Sales OS" };
+    if (pathname.startsWith("/growth") || pathname.startsWith("/sbo/growth")) return { name: businessName || customerName || "Social Media", role: "Social Media" };
+    if (pathname.startsWith("/connect")) return { name: "Social", role: "Social" };
+    if (mode === "PLATFORM") return { name: customerName || "Admin", role: "Platform Admin" };
     if (mode === "PM" || pathname.startsWith("/pm")) return { name: "Property Management", role: "PM" };
     if (mode === "SBO" || mode === "EMPLOYEE") return { name: businessName || "Select a business", role: mode === "EMPLOYEE" ? "Employee" : "Business" };
     return { name: customerName || "Personal", role: "Personal" };
@@ -1768,19 +1769,27 @@ export default function ModeBar({
     const exact = {
       "/customer": "Dashboard", "/sbo": "Dashboard", "/pm": "Dashboard",
       "/investor": "Property Owner Dashboard", "/tenant": "Tenant Dashboard",
-      "/customer/health": "Health Dashboard", "/platform": "Admin Dashboard",
+      "/customer/health": "Health", "/health": "Health", "/platform": "Admin Dashboard",
       "/customer/tickets": "Tickets", "/customer/finance": "Finance",
       "/calendar": "Calendar", "/customer/inbox": "Inbox",
+      "/customer/tasks": "To-do", "/customer/weather": "Weather",
+      "/customer/traffic": "Traffic", "/customer/discover": "Local",
+      "/customer/marketplace": "Services", "/customer/new-request": "New Request",
       "/customer/settings": "Settings", "/sbo/customers": "Customers",
       "/sbo/leads": "Leads", "/sbo/growth": "Social Media",
       "/pm/properties": "Properties", "/pm/tenants": "Tenants",
+      "/connect": "Feed", "/upgrade": "Plans & Access"
     };
     if (exact[pathname]) return exact[pathname];
     const supplied = String(title || "").trim();
     if (supplied && supplied.toLowerCase() !== "syncworks") return supplied;
-    const last = pathname.split("/").filter(Boolean).pop() || "Dashboard";
-    if (/^\\d+$/.test(last)) return "Details";
-    return last.split("-").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+    const segments = pathname.split("/").filter(Boolean);
+    const last = segments[segments.length - 1] || "Dashboard";
+    if (/^\\d+$/.test(last) || /^[0-9a-f]{8}-[0-9a-f-]{20,}$/i.test(last)) {
+      const parent = segments[segments.length - 2] || "Item";
+      return parent.replace(/-/g, " ").replace(/\\b\\w/g, c => c.toUpperCase()) + " Details";
+    }
+    return last.replace(/-/g, " ").replace(/\\b\\w/g, c => c.toUpperCase());
   }, [pathname, title]);
 
   const identityLeft = workspaceContext.name;

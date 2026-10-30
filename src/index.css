@@ -250,3 +250,29 @@ body {
     margin-bottom: 5.75rem;
   }
 }
+
+/* SyncWorks unified visual language — inherited by internal workspaces. */
+:root {
+  --sw-midnight:#05080f;
+  --sw-metallic:#111d2c;
+  --sw-electric-blue:#168bff;
+  --sw-electric-teal:#00d5c2;
+  --sw-electric-violet:#8756ea;
+}
+.sw-autoglow { background:#05080f; }
+.sw-autoglow .sw-modebar {
+  border-bottom-color:rgba(60,129,196,.32);
+  background:rgba(5,8,15,.95);
+  box-shadow:0 8px 30px rgba(0,0,0,.25),inset 0 -1px rgba(22,139,255,.12);
+}
+.sw-autoglow :is(button,a,input,select,textarea):focus-visible {
+  outline:2px solid #55d8ff;
+  outline-offset:2px;
+}
+.sw-autoglow :is(.bg-slate-950\/75,.bg-slate-950\/65,.bg-slate-950\/70) {
+  border-color:rgba(76,116,164,.25);
+}
+.sw-autoglow .sw-modebar button { transition:background-color .18s,border-color .18s; }
+@media (prefers-reduced-motion:reduce) {
+  .sw-autoglow .sw-modebar button {transition:none;}
+}
