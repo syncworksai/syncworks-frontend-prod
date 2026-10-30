@@ -84,7 +84,7 @@ function routeMatches(pathname, target) {
 
 function navModeFromPath(pathname, fallbackMode, search = "") {
   // Platform founders have a dedicated compact navigation dock, never Customer shortcuts.
-  if (pathname.startsWith("/platform") || pathname.startsWith("/god-mode")) return null;
+  if (pathname === "/platform" || pathname === "/god-mode") return null;
   if (pathname.startsWith("/customer") || pathname === "/calendar") return "CUSTOMER";
   if (pathname.startsWith("/sbo")) return "SBO";
   if (pathname.startsWith("/employee")) return "EMPLOYEE";
