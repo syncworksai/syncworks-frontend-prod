@@ -126,7 +126,7 @@ export default function PlatformMobileDashboard({ activeTab, tabs, onChange }) {
           <StatusTile label="Users" value={numberText(metrics?.users_total)} note="Accounts on SyncWorks" icon={UserRound} onClick={()=>go("users")}/>
           <StatusTile label="Businesses" value={numberText(metrics?.businesses_total)} note="Registered businesses" icon={BriefcaseBusiness} onClick={()=>go("businesses")}/>
           <StatusTile label="Signups (30d)" value={numberText(metrics?.signups_last_30_days)} note="New users in the last 30 days" icon={Users} onClick={()=>go("users")}/>
-          <StatusTile label="Platform alerts" value={numberText(alertCount)} note={alerts ? "Reported by platform monitoring" : "Monitoring unavailable"} icon={AlertTriangle} tone={Number(alertCount)>0 ? "rose" : "emerald"} onClick={()=>go("requests")}/>
+          <StatusTile label="Platform alerts" value={numberText(alertCount)} note={alerts ? "Reported by platform monitoring" : "Monitoring unavailable"} icon={AlertTriangle} tone={alertCount === null ? "amber" : Number(alertCount)>0 ? "rose" : "emerald"} onClick={()=>go("requests")}/>
         </div>
       </header>
 
