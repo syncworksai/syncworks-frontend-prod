@@ -45,7 +45,7 @@ export default function CustomerStore() {
     if (searched.minimum > 0) url.searchParams.set("low-price", String(searched.minimum));
     return url.toString();
   })() : "";
-  return <main className="min-h-dvh bg-[#020617] px-3 pb-28 pt-3 text-white">
+  return <main className="min-h-dvh bg-[#020617] px-3 pb-40 pt-3 text-white">
     <div className="mx-auto max-w-2xl">
       <header className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/70 p-3">
         <button type="button" onClick={()=>nav("/customer")} aria-label="Back to Personal" className="grid size-10 place-items-center rounded-xl border border-white/10"><ArrowLeft size={20}/></button>
