@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   Bot,
   BriefcaseBusiness,
+  Building2,
   CalendarDays,
   CheckCircle2,
   CloudSun,
@@ -23,6 +24,7 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { getActiveBusinessId } from "../api/client";
 import SyncActionStudio from "../components/sync/SyncActionStudio";
+import SyncWorkflowIntake from "../components/sync/SyncWorkflowIntake";
 import {
   getSyncAiErrorMessage,
   getSyncAiStatus,
@@ -60,6 +62,12 @@ const PERSONAL_SUGGESTIONS = [
   "What weather information can you prepare from my saved address or ZIP?",
 ];
 
+const PM_SUGGESTIONS = [
+  "What PM maintenance items need attention today?",
+  "Give me a read-only summary of my property-management portfolio.",
+  "Help me triage a tenant maintenance issue.",
+];
+
 const BUSINESS_SUGGESTIONS = [
   "Read my complete Business profile and all current operations updates aloud.",
   "What needs my attention today across jobs, leads, messages, and approvals?",
@@ -86,9 +94,8 @@ function saveJson(key, value) {
 
 function inferWorkspace(pathname, returnTo) {
   const value = `${pathname || ""} ${returnTo || ""}`.toLowerCase();
-  return value.includes("/sbo") || value.includes("/business")
-    ? "business"
-    : "personal";
+  if (value.includes("/pm") || value.includes("/property-management")) return "pm";
+  return value.includes("/sbo") || value.includes("/business") ? "business" : "personal";
 }
 
 function findBrowserVoice(option, voices) {
@@ -149,8 +156,7 @@ export default function SyncAssistant() {
     [settings.voiceId]
   );
 
-  const suggestions =
-    workspace === "business" ? BUSINESS_SUGGESTIONS : PERSONAL_SUGGESTIONS;
+  const suggestions = workspace === "pm" ? PM_SUGGESTIONS : workspace === "business" ? BUSINESS_SUGGESTIONS : PERSONAL_SUGGESTIONS;
   const businessAvailable = Boolean(getActiveBusinessId());
   const aiReady = status.enabled && status.configured && !status.loading;
 
@@ -282,10 +288,11 @@ export default function SyncAssistant() {
     stopSpeaking();
 
     if (greeting) {
-      const greetingText =
-        workspace === "business"
-          ? "Business SYNC is ready. What can I do for you today?"
-          : "SYNC is ready. What can I do for you today?";
+      const greetingText = workspace === "pm"
+        ? "Property Management SYNC is ready. What can I do for you today?"
+        : workspace === "business"
+        ? "Business SYNC is ready. What can I do for you today?"
+        : "SYNC is ready. What can I do for you today?";
       speak(greetingText, { force: true });
       window.setTimeout(begin, 1700);
       return;
@@ -341,7 +348,9 @@ export default function SyncAssistant() {
 
   function readFullProfile() {
     const prompt =
-      workspace === "business"
+      workspace === "pm"
+        ? "Give me a read-only property-management briefing using the authorized portfolio summary. Tell me what needs attention and identify missing data."
+        : workspace === "business"
         ? "Give me a complete spoken Business profile briefing. Read all available business profile details and current updates, including active jobs, overdue or blocked work, unassigned jobs, approvals, leads, follow-ups, partner invitations, recent conversation activity, service coverage, marketplace status, and any missing information. Organize it clearly for listening while I am mobile."
         : "Give me a complete spoken Personal profile briefing. Read all available personal profile details and current updates, including active requests, tickets, scheduled work, approvals, recent conversation activity, Health profile and workout data availability, finance snapshot and plan status, and any missing information. Organize it clearly for listening while I am mobile.";
 
@@ -453,7 +462,7 @@ export default function SyncAssistant() {
             </div>
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
             <button
               type="button"
               onClick={() => setWorkspace("personal")}
@@ -493,6 +502,12 @@ export default function SyncAssistant() {
                   ? "Jobs, leads, approvals, messages, and operations."
                   : "Select a Business workspace first."}
               </div>
+            </button>
+            <button type="button" onClick={() => { setWorkspace("pm"); setNotice("PM SYNC requires an authorized Property Management portfolio."); }}
+              className={`rounded-3xl border p-4 text-left ${workspace === "pm" ? "border-emerald-400/40 bg-emerald-500/10" : "border-slate-800 bg-slate-950/70"}`}>
+              <Building2 className="h-5 w-5 text-emerald-200" />
+              <div className="mt-3 font-black text-white">PM SYNC</div>
+              <div className="mt-1 text-xs leading-5 text-slate-400">Property, maintenance and work-order oversight.</div>
             </button>
           </div>
 
@@ -660,11 +675,13 @@ export default function SyncAssistant() {
           </div>
         </section>
 
-        <SyncActionStudio
+        <SyncWorkflowIntake workspace={workspace} onNotice={setNotice} />
+
+        {workspace !== "pm" ? <SyncActionStudio
           workspace={workspace}
           disabled={sending || !aiReady}
           onNotice={setNotice}
-        />
+        /> : null}
 
         <section className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-4">

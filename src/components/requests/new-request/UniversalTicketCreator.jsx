@@ -287,6 +287,7 @@ export default function UniversalTicketCreator({
   businessServiceKeys = [],
   title = "",
   subtitle = "",
+  initialDetails = "",
 }) {
   const isBusinessInternal = mode === MARKETPLACE_MODES.BUSINESS_INTERNAL;
 
@@ -340,7 +341,7 @@ export default function UniversalTicketCreator({
   const [serviceZip, setServiceZip] = useState("");
   const [accessNotes, setAccessNotes] = useState("");
 
-  const [details, setDetails] = useState("");
+  const [details, setDetails] = useState(() => String(initialDetails || "").slice(0, 3000));
   const [bestPhone, setBestPhone] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
