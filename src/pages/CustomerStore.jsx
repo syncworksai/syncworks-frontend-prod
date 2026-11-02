@@ -1,163 +1,80 @@
-import React, { useMemo, useState } from "react";
-import {
-  ArrowLeft,
-  ChevronRight,
-  Dumbbell,
-  Hammer,
-  HeartPulse,
-  Home,
-  Laptop,
-  PackageSearch,
-  Search,
-  ShoppingBag,
-  Sparkles,
-  Trees,
-  X,
-} from "lucide-react";
+import React, { useState } from "react";
+import { ArrowLeft, Bookmark, ChevronRight, Dumbbell, Hammer, Home, ListChecks, Package, Search, ShoppingBag, Sparkles, Trees } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import JarvisShop from "../components/customer/JarvisShop";
 
 const CATEGORIES = [
-  { key: "HOME", label: "Home", icon: Home, copy: "Repairs, filters, organization and everyday household needs." },
-  { key: "TOOLS", label: "Tools", icon: Hammer, copy: "Project tools, hardware and equipment suggested from your task list." },
-  { key: "LAWN", label: "Lawn", icon: Trees, copy: "Lawn care, irrigation, cleanup and outdoor maintenance gear." },
-  { key: "FAMILY", label: "Family", icon: HeartPulse, copy: "Useful household and family products without the clutter." },
-  { key: "TECH", label: "Technology", icon: Laptop, copy: "Connected-home, productivity and everyday technology." },
-  { key: "FITNESS", label: "Fitness", icon: Dumbbell, copy: "Protein, hydration, recovery and training accessories." },
+  ["Home", Home, "air filters home supplies"],
+  ["Tools", Hammer, "tools hardware"],
+  ["Outdoor", Trees, "garden outdoor supplies"],
+  ["Fitness", Dumbbell, "fitness equipment"],
 ];
-
-const RECOMMENDATIONS = [
-  {
-    id: "air-filter",
-    category: "HOME",
-    eyebrow: "SYNC RECOMMENDED",
-    title: "Replacement air filters",
-    detail: "A task-aware recommendation pattern for routine home maintenance.",
-    merchant: "Amazon",
-    status: "Partner link not connected",
-  },
-  {
-    id: "drill",
-    category: "TOOLS",
-    eyebrow: "PROJECT READY",
-    title: "20V drill options",
-    detail: "Designed for SYNC to surface the right product when a project calls for it.",
-    merchant: "Amazon",
-    status: "Partner link not connected",
-  },
-  {
-    id: "protein",
-    category: "FITNESS",
-    eyebrow: "HEALTH PICK",
-    title: "Protein options",
-    detail: "Contextual nutrition recommendations can route here from SyncWorks Health.",
-    merchant: "SEEQ + partners",
-    status: "Affiliate IDs pending",
-  },
-];
-
-const PARTNERS = [
-  { name: "Amazon", detail: "Home, tools, lawn, family, technology and general product discovery.", status: "READY FOR LINK" },
-  { name: "SEEQ", detail: "Fitness and protein partner placement for Health and Personal Store.", status: "READY FOR LINK" },
-  { name: "Keeper", detail: "Software partner opportunity for identity and security recommendations.", status: "REVIEW" },
-];
-
-function CategoryCard({ item, active, onClick }) {
-  const Icon = item.icon;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-2xl border p-3 text-left transition ${active ? "border-cyan-300/35 bg-cyan-500/[.10]" : "border-white/10 bg-white/[.025] hover:border-white/20"}`}
-    >
-      <span className="grid h-9 w-9 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-500/10 text-cyan-200"><Icon className="h-4 w-4" /></span>
-      <div className="mt-2 text-[11px] font-black text-white">{item.label}</div>
-      <div className="mt-1 text-[9px] leading-4 text-slate-500">{item.copy}</div>
-    </button>
-  );
+const PROMPTS = ["Wireless mouse under $30", "Air filters for my house", "Best drill under $100", "Garden supplies under $50"];
+const PROJECT_KEY = "sw:shop-assist:project-list:v1";
+function readProjects() {
+  try { const v = JSON.parse(localStorage.getItem(PROJECT_KEY) || "[]"); return Array.isArray(v) ? v.filter(s => typeof s === "string").slice(0, 20) : []; }
+  catch { return []; }
 }
-
-function RecommendationCard({ item, onOpen }) {
-  return (
-    <button type="button" onClick={() => onOpen(item)} className="rounded-2xl border border-white/10 bg-white/[.025] p-4 text-left transition hover:-translate-y-px hover:border-cyan-300/25">
-      <div className="text-[8px] font-black uppercase tracking-[.18em] text-cyan-300">{item.eyebrow}</div>
-      <div className="mt-2 text-sm font-black text-white">{item.title}</div>
-      <div className="mt-1 text-[10px] leading-4 text-slate-500">{item.detail}</div>
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="text-[9px] font-bold text-slate-300">{item.merchant}</span>
-        <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-amber-200">Preview</span>
-      </div>
-    </button>
-  );
-}
-
 export default function CustomerStore() {
   const nav = useNavigate();
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("ALL");
-  const [selected, setSelected] = useState(null);
-
-  const filtered = useMemo(() => {
-    const clean = query.trim().toLowerCase();
-    return RECOMMENDATIONS.filter((item) => {
-      const categoryMatch = category === "ALL" || item.category === category;
-      const queryMatch = !clean || `${item.title} ${item.detail} ${item.merchant}`.toLowerCase().includes(clean);
-      return categoryMatch && queryMatch;
-    });
-  }, [category, query]);
-
-  return (
-    <div className="min-h-dvh bg-[#020617] text-slate-100">
-      <div className="mx-auto max-w-7xl px-3 pb-28 pt-3 sm:px-5 lg:px-8 lg:pb-10">
-        <header className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/75 p-3 backdrop-blur-xl">
-          <button type="button" onClick={() => nav("/customer")} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[.03] text-slate-300"><ArrowLeft className="h-4 w-4" /></button>
-          <div className="min-w-0 flex-1">
-            <div className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-300">SyncWorks Personal</div>
-            <h1 className="truncate text-lg font-black text-white">Store</h1>
-          </div>
-          <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-violet-200">Preview</span>
-        </header>
-
-        <JarvisShop />
-
-        <section className="mt-3 overflow-hidden rounded-[1.6rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_90%_0%,rgba(168,85,247,.18),transparent_34%),radial-gradient(circle_at_0%_100%,rgba(34,211,238,.12),transparent_30%),linear-gradient(145deg,rgba(8,18,35,.98),rgba(2,6,23,.98))] p-4 sm:p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[.18em] text-cyan-300"><Sparkles className="h-3.5 w-3.5" />Shop from what you already need</div>
-              <h2 className="mt-2 text-2xl font-black tracking-tight text-white sm:text-3xl">Useful products, not random ads.</h2>
-              <p className="mt-2 text-[11px] leading-5 text-slate-400 sm:text-xs">The Store is designed for SYNC to turn tasks, projects, Health goals and household needs into relevant product options. Partner links will only activate after the approved affiliate account is connected.</p>
-            </div>
-            <button type="button" onClick={() => nav("/sync")} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-violet-300/25 bg-violet-500/10 px-4 text-xs font-black text-violet-100">Ask SYNC what I need <ChevronRight className="h-4 w-4" /></button>
-          </div>
-
-          <label className="mt-4 flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-3">
-            <Search className="h-4 w-4 text-cyan-300" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tools, protein, home supplies…" className="min-w-0 flex-1 bg-transparent py-3 text-[12px] text-white outline-none placeholder:text-slate-600" />
-          </label>
-        </section>
-
-        <section className="mt-4">
-          <div className="mb-2 flex items-center justify-between"><h2 className="text-[12px] font-black text-white">Shop by need</h2><button type="button" onClick={() => setCategory("ALL")} className="text-[9px] font-black text-cyan-300">Show all</button></div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-            {CATEGORIES.map((item) => <CategoryCard key={item.key} item={item} active={category === item.key} onClick={() => setCategory(item.key)} />)}
-          </div>
-        </section>
-
-        <section className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div>
-            <div className="mb-2 flex items-center justify-between"><h2 className="text-[12px] font-black text-white">Recommended by SYNC</h2><span className="text-[9px] text-slate-500">{filtered.length} preview cards</span></div>
-            {filtered.length ? <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{filtered.map((item) => <RecommendationCard key={item.id} item={item} onOpen={setSelected} />)}</div> : <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-[11px] text-slate-500">No preview recommendations match this filter yet.</div>}
-          </div>
-
-          <aside className="rounded-2xl border border-white/10 bg-white/[.025] p-4">
-            <div className="flex items-center gap-2"><ShoppingBag className="h-4 w-4 text-cyan-300" /><h2 className="text-[12px] font-black text-white">Partner readiness</h2></div>
-            <div className="mt-3 space-y-2">{PARTNERS.map((partner) => <div key={partner.name} className="rounded-xl border border-white/10 bg-black/15 p-3"><div className="flex items-center justify-between gap-2"><span className="text-[11px] font-black text-white">{partner.name}</span><span className="text-[8px] font-black uppercase tracking-wider text-amber-200">{partner.status}</span></div><p className="mt-1 text-[9px] leading-4 text-slate-500">{partner.detail}</p></div>)}</div>
-            <div className="mt-3 rounded-xl border border-cyan-300/15 bg-cyan-500/[.05] p-3 text-[9px] leading-4 text-slate-400">Partner link — SyncWorks may earn a commission when an approved affiliate link is used. No merchant link is active in this preview.</div>
-          </aside>
-        </section>
+  const [draft, setDraft] = useState("");
+  const [showAssistant, setShowAssistant] = useState(false);
+  const [projects, setProjects] = useState(readProjects);
+  const [projectInput, setProjectInput] = useState("");
+  function start(term) {
+    const clean = term.trim();
+    if (!clean) return;
+    setDraft(clean);
+    setShowAssistant(true);
+    window.setTimeout(() => document.getElementById("shop-assistant")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  }
+  function addProject(e) {
+    e.preventDefault();
+    const text = projectInput.trim();
+    if (!text || text.length > 120) return;
+    const next = [...projects, text].slice(0, 20);
+    setProjects(next); setProjectInput("");
+    try { localStorage.setItem(PROJECT_KEY, JSON.stringify(next)); } catch { /* storage disabled */ }
+  }
+  function removeProject(index) {
+    const next = projects.filter((_, i) => i !== index);
+    setProjects(next);
+    try { localStorage.setItem(PROJECT_KEY, JSON.stringify(next)); } catch { /* storage disabled */ }
+  }
+  return <main className="min-h-dvh bg-[#020617] pb-28 text-slate-100">
+    <div className="mx-auto max-w-5xl px-3 pt-3 sm:px-6">
+      <header className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3">
+        <button type="button" aria-label="Back to Personal dashboard" onClick={() => nav("/customer")} className="grid size-10 place-items-center rounded-xl border border-white/10"><ArrowLeft size={19}/></button>
+        <span className="grid size-10 place-items-center rounded-xl border border-cyan-300/25 bg-cyan-400/10"><ShoppingBag size={20} className="text-cyan-300"/></span>
+        <div className="min-w-0 flex-1"><div className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-300">SyncWorks Personal</div><h1 className="text-lg font-black">SYNC Shop Assist</h1></div>
+      </header>
+      <section className="mt-3 rounded-[1.5rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_100%_0%,rgba(99,102,241,.22),transparent_55%),linear-gradient(140deg,#0b1730,#020617)] p-4 sm:p-6">
+        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-cyan-300"><Sparkles size={16}/> Your shopping assistant</div>
+        <h2 className="mt-2 text-2xl font-black leading-tight sm:text-3xl">What do you need today?</h2>
+        <p className="mt-2 text-xs leading-5 text-slate-400">Find products by budget, shop supplies for a project, or save something to reorder.</p>
+        <form className="mt-4 flex flex-col gap-2 sm:flex-row" onSubmit={(e)=>{e.preventDefault();start(draft);}}>
+          <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-white/15 bg-black/30 px-3 focus-within:border-cyan-300"><Search size={19} className="shrink-0 text-cyan-300"/><input value={draft} maxLength={180} onChange={e=>setDraft(e.target.value)} aria-label="Describe the product you need" placeholder="Find a product or supply…" className="min-h-12 min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500"/></label>
+          <button type="submit" disabled={!draft.trim()} className="min-h-12 rounded-xl bg-cyan-400 px-5 text-sm font-black text-slate-950 disabled:opacity-50">Find options <ChevronRight size={16} className="ml-1 inline"/></button>
+        </form>
+        <div className="mt-3 flex flex-wrap gap-2">{PROMPTS.map(p=><button key={p} type="button" onClick={()=>start(p)} className="rounded-full border border-white/15 bg-white/[.04] px-3 py-2 text-[11px] font-semibold text-slate-200">{p}</button>)}</div>
+      </section>
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {[
+          ["Find products",Search,()=>document.querySelector('input[aria-label="Describe the product you need"]')?.focus()],
+          ["Saved searches",Bookmark,()=>{setShowAssistant(true);document.getElementById("shop-assistant")?.scrollIntoView({behavior:"smooth"});}],
+          ["Project supplies",ListChecks,()=>document.getElementById("shop-projects")?.scrollIntoView({behavior:"smooth"})],
+          ["Ask SYNC",Sparkles,()=>nav("/sync?return=%2Fcustomer%2Fstore")],
+        ].map(([label,Icon,action])=><button key={label} type="button" onClick={action} className="flex min-h-24 flex-col items-start justify-between rounded-2xl border border-white/10 bg-slate-900/65 p-3 text-left hover:border-cyan-300/30"><Icon size={22} className="text-cyan-300"/><span className="text-xs font-bold">{label}</span></button>)}
       </div>
-
-      {selected ? <div className="fixed inset-0 z-[230] bg-black/70 backdrop-blur-sm" onMouseDown={() => setSelected(null)}><aside className="absolute inset-y-0 right-0 w-[90%] max-w-md overflow-y-auto border-l border-cyan-300/15 bg-[#020817] p-4" onMouseDown={(event) => event.stopPropagation()}><div className="flex items-center justify-between"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-300">Recommendation preview</div><h2 className="mt-1 text-xl font-black text-white">{selected.title}</h2></div><button type="button" onClick={() => setSelected(null)} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10"><X className="h-5 w-5" /></button></div><div className="mt-5 rounded-2xl border border-white/10 bg-white/[.025] p-4"><PackageSearch className="h-6 w-6 text-cyan-300" /><p className="mt-3 text-sm leading-6 text-slate-300">{selected.detail}</p><div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/[.08] p-3 text-[10px] leading-4 text-amber-100">{selected.status}. We are intentionally not sending users to an untracked retailer link until the approved affiliate destination is configured.</div></div><button type="button" onClick={() => nav("/sync")} className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-500/10 text-xs font-black text-cyan-100">Ask SYNC for alternatives <ChevronRight className="h-4 w-4" /></button></aside></div> : null}
+      <div id="shop-assistant" className="scroll-mt-28">{showAssistant && <JarvisShop />}</div>
+      <section id="shop-projects" className="mt-4 scroll-mt-28 rounded-2xl border border-white/10 bg-slate-900/50 p-4">
+        <div className="flex items-center gap-2"><ListChecks className="text-emerald-300" size={18}/><h2 className="text-base font-black">Project shopping list</h2></div>
+        <p className="mt-1 text-xs text-slate-400">Keep a quick list of supplies and search each item when you're ready.</p>
+        <form onSubmit={addProject} className="mt-3 flex gap-2"><input aria-label="Add project supply" maxLength={120} value={projectInput} onChange={e=>setProjectInput(e.target.value)} placeholder="e.g. Mulch, gloves, air filter…" className="min-w-0 flex-1 rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none focus:border-cyan-400"/><button type="submit" disabled={!projectInput.trim()} className="rounded-xl bg-emerald-300 px-4 text-xs font-black text-slate-950 disabled:opacity-50">Add</button></form>
+        <div className="mt-3 space-y-2">{projects.length ? projects.map((p,i)=><div key={i} className="flex items-center gap-2 rounded-xl border border-white/10 p-3"><Package size={18} className="text-cyan-300"/><span className="min-w-0 flex-1 text-sm">{p}</span><button type="button" onClick={()=>start(p)} className="rounded-lg border border-cyan-300/25 px-3 py-2 text-xs font-bold text-cyan-200">Find</button><button type="button" onClick={()=>removeProject(i)} aria-label={"Remove "+p} className="px-2 text-xs text-slate-400">Remove</button></div>) : <p className="rounded-xl border border-dashed border-white/10 p-4 text-xs text-slate-500">No supplies yet. Add your first item above.</p>}</div>
+      </section>
+      <section className="mt-4"><h2 className="mb-3 text-base font-black">Browse by need</h2><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{CATEGORIES.map(([label,Icon,term])=><button type="button" key={label} onClick={()=>start(term)} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[.03] p-4 text-left text-xs font-bold hover:border-cyan-300/30"><Icon size={20} className="text-cyan-300"/>{label}</button>)}</div></section>
+      <p className="mt-5 text-[11px] leading-5 text-slate-500">As an Amazon Associate, SyncWorks earns from qualifying purchases. Shop Assist opens Amazon for current pricing, reviews and checkout. We do not place orders or add items to your Amazon cart.</p>
     </div>
-  );
+  </main>;
 }
