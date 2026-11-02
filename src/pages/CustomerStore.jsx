@@ -63,6 +63,8 @@ export default function CustomerStore() {
         <p className="mt-2 text-sm text-slate-300">Searching for <strong>{searched.q}</strong> between ${searched.minimum} and ${searched.maximum}, prioritizing {CHOICES.find(c=>c.id===searched.choice)?.label.toLowerCase()}.</p>
         <p className="mt-3 text-xs leading-5 text-amber-200">Three individually verified products cannot be shown until Amazon Creators API access is connected. This link opens Amazon with your search preferences and our affiliate tag. Review price, seller and ratings there before buying.</p>
         <a href={searchLink} target="_blank" rel="sponsored noopener noreferrer" className="mt-4 flex min-h-12 items-center justify-center gap-2 rounded-xl border border-cyan-300/40 bg-cyan-500/10 px-4 text-sm font-black text-cyan-100">View matching products on Amazon <ExternalLink size={17}/></a>
+        <a href={searchLink} target="_blank" rel="sponsored noopener noreferrer" className="mt-2 flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[.03] px-4 text-sm font-black text-white">Browse more items <ExternalLink size={17}/></a>
+        <p className="mt-2 text-[11px] text-slate-400">Both links include the SyncWorks affiliate tag. Additional browsing and purchases on Amazon are subject to Amazon’s referral-session rules.</p>
       </section>}
       <p className="mt-5 px-1 text-xs leading-5 text-slate-500">As an Amazon Associate, SyncWorks earns from qualifying purchases. Checkout and cart changes happen on Amazon. Prices and availability may change.</p>
     </div>
