@@ -56,11 +56,11 @@ export default function JarvisShop() {
     setSubmitted({ query: clean, budget: max, priority });
   }
   return (
-    <section aria-labelledby="jarvis-shop-title" className="mt-4 rounded-[1.5rem] border border-cyan-400/25 bg-gradient-to-br from-slate-900 to-[#060b20] p-4 shadow-xl sm:p-6">
+    <section aria-labelledby="sync-shop-assist-title" className="mt-3 rounded-[1.5rem] border border-cyan-400/25 bg-gradient-to-br from-slate-900 to-[#060b20] p-4 shadow-xl sm:p-6">
       <div className="flex items-start gap-3"><span className="rounded-xl bg-cyan-400/10 p-2 text-cyan-200"><Sparkles size={22} /></span>
         <div><div className="text-[10px] font-extrabold uppercase tracking-widest text-cyan-300">SyncWorks Personal · Shopping assistant</div>
-          <h2 id="jarvis-shop-title" className="mt-1 text-xl font-black text-white">Jarvis Shop</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-400">Tell Jarvis what you need. Compare three Amazon search strategies within your budget, then choose and check out on Amazon.</p>
+          <h2 id="sync-shop-assist-title" className="mt-1 text-xl font-black text-white">SYNC Shop Assist</h2>
+          <p className="mt-1 text-xs leading-5 text-slate-400">Find what you need fast. Set a budget, compare Amazon searches, and check out securely on Amazon.</p>
         </div>
       </div>
       <form onSubmit={submit} className="mt-5 grid gap-3">
