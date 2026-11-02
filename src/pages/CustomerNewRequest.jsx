@@ -1,12 +1,14 @@
 // src/pages/CustomerNewRequest.jsx
 import React from "react";
 import { CalendarClock } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import UniversalTicketCreator from "../components/requests/new-request/UniversalTicketCreator";
 import { MARKETPLACE_MODES } from "../components/requests/new-request/requestMarketplaceCatalog";
 
 export default function CustomerNewRequest() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const jarvisDetails = typeof location.state?.jarvisDescription === "string" ? location.state.jarvisDescription.slice(0, 3000) : "";
 
   function handleCreated({ id }) {
     window.setTimeout(() => {
@@ -32,6 +34,7 @@ export default function CustomerNewRequest() {
       </div>
       <UniversalTicketCreator
         mode={MARKETPLACE_MODES.CUSTOMER_MARKETPLACE}
+        initialDetails={jarvisDetails}
         title="What do you need?"
         subtitle="Search the local marketplace. SyncWorks turns every request into a trackable ticket behind the scenes."
         onCreated={handleCreated}
