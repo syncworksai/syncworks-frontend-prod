@@ -24,6 +24,7 @@ import {
   Settings,
   Sparkles,
   Store,
+  ShoppingBag,
   Users,
   WalletCards,
 } from "lucide-react";
@@ -225,6 +226,7 @@ export default function CustomerDashboard() {
             <NavButton icon={Compass} label="Local" onClick={() => nav("/customer/discover")} color="emerald" />
             <NavButton icon={MapPinned} label="Traffic" onClick={() => nav("/customer/traffic")} color="rose" badge="LIVE" />
             <NavButton icon={CloudSun} label="Weather" onClick={() => nav("/customer/weather")} color="sky" badge="LIVE" />
+            <NavButton icon={ShoppingBag} label="Shop Assist" onClick={() => nav("/customer/store")} color="emerald" />
             <NavButton icon={Store} label="Services" onClick={() => nav("/customer/marketplace")} color="cyan" />
             <NavButton icon={Network} label="Social" onClick={() => nav("/connect")} color="fuchsia" />
             <NavButton icon={Search} label="EDGE" onClick={() => nav("/customer/edge")} color="violet" />
@@ -248,6 +250,7 @@ export default function CustomerDashboard() {
             </div>
           </section>
 
+          <button type="button" onClick={() => nav("/customer/store")} className="flex w-full items-center gap-3 rounded-[1.4rem] border border-cyan-300/20 bg-cyan-500/[.06] p-4 text-left"><ShoppingBag className="h-6 w-6 shrink-0 text-cyan-300"/><span className="min-w-0 flex-1"><span className="block text-sm font-black text-white">SYNC Shop Assist</span><span className="mt-1 block text-xs text-slate-400">Find products, compare budgets, and reorder supplies.</span></span><ChevronRight className="h-5 w-5 text-cyan-300"/></button>
           <section className="rounded-[1.6rem] border border-violet-400/20 bg-[radial-gradient(circle_at_0%_0%,rgba(139,92,246,.14),transparent_36%),rgba(15,23,42,.55)] p-5">
             <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-violet-400/25 bg-violet-500/10 text-violet-200"><Sparkles className="h-5 w-5" /></span><div className="min-w-0 flex-1"><div className="text-[9px] font-black uppercase tracking-[.18em] text-violet-200">SYNC brief</div><div className="mt-1 text-sm font-bold leading-6 text-white">{brief}</div></div><button type="button" onClick={() => nav("/sync")} className="shrink-0 rounded-xl border border-violet-300/20 bg-violet-500/10 px-3 py-2 text-[10px] font-black text-violet-100">Ask SYNC</button></div>
           </section>
