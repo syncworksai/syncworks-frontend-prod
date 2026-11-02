@@ -634,7 +634,7 @@ export default function SboSetupWizard({
                 Set Up Your Business
               </div>
               <div className="mt-1 text-sm text-slate-400">
-                Four short steps. Save as you go, then finish activation from your dashboard.
+                Four guided steps: tell us about your business, where you work, what you offer, and review the setup. We'll explain why each answer matters.
               </div>
             </div>
 
@@ -951,9 +951,9 @@ export default function SboSetupWizard({
                 </div>
 
                 <div className="rounded-3xl border border-cyan-500/25 bg-slate-950/65 p-4">
-                  <div className="text-xl font-black text-slate-100">Next: activate your business</div>
+                  <div className="text-xl font-black text-slate-100">Next: choose your plan and activate payments</div>
                   <ol className="mt-4 space-y-3 text-sm text-slate-300">
-                    <li>1. Activate the Business plan and add your billing card in Finance.</li>
+                    <li>1. Review available Business plans, trial terms and optional upgrades in Plans & Access; no charge occurs just by finishing this wizard.</li>
                     <li>2. Complete Stripe Connect to accept payments and receive payouts.</li>
                     <li>3. Add a priced service in your Catalog and review dashboard readiness.</li>
                     <li>4. Follow the five-step payment migration checklist in Finance: preserve current processor, compare fees, verify bank, test payment, and request a controlled switch.</li>
