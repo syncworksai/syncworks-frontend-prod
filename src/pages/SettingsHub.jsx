@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import ModeBar from "../components/ModeBar";
+import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { MobileNavSettings } from "../components/navigation/RoleAwareMobileNav";
 import { loadConnectedLifeRegistry } from "../api/connectedLife";
@@ -115,6 +116,7 @@ export default function SettingsHub() {
   const validTabs = ["ACCOUNT", "CONNECTIONS", "FEES", "NAVIGATION", "ACCESS"];
   const [tab, setTab] = useState(validTabs.includes(queryTab) ? queryTab : "CONNECTIONS");
   const [registry, setRegistry] = useState(null);
+  const [billingMessage, setBillingMessage] = useState("");
   const [registryLoading, setRegistryLoading] = useState(false);
   const [locationPermission, setLocationPermission] = useState("unknown");
 
@@ -139,6 +141,12 @@ export default function SettingsHub() {
   }, [financeConnected, growthConnected]);
 
   useEffect(() => { refreshRegistry(); }, [refreshRegistry]);
+  useEffect(() => {
+    if (tab !== "ACCOUNT") return;
+    let active = true;
+    api.get("/billing/status/").then(() => { if (active) setBillingMessage("Billing endpoint reached. Review checkout for exact prices and trial terms."); }).catch(() => { if (active) setBillingMessage("Subscription status unavailable here. Review Plans & Billing for confirmed prices."); });
+    return () => { active = false; };
+  }, [tab]);
 
   useEffect(() => {
     let permissionStatus;
@@ -230,7 +238,25 @@ export default function SettingsHub() {
         ) : null}
 
         {tab === "ACCOUNT" ? (
-          <Card title="Account" subtitle="Identity and core account controls.">
+          <Card title="Account" subtitle="Identity, subscriptions, optional tools and account controls.">
+            <section className="mb-5 rounded-2xl border border-cyan-400/25 bg-cyan-500/[.05] p-4">
+              <h3 className="text-lg font-bold text-white">My plans & subscriptions</h3>
+              <p className="mt-2 text-sm text-slate-200">View and manage the workspaces and optional capabilities connected to your account. A connected workspace does not necessarily mean a paid subscription is active.</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-white/10 p-3"><div className="text-xs text-cyan-200">Personal</div><strong>Free core account</strong></div>
+                <div className="rounded-xl border border-white/10 p-3"><div className="text-xs text-cyan-200">Business</div><strong>{businessConnected ? "Workspace connected" : "Available to add"}</strong></div>
+                <div className="rounded-xl border border-white/10 p-3"><div className="text-xs text-cyan-200">Property Management</div><strong>{pmConnected ? "Workspace connected" : "Available to add"}</strong></div>
+              </div>
+              <p className="mt-3 text-xs text-slate-300">{billingMessage || "Checking billing connection..."}</p>
+              <div className="mt-4 rounded-xl border border-amber-400/25 bg-amber-500/5 p-3 text-sm text-slate-200">
+                <strong className="text-white">Optional feature trial policy (planned):</strong> 30 days of access, reminder emails and business-inbox notices before expiration, features disabled at expiry unless upgraded, and a proposed 10% early-upgrade discount. No trial or discount is activated on this page until supported by billing and entitlements.
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button type="button" onClick={() => nav("/upgrade")} className="rounded-xl bg-cyan-500 px-4 py-3 text-sm font-bold text-slate-950">View plans & billing</button>
+                {businessConnected ? <button type="button" onClick={() => nav("/sbo/settings/general?setup=1")} className="rounded-xl border border-slate-600 px-4 py-3 text-sm font-semibold text-white">Customize business</button> : null}
+                {pmConnected ? <button type="button" onClick={() => nav("/pm/settings")} className="rounded-xl border border-slate-600 px-4 py-3 text-sm font-semibold text-white">Property settings</button> : null}
+              </div>
+            </section>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="rounded-2xl border border-white/10 bg-white/[.025] p-4"><div className="text-xs font-black uppercase tracking-widest text-slate-500">Signed in as</div><div className="mt-2 font-black text-white">{`${user?.first_name || ""} ${user?.last_name || ""}`.trim() || user?.username || "SyncWorks user"}</div><div className="mt-1 text-sm text-slate-400">{user?.email || "No email available"}</div></div>
               <div className="rounded-2xl border border-white/10 bg-white/[.025] p-4"><div className="text-xs font-black uppercase tracking-widest text-slate-500">Profile & security</div><div className="mt-2 text-sm leading-6 text-slate-400">Update your identity and account security from Profile.</div><button type="button" onClick={() => nav("/profile")} className="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-500/[.08] px-3 py-2 text-xs font-black text-cyan-100">Open Profile</button></div>
