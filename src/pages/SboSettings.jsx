@@ -735,7 +735,7 @@ export default function SboSettings() {
       setGoogleBusinessUrl(biz?.google_business_url || "");
 
       try {
-        const local = JSON.parse(localStorage.getItem(setupStorageKey(activeBusinessId)) || "{}");
+        const local = JSON.parse(localStorage.getItem(setupStorageKey(resolvedBusinessId)) || "{}");
         setBaselineRevenue(String(local.baselineRevenue || ""));
         setTargetRevenue(String(local.targetRevenue || ""));
         setOldDataStatus(local.oldDataStatus || "LATER");
@@ -757,7 +757,7 @@ export default function SboSettings() {
 
   function saveLocalSnapshot() {
     localStorage.setItem(
-      setupStorageKey(activeBusinessId),
+      setupStorageKey(resolvedBusinessId),
       JSON.stringify({
         baselineRevenue,
         targetRevenue,
@@ -796,8 +796,8 @@ export default function SboSettings() {
   }
 
   async function saveWizardBusiness(payload) {
-    if (!activeBusinessId) throw new Error("Select a business before setup.");
-    await api.patch(`/businesses/${activeBusinessId}/`, payload);
+    if (!resolvedBusinessId) throw new Error("Select a business before setup.");
+    await api.patch(`/businesses/${resolvedBusinessId}/`, payload);
   }
 
   async function finishWizard() {
@@ -807,7 +807,7 @@ export default function SboSettings() {
   }
 
   async function saveSettings() {
-    if (!activeBusinessId) {
+    if (!resolvedBusinessId) {
       setErr("Select a business before saving settings.");
       return false;
     }
@@ -817,7 +817,7 @@ export default function SboSettings() {
     setOk("");
 
     try {
-      await api.patch(`/businesses/${activeBusinessId}/`, basePayload());
+      await api.patch(`/businesses/${resolvedBusinessId}/`, basePayload());
       try { saveLocalSnapshot(); } catch { /* Local planning snapshot is optional; server save remains authoritative. */ }
 
       const refreshed = await api.get(`/businesses/${resolvedBusinessId}/`);
@@ -851,7 +851,7 @@ export default function SboSettings() {
   }
 
   async function uploadLogo() {
-  if (!activeBusinessId || !logoFile) return;
+  if (!resolvedBusinessId || !logoFile) return;
 
   setLogoSaving(true);
   setErr("");
@@ -861,13 +861,13 @@ export default function SboSettings() {
     const fd = new FormData();
     fd.append("logo", logoFile);
 
-    const res = await api.post(`/businesses/${activeBusinessId}/upload-logo/`, fd, {
+    const res = await api.post(`/businesses/${resolvedBusinessId}/upload-logo/`, fd, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
     });
 
-    const refreshed = await api.get(`/businesses/${activeBusinessId}/`);
+    const refreshed = await api.get(`/businesses/${resolvedBusinessId}/`);
     setBusiness(refreshed?.data || null);
     setOk("Logo uploaded.");
     setLogoFile(null);
@@ -905,7 +905,7 @@ export default function SboSettings() {
         rightActions={
           <div className="flex flex-wrap gap-2">
             <BusinessPicker />
-            <SmallButton tone="fuchsia" onClick={() => setWizardOpen(true)} disabled={loading || !activeBusinessId}>
+            <SmallButton tone="fuchsia" onClick={() => setWizardOpen(true)} disabled={loading || !resolvedBusinessId}>
               Guided Setup
             </SmallButton>
             <SmallButton tone="slate" onClick={() => navigate(returnTo)}>
@@ -969,7 +969,7 @@ export default function SboSettings() {
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" onClick={previousSection} disabled={currentSectionIndex === 0 || saving} className="min-h-11 rounded-xl border border-slate-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">Back</button>
-            <button type="button" onClick={currentSectionIndex === SETTINGS_SECTIONS.length - 1 ? saveSettings : saveAndContinue} disabled={saving || loading || !activeBusinessId} className="min-h-11 rounded-xl bg-[#168BFF] px-5 py-2 text-sm font-bold text-white hover:bg-[#287BF2] disabled:opacity-40">{saving ? "Saving…" : currentSectionIndex === SETTINGS_SECTIONS.length - 1 ? "Save & complete setup" : "Save & continue"}</button>
+            <button type="button" onClick={currentSectionIndex === SETTINGS_SECTIONS.length - 1 ? saveSettings : saveAndContinue} disabled={saving || loading || !resolvedBusinessId} className="min-h-11 rounded-xl bg-[#168BFF] px-5 py-2 text-sm font-bold text-white hover:bg-[#287BF2] disabled:opacity-40">{saving ? "Saving…" : currentSectionIndex === SETTINGS_SECTIONS.length - 1 ? "Save & complete setup" : "Save & continue"}</button>
             {currentSectionIndex === SETTINGS_SECTIONS.length - 1 ? <button type="button" onClick={() => navigate("/upgrade?return=%2Fsbo")} className="min-h-11 rounded-xl border border-violet-400/40 px-4 py-2 text-sm font-semibold text-violet-100">Review plans & access</button> : null}
           </div>
           <p className="mt-2 text-xs leading-5 text-slate-400">Your changes are saved to this business when you choose Save. You can return to any step later. Subscriptions and payments are handled separately.</p>
@@ -1061,7 +1061,7 @@ export default function SboSettings() {
           ) : null}
 
           {section === "communication" ? (
-            <BusinessCommunicationAutomation businessId={activeBusinessId} />
+            <BusinessCommunicationAutomation businessId={resolvedBusinessId} />
           ) : null}
 
           {section === "marketplace" ? (
@@ -1163,7 +1163,7 @@ export default function SboSettings() {
 
           {section === "card" ? (
             <BusinessDigitalCardPreview
-              businessId={activeBusinessId}
+              businessId={resolvedBusinessId}
               name={name}
               logoUrl={currentLogoUrl}
               headline={headline}
@@ -1269,11 +1269,11 @@ export default function SboSettings() {
           {SETTINGS_SECTIONS[currentSectionIndex]?.label}
         </div>
       </div>
-      {!loading && business && activeBusinessId ? (
+      {!loading && business && resolvedBusinessId ? (
         <SboSetupWizard
           open={wizardOpen}
           onClose={() => setWizardOpen(false)}
-          businessId={activeBusinessId}
+          businessId={resolvedBusinessId}
           business={business}
           categories={categories}
           onSaveBusiness={saveWizardBusiness}
