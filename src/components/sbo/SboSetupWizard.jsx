@@ -1033,25 +1033,26 @@ export default function SboSetupWizard({
                   </div>
                   <label className="mt-3 flex items-start gap-3 rounded-xl border border-cyan-400/35 bg-cyan-500/5 p-3 text-sm text-white"><input type="checkbox" checked={jarvisAutomate} onChange={e=>setJarvisAutomate(e.target.checked)} className="mt-1 accent-cyan-400"/><span><strong>Business Jarvis Automate · $39.99/month proposed</strong><span className="mt-1 block text-slate-300">AI-assisted business workflows, suggested responses and follow-ups. $59.98/month total with Business base. Activation and usage allowances are subject to billing integration.</span></span></label>
                   <div className="mt-3 rounded-xl border border-slate-700 p-3">
-                    <p className="text-sm font-bold text-white">Additional tools — register interest</p>
-                    <p className="mt-1 text-xs text-slate-300">Not included in the total until pricing and Stripe products are finalized. Checking an option does not purchase it.</p>
+                    <p className="text-sm font-bold text-white">Optional business features</p>
+                    <p className="mt-1 text-xs text-slate-300">Select features to preview your proposed bill. Prices are not active until Stripe verifies each product; selections are saved as onboarding preferences only.</p>
                     {[
-                      ["automated_email","Advanced automated email follow-ups"],
-                      ["technician_location","Technician location visibility"],
-                      ["ai_assistant","On-demand business AI assistant"],
-                      ["weather","AI weather assistance"],
-                      ["traffic","Traffic intelligence"],
-                      ["routing","AI route optimization"],
-                      ["phone","Jarvis phone answering · usage-based"]
-                    ].map(([key,label])=><label key={key} className="mt-2 flex items-start gap-2 text-sm text-slate-200"><input className="mt-1 accent-cyan-400" type="checkbox" checked={featureInterests.includes(key)} onChange={e=>setFeatureInterests(prev=>e.target.checked?[...prev,key]:prev.filter(x=>x!==key))}/><span>{label} <span className="text-xs text-slate-400">· pricing pending</span></span></label>)}
+                      ["automated_email","Advanced automated email follow-ups",99],
+                      ["technician_location","Technician location visibility",999],
+                      ["ai_assistant","On-demand business AI assistant",1999],
+                      ["weather","AI weather assistance",99],
+                      ["traffic","Traffic intelligence",99],
+                      ["routing","AI route optimization",999],
+                      ["phone","Jarvis phone answering",1999]
+                    ].map(([key,label,cents])=><label key={key} className="mt-2 flex items-start justify-between gap-3 rounded-lg border border-slate-700/70 p-2 text-sm text-slate-200"><span className="flex items-start gap-2"><input className="mt-1 accent-cyan-400" type="checkbox" checked={featureInterests.includes(key)} onChange={e=>setFeatureInterests(prev=>e.target.checked?[...prev,key]:prev.filter(x=>x!==key))}/><span>{label}{key==="phone" ? <span className="block text-xs text-amber-200">Starting subscription; usage billed separately</span>:null}</span></span><span className="shrink-0 font-semibold text-white">${(cents/100).toFixed(2)}/mo</span></label>)}
+                    <p className="mt-3 text-xs leading-5 text-amber-200">AI-enabled features require hard provider-cost caps; phone and routing usage may have additional charges, disclosed before activation.</p>
                   </div>
                   <label className="mt-4 block text-sm font-semibold text-white">Access / promotional code
                     <input value={planPromo} onChange={e=>setPlanPromo(e.target.value.toUpperCase())} placeholder="Enter code (optional)" className="mt-2 h-11 w-full rounded-xl border border-slate-600 bg-slate-950 px-3 text-white"/>
                   </label>
                   <p className="mt-2 text-xs text-slate-300">{planPromo.trim()==="SWFF26"?"SWFF26 entered: tester subscription-waiver eligibility must be confirmed by billing. The 1% platform fee still applies.":"Code is not applied or validated here. Any trial or discount must be confirmed by secure billing."}</p>
                   <div className="mt-4 border-t border-slate-700 pt-3">
-                    <div className="flex justify-between text-base font-bold text-white"><span>Illustrative total</span><span>{billingCycle==="monthly"?"$"+(19.99+(jarvisAutomate?39.99:0)).toFixed(2)+"/mo":"$"+(199+(jarvisAutomate?39.99*12:0)).toFixed(2)+"/yr"}</span></div>
-                    <p className="mt-2 text-xs leading-5 text-amber-200">Estimate only. Jarvis pricing is proposed, annual pricing is illustrative, and feature interests are not billable selections. Trial eligibility and add-on activation are not configured by this form. Actual checkout terms and accepted promo codes govern your charge. Platform transaction fees are separate.</p>
+                    <div className="flex justify-between text-base font-bold text-white"><span>Illustrative total</span><span>{billingCycle==="monthly"?"$"+(19.99+(jarvisAutomate?39.99:0)+(featureInterests.reduce((sum, key) => sum + ({automated_email:99,technician_location:999,ai_assistant:1999,weather:99,traffic:99,routing:999,phone:1999}[key] || 0), 0) / 100)).toFixed(2)+"/mo":"$"+(199+(jarvisAutomate?39.99*12:0)+12*(featureInterests.reduce((sum, key) => sum + ({automated_email:99,technician_location:999,ai_assistant:1999,weather:99,traffic:99,routing:999,phone:1999}[key] || 0), 0) / 100)).toFixed(2)+"/yr"}</span></div>
+                    <p className="mt-2 text-xs leading-5 text-amber-200">Estimate only. All add-on prices are proposed; annual add-ons are shown at 12 times monthly rates without an unapproved discount. Selections are not billable purchases. Trial eligibility and add-on activation are not configured by this form. Actual checkout terms and accepted promo codes govern your charge. Platform transaction fees are separate.</p>
                   </div>
                 </div>
               </div>
