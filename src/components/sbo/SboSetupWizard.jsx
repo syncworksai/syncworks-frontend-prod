@@ -1,5 +1,6 @@
 // src/components/sbo/SboSetupWizard.jsx
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 
 function cx(...parts) {
@@ -347,6 +348,10 @@ export default function SboSetupWizard({
   onDone,
 }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [billingCycle, setBillingCycle] = useState("monthly");
+  const [planPromo, setPlanPromo] = useState("");
+  const [growthAddon, setGrowthAddon] = useState(false);
   const [customerFlow, setCustomerFlow] = useState("service");
   const [sameEmail, setSameEmail] = useState(false);
   const [sameName, setSameName] = useState(false);
@@ -358,7 +363,7 @@ export default function SboSetupWizard({
       { key: "basics", label: "1. Business Basics" },
       { key: "area", label: "2. Service Area" },
       { key: "services", label: "3. Services" },
-      { key: "finish", label: "4. Activate" },
+      { key: "finish", label: "4. Plan Review" },
     ],
     []
   );
@@ -423,6 +428,9 @@ export default function SboSetupWizard({
     }
 
     setStep(0);
+    setBillingCycle(local.billingCycle || "monthly");
+    setPlanPromo(local.planPromo || "");
+    setGrowthAddon(!!local.growthAddon);
     setSaving(false);
     setError("");
     setWarning("");
@@ -476,6 +484,9 @@ export default function SboSetupWizard({
   function persistLocal() {
     const payload = {
       name,
+      billingCycle,
+      planPromo,
+      growthAddon,
       customerFlow,
       sameEmail,
       sameName,
@@ -584,7 +595,8 @@ export default function SboSetupWizard({
     }
 
     if (currentStep === 2) {
-      return saveBusinessStep(servicesPayload(), "Services saved.");
+      if (!selectedServiceIds.length && !serviceRows.length) { persistLocal(); setWarning("Service categories are unavailable. You may finish the profile, but marketplace matching remains inactive until offerings are selected."); return true; }
+      return saveBusinessStep(servicesPayload(), "Offerings saved.");
     }
 
     return true;
@@ -607,8 +619,8 @@ export default function SboSetupWizard({
       setStep(1);
       return;
     }
-    if (!selectedServiceIds.length) {
-      setError("Choose at least one service you offer.");
+    if (!selectedServiceIds.length && serviceRows.length > 0) {
+      setError("Choose at least one offering before completing setup.");
       setStep(2);
       return;
     }
@@ -632,6 +644,7 @@ export default function SboSetupWizard({
       await Promise.resolve(onDone());
     }
 
+    navigate("/upgrade?modules=SBO&next=%2Fsbo");
     onClose?.();
   }
 
@@ -641,7 +654,7 @@ export default function SboSetupWizard({
       : step === 1
       ? !!city.trim() && /^\d{5}$/.test(baseZip.trim()) && !!normalizeStateCode(state).trim() && (businessPresenceMode === "online" || Number(radius || 0) > 0)
       : step === 2
-      ? selectedServiceIds.length > 0
+      ? (selectedServiceIds.length > 0 || serviceRows.length === 0)
       : true;
 
   return (
@@ -986,32 +999,32 @@ export default function SboSetupWizard({
           ) : null}
 
           {step === 3 ? (
-            <Card
-              title="You're almost ready"
-              subtitle="We will save your business profile now. Payments and the catalog are the last two activation tasks."
-            >
+            <Card title="Review your business plan" subtitle="Review an estimate, confirm your setup, then activate your subscription through secure billing. No charge is made on this screen.">
               <div className="grid gap-4 lg:grid-cols-2">
-                <div className="rounded-3xl border border-fuchsia-500/25 bg-slate-950/65 p-4">
-                  <div className="text-xl font-black text-slate-100">Saved when you finish</div>
-                  <ul className="mt-4 space-y-3 text-sm text-slate-300">
-                    <li>• Business contact details</li>
-                    <li>• City, state, ZIP and service area</li>
-                    <li>• {selectedServiceIds.length} service type(s) for matching</li>
-                    <li>• Marketplace requests {acceptsMarketplace ? "enabled" : "paused"}</li>
-                  </ul>
+                <div className="rounded-2xl border border-sky-400/25 bg-slate-950/70 p-4">
+                  <h3 className="text-lg font-bold text-white">Your business</h3>
+                  <p className="mt-2 text-sm text-slate-200">{name}</p>
+                  <p className="mt-1 text-sm text-slate-300">{city}, {normalizeStateCode(state)} · {baseZip}</p>
+                  <p className="mt-2 text-sm text-slate-300">Customer workflow: {customerFlow === "lead" ? "Leads and consultations" : customerFlow === "order" ? "Orders and products" : customerFlow === "mixed" ? "Mixed business" : "Services and appointments"}</p>
+                  <p className="mt-1 text-sm text-slate-300">{selectedServiceIds.length} marketplace offering(s) selected</p>
+                  {!selectedServiceIds.length ? <p className="mt-3 rounded-lg border border-amber-400/25 p-3 text-sm text-amber-200">Marketplace discovery is not ready: select offerings when the category directory is available.</p> : null}
                 </div>
-
-                <div className="rounded-3xl border border-cyan-500/25 bg-slate-950/65 p-4">
-                  <div className="text-xl font-black text-slate-100">Next: choose your plan and activate payments</div>
-                  <ol className="mt-4 space-y-3 text-sm text-slate-300">
-                    <li>1. Review available Business plans, trial terms and optional upgrades in Plans & Access; no charge occurs just by finishing this wizard.</li>
-                    <li>2. Complete Stripe Connect to accept payments and receive payouts.</li>
-                    <li>3. Add a priced service in your Catalog and review dashboard readiness.</li>
-                    <li>4. Follow the five-step payment migration checklist in Finance: preserve current processor, compare fees, verify bank, test payment, and request a controlled switch.</li>
-                  </ol>
-                  <p className="mt-4 text-xs leading-5 text-cyan-200">
-                    Finishing this step saves your profile; it does not claim payment activation or guarantee new leads.
-                  </p>
+                <div className="rounded-2xl border border-sky-400/25 bg-[#091b2b] p-4">
+                  <h3 className="text-lg font-bold text-white">Subscription estimate</h3>
+                  <div className="mt-3 flex gap-2">
+                    <button type="button" onClick={()=>setBillingCycle("monthly")} aria-pressed={billingCycle==="monthly"} className={`rounded-lg border px-4 py-2 text-sm ${billingCycle==="monthly"?"border-cyan-300 text-white bg-cyan-500/20":"border-slate-700 text-slate-300"}`}>Monthly</button>
+                    <button type="button" onClick={()=>setBillingCycle("annual")} aria-pressed={billingCycle==="annual"} className={`rounded-lg border px-4 py-2 text-sm ${billingCycle==="annual"?"border-cyan-300 text-white bg-cyan-500/20":"border-slate-700 text-slate-300"}`}>Annual estimate</button>
+                  </div>
+                  <div className="mt-4 flex justify-between gap-3 text-sm text-slate-100"><span>Business base</span><strong>{billingCycle==="monthly"?"$19.99 / mo":"$199.00 / yr (proposed)"}</strong></div>
+                  <label className="mt-3 flex items-start gap-3 rounded-xl border border-slate-700 p-3 text-sm text-white"><input type="checkbox" checked={growthAddon} onChange={e=>setGrowthAddon(e.target.checked)} className="mt-1 accent-cyan-400"/><span><strong>Growth OS / Social Media</strong><span className="mt-1 block text-slate-300">$29.95/month proposed add-on; plan availability must be verified at checkout.</span></span></label>
+                  <label className="mt-4 block text-sm font-semibold text-white">Access / promotional code
+                    <input value={planPromo} onChange={e=>setPlanPromo(e.target.value.toUpperCase())} placeholder="Enter code (optional)" className="mt-2 h-11 w-full rounded-xl border border-slate-600 bg-slate-950 px-3 text-white"/>
+                  </label>
+                  <p className="mt-2 text-xs text-slate-300">{planPromo.trim()==="SWFF26"?"SWFF26 entered: tester subscription-waiver eligibility must be confirmed by billing. The 1% platform fee still applies.":"Code is not applied or validated here. Any trial or discount must be confirmed by secure billing."}</p>
+                  <div className="mt-4 border-t border-slate-700 pt-3">
+                    <div className="flex justify-between text-base font-bold text-white"><span>Illustrative total</span><span>{billingCycle==="monthly"?"$"+(19.99+(growthAddon?29.95:0)).toFixed(2)+"/mo":"$"+(199+(growthAddon?29.95*12:0)).toFixed(2)+"/yr"}</span></div>
+                    <p className="mt-2 text-xs leading-5 text-amber-200">Estimate only. Annual billing, trial eligibility and add-on pricing are not activated by this form. Actual checkout terms and accepted promo codes govern your charge. Platform transaction fees are separate.</p>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -1055,7 +1068,7 @@ export default function SboSetupWizard({
                   disabled={saving}
                   className="rounded-2xl border border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500 to-cyan-400 px-5 py-3 text-sm font-black text-black transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {saving ? "Saving…" : "Finish Setup"}
+                  {saving ? "Saving…" : "Save & review billing"}
                 </button>
               )}
             </div>
