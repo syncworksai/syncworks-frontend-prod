@@ -82,11 +82,20 @@ export default function BusinessServiceAreasEditor({
       <div className="rounded-3xl border border-fuchsia-500/25 bg-fuchsia-500/10 p-4">
         <div className="text-sm font-black text-fuchsia-100">Add expanded coverage</div>
 
+        <div className="mt-3 rounded-xl border border-sky-400/25 bg-slate-950/60 p-3">
+          <p className="mb-2 text-sm font-semibold text-slate-100">How should customers find you?</p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {[["ZIP","ZIP codes"],["CITY","Specific cities"],["STATE","Entire state"]].map(([value,label]) =>
+              <button key={value} type="button" onClick={()=>{setType(value);setLocationError("");setLocations("");setStates([]);}} aria-pressed={type===value} className={`min-h-11 rounded-xl border px-3 py-2 text-sm font-semibold ${type===value?"border-sky-400 bg-sky-400/15 text-sky-100":"border-slate-700 text-slate-300"}`}>{label}</button>
+            )}
+          </div>
+          <p className="mt-2 text-xs leading-5 text-slate-300">Use your home ZIP and radius for live nearby matching. City and statewide coverage are saved as planned areas until geographic matching is enabled on the server.</p>
+        </div>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Alabama commercial projects" className="rounded-2xl border border-slate-800 bg-slate-950/75 px-3 py-3 text-sm" />
           <select value={type} onChange={(e) => setType(e.target.value)} className="rounded-2xl border border-slate-800 bg-slate-950/75 px-3 py-3 text-sm">
             <option value="ZIP">Specific ZIP codes</option>
-            <option value="CITY">City / metro</option>
+            <option value="CITY">Specific cities</option>
             <option value="COUNTY">County</option>
             <option value="STATE">Entire state</option>
             <option value="REGION">Multiple states</option>
@@ -102,7 +111,7 @@ export default function BusinessServiceAreasEditor({
               <p className="mt-2 text-xs text-slate-400">{states.length} selected. This records intended coverage only; it does not enable live multi-state matching.</p>
             </fieldset>
           ) : type !== "NATIONWIDE" ? (
-            <textarea value={locations} onChange={(e) => setLocations(e.target.value)} rows={3} placeholder={type==="ZIP" ? "36104, 36106" : "Enter locations separated by commas"} className="rounded-2xl border border-slate-800 bg-slate-950/75 px-3 py-3 text-sm md:col-span-2" />
+            <textarea value={locations} onChange={(e) => setLocations(e.target.value)} rows={3} placeholder={type==="ZIP" ? "36104, 36106" : type==="CITY" ? "Montgomery, AL; Auburn, AL" : "Enter locations separated by commas"} className="rounded-2xl border border-slate-800 bg-slate-950/75 px-3 py-3 text-sm md:col-span-2" />
           ) : null}
 
           <select value={scope} onChange={(e) => setScope(e.target.value)} className="rounded-2xl border border-slate-800 bg-slate-950/75 px-3 py-3 text-sm">
