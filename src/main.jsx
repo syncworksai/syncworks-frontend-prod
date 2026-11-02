@@ -10,11 +10,9 @@ import PersonalStorefrontDock from "./components/customer/PersonalStorefrontDock
 import PMShell from "./components/pm/PMShell";
 import PMTenantEditOverlay from "./components/pm/PMTenantEditOverlay";
 import NutritionCoachGlobalAssist from "./components/customer-health/NutritionCoachGlobalAssist";
-import StorefrontCartDock from "./components/storefront/StorefrontCartDock";
 import App from "./App";
 import AppCrashBoundary from "./components/AppCrashBoundary";
 import PlatformDirectEntry from "./pages/PlatformDirectEntry";
-import CustomerStoreV2 from "./pages/CustomerStoreV2";
 import PMPropertyCreate from "./pages/PMPropertyCreate";
 import PMProperties from "./pages/PMProperties";
 import PMTenants from "./pages/PMTenants";
@@ -56,7 +54,6 @@ function RoutedApplication() {
   if (pathname === "/platform") return <PlatformDirectEntry />;
 
   const directPages = {
-    "/customer/store": <><CustomerStoreV2 /><StorefrontCartDock /></>,
     "/pm/properties/new": <PMPropertyCreate />,
     "/pm/properties": <PMProperties />,
     "/pm/tenants": <PMTenants />,
