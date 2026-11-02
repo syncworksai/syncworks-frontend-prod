@@ -1,6 +1,7 @@
 // src/components/business/BusinessServiceAreasEditor.jsx
 import React, { useState } from "react";
 
+const US_STATES = [["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],["CA","California"],["CO","Colorado"],["CT","Connecticut"],["DE","Delaware"],["FL","Florida"],["GA","Georgia"],["HI","Hawaii"],["ID","Idaho"],["IL","Illinois"],["IN","Indiana"],["IA","Iowa"],["KS","Kansas"],["KY","Kentucky"],["LA","Louisiana"],["ME","Maine"],["MD","Maryland"],["MA","Massachusetts"],["MI","Michigan"],["MN","Minnesota"],["MS","Mississippi"],["MO","Missouri"],["MT","Montana"],["NE","Nebraska"],["NV","Nevada"],["NH","New Hampshire"],["NJ","New Jersey"],["NM","New Mexico"],["NY","New York"],["NC","North Carolina"],["ND","North Dakota"],["OH","Ohio"],["OK","Oklahoma"],["OR","Oregon"],["PA","Pennsylvania"],["RI","Rhode Island"],["SC","South Carolina"],["SD","South Dakota"],["TN","Tennessee"],["TX","Texas"],["UT","Utah"],["VT","Vermont"],["VA","Virginia"],["WA","Washington"],["WV","West Virginia"],["WI","Wisconsin"],["WY","Wyoming"],["DC","District of Columbia"]];
 export function normalizeServiceAreas(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -17,9 +18,11 @@ export default function BusinessServiceAreasEditor({
   const [scope, setScope] = useState("BOTH");
   const [minimum, setMinimum] = useState("");
   const [notes, setNotes] = useState("");
+  const [states, setStates] = useState([]);
+  const [locationError, setLocationError] = useState("");
 
   function addArea() {
-    const values =
+    const values = (type === "STATE" || type === "REGION") ? states :
       type === "NATIONWIDE"
         ? ["US"]
         : locations
@@ -27,7 +30,9 @@ export default function BusinessServiceAreasEditor({
             .map((item) => item.trim())
             .filter(Boolean);
 
-    if (type !== "NATIONWIDE" && !values.length) return;
+    if (type !== "NATIONWIDE" && !values.length) { setLocationError("Choose at least one location before adding this area."); return; }
+    if (type === "ZIP" && values.some(v => !/^\\d{5}$/.test(v))) { setLocationError("Enter five-digit ZIP codes separated by commas."); return; }
+    setLocationError("");
 
     const area = {
       id: `area-${Date.now()}`,
@@ -44,6 +49,7 @@ export default function BusinessServiceAreasEditor({
     setName("");
     setType("ZIP");
     setLocations("");
+    setStates([]);
     setScope("BOTH");
     setMinimum("");
     setNotes("");
@@ -69,7 +75,7 @@ export default function BusinessServiceAreasEditor({
           {baseZip || "No ZIP"} • {radius || "0"} miles
         </div>
         <div className="mt-2 text-[11px] leading-5 text-slate-500">
-          Build 3A stores expanded areas. The marketplace continues using the current ZIP-radius matcher until Build 3B.
+          Only the home ZIP and radius currently affect live marketplace matching. Additional states are planning coverage, not automatically active territories.
         </div>
       </div>
 
@@ -83,12 +89,20 @@ export default function BusinessServiceAreasEditor({
             <option value="CITY">City / metro</option>
             <option value="COUNTY">County</option>
             <option value="STATE">Entire state</option>
-            <option value="REGION">Multi-state region</option>
+            <option value="REGION">Multiple states</option>
             <option value="NATIONWIDE">Nationwide projects</option>
           </select>
 
-          {type !== "NATIONWIDE" ? (
-            <textarea value={locations} onChange={(e) => setLocations(e.target.value)} rows={3} placeholder="AL, FL, LA, NC or 36104, 36106" className="rounded-2xl border border-slate-800 bg-slate-950/75 px-3 py-3 text-sm md:col-span-2" />
+          {(type === "STATE" || type === "REGION") ? (
+            <fieldset className="md:col-span-2 rounded-2xl border border-sky-400/25 bg-slate-950/65 p-3">
+              <legend className="px-1 text-sm font-semibold text-sky-100">Select covered states (not license verification)</legend>
+              <div className="mt-2 grid max-h-48 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3 lg:grid-cols-4">
+                {US_STATES.map(([code,label]) => <label key={code} className="flex cursor-pointer items-center gap-2 rounded-lg p-2 text-xs text-slate-200 hover:bg-sky-500/10"><input type="checkbox" checked={states.includes(code)} onChange={e=>setStates(prev=>e.target.checked?[...prev,code]:prev.filter(x=>x!==code))} className="accent-sky-400"/>{label}</label>)}
+              </div>
+              <p className="mt-2 text-xs text-slate-400">{states.length} selected. This records intended coverage only; it does not enable live multi-state matching.</p>
+            </fieldset>
+          ) : type !== "NATIONWIDE" ? (
+            <textarea value={locations} onChange={(e) => setLocations(e.target.value)} rows={3} placeholder={type==="ZIP" ? "36104, 36106" : "Enter locations separated by commas"} className="rounded-2xl border border-slate-800 bg-slate-950/75 px-3 py-3 text-sm md:col-span-2" />
           ) : null}
 
           <select value={scope} onChange={(e) => setScope(e.target.value)} className="rounded-2xl border border-slate-800 bg-slate-950/75 px-3 py-3 text-sm">
@@ -102,6 +116,7 @@ export default function BusinessServiceAreasEditor({
           <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Internal notes" className="rounded-2xl border border-slate-800 bg-slate-950/75 px-3 py-3 text-sm md:col-span-2" />
         </div>
 
+        {locationError ? <p role="alert" className="mt-3 text-sm text-amber-200">{locationError}</p> : null}
         <button type="button" onClick={addArea} className="mt-4 rounded-2xl bg-fuchsia-500 px-5 py-3 text-sm font-black text-white">
           Add Service Area
         </button>
