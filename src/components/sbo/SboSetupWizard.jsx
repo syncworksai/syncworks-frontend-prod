@@ -351,7 +351,8 @@ export default function SboSetupWizard({
   const navigate = useNavigate();
   const [billingCycle, setBillingCycle] = useState("monthly");
   const [planPromo, setPlanPromo] = useState("");
-  const [growthAddon, setGrowthAddon] = useState(false);
+  const [jarvisAutomate, setJarvisAutomate] = useState(false);
+  const [featureInterests, setFeatureInterests] = useState([]);
   const [customerFlow, setCustomerFlow] = useState("service");
   const [sameEmail, setSameEmail] = useState(false);
   const [sameName, setSameName] = useState(false);
@@ -430,7 +431,8 @@ export default function SboSetupWizard({
     setStep(0);
     setBillingCycle(local.billingCycle || "monthly");
     setPlanPromo(local.planPromo || "");
-    setGrowthAddon(!!local.growthAddon);
+    setJarvisAutomate(!!local.jarvisAutomate);
+    setFeatureInterests(Array.isArray(local.featureInterests) ? local.featureInterests : []);
     setSaving(false);
     setError("");
     setWarning("");
@@ -486,7 +488,8 @@ export default function SboSetupWizard({
       name,
       billingCycle,
       planPromo,
-      growthAddon,
+      jarvisAutomate,
+      featureInterests,
       customerFlow,
       sameEmail,
       sameName,
@@ -1016,14 +1019,39 @@ export default function SboSetupWizard({
                     <button type="button" onClick={()=>setBillingCycle("annual")} aria-pressed={billingCycle==="annual"} className={`rounded-lg border px-4 py-2 text-sm ${billingCycle==="annual"?"border-cyan-300 text-white bg-cyan-500/20":"border-slate-700 text-slate-300"}`}>Annual estimate</button>
                   </div>
                   <div className="mt-4 flex justify-between gap-3 text-sm text-slate-100"><span>Business base</span><strong>{billingCycle==="monthly"?"$19.99 / mo":"$199.00 / yr (proposed)"}</strong></div>
-                  <label className="mt-3 flex items-start gap-3 rounded-xl border border-slate-700 p-3 text-sm text-white"><input type="checkbox" checked={growthAddon} onChange={e=>setGrowthAddon(e.target.checked)} className="mt-1 accent-cyan-400"/><span><strong>Growth OS / Social Media</strong><span className="mt-1 block text-slate-300">$29.95/month proposed add-on; plan availability must be verified at checkout.</span></span></label>
+                  <div className="mt-4 rounded-xl border border-slate-700 p-3">
+                    <p className="text-sm font-bold text-white">Included with Business · $19.99/month</p>
+                    <ul className="mt-2 grid gap-1 text-sm leading-6 text-slate-200">
+                      <li>✓ Business profile and searchable marketplace listing</li>
+                      <li>✓ Customer CRM, leads and job requests</li>
+                      <li>✓ Manual scheduling and employee assignments</li>
+                      <li>✓ Quotes, invoicing and payment records</li>
+                      <li>✓ Team inbox and basic email notifications</li>
+                      <li>✓ Business dashboard and basic reporting</li>
+                    </ul>
+                    <p className="mt-2 text-xs text-slate-400">Features depend on account setup and activation; marketplace exposure requires approved offerings and coverage.</p>
+                  </div>
+                  <label className="mt-3 flex items-start gap-3 rounded-xl border border-cyan-400/35 bg-cyan-500/5 p-3 text-sm text-white"><input type="checkbox" checked={jarvisAutomate} onChange={e=>setJarvisAutomate(e.target.checked)} className="mt-1 accent-cyan-400"/><span><strong>Business Jarvis Automate · $39.99/month proposed</strong><span className="mt-1 block text-slate-300">AI-assisted business workflows, suggested responses and follow-ups. $59.98/month total with Business base. Activation and usage allowances are subject to billing integration.</span></span></label>
+                  <div className="mt-3 rounded-xl border border-slate-700 p-3">
+                    <p className="text-sm font-bold text-white">Additional tools — register interest</p>
+                    <p className="mt-1 text-xs text-slate-300">Not included in the total until pricing and Stripe products are finalized. Checking an option does not purchase it.</p>
+                    {[
+                      ["automated_email","Advanced automated email follow-ups"],
+                      ["technician_location","Technician location visibility"],
+                      ["ai_assistant","On-demand business AI assistant"],
+                      ["weather","AI weather assistance"],
+                      ["traffic","Traffic intelligence"],
+                      ["routing","AI route optimization"],
+                      ["phone","Jarvis phone answering · usage-based"]
+                    ].map(([key,label])=><label key={key} className="mt-2 flex items-start gap-2 text-sm text-slate-200"><input className="mt-1 accent-cyan-400" type="checkbox" checked={featureInterests.includes(key)} onChange={e=>setFeatureInterests(prev=>e.target.checked?[...prev,key]:prev.filter(x=>x!==key))}/><span>{label} <span className="text-xs text-slate-400">· pricing pending</span></span></label>)}
+                  </div>
                   <label className="mt-4 block text-sm font-semibold text-white">Access / promotional code
                     <input value={planPromo} onChange={e=>setPlanPromo(e.target.value.toUpperCase())} placeholder="Enter code (optional)" className="mt-2 h-11 w-full rounded-xl border border-slate-600 bg-slate-950 px-3 text-white"/>
                   </label>
                   <p className="mt-2 text-xs text-slate-300">{planPromo.trim()==="SWFF26"?"SWFF26 entered: tester subscription-waiver eligibility must be confirmed by billing. The 1% platform fee still applies.":"Code is not applied or validated here. Any trial or discount must be confirmed by secure billing."}</p>
                   <div className="mt-4 border-t border-slate-700 pt-3">
-                    <div className="flex justify-between text-base font-bold text-white"><span>Illustrative total</span><span>{billingCycle==="monthly"?"$"+(19.99+(growthAddon?29.95:0)).toFixed(2)+"/mo":"$"+(199+(growthAddon?29.95*12:0)).toFixed(2)+"/yr"}</span></div>
-                    <p className="mt-2 text-xs leading-5 text-amber-200">Estimate only. Annual billing, trial eligibility and add-on pricing are not activated by this form. Actual checkout terms and accepted promo codes govern your charge. Platform transaction fees are separate.</p>
+                    <div className="flex justify-between text-base font-bold text-white"><span>Illustrative total</span><span>{billingCycle==="monthly"?"$"+(19.99+(jarvisAutomate?39.99:0)).toFixed(2)+"/mo":"$"+(199+(jarvisAutomate?39.99*12:0)).toFixed(2)+"/yr"}</span></div>
+                    <p className="mt-2 text-xs leading-5 text-amber-200">Estimate only. Jarvis pricing is proposed, annual pricing is illustrative, and feature interests are not billable selections. Trial eligibility and add-on activation are not configured by this form. Actual checkout terms and accepted promo codes govern your charge. Platform transaction fees are separate.</p>
                   </div>
                 </div>
               </div>
