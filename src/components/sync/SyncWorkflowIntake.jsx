@@ -103,7 +103,7 @@ export default function SyncWorkflowIntake({ workspace = "personal", onNotice })
     } catch {
       onNotice?.("Complete the existing form to submit the request.");
     }
-    navigate(preview.route);
+    navigate(preview.route, preview.workflow_type === "service_booking" ? { state: { jarvisDescription: description.trim() } } : undefined);
   }
 
   return (
