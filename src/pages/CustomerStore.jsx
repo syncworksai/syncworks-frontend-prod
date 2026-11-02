@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import JarvisShop from "../components/customer/JarvisShop";
 
 const CATEGORIES = [
   { key: "HOME", label: "Home", icon: Home, copy: "Repairs, filters, organization and everyday household needs." },
@@ -116,6 +117,8 @@ export default function CustomerStore() {
           </div>
           <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-violet-200">Preview</span>
         </header>
+
+        <JarvisShop />
 
         <section className="mt-3 overflow-hidden rounded-[1.6rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_90%_0%,rgba(168,85,247,.18),transparent_34%),radial-gradient(circle_at_0%_100%,rgba(34,211,238,.12),transparent_30%),linear-gradient(145deg,rgba(8,18,35,.98),rgba(2,6,23,.98))] p-4 sm:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
