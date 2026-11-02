@@ -56,7 +56,7 @@ export default function SyncAssistantLauncher() {
     return () => window.clearInterval(timer);
   }, [location.pathname, loadUnread, hiddenForSports]);
 
-  if (hiddenForSports || HIDDEN_PREFIXES.some((prefix) => location.pathname.startsWith(prefix))) return null;
+  if (hiddenForSports || location.pathname === "/customer/store" || HIDDEN_PREFIXES.some((prefix) => location.pathname.startsWith(prefix))) return null;
 
   const isCustomerHome = location.pathname === "/customer";
   const showMic = location.pathname !== "/sync" && !isCustomerHome;
