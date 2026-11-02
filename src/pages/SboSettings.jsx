@@ -1100,11 +1100,17 @@ export default function SboSettings() {
                 />
               </div>
 
+              <section className="mt-5 rounded-2xl border border-amber-400/25 bg-amber-500/5 p-4" aria-label="Business verification status">
+                <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-base font-bold text-white">Business verification</h3><span className="rounded-full border border-amber-400/35 px-3 py-1 text-xs font-bold text-amber-100">Not verified in SyncWorks</span></div>
+                <p className="mt-2 text-sm leading-6 text-slate-200">Verification helps customers trust businesses and prevents misleading listings. Licenses and certifications depend on your industry and the states where you operate. Adding service areas does not prove you hold a license.</p>
+                <p className="mt-2 text-sm text-slate-300">Before receiving regulated work, a business may need legal name and registration, applicable state/local licenses, certification numbers and expiration dates, and a manual review. Do not put sensitive documents in public descriptions or notes.</p>
+                <p className="mt-2 text-xs text-amber-200">Secure credential upload and staff approval are not connected yet. Your listing must not display a verified badge until review is implemented.</p>
+              </section>
               <div className="mt-5 border-t border-slate-800 pt-5">
                 <div className="mb-4">
-                  <div className="text-sm font-black text-white">Expanded Coverage Rules</div>
+                  <div className="text-sm font-black text-white">Where can your business operate?</div>
                   <div className="mt-1 text-xs text-slate-400">
-                    Prepare this business for regional, multi-state, and nationwide growth.
+                    Start with your local ZIP radius, or select additional states where you intend to operate. State coverage is not yet used for live marketplace routing.
                   </div>
                 </div>
                 <BusinessServiceAreasEditor
