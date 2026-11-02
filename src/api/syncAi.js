@@ -1,7 +1,8 @@
 import api, { getActiveBusinessId } from "./client";
 
 function normalizeWorkspace(workspace) {
-  return String(workspace || "personal").toLowerCase() === "business" ? "business" : "personal";
+  const value = String(workspace || "personal").toLowerCase();
+  return ["personal", "business", "pm"].includes(value) ? value : "personal";
 }
 
 function requireBusiness(workspace) {
@@ -72,6 +73,29 @@ export async function sendSyncAiMessage({ message, workspace = "personal" }) {
   }
 
   const response = await api.post("/sync-ai/chat/", { workspace: normalizedWorkspace, message: cleanMessage });
+  return response?.data || {};
+}
+
+export async function previewSyncWorkflow({ workspace = "personal", workflowType, description }) {
+  const scope = normalizeWorkspace(workspace);
+  requireBusiness(scope);
+  const response = await api.post("/sync-ai/workflows/preview/", {
+    workspace: scope,
+    workflow_type: String(workflowType || "auto").trim(),
+    description: String(description || "").trim(),
+  });
+  return response?.data || {};
+}
+
+export async function createSyncPmWorkOrder({ pmWorkspaceId, propertyId, title, description, confirmed = false }) {
+  const response = await api.post("/sync-ai/workflows/pm-work-order/create/", {
+    workspace: "pm",
+    pm_workspace_id: Number(pmWorkspaceId),
+    property_id: Number(propertyId),
+    title: String(title || "").trim(),
+    description: String(description || "").trim(),
+    confirmed: confirmed === true,
+  });
   return response?.data || {};
 }
 
