@@ -934,6 +934,30 @@ export default function SboSettings() {
           </div>
         </div>
 
+        <section aria-label="Business setup progress" className="mb-5 rounded-2xl border border-sky-400/30 bg-[#0c1929] p-4 text-slate-100 shadow-lg shadow-black/20">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-extrabold uppercase tracking-wider text-cyan-200">Business setup · Step {currentSectionIndex + 1} of {SETTINGS_SECTIONS.length}</p>
+              <h1 className="mt-1 text-xl font-bold text-white">{SETTINGS_SECTIONS[currentSectionIndex]?.label}</h1>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">{({
+                business: "Introduce your company. Your business name, contact information and profile help customers recognize and reach you.",
+                marketplace: "Choose where you operate. SyncWorks uses your location and coverage settings to match nearby requests to the right company.",
+                services: "Choose the work you actually offer. Only selected service types should be used for job matching; review the list before going live.",
+                communication: "Choose how your team handles messages. Internal inbox and email notifications help you avoid missed customers and jobs.",
+                card: "Review the public-facing contact card, QR code and Connect Code before sharing your business.",
+                goals: "Set optional growth goals. This planning snapshot stays on this device; you can finish without it."
+              })[section]}</p>
+            </div>
+            <span className="rounded-full border border-sky-400/30 bg-sky-400/10 px-3 py-1 text-xs font-semibold text-cyan-100">{Math.round(((currentSectionIndex + 1) / SETTINGS_SECTIONS.length) * 100)}% through setup</span>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button type="button" onClick={previousSection} disabled={currentSectionIndex === 0 || saving} className="min-h-11 rounded-xl border border-slate-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">Back</button>
+            <button type="button" onClick={currentSectionIndex === SETTINGS_SECTIONS.length - 1 ? saveSettings : saveAndContinue} disabled={saving || loading || !activeBusinessId} className="min-h-11 rounded-xl bg-[#168BFF] px-5 py-2 text-sm font-bold text-white hover:bg-[#287BF2] disabled:opacity-40">{saving ? "Saving…" : currentSectionIndex === SETTINGS_SECTIONS.length - 1 ? "Save & complete setup" : "Save & continue"}</button>
+            {currentSectionIndex === SETTINGS_SECTIONS.length - 1 ? <button type="button" onClick={() => navigate("/upgrade?return=%2Fsbo")} className="min-h-11 rounded-xl border border-violet-400/40 px-4 py-2 text-sm font-semibold text-violet-100">Review plans & access</button> : null}
+          </div>
+          <p className="mt-2 text-xs leading-5 text-slate-400">Your changes are saved to this business when you choose Save. You can return to any step later. Subscriptions and payments are handled separately.</p>
+        </section>
+
         <div className="mb-5 rounded-3xl border border-cyan-500/20 bg-cyan-500/5 p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
