@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ArrowLeft, ExternalLink, Search, ShoppingBag, Star, Wallet, SlidersHorizontal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { amazonSearchUrl } from "../components/customer/JarvisShop";
+import api from "../api/client";
 
 const CHOICES = [
   { id: "quality", label: "Best quality", Icon: Star, sort: "review-rank", description: "Prioritize highly rated options" },
@@ -16,7 +17,10 @@ export default function CustomerStore() {
   const [choice, setChoice] = useState("value");
   const [searched, setSearched] = useState(null);
   const [error, setError] = useState("");
-  function submit(event) {
+  const [items, setItems] = useState([]);
+  const [catalogMessage, setCatalogMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  async function submit(event) {
     event.preventDefault();
     const q = query.trim();
     const minimum = min === "" ? 0 : Number(min);
@@ -25,6 +29,14 @@ export default function CustomerStore() {
     if (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum < 0 || maximum <= 0 || maximum > 10000 || minimum >= maximum) return setError("Set a valid price range (maximum $10,000).");
     setError("");
     setSearched({ q, minimum, maximum, choice });
+    setLoading(true); setItems([]); setCatalogMessage("");
+    try {
+      const response = await api.get("/shop-assist/search/", { params: { q, min: minimum, max: maximum, priority: choice } });
+      const products = Array.isArray(response.data?.items) ? response.data.items : [];
+      setItems(products.slice(0, 3));
+      if (!products.length) setCatalogMessage(response.data?.message || "No verified catalog products matched. Browse more on Amazon.");
+    } catch { setCatalogMessage("Live product listings are currently unavailable. Browse on Amazon instead."); }
+    finally { setLoading(false); }
   }
   const searchLink = searched ? (() => {
     const selected = CHOICES.find(c => c.id === searched.choice) || CHOICES[1];
@@ -59,10 +71,14 @@ export default function CustomerStore() {
         </form>
       </section>
       {searched && <section aria-live="polite" className="mt-4 rounded-2xl border border-white/10 bg-slate-900/65 p-4">
-        <h3 className="text-lg font-black">Your Amazon search is ready</h3>
+        <h3 className="text-lg font-black">{loading ? "Searching Amazon catalog…" : items.length ? "Matching products" : "Your Amazon search is ready"}</h3>
         <p className="mt-2 text-sm text-slate-300">Searching for <strong>{searched.q}</strong> between ${searched.minimum} and ${searched.maximum}, prioritizing {CHOICES.find(c=>c.id===searched.choice)?.label.toLowerCase()}.</p>
-        <p className="mt-3 text-xs leading-5 text-amber-200">Three individually verified products cannot be shown until Amazon Creators API access is connected. This link opens Amazon with your search preferences and our affiliate tag. Review price, seller and ratings there before buying.</p>
+        {items.length > 0 && <div className="mt-4 grid gap-3">{items.map(item=><article key={item.asin} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[.03] p-3">{item.image && <img src={item.image} alt="" className="h-20 w-20 shrink-0 rounded-lg bg-white object-contain" loading="lazy"/>}<div className="min-w-0 flex-1"><p className="text-sm font-bold text-white">{item.title}</p><p className="mt-1 text-sm font-black text-cyan-200">${item.price.toFixed(2)}</p><a href={item.url} target="_blank" rel="sponsored noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-black text-cyan-300">View on Amazon <ExternalLink size={13}/></a></div></article>)}</div>}
+        {catalogMessage && <p className="mt-3 text-xs leading-5 text-amber-200">{catalogMessage}</p>}
+        {!items.length && !catalogMessage && !loading && <p className="mt-3 text-xs text-amber-200">Review prices and ratings on Amazon before purchasing.</p>}
         <a href={searchLink} target="_blank" rel="sponsored noopener noreferrer" className="mt-4 flex min-h-12 items-center justify-center gap-2 rounded-xl border border-cyan-300/40 bg-cyan-500/10 px-4 text-sm font-black text-cyan-100">View matching products on Amazon <ExternalLink size={17}/></a>
+        <a href={searchLink} target="_blank" rel="sponsored noopener noreferrer" className="mt-2 flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[.03] px-4 text-sm font-black text-white">Browse more items <ExternalLink size={17}/></a>
+        <p className="mt-2 text-[11px] text-slate-400">Both links include the SyncWorks affiliate tag. Additional browsing and purchases on Amazon are subject to Amazon’s referral-session rules.</p>
       </section>}
       <p className="mt-5 px-1 text-xs leading-5 text-slate-500">As an Amazon Associate, SyncWorks earns from qualifying purchases. Checkout and cart changes happen on Amazon. Prices and availability may change.</p>
     </div>
