@@ -538,7 +538,8 @@ function ServicesPicker({ categories, selectedServiceIds, setSelectedServiceIds 
 export default function SboSettings() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { activeBusinessId, reloadBusinesses } = useAuth();
+  const { activeBusinessId, myBusinesses = [], reloadBusinesses } = useAuth();
+  const resolvedBusinessId = activeBusinessId || (myBusinesses.length === 1 ? String(myBusinesses[0]?.business?.id || myBusinesses[0]?.business_id || myBusinesses[0]?.id || "") : "");
   const [wizardOpen, setWizardOpen] = useState(() => new URLSearchParams(location.search).get("setup") === "1");
 
   const [loading, setLoading] = useState(true);
@@ -672,7 +673,9 @@ export default function SboSettings() {
   }, [logoPreviewUrl]);
 
   async function loadAll() {
-    if (!activeBusinessId) {
+    if (!resolvedBusinessId) {
+      setBusiness(null);
+      setErr("Select a business to configure. If you just created one, refresh your business list.");
       setLoading(false);
       return;
     }
@@ -682,16 +685,30 @@ export default function SboSettings() {
     setOk("");
 
     try {
-      const [bizRes, catRes] = await Promise.all([
-        api.get(`/businesses/${activeBusinessId}/`),
+      const [bizResult, catResult] = await Promise.allSettled([
+        api.get(`/businesses/${resolvedBusinessId}/`),
         api.get("/service-categories/"),
       ]);
 
-      const biz = bizRes?.data || null;
-      const cats = safeList(catRes?.data);
+      const categoriesData = catResult.status === "fulfilled" ? safeList(catResult.value?.data) : [];
+      setCategories(categoriesData);
 
+      if (catResult.status === "rejected") {
+        console.warn("Business taxonomy unavailable", catResult.reason?.response?.status);
+      }
+
+      if (bizResult.status !== "fulfilled") {
+        const detail = bizResult.reason?.response?.data?.detail;
+        setBusiness(null);
+        setErr(`Could not load the selected business. ${typeof detail === "string" ? detail : "Please select the correct company from the business switcher and retry."}`);
+        return;
+      }
+
+      const biz = bizResult.value?.data || null;
       setBusiness(biz);
-      setCategories(cats);
+      if (!categoriesData.length) {
+        setErr("The service directory is unavailable or empty. Your business profile can still be edited, but Marketplace offerings cannot be configured until categories load.");
+      }
 
       setName(biz?.name || "");
       setBusinessEmail(biz?.business_email || "");
@@ -736,7 +753,7 @@ export default function SboSettings() {
   useEffect(() => {
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeBusinessId]);
+  }, [resolvedBusinessId]);
 
   function saveLocalSnapshot() {
     localStorage.setItem(
@@ -803,7 +820,7 @@ export default function SboSettings() {
       await api.patch(`/businesses/${activeBusinessId}/`, basePayload());
       try { saveLocalSnapshot(); } catch { /* Local planning snapshot is optional; server save remains authoritative. */ }
 
-      const refreshed = await api.get(`/businesses/${activeBusinessId}/`);
+      const refreshed = await api.get(`/businesses/${resolvedBusinessId}/`);
       setBusiness(refreshed?.data || null);
       setSelectedServiceIds(extractBusinessServiceIds(refreshed?.data || null));
 
