@@ -350,6 +350,9 @@ export default function SboSetupWizard({
   const [customerFlow, setCustomerFlow] = useState("service");
   const [sameEmail, setSameEmail] = useState(false);
   const [sameName, setSameName] = useState(false);
+  const [sameAddress, setSameAddress] = useState(false);
+  const [orderMethod, setOrderMethod] = useState("pickup");
+  const [contactPreference, setContactPreference] = useState("inbox");
   const steps = useMemo(
     () => [
       { key: "basics", label: "1. Business Basics" },
@@ -428,6 +431,9 @@ export default function SboSetupWizard({
     setCustomerFlow(local.customerFlow || "service");
     setSameEmail(!!local.sameEmail);
     setSameName(!!local.sameName);
+    setSameAddress(!!local.sameAddress);
+    setOrderMethod(local.orderMethod || "pickup");
+    setContactPreference(local.contactPreference || "inbox");
     setName(local.name ?? business?.name ?? "");
     setBusinessEmail(local.businessEmail ?? business?.business_email ?? "");
     setOwnerName(local.ownerName ?? business?.owner_name ?? "");
@@ -473,6 +479,9 @@ export default function SboSetupWizard({
       customerFlow,
       sameEmail,
       sameName,
+      sameAddress,
+      orderMethod,
+      contactPreference,
       businessEmail,
       ownerName,
       phone,
@@ -822,6 +831,16 @@ export default function SboSetupWizard({
                 />
               </div>
 
+              <div className="mb-4 rounded-2xl border border-sky-400/20 bg-sky-500/5 p-4">
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-100"><input type="checkbox" checked={sameAddress} onChange={e=>{setSameAddress(e.target.checked);if(e.target.checked){setAddress(user?.address||user?.street_address||"");setCity(user?.city||"");setState(user?.state||"");setBaseZip(user?.zip||user?.zip_code||"");}}}/>Use my personal profile address</label>
+                <p className="mt-1 text-xs text-slate-300">Only reuse fields already saved in your profile; check them before saving. For online businesses, this address is for account setup and should not automatically be displayed publicly.</p>
+              </div>
+              {(customerFlow==="order"||customerFlow==="mixed") ? <div className="mb-4 rounded-2xl border border-violet-400/25 bg-violet-400/5 p-4">
+                <p className="text-sm font-bold text-white">How will customers receive orders?</p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">{[["pickup","In-store pickup"],["delivery","Local delivery"],["shipping","Shipping"],["arranged","Arrange with customer"]].map(([key,label])=><label key={key} className="flex items-center gap-2 text-sm text-slate-200"><input type="radio" name="orderMethod" checked={orderMethod===key} onChange={()=>setOrderMethod(key)}/>{label}</label>)}</div>
+                <p className="mt-2 text-xs text-slate-300">Your preference is saved for future order setup. Shipping and delivery integrations are not enabled by choosing an option.</p>
+              </div> : null}
+              {(customerFlow==="lead"||customerFlow==="mixed") ? <div className="mb-4 rounded-2xl border border-teal-400/25 bg-teal-400/5 p-4"><p className="text-sm font-bold text-white">Where should new inquiries go first?</p><select value={contactPreference} onChange={e=>setContactPreference(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-sm text-white"><option value="inbox">Business inbox</option><option value="consultation">Consultation request queue</option></select><p className="mt-2 text-xs text-slate-300">This is a saved preference. Automated lead routing will be enabled when the relevant workflow is available.</p></div> : null}
               <div className="mt-4">
                 <Toggle
                   label="Accept Marketplace Tickets"
