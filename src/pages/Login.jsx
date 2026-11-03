@@ -201,7 +201,7 @@ export default function Login({ backgroundOnly = false }) {
           <nav aria-label="Learn about SyncWorks" className="hidden items-center gap-5 text-sm text-slate-300 md:flex">
             <a href="#roles" className="hover:text-white">Who it helps</a>
             <a href="#platform" className="hover:text-white">What it does</a>
-            <a href="#story" className="hover:text-white">Why it exists</a>
+            <a href="#story" className="hover:text-white">About SyncWorks</a>
           </nav>
           <div className="flex items-center gap-2">
             <Link to="/register?role=business" className="hidden rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-400/50 lg:inline-flex">Service business onboarding</Link>
@@ -312,7 +312,7 @@ export default function Login({ backgroundOnly = false }) {
         </section>
       </main>
 
-      <footer className="border-t border-white/10 px-4 py-8 text-center text-xs text-slate-500">© {new Date().getFullYear()} SyncWorks. One system for the work and life around you.</footer>
+      <footer className="border-t border-white/10 px-4 py-8 text-center text-xs text-slate-500">© {new Date().getFullYear()} SyncWorks. One system for the work and life around you. <a href="#story" className="ml-2 underline underline-offset-4 hover:text-cyan-200">About SyncWorks</a> <span className="ml-2">Full company story coming soon.</span></footer>
 
       {signInOpen ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label="Sign in to SyncWorks" onMouseDown={(event) => { if (event.target === event.currentTarget) setSignInOpen(false); }}>
