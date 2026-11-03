@@ -229,7 +229,10 @@ export default function PMMonthlyLedger({
             <div className="flex flex-wrap gap-1.5">
               <button type="button" className={textButton} onClick={()=>onAddPayment(r.month,"TENANT")}>+ Payment</button>
               <button type="button" className={textButton} onClick={()=>onEditRent(r.month)}>Edit rent</button>
-              <button type="button" className={textButton} onClick={()=>onHousingEvidence(r.month)}>Section 8</button>
+              {(payer?.profile?.section8 || r.suggestedHousing > 0 || r.rentHousing > 0 || r.abated > 0) ? <>
+                <button type="button" className={textButton} onClick={()=>onAddPayment(r.month,"HOUSING")}>+ MHA receipt</button>
+                <button type="button" className={textButton} onClick={()=>onHousingEvidence(r.month)}>Section 8 / trace</button>
+              </> : null}
               <button type="button" className={textButton} onClick={()=>onLateFee(r.month)}>Late fee</button>
               <button type="button" className={textButton} onClick={onAdvanced}>Correct / reverse</button>
             </div>
