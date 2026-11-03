@@ -14,6 +14,7 @@ const roxana={
  verified_through:"2026-10",source_note:"Current $1,485 lease. Prior MHA correspondence: October 2026 abatement; November MHA $377 must be independently reverified before assisted automatic billing.",
  // Historical 2026 months are reconciled separately; recurring billing must start in November.
  monthly_overrides:{}
+};
 
 function FormError({error}){return error?<div role="alert" className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">{error}</div>:null;}
 
