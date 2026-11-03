@@ -75,7 +75,7 @@ export default function PMMonthlyLedger({
       const row = ensure(String(item.entry_date || "").slice(0,7));
       if (!row) continue;
       row.transactions.push(item);
-      if (rentCategory(item)) {
+      if (rentCategory(item) && item.entry_type !== "PAYMENT") {
         const amount = val(item.amount) * sign(item);
         if (housing(item)) row.rentHousing += amount;
         else row.rentTenant += amount;
