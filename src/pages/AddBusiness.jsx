@@ -20,7 +20,7 @@ export default function AddBusiness() {
   const { user, reloadBusinesses, setActiveBusinessId } = useAuth();
   const [form,setForm] = useState({
     name:"", business_email:"", phone:"", city:"", state:"", base_zip:"",
-    accepts_marketplace_tickets:vertical==="service", accepts_fee:false,
+    accepts_marketplace_tickets:vertical==="service",
   });
   const [saving,setSaving] = useState(false);
   const [createdId,setCreatedId] = useState(null);
@@ -32,7 +32,6 @@ export default function AddBusiness() {
     setError("");
     const personalEmail = String(user?.email||"").trim().toLowerCase();
     const companyEmail = String(form.business_email||"").trim().toLowerCase() || personalEmail;
-    if (!form.accepts_fee) { setError("Review and accept the platform fee terms."); return; }
     if (!/^\d{5}(?:-?\d{4})?$/.test(form.base_zip.trim())) { setError("Enter a valid five-digit US ZIP code."); return; }
     if (!companyEmail) { setError("Your account must have a verified email."); return; }
     setSaving(true);
@@ -87,8 +86,7 @@ export default function AddBusiness() {
           <div className="grid grid-cols-2 gap-3">{label("City","city",{autoComplete:"address-level2"})}{label("State","state",{maxLength:2,upper:true,autoComplete:"address-level1"})}</div>
           {label("Service ZIP","base_zip",{required:true,autoComplete:"postal-code",maxLength:10})}
           <label className="flex items-start gap-2 rounded-xl border border-slate-700 p-3 text-sm"><input type="checkbox" checked={form.accepts_marketplace_tickets} onChange={e=>set("accepts_marketplace_tickets",e.target.checked)} className="mt-1"/> Allow eligible customers in my service area to request jobs</label>
-          <label className="flex items-start gap-2 rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-sm"><input type="checkbox" checked={form.accepts_fee} onChange={e=>set("accepts_fee",e.target.checked)} required className="mt-1"/> I understand that transaction platform fees may still apply even when subscription charges are waived. Final billing terms are reviewed before collection is enabled.</label>
-          <button type="submit" disabled={saving||!form.accepts_fee} className="min-h-12 w-full rounded-xl bg-cyan-400 px-4 font-black text-slate-950 disabled:opacity-40">{saving?"Creating business…":"Create business and continue setup"}</button>
+          <button type="submit" disabled={saving} className="min-h-12 w-full rounded-xl bg-cyan-400 px-4 font-black text-slate-950 disabled:opacity-40">{saving?"Creating business…":"Create business and continue setup"}</button>
         </form>
       </div>
     </main>
