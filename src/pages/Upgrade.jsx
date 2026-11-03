@@ -198,6 +198,7 @@ export default function Upgrade() {
   const [promoStatus, setPromoStatus] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoApplied, setPromoApplied] = useState(false);
+  const [promoFeeAcknowledged, setPromoFeeAcknowledged] = useState(false);
   const [affiliateCode] = useState(getStoredAffiliateCode());
 
   const search = useMemo(() => new URLSearchParams(loc.search || ""), [loc.search]);
@@ -260,6 +261,10 @@ export default function Upgrade() {
       setPromoStatus("Create or select your business first, then apply your access code.");
       return;
     }
+    if (code === "SWFF26" && !promoFeeAcknowledged) {
+      setPromoStatus("Please acknowledge the transaction platform fee disclosure before applying SWFF26.");
+      return;
+    }
 
     setPromoLoading(true);
     setPromoStatus("");
@@ -279,6 +284,7 @@ export default function Upgrade() {
         }
       );
 
+      if (code === "SWFF26" && !res?.data?.subscriptions_exempt) throw new Error("The SWFF26 subscription waiver was not confirmed.");
       setPromoApplied(true);
       setPromoCode(code);
       setPromoStatus(res?.data?.detail || "Access code applied.");
@@ -286,6 +292,7 @@ export default function Upgrade() {
       const msg =
         e?.response?.data?.detail ||
         e?.response?.data?.error ||
+        e?.message ||
         "Unable to apply access code.";
       setPromoApplied(false);
       setPromoStatus(String(msg));
@@ -408,7 +415,7 @@ export default function Upgrade() {
           <div className="mt-4 flex gap-2 flex-wrap">
             <input
               value={promoCode}
-              onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+              onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setPromoApplied(false); setPromoFeeAcknowledged(false); setPromoStatus(""); }}
               placeholder="Enter access code"
               className="flex-1 min-w-[220px] rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-2 text-sm outline-none focus:border-cyan-500/40"
             />
@@ -422,6 +429,19 @@ export default function Upgrade() {
               {promoLoading ? "Applying..." : "Apply Code"}
             </button>
           </div>
+
+          {String(promoCode || "").trim().toUpperCase() === "SWFF26" ? (
+            <label className="mt-3 flex items-start gap-3 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm leading-6 text-slate-100">
+              <input
+                type="checkbox"
+                checked={promoFeeAcknowledged}
+                onChange={(e) => setPromoFeeAcknowledged(e.target.checked)}
+                disabled={promoApplied || promoLoading}
+                className="mt-1 shrink-0"
+              />
+              <span>I understand that SWFF26 waives eligible SyncWorks subscription charges, but does not waive the 1% SyncWorks platform transaction fee. Final payment terms apply when payments are enabled.</span>
+            </label>
+          ) : null}
 
           {promoApplied ? (
             <div className="mt-3 text-sm text-emerald-300 bg-emerald-900/10 border border-emerald-800 rounded-2xl p-3">
