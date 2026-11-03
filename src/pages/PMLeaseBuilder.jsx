@@ -9,9 +9,9 @@ const list=d=>Array.isArray(d?.results)?d.results:Array.isArray(d)?d:[];
 const F=({name,children})=><label className="block min-w-0 text-[10px] font-bold text-slate-400">{name}<div className="mt-1">{children}</div></label>;
 const Box=({title,desc,children})=><section className="rounded-xl border border-cyan-400/15 bg-[#07111f] p-3 sm:p-4"><h2 className="text-sm font-black">{title}</h2>{desc?<p className="mt-1 text-[11px] text-slate-400">{desc}</p>:null}<div className="mt-3">{children}</div></section>;
 const roxana={
- active:true,billing_start_date:"2026-03-01",due_day:1,grace_days:5,
+ active:false,billing_start_date:"2026-11-01",due_day:1,grace_days:5,
  late_fee_amount:"50.00",auto_late_fees:false,late_fee_verified:false,
- verified_through:"2026-10",source_note:"MHA correspondence identifying monthly voucher responsibilities; Adair receipts and reported March 1 management transfer. October assistance abated, not tenant-billable.",
+ verified_through:"2026-10",source_note:"Current $1,485 lease. Prior MHA correspondence: October 2026 abatement; November MHA $377 must be independently reverified before assisted automatic billing.",
  monthly_overrides:Object.fromEntries([
   ...["2026-03","2026-04","2026-05","2026-06","2026-07"].map(m=>[m,{tenant:"1407.00",housing:"78.00",abated:"0.00",note:"MHA supplied $78 share"}]),
   ["2026-08",{tenant:"1485.00",housing:"0.00",abated:"0.00",note:"MHA confirmed full tenant share in August"}],
@@ -156,10 +156,13 @@ export default function PMLeaseBuilder(){
     {leaseForm.section8?<><F name="Current tenant share"><input inputMode="decimal" className={field} value={leaseForm.tenant_portion} onChange={e=>changeLease("tenant_portion",e.target.value)}/></F><F name="Current housing share"><input inputMode="decimal" className={field} value={leaseForm.assistance_portion} onChange={e=>changeLease("assistance_portion",e.target.value)}/></F></>:null}
     <F name="Rolls to month-to-month"><select className={field} value={leaseForm.converts_to_month_to_month?"yes":"no"} onChange={e=>changeLease("converts_to_month_to_month",e.target.value==="yes")}><option value="yes">Yes</option><option value="no">No</option></select></F>
    </div>
-   {isRoxana?<p className="mt-2 text-[11px] text-amber-200">Roxana's saved lease currently differs from the documented $1,485 total. Correct it to $1,485 with the current certified $1,108 tenant / $377 housing split before saving the billing schedule. Preserve the deposit dispute separately.</p>:null}
+   {isRoxana?<p className="mt-2 text-[11px] text-amber-200">Roxana's live lease already shows $1,485 total, with $1,108 tenant and $377 housing. This configured split is not proof November MHA payment is approved or received. October's $377 was abated. Preserve the deposit dispute separately.</p>:null}
    <button disabled={busy} onClick={saveLease} className="mt-3 min-h-10 rounded-lg bg-cyan-400 px-4 text-xs font-black text-slate-950 disabled:opacity-40">{lease?"Save verified lease amounts":"Create lease"}</button>
   </Box>
-  {lease&&config?<><Box title="2 · Monthly billing rules" desc="Monthly rent bills once on the due day. Biweekly tenant payments reduce the oldest unpaid charges, but do not automatically create multiple monthly late fees.">
+  {lease&&config?<>{isRoxana ? <div className="rounded-xl border border-amber-400/30 bg-amber-500/5 p-3 text-[11px] leading-5 text-amber-100">
+    <strong>November 2026 billing readiness:</strong> no November rent charge is posted, and the saved billing setup is not yet active. Get the written MHA determination and confirm the October inspection/abatement status before extending the assisted schedule.
+    The daily Render billing job also needs to be configured before automatic monthly posting will run. This panel never silently bills an unverified assistance amount.
+  </div> : null}<Box title="2 · Monthly billing rules" desc="Monthly rent bills once on the due day. Biweekly tenant payments reduce the oldest unpaid charges, but do not automatically create multiple monthly late fees.">
    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
     <F name="Bill from"><input type="date" value={config.billing_start_date||""} onChange={e=>changeCfg("billing_start_date",e.target.value)} className={field}/></F>
     <F name="Due day"><select value={config.due_day||1} onChange={e=>changeCfg("due_day",Number(e.target.value))} className={field}>{[1,2,3,5,10,15,20,25,28].map(n=><option key={n} value={n}>{n}{n===1?"st of month":""}</option>)}</select></F>
