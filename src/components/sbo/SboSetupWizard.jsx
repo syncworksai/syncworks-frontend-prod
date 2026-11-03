@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
+import { BUSINESS_ADD_ONS, STATUS_LABEL } from "../../lib/featureAvailability";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -1031,19 +1032,20 @@ export default function SboSetupWizard({
                     </ul>
                     <p className="mt-2 text-xs text-slate-400">Features depend on account setup and activation; marketplace exposure requires approved offerings and coverage.</p>
                   </div>
-                  <label className="mt-3 flex items-start gap-3 rounded-xl border border-cyan-400/35 bg-cyan-500/5 p-3 text-sm text-white"><input type="checkbox" checked={jarvisAutomate} onChange={e=>{setJarvisAutomate(e.target.checked); if(e.target.checked)setFeatureInterests(prev=>prev.filter(x=>x!=="ai_assistant"));}} className="mt-1 accent-cyan-400"/><span><strong>Business Jarvis Automate · $39.99/month proposed</strong><span className="mt-1 block text-slate-300">Includes the on-demand Business AI assistant, plus workflow automation, suggested replies, and follow-ups. Replaces the standalone $19.99 AI assistant; never billed together. $59.98/month with Business base. Activation and usage allowances are subject to billing integration.</span></span></label>
+                  <div className="mt-3 flex items-start gap-3 rounded-xl border border-slate-600/50 bg-slate-800/30 p-3 text-sm text-slate-300" aria-label="SYNC AI Automate coming soon"><span aria-hidden="true">◌</span><span><strong className="text-slate-200">SYNC AI Automate · $39.99/month proposed</strong><span className="ml-2 rounded border border-slate-500 px-2 py-0.5 text-xs">Coming soon</span><span className="mt-1 block text-slate-300">Planned AI workflows, suggested replies, and follow-ups. Includes the standalone assistant when released. Not available to purchase yet.</span></span></div>
                   <div className="mt-3 rounded-xl border border-slate-700 p-3">
                     <p className="text-sm font-bold text-white">Optional business features</p>
-                    <p className="mt-1 text-xs text-slate-300">Select features to preview your proposed bill. Prices are not active until Stripe verifies each product; selections are saved as onboarding preferences only.</p>
-                    {[
-                      ["automated_email","Advanced automated email follow-ups",99],
-                      ["technician_location","Technician location visibility",999],
-                      ["ai_assistant","On-demand business AI assistant",1999],
-                      ["weather","AI weather assistance",99],
-                      ["traffic","Traffic intelligence",99],
-                      ["routing","AI route optimization",999],
-                      ["phone","Jarvis phone answering",1999]
-                    ].map(([key,label,cents])=><label key={key} className="mt-2 flex items-start justify-between gap-3 rounded-lg border border-slate-700/70 p-2 text-sm text-slate-200"><span className="flex items-start gap-2"><input className="mt-1 accent-cyan-400" type="checkbox" checked={featureInterests.includes(key) && !(key==="ai_assistant" && jarvisAutomate)} disabled={key==="ai_assistant" && jarvisAutomate} onChange={e=>setFeatureInterests(prev=>e.target.checked?[...prev,key]:prev.filter(x=>x!==key))}/><span>{label}{key==="ai_assistant" && jarvisAutomate ? <span className="block text-xs text-cyan-200">Included with Jarvis Automate</span> : null}{key==="phone" ? <span className="block text-xs text-amber-200">Starting subscription; usage billed separately</span>:null}</span></span><span className="shrink-0 font-semibold text-white">${(cents/100).toFixed(2)}/mo</span></label>)}
+                    <p className="mt-1 text-xs text-slate-300">Here is what we are building. Prices are proposals, not current charges. Unreleased add-ons cannot be selected or purchased.</p>
+                    {BUSINESS_ADD_ONS.map(([key,label,cents,status])=>(
+                      <div key={key} className="mt-2 flex items-start justify-between gap-3 rounded-lg border border-slate-700/70 bg-slate-800/20 p-3 text-sm text-slate-300" aria-label={`${label}: ${STATUS_LABEL[status]}`}>
+                        <span className="min-w-0">
+                          <strong className="block font-semibold text-slate-200">{label}</strong>
+                          <span className="mt-1 inline-block rounded border border-slate-600 px-2 py-0.5 text-xs text-slate-300">{STATUS_LABEL[status]}</span>
+                          {key==="phone" ? <span className="mt-1 block text-xs">Additional usage charges would apply if released.</span> : null}
+                        </span>
+                        <span className="shrink-0 text-right text-xs text-slate-200">${(cents/100).toFixed(2)}/mo<span className="block text-slate-400">proposed</span></span>
+                      </div>
+                    ))}
                     <p className="mt-3 text-xs leading-5 text-amber-200">AI-enabled features require hard provider-cost caps; phone and routing usage may have additional charges, disclosed before activation.</p>
                   </div>
                   <label className="mt-4 block text-sm font-semibold text-white">Access / promotional code
@@ -1051,8 +1053,8 @@ export default function SboSetupWizard({
                   </label>
                   <p className="mt-2 text-xs text-slate-300">{planPromo.trim()==="SWFF26"?"SWFF26 entered: tester subscription-waiver eligibility must be confirmed by billing. The 1% platform fee still applies.":"Code is not applied or validated here. Any trial or discount must be confirmed by secure billing."}</p>
                   <div className="mt-4 border-t border-slate-700 pt-3">
-                    <div className="flex justify-between text-base font-bold text-white"><span>Illustrative total</span><span>{billingCycle==="monthly"?"$"+(19.99+(jarvisAutomate?39.99:0)+(featureInterests.reduce((sum, key) => sum + (jarvisAutomate && key==="ai_assistant" ? 0 : ({automated_email:99,technician_location:999,ai_assistant:1999,weather:99,traffic:99,routing:999,phone:1999}[key] || 0)), 0) / 100)).toFixed(2)+"/mo":"$"+(199+(jarvisAutomate?39.99*12:0)+12*(featureInterests.reduce((sum, key) => sum + (jarvisAutomate && key==="ai_assistant" ? 0 : ({automated_email:99,technician_location:999,ai_assistant:1999,weather:99,traffic:99,routing:999,phone:1999}[key] || 0)), 0) / 100)).toFixed(2)+"/yr"}</span></div>
-                    <p className="mt-2 text-xs leading-5 text-amber-200">Estimate only. All add-on prices are proposed; annual add-ons are shown at 12 times monthly rates without an unapproved discount. Selections are not billable purchases. Trial eligibility and add-on activation are not configured by this form. Actual checkout terms and accepted promo codes govern your charge. Platform transaction fees are separate.</p>
+                    <div className="flex justify-between text-base font-bold text-white"><span>Business base estimate</span><span>{billingCycle==="monthly"?"$19.99/mo":"$199.00/yr proposed"}</span></div>
+                    <p className="mt-2 text-xs leading-5 text-amber-200">Estimate only. Coming soon and verification-pending features are excluded from totals and unavailable for purchase. Trial eligibility and add-on activation are not configured here. Checkout controls final charges, and platform transaction fees are separate.</p>
                   </div>
                 </div>
               </div>
