@@ -86,7 +86,7 @@ export default function PMPayments() {
   const [lateError, setLateError] = useState("");
   const [externalForm, setExternalForm] = useState({ category: "HAP_PAID_TO_FORMER_MANAGER", period: today.slice(0, 7), amount: "", evidence_status: "REPORTED", note: "" });
   const [drawer, setDrawer] = useState(params.get("add") === "1" ? "entry" : "");
-  const [entry, setEntry] = useState({ ...blankEntry, tenant: params.get("tenant") || "" });
+  const [entry, setEntry] = useState({ ...blankEntry, tenant: params.get("tenant") || "", entry_date: params.get("rent_month") ? "" : today, memo: params.get("rent_month") ? "Owner-selected rent reference month: " + params.get("rent_month") + ". Allocate to oldest eligible charge; use actual receipt date." : "" });
   const [editing, setEditing] = useState(null);
   const [payer, setPayer] = useState({ profile: {}, buckets: { tenant_owes: "0", housing_owes: "0", total_balance: "0" } });
   const [selectedIds, setSelectedIds] = useState([]);
@@ -306,7 +306,9 @@ export default function PMPayments() {
   function openEntry(id = "") {
     const tenant = String(id || filterTenant || "");
     if (tenant) selectTenant(tenant);
-    setEntry({ ...blankEntry, tenant });
+    const referenceMonth = params.get("rent_month");
+    setEntry({ ...blankEntry, tenant, entry_date: referenceMonth ? "" : today,
+      memo: referenceMonth ? "Owner-selected rent reference month: " + referenceMonth + ". Allocate to oldest eligible charge; use actual receipt date." : "" });
     setEditing(null);
     setDrawerError("");
     setDrawer("entry");
@@ -316,6 +318,7 @@ export default function PMPayments() {
     setDrawer("");
     const next = new URLSearchParams(params);
     next.delete("add");
+    next.delete("rent_month");
     setParams(next, { replace: true });
   }
 

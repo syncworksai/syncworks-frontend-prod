@@ -6,7 +6,7 @@ const cash = n => Number(n || 0).toLocaleString("en-US",{style:"currency",curren
 const healthTone = status => status==="AT_RISK"?"text-rose-200 bg-rose-500/10 border-rose-500/30":status==="WATCH"?"text-amber-200 bg-amber-500/10 border-amber-500/30":"text-emerald-200 bg-emerald-500/10 border-emerald-500/30";
 const navTiles=[
   {key:"tenants",label:"Tenants & leases",hint:"People and agreements",icon:Users},
-  {key:"ledger",label:"Money & ledger",hint:"Rent, payments, deposits",icon:Receipt},
+  {key:"review",label:"Money & ledger",hint:"Monthly rent, receipts, reconciliation",icon:Receipt},
   {key:"documents",label:"Files & signatures",hint:"All records, approvals",icon:FileText},
   {key:"maintenance",label:"Repairs & work",hint:"Open jobs and projects",icon:Wrench},
   {key:"handoff",label:"Setup & transfer",hint:"Opening balances, agency",icon:Handshake},

@@ -12,10 +12,10 @@ const errText=e=>{const d=e?.response?.data;if(typeof d?.detail==="string")retur
   if(d&&typeof d==="object")return Object.entries(d).map(([k,v])=>k+": "+(Array.isArray(v)?v.join("; "):String(v))).join(" | ");
   return e?.message||"Unable to save. Please review the month and try again.";};
 const ownerSchedule=[
- ["2026-02",78],["2026-03",78],["2026-04",78],["2026-05",78],
- ["2026-06",78],["2026-07",78],["2026-08",344],["2026-09",344],["2026-10",344],
+ ["2026-01",78],["2026-02",78],["2026-03",78],["2026-04",78],["2026-05",78],
+ ["2026-06",78],["2026-07",78],["2026-08",0],["2026-09",377],["2026-10",377],
 ].map(([month,mha])=>({month,rent:"1485.00",mha:String(mha),status:month<"2026-03"?"FORMER_MANAGER":
-  month>="2026-08"?"REQUIRES_VERIFICATION":"MHA_REPORTED"}));
+  month==="2026-10"?"ABATED_NOT_RECEIVABLE":month>="2026-08"?"REQUIRES_VERIFICATION":"MHA_REPORTED"}));
 const sourceDefault="Owner-entered schedule, pending comparison with written MHA determinations and the original signed lease.";
 export default function PMRentCorrection(){
  const nav=useNavigate();const [search]=useSearchParams();
@@ -38,7 +38,7 @@ export default function PMRentCorrection(){
  const parseAmount=v=>String(v).trim()!==""&&Number.isFinite(Number(v))&&Number(v)>=0;
  const validRow=r=>parseAmount(r.rent)&&parseAmount(r.mha)&&Number(r.mha)<=Number(r.rent)&&Number(r.rent)>0;
  const reviewed=active?checks[active.month]:null;
- const mismatched=active?.month>="2026-08"&&isRoxana;
+ const mismatched=!!active&&isRoxana&&Object.prototype.hasOwnProperty.call({"2026-08":0,"2026-09":377,"2026-10":377},active.month)&&Number(active.mha)!==({"2026-08":0,"2026-09":377,"2026-10":377})[active.month];
  const activeNoChange=reviewed&&Math.abs(Number(reviewed.tenant_charge_adjustment||0))<0.005&&
     Math.abs(Number(reviewed.housing_charge_adjustment||0))<0.005;
  useEffect(()=>{let alive=true;(async()=>{try{
@@ -156,7 +156,7 @@ export default function PMRentCorrection(){
        <div key={label} className="rounded-xl border border-slate-700 bg-[#07111f] p-2.5"><div className="text-[10px] text-slate-400">{label}</div><div className="mt-1 text-sm font-black sm:text-lg">{money(value)}</div></div>)}
     </section>
     {isRoxana?<div className="rounded-xl border border-amber-400/25 bg-amber-500/5 p-3 text-[11px] leading-5 text-amber-100">
-       <strong>Source conflict to review:</strong> Your proposed schedule uses $344 MHA for August–October. MHA previously stated August $0, September $377, and an October abatement. Those months remain marked for verification; October's MHA amount is displayed for comparison but excluded from billing. February was managed by Adair and is shown for reference only.
+       <strong>Historic MHA allocations:</strong> August $0 (full tenant share), September $377 MHA, and October $377 assistance abated. October's MHA share is displayed for reference but excluded from billing. January and February are former-manager reference months; do not duplicate their charges or receipts. Verify written determinations before posting corrections.
      </div>:null}
     <section className={box}>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-sm font-black">Monthly rent · {name}</h2><p className="mt-0.5 text-[10px] text-slate-400">{draftSaved?"Schedule draft saved":"Unsaved proposed schedule"} · Edit amount → Save draft → Review individual charges</p></div>
