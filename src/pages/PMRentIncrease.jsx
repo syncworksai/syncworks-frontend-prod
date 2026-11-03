@@ -2,6 +2,7 @@ import React,{useEffect,useMemo,useState} from "react";
 import {useNavigate,useSearchParams} from "react-router-dom";
 import api from "../api/client";
 import PMShell from "../components/pm/PMShell";
+import { ROXANA_RENT_REVIEW_DATE } from "../components/pm/roxanaPilotMilestones";
 
 const list=x=>Array.isArray(x?.results)?x.results:Array.isArray(x)?x:[];
 const fmt=x=>x?new Date(x+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"Not set";
@@ -99,6 +100,14 @@ export default function PMRentIncrease(){
   <section className="rounded-xl border border-cyan-500/20 bg-[#07111f] p-3">
     <Field label="Property"><select className={input} value={propertyId} onChange={e=>{setPropertyId(e.target.value);setParams(e.target.value?{property:e.target.value}:{});setSelected(null);setPlans([]);}}><option value="">Choose a property</option>{properties.map(p=><option value={p.id} key={p.id}>{p.name} — {p.address}</option>)}</select></Field>
   </section>
+  {String(propertyId)==="1" ? <section className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+     <div className="flex flex-wrap items-center justify-between gap-2">
+       <div><h2 className="text-xs font-black text-amber-200">Roxana · Rent eligibility review: {ROXANA_RENT_REVIEW_DATE}</h2>
+         <p className="mt-1 text-[11px] text-slate-300">Planning milestone, not an increase or tenant notice. Verify month-to-month lease, MHA HAP anniversary, inspection status and rent reasonableness. MHA requests require advance written notice.</p>
+       </div><button type="button" className="min-h-9 rounded-lg border border-amber-400/40 px-3 text-xs text-amber-100" onClick={()=>nav("/pm/calendar?property=1&month=2027-01")}>PM calendar</button>
+     </div>
+     <a className="mt-2 inline-block text-[11px] text-cyan-200 underline" href="https://mhatoday.org/vendor-resources/" target="_blank" rel="noreferrer">Official MHA rent-increase forms</a>
+   </section> : null}
   {propertyId?<><section className="rounded-xl border border-amber-400/25 bg-[#07111f] p-3 sm:p-5">
     <h2 className="text-sm font-black text-amber-100">Original contract rent audit</h2>
     <p className="mt-1 text-xs leading-5 text-slate-400">Correct only the ORIGINAL signed lease amount. This does not backdate new rent increases, change third-party shares, or overwrite tenant payments.</p>
