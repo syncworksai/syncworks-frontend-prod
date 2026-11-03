@@ -1,6 +1,7 @@
 // src/pages/PropertyManagerCalendar.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ROXANA_RENT_REVIEW_EVENT } from "../components/pm/roxanaPilotMilestones";
 import api from "../api/client";
 import ModeBar from "../components/ModeBar";
 import Button from "../components/ui/Button";
@@ -35,6 +36,7 @@ const EVENT_TYPES = [
   { key: "DOC_SIGNATURE", label: "Documents to Sign" },
   { key: "INSPECTION", label: "Inspections" },
   { key: "SECTION8", label: "Section 8 / Recerts" },
+  { key: "RENT_REVIEW", label: "Rent increase reviews" },
   { key: "MAINTENANCE", label: "Maintenance" },
   { key: "OTHER", label: "Other" },
 ];
@@ -107,7 +109,7 @@ function typeTone(type) {
   if (t === "LEASE_EXPIRES") return "amber";
   if (t === "DOC_SIGNATURE") return "cyan";
   if (t === "INSPECTION") return "emerald";
-  if (t === "SECTION8") return "amber";
+  if (t === "SECTION8" || t === "RENT_REVIEW") return "amber";
   if (t === "MAINTENANCE") return "slate";
   return "slate";
 }
@@ -155,19 +157,21 @@ function buildMonthGrid(viewDate) {
 
 export default function PropertyManagerCalendar() {
   const nav = useNavigate();
+  const [params] = useSearchParams();
+  const startMonth = params.get("month");
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
 
   // Calendar view date (month)
-  const [viewDate, setViewDate] = useState(() => monthStart(new Date()));
+  const [viewDate, setViewDate] = useState(() => /^\d{4}-(0[1-9]|1[0-2])$/.test(startMonth || "") ? monthStart(new Date(startMonth + "-01T12:00:00")) : monthStart(new Date()));
 
   // Filters (designed for hundreds of properties)
   const [search, setSearch] = useState("");
   const [type, setType] = useState("ALL");
   const [status, setStatus] = useState("OPEN"); // default to Open to reduce noise
-  const [propertyId, setPropertyId] = useState("ALL");
+  const [propertyId, setPropertyId] = useState(params.get("property") || "ALL");
 
   // Properties list for filter dropdown (optional until backend exists)
   const [properties, setProperties] = useState([]);
@@ -206,7 +210,7 @@ export default function PropertyManagerCalendar() {
   async function loadProperties() {
     // We'll wire this later; until then it silently falls back to empty.
     try {
-      const list = await tryList(["/pm/properties/", "/properties/"]);
+      const list = await tryList(["/pm-hub/properties/", "/pm/properties/", "/properties/"]);
       setProperties(list);
     } catch {
       setProperties([]);
@@ -233,16 +237,23 @@ export default function PropertyManagerCalendar() {
 
     try {
       const list = await tryList(["/pm/events/", "/events/"], params);
-      setEvents(list);
+      const pilot = (type === "ALL" || type === "RENT_REVIEW") &&
+        (status === "ALL" || status === "OPEN") &&
+        (propertyId === "ALL" || String(propertyId) === "1") &&
+        (!search || [ROXANA_RENT_REVIEW_EVENT.title, ROXANA_RENT_REVIEW_EVENT.property_name, ROXANA_RENT_REVIEW_EVENT.tenant_name].join(" ").toLowerCase().includes(search.toLowerCase())) ? [ROXANA_RENT_REVIEW_EVENT] : [];
+      setEvents([...list.filter(e => e.id !== ROXANA_RENT_REVIEW_EVENT.id), ...pilot]);
     } catch (e) {
       // Graceful “UI-first” message
       const msg = e?.response?.data?.detail || e?.message || "Failed to load calendar events.";
-      setEvents([]);
-      setErr(
-        e?.response?.status === 404
-          ? "PM calendar endpoints aren’t wired yet. This page is ready — next step is backend models + /pm/events/ API."
-          : msg
-      );
+      const pilot = (type === "ALL" || type === "RENT_REVIEW") && (status === "ALL" || status === "OPEN") &&
+        (propertyId === "ALL" || String(propertyId) === "1") &&
+        (!search || ROXANA_RENT_REVIEW_EVENT.title.toLowerCase().includes(search.toLowerCase()) ||
+          ROXANA_RENT_REVIEW_EVENT.property_name.toLowerCase().includes(search.toLowerCase()))
+        ? [ROXANA_RENT_REVIEW_EVENT] : [];
+      setEvents(pilot);
+      setErr(e?.response?.status === 404
+        ? "Other PM event syncing is not connected yet. The Roxana rent-review pilot reminder is visible locally; it does not send notifications."
+        : msg);
     } finally {
       setLoading(false);
     }
@@ -376,6 +387,14 @@ export default function PropertyManagerCalendar() {
       />
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-4">
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 px-4 py-3">
+          <div><div className="text-xs font-black text-amber-200">Roxana · 2027 rent eligibility review</div>
+            <p className="mt-1 text-[11px] text-slate-300">Jan 4, 2027 · Review month-to-month lease, Section 8 notice requirements and administrator approval. No new rent is applied.</p>
+            <p className="text-[10px] text-slate-500">Pilot planning milestone, not an automatic reminder or tenant notice.</p>
+          </div>
+          <button type="button" className="min-h-9 rounded-lg border border-amber-400/50 px-3 text-xs font-bold text-amber-100"
+            onClick={() => { setViewDate(new Date("2027-01-04T12:00:00")); setPropertyId("1"); setType("RENT_REVIEW"); setStatus("OPEN"); }}>View January</button>
+        </section>
         {/* Filters */}
         <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-5">
           <div className="grid lg:grid-cols-5 gap-3">
