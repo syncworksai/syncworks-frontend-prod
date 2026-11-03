@@ -33,9 +33,10 @@ function Badge({status}) {
 
 export default function PMMonthlyLedger({
   tenant, workspace, entries = [], allocation, payer, onAddPayment, onEditRent,
-  onHousingEvidence, onLateFee, onAdvanced, onBillingRules,
+  onHousingEvidence, onLateFee, onAdvanced, onBillingRules, onLeaseBuilder,
 }) {
   const [schedule, setSchedule] = useState(null);
+  const [billing, setBilling] = useState(null);
   const [fetching, setFetching] = useState(false);
   const [scheduleError, setScheduleError] = useState(false);
   const [opened, setOpened] = useState("");
@@ -46,12 +47,18 @@ export default function PMMonthlyLedger({
   useEffect(() => {
     if (!tenantId || !workspaceId) { return; }
     let live = true;
-    setSchedule(null); setScheduleError(false); setFetching(true); setOpened(""); setSearch(""); setOnly("ALL");
-    api.get("/pm-hub/billing/tenants/" + tenantId + "/simple-schedule/", {
-      headers: { "X-PM-Workspace-ID": String(workspaceId) },
-    }).then(({data}) => { if (live) setSchedule(data?.schedule || null); })
-      .catch(() => { if (live) setScheduleError(true); })
-      .finally(() => { if (live) setFetching(false); });
+    setSchedule(null); setBilling(null); setScheduleError(false); setFetching(true); setOpened(""); setSearch(""); setOnly("ALL");
+    const headers = { "X-PM-Workspace-ID": String(workspaceId) };
+    Promise.allSettled([
+      api.get("/pm-hub/billing/tenants/" + tenantId + "/simple-schedule/", { headers }),
+      api.get("/pm-hub/billing/tenants/" + tenantId + "/lease-builder/", { headers }),
+    ]).then(([sched, bill]) => {
+      if (!live) return;
+      if (sched.status === "fulfilled") setSchedule(sched.value.data?.schedule || null);
+      else setScheduleError(true);
+      if (bill.status === "fulfilled") setBilling(bill.value.data || null);
+      else setScheduleError(true);
+    }).finally(() => { if (live) setFetching(false); });
     return () => { live = false; };
   }, [tenantId, workspaceId]);
 
@@ -101,14 +108,16 @@ export default function PMMonthlyLedger({
       }
     }
     const now = new Date();
+    const thisMonth = currentMonth();
     const dueDay = Math.max(1, Math.min(28, Number(payer?.profile?.rent_due_day) || 1));
     return [...rowsByMonth.values()].map((row) => {
       const split = row.scheduled;
       const abated = String(split?.source_status || "").includes("ABAT") ? val(split?.mha) : 0;
-      const suggestedHousing = abated ? 0 : val(split?.mha);
-      const suggestedTenant = split ? val(split.tenant ?? (val(split.rent)-val(split.mha))) : 0;
+      const leaseEstimate = !split && row.month === thisMonth && billing?.lease ? billing.lease : null;
+      const suggestedHousing = abated ? 0 : split ? val(split.mha) : val(leaseEstimate?.housing_portion);
+      const suggestedTenant = split ? val(split.tenant ?? (val(split.rent)-val(split.mha))) : val(leaseEstimate?.tenant_portion);
       const postedRent = row.rentTenant + row.rentHousing;
-      const expected = split ? val(split.rent) : postedRent;
+      const expected = split ? val(split.rent) : leaseEstimate ? val(leaseEstimate.contract_rent) : postedRent;
       const dueDate = new Date(Number(row.month.slice(0,4)), Number(row.month.slice(5,7))-1, dueDay, 23, 59, 59);
       const ready = !!allocation && (row.rentTenant > .005 || row.rentHousing > .005);
       const unpaid = row.tenantOpen + row.housingOpen + row.feeOpen;
@@ -116,19 +125,24 @@ export default function PMMonthlyLedger({
          Math.abs(suggestedHousing - row.rentHousing) > .01);
       let status = { id: "review", label: "Not yet billed" };
       if (fetching || scheduleError || !allocation) status = { id: "review", label: "Verify account" };
-      else if (!ready || mismatch) status = { id: "pending", label: mismatch ? "Review split" : "Not yet billed" };
+      else if (!ready || mismatch) status = { id: "pending", label: mismatch ? "Review split" : row.month === thisMonth ? "Rent not posted" : "Not billed" };
       else if (unpaid < .005) status = { id: "full", label: "Paid in full" };
       else if (now > dueDate && (row.tenantOpen > .005 || row.feeOpen > .005)) status = { id: "late", label: "Past due" };
       else if (row.housingOpen > .005 && row.tenantOpen < .005) status = { id: "pending", label: "MHA pending" };
       else status = { id: "pending", label: "Partially paid" };
       return {
-        ...row, status, dueDate, postedRent, abated, expected, suggestedTenant, suggestedHousing,
+        ...row, status, dueDate, postedRent, ready, abated, expected, suggestedTenant, suggestedHousing,
         mismatch, feeBalance: row.feeOpen, rentOutstanding: row.tenantOpen + row.housingOpen,
         payments: row.transactions.filter((item) => item.entry_type === "PAYMENT").sort((a,b) => String(b.entry_date).localeCompare(String(a.entry_date))),
       };
     }).sort((a,b) => b.month.localeCompare(a.month));
-  }, [schedule, entries, allocation, payer, tenantId, fetching, scheduleError]);
+  }, [schedule, billing, entries, allocation, payer, tenantId, fetching, scheduleError]);
 
+  const currentRow = rows.find(row => row.month === currentMonth());
+  const missingCurrentCharge = !!billing?.lease && currentRow && !currentRow.ready;
+  const billingInactive = !billing?.setup?.active;
+  const assistHorizon = billing?.setup?.verified_through || "";
+  const housingNotVerified = !!billing?.lease?.section8 && assistHorizon < currentMonth();
   const filtered = rows.filter((row) => (!search || monthTitle(row.month).toLowerCase().includes(search.toLowerCase()) || row.month.includes(search)) &&
     (only === "ALL" || row.status.id === only));
   const totals = {
@@ -180,6 +194,14 @@ export default function PMMonthlyLedger({
       </div>
       <p className="mt-2 text-[10px] text-slate-500">Green = paid · Red = overdue · Amber = needs review. Balance due excludes MHA.</p>
     </div>
+    {missingCurrentCharge ? <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/40 bg-amber-500/10 p-3">
+      <div className="space-y-1">
+        <p className="text-xs font-black text-amber-100">This month has no posted rent charge</p>
+        <p className="text-[11px] text-slate-300">Expected from lease: {usd(currentRow.expected)} total · Tenant {usd(currentRow.suggestedTenant)} · Assistance {usd(currentRow.suggestedHousing)}.</p>
+        <p className="text-[10px] text-amber-200">{billingInactive ? "Automatic lease billing is not activated. " : ""}{housingNotVerified ? "MHA allocation needs written verification for this month. " : ""}This estimate is not a posted charge or confirmation that MHA paid.</p>
+      </div>
+      <button className={textButton} type="button" onClick={onLeaseBuilder}>Review & activate billing</button>
+    </section> : null}
     {fetching && <p className="text-xs text-slate-400">Checking monthly rent schedule…</p>}
     {scheduleError && <p role="alert" className="rounded-lg border border-amber-500/25 px-3 py-2 text-xs text-amber-200">Monthly schedule could not be loaded. Posted transactions remain visible but color status requires verification.</p>}
     <div className="grid gap-2 lg:grid-cols-2">
@@ -196,22 +218,22 @@ export default function PMMonthlyLedger({
               <Badge status={r.status}/>
             </div>
             <span className="flex shrink-0 items-center gap-2 text-right">
-              <span><span className="block text-[9px] text-slate-400">Rent</span><span className="text-sm font-black text-white">{usd(r.expected)}</span></span>
+              <span><span className="block text-[9px] text-slate-400">{r.ready ? "Rent" : "Expected rent"}</span><span className="text-sm font-black text-white">{usd(r.expected)}</span></span>
               <span aria-hidden="true" className="text-slate-400">{active ? "⌃" : "⌄"}</span>
             </span>
           </button>
           <div className="mt-2 grid grid-cols-3 gap-1 sm:gap-1.5">
             {[
-              ["Tenant due", r.scheduled ? r.suggestedTenant : r.rentTenant, "text-white"],
-              ["Assistance due", r.scheduled ? r.suggestedHousing : r.rentHousing, "text-fuchsia-200"],
+              ["Tenant due", r.scheduled || (r.month === currentMonth() && billing?.lease) ? r.suggestedTenant : r.rentTenant, "text-white"],
+              ["Assistance due", r.scheduled || (r.month === currentMonth() && billing?.lease) ? r.suggestedHousing : r.rentHousing, "text-fuchsia-200"],
               ["Tenant paid", r.tenantReceived, "text-emerald-200"],
               ["MHA paid", r.housingReceived, "text-emerald-200"],
               ["Late fees", r.postedFees, "text-amber-200"],
-              ["Balance due", r.tenantOpen + r.feeOpen, r.tenantOpen + r.feeOpen > .005 ? "text-rose-200" : "text-emerald-200"],
+              ["Balance due", r.ready ? r.tenantOpen + r.feeOpen : "Not billed", r.ready ? (r.tenantOpen + r.feeOpen > .005 ? "text-rose-200" : "text-emerald-200") : "text-amber-200"],
             ].map(([label, amount, tone]) => <div key={label}
               className="min-w-0 rounded-md border border-slate-700/70 bg-black/20 px-1.5 py-1.5 sm:px-2">
               <div className="truncate text-[9px] leading-tight text-slate-400">{label}</div>
-              <div className={"mt-0.5 truncate text-[11px] font-black tabular-nums sm:text-xs " + tone}>{usd(amount)}</div>
+              <div className={"mt-0.5 truncate text-[11px] font-black tabular-nums sm:text-xs " + tone}>{typeof amount === "string" ? amount : usd(amount)}</div>
             </div>)}
           </div>
           <div className="mt-2 flex items-center justify-between gap-2 text-[10px]">
@@ -222,6 +244,7 @@ export default function PMMonthlyLedger({
             <span className="shrink-0 text-slate-500">{r.payments.length} receipt{r.payments.length===1?"":"s"}</span>
           </div>
           {active ? <div className="mt-2 space-y-2 border-t border-slate-600/30 pt-2">
+            {!r.ready && r.month === currentMonth() ? <p className="rounded-lg border border-amber-500/30 p-2 text-[10px] text-amber-200">Estimated from current lease. Charges have not posted; the separate tenant payment shown is still recorded and applies oldest-first.</p> : null}
             {r.mismatch && <p className="rounded-lg border border-amber-500/30 p-2 text-[10px] text-amber-200">The saved monthly split differs from posted rent. Review before correcting it. A rent schedule is not a payment receipt.</p>}
             <div className="grid grid-cols-3 gap-1.5 rounded-lg border border-slate-700/70 p-2 text-[10px]">
               <span className="text-slate-400">Rent open <strong className="text-white">{usd(r.tenantOpen)}</strong></span>
