@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import NotificationsBell from "../NotificationsBell";
+import api from "../../api/client";
 
 const GOD_MODE_EMAIL = "jacoblord7@outlook.com";
 const MODE_ROUTES = {
@@ -18,7 +19,7 @@ const EXTRA_ROUTES = [
   { label: "Property Owner", to: "/investor/properties" },
   { label: "Inbox", to: "/inbox" },
   { label: "Calendar", to: "/calendar" },
-  { label: "Create Business", to: "/upgrade" },
+
   { label: "Settings", to: "/settings" },
 ];
 const BAR_HEIGHT = 57;
@@ -54,11 +55,38 @@ function MenuIcon({ open }) {
 }
 
 export default function GlobalModeBar() {
-  const { isAuthed, availableModes, mode, setMode, user } = useAuth();
+  const { isAuthed, availableModes, mode, setMode, user, myBusinesses, activeBusinessId, setActiveBusinessId } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [pmWorkspace, setPmWorkspace] = useState(null);
   const rootRef = useRef(null);
+  const businessWorkspaces = useMemo(() => {
+    const seen = new Set();
+    return (Array.isArray(myBusinesses) ? myBusinesses : []).map(member => {
+      const business = member?.business && typeof member.business === "object" ? member.business : member;
+      const id = business?.id ?? member?.business_id;
+      const name = business?.name || business?.business_name || member?.business_name;
+      if (!id || !name || seen.has(String(id))) return null;
+      seen.add(String(id));
+      return { id, name: String(name) };
+    }).filter(Boolean);
+  }, [myBusinesses]);
+  useEffect(() => {
+    if (!isAuthed) return;
+    let live = true;
+    api.get("/pm-hub/workspaces/current/").then(response => {
+      const workspace = response?.data;
+      if (live && workspace?.id && workspace?.name) setPmWorkspace(workspace);
+    }).catch(() => { if (live) setPmWorkspace(null); });
+    return () => { live = false; };
+  }, [isAuthed, location.pathname]);
+  const selectBusiness = (id) => {
+    setActiveBusinessId?.(id);
+    setMode("SBO");
+    setOpen(false);
+    navigate("/sbo");
+  };
   const isGodMode = String(user?.email || "").trim().toLowerCase() === GOD_MODE_EMAIL;
   // Protected Social and Sports pages use this ONE header for navigation and notifications.
   const showConnectNotifications = location.pathname === "/connect" || location.pathname.startsWith("/connect/");
@@ -108,7 +136,14 @@ export default function GlobalModeBar() {
         <button type="button" className="fixed inset-x-0 bottom-0 top-[115px] sm:top-[57px] z-[321] bg-black/70" aria-label="Close app navigation" onClick={() => setOpen(false)} />
         <div className="fixed left-3 right-3 top-[123px] sm:top-[65px] z-[322] max-h-[calc(100dvh-8.5rem)] sm:max-h-[calc(100dvh-5rem)] overflow-y-auto rounded-[28px] border border-cyan-400/25 bg-[#050b16] p-4 shadow-[0_28px_90px_rgba(0,0,0,0.78)] sm:left-auto sm:w-[420px]">
           <div className="mb-3 flex items-center justify-between px-1"><div><div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">SyncWorks</div><div className="mt-1 text-sm font-bold text-white">App navigation</div></div><button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300">Close</button></div>
-          <div className="grid gap-2 sm:grid-cols-2">{modes.map(([key, item]) => { const active = mode === key || location.pathname === item.to || location.pathname.startsWith(`${item.to}/`); return <Link key={key} to={item.to} onClick={() => chooseMode(key)} className={linkClass(active)}><span>{item.label}</span>{active ? <span className="text-[10px] uppercase tracking-[0.14em] text-cyan-300">Current</span> : null}</Link>; })}</div>
+          <div className="grid gap-2">
+            <Link to="/customer" onClick={() => chooseMode("CUSTOMER")} className={linkClass(mode === "CUSTOMER")}><span>Personal</span>{mode === "CUSTOMER" ? <span className="text-[10px] text-cyan-300">Current</span> : null}</Link>
+            {businessWorkspaces.map(item => <button type="button" key={`business-${item.id}`} onClick={() => selectBusiness(item.id)} className={linkClass(mode === "SBO" && String(activeBusinessId) === String(item.id))}><span className="min-w-0 truncate">{item.name}</span><span className="text-[10px] text-emerald-300">Business</span></button>)}
+            {pmWorkspace ? <Link to="/pm" onClick={() => chooseMode("PM")} className={linkClass(mode === "PM")}><span className="min-w-0 truncate">{pmWorkspace.name}</span><span className="text-[10px] text-violet-300">Property Management</span></Link> : null}
+            {modes.filter(([key]) => !["CUSTOMER","SBO","PM"].includes(key)).map(([key,item]) => <Link key={key} to={item.to} onClick={() => chooseMode(key)} className={linkClass(mode === key)}>{item.label}</Link>)}
+            <Link to="/onboarding/business" onClick={() => setOpen(false)} className={linkClass(false)}>+ Add a Business</Link>
+            <Link to="/onboarding/property-management" onClick={() => setOpen(false)} className={linkClass(false)}>+ Add a PM Company</Link>
+          </div>
           <div className="my-4 border-t border-slate-800" />
           <div className="grid gap-2 sm:grid-cols-2">{EXTRA_ROUTES.map((item) => { const active = location.pathname === item.to || location.pathname.startsWith(`${item.to}/`); return <Link key={item.label} to={item.to} onClick={() => setOpen(false)} className={linkClass(active)}>{item.label}</Link>; })}{isGodMode ? <Link to="/platform?tab=overview" onClick={() => setOpen(false)} className="flex min-h-12 items-center rounded-2xl border border-fuchsia-400/30 bg-fuchsia-400/10 px-4 text-sm font-black text-fuchsia-100">Legacy Admin Dashboard</Link> : null}</div>
         </div>
