@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/client";
 import Button from "../components/ui/Button";
 import PMBillingPolicyEditor from "../components/pm/PMBillingPolicyEditor";
 import PMDepositReviewCard from "../components/pm/PMDepositReviewCard";
 import PMOwnerPaymentReview from "../components/pm/PMOwnerPaymentReview";
+import PMMonthlyLedger from "../components/pm/PMMonthlyLedger";
 
 const inputClass = "min-h-10 w-full rounded-xl border border-slate-700 bg-black/35 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400/70 sm:min-h-11 sm:rounded-2xl sm:px-3.5 sm:py-2.5";
 const list = (d) => (Array.isArray(d?.results) ? d.results : Array.isArray(d) ? d : []);
@@ -59,7 +60,9 @@ const matchesLedgerFilter = (row, filter) => {
 };
 
 export default function PMPayments() {
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
+  const [viewMode, setViewMode] = useState(params.get("view") === "advanced" ? "advanced" : "monthly");
   const [workspace, setWorkspace] = useState(null);
   const [tenants, setTenants] = useState([]);
   const [entries, setEntries] = useState([]);
@@ -314,6 +317,17 @@ export default function PMPayments() {
     setDrawer("entry");
   }
 
+  function openMonthlyPayment(month, who = "TENANT") {
+    if (!filterTenant) return;
+    setEntry({
+      ...blankEntry, tenant: filterTenant, entry_date: "", entry_type: "PAYMENT", amount: "",
+      payer: who, category: who === "HOUSING" ? "RENT_HOUSING" : "RENT_TENANT",
+      payment_method: who === "HOUSING" ? "HOUSING_AUTHORITY" : "OTHER",
+      memo: "Payment associated with " + month + "; record the actual receipt date and method. Oldest eligible balance is paid first.",
+    });
+    setEditing(null); setDrawerError(""); setDrawer("entry");
+  }
+
   function closeDrawer() {
     setDrawer("");
     const next = new URLSearchParams(params);
@@ -335,9 +349,12 @@ export default function PMPayments() {
     setBusy(true); setError(""); setDrawerError("");
     try {
       const payload = { ...model, category: categoryFor(model.payer, model.category), payment_method: model.entry_type === "PAYMENT" ? (model.payer === "HOUSING" ? "HOUSING_AUTHORITY" : model.payment_method) : "", workspace_id: workspace.id };
-      if (isEdit) await api.patch(`/pm-hub/ledger/${model.id}/`, payload, { headers });
+      if (isEdit) await api.post(`/pm-hub/ledger/${model.id}/correct/`, {
+        correction_date: today, reason: "Owner-approved replacement from PM Advanced Accounting",
+        replacement: payload,
+      }, { headers });
       else await api.post("/pm-hub/ledger/", payload, { headers });
-      setMessage(isEdit ? "Ledger entry updated." : "Ledger entry saved.");
+      setMessage(isEdit ? "Correction recorded: original entry preserved and replacement posted." : "Ledger entry saved.");
       closeDrawer();
       await load();
       await loadPayer(model.tenant);
@@ -349,18 +366,37 @@ export default function PMPayments() {
   }
 
   async function remove(r) {
-    if (!confirm(`Delete ${r.entry_date} · ${money(r.amount)}?`)) return;
-    await api.delete(`/pm-hub/ledger/${r.id}/`, { headers });
-    await load();
-    await loadPayer(filterTenant);
+    const reason = window.prompt("Reason to reverse this posted entry? The original record will remain in the audit trail.");
+    if (!reason?.trim()) return;
+    if (!window.confirm("Create an auditable reversal for " + r.entry_date + " · " + money(r.amount) + "?")) return;
+    setBusy(true); setError("");
+    try {
+      await api.post(`/pm-hub/ledger/${r.id}/correct/`, {reason: reason.trim(), correction_date: today}, {headers});
+      setMessage("Entry reversed with audit history preserved.");
+      await load(); await loadPayer(filterTenant);
+    } catch (err) { setError(err?.response?.data?.detail || "Could not reverse this entry."); }
+    finally { setBusy(false); }
   }
 
   async function removeSelected() {
-    if (!selectedIds.length || !confirm(`Delete ${selectedIds.length} selected entries?`)) return;
-    await api.post("/pm-hub/ledger/bulk-delete/", { ids: selectedIds }, { headers });
-    setSelectedIds([]);
-    await load();
-    await loadPayer(filterTenant);
+    if (!selectedIds.length) return;
+    const reason = window.prompt("Reason for reversing these entries? They will remain visible in audit history.");
+    if (!reason?.trim()) return;
+    if (!window.confirm("Reverse " + selectedIds.length + " entries individually with audit records?")) return;
+    setBusy(true); setError("");
+    let reversed = 0;
+    try {
+      for (const id of selectedIds) {
+        await api.post(`/pm-hub/ledger/${id}/correct/`, {reason: reason.trim(), correction_date: today}, {headers});
+        reversed++;
+      }
+      setSelectedIds([]);
+      setMessage(reversed + " entries reversed. Originals were not deleted.");
+      await load(); await loadPayer(filterTenant);
+    } catch (err) {
+      setError(reversed + " reversed before an error. " + (err?.response?.data?.detail || "Review the remaining entries."));
+      await load(); await loadPayer(filterTenant);
+    } finally { setBusy(false); }
   }
 
   const entryForm = (model, setter, onSave) => (
@@ -368,7 +404,7 @@ export default function PMPayments() {
       {drawerError ? <div role="alert" className="rounded-2xl border border-rose-400/35 bg-rose-500/10 p-3 text-sm font-semibold text-rose-100">{drawerError}</div> : null}
       <Field label="Tenant"><select className={inputClass} value={model.tenant || ""} disabled={Boolean(model.id)} onChange={(e) => { setter({ ...model, tenant: e.target.value }); setDrawerError(""); }}><option value="">Choose tenant</option>{tenants.map((t) => <option key={t.id} value={t.id}>{t.full_name} · {t.property_name || "No property"}</option>)}</select></Field>
       <Field label="Who owes / paid this?"><div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-2">{["TENANT", "HOUSING"].map((v) => <button type="button" key={v} onClick={() => setter({ ...model, payer: v })} className={`min-w-0 rounded-2xl border p-3 text-sm font-black transition ${model.payer === v ? "border-cyan-300 bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-950/30" : "border-slate-600 bg-slate-800/80 text-white hover:border-cyan-400/60"}`}>{v === "TENANT" ? "Tenant" : "Assistance administrator"}</button>)}</div></Field>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><Field label="Date"><input type="date" className={inputClass} value={model.entry_date || today} onChange={(e) => setter({ ...model, entry_date: e.target.value })}/></Field><Field label="Type"><select className={inputClass} value={model.entry_type} onChange={(e) => setter({ ...model, entry_type: e.target.value })}>{["CHARGE", "PAYMENT", "CREDIT", "ADJUSTMENT"].map((v) => <option key={v}>{v}</option>)}</select></Field></div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><Field label="Date"><input type="date" className={inputClass} value={model.entry_date || ""} onChange={(e) => setter({ ...model, entry_date: e.target.value })}/></Field><Field label="Type"><select className={inputClass} value={model.entry_type} onChange={(e) => setter({ ...model, entry_type: e.target.value })}>{["CHARGE", "PAYMENT", "CREDIT", "ADJUSTMENT"].map((v) => <option key={v}>{v}</option>)}</select></Field></div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><Field label="Amount"><input className={inputClass} inputMode="decimal" value={model.amount || ""} onChange={(e) => setter({ ...model, amount: e.target.value })}/></Field><Field label="Category"><select className={inputClass} value={String(model.category || "RENT").replace("RENT_TENANT", "RENT").replace("RENT_HOUSING", "RENT")} onChange={(e) => setter({ ...model, category: e.target.value })}>{["RENT", "LATE_FEE", "SECURITY_DEPOSIT", "UTILITY", "REPAIR", "OTHER"].map((v) => <option key={v}>{v}</option>)}</select></Field></div>
       {model.entry_type === "PAYMENT" && model.payer !== "HOUSING" ? <Field label="Payment method"><select className={inputClass} value={model.payment_method || "CASH"} onChange={(e) => setter({ ...model, payment_method: e.target.value })}>{paymentMethods.filter((v) => v !== "HOUSING_AUTHORITY").map((v) => <option key={v}>{v}</option>)}</select></Field> : null}
       <Field label="Reference"><input className={inputClass} value={model.reference || ""} onChange={(e) => setter({ ...model, reference: e.target.value })}/></Field>
@@ -383,7 +419,7 @@ export default function PMPayments() {
     <div className="min-h-screen text-slate-100">
       <main className="space-y-3 px-3 py-4 sm:space-y-5 sm:px-6 sm:py-6">
         <section className="rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-[#07111f] to-fuchsia-500/10 p-3.5 sm:rounded-[28px] sm:p-5">
-          <div className="flex flex-wrap justify-between gap-3"><div><div className="hidden text-[10px] font-black uppercase tracking-[.18em] text-cyan-300 sm:block">Tenant accounting</div><h1 className="text-xl font-black sm:mt-2 sm:text-3xl"><span className="sm:hidden">Ledger</span><span className="hidden sm:inline">Ledger Command Center</span></h1><p className="mt-2 hidden text-sm text-slate-400 sm:block">Filter charges, payments, credits, late fees, and payer buckets without losing the tenant-level view.</p></div><div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:flex sm:flex-wrap"><button onClick={() => openEntry()} className="rounded-xl bg-cyan-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-cyan-300 sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm">+ Add Entry</button><button onClick={() => setDrawer("rules")} disabled={!filterTenant} className="rounded-xl border border-fuchsia-400/50 bg-fuchsia-500/15 px-3 py-2 text-xs font-black text-fuchsia-100 hover:bg-fuchsia-500/25 disabled:cursor-not-allowed disabled:opacity-40 sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm">Lease & Billing Rules</button></div></div>
+          <div className="flex flex-wrap justify-between gap-3"><div><div className="hidden text-[10px] font-black uppercase tracking-[.18em] text-cyan-300 sm:block">Tenant accounting</div><h1 className="text-xl font-black sm:mt-2 sm:text-3xl">Monthly Rent Command Center</h1><p className="mt-2 hidden text-sm text-slate-400 sm:block">Simple, color-coded months. Open Advanced Accounting for individual entries, audit history and reconciliations.</p></div><div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:flex sm:flex-wrap"><button onClick={() => openEntry()} className="rounded-xl bg-cyan-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-cyan-300 sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm">+ Record Payment</button><button onClick={() => setDrawer("rules")} disabled={!filterTenant} className="rounded-xl border border-fuchsia-400/50 bg-fuchsia-500/15 px-3 py-2 text-xs font-black text-fuchsia-100 hover:bg-fuchsia-500/25 disabled:cursor-not-allowed disabled:opacity-40 sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm">Lease & Billing Rules</button></div></div>
         </section>
 
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-indigo-400/25 bg-indigo-500/10 p-3 sm:p-4">
@@ -407,10 +443,28 @@ export default function PMPayments() {
             </div>)}
           </div> : null}
           {filterTenant ? <p className="mt-2 text-[10px] text-amber-200">Totals include posted records only; missing rent months must be reviewed and billed in Lease Builder before this is a complete amount owed.</p> : null}
-          {filterTenant ? <div className="mt-3 grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3"><div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-2.5 sm:rounded-2xl sm:p-4"><div className="text-[10px] text-slate-400 sm:text-xs">Tenant (posted)</div><div className="mt-1 text-base font-black text-cyan-300 sm:text-2xl">{money(payer.buckets?.tenant_owes)}</div></div><div className="rounded-xl border border-fuchsia-500/30 bg-fuchsia-500/5 p-2.5 sm:rounded-2xl sm:p-4"><div className="text-[10px] text-slate-400 sm:text-xs">Housing (unreconciled)</div><div className="mt-1 text-base font-black text-fuchsia-300 sm:text-2xl">{money(payer.buckets?.housing_owes)}</div></div><div className="rounded-xl border border-slate-600 bg-slate-900/50 p-2.5 sm:rounded-2xl sm:p-4"><div className="text-[10px] text-slate-400 sm:text-xs">Posted balance</div><div className="mt-1 text-base font-black sm:text-2xl">{money(payer.buckets?.total_balance)}</div></div></div> : null}
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3 md:grid-cols-2 xl:grid-cols-3">{tenantRows.map((t) => { const a = summaryMap.get(String(t.id)) || {}; return <button key={t.id} onClick={() => selectTenant(t.id)} className={`rounded-xl border p-3 text-left transition sm:rounded-2xl sm:p-4 ${String(filterTenant) === String(t.id) ? "border-cyan-300 bg-cyan-500/15 shadow-lg shadow-cyan-950/20" : "border-slate-700 bg-slate-900/40 hover:border-cyan-500/40"}`}><div className="truncate text-sm font-black sm:text-base">{t.full_name}</div><div className="mt-0.5 truncate text-[11px] text-slate-400 sm:mt-1 sm:text-xs">{t.property_name || "No property"}</div><div className="mt-2 text-xs font-semibold sm:mt-3 sm:text-sm">Balance {money(a.balance)}</div></button>; })}</div>
+
+          {!filterTenant ? <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3 md:grid-cols-2 xl:grid-cols-3">{tenantRows.map((t) => { const a = summaryMap.get(String(t.id)) || {}; return <button key={t.id} onClick={() => selectTenant(t.id)} className={`rounded-xl border p-3 text-left transition sm:rounded-2xl sm:p-4 ${String(filterTenant) === String(t.id) ? "border-cyan-300 bg-cyan-500/15 shadow-lg shadow-cyan-950/20" : "border-slate-700 bg-slate-900/40 hover:border-cyan-500/40"}`}><div className="truncate text-sm font-black sm:text-base">{t.full_name}</div><div className="mt-0.5 truncate text-[11px] text-slate-400 sm:mt-1 sm:text-xs">{t.property_name || "No property"}</div><div className="mt-2 text-xs font-semibold sm:mt-3 sm:text-sm">Balance {money(a.balance)}</div></button>; })}</div> : null}
         </section>
 
+        {filterTenant && workspace ? <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-[11px] text-slate-400">View: {viewMode === "monthly" ? "Monthly cards" : "Advanced transaction ledger"}</span>
+          <button type="button" className="min-h-9 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 text-xs font-black text-cyan-200"
+            onClick={() => setViewMode((old) => old === "monthly" ? "advanced" : "monthly")}>
+            {viewMode === "monthly" ? "Advanced Accounting" : "← Simple Monthly View"}
+          </button>
+        </div> : null}
+        {filterTenant && workspace && viewMode === "monthly" ? <PMMonthlyLedger
+          tenant={selectedTenant} workspace={workspace} entries={tenantEntries}
+          allocation={allocation} payer={payer}
+          onAddPayment={openMonthlyPayment}
+          onEditRent={() => navigate("/pm/rent-correction?tenant=" + filterTenant)}
+          onHousingEvidence={(month) => { setExternalForm((old) => ({...old, period: month})); setExternalError(""); setDrawer("external"); }}
+          onLateFee={openLateReview}
+          onAdvanced={() => setViewMode("advanced")}
+          onBillingRules={() => setDrawer("rules")}
+        /> : null}
+        {viewMode === "advanced" ? <>
         {filterTenant && workspace ? <PMOwnerPaymentReview tenantId={filterTenant} workspaceId={workspace.id} ledgerCount={entries.length}
           onRecordPayment={() => {
             openEntry(filterTenant);
@@ -490,10 +544,11 @@ export default function PMPayments() {
           <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3"><div><h2 className="text-lg font-black sm:text-xl">{filterTenant ? `${selectedTenant?.full_name || "Tenant"} ledger` : "Select a tenant"}</h2>{filterTenant ? <p className="mt-1 text-xs text-slate-400">Showing {visibleEntries.length} of {tenantEntries.length} ledger entries</p> : null}</div>{filterTenant ? <button onClick={() => openEntry(filterTenant)} className="rounded-xl bg-cyan-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-cyan-300 sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm">+ Add Entry</button> : null}</div>
           {filterTenant ? <>
             <div className="-mx-1 mt-3 flex gap-1.5 overflow-x-auto px-1 pb-1 sm:mx-0 sm:mt-4 sm:flex-wrap sm:gap-2 sm:px-0">{ledgerFilters.map(([key, label]) => <button key={key} type="button" onClick={() => setLedgerFilter(key)} className={`flex-none rounded-full border px-2.5 py-1.5 text-[10px] font-black transition sm:px-3 sm:py-2 sm:text-xs ${ledgerFilter === key ? "border-cyan-300 bg-cyan-400 text-slate-950" : "border-slate-600 bg-slate-800/80 text-slate-100 hover:border-cyan-400/60 hover:bg-slate-700"}`}>{label} <span className="ml-1 opacity-70">{filterCounts[key] || 0}</span></button>)}</div>
-            <div className="mt-3 flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/50 p-2.5 text-xs sm:mt-4 sm:flex-wrap sm:gap-3 sm:rounded-2xl sm:p-3 sm:text-sm"><input className="h-4 w-4 flex-none" type="checkbox" checked={visibleEntries.length > 0 && visibleEntries.every((r) => selectedIds.includes(r.id))} onChange={(e) => setSelectedIds(e.target.checked ? visibleEntries.map((r) => r.id) : [])}/><span className="whitespace-nowrap">Select visible</span><button type="button" onClick={removeSelected} disabled={!selectedIds.length} className="ml-auto rounded-lg border border-rose-400/50 bg-rose-500/15 px-2.5 py-1.5 text-[10px] font-black text-rose-100 hover:bg-rose-500/25 disabled:opacity-35 sm:ml-0 sm:rounded-xl sm:px-3 sm:py-2 sm:text-xs">Delete selected ({selectedIds.length})</button></div>
-            <div className="mt-2 space-y-1.5 sm:mt-3 sm:space-y-3">{visibleEntries.length ? visibleEntries.map((r) => <article key={r.id} className="rounded-xl border border-slate-700 bg-slate-950/55 px-2.5 py-2 transition hover:border-slate-600 sm:rounded-2xl sm:p-4"><div className="flex items-start justify-between gap-1.5 sm:flex-wrap sm:gap-4"><div className="flex min-w-0 flex-1 gap-2 sm:gap-3"><input className="mt-0.5 h-4 w-4 flex-none" type="checkbox" checked={selectedIds.includes(r.id)} onChange={(e) => setSelectedIds((x) => e.target.checked ? [...x, r.id] : x.filter((id) => id !== r.id))}/><div className="min-w-0"><div className="truncate text-xs font-bold sm:text-base">{r.tenant_name}</div><div className="mt-0.5 text-[10px] leading-tight text-slate-300 sm:text-xs">{r.entry_date} · {r.category} · {r.entry_type}</div><div className="mt-1 flex flex-wrap gap-1 sm:mt-2 sm:gap-2"><span className={`rounded-full border px-2 py-0.5 text-[9px] font-black sm:py-1 sm:text-[10px] ${bucketFor(r) === "ESCROW" ? "border-amber-400/40 bg-amber-500/10 text-amber-200" : bucketFor(r) === "HOUSING" ? "border-fuchsia-400/40 bg-fuchsia-500/10 text-fuchsia-200" : "border-cyan-400/40 bg-cyan-500/10 text-cyan-200"}`}>{bucketFor(r) === "ESCROW" ? "DEPOSIT · NOT RENT" : bucketFor(r) === "HOUSING" ? "HOUSING / SECTION 8" : "TENANT"}</span><span className={`rounded-full border px-2 py-0.5 text-[9px] font-black sm:py-1 sm:text-[10px] ${isCredit(r) ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-200" : "border-rose-400/40 bg-rose-500/10 text-rose-200"}`}>{isCredit(r) ? "CREDIT" : "DEBIT"}</span></div>{r.memo ? <div className="mt-1.5 line-clamp-2 max-w-3xl text-[11px] text-slate-400 sm:mt-2 sm:text-xs">{r.memo}</div> : null}</div></div><div className="ml-auto flex-none text-right"><div className={`text-sm font-black sm:text-lg ${isDepositRow(r) ? "text-amber-200" : isCredit(r) ? "text-emerald-300" : "text-rose-200"}`}>{isDepositRow(r) ? "" : isCredit(r) ? "−" : "+"}{money(r.amount)}{isDepositRow(r) ? <div className="text-[9px] font-normal text-amber-200">Not counted toward rent</div> : null}</div><div className="mt-1.5 flex justify-end gap-1 sm:mt-3 sm:gap-2"><button onClick={() => editRow(r)} className="rounded-lg border border-cyan-300/60 bg-cyan-500/15 px-2 py-1.5 text-[10px] font-black text-cyan-100 hover:bg-cyan-500/25 sm:rounded-xl sm:px-3.5 sm:py-2 sm:text-xs">Edit</button><button onClick={() => remove(r)} className="rounded-lg border border-rose-300/60 bg-rose-500/15 px-2 py-1.5 text-[10px] font-black text-rose-100 hover:bg-rose-500/25 sm:rounded-xl sm:px-3.5 sm:py-2 sm:text-xs">Delete</button></div></div></div></article>) : <div className="rounded-2xl border border-dashed border-slate-700 p-8 text-center text-sm text-slate-400">No entries match this filter.</div>}</div>
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/50 p-2.5 text-xs sm:mt-4 sm:flex-wrap sm:gap-3 sm:rounded-2xl sm:p-3 sm:text-sm"><input className="h-4 w-4 flex-none" type="checkbox" checked={visibleEntries.length > 0 && visibleEntries.every((r) => selectedIds.includes(r.id))} onChange={(e) => setSelectedIds(e.target.checked ? visibleEntries.map((r) => r.id) : [])}/><span className="whitespace-nowrap">Select visible</span><button type="button" onClick={removeSelected} disabled={!selectedIds.length} className="ml-auto rounded-lg border border-rose-400/50 bg-rose-500/15 px-2.5 py-1.5 text-[10px] font-black text-rose-100 hover:bg-rose-500/25 disabled:opacity-35 sm:ml-0 sm:rounded-xl sm:px-3 sm:py-2 sm:text-xs">Reverse selected ({selectedIds.length})</button></div>
+            <div className="mt-2 space-y-1.5 sm:mt-3 sm:space-y-3">{visibleEntries.length ? visibleEntries.map((r) => <article key={r.id} className="rounded-xl border border-slate-700 bg-slate-950/55 px-2.5 py-2 transition hover:border-slate-600 sm:rounded-2xl sm:p-4"><div className="flex items-start justify-between gap-1.5 sm:flex-wrap sm:gap-4"><div className="flex min-w-0 flex-1 gap-2 sm:gap-3"><input className="mt-0.5 h-4 w-4 flex-none" type="checkbox" checked={selectedIds.includes(r.id)} onChange={(e) => setSelectedIds((x) => e.target.checked ? [...x, r.id] : x.filter((id) => id !== r.id))}/><div className="min-w-0"><div className="truncate text-xs font-bold sm:text-base">{r.tenant_name}</div><div className="mt-0.5 text-[10px] leading-tight text-slate-300 sm:text-xs">{r.entry_date} · {r.category} · {r.entry_type}</div><div className="mt-1 flex flex-wrap gap-1 sm:mt-2 sm:gap-2"><span className={`rounded-full border px-2 py-0.5 text-[9px] font-black sm:py-1 sm:text-[10px] ${bucketFor(r) === "ESCROW" ? "border-amber-400/40 bg-amber-500/10 text-amber-200" : bucketFor(r) === "HOUSING" ? "border-fuchsia-400/40 bg-fuchsia-500/10 text-fuchsia-200" : "border-cyan-400/40 bg-cyan-500/10 text-cyan-200"}`}>{bucketFor(r) === "ESCROW" ? "DEPOSIT · NOT RENT" : bucketFor(r) === "HOUSING" ? "HOUSING / SECTION 8" : "TENANT"}</span><span className={`rounded-full border px-2 py-0.5 text-[9px] font-black sm:py-1 sm:text-[10px] ${isCredit(r) ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-200" : "border-rose-400/40 bg-rose-500/10 text-rose-200"}`}>{isCredit(r) ? "CREDIT" : "DEBIT"}</span></div>{r.memo ? <div className="mt-1.5 line-clamp-2 max-w-3xl text-[11px] text-slate-400 sm:mt-2 sm:text-xs">{r.memo}</div> : null}</div></div><div className="ml-auto flex-none text-right"><div className={`text-sm font-black sm:text-lg ${isDepositRow(r) ? "text-amber-200" : isCredit(r) ? "text-emerald-300" : "text-rose-200"}`}>{isDepositRow(r) ? "" : isCredit(r) ? "−" : "+"}{money(r.amount)}{isDepositRow(r) ? <div className="text-[9px] font-normal text-amber-200">Not counted toward rent</div> : null}</div><div className="mt-1.5 flex justify-end gap-1 sm:mt-3 sm:gap-2"><button onClick={() => editRow(r)} className="rounded-lg border border-cyan-300/60 bg-cyan-500/15 px-2 py-1.5 text-[10px] font-black text-cyan-100 hover:bg-cyan-500/25 sm:rounded-xl sm:px-3.5 sm:py-2 sm:text-xs">Correct</button><button onClick={() => remove(r)} className="rounded-lg border border-rose-300/60 bg-rose-500/15 px-2 py-1.5 text-[10px] font-black text-rose-100 hover:bg-rose-500/25 sm:rounded-xl sm:px-3.5 sm:py-2 sm:text-xs">Reverse</button></div></div></div></article>) : <div className="rounded-2xl border border-dashed border-slate-700 p-8 text-center text-sm text-slate-400">No entries match this filter.</div>}</div>
           </> : <div className="mt-5 text-sm text-slate-400">Choose a tenant account above.</div>}
         </section>
+        </> : null}
       </main>
 
       {drawer === "lateReview" && lateForm ? <Drawer title={`Late fee: ${lateForm.month}`} onClose={closeDrawer}>
@@ -553,7 +608,7 @@ export default function PMPayments() {
         </div>
       </Drawer> : null}
       {drawer === "entry" ? <Drawer title="Add Ledger Entry" onClose={closeDrawer}>{entryForm(entry, setEntry, () => saveEntry(entry))}</Drawer> : null}
-      {drawer === "edit" && editing ? <Drawer title="Edit Ledger Entry" onClose={closeDrawer}>{entryForm(editing, setEditing, () => saveEntry(editing, true))}</Drawer> : null}
+      {drawer === "edit" && editing ? <Drawer title="Correct Ledger Entry (audited)" onClose={closeDrawer}>{entryForm(editing, setEditing, () => saveEntry(editing, true))}</Drawer> : null}
       {drawer === "rules" ? <Drawer title="Lease & Billing Rules" width="max-w-4xl" onClose={closeDrawer}><PMBillingPolicyEditor workspace={workspace} tenant={selectedTenant} onRefresh={async () => { await load(); await loadPayer(filterTenant); }}/></Drawer> : null}
     </div>
   );
