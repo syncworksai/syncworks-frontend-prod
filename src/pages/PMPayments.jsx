@@ -456,7 +456,7 @@ export default function PMPayments() {
           </button>
         </div> : null}
         {filterTenant && workspace && selectedTenant && viewMode === "monthly" ? <PMMonthlyLedger
-          tenant={selectedTenant} workspace={workspace} entries={tenantEntries}
+          key={selectedTenant.id} tenant={selectedTenant} workspace={workspace} entries={tenantEntries}
           allocation={allocation} payer={payer}
           onAddPayment={openMonthlyPayment}
           onEditRent={() => navigate("/pm/rent-correction?tenant=" + filterTenant)}
