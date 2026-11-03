@@ -12,12 +12,9 @@ const roxana={
  active:false,billing_start_date:"2026-11-01",due_day:1,grace_days:5,
  late_fee_amount:"50.00",auto_late_fees:false,late_fee_verified:false,
  verified_through:"2026-10",source_note:"Current $1,485 lease. Prior MHA correspondence: October 2026 abatement; November MHA $377 must be independently reverified before assisted automatic billing.",
- monthly_overrides:Object.fromEntries([
-  ...["2026-03","2026-04","2026-05","2026-06","2026-07"].map(m=>[m,{tenant:"1407.00",housing:"78.00",abated:"0.00",note:"MHA supplied $78 share"}]),
-  ["2026-08",{tenant:"1485.00",housing:"0.00",abated:"0.00",note:"MHA confirmed full tenant share in August"}],
-  ["2026-09",{tenant:"1108.00",housing:"377.00",abated:"0.00",note:"MHA Sept 1 income-change determination"}],
-  ["2026-10",{tenant:"1108.00",housing:"0.00",abated:"377.00",note:"MHA October abatement; do not bill tenant for this $377"}],
- ])};
+ // Historical 2026 months are reconciled separately; recurring billing must start in November.
+ monthly_overrides:{}
+
 function FormError({error}){return error?<div role="alert" className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">{error}</div>:null;}
 
 export default function PMLeaseBuilder(){
