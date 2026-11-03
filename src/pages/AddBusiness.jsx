@@ -20,7 +20,7 @@ export default function AddBusiness() {
   const { user, reloadBusinesses, setActiveBusinessId } = useAuth();
   const [form,setForm] = useState({
     name:"", business_email:"", phone:"", city:"", state:"", base_zip:"",
-    access_code:"", accepts_marketplace_tickets:vertical==="service", accepts_fee:false,
+    accepts_marketplace_tickets:vertical==="service", accepts_fee:false,
   });
   const [saving,setSaving] = useState(false);
   const [createdId,setCreatedId] = useState(null);
@@ -50,19 +50,7 @@ export default function AddBusiness() {
       try { localStorage.setItem("sw_active_business_id",String(id)); } catch {}
       try { setActiveBusinessId?.(id); } catch {}
       await Promise.resolve(reloadBusinesses?.()).catch(()=>{});
-      // A promo is only applied after the API explicitly confirms its status.
-      const code=form.access_code.trim().toUpperCase();
-      if (code) {
-        try {
-          const granted=await api.post("/auth/upgrade-to-sbo-promo/",{business_id:id,code});
-          if (code==="SWFF26" && !granted?.data?.subscriptions_exempt) {
-            throw new Error("The lifetime subscription waiver was not confirmed.");
-          }
-        } catch(e) {
-          setError("Your business was created successfully, but the subscription code was NOT confirmed. Do not create a second business. " + errText(e));
-          return;
-        }
-      }
+      // Promotional codes belong to final subscription review, never business creation.
       try { localStorage.setItem("sw_active_business_id",String(id)); } catch {}
       try { setActiveBusinessId?.(id); } catch {}
       await Promise.resolve(reloadBusinesses?.()).catch(()=>{});
@@ -78,7 +66,7 @@ export default function AddBusiness() {
   if (createdId) return <div className="min-h-dvh bg-[#030712] px-4 py-10 text-white">
     <main className="mx-auto max-w-lg rounded-3xl border border-amber-400/25 bg-[#081525] p-6">
       <h1 className="text-2xl font-black">Business created</h1>
-      <p className="mt-3 text-sm text-slate-300">Your Business profile exists. Complete your service settings next. If you entered a promo code, verify it before assuming the subscription is waived.</p>
+      <p className="mt-3 text-sm text-slate-300">Your business profile exists. Complete company settings and then review subscription billing. Promotional subscription codes are applied only at the final billing step.</p>
       {error ? <p role="alert" className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">{error}</p> : null}
       <Link to="/sbo/settings/general?setup=1&return=%2Fsbo" className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-cyan-400 px-4 font-bold text-slate-950">Continue Business setup</Link>
     </main>
@@ -88,7 +76,7 @@ export default function AddBusiness() {
       <Link to="/get-started" className="text-sm font-bold text-cyan-300">← All onboarding options</Link>
       <div className="mt-6 rounded-3xl border border-cyan-400/25 bg-[#081525]/90 p-5 shadow-2xl sm:p-7">
         <div className="flex items-center gap-3"><Building2 size={28} className="text-cyan-200"/><div><p className="text-xs uppercase tracking-widest text-cyan-300">Step 2 · Business</p><h1 className="text-2xl font-black">Add your {verticalLabel} business</h1></div></div>
-        <p className="mt-3 text-sm leading-6 text-slate-300">Your Personal login already exists. Your {verticalLabel} company will have its own business profile, contact email and core business tools—no second login. A dedicated industry dashboard will follow.</p>
+        <p className="mt-3 text-sm leading-6 text-slate-300">Your Personal login already exists. Set up this company under the same account. Subscription pricing and promotional codes are reviewed at the end, after company setup.</p>
         <div className="mt-4 flex gap-2 rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3 text-sm text-emerald-100"><ShieldCheck size={17} className="shrink-0 mt-0.5"/> Personal sign-in: {user?.email||"verified account"}</div>
         {error?<p role="alert" className="mt-4 rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</p>:null}
         <form onSubmit={submit} className="mt-5 space-y-4">
@@ -98,9 +86,8 @@ export default function AddBusiness() {
           {label("Business phone","phone",{type:"tel",autoComplete:"tel"})}
           <div className="grid grid-cols-2 gap-3">{label("City","city",{autoComplete:"address-level2"})}{label("State","state",{maxLength:2,upper:true,autoComplete:"address-level1"})}</div>
           {label("Service ZIP","base_zip",{required:true,autoComplete:"postal-code",maxLength:10})}
-          {label("Business access code","access_code",{placeholder:"SWFF26 (if invited)"})}
           <label className="flex items-start gap-2 rounded-xl border border-slate-700 p-3 text-sm"><input type="checkbox" checked={form.accepts_marketplace_tickets} onChange={e=>set("accepts_marketplace_tickets",e.target.checked)} className="mt-1"/> Allow eligible customers in my service area to request jobs</label>
-          <label className="flex items-start gap-2 rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-sm"><input type="checkbox" checked={form.accepts_fee} onChange={e=>set("accepts_fee",e.target.checked)} required className="mt-1"/> I acknowledge that a promotional subscription waiver does not automatically waive platform transaction fees. Final payment terms are provided before collection is enabled.</label>
+          <label className="flex items-start gap-2 rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-3 text-sm"><input type="checkbox" checked={form.accepts_fee} onChange={e=>set("accepts_fee",e.target.checked)} required className="mt-1"/> I understand that transaction platform fees may still apply even when subscription charges are waived. Final billing terms are reviewed before collection is enabled.</label>
           <button type="submit" disabled={saving||!form.accepts_fee} className="min-h-12 w-full rounded-xl bg-cyan-400 px-4 font-black text-slate-950 disabled:opacity-40">{saving?"Creating business…":"Create business and continue setup"}</button>
         </form>
       </div>

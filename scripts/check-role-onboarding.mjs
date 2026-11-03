@@ -51,9 +51,9 @@ test("existing account can create separate business without second login or unve
   assert.match(s,/user\?\.email/);
   assert.match(s,/business_email:companyEmail/);
   assert.match(s,/companyEmail.*personalEmail/);
-  assert.match(s,/\/auth\/upgrade-to-sbo-promo\//);
+  assert.doesNotMatch(s,/\/auth\/upgrade-to-sbo-promo\//);
+  assert.doesNotMatch(s,/Business access code/);
   assert.match(s,/setCreatedId\(id\)/);
-  assert.match(s,/subscription code was NOT confirmed/);
   assert.match(s,/\/sbo\/settings\/general\?setup=1/);
 });
 
@@ -101,3 +101,13 @@ test("owner-facing settings and portal use PM-scoped claims and clear labels",()
   assert.match(dashboard,/Property Owner \/ Partner/);
   assert.match(portfolio,/Property Owner \/ Partner Portal/);
 });
+
+ test("global menu lists named organizations and exposes add-company entry points",()=>{
+ const nav=read("src/components/navigation/GlobalModeBar.jsx");
+ assert.match(nav,/myBusinesses/);
+ assert.match(nav,/businessWorkspaces\.map/);
+ assert.match(nav,/pmWorkspace\.name/);
+ assert.match(nav,/\/onboarding\/business/);
+ assert.match(nav,/\/onboarding\/property-management/);
+ assert.doesNotMatch(nav,/label: "Create Business", to: "\/upgrade"/);
+ });
