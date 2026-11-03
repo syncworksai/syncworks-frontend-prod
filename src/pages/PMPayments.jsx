@@ -447,7 +447,7 @@ export default function PMPayments() {
         </div>
       </Field>
       <div className="grid grid-cols-2 gap-2">
-        <Field label="Date received"><input type="date" required className={inputClass + " min-w-0"} value={model.entry_date || ""}
+        <Field label={model.entry_type === "PAYMENT" ? "Date received" : "Entry date"}><input type="date" required className={inputClass + " min-w-0"} value={model.entry_date || ""}
           onChange={(e) => { setter({ ...model, entry_date: e.target.value }); setDrawerError(""); }}/></Field>
         <Field label="Amount ($)"><input required className={inputClass + " min-w-0"} inputMode="decimal"
           placeholder="0.00" value={model.amount || ""} onChange={(e) => { setter({ ...model, amount: e.target.value }); setDrawerError(""); }}/></Field>
@@ -464,7 +464,7 @@ export default function PMPayments() {
         onChange={(e) => setter({ ...model, memo: e.target.value })}/></Field>
       {model.entry_type === "PAYMENT" && model.payer !== "HOUSING" && model.payment_method === "OTHER" ?
         <p className="text-[10px] text-slate-400">Venmo payments are entered as outside receipts. SyncWorks does not charge a fee for a manual entry.</p> : null}
-      <details className="rounded-lg border border-slate-700/70 bg-black/15 px-3 py-2" open={Boolean(model.id) ? undefined : undefined}>
+      <details className="rounded-lg border border-slate-700/70 bg-black/15 px-3 py-2">
         <summary className="cursor-pointer text-xs font-semibold text-slate-400">More accounting options</summary>
         <div className="mt-3 grid grid-cols-2 gap-2">
           <Field label="Entry type"><select className={inputClass} value={model.entry_type}
