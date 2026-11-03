@@ -111,3 +111,13 @@ test("owner-facing settings and portal use PM-scoped claims and clear labels",()
  assert.match(nav,/\/onboarding\/property-management/);
  assert.doesNotMatch(nav,/label: "Create Business", to: "\/upgrade"/);
  });
+
+test("SWFF26 platform fee disclaimer appears only at subscription redemption",()=>{
+  const add=read("src/pages/AddBusiness.jsx");
+  const upgrade=read("src/pages/Upgrade.jsx");
+  assert.doesNotMatch(add,/accepts_fee|transaction platform fees may still apply/);
+  assert.match(upgrade,/promoCode.*SWFF26/);
+  assert.match(upgrade,/promoFeeAcknowledged/);
+  assert.match(upgrade,/1% SyncWorks platform transaction fee/);
+  assert.match(upgrade,/subscriptions_exempt/);
+});
