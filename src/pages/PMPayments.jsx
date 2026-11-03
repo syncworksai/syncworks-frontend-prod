@@ -135,6 +135,7 @@ export default function PMPayments() {
     if (!filterTenant || !workspace?.id) {
       setAllocation(null); setExternalRecords([]); setDepositStatus(null); return undefined;
     }
+    setAllocation(null);
     const id = filterTenant;
     const h = { "X-PM-Workspace-ID": String(workspace.id) };
     Promise.all([
@@ -454,7 +455,7 @@ export default function PMPayments() {
             {viewMode === "monthly" ? "Advanced Accounting" : "← Simple Monthly View"}
           </button>
         </div> : null}
-        {filterTenant && workspace && viewMode === "monthly" ? <PMMonthlyLedger
+        {filterTenant && workspace && selectedTenant && viewMode === "monthly" ? <PMMonthlyLedger
           tenant={selectedTenant} workspace={workspace} entries={tenantEntries}
           allocation={allocation} payer={payer}
           onAddPayment={openMonthlyPayment}
