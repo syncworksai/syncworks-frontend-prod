@@ -5,11 +5,13 @@ import PMPropertyPaperworkDock from "../components/pm/PMPropertyPaperworkDock";
 import PMPropertyDetailsDrawer from "../components/pm/PMPropertyDetailsDrawer";
 import PMProperty360Snapshot from "../components/pm/PMProperty360Snapshot";
 import PMTenantReview from "../components/pm/PMTenantReview";
+import PMTenantPilotPreview from "../components/pm/PMTenantPilotPreview";
+import { ROXANA_RENT_REVIEW_DATE, isRoxanaPilotProperty } from "../components/pm/roxanaPilotMilestones";
 
 const list = (data) => Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
 const money = (value) => Number(value || 0).toLocaleString("en-US", { style: "currency", currency: "USD" });
-const tabs = ["overview", "review", "units", "tenants", "ledger", "maintenance", "projects", "messages", "documents", "reports"];
-const tabLabels = {overview:"Overview",review:"Tenant Review",units:"Units",tenants:"Tenants",ledger:"Advanced Ledger",maintenance:"Work",projects:"Projects",messages:"Inbox",documents:"Files",reports:"Owners"};
+const tabs = ["overview", "review", "tenantpreview", "units", "tenants", "ledger", "maintenance", "projects", "messages", "documents", "reports"];
+const tabLabels = {overview:"Overview",review:"Tenant Review",tenantpreview:"Resident Preview",units:"Units",tenants:"Tenants",ledger:"Advanced Ledger",maintenance:"Work",projects:"Projects",messages:"Inbox",documents:"Files",reports:"Owners"};
 
 function Panel({ title, subtitle, action, children }) {
   return <section className="rounded-xl border border-cyan-500/15 bg-[#07111f]"><div className="flex flex-wrap items-start justify-between gap-2 border-b border-cyan-500/10 px-3 py-3"><div><h2 className="text-sm font-black text-white">{title}</h2>{subtitle ? <p className="mt-1 text-[11px] text-slate-500">{subtitle}</p> : null}</div>{action}</div><div className="p-3">{children}</div></section>;
@@ -189,7 +191,7 @@ export default function PMPropertyDetail() {
       </select>
     </section>
 
-    <nav id="pm-property-sections" aria-label="Property 360 sections" className="sticky top-[max(4rem,env(safe-area-inset-top))] z-20 flex scroll-mt-24 gap-1.5 overflow-x-auto rounded-xl border border-cyan-500/15 bg-[#07111f]/95 p-1.5 backdrop-blur">{tabs.map((item) => <button key={item} type="button" onClick={() => { setTab(item); nav(`/pm/properties/${propertyId}?tab=${item}`); }} className={`min-h-9 shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-black ${tab === item ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>{tabLabels[item]}</button>)}</nav>
+    <nav id="pm-property-sections" aria-label="Property 360 sections" className="sticky top-[max(4rem,env(safe-area-inset-top))] z-20 flex scroll-mt-24 gap-1.5 overflow-x-auto rounded-xl border border-cyan-500/15 bg-[#07111f]/95 p-1.5 backdrop-blur">{tabs.filter(item => item !== "tenantpreview" || isRoxanaPilotProperty(property)).map((item) => <button key={item} type="button" onClick={() => { setTab(item); nav(`/pm/properties/${propertyId}?tab=${item}`); }} className={`min-h-9 shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-black ${tab === item ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>{tabLabels[item]}</button>)}</nav>
 
     {tab === "overview" ? <div className="space-y-3">
       <section className="rounded-xl border border-slate-700 bg-[#07111f] p-3">
@@ -200,6 +202,12 @@ export default function PMPropertyDetail() {
         </div>
         <p className="mt-3 rounded-lg border border-slate-800 bg-black/20 p-3 text-xs text-slate-400">{property.notes || "No internal property notes on file."}</p>
       </section>
+      {isRoxanaPilotProperty(property) ? <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/25 bg-amber-500/5 p-3">
+        <div><h3 className="text-xs font-black text-amber-200">2027 rent eligibility review · {ROXANA_RENT_REVIEW_DATE}</h3>
+          <p className="mt-1 text-[11px] text-slate-300">Planning reminder only. Verify signed month-to-month terms, MHA approval, prior abatement and required notices before changing rent.</p></div>
+        <div className="flex flex-wrap gap-2"><Button onClick={() => nav("/pm/calendar?property=1&month=2027-01")}>PM Calendar</Button>
+          <Button tone="cyan" onClick={() => nav("/pm/rent-increases?property=1")}>Rent Increase Planner</Button></div>
+      </section> : null}
       <details className="rounded-xl border border-cyan-500/20 bg-[#07111f] p-3">
         <summary className="cursor-pointer text-sm font-black text-cyan-100">Move-in checklist · {moveInItems.filter(x=>x.done).length}/{moveInItems.length}</summary>
         <div className="mt-3"><Checklist title="Move-in readiness" subtitle="Complete each item and verify supporting evidence." items={moveInItems} action={<Button onClick={() => setTab("documents")}>Documents</Button>} /></div>
@@ -211,6 +219,11 @@ export default function PMPropertyDetail() {
     </div> : null}
 
     {tab === "review" ? <PMTenantReview property={property} tenants={tenants} workspace={workspace} ledger={propertyLedger} navigate={nav} /> : null}
+    {tab === "tenantpreview" && isRoxanaPilotProperty(property) ? <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-[11px] text-slate-400">Only Roxana is enabled for this pilot. The resident's invitation email stays unchanged.</p>
+        <Button onClick={() => nav("/pm/tenants?property=" + propertyId)}>Switch tenant</Button></div>
+      <PMTenantPilotPreview property={property} tenant={tenants.find(t => Number(t.id) === 1)} workspace={workspace} navigate={nav}/>
+    </div> : null}
     {tab === "units" ? <Panel title="Units & Availability" action={<div className="flex flex-wrap gap-2"><Button tone="cyan" onClick={() => nav(`/pm/leasing?property=${propertyId}&tab=units`)}>Add Unit</Button><Button onClick={() => setDetailsOpen(true)}>Inventory</Button></div>}>{units.length ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{units.map((unit) => <article key={unit.id} className="rounded-2xl border border-slate-800 bg-black/25 p-4"><div className="flex items-start justify-between"><div><div className="font-black text-white">{unit.label}</div><div className="mt-1 text-xs text-slate-500">{unit.bedrooms || 0} bed · {unit.bathrooms || 0} bath</div></div><Badge>{String(unit.availability || "AVAILABLE").replaceAll("_", " ")}</Badge></div><div className="mt-4 text-sm text-slate-400">Market rent: <strong className="text-white">{money(unit.market_rent)}</strong></div></article>)}</div> : <Empty text="No units have been added." />}</Panel> : null}
     {tab === "tenants" ? <Panel title="Current & Former Tenant Records" action={<Button tone="cyan" onClick={() => nav(`/pm/tenants?property=${propertyId}`)}>Add Tenant</Button>}>{tenants.length ? <div className="space-y-3">{tenants.map((tenant) => <article key={tenant.id} className="rounded-2xl border border-slate-800 bg-black/25 p-4"><div className="flex items-start justify-between gap-3"><div><div className="font-black text-white">{tenant.full_name || `${tenant.first_name} ${tenant.last_name}`}</div><div className="mt-1 text-xs text-slate-500">{tenant.email} · {tenant.unit_label || "Unit not assigned"}</div>
       {summary?.tenants?.find(x=>Number(x.id)===Number(tenant.id))?.link_status==="REVIEW_NAME_MATCH" ?
