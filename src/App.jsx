@@ -102,6 +102,8 @@ import PMRentIncrease from "./pages/PMRentIncrease";
 import PMRentCorrection from "./pages/PMRentCorrection";
 import PMCollectionSetup from "./pages/PMCollectionSetup";
 import PMLeaseBuilder from "./pages/PMLeaseBuilder";
+import PMOnboardingHub from "./pages/PMOnboardingHub";
+import PMApplicationForm from "./pages/PMApplicationForm";
 import PMPropertiesIndex from "./pages/PMPropertiesIndex";
 import PMTenantsIndex from "./pages/PMTenantsIndex";
 import PMPayments from "./pages/PMPayments";
@@ -248,6 +250,8 @@ export default function App() {
         <Route path="/pm/rent-increases" element={<ProtectedRoute><PMRentIncrease /></ProtectedRoute>} />
         <Route path="/pm/rent-correction" element={<ProtectedRoute><PMRentCorrection /></ProtectedRoute>} />
         <Route path="/pm/lease-builder" element={<ProtectedRoute><PMLeaseBuilder /></ProtectedRoute>} />
+        <Route path="/pm/onboarding" element={<ProtectedRoute><PMOnboardingHub /></ProtectedRoute>} />
+        <Route path="/pm/apply" element={<ProtectedRoute><PMApplicationForm /></ProtectedRoute>} />
         <Route path="/pm/payments" element={<ProtectedRoute><PMPayments /></ProtectedRoute>} />
         <Route path="/pm/payment-setup" element={<ProtectedRoute><PMCollectionSetup /></ProtectedRoute>} />
         <Route path="/pm/tenants" element={<ProtectedRoute><PMTenantsIndex /></ProtectedRoute>} />
