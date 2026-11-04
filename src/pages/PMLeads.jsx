@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api/client";
+import PMPropertyPicker from "../components/pm/PMPropertyPicker";
 
 const inputClass = "min-h-10 w-full rounded-xl border border-slate-700 bg-black/35 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400/70";
 const stagesDefault = [
@@ -11,6 +12,31 @@ const sourcesDefault = [["FURNISHED_FINDER", "Furnished Finder"], ["ZILLOW", "Zi
 const mailCategories = [["LEADS", "Leads"], ["TENANTS", "Tenants"], ["OWNERS", "Owners / Investors"], ["MAINTENANCE", "Maintenance"], ["SECTION8", "Section 8"], ["COLLECTIONS", "Collections / Legal"], ["VENDORS", "Vendors"]];
 const blankLead = { stage: "NEW", lead_type: "REGULAR", source: "MANUAL", first_name: "", last_name: "", email: "", phone: "", company_name: "", property: "", requested_start: "", requested_end: "", adults: 1, children: 0, pets: 0, pet_notes: "", furnished_requested: false, budget_amount: "", summary: "", notes: "" };
 
+const pipelineGroups = [
+  { id: "NEW", label: "New inquiries", stages: ["NEW"], hint: "Call, email, qualify" },
+  { id: "FOLLOW_UP", label: "In process", stages: ["CONTACTED","QUALIFIED","REVIEWING"], hint: "Showing & follow-up" },
+  { id: "APPLICATION", label: "Applications", stages: ["APPLICATION"], hint: "Send or review application" },
+  { id: "APPROVED", label: "Approved", stages: ["APPROVED"], hint: "Assign home & create tenant" },
+  { id: "LEASE_PENDING", label: "Lease needed", stages: ["LEASE_PENDING"], hint: "Prepare / obtain signatures" },
+  { id: "WON", label: "Move-in", stages: ["WON"], hint: "Portal, keys & checklist" },
+];
+function nextLeadAction(lead) {
+  const application = lead?.metadata?.pm_onboarding?.application_status || "NOT_STARTED";
+  const property = Boolean(lead?.property);
+  switch (lead?.stage) {
+    case "NEW": return "Contact prospect and confirm interest";
+    case "CONTACTED": return "Qualify household and preferred property";
+    case "QUALIFIED": return property ? "Schedule a showing or send application" : "Match prospect to an available property";
+    case "REVIEWING": return "Complete showing and invite applicant";
+    case "APPLICATION": return application === "SUBMITTED" ? "Review submitted application" :
+      application === "INVITED" ? "Await application submission" : "Create application link";
+    case "APPROVED": return property ? "Convert to tenant draft and prepare lease" : "Assign a property before tenant conversion";
+    case "LEASE_PENDING": return "Prepare lease and obtain required signatures";
+    case "WON": return "Verify move-in, unsigned documents and portal access";
+    case "LOST": return "Closed — no action required";
+    default: return "Review lead and set next stage";
+  }
+}
 function list(data) { return Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : []; }
 function choiceRows(rows, fallback) { return Array.isArray(rows) && rows.length ? rows.map((r) => [r.value, r.label]) : fallback; }
 function Field({ label, children }) { return <label className="block"><span className="mb-1 block text-[11px] font-semibold text-slate-300">{label}</span>{children}</label>; }
@@ -35,7 +61,7 @@ export default function PMLeads() {
   const [typeFilter, setTypeFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
   const [search, setSearch] = useState("");
-  const [drawer, setDrawer] = useState(() => new URLSearchParams(location.search).get("connect") === "email" ? "mail" : "");
+  const [drawer, setDrawer] = useState(() => { const q = new URLSearchParams(location.search); return q.get("connect") === "email" ? "mail" : q.get("create") === "1" ? "new" : ""; });
   const [draft, setDraft] = useState(blankLead);
   const [selected, setSelected] = useState(null);
   const [reply, setReply] = useState("");
@@ -66,24 +92,44 @@ export default function PMLeads() {
   }
   useEffect(() => { load(); }, []);
   useEffect(() => {
-    if (new URLSearchParams(location.search).get("connect") === "email") setDrawer("mail");
+    const q = new URLSearchParams(location.search);
+    if (q.get("connect") === "email") setDrawer("mail");
+    else if (q.get("create") === "1") {
+      setDraft({ ...blankLead, property: q.get("property") || "", source: q.get("source") || "MANUAL" });
+      setDrawer("new");
+    }
   }, [location.search]);
+  useEffect(() => {
+    const id = new URLSearchParams(location.search).get("lead");
+    if (!id || !workspace?.id) return undefined;
+    let active = true;
+    api.get(`/pm-hub/leads/${id}/`, { headers: { "X-PM-Workspace-ID": String(workspace.id) } })
+      .then(r => { if (active) { setSelected(r.data); setDrawer("lead"); } })
+      .catch(e => { if (active) setError(e?.response?.data?.detail || "Could not open the selected lead."); });
+    return () => { active = false; };
+  }, [location.search, workspace?.id]);
 
   const stageRows = choiceRows(choices.stages, stagesDefault);
   const typeRows = choiceRows(choices.lead_types, leadTypesDefault);
   const sourceRows = choiceRows(choices.sources, sourcesDefault);
   const filtered = useMemo(() => leads.filter((lead) => {
     if (stageFilter === "ACTIVE" && ["WON", "LOST"].includes(lead.stage)) return false;
-    if (stageFilter && stageFilter !== "ACTIVE" && lead.stage !== stageFilter) return false;
+    if (stageFilter === "FOLLOW_UP" && !["CONTACTED","QUALIFIED","REVIEWING"].includes(lead.stage)) return false;
+    if (stageFilter && stageFilter !== "ACTIVE" && stageFilter !== "FOLLOW_UP" && lead.stage !== stageFilter) return false;
     if (typeFilter && lead.lead_type !== typeFilter) return false;
     if (sourceFilter && lead.source !== sourceFilter) return false;
     if (search) {
-      const hay = `${lead.full_name} ${lead.email} ${lead.phone} ${lead.company_name} ${lead.property_name} ${lead.source_label} ${lead.source_subject}`.toLowerCase();
-      if (!hay.includes(search.toLowerCase())) return false;
+      const property = properties.find(p => String(p.id) === String(lead.property));
+      const hay = [lead.full_name,lead.email,lead.phone,lead.company_name,
+        lead.property_name,lead.source_label,lead.source_subject,
+        property?.name, property?.address, property?.city, property?.zip].join(" ").toLowerCase();
+      if (!search.toLowerCase().trim().split(/\s+/).every(token=>hay.includes(token))) return false;
     }
     return true;
-  }), [leads, stageFilter, typeFilter, sourceFilter, search]);
+  }), [leads, properties, stageFilter, typeFilter, sourceFilter, search]);
   const counts = useMemo(() => Object.fromEntries(stageRows.map(([value]) => [value, leads.filter((l) => l.stage === value).length])), [leads, stageRows]);
+  const groupCounts = useMemo(() => Object.fromEntries(pipelineGroups.map(group =>
+    [group.id, leads.filter(l => group.stages.includes(l.stage)).length])), [leads]);
   const mailAccounts = connections.filter((c) => c.provider === "MICROSOFT");
   const enabledMail = mailAccounts.filter((c) => c.mail_enabled);
 
@@ -155,7 +201,8 @@ export default function PMLeads() {
 
   const leadForm = (model, setter, existing = false) => <div className="grid gap-3 pb-6">
     <div className="grid gap-3 sm:grid-cols-3"><Field label="Stage"><select className={inputClass} value={model.stage || "NEW"} onChange={(e) => setter({ ...model, stage: e.target.value })}>{stageRows.map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select></Field><Field label="Lead type"><select className={inputClass} value={model.lead_type || "REGULAR"} onChange={(e) => setter({ ...model, lead_type: e.target.value })}>{typeRows.map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select></Field><Field label="Source"><select className={inputClass} value={model.source || "MANUAL"} onChange={(e) => setter({ ...model, source: e.target.value })}>{sourceRows.map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select></Field></div>
-    <div className="grid gap-3 sm:grid-cols-2"><Field label="First name"><input className={inputClass} value={model.first_name || ""} onChange={(e) => setter({ ...model, first_name: e.target.value })}/></Field><Field label="Last name"><input className={inputClass} value={model.last_name || ""} onChange={(e) => setter({ ...model, last_name: e.target.value })}/></Field><Field label="Email"><input type="email" className={inputClass} value={model.email || ""} onChange={(e) => setter({ ...model, email: e.target.value })}/></Field><Field label="Phone"><input className={inputClass} value={model.phone || ""} onChange={(e) => setter({ ...model, phone: e.target.value })}/></Field><Field label="Company"><input className={inputClass} value={model.company_name || ""} onChange={(e) => setter({ ...model, company_name: e.target.value })}/></Field><Field label="Property"><select className={inputClass} value={model.property || ""} onChange={(e) => setter({ ...model, property: e.target.value })}><option value="">Not matched yet</option>{properties.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.address}</option>)}</select></Field></div>
+    <div className="grid gap-3 sm:grid-cols-2"><Field label="First name"><input className={inputClass} value={model.first_name || ""} onChange={(e) => setter({ ...model, first_name: e.target.value })}/></Field><Field label="Last name"><input className={inputClass} value={model.last_name || ""} onChange={(e) => setter({ ...model, last_name: e.target.value })}/></Field><Field label="Email"><input type="email" className={inputClass} value={model.email || ""} onChange={(e) => setter({ ...model, email: e.target.value })}/></Field><Field label="Phone"><input className={inputClass} value={model.phone || ""} onChange={(e) => setter({ ...model, phone: e.target.value })}/></Field><Field label="Company"><input className={inputClass} value={model.company_name || ""} onChange={(e) => setter({ ...model, company_name: e.target.value })}/></Field><PMPropertyPicker label="Interested property (search name or address)" properties={properties} value={model.property||""}
+      onChange={value=>setter({...model,property:value})}/></div>
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4"><Field label="Start"><input type="date" className={inputClass} value={model.requested_start || ""} onChange={(e) => setter({ ...model, requested_start: e.target.value })}/></Field><Field label="End"><input type="date" className={inputClass} value={model.requested_end || ""} onChange={(e) => setter({ ...model, requested_end: e.target.value })}/></Field><Field label="Adults"><input type="number" min="0" className={inputClass} value={model.adults ?? 1} onChange={(e) => setter({ ...model, adults: e.target.value })}/></Field><Field label="Children"><input type="number" min="0" className={inputClass} value={model.children ?? 0} onChange={(e) => setter({ ...model, children: e.target.value })}/></Field><Field label="Pets"><input type="number" min="0" className={inputClass} value={model.pets ?? 0} onChange={(e) => setter({ ...model, pets: e.target.value })}/></Field><Field label="Budget"><input className={inputClass} value={model.budget_amount || ""} onChange={(e) => setter({ ...model, budget_amount: e.target.value })}/></Field></div>
     <label className="flex items-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-xs"><input type="checkbox" checked={Boolean(model.furnished_requested)} onChange={(e) => setter({ ...model, furnished_requested: e.target.checked })}/>Furnished requested</label>
     <Field label="Pet notes"><input className={inputClass} value={model.pet_notes || ""} onChange={(e) => setter({ ...model, pet_notes: e.target.value })}/></Field>
@@ -166,15 +213,33 @@ export default function PMLeads() {
 
   return <div className="min-h-screen bg-[#020611] text-slate-100"><main className="space-y-4 px-4 py-5 sm:px-6">
     <section className="rounded-[28px] border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-[#07111f] to-fuchsia-500/10 p-4 sm:p-5"><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-300">Leasing intelligence</div><h2 className="mt-2 text-2xl font-black">PM Leads Command Center</h2><p className="mt-1 max-w-3xl text-sm text-slate-400">Rental inquiries, corporate housing, insurance housing, relocation, Section 8, and other prospects in one property-linked pipeline.</p></div><div className="flex flex-wrap gap-2"><button onClick={() => { setDraft(blankLead); setDrawer("new"); }} className="rounded-xl bg-cyan-400 px-3 py-2 text-xs font-black text-slate-950">+ Add Lead</button><button onClick={() => nav("/pm/onboarding")} className="rounded-xl border border-cyan-400/40 bg-cyan-500/10 px-3 py-2 text-xs font-black text-cyan-100">Tenant Onboarding</button><button onClick={syncInbox} disabled={busy} className="rounded-xl border border-emerald-400/45 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-100 disabled:opacity-50">{busy ? "Syncing..." : "Sync Inbox"}</button><button onClick={() => setDrawer("mail")} className="rounded-xl border border-fuchsia-400/45 bg-fuchsia-500/10 px-3 py-2 text-xs font-black text-fuchsia-100">Email Accounts</button></div></div></section>
+    <section aria-label="Leasing pipeline" className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
+      {pipelineGroups.map(group=><button key={group.id} type="button" onClick={()=>setStageFilter(group.id)}
+        className={`min-h-20 rounded-2xl border p-3 text-left transition ${stageFilter===group.id?
+          "border-cyan-300 bg-cyan-400/15":"border-slate-700 bg-[#07111f] hover:border-cyan-400/35"}`}>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] font-black text-slate-200">{group.label}</span>
+          <strong className="text-xl tabular-nums text-cyan-200">{groupCounts[group.id]||0}</strong>
+        </div>
+        <p className="mt-1 text-[10px] text-slate-400">{group.hint}</p>
+      </button>)}
+    </section>
     {error ? <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-100">{error}</div> : null}{message ? <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-100">{message}</div> : null}
     <section className="rounded-[24px] border border-cyan-500/15 bg-[#07111f]/90 p-4"><div className="grid gap-3 md:grid-cols-[1fr_auto_auto]"><input className={inputClass} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search lead, company, property, source..."/><select className={inputClass} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}><option value="">All lead types</option>{typeRows.map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select><select className={inputClass} value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}><option value="">All sources</option>{sourceRows.map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select></div><div className="mt-3 flex flex-wrap gap-2"><button onClick={() => setStageFilter("ACTIVE")} className={`rounded-full border px-2.5 py-1.5 text-[11px] font-black ${stageFilter === "ACTIVE" ? "border-cyan-300 bg-cyan-400 text-slate-950" : "border-slate-700 text-slate-300"}`}>Active {leads.filter((l) => !["WON","LOST"].includes(l.stage)).length}</button>{stageRows.map(([v,l]) => <button key={v} onClick={() => setStageFilter(v)} className={`rounded-full border px-2.5 py-1.5 text-[11px] font-black ${stageFilter === v ? "border-cyan-300 bg-cyan-400 text-slate-950" : "border-slate-700 text-slate-300"}`}>{l} {counts[v] || 0}</button>)}</div></section>
-    <section className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">{filtered.length ? filtered.map((lead) => <button key={lead.id} onClick={() => openLead(lead.id)} className="rounded-[22px] border border-slate-700 bg-[#07111f]/90 p-4 text-left transition hover:border-cyan-400/45 hover:bg-cyan-500/5"><div className="flex items-start justify-between gap-3"><div><div className="text-base font-black text-white">{lead.full_name}</div><div className="mt-1 text-xs text-slate-400">{lead.company_name || lead.email || "No contact email"}</div></div>{tag(lead.stage === "WON" ? "emerald" : lead.stage === "LOST" ? "amber" : "cyan", stageRows.find(([v]) => v === lead.stage)?.[1] || lead.stage)}</div><div className="mt-3 flex flex-wrap gap-1.5">{tag("fuchsia", typeRows.find(([v]) => v === lead.lead_type)?.[1] || lead.lead_type)}{tag("cyan", lead.source_label || lead.source)}{lead.furnished_requested ? tag("emerald", "Furnished") : null}</div><div className="mt-3 grid grid-cols-2 gap-2 text-[11px]"><div><span className="text-slate-500">Property</span><div className="mt-0.5 font-semibold text-slate-200">{lead.property_name || "Unmatched"}</div></div><div><span className="text-slate-500">Stay</span><div className="mt-0.5 font-semibold text-slate-200">{lead.requested_start || "—"} → {lead.requested_end || "—"}</div></div><div><span className="text-slate-500">Party</span><div className="mt-0.5 font-semibold text-slate-200">{lead.adults} adults · {lead.children} kids · {lead.pets} pets</div></div><div><span className="text-slate-500">Messages</span><div className="mt-0.5 font-semibold text-slate-200">{lead.message_count || 0}</div></div></div>{lead.classification_reason ? <div className="mt-3 rounded-xl border border-slate-800 bg-black/20 p-2 text-[10px] text-slate-400">SYNC: {lead.classification_reason} · {lead.classification_confidence}%</div> : null}</button>) : <div className="col-span-full rounded-[22px] border border-dashed border-slate-700 p-10 text-center text-sm text-slate-400">No leads match these filters.</div>}</section>
+    <section className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">{filtered.length ? filtered.map((lead) => <button key={lead.id} onClick={() => openLead(lead.id)} className="rounded-[22px] border border-slate-700 bg-[#07111f]/90 p-4 text-left transition hover:border-cyan-400/45 hover:bg-cyan-500/5"><div className="flex items-start justify-between gap-3"><div><div className="text-base font-black text-white">{lead.full_name}</div><div className="mt-1 text-xs text-slate-400">{lead.company_name || lead.email || "No contact email"}</div></div>{tag(lead.stage === "WON" ? "emerald" : lead.stage === "LOST" ? "amber" : "cyan", stageRows.find(([v]) => v === lead.stage)?.[1] || lead.stage)}</div><div className="mt-3 flex flex-wrap gap-1.5">{tag("fuchsia", typeRows.find(([v]) => v === lead.lead_type)?.[1] || lead.lead_type)}{tag("cyan", lead.source_label || lead.source)}{lead.furnished_requested ? tag("emerald", "Furnished") : null}</div><div className="mt-3 grid grid-cols-2 gap-2 text-[11px]"><div><span className="text-slate-500">Property</span><div className="mt-0.5 font-semibold text-slate-200">{lead.property_name || "Unmatched"}</div></div><div><span className="text-slate-500">Stay</span><div className="mt-0.5 font-semibold text-slate-200">{lead.requested_start || "—"} → {lead.requested_end || "—"}</div></div><div><span className="text-slate-500">Party</span><div className="mt-0.5 font-semibold text-slate-200">{lead.adults} adults · {lead.children} kids · {lead.pets} pets</div></div><div><span className="text-slate-500">Messages</span><div className="mt-0.5 font-semibold text-slate-200">{lead.message_count || 0}</div></div></div><div className="mt-3 rounded-xl border border-amber-400/20 bg-amber-500/5 p-2.5 text-[11px]">
+    <div className="text-[9px] font-black uppercase tracking-wide text-amber-200">Next action</div>
+    <div className="mt-1 font-semibold text-slate-200">{nextLeadAction(lead)}</div>
+    {lead.metadata?.pm_onboarding?.application_status ? <div className="mt-1 text-[10px] text-slate-400">
+      Application: {String(lead.metadata.pm_onboarding.application_status).replaceAll("_"," ").toLowerCase()}</div> : null}
+  </div>
+  {lead.classification_reason ? <div className="mt-3 rounded-xl border border-slate-800 bg-black/20 p-2 text-[10px] text-slate-400">SYNC: {lead.classification_reason} · {lead.classification_confidence}%</div> : null}</button>) : <div className="col-span-full rounded-[22px] border border-dashed border-slate-700 p-10 text-center text-sm text-slate-400">No leads match these filters.</div>}</section>
   </main>
 
   {drawer === "new" ? <Drawer title="Add Lead" onClose={() => setDrawer("")}>{leadForm(draft, setDraft)}</Drawer> : null}
   {drawer === "lead" && selected ? <Drawer title={selected.full_name} width="max-w-4xl" onClose={() => setDrawer("")}><div className="space-y-4">{selected.classification_reason ? <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 text-xs"><strong>SYNC classification:</strong> {selected.classification_reason} · {selected.classification_confidence}% confidence</div> : null}{leadForm(selected, setSelected, true)}<div className="rounded-2xl border border-slate-800 p-3"><div className="text-sm font-black">Communication thread</div><div className="mt-3 space-y-2">{(selected.messages || []).length ? selected.messages.map((m) => <div key={m.id} className={`rounded-xl border p-3 ${m.direction === "OUTBOUND" ? "border-cyan-500/20 bg-cyan-500/5" : m.direction === "INTERNAL" ? "border-amber-500/20 bg-amber-500/5" : "border-slate-700 bg-slate-900/50"}`}><div className="flex justify-between gap-3 text-[10px] text-slate-500"><span>{m.direction} · {m.sender_name || m.sender_email || m.channel}</span><span>{String(m.sent_at || m.created_at || "").replace("T", " ").slice(0,16)}</span></div>{m.subject ? <div className="mt-1 text-xs font-black">{m.subject}</div> : null}<div className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-300">{m.body}</div></div>) : <div className="text-xs text-slate-500">No messages yet.</div>}</div><div className="mt-4 grid gap-3 sm:grid-cols-2"><div><textarea rows={4} className={inputClass} value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Reply by email..."/><button onClick={sendReply} disabled={busy || !selected.email} className="mt-2 rounded-lg bg-cyan-400 px-3 py-2 text-xs font-black text-slate-950 disabled:opacity-40">Send Email</button></div><div><textarea rows={4} className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Internal note — never emailed..."/><button onClick={addNote} disabled={busy} className="mt-2 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs font-black text-amber-100 disabled:opacity-40">Save Internal Note</button></div></div></div><div className="flex flex-wrap gap-2 border-t border-slate-800 pt-4">
     <button onClick={() => { setDrawer(""); nav("/pm/onboarding?lead="+selected.id); }}
       className="rounded-lg border border-cyan-400/40 bg-cyan-500/10 px-3 py-2 text-xs font-black text-cyan-100">Application / Section 8 / Lease</button>
+    <div className="w-full rounded-lg border border-amber-500/25 bg-amber-500/5 p-3 text-xs text-amber-100">Next action: {nextLeadAction(selected)}</div>
     {selected.stage === "WON" ? <button onClick={convertToTenant} disabled={busy} className="rounded-lg bg-emerald-400 px-3 py-2 text-xs font-black text-slate-950">Convert to Tenant</button> : null}<button onClick={deleteLead} className="rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs font-black text-rose-100">Delete Lead</button></div></div></Drawer> : null}
   {drawer === "mail" ? <Drawer title="Email Accounts & SYNC Routing" width="max-w-3xl" onClose={() => setDrawer("")}><div className="space-y-4"><div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 text-xs leading-5 text-slate-300">Connections are owned by the signed-in user. You decide which areas each mailbox may feed. SYNC classifies the message; routing permissions decide where it is allowed to go. Non-PM banking/personal mail is not copied into this PM workspace.</div>{mailAccounts.length ? mailAccounts.map((account) => <MailAccountCard key={`${account.id}-${account.updated_at || "current"}`} account={account} workspaces={workspaces} onSave={saveMailRoute} onSync={async () => { setBusy(true); try { const r = await api.post(`/personal-calendar/connections/${account.id}/sync/`); setMessage(`Mailbox synced. ${r.data?.mail?.leads || 0} leads and ${r.data?.mail?.pm_messages || 0} PM messages routed.`); await load(); } catch (e) { setError(e?.response?.data?.detail || "Mailbox sync failed. Reconnect Outlook to grant Mail.Read/Mail.Send."); } finally { setBusy(false); } }} busy={busy}/>) : <div className="rounded-xl border border-dashed border-slate-700 p-5 text-center text-sm text-slate-400">No Microsoft mailbox connected yet.</div>}<button onClick={startMicrosoft} className="rounded-xl bg-cyan-400 px-4 py-2.5 text-xs font-black text-slate-950">{mailAccounts.length ? "Connect Another Outlook Account" : "Connect Outlook / Microsoft"}</button><div className="text-[11px] leading-5 text-slate-500">Existing Microsoft Calendar connections created before this build may need one reconnect so Microsoft can grant the additional Mail.Read and Mail.Send permissions. Gmail routing is the next provider adapter; this build activates Microsoft/Outlook first.</div></div></Drawer> : null}
 </div>;
