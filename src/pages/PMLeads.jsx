@@ -10,6 +10,22 @@ const stagesDefault = [
 const leadTypesDefault = [["REGULAR", "Regular Tenant"], ["CORPORATE", "Corporate Leasing"], ["INSURANCE", "Insurance Housing"], ["SECTION8", "Section 8 / Housing"], ["RELOCATION", "Relocation"], ["OTHER", "Other"]];
 const sourcesDefault = [["FURNISHED_FINDER", "Furnished Finder"], ["ZILLOW", "Zillow"], ["APARTMENTS", "Apartments.com"], ["FACEBOOK", "Facebook"], ["INSTAGRAM", "Instagram"], ["WEBSITE", "Website"], ["PHONE", "Phone"], ["REFERRAL", "Referral"], ["CORPORATE_PARTNER", "Corporate Housing Partner"], ["INSURANCE_CARRIER", "Insurance Carrier"], ["HOUSING_AUTHORITY", "Housing Authority"], ["REALTOR", "Realtor"], ["OWNER_REFERRAL", "Owner Referral"], ["MANUAL", "Manual"], ["OTHER", "Other"]];
 const mailCategories = [["LEADS", "Leads"], ["TENANTS", "Tenants"], ["OWNERS", "Owners / Investors"], ["MAINTENANCE", "Maintenance"], ["SECTION8", "Section 8"], ["COLLECTIONS", "Collections / Legal"], ["VENDORS", "Vendors"]];
+const QUICK_EMAILS = [
+  ["THANK_YOU", "Thank you / We will call", "Thank you for your rental inquiry",
+   "Hi {first},\n\nThank you for your interest in {property}. We have received your inquiry and will be contacting you shortly by phone to discuss availability and next steps.\n\nThank you,\n{pm}"],
+  ["SHOWING", "Schedule a showing", "Schedule a showing at {property}",
+   "Hi {first},\n\nThank you for your interest in {property}. Please reply with two preferred dates and times for a showing. We will confirm availability.\n\nThank you,\n{pm}"],
+  ["APPLICATION", "Complete your application", "Rental application for {property}",
+   "Hi {first},\n\nPlease complete your secure SyncWorks rental application using the link your property manager provides. Sign in or create your free Personal account with this same email address.\n\nThank you,\n{pm}"],
+  ["FOLLOW_UP", "Following up", "Following up about {property}",
+   "Hi {first},\n\nFollowing up on your rental inquiry for {property}. Please let us know whether you are still interested or have any questions.\n\nThank you,\n{pm}"],
+];
+const QUICK_NOTES = [
+  ["NO_ANSWER", "Called · No answer"],
+  ["VOICEMAIL", "Voicemail left"],
+  ["FOLLOW_UP", "Follow-up needed"],
+  ["APPLICATION", "Application requested"],
+];
 const blankLead = { stage: "NEW", lead_type: "REGULAR", source: "MANUAL", first_name: "", last_name: "", email: "", phone: "", company_name: "", property: "", requested_start: "", requested_end: "", adults: 1, children: 0, pets: 0, pet_notes: "", furnished_requested: false, budget_amount: "", summary: "", notes: "" };
 
 const pipelineGroups = [
@@ -65,6 +81,8 @@ export default function PMLeads() {
   const [draft, setDraft] = useState(blankLead);
   const [selected, setSelected] = useState(null);
   const [reply, setReply] = useState("");
+  const [replySubject, setReplySubject] = useState("");
+  const [quickOpen, setQuickOpen] = useState(false);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -160,13 +178,31 @@ export default function PMLeads() {
     setBusy(true);
     try { const r = await api.post(`/pm-hub/leads/${selected.id}/note/`, { body: note }, { headers }); setSelected(r.data); setNote(""); await refreshLeads(); } catch (e) { setError(e?.response?.data?.detail || "Could not save note."); } finally { setBusy(false); }
   }
+  function applyQuickEmail(key) {
+    if (!selected) return;
+    const item = QUICK_EMAILS.find(row => row[0] === key);
+    if (!item) return;
+    const tokens = {
+      first: selected.first_name || selected.full_name?.split(" ")[0] || "there",
+      property: selected.property_name || "the property",
+      pm: workspace?.name || "Property Management",
+    };
+    const render = text => text.replace(/\\{(first|property|pm)\\}/g, (_,name) => tokens[name]);
+    setReplySubject(render(item[2])); setReply(render(item[3])); setQuickOpen(false);
+  }
+  function applyQuickNote(key) {
+    const item = QUICK_NOTES.find(row=>row[0]===key);
+    if(!item)return;
+    setNote(item[1] + " · " + new Date().toLocaleDateString() + (note.trim()?"\\n"+note:""));
+    setQuickOpen(false);
+  }
   async function sendReply() {
     if (!reply.trim() || !selected) return;
     setBusy(true); setError("");
     try {
       const connectionId = selected.mailbox_connection_id || enabledMail[0]?.id || "";
-      const r = await api.post(`/pm-hub/leads/${selected.id}/reply-email/`, { body: reply, connection_id: connectionId }, { headers });
-      setSelected(r.data); setReply(""); setMessage("Email sent and saved to the lead thread."); await refreshLeads();
+      const r = await api.post(`/pm-hub/leads/${selected.id}/reply-email/`, { body: reply, subject: replySubject, connection_id: connectionId }, { headers });
+      setSelected(r.data); setReply(""); setReplySubject(""); setMessage("Email sent and saved to the lead thread."); await refreshLeads();
     } catch (e) { setError(e?.response?.data?.detail || "Could not send email."); } finally { setBusy(false); }
   }
   async function convertToTenant() {
@@ -212,7 +248,7 @@ export default function PMLeads() {
   </div>;
 
   return <div className="min-h-screen bg-[#020611] text-slate-100"><main className="space-y-4 px-4 py-5 sm:px-6">
-    <section className="rounded-[28px] border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-[#07111f] to-fuchsia-500/10 p-4 sm:p-5"><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-300">Leasing intelligence</div><h2 className="mt-2 text-2xl font-black">PM Leads Command Center</h2><p className="mt-1 max-w-3xl text-sm text-slate-400">Rental inquiries, corporate housing, insurance housing, relocation, Section 8, and other prospects in one property-linked pipeline.</p></div><div className="flex flex-wrap gap-2"><button onClick={() => { setDraft(blankLead); setDrawer("new"); }} className="rounded-xl bg-cyan-400 px-3 py-2 text-xs font-black text-slate-950">+ Add Lead</button><button onClick={() => nav("/pm/onboarding")} className="rounded-xl border border-cyan-400/40 bg-cyan-500/10 px-3 py-2 text-xs font-black text-cyan-100">Tenant Onboarding</button><button onClick={syncInbox} disabled={busy} className="rounded-xl border border-emerald-400/45 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-100 disabled:opacity-50">{busy ? "Syncing..." : "Sync Inbox"}</button><button onClick={() => setDrawer("mail")} className="rounded-xl border border-fuchsia-400/45 bg-fuchsia-500/10 px-3 py-2 text-xs font-black text-fuchsia-100">Email Accounts</button></div></div></section>
+    <section className="rounded-[28px] border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-[#07111f] to-fuchsia-500/10 p-4 sm:p-5"><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-300">Leasing intelligence</div><h2 className="mt-2 text-2xl font-black">PM Leads Command Center</h2><p className="mt-1 max-w-3xl text-sm text-slate-400">Rental inquiries, corporate housing, insurance housing, relocation, Section 8, and other prospects in one property-linked pipeline.</p></div><div className="flex flex-wrap gap-2"><button onClick={() => { setDraft(blankLead); setDrawer("new"); }} className="rounded-xl bg-cyan-400 px-3 py-2 text-xs font-black text-slate-950">+ Add Lead</button><button onClick={() => nav("/pm/onboarding")} className="rounded-xl border border-cyan-400/40 bg-cyan-500/10 px-3 py-2 text-xs font-black text-cyan-100">Tenant Onboarding</button><button onClick={syncInbox} disabled={busy} className="rounded-xl border border-emerald-400/45 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-100 disabled:opacity-50">{busy ? "Syncing..." : "Sync Inbox"}</button><button onClick={() => setDrawer("mail")} className="rounded-xl border border-fuchsia-400/45 bg-fuchsia-500/10 px-3 py-2 text-xs font-black text-fuchsia-100">Email Accounts</button><button onClick={() => nav("/pm/add-ons")} className="rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-xs font-black text-amber-100">Automation Plans</button></div></div></section>
     <section aria-label="Leasing pipeline" className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
       {pipelineGroups.map(group=><button key={group.id} type="button" onClick={()=>setStageFilter(group.id)}
         className={`min-h-20 rounded-2xl border p-3 text-left transition ${stageFilter===group.id?
@@ -236,7 +272,24 @@ export default function PMLeads() {
   </main>
 
   {drawer === "new" ? <Drawer title="Add Lead" onClose={() => setDrawer("")}>{leadForm(draft, setDraft)}</Drawer> : null}
-  {drawer === "lead" && selected ? <Drawer title={selected.full_name} width="max-w-4xl" onClose={() => setDrawer("")}><div className="space-y-4">{selected.classification_reason ? <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 text-xs"><strong>SYNC classification:</strong> {selected.classification_reason} · {selected.classification_confidence}% confidence</div> : null}{leadForm(selected, setSelected, true)}<div className="rounded-2xl border border-slate-800 p-3"><div className="text-sm font-black">Communication thread</div><div className="mt-3 space-y-2">{(selected.messages || []).length ? selected.messages.map((m) => <div key={m.id} className={`rounded-xl border p-3 ${m.direction === "OUTBOUND" ? "border-cyan-500/20 bg-cyan-500/5" : m.direction === "INTERNAL" ? "border-amber-500/20 bg-amber-500/5" : "border-slate-700 bg-slate-900/50"}`}><div className="flex justify-between gap-3 text-[10px] text-slate-500"><span>{m.direction} · {m.sender_name || m.sender_email || m.channel}</span><span>{String(m.sent_at || m.created_at || "").replace("T", " ").slice(0,16)}</span></div>{m.subject ? <div className="mt-1 text-xs font-black">{m.subject}</div> : null}<div className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-300">{m.body}</div></div>) : <div className="text-xs text-slate-500">No messages yet.</div>}</div><div className="mt-4 grid gap-3 sm:grid-cols-2"><div><textarea rows={4} className={inputClass} value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Reply by email..."/><button onClick={sendReply} disabled={busy || !selected.email} className="mt-2 rounded-lg bg-cyan-400 px-3 py-2 text-xs font-black text-slate-950 disabled:opacity-40">Send Email</button></div><div><textarea rows={4} className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Internal note — never emailed..."/><button onClick={addNote} disabled={busy} className="mt-2 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs font-black text-amber-100 disabled:opacity-40">Save Internal Note</button></div></div></div><div className="flex flex-wrap gap-2 border-t border-slate-800 pt-4">
+  {drawer === "lead" && selected ? <Drawer title={selected.full_name} width="max-w-4xl" onClose={() => setDrawer("")}><div className="space-y-4">{selected.classification_reason ? <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 text-xs"><strong>SYNC classification:</strong> {selected.classification_reason} · {selected.classification_confidence}% confidence</div> : null}{leadForm(selected, setSelected, true)}<div className="rounded-2xl border border-slate-800 p-3"><div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="text-sm font-black">Communication thread</div>
+      <button type="button" onClick={()=>setQuickOpen(v=>!v)}
+        className="rounded-lg border border-cyan-400/40 bg-cyan-500/10 px-3 py-2 text-xs font-black text-cyan-100">Quick message</button>
+    </div>
+    {quickOpen?<div className="mt-3 grid gap-2 rounded-xl border border-cyan-400/25 bg-black/30 p-3 sm:grid-cols-2">
+      <div><p className="mb-2 text-[10px] font-black uppercase text-cyan-200">Premade emails</p>
+        <div className="flex flex-wrap gap-2">{QUICK_EMAILS.map(row=><button key={row[0]} type="button"
+          onClick={()=>applyQuickEmail(row[0])} className="rounded-lg border border-slate-600 px-2 py-1.5 text-[10px] text-white">{row[1]}</button>)}</div>
+      </div>
+      <div><p className="mb-2 text-[10px] font-black uppercase text-amber-200">Internal notes</p>
+        <div className="flex flex-wrap gap-2">{QUICK_NOTES.map(row=><button key={row[0]} type="button"
+          onClick={()=>applyQuickNote(row[0])} className="rounded-lg border border-amber-400/30 px-2 py-1.5 text-[10px] text-amber-100">{row[1]}</button>)}</div>
+      </div>
+      <p className="sm:col-span-2 text-[10px] text-slate-400">Templates fill your draft; review and click Send Email or Save Internal Note yourself.</p>
+    </div>:null}<div className="mt-3 space-y-2">{(selected.messages || []).length ? selected.messages.map((m) => <div key={m.id} className={`rounded-xl border p-3 ${m.direction === "OUTBOUND" ? "border-cyan-500/20 bg-cyan-500/5" : m.direction === "INTERNAL" ? "border-amber-500/20 bg-amber-500/5" : "border-slate-700 bg-slate-900/50"}`}><div className="flex justify-between gap-3 text-[10px] text-slate-500"><span>{m.direction} · {m.sender_name || m.sender_email || m.channel}</span><span>{String(m.sent_at || m.created_at || "").replace("T", " ").slice(0,16)}</span></div>{m.subject ? <div className="mt-1 text-xs font-black">{m.subject}</div> : null}<div className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-300">{m.body}</div></div>) : <div className="text-xs text-slate-500">No messages yet.</div>}</div><div className="mt-4 grid gap-3 sm:grid-cols-2"><div><p className="mb-1 text-[10px] text-slate-400">To: {selected.email || "Add tenant email"}</p>
+    <input className={inputClass+" mb-2"} placeholder="Email subject (optional)" value={replySubject} onChange={e=>setReplySubject(e.target.value)}/>
+    <textarea rows={4} className={inputClass} value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Reply by email..."/><button onClick={sendReply} disabled={busy || !selected.email} className="mt-2 rounded-lg bg-cyan-400 px-3 py-2 text-xs font-black text-slate-950 disabled:opacity-40">Send Email</button></div><div><textarea rows={4} className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Internal note — never emailed..."/><button onClick={addNote} disabled={busy} className="mt-2 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs font-black text-amber-100 disabled:opacity-40">Save Internal Note</button></div></div></div><div className="flex flex-wrap gap-2 border-t border-slate-800 pt-4">
     <button onClick={() => { setDrawer(""); nav("/pm/onboarding?lead="+selected.id); }}
       className="rounded-lg border border-cyan-400/40 bg-cyan-500/10 px-3 py-2 text-xs font-black text-cyan-100">Application / Section 8 / Lease</button>
     <div className="w-full rounded-lg border border-amber-500/25 bg-amber-500/5 p-3 text-xs text-amber-100">Next action: {nextLeadAction(selected)}</div>

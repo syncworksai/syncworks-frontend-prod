@@ -117,6 +117,7 @@ function QuickOperations({ open, onClose, navigate, firstProperty }) {
     [Wrench, "Create work order", "Open and dispatch maintenance", "/pm/work-orders?create=1", "amber"],
     [Users, "Add tenant", "Create or invite a resident", "/pm/tenants", "fuchsia"],
     [Users, "Add lead", "Capture a call, email, or property inquiry", "/pm/leads?create=1", "cyan"],
+    [Mail, "Lead Automation", "Connected inboxes and recurring add-ons", "/pm/add-ons", "cyan"],
     [ClipboardList, "Tenant onboarding", "Lead, application, Section 8, lease and move-in", "/pm/onboarding", "cyan"],
     [Building2, "Add property", "Add a property to this portfolio", "/pm/properties/new", "emerald"],
     [ClipboardList, "Take over a property", "Guided handoff, documents, assistance programs and opening balances", "/pm/handoff", "cyan"],
