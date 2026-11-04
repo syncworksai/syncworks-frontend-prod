@@ -19,6 +19,8 @@ export default function PMLeadAddons() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [demoStep, setDemoStep] = useState("estimate");
+  const [demoInboxes, setDemoInboxes] = useState(3);
 
   useEffect(() => {
     let active=true;
@@ -39,6 +41,9 @@ export default function PMLeadAddons() {
   const percent = discountFor(mailboxes);
   const total = founder ? 0 : preview(mailboxes);
   const subtotal = founder ? 0 : mailboxes*999;
+  const demoSubtotal = demoInboxes * 999;
+  const demoPercent = discountFor(demoInboxes);
+  const demoTotal = preview(demoInboxes);
   function toggle(feature) {
     if(!data?.catalog?.[feature]?.available || data.catalog[feature].included)return;
     setChoices(old=>old.includes(feature)?old.filter(x=>x!==feature):[...old,feature]);
@@ -86,6 +91,52 @@ export default function PMLeadAddons() {
     {founder?<section className="rounded-2xl border border-emerald-400/35 bg-emerald-500/10 p-4">
       <div className="text-sm font-black text-emerald-200">Founder testing access · $0.00</div>
       <p className="mt-1 text-xs text-slate-300">This verified test account has access to all lead-automation entitlements and unlimited connected mailboxes. No Stripe subscription or credit card is required. Features not yet built remain marked in development.</p>
+    </section>:null}
+    {founder?<section className={panel} aria-label="Founder checkout simulation">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[.18em] text-amber-300">Founder only · Interactive demonstration</div>
+          <h2 className="mt-1 text-lg font-black">See how customer subscriptions work</h2>
+          <p className="mt-1 text-xs leading-5 text-slate-400">Simulate a paying PM company's selection, checkout and subscription management. This is an on-screen demonstration, not a real Stripe Checkout session. Nothing is charged or saved.</p>
+        </div>
+        <button type="button" onClick={()=>setDemoStep("estimate")}
+          className="rounded-lg border border-slate-600 px-3 py-2 text-[11px] text-slate-200">Restart demo</button>
+      </div>
+      <div className="mt-4 flex flex-wrap items-end gap-3">
+        <label className="text-xs text-slate-300">Example customer's inboxes
+          <input type="number" min="1" max="100" step="1" className="mt-1 block min-h-11 w-24 rounded-lg border border-slate-600 bg-slate-950 px-3 text-white"
+            value={demoInboxes}
+            onChange={e=>{setDemoInboxes(Math.max(1,Math.min(100,Math.round(Number(e.target.value)||1))));setDemoStep("estimate");}}/>
+        </label>
+        <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-2.5 text-xs">
+          Volume discount <strong className="ml-1 text-emerald-200">{demoPercent}%</strong>
+        </div>
+      </div>
+      <div className="mt-4 space-y-2 rounded-xl border border-cyan-400/20 bg-black/25 p-4 text-xs">
+        <div className="flex justify-between gap-2"><span className="text-slate-300">{demoInboxes} inboxes × $9.99</span><strong>{monthly(demoSubtotal)}</strong></div>
+        <div className="flex justify-between gap-2 text-emerald-200"><span>Volume discount ({demoPercent}%)</span><strong>−{monthly(demoSubtotal-demoTotal)}</strong></div>
+        <div className="flex justify-between gap-2 border-t border-slate-700 pt-2"><strong>Example recurring monthly total</strong><strong className="text-lg text-cyan-200">{monthly(demoTotal)}</strong></div>
+      </div>
+      {demoStep==="estimate"?<button type="button" onClick={()=>setDemoStep("checkout")}
+        className="mt-4 min-h-11 w-full rounded-xl bg-cyan-400 px-4 text-xs font-black text-slate-950">Preview customer Checkout</button>:null}
+      {demoStep==="checkout"?<div className="mt-3 space-y-3 rounded-xl border border-amber-400/35 bg-amber-500/5 p-4">
+        <strong className="text-sm text-amber-100">Sample Checkout · Demonstration only</strong>
+        <p className="text-xs leading-5 text-slate-300">A paying customer would be redirected to Stripe's secure hosted checkout, confirm their payment method, and authorize {monthly(demoTotal)} per month. Their access is not activated until the signed Stripe subscription webhook confirms it.</p>
+        <p className="text-[11px] text-slate-400">No card fields are displayed here. This simulation makes no network calls and creates no subscription.</p>
+        <button type="button" onClick={()=>setDemoStep("active")}
+          className="min-h-11 w-full rounded-xl bg-amber-300 px-4 text-xs font-black text-slate-950">Simulate completed Checkout · $0 charged</button>
+      </div>:null}
+      {demoStep==="active"?<div className="mt-3 space-y-3 rounded-xl border border-emerald-400/35 bg-emerald-500/5 p-4">
+        <strong className="text-sm text-emerald-200">Sample subscription · ACTIVE</strong>
+        <p className="text-xs text-slate-300">The customer would now have {demoInboxes} paid inbox seats, billed {monthly(demoTotal)} each month. They can open the Stripe Customer Portal to update their payment method, view billing details or cancel.</p>
+        <button type="button" onClick={()=>setDemoStep("cancelled")}
+          className="min-h-11 w-full rounded-xl border border-slate-600 px-4 text-xs font-bold text-white">Preview cancellation at end of billing period</button>
+      </div>:null}
+      {demoStep==="cancelled"?<div className="mt-3 space-y-3 rounded-xl border border-slate-600 bg-slate-900/60 p-4">
+        <strong className="text-sm text-slate-200">Sample subscription · CANCELLING</strong>
+        <p className="text-xs text-slate-300">The customer keeps paid access through the current paid billing period. The subscription will not renew after that date. Your founder access and the real Stripe account remain unchanged.</p>
+        <button type="button" onClick={()=>setDemoStep("estimate")} className="min-h-11 rounded-lg border border-cyan-400/40 px-4 text-xs font-black text-cyan-200">Try another example</button>
+      </div>:null}
     </section>:null}
     {data&&!founder?<section className={panel}>
       <div className="flex flex-wrap justify-between gap-3">
