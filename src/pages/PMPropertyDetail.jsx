@@ -58,9 +58,19 @@ export default function PMPropertyDetail() {
   const [savingStatus, setSavingStatus] = useState(false);
   const [summary, setSummary] = useState(null);
   const [summaryError, setSummaryError] = useState("");
+  const [inquiryCount, setInquiryCount] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if(!workspace?.id || !propertyId)return undefined;
+    let live=true;
+    api.get("/pm-hub/onboarding/overview/",{headers:{"X-PM-Workspace-ID":String(workspace.id)}})
+      .then(r => {if(live)setInquiryCount(r.data?.properties?.find(p=>String(p.id)===String(propertyId))?.inquiries ?? null);})
+      .catch(()=>{if(live)setInquiryCount(null)});
+    return()=>{live=false};
+  },[workspace?.id,propertyId]);
 
   async function load() {
     setLoading(true);
@@ -194,6 +204,13 @@ export default function PMPropertyDetail() {
     <nav id="pm-property-sections" aria-label="Property 360 sections" className="sticky top-[max(4rem,env(safe-area-inset-top))] z-20 flex scroll-mt-24 gap-1.5 overflow-x-auto rounded-xl border border-cyan-500/15 bg-[#07111f]/95 p-1.5 backdrop-blur">{tabs.filter(item => item !== "tenantpreview" || isRoxanaPilotProperty(property)).map((item) => <button key={item} type="button" onClick={() => { setTab(item); nav(`/pm/properties/${propertyId}?tab=${item}`); }} className={`min-h-9 shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-black ${tab === item ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>{tabLabels[item]}</button>)}</nav>
 
     {tab === "overview" ? <div className="space-y-3">
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-400/25 bg-cyan-500/5 p-3">
+        <div><h2 className="text-sm font-black text-cyan-100">Leasing & Section 8 profile</h2>
+          <p className="mt-1 text-[11px] text-slate-400">
+            {inquiryCount===null ? "Inquiries not checked" : inquiryCount+" recorded inquiries"} · Voucher standards and proposed rent stay separate from approved HAP amounts.
+          </p></div>
+        <Button tone="cyan" onClick={()=>nav("/pm/onboarding?property="+propertyId)}>Open Onboarding / Pricing</Button>
+      </section>
       <section className="rounded-xl border border-slate-700 bg-[#07111f] p-3">
         <div className="flex items-center justify-between gap-2">
           <div><h2 className="text-sm font-black text-white">Lifecycle & property details</h2>
