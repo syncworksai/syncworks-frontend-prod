@@ -94,6 +94,9 @@ export default function PMPayments() {
   const [lateAgreed, setLateAgreed] = useState(false);
   const [lateBusy, setLateBusy] = useState(false);
   const [lateError, setLateError] = useState("");
+  const [waiveForm, setWaiveForm] = useState(null);
+  const [waiveBusy, setWaiveBusy] = useState(false);
+  const [waiveError, setWaiveError] = useState("");
   const [externalForm, setExternalForm] = useState({ category: "HAP_PAID_TO_FORMER_MANAGER", period: today.slice(0, 7), amount: "", evidence_status: "REPORTED", note: "" });
   const [drawer, setDrawer] = useState(params.get("add") === "1" ? "entry" : "");
   const [entry, setEntry] = useState({ ...blankEntry, tenant: params.get("tenant") || "", entry_date: params.get("rent_month") ? "" : today, memo: params.get("rent_month") ? "Owner-selected rent reference month: " + params.get("rent_month") + ". Allocate to oldest eligible charge; use actual receipt date." : "" });
@@ -284,12 +287,16 @@ export default function PMPayments() {
 
 
   function openLateReview(month) {
+    const roxanaPilot = String(filterTenant) === "1" && String(propertyFilter) === "1";
     setLateForm({
       month,
-      amount: String(payer.profile?.late_fee_amount && Number(payer.profile.late_fee_amount) > 0 ? payer.profile.late_fee_amount : "50.00"),
-      due_day: String(payer.profile?.rent_due_day || 1),
-      grace_days: String(payer.profile?.grace_days ?? 0),
-      source_note: "",
+      stage: roxanaPilot ? "AFTER_5TH" : "STANDARD",
+      amount: roxanaPilot ? "50.00" : String(payer.profile?.late_fee_amount && Number(payer.profile.late_fee_amount) > 0 ? payer.profile.late_fee_amount : "50.00"),
+      due_day: roxanaPilot ? "1" : String(payer.profile?.rent_due_day || 1),
+      grace_days: roxanaPilot ? "5" : String(payer.profile?.grace_days ?? 0),
+      source_note: roxanaPilot
+        ? "Adair signed lease (October 2024), rent due the 1st; $50 after the 5th and an additional $50 after the 10th. Verify receipts, month-to-month terms and HAP requirements."
+        : "",
     });
     setLatePreview(null); setLateAgreed(false); setLateError("");
     setDrawer("lateReview");
@@ -308,6 +315,31 @@ export default function PMPayments() {
       } else setLatePreview(r.data);
     } catch (err) { setLateError(err?.response?.data?.detail || "Unable to review the fee."); }
     finally { setLateBusy(false); }
+  }
+
+  function openFeeWaiver(fee, month) {
+    setWaiveForm({ feeId: fee.id, month, originalAmount: String(fee.amount), reason: "", confirmed: false });
+    setWaiveError(""); setDrawer("feeWaiver");
+  }
+
+  async function saveFeeWaiver() {
+    if (!waiveForm || !filterTenant || !workspace?.id) return;
+    if (waiveForm.reason.trim().length < 5 || !waiveForm.confirmed) {
+      setWaiveError("Provide a waiver reason and confirm the decision.");
+      return;
+    }
+    setWaiveBusy(true); setWaiveError("");
+    try {
+      await api.post(
+        `/pm-hub/billing/tenants/${filterTenant}/late-fees/${waiveForm.feeId}/waive/`,
+        { reason: waiveForm.reason.trim(), amount: waiveForm.originalAmount, confirmed: true }, { headers },
+      );
+      setDrawer(""); setWaiveForm(null);
+      setMessage(`Late fee waived for ${waiveForm.month}. Original charge and credit remain in history.`);
+      await load(); await loadPayer(filterTenant);
+    } catch (err) {
+      setWaiveError(err?.response?.data?.detail || "Could not save the waiver. Check fee history before trying again.");
+    } finally { setWaiveBusy(false); }
   }
 
   function selectTenant(id) {
@@ -541,6 +573,7 @@ export default function PMPayments() {
           onEditRent={() => navigate("/pm/rent-correction?tenant=" + filterTenant)}
           onHousingEvidence={(month) => { setExternalForm((old) => ({...old, period: month})); setExternalError(""); setDrawer("external"); }}
           onLateFee={openLateReview}
+          onWaiveFee={openFeeWaiver}
           onAdvanced={() => setViewMode("advanced")}
           onBillingRules={() => setDrawer("rules")}
           onLeaseBuilder={() => navigate("/pm/lease-builder?tenant=" + filterTenant)}
@@ -632,9 +665,37 @@ export default function PMPayments() {
         </> : null}
       </main>
 
+      {drawer === "feeWaiver" && waiveForm ? <Drawer title={`Waive late fee · ${waiveForm.month}`} onClose={closeDrawer}>
+        <div className="space-y-3 pb-6 text-sm">
+          <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs leading-5 text-emerald-100">
+            Waiving {money(waiveForm.originalAmount)} records a credit against this fee only. The original charge stays in the audit trail; this does not mark rent or MHA paid.
+          </p>
+          <Field label="Fee being waived"><div className="rounded-lg border border-slate-700 px-3 py-2 font-bold">{money(waiveForm.originalAmount)}</div></Field>
+          <Field label="Reason for waiver"><textarea rows={3} className={inputClass} value={waiveForm.reason}
+            onChange={e => setWaiveForm(x => ({...x, reason:e.target.value, confirmed:false}))}
+            placeholder="Owner-approved courtesy waiver, correction or documented reason"/></Field>
+          <label className="flex items-start gap-2 text-xs text-slate-300">
+            <input type="checkbox" className="mt-0.5 h-4 w-4" checked={waiveForm.confirmed}
+              onChange={e => setWaiveForm(x => ({...x, confirmed:e.target.checked}))}/>
+            I authorize this waiver and understand the original fee remains visible in accounting history.
+          </label>
+          {waiveError ? <p role="alert" className="rounded-lg border border-rose-500/35 p-3 text-xs text-rose-200">{waiveError}</p> : null}
+          <button type="button" onClick={saveFeeWaiver} disabled={waiveBusy || !waiveForm.confirmed || waiveForm.reason.trim().length < 5}
+            className="min-h-11 w-full rounded-lg bg-emerald-400 px-4 text-xs font-black text-slate-950 disabled:opacity-40">
+            {waiveBusy ? "Saving waiver…" : "Confirm waive " + money(waiveForm.originalAmount)}
+          </button>
+        </div>
+      </Drawer> : null}
       {drawer === "lateReview" && lateForm ? <Drawer title={`Late fee: ${lateForm.month}`} onClose={closeDrawer}>
         <div className="space-y-3 pb-6 text-sm">
           <p className="rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100">A past-due balance alone does not prove a late fee is owed. Confirm the actual lease due date, grace period, permitted fee amount, and payment history. The assistance administrator's unpaid share is never used for this test.</p>
+          {String(filterTenant) === "1" && String(propertyFilter) === "1" ?
+            <Field label="Roxana signed lease stage"><select className={inputClass} value={lateForm.stage}
+              onChange={e => { setLatePreview(null); setLateAgreed(false);
+                setLateForm(x => ({...x,stage:e.target.value,grace_days:e.target.value==="AFTER_5TH"?"5":"10"})); }}>
+              <option value="AFTER_5TH">First $50 · after the 5th</option>
+              <option value="AFTER_10TH">Additional $50 · after the 10th</option>
+            </select></Field> : null}
           <div className="grid grid-cols-2 gap-2">
             <Field label="Fee amount from lease"><input className={inputClass} inputMode="decimal" value={lateForm.amount} onChange={(e) => { setLatePreview(null); setLateAgreed(false); setLateForm((x) => ({ ...x, amount: e.target.value })); }} /></Field>
             <Field label="Due day"><input type="number" min="1" max="28" className={inputClass} value={lateForm.due_day} onChange={(e) => { setLatePreview(null); setLateAgreed(false); setLateForm((x) => ({ ...x, due_day: e.target.value })); }} /></Field>
@@ -643,8 +704,8 @@ export default function PMPayments() {
           <Field label="Signed lease clause and payment-date evidence"><textarea className={inputClass} rows={3} value={lateForm.source_note} onChange={(e) => { setLatePreview(null); setLateAgreed(false); setLateForm((x) => ({ ...x, source_note: e.target.value })); }} placeholder="E.g. Lease section X: $50 fee after due date; receipts reviewed..." /></Field>
           {lateError ? <p role="alert" className="rounded-lg border border-rose-400/25 bg-rose-500/10 p-3 text-xs text-rose-200">{lateError}</p> : null}
           <button type="button" onClick={() => auditLateFee(false)} disabled={lateBusy} className="min-h-11 w-full rounded-xl border border-cyan-400/40 bg-cyan-500/10 text-xs font-black text-cyan-100 disabled:opacity-40">Preview fee eligibility</button>
-          {latePreview ? <div className="space-y-2 rounded-xl border border-slate-700 p-3 text-xs"><p>Tenant rent unpaid at grace deadline: <strong>{money(latePreview.unpaid_tenant_rent_at_grace)}</strong></p><p>Proposed fee: <strong>{money(latePreview.fee)}</strong> · Effective {latePreview.fee_date}</p><p className={latePreview.eligible_for_review ? "text-amber-200" : "text-emerald-200"}>{latePreview.eligible_for_review ? "Eligible for documented review; confirm lease terms before posting." : "No late fee indicated by payment timing."}</p>{latePreview.eligible_for_review ? <>
-            <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 h-4 w-4" checked={lateAgreed} onChange={(e) => setLateAgreed(e.target.checked)}/><span>I verified the signed lease, due/grace dates, charge amount, and all receipts. I authorize this single monthly fee.</span></label>
+          {latePreview ? <div className="space-y-2 rounded-xl border border-slate-700 p-3 text-xs"><p>Tenant rent unpaid at deadline: <strong>{money(latePreview.unpaid_tenant_rent_at_grace)}</strong></p><p>Proposed fee: <strong>{money(latePreview.fee)}</strong> · Effective {latePreview.fee_date}</p><p className={latePreview.eligible_for_review ? "text-amber-200" : "text-emerald-200"}>{latePreview.eligible_for_review ? "Eligible for documented review; confirm lease terms before posting." : "No late fee indicated by payment timing."}</p>{latePreview.eligible_for_review ? <>
+            <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 h-4 w-4" checked={lateAgreed} onChange={(e) => setLateAgreed(e.target.checked)}/><span>I verified the signed lease, due/grace dates, charge amount, and all receipts. I authorize this specific fee stage; no duplicate fee is allowed.</span></label>
             <button type="button" onClick={() => auditLateFee(true)} disabled={!lateAgreed || lateBusy} className="min-h-11 w-full rounded-xl bg-cyan-400 text-xs font-black text-slate-950 disabled:opacity-40">Post verified late fee</button></> : null}</div> : null}
         </div>
       </Drawer> : null}
