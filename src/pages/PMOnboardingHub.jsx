@@ -73,6 +73,19 @@ export default function PMOnboardingHub(){
       setNotice("Applicant and voucher/agent details saved for reuse.");await refresh();
     });
   }
+  function exportApplication(){
+    if(!lead)return;
+    const record={lead_id:lead.id,name:lead.full_name,email:lead.email,source:lead.source,
+      stage:lead.stage,application_status:applicationStatus,property:lead.property_name||"",
+      ...profile};
+    const pairs=Object.entries(record);
+    const escaped=x=>'"'+String(x??"").replaceAll('"','""')+'"';
+    const csv=pairs.map(([k,v])=>escaped(k)+","+escaped(v)).join("\r\n");
+    const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+    const anchor=document.createElement("a");
+    anchor.href=url;anchor.download="syncworks-pm-application-"+lead.id+".csv";
+    document.body.appendChild(anchor);anchor.click();anchor.remove();URL.revokeObjectURL(url);
+  }
   async function invite(){
     if(!leadId||!lead?.email)return;
     await run(async()=>{
@@ -159,6 +172,7 @@ export default function PMOnboardingHub(){
         </div>:null}
         <div className="flex flex-wrap gap-2">
           <button className={act} disabled={busy} onClick={saveLeadProfile}>Save applicant</button>
+          <button className={act} type="button" onClick={exportApplication}>Export application CSV</button>
           <button className={primary} disabled={busy||!lead.email} onClick={invite}>Create application link</button>
           {applicationStatus==="SUBMITTED" && lead.stage!=="APPROVED"?
             <button className={act} disabled={busy} onClick={approve}>Approve application</button>:null}
@@ -212,6 +226,13 @@ export default function PMOnboardingHub(){
         <button className={act} onClick={()=>nav("/pm/lease-builder"+(tenantId?"?tenant="+tenantId:""))}>Lease Builder</button>
         <button className={act} onClick={()=>nav(propertyId?"/pm/properties/"+propertyId+"?tab=documents":"/pm/properties")}>Document Center</button>
         <button className={act} onClick={()=>nav("/pm/tenants")}>Tenant invite / move-in</button>
+      </div>
+      <div className="mt-3 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-[11px] text-amber-100">
+        <strong>State compliance review:</strong> {property?.state||"Choose a property"} lease terms must be reviewed against local law.
+        For a voucher tenancy, attach the full HUD tenancy addendum and verify RFTA, approved rent,
+        inspection and HAP paperwork before activating the lease or billing.
+        <a href="https://www.hud.gov/helping-americans/housing-choice-vouchers-landlord-forms"
+          target="_blank" rel="noreferrer" className="ml-1 underline">HUD landlord forms</a>
       </div>
       <p className="mt-2 text-[10px] text-amber-200">The draft PDF is not a legal signature. Secure e-sign and state-approved templates still need integration and verification.</p>
     </section>
