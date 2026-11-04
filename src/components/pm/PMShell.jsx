@@ -12,6 +12,8 @@ const navItems = [
   ["Lease Builder", "/pm/lease-builder", "folder"],
   ["Rent Corrections", "/pm/rent-correction", "money"],
   ["WORKFLOWS", "", "", "section"],
+  ["Leads", "/pm/leads", "users"],
+  ["Tenant Onboarding", "/pm/onboarding", "leasing"],
   ["Takeovers", "/pm/handoff", "folder"],
   ["Documents & Signatures", "/pm/document-requests", "folder"],
   ["Rent Increases", "/pm/rent-increases", "calendar"],
@@ -20,7 +22,6 @@ const navItems = [
   ["PEOPLE & TEAM", "", "", "section"],
   ["Team & Assignments", "/pm/team", "team"],
   ["Messages", "/pm/settings?view=messages", "messages"],
-  ["Leads", "/pm/settings?view=leads", "users"],
   ["Settings", "/pm/settings", "settings"],
 ];
 
@@ -33,6 +34,8 @@ const pageMeta = {
   "/pm/document-requests": ["Document Requests", "Route tenant, owner, management and external agency paperwork and reminders."],
   "/pm/rent-increases": ["Rent Increase Planner", "Prepare notice, approvals, signature requirements and future rent changes."],
   "/pm/leasing": ["Leasing Pipeline", "Manage prospects, applications, showings, Section 8 needs, available units, and onboarding."],
+  "/pm/leads": ["PM Leads Command Center", "Track inquiries, next actions, applications, approvals, and lease readiness."],
+  "/pm/onboarding": ["Tenant & Partner Onboarding", "Carry applicant details from lead to lease, signing and move-in."],
   "/pm/tenants": ["Tenant Center", "Manage tenant records, lease terms, onboarding, and communication."],
   "/pm/payments": ["Payments & Ledger", "Record charges, payments, credits, adjustments, balances, and tenant ledgers."],
   "/pm/rent-correction": ["Rent Correction", "Preview monthly tenant and assistance allocations, preserve receipts and late fees."],
