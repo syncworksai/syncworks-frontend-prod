@@ -209,7 +209,10 @@ export default function PMPropertyDetail() {
           <p className="mt-1 text-[11px] text-slate-400">
             {inquiryCount===null ? "Inquiries not checked" : inquiryCount+" recorded inquiries"} · Voucher standards and proposed rent stay separate from approved HAP amounts.
           </p></div>
-        <Button tone="cyan" onClick={()=>nav("/pm/onboarding?property="+propertyId)}>Open Onboarding / Pricing</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button tone="slate" onClick={()=>nav("/pm/leads?property="+propertyId+"&create=1")}>+ Inquiry</Button>
+          <Button tone="cyan" onClick={()=>nav("/pm/onboarding?property="+propertyId)}>Onboarding / Pricing</Button>
+        </div>
       </section>
       <section className="rounded-xl border border-slate-700 bg-[#07111f] p-3">
         <div className="flex items-center justify-between gap-2">
