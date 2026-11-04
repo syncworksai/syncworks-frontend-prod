@@ -161,6 +161,7 @@ export default function TenantDashboard() {
   const lease = accountData?.lease || {};
   const ledger = accountData?.ledger || [];
   const documents = accountData?.documents || [];
+  const unsignedPackets = documents.filter(item => item.signature_pending);
   const management = accountData?.management || {};
 
   return (
@@ -254,6 +255,14 @@ export default function TenantDashboard() {
               </Card>
             </div>
 
+            {unsignedPackets.length ? <section role="status" className="rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4">
+              <div className="text-[10px] font-black uppercase tracking-wider text-amber-300">Action required · Unsigned paperwork</div>
+              <h2 className="mt-1 text-base font-black text-white">{unsignedPackets.length} document{unsignedPackets.length === 1 ? "" : "s"} awaiting signature</h2>
+              <div className="mt-2 space-y-1">{unsignedPackets.map(item=><div key={item.id} className="text-xs text-slate-200">• {item.template_name || "Lease document"} · Pending approved signing method</div>)}</div>
+              <p className="mt-2 text-[11px] text-amber-100">This is a draft/signature request, not a signed lease. Ask management for its secure signing link or approved paper process.</p>
+              <button type="button" onClick={() => {setMessageForm({subject:"Unsigned lease / onboarding documents",body:"Please send the approved signing link or tell me how to sign my pending documents."});setMessageOpen(true);}}
+                className="mt-3 min-h-10 rounded-lg border border-amber-400/40 px-3 text-xs font-bold text-amber-100">Request signing link</button>
+            </section> : null}
             {documentActions.length ? <Card title="Required Documents & Actions" subtitle="What your property manager needs from you">
               <div className="grid gap-2 sm:grid-cols-2">{documentActions.filter(x=>!["VERIFIED","CANCELED"].includes(x.status)).map(action=><article key={action.id} className="rounded-xl border border-cyan-400/20 bg-black/25 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-1"><div className="text-xs font-black text-white">{action.title}</div><Pill tone="blue">{label(action.status)}</Pill></div>
