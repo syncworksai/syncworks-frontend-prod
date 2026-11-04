@@ -1,17 +1,11 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
+import { matchesPMProperty } from "../../utils/pmPropertySearch";
+export { matchesPMProperty };
 
 /** Match street numbers, property names, city and ZIP in any order.
  * "338 roxana" finds "Roxana — 3380 Roxana Road" and "chastain 907" finds Chastain Park Dr.
  * A PM can use the same picker for leads, applications and tenant creation.
  */
-export function matchesPMProperty(property, search) {
-  const tokens = String(search || "").trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
-  if (!tokens.length) return true;
-  const fields = [property?.name, property?.address, property?.street_address,
-    property?.city, property?.state, property?.zip, property?.postal_code,
-    property?.unit_label].filter(Boolean).join(" ").toLocaleLowerCase();
-  return tokens.every(token => fields.includes(token));
-}
 
 export default function PMPropertyPicker({
   properties = [], value = "", onChange, label = "Property", placeholder = "Search property name, street number, address or ZIP...",
