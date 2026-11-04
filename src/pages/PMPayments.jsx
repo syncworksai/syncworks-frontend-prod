@@ -287,7 +287,7 @@ export default function PMPayments() {
 
 
   function openLateReview(month) {
-    const roxanaPilot = String(filterTenant) === "1" && String(propertyFilter) === "1";
+    const roxanaPilot = String(filterTenant) === "1" && /roxana/i.test(String(selectedTenant?.property_name || ""));
     setLateForm({
       month,
       stage: roxanaPilot ? "AFTER_5TH" : "STANDARD",
@@ -689,7 +689,7 @@ export default function PMPayments() {
       {drawer === "lateReview" && lateForm ? <Drawer title={`Late fee: ${lateForm.month}`} onClose={closeDrawer}>
         <div className="space-y-3 pb-6 text-sm">
           <p className="rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100">A past-due balance alone does not prove a late fee is owed. Confirm the actual lease due date, grace period, permitted fee amount, and payment history. The assistance administrator's unpaid share is never used for this test.</p>
-          {String(filterTenant) === "1" && String(propertyFilter) === "1" ?
+          {String(filterTenant) === "1" && /roxana/i.test(String(selectedTenant?.property_name || "")) ?
             <Field label="Roxana signed lease stage"><select className={inputClass} value={lateForm.stage}
               onChange={e => { setLatePreview(null); setLateAgreed(false);
                 setLateForm(x => ({...x,stage:e.target.value,grace_days:e.target.value==="AFTER_5TH"?"5":"10"})); }}>
