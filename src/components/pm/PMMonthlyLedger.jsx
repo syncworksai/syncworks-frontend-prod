@@ -33,7 +33,7 @@ function Badge({status}) {
 
 export default function PMMonthlyLedger({
   tenant, workspace, entries = [], allocation, payer, onAddPayment, onEditRent,
-  onHousingEvidence, onLateFee, onAdvanced, onBillingRules, onLeaseBuilder,
+  onHousingEvidence, onLateFee, onWaiveFee, onAdvanced, onBillingRules, onLeaseBuilder,
 }) {
   const [schedule, setSchedule] = useState(null);
   const [billing, setBilling] = useState(null);
@@ -70,6 +70,7 @@ export default function PMMonthlyLedger({
         month, transactions: [], scheduled: null, rentTenant: 0, rentHousing: 0,
         postedRentCharges: 0, postedFees: 0, tenantReceived: 0, housingReceived: 0,
         unapplied: false, tenantOpen: 0, housingOpen: 0, feeOpen: 0,
+        feeCharged: 0, feeWaived: 0, feeEntries: [], waiverEntries: [],
       });
       return rowsByMonth.get(month);
     };
@@ -88,11 +89,36 @@ export default function PMMonthlyLedger({
         else row.rentTenant += amount;
         if (item.entry_type === "CHARGE" || item.entry_type === "ADJUSTMENT") row.postedRentCharges += val(item.amount);
       }
-      if (String(item.category || "").toUpperCase() === "LATE_FEE") row.postedFees += val(item.amount) * sign(item);
+      if (String(item.category || "").toUpperCase() === "LATE_FEE") {
+        if (["CHARGE", "ADJUSTMENT"].includes(item.entry_type)) {
+          row.postedFees += val(item.amount);
+          row.feeCharged += val(item.amount);
+          if (item.entry_type === "CHARGE") row.feeEntries.push(item);
+        } else if (item.entry_type === "CREDIT" && !String(item.reference || "").startsWith("LATE-WAIVE-")) {
+          row.postedFees -= val(item.amount);
+        }
+      }
       if (item.entry_type === "PAYMENT") {
         if (housing(item)) row.housingReceived += val(item.amount);
         else row.tenantReceived += val(item.amount);
       }
+    }
+    // The waiver is posted on the day it is approved, but it belongs visually
+    // to the original month's fee, not the waiver transaction's calendar month.
+    const chargeMonths = new Map();
+    for (const row of rowsByMonth.values()) {
+      for (const fee of row.feeEntries) chargeMonths.set(String(fee.id), row.month);
+    }
+    for (const item of entries) {
+      if (String(item.tenant) !== String(tenantId) || item.entry_type !== "CREDIT" ||
+          String(item.category || "").toUpperCase() !== "LATE_FEE") continue;
+      const match = /^LATE-WAIVE-(\d+)$/.exec(String(item.reference || ""));
+      if (!match) continue;
+      const origin = chargeMonths.get(match[1]);
+      if (!origin) continue;
+      const row = ensure(origin);
+      row.feeWaived += val(item.amount);
+      row.waiverEntries.push(item);
     }
     ensure(currentMonth());
     if (allocation) {
@@ -153,11 +179,11 @@ export default function PMMonthlyLedger({
   const exportRows = [
     ["Month","Status","Contract rent (reference)","Tenant portion (schedule)","Housing portion (schedule)","Abated assistance",
       "Tenant net posted rent","Housing net posted rent","Tenant payments dated this month","Housing payments dated this month",
-      "Tenant rent outstanding oldest-first","Housing rent outstanding oldest-first","Late fees posted net","Late fees outstanding","Note"],
+      "Tenant rent outstanding oldest-first","Housing rent outstanding oldest-first","Late fees charged","Fees waived","Fees outstanding","Note"],
     ...rows.slice().reverse().map((r) => [
       r.month,r.status.label,r.expected.toFixed(2),r.suggestedTenant.toFixed(2),r.suggestedHousing.toFixed(2),r.abated.toFixed(2),
       r.rentTenant.toFixed(2),r.rentHousing.toFixed(2),r.tenantReceived.toFixed(2),r.housingReceived.toFixed(2),
-      r.tenantOpen.toFixed(2),r.housingOpen.toFixed(2),r.postedFees.toFixed(2),r.feeOpen.toFixed(2),
+      r.tenantOpen.toFixed(2),r.housingOpen.toFixed(2),r.feeCharged.toFixed(2),r.feeWaived.toFixed(2),r.feeOpen.toFixed(2),
       r.mismatch ? "Saved split differs from posted charges; verify before correction" : "",
     ]),
     [],
@@ -228,7 +254,7 @@ export default function PMMonthlyLedger({
               ["Assistance due", r.scheduled || (r.month === currentMonth() && billing?.lease) ? r.suggestedHousing : r.rentHousing, "text-fuchsia-200"],
               ["Tenant paid", r.tenantReceived, "text-emerald-200"],
               ["MHA paid", r.housingReceived, "text-emerald-200"],
-              ["Late fees", r.postedFees, "text-amber-200"],
+              ["Late fee", r.feeCharged, "text-amber-200"],
               ["Balance due", r.ready ? r.tenantOpen + r.feeOpen : "Not billed", r.ready ? (r.tenantOpen + r.feeOpen > .005 ? "text-rose-200" : "text-emerald-200") : "text-amber-200"],
             ].map(([label, amount, tone]) => <div key={label}
               className="min-w-0 rounded-md border border-slate-700/70 bg-black/20 px-1.5 py-1.5 sm:px-2">
@@ -236,6 +262,10 @@ export default function PMMonthlyLedger({
               <div className={"mt-0.5 truncate text-[11px] font-black tabular-nums sm:text-xs " + tone}>{typeof amount === "string" ? amount : usd(amount)}</div>
             </div>)}
           </div>
+          {r.feeWaived > .005 ? <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[10px] font-semibold text-emerald-200">
+            <span className="rounded-md border border-emerald-500/35 bg-emerald-500/10 px-1.5 py-0.5">Late fee waived: {usd(r.feeWaived)}</span>
+            <span className="text-slate-400">Fee still due: {usd(r.feeOpen)}</span>
+          </div> : null}
           <div className="mt-2 flex items-center justify-between gap-2 text-[10px]">
             <span className="min-w-0 truncate text-slate-400">
               {r.abated > .005 ? usd(r.abated) + " MHA abated · " : ""}
@@ -248,7 +278,7 @@ export default function PMMonthlyLedger({
             {r.mismatch && <p className="rounded-lg border border-amber-500/30 p-2 text-[10px] text-amber-200">The saved monthly split differs from posted rent. Review before correcting it. A rent schedule is not a payment receipt.</p>}
             <div className="grid grid-cols-3 gap-1.5 rounded-lg border border-slate-700/70 p-2 text-[10px]">
               <span className="text-slate-400">Rent open <strong className="text-white">{usd(r.tenantOpen)}</strong></span>
-              <span className="text-slate-400">Fees open <strong className="text-amber-200">{usd(r.feeBalance)}</strong></span>
+              <span className="text-slate-400">Fee due <strong className="text-amber-200">{usd(r.feeBalance)}</strong></span>
               <span className="text-slate-400">MHA open <strong className="text-fuchsia-200">{usd(r.housingOpen)}</strong></span>
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -258,9 +288,27 @@ export default function PMMonthlyLedger({
                 <button type="button" className={textButton} onClick={()=>onAddPayment(r.month,"HOUSING")}>+ MHA payment</button>
                 <button type="button" className={textButton} onClick={()=>onHousingEvidence(r.month)}>MHA details</button>
               </> : null}
-              <button type="button" className={textButton} onClick={()=>onLateFee(r.month)}>Add fee</button>
+              <button type="button" className={textButton} onClick={()=>onLateFee(r.month)}>Charge fee</button>
               <button type="button" className={textButton} onClick={onAdvanced}>History</button>
             </div>
+            {r.feeEntries.length ? <div className="space-y-1.5 rounded-lg border border-amber-500/20 bg-amber-500/[.04] p-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-bold text-slate-300">
+                <span>Late-fee history</span><span>Charged {usd(r.feeCharged)} · Waived {usd(r.feeWaived)}</span>
+              </div>
+              {r.feeEntries.map(fee => {
+                const waived = r.waiverEntries.filter(w => w.reference === "LATE-WAIVE-" + fee.id)
+                  .reduce((total, w) => total + val(w.amount), 0);
+                return <div key={fee.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-700/70 px-2 py-1.5 text-[10px]">
+                  <div><span className="font-bold text-slate-100">{usd(fee.amount)} charged</span>
+                    <span className="ml-1 text-slate-400">{fee.entry_date}</span>
+                    {waived > .005 ? <span className="ml-2 font-bold text-emerald-200">{usd(waived)} waived</span> : null}
+                    <p className="mt-1 max-w-sm text-slate-500">{fee.memo || "Late fee entered in accounting"}</p>
+                  </div>
+                  {waived < .005 ? <button type="button" className={textButton} onClick={() => onWaiveFee(fee,r.month)}>Waive fee</button> :
+                    <span className="font-semibold text-emerald-200">Waived</span>}
+                </div>;
+              })}
+            </div> : null}
             {r.payments.length ? <div className="space-y-1">
               <div className="text-[10px] font-bold text-slate-300">Payments recorded this month</div>
               {r.payments.map((p) => <div key={p.id} className="flex items-center justify-between gap-2 rounded-md bg-black/20 px-2 py-1.5 text-[10px]">

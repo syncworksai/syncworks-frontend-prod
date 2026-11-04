@@ -10,7 +10,7 @@ const F=({name,children})=><label className="block min-w-0 text-[10px] font-bold
 const Box=({title,desc,children})=><section className="rounded-xl border border-cyan-400/15 bg-[#07111f] p-3 sm:p-4"><h2 className="text-sm font-black">{title}</h2>{desc?<p className="mt-1 text-[11px] text-slate-400">{desc}</p>:null}<div className="mt-3">{children}</div></section>;
 const roxana={
  active:false,billing_start_date:"2026-11-01",due_day:1,grace_days:5,
- late_fee_amount:"50.00",auto_late_fees:false,late_fee_verified:false,
+ late_fee_amount:"50.00",late_fee_schedule:"TWO_STAGE",auto_late_fees:false,late_fee_verified:false,
  verified_through:"2026-10",source_note:"Current $1,485 lease. Prior MHA correspondence: October 2026 abatement; November MHA $377 must be independently reverified before assisted automatic billing.",
  // Historical 2026 months are reconciled separately; recurring billing must start in November.
  monthly_overrides:{}
@@ -166,6 +166,13 @@ export default function PMLeaseBuilder(){
     <F name="Due day"><select value={config.due_day||1} onChange={e=>changeCfg("due_day",Number(e.target.value))} className={field}>{[1,2,3,5,10,15,20,25,28].map(n=><option key={n} value={n}>{n}{n===1?"st of month":""}</option>)}</select></F>
     <F name="Grace period (days)"><input type="number" min="0" max="30" className={field} value={config.grace_days||0} onChange={e=>changeCfg("grace_days",Number(e.target.value))}/></F>
     <F name="Late fee"><input inputMode="decimal" className={field} value={config.late_fee_amount||"0"} onChange={e=>changeCfg("late_fee_amount",e.target.value)}/></F>
+    <F name="Late-fee schedule">
+      <select className={field} value={config.late_fee_schedule||"SINGLE"}
+        onChange={e => changeCfg("late_fee_schedule",e.target.value)}>
+        <option value="SINGLE">Single fee after grace period</option>
+        <option value="TWO_STAGE">Two fees: after 5th and 10th</option>
+      </select>
+    </F>
     {leaseForm.section8?<F name="Voucher allocation verified through"><input type="month" className={field} value={config.verified_through||""} onChange={e=>changeCfg("verified_through",e.target.value)}/></F>:null}
    </div>
    <div className="mt-3 flex flex-wrap gap-3">
@@ -173,7 +180,15 @@ export default function PMLeaseBuilder(){
     <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={Boolean(config.late_fee_verified)} onChange={e=>changeCfg("late_fee_verified",e.target.checked)}/>Signed $50 fee provision verified</label>
     <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={Boolean(config.auto_late_fees)} onChange={e=>changeCfg("auto_late_fees",e.target.checked)}/>Automatic FUTURE late fees</label>
    </div>
-   <p className="mt-2 text-[10px] text-slate-400">Historical late fees need individual review. Automatic recurring billing requires the daily billing job to be connected on the production server; activating a schedule here doesn't independently schedule a server.</p>
+   <p className="mt-2 text-[10px] text-slate-400">
+     Two-stage terms apply only to a verified lease requiring rent on the 1st, $50 after the 5th and another $50 after the 10th.
+     Each stage checks the tenant's unpaid rent as of its deadline. Previously charged or waived fees cannot be duplicated.
+   </p>
+   <p className="mt-1 text-[10px] text-amber-200">
+     Automatic future fees require a verified clause, explicit opt-in and a scheduled server job.
+     Do not enable automated fees for Roxana while the historical ledger and MHA billing are under reconciliation.
+     Saving a policy alone never triggers fees or schedules a server.
+   </p>
    <F name="Source / signed agreement"><textarea className={field} rows={2} value={config.source_note||""} onChange={e=>changeCfg("source_note",e.target.value)}/></F>
    <button disabled={busy} onClick={saveSchedule} className="mt-3 min-h-10 rounded-lg border border-cyan-400/40 bg-cyan-500/10 px-4 text-xs font-black text-cyan-100">Save billing schedule</button>
   </Box>
