@@ -116,6 +116,7 @@ function QuickOperations({ open, onClose, navigate, firstProperty }) {
     [DollarSign, "Add ledger entry", "Record a charge, payment, credit, or adjustment", "/pm/payments?add=1", "cyan"],
     [Wrench, "Create work order", "Open and dispatch maintenance", "/pm/work-orders?create=1", "amber"],
     [Users, "Add tenant", "Create or invite a resident", "/pm/tenants", "fuchsia"],
+    [ClipboardList, "Tenant onboarding", "Lead, application, Section 8, lease and move-in", "/pm/onboarding", "cyan"],
     [Building2, "Add property", "Add a property to this portfolio", "/pm/properties/new", "emerald"],
     [ClipboardList, "Take over a property", "Guided handoff, documents, assistance programs and opening balances", "/pm/handoff", "cyan"],
     [MessageSquare, "New message", "Tenant, owner, team, or collections", "/pm/settings?view=messages&compose=1", "violet"],
@@ -250,6 +251,7 @@ export default function PropertyManagerDashboard() {
         ["Team & Tasks","/pm/team",Users],
         ["Investors & Payouts","/pm/investors",WalletCards],
         ["Documents","/pm/document-requests",FileSearch],
+        ["Tenant Onboarding","/pm/onboarding",ClipboardList],
         ["Property Takeovers","/pm/handoff",ClipboardList],
       ].map(([label,href,Icon])=><button type="button" key={href} onClick={()=>nav(href)} className="rounded-xl border border-slate-700 bg-black/20 p-2.5 text-left text-[11px] font-bold hover:border-cyan-400/30"><Icon className="mb-1.5 h-4 w-4 text-cyan-300"/>{label}</button>)}</div>
     </Card>
