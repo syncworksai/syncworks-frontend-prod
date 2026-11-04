@@ -1,6 +1,7 @@
 import React,{useEffect,useState} from "react";
 import {useNavigate,useSearchParams} from "react-router-dom";
 import api from "../api/client";
+import PMPropertyPicker, { matchesPMProperty } from "../components/pm/PMPropertyPicker";
 const field="min-h-10 w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white";
 const act="min-h-10 rounded-lg border border-cyan-400/35 bg-cyan-500/10 px-3 text-xs font-bold text-cyan-100 disabled:opacity-40";
 const primary="min-h-10 rounded-lg bg-cyan-400 px-4 text-xs font-black text-slate-950 disabled:opacity-40";
@@ -13,12 +14,14 @@ export default function PMOnboardingHub(){
   const nav=useNavigate(),[params,setParams]=useSearchParams();
   const [ws,setWs]=useState(null),[leads,setLeads]=useState([]),[overview,setOverview]=useState(null);
   const [leadId,setLeadId]=useState(params.get("lead")||""),[propertyId,setPropertyId]=useState(params.get("property")||"");
+  const [propertySearch,setPropertySearch]=useState("");
   const [profile,setProfile]=useState(blank),[applicationStatus,setApplicationStatus]=useState("NOT_STARTED");
   const [housing,setHousing]=useState(emptyHousing),[link,setLink]=useState(""),[tenantId,setTenantId]=useState("");
   const [error,setError]=useState(""),[notice,setNotice]=useState(""),[busy,setBusy]=useState(false);
   const headers=ws?.id?{"X-PM-Workspace-ID":String(ws.id)}:{};
   const lead=leads.find(x=>String(x.id)===String(leadId));
   const property=overview?.properties?.find(x=>String(x.id)===String(propertyId));
+  const visibleProperties=(overview?.properties||[]).filter(p=>matchesPMProperty(p,propertySearch)).slice(0,24);
   const update=(key,value)=>setProfile(x=>({...x,[key]:value}));
   const updateHousing=(key,value)=>setHousing(x=>({...x,[key]:value}));
   const alertError=e=>setError(e?.response?.data?.detail||"Could not complete the operation.");
@@ -144,7 +147,7 @@ export default function PMOnboardingHub(){
     <section className={panel}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div><h2 className="text-base font-black">1 · Leads & application</h2><p className="mt-1 text-xs text-slate-400">Phone and email inquiries live on the dedicated PM Leads page.</p></div>
-        <button className={primary} onClick={()=>nav("/pm/settings?view=leads")}>Add / find lead</button>
+        <button className={primary} onClick={()=>nav("/pm/leads?create=1")}>+ Add lead</button>
       </div>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <label className="text-[10px] text-slate-400">Select lead<select className={field+" mt-1"} value={leadId} onChange={e=>choose("lead",e.target.value,setLeadId)}>
@@ -155,9 +158,8 @@ export default function PMOnboardingHub(){
       {lead?<div className="mt-3 space-y-3 border-t border-slate-700 pt-3">
         <p className="text-[11px] text-slate-400">{lead.full_name} · Source: {lead.source_label||lead.source} · Stage: {lead.stage}</p>
         <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-          <label className="text-[10px] text-slate-400">Property (optional)<select className={field+" mt-1"} value={profile.property_id||""} onChange={e=>update("property_id",e.target.value)}>
-            <option value="">Not selected yet</option>{(overview?.properties||[]).map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-          </select></label>
+          <PMPropertyPicker properties={overview?.properties||[]} value={profile.property_id||""}
+            onChange={value=>update("property_id",value)} label="Interested property (optional)" />
           {input("Phone",profile.phone,v=>update("phone",v))}
           {input("Preferred move-in",profile.preferred_move_in,v=>update("preferred_move_in",v),"date")}
         </div>
@@ -171,6 +173,7 @@ export default function PMOnboardingHub(){
           {input("Voucher notes",profile.housing_notes,v=>update("housing_notes",v))}
         </div>:null}
         <div className="flex flex-wrap gap-2">
+          <button className={act} type="button" onClick={()=>nav("/pm/leads?lead="+leadId)}>Open lead timeline</button>
           <button className={act} disabled={busy} onClick={saveLeadProfile}>Save applicant</button>
           <button className={act} type="button" onClick={exportApplication}>Export application CSV</button>
           <button className={primary} disabled={busy||!lead.email} onClick={invite}>Create application link</button>
@@ -193,11 +196,21 @@ export default function PMOnboardingHub(){
     <section className={panel}>
       <h2 className="text-base font-black">2 · Properties & Section 8 rates</h2>
       <p className="mt-1 text-xs text-slate-400">Inquiry counts and voucher-related pricing stay attached to the property. A payment standard is not an approved HAP allocation.</p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <PMPropertyPicker properties={overview?.properties||[]} value={propertyId} onChange={value=>choose("property",value,setPropertyId)}
+          label="Find property — name, street number or address" />
+        <label className="block text-[10px] text-slate-400">Filter portfolio cards
+          <input className={field+" mt-1"} placeholder="338 roxana, 907 chastain, city or ZIP" value={propertySearch}
+            onChange={e=>setPropertySearch(e.target.value)} /></label>
+      </div>
+      <p className="mt-2 text-[10px] text-slate-500">
+        Showing {visibleProperties.length} of {overview?.properties?.length||0} properties. Choose a match to open its Section 8 reference.
+      </p>
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {(overview?.properties||[]).map(p=><button key={p.id} onClick={()=>choose("property",p.id,setPropertyId)}
+        {visibleProperties.map(p=><button key={p.id} onClick={()=>choose("property",p.id,setPropertyId)}
           className={"rounded-xl border p-3 text-left "+(String(p.id)===String(propertyId)?"border-cyan-300 bg-cyan-500/10":"border-slate-700 bg-black/20")}>
           <div className="text-sm font-bold">{p.name}</div><div className="text-[10px] text-slate-500">{p.address}</div>
-          <div className="mt-2 text-xs text-cyan-200">{p.inquiries} inquiries</div>
+          <div className="mt-2 text-xs text-cyan-200">{p.inquiries} linked {p.inquiries===1?"inquiry":"inquiries"}</div>
         </button>)}
       </div>
       {property?<div className="mt-3 space-y-3 rounded-xl border border-slate-700 p-3">
