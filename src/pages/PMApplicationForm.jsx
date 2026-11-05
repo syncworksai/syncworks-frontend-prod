@@ -52,6 +52,7 @@ export default function PMApplicationForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [certified, setCertified] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
   const applicantName = loaded?.name || [user?.first_name, user?.last_name].filter(Boolean).join(" ");
   const applicantEmail = loaded?.email || user?.email || "";
@@ -89,11 +90,24 @@ export default function PMApplicationForm() {
     return () => { alive = false; };
   }, [token, user?.phone, user?.phone_number, user?.address]);
 
+  async function saveDraft() {
+    if (!loaded || isSaving || isSubmitted) return;
+    setError(""); setNotice(""); setIsSaving(true);
+    try {
+      await api.patch("/pm-hub/onboarding/applications/my/", {
+        ...form, token, property_id: loaded.property_id || "",
+      });
+      setNotice("Draft saved. You can return with the same application link to finish later.");
+    } catch (e) {
+      setError(e?.response?.data?.detail || "Could not save your application draft.");
+    } finally { setIsSaving(false); }
+  }
+
   async function submit(event) {
     event.preventDefault();
     if (!loaded || isSaving || isSubmitted) return;
     if (!certified) { setError("Confirm the accuracy statement before submitting."); return; }
-    setError(""); setIsSaving(true);
+    setError(""); setNotice(""); setIsSaving(true);
     try {
       await api.post("/pm-hub/onboarding/applications/my/", {
         ...form, token, property_id: loaded.property_id || "", certifies_truth: true,
@@ -135,6 +149,7 @@ export default function PMApplicationForm() {
 
       {isLoading ? <p className="text-sm text-slate-300">Loading your application…</p> : null}
       {error ? <div role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-100">{error}</div> : null}
+      {notice ? <div role="status" className="rounded-xl border border-emerald-400/40 bg-emerald-500/10 p-3 text-xs text-emerald-200">{notice}</div> : null}
       {isSubmitted ? <section className="rounded-2xl border border-emerald-400/40 bg-emerald-500/10 p-5">
         <h2 className="text-lg font-black text-emerald-200">Application received</h2>
         <p className="mt-2 text-sm text-slate-200">
@@ -240,6 +255,10 @@ export default function PMApplicationForm() {
           <button type="button" disabled={step === 0 || isSaving}
             onClick={() => { setStep(s => Math.max(0, s - 1)); setError(""); }}
             className="min-h-11 rounded-xl border border-slate-700 px-4 text-xs font-bold disabled:opacity-40">Back</button>
+          <button type="button" onClick={saveDraft} disabled={isSaving}
+            className="min-h-11 rounded-xl border border-cyan-400/40 px-4 text-xs font-bold text-cyan-100 disabled:opacity-40">
+            {isSaving ? "Saving…" : "Save draft"}
+          </button>
           {step < steps.length - 1 ?
             <button type="button" onClick={nextStep}
               className="min-h-11 rounded-xl bg-cyan-400 px-6 text-xs font-black text-slate-950">Continue</button> :
