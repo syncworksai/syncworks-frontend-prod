@@ -121,3 +121,11 @@ test("SWFF26 platform fee disclaimer appears only at subscription redemption",()
   assert.match(upgrade,/1% SyncWorks platform transaction fee/);
   assert.match(upgrade,/subscriptions_exempt/);
 });
+
+test("mobile add-business form retains safe scroll and tappable submit",()=>{
+ const page=read("src/pages/AddBusiness.jsx");
+ assert.match(page,/data-sw-business-onboarding/);
+ assert.match(page,/pb-\[max\(14rem,env\(safe-area-inset-bottom\)\)\]/);
+ assert.match(page,/touch-manipulation/);
+ assert.match(page,/disabled=\{saving\}/);
+});
