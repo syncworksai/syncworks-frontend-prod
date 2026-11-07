@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import Button from "../components/ui/Button";
+import { useAuth } from "../auth/AuthContext";
 
 function Card({ title, subtitle, right, children }) {
   return (
@@ -40,6 +41,7 @@ function useQuery() {
 
 export default function EmployeeInvite() {
   const nav = useNavigate();
+  const { reloadBusinesses, setActiveBusinessId, setMode } = useAuth();
   const q = useQuery();
 
   const inputRef = useRef(null);
@@ -111,6 +113,9 @@ export default function EmployeeInvite() {
       // This endpoint does NOT need X-Business-Id because the invite code determines the business.
       const r = await api.post("/auth/employee-invites/accept/", { code: trimmed });
 
+      if (r?.data?.business_id) setActiveBusinessId?.(r.data.business_id);
+      await reloadBusinesses?.();
+      setMode?.("EMPLOYEE");
       setOk(r?.data?.detail || "Invite accepted.");
       setErr("");
 
