@@ -139,6 +139,7 @@ export default function Login({ backgroundOnly = false }) {
   const returnTo = safeReturnPath(searchParams.get("next") || location.state?.from);
   const inviteRole = returnTo.startsWith("/tenant/accept") ? "tenant" : returnTo.startsWith("/investor/accept") ? "owner" : null;
   const applicantInvite = returnTo.startsWith("/pm/apply?token=");
+  const employeeInvite = returnTo.startsWith("/employee/invite?code=");
   const invitedCode = inviteRole ? (new URLSearchParams(returnTo.split("?")[1] || "")).get("code") || "" : "";
 
   const invitedEmail = String(searchParams.get("email") || "").trim().toLowerCase();
@@ -151,16 +152,16 @@ export default function Login({ backgroundOnly = false }) {
     const signUpEmail = String(emailOrUser || invitedEmail).trim();
     if (signUpEmail.includes("@")) signupParams.set("email",signUpEmail);
   }
-  if (applicantInvite) {
+  if (applicantInvite || employeeInvite) {
     signupParams.set("role", "personal");
     signupParams.set("next", returnTo);
     if (emailOrUser.trim().includes("@")) signupParams.set("email", emailOrUser.trim());
   }
-  const signupPath = inviteRole && invitedCode ? `/register?${signupParams.toString()}` : applicantInvite ? `/register?${signupParams.toString()}` : "/get-started";
+  const signupPath = (inviteRole && invitedCode) || applicantInvite || employeeInvite ? `/register?${signupParams.toString()}` : "/get-started";
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
-  const [signInOpen, setSignInOpen] = useState(false);
+  const [signInOpen, setSignInOpen] = useState(() => employeeInvite);
   const [activeRole, setActiveRole] = useState(ROLE_OPTIONS[0].id);
 
   useEffect(() => {

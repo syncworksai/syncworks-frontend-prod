@@ -1,5 +1,5 @@
 // src/pages/EmployeeInvite.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import Button from "../components/ui/Button";
@@ -44,23 +44,26 @@ export default function EmployeeInvite() {
   const { reloadBusinesses, setActiveBusinessId, setMode } = useAuth();
   const q = useQuery();
 
-  const inputRef = useRef(null);
+  // Older invitation emails contained escaped newlines appended to the URL.
+  const cleanInviteCode = (value) => String(value || "").split(/\\n|\r|\n/)[0].trim();
 
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [me, setMe] = useState(null);
 
-  const [code, setCode] = useState(q.get("code") || "");
+  const [code, setCode] = useState(() => cleanInviteCode(q.get("code")));
   const [accepting, setAccepting] = useState(false);
 
   const [ok, setOk] = useState("");
   const [err, setErr] = useState("");
 
   const nextUrl = useMemo(() => {
-    const c = encodeURIComponent(code || q.get("code") || "");
+    const c = encodeURIComponent(cleanInviteCode(code || q.get("code")));
     return `/employee/invite${c ? `?code=${c}` : ""}`;
   }, [code, q]);
 
   const isAuthed = !!me && !me?.detail;
+  const loginLink = `/login?next=${encodeURIComponent(nextUrl)}`;
+  const signupLink = `/register?role=personal&next=${encodeURIComponent(nextUrl)}`;
 
   async function checkAuth() {
     setCheckingAuth(true);
@@ -78,14 +81,9 @@ export default function EmployeeInvite() {
 
   // Keep code in sync if user arrives with ?code=
   useEffect(() => {
-    const incoming = q.get("code") || "";
+    const incoming = cleanInviteCode(q.get("code"));
     if (incoming && !code) setCode(incoming);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Autofocus code box if present / useful
-  useEffect(() => {
-    if (inputRef.current) inputRef.current.focus();
   }, []);
 
   useEffect(() => {
@@ -94,7 +92,7 @@ export default function EmployeeInvite() {
   }, []);
 
   async function acceptInvite() {
-    const trimmed = String(code || "").trim();
+    const trimmed = cleanInviteCode(code);
     if (!trimmed) {
       setErr("Invite code is required.");
       return;
@@ -131,7 +129,7 @@ export default function EmployeeInvite() {
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100">
+    <div className="min-h-screen bg-[#020617] pb-40 text-slate-100">
       {/* Minimal public header (no ModeBar; avoids BusinessPicker dependency) */}
       <div className="border-b border-slate-900/80 bg-slate-950/40">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-3 flex-wrap">
@@ -143,7 +141,7 @@ export default function EmployeeInvite() {
 
           <div className="flex items-center gap-2">
             <Link
-              to={isAuthed ? "/employee" : `/login?next=${encodeURIComponent(nextUrl)}`}
+              to={isAuthed ? "/employee" : loginLink}
               className="inline-flex items-center justify-center h-9 text-xs rounded-xl px-4 border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40 text-slate-200"
             >
               {isAuthed ? "Go to Employee" : "Login"}
@@ -151,7 +149,7 @@ export default function EmployeeInvite() {
 
             {!isAuthed ? (
               <Link
-                to={`/register?next=${encodeURIComponent(nextUrl)}`}
+                to={signupLink}
                 className="inline-flex items-center justify-center h-9 text-xs rounded-xl px-4 border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-200"
               >
                 Create Account
@@ -223,7 +221,7 @@ export default function EmployeeInvite() {
                   If you already have a SyncWorks account, login and you’ll return here automatically.
                 </div>
                 <div className="flex gap-2 flex-wrap">
-                  <Link to={`/login?next=${encodeURIComponent(nextUrl)}`}>
+                  <Link to={loginLink}>
                     <Button tone="cyan">Login</Button>
                   </Link>
                   <Link to={`/register?next=${encodeURIComponent(nextUrl)}`}>
@@ -231,8 +229,7 @@ export default function EmployeeInvite() {
                   </Link>
                 </div>
                 <div className="text-[11px] text-slate-500">
-                  Later: we’ll support “employee-only account” onboarding too (no customer profile created unless they
-                  choose).
+                  Create a free Personal account with the email that received this invitation. Your team access is added after accepting.
                 </div>
               </div>
             )}
@@ -245,11 +242,10 @@ export default function EmployeeInvite() {
           >
             <div className="space-y-3">
               <div>
-                <div className="text-xs text-slate-400 mb-1">Invite code</div>
+                <div className="text-xs text-slate-400 mb-1">Invitation code (filled automatically)</div>
                 <input
-                  ref={inputRef}
                   value={code}
-                  onChange={(e) => setCode(e.target.value)}
+                  onChange={(e) => setCode(cleanInviteCode(e.target.value))}
                   className="w-full rounded-2xl bg-slate-950 border border-slate-800 px-4 py-2 text-sm"
                   placeholder="e.g., BAtfcm-6HpiCdqZTs1WEjg"
                 />
