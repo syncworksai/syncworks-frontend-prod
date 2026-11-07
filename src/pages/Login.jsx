@@ -161,7 +161,7 @@ export default function Login({ backgroundOnly = false }) {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
-  const [signInOpen, setSignInOpen] = useState(false);
+  const [signInOpen, setSignInOpen] = useState(() => employeeInvite);
   const [activeRole, setActiveRole] = useState(ROLE_OPTIONS[0].id);
 
   useEffect(() => {
