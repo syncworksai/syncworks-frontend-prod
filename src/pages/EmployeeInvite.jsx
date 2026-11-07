@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import Button from "../components/ui/Button";
+import { useAuth } from "../auth/AuthContext";
 
 function Card({ title, subtitle, right, children }) {
   return (
@@ -40,6 +41,7 @@ function useQuery() {
 
 export default function EmployeeInvite() {
   const nav = useNavigate();
+  const { reloadBusinesses, setActiveBusinessId, setMode } = useAuth();
   const q = useQuery();
 
   const inputRef = useRef(null);
@@ -109,8 +111,11 @@ export default function EmployeeInvite() {
     try {
       // ✅ IMPORTANT:
       // This endpoint does NOT need X-Business-Id because the invite code determines the business.
-      const r = await api.post("/pm/employees/invites/accept/", { code: trimmed });
+      const r = await api.post("/auth/employee-invites/accept/", { code: trimmed });
 
+      if (r?.data?.business_id) setActiveBusinessId?.(r.data.business_id);
+      await reloadBusinesses?.();
+      setMode?.("EMPLOYEE");
       setOk(r?.data?.detail || "Invite accepted.");
       setErr("");
 
@@ -176,7 +181,7 @@ export default function EmployeeInvite() {
         <div className="grid md:grid-cols-2 gap-4">
           <Card
             title="Step 1: Login or create your account"
-            subtitle="This supports SSO — employee and customer can be the same login (optional)."
+            subtitle="Use the same SyncWorks account for Personal and Employee workspaces. Your existing password stays unchanged."
             right={
               checkingAuth ? (
                 <Pill tone="slate">Checking…</Pill>
@@ -235,7 +240,7 @@ export default function EmployeeInvite() {
 
           <Card
             title="Step 2: Accept your invite"
-            subtitle="Paste the invite code from your email (or it may already be in the link)."
+            subtitle="Your employer sent a secure invitation link. The code is already filled in when you open it."
             right={<Pill tone="cyan">Secure</Pill>}
           >
             <div className="space-y-3">
