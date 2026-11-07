@@ -567,7 +567,7 @@ export default function Register() {
   const [inviteCode, setInviteCode] = useState(() => String(invitationFromLink).trim());
   const signInPath = isPropertyInvite
     ? `/login?next=${encodeURIComponent(claimPath(inviteCode))}&email=${encodeURIComponent(email || invitedEmail)}`
-    : "/login";
+    : returnTo.startsWith("/employee/invite?code=") ? `/login?next=${encodeURIComponent(returnTo)}&email=${encodeURIComponent(email || invitedEmail)}` : "/login";
   const [challengeId, setChallengeId] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [registrationProof, setRegistrationProof] = useState("");
