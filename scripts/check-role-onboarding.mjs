@@ -129,3 +129,16 @@ test("mobile add-business form retains safe scroll and tappable submit",()=>{
  assert.match(page,/touch-manipulation/);
  assert.match(page,/disabled=\{saving\}/);
 });
+
+test("employee email link preserves clean code through login and registration",()=>{
+  const invite=read("src/pages/EmployeeInvite.jsx");
+  const login=read("src/pages/Login.jsx");
+  const register=read("src/pages/Register.jsx");
+  assert.match(invite,/cleanInviteCode/);
+  assert.match(invite,/signupLink = `\/register\?role=personal&next=/);
+  assert.match(invite,/loginLink = `\/login\?next=/);
+  assert.match(invite,/\/auth\/employee-invites\/accept\//);
+  assert.match(login,/employeeInvite = returnTo.startsWith/);
+  assert.match(login,/useState\(\(\) => employeeInvite\)/);
+  assert.match(register,/returnTo.startsWith\("\/employee\/invite\?code="\)/);
+});
