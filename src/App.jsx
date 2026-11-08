@@ -19,6 +19,7 @@ import CustomerDashboard from "./pages/CustomerDashboardResponsive";
 import CustomerGames from "./pages/CustomerGames";
 import CustomerGamesLibrary from "./pages/CustomerGamesLibrary";
 import CustomerFYB from "./pages/CustomerFYB";
+import Customer442 from "./pages/Customer442";
 import CustomerQueenFollower from "./pages/CustomerQueenFollower";
 import CustomerCardClubs from "./pages/CustomerCardClubs";
 import CustomerNewRequest from "./pages/CustomerNewRequest";
@@ -216,6 +217,7 @@ export default function App() {
         <Route path="/customer/games" element={<ProtectedRoute><CustomerGamesLibrary /></ProtectedRoute>} />
         <Route path="/customer/games/357" element={<ProtectedRoute><CustomerGames /></ProtectedRoute>} />
         <Route path="/customer/games/fyb" element={<ProtectedRoute><CustomerFYB /></ProtectedRoute>} />
+        <Route path="/customer/games/442" element={<ProtectedRoute><Customer442 /></ProtectedRoute>} />
         <Route path="/customer/games/queen-follower" element={<ProtectedRoute><CustomerQueenFollower /></ProtectedRoute>} />
         <Route path="/customer/games/clubs" element={<ProtectedRoute><CustomerCardClubs /></ProtectedRoute>} />
         <Route path="/customer/affiliate" element={<ProtectedRoute><AffiliateDashboard /></ProtectedRoute>} />
