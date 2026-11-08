@@ -18,6 +18,7 @@ import AddBusiness from "./pages/AddBusiness";
 import CustomerDashboard from "./pages/CustomerDashboardResponsive";
 import CustomerGames from "./pages/CustomerGames";
 import CustomerPokerTable from "./pages/CustomerPokerTable";
+import CustomerJoinPokerRoom from "./pages/CustomerJoinPokerRoom";
 import CustomerNewPokerGame from "./pages/CustomerNewPokerGame";
 import CustomerGamesLibrary from "./pages/CustomerGamesLibrary";
 import CustomerGamesHome from "./pages/CustomerGamesHome";
@@ -228,6 +229,7 @@ export default function App() {
         <Route path="/customer/games/clubs/room-preview" element={<ProtectedRoute><CustomerCardClubRoom /></ProtectedRoute>} />
         <Route path="/customer/games/357" element={<ProtectedRoute><CustomerGames /></ProtectedRoute>} />
         <Route path="/customer/games/table" element={<ProtectedRoute><CustomerPokerTable /></ProtectedRoute>} />
+        <Route path="/customer/games/join" element={<ProtectedRoute><CustomerJoinPokerRoom /></ProtectedRoute>} />
         <Route path="/customer/games/new" element={<ProtectedRoute><CustomerNewPokerGame /></ProtectedRoute>} />
         <Route path="/customer/games/fyb" element={<ProtectedRoute><CustomerFYB /></ProtectedRoute>} />
         <Route path="/customer/games/442" element={<ProtectedRoute><Customer442 /></ProtectedRoute>} />
