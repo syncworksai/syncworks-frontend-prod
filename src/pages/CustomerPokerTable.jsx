@@ -233,7 +233,7 @@ export default function CustomerPokerTable(){
  }
  function next(){
   if(phase!=="resolved")return;
-  if(pot===0){finishGameAndPassDealer();return;}
+  if(pot===0&&(outcome?.kind==="drag"||outcome?.kind==="instant")){finishGameAndPassDealer();return;}
   if(round===2||outcome?.kind==="instant"||pot>=capCents){
    // A replacement pot stays with the current dealer and game.
    dealOpening(pot,chipStacks,strikes);return;
@@ -245,7 +245,7 @@ export default function CustomerPokerTable(){
  const currentPlayer=displayIndex!==null?people[displayIndex]:null;
  const readyCount=choices.filter(c=>c!==null).length;
  const canReveal=phase==="revealing"&&currentReveal!==undefined;
- const gameOver=pot===0&&phase==="resolved";
+ const gameOver=pot===0&&phase==="resolved"&&(outcome?.kind==="drag"||outcome?.kind==="instant");
  return <main className="sw-poker-screen"><div className="sw-poker-content">
   <header className="sw-poker-top">
    <button type="button" className="sw-poker-back" onClick={()=>nav(groupId?"/customer/games/new?group="+encodeURIComponent(groupId):"/customer/games")} aria-label="Back to lobby"><ArrowLeft size={21}/></button>
