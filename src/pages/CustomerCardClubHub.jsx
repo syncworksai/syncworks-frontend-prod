@@ -3,7 +3,7 @@ import {ArrowLeft,ArrowRight,Check,Copy,Plus,RefreshCcw,Trophy,Users,WalletCards
 import {useNavigate,useSearchParams} from "react-router-dom";
 import {createGroup,createGroupInviteLink,getGroupMembers,getGroups,getMemberships} from "../api/social";
 
-const GAMES=[["357","3-5-7 DROP"],["fyb","FYB"],["queen-follower","Queen & the Follower"],["442","4/4/Deuce"]];
+const GAMES=[["357","3-5-7 DROP"],["fyb","FYB"],["queen-follower","Queen & the Follower"],["442","4/4/Deuce"],["bozo","Bozo · The Clown"],["manual","Manual Poker"]];
 const cents=v=>Math.round(Number(v)*100);
 const fmt=v=>(Math.abs(v)/100).toLocaleString("en-US",{style:"currency",currency:"USD"});
 const key=id=>`syncworks-games-club-ledger-local-v2-${id}`;
