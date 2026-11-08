@@ -1,0 +1,21 @@
+name: SyncWorks Poker Table Logic
+
+on:
+  pull_request:
+    paths:
+      - "src/games/drop357Table.mjs"
+      - "src/games/drop357Table.test.mjs"
+      - "src/games/bozoRules.mjs"
+      - ".github/workflows/poker-table-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  table-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check table rules
+        run: node --test src/games/drop357Table.test.mjs

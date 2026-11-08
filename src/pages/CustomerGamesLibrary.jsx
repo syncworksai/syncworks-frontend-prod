@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 const accents = { cyan: "border-cyan-300/20 bg-cyan-500/10 text-cyan-200", emerald: "border-emerald-300/20 bg-emerald-500/10 text-emerald-200", violet: "border-violet-300/20 bg-violet-500/10 text-violet-200" };
 const tiles = [
-  { title: "3-5-7 DROP", subtitle: "3s → 5s → 7s wild", note: "Hold or drop, drag-and-replace pot, cumulative lone holds", icon: Spade, path: "/customer/games/357", status: "Playable local beta", accent: "cyan" },
+  { title: "3-5-7 DROP", subtitle: "3s → 5s → 7s wild", note: "Hold or drop, drag-and-replace pot, cumulative lone holds", icon: Spade, path: "/customer/games/table", status: "Interactive local beta", accent: "cyan" },
   { title: "4/4/Deuce", subtitle: "2s wild · 4s conditional", note: "Guts declarations, re-ante and capped match-the-pot preview", icon: Spade, path: "/customer/games/442", status: "Rules sandbox", accent: "cyan" },
   { title: "Bozo · The Clown", subtitle: "Beat the ghost hand", note: "One Clown card sets global wilds; hold or drop for a guarded community pot", icon: Club, path: "/customer/games/bozo", status: "Local beta", accent: "emerald" },
   { title: "FYB", subtitle: "Low card loses", note: "Pass left, Kings block trades, three chips to start", icon: Club, path: "/customer/games/fyb", status: "Playable local beta", accent: "emerald" },
