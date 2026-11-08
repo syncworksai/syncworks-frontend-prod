@@ -13,6 +13,7 @@ const HIDDEN_PREFIXES = [
   "/sports/team-invite",
   "/social/invite",
   "/customer/games/table",
+  "/customer/games/clubs/room",
 ];
 
 function contextualPrompt(pathname) {

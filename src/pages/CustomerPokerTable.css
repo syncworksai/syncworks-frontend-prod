@@ -119,3 +119,22 @@
 .sw-poker-settlement-row {display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid #6a3542;background:#401b2d65;padding:9px 10px;border-radius:10px;font-size:12px;color:#ffd1d9}
 .sw-poker-settlement-row strong{color:#ffa9ba}
 @media (prefers-reduced-motion:reduce){.sw-poker-chip-flight,.sw-poker-win-pop,.sw-poker-loss-pop,.sw-poker-spinner,.sw-poker-winner-banner{animation:none}}
+
+/* Shared waiting room uses the same neon/navy + green felt visual language as gameplay. */
+.sw-live-lobby-felt-wrap {position:relative;padding:50px 6px 50px;max-width:850px;margin:0 auto 12px;isolation:isolate}
+.sw-live-lobby-felt {position:relative;aspect-ratio:1.5/1;width:100%;border-radius:49%/45%;border:11px solid #50361e;background:radial-gradient(ellipse at 45% 44%,#0b6252,#034639 65%,#002c24);box-shadow:inset 0 0 0 3px #d0ac63,inset 0 0 0 7px #163a2c,inset 0 0 78px #001e18,0 0 30px #16bceb30,0 20px 38px #0009}
+.sw-live-lobby-inner-ring {position:absolute;inset:15px;border:1px solid #66c4ab55;border-radius:49%/45%;pointer-events:none}
+.sw-live-lobby-center {position:absolute;top:50%;left:50%;width:65%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;pointer-events:none}
+.sw-live-lobby-logo {font-style:italic;font-size:34px;font-weight:1000;color:#64bca66c;line-height:1}
+.sw-live-lobby-center>strong {font-size:clamp(10px,2vw,20px);letter-spacing:.22em;font-weight:1000;color:#99cbb7aa}
+.sw-live-lobby-pot {margin-top:7px;padding:6px 11px;border:1px solid #80e6e8;border-radius:30px;background:#041a25bb;color:#d1f9ff;font-weight:900;font-size:clamp(9px,2vw,13px);box-shadow:0 0 16px #45aefb3f;white-space:nowrap}
+.sw-live-lobby-seat {position:absolute;transform:translate(-50%,-50%);z-index:4;display:flex;flex-direction:column;align-items:center;min-width:66px;max-width:115px}
+.sw-live-lobby-avatar,.sw-live-lobby-empty {width:43px;height:43px;flex-shrink:0;border-radius:50%;border:2px solid #91acfa;background:linear-gradient(140deg,#19355c,#31246f);display:grid;place-items:center;color:white;font-size:13px;font-weight:900;box-shadow:0 0 13px #4e80e45c;position:relative}
+.sw-live-lobby-empty {color:#baf1ff;font-size:25px;border-color:#58cce9;cursor:pointer}
+.sw-live-lobby-empty:disabled {opacity:.62;cursor:default}
+.sw-live-lobby-dealer {position:absolute;right:-12px;bottom:-5px;background:#fff;color:#08182a;border:2px solid #8d9ab1;border-radius:50%;height:23px;width:23px;display:grid;place-items:center;font-size:11px}
+.sw-live-lobby-name {margin-top:3px;max-width:110px;min-width:75px;border-radius:10px;background:#061526f1;border:1px solid #34617e;padding:4px 7px;text-align:center;box-shadow:0 4px 12px #0008}
+.sw-live-lobby-name strong {display:block;font-size:11px;line-height:1.2;white-space:nowrap;max-width:100px;overflow:hidden;text-overflow:ellipsis}
+.sw-live-lobby-name small {display:block;color:#78f7bb;font-size:10px;margin-top:2px;white-space:nowrap}
+@media(min-width:650px){.sw-live-lobby-felt-wrap{padding:64px 25px}.sw-live-lobby-avatar,.sw-live-lobby-empty{width:56px;height:56px}.sw-live-lobby-name strong{font-size:13px}}
+@media(max-width:420px){.sw-live-lobby-felt-wrap{padding:42px 0 50px}.sw-live-lobby-felt{border-width:8px}.sw-live-lobby-avatar,.sw-live-lobby-empty{width:34px;height:34px}.sw-live-lobby-name{min-width:62px;padding:4px}.sw-live-lobby-name strong{font-size:9px}.sw-live-lobby-name small{font-size:9px}.sw-live-lobby-seat{min-width:62px}.sw-live-lobby-pot{font-size:8px}}
