@@ -40,6 +40,7 @@ export default function CustomerPokerTable(){
  const [phase,setPhase]=useState("setup"),[round,setRound]=useState(0),[hands,setHands]=useState([]),[deck,setDeck]=useState([]);
  const [choices,setChoices]=useState([]),[viewer,setViewer]=useState(null);
  const [counter,setCounter]=useState(null),[reveal,setReveal]=useState({}),[outcome,setOutcome]=useState(null);
+ const [revealStep,setRevealStep]=useState(0),[showdownViewer,setShowdownViewer]=useState(null),[chipAnimation,setChipAnimation]=useState(null);
  const [strikes,setStrikes]=useState({}),[pot,setPot]=useState(0),[chipStacks,setChipStacks]=useState([]);
  const [ante,setAnte]=useState("0.25"),[maxPot,setMaxPot]=useState("50"),[startingChips,setStartingChips]=useState("20");
  const [guide,setGuide]=useState(null),[status,setStatus]=useState(""),[log,setLog]=useState([]),[remoteNotice,setRemoteNotice]=useState(false);
@@ -53,6 +54,9 @@ export default function CustomerPokerTable(){
  const allReady=choices.length===tableSize&&choices.every(c=>c!==null);
  const held=choices.flatMap((c,i)=>c==="hold"?[i]:[]);
  const revealOrder=useMemo(()=>held.slice().sort((a,b)=>((a-dealer+tableSize-1)%tableSize)-((b-dealer+tableSize-1)%tableSize)),[choices,dealer,tableSize]);
+ const competingHolders=held.length>=2;
+ const canSeeOtherHands=showdownViewer!==null&&choices[showdownViewer]==="hold"&&competingHolders;
+ const sevenCardReveal=round===2&&competingHolders;
  const revealedCount=Object.values(reveal).reduce((sum,n)=>sum+n,0);
  const totalRevealCards=revealOrder.reduce((sum,i)=>sum+(hands[i]?.length||0),0);
  const currentReveal=revealOrder.find(i=>(reveal[i]||0)<(hands[i]?.length||0));
@@ -64,7 +68,16 @@ export default function CustomerPokerTable(){
   else if(groupId){const r=readLocalRoom(groupId);if(r?.seats?.length){setLobbyName(r.name||"Poker Table");setPeople(r.seats.map(getPlayer));setStartingChips(String((r.buyInCents??2000)/100));setRoomMinimum(r.buyInCents??2000);setRoomCapacity(r.capacity||6);setRemoteNotice(false);}}
   return()=>{mounted=false;};
  },[groupId,roomId]);
- useEffect(()=>{if(phase!=="countdown")return;setCounter(3);const started=Date.now();const timer=setInterval(()=>{const elapsed=Math.floor((Date.now()-started)/1000);const remaining=3-elapsed;if(remaining<=0){clearInterval(timer);setCounter(null);setPhase("revealing");setViewer(null);addLog("Dealer countdown finished — held hands may be revealed.");}else setCounter(remaining);},120);return()=>clearInterval(timer);},[phase]);
+ useEffect(()=>{if(phase!=="countdown")return;setCounter(3);const started=Date.now();const timer=setInterval(()=>{const elapsed=Math.floor((Date.now()-started)/1000);const remaining=3-elapsed;if(remaining<=0){clearInterval(timer);setCounter(null);setRevealStep(0);setPhase("revealing");setViewer(null);addLog("Dealer countdown complete. Comparing holders privately.");}else setCounter(remaining);},120);return()=>clearInterval(timer);},[phase]);
+ // No showdown cards are exposed unless two or more players held.
+ // In the seven-card stage reveal one card from EACH holder per beat, automatically.
+ useEffect(()=>{
+  if(phase!=="revealing")return;
+  if(!sevenCardReveal){const timer=setTimeout(()=>settleCurrentRound(),1050);return()=>clearTimeout(timer);}
+  if(revealStep<7){const timer=setTimeout(()=>setRevealStep(v=>v+1),650);return()=>clearTimeout(timer);}
+  const timer=setTimeout(()=>settleCurrentRound(),950);return()=>clearTimeout(timer);
+ },[phase,round,revealStep,choices,hands,pot,strikes]);
+ useEffect(()=>{if(!chipAnimation)return;const timer=setTimeout(()=>setChipAnimation(null),3200);return()=>clearTimeout(timer);},[chipAnimation]);
  async function shareRoom(){
   if(shareBusy)return;
   if(!roomId){
@@ -135,7 +148,7 @@ export default function CustomerPokerTable(){
   const newPot=previousPot+tableSize*anteCents;
   setHands(fresh.hands);setDeck(fresh.deck);setRound(0);
   setChipStacks(afterAnte);setPot(newPot);setStrikes(previousStrikes||{});
-  setReveal({});setOutcome(null);setViewer(null);setCounter(null);
+  setReveal({});setRevealStep(0);setShowdownViewer(null);setChipAnimation(null);setOutcome(null);setViewer(null);setCounter(null);
   const instant=fresh.hands.flatMap((hand,i)=>instant357(hand)?[i]:[]);
   if(instant.length===1){
    const winner=instant[0];setChipStacks(afterAnte.map((v,i)=>i===winner?v+newPot:v));setPot(0);
@@ -150,12 +163,18 @@ export default function CustomerPokerTable(){
  function start(){setSession("playing");setLog([]);dealOpening(0,null,{});}
  function choose(c){if(phase!=="choosing"||currentIndex<0||people[currentIndex].kind==="computer")return;setChoices(old=>old.map((v,i)=>i===currentIndex?c:v));setViewer(null);addLog(people[currentIndex].name+" is READY.");}
  function countdown(){if(phase!=="choosing"||!allReady)return;setPhase("countdown");addLog("Dealer started 3, 2, 1 countdown.");}
- function showNextCard(){if(phase!=="revealing"||currentReveal===undefined)return;setReveal(old=>({...old,[currentReveal]:(old[currentReveal]||0)+1}));}
- function settle(){
-  if(phase!=="revealing"||revealedCount<totalRevealCards)return;
+ function settleCurrentRound(){
+  if(phase!=="revealing")return;
   const result=resolve357({hands,round,choices,potCents:pot,strikes,anteCents});
-  setOutcome(result);setPot(result.nextPot);setStrikes(result.strikes);
-  setChipStacks(old=>old.map((v,i)=>v+result.delta[i]));
+  setOutcome(result);
+  setStrikes(result.strikes);
+  setChipStacks(previous=>previous.map((value,index)=>value+(result.delta[index]||0)));
+  setPot(result.nextPot);
+  if(result.winner!==null&&result.winner!==undefined) {
+    setChipAnimation({winner:result.winner,amount:pot,losers:result.entered.filter(i=>i!==result.winner)});
+  }else if(result.kind==="all-drop"){
+    setChipAnimation({winner:null,amount:anteCents*tableSize,losers:[]});
+  }
   setPhase(result.kind==="tie-review"?"review":"resolved");
   addLog(result.message);
  }
@@ -165,7 +184,7 @@ export default function CustomerPokerTable(){
    setDealer(i=>(i+1)%tableSize);dealOpening(pot,chipStacks,strikes);return;
   }
   const updated=addRoundCards(hands,deck);
-  setHands(updated.hands);setDeck(updated.deck);setRound(v=>v+1);setViewer(null);setChoices(preparedChoices(tableSize));setReveal({});setOutcome(null);setPhase("choosing");
+  setHands(updated.hands);setDeck(updated.deck);setRound(v=>v+1);setViewer(null);setShowdownViewer(null);setChoices(preparedChoices(tableSize));setReveal({});setRevealStep(0);setOutcome(null);setPhase("choosing");
   addLog("Two cards added to every hand. Only "+THREE_FIVE_SEVEN[round+1]+"s are wild.");
  }
  const currentPlayer=displayIndex!==null?people[displayIndex]:null;
