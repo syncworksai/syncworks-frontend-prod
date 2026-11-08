@@ -3,6 +3,8 @@ name: SyncWorks Poker Table Logic
 on:
   pull_request:
     paths:
+      - "src/games/pokerDealerRotation.mjs"
+      - "src/games/pokerDealerRotation.test.mjs"
       - "src/games/practiceOdds357.mjs"
       - "src/games/practiceOdds357.test.mjs"
       - "src/games/pokerResume.mjs"
