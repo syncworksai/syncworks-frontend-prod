@@ -16,6 +16,15 @@ import Register from "./pages/Register";
 import GetStarted from "./pages/GetStarted";
 import AddBusiness from "./pages/AddBusiness";
 import CustomerDashboard from "./pages/CustomerDashboardResponsive";
+import CustomerGames from "./pages/CustomerGames";
+import CustomerGamesLibrary from "./pages/CustomerGamesLibrary";
+import CustomerFYB from "./pages/CustomerFYB";
+import Customer442 from "./pages/Customer442";
+import CustomerBozo from "./pages/CustomerBozo";
+import CustomerManualPoker from "./pages/CustomerManualPoker";
+import CustomerQueenFollower from "./pages/CustomerQueenFollower";
+import CustomerCardClubs from "./pages/CustomerCardClubs";
+import CustomerCardClubHub from "./pages/CustomerCardClubHub";
 import CustomerNewRequest from "./pages/CustomerNewRequest";
 import CustomerMarketplaceAvailability from "./pages/CustomerMarketplaceAvailability";
 import CustomerSettings from "./pages/CustomerSettings";
@@ -208,6 +217,15 @@ export default function App() {
         <Route path="/billing/cash-fee-invoices" element={<ProtectedRoute><CashFeeInvoices /></ProtectedRoute>} />
         <Route path="/sales/*" element={<Navigate to="/customer" replace />} />
         <Route path="/customer" element={<ProtectedRoute><CustomerDashboard /></ProtectedRoute>} />
+        <Route path="/customer/games" element={<ProtectedRoute><CustomerGamesLibrary /></ProtectedRoute>} />
+        <Route path="/customer/games/357" element={<ProtectedRoute><CustomerGames /></ProtectedRoute>} />
+        <Route path="/customer/games/fyb" element={<ProtectedRoute><CustomerFYB /></ProtectedRoute>} />
+        <Route path="/customer/games/442" element={<ProtectedRoute><Customer442 /></ProtectedRoute>} />
+        <Route path="/customer/games/bozo" element={<ProtectedRoute><CustomerBozo /></ProtectedRoute>} />
+        <Route path="/customer/games/manual" element={<ProtectedRoute><CustomerManualPoker /></ProtectedRoute>} />
+        <Route path="/customer/games/queen-follower" element={<ProtectedRoute><CustomerQueenFollower /></ProtectedRoute>} />
+        <Route path="/customer/games/clubs" element={<ProtectedRoute><CustomerCardClubHub /></ProtectedRoute>} />
+        <Route path="/customer/games/clubs/local-preview" element={<ProtectedRoute><CustomerCardClubs /></ProtectedRoute>} />
         <Route path="/customer/affiliate" element={<ProtectedRoute><AffiliateDashboard /></ProtectedRoute>} />
         <Route path="/customer/store" element={<ProtectedRoute><CustomerStore /></ProtectedRoute>} />
         <Route path="/customer/favorites" element={<ProtectedRoute><CustomerFavorites /></ProtectedRoute>} />

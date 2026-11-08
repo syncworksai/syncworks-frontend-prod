@@ -3,7 +3,7 @@ import { CheckCircle2, Copy, KeyRound, Link2, Loader2, LogIn, Share2, ShieldChec
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthContext";
-import { getMemberships, joinGroupAsPlayer, previewGroupInviteLink } from "../api/social";
+import { getMemberships, joinGroupAsPlayer, previewGroupInviteLink, requestJoinGroup } from "../api/social";
 
 const errorText = (error) => error?.response?.data?.detail || error?.message || "Unable to complete your request.";
 
@@ -18,6 +18,7 @@ export default function SocialGroupInviteLanding() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const nextPath = safeNextPath(params.get("next"));
+  const isCardClub = params.get("mode") === "club";
   const { user, booting } = useAuth();
   const [preview, setPreview] = useState(null);
   const [mode, setMode] = useState(params.get("mode") === "player" ? "PLAYER" : "");
@@ -27,6 +28,7 @@ export default function SocialGroupInviteLanding() {
   const [error, setError] = useState("");
   const [done, setDone] = useState(null);
   const [shared, setShared] = useState("");
+  const [requested, setRequested] = useState(false);
   const inviteUrl = window.location.origin + "/social/invite/" + token;
 
   useEffect(() => {
@@ -72,6 +74,16 @@ export default function SocialGroupInviteLanding() {
     }
   }
 
+  async function requestClubJoin() {
+    if (busy) return;
+    setBusy(true);setError("");
+    try {
+      await requestJoinGroup(token);
+      setRequested(true);
+    } catch(err) { setError(errorText(err)); }
+    finally { setBusy(false); }
+  }
+
   async function shareInvite() {
     if (navigator.share) {
       try {
@@ -89,7 +101,7 @@ export default function SocialGroupInviteLanding() {
   if (loading || booting) {
     return <div className="grid min-h-screen place-items-center bg-[#02060c] text-cyan-200"><Loader2 className="h-7 w-7 animate-spin"/></div>;
   }
-  const returnPath = "/social/invite/" + token + "?mode=player" + (nextPath ? "&next=" + encodeURIComponent(nextPath) : "");
+  const returnPath = "/social/invite/" + token + "?mode=" + (isCardClub ? "club" : "player") + (nextPath ? "&next=" + encodeURIComponent(nextPath) : "");
   const next = encodeURIComponent(returnPath);
   const fanPath = "/social/fan/" + token;
 
@@ -97,14 +109,28 @@ export default function SocialGroupInviteLanding() {
     <div className="min-h-screen bg-[#02060c] px-3 py-[max(1.5rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))] text-slate-100">
       <main className="mx-auto max-w-md space-y-3">
         <section className="rounded-[2rem] border border-cyan-300/20 bg-[radial-gradient(circle_at_80%_0%,rgba(34,211,238,.16),transparent_35%),radial-gradient(circle_at_0%_100%,rgba(139,92,246,.14),transparent_35%),#07111f] p-5 shadow-2xl">
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.16em] text-cyan-300"><Link2 className="h-4 w-4"/>SyncWorks team invitation</div>
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.16em] text-cyan-300"><Link2 className="h-4 w-4"/>{isCardClub ? "SyncWorks Card Club invitation" : "SyncWorks team invitation"}</div>
           {error ? <div role="alert" className="mt-3 rounded-xl border border-rose-300/20 bg-rose-300/10 p-3 text-sm text-rose-100">{error}</div> : null}
           {preview ? <>
             <h1 className="mt-4 text-2xl font-black text-white">{preview.group?.name}</h1>
             <p className="mt-2 text-xs leading-5 text-slate-400">{preview.group?.description || "Join the team or follow their live games, schedule and updates."}</p>
             {preview.group?.logo_image_url || preview.group?.logo_url ? <img src={preview.group.logo_image_url || preview.group.logo_url} alt="" className="mx-auto mt-4 h-24 w-24 rounded-2xl object-cover"/> : null}
 
-            {!mode && !done ? <div className="mt-5 space-y-3">
+            {isCardClub ? <div className="mt-5 space-y-3 rounded-2xl border border-violet-300/20 bg-violet-300/[.06] p-4">
+              <h2 className="text-lg font-black text-white">Join this Card Club</h2>
+              <p className="text-xs text-slate-300">Your invite code is <b className="break-all text-cyan-200">{token}</b>. Join using your free SyncWorks customer account.</p>
+              {user ? <>
+                <div className="text-xs text-slate-300">Signed in as <b>{user.email}</b>.</div>
+                {requested ? <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-3 text-sm text-emerald-200">Your request was sent. A group manager may need to approve membership before you can access the club.</div> :
+                  <button type="button" disabled={busy} onClick={requestClubJoin} className="min-h-12 w-full rounded-xl bg-violet-300 font-black text-slate-950 disabled:opacity-50">{busy ? "Submitting…" : "Request to join Card Club"}</button>}
+                <button type="button" onClick={()=>navigate(nextPath||"/customer/games/clubs")} className="min-h-11 w-full rounded-xl border border-white/20 text-xs font-bold">Open Card Clubs</button>
+              </> : <div className="grid gap-2">
+                <button type="button" onClick={()=>window.location.assign("/register?next="+next)} className="min-h-12 rounded-xl bg-cyan-300 font-bold text-slate-950">Create free account & continue</button>
+                <button type="button" onClick={()=>window.location.assign("/login?next="+next)} className="min-h-12 rounded-xl border border-white/20 text-sm font-bold">Log in & continue</button>
+              </div>}
+              <p className="text-[11px] text-slate-400">The invitation identifies the group, but it does not bypass approval or give anyone access to another player's private information.</p>
+            </div> : null}
+            {!isCardClub && !mode && !done ? <div className="mt-5 space-y-3">
               <h2 className="text-center text-sm font-black text-white">How are you joining?</h2>
               <button type="button" onClick={()=>setMode("PLAYER")} className="flex min-h-[5.5rem] w-full items-center gap-4 rounded-2xl border border-cyan-300/30 bg-cyan-300/10 p-4 text-left">
                 <ShieldCheck className="h-8 w-8 shrink-0 text-cyan-300"/>
@@ -116,7 +142,7 @@ export default function SocialGroupInviteLanding() {
               </button>
             </div> : null}
 
-            {mode === "PLAYER" && !done ? <div className="mt-5 space-y-3 rounded-2xl border border-cyan-300/20 bg-black/20 p-4">
+            {!isCardClub && mode === "PLAYER" && !done ? <div className="mt-5 space-y-3 rounded-2xl border border-cyan-300/20 bg-black/20 p-4">
               <button type="button" onClick={()=>setMode("")} className="text-xs font-bold text-cyan-300">← Back to player or fan</button>
               <div className="flex items-center gap-2 text-base font-black text-white"><KeyRound className="h-5 w-5 text-cyan-300"/>Player access</div>
               {user ? <>
