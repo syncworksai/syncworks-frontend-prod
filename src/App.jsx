@@ -17,6 +17,9 @@ import GetStarted from "./pages/GetStarted";
 import AddBusiness from "./pages/AddBusiness";
 import CustomerDashboard from "./pages/CustomerDashboardResponsive";
 import CustomerGames from "./pages/CustomerGames";
+import CustomerGamesLibrary from "./pages/CustomerGamesLibrary";
+import CustomerFYB from "./pages/CustomerFYB";
+import CustomerQueenFollower from "./pages/CustomerQueenFollower";
 import CustomerCardClubs from "./pages/CustomerCardClubs";
 import CustomerNewRequest from "./pages/CustomerNewRequest";
 import CustomerMarketplaceAvailability from "./pages/CustomerMarketplaceAvailability";
@@ -210,7 +213,10 @@ export default function App() {
         <Route path="/billing/cash-fee-invoices" element={<ProtectedRoute><CashFeeInvoices /></ProtectedRoute>} />
         <Route path="/sales/*" element={<Navigate to="/customer" replace />} />
         <Route path="/customer" element={<ProtectedRoute><CustomerDashboard /></ProtectedRoute>} />
-        <Route path="/customer/games" element={<ProtectedRoute><CustomerGames /></ProtectedRoute>} />
+        <Route path="/customer/games" element={<ProtectedRoute><CustomerGamesLibrary /></ProtectedRoute>} />
+        <Route path="/customer/games/357" element={<ProtectedRoute><CustomerGames /></ProtectedRoute>} />
+        <Route path="/customer/games/fyb" element={<ProtectedRoute><CustomerFYB /></ProtectedRoute>} />
+        <Route path="/customer/games/queen-follower" element={<ProtectedRoute><CustomerQueenFollower /></ProtectedRoute>} />
         <Route path="/customer/games/clubs" element={<ProtectedRoute><CustomerCardClubs /></ProtectedRoute>} />
         <Route path="/customer/affiliate" element={<ProtectedRoute><AffiliateDashboard /></ProtectedRoute>} />
         <Route path="/customer/store" element={<ProtectedRoute><CustomerStore /></ProtectedRoute>} />
