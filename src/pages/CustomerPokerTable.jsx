@@ -37,6 +37,7 @@ export default function CustomerPokerTable(){
  const [ante,setAnte]=useState("0.25"),[maxPot,setMaxPot]=useState("50"),[startingChips,setStartingChips]=useState("20");
  const [guide,setGuide]=useState(null),[status,setStatus]=useState(""),[log,setLog]=useState([]),[remoteNotice,setRemoteNotice]=useState(false);
  const [shareBusy,setShareBusy]=useState(false),[inviteUrl,setInviteUrl]=useState(""),[roomMinimum,setRoomMinimum]=useState(null),[roomCapacity,setRoomCapacity]=useState(6);
+ const [seatEditor,setSeatEditor]=useState(false),[seatName,setSeatName]=useState(""),[seatBuyin,setSeatBuyin]=useState("20"),[seatError,setSeatError]=useState("");
  const anteCents=Math.round(Number(ante)*100),capCents=Math.round(Number(maxPot)*100);
  const wild=THREE_FIVE_SEVEN[round];
  const tableSize=people.length;
@@ -82,6 +83,32 @@ export default function CustomerPokerTable(){
     else setStatus("Share link: "+url);
   }catch(err){if(err?.name!=="AbortError")setStatus(err?.response?.data?.detail||err?.message||"Unable to share invitation.");}
   finally{setShareBusy(false);}
+ }
+ function storeLocalSeats(updated){
+  if(!groupId||roomId)return;
+  try{
+    const stored=readLocalRoom(groupId);
+    if(!stored)return;
+    localStorage.setItem(localRoomKey(groupId),JSON.stringify({...stored,seats:updated.map(p=>({id:p.id,name:p.name,kind:p.kind,photo:p.photo||"",virtual_chips_cents:p.chips}))}));
+  }catch{setStatus("Seats changed, but this browser could not save the local table.");}
+ }
+ function updateSeats(action){
+   if(session!=="setup")return;
+   setPeople(current=>{const result=action(current);storeLocalSeats(result);return result;});
+ }
+ function addGuestToTable(event){
+   event.preventDefault();
+   const name=seatName.trim().slice(0,24);
+   const amount=Math.round(Number(seatBuyin)*100);
+   if(!name){setSeatError("Enter a player name.");return;}
+   if(!Number.isSafeInteger(amount)||amount<(roomMinimum??0)||amount>1000000){setSeatError("Choose a valid virtual chip buy-in at or above the room minimum.");return;}
+   if(people.length>=roomCapacity){setSeatError("This table has no open seats.");return;}
+   updateSeats(old=>[...old,{id:uid(),name,kind:"guest",chips:amount}]);
+   setSeatError("");setSeatName("");setSeatEditor(false);
+ }
+ function addComputerToTable(){
+   if(session!=="setup"||people.length>=roomCapacity||people.some(p=>p.kind==="computer"))return;
+   updateSeats(old=>[...old,{id:uid(),name:"Computer",kind:"computer",chips:roomMinimum??2000}]);
  }
  function preparedChoices(size){return people.slice(0,size).map(p=>p.kind==="computer"?(Math.random()>.4?"hold":"drop"):null);}
  function dealOpening(previousPot=0,previousChips=null,previousStrikes=null){
@@ -140,30 +167,30 @@ export default function CustomerPokerTable(){
    <button type="button" className="sw-poker-icon-btn" aria-label="Rules and strategy" onClick={()=>setGuide("rules")}><Info size={20}/></button>
   </header>
   <div className="sw-poker-round"><div className="sw-poker-round-badge"><div>♠ {gameName}</div><span>Round {round+1} · {wild}s Wild</span></div><div className="sw-poker-steps">{THREE_FIVE_SEVEN.map((n,i)=><div key={i} title={"Round "+(i+1)+": "+n+"s wild"} className={"sw-poker-step"+(i===round?" current":"")}>{i+1}</div>)}</div></div>
+  {session==="setup"&&<section className="sw-poker-quick-setup" aria-label="Poker table seating">
+  <div className="sw-poker-quick-header"><div><strong>YOUR TABLE · {tableSize}/{roomCapacity} PLAYERS</strong><p>Choose players, add a computer, then deal.</p></div><span className="sw-poker-purse">♠ {displayMoney(people.reduce((sum,p)=>sum+(p.chips??roomMinimum??2000),0))} chips</span></div>
+  <div className="sw-poker-quick-actions"><button type="button" className="sw-poker-button primary" disabled={tableSize>=roomCapacity} onClick={()=>{setSeatBuyin(String((roomMinimum??2000)/100));setSeatEditor(true);setSeatError("");}}><Users size={16} className="mr-1 inline"/> + Add Player</button><button type="button" className="sw-poker-button" disabled={tableSize>=roomCapacity||people.some(p=>p.kind==="computer")} onClick={addComputerToTable}>🤖 + Computer</button></div>
+  <div className="sw-poker-quick-players">{people.map((p,i)=><div className="sw-poker-quick-person" key={p.id}><Photo person={p}/><label className="min-w-0 flex-1 text-xs text-slate-300"><input aria-label={"Player "+(i+1)+" name"} value={p.name} maxLength={24} onChange={e=>updateSeats(old=>old.map((x,j)=>i===j?{...x,name:e.target.value.slice(0,24)}:x))} className="sw-poker-name-input"/><span className="block text-[10px] text-emerald-200">{displayMoney(p.chips??roomMinimum??2000)} · {p.kind==="computer"?"Computer":"Seated"}</span></label>{p.kind!=="host"&&<button type="button" aria-label={"Remove "+p.name} onClick={()=>updateSeats(old=>old.filter((_,j)=>j!==i))} className="sw-poker-remove">×</button>}</div>)}</div>
+  <div className="sw-poker-quick-footer"><button type="button" className="sw-poker-button primary" disabled={tableSize<2} onClick={start}>♠ Shuffle & Deal · 3 Cards</button><p>{tableSize<2?"Add at least one more player or a computer to start.":"Ready to deal on this device."}</p></div>
+ </section>}
   {status&&<div role="status" className="mb-2 rounded-xl border border-cyan-300/30 bg-cyan-300/10 p-3 text-xs text-cyan-100">{status}</div>}
   {roomMinimum!==null&&<div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-emerald-300/20 bg-emerald-500/10 px-3 py-2 text-xs"><span>Room minimum: <b>{displayMoney(roomMinimum)}</b> virtual chips</span>{groupId&&<button type="button" onClick={shareRoom} disabled={shareBusy} className="rounded-lg border border-cyan-300/30 px-3 py-2 font-black text-cyan-100"><Share2 size={14} className="mr-1 inline"/> Share {roomId?"room":"club invite"}</button>}</div>}
   <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-[11px] leading-4 text-amber-100">Local interactive game preview. Ready, countdown, cards and payouts are on this device only; they are <b>not synchronized across phones</b>. All chips are virtual.</div>
+ {seatEditor&&session==="setup"&&<div className="sw-poker-modal-cover" role="presentation" onClick={()=>setSeatEditor(false)}><form className="sw-poker-modal" role="dialog" aria-modal="true" aria-label="Add poker player" onClick={e=>e.stopPropagation()} onSubmit={addGuestToTable}><div className="flex items-center justify-between"><h2 className="text-xl font-black">Add a player</h2><button type="button" className="sw-poker-button" onClick={()=>setSeatEditor(false)}>✕</button></div><p className="mt-2 text-xs text-slate-400">Local guest seat; no separate phone connection yet.</p><label className="mt-4 block text-xs text-slate-300">Display name<input autoFocus required maxLength={24} value={seatName} onChange={e=>setSeatName(e.target.value)} placeholder="e.g. Zack" className="mt-2 w-full rounded-xl border border-white/20 bg-slate-950 p-3 text-white"/></label><label className="mt-3 block text-xs text-slate-300">Virtual buy-in ($) · minimum {displayMoney(roomMinimum??0)}<input required type="number" min={(roomMinimum??0)/100} max="10000" step="0.01" value={seatBuyin} onChange={e=>setSeatBuyin(e.target.value)} className="mt-2 w-full rounded-xl border border-white/20 bg-slate-950 p-3 text-white"/></label>{seatError&&<p role="alert" className="mt-3 text-xs text-rose-300">{seatError}</p>}<button type="submit" className="sw-poker-button primary mt-4 w-full">Seat Player</button></form></div>}
   <div className="sw-poker-table-space">
    <div className="sw-poker-felt">
     <div className="sw-poker-felt-brand"><i>S</i>SYNCWORKS<br/>POKER</div>
     <div className="sw-poker-pot"><div className="sw-poker-chip-stack"><span className="sw-poker-chip dark"/><span className="sw-poker-chip blue"/><span className="sw-poker-chip red"/></div><div className="sw-poker-pot-amount">Pot: {displayMoney(pot)}</div><div className="sw-poker-pot-small">Ante: {displayMoney(anteCents)} · Cap: {displayMoney(capCents)}</div></div>
     {counter!==null&&<div aria-live="assertive" className="sw-poker-decision-shadow">{counter}</div>}
-    {people.map((p,i)=><div key={p.id} className={"sw-poker-seat s"+i} aria-label={p.name+" "+(choices[i]!==null?"Ready":"Waiting")}>
-      <Photo person={p}/>
-      <div className="sw-poker-seat-nameplate"><strong>{p.name}</strong><small>◉ {displayMoney(chipStacks[i]??p.chips??2000)}</small></div>
-      {session==="playing"&&<span className={"sw-poker-status"+(choices[i]!==null&&phase!=="setup"?" ready":"")}>{phase==="choosing"||phase==="countdown"?(choices[i]===null?"◷ Waiting":"✓ Ready"):phase==="revealing"||phase==="resolved"?(choices[i]==="hold"?"Held":choices[i]==="drop"?"Folded":"Waiting"):"At table"}</span>}
-      {dealer===i&&<span className="sw-poker-dealer">D</span>}
-    </div>)}
+    {Array.from({length:session==="setup"?roomCapacity:tableSize},(_,i)=>{const p=people[i];return <div key={p?.id||"open-"+i} className={"sw-poker-seat s"+i+(p?"":" sw-poker-seat-empty")} aria-label={p?p.name+" "+(choices[i]!==null?"Ready":"Waiting"):"Open poker seat"}>
+      {p?<Photo person={p}/>:<button type="button" aria-label={"Add player to seat "+(i+1)} disabled={session!=="setup"} className="sw-poker-empty-seat" onClick={()=>{setSeatBuyin(String((roomMinimum??2000)/100));setSeatEditor(true);}}>+</button>}
+      <div className="sw-poker-seat-nameplate"><strong>{p?.name||"Open Seat"}</strong><small>{p?"◉ "+displayMoney(chipStacks[i]??p.chips??2000):"Tap to join"}</small></div>
+      {session==="playing"&&p&&<span className={"sw-poker-status"+(choices[i]!==null&&phase!=="setup"?" ready":"")}>{phase==="choosing"||phase==="countdown"?(choices[i]===null?"◷ Waiting":"✓ Ready"):phase==="revealing"||phase==="resolved"?(choices[i]==="hold"?"Held":choices[i]==="drop"?"Folded":"Waiting"):"At table"}</span>}
+      {p&&dealer===i&&<span className="sw-poker-dealer">D</span>}
+    </div>;})}
    </div>
   </div>
-  {session==="setup"?<section className="sw-poker-panel mx-auto max-w-xl">
-   <h3><Users size={18}/> Start 3-5-7 Table Preview</h3>
-   <p>This preview deals one shuffled 52-card deck to 2–6 seats. Everyone plays on this device, passing it for private decisions. The dealer starts the countdown when all are ready.</p>
-   <div className="mt-3 space-y-2">{people.map((p,i)=><div key={p.id} className="flex items-center gap-2"><Photo person={p}/><input className="min-w-0 flex-1 rounded-lg border border-white/20 bg-slate-950 p-2 text-sm text-white" value={p.name} aria-label={"Player "+(i+1)+" display name"} onChange={e=>setPeople(old=>old.map((item,j)=>j===i?{...item,name:e.target.value.slice(0,24)}:item))}/>{people.length>2&&<button type="button" onClick={()=>setPeople(old=>old.filter((_,j)=>j!==i))} className="sw-poker-button">×</button>}</div>)}</div>
-   <div className="mt-3 flex gap-2"><button type="button" className="sw-poker-button" disabled={people.length>=roomCapacity} onClick={()=>setPeople(old=>[...old,{id:uid(),name:"Player "+(old.length+1),kind:"guest",chips:roomMinimum??2000}])}>+ Seat</button><button type="button" className="sw-poker-button" disabled={people.length>=roomCapacity||people.some(p=>p.kind==="computer")} onClick={()=>setPeople(old=>[...old,{id:uid(),name:"Computer",kind:"computer",chips:roomMinimum??2000}])}>+ Computer</button></div>
-   <div className="mt-3 grid grid-cols-3 gap-2">{[["Buy-in",startingChips,setStartingChips],["Ante",ante,setAnte],["Pot cap",maxPot,setMaxPot]].map(([title,value,setValue])=><label key={title} className="text-xs text-slate-300">{title} ($)<input type="number" min="0" step="0.25" value={value} onChange={e=>setValue(e.target.value)} className="mt-1 w-full rounded-lg border border-white/20 bg-slate-950 p-2 text-white"/></label>)}</div>
-   <button type="button" onClick={start} className="sw-poker-button primary mt-4 w-full">Shuffle & deal 3 cards</button>
-  </section>:<>
+  {session!=="setup"&&<>
    {phase==="choosing"&&<div className="sw-poker-pov">
     <p className="sw-poker-pov-label">{allReady?"Everyone is ready — dealer may start countdown":currentPlayer?.name+" is choosing privately · "+readyCount+"/"+tableSize+" ready"}</p>
     <div className="sw-poker-facecards">{viewCards?viewCards.map((c,i)=><Card key={i} card={c} wild={c.rank===wild}/>):(hands[displayIndex??0]||[]).map((c,i)=><Card key={i} card={c} hidden/>)}</div>

@@ -67,3 +67,32 @@
 @media(min-width:650px) {.sw-poker-screen{padding-left:24px;padding-right:24px}.sw-poker-seat-avatar{width:60px;height:60px}.sw-poker-seat-nameplate strong{font-size:13px}.sw-poker-seat-nameplate small{font-size:11px}.sw-poker-panel-grid{grid-template-columns:1fr 1fr}.sw-poker-card{width:68px;height:95px}}
 @media(max-width:400px) {.sw-poker-table-space{padding-top:54px;padding-bottom:45px}.sw-poker-felt{border-width:9px}.sw-poker-seat-nameplate{padding:3px 5px;min-width:67px}.sw-poker-seat-avatar{width:35px;height:35px}.sw-poker-seat-nameplate strong{font-size:9px}.sw-poker-seat-nameplate small{font-size:9px}.sw-poker-seat.s0{left:18%}.sw-poker-seat.s2{left:82%}.sw-poker-seat.s3{left:83%}.sw-poker-seat.s5{left:17%}.sw-poker-seat{min-width:65px}.sw-poker-card{width:48px;height:76px}}
 @media(prefers-reduced-motion:reduce) {.sw-poker-card,.sw-poker-decision-shadow{animation:none}}
+
+/* The primary table controls must appear above the felt on an iPhone. */
+.sw-poker-quick-setup {border:1px solid #287da8;border-radius:20px;background:linear-gradient(145deg,#092f3d,#091229 65%);padding:13px;margin:13px 0 10px;box-shadow:0 10px 32px #0007}
+.sw-poker-quick-header {display:flex;align-items:start;justify-content:space-between;gap:8px}
+.sw-poker-quick-header strong {font-size:13px;letter-spacing:.08em;color:#e7f7ff}
+.sw-poker-quick-header p {font-size:11px;color:#b7cae7;margin:3px 0 0}
+.sw-poker-purse {color:#77f9d6;white-space:nowrap;font-size:11px;font-weight:800}
+.sw-poker-quick-actions {display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.sw-poker-quick-actions .sw-poker-button {font-size:12px;padding:10px 5px}
+.sw-poker-quick-players {display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px;max-height:205px;overflow:auto}
+.sw-poker-quick-person {display:flex;align-items:center;gap:7px;min-width:0;background:#0514269c;border:1px solid #2e4b66;border-radius:12px;padding:6px}
+.sw-poker-quick-person .sw-poker-seat-avatar {width:34px;height:34px;font-size:10px;flex-shrink:0}
+.sw-poker-name-input {width:100%;max-width:100%;background:transparent;border:0;border-bottom:1px solid #305876;border-radius:0;color:white;font-size:12px;font-weight:800;padding:3px 0;outline-offset:2px}
+.sw-poker-remove {height:27px;width:27px;flex-shrink:0;border:1px solid #7e4356;background:#2b1321;color:#ffc7d2;border-radius:8px}
+.sw-poker-quick-footer {margin-top:12px;display:flex;align-items:center;gap:10px}
+.sw-poker-quick-footer .sw-poker-button {flex:1}
+.sw-poker-quick-footer p {font-size:10px;max-width:125px;color:#a7c1de;line-height:1.4}
+.sw-poker-seat-empty {pointer-events:auto}
+.sw-poker-empty-seat {width:42px;height:42px;border:2px solid #4baff3;border-radius:50%;background:#1f245a;color:#bdeaff;font-size:26px;font-weight:900;cursor:pointer;box-shadow:0 0 12px #328dff55}
+.sw-poker-seat-empty .sw-poker-seat-nameplate {background:#061625ba;border-style:dashed;opacity:.9}
+@media(max-width:480px) {
+ .sw-poker-table-space {padding-top:31px;padding-bottom:32px}
+ .sw-poker-felt {border-width:9px}
+ .sw-poker-quick-footer {display:block}
+ .sw-poker-quick-footer p {max-width:none;text-align:center;margin-top:7px}
+ .sw-poker-quick-header {flex-wrap:wrap}
+ .sw-poker-empty-seat {width:34px;height:34px;font-size:22px}
+ .sw-poker-quick-players {max-height:150px}
+}
