@@ -14,6 +14,7 @@ export default function CustomerGamesHome(){
   <section className="overflow-hidden rounded-[1.8rem] border border-cyan-300/20 bg-gradient-to-br from-[#14243b] via-[#061426] to-[#080b20] p-5 shadow-xl">
    <div className="text-[10px] font-black uppercase tracking-widest text-emerald-300">Your league. Your table.</div>
    <h1 className="mt-2 text-3xl font-black">Poker Night</h1><p className="mt-2 max-w-xl text-xs leading-5 text-slate-300">Create a league, invite friends, check lifetime standings and join its poker lobby. Games are selected inside the room—not before it.</p>
+   <button type="button" onClick={()=>nav("/customer/games/new")} className="mt-4 flex min-h-12 w-full items-center justify-center rounded-xl bg-cyan-400 px-4 text-sm font-black text-slate-950">＋ New Game · Create room</button>
    <div className="mt-4 flex gap-2 text-xs"><span className="rounded-full border border-white/15 bg-white/5 px-3 py-1">5 card games</span><span className="rounded-full border border-white/15 bg-white/5 px-3 py-1">Manual Poker</span></div>
   </section>
   <div className="mt-5 grid gap-4 md:grid-cols-[1.1fr_.9fr]">
