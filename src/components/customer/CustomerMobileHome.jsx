@@ -72,6 +72,7 @@ function titleFor(ticket) {
 
 const MORE = [
   ["Social", "People, groups, events and teams.", "/connect"],
+  ["Card Clubs", "Create a card group and track your games.", "/customer/games/clubs"],
   ["Games", "Play 3-5-7 DROP with friends.", "/customer/games"],
   ["Shop Assist", "Find products by budget or project.", "/customer/store"],
   ["Marketplace & services", "Find providers and track service work.", "/customer/marketplace"],
