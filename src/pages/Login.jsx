@@ -136,14 +136,15 @@ export default function Login({ backgroundOnly = false }) {
   const nav = useNavigate();
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const returnTo = safeReturnPath(searchParams.get("next") || location.state?.from);
+  const explicitReturn = searchParams.get("next") || location.state?.from;
+  const returnTo = safeReturnPath(explicitReturn, "/");
   const inviteRole = returnTo.startsWith("/tenant/accept") ? "tenant" : returnTo.startsWith("/investor/accept") ? "owner" : null;
   const applicantInvite = returnTo.startsWith("/pm/apply?token=");
   const employeeInvite = returnTo.startsWith("/employee/invite?code=");
   const invitedCode = inviteRole ? (new URLSearchParams(returnTo.split("?")[1] || "")).get("code") || "" : "";
 
   const invitedEmail = String(searchParams.get("email") || "").trim().toLowerCase();
-  const { login, user } = useAuth();
+  const { login, user, booting, hasStoredToken } = useAuth();
   const [emailOrUser, setEmailOrUser] = useState(invitedEmail);
   const signupParams = new URLSearchParams();
   if (inviteRole && invitedCode) {
@@ -196,6 +197,7 @@ export default function Login({ backgroundOnly = false }) {
   }
 
   const selectedRole = ROLE_OPTIONS.find((role) => role.id === activeRole) || ROLE_OPTIONS[0];
+  if (!backgroundOnly && booting && hasStoredToken) return <main className="flex min-h-dvh items-center justify-center bg-[#020817] text-sm text-cyan-100">Restoring your SyncWorks session…</main>;
 
   return (
     <div className="min-h-screen bg-[#05080f] text-slate-100">
