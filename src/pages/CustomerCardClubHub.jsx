@@ -48,7 +48,9 @@ export default function CustomerCardClubHub(){
  useEffect(()=>{let ok=true;Promise.all([getGroups(),getMemberships()]).then(([gs,ms])=>{if(ok){setGroups(gs);setMemberships(ms);}}).catch(e=>{if(ok)setError(e.message||"Unable to load groups");}).finally(()=>{if(ok)setLoading(false);});return()=>{ok=false;};},[]);
  useEffect(()=>{if(!selected)return;setLocal(readLocal(selected));try{const arr=JSON.parse(localStorage.getItem(key(selected)+"-players")||"[]");setCustomPlayers(Array.isArray(arr)?arr:[]);}catch{setCustomPlayers([]);}
  let valid=true;getGroupMembers(selected).then(rows=>{if(valid)setMembers(rows);}).catch(e=>{if(valid){setMembers([]);setError(e.message||"Unable to load members");}});return()=>{valid=false;};},[selected]);
- useEffect(()=>{if(!selected)return;try{localStorage.setItem(key(selected),JSON.stringify(local));}catch{setError("Browser storage is unavailable; ledger preview may not persist.");}},[selected,local]);
+ function persistLocal(mutator){
+   setLocal(old=>{const updated=mutator(old);try{localStorage.setItem(key(selected),JSON.stringify(updated));}catch{setError("Browser storage is unavailable; ledger preview may not persist.");}return updated;});
+ }
  useEffect(()=>{if(!selected)return;try{localStorage.setItem(key(selected)+"-players",JSON.stringify(customPlayers));}catch{}},[selected,customPlayers]);
  function chooseGroup(id){setSelected(String(id));setParams({group:String(id)});setInvite("");setTab("overview");setMembers([]);}
  async function makeGroup(e){e.preventDefault();if(!clubName.trim())return;setBusy(true);setError("");try{
@@ -66,11 +68,11 @@ export default function CustomerCardClubHub(){
  const amount=cents(buyIn),prize=cents(payout);
  if(!participants.length||!participants.includes(winner)||!Number.isSafeInteger(amount)||amount<0||!Number.isSafeInteger(prize)||prize<0){setError("Choose participants and a winner, and enter valid amounts.");return;}
  const item={id:freshId(),time:new Date().toISOString(),game,winner,players:[...participants],buyInCents:amount,payoutCents:prize};
- setLocal(v=>({...v,games:[...v.games,item]}));setNotice("Game recorded in this device's preview. Other members cannot see it.");setError("");
+ persistLocal(v=>({...v,games:[...v.games,item]}));setNotice("Game recorded in this device's preview. Other members cannot see it.");setError("");
  }
  function recordSettlement(e){e.preventDefault();const amount=cents(settleAmount);
  if(!settlePayer||!settleReceiver||settlePayer===settleReceiver||!Number.isSafeInteger(amount)||amount<=0){setError("Select different payer and receiver, and a valid amount.");return;}
- setLocal(v=>({...v,entries:[...v.entries,{id:freshId(),kind:"settlement",time:new Date().toISOString(),payer:settlePayer,receiver:settleReceiver,cents:amount,method:"outside SyncWorks",status:"recorded"}]}));
+ persistLocal(v=>({...v,entries:[...v.entries,{id:freshId(),kind:"settlement",time:new Date().toISOString(),payer:settlePayer,receiver:settleReceiver,cents:amount,method:"outside SyncWorks",status:"recorded"}]}));
  setNotice("Off-app settlement recorded locally. This is a manual statement, not proof of payment.");setError("");
  }
  function addPlayerToGame(n){setParticipants(a=>a.includes(n)?a.filter(x=>x!==n):[...a,n]);}
