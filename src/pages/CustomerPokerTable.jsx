@@ -49,12 +49,14 @@ export default function CustomerPokerTable(){
  const [revealStep,setRevealStep]=useState(0),[showdownViewer,setShowdownViewer]=useState(null),[chipAnimation,setChipAnimation]=useState(null);
  const [strikes,setStrikes]=useState({}),[pot,setPot]=useState(0),[chipStacks,setChipStacks]=useState([]);
  const [ante,setAnte]=useState("0.25"),[maxPot,setMaxPot]=useState("50"),[startingChips,setStartingChips]=useState("20");
- const [guide,setGuide]=useState(null),[status,setStatus]=useState(""),[log,setLog]=useState([]),[remoteNotice,setRemoteNotice]=useState(false);
+ const [drawerOpen,setDrawerOpen]=useState(false),[drawerTab,setDrawerTab]=useState("hands"),[status,setStatus]=useState(""),[log,setLog]=useState([]),[remoteNotice,setRemoteNotice]=useState(false);
  const [shareBusy,setShareBusy]=useState(false),[inviteUrl,setInviteUrl]=useState(""),[roomMinimum,setRoomMinimum]=useState(null),[roomCapacity,setRoomCapacity]=useState(6);
  const [selectedGame,setSelectedGame]=useState("357");
  const [dealerChoosing,setDealerChoosing]=useState(false);
  const [upgrading,setUpgrading]=useState(false);
  const [seatEditor,setSeatEditor]=useState(false),[seatName,setSeatName]=useState(""),[seatBuyin,setSeatBuyin]=useState("20"),[seatError,setSeatError]=useState("");
+ function openDrawer(tab="hands"){setDrawerTab(tab);setDrawerOpen(true);}
+ function closeDrawer(){setDrawerOpen(false);}
  const anteCents=Math.round(Number(ante)*100),capCents=Math.round(Number(maxPot)*100);
  const wild=THREE_FIVE_SEVEN[round];
  const tableSize=people.length;
@@ -145,7 +147,7 @@ export default function CustomerPokerTable(){
   const rotation=rotationAfterPot({potCents:pot,dealer,playerCount:tableSize});
   if(!rotation.gameFinished){setStatus("A replacement pot remains. This dealer continues until it is fully dragged.");return;}
   const next=rotation.nextDealer;
-  setDealer(next);setPhase("setup");setSession("setup");setChoices([]);setViewer(null);
+  setDealer(next);setPhase("setup");setSession("setup");setChoices([]);setViewer(null);closeDrawer();
   setShowdownViewer(null);setOutcome(null);setChipAnimation(null);setReveal({});
   setStrikes({});setHands([]);setDeck([]);setRound(0);setDealerChoosing(true);
   if(people[next]?.kind==="computer"){
@@ -202,7 +204,7 @@ export default function CustomerPokerTable(){
   const newPot=previousPot+tableSize*anteCents;
   setHands(fresh.hands);setDeck(fresh.deck);setRound(0);
   setChipStacks(afterAnte);setPot(newPot);setStrikes(previousStrikes||{});
-  setReveal({});setRevealStep(0);setShowdownViewer(null);setChipAnimation(null);setOutcome(null);setViewer(null);setCounter(null);
+  setReveal({});setRevealStep(0);setShowdownViewer(null);setChipAnimation(null);setOutcome(null);setViewer(null);setCounter(null);closeDrawer();
   const instant=fresh.hands.flatMap((hand,i)=>instant357(hand)?[i]:[]);
   if(instant.length===1){
    const winner=instant[0];setChipStacks(afterAnte.map((v,i)=>i===winner?v+newPot:v));setPot(0);
@@ -240,13 +242,17 @@ export default function CustomerPokerTable(){
    dealOpening(pot,chipStacks,strikes);return;
   }
   const updated=addRoundCards(hands,deck);
-  setHands(updated.hands);setDeck(updated.deck);setRound(v=>v+1);setViewer(null);setShowdownViewer(null);setChoices(preparedChoices(tableSize));setReveal({});setRevealStep(0);setOutcome(null);setPhase("choosing");
+  setHands(updated.hands);setDeck(updated.deck);setRound(v=>v+1);setViewer(null);setShowdownViewer(null);setChoices(preparedChoices(tableSize));setReveal({});setRevealStep(0);setOutcome(null);setPhase("choosing");closeDrawer();
   addLog("Two cards added to every hand. Only "+THREE_FIVE_SEVEN[round+1]+"s are wild.");
  }
  const currentPlayer=displayIndex!==null?people[displayIndex]:null;
  const readyCount=choices.filter(c=>c!==null).length;
  const canReveal=phase==="revealing"&&currentReveal!==undefined;
  const gameOver=pot===0&&phase==="resolved"&&(outcome?.kind==="drag"||outcome?.kind==="instant");
+ const hasPracticeRecap=practiceMode&&phase==="resolved"&&people.some(p=>p.kind==="computer");
+ const nextActionLabel=gameOver?"Pass dealer · Choose game":round===2?"New 3-card hand":"Deal 2 more · "+THREE_FIVE_SEVEN[round+1]+"s wild";
+ const doNext=()=>gameOver?finishGameAndPassDealer():next();
+ useEffect(()=>{if(!drawerOpen)return;const onKey=e=>{if(e.key==="Escape")closeDrawer();};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey);},[drawerOpen]);
  return <main className="sw-poker-screen"><div className="sw-poker-content">
   <header className="sw-poker-top">
    <button type="button" className="sw-poker-back" onClick={()=>nav(groupId?"/customer/games/new?group="+encodeURIComponent(groupId):"/customer/games")} aria-label="Back to lobby"><ArrowLeft size={21}/></button>
@@ -254,7 +260,7 @@ export default function CustomerPokerTable(){
    <div className="sw-poker-heading"><strong>SYNCWORKS POKER</strong><small>♧ {lobbyName} · Private table preview</small></div>
    {groupId&&<button type="button" className="sw-poker-icon-btn" aria-label={roomId?"Share poker room":"Room sharing unavailable in local preview"} onClick={shareRoom} disabled={shareBusy}><Share2 size={20}/></button>}
    <span className="sw-poker-capsule">♙ {tableSize}</span>
-   <button type="button" className="sw-poker-icon-btn" aria-label="Rules and strategy" onClick={()=>setGuide("rules")}><Info size={20}/></button>
+   <button type="button" className="sw-poker-icon-btn" aria-label="Rules and strategy" onClick={()=>openDrawer("rules")}><Info size={20}/></button>
   </header>
   <div className="sw-poker-round"><div className="sw-poker-round-badge"><div>♠ {gameName}</div><span>Round {round+1} · {wild}s Wild</span></div><div className="sw-poker-steps">{THREE_FIVE_SEVEN.map((n,i)=><div key={i} title={"Round "+(i+1)+": "+n+"s wild"} className={"sw-poker-step"+(i===round?" current":"")}>{i+1}</div>)}</div></div>
   {!roomId&&groupId&&session==="setup"&&roomMinimum!==null&&<section className="mb-3 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-3"><div className="text-sm font-black text-emerald-100">Want players on separate phones?</div><p className="mt-1 text-xs leading-5 text-slate-300">Create a shared waiting room in this Card Club with the same name, seat count and minimum buy-in. Local guests and dealt hands stay on this device, and synchronized game cards are not live yet.</p><button type="button" onClick={upgradeToLiveRoom} disabled={upgrading} className="sw-poker-button primary mt-3 w-full">{upgrading?"Creating shared room…":"♠ Make This a Live Waiting Room"}</button></section>}
@@ -269,8 +275,8 @@ export default function CustomerPokerTable(){
  </section>}
   {status&&<div role="status" className="mb-2 rounded-xl border border-cyan-300/30 bg-cyan-300/10 p-3 text-xs text-cyan-100">{status}</div>}
   {roomMinimum!==null&&<div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-emerald-300/20 bg-emerald-500/10 px-3 py-2 text-xs"><span>Room minimum: <b>{displayMoney(roomMinimum)}</b> virtual chips</span>{groupId&&<button type="button" onClick={shareRoom} disabled={shareBusy} className="rounded-lg border border-cyan-300/30 px-3 py-2 font-black text-cyan-100"><Share2 size={14} className="mr-1 inline"/> {roomId?"Share table":"Sharing unavailable"}</button>}</div>}
-  {practiceMode&&<div className="mb-3 flex items-center justify-between gap-2 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-100"><span>♠ Practice Mode · Hand hints & estimated odds</span><button type="button" className="rounded-lg border border-cyan-300/35 px-3 py-2 font-bold" onClick={()=>setGuide("ranks")}>What beats what?</button></div>}
-  <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-[11px] leading-4 text-amber-100">Local interactive game preview. Ready, countdown, cards and payouts are on this device only; they are <b>not synchronized across phones</b>. All chips are virtual.</div>
+  {practiceMode&&session==="setup"&&<div className="sw-poker-practice-note">♠ Practice Mode · hand tips, odds and ranks in Info</div>}
+  {session==="setup"&&<div className="sw-poker-practice-note">Local virtual chip practice · hands are not synchronized between phones.</div>}
  {seatEditor&&session==="setup"&&<div className="sw-poker-modal-cover" role="presentation" onClick={()=>setSeatEditor(false)}><form className="sw-poker-modal" role="dialog" aria-modal="true" aria-label="Add poker player" onClick={e=>e.stopPropagation()} onSubmit={addGuestToTable}><div className="flex items-center justify-between"><h2 className="text-xl font-black">Add a player</h2><button type="button" className="sw-poker-button" onClick={()=>setSeatEditor(false)}>✕</button></div><p className="mt-2 text-xs text-slate-400">Local guest seat; no separate phone connection yet.</p><label className="mt-4 block text-xs text-slate-300">Display name<input autoFocus required maxLength={24} value={seatName} onChange={e=>setSeatName(e.target.value)} placeholder="e.g. Zack" className="mt-2 w-full rounded-xl border border-white/20 bg-slate-950 p-3 text-white"/></label><label className="mt-3 block text-xs text-slate-300">Virtual buy-in ($) · minimum {displayMoney(roomMinimum??0)}<input required type="number" min={(roomMinimum??0)/100} max="10000" step="0.01" value={seatBuyin} onChange={e=>setSeatBuyin(e.target.value)} className="mt-2 w-full rounded-xl border border-white/20 bg-slate-950 p-3 text-white"/></label>{seatError&&<p role="alert" className="mt-3 text-xs text-rose-300">{seatError}</p>}<button type="submit" className="sw-poker-button primary mt-4 w-full">Seat Player</button></form></div>}
   <div className="sw-poker-table-space">
    <div className="sw-poker-felt">
@@ -290,46 +296,58 @@ export default function CustomerPokerTable(){
    {phase==="choosing"&&<div className="sw-poker-pov">
     <p className="sw-poker-pov-label">{allReady?"Everyone is ready — dealer may start countdown":currentPlayer?.name+" is choosing privately · "+readyCount+"/"+tableSize+" ready"}</p>
     <div className="sw-poker-facecards">{viewCards?viewCards.map((c,i)=><Card key={i} card={c} wild={c.rank===wild}/>):(hands[displayIndex??0]||[]).map((c,i)=><Card key={i} card={c} hidden/>)}</div>
-    {practiceMode&&handInsight&&<div className="sw-practice-hint" aria-live="polite"><div className="sw-practice-hint-heading"><span>♠ PRACTICE HAND ANALYSIS</span><button type="button" onClick={()=>setGuide("ranks")}>Hand rankings <BookOpen size={13} className="inline"/></button></div><strong>{handInsight.name}</strong><p>{handInsight.wildCount?handInsight.wildCount+" wild card(s) · ":""}{wild}s are wild this round. {round===0?"No straights or flushes in three-card hands.":round===2?"Best five from your seven cards.":"Five-card poker hierarchy."}</p>{equity&&<div className="sw-practice-equity"><div><b>{equity.percent}%</b><span>Estimated strength vs one random hand</span></div><div className="sw-practice-equity-track"><i style={{width:equity.percent+"%"}}/></div><small>Practice estimate from {equity.trials} simulated opponent hands. Not your actual odds against the seated players, and not a prediction of whether they will hold.</small></div>}</div>}
 
-    {currentPlayer&&<button type="button" className="sw-poker-button mt-2" onClick={()=>setViewer(v=>v===displayIndex?null:displayIndex)}>{viewer===displayIndex?<><EyeOff size={14} className="mr-1 inline"/> Hide my hand</>:<><Eye size={14} className="mr-1 inline"/> View {currentPlayer.name}'s hand</>}</button>}
-    {currentPlayer?<div className="sw-poker-controls"><button type="button" onClick={()=>choose("drop")} className="sw-poker-control">FOLD</button><button type="button" onClick={()=>choose("hold")} className="sw-poker-control hold">HOLD</button></div>:<button type="button" disabled={!allReady} onClick={countdown} className="sw-poker-button gold mt-3 w-full max-w-lg">All {tableSize} Ready · Dealer start 3, 2, 1</button>}
-    {currentPlayer&&<p className="mt-2 text-[11px] text-slate-400">Pass the device after each choice. Other players see only Ready/Waiting until reveal.</p>}
+
+    <p className="sw-poker-compact-note">{currentPlayer?"Use the sticky bar to Hold, Fold, or Hide cards.":"Everyone is ready. Start the countdown below."}</p>
    </div>}
    {phase==="countdown"&&<div className="sw-poker-pov rounded-2xl border border-cyan-400/30 bg-cyan-400/5 p-4"><strong>Everyone is READY</strong><p className="mt-1 text-xs text-cyan-200">Synchronized-style countdown demonstration on this device.</p></div>}
-   {phase==="revealing"&&<section className="sw-poker-pov sw-poker-panel sw-poker-showdown">
-    <h3><Eye size={17}/> {held.length===0?"Everyone dropped":held.length===1?"Blind hold · no showdown":round===2?"Seven-card showdown":"Comparing holding hands"}</h3>
-    {held.length===0?<p>Everyone folded. No cards are revealed; each player antes again into the growing pot.</p>:
-     held.length===1?<p><b>{people[held[0]].name}</b> is the only player holding. Their cards remain hidden. This counts toward three cumulative uncontested holds; the pot is not dragged unless this is their third.</p>:
-     round!==2?<p>{held.length} players held. Hands are being evaluated automatically; there is no individual card flip in this round. Folded players' cards stay hidden.</p>:
-     <><p>Seven-card finale: one card from every holding player flips automatically per beat. Folded hands stay hidden. Only eligible holders should view this shared local device.</p>
-     <div className="mt-3 flex flex-wrap justify-center gap-2">
-       {revealOrder.filter(i=>people[i].kind!=="computer").map(i=><button key={i} type="button" onClick={()=>setShowdownViewer(i)} className={"sw-poker-button "+(showdownViewer===i?"primary":"")}>View as {people[i].name}</button>)}
-       <button type="button" onClick={()=>setShowdownViewer(null)} className="sw-poker-button">Hide cards</button>
-     </div>
-     {canSeeOtherHands?<div className="mt-4 space-y-3">{revealOrder.map(i=><div key={i} className="rounded-xl border border-cyan-400/20 bg-black/15 p-3"><div className="mb-2 flex justify-between text-xs"><strong>{people[i].name}</strong><span className="text-emerald-300">{revealStep>=7?rate357(hands[i],round).name:Math.min(revealStep,7)+"/7 flipped"}</span></div><div className="sw-poker-facecards">{hands[i].map((c,j)=><Card key={j+"-"+(j<revealStep?"up":"down")} card={c} wild={c.rank===wild} hidden={j>=revealStep}/>)}</div></div>)}</div>:
-     <p className="mt-4 rounded-xl border border-amber-300/25 bg-amber-500/10 p-3 text-sm text-amber-100">Cards concealed. A player who folded cannot see other hands. Select a holding player above only when handing the device to that person. This local preview cannot independently verify who is holding the phone.</p>}
-     <p className="mt-3 text-xs text-cyan-200">{Math.min(revealStep,7)}/7 cards per holder · automatic reveal in progress</p></>}
-     <div className="mt-3 flex items-center justify-center gap-2 text-xs font-bold text-amber-300"><span className="sw-poker-spinner">♠</span> {sevenCardReveal?"Flipping and comparing cards…":"Calculating result…"}</div>
+   {phase==="revealing"&&<section className="sw-poker-pov sw-poker-panel sw-poker-showdown sw-poker-compact-result">
+    <h3><Eye size={17}/> {held.length===0?"Everyone folded":held.length===1?"Blind hold · no reveal":round===2?"Seven-card showdown":"Evaluating hands"}</h3>
+    <p>{held.length===0?"Pot carries forward.":held.length===1?"Cards remain hidden.":"Comparing holders automatically."}</p>
+    {sevenCardReveal&&<p>Flipping {Math.min(revealStep,7)}/7 cards per holder. <button type="button" onClick={()=>openDrawer("hands")} className="sw-poker-text-action">View showdown</button></p>}
    </section>}
    {phase==="review"&&<section className="sw-poker-panel mx-auto max-w-xl"><h3>Dealer review required</h3><p>{outcome?.message||"More than one player was dealt 3-5-7. No automatic payout has been made."}</p><button type="button" onClick={()=>{setSession("setup");setPhase("setup");}} className="sw-poker-button mt-3">Restart demo</button></section>}
-   {phase==="resolved"&&<section className="sw-poker-panel mx-auto max-w-xl sw-poker-result"><h3>🏆 Round {round+1} result</h3>
-    {outcome?.winner!==null&&outcome?.winner!==undefined&&<div className="sw-poker-winner-banner">🏆 {people[outcome.winner].name} · {outcome.kind==="lone-strike"?"Uncontested hold":"DRAGS "+displayMoney(outcome?.potDraggedCents??0)}</div>}
-    {outcome?.kind==="lone-strike"&&<p className="text-xs text-cyan-200">Blind bluff · {outcome.strikes?.[outcome.entered[0]]||0}/3 cumulative uncontested holds. No cards shown, no pot payout yet.</p>}
-    {outcome?.kind==="drag"&&<div className="mt-3 space-y-2">{outcome.entered.filter(i=>i!==outcome.winner).map(i=><div key={i} className="sw-poker-settlement-row"><span>{people[i].name} replaces pot</span><strong>−{displayMoney(outcome?.potDraggedCents??0)}</strong></div>)}</div>}
-    {outcome?.kind==="all-drop"&&<div className="sw-poker-winner-banner">No winner · everyone re-antes</div>}
-    {practiceMode&&people.some(p=>p.kind==="computer")&&<div className="sw-practice-computer-recap"><div className="sw-practice-hint-heading"><strong>🤖 Virtual player's cards · Practice only</strong><button type="button" onClick={()=>setGuide("ranks")}>Rankings</button></div>{people.map((p,i)=>p.kind==="computer"&&hands[i]?<div key={p.id}><p>{p.name} had: <b>{practiceHandInfo(hands[i],round)?.name||"No hand"}</b>{choices[i]==="drop"?" · Folded":choices[i]==="hold"?" · Held":""}</p><div className="sw-poker-facecards">{hands[i].map((card,j)=><Card key={j} card={card} wild={card.rank===wild}/>)}</div></div>:null)}<small>Only displayed once this practice round is over. Hidden from all live multiplayer games.</small></div>}<p className="text-sm font-bold text-emerald-200">{outcome?.winner!==null&&outcome?.winner!==undefined?people[outcome.winner].name+" wins "+displayMoney(outcome?.potDraggedCents??0):"Pot carries forward"}</p><p>{outcome?.message}</p><p className="mt-2">{pot===0?"Pot is empty. Game finished; next dealer chooses game and ante.":"Next pot: "+displayMoney(pot)+". Current stage: "+wild+"s wild."}</p>{pot>=capCents&&<p className="mt-2 text-amber-200">Pot cap reached. Review settlement before beginning another hand.</p>}
-    {gameOver?<><div className="sw-poker-winner-banner">🏁 Pot fully dragged · Game over</div><button type="button" onClick={finishGameAndPassDealer} className="sw-poker-button primary mt-3 w-full">♠ Pass dealer to {people[(dealer+1)%tableSize]?.name} · Choose next game <ChevronRight size={16} className="inline"/></button></>:<button type="button" disabled={pot>=capCents} onClick={next} className="sw-poker-button primary mt-3 w-full">{round===2?"Continue current game · New 3-card hand":"Deal 2 more · "+THREE_FIVE_SEVEN[round+1]+"s wild"} <ChevronRight size={16} className="inline"/></button>}
-    {pot>=capCents&&<button type="button" onClick={()=>{setPhase("setup");setSession("setup");}} className="sw-poker-button mt-2">End table preview</button>}
+   {phase==="resolved"&&<section className="sw-poker-panel mx-auto max-w-xl sw-poker-result sw-poker-compact-result" aria-label="Round result">
+    <h3>🏆 Round {round+1} result</h3>
+    {outcome?.winner!==null&&outcome?.winner!==undefined?<div className="sw-poker-winner-banner">{outcome.kind==="lone-strike"?"♠ "+people[outcome.winner].name+" · Uncontested Hold":"🏆 "+people[outcome.winner].name+" · DRAGS "+displayMoney(outcome?.potDraggedCents??0)}</div>:<p>{outcome?.kind==="all-drop"?"Everyone folded · pot carries forward":outcome?.message}</p>}
+    <div className="sw-poker-result-actions">
+     {practiceMode&&<button type="button" onClick={()=>openDrawer("hands")} className="sw-poker-button"><Eye size={15} className="mr-1 inline"/> Review hands</button>}
+     <button type="button" onClick={()=>openDrawer("log")} className="sw-poker-button"><BookOpen size={15} className="mr-1 inline"/> Round details</button>
+    </div>
+    {gameOver&&<p className="sw-poker-compact-note">Pot cleared · next dealer chooses the game and ante.</p>}
+    {pot>=capCents&&<p className="sw-poker-compact-note">Pot cap reached · dealer review required.</p>}
    </section>}
   </>}
-  <div className="sw-poker-panel-grid">
-   <section className="sw-poker-panel"><h3><Users size={17}/> Table Status <span className="ml-auto text-xs text-slate-400">{tableSize} Players</span></h3><div className="grid grid-cols-2 gap-2">{people.map((p,i)=><div key={p.id} className="flex items-center justify-between gap-1 border-b border-white/10 py-1 text-[11px]"><span className="truncate">{p.name}</span><span className={choices[i]!==null?"text-emerald-300":"text-slate-400"}>{session!=="playing"?"Seated":phase==="choosing"||phase==="countdown"?(choices[i]!==null?"✓ Ready":"◷ Waiting"):choices[i]==="hold"?"HOLD":choices[i]==="drop"?"FOLD":"—"}</span></div>)}</div><button type="button" className="sw-poker-button mt-3 w-full" onClick={()=>setGuide("strategy")}><Lightbulb size={15} className="mr-2 inline"/> Beginner tip</button></section>
-   <section className="sw-poker-panel"><h3><Eye size={17}/> Card Reveals</h3><p>When the countdown ends, only holding players reveal. Cards appear progressively in order, beginning to the dealer's left.</p><div className="mt-2 flex flex-wrap gap-2">{(phase==="revealing"?revealOrder:held).map(i=><span key={i} className="rounded-lg border border-cyan-400/25 px-2 py-1 text-[10px] text-cyan-200">{people[i].name}</span>)}{!held.length&&<span className="text-xs text-slate-500">No holders yet</span>}</div></section>
-   <section className="sw-poker-panel"><h3><WalletCards size={17}/> Game Log</h3><div className="sw-poker-log">{log.length?log.map(item=><div key={item.id}><span className="mr-2 text-emerald-400">●</span>{item.message} <span className="float-right text-slate-500">{item.time}</span></div>):<p>Waiting for a new hand.</p>}</div></section>
-   <section className="sw-poker-panel"><div className="mb-3 grid grid-cols-2 gap-2"><button type="button" onClick={()=>setGuide("rules")} className="sw-poker-button"><BookOpen size={14} className="mr-1 inline"/> Rules</button><button type="button" onClick={()=>setGuide("strategy")} className="sw-poker-button"><Target size={14} className="mr-1 inline"/> Strategy</button></div><h3>3-5-7 DROP · Quick Guide</h3><p>Three stages: 3s, then 5s, then 7s wild. Keep the same hand and add two cards each stage. Choose Hold or Fold; losing holders match the previous pot.</p></section>
-  </div>
  </div>
- {guide&&<div className="sw-poker-modal-cover" role="presentation" onClick={()=>setGuide(null)}><div className="sw-poker-modal" role="dialog" aria-modal="true" aria-label={guide==="rules"?"Game rules":guide==="ranks"?"Hand ranking hierarchy":"Beginner strategy"} onClick={e=>e.stopPropagation()}><div className="flex items-center justify-between"><h2 className="text-xl font-black">{guide==="rules"?"3-5-7 Rules":guide==="ranks"?"What Beats What?":"Beginner Strategy"}</h2><button type="button" onClick={()=>setGuide(null)} className="sw-poker-button" aria-label="Close guide">✕</button></div><div className="mt-4 space-y-3 text-sm leading-6 text-slate-200">{helperContent(guide,round)}</div><div className="mt-4 grid grid-cols-2 gap-2"><button type="button" onClick={()=>setGuide("rules")} className="sw-poker-button">Rules</button><button type="button" onClick={()=>setGuide("strategy")} className="sw-poker-button">Strategy</button><button type="button" onClick={()=>setGuide("ranks")} className="sw-poker-button">Hand rankings</button></div></div></div>}
+
+ {session==="playing"&&<nav className="sw-poker-sticky-actions" aria-label="Poker actions">
+  <div className="sw-poker-action-top"><strong>♠ {phase==="choosing"?(currentPlayer?.name||"Dealer")+" · "+readyCount+"/"+tableSize+" ready":phase==="resolved"?"Round settled":phase==="revealing"?"Showdown in progress":phase==="countdown"?"3 · 2 · 1":"Poker"}</strong><span>Pot {displayMoney(pot)}</span></div>
+  <div className="sw-poker-action-buttons">
+   {phase==="choosing"&&currentPlayer?<><button type="button" className="sw-poker-action hide" onClick={()=>setViewer(v=>v===displayIndex?null:displayIndex)} aria-pressed={viewer===displayIndex}>{viewer===displayIndex?<><EyeOff size={17}/> Hide</>:<><Eye size={17}/> Show hand</>}</button><button type="button" className="sw-poker-action fold" onClick={()=>choose("drop")}>Fold</button><button type="button" className="sw-poker-action hold" onClick={()=>choose("hold")}>Hold</button></>:
+   phase==="choosing"&&allReady?<button type="button" className="sw-poker-action hold grow" onClick={countdown}>Start 3 · 2 · 1 countdown</button>:
+   phase==="resolved"?<button type="button" disabled={!gameOver&&pot>=capCents} className="sw-poker-action hold grow" onClick={doNext}>{nextActionLabel} <ChevronRight size={16}/></button>:
+   phase==="revealing"?<button type="button" className="sw-poker-action hide grow" onClick={()=>openDrawer("hands")}><Eye size={16}/> View showdown</button>:
+   <span className="sw-poker-action-wait">Waiting for the round…</span>}
+   <button type="button" className="sw-poker-action info" onClick={()=>openDrawer(phase==="resolved"?"hands":"rules")} aria-label="Open game information and hand review"><Info size={19}/><span>Info</span></button>
+  </div>
+ </nav>}
+ {drawerOpen&&<div className="sw-poker-drawer-backdrop" role="presentation" onClick={closeDrawer}>
+  <section role="dialog" aria-modal="true" aria-label="Poker details" className="sw-poker-drawer" onClick={e=>e.stopPropagation()}>
+   <div className="sw-poker-drawer-grip" aria-hidden="true"/>
+   <div className="sw-poker-drawer-heading"><div><strong>♠ Table Details</strong><small>Practice mode · {gameName} · {wild}s wild</small></div><button type="button" className="sw-poker-drawer-close" aria-label="Close table details" onClick={closeDrawer}>✕</button></div>
+   <div role="tablist" aria-label="Poker details" className="sw-poker-drawer-tabs">{[["hands","Hands"],["ranks","Rankings"],["strategy","Tips"],["rules","Rules"],["log","Log"]].map(([tab,label])=><button type="button" key={tab} role="tab" aria-selected={drawerTab===tab} onClick={()=>setDrawerTab(tab)} className={drawerTab===tab?"active":""}>{label}</button>)}</div>
+   <div className="sw-poker-drawer-body">
+    {drawerTab==="hands"&&<>
+      {phase==="choosing"&&<>{handInsight&&viewCards?<div className="sw-practice-hint"><strong>{handInsight.name}</strong><p>{handInsight.wildCount?handInsight.wildCount+" wild card(s) · ":""}{wild}s are wild. {round===0?"No flushes or straights in the 3-card round.":round===2?"Best five cards from seven.":"Five-card hand ranking."}</p>{equity&&<div className="sw-practice-equity"><div><b>{equity.percent}%</b><span>Estimate against one random hand</span></div><div className="sw-practice-equity-track"><i style={{width:equity.percent+"%"}}/></div><small>Practice simulation using {equity.trials} random hands, not the opponents' actual cards. Not a guaranteed win.</small></div>}</div>:<p>Tap <b>Show hand</b> in the bottom bar first to see your hand strength and estimated odds. Opponents' cards stay hidden until the round ends.</p>}</>}
+      {phase==="revealing"&&<>{!competingHolders?<p>No hand reveal: {held.length===1?"only one player held.":"everyone folded."}</p>:round===2?<><p>Seven-card showdown · {Math.min(revealStep,7)}/7 revealed per holder.</p><div className="sw-poker-drawer-buttons">{revealOrder.filter(i=>people[i].kind!=="computer").map(i=><button type="button" key={i} onClick={()=>setShowdownViewer(i)} className={showdownViewer===i?"active":""}>View as {people[i].name}</button>)}<button type="button" onClick={()=>setShowdownViewer(null)}>Hide</button></div>{canSeeOtherHands?<div className="sw-poker-drawer-hands">{revealOrder.map(i=><section key={people[i].id}><strong>{people[i].name}</strong><div className="sw-poker-facecards">{hands[i].map((c,j)=><Card key={j} card={c} hidden={j>=revealStep} wild={c.rank===wild}/>)}</div></section>)}</div>:<p>Only holding players may inspect competing hands during the showdown. Hand the device to a holder and select their name. Folded players cannot view cards.</p>}</>:<p>Players' hands are being evaluated automatically. Full virtual hands can be inspected once the round ends.</p>}</>}
+      {phase==="resolved"&&<>{hasPracticeRecap?<><p>Full virtual-player hands are optional in practice mode. Folded players' cards were not shown during the decision.</p><div className="sw-poker-drawer-hands">{people.map((p,i)=>p.kind==="computer"&&hands[i]?<section key={p.id}><strong>{p.name} · {practiceHandInfo(hands[i],round)?.name||"Hand"}</strong><small>{choices[i]==="hold"?"Held":choices[i]==="drop"?"Folded":"Round complete"}</small><div className="sw-poker-facecards">{hands[i].map((c,j)=><Card key={j} card={c} wild={c.rank===wild}/>)}</div></section>:null)}</div></>:<p>No virtual-player hands to review for this round.</p>}</>}
+      {phase==="countdown"&&<p>The decision countdown is underway. Opponents' hands stay private.</p>}
+      {phase==="review"&&<p>Dealer review required. No automatic payout has been made.</p>}
+    </>}
+    {(drawerTab==="ranks"||drawerTab==="strategy"||drawerTab==="rules")&&<div className="sw-poker-drawer-prose">{helperContent(drawerTab,round)}</div>}
+    {drawerTab==="log"&&<><h3>Round details</h3>{phase==="resolved"&&<div className="sw-poker-drawer-summary"><p>{outcome?.message}</p><p>Winner's pot: {displayMoney(outcome?.potDraggedCents??0)} · Next pot: {displayMoney(pot)}</p>{outcome?.kind==="drag"&&outcome.entered.filter(i=>i!==outcome.winner).map(i=><p key={people[i].id}>{people[i].name} replaces {displayMoney(outcome.potDraggedCents??0)}</p>)}</div>}<h3>Player chip balances</h3>{people.map((p,i)=><div key={p.id} className="sw-poker-drawer-ledger"><span>{p.name}</span><b>{displayMoney(chipStacks[i]??p.chips??0)}</b></div>)}<h3>Game log</h3>{log.length?log.map(entry=><p className="sw-poker-drawer-log-entry" key={entry.id}><span>{entry.time}</span>{entry.message}</p>):<p>No actions yet.</p>}</>}
+   </div>
+  </section>
+ </div>}
  </main>;
 }

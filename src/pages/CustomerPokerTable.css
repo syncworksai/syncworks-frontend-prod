@@ -159,3 +159,54 @@
 .sw-practice-rank-list span{width:23px;height:23px;display:grid;place-items:center;background:#095d76;border-radius:50%;font-weight:800;color:#e0fdff}
 .sw-practice-rank-list strong{font-weight:800;color:#e8f9ff}
 @media(max-width:420px){.sw-practice-hint,.sw-practice-computer-recap{padding:10px}.sw-practice-computer-recap .sw-poker-card{min-width:0}}
+
+/* Compact poker experience: fixed thumb controls and an opt-in bottom sheet. */
+.sw-poker-screen{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))!important}
+.sw-poker-sticky-actions{position:fixed;bottom:0;left:0;right:0;z-index:1100;margin:auto;max-width:900px;border:1px solid #246e8e;border-bottom:0;border-radius:20px 20px 0 0;background:linear-gradient(115deg,#061b2df7,#111534f7);box-shadow:0 -12px 35px #020a20db;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));backdrop-filter:blur(18px)}
+.sw-poker-action-top{display:flex;justify-content:space-between;align-items:center;color:#bbd9ed;font-size:11px;gap:9px;margin-bottom:8px}
+.sw-poker-action-top strong{color:#e1f8ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sw-poker-action-buttons{display:flex;align-items:stretch;gap:8px}
+.sw-poker-action{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:52px;flex:1;border-radius:13px;border:1px solid #52718d;background:#102d44;color:#f0faff;font-size:14px;font-weight:900;white-space:nowrap;padding:9px 6px}
+.sw-poker-action.hold{background:linear-gradient(120deg,#2fdba9,#12a978);border-color:#86ffe0;color:#031c22}
+.sw-poker-action.fold{background:linear-gradient(120deg,#ff8a92,#ce415d);border-color:#ffc0cb;color:#230d15}
+.sw-poker-action.hide{background:#122840}
+.sw-poker-action.info{max-width:65px;min-width:59px;flex:0 0 63px;flex-direction:column;gap:0;font-size:10px;border-color:#39b7d3;color:#aeeeff}
+.sw-poker-action.grow{flex:3}
+.sw-poker-action-wait{flex:1;display:grid;place-items:center;color:#acd4e6;font-size:12px}
+.sw-poker-action:disabled{opacity:.45;cursor:not-allowed}
+.sw-poker-compact-result{margin:18px auto 6px!important;max-width:640px!important;padding:12px!important}
+.sw-poker-compact-result .sw-poker-winner-banner{padding:12px 9px;margin:8px 0;font-size:clamp(15px,4vw,22px)}
+.sw-poker-compact-result p{margin:5px 0;font-size:12px;line-height:1.5}
+.sw-poker-compact-result .sw-poker-result-actions{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 3px}
+.sw-poker-compact-result .sw-poker-result-actions button{flex:1;min-height:42px;font-size:12px}
+.sw-poker-compact-note,.sw-poker-practice-note{font-size:11px;color:#b6cadb;text-align:center;padding:8px 11px;line-height:1.45}
+.sw-poker-practice-note{margin:7px auto;border:1px solid #2d5967;background:#0b2338;border-radius:10px;max-width:750px}
+.sw-poker-text-action{color:#a8f9ff;font-weight:800;text-decoration:underline}
+.sw-poker-drawer-backdrop{position:fixed;inset:0;z-index:1250;background:#020814a8;display:flex;align-items:flex-end;justify-content:center}
+.sw-poker-drawer{width:100%;max-width:900px;max-height:min(85dvh,850px);display:flex;flex-direction:column;min-height:260px;border-radius:24px 24px 0 0;border:1px solid #3c88a8;border-bottom:0;background:linear-gradient(145deg,#0b1c32,#090e23);color:#f2f9ff;box-shadow:0 -18px 55px #000b;padding-bottom:env(safe-area-inset-bottom,0px)}
+.sw-poker-drawer-grip{width:50px;height:5px;border-radius:9px;background:#638ba6;margin:9px auto 4px}
+.sw-poker-drawer-heading{display:flex;align-items:center;justify-content:space-between;padding:5px 16px 12px;gap:12px}
+.sw-poker-drawer-heading strong{font-weight:900;font-size:17px}
+.sw-poker-drawer-heading small{display:block;color:#9cb2cc;font-size:11px}
+.sw-poker-drawer-close{height:42px;width:42px;display:grid;place-items:center;border:1px solid #3c5a73;border-radius:11px;font-size:19px}
+.sw-poker-drawer-tabs{display:flex;gap:5px;overflow-x:auto;padding:0 12px 10px;border-bottom:1px solid #2d4661}
+.sw-poker-drawer-tabs button{border:1px solid #385574;background:#12253c;border-radius:10px;padding:9px 10px;font-size:12px;font-weight:800;color:#b9cee2;flex:1;min-width:65px;white-space:nowrap}
+.sw-poker-drawer-tabs button.active{background:#126d84;color:white;border-color:#3bdff6}
+.sw-poker-drawer-body{overflow-y:auto;overscroll-behavior:contain;padding:14px 16px 25px;font-size:13px;line-height:1.6;flex:1}
+.sw-poker-drawer-body>p{padding:10px 0;color:#bacbdd}
+.sw-poker-drawer-body h3{font-weight:900;margin:12px 0 8px;font-size:14px;color:#b4edff}
+.sw-poker-drawer-prose p{margin:9px 0}
+.sw-poker-drawer-ledger{display:flex;justify-content:space-between;padding:7px 3px;border-bottom:1px solid #2d4557}
+.sw-poker-drawer-ledger b{color:#84f8c4}
+.sw-poker-drawer-log-entry{border-bottom:1px solid #20374d;padding:7px 0}
+.sw-poker-drawer-log-entry span{font-size:10px;color:#82bacc;margin-right:8px}
+.sw-poker-drawer-summary{background:#071f2e;border:1px solid #2a5565;padding:9px;border-radius:12px}
+.sw-poker-drawer-hands{display:grid;gap:14px}
+.sw-poker-drawer-hands>section{border:1px solid #385779;background:#111f3a;padding:11px;border-radius:12px}
+.sw-poker-drawer-hands>section>small{display:block;color:#8ee0b5}
+.sw-poker-drawer-hands .sw-poker-facecards{justify-content:flex-start;flex-wrap:wrap;gap:5px;margin-top:10px}
+.sw-poker-drawer-buttons{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0}
+.sw-poker-drawer-buttons button{border:1px solid #466c86;border-radius:9px;padding:8px 10px;font-size:11px}
+.sw-poker-drawer-buttons button.active{background:#087d98}
+.sw-poker-drawer-body .sw-practice-hint{margin:0 0 14px}
+@media(max-width:390px){.sw-poker-sticky-actions{padding-inline:8px}.sw-poker-action{font-size:12px;min-height:49px}.sw-poker-action.info{flex-basis:54px;min-width:54px}}
