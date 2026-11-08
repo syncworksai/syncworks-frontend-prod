@@ -138,3 +138,24 @@
 .sw-live-lobby-name small {display:block;color:#78f7bb;font-size:10px;margin-top:2px;white-space:nowrap}
 @media(min-width:650px){.sw-live-lobby-felt-wrap{padding:64px 25px}.sw-live-lobby-avatar,.sw-live-lobby-empty{width:56px;height:56px}.sw-live-lobby-name strong{font-size:13px}}
 @media(max-width:420px){.sw-live-lobby-felt-wrap{padding:42px 0 50px}.sw-live-lobby-felt{border-width:8px}.sw-live-lobby-avatar,.sw-live-lobby-empty{width:34px;height:34px}.sw-live-lobby-name{min-width:62px;padding:4px}.sw-live-lobby-name strong{font-size:9px}.sw-live-lobby-name small{font-size:9px}.sw-live-lobby-seat{min-width:62px}.sw-live-lobby-pot{font-size:8px}}
+
+/* Practice-only hand coaching. No gameplay hints are shown in shared live lobby. */
+.sw-practice-hint,.sw-practice-computer-recap{margin:12px auto;padding:13px;max-width:620px;border:1px solid #3cbbda75;border-radius:16px;background:linear-gradient(125deg,#0c3141,#0c1830 60%);color:#e5fbff;text-align:left;box-shadow:0 10px 27px #0004}
+.sw-practice-hint-heading{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;font-size:11px;letter-spacing:.035em;color:#a5f8ff;font-weight:800}
+.sw-practice-hint-heading button{border:1px solid #80c9ee71;border-radius:9px;padding:7px;font-size:11px;color:#d9f8ff;font-weight:700}
+.sw-practice-hint>strong{display:block;font-size:19px;margin-top:10px;color:#e6ff9c;font-weight:900}
+.sw-practice-hint p,.sw-practice-computer-recap p{font-size:12px;line-height:1.5;color:#c1d5ea;margin:6px 0}
+.sw-practice-equity{margin-top:12px;background:#041a28a8;border:1px solid #368e9787;border-radius:12px;padding:10px}
+.sw-practice-equity>div:first-child{display:flex;align-items:baseline;gap:10px}
+.sw-practice-equity b{font-size:24px;color:#86f8ca;font-weight:900}
+.sw-practice-equity span{font-size:11px;color:#d0e8eb}
+.sw-practice-equity small,.sw-practice-computer-recap small{display:block;font-size:10px;line-height:1.5;color:#8eabc3;margin-top:8px}
+.sw-practice-equity-track{margin-top:8px;height:8px;background:#142d45;border-radius:30px;overflow:hidden}
+.sw-practice-equity-track i{display:block;height:100%;background:linear-gradient(90deg,#24bcd4,#75efb6);border-radius:30px}
+.sw-practice-computer-recap{margin:12px 0 16px;border-color:#bc8fee75;background:linear-gradient(120deg,#1d2041,#081b2a)}
+.sw-practice-computer-recap .sw-poker-facecards{justify-content:flex-start;flex-wrap:wrap;gap:4px;margin:8px 0}
+.sw-practice-rank-list{display:grid;gap:5px;margin:12px 0}
+.sw-practice-rank-list>div{display:flex;align-items:center;gap:10px;background:#0a1830;border:1px solid #28466a;border-radius:10px;padding:8px;font-size:13px}
+.sw-practice-rank-list span{width:23px;height:23px;display:grid;place-items:center;background:#095d76;border-radius:50%;font-weight:800;color:#e0fdff}
+.sw-practice-rank-list strong{font-weight:800;color:#e8f9ff}
+@media(max-width:420px){.sw-practice-hint,.sw-practice-computer-recap{padding:10px}.sw-practice-computer-recap .sw-poker-card{min-width:0}}
