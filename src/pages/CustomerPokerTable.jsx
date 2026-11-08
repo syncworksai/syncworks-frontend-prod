@@ -69,7 +69,7 @@ export default function CustomerPokerTable(){
   else if(groupId){const r=readLocalRoom(groupId);if(r?.seats?.length){setLobbyName(r.name||"Poker Table");setPeople(r.seats.map(getPlayer));setStartingChips(String((r.buyInCents??2000)/100));setRoomMinimum(r.buyInCents??2000);setRoomCapacity(r.capacity||6);setRemoteNotice(false);}}
   return()=>{mounted=false;};
  },[groupId,roomId]);
- useEffect(()=>{if(phase!=="countdown")return;setCounter(3);const started=Date.now();const timer=setInterval(()=>{const elapsed=Math.floor((Date.now()-started)/1000);const remaining=3-elapsed;if(remaining<=0){clearInterval(timer);setCounter(null);setRevealStep(0);setPhase("revealing");setViewer(null);addLog("Dealer countdown complete. Comparing holders privately.");}else setCounter(remaining);},120);return()=>clearInterval(timer);},[phase]);
+ useEffect(()=>{if(phase!=="countdown")return;setCounter(3);const started=Date.now();const timer=setInterval(()=>{const elapsed=Math.floor((Date.now()-started)/1000);const remaining=3-elapsed;if(remaining<=0){clearInterval(timer);setCounter(null);setRevealStep(0);setPhase("revealing");setViewer(null);setShowdownViewer(round===2&&choices.filter(c=>c==="hold").length>=2?choices.findIndex((c,i)=>c==="hold"&&people[i]?.kind!=="computer"):null);addLog("Dealer countdown complete. Comparing holders privately.");}else setCounter(remaining);},120);return()=>clearInterval(timer);},[phase]);
  // No showdown cards are exposed unless two or more players held.
  // In the seven-card stage reveal one card from EACH holder per beat, automatically.
  useEffect(()=>{
