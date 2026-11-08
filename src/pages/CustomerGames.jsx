@@ -208,7 +208,6 @@ export default function CustomerGames() {
     let awarded = 0;
     let replacements = 0;
     if (!entered.length) {
-      setSoloStreak({});
       const added = anteCents * activeNames.length;
       setPotCents(potCents + added);
       setNetCents((old)=>old.map((v)=>v-anteCents));
@@ -223,7 +222,6 @@ export default function CustomerGames() {
     } else {
       const max = Math.max(...entered.map((i) => results[i].score));
       winners = entered.filter((i) => results[i].score === max);
-      setSoloStreak({});
       message = "Contested hold — highest eligible hand wins. Every losing holder replaces the drag.";
     }
     if (winners.length === 1) {
