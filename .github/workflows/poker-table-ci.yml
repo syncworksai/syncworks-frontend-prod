@@ -3,6 +3,8 @@ name: SyncWorks Poker Table Logic
 on:
   pull_request:
     paths:
+      - "src/games/pokerResume.mjs"
+      - "src/games/pokerResume.test.mjs"
       - "src/games/drop357Table.mjs"
       - "src/games/drop357Table.test.mjs"
       - "src/games/bozoRules.mjs"
@@ -18,4 +20,4 @@ jobs:
         with:
           node-version: "20"
       - name: Check table rules
-        run: node --test src/games/drop357Table.test.mjs
+        run: node --test src/games/drop357Table.test.mjs src/games/pokerResume.test.mjs
