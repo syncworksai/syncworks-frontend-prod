@@ -16,6 +16,7 @@ import Register from "./pages/Register";
 import GetStarted from "./pages/GetStarted";
 import AddBusiness from "./pages/AddBusiness";
 import CustomerDashboard from "./pages/CustomerDashboardResponsive";
+import CustomerGames from "./pages/CustomerGames";
 import CustomerNewRequest from "./pages/CustomerNewRequest";
 import CustomerMarketplaceAvailability from "./pages/CustomerMarketplaceAvailability";
 import CustomerSettings from "./pages/CustomerSettings";
@@ -208,6 +209,7 @@ export default function App() {
         <Route path="/billing/cash-fee-invoices" element={<ProtectedRoute><CashFeeInvoices /></ProtectedRoute>} />
         <Route path="/sales/*" element={<Navigate to="/customer" replace />} />
         <Route path="/customer" element={<ProtectedRoute><CustomerDashboard /></ProtectedRoute>} />
+        <Route path="/customer/games" element={<ProtectedRoute><CustomerGames /></ProtectedRoute>} />
         <Route path="/customer/affiliate" element={<ProtectedRoute><AffiliateDashboard /></ProtectedRoute>} />
         <Route path="/customer/store" element={<ProtectedRoute><CustomerStore /></ProtectedRoute>} />
         <Route path="/customer/favorites" element={<ProtectedRoute><CustomerFavorites /></ProtectedRoute>} />
