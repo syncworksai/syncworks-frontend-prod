@@ -72,6 +72,7 @@ function titleFor(ticket) {
 
 const MORE = [
   ["Social", "People, groups, events and teams.", "/connect"],
+  ["Games", "Play 3-5-7 DROP with friends.", "/customer/games"],
   ["Shop Assist", "Find products by budget or project.", "/customer/store"],
   ["Marketplace & services", "Find providers and track service work.", "/customer/marketplace"],
   ["Invoices & payments", "Review SyncWorks invoices and payments.", "/customer/invoices"],
@@ -186,6 +187,8 @@ export default function CustomerMobileHome({
           <MiniCard icon={AlertTriangle} label="Attention" value={attentionCount ? attentionCount : "Clear"} detail={attentionCount ? `${overdueItems.length} overdue · ${weatherAlerts.length} weather alert${weatherAlerts.length === 1 ? "" : "s"}` : `${dueItems.length} routine payment item${dueItems.length === 1 ? "" : "s"}`} tone={attentionCount ? "rose" : "emerald"} onClick={attentionCount ? onOpenInvoices : undefined} />
         </div>
       </div>
+
+      <button type="button" onClick={() => nav("/customer/games")} className="mt-3 flex min-h-14 w-full items-center gap-3 rounded-2xl border border-amber-400/25 bg-amber-500/[.06] p-3 text-left"><span className="text-2xl">♠</span><span className="min-w-0 flex-1"><span className="block text-xs font-black text-white">Games · 3-5-7 DROP</span><span className="block text-[10px] text-slate-400">Play a three-round wild-card game</span></span><ChevronRight className="h-4 w-4 text-amber-300" /></button>
 
       <Panel eyebrow="SYNC brief" title="Your day in one glance" action="Play" onAction={onOpenAudioSummary} className="border-violet-400/20 bg-violet-500/[.05]"><div className="mt-2 text-[11px] font-semibold leading-5 text-slate-200">{brief}</div><button type="button" onClick={() => nav("/sync")} className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl border border-violet-300/20 bg-violet-500/10 px-3 text-[10px] font-black text-violet-100"><Sparkles className="h-3.5 w-3.5" />Ask SYNC</button></Panel>
 
