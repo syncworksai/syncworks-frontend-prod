@@ -17,6 +17,7 @@ import api, {
   setActiveBusinessId,
   setToken,
 } from "../api/client";
+import {clearPokerResume} from "../games/pokerResume.mjs";
 
 const AuthContext = createContext(null);
 
@@ -1243,6 +1244,7 @@ export function AuthProvider({ children }) {
       // Local cleanup must still happen.
     }
 
+    clearPokerResume(user);
     clearToken();
     setActiveBusinessId(null);
     setActiveBusinessIdState("");
@@ -1257,6 +1259,7 @@ export function AuthProvider({ children }) {
   }, [
     resetAuthedState,
     setMode,
+    user,
   ]);
 
   const updateActiveBusinessId =
