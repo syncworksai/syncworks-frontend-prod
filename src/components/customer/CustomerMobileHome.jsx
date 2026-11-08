@@ -94,6 +94,7 @@ function Panel({ eyebrow, title, action, onAction, children, className = "" }) {
 
 export default function CustomerMobileHome({
   displayName,
+  resumePokerRoomPath,
   profilePhotoUrl,
   tickets,
   invoices,
@@ -216,6 +217,7 @@ export default function CustomerMobileHome({
 
       <div className="mt-4 -mx-3 flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none]">{[[Users,"Social",()=>nav("/connect")],[ShoppingBag,"Shop Assist",()=>nav("/customer/store")],[CalendarDays,"Calendar",onOpenCalendar],[Mail,"Inbox",onOpenMessages],[ReceiptText,"Invoices",onOpenInvoices],[Dumbbell,"Health",onOpenHealth],[CircleDollarSign,"Money",onOpenMoney],[Mic2,"Briefing",onOpenAudioSummary]].map(([Icon,label,action]) => <button key={label} type="button" onClick={action} className="min-w-[82px] rounded-2xl border border-white/10 bg-white/[.025] p-3 text-left"><Icon className="h-4 w-4 text-cyan-300" /><div className="mt-2 text-[9px] font-black text-white">{label}</div></button>)}</div>
 
+      {resumePokerRoomPath ? <button type="button" onClick={() => nav(resumePokerRoomPath)} className="mt-3 flex min-h-16 w-full items-center justify-between gap-3 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-4 text-left"><span className="flex items-center gap-3"><span className="text-2xl">♠</span><span><strong className="block text-sm text-white">Return to Poker Room</strong><span className="block text-[11px] text-emerald-200">Rejoin your last active table · saved seats</span></span></span><ChevronRight className="h-5 w-5 text-emerald-300"/></button> : null}
       <button type="button" onClick={() => nav("/customer/games/new")} className="mt-3 flex min-h-16 w-full items-center justify-between gap-3 rounded-2xl border border-cyan-300/35 bg-cyan-500/10 p-4 text-left"><span className="flex items-center gap-3"><span className="text-2xl">♠</span><span><strong className="block text-sm text-white">New Game</strong><span className="block text-[11px] text-cyan-100">Create poker room · set buy-in · share invite</span></span></span><span className="text-cyan-300">＋</span></button>
       <button type="button" onClick={() => nav("/customer/games")} className="mt-3 flex min-h-14 w-full items-center gap-3 rounded-2xl border border-amber-400/25 bg-amber-500/[.06] p-3 text-left"><span className="text-2xl">♠</span><span className="min-w-0 flex-1"><span className="block text-xs font-black text-white">Games & Card Clubs · 5 games</span><span className="block text-[10px] text-slate-400">Create leagues, invite friends, play cards & track wins</span></span><ChevronRight className="h-4 w-4 text-amber-300" /></button>
 
