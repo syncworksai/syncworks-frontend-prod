@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { getIdentityProfile } from "../api/identity";
 import { useAuth } from "../auth/AuthContext";
+import {readPokerResume} from "../games/pokerResume.mjs";
 import CustomerDashboard from "./CustomerDashboard.jsx";
 import CustomerMobileHome from "../components/customer/CustomerMobileHome";
 import SyncAssistantStickyDock from "../components/sync/SyncAssistantStickyDock";
@@ -107,6 +108,7 @@ export default function CustomerDashboardResponsive() {
     <div className="min-h-dvh bg-[#020617] px-3 pb-24 pt-3 text-slate-100" data-sw-layout="portrait" data-sw-visual="midnight">
       <CustomerMobileHome
         displayName={firstName(user)}
+        resumePokerRoomPath={readPokerResume(user)?.path||""}
         profilePhotoUrl={profilePhotoUrl}
         tickets={tickets}
         invoices={invoices}
