@@ -188,8 +188,9 @@ export default function CustomerPokerTable(){
    setSeatError("");setSeatName("");setSeatEditor(false);
  }
  function addComputerToTable(){
-   if(session!=="setup"||people.length>=roomCapacity||people.some(p=>p.kind==="computer"))return;
-   updateSeats(old=>[...old,{id:uid(),name:"Computer",kind:"computer",chips:roomMinimum??2000}]);
+   if(session!=="setup"||people.length>=roomCapacity)return;
+   const virtualCount=people.filter(p=>p.kind==="computer").length;
+   updateSeats(old=>[...old,{id:uid(),name:"Virtual Player "+(virtualCount+1),kind:"computer",chips:roomMinimum??2000}]);
  }
  function preparedChoices(size){return people.slice(0,size).map(p=>p.kind==="computer"?(Math.random()>.4?"hold":"drop"):null);}
  function dealOpening(previousPot=0,previousChips=null,previousStrikes=null){
@@ -261,8 +262,8 @@ export default function CustomerPokerTable(){
  {dealerChoosing&&<><label htmlFor="sw-dealer-ante">Next ante ($)</label><div className="flex flex-wrap gap-2">{["0.25","0.50","1.00"].map(a=><button type="button" key={a} onClick={()=>setAnte(a)} className={"sw-poker-button "+(ante===a?"primary":"")}>{a}</button>)}</div><input id="sw-dealer-ante" type="number" min="0" max="100" step="0.01" value={ante} onChange={e=>setAnte(e.target.value)} className="min-h-11 w-full rounded-lg border border-cyan-300/30 bg-slate-950 p-2"/><button type="button" onClick={startDealerSelectedGame} className="sw-poker-button gold mt-3 w-full">♠ Start {TABLE_GAMES.find(g=>g.code===selectedGame)?.label||"Selected Game"}</button></>}
  </section>}
   {session==="setup"&&!dealerChoosing&&<section className="sw-poker-quick-setup" aria-label="Poker table seating">
-  <div className="sw-poker-quick-header"><div><strong>YOUR TABLE · {tableSize}/{roomCapacity} PLAYERS</strong><p>Choose players, add a computer, then deal.</p></div><span className="sw-poker-purse">♠ {displayMoney(people.reduce((sum,p)=>sum+(p.chips??roomMinimum??2000),0))} chips</span></div>
-  <div className="sw-poker-quick-actions"><button type="button" className="sw-poker-button primary" disabled={tableSize>=roomCapacity} onClick={()=>{setSeatBuyin(String((roomMinimum??2000)/100));setSeatEditor(true);setSeatError("");}}><Users size={16} className="mr-1 inline"/> + Add Player</button><button type="button" className="sw-poker-button" disabled={tableSize>=roomCapacity||people.some(p=>p.kind==="computer")} onClick={addComputerToTable}>🤖 + Computer</button></div>
+  <div className="sw-poker-quick-header"><div><strong>YOUR TABLE · {tableSize}/{roomCapacity} PLAYERS</strong><p>Choose players, add up to five virtual opponents, then deal.</p></div><span className="sw-poker-purse">♠ {displayMoney(people.reduce((sum,p)=>sum+(p.chips??roomMinimum??2000),0))} chips</span></div>
+  <div className="sw-poker-quick-actions"><button type="button" className="sw-poker-button primary" disabled={tableSize>=roomCapacity} onClick={()=>{setSeatBuyin(String((roomMinimum??2000)/100));setSeatEditor(true);setSeatError("");}}><Users size={16} className="mr-1 inline"/> + Add Player</button><button type="button" className="sw-poker-button" disabled={tableSize>=roomCapacity} onClick={addComputerToTable}>🤖 Add Virtual Player ({people.filter(p=>p.kind==="computer").length}/{roomCapacity-people.filter(p=>p.kind!=="computer").length})</button></div>
   <div className="sw-poker-quick-players">{people.map((p,i)=><div className="sw-poker-quick-person" key={p.id}><Photo person={p}/><label className="min-w-0 flex-1 text-xs text-slate-300"><input aria-label={"Player "+(i+1)+" name"} value={p.name} maxLength={24} onChange={e=>updateSeats(old=>old.map((x,j)=>i===j?{...x,name:e.target.value.slice(0,24)}:x))} className="sw-poker-name-input"/><span className="block text-[10px] text-emerald-200">{displayMoney(p.chips??roomMinimum??2000)} · {p.kind==="computer"?"Computer":"Seated"}</span></label>{p.kind!=="host"&&<button type="button" aria-label={"Remove "+p.name} onClick={()=>updateSeats(old=>old.filter((_,j)=>j!==i))} className="sw-poker-remove">×</button>}</div>)}</div>
   <div className="sw-poker-quick-footer"><button type="button" className="sw-poker-button primary" disabled={tableSize<2} onClick={start}>♠ Shuffle & Deal · 3 Cards</button><p>{tableSize<2?"Add at least one more player or a computer to start.":"Ready to deal on this device."}</p></div>
  </section>}
