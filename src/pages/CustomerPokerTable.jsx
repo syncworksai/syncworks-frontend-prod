@@ -205,7 +205,7 @@ export default function CustomerPokerTable(){
   const instant=fresh.hands.flatMap((hand,i)=>instant357(hand)?[i]:[]);
   if(instant.length===1){
    const winner=instant[0];setChipStacks(afterAnte.map((v,i)=>i===winner?v+newPot:v));setPot(0);
-   setOutcome({kind:"instant",winner,delta:[],message:people[winner].name+" received 3-5-7 on the opening deal. Instant pot win!"});
+   setOutcome({kind:"instant",winner,entered:[winner],delta:[],potDraggedCents:newPot,message:people[winner].name+" received 3-5-7 on the opening deal. Instant pot win!"});
    setPhase("resolved");addLog(people[winner].name+" dealt natural 3-5-7 — instant win.");
   }else if(instant.length>1){
    setPhase("review");addLog("Multiple 3-5-7 instant hands — dealer review required.");
