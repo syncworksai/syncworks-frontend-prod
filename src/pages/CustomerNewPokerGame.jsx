@@ -3,12 +3,14 @@ import {useNavigate,useSearchParams} from "react-router-dom";
 import {ArrowLeft,Plus,Spade,Users} from "lucide-react";
 import {createGroup,getGroups} from "../api/social";
 import {createCardRoom,listCardRooms} from "../api/cardRooms";
+import {useAuth} from "../auth/AuthContext";
 
 const cents=v=>Math.round(Number(v)*100);
 const roomKey=id=>"syncworks-local-poker-room-v1-"+id;
 function groupOptions(groups){return groups.filter(g=>String(g.kind||"").toUpperCase()==="CLUB");}
 export default function CustomerNewPokerGame(){
  const nav=useNavigate(),[params]=useSearchParams();
+ const {user}=useAuth();
  const [groups,setGroups]=useState([]),[groupId,setGroupId]=useState(params.get("group")||"");
  const [createLeague,setCreateLeague]=useState(false),[leagueName,setLeagueName]=useState("Saturday Card Club");
  const [roomName,setRoomName]=useState("Saturday Poker"),[seats,setSeats]=useState(6),[minimum,setMinimum]=useState("20");
@@ -35,7 +37,7 @@ export default function CustomerNewPokerGame(){
    }catch(err){
     if(err?.response?.status!==404)throw err;
     // Until the Django room API is deployed, keep a local, clearly labeled preview.
-    const room={id:"local-"+Date.now(),name:roomName.trim()||"Poker Table",capacity:Number(seats),buyInCents:buyin,seats:[],createdAt:new Date().toISOString(),localOnly:true};
+    const room={id:"local-"+Date.now(),name:roomName.trim()||"Poker Table",capacity:Number(seats),buyInCents:buyin,seats:[{id:String(user?.id||"host"),name:[user?.first_name,user?.last_name].filter(Boolean).join(" ")||user?.display_name||user?.email||"Host",kind:"host",virtual_chips_cents:buyin}],createdAt:new Date().toISOString(),localOnly:true};
     localStorage.setItem(roomKey(id),JSON.stringify(room));
     nav("/customer/games/table?group="+encodeURIComponent(id)+"&preview=1",{replace:true});
    }
