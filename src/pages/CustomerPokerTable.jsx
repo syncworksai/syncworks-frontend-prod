@@ -1,7 +1,7 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {useNavigate,useSearchParams} from "react-router-dom";
 import {ArrowLeft,BookOpen,Check,ChevronRight,Eye,EyeOff,Info,Lightbulb,RotateCcw,Shield,Spade,Target,Users,WalletCards} from "lucide-react";
-import {getCardRoom} from "../api/cardRooms";
+import {getCardRoom,createCardRoom} from "../api/cardRooms";
 import {createGroupInviteLink} from "../api/social";
 import {useAuth} from "../auth/AuthContext";
 import {Share2} from "lucide-react";
@@ -46,6 +46,7 @@ export default function CustomerPokerTable(){
  const [guide,setGuide]=useState(null),[status,setStatus]=useState(""),[log,setLog]=useState([]),[remoteNotice,setRemoteNotice]=useState(false);
  const [shareBusy,setShareBusy]=useState(false),[inviteUrl,setInviteUrl]=useState(""),[roomMinimum,setRoomMinimum]=useState(null),[roomCapacity,setRoomCapacity]=useState(6);
  const [selectedGame,setSelectedGame]=useState("357");
+ const [upgrading,setUpgrading]=useState(false);
  const [seatEditor,setSeatEditor]=useState(false),[seatName,setSeatName]=useState(""),[seatBuyin,setSeatBuyin]=useState("20"),[seatError,setSeatError]=useState("");
  const anteCents=Math.round(Number(ante)*100),capCents=Math.round(Number(maxPot)*100);
  const wild=THREE_FIVE_SEVEN[round];
@@ -78,6 +79,25 @@ export default function CustomerPokerTable(){
   const timer=setTimeout(()=>settleCurrentRound(),950);return()=>clearTimeout(timer);
  },[phase,round,revealStep,choices,hands,pot,strikes]);
  useEffect(()=>{if(!chipAnimation)return;const timer=setTimeout(()=>setChipAnimation(null),3200);return()=>clearTimeout(timer);},[chipAnimation]);
+ async function upgradeToLiveRoom(){
+  if(upgrading||!groupId||roomId||session!=="setup")return;
+  const minimum=roomMinimum??Math.round(Number(startingChips)*100);
+  if(!Number.isSafeInteger(minimum)||minimum<0||minimum>1000000){setStatus("Set a valid room minimum first.");return;}
+  setUpgrading(true);setStatus("");
+  try{
+    const shared=await createCardRoom({
+      group:Number(groupId),name:lobbyName||"Poker Table",
+      capacity:roomCapacity,virtual_buy_in_cents:minimum
+    });
+    if(!shared?.id)throw Error("Server did not confirm the new shared room.");
+    // Each remote participant must join on their own account; local guests
+    // and already dealt hands are never silently moved to a shared table.
+    nav("/customer/games/clubs/room?group="+encodeURIComponent(groupId)+"&room="+encodeURIComponent(shared.id),{replace:true});
+  }catch(err){
+    const code=err?.response?.status;
+    setStatus(code===404?"Shared poker rooms are not enabled on the server yet. Your local table is unchanged.":err?.response?.data?.detail||err?.message||"Could not create a shared room. Your local table is unchanged.");
+  }finally{setUpgrading(false);}
+ }
  async function shareRoom(){
   if(shareBusy)return;
   if(!roomId){
@@ -201,6 +221,7 @@ export default function CustomerPokerTable(){
    <button type="button" className="sw-poker-icon-btn" aria-label="Rules and strategy" onClick={()=>setGuide("rules")}><Info size={20}/></button>
   </header>
   <div className="sw-poker-round"><div className="sw-poker-round-badge"><div>♠ {gameName}</div><span>Round {round+1} · {wild}s Wild</span></div><div className="sw-poker-steps">{THREE_FIVE_SEVEN.map((n,i)=><div key={i} title={"Round "+(i+1)+": "+n+"s wild"} className={"sw-poker-step"+(i===round?" current":"")}>{i+1}</div>)}</div></div>
+  {!roomId&&groupId&&session==="setup"&&roomMinimum!==null&&<section className="mb-3 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-3"><div className="text-sm font-black text-emerald-100">Want players on separate phones?</div><p className="mt-1 text-xs leading-5 text-slate-300">Create a shared waiting room in this Card Club with the same name, seat count and minimum buy-in. Local guests and dealt hands stay on this device, and synchronized game cards are not live yet.</p><button type="button" onClick={upgradeToLiveRoom} disabled={upgrading} className="sw-poker-button primary mt-3 w-full">{upgrading?"Creating shared room…":"♠ Make This a Live Waiting Room"}</button></section>}
   {session==="setup"&&<section className="sw-poker-game-choice" aria-label="Choose the poker game"><label htmlFor="sw-poker-game-select">Dealer's game choice</label><select id="sw-poker-game-select" value={selectedGame} onChange={e=>changeGame(e.target.value)}>{TABLE_GAMES.map(g=><option key={g.code} value={g.code}>{g.label}</option>)}</select><p>3-5-7 uses this branded table. Other games open their existing local game screens until the shared table engine is complete.</p></section>}
   {session==="setup"&&<section className="sw-poker-quick-setup" aria-label="Poker table seating">
   <div className="sw-poker-quick-header"><div><strong>YOUR TABLE · {tableSize}/{roomCapacity} PLAYERS</strong><p>Choose players, add a computer, then deal.</p></div><span className="sw-poker-purse">♠ {displayMoney(people.reduce((sum,p)=>sum+(p.chips??roomMinimum??2000),0))} chips</span></div>
