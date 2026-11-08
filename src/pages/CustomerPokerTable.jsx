@@ -9,6 +9,13 @@ import {addRoundCards,cardRank,createShuffledDeck,dealt357,displayMoney,instant3
 import "./CustomerPokerTable.css";
 
 const DEFAULT_PLAYERS=[{id:"local-you",name:"You",kind:"local"},{id:"local-zack",name:"Zack",kind:"guest"},{id:"local-russ",name:"Russ",kind:"guest"}];
+const TABLE_GAMES=[
+ {code:"357",label:"3-5-7 DROP",path:"/customer/games/table"},
+ {code:"fyb",label:"FYB",path:"/customer/games/fyb"},
+ {code:"442",label:"4/4/Deuce",path:"/customer/games/442"},
+ {code:"queen-follower",label:"Queen & the Follower",path:"/customer/games/queen-follower"},
+ {code:"bozo",label:"Bozo · The Clown",path:"/customer/games/bozo"},
+];
 const gameName="3-5-7 DROP";
 const rankText=card=>cardRank(card.rank);
 const isRed=suit=>suit==="♥"||suit==="♦";
@@ -37,6 +44,7 @@ export default function CustomerPokerTable(){
  const [ante,setAnte]=useState("0.25"),[maxPot,setMaxPot]=useState("50"),[startingChips,setStartingChips]=useState("20");
  const [guide,setGuide]=useState(null),[status,setStatus]=useState(""),[log,setLog]=useState([]),[remoteNotice,setRemoteNotice]=useState(false);
  const [shareBusy,setShareBusy]=useState(false),[inviteUrl,setInviteUrl]=useState(""),[roomMinimum,setRoomMinimum]=useState(null),[roomCapacity,setRoomCapacity]=useState(6);
+ const [selectedGame,setSelectedGame]=useState("357");
  const [seatEditor,setSeatEditor]=useState(false),[seatName,setSeatName]=useState(""),[seatBuyin,setSeatBuyin]=useState("20"),[seatError,setSeatError]=useState("");
  const anteCents=Math.round(Number(ante)*100),capCents=Math.round(Number(maxPot)*100);
  const wild=THREE_FIVE_SEVEN[round];
@@ -61,7 +69,7 @@ export default function CustomerPokerTable(){
   if(shareBusy)return;
   setShareBusy(true);
   try{
-    // For a local room, sharing is a club invitation, NOT a remotely joinable table.
+    // For a local room, sharing invites approved club membership, NOT this table.
     let url=inviteUrl;
     if(!url){
       if(!groupId)throw Error("Create a club room to share an invitation.");
@@ -73,7 +81,7 @@ export default function CustomerPokerTable(){
         if(!raw)throw Error("The club invitation service did not provide a link.");
         const link=new URL(raw,window.location.origin);
         link.searchParams.set("mode","club");
-        link.searchParams.set("next","/customer/games/new?group="+groupId);
+        link.searchParams.set("next",roomId?"/customer/games/clubs/room?group="+groupId+"&room="+roomId:"/customer/games/new?group="+groupId);
         url=link.toString();
       }
       setInviteUrl(url);
@@ -83,6 +91,17 @@ export default function CustomerPokerTable(){
     else setStatus("Share link: "+url);
   }catch(err){if(err?.name!=="AbortError")setStatus(err?.response?.data?.detail||err?.message||"Unable to share invitation.");}
   finally{setShareBusy(false);}
+ }
+ function changeGame(nextCode){
+  setSelectedGame(nextCode);
+  if(nextCode==="357")return;
+  const next=TABLE_GAMES.find(g=>g.code===nextCode);
+  if(!next)return;
+  // Other engines have their own local prototype routes, not this 3-5-7 evaluator.
+  const qs=new URLSearchParams();
+  if(groupId)qs.set("group",groupId);
+  if(roomId)qs.set("room",roomId);
+  nav(next.path+(qs.toString()?"?"+qs.toString():""));
  }
  function storeLocalSeats(updated){
   if(!groupId||roomId)return;
@@ -167,6 +186,7 @@ export default function CustomerPokerTable(){
    <button type="button" className="sw-poker-icon-btn" aria-label="Rules and strategy" onClick={()=>setGuide("rules")}><Info size={20}/></button>
   </header>
   <div className="sw-poker-round"><div className="sw-poker-round-badge"><div>♠ {gameName}</div><span>Round {round+1} · {wild}s Wild</span></div><div className="sw-poker-steps">{THREE_FIVE_SEVEN.map((n,i)=><div key={i} title={"Round "+(i+1)+": "+n+"s wild"} className={"sw-poker-step"+(i===round?" current":"")}>{i+1}</div>)}</div></div>
+  {session==="setup"&&<section className="sw-poker-game-choice" aria-label="Choose the poker game"><label htmlFor="sw-poker-game-select">Dealer's game choice</label><select id="sw-poker-game-select" value={selectedGame} onChange={e=>changeGame(e.target.value)}>{TABLE_GAMES.map(g=><option key={g.code} value={g.code}>{g.label}</option>)}</select><p>3-5-7 uses this branded table. Other games open their existing local game screens until the shared table engine is complete.</p></section>}
   {session==="setup"&&<section className="sw-poker-quick-setup" aria-label="Poker table seating">
   <div className="sw-poker-quick-header"><div><strong>YOUR TABLE · {tableSize}/{roomCapacity} PLAYERS</strong><p>Choose players, add a computer, then deal.</p></div><span className="sw-poker-purse">♠ {displayMoney(people.reduce((sum,p)=>sum+(p.chips??roomMinimum??2000),0))} chips</span></div>
   <div className="sw-poker-quick-actions"><button type="button" className="sw-poker-button primary" disabled={tableSize>=roomCapacity} onClick={()=>{setSeatBuyin(String((roomMinimum??2000)/100));setSeatEditor(true);setSeatError("");}}><Users size={16} className="mr-1 inline"/> + Add Player</button><button type="button" className="sw-poker-button" disabled={tableSize>=roomCapacity||people.some(p=>p.kind==="computer")} onClick={addComputerToTable}>🤖 + Computer</button></div>
@@ -206,7 +226,8 @@ export default function CustomerPokerTable(){
    {phase==="review"&&<section className="sw-poker-panel mx-auto max-w-xl"><h3>Dealer review required</h3><p>{outcome?.message||"More than one player was dealt 3-5-7. No automatic payout has been made."}</p><button type="button" onClick={()=>{setSession("setup");setPhase("setup");}} className="sw-poker-button mt-3">Restart demo</button></section>}
    {phase==="resolved"&&<section className="sw-poker-panel mx-auto max-w-xl"><h3>🏆 Round {round+1} result</h3><p className="text-sm font-bold text-emerald-200">{outcome?.winner!==null&&outcome?.winner!==undefined?people[outcome.winner].name+" wins the drag":"Pot carries forward"}</p><p>{outcome?.message}</p><p className="mt-2">Next pot: {displayMoney(pot)}. Current stage: {wild}s wild.</p>{pot>=capCents&&<p className="mt-2 text-amber-200">Pot cap reached. Review settlement before beginning another hand.</p>}
     <button type="button" disabled={pot>=capCents} onClick={next} className="sw-poker-button primary mt-3 w-full">{gameOver?"New hand · rotate dealer":"Deal 2 more · "+THREE_FIVE_SEVEN[round+1]+"s wild"} <ChevronRight size={16} className="inline"/></button>
-    {pot>=capCents&&<button type="button" onClick={()=>{setPhase("setup");setSession("setup");}} className="sw-poker-button mt-2">End table preview</button>}
+    {gameOver&&<button type="button" onClick={()=>{setPhase("setup");setSession("setup");setChoices([]);setViewer(null);setOutcome(null);setSelectedGame("357");}} className="sw-poker-button mt-2 w-full">♠ Dealer's Choice · Change game for next hand</button>}
+   {pot>=capCents&&<button type="button" onClick={()=>{setPhase("setup");setSession("setup");}} className="sw-poker-button mt-2">End table preview</button>}
    </section>}
   </>}
   <div className="sw-poker-panel-grid">

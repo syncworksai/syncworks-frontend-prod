@@ -96,3 +96,8 @@
  .sw-poker-empty-seat {width:34px;height:34px;font-size:22px}
  .sw-poker-quick-players {max-height:150px}
 }
+
+.sw-poker-game-choice{margin:12px 0;border:1px solid #3da1c9;background:linear-gradient(120deg,#081b34,#101031);border-radius:17px;padding:12px;display:flex;flex-direction:column;gap:7px}
+.sw-poker-game-choice label{font-weight:900;color:#a8eeff;font-size:12px;letter-spacing:.045em}
+.sw-poker-game-choice select{min-height:49px;width:100%;padding:10px;border-radius:12px;border:1px solid #66d7ee;background:#061122;color:white;font-weight:800;font-size:14px}
+.sw-poker-game-choice p{margin:0;color:#a3bdd4;font-size:11px;line-height:1.45}
