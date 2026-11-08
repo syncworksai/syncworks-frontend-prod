@@ -25,14 +25,12 @@ export default function Customer442(){
    setPot(names.length*stake);setHistory([{text:`Opening ante: ${names.length} players × ${dollars(stake)} = ${dollars(names.length*stake)}`}]);
    setStage("declaring");
  }
- function nextHand(extraAnte=false){
+ function nextHand(){
    const deck=shuffle();
    setHands(names.map((_,i)=>deck.slice(i*5,i*5+5)));
    setDecisions([]);setPosition(0);setWinner(null);setActiveView(null);
-   if(extraAnte){
-     const newPot=pot+names.length*stake;setPot(newPot);
-     setHistory(h=>[...h,{text:`Everyone out: ${names.length} new antes of ${dollars(stake)}; pot ${dollars(newPot)}.`}]);
-   }
+   const newPot=pot+names.length*stake;setPot(newPot);
+   setHistory(h=>[...h,{text:`New mandatory ante: ${names.length} players × ${dollars(stake)}; virtual pot ${dollars(newPot)}.`}]);
    setStage("declaring");
  }
  function commit(choice){
@@ -58,9 +56,9 @@ export default function Customer442(){
  <div className="mb-4 rounded-2xl border border-amber-400/25 bg-amber-500/10 p-4"><div className="text-xs font-bold text-amber-200">Current virtual pot</div><div className="text-3xl font-black">{dollars(pot)}</div><div className="text-xs text-slate-300">Loser match cap: {dollars(limit)} each</div></div>
  <div className="grid gap-2 sm:grid-cols-3">{names.map((n,i)=><div key={i} className="rounded-xl border border-white/10 bg-white/[.03] p-3"><div className="flex justify-between text-xs font-black"><span>{n}</span><span>{decisions[i]==="in"?"IN":decisions[i]==="out"?"OUT":""}</span></div><div className="mt-2 flex flex-wrap gap-1">{hands[i].map((card,j)=><div key={j} className={`flex h-[66px] w-10 flex-col justify-between rounded border p-1 text-xs font-black ${activeView===i||stage!=="declaring"?"border-white/60 bg-white text-slate-950":"border-cyan-300/30 bg-slate-900 text-cyan-200"}`}><span>{activeView===i||stage!=="declaring"?label(card.rank):"SW"}</span><span className="text-right">{activeView===i||stage!=="declaring"?card.suit:"♠"}</span><span className="text-[8px] text-amber-700">{(activeView===i||stage!=="declaring")&&wild442(hands[i])[j]?"WILD":""}</span></div>)}</div></div>)}</div>
  {stage==="declaring"&&<section className="mt-4 rounded-2xl border border-cyan-400/20 p-4"><h2 className="font-black">{names[position]}'s declaration</h2><p className="mt-2 text-xs text-slate-400">Pass device privately. Online simultaneous declarations will require a secure room server.</p><button type="button" onClick={()=>setActiveView(activeView===position?null:position)} className="mt-3 min-h-11 w-full rounded-xl border border-white/20"> {activeView===position?"Hide":"Peek at"} my hand</button><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={()=>commit("in")} className="min-h-12 rounded-xl bg-emerald-400 font-black text-black">IN</button><button type="button" onClick={()=>commit("out")} className="min-h-12 rounded-xl bg-rose-500 font-black">OUT</button></div></section>}
- {stage==="all-out"&&<div className="mt-4 rounded-xl border border-amber-400/20 p-4"><h2 className="font-black">Everyone dropped</h2><p className="mt-2 text-xs">Pot carries over. Every player pays another {dollars(stake)} virtual ante.</p><button type="button" onClick={()=>nextHand(true)} className="mt-3 min-h-12 w-full rounded-xl bg-cyan-400 font-black text-black">Re-ante & deal</button></div>}
+ {stage==="all-out"&&<div className="mt-4 rounded-xl border border-amber-400/20 p-4"><h2 className="font-black">Everyone dropped</h2><p className="mt-2 text-xs">Pot carries over. Every player pays another {dollars(stake)} virtual ante.</p><button type="button" onClick={nextHand} className="mt-3 min-h-12 w-full rounded-xl bg-cyan-400 font-black text-black">Re-ante & deal</button></div>}
  {stage==="adjudicate"&&<section className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/5 p-4"><h2 className="font-black">Select winning hand (demo only)</h2><p className="mt-2 text-xs text-slate-400">This prototype does not automatically determine the highest hand. Select a winner to preview the match-the-pot rule.</p><div className="mt-3 grid gap-2">{holders.map(i=><button type="button" key={i} onClick={()=>resolve(i)} className="min-h-11 rounded-xl border border-cyan-300/20 bg-cyan-500/10 text-sm font-bold">Award to {names[i]}</button>)}</div></section>}
- {stage==="result"&&<section className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-4"><div className="font-black">{names[winner]} drags the pot</div><div className="mt-2 text-xs text-slate-300">Next virtual pot: {dollars(pot)}</div><div className="mt-3 flex gap-2"><button type="button" onClick={()=>nextHand(false)} className="min-h-11 flex-1 rounded-xl bg-emerald-400 font-black text-black">Next hand</button><button type="button" onClick={()=>setStage("setup")} className="flex items-center gap-1 rounded-xl border border-white/20 px-3"><RefreshCcw size={15}/> Setup</button></div></section>}
+ {stage==="result"&&<section className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-4"><div className="font-black">{names[winner]} drags the pot</div><div className="mt-2 text-xs text-slate-300">Next virtual pot: {dollars(pot)}</div><div className="mt-3 flex gap-2"><button type="button" onClick={nextHand} className="min-h-11 flex-1 rounded-xl bg-emerald-400 font-black text-black">Next hand</button><button type="button" onClick={()=>setStage("setup")} className="flex items-center gap-1 rounded-xl border border-white/20 px-3"><RefreshCcw size={15}/> Setup</button></div></section>}
  <section className="mt-4 rounded-xl border border-white/10 p-3"><h2 className="flex items-center gap-2 text-xs font-black"><Shield size={15}/> Demo history</h2>{[...history].reverse().map((item,i)=><p key={i} className="mt-2 text-xs text-slate-400">{item.text}</p>)}</section>
  </>}
  </div></main>;
