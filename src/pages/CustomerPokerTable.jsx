@@ -226,7 +226,8 @@ export default function CustomerPokerTable(){
    {phase==="review"&&<section className="sw-poker-panel mx-auto max-w-xl"><h3>Dealer review required</h3><p>{outcome?.message||"More than one player was dealt 3-5-7. No automatic payout has been made."}</p><button type="button" onClick={()=>{setSession("setup");setPhase("setup");}} className="sw-poker-button mt-3">Restart demo</button></section>}
    {phase==="resolved"&&<section className="sw-poker-panel mx-auto max-w-xl"><h3>🏆 Round {round+1} result</h3><p className="text-sm font-bold text-emerald-200">{outcome?.winner!==null&&outcome?.winner!==undefined?people[outcome.winner].name+" wins the drag":"Pot carries forward"}</p><p>{outcome?.message}</p><p className="mt-2">Next pot: {displayMoney(pot)}. Current stage: {wild}s wild.</p>{pot>=capCents&&<p className="mt-2 text-amber-200">Pot cap reached. Review settlement before beginning another hand.</p>}
     <button type="button" disabled={pot>=capCents} onClick={next} className="sw-poker-button primary mt-3 w-full">{gameOver?"New hand · rotate dealer":"Deal 2 more · "+THREE_FIVE_SEVEN[round+1]+"s wild"} <ChevronRight size={16} className="inline"/></button>
-    {pot>=capCents&&<button type="button" onClick={()=>{setPhase("setup");setSession("setup");}} className="sw-poker-button mt-2">End table preview</button>}
+    {gameOver&&<button type="button" onClick={()=>{setPhase("setup");setSession("setup");setChoices([]);setViewer(null);setOutcome(null);setSelectedGame("357");}} className="sw-poker-button mt-2 w-full">♠ Dealer's Choice · Change game for next hand</button>}
+   {pot>=capCents&&<button type="button" onClick={()=>{setPhase("setup");setSession("setup");}} className="sw-poker-button mt-2">End table preview</button>}
    </section>}
   </>}
   <div className="sw-poker-panel-grid">
