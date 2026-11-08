@@ -5,6 +5,7 @@ import {useAuth} from "../auth/AuthContext";
 import {getGroups,createGroupInviteLink} from "../api/social";
 import {actCardRoom,createCardRoom,getCardRoom,listCardRooms} from "../api/cardRooms";
 import "./CustomerPokerTable.css";
+import {rememberPokerRoom,clearPokerResume} from "../games/pokerResume.mjs";
 
 const GAMES=[["357","3-5-7 DROP"],["fyb","FYB"],["442","4/4/Deuce"],["bozo","Bozo · The Clown"],["queen-follower","Queen & the Follower"]];
 const dollars=c=>"$"+(Number(c||0)/100).toFixed(2);
@@ -49,6 +50,14 @@ export default function CustomerCardClubLiveLobby(){
  const mySeat=room?.seats?.find(s=>s.user_id===user?.id),isHost=room?.host===true;
  const dealerSeat=room?.seats?.find(s=>s.position===room.dealer_position);
  const canConfigure=isHost||dealerSeat?.user_id===user?.id;
+ useEffect(()=>{
+   if(!room?.id||!groupId||!user?.id)return;
+   if(room.state==="CLOSED"){clearPokerResume(user);return;}
+   if(room.seats?.some(seat=>String(seat.user_id)===String(user.id))){
+     rememberPokerRoom(user,groupId,room.id);
+   }
+ },[user?.id,room?.id,room?.state,room?.seats,groupId]);
+
  const refresh=useCallback(async()=>{
   if(!groupId)return;
   try {
@@ -70,7 +79,7 @@ export default function CustomerCardClubLiveLobby(){
  useEffect(()=>{if(!groupId)return;const timer=window.setInterval(()=>{refresh();},3500);return()=>window.clearInterval(timer);},[groupId,refresh]);
  async function mutate(action,payload={}){
   if(!room||busy)return;setBusy(true);setError("");
-  try{const updated=await actCardRoom(room.id,action,payload);setRoom(updated);setRooms(old=>old.map(r=>r.id===updated.id?updated:r));if(action==="start"){setSpinning(true);window.setTimeout(()=>setSpinning(false),1750);}setNotice(action==="join"?"You joined the live room.":action==="nickname"?"Your table nickname was updated.":action==="start"?"Dealer selected.":action==="next-dealer"?"Dealer rotated.":"Room updated.");if(action==="close"){setRoom(null);setParams({group:groupId});await refresh();}}
+  try{const updated=await actCardRoom(room.id,action,payload);setRoom(updated);setRooms(old=>old.map(r=>r.id===updated.id?updated:r));if(action==="start"){setSpinning(true);window.setTimeout(()=>setSpinning(false),1750);}setNotice(action==="join"?"You joined the live room.":action==="nickname"?"Your table nickname was updated.":action==="start"?"Dealer selected.":action==="next-dealer"?"Dealer rotated.":"Room updated.");if(action==="close"||action==="leave"){clearPokerResume(user);}if(action==="close"){setRoom(null);setParams({group:groupId});await refresh();}}
   catch(e){setError(e?.response?.data?.detail||e?.message||"Room action failed");}finally{setBusy(false);}
  }
  async function create(e){e.preventDefault();if(busy)return;setBusy(true);setError("");try{
