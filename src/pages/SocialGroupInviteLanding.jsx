@@ -17,8 +17,14 @@ export default function SocialGroupInviteLanding() {
   const { token } = useParams();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const nextPath = safeNextPath(params.get("next"));
   const isCardClub = params.get("mode") === "club";
+  const rawNextPath = safeNextPath(params.get("next"));
+  // Old invites pointed to Create Game; no shared room ID was ever included.
+  const legacyGroup = rawNextPath.startsWith("/customer/games/new?")
+    ? new URLSearchParams(rawNextPath.split("?")[1]).get("group") : null;
+  const nextPath = isCardClub && legacyGroup && /^[0-9]+$/.test(legacyGroup)
+    ? "/customer/games/clubs/room?group=" + encodeURIComponent(legacyGroup)
+    : rawNextPath;
   const { user, booting } = useAuth();
   const [preview, setPreview] = useState(null);
   const [mode, setMode] = useState(params.get("mode") === "player" ? "PLAYER" : "");
@@ -48,7 +54,7 @@ export default function SocialGroupInviteLanding() {
       .then((rows) => {
         if (!active) return;
         const alreadyMember = (Array.isArray(rows) ? rows : []).some(
-          (row) => Number(row.group) === Number(preview.group.id) && row.status === "ACTIVE",
+          (row) => Number(typeof row.group === "object" ? row.group?.id : row.group) === Number(preview.group.id) && row.status === "ACTIVE",
         );
         if (alreadyMember) navigate(nextPath, { replace: true });
       })
@@ -78,7 +84,8 @@ export default function SocialGroupInviteLanding() {
     if (busy) return;
     setBusy(true);setError("");
     try {
-      await requestJoinGroup(token);
+      const result = await requestJoinGroup(token);
+      if (result?.already_member && nextPath) { navigate(nextPath,{replace:true}); return; }
       setRequested(true);
     } catch(err) { setError(errorText(err)); }
     finally { setBusy(false); }
@@ -121,14 +128,14 @@ export default function SocialGroupInviteLanding() {
               <p className="text-xs text-slate-300">Your invite code is <b className="break-all text-cyan-200">{token}</b>. Join using your free SyncWorks customer account.</p>
               {user ? <>
                 <div className="text-xs text-slate-300">Signed in as <b>{user.email}</b>.</div>
-                {requested ? <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-3 text-sm text-emerald-200">Your request was sent. A group manager may need to approve membership before you can access the club.</div> :
+                {requested ? <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-3 text-sm text-emerald-200">Your request was sent. A club manager must approve membership before you can enter the poker room. Reopen this same invitation after approval.</div> :
                   <button type="button" disabled={busy} onClick={requestClubJoin} className="min-h-12 w-full rounded-xl bg-violet-300 font-black text-slate-950 disabled:opacity-50">{busy ? "Submitting…" : "Request to join Card Club"}</button>}
-                <button type="button" onClick={()=>navigate(nextPath||"/customer/games/clubs")} className="min-h-11 w-full rounded-xl border border-white/20 text-xs font-bold">Open Card Clubs</button>
+                <button type="button" onClick={()=>navigate(nextPath||"/customer/games/clubs")} className="min-h-11 w-full rounded-xl border border-white/20 text-xs font-bold">{nextPath?.includes("/customer/games/clubs/room")||nextPath?.includes("/customer/games/join")?"Open poker room (after approval)":"Open Card Clubs"}</button>
               </> : <div className="grid gap-2">
                 <button type="button" onClick={()=>window.location.assign("/register?next="+next)} className="min-h-12 rounded-xl bg-cyan-300 font-bold text-slate-950">Create free account & continue</button>
                 <button type="button" onClick={()=>window.location.assign("/login?next="+next)} className="min-h-12 rounded-xl border border-white/20 text-sm font-bold">Log in & continue</button>
               </div>}
-              <p className="text-[11px] text-slate-400">The invitation identifies the group, but it does not bypass approval or give anyone access to another player's private information.</p>
+              <p className="text-[11px] text-slate-400">The invitation identifies the club and intended room. Entry requires approved membership and an available room. It never creates a new game on the invited player's account.</p>
             </div> : null}
             {!isCardClub && !mode && !done ? <div className="mt-5 space-y-3">
               <h2 className="text-center text-sm font-black text-white">How are you joining?</h2>
