@@ -20,6 +20,7 @@ import CustomerGames from "./pages/CustomerGames";
 import CustomerGamesLibrary from "./pages/CustomerGamesLibrary";
 import CustomerFYB from "./pages/CustomerFYB";
 import Customer442 from "./pages/Customer442";
+import CustomerBozo from "./pages/CustomerBozo";
 import CustomerQueenFollower from "./pages/CustomerQueenFollower";
 import CustomerCardClubs from "./pages/CustomerCardClubs";
 import CustomerCardClubHub from "./pages/CustomerCardClubHub";
@@ -219,6 +220,7 @@ export default function App() {
         <Route path="/customer/games/357" element={<ProtectedRoute><CustomerGames /></ProtectedRoute>} />
         <Route path="/customer/games/fyb" element={<ProtectedRoute><CustomerFYB /></ProtectedRoute>} />
         <Route path="/customer/games/442" element={<ProtectedRoute><Customer442 /></ProtectedRoute>} />
+        <Route path="/customer/games/bozo" element={<ProtectedRoute><CustomerBozo /></ProtectedRoute>} />
         <Route path="/customer/games/queen-follower" element={<ProtectedRoute><CustomerQueenFollower /></ProtectedRoute>} />
         <Route path="/customer/games/clubs" element={<ProtectedRoute><CustomerCardClubHub /></ProtectedRoute>} />
         <Route path="/customer/games/clubs/local-preview" element={<ProtectedRoute><CustomerCardClubs /></ProtectedRoute>} />
