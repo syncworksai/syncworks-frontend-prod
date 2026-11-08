@@ -33,7 +33,7 @@ export default function CustomerCardClubs() {
     for (const entry of club.transactions) {
       if (entry.kind === "buyin") { totals[entry.player] -= entry.cents; pot += entry.cents; }
       if (entry.kind === "award") { totals[entry.player] += entry.cents; pot -= entry.cents; }
-      if (entry.kind === "settlement") { totals[entry.player] += entry.cents; totals[entry.recipient] -= entry.cents; }
+      if (entry.kind === "settlement") { totals[entry.player] -= entry.cents; totals[entry.recipient] += entry.cents; }
     }
     return { totals, pot };
   }, [club]);
