@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "scope": "local prototypes; online server authoritative implementation pending",
+  "variants": {
+    "357": {
+      "deck": 52,
+      "rounds": [
+        {
+          "cards": 3,
+          "wild_rank": 3,
+          "straights": false,
+          "flushes": false
+        },
+        {
+          "cards": 5,
+          "wild_rank": 5
+        },
+        {
+          "cards": 7,
+          "wild_rank": 7,
+          "best_five": true
+        }
+      ],
+      "retain_previous_cards": true,
+      "declare": "simultaneous_hold_drop",
+      "lone_holder_strikes_required": 3,
+      "lone_holder_strikes_cumulative": true,
+      "all_drop": "each_player_antes",
+      "contested_loss": "match_entire_previous_pot",
+      "special": "3-5-7 opening hand immediately drags pot",
+      "pot_cap_behavior": "pause_for_dealer_review"
+    },
+    "442": {
+      "deck": 52,
+      "unconditional_wild_ranks": [
+        2
+      ],
+      "conditional_wild_ranks": [
+        {
+          "rank": 4,
+          "requires_rank_in_same_hand": 2
+        }
+      ],
+      "betting_style": "simultaneous_guts_drop",
+      "ante": "all_players_each_new_hand",
+      "showdown": {
+        "no_holders": "all_players_ante_again",
+        "one_holder": "wins_pot",
+        "multiple_holders": "highest_poker_hand_wins; losing_holders_match_prior_pot_up_to_cap"
+      },
+      "pot_cap_behavior": "cap_each_loser_match_not_necessarily_total_pot",
+      "hand_size": "HOUSE_RULE_REQUIRED"
+    },
+    "queen_follower": {
+      "deck": 52,
+      "wild_queens": true,
+      "face_up_queen_arms_next_sequential_card": true,
+      "followers_stack": true,
+      "queen_follower_extends_pending": true,
+      "dealing": [
+        {
+          "cards_down": 2,
+          "cards_up": 1
+        },
+        {
+          "cards_down": 0,
+          "cards_up": 2
+        },
+        {
+          "cards_down": 1,
+          "cards_up": 1
+        }
+      ],
+      "betting": "incremental_stud",
+      "bet_streets": [
+        3,
+        5,
+        7
+      ],
+      "showdown": "best_five_of_seven",
+      "loss_penalty": "forfeit_own_wager_only",
+      "tie_break": "natural_beats_wild",
+      "pending_if_last_face_up_queen": "no_new_rank",
+      "face_down_follower_visibility": "NEEDS_HOUSE_RULE_CONFIRMATION"
+    }
+  }
+}
