@@ -2,7 +2,7 @@ import React,{useCallback,useEffect,useMemo,useState} from "react";
 import {useNavigate,useSearchParams} from "react-router-dom";
 import {ArrowLeft,ArrowRight,Club,Crown,RefreshCw,Spade,UserPlus,Users,Share2} from "lucide-react";
 import {useAuth} from "../auth/AuthContext";
-import {getGroups} from "../api/social";
+import {getGroups,createGroupInviteLink} from "../api/social";
 import {actCardRoom,createCardRoom,getCardRoom,listCardRooms} from "../api/cardRooms";
 
 const GAMES=[["357","3-5-7 DROP"],["fyb","FYB"],["442","4/4/Deuce"],["bozo","Bozo · The Clown"],["queen-follower","Queen & the Follower"]];
@@ -65,13 +65,30 @@ export default function CustomerCardClubLiveLobby(){
  function openRoom(r){setRoom(r);setJoinBuyin(String((r.minimum_buy_in_cents??r.virtual_buy_in_cents)/100));setParams({group:groupId,room:String(r.id)});setNotice("");}
  function backToRooms(){setRoom(null);setParams({group:groupId});setNotice("");}
  async function shareLiveRoom(){
-  if(!room)return;
-  const url=window.location.origin+"/customer/games/clubs/room?group="+encodeURIComponent(groupId)+"&room="+room.id;
-  try{
-    if(navigator.share)await navigator.share({title:room.name+" · SyncWorks Poker",text:"Join our poker room with your approved Card Club account.",url});
-    else if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(url);setNotice("Live room link copied.");}
-    else setNotice("Room link: "+url);
-  }catch(err){if(err?.name!=="AbortError")setError("Unable to share this room.");}
+  if(!room||busy)return;
+  setBusy(true);setError("");
+  const roomPath="/customer/games/clubs/room?group="+encodeURIComponent(groupId)+"&room="+encodeURIComponent(room.id);
+  let url=window.location.origin+roomPath;
+  let description="Open this poker room using an approved Card Club account. Your seat is assigned when you select Join Table.";
+  try {
+    if(isHost){
+      // An invitation token is necessary for users who have not joined this club.
+      // Approval may be required; the next parameter preserves the exact room.
+      const invitation=await createGroupInviteLink(Number(groupId),"MEMBER");
+      const raw=invitation?.invite_url||invitation?.url||invitation?.link||(invitation?.token?window.location.origin+"/social/invite/"+invitation.token:"");
+      if(raw){
+        const link=new URL(raw,window.location.origin);
+        link.searchParams.set("mode","club");
+        link.searchParams.set("next",roomPath);
+        url=link.href;
+        description="Join this Card Club first, then open our poker room. Approval may be required before taking a seat.";
+      }
+    }
+    if(navigator.share)await navigator.share({title:room.name+" · SyncWorks Poker",text:description,url});
+    else if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(url);setNotice("Room invitation copied. Club approval and a shared-room server are needed for remote seating.");}
+    else setNotice("Invite URL: "+url);
+  }catch(err){if(err?.name!=="AbortError")setError(err?.response?.data?.detail||err?.message||"Unable to share this room.");}
+  finally{setBusy(false);}
  }
  function configure(){const a=money(ante),c=money(cap);if(!Number.isSafeInteger(a)||a<0||!Number.isSafeInteger(c)||c<=0&&game!=="fyb"){setError("Check ante and pot max.");return;}mutate("configure",{game_selection:mode,game_code:game,ante_cents:a,pot_cap_cents:game==="fyb"?0:c});}
  if(!groupId)return <main className="min-h-dvh bg-[#020817] p-6 text-white">Choose a group first. <button className="underline" onClick={()=>nav("/customer/games")}>Leagues</button></main>;
