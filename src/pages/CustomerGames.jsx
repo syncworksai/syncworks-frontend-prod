@@ -142,8 +142,8 @@ export default function CustomerGames() {
     if (!previousScores.length) {
       const unit = Math.max(1, Math.round(Number(stake || 1) * 100));
       setPotCents(unit);
-      setNetCents(activeNames.map((_,i)=>i===0?-unit:0));
-      setPotHistory([{kind:"initial virtual pot",amount:unit}]);
+      setNetCents(activeNames.map(()=>0));
+      setPotHistory([{kind:"opening virtual pot (source not assigned)",amount:unit}]);
     }
     setResult(null);
     setViewPlayer(null);
