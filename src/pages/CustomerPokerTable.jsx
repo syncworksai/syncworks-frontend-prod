@@ -8,6 +8,7 @@ import {Share2} from "lucide-react";
 import {addRoundCards,cardRank,createShuffledDeck,dealt357,displayMoney,instant357,rate357,resolve357,THREE_FIVE_SEVEN} from "../games/drop357Table.mjs";
 import "./CustomerPokerTable.css";
 import {HAND_RANKINGS_357,practiceHandInfo,estimatePracticeEquity} from "../games/practiceOdds357.mjs";
+import {rotationAfterPot,chooseVirtualDealer} from "../games/pokerDealerRotation.mjs";
 
 const DEFAULT_PLAYERS=[{id:"local-you",name:"You",kind:"local"},{id:"local-zack",name:"Zack",kind:"guest"},{id:"local-russ",name:"Russ",kind:"guest"}];
 const TABLE_GAMES=[
@@ -51,6 +52,7 @@ export default function CustomerPokerTable(){
  const [guide,setGuide]=useState(null),[status,setStatus]=useState(""),[log,setLog]=useState([]),[remoteNotice,setRemoteNotice]=useState(false);
  const [shareBusy,setShareBusy]=useState(false),[inviteUrl,setInviteUrl]=useState(""),[roomMinimum,setRoomMinimum]=useState(null),[roomCapacity,setRoomCapacity]=useState(6);
  const [selectedGame,setSelectedGame]=useState("357");
+ const [dealerChoosing,setDealerChoosing]=useState(false);
  const [upgrading,setUpgrading]=useState(false);
  const [seatEditor,setSeatEditor]=useState(false),[seatName,setSeatName]=useState(""),[seatBuyin,setSeatBuyin]=useState("20"),[seatError,setSeatError]=useState("");
  const anteCents=Math.round(Number(ante)*100),capCents=Math.round(Number(maxPot)*100);
@@ -130,7 +132,7 @@ export default function CustomerPokerTable(){
  }
  function changeGame(nextCode){
   setSelectedGame(nextCode);
-  if(nextCode==="357")return;
+  if(dealerChoosing||nextCode==="357")return;
   const next=TABLE_GAMES.find(g=>g.code===nextCode);
   if(!next)return;
   // Other engines have their own local prototype routes, not this 3-5-7 evaluator.
@@ -138,6 +140,30 @@ export default function CustomerPokerTable(){
   if(groupId)qs.set("group",groupId);
   if(roomId)qs.set("room",roomId);
   nav(next.path+(qs.toString()?"?"+qs.toString():""));
+ }
+ function finishGameAndPassDealer(){
+  const rotation=rotationAfterPot({potCents:pot,dealer,playerCount:tableSize});
+  if(!rotation.gameFinished){setStatus("A replacement pot remains. This dealer continues until it is fully dragged.");return;}
+  const next=rotation.nextDealer;
+  setDealer(next);setPhase("setup");setSession("setup");setChoices([]);setViewer(null);
+  setShowdownViewer(null);setOutcome(null);setChipAnimation(null);setReveal({});
+  setStrikes({});setHands([]);setDeck([]);setRound(0);setDealerChoosing(true);
+  if(people[next]?.kind==="computer"){
+    const pick=chooseVirtualDealer();setSelectedGame(pick.game);setAnte(pick.ante);
+    addLog(people[next].name+" picked "+(TABLE_GAMES.find(g=>g.code===pick.game)?.label||pick.game)+" with "+pick.ante+" virtual ante.");
+  }else{setSelectedGame("357");addLog(people[next]?.name+" is the next dealer. Choose the next game and ante.");}
+ }
+ function startDealerSelectedGame(){
+  if(!dealerChoosing)return;
+  if(!Number.isFinite(Number(ante))||Number(ante)<0||Number(ante)>100){setStatus("Choose an ante between $0 and $100.");return;}
+  if(selectedGame==="357"){setDealerChoosing(false);setSession("playing");setLog([]);dealOpening(0,chipStacks,{});return;}
+  // Other games have independent local prototypes; never imply chip ledger transfer.
+  const next=TABLE_GAMES.find(g=>g.code===selectedGame);
+  if(!next)return;
+  const q=new URLSearchParams({practice:"1",ante:String(ante),dealer:String(dealer),fromPoker:"1"});
+  if(groupId)q.set("group",groupId);
+  if(roomId)q.set("room",roomId);
+  nav(next.path+"?"+q.toString());
  }
  function storeLocalSeats(updated){
   if(!groupId||roomId)return;
@@ -207,8 +233,10 @@ export default function CustomerPokerTable(){
  }
  function next(){
   if(phase!=="resolved")return;
+  if(pot===0){finishGameAndPassDealer();return;}
   if(round===2||outcome?.kind==="instant"||pot>=capCents){
-   setDealer(i=>(i+1)%tableSize);dealOpening(pot,chipStacks,strikes);return;
+   // A replacement pot stays with the current dealer and game.
+   dealOpening(pot,chipStacks,strikes);return;
   }
   const updated=addRoundCards(hands,deck);
   setHands(updated.hands);setDeck(updated.deck);setRound(v=>v+1);setViewer(null);setShowdownViewer(null);setChoices(preparedChoices(tableSize));setReveal({});setRevealStep(0);setOutcome(null);setPhase("choosing");
@@ -217,7 +245,7 @@ export default function CustomerPokerTable(){
  const currentPlayer=displayIndex!==null?people[displayIndex]:null;
  const readyCount=choices.filter(c=>c!==null).length;
  const canReveal=phase==="revealing"&&currentReveal!==undefined;
- const gameOver=round===2||outcome?.kind==="instant";
+ const gameOver=pot===0&&phase==="resolved";
  return <main className="sw-poker-screen"><div className="sw-poker-content">
   <header className="sw-poker-top">
    <button type="button" className="sw-poker-back" onClick={()=>nav(groupId?"/customer/games/new?group="+encodeURIComponent(groupId):"/customer/games")} aria-label="Back to lobby"><ArrowLeft size={21}/></button>
@@ -229,8 +257,10 @@ export default function CustomerPokerTable(){
   </header>
   <div className="sw-poker-round"><div className="sw-poker-round-badge"><div>♠ {gameName}</div><span>Round {round+1} · {wild}s Wild</span></div><div className="sw-poker-steps">{THREE_FIVE_SEVEN.map((n,i)=><div key={i} title={"Round "+(i+1)+": "+n+"s wild"} className={"sw-poker-step"+(i===round?" current":"")}>{i+1}</div>)}</div></div>
   {!roomId&&groupId&&session==="setup"&&roomMinimum!==null&&<section className="mb-3 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-3"><div className="text-sm font-black text-emerald-100">Want players on separate phones?</div><p className="mt-1 text-xs leading-5 text-slate-300">Create a shared waiting room in this Card Club with the same name, seat count and minimum buy-in. Local guests and dealt hands stay on this device, and synchronized game cards are not live yet.</p><button type="button" onClick={upgradeToLiveRoom} disabled={upgrading} className="sw-poker-button primary mt-3 w-full">{upgrading?"Creating shared room…":"♠ Make This a Live Waiting Room"}</button></section>}
-  {session==="setup"&&<section className="sw-poker-game-choice" aria-label="Choose the poker game"><label htmlFor="sw-poker-game-select">Dealer's game choice</label><select id="sw-poker-game-select" value={selectedGame} onChange={e=>changeGame(e.target.value)}>{TABLE_GAMES.map(g=><option key={g.code} value={g.code}>{g.label}</option>)}</select><p>3-5-7 uses this branded table. Other games open their existing local game screens until the shared table engine is complete.</p></section>}
-  {session==="setup"&&<section className="sw-poker-quick-setup" aria-label="Poker table seating">
+  {session==="setup"&&<section className="sw-poker-game-choice" aria-label="Choose the poker game"><label htmlFor="sw-poker-game-select">{dealerChoosing?people[dealer]?.name+" is dealer · Choose next game":"Dealer's game choice"}</label><select id="sw-poker-game-select" value={selectedGame} onChange={e=>changeGame(e.target.value)}>{TABLE_GAMES.map(g=><option key={g.code} value={g.code}>{g.label}</option>)}</select><p>{dealerChoosing?"Previous game finished. Set the next game and ante. Other game prototypes do not share this table's chip ledger yet.":"3-5-7 uses this branded table. Other games open their existing local game screens until the shared table engine is complete."}</p>
+ {dealerChoosing&&<><label htmlFor="sw-dealer-ante">Next ante ($)</label><div className="flex flex-wrap gap-2">{["0.25","0.50","1.00"].map(a=><button type="button" key={a} onClick={()=>setAnte(a)} className={"sw-poker-button "+(ante===a?"primary":"")}>{a}</button>)}</div><input id="sw-dealer-ante" type="number" min="0" max="100" step="0.01" value={ante} onChange={e=>setAnte(e.target.value)} className="min-h-11 w-full rounded-lg border border-cyan-300/30 bg-slate-950 p-2"/><button type="button" onClick={startDealerSelectedGame} className="sw-poker-button gold mt-3 w-full">♠ Start {TABLE_GAMES.find(g=>g.code===selectedGame)?.label||"Selected Game"}</button></>}
+ </section>}
+  {session==="setup"&&!dealerChoosing&&<section className="sw-poker-quick-setup" aria-label="Poker table seating">
   <div className="sw-poker-quick-header"><div><strong>YOUR TABLE · {tableSize}/{roomCapacity} PLAYERS</strong><p>Choose players, add a computer, then deal.</p></div><span className="sw-poker-purse">♠ {displayMoney(people.reduce((sum,p)=>sum+(p.chips??roomMinimum??2000),0))} chips</span></div>
   <div className="sw-poker-quick-actions"><button type="button" className="sw-poker-button primary" disabled={tableSize>=roomCapacity} onClick={()=>{setSeatBuyin(String((roomMinimum??2000)/100));setSeatEditor(true);setSeatError("");}}><Users size={16} className="mr-1 inline"/> + Add Player</button><button type="button" className="sw-poker-button" disabled={tableSize>=roomCapacity||people.some(p=>p.kind==="computer")} onClick={addComputerToTable}>🤖 + Computer</button></div>
   <div className="sw-poker-quick-players">{people.map((p,i)=><div className="sw-poker-quick-person" key={p.id}><Photo person={p}/><label className="min-w-0 flex-1 text-xs text-slate-300"><input aria-label={"Player "+(i+1)+" name"} value={p.name} maxLength={24} onChange={e=>updateSeats(old=>old.map((x,j)=>i===j?{...x,name:e.target.value.slice(0,24)}:x))} className="sw-poker-name-input"/><span className="block text-[10px] text-emerald-200">{displayMoney(p.chips??roomMinimum??2000)} · {p.kind==="computer"?"Computer":"Seated"}</span></label>{p.kind!=="host"&&<button type="button" aria-label={"Remove "+p.name} onClick={()=>updateSeats(old=>old.filter((_,j)=>j!==i))} className="sw-poker-remove">×</button>}</div>)}</div>
@@ -287,10 +317,9 @@ export default function CustomerPokerTable(){
     {outcome?.kind==="lone-strike"&&<p className="text-xs text-cyan-200">Blind bluff · {outcome.strikes?.[outcome.entered[0]]||0}/3 cumulative uncontested holds. No cards shown, no pot payout yet.</p>}
     {outcome?.kind==="drag"&&<div className="mt-3 space-y-2">{outcome.entered.filter(i=>i!==outcome.winner).map(i=><div key={i} className="sw-poker-settlement-row"><span>{people[i].name} replaces pot</span><strong>−{displayMoney(outcome?.potDraggedCents??0)}</strong></div>)}</div>}
     {outcome?.kind==="all-drop"&&<div className="sw-poker-winner-banner">No winner · everyone re-antes</div>}
-    {practiceMode&&people.some(p=>p.kind==="computer")&&<div className="sw-practice-computer-recap"><div className="sw-practice-hint-heading"><strong>🤖 Virtual player's cards · Practice only</strong><button type="button" onClick={()=>setGuide("ranks")}>Rankings</button></div>{people.map((p,i)=>p.kind==="computer"&&hands[i]?<div key={p.id}><p>{p.name} had: <b>{practiceHandInfo(hands[i],round)?.name||"No hand"}</b>{choices[i]==="drop"?" · Folded":choices[i]==="hold"?" · Held":""}</p><div className="sw-poker-facecards">{hands[i].map((card,j)=><Card key={j} card={card} wild={card.rank===wild}/>)}</div></div>:null)}<small>Only displayed once this practice round is over. Hidden from all live multiplayer games.</small></div>}<p className="text-sm font-bold text-emerald-200">{outcome?.winner!==null&&outcome?.winner!==undefined?people[outcome.winner].name+" wins "+displayMoney(outcome?.potDraggedCents??0):"Pot carries forward"}</p><p>{outcome?.message}</p><p className="mt-2">Next pot: {displayMoney(pot)}. Current stage: {wild}s wild.</p>{pot>=capCents&&<p className="mt-2 text-amber-200">Pot cap reached. Review settlement before beginning another hand.</p>}
-    <button type="button" disabled={pot>=capCents} onClick={next} className="sw-poker-button primary mt-3 w-full">{gameOver?"New hand · rotate dealer":"Deal 2 more · "+THREE_FIVE_SEVEN[round+1]+"s wild"} <ChevronRight size={16} className="inline"/></button>
-    {gameOver&&<button type="button" onClick={()=>{setPhase("setup");setSession("setup");setChoices([]);setViewer(null);setOutcome(null);setSelectedGame("357");}} className="sw-poker-button mt-2 w-full">♠ Dealer's Choice · Change game for next hand</button>}
-   {pot>=capCents&&<button type="button" onClick={()=>{setPhase("setup");setSession("setup");}} className="sw-poker-button mt-2">End table preview</button>}
+    {practiceMode&&people.some(p=>p.kind==="computer")&&<div className="sw-practice-computer-recap"><div className="sw-practice-hint-heading"><strong>🤖 Virtual player's cards · Practice only</strong><button type="button" onClick={()=>setGuide("ranks")}>Rankings</button></div>{people.map((p,i)=>p.kind==="computer"&&hands[i]?<div key={p.id}><p>{p.name} had: <b>{practiceHandInfo(hands[i],round)?.name||"No hand"}</b>{choices[i]==="drop"?" · Folded":choices[i]==="hold"?" · Held":""}</p><div className="sw-poker-facecards">{hands[i].map((card,j)=><Card key={j} card={card} wild={card.rank===wild}/>)}</div></div>:null)}<small>Only displayed once this practice round is over. Hidden from all live multiplayer games.</small></div>}<p className="text-sm font-bold text-emerald-200">{outcome?.winner!==null&&outcome?.winner!==undefined?people[outcome.winner].name+" wins "+displayMoney(outcome?.potDraggedCents??0):"Pot carries forward"}</p><p>{outcome?.message}</p><p className="mt-2">{pot===0?"Pot is empty. Game finished; next dealer chooses game and ante.":"Next pot: "+displayMoney(pot)+". Current stage: "+wild+"s wild."}</p>{pot>=capCents&&<p className="mt-2 text-amber-200">Pot cap reached. Review settlement before beginning another hand.</p>}
+    {gameOver?<><div className="sw-poker-winner-banner">🏁 Pot fully dragged · Game over</div><button type="button" onClick={finishGameAndPassDealer} className="sw-poker-button primary mt-3 w-full">♠ Pass dealer to {people[(dealer+1)%tableSize]?.name} · Choose next game <ChevronRight size={16} className="inline"/></button></>:<button type="button" disabled={pot>=capCents} onClick={next} className="sw-poker-button primary mt-3 w-full">{round===2?"Continue current game · New 3-card hand":"Deal 2 more · "+THREE_FIVE_SEVEN[round+1]+"s wild"} <ChevronRight size={16} className="inline"/></button>}
+    {pot>=capCents&&<button type="button" onClick={()=>{setPhase("setup");setSession("setup");}} className="sw-poker-button mt-2">End table preview</button>}
    </section>}
   </>}
   <div className="sw-poker-panel-grid">
