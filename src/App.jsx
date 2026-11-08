@@ -20,6 +20,7 @@ import CustomerGames from "./pages/CustomerGames";
 import CustomerGamesLibrary from "./pages/CustomerGamesLibrary";
 import CustomerGamesHome from "./pages/CustomerGamesHome";
 import CustomerCardClubRoom from "./pages/CustomerCardClubRoom";
+import CustomerCardClubLiveLobby from "./pages/CustomerCardClubLiveLobby";
 import CustomerFYB from "./pages/CustomerFYB";
 import Customer442 from "./pages/Customer442";
 import CustomerBozo from "./pages/CustomerBozo";
@@ -221,7 +222,8 @@ export default function App() {
         <Route path="/customer" element={<ProtectedRoute><CustomerDashboard /></ProtectedRoute>} />
         <Route path="/customer/games" element={<ProtectedRoute><CustomerGamesHome /></ProtectedRoute>} />
         <Route path="/customer/games/library" element={<ProtectedRoute><CustomerGamesLibrary /></ProtectedRoute>} />
-        <Route path="/customer/games/clubs/room" element={<ProtectedRoute><CustomerCardClubRoom /></ProtectedRoute>} />
+        <Route path="/customer/games/clubs/room" element={<ProtectedRoute><CustomerCardClubLiveLobby /></ProtectedRoute>} />
+        <Route path="/customer/games/clubs/room-preview" element={<ProtectedRoute><CustomerCardClubRoom /></ProtectedRoute>} />
         <Route path="/customer/games/357" element={<ProtectedRoute><CustomerGames /></ProtectedRoute>} />
         <Route path="/customer/games/fyb" element={<ProtectedRoute><CustomerFYB /></ProtectedRoute>} />
         <Route path="/customer/games/442" element={<ProtectedRoute><Customer442 /></ProtectedRoute>} />
