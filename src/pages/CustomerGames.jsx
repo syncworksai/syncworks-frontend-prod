@@ -98,7 +98,7 @@ function evaluateThree(cards, wildRank) {
 }
 function bestHand(cards, wildRank, round = 0) {
   if (round === 0) return choose(cards, 3).map((hand)=>evaluateThree(hand,wildRank)).sort((a,b)=>b.score-a.score)[0];
-  return combinations(cards).map((hand) => evaluateFive(hand, wildRank)).sort((a, b) => b.score - a.score)[0];
+  return choose(cards, 5).map((hand) => evaluateFive(hand, wildRank)).sort((a, b) => b.score - a.score)[0];
 }
 function PlayingCard({ card, wild }) {
   return <div className={`relative flex h-24 w-[66px] shrink-0 flex-col justify-between rounded-lg border-2 p-1.5 shadow-lg ${wild ? "border-amber-400 bg-amber-50" : "border-slate-200 bg-white"} ${card.suit === "♥" || card.suit === "♦" ? "text-red-600" : "text-slate-950"}`}>
@@ -126,25 +126,30 @@ export default function CustomerGames() {
   const [soloStreak, setSoloStreak] = useState({ player: null, count: 0 });
   const [potCents, setPotCents] = useState(100);
   const [stake, setStake] = useState("1.00");
+  const [ante, setAnte] = useState("0.25");
+  const [potCap, setPotCap] = useState("20.00");
+  const [dealerMode, setDealerMode] = useState("dealer");
   const [netCents, setNetCents] = useState([]);
   const [potHistory, setPotHistory] = useState([]);
   const wildRank = WILDS[round];
 
   const activeNames = mode === "solo" ? [names[0] || "You", "Computer"] : names;
-  function deal(nextRound = round, previousScores = scores) {
+  const anteCents = Math.round(Number(ante || 0) * 100);
+  const capCents = Math.round(Number(potCap || 0) * 100);
+  const atCap = potCents >= capCents;
+  function deal() {
     const fresh = shuffle(makeDeck());
-    const nextHands = activeNames.map((_, i) => fresh.slice(i * 2, i * 2 + 2));
-    setDeck(fresh.slice(activeNames.length * 2));
+    const nextHands = activeNames.map((_, i) => fresh.slice(i * 3, i * 3 + 3));
+    setDeck(fresh.slice(activeNames.length * 3));
     setHands(nextHands);
-    setRound(nextRound);
+    setRound(0);
     setTurn(1);
-    setScores(previousScores.length ? previousScores : activeNames.map(() => 0));
-    if (!previousScores.length) {
-      const unit = Math.max(1, Math.round(Number(stake || 1) * 100));
-      setPotCents(unit);
-      setNetCents(activeNames.map(()=>0));
-      setPotHistory([{kind:"opening virtual pot (source not assigned)",amount:unit}]);
-    }
+    setScores(activeNames.map(() => 0));
+    setSoloStreak({ player: null, count: 0 });
+    const opening = Math.max(1, Math.round(Number(stake || 1) * 100));
+    setPotCents(opening);
+    setNetCents(activeNames.map(()=>0));
+    setPotHistory([{kind:"opening virtual pot (funding unassigned)",amount:opening}]);
     setResult(null);
     setViewPlayer(null);
     setCountdown(3);
@@ -152,13 +157,22 @@ export default function CustomerGames() {
     setDecisionIndex(0);
     setPhase("playing");
   }
-  function draw() {
-    if (turn >= 3) return;
+  function advanceRound() {
+    if (round >= 2 || atCap) return;
     const next = deck.slice(0, activeNames.length * 2);
+    if (next.length !== activeNames.length * 2) return;
     setDeck(deck.slice(next.length));
     setHands(hands.map((hand, i) => [...hand, ...next.slice(i * 2, i * 2 + 2)]));
-    setTurn(turn + 1);
+    setRound(round + 1);
+    setTurn(round + 2);
+    setDropChoices([]);
+    setDecisionIndex(0);
     setViewPlayer(null);
+    setResult(null);
+    setPhase("playing");
+  }
+  function finishGame() {
+    setPhase("finished");
   }
   function commitChoice(choice) {
     const next = [...dropChoices, choice];
@@ -176,7 +190,11 @@ export default function CustomerGames() {
     let replacements = 0;
     if (!entered.length) {
       setSoloStreak({ player: null, count: 0 });
-      message = "Everyone dropped — no winner; pot carries over.";
+      const added = anteCents * activeNames.length;
+      setPotCents(potCents + added);
+      setNetCents((old)=>old.map((v)=>v-anteCents));
+      setPotHistory((old)=>[...old,{kind:"all dropped ante",each:anteCents,players:activeNames.length,added,newPot:potCents+added}]);
+      message = `Everyone dropped — each player contributes the ${(anteCents/100).toFixed(2)} ante. Pot grows by ${(added/100).toFixed(2)}.`;
     } else if (entered.length === 1) {
       const only = entered[0];
       const newCount = soloStreak.player === only ? soloStreak.count + 1 : 1;
@@ -211,18 +229,19 @@ export default function CustomerGames() {
     <div className="mx-auto max-w-4xl">
       <header className="mb-6 flex items-center justify-between gap-3"><button type="button" onClick={() => nav("/customer")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 px-3 text-sm"><ArrowLeft size={18}/> Dashboard</button><div className="text-right"><span className="block text-[10px] font-bold tracking-[.3em] text-cyan-300">SYNCWORKS GAMES</span><h1 className="text-2xl font-black">3–5–7 DROP</h1></div></header>
       <button type="button" onClick={() => nav("/customer/games/clubs")} className="mb-4 min-h-11 w-full rounded-xl border border-violet-400/25 bg-violet-500/10 px-4 text-left text-sm font-bold text-violet-200">Card Clubs & running tally preview →</button>
-      <div className="mb-5 rounded-2xl border border-cyan-400/20 bg-cyan-500/5 p-4"><div className="flex items-center gap-2 text-sm font-bold text-cyan-200"><Spade size={17}/> Pass & play beta</div><p className="mt-1 text-xs leading-5 text-slate-400">Three rounds: 3s, 5s, then 7s wild. Draw two cards per player each turn; after three deals, players secretly hold or drop together on three. Two or more holders compare the best five of six. A lone holder needs three uncontested holds to claim the pot. The winning holder drags the current virtual pot, and each losing holder replaces it. Three-card hands are compared in round one; later hand rules remain provisional.</p></div>
-      {phase === "setup" ? <section className="rounded-2xl border border-white/10 bg-white/5 p-5"><h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Users size={20}/> Players</h2><div className="mb-4 grid grid-cols-2 gap-2"><button type="button" onClick={() => setMode("friends")} className={`min-h-11 rounded-xl border text-sm font-bold ${mode === "friends" ? "border-cyan-400 bg-cyan-500/20" : "border-white/15"}`}>Friends</button><button type="button" onClick={() => setMode("solo")} className={`min-h-11 rounded-xl border text-sm font-bold ${mode === "solo" ? "border-cyan-400 bg-cyan-500/20" : "border-white/15"}`}>Vs. Computer</button></div><div className="space-y-3">{(mode === "solo" ? names.slice(0, 1) : names).map((name, i) => <label key={i} className="block text-xs text-slate-400">Player {i + 1}<input className="mt-1 block w-full rounded-xl border border-white/15 bg-slate-950 p-3 text-white" value={name} maxLength={24} onChange={(e) => setNames((old) => old.map((x, j) => j === i ? e.target.value : x))}/></label>)}</div>{mode === "friends" && <div className="mt-4 flex gap-2"><button type="button" className="rounded-xl border border-white/20 px-3 py-2 text-sm" disabled={names.length <= 2} onClick={() => setNames(names.slice(0, -1))}>Remove</button><button type="button" className="rounded-xl border border-white/20 px-3 py-2 text-sm" disabled={names.length >= 6} onClick={() => setNames([...names, `Player ${names.length + 1}`])}>Add player</button></div>}<label className="mt-4 block text-xs text-slate-400">Starting virtual pot ($)<input type="number" min="0.01" max="1000" step="0.01" value={stake} onChange={(e)=>setStake(e.target.value)} className="mt-1 block w-full rounded-xl border border-white/15 bg-slate-950 p-3 text-white" /></label><button type="button" disabled={!Number.isFinite(Number(stake)) || Number(stake)<0.01 || Number(stake)>1000} className="mt-5 min-h-12 w-full rounded-xl bg-cyan-500 font-black text-slate-950 disabled:opacity-40" onClick={() => deal(0, [])}>Start 3–5–7</button></section> : <>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><div className="text-xs font-bold text-cyan-300">ROUND {round + 1} OF 3</div><div className="text-2xl font-black">{wildRank}s are WILD</div><div className="text-xs text-slate-400">Deal {turn}/3 · {turn * 2} cards per player</div></div><button type="button" className="flex items-center gap-2 rounded-xl border border-white/15 px-3 py-2 text-xs" onClick={reset}><RotateCcw size={15}/> New game</button></div>
-        <div className="mb-4 rounded-xl border border-amber-400/20 bg-amber-500/10 p-3"><div className="text-xs text-amber-200">Current virtual pot (device only)</div><div className="text-2xl font-black">${(potCents/100).toFixed(2)}</div><div className="text-[10px] text-slate-400">No actual funds or transfers. Drag-and-replace updates the running pot.</div></div>
+      <div className="mb-5 rounded-2xl border border-cyan-400/20 bg-cyan-500/5 p-4"><div className="flex items-center gap-2 text-sm font-bold text-cyan-200"><Spade size={17}/> Pass & play beta</div><p className="mt-1 text-xs leading-5 text-slate-400">One growing hand: three cards with 3s wild, add two cards for 5s wild, then add two for 7s wild. Old wild ranks revert to normal. Everyone chooses HOLD/DROP each round; a lone holder needs three uncontested holds. If everyone drops, every player adds the configured ante to the virtual pot. The winner drags the pot and each losing holder replaces the amount. Pot cap pauses play for dealer review.</p></div>
+      {phase === "setup" ? <section className="rounded-2xl border border-white/10 bg-white/5 p-5"><h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Users size={20}/> Players</h2><div className="mb-4 grid grid-cols-2 gap-2"><button type="button" onClick={() => setMode("friends")} className={`min-h-11 rounded-xl border text-sm font-bold ${mode === "friends" ? "border-cyan-400 bg-cyan-500/20" : "border-white/15"}`}>Friends</button><button type="button" onClick={() => setMode("solo")} className={`min-h-11 rounded-xl border text-sm font-bold ${mode === "solo" ? "border-cyan-400 bg-cyan-500/20" : "border-white/15"}`}>Vs. Computer</button></div><div className="space-y-3">{(mode === "solo" ? names.slice(0, 1) : names).map((name, i) => <label key={i} className="block text-xs text-slate-400">Player {i + 1}<input className="mt-1 block w-full rounded-xl border border-white/15 bg-slate-950 p-3 text-white" value={name} maxLength={24} onChange={(e) => setNames((old) => old.map((x, j) => j === i ? e.target.value : x))}/></label>)}</div>{mode === "friends" && <div className="mt-4 flex gap-2"><button type="button" className="rounded-xl border border-white/20 px-3 py-2 text-sm" disabled={names.length <= 2} onClick={() => setNames(names.slice(0, -1))}>Remove</button><button type="button" className="rounded-xl border border-white/20 px-3 py-2 text-sm" disabled={names.length >= 6} onClick={() => setNames([...names, `Player ${names.length + 1}`])}>Add player</button></div>}<label className="mt-4 block text-xs text-slate-400">Opening virtual pot ($)<input type="number" min="0.01" max="1000" step="0.01" value={stake} onChange={(e)=>setStake(e.target.value)} className="mt-1 block w-full rounded-xl border border-white/15 bg-slate-950 p-3 text-white" /></label><div className="mt-4 text-xs font-bold text-slate-300">Dealer's ante per player when everyone drops</div><div className="mt-2 grid grid-cols-3 gap-2">{["0.25","0.50","1.00"].map((value)=><button type="button" key={value} onClick={()=>setAnte(value)} className={`min-h-11 rounded-xl border font-bold ${ante===value?"border-cyan-400 bg-cyan-500/20":"border-white/15"}`}>${value}</button>)}</div><label className="mt-3 block text-xs text-slate-400">Custom ante ($)<input type="number" min="0.01" max="1000" step="0.01" value={ante} onChange={(e)=>setAnte(e.target.value)} className="mt-1 block w-full rounded-xl border border-white/15 bg-slate-950 p-3 text-white"/></label><label className="mt-3 block text-xs text-slate-400">Pot cap ($) — pause for dealer review<input type="number" min="0.01" max="1000000" step="0.01" value={potCap} onChange={(e)=>setPotCap(e.target.value)} className="mt-1 block w-full rounded-xl border border-white/15 bg-slate-950 p-3 text-white"/></label><label className="mt-3 block text-xs text-slate-400">Dealer selection<select value={dealerMode} onChange={(e)=>setDealerMode(e.target.value)} className="mt-1 block w-full rounded-xl border border-white/15 bg-slate-950 p-3 text-white"><option value="dealer">Dealer choice</option><option value="random">Random dealer (future room support)</option></select></label><button type="button" disabled={!Number.isFinite(Number(stake)) || Number(stake)<0.01 || !Number.isFinite(Number(ante)) || Number(ante)<0.01 || !Number.isFinite(Number(potCap)) || Number(potCap)<Number(stake)} className="mt-5 min-h-12 w-full rounded-xl bg-cyan-500 font-black text-slate-950 disabled:opacity-40" onClick={deal}>Start 3–5–7</button></section> : <>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><div className="text-xs font-bold text-cyan-300">ROUND {round + 1} OF 3</div><div className="text-2xl font-black">{wildRank}s are WILD</div><div className="text-xs text-slate-400">{hands[0]?.length || 0} cards per player · ante ${(anteCents/100).toFixed(2)}</div></div><button type="button" className="flex items-center gap-2 rounded-xl border border-white/15 px-3 py-2 text-xs" onClick={reset}><RotateCcw size={15}/> New game</button></div>
+        <div className="mb-4 rounded-xl border border-amber-400/20 bg-amber-500/10 p-3"><div className="text-xs text-amber-200">Current virtual pot (device only)</div><div className="text-2xl font-black">${(potCents/100).toFixed(2)}</div><div className="text-[10px] text-slate-400">Cap ${(capCents/100).toFixed(2)} · No actual funds or transfers. Drag-and-replace updates the running pot.</div></div>
+        {atCap && <div role="status" className="mb-4 rounded-xl border border-rose-400/40 bg-rose-500/10 p-3 text-sm text-rose-200">Pot cap reached or exceeded. Dealer review required before another round; the tally is not silently reduced. Start a new game after settling the virtual pot.</div>}
         <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">{activeNames.map((name, i) => <div key={i} className="rounded-xl border border-white/10 bg-white/5 p-3"><div className="truncate text-sm font-bold">{name || `Player ${i + 1}`}</div><div className="text-xs text-slate-400">{scores[i] || 0} round wins · {netCents[i] >= 0 ? "+" : "−"}${(Math.abs(netCents[i] || 0)/100).toFixed(2)}</div></div>)}</div>
-        {phase === "playing" ? <section className="rounded-2xl border border-emerald-500/25 bg-emerald-950/20 p-4"><h2 className="mb-3 text-center text-xl font-black">Private hands</h2><p className="mb-4 text-center text-xs text-slate-400">Pass the device. Tap a name to peek at your cards, then hide them before passing it on.</p><div className="space-y-2">{activeNames.map((name, i) => <div key={i} className="rounded-xl border border-white/10 bg-black/20 p-3"><button type="button" className="flex min-h-10 w-full items-center justify-between text-sm font-bold" disabled={mode === "solo" && i === 1} onClick={() => setViewPlayer(viewPlayer === i ? null : i)}><span>{name}</span><span className="text-cyan-300">{mode === "solo" && i === 1 ? "Hidden until DROP" : viewPlayer === i ? "Hide hand" : "View hand"}</span></button>{viewPlayer === i && <div className="mt-3 flex flex-wrap gap-2">{hands[i].map((card, j) => <PlayingCard key={j} card={card} wild={card.rank === wildRank}/>)}</div>}</div>)}</div>{turn < 3 ? <button type="button" className="mt-5 min-h-12 w-full rounded-xl bg-cyan-500 font-black text-slate-950" onClick={draw}>Deal 2 more cards to each player</button> : <button type="button" className="mt-5 min-h-12 w-full rounded-xl bg-amber-400 font-black text-slate-950" onClick={() => {setViewPlayer(null);setDropChoices([]);setDecisionIndex(0);setPhase("deciding");}}>1, 2, 3, DROP — choose hold or fold</button>}</section> : null}
+        {phase === "playing" ? <section className="rounded-2xl border border-emerald-500/25 bg-emerald-950/20 p-4"><h2 className="mb-3 text-center text-xl font-black">Private hands</h2><p className="mb-4 text-center text-xs text-slate-400">Pass the device. Tap a name to peek at your cards, then hide them before passing it on.</p><div className="space-y-2">{activeNames.map((name, i) => <div key={i} className="rounded-xl border border-white/10 bg-black/20 p-3"><button type="button" className="flex min-h-10 w-full items-center justify-between text-sm font-bold" disabled={mode === "solo" && i === 1} onClick={() => setViewPlayer(viewPlayer === i ? null : i)}><span>{name}</span><span className="text-cyan-300">{mode === "solo" && i === 1 ? "Hidden until DROP" : viewPlayer === i ? "Hide hand" : "View hand"}</span></button>{viewPlayer === i && <div className="mt-3 flex flex-wrap gap-2">{hands[i].map((card, j) => <PlayingCard key={j} card={card} wild={card.rank === wildRank}/>)}</div>}</div>)}</div>{<button type="button" className="mt-5 min-h-12 w-full rounded-xl bg-amber-400 font-black text-slate-950" onClick={() => {setViewPlayer(null);setDropChoices([]);setDecisionIndex(0);setPhase("deciding");}}>Round {round + 1}: 1, 2, 3, DROP — choose hold or fold</button>}</section> : null}
         {phase === "deciding" && <section className="rounded-2xl border border-amber-400/25 bg-amber-500/10 p-6 text-center">
-          {mode === "solo" && decisionIndex === 1 ? <div><h2 className="text-xl font-black">Computer is choosing</h2><p className="mt-2 text-sm text-slate-400">The computer's decision is hidden until reveal.</p><button type="button" className="mt-5 min-h-12 w-full rounded-xl bg-cyan-500 font-black text-black" onClick={() => commitChoice(bestHand(hands[1], wildRank).score >= 2e10 || Math.random() > 0.45 ? "hold" : "drop")}>Commit computer's choice</button></div>
+          {mode === "solo" && decisionIndex === 1 ? <div><h2 className="text-xl font-black">Computer is choosing</h2><p className="mt-2 text-sm text-slate-400">The computer's decision is hidden until reveal.</p><button type="button" className="mt-5 min-h-12 w-full rounded-xl bg-cyan-500 font-black text-black" onClick={() => commitChoice(bestHand(hands[1], wildRank, round).score >= (round===0 ? 100000 : 2e10) || Math.random() > 0.45 ? "hold" : "drop")}>Commit computer's choice</button></div>
             : <><h2 className="text-xl font-black">{activeNames[decisionIndex]}: hold or drop?</h2><p className="mt-2 text-xs text-slate-400">Pass the phone privately. Your selection is hidden until everyone has chosen. Online play will commit selections server-side simultaneously.</p><div className="mt-5 grid grid-cols-2 gap-3"><button type="button" className="min-h-14 rounded-xl bg-emerald-500 font-black text-black" onClick={() => commitChoice("hold")}>HOLD — IN</button><button type="button" className="min-h-14 rounded-xl bg-rose-500 font-black text-white" onClick={() => commitChoice("drop")}>DROP — OUT</button></div></>}
         </section>}
         {phase === "countdown" && <section className="rounded-2xl border border-amber-400/30 bg-amber-500/10 p-8 text-center"><div className="text-6xl font-black text-amber-300">{countdown ? countdown : "DROP!"}</div><button type="button" className="mt-6 min-h-12 rounded-xl bg-amber-400 px-8 font-black text-black" onClick={() => countdown > 1 ? setCountdown(countdown - 1) : drop()}>{countdown > 1 ? "Next count" : "DROP & reveal"}</button></section>}
-        {phase === "revealed" && <section className="space-y-3"><div className="rounded-2xl border border-amber-400/25 bg-amber-500/10 p-5 text-center"><div className="text-xs font-bold uppercase tracking-widest text-amber-300">Round result</div><div className="mt-1 text-2xl font-black">{result.winners.length ? result.winners.map((i) => activeNames[i]).join(" & ") : "Pot carries over"}</div><p className="mt-2 text-xs text-amber-100">{result.message}</p>{result.awarded>0 && <p className="mt-2 text-xs text-amber-100">Dragged ${(result.awarded/100).toFixed(2)} · {result.replacements} losing holders replaced it · next pot ${((result.awarded*result.replacements)/100).toFixed(2)}</p>}</div>{result.results.map(({ i, name }) => <div key={i} className="rounded-2xl border border-white/10 bg-white/5 p-3"><div className="mb-2 flex justify-between gap-2 text-sm font-bold"><span>{activeNames[i]} · {dropChoices[i] === "hold" ? "HELD" : "DROPPED"}</span><span className="text-cyan-300">{dropChoices[i] === "hold" ? name : "Folded"}</span></div><div className="flex flex-wrap gap-2">{hands[i].map((card, j) => <PlayingCard key={j} card={card} wild={card.rank === wildRank}/>)}</div></div>)}{round < 2 ? <button type="button" className="min-h-12 w-full rounded-xl bg-cyan-500 font-black text-black" onClick={() => deal(round + 1)}>Next round: {WILDS[round + 1]}s wild</button> : <button type="button" className="min-h-12 w-full rounded-xl bg-amber-400 font-black text-black" onClick={() => setPhase("finished")}>Final results</button>}</section>}
+        {phase === "revealed" && <section className="space-y-3"><div className="rounded-2xl border border-amber-400/25 bg-amber-500/10 p-5 text-center"><div className="text-xs font-bold uppercase tracking-widest text-amber-300">Round result</div><div className="mt-1 text-2xl font-black">{result.winners.length ? result.winners.map((i) => activeNames[i]).join(" & ") : "Pot carries over"}</div><p className="mt-2 text-xs text-amber-100">{result.message}</p>{result.awarded>0 && <p className="mt-2 text-xs text-amber-100">Dragged ${(result.awarded/100).toFixed(2)} · {result.replacements} losing holders replaced it · next pot ${((result.awarded*result.replacements)/100).toFixed(2)}</p>}</div>{result.results.map(({ i, name }) => <div key={i} className="rounded-2xl border border-white/10 bg-white/5 p-3"><div className="mb-2 flex justify-between gap-2 text-sm font-bold"><span>{activeNames[i]} · {dropChoices[i] === "hold" ? "HELD" : "DROPPED"}</span><span className="text-cyan-300">{dropChoices[i] === "hold" ? name : "Folded"}</span></div><div className="flex flex-wrap gap-2">{hands[i].map((card, j) => <PlayingCard key={j} card={card} wild={card.rank === wildRank}/>)}</div></div>)}{round < 2 ? <button type="button" className="min-h-12 w-full rounded-xl bg-cyan-500 font-black text-black" disabled={atCap} onClick={advanceRound}>{atCap ? "Pot cap reached — dealer review" : `Deal 2 more cards: ${WILDS[round + 1]}s wild`}</button> : <button type="button" className="min-h-12 w-full rounded-xl bg-amber-400 font-black text-black" onClick={finishGame}>Final results</button>}</section>}
         {phase === "finished" && <section className="rounded-2xl border border-amber-400/25 bg-amber-500/10 p-6 text-center"><h2 className="text-2xl font-black">Game complete!</h2><p className="mt-3 text-lg">Winner: {activeNames.filter((_, i) => scores[i] === Math.max(...scores)).join(" & ")}</p><button type="button" className="mt-5 min-h-12 rounded-xl bg-cyan-500 px-8 font-black text-black" onClick={reset}>Play again</button></section>}
       </>}
     </div>
