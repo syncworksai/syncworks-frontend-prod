@@ -101,3 +101,21 @@
 .sw-poker-game-choice label{font-weight:900;color:#a8eeff;font-size:12px;letter-spacing:.045em}
 .sw-poker-game-choice select{min-height:49px;width:100%;padding:10px;border-radius:12px;border:1px solid #66d7ee;background:#061122;color:white;font-weight:800;font-size:14px}
 .sw-poker-game-choice p{margin:0;color:#a3bdd4;font-size:11px;line-height:1.45}
+
+/* Animated game result: chips move toward the winner; virtual stacks use the ledger. */
+.sw-poker-chip-flight {position:absolute;top:-31px;left:50%;transform:translateX(-50%);z-index:7;white-space:nowrap;padding:5px 10px;border-radius:30px;background:#082f34;border:1px solid #ffd66f;color:#ffeb99;font-size:12px;font-weight:900;box-shadow:0 0 20px #ffd66f65;animation:sw-chip-flight 2.4s ease-in-out both}
+.sw-poker-chip-flight.payout {animation-name:sw-chip-flight-payout}
+.sw-poker-win-pop,.sw-poker-loss-pop {position:absolute;top:-25px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:30px;padding:4px 9px;font-weight:1000;font-size:11px;color:#002b1b;background:#89fbc8;border:1px solid #d1ffe7;box-shadow:0 0 20px #2df0a1;animation:sw-chip-pop 2.7s ease-out both}
+.sw-poker-loss-pop {background:#ffc4ce;color:#692233;box-shadow:0 0 15px #fc617888;animation-delay:.4s}
+@keyframes sw-chip-flight {0%{opacity:0;transform:translate(-50%,25px) scale(.5)}30%{opacity:1;transform:translate(-50%,-3px) scale(1.2)}70%{opacity:1;transform:translate(-50%,-18px)}100%{opacity:0;transform:translate(-50%,-43px)}}
+@keyframes sw-chip-flight-payout {0%{opacity:0;transform:translate(-50%,30px) scale(.5)}26%{opacity:1;transform:translate(-50%,0) scale(1.2)}62%{opacity:1;transform:translate(-50%,-38px) scale(.8)}100%{opacity:0;transform:translate(-50%,-82px) scale(.5)}}
+@keyframes sw-chip-pop {0%{opacity:0;transform:translate(-50%,25px) scale(.5)}24%{opacity:1;transform:translate(-50%,-10px) scale(1.15)}70%{opacity:1;transform:translate(-50%,-21px)}100%{opacity:0;transform:translate(-50%,-44px)}}
+.sw-poker-showdown {border-color:#12b7ca!important;box-shadow:0 0 30px #04d0ff23}
+.sw-poker-spinner {display:inline-grid;place-items:center;width:20px;height:20px;animation:sw-poker-spin 1.6s linear infinite;color:#ffd75b}
+@keyframes sw-poker-spin {to{transform:rotate(360deg)}}
+.sw-poker-result {border-color:#e6c45b!important;background:linear-gradient(140deg,#15213a,#07151f 65%)!important;box-shadow:0 0 30px #f3cb4938}
+.sw-poker-winner-banner {font-weight:1000;font-size:clamp(15px,4vw,23px);text-align:center;padding:15px 10px;margin:12px 0;background:linear-gradient(115deg,#654b11,#b28527,#634b0d);color:white;border:1px solid #ffe28e;border-radius:14px;box-shadow:0 0 22px #f3b8375c;animation:sw-poker-win-banner .8s ease-out both}
+@keyframes sw-poker-win-banner {from{opacity:.1;transform:scale(.91)}to{opacity:1;transform:scale(1)}}
+.sw-poker-settlement-row {display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid #6a3542;background:#401b2d65;padding:9px 10px;border-radius:10px;font-size:12px;color:#ffd1d9}
+.sw-poker-settlement-row strong{color:#ffa9ba}
+@media (prefers-reduced-motion:reduce){.sw-poker-chip-flight,.sw-poker-win-pop,.sw-poker-loss-pop,.sw-poker-spinner,.sw-poker-winner-banner{animation:none}}
