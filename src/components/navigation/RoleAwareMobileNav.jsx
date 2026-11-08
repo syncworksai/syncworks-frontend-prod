@@ -175,10 +175,11 @@ export default function RoleAwareMobileNav() {
   const hidden = useMemo(() => {
     if (!navMode) return true;
     if (pathname === "/customer/games/table") return true;
+    if (pathname === "/customer/games/clubs/room" && new URLSearchParams(location.search).has("room")) return true;
     if (/^\/tickets\/[^/]+\/?$/.test(pathname)) return true;
     if (/^\/connect\/groups\/[^/]+\/sports(?:\/|$)/.test(pathname)) return true;
     return ["/login", "/register", "/upgrade", "/gamecast", "/sports/invite", "/sports/team-invite", "/social/invite"].some((prefix) => pathname.startsWith(prefix));
-  }, [navMode, pathname]);
+  }, [navMode, pathname, location.search]);
 
   useEffect(() => {
     if (!navMode) return undefined;
