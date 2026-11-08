@@ -67,9 +67,9 @@ export default function CustomerCardClubLiveLobby(){
  async function shareLiveRoom(){
   if(!room||busy)return;
   setBusy(true);setError("");
-  const roomPath="/customer/games/clubs/room?group="+encodeURIComponent(groupId)+"&room="+encodeURIComponent(room.id);
+  const roomPath="/customer/games/join?group="+encodeURIComponent(groupId)+"&room="+encodeURIComponent(room.id);
   let url=window.location.origin+roomPath;
-  let description="Open this poker room using an approved Card Club account. Your seat is assigned when you select Join Table.";
+  let description="Use this link to join my existing poker table with your own virtual buy-in.";
   try {
     if(isHost){
       // An invitation token is necessary for users who have not joined this club.
