@@ -18,6 +18,7 @@ import AddBusiness from "./pages/AddBusiness";
 import CustomerDashboard from "./pages/CustomerDashboardResponsive";
 import CustomerGames from "./pages/CustomerGames";
 import CustomerPokerTable from "./pages/CustomerPokerTable";
+import PokerResumeEntry from "./pages/PokerResumeEntry";
 import CustomerJoinPokerRoom from "./pages/CustomerJoinPokerRoom";
 import CustomerNewPokerGame from "./pages/CustomerNewPokerGame";
 import CustomerGamesLibrary from "./pages/CustomerGamesLibrary";
@@ -314,7 +315,7 @@ export default function App() {
         <Route path="/connect/groups/:groupId/sports/games/:gameId" element={<ProtectedRoute><SoftballGameDayAdvanced /></ProtectedRoute>} />
         <Route path="/team/invites" element={<ProtectedRoute><TeamInvites /></ProtectedRoute>} />
         <Route path="/team" element={<ProtectedRoute><TeamInvites /></ProtectedRoute>} />
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<ProtectedRoute><PokerResumeEntry /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
       </Suspense>
