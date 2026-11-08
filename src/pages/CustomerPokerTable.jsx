@@ -67,29 +67,25 @@ export default function CustomerPokerTable(){
  useEffect(()=>{if(phase!=="countdown")return;setCounter(3);const started=Date.now();const timer=setInterval(()=>{const elapsed=Math.floor((Date.now()-started)/1000);const remaining=3-elapsed;if(remaining<=0){clearInterval(timer);setCounter(null);setPhase("revealing");setViewer(null);addLog("Dealer countdown finished — held hands may be revealed.");}else setCounter(remaining);},120);return()=>clearInterval(timer);},[phase]);
  async function shareRoom(){
   if(shareBusy)return;
+  if(!roomId){
+    setStatus("This is a local preview stored on your phone. It has no shared room ID, so a friend cannot join it by link. Shared rooms must be enabled on the server first. The Card Club invitation adds members to your club, not this table.");
+    return;
+  }
   setShareBusy(true);
   try{
-    // For a local room, sharing invites approved club membership, NOT this table.
-    let url=inviteUrl;
-    if(!url){
-      if(!groupId)throw Error("Create a club room to share an invitation.");
-      if(roomId){
-        url=window.location.origin+"/customer/games/clubs/room?group="+encodeURIComponent(groupId)+"&room="+encodeURIComponent(roomId);
-      }else{
-        const invitation=await createGroupInviteLink(Number(groupId),"MEMBER");
-        const raw=invitation?.invite_url||invitation?.url||invitation?.link||(invitation?.token?window.location.origin+"/social/invite/"+invitation.token:"");
-        if(!raw)throw Error("The club invitation service did not provide a link.");
-        const link=new URL(raw,window.location.origin);
-        link.searchParams.set("mode","club");
-        link.searchParams.set("next",roomId?"/customer/games/clubs/room?group="+groupId+"&room="+roomId:"/customer/games/new?group="+groupId);
-        url=link.toString();
-      }
-      setInviteUrl(url);
-    }
-    if(navigator.share)await navigator.share({title:roomId?"SyncWorks Poker Room":"SyncWorks Card Club Invitation",text:roomId?"Join our private poker waiting room. Sign in to your approved club account first.":"Join our Card Club. This is a club invitation; local game seats are not shared between devices yet.",url});
-    else if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(url);setStatus("Invitation link copied. "+(roomId?"Members can open the waiting room after approval.":"This invites members to the club, not to this local table."));}
-    else setStatus("Share link: "+url);
-  }catch(err){if(err?.name!=="AbortError")setStatus(err?.response?.data?.detail||err?.message||"Unable to share invitation.");}
+    const roomPath="/customer/games/join?group="+encodeURIComponent(groupId)+"&room="+encodeURIComponent(roomId);
+    const invitation=await createGroupInviteLink(Number(groupId),"MEMBER");
+    const raw=invitation?.invite_url||invitation?.url||invitation?.link||(invitation?.token?window.location.origin+"/social/invite/"+invitation.token:"");
+    if(!raw)throw Error("Could not create a club invitation.");
+    const link=new URL(raw,window.location.origin);
+    link.searchParams.set("mode","club");
+    link.searchParams.set("next",roomPath);
+    const url=link.href;
+    setInviteUrl(url);
+    if(navigator.share)await navigator.share({title:lobbyName+" · Join my SyncWorks poker table",text:"This link takes you to my existing poker room after joining the club. Club approval may be required.",url});
+    else if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(url);setStatus("Table invitation copied. Players are directed to this specific room after club access is approved.");}
+    else setStatus("Table invitation: "+url);
+  }catch(err){if(err?.name!=="AbortError")setStatus(err?.response?.data?.detail||err?.message||"Could not share table.");}
   finally{setShareBusy(false);}
  }
  function changeGame(nextCode){
@@ -181,7 +177,7 @@ export default function CustomerPokerTable(){
    <button type="button" className="sw-poker-back" onClick={()=>nav(groupId?"/customer/games/new?group="+encodeURIComponent(groupId):"/customer/games")} aria-label="Back to lobby"><ArrowLeft size={21}/></button>
    <div className="sw-poker-symbol" aria-label="SyncWorks">S</div>
    <div className="sw-poker-heading"><strong>SYNCWORKS POKER</strong><small>♧ {lobbyName} · Private table preview</small></div>
-   {groupId&&<button type="button" className="sw-poker-icon-btn" aria-label="Share poker room" onClick={shareRoom} disabled={shareBusy}><Share2 size={20}/></button>}
+   {groupId&&<button type="button" className="sw-poker-icon-btn" aria-label={roomId?"Share poker room":"Room sharing unavailable in local preview"} onClick={shareRoom} disabled={shareBusy}><Share2 size={20}/></button>}
    <span className="sw-poker-capsule">♙ {tableSize}</span>
    <button type="button" className="sw-poker-icon-btn" aria-label="Rules and strategy" onClick={()=>setGuide("rules")}><Info size={20}/></button>
   </header>
@@ -194,7 +190,7 @@ export default function CustomerPokerTable(){
   <div className="sw-poker-quick-footer"><button type="button" className="sw-poker-button primary" disabled={tableSize<2} onClick={start}>♠ Shuffle & Deal · 3 Cards</button><p>{tableSize<2?"Add at least one more player or a computer to start.":"Ready to deal on this device."}</p></div>
  </section>}
   {status&&<div role="status" className="mb-2 rounded-xl border border-cyan-300/30 bg-cyan-300/10 p-3 text-xs text-cyan-100">{status}</div>}
-  {roomMinimum!==null&&<div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-emerald-300/20 bg-emerald-500/10 px-3 py-2 text-xs"><span>Room minimum: <b>{displayMoney(roomMinimum)}</b> virtual chips</span>{groupId&&<button type="button" onClick={shareRoom} disabled={shareBusy} className="rounded-lg border border-cyan-300/30 px-3 py-2 font-black text-cyan-100"><Share2 size={14} className="mr-1 inline"/> Share {roomId?"room":"club invite"}</button>}</div>}
+  {roomMinimum!==null&&<div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-emerald-300/20 bg-emerald-500/10 px-3 py-2 text-xs"><span>Room minimum: <b>{displayMoney(roomMinimum)}</b> virtual chips</span>{groupId&&<button type="button" onClick={shareRoom} disabled={shareBusy} className="rounded-lg border border-cyan-300/30 px-3 py-2 font-black text-cyan-100"><Share2 size={14} className="mr-1 inline"/> {roomId?"Share table":"Sharing unavailable"}</button>}</div>}
   <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-[11px] leading-4 text-amber-100">Local interactive game preview. Ready, countdown, cards and payouts are on this device only; they are <b>not synchronized across phones</b>. All chips are virtual.</div>
  {seatEditor&&session==="setup"&&<div className="sw-poker-modal-cover" role="presentation" onClick={()=>setSeatEditor(false)}><form className="sw-poker-modal" role="dialog" aria-modal="true" aria-label="Add poker player" onClick={e=>e.stopPropagation()} onSubmit={addGuestToTable}><div className="flex items-center justify-between"><h2 className="text-xl font-black">Add a player</h2><button type="button" className="sw-poker-button" onClick={()=>setSeatEditor(false)}>✕</button></div><p className="mt-2 text-xs text-slate-400">Local guest seat; no separate phone connection yet.</p><label className="mt-4 block text-xs text-slate-300">Display name<input autoFocus required maxLength={24} value={seatName} onChange={e=>setSeatName(e.target.value)} placeholder="e.g. Zack" className="mt-2 w-full rounded-xl border border-white/20 bg-slate-950 p-3 text-white"/></label><label className="mt-3 block text-xs text-slate-300">Virtual buy-in ($) · minimum {displayMoney(roomMinimum??0)}<input required type="number" min={(roomMinimum??0)/100} max="10000" step="0.01" value={seatBuyin} onChange={e=>setSeatBuyin(e.target.value)} className="mt-2 w-full rounded-xl border border-white/20 bg-slate-950 p-3 text-white"/></label>{seatError&&<p role="alert" className="mt-3 text-xs text-rose-300">{seatError}</p>}<button type="submit" className="sw-poker-button primary mt-4 w-full">Seat Player</button></form></div>}
   <div className="sw-poker-table-space">
