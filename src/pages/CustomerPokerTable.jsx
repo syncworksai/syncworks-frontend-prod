@@ -166,7 +166,7 @@ export default function CustomerPokerTable(){
  function settleCurrentRound(){
   if(phase!=="revealing")return;
   const result=resolve357({hands,round,choices,potCents:pot,strikes,anteCents});
-  setOutcome(result);
+  setOutcome({...result,potDraggedCents:result.winner!==null&&result.winner!==undefined?pot:0});
   setStrikes(result.strikes);
   setChipStacks(previous=>previous.map((value,index)=>value+(result.delta[index]||0)));
   setPot(result.nextPot);
@@ -252,7 +252,7 @@ export default function CustomerPokerTable(){
    </section>}
    {phase==="review"&&<section className="sw-poker-panel mx-auto max-w-xl"><h3>Dealer review required</h3><p>{outcome?.message||"More than one player was dealt 3-5-7. No automatic payout has been made."}</p><button type="button" onClick={()=>{setSession("setup");setPhase("setup");}} className="sw-poker-button mt-3">Restart demo</button></section>}
    {phase==="resolved"&&<section className="sw-poker-panel mx-auto max-w-xl sw-poker-result"><h3>🏆 Round {round+1} result</h3>
-    {outcome?.winner!==null&&outcome?.winner!==undefined&&<div className="sw-poker-winner-banner">🏆 {people[outcome.winner].name} · {outcome.kind==="lone-strike"?"Uncontested hold":"DRAGS "+displayMoney(chipAnimation?.amount??0)}</div>}
+    {outcome?.winner!==null&&outcome?.winner!==undefined&&<div className="sw-poker-winner-banner">🏆 {people[outcome.winner].name} · {outcome.kind==="lone-strike"?"Uncontested hold":"DRAGS "+displayMoney(outcome?.potDraggedCents??0)}</div>}
     {outcome?.kind==="lone-strike"&&<p className="text-xs text-cyan-200">Blind bluff · {outcome.strikes?.[outcome.entered[0]]||0}/3 cumulative uncontested holds. No cards shown, no pot payout yet.</p>}
     {outcome?.kind==="drag"&&<div className="mt-3 space-y-2">{outcome.entered.filter(i=>i!==outcome.winner).map(i=><div key={i} className="sw-poker-settlement-row"><span>{people[i].name} replaces pot</span><strong>−{displayMoney(chipAnimation?.amount??0)}</strong></div>)}</div>}
     {outcome?.kind==="all-drop"&&<div className="sw-poker-winner-banner">No winner · everyone re-antes</div>}<p className="text-sm font-bold text-emerald-200">{outcome?.winner!==null&&outcome?.winner!==undefined?people[outcome.winner].name+" wins "+displayMoney(chipAnimation?.amount??0):"Pot carries forward"}</p><p>{outcome?.message}</p><p className="mt-2">Next pot: {displayMoney(pot)}. Current stage: {wild}s wild.</p>{pot>=capCents&&<p className="mt-2 text-amber-200">Pot cap reached. Review settlement before beginning another hand.</p>}
