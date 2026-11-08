@@ -230,6 +230,7 @@ export default function CustomerDashboard() {
             <NavButton icon={ShoppingBag} label="Shop Assist" onClick={() => nav("/customer/store")} color="emerald" />
             <NavButton icon={Store} label="Services" onClick={() => nav("/customer/marketplace")} color="cyan" />
             <NavButton icon={Network} label="Social" onClick={() => nav("/connect")} color="fuchsia" />
+            <NavButton icon={Spade} label="New Game" onClick={() => nav("/customer/games/new")} color="cyan" />
             <NavButton icon={Spade} label="Games" onClick={() => nav("/customer/games")} color="violet" />
             <NavButton icon={Search} label="EDGE" onClick={() => nav("/customer/edge")} color="violet" />
             {dayTradingEnabled ? <NavButton icon={Activity} label="Day Trade" onClick={() => nav("/customer/day-trading-futures")} color="emerald" badge="LIVE" /> : null}

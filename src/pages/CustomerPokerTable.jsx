@@ -2,6 +2,9 @@ import React,{useEffect,useMemo,useState} from "react";
 import {useNavigate,useSearchParams} from "react-router-dom";
 import {ArrowLeft,BookOpen,Check,ChevronRight,Eye,EyeOff,Info,Lightbulb,RotateCcw,Shield,Spade,Target,Users,WalletCards} from "lucide-react";
 import {getCardRoom} from "../api/cardRooms";
+import {createGroupInviteLink} from "../api/social";
+import {useAuth} from "../auth/AuthContext";
+import {Share2} from "lucide-react";
 import {addRoundCards,cardRank,createShuffledDeck,dealt357,displayMoney,instant357,rate357,resolve357,THREE_FIVE_SEVEN} from "../games/drop357Table.mjs";
 import "./CustomerPokerTable.css";
 
@@ -21,6 +24,7 @@ function helperContent(page,round){
 }
 export default function CustomerPokerTable(){
  const nav=useNavigate(),[params]=useSearchParams();
+ const {user}=useAuth();
  const groupId=params.get("group")||"";
  const roomId=params.get("room")||"";
  const [people,setPeople]=useState(DEFAULT_PLAYERS);
@@ -32,6 +36,7 @@ export default function CustomerPokerTable(){
  const [strikes,setStrikes]=useState({}),[pot,setPot]=useState(0),[chipStacks,setChipStacks]=useState([]);
  const [ante,setAnte]=useState("0.25"),[maxPot,setMaxPot]=useState("50"),[startingChips,setStartingChips]=useState("20");
  const [guide,setGuide]=useState(null),[status,setStatus]=useState(""),[log,setLog]=useState([]),[remoteNotice,setRemoteNotice]=useState(false);
+ const [shareBusy,setShareBusy]=useState(false),[inviteUrl,setInviteUrl]=useState(""),[roomMinimum,setRoomMinimum]=useState(null),[roomCapacity,setRoomCapacity]=useState(6);
  const anteCents=Math.round(Number(ante)*100),capCents=Math.round(Number(maxPot)*100);
  const wild=THREE_FIVE_SEVEN[round];
  const tableSize=people.length;
@@ -46,14 +51,41 @@ export default function CustomerPokerTable(){
  const viewCards=viewer!==null&&phase==="choosing"?hands[viewer]:null;
  function addLog(message){setLog(old=>[{id:uid(),message,time:new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})},...old].slice(0,32));}
  useEffect(()=>{let mounted=true;
-  if(roomId){getCardRoom(roomId).then(r=>{if(!mounted)return;setLobbyName(r.name||"Poker Table");if(Array.isArray(r.seats)&&r.seats.length>=2){setPeople(r.seats.map(getPlayer));setStartingChips(String((r.virtual_buy_in_cents||2000)/100));const idx=r.seats.findIndex(s=>s.position===r.dealer_position);if(idx>=0)setDealer(idx);setRemoteNotice(true);}}).catch(()=>{if(mounted)setStatus("Shared lobby unavailable; use the local preview with sample seats.");});}
-  else if(groupId){const r=readLocalRoom(groupId);if(r?.seats?.length>=2){setLobbyName(r.name||"Poker Table");setPeople(r.seats.map(getPlayer));setStartingChips(String((r.buyInCents||2000)/100));setRemoteNotice(false);}}
+  if(roomId){getCardRoom(roomId).then(r=>{if(!mounted)return;setLobbyName(r.name||"Poker Table");if(Array.isArray(r.seats)&&r.seats.length>=2){setPeople(r.seats.map(getPlayer));setStartingChips(String((r.virtual_buy_in_cents??2000)/100));setRoomMinimum(r.minimum_buy_in_cents??r.virtual_buy_in_cents??2000);setRoomCapacity(r.capacity||6);const idx=r.seats.findIndex(s=>s.position===r.dealer_position);if(idx>=0)setDealer(idx);setRemoteNotice(true);}}).catch(()=>{if(mounted)setStatus("Shared lobby unavailable; use the local preview with sample seats.");});}
+  else if(groupId){const r=readLocalRoom(groupId);if(r?.seats?.length){setLobbyName(r.name||"Poker Table");setPeople(r.seats.map(getPlayer));setStartingChips(String((r.buyInCents??2000)/100));setRoomMinimum(r.buyInCents??2000);setRoomCapacity(r.capacity||6);setRemoteNotice(false);}}
   return()=>{mounted=false;};
  },[groupId,roomId]);
  useEffect(()=>{if(phase!=="countdown")return;setCounter(3);const started=Date.now();const timer=setInterval(()=>{const elapsed=Math.floor((Date.now()-started)/1000);const remaining=3-elapsed;if(remaining<=0){clearInterval(timer);setCounter(null);setPhase("revealing");setViewer(null);addLog("Dealer countdown finished — held hands may be revealed.");}else setCounter(remaining);},120);return()=>clearInterval(timer);},[phase]);
+ async function shareRoom(){
+  if(shareBusy)return;
+  setShareBusy(true);
+  try{
+    // For a local room, sharing is a club invitation, NOT a remotely joinable table.
+    let url=inviteUrl;
+    if(!url){
+      if(!groupId)throw Error("Create a club room to share an invitation.");
+      if(roomId){
+        url=window.location.origin+"/customer/games/clubs/room?group="+encodeURIComponent(groupId)+"&room="+encodeURIComponent(roomId);
+      }else{
+        const invitation=await createGroupInviteLink(Number(groupId),"MEMBER");
+        const raw=invitation?.invite_url||invitation?.url||invitation?.link||(invitation?.token?window.location.origin+"/social/invite/"+invitation.token:"");
+        if(!raw)throw Error("The club invitation service did not provide a link.");
+        const link=new URL(raw,window.location.origin);
+        link.searchParams.set("mode","club");
+        link.searchParams.set("next","/customer/games/new?group="+groupId);
+        url=link.toString();
+      }
+      setInviteUrl(url);
+    }
+    if(navigator.share)await navigator.share({title:roomId?"SyncWorks Poker Room":"SyncWorks Card Club Invitation",text:roomId?"Join our private poker waiting room. Sign in to your approved club account first.":"Join our Card Club. This is a club invitation; local game seats are not shared between devices yet.",url});
+    else if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(url);setStatus("Invitation link copied. "+(roomId?"Members can open the waiting room after approval.":"This invites members to the club, not to this local table."));}
+    else setStatus("Share link: "+url);
+  }catch(err){if(err?.name!=="AbortError")setStatus(err?.response?.data?.detail||err?.message||"Unable to share invitation.");}
+  finally{setShareBusy(false);}
+ }
  function preparedChoices(size){return people.slice(0,size).map(p=>p.kind==="computer"?(Math.random()>.4?"hold":"drop"):null);}
  function dealOpening(previousPot=0,previousChips=null,previousStrikes=null){
-  const stack=previousChips||people.map(p=>p.chips||Math.max(0,Math.round(Number(startingChips)*100)));
+  const stack=previousChips||people.map(p=>Number.isFinite(p.chips)?p.chips:Math.max(0,Math.round(Number(startingChips)*100)));
   if(tableSize<2||tableSize>6){setStatus("Choose 2–6 players before dealing.");return;}
   if(!Number.isSafeInteger(anteCents)||anteCents<0||!Number.isSafeInteger(capCents)||capCents<1){setStatus("Set valid ante and pot-cap amounts.");return;}
   const fresh=dealt357(createShuffledDeck(),tableSize);
@@ -100,13 +132,16 @@ export default function CustomerPokerTable(){
  const gameOver=round===2||outcome?.kind==="instant";
  return <main className="sw-poker-screen"><div className="sw-poker-content">
   <header className="sw-poker-top">
-   <button type="button" className="sw-poker-back" onClick={()=>nav(groupId?"/customer/games/clubs/room-preview?group="+encodeURIComponent(groupId):"/customer/games")} aria-label="Back to lobby"><ArrowLeft size={21}/></button>
+   <button type="button" className="sw-poker-back" onClick={()=>nav(groupId?"/customer/games/new?group="+encodeURIComponent(groupId):"/customer/games")} aria-label="Back to lobby"><ArrowLeft size={21}/></button>
    <div className="sw-poker-symbol" aria-label="SyncWorks">S</div>
    <div className="sw-poker-heading"><strong>SYNCWORKS POKER</strong><small>♧ {lobbyName} · Private table preview</small></div>
+   {groupId&&<button type="button" className="sw-poker-icon-btn" aria-label="Share poker room" onClick={shareRoom} disabled={shareBusy}><Share2 size={20}/></button>}
    <span className="sw-poker-capsule">♙ {tableSize}</span>
    <button type="button" className="sw-poker-icon-btn" aria-label="Rules and strategy" onClick={()=>setGuide("rules")}><Info size={20}/></button>
   </header>
   <div className="sw-poker-round"><div className="sw-poker-round-badge"><div>♠ {gameName}</div><span>Round {round+1} · {wild}s Wild</span></div><div className="sw-poker-steps">{THREE_FIVE_SEVEN.map((n,i)=><div key={i} title={"Round "+(i+1)+": "+n+"s wild"} className={"sw-poker-step"+(i===round?" current":"")}>{i+1}</div>)}</div></div>
+  {status&&<div role="status" className="mb-2 rounded-xl border border-cyan-300/30 bg-cyan-300/10 p-3 text-xs text-cyan-100">{status}</div>}
+  {roomMinimum!==null&&<div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-emerald-300/20 bg-emerald-500/10 px-3 py-2 text-xs"><span>Room minimum: <b>{displayMoney(roomMinimum)}</b> virtual chips</span>{groupId&&<button type="button" onClick={shareRoom} disabled={shareBusy} className="rounded-lg border border-cyan-300/30 px-3 py-2 font-black text-cyan-100"><Share2 size={14} className="mr-1 inline"/> Share {roomId?"room":"club invite"}</button>}</div>}
   <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-[11px] leading-4 text-amber-100">Local interactive game preview. Ready, countdown, cards and payouts are on this device only; they are <b>not synchronized across phones</b>. All chips are virtual.</div>
   <div className="sw-poker-table-space">
    <div className="sw-poker-felt">
@@ -125,7 +160,7 @@ export default function CustomerPokerTable(){
    <h3><Users size={18}/> Start 3-5-7 Table Preview</h3>
    <p>This preview deals one shuffled 52-card deck to 2–6 seats. Everyone plays on this device, passing it for private decisions. The dealer starts the countdown when all are ready.</p>
    <div className="mt-3 space-y-2">{people.map((p,i)=><div key={p.id} className="flex items-center gap-2"><Photo person={p}/><input className="min-w-0 flex-1 rounded-lg border border-white/20 bg-slate-950 p-2 text-sm text-white" value={p.name} aria-label={"Player "+(i+1)+" display name"} onChange={e=>setPeople(old=>old.map((item,j)=>j===i?{...item,name:e.target.value.slice(0,24)}:item))}/>{people.length>2&&<button type="button" onClick={()=>setPeople(old=>old.filter((_,j)=>j!==i))} className="sw-poker-button">×</button>}</div>)}</div>
-   <div className="mt-3 flex gap-2"><button type="button" className="sw-poker-button" disabled={people.length>=6} onClick={()=>setPeople(old=>[...old,{id:uid(),name:"Player "+(old.length+1),kind:"guest",chips:2000}])}>+ Seat</button><button type="button" className="sw-poker-button" disabled={people.length>=6||people.some(p=>p.kind==="computer")} onClick={()=>setPeople(old=>[...old,{id:uid(),name:"Computer",kind:"computer",chips:2000}])}>+ Computer</button></div>
+   <div className="mt-3 flex gap-2"><button type="button" className="sw-poker-button" disabled={people.length>=roomCapacity} onClick={()=>setPeople(old=>[...old,{id:uid(),name:"Player "+(old.length+1),kind:"guest",chips:roomMinimum??2000}])}>+ Seat</button><button type="button" className="sw-poker-button" disabled={people.length>=roomCapacity||people.some(p=>p.kind==="computer")} onClick={()=>setPeople(old=>[...old,{id:uid(),name:"Computer",kind:"computer",chips:roomMinimum??2000}])}>+ Computer</button></div>
    <div className="mt-3 grid grid-cols-3 gap-2">{[["Buy-in",startingChips,setStartingChips],["Ante",ante,setAnte],["Pot cap",maxPot,setMaxPot]].map(([title,value,setValue])=><label key={title} className="text-xs text-slate-300">{title} ($)<input type="number" min="0" step="0.25" value={value} onChange={e=>setValue(e.target.value)} className="mt-1 w-full rounded-lg border border-white/20 bg-slate-950 p-2 text-white"/></label>)}</div>
    <button type="button" onClick={start} className="sw-poker-button primary mt-4 w-full">Shuffle & deal 3 cards</button>
   </section>:<>

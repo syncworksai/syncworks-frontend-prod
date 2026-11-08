@@ -14,6 +14,7 @@ export default function CustomerGamesHome(){
   <section className="overflow-hidden rounded-[1.8rem] border border-cyan-300/20 bg-gradient-to-br from-[#14243b] via-[#061426] to-[#080b20] p-5 shadow-xl">
    <div className="text-[10px] font-black uppercase tracking-widest text-emerald-300">Your league. Your table.</div>
    <h1 className="mt-2 text-3xl font-black">Poker Night</h1><p className="mt-2 max-w-xl text-xs leading-5 text-slate-300">Create a league, invite friends, check lifetime standings and join its poker lobby. Games are selected inside the room—not before it.</p>
+   <button type="button" onClick={()=>nav("/customer/games/new")} className="mt-4 flex min-h-12 w-full items-center justify-center rounded-xl bg-cyan-400 px-4 text-sm font-black text-slate-950">＋ New Game · Create room</button>
    <div className="mt-4 flex gap-2 text-xs"><span className="rounded-full border border-white/15 bg-white/5 px-3 py-1">5 card games</span><span className="rounded-full border border-white/15 bg-white/5 px-3 py-1">Manual Poker</span></div>
   </section>
   <div className="mt-5 grid gap-4 md:grid-cols-[1.1fr_.9fr]">
@@ -28,7 +29,7 @@ export default function CustomerGamesHome(){
    </section>
    <section className="flex flex-col rounded-2xl border border-emerald-400/20 bg-emerald-500/[.04] p-4"><h2 className="text-lg font-black">{group?group.name:"Your league hub"}</h2><p className="mt-2 text-xs leading-5 text-slate-300">{group?"View players, purse and leaderboard, then open a room or create a table.":"Select a group to see its lobby and standings."}</p>
      <div className="mt-4 grid grid-cols-2 gap-2"><div className="rounded-xl border border-white/10 p-3"><Trophy className="mb-2 h-5 w-5 text-amber-300"/><div className="text-xs font-bold">All-time leaders</div><div className="mt-1 text-[10px] text-slate-400">Money in / out</div></div><div className="rounded-xl border border-white/10 p-3"><Users className="mb-2 h-5 w-5 text-cyan-300"/><div className="text-xs font-bold">Waiting rooms</div><div className="mt-1 text-[10px] text-slate-400">4–6 seat tables</div></div></div>
-     <div className="mt-auto space-y-2 pt-5"><button disabled={!group} onClick={()=>nav(`/customer/games/clubs?group=${group.id}`)} className="min-h-12 w-full rounded-xl bg-emerald-400 font-black text-slate-950 disabled:opacity-40">Enter league dashboard</button><button disabled={!group} onClick={()=>nav(`/customer/games/clubs/room?group=${group.id}`)} className="min-h-12 w-full rounded-xl border border-cyan-300/30 font-bold text-cyan-200 disabled:opacity-40">Open poker lobby</button></div>
+     <div className="mt-auto space-y-2 pt-5"><button disabled={!group} onClick={()=>nav(`/customer/games/clubs?group=${group.id}`)} className="min-h-12 w-full rounded-xl bg-emerald-400 font-black text-slate-950 disabled:opacity-40">Enter league dashboard</button><button disabled={!group} onClick={()=>nav(`/customer/games/new?group=${group.id}`)} className="min-h-12 w-full rounded-xl border border-cyan-300/30 font-bold text-cyan-200 disabled:opacity-40">Create new poker room</button></div>
    </section>
   </div>
   <p className="mt-4 text-center text-[11px] leading-5 text-amber-200">Game rooms and virtual tallies are currently a local beta preview. Other devices cannot join the same live game yet. SyncWorks holds no game funds.</p>
