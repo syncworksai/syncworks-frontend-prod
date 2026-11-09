@@ -32,7 +32,7 @@ test("completed or old checkpoints are not offered as Continue Game",()=>{
  savePracticeGame("100","12","357",{active:false});
  assert.equal(listPracticeGames("100","12").length,0);
  savePracticeGame("100","12","fyb",{active:true});
- const key=data.keys().next().value;
+ const key=[...data.keys()].find(k=>k.endsWith(":fyb"));
  data.set(key,JSON.stringify({...JSON.parse(data.get(key)),updatedAt:Date.now()-90000000}));
  assert.equal(listPracticeGames("100","12").length,0);
 });
