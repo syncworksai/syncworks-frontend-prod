@@ -87,6 +87,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   saveCardNight({groupId,roomId,people:players,stacks:nextStacks,pot:nextPot,dealer:nextDealer,gameNumber:nextGame,capCents:sessionCapCents,rebuyCounts,sittingOut,cashouts,virtualSessionId});
  }
  function quitToDealer(){
+  clearPracticeGame(user?.id,groupId,variant);
   const next=(dealer+1)%players.length;
   store(stacks,pot,next,gameNumber+1);
   nav(nextGameUrl);
@@ -95,6 +96,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   if(nextCode===variant)return;
   if(step!=="ready"||pot>0||variant==="bozo"&&bozoLocked){setStatus("Finish dragging the current pot before selecting another game.");return;}
   if(!ALL_POKER_GAMES.some(g=>g.code===nextCode))return;
+  clearPracticeGame(user?.id,groupId,variant);
   store();
   const args=new URLSearchParams();
   if(groupId)args.set("group",groupId);
