@@ -1,6 +1,6 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {Plus,CheckCircle,AlertTriangle,Copy,Users,Save,Trash2} from "lucide-react";
-import {sessionKey,money,parseMoney,createSession,sessionTotals,suggestedHistory,clubSummary,normalizeAlias} from "../games/cardClubSessions.mjs";
+import {sessionKey,money,parseMoney,createSession,sessionTotals,suggestedHistory,clubSummary,normalizeAlias} from "../../games/cardClubSessions.mjs";
 
 const draftRow=(player="",buyin="20")=>({player,buyin,rebuy:"0",payout:"0"});
 const emptyDraft=()=>({date:new Date().toISOString().slice(0,10),table:"Table 1",notes:"",opening:"0",closing:"0",rows:[draftRow(),draftRow(),draftRow(),draftRow()]});
