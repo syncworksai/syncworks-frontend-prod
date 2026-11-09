@@ -320,10 +320,7 @@ export default function CustomerPokerTable(){
  function next(){
   if(phase!=="resolved")return;
   if(pot===0&&(outcome?.kind==="drag"||outcome?.kind==="instant")){finishGameAndPassDealer();return;}
-  if(round===2||outcome?.kind==="instant"){
-   // A replacement pot stays with the current dealer and game.
-   dealOpening(pot,chipStacks,strikes);return;
-  }
+  if(round===2||outcome?.kind==="instant"||outcome?.kind==="all-drop") {const nextDealer=(dealer+1)%tableSize;setDealer(nextDealer);setHandFolds({});dealOpening(pot,chipStacks,strikes);addLog("Dealer passes to "+people[nextDealer]?.name+". Pot carries into a fresh three-card hand.");return;}
   const updated=addRoundCards(hands,deck);
   setDealAnimation({nonce:Date.now(),count:2});
   setHands(updated.hands);setDeck(updated.deck);setRound(v=>v+1);setViewer(null);setShowdownViewer(null);setChoices(preparedChoices(tableSize,updated.hands,round+1).map((c,i)=>sittingOut[i]||handFolds[i]?"drop":c));setReveal({});setRevealStep(0);setOutcome(null);setPhase("choosing");closeDrawer();
@@ -334,7 +331,7 @@ export default function CustomerPokerTable(){
  const canReveal=phase==="revealing"&&currentReveal!==undefined;
  const gameOver=pot===0&&phase==="resolved"&&(outcome?.kind==="drag"||outcome?.kind==="instant");
  const hasPracticeRecap=practiceMode&&phase==="resolved"&&people.some(p=>p.kind==="computer");
- const nextActionLabel=gameOver?"Pass dealer · Choose game":round===2?"New 3-card hand":"Deal 2 more · "+THREE_FIVE_SEVEN[round+1]+"s wild";
+ const nextActionLabel=gameOver?"Pass dealer · Choose game":round===2||outcome?.kind==="all-drop"?"Next dealer · New 3-card hand":"Deal 2 more · "+THREE_FIVE_SEVEN[round+1]+"s wild";
  const doNext=()=>gameOver?finishGameAndPassDealer():next();
  useEffect(()=>{if(!drawerOpen)return;const onKey=e=>{if(e.key==="Escape")closeDrawer();};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey);},[drawerOpen]);
  return <main className="sw-poker-screen"><div className="sw-poker-content">
