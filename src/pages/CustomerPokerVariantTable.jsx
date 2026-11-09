@@ -7,6 +7,7 @@ import {score442,naturalPair442,replace442,settle442,botExchange442} from "../ga
 import {capGutsResult,limitAnte,rebuyChips,centsFromDollars,pickPracticeBotChoice,fundedReplacement} from "../games/pokerPracticeSession.mjs";
 import {readCardNight,saveCardNight,clearCardNight} from "../games/cardNightTransfer.mjs";
 import PokerSessionBar from "../components/poker/PokerSessionBar";
+import {buildPracticeSummary,savePracticeSummary} from "../games/pokerClubPracticeLedger.mjs";
 import {getCardRoom} from "../api/cardRooms";
 import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal,fybRevealKing,fybCurrentKings,fybDealFromShoe,fybDealerDraw,fybPayRound,fybSplitPurse,fybBotWantsPass,fybLocalSeat,canRevealOwnFybCard} from "../games/fybElimination.mjs";
 import "./CustomerPokerTable.css";
@@ -29,7 +30,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  const groupId=query.get("group")||"",roomId=query.get("room")||"";
  const [rebuyCounts,setRebuyCounts]=useState({}),[sittingOut,setSittingOut]=useState({}),[cashouts,setCashouts]=useState([]),[virtualSessionId,setVirtualSessionId]=useState(()=>"practice-"+Date.now()+"-"+Math.random().toString(36).slice(2));
  const [players,setPlayers]=useState([]),[stacks,setStacks]=useState([]),[dealer,setDealer]=useState(0),[pot,setPot]=useState(0),[gameNumber,setGameNumber]=useState(1);
- const [ante,setAnte]=useState(variant==="fyb"?"1.50":query.get("ante")||"0.25"),[cap,setCap]=useState("50"),[step,setStep]=useState("loading");
+ const [ante,setAnte]=useState(variant==="fyb"?"1.50":query.get("ante")||"0.25"),[cap,setCap]=useState("50"),[sessionCapCents,setSessionCapCents]=useState(5000),[step,setStep]=useState("loading");
  const [hands,setHands]=useState([]),[clown,setClown]=useState([]),[deck,setDeck]=useState([]),[decisions,setDecisions]=useState([]),[viewer,setViewer]=useState(null),[outcome,setOutcome]=useState(null),[log,setLog]=useState([]);
  const [drawer,setDrawer]=useState(false),[tab,setTab]=useState("hands"),[rebuy,setRebuy]=useState(false),[rebuySeat,setRebuySeat]=useState(0),[rebuyAmount,setRebuyAmount]=useState("20"),[status,setStatus]=useState("");
  const [fybTurn,setFybTurn]=useState(0),[fybSettlement,setFybSettlement]=useState(null),[draw442Turn,setDraw442Turn]=useState(0),[draw442Selected,setDraw442Selected]=useState([]),[showdown442,setShowdown442]=useState(null),[followers,setFollowers]=useState([]),[pendingFollower,setPendingFollower]=useState(false),[street,setStreet]=useState(0);
@@ -51,13 +52,13 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  const record=(message)=>setLog(v=>[{id:Date.now()+Math.random(),message},...v].slice(0,45));
  useEffect(()=>{let mounted=true;
   const saved=readCardNight(groupId,roomId);
-  if(saved){setPlayers(saved.people);setStacks(saved.stacks);setDealer(saved.dealer??0);setPot(saved.pot??0);setCap(String((saved.capCents??5000)/100));setGameNumber(saved.gameNumber??1);setRebuyCounts(saved.rebuyCounts||{});setSittingOut(saved.sittingOut||{});setCashouts(saved.cashouts||[]);setVirtualSessionId(saved.virtualSessionId||("practice-"+Date.now()));setStep("ready");return()=>{mounted=false;};}
+  if(saved){setPlayers(saved.people);setStacks(saved.stacks);setDealer(saved.dealer??0);setPot(saved.pot??0);setCap(String((saved.capCents??5000)/100));setSessionCapCents(saved.capCents??5000);setGameNumber(saved.gameNumber??1);setRebuyCounts(saved.rebuyCounts||{});setSittingOut(saved.sittingOut||{});setCashouts(saved.cashouts||[]);setVirtualSessionId(saved.virtualSessionId||("practice-"+Date.now()));setStep("ready");return()=>{mounted=false;};}
   if(roomId){getCardRoom(roomId).then(r=>{if(!mounted)return;const ps=r.seats?.map((p,i)=>({id:String(p.id??i),name:p.name||p.nickname||"Player "+(i+1),kind:p.is_computer?"computer":"human",chips:p.virtual_chips_cents??2000}))||[];setPlayers(ps);setStacks(ps.map(p=>p.chips));setStep("ready");}).catch(()=>{if(mounted){setStatus("Could not load room. Return to your poker lobby.");setStep("ready");}});}
   else {const p=[{id:"you",name:"You",kind:"human",chips:2000},{id:"bot",name:"Virtual Player 1",kind:"computer",chips:2000}];setPlayers(p);setStacks(p.map(x=>x.chips));setStep("ready");}
   return()=>{mounted=false;};
  },[groupId,roomId]);
  function store(nextStacks=stacks,nextPot=pot,nextDealer=dealer,nextGame=gameNumber){
-  saveCardNight({groupId,roomId,people:players,stacks:nextStacks,pot:nextPot,dealer:nextDealer,gameNumber:nextGame,capCents:maxCents,rebuyCounts,sittingOut,cashouts,virtualSessionId});
+  saveCardNight({groupId,roomId,people:players,stacks:nextStacks,pot:nextPot,dealer:nextDealer,gameNumber:nextGame,capCents:sessionCapCents,rebuyCounts,sittingOut,cashouts,virtualSessionId});
  }
  function quitToDealer(){
   const next=(dealer+1)%players.length;
@@ -65,6 +66,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   nav(nextGameUrl);
  }
  function endLocalSession(){
+  try{savePracticeSummary(groupId,buildPracticeSummary({id:virtualSessionId,players,stacks,rebuyCounts,cashouts,pot,gameCount:gameNumber}));}catch(e){console.warn("Virtual history could not be saved",e);}
   clearCardNight();
   setViewer(null);setHands([]);setDeck([]);setFybLastMove(null);
   nav(groupId?"/customer/games/clubs?group="+encodeURIComponent(groupId):"/customer/games");
@@ -103,9 +105,12 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  }
  function takeAnte(){
   const actual=limitAnte({potCents:pot,capCents:maxCents,anteCents,playerCount:players.length});
-  if(stacks.some((v,i)=>players[i].kind!=="computer"&&v<actual)){setStatus("A player needs a rebuy before dealing.");setRebuy(true);return false;}
-  const nextStacks=stacks.map((v,i)=>v+(players[i].kind==="computer"&&v<actual?2000:0)-actual);
-  setStacks(nextStacks);setPot(v=>v+actual*players.length);
+  if(stacks.some((v,i)=>!sittingOut[i]&&players[i].kind!=="computer"&&v<Math.max(1,actual))){setStatus("A player needs a $20 rebuy or must sit out.");setRebuy(true);return false;}
+  const botRebuys=stacks.map((v,i)=>!sittingOut[i]&&players[i].kind==="computer"&&v<Math.max(1,actual)&&(rebuyCounts[i]||0)<4?2000:0);
+  if(stacks.some((v,i)=>!sittingOut[i]&&v+botRebuys[i]<Math.max(1,actual))){setStatus("A player has exhausted available rebuys.");return false;}
+  if(botRebuys.some(Boolean))setRebuyCounts(old=>Object.fromEntries(players.map((_,i)=>[i,(old[i]||0)+(botRebuys[i]?1:0)])));
+  const nextStacks=stacks.map((v,i)=>v+botRebuys[i]-(sittingOut[i]?0:actual));
+  setStacks(nextStacks);setPot(v=>v+actual*players.filter((_,i)=>!sittingOut[i]).length);
   return true;
  }
  function deal(){
@@ -358,8 +363,8 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  {tab==="activity"&&variant==="fyb"&&<><h3>Current turn</h3><p>{centered}</p><p>{fybDealerTurn?"Dealer: keep your card or draw a replacement from the deck.":activeIndex>=0?"Pass left to "+(players[order[fybTurn+1]]?.name||"the next seat")+". Kings block incoming swaps and reveal at their seat.":"Waiting for the next hand."}</p>{fybAwaitNext&&<p>Review your updated card, then tap Continue.</p>}{fybLastMove&&<p className="sw-fyb-exchange">{fybLastMove.event}</p>}<h3>Recent activity</h3>{log.slice(0,12).map(e=><p key={e.id} className="sw-poker-drawer-log-entry">{e.message}</p>)}<h3>Hand details</h3><p>Dealer: {players[dealer]?.name} · {fybActive.length} active · {displayMoney(anteCents)} per loss · Deck {fybDeckNumber} · {deck.length} remaining · Purse {displayMoney(pot)}</p></>}{tab==="hands"&&<>{variant==="fyb"&&step==="result"&&fybSettlement&&<p>Lowest card: {fybSettlement.losers.map(i=>players[i].name).join(", ")}. Losers pay {displayMoney(fybSettlement.paidCents)} each. All balances shown are after settlement.</p>}{!reviewable?<p>Opponents' private cards are not revealed before a completed hand. You can view only your active hand.</p>:players.map((p,i)=><section className="sw-poker-drawer-hands" key={p.id}><strong>{p.name}</strong><div className="sw-poker-facecards">{hands[i]?.map((c,j)=><PokerCard c={c} key={j}/>)}</div></section>)}{variant==="bozo"&&reviewable&&<section><h3>Clown</h3><div className="sw-poker-facecards">{clown.map((c,i)=><PokerCard key={i} c={c}/>)}</div></section>}</>}
  {tab==="rules"&&<><h3>{game.title}</h3><p>{variant==="fyb"?"Three chips per person, with one shared purse of lost chips. Dealer sets the total stake per player (e.g. $3.00 total means $1.00 for each lost chip). Each lowest-card player loses one chip per completed hand; ties all lose a chip. At three lost chips, that player is eliminated. All lost chips go to the shared purse. The last player standing drags that purse. Keep using the same 52-card deck between hands and open a new one only when it is exhausted. Aces are lowest; Kings are highest and block a pass to them. Any King flips face-up for the table when its owner’s turn arrives, including the dealer’s King. A King also flips immediately when it blocks a pass, and stays revealed for that hand. Pass exchanges cards with the player to the left, and the dealer may draw off the deck. Dealer rotates each hand among surviving players.":variant==="442"?"Four cards per player, with 4s always wild. No straights or flushes: four of a kind beats three of a kind, then two pair, a pair, then high card. Starting left of the dealer, each player exchanges zero to three cards from the deck. Then each privately chooses Drop or Hold. Highest four-card hand among holders wins the pot, and other holding players replace it up to the pot cap. A lone holder can drag only with a NATURAL pair: two matching non-wild cards. If no one holds, or a lone holder has no natural pair, the pot carries forward and everyone antes again. Dealer passes each new hand.":variant==="bozo"?"The Clown is a ghost hand with one upcard that sets the wild rank. A holder must beat the Clown and all other holders. Losers replenish the pot.": "Queens are always wild. A face-up Queen makes the next face-up follower rank wild for everyone. The stud betting engine is still under construction."}</p></>}
  {tab==="log"&&<><h3>Balances</h3>{players.map((p,i)=><p key={p.id}>{p.name} — {displayMoney(stacks[i]??0)}</p>)}<h3>Hand log</h3>{log.map(e=><p key={e.id}>{e.message}</p>)}</>}
- {tab==="settings"&&<><h3>Rebuy virtual chips</h3><select value={rebuySeat} onChange={e=>setRebuySeat(Number(e.target.value))}>{players.map((p,i)=><option key={p.id} value={i}>{p.name}</option>)}</select><input type="number" min="0.01" step="0.01" value={rebuyAmount} onChange={e=>setRebuyAmount(e.target.value)}/><button className="sw-poker-button" onClick={addRebuy}>Rebuy</button><button className="sw-poker-button mt-3" onClick={quitToDealer}>Return to dealer game choice</button></>}
+ {tab==="settings"&&<><h3>Rebuy virtual chips</h3><select value={rebuySeat} onChange={e=>setRebuySeat(Number(e.target.value))}>{players.map((p,i)=><option key={p.id} value={i}>{p.name}</option>)}</select><p>$20 per rebuy · {rebuyCounts[rebuySeat]||0}/4 used · $100 maximum buy-in per player.</p><button className="sw-poker-button" onClick={addRebuy}>Rebuy</button><button className="sw-poker-button mt-3" onClick={quitToDealer}>Return to dealer game choice</button></>}
  </div></section></div>}
- {rebuy&&<div className="sw-poker-modal-cover"><section className="sw-poker-modal"><h2>Rebuy virtual chips</h2><p>A human player needs more chips before dealing.</p><select value={rebuySeat} onChange={e=>setRebuySeat(Number(e.target.value))}>{players.map((p,i)=><option key={p.id} value={i}>{p.name}</option>)}</select><input type="number" value={rebuyAmount} onChange={e=>setRebuyAmount(e.target.value)}/><button className="sw-poker-button primary" onClick={addRebuy}>Confirm rebuy</button><button className="sw-poker-button" onClick={()=>setRebuy(false)}>Cancel</button></section></div>}
+ {rebuy&&<div className="sw-poker-modal-cover"><section className="sw-poker-modal"><h2>Rebuy virtual chips</h2><p>A human player needs more chips before dealing.</p><select value={rebuySeat} onChange={e=>setRebuySeat(Number(e.target.value))}>{players.map((p,i)=><option key={p.id} value={i}>{p.name}</option>)}</select><p>$20 per rebuy · {rebuyCounts[rebuySeat]||0}/4 used.</p><button className="sw-poker-button primary" onClick={addRebuy}>Confirm rebuy</button><button className="sw-poker-button" onClick={()=>setRebuy(false)}>Cancel</button></section></div>}
  </main>;
 }
