@@ -4,7 +4,7 @@ import {ArrowLeft,Eye,EyeOff,Info,RotateCcw,ChevronRight} from "lucide-react";
 import {createShuffledDeck,displayMoney} from "../games/drop357Table.mjs";
 import {evaluateBozoHand,resolveBozoRound} from "../games/bozoRules.mjs";
 import {score442,naturalPair442,replace442,settle442,botExchange442} from "../games/fourFourDeuce.mjs";
-import {capGutsResult,limitAnte,rebuyChips,centsFromDollars,pickPracticeBotChoice} from "../games/pokerPracticeSession.mjs";
+import {capGutsResult,limitAnte,rebuyChips,centsFromDollars,pickPracticeBotChoice,fundedReplacement} from "../games/pokerPracticeSession.mjs";
 import {readCardNight,saveCardNight,clearCardNight} from "../games/cardNightTransfer.mjs";
 import PokerSessionBar from "../components/poker/PokerSessionBar";
 import {getCardRoom} from "../api/cardRooms";
@@ -190,9 +190,9 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  function settleGuts(next){
   const entered=next.flatMap((v,i)=>v==="hold"?[i]:[]);
   const amount=pot;
-  if(!entered.length){setOutcome({message:"All players folded. Pot carries forward."});setDecisions(next);setStep("result");return;}
+  if(!entered.length&&variant!=="442"){setOutcome({message:"All players folded. Pot carries forward."});setDecisions(next);setStep("result");return;}
   if(variant==="442"){
-   const result=settle442({hands,choices:next,potCents:pot,capCents:maxCents,anteCents});
+   const result=settle442({hands,choices:next,potCents:pot,capCents:maxCents,anteCents,stacks});
    setDecisions(next);
    setShowdown442({...result,nonce:Date.now(),beforeStacks:[...stacks],potBefore:pot});
    if(result.kind==="drag"){
@@ -206,19 +206,19 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   const score=resolveBozoRound({choices:next.map(v=>v==="hold"?"hold":"drop"),hands,clown,wildRank:wild,potCents:amount});
   if(score.kind==="player-win")return settleGutsPay(score.winner,entered,next,amount);
   if(score.kind==="clown-win"){
-   const each=Math.min(amount,Math.floor((maxCents-pot)/entered.length));
+   const each=pot>=maxCents?0:fundedReplacement({losers:entered,stacks,potCents:amount,capCents:maxCents-pot}).perLoser;
    const paid=stacks.map((v,i)=>v-(entered.includes(i)?each:0));
    setStacks(paid);setPot(pot+each*entered.length);
-   setOutcome({message:"The Clown wins! Each holding player matches "+displayMoney(each)+". The ghost never contributes chips."});
+   setOutcome({message:each===0?"Pot is capped or no chips remain. No further matching is charged; keep dealing until a player beats the Clown.":"The Clown wins! Each holding player matches "+displayMoney(each)+". The ghost never contributes chips."});
   }else setOutcome({message:score.message});
   setDecisions(next);setStep("result");
  }
  function settleGutsPay(winner,entered,next,amount){
   const losers=entered.filter(i=>i!==winner);
-  const match=losers.length?Math.min(amount,Math.floor(maxCents/losers.length)):0;
+  const match=pot>=maxCents?0:fundedReplacement({losers,stacks,potCents:amount,capCents:maxCents}).perLoser;
   const nextStacks=stacks.map((v,i)=>v+(i===winner?amount:losers.includes(i)?-match:0));
   const newPot=match*losers.length;setStacks(nextStacks);setPot(newPot);
-  setOutcome({winner,amount,match,losers,message:players[winner].name+" drags "+displayMoney(amount)+". "+losers.length+" losing holder(s) replenish "+displayMoney(match)+" each."});
+  setOutcome({winner,amount,match,losers,gameFinished:newPot===0,message:players[winner].name+" drags "+displayMoney(amount)+". "+(pot>=maxCents?"Pot cap reached; no further matching. New dealer chooses a game.":losers.length+" losing holder(s) replenish "+displayMoney(match)+" each.")});
   setDecisions(next);setStep("result");
  }
  function finish442Exchange(seat,indexes){
