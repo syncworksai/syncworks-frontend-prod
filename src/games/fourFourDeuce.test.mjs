@@ -26,18 +26,18 @@ test("exchange limit, selected slots and deck conservation",()=>{
 });
 test("all drop and lone no natural pair carry pot without transfer",()=>{
  const hands=[cards(4,8,9,10),cards(6,6,7,8)];
- let r=settle442({hands,choices:["fold","fold"],potCents:150,capCents:1000,anteCents:25});
+ let r=settle442({hands,choices:["fold","fold"],potCents:150,capCents:1000,anteCents:25,stacks:[500,500]});
  assert.equal(r.kind,"all-drop");assert.equal(r.nextPot,150);
- r=settle442({hands,choices:["hold","fold"],potCents:150,capCents:1000,anteCents:25});
+ r=settle442({hands,choices:["hold","fold"],potCents:150,capCents:1000,anteCents:25,stacks:[500,500]});
  assert.equal(r.kind,"no-natural-pair");assert.equal(r.nextPot,150);
- r=settle442({hands,choices:["fold","hold"],potCents:150,capCents:1000,anteCents:25});
+ r=settle442({hands,choices:["fold","hold"],potCents:150,capCents:1000,anteCents:25,stacks:[500,500]});
  assert.equal(r.winner,1);assert.equal(r.nextPot,0);assert.equal(r.delta[1],150);
 });
 test("best four-card holder drags and loser matches pot within cap",()=>{
  const hands=[cards(7,7,9,10),cards(8,8,8,4)];
- const r=settle442({hands,choices:["hold","hold"],potCents:150,capCents:1000,anteCents:25});
+ const r=settle442({hands,choices:["hold","hold"],potCents:150,capCents:1000,anteCents:25,stacks:[500,500]});
  assert.equal(r.winner,1);assert.deepEqual(r.delta,[-150,150]);assert.equal(r.nextPot,150);
- const capped=settle442({hands,choices:["hold","hold"],potCents:150,capCents:100,anteCents:25});
+ const capped=settle442({hands,choices:["hold","hold"],potCents:150,capCents:100,anteCents:25,stacks:[500,500]});
  assert.deepEqual(capped.delta,[-100,150]);assert.equal(capped.nextPot,100);
 });
 test("bot conserves wild fours and existing natural pairs",()=>{
