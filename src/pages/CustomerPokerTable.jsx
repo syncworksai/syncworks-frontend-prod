@@ -11,6 +11,7 @@ import {HAND_RANKINGS_357,practiceHandInfo,estimatePracticeEquity} from "../game
 import {rotationAfterPot,chooseVirtualDealer} from "../games/pokerDealerRotation.mjs";
 import {capGutsResult,limitAnte,rebuyChips,centsFromDollars,pickPracticeBotChoice} from "../games/pokerPracticeSession.mjs";
 import {readCardNight,saveCardNight,clearCardNight} from "../games/cardNightTransfer.mjs";
+import PokerSessionBar from "../components/poker/PokerSessionBar";
 
 const DEFAULT_PLAYERS=[{id:"local-you",name:"You",kind:"local"},{id:"local-zack",name:"Zack",kind:"guest"},{id:"local-russ",name:"Russ",kind:"guest"}];
 const TABLE_GAMES=[
@@ -315,6 +316,7 @@ export default function CustomerPokerTable(){
    <span className="sw-poker-capsule">♙ {tableSize}</span>
    <button type="button" className="sw-poker-icon-btn" aria-label="Rules and strategy" onClick={()=>openDrawer("rules")}><Info size={20}/></button>
   </header>
+  <PokerSessionBar players={people.map(p=>({...p,chips:p.chips??Math.round(Number(startingChips)*100)}))} stacks={chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??Math.round(Number(startingChips)*100))} groupId={groupId} roomId={roomId} gameNumber={sessionGames} onEnd={()=>{clearCardNight();setSession("setup");setHands([]);setDeck([]);setPot(0);setViewer(null);nav(groupId?"/customer/games/clubs?group="+encodeURIComponent(groupId):"/customer/games");}}/>
   <div className="sw-poker-session-status"><span>♣ Card Night · Game {sessionGames}</span><span>Max pot <b>{displayMoney(capCents)}</b> · {botStyle==="balanced"?"Balanced bots":botStyle==="cautious"?"Cautious bots":"Aggressive bots"}</span></div>
   <div className="sw-poker-round"><div className="sw-poker-round-badge"><div>♠ {gameName}</div><span>Round {round+1} · {wild}s Wild</span></div><div className="sw-poker-steps">{THREE_FIVE_SEVEN.map((n,i)=><div key={i} title={"Round "+(i+1)+": "+n+"s wild"} className={"sw-poker-step"+(i===round?" current":"")}>{i+1}</div>)}</div></div>
   {!roomId&&groupId&&session==="setup"&&roomMinimum!==null&&<section className="mb-3 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-3"><div className="text-sm font-black text-emerald-100">Want players on separate phones?</div><p className="mt-1 text-xs leading-5 text-slate-300">Create a shared waiting room in this Card Club with the same name, seat count and minimum buy-in. Local guests and dealt hands stay on this device, and synchronized game cards are not live yet.</p><button type="button" onClick={upgradeToLiveRoom} disabled={upgrading} className="sw-poker-button primary mt-3 w-full">{upgrading?"Creating shared room…":"♠ Make This a Live Waiting Room"}</button></section>}
