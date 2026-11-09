@@ -85,3 +85,16 @@ export function fybPayRound({stacks,potCents,losers,chipCents,winner=null}){
  const next=stacks.map((n,i)=>n-(losers.includes(i)?chipCents:0)+(i===winner?purse:0));
  return {stacks:next,potCents:winner===null?purse:0,dragCents:winner===null?0:purse,paidCents:paid};
 }
+
+// A split is available only while exactly two eligible players remain.
+// Each player's affirmative vote must be recorded before any chips move.
+export function fybSplitPurse({stacks,potCents,seats,approvals}){
+ if(!Array.isArray(stacks)||!Array.isArray(seats)||seats.length!==2||seats[0]===seats[1]||!seats.every(i=>Number.isInteger(i)&&i>=0&&i<stacks.length))throw Error("Split requires exactly two eligible seats");
+ if(!Number.isSafeInteger(potCents)||potCents<=0)throw Error("No FYB purse available to split");
+ if(!seats.every(i=>approvals?.[i]===true))throw Error("Both players must approve");
+ const ordered=[...seats].sort((a,b)=>a-b);
+ const first=Math.ceil(potCents/2),second=Math.floor(potCents/2);
+ const payouts={[ordered[0]]:first,[ordered[1]]:second};
+ const nextStacks=stacks.map((amount,i)=>amount+(payouts[i]??0));
+ return {stacks:nextStacks,potCents:0,payouts,splitCents:potCents};
+}
