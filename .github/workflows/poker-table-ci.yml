@@ -26,4 +26,4 @@ jobs:
         with:
           node-version: "20"
       - name: Check table rules
-        run: node --test src/games/drop357Table.test.mjs src/games/pokerResume.test.mjs src/games/practiceOdds357.test.mjs
+        run: node --test src/games/drop357Table.test.mjs src/games/pokerResume.test.mjs src/games/practiceOdds357.test.mjs src/games/pokerDealerRotation.test.mjs src/games/pokerPracticeSession.test.mjs
