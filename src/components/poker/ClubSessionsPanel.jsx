@@ -9,7 +9,7 @@ const classes="min-w-0 w-full rounded-lg border border-white/15 bg-slate-950 px-
 export default function ClubSessionsPanel({groupId,playerNames=[]}){
  const [data,setData]=useState(initialData),[draft,setDraft]=useState(emptyDraft),[error,setError]=useState(""),[notice,setNotice]=useState("");
  const [aliasName,setAliasName]=useState(""),[aliasTarget,setAliasTarget]=useState("");
- const [filterDate,setFilterDate]=useState("");
+ const [filterDate,setFilterDate]=useState(""),[editingId,setEditingId]=useState(null);
  useEffect(()=>{if(!groupId)return;try{const raw=JSON.parse(localStorage.getItem(sessionKey(groupId))||"null");setData(raw&&Array.isArray(raw.sessions)?{...initialData(),...raw}:initialData());}catch{setData(initialData());}setDraft(emptyDraft());setNotice("");setError("");},[groupId]);
  function updateData(next){setData(next);try{localStorage.setItem(sessionKey(groupId),JSON.stringify(next));}catch{setError("Browser storage unavailable: changes may not survive a reload.");}}
  const totals=useMemo(()=>clubSummary(data.sessions,data.aliases),[data]);
@@ -32,7 +32,8 @@ export default function ClubSessionsPanel({groupId,playerNames=[]}){
    if(openingPotCents===null||closingPotCents===null)throw Error("Opening and closing pot must be valid amounts.");
    const item=createSession({date:draft.date,table:draft.table,rows,notes:draft.notes,openingPotCents,closingPotCents});
    const summary=sessionTotals(item);
-   updateData({...data,sessions:[...data.sessions,item]});
+   updateData({...data,sessions:editingId?data.sessions.map(old=>old.id===editingId?{...item,id:editingId}:old):[...data.sessions,item]});
+   setEditingId(null);
    setDraft(old=>({...emptyDraft(),date:old.date,table:old.table}));
    setNotice(summary.balanced?"Table session saved and reconciled.":"Table session saved as unreconciled. Review the difference before using as a final record.");
   }catch(err){setError(err.message||"Unable to save session");}
@@ -40,8 +41,8 @@ export default function ClubSessionsPanel({groupId,playerNames=[]}){
  function editSession(s){
   setDraft({date:s.date,table:s.table,notes:s.notes||"",opening:String((s.openingPotCents||0)/100),closing:String((s.closingPotCents||0)/100),
    rows:s.rows?.length?s.rows.map(r=>({player:r.player,buyin:String((r.buyinCents||0)/100),rebuy:String((r.rebuyCents||0)/100),payout:String((r.payoutCents||0)/100)})): [draftRow("",String((s.defaultBuyinCents||2000)/100))]});
-  updateData({...data,sessions:data.sessions.filter(x=>x.id!==s.id)});
-  setNotice("Draft moved into entry form for editing. Save again when done.");
+  setEditingId(s.id);
+  setNotice("Editing the saved session. Changes are not applied until you press Save.");
   window.scrollTo?.({top:0,behavior:"smooth"});
  }
  function deleteSession(id){if(!window.confirm("Delete this locally recorded session?"))return;updateData({...data,sessions:data.sessions.filter(s=>s.id!==id)});}
@@ -60,7 +61,7 @@ export default function ClubSessionsPanel({groupId,playerNames=[]}){
   {notice&&<p role="status" className="rounded-xl border border-cyan-400/35 p-3 text-xs text-cyan-100">{notice}</p>}
   <div className="grid grid-cols-3 gap-2">{[["Sessions",String(data.sessions.length)],["Needs review",String(mismatches.length)],["Player records",String(totals.length)]].map(([label,val])=><div key={label} className="rounded-xl border border-white/10 bg-white/[.04] p-3"><p className="text-[10px] text-slate-400">{label}</p><b className="text-xl">{val}</b></div>)}</div>
   <form onSubmit={save} className="space-y-3 rounded-2xl border border-white/10 bg-white/[.03] p-4">
-   <h3 className="font-black">Record a table night</h3>
+   <h3 className="font-black">{editingId?"Edit table night":"Record a table night"}</h3>
    <div className="grid grid-cols-2 gap-2"><label className="text-xs text-slate-300">Date<input className={"mt-1 "+classes} type="date" value={draft.date} onChange={e=>setDraft(d=>({...d,date:e.target.value}))} required/></label><label className="text-xs text-slate-300">Table name<input className={"mt-1 "+classes} maxLength={60} value={draft.table} onChange={e=>setDraft(d=>({...d,table:e.target.value}))} required placeholder="Table 2"/></label></div>
    <div className="grid grid-cols-[1.1fr_.7fr_.7fr_.7fr_auto] gap-1 text-[10px] text-slate-300"><b>Player</b><b>Buy-in</b><b>Rebuy</b><b>Out</b><span></span></div>
    {draft.rows.map((r,i)=><div key={i} className="grid grid-cols-[1.1fr_.7fr_.7fr_.7fr_auto] gap-1 items-center">
