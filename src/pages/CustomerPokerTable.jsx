@@ -46,6 +46,7 @@ export default function CustomerPokerTable(){
  const [people,setPeople]=useState(DEFAULT_PLAYERS);
  const [lobbyName,setLobbyName]=useState("Saturday Poker");
  const [dealer,setDealer]=useState(0),[session,setSession]=useState("setup");
+ const [rebuyCounts,setRebuyCounts]=useState({}),[sittingOut,setSittingOut]=useState({}),[handFolds,setHandFolds]=useState({}),[cashouts,setCashouts]=useState([]),[dealAnimation,setDealAnimation]=useState(null);
  const [phase,setPhase]=useState("setup"),[round,setRound]=useState(0),[hands,setHands]=useState([]),[deck,setDeck]=useState([]);
  const [choices,setChoices]=useState([]),[viewer,setViewer]=useState(null);
  const [counter,setCounter]=useState(null),[reveal,setReveal]=useState({}),[outcome,setOutcome]=useState(null);
@@ -62,7 +63,8 @@ export default function CustomerPokerTable(){
  const [seatEditor,setSeatEditor]=useState(false),[seatName,setSeatName]=useState(""),[seatBuyin,setSeatBuyin]=useState("20"),[seatError,setSeatError]=useState("");
  function openDrawer(tab="hands"){setDrawerTab(tab);setDrawerOpen(true);}
  function closeDrawer(){setDrawerOpen(false);setShowdownViewer(null);}
- const anteCents=Math.round(Number(ante)*100),capCents=Math.round(Number(maxPot)*100);
+ const anteCents=Math.round(Number(ante)*100),capCents=maxPot==="unlimited"?100000000:Math.round(Number(maxPot)*100);
+ const capText=maxPot==="unlimited"?"Unlimited":displayMoney(capCents);
  const wild=THREE_FIVE_SEVEN[round];
  const tableSize=people.length;
  const currentIndex=choices.findIndex(c=>c===null);
@@ -91,7 +93,8 @@ export default function CustomerPokerTable(){
   const previous=readCardNight(groupId,roomId);if(!previous)return;
   setPeople(previous.people);setChipStacks(previous.stacks);setPot(previous.pot??0);
   setDealer(previous.dealer??0);setSessionGames(previous.gameNumber??1);
-  setMaxPot(String((previous.capCents??5000)/100));setCapDraft(String((previous.capCents??5000)/100));
+  setRebuyCounts(previous.rebuyCounts||{});setSittingOut(previous.sittingOut||{});setCashouts(previous.cashouts||[]);
+  setMaxPot(previous.capCents===100000000?"unlimited":String((previous.capCents??5000)/100));setCapDraft(previous.capCents===100000000?"unlimited":String((previous.capCents??5000)/100));
   setDealerChoosing(true);setSession("setup");setPhase("setup");
   if(previous.people[previous.dealer??0]?.kind==="computer"){
     const pick=chooseVirtualDealer();
@@ -179,18 +182,32 @@ export default function CustomerPokerTable(){
  }
  function confirmRebuy(){
   const add=centsFromDollars(rebuyAmount),index=Number(rebuySeat);
-  if(add===null||add<=0||add>1000000||!people[index]){setStatus("Enter a valid virtual buy-in between $0.01 and $10,000.");return;}
+  if(add!==2000||!people[index]){setStatus("Each rebuy is exactly $20.");return;}
+  if((rebuyCounts[index]||0)>=4){setStatus("Maximum four $20 rebuys per player ($100 total).");return;}
+  setRebuyCounts(old=>({...old,[index]:(old[index]||0)+1}));
   if(session==="playing")setChipStacks(old=>rebuyChips(old,index,add));
   else setPeople(old=>old.map((p,i)=>i===index?{...p,chips:(p.chips??0)+add}:p));
-  addLog(people[index].name+" added "+displayMoney(add)+" in virtual practice chips.");
+  setSittingOut(old=>({...old,[index]:false}));
+  addLog(people[index].name+" rebought "+displayMoney(add)+" (rebuy "+((rebuyCounts[index]||0)+1)+"/4).");
   setStatus(people[index].name+" rebought "+displayMoney(add)+". No real money was charged.");
   setRebuyOpen(false);
+ }
+ function sitOutPlayer(index){
+  if(session==="playing"&&phase!=="resolved"){setStatus("Finish the current round before sitting out.");return;}
+  setSittingOut(old=>({...old,[index]:true}));setStatus(people[index].name+" is sitting out; their chips remain saved.");
+ }
+ function cashOutPlayer(index){
+  if(session==="playing"&&phase!=="resolved"){setStatus("Finish the current round before leaving.");return;}
+  const balance=chipStacks[index]??people[index]?.chips??0;
+  if(balance<0){setStatus("Balance must be nonnegative before cashing out.");return;}
+  setCashouts(old=>[...old,{seat:index,name:people[index].name,chips:balance,at:new Date().toISOString()}]);setSittingOut(old=>({...old,[index]:true}));
+  setStatus(people[index].name+" cashed out "+displayMoney(balance)+" in virtual chips (local session record).");
  }
  function restartPracticeSession(){
   // Explicit practice reset; reset the full ledger and current game together.
   const restored=people.map(p=>Number.isFinite(p.chips)?p.chips:roomMinimum??2000);
   clearCardNight();
-  setChipStacks(restored);setPot(0);setStrikes({});setDealer(0);setSessionGames(1);
+  setChipStacks(restored);setPot(0);setStrikes({});setDealer(0);setSessionGames(1);setRebuyCounts({});setSittingOut({});setHandFolds({});setCashouts([]);
   setSession("setup");setPhase("setup");setRound(0);setHands([]);setDeck([]);
   setChoices([]);setOutcome(null);setReveal({});setRevealStep(0);setChipAnimation(null);
   setDealerChoosing(false);setSelectedGame("357");setViewer(null);setCounter(null);
@@ -198,10 +215,10 @@ export default function CustomerPokerTable(){
   setStatus("Practice session restarted. Virtual chips and pot reset to original buy-ins; names and seats were retained.");
  }
  function setPotCap(value){
-  const next=centsFromDollars(value);
-  if(next===null||next<100){setStatus("Pot cap must be at least $1.");return;}
+  const next=value==="unlimited"?100000000:centsFromDollars(value);
+  if(![1000,2000,5000,100000000].includes(next)){setStatus("Select $10, $20, $50 or Unlimited.");return;}
   if(next<pot){setStatus("The cap cannot be lower than the existing pot. Finish or restart the session first.");return;}
-  setMaxPot((next/100).toFixed(2));setCapDraft((next/100).toFixed(2));setStatus("Hard maximum pot set to "+displayMoney(next)+". Match payments and antes will respect the cap.");
+  setMaxPot(value);setCapDraft(value);setStatus(next===100000000?"Unlimited virtual pot selected.":"Maximum pot set to "+displayMoney(next)+".");
  }
  function startDealerSelectedGame(){
   if(!dealerChoosing)return;
