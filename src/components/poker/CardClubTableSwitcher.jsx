@@ -1,6 +1,7 @@
 import React,{useCallback,useEffect,useMemo,useState} from "react";
 import {ArrowRight,ChevronDown,RefreshCcw,Users} from "lucide-react";
 import {listCardRooms} from "../../api/cardRooms";
+import {listPracticeGames} from "../../games/cardPracticeResume.mjs";
 
 /**
  * Displays authoritative room status only.
@@ -24,15 +25,17 @@ export default function CardClubTableSwitcher({groupId,currentRoomId="",userId=n
  const [rooms,setRooms]=useState([]);
  const [loading,setLoading]=useState(false);
  const [error,setError]=useState("");
+ const [pausedGames,setPausedGames]=useState([]);
  const [alertVisible,setAlertVisible]=useState(false);
  const [dismissedHand,setDismissedHand]=useState("");
  const refresh=useCallback(async()=>{
   if(!groupId)return;
   setLoading(true);
+  setPausedGames(listPracticeGames(userId,groupId));
   try{const list=await listCardRooms(groupId);setRooms(list.filter(room=>room.state!=="CLOSED"));setError("");}
   catch(e){setError(e.response?.data?.detail||e.message||"Room status unavailable");}
   finally{setLoading(false);}
- },[groupId]);
+ },[groupId,userId]);
  useEffect(()=>{setRooms([]);setOpen(false);refresh();},[refresh]);
  // Poll only while list is visible. A server-driven turn event will eventually replace this.
  useEffect(()=>{if(!open||!groupId)return;const id=setInterval(refresh,15000);return()=>clearInterval(id);},[open,groupId,refresh]);
@@ -64,6 +67,7 @@ export default function CardClubTableSwitcher({groupId,currentRoomId="",userId=n
     <span className="min-w-0"><strong className="block truncate text-xs">{room.name}</strong><span className="text-[10px] text-slate-400">{room.seats?.length||0}/{room.capacity} · {room.state==="PLAYING"?"In game":room.state==="READY"?"Ready":room.state==="WAITING"?"Waiting":"Dealer choice"} · {room.practice_mode?"Practice":"Human only"} · {room.admission_open===false?"Closed joins":"Open joins"}</span></span><ArrowRight size={15} className="shrink-0"/>
    </button>)}
    {!rooms.length&&!error&&<p className="p-2 text-xs text-slate-400">No current tables. Create a table to invite players.</p>}
+   {pausedGames.length>0&&<div className="mt-2 border-t border-white/10 pt-2"><div className="px-1 pb-1 text-[11px] font-bold text-emerald-200">Continue practice</div>{pausedGames.map(game=><button type="button" key={game.variant} onClick={()=>navigate(game.path)} className="mb-1 flex min-h-10 w-full items-center justify-between rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-2 text-left text-xs"><span>{({357:"3-5-7",fyb:"FYB",442:"4/4/Deuce",bozo:"Bozo","queen-follower":"Queen & the Follower"})[game.variant]||game.variant} · {game.phase}</span><span className="font-bold text-emerald-200">Continue →</span></button>)}</div>}
    <p className="mt-2 text-[10px] text-slate-400">Room status is shared. Cross-phone turn alerts will activate only once the server supplies authenticated player turns and deadlines.</p>
   </div>}
  </div>;
