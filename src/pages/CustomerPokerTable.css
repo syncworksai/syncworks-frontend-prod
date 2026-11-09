@@ -592,3 +592,114 @@
  .sw-357-playing .sw-357-hand-position .sw-poker-card{height:50px}
 }
 @media(prefers-reduced-motion:reduce){.sw-357-new-card,.sw-357-winning-text{animation:none}}
+
+/* Card Console v1 universal active-game shell.
+ * Reuse with .sw-card-console-active on every game screen.
+ * The host app owns its header; the console owns the remaining visible space.
+ * Drawers/modal content may scroll, but the game surface must not.
+ */
+.sw-card-console-active {
+ --sw-console-shell:112px;
+ --sw-console-actions:142px;
+ --sw-console-gap:4px;
+ --sw-console-card-ratio:.69;
+}
+@media(max-width:650px){
+ .sw-poker-screen.sw-card-console-active {
+  height:calc(100dvh - var(--sw-console-shell));
+  min-height:0!important;
+  padding:3px 8px 0!important;
+  overflow:hidden!important;
+ }
+ .sw-card-console-active .sw-poker-content {
+  height:calc(100dvh - var(--sw-console-shell) - var(--sw-console-actions) - env(safe-area-inset-bottom,0px));
+  min-height:0!important;
+  max-height:none!important;
+  overflow:hidden!important;
+  display:flex;
+  flex-direction:column;
+  gap:var(--sw-console-gap);
+ }
+ .sw-card-console-active .sw-poker-top{display:none}
+ .sw-card-console-active .sw-poker-session-strip,
+ .sw-card-console-active .sw-poker-round,
+ .sw-card-console-active .sw-poker-round-badge{flex-shrink:0}
+ .sw-card-console-active .sw-poker-round{margin:2px 0 1px}
+ .sw-card-console-active .sw-poker-table-space{
+  flex:1 1 0!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:25px 3px 29px!important;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+ }
+ .sw-card-console-active .sw-poker-felt{
+  width:min(100%,calc((100dvh - var(--sw-console-shell) - var(--sw-console-actions) - 240px)*1.52))!important;
+  max-width:100%!important;
+  flex:0 0 auto!important;
+  margin:auto!important;
+  aspect-ratio:1.52 / 1;
+ }
+ .sw-card-console-active .sw-poker-seat-nameplate{padding:2px 4px}
+ .sw-card-console-active .sw-poker-seat-nameplate strong{font-size:10px}
+ .sw-card-console-active .sw-poker-seat-nameplate small{font-size:9px}
+ .sw-card-console-active .sw-poker-seat-avatar{width:32px;height:32px;font-size:11px}
+ .sw-card-console-active .sw-poker-pov,
+ .sw-card-console-active .sw-357-persistent-hand,
+ .sw-card-console-active .sw-poker-compact-result{
+  flex:0 0 auto;
+  min-height:0;
+  margin:1px auto!important;
+  width:100%;
+  max-width:100%;
+ }
+ /* One row even for seven cards: never clip behind the footer or scroll sideways. */
+ .sw-card-console-active .sw-poker-facecards.sw-card-console-hand,
+ .sw-card-console-active .sw-357-one-row{
+  width:100%!important;
+  min-height:0!important;
+  max-width:470px;
+  margin:2px auto 1px!important;
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  justify-content:center;
+  gap:clamp(2px,.7vw,5px)!important;
+  overflow:visible;
+ }
+ .sw-card-console-active .sw-card-console-hand>.sw-poker-card{
+  flex:1 1 0!important;
+  min-width:0!important;
+  max-width:58px!important;
+  width:clamp(24px,11vw,58px)!important;
+  height:clamp(42px,14.5vw,76px)!important;
+  padding:3px!important;
+  border-radius:6px;
+ }
+ .sw-card-console-active .sw-card-console-hand>.sw-poker-card strong{font-size:clamp(9px,2.8vw,14px)}
+ .sw-card-console-active .sw-card-console-hand>.sw-poker-card b{font-size:clamp(13px,4.3vw,22px)}
+ .sw-card-console-active .sw-card-console-hand>.sw-poker-card small{font-size:7px;right:-3px;padding:1px 2px}
+ .sw-card-console-active .sw-poker-compact-result{
+  max-height:105px!important;
+  overflow:hidden;
+  padding:3px 5px!important;
+ }
+ .sw-card-console-active .sw-poker-compact-result>h3,
+ .sw-card-console-active .sw-poker-compact-result>p{font-size:10px!important;margin:0 0 3px!important;line-height:1.2}
+ .sw-card-console-active .sw-poker-sticky-actions{
+  min-height:0!important;
+  padding:6px 8px calc(8px + env(safe-area-inset-bottom,0px))!important;
+ }
+ .sw-card-console-active .sw-poker-action-top{margin-bottom:4px;font-size:11px}
+ .sw-card-console-active .sw-poker-action-buttons{gap:5px}
+ .sw-card-console-active .sw-poker-action{min-height:46px;font-size:12px;padding:6px 4px}
+ .sw-card-console-active .sw-poker-action.info{flex:0 0 44px;max-width:46px;font-size:9px}
+ /* Status messages belong in Info. Preserve screen-reader accessibility. */
+ .sw-card-console-active .sw-poker-session-status{position:absolute!important;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+}
+@media(max-width:650px) and (max-height:740px){
+ .sw-card-console-active{--sw-console-actions:132px}
+ .sw-card-console-active .sw-poker-table-space{padding:21px 2px 25px!important}
+ .sw-card-console-active .sw-poker-felt{width:min(100%,calc((100dvh - var(--sw-console-shell) - var(--sw-console-actions) - 205px)*1.52))!important}
+ .sw-card-console-active .sw-card-console-hand>.sw-poker-card{height:clamp(39px,12vw,58px)!important}
+}
