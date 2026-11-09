@@ -52,12 +52,13 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  const nextGameUrl="/customer/games/table?"+new URLSearchParams({group:groupId,room:roomId,resumeGame:"1"}).toString();
  const record=(message)=>setLog(v=>[{id:Date.now()+Math.random(),message},...v].slice(0,45));
  useEffect(()=>{let mounted=true;
+  setBozoLocked(false);setBozoLastResult(null);setStatus("");setViewer(null);setOutcome(null);
   const saved=readCardNight(groupId,roomId);
-  if(saved){setPlayers(saved.people);setStacks(saved.stacks);setDealer(saved.dealer??0);setPot(saved.pot??0);setCap(String((saved.capCents??5000)/100));setSessionCapCents(saved.capCents??5000);setGameNumber(saved.gameNumber??1);setRebuyCounts(saved.rebuyCounts||{});setSittingOut(saved.sittingOut||{});setCashouts(saved.cashouts||[]);setVirtualSessionId(saved.virtualSessionId||("practice-"+Date.now()));setStep("ready");return()=>{mounted=false;};}
+  if(saved){setPlayers(saved.people);setStacks(saved.stacks);setDealer(saved.dealer??0);setPot(saved.pot??0);setCap(saved.capCents===100000000?"unlimited":String((saved.capCents??5000)/100));setSessionCapCents(saved.capCents??5000);setGameNumber(saved.gameNumber??1);setRebuyCounts(saved.rebuyCounts||{});setSittingOut(saved.sittingOut||{});setCashouts(saved.cashouts||[]);setVirtualSessionId(saved.virtualSessionId||("practice-"+Date.now()));setStep("ready");return()=>{mounted=false;};}
   if(roomId){getCardRoom(roomId).then(r=>{if(!mounted)return;const ps=r.seats?.map((p,i)=>({id:String(p.id??i),name:p.name||p.nickname||"Player "+(i+1),kind:p.is_computer?"computer":"human",chips:p.virtual_chips_cents??2000}))||[];setPlayers(ps);setStacks(ps.map(p=>p.chips));setStep("ready");}).catch(()=>{if(mounted){setStatus("Could not load room. Return to your poker lobby.");setStep("ready");}});}
   else {const p=[{id:"you",name:"You",kind:"human",chips:2000},{id:"bot",name:"Virtual Player 1",kind:"computer",chips:2000}];setPlayers(p);setStacks(p.map(x=>x.chips));setStep("ready");}
   return()=>{mounted=false;};
- },[groupId,roomId]);
+ },[groupId,roomId,variant]);
  function store(nextStacks=stacks,nextPot=pot,nextDealer=dealer,nextGame=gameNumber){
   saveCardNight({groupId,roomId,people:players,stacks:nextStacks,pot:nextPot,dealer:nextDealer,gameNumber:nextGame,capCents:sessionCapCents,rebuyCounts,sittingOut,cashouts,virtualSessionId});
  }
