@@ -22,6 +22,7 @@ function localDeal(game,count,size=5){
  const hands=Array.from({length:count},(_,i)=>deck.slice(i*handSize,(i+1)*handSize));
  return {hands,deck:deck.slice(game==="bozo"?(count+1)*size:count*handSize),clown:game==="bozo"?deck.slice(count*size,(count+1)*size):[]};
 }
+const ALL_POKER_GAMES=[{code:"357",title:"3-5-7 DROP"},{code:"fyb",title:"FYB"},{code:"442",title:"4/4/Deuce"},{code:"bozo",title:"Bozo · The Clown"},{code:"queen-follower",title:"Queen & the Follower"}];
 const cents=x=>Math.round(Number(x)*100);
 export default function CustomerPokerVariantTable({variant:providedVariant}){
  const [query]=useSearchParams(),nav=useNavigate();
@@ -64,6 +65,18 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   const next=(dealer+1)%players.length;
   store(stacks,pot,next,gameNumber+1);
   nav(nextGameUrl);
+ }
+ function changeDealerGame(nextCode){
+  if(nextCode===variant)return;
+  if(step!=="ready"||pot>0||variant==="bozo"&&bozoLocked){setStatus("Finish dragging the current pot before selecting another game.");return;}
+  if(!ALL_POKER_GAMES.some(g=>g.code===nextCode))return;
+  store();
+  const args=new URLSearchParams();
+  if(groupId)args.set("group",groupId);
+  if(roomId)args.set("room",roomId);
+  if(nextCode!=="357")args.set("game",nextCode);
+  args.set("ante",ante);
+  nav((nextCode==="357"?"/customer/games/table":"/customer/games/variant")+(args.size?"?"+args.toString():""));
  }
  function endLocalSession(){
   try{savePracticeSummary(groupId,buildPracticeSummary({id:virtualSessionId,players,stacks,rebuyCounts,cashouts,pot,gameCount:gameNumber}));}catch(e){console.warn("Virtual history could not be saved",e);}
@@ -298,7 +311,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  },[fybDeckFlash,fybDeckNumber]);
  const reviewable=step==="result"||step==="stud-result";
  const centered=step==="bozo-next"?"Next Bozo hand · Fresh deck":step==="442-next"?"Next 4/4 hand · Shuffling":step==="442-draw"&&activeIndex>=0?currentPlayer?.name+" · Exchange up to 3":step==="fyb-next"?"Next FYB hand · Shuffling":step==="deciding"&&activeIndex>=0?"Your turn: "+currentPlayer?.name:step==="fyb"&&activeIndex>=0?currentPlayer?.name+"'s turn":step==="stud"?"Stud street "+(street+1):reviewable?"Hand finished":game.tag;
- return <main className={"sw-poker-screen"+(variant==="fyb"&&step==="fyb"?" sw-fyb-play-mode":"")+(variant==="bozo"&&bozoLocked?" sw-bozo-play-mode":"")+(variant==="bozo"&&step==="ready"&&!bozoLocked?" sw-bozo-setup-mode":"")}><div className="sw-poker-content">
+ return <main className={"sw-poker-screen"+(variant==="fyb"&&step==="fyb"?" sw-fyb-play-mode":"")+(variant==="bozo"&&bozoLocked?" sw-bozo-play-mode":"")+(step==="ready"&&!(variant==="bozo"&&bozoLocked)?" sw-unified-setup-mode":"")}><div className="sw-poker-content">
   <header className="sw-poker-top"><button type="button" className="sw-poker-back" onClick={()=>{if(variant==="bozo"&&bozoLocked&&pot>0){setStatus("Bozo rules stay locked until the entire pot is dragged. Continue playing, or end the session.");return;}store();nav(nextGameUrl);}}><ArrowLeft size={20}/></button><div className="sw-poker-symbol">S</div><div className="sw-poker-heading"><strong>SYNCWORKS POKER</strong><small>♠ Card Night · {game.title}</small></div><button type="button" className="sw-poker-icon-btn" onClick={()=>{setTab("rules");setDrawer(true)}} aria-label="Game information"><Info size={20}/></button></header>
   <PokerSessionBar players={players} stacks={stacks} groupId={groupId} roomId={roomId} gameNumber={gameNumber} onEnd={endLocalSession}/>
   <div className="sw-poker-round"><div className="sw-poker-round-badge"><div>♠ {game.title}</div><span>{game.tag}</span></div><span className="sw-poker-capsule">♙ {players.length}</span></div>
@@ -306,19 +319,16 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   <div className="sw-poker-session-status"><span>♣ Card Night · Game {gameNumber}</span><span>Dealer: {players[dealer]?.name||"Waiting"} · {variant==="fyb"?fybActive.length+" active · "+displayMoney(cents(ante))+" total per player":"Hard cap "+(cap==="unlimited"?"Unlimited":displayMoney(maxCents))}</span></div>
   {status&&<div role="status" className="sw-poker-practice-note">{status}</div>}
   {variant==="fyb"&&splitDeclined&&step==="result"&&<div className="sw-fyb-split-declined" role="status">{splitDeclined}</div>}
-  {step==="ready"&&!(variant==="bozo"&&bozoLocked)&&<section className="sw-poker-game-choice sw-fyb-setup-panel">
-  <strong>{variant==="bozo"?"🤡 Dealer setup":variant==="fyb"?"♠ Dealer setup · FYB":("Ready for "+game.title)}</strong>
-  {variant==="fyb"?<><p>Choose the <b>total stake per player</b> once. Three strikes. Then the table will automatically deal each new hand with the same settings.</p>
-   <div className="sw-fyb-setup-fields">
-    <label htmlFor="fyb-total-stake">Total per player ($)
-     <input id="fyb-total-stake" type="number" step="0.01" min="0.03" value={ante} onChange={e=>setAnte(e.target.value)}/>
-    </label>
-    <div className="sw-fyb-stake-presets" aria-label="Total stake presets">{["1.50","3.00","6.00"].map(total=><button type="button" key={total} className={ante===total?"selected":""} onClick={()=>setAnte(total)}>$ {total}</button>)}</div>
+  {step==="ready"&&!(variant==="bozo"&&bozoLocked)&&<section className="sw-poker-game-choice sw-poker-unified-choice" aria-label="Dealer's game choice">
+   <label htmlFor="sw-variant-game-select">Dealer's game choice</label>
+   <select id="sw-variant-game-select" value={variant} onChange={e=>changeDealerGame(e.target.value)}>{ALL_POKER_GAMES.map(g=><option key={g.code} value={g.code}>{g.title}</option>)}</select>
+   <div className="sw-poker-unified-controls">
+    {variant==="bozo"&&<label>Cards<select value={bozoHandSize} onChange={e=>setBozoHandSize(Number(e.target.value))}><option value={5}>5 cards</option><option value={7}>7 cards</option></select></label>}
+    {variant==="fyb"?<label>Total stake ($)<input inputMode="decimal" type="number" min="0.03" step="0.03" value={ante} onChange={e=>setAnte(e.target.value)}/></label>:<><label>Ante ($)<input inputMode="decimal" type="number" min="0.01" step="0.01" value={ante} onChange={e=>setAnte(e.target.value)}/></label><label>Maximum pot<select value={cap} onChange={e=>setCap(e.target.value)}><option value="10">$10</option><option value="20">$20</option><option value="50">$50</option><option value="unlimited">Unlimited</option></select></label></>}
    </div>
-   <div className="sw-fyb-setup-summary"><span>Three chips each</span><strong>{fybStake?displayMoney(fybStake.chipCents)+" per loss":"Enter a total divisible into three chips"}</strong></div>
-  </>:variant==="bozo"?<div className="sw-bozo-setup-grid"><label>Cards<select value={bozoHandSize} onChange={e=>setBozoHandSize(Number(e.target.value))}><option value={5}>5 cards</option><option value={7}>7 cards</option></select></label><label>Ante ($)<input type="number" inputMode="decimal" step="0.01" min="0.01" value={ante} onChange={e=>setAnte(e.target.value)}/></label><label>Pot cap<select value={cap} onChange={e=>setCap(e.target.value)}><option value="10">$10</option><option value="20">$20</option><option value="50">$50</option><option value="unlimited">No cap</option></select></label></div>:<><div className="sw-fyb-setup-fields"><label>Ante ($)<input type="number" step="0.01" min="0.01" value={ante} onChange={e=>setAnte(e.target.value)}/></label><label>Maximum pot<select value={cap} onChange={e=>setCap(e.target.value)}><option value="10">$10</option><option value="20">$20</option><option value="50">$50</option><option value="unlimited">Unlimited</option></select></label></div></>}
-  {variant!=="bozo"&&<button type="button" className="sw-poker-button primary mt-3 w-full" onClick={deal}>♠ Shuffle & Deal {game.title}</button>}
- </section>}
+   {variant==="fyb"&&<p className="sw-poker-setup-hint">Three strikes · {fybStake?displayMoney(fybStake.chipCents)+" per loss":"Total must divide into three whole-cent chips"}</p>}
+   {variant==="442"&&<p className="sw-poker-setup-hint">4 cards · Wild 4s · Exchange up to 3</p>}
+  </section>}
   <div className="sw-poker-table-space"><div className="sw-poker-felt"><div className="sw-poker-felt-brand"><i>S</i>SYNCWORKS<br/>POKER</div>{variant==="442"&&step==="result"&&showdown442?.losers.map((seat,index)=><div key={showdown442.nonce+"-"+seat} className={"sw-fyb-chip-flight from-seat-"+seat} style={{"--chip-delay":index*170+"ms"}} aria-hidden="true"><span>●</span><small>−{displayMoney(showdown442.match)}</small></div>)}{variant==="fyb"&&step==="result"&&fybSettlement?.losers.map((seat,index)=><div key={fybSettlement.nonce+"-"+seat} className={"sw-fyb-chip-flight from-seat-"+seat} style={{"--chip-delay":index*180+"ms"}} aria-hidden="true"><span>●</span><small>−{displayMoney(fybSettlement.paidCents)}</small></div>)}<div className="sw-poker-pot"><div className="sw-poker-chip-stack"><span className="sw-poker-chip dark"/><span className="sw-poker-chip blue"/><span className="sw-poker-chip red"/></div><div className="sw-poker-pot-amount">{variant==="fyb"?"FYB Purse: "+displayMoney(pot):"Pot: "+displayMoney(pot)}</div><div className="sw-poker-pot-small">{game.title} · {variant==="fyb"?fybActive.length+" active · "+displayMoney(anteCents)+" / loss · Deck "+fybDeckNumber+" · "+deck.length+" left":"Max "+(cap==="unlimited"?"Unlimited":displayMoney(maxCents))}</div></div>
   {players.map((p,i)=><div className={"sw-poker-seat s"+i+(variant==="fyb"&&(fybLosses[i]??0)>=3?" sw-fyb-out":"")+(variant==="fyb"&&step==="result"&&fybSettlement?.losers.includes(i)?" sw-fyb-lowest-seat":"")} key={p.id}><div className="sw-poker-seat-avatar">{p.kind==="computer"?"🤖":p.name.split(" ").map(x=>x[0]).slice(0,2).join("")}</div><div className="sw-poker-seat-nameplate"><strong>{p.name}</strong><small>◉ {displayMoney(stacks[i]??p.chips)}</small>{variant==="fyb"&&<span className="sw-fyb-strikes" aria-label={3-(fybLosses[i]??0)+" remaining chips"}>{[0,1,2].map(n=><span key={n} className={n<3-(fybLosses[i]??0)?"live":"spent"}>●</span>)}</span>}</div>{i===dealer&&<span className="sw-poker-dealer">D</span>}{variant==="fyb"&&fybCurrentKings(fybRevealedKings,hands).some(k=>k.seat===i)&&<span className="sw-poker-status sw-fyb-king-label">👑 K</span>}{variant==="442"&&step==="result"&&hands[i]?.length===4&&<div className={"sw-442-showdown"+(showdown442?.winner===i?" winner":showdown442?.losers.includes(i)?" loser":"")} aria-label={p.name+" shows their four-card hand"}>{hands[i].map((c,j)=><span key={j} style={{"--card-delay":j*115+"ms"}} className="sw-442-flip-card">{label(c)}</span>)}{showdown442?.winner===i&&<small>WINNER</small>}{showdown442?.losers.includes(i)&&<small>−{displayMoney(showdown442.match)}</small>}</div>}{variant==="fyb"&&step==="result"&&fybSettlement?.active.includes(i)&&hands[i]?.[0]&&<div className={"sw-fyb-showdown-card"+(fybSettlement.losers.includes(i)?" lowest":"")} aria-label={p.name+" shows "+label(hands[i][0])+(fybSettlement.losers.includes(i)?" lowest card":"")}><span className="sw-fyb-showdown-back">♠</span><span className="sw-fyb-showdown-face">{label(hands[i][0])}</span>{fybSettlement.losers.includes(i)&&<small>LOWEST · −{displayMoney(fybSettlement.paidCents)}</small>}</div>}{variant==="fyb"&&step==="result"&&fybSettlement&&<span className="sw-fyb-new-total">Total: {displayMoney(fybSettlement.afterStacks[i]??0)}</span>}{variant==="fyb"&&fybActions[i]&&step!=="result"&&<span className={"sw-poker-status sw-fyb-action-label "+fybActions[i]}>{({swap:"Swapped",keep:"Kept",blocked:"King blocked",draw:"Drew"})[fybActions[i]]}</span>}{step==="442-draw"&&<span className="sw-poker-status">{i===activeIndex?"Drawing":"Wait"}</span>}{step==="deciding"&&<span className="sw-poker-status">{decisions[i]?"✓ Ready":"Waiting"}</span>}</div>)}
   {variant==="bozo"&&clown[0]&&<div className="sw-bozo-clown-upcard" role="status" aria-label={"Clown face-up card "+label(clown[0])+" determines wild rank"}><span>🤡 Wild</span><strong>{label(clown[0])}</strong><small>{bozoHandSize} cards</small></div>}{variant==="fyb"&&step!=="result"&&fybCurrentKings(fybRevealedKings,hands).map(({seat,card})=><div className="sw-fyb-public-king" key={seat} style={{left:fybSeatCoords[seat]?.x,top:fybSeatCoords[seat]?.y}} aria-label={players[seat]?.name+" has a revealed King of "+card.suit}><div className="sw-fyb-public-king-face"><b>K {card.suit}</b></div></div>)}
