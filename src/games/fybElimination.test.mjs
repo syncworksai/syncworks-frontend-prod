@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal} from "./fybElimination.mjs";
+import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal,fybRevealKing,fybCurrentKings} from "./fybElimination.mjs";
 const hand=n=>[{rank:n,suit:"♠"}];
 test("three losses eliminate a seat, but do not finish when 2+ survivors",()=>{
  const r=fybRound({hands:[hand(4),hand(9),hand(12)],active:[0,1,2],losses:[2,1,0],chipCents:50});
@@ -61,4 +61,31 @@ test("dealer is last and may keep or draw after right-hand player acts",()=>{
  assert.equal(keep.kind,"keep");assert.equal(keep.hands[2][0].rank,9);
  const draw=fybSwap({hands:passToDealer.hands,deck:passToDealer.deck,actor:2,next:null,pass:true,playerName:"Dealer"});
  assert.equal(draw.kind,"draw");assert.equal(draw.hands[2][0].rank,11);
+});
+
+test("blocked King becomes publicly revealed at receiving seat and continues to block",()=>{
+ const hands=[hand(7),hand(13),hand(5)];
+ const move=fybSwap({hands,deck:[],actor:0,next:1,pass:true,playerName:"Right",nextName:"King owner"});
+ const seen=fybRevealKing({},move.hands,1);
+ assert.equal(move.kind,"blocked");
+ assert.deepEqual(fybCurrentKings(seen,move.hands),[{seat:1,card:move.hands[1][0]}]);
+ const again=fybSwap({hands:move.hands,deck:[],actor:0,next:1,pass:true,playerName:"Right",nextName:"King owner"});
+ assert.equal(again.kind,"blocked");
+ assert.deepEqual(fybCurrentKings(seen,again.hands),[{seat:1,card:again.hands[1][0]}]);
+});
+test("dealer King flips on arrival even without a pass, other cards stay hidden",()=>{
+ const hands=[hand(5),hand(8),hand(13)];
+ const before={};
+ assert.strictEqual(fybRevealKing(before,hands,0),before);
+ const dealerTurn=fybRevealKing(before,hands,2);
+ assert.deepEqual(fybCurrentKings(dealerTurn,hands),[{seat:2,card:hands[2][0]}]);
+});
+test("reveal follows actual King card and clears from seat if it moves",()=>{
+ const start=[hand(13),hand(8)];
+ const shown=fybRevealKing({},start,0);
+ const swap=fybSwap({hands:start,deck:[],actor:0,next:1,pass:true,playerName:"A",nextName:"B"});
+ assert.equal(swap.kind,"swap");
+ assert.deepEqual(fybCurrentKings(shown,swap.hands),[]);
+ const arrived=fybRevealKing(shown,swap.hands,1);
+ assert.deepEqual(fybCurrentKings(arrived,swap.hands),[{seat:1,card:swap.hands[1][0]}]);
 });

@@ -39,3 +39,16 @@ export function fybStakeFromTotal(totalCents){
  if(!Number.isSafeInteger(totalCents)||totalCents<3||totalCents%FYB_STRIKES!==0)return null;
  return {totalCents,chipCents:totalCents/FYB_STRIKES,strikes:FYB_STRIKES};
 }
+
+// Kings reveal publicly when their seat is reached or they block an incoming pass.
+// Only keep a public King visible while its owner actually holds that King.
+export function fybRevealKing(current,hands,seat){
+ const card=hands?.[seat]?.[0];
+ if(card?.rank!==13)return current;
+ if(current?.[seat]?.rank===13&&current[seat].suit===card.suit)return current;
+ return {...current,[seat]:card};
+}
+export function fybCurrentKings(revealed,hands){
+ return Object.entries(revealed||{}).filter(([seat])=>hands?.[Number(seat)]?.[0]?.rank===13)
+  .map(([seat])=>({seat:Number(seat),card:hands[Number(seat)][0]}));
+}
