@@ -364,3 +364,31 @@
 }
 @media(max-width:430px){.sw-357-seat-reveal{gap:1px}.sw-357-flip-card{width:17px;height:26px}.sw-357-flip-face,.sw-357-flip-back{font-size:9px}.sw-357-chip-to-pot small{font-size:8px}}
 @media(prefers-reduced-motion:reduce){.sw-357-flip-card{transition:none}.sw-357-chip-to-pot{animation:none;opacity:0}}
+
+/* FYB end-of-hand: final one-card showdown, low-card glow, correct paid chips and totals. */
+.sw-fyb-lowest-seat .sw-poker-seat-nameplate{border:2px solid #ffbd51;box-shadow:0 0 17px #ffb83b9a;background:#352019f2}
+.sw-fyb-showdown-card{position:absolute;z-index:20;top:100%;left:50%;width:51px;height:68px;transform:translateX(-50%);perspective:500px;pointer-events:none;animation:sw-fyb-showdown-turn .65s ease both}
+.sw-fyb-showdown-back,.sw-fyb-showdown-face{position:absolute;inset:0;display:grid;place-items:center;border-radius:8px;backface-visibility:hidden;font-weight:1000;font-size:17px;border:2px solid #91eaff;box-shadow:0 4px 13px #000b}
+.sw-fyb-showdown-back{background:repeating-linear-gradient(45deg,#122446 0 6px,#1e4a6b 6px 12px);color:#80eaff}
+.sw-fyb-showdown-face{transform:rotateY(180deg);background:#f2f8ff;color:#12273d}
+.sw-fyb-showdown-card:has(.sw-fyb-showdown-face) .sw-fyb-showdown-face{color:#11273c}
+.sw-fyb-showdown-card.lowest .sw-fyb-showdown-face{border-color:#ffcf57;background:#fff4ce;color:#b53d18;box-shadow:0 0 16px #ffb72b}
+.sw-fyb-showdown-card small{position:absolute;top:100%;left:50%;transform:translateX(-50%);white-space:nowrap;border:1px solid #ffbd58;border-radius:9px;background:#4b291d;color:#ffe69a;font-size:9px;font-weight:1000;padding:3px 5px}
+.sw-fyb-new-total{display:block;white-space:nowrap;color:#a9ffe0;font-size:10px;font-weight:900;margin-top:3px;background:#052e29d9;border:1px solid #2cb992;border-radius:9px;padding:2px 4px}
+.sw-fyb-results-summary{font-weight:800;color:#ffe6a6!important}
+.sw-fyb-chip-flight{--sx:50%;--sy:50%;position:absolute;z-index:15;left:var(--sx);top:var(--sy);display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none;opacity:0;animation:sw-357-chip-into-pot 1.5s ease-in forwards;animation-delay:calc(.85s + var(--chip-delay,0ms))}
+.sw-fyb-chip-flight.from-seat-0{--sx:21%;--sy:9%}.sw-fyb-chip-flight.from-seat-1{--sx:50%;--sy:-1%}
+.sw-fyb-chip-flight.from-seat-2{--sx:79%;--sy:9%}.sw-fyb-chip-flight.from-seat-3{--sx:80%;--sy:88%}
+.sw-fyb-chip-flight.from-seat-4{--sx:50%;--sy:103%}.sw-fyb-chip-flight.from-seat-5{--sx:20%;--sy:88%}
+.sw-fyb-chip-flight span{display:grid;place-items:center;width:25px;height:25px;background:#ba2d45;border:4px dashed #ffd28c;color:#fff3bc;border-radius:50%;box-shadow:0 0 13px #f8b84d;font-size:13px}
+.sw-fyb-chip-flight small{font-size:10px;font-weight:900;white-space:nowrap;background:#122333;color:#ffdda4;border:1px solid #bd9c65;border-radius:7px;padding:2px 5px}
+@keyframes sw-fyb-showdown-turn{0%{transform:translateX(-50%) rotateY(0deg)}100%{transform:translateX(-50%) rotateY(180deg)}}
+.sw-fyb-showdown-card .sw-fyb-showdown-face,.sw-fyb-showdown-card .sw-fyb-showdown-back{transform:rotateY(180deg)}
+.sw-fyb-showdown-card .sw-fyb-showdown-back{transform:rotateY(0deg)}
+/* Bottom seats show their cards above the avatar to prevent sticky-bar overlap. */
+.sw-poker-seat.s3 .sw-fyb-showdown-card,.sw-poker-seat.s4 .sw-fyb-showdown-card,.sw-poker-seat.s5 .sw-fyb-showdown-card{top:auto;bottom:100%}
+@media(max-width:430px){.sw-fyb-showdown-card{width:39px;height:53px}.sw-fyb-showdown-face{font-size:14px}.sw-fyb-showdown-card small{font-size:7px;padding:2px 3px}.sw-fyb-new-total{font-size:8px}}
+/* 3-5-7 hands now flip only after the completed round result mounts. */
+.sw-357-end-flip{animation:sw-357-final-flip .55s ease both;animation-delay:var(--flip-delay,0ms)}
+@keyframes sw-357-final-flip{0%{transform:rotateY(0deg)}100%{transform:rotateY(180deg)}}
+@media(prefers-reduced-motion:reduce){.sw-fyb-showdown-card{animation:none;transform:translateX(-50%) rotateY(180deg)}.sw-fyb-chip-flight{animation:none;opacity:0}.sw-357-end-flip{animation:none;transform:rotateY(180deg)}}
