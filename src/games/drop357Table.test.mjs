@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {createShuffledDeck,dealt357,addRoundCards,instant357,rate357,resolve357} from "./drop357Table.mjs";
+import {createShuffledDeck,dealt357,addRoundCards,instant357,rate357,resolve357,winningHandText357} from "./drop357Table.mjs";
 
 const c=(rank,suit="♠")=>({rank,suit});
 
@@ -86,4 +86,19 @@ test("folded players receive no fifth or seventh cards and no extra deck cards a
  assert.equal(seven.deck.length,34);
  const all=initial.hands.flat().concat(initial.deck);
  assert.equal(new Set(all.map(c=>c.rank+":"+c.suit)).size,52);
+});
+
+test("three uncontested holds accumulate as three dots before dragging the pot",()=>{
+ const hands=[[c(10),c(10,"♥"),c(12)],[c(2),c(8),c(11)]];
+ const args={hands,round:0,choices:["hold","drop"],potCents:300,anteCents:25};
+ const one=resolve357({...args,strikes:{}});
+ assert.equal(one.kind,"lone-strike");assert.equal(one.strikes[0],1);assert.equal(one.nextPot,300);
+ const two=resolve357({...args,strikes:one.strikes});
+ assert.equal(two.kind,"lone-strike");assert.equal(two.strikes[0],2);
+ const three=resolve357({...args,strikes:two.strikes});
+ assert.equal(three.kind,"drag");assert.equal(three.winner,0);assert.equal(three.strikes[0],3);
+});
+test("winner hand text spells out matching rank for four Aces with wild fives",()=>{
+ const hand=[c(14),c(14,"♥"),c(14,"♦"),c(5,"♣"),c(9,"♠")];
+ assert.equal(winningHandText357(hand,1),"four Aces");
 });
