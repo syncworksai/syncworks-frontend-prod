@@ -332,6 +332,7 @@ export default function CustomerPokerTable(){
   setHandFolds(old=>({...old,...Object.fromEntries(choices.flatMap((c,i)=>c==="drop"?[[i,true]]:[]))}));
    const result=capGutsResult(resolve357({hands,round,choices,potCents:pot,strikes,anteCents}),{potCents:pot,capCents,anteCents,stacks:chipStacks});
   setOutcome({...result,potDraggedCents:result.winner!==null&&result.winner!==undefined?pot:0});
+  if(round===2||result.kind==="drag")setShowdownViewer(privateSeatIndex>=0&&choices[privateSeatIndex]==="hold"&&result.entered?.length>1?privateSeatIndex:null);
   setStrikes(result.strikes);
   setChipStacks(previous=>previous.map((value,index)=>value+(result.delta[index]||0)));
   setPot(result.nextPot);
@@ -404,6 +405,7 @@ export default function CustomerPokerTable(){
       {p?<Photo person={p}/>:<button type="button" aria-label={"Add player to seat "+(i+1)} disabled={session!=="setup"} className="sw-poker-empty-seat" onClick={()=>{setSeatBuyin(String((roomMinimum??2000)/100));setSeatEditor(true);}}>+</button>}
       <div className="sw-poker-seat-nameplate"><strong>{p?.name||"Open Seat"}</strong><small>{p?"◉ "+displayMoney(chipStacks[i]??p.chips??2000):"Tap to join"}</small></div>
       {session==="playing"&&p&&<span className={"sw-poker-status"+(choices[i]!==null&&phase!=="setup"?" ready":"")}>{phase==="choosing"||phase==="countdown"?(choices[i]===null?"◷ Waiting":"✓ Ready"):phase==="revealing"||phase==="resolved"?(choices[i]==="hold"?"Held":choices[i]==="drop"?"Folded":"Waiting"):"At table"}</span>}
+      {session==="playing"&&p&&<div className="sw-357-strike-dots" aria-label={(strikes[i]||0)+" of 3 uncontested holds"}>{[0,1,2].map(n=><span key={n} className={n<(strikes[i]||0)?"filled":""}/>)}</div>}
       {p&&chipAnimation?.winner===i&&<div className="sw-poker-win-pop">+{displayMoney(chipAnimation.amount)}</div>}{p&&chipAnimation?.contributions?.some(x=>x.seat===i)&&<div className="sw-poker-loss-pop">−{displayMoney(chipAnimation.contributions.find(x=>x.seat===i).amount)}</div>}
        {p&&hands[i]?.length>0&&phase==="resolved"&&canSeeOtherHands&&choices[i]==="hold"&&<div className="sw-357-seat-reveal" aria-label={p.name+" cards at completed round showdown"}>{hands[i].map((c,j)=><div key={j} className="sw-357-flip-card sw-357-end-flip" style={{"--flip-delay":j*95+"ms"}}><span className="sw-357-flip-back">♠</span><span className={"sw-357-flip-face"+(isRed(c.suit)?" red":"")}>{rankText(c)}{c.suit}</span></div>)}</div>}
       {p&&dealer===i&&<span className="sw-poker-dealer">D</span>}
@@ -411,12 +413,12 @@ export default function CustomerPokerTable(){
    </div>
   </div>
   {session!=="setup"&&<>
-   {phase==="choosing"&&<div className="sw-poker-pov">
-    <p className="sw-poker-pov-label">{allReady?"Everyone is ready — dealer may start countdown":currentPlayer?.name+" is choosing privately · "+readyCount+"/"+tableSize+" ready"}</p>
-    <div className="sw-poker-facecards">{viewCards?viewCards.map((c,i)=><Card key={i} card={c} wild={c.rank===wild}/>):(hands[privateSeatIndex>=0?privateSeatIndex:displayIndex??0]||[]).map((c,i)=><Card key={i} card={c} hidden/>)}</div>
+   {(phase==="choosing"||phase==="resolved")&&<div className="sw-poker-pov sw-357-persistent-hand">
+    <p className="sw-poker-pov-label">My cards · {hands[privateSeatIndex]?.length||0} dealt · {wild}s wild {phase==="choosing"&&currentPlayer?"· "+readyCount+"/"+tableSize+" ready":""}</p>
+    <div className="sw-poker-facecards sw-357-one-row">{viewCards?viewCards.map((c,i)=><div key={i} className={"sw-357-hand-position"+(dealAnimation?.count===2&&i>=hands[privateSeatIndex].length-2&&phase==="choosing"?" sw-357-new-card":"")} style={{"--card-index":i}}><Card card={c} wild={c.rank===wild}/></div>):(hands[privateSeatIndex>=0?privateSeatIndex:displayIndex??0]||[]).map((c,i)=><div key={i} className="sw-357-hand-position"><Card card={c} hidden/></div>)}</div>
 
 
-    <p className="sw-poker-compact-note">{currentPlayer?"Use the sticky bar to Hold, Fold, or Hide cards.":"Everyone is ready. Start the countdown below."}</p>
+    
    </div>}
    {phase==="countdown"&&<div className="sw-poker-pov rounded-2xl border border-cyan-400/30 bg-cyan-400/5 p-4"><strong>Everyone is READY</strong><p className="mt-1 text-xs text-cyan-200">Synchronized-style countdown demonstration on this device.</p></div>}
    {phase==="revealing"&&<section className="sw-poker-pov sw-poker-panel sw-poker-showdown sw-poker-compact-result">
@@ -425,16 +427,7 @@ export default function CustomerPokerTable(){
     
    </section>}
    {phase==="review"&&<section className="sw-poker-panel mx-auto max-w-xl"><h3>Dealer review required</h3><p>{outcome?.message||"More than one player was dealt 3-5-7. No automatic payout has been made."}</p><button type="button" onClick={()=>{setSession("setup");setPhase("setup");}} className="sw-poker-button mt-3">Restart demo</button></section>}
-   {phase==="resolved"&&<section className="sw-poker-panel mx-auto max-w-xl sw-poker-result sw-poker-compact-result" aria-label="Round result">
-    <h3>🏆 Round {round+1} result</h3>
-    {outcome?.winner!==null&&outcome?.winner!==undefined?<div className="sw-poker-winner-banner">{outcome.kind==="lone-strike"?"♠ "+people[outcome.winner].name+" · Uncontested Hold":"🏆 "+people[outcome.winner].name+" · DRAGS "+displayMoney(outcome?.potDraggedCents??0)}</div>:<p>{outcome?.kind==="all-drop"?"Everyone folded · pot carries forward":outcome?.message}</p>}
-    <div className="sw-poker-result-actions">
-     {practiceMode&&<button type="button" onClick={()=>openDrawer("hands")} className="sw-poker-button"><Eye size={15} className="mr-1 inline"/> Holder-only review</button>}
-     <button type="button" onClick={()=>openDrawer("log")} className="sw-poker-button"><BookOpen size={15} className="mr-1 inline"/> Round details</button>
-    </div>
-    {gameOver&&<p className="sw-poker-compact-note">Pot cleared · next dealer chooses the game and ante.</p>}
-    {pot>=capCents&&<p className="sw-poker-compact-note">Maximum pot reached · new contributions are capped.</p>}
-   </section>}
+   {phase==="resolved"&&<div className="sw-357-result-ticker" role="status">{outcome?.kind==="lone-strike"?"Uncontested hold · "+(strikes[outcome.entered?.[0]]||0)+"/3":outcome?.winner!=null?<strong className="sw-357-winning-text">🏆 {people[outcome.winner]?.name} wins with {winnerHand} · +{displayMoney(outcome.potDraggedCents||0)}</strong>:outcome?.kind==="all-drop"?"Everyone folded · pot carries":outcome?.message}{outcome?.kind==="drag"&&outcome.entered?.filter(i=>i!==outcome.winner).length>0&&<span> · Losers replace {displayMoney(outcome.matchingAmountCents??0)} each</span>}</div>}
   </>}
  </div>
 
@@ -442,13 +435,13 @@ export default function CustomerPokerTable(){
   <div className="sw-poker-action-top"><strong>♠ {phase==="choosing"?(currentPlayer?.name||"Dealer")+" · "+readyCount+"/"+tableSize+" ready":phase==="resolved"?"Round settled":phase==="revealing"?"Showdown in progress":phase==="countdown"?"3 · 2 · 1":"Poker"}</strong><div className="sw-poker-quick-management"><span>Pot {displayMoney(pot)} / {capText}</span><button type="button" onClick={()=>{setRebuySeat(0);setRebuyAmount("20");setRebuyOpen(true);}}>+ Rebuy</button><button type="button" onClick={()=>setResetConfirm(true)}>↻ Reset</button></div></div>
   <div className="sw-poker-action-buttons">
    {isSharedRoom&&<span className="sw-poker-action-wait">Shared lobby only · secure real-time dealing is not yet available</span>}
-   {!isSharedRoom&&phase==="choosing"&&currentPlayer&&canActCurrent?<><button type="button" className="sw-poker-action hide" onClick={()=>setViewer(v=>v===privateSeatIndex?null:privateSeatIndex)} aria-pressed={viewer===privateSeatIndex}>{viewer===privateSeatIndex?<><EyeOff size={17}/> Hide</>:<><Eye size={17}/> Show my hand</>}</button><button type="button" className="sw-poker-action fold" onClick={()=>choose("drop")}>Fold</button><button type="button" className="sw-poker-action hold" onClick={()=>choose("hold")}>Hold</button></>:
+   {!isSharedRoom&&phase==="choosing"&&currentPlayer&&canActCurrent?<><button type="button" className="sw-poker-action hide" onClick={()=>setMyHandVisible(v=>!v)} aria-pressed={myHandVisible}>{myHandVisible?<><EyeOff size={17}/> Hide</>:<><Eye size={17}/> Show my hand</>}</button><button type="button" className="sw-poker-action fold" onClick={()=>choose("drop")}>Fold</button><button type="button" className="sw-poker-action hold" onClick={()=>choose("hold")}>Hold</button></>:
     !isSharedRoom&&phase==="choosing"&&currentPlayer?<span className="sw-poker-action-wait">Other player\'s turn · {turnRemaining}s · auto-fold at zero</span>:
    !isSharedRoom&&phase==="choosing"&&allReady?<button type="button" className="sw-poker-action hold grow" onClick={countdown}>Start 3 · 2 · 1 countdown</button>:
    !isSharedRoom&&phase==="resolved"?<button type="button" className="sw-poker-action hold grow" onClick={doNext}>{nextActionLabel} <ChevronRight size={16}/></button>:
    phase==="revealing"?<span className="sw-poker-action-wait">Evaluating held hands privately…</span>:
    <span className="sw-poker-action-wait">Waiting for the round…</span>}
-   <button type="button" className="sw-poker-action info" onClick={()=>openDrawer(phase==="resolved"?"hands":"rules")} aria-label="Open game information and hand review"><Info size={19}/><span>Info</span></button>
+   <button type="button" className="sw-poker-action info" onClick={()=>openDrawer("log")} aria-label="Show round results"><BookOpen size={19}/><span>Results</span></button><button type="button" className="sw-poker-action info" onClick={()=>openDrawer("rules")} aria-label="Open game information"><Info size={19}/><span>Info</span></button>
   </div>
  </nav>}
  {drawerOpen&&<div className="sw-poker-drawer-backdrop" role="presentation" onClick={closeDrawer}>
