@@ -14,18 +14,20 @@ export function createShuffledDeck(random=Math.random) {
   return deck;
 }
 
-export function dealt357(deck,playerCount) {
-  if (playerCount<2 || playerCount>6 || deck.length<playerCount*7) throw new Error("A single deck supports 2–6 players here.");
+export function dealt357(deck,playerCount,activeSeats=Array.from({length:playerCount},(_,i)=>i)) {
+  if (playerCount<2 || playerCount>6 || activeSeats.length<2 || new Set(activeSeats).size!==activeSeats.length || activeSeats.some(i=>!Number.isInteger(i)||i<0||i>=playerCount)||deck.length<activeSeats.length*7) throw new Error("A single deck supports 2–6 active players here.");
   const hands=Array.from({length:playerCount},()=>[]);
   let next=0;
-  // Deal clockwise, one card at a time, including follow-up two-card stages.
-  for(let pass=0;pass<3;pass++)for(let player=0;player<playerCount;player++)hands[player].push(deck[next++]);
+  // Deal only to seated players who have not left the table; preserves a single deck.
+  for(let pass=0;pass<3;pass++)for(const player of activeSeats)hands[player].push(deck[next++]);
   return {hands,deck:deck.slice(next)};
 }
 export function addRoundCards(hands,deck) {
   const result=hands.map(hand=>[...hand]);
+  const active=result.flatMap((h,i)=>h.length?[i]:[]);
+  if(deck.length<active.length*2)throw Error("Not enough cards left in this deck.");
   let index=0;
-  for(let pass=0;pass<2;pass++)for(let i=0;i<result.length;i++)result[i].push(deck[index++]);
+  for(let pass=0;pass<2;pass++)for(const i of active)result[i].push(deck[index++]);
   return {hands:result,deck:deck.slice(index)};
 }
 export const instant357=hand=>hand.length===3&&hand.map(c=>c.rank).sort((a,b)=>a-b).join(",")==="3,5,7";
