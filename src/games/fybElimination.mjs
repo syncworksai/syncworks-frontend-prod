@@ -52,3 +52,36 @@ export function fybCurrentKings(revealed,hands){
  return Object.entries(revealed||{}).filter(([seat])=>hands?.[Number(seat)]?.[0]?.rank===13)
   .map(([seat])=>({seat:Number(seat),card:hands[Number(seat)][0]}));
 }
+
+// A FYB game uses one shuffled deck until exhausted. Cards dealt in older hands
+// are discarded, not reinserted. When the draw pile is empty, a fresh deck enters.
+export function fybDealFromShoe({deck,active,playerCount,newDeck}){
+ if(!Array.isArray(deck)||!Array.isArray(active)||!Number.isInteger(playerCount)||!newDeck)throw Error("Invalid FYB shoe");
+ let remaining=[...deck],replacements=0;
+ const hands=Array.from({length:playerCount},()=>[]);
+ for(const seat of active){
+  if(remaining.length===0){remaining=newDeck();replacements++;}
+  const card=remaining.shift();
+  if(!card)throw Error("Empty replacement deck");
+  hands[seat]=[card.rank===14?{...card,rank:1}:card];
+ }
+ return {hands,deck:remaining,newDeckCount:replacements};
+}
+export function fybDealerDraw({hands,deck,actor,newDeck}){
+ let remaining=[...deck],replacements=0;
+ if(remaining.length===0){remaining=newDeck();replacements++;}
+ const card=remaining.shift();
+ if(!card)throw Error("Empty replacement deck");
+ const updated=hands.map(h=>[...h]);
+ updated[actor]=[card.rank===14?{...card,rank:1}:card];
+ return {hands:updated,deck:remaining,newDeckCount:replacements};
+}
+// Lose one fixed-denomination chip to the shared FYB purse. Once the last
+// survivor is known, award the entire purse and leave no unclaimed FYB pot.
+export function fybPayRound({stacks,potCents,losers,chipCents,winner=null}){
+ if(!Array.isArray(stacks)||!Number.isSafeInteger(potCents)||potCents<0||!Number.isSafeInteger(chipCents)||chipCents<0)throw Error("Invalid FYB accounting");
+ const paid=losers.length*chipCents;
+ const purse=potCents+paid;
+ const next=stacks.map((n,i)=>n-(losers.includes(i)?chipCents:0)+(i===winner?purse:0));
+ return {stacks:next,potCents:winner===null?purse:0,dragCents:winner===null?0:purse,paidCents:paid};
+}

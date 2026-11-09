@@ -277,3 +277,9 @@
 @keyframes swFybKingUncover{0%{opacity:.35;transform:rotateY(90deg) scale(.8)}80%{opacity:1;transform:rotateY(-7deg) scale(1.08)}100%{opacity:1;transform:rotateY(0deg) scale(1)}}
 @media(max-width:430px){.sw-fyb-public-king{transform:translate(20%,-80%)}.sw-fyb-public-king-face{min-width:39px;min-height:54px}.sw-fyb-public-king-face b{font-size:16px}.sw-fyb-public-king-face small{font-size:5px}}
 @media(prefers-reduced-motion:reduce){.sw-fyb-public-king-face{animation:none}}
+
+/* Keep replacement-deck cue brief and non-interactive; never block the playing table. */
+.sw-fyb-new-deck-flash{position:relative;z-index:2;width:max-content;max-width:100%;margin:4px auto 6px;padding:5px 13px;border:1px solid #5fdbd3;border-radius:999px;background:linear-gradient(100deg,#073b50,#11275c);color:#c9ffec;box-shadow:0 0 12px #00e0ba40;font-size:11px;font-weight:900;letter-spacing:.09em;text-align:center;pointer-events:none;animation:swFybDeckNotice 1.85s ease-out both}
+@keyframes swFybDeckNotice{0%{opacity:0;transform:scale(.92)}18%,70%{opacity:1;transform:scale(1)}100%{opacity:0}}
+.sw-fyb-public-king-face{gap:0}.sw-fyb-public-king-face b{font-size:22px}
+@media(prefers-reduced-motion:reduce){.sw-fyb-new-deck-flash{animation:none}}
