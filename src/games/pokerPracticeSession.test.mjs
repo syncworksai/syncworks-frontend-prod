@@ -2,13 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {limitAnte,capGutsResult,rebuyChips,pickPracticeBotChoice,centsFromDollars} from "./pokerPracticeSession.mjs";
 test("a $50 cap limits a 4-loser matching pot and conserves chips",()=>{
- const r=capGutsResult({kind:"drag",winner:0,entered:[0,1,2,3,4],delta:[2500,-2500,-2500,-2500,-2500],nextPot:10000,message:"Drag"}, {potCents:2500,capCents:5000,anteCents:25});
+ const r=capGutsResult({kind:"drag",winner:0,entered:[0,1,2,3,4],delta:[2500,-2500,-2500,-2500,-2500],nextPot:10000,message:"Drag"}, {potCents:2500,capCents:5000,anteCents:25,stacks:[2000,2000,2000,2000,2000]});
  assert.equal(r.nextPot,5000);
  assert.deepEqual(r.delta,[2500,-1250,-1250,-1250,-1250]);
  assert.equal(r.delta.reduce((sum,x)=>sum+x,0)+r.nextPot-2500,0);
 });
 test("at cap a no-holder round cannot add an ante",()=>{
- const r=capGutsResult({kind:"all-drop",delta:[-25,-25,-25],nextPot:5075,message:"Everyone folded"}, {potCents:5000,capCents:5000,anteCents:25});
+ const r=capGutsResult({kind:"all-drop",delta:[-25,-25,-25],nextPot:5075,message:"Everyone folded"}, {potCents:5000,capCents:5000,anteCents:25,stacks:[2000,2000,2000]});
  assert.equal(r.nextPot,5000);assert.deepEqual(r.delta,[0,0,0]);
 });
 test("limit first ante and rebuys remain separate from pot",()=>{
@@ -23,4 +23,15 @@ test("balanced bots fold weak hands more and aggressive is opt-in",()=>{
  assert.equal(pickPracticeBotChoice(weak,0,"balanced",()=>0.5),"drop");
  assert.equal(pickPracticeBotChoice(strong,0,"balanced",()=>0.5),"hold");
  assert.equal(pickPracticeBotChoice(weak,0,"aggressive",()=>0.5),"hold");
+});
+
+test("full pot awards winner without any replacement liability",()=>{
+ const r=capGutsResult({kind:"drag",winner:0,entered:[0,1],delta:[5000,-5000],nextPot:5000,message:"Drag"},
+ {potCents:5000,capCents:5000,anteCents:25,stacks:[1200,400]});
+ assert.deepEqual(r.delta,[5000,0]);assert.equal(r.nextPot,0);assert.equal(r.capFinal,true);
+});
+test("short losing chip balance caps matching without a negative stack",()=>{
+ const r=capGutsResult({kind:"drag",winner:0,entered:[0,1,2],delta:[300,-300,-300],nextPot:600,message:"Drag"},
+ {potCents:300,capCents:2000,anteCents:25,stacks:[100,60,200]});
+ assert.deepEqual(r.delta,[300,-60,-60]);assert.equal(r.nextPot,120);
 });
