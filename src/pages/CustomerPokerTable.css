@@ -283,3 +283,19 @@
 @keyframes swFybDeckNotice{0%{opacity:0;transform:scale(.92)}18%,70%{opacity:1;transform:scale(1)}100%{opacity:0}}
 .sw-fyb-public-king-face{gap:0}.sw-fyb-public-king-face b{font-size:22px}
 @media(prefers-reduced-motion:reduce){.sw-fyb-new-deck-flash{animation:none}}
+
+/* FYB: split offer only for the final two survivors, with separate consent per seat. */
+.sw-fyb-split-action{border:1px solid #60e8cb!important;background:#124b53!important;color:#dafff4!important;font-weight:900;white-space:nowrap}
+.sw-fyb-split-hint{color:#c9e5eb;font-size:12px;line-height:1.5;padding:8px 2px}
+.sw-fyb-split-declined{background:#382530;border:1px solid #92566a;border-radius:10px;padding:11px;color:#ffcfda;font-size:12px;margin:9px 0}
+.sw-fyb-split-shade{z-index:1300!important;display:flex;align-items:flex-end;justify-content:center}
+.sw-fyb-split-dialog{width:min(100%,560px);max-height:85dvh;overflow-y:auto;border-radius:22px 22px 0 0;background:linear-gradient(145deg,#101b36,#061627);border:1px solid #447f91;color:#ecfcff;box-shadow:0 -14px 50px #000a;padding:18px 17px calc(18px + env(safe-area-inset-bottom,0px))}
+.sw-fyb-split-dialog header{display:flex;align-items:center;justify-content:space-between;gap:10px}.sw-fyb-split-dialog h3{font-size:19px;font-weight:900;margin:0}.sw-fyb-split-dialog header button{border:1px solid #426781;border-radius:10px;font-size:23px;min-width:40px;min-height:40px}
+.sw-fyb-split-dialog>p{font-size:13px;line-height:1.6;color:#c8dfeb;margin:12px 0 16px}
+.sw-fyb-split-votes{display:grid;gap:12px}.sw-fyb-split-player{background:#0a2a3e;border:1px solid #315b73;border-radius:12px;padding:13px;display:grid;gap:7px}
+.sw-fyb-split-player>strong{font-size:15px}.sw-fyb-split-player>small{font-size:12px;color:#a5cade}
+.sw-fyb-split-buttons{display:flex;gap:8px;flex-wrap:wrap}.sw-fyb-split-buttons button{font-size:12px;font-weight:850;min-height:44px;border-radius:10px;flex:1;padding:8px}
+.sw-fyb-split-buttons .approve{background:#12a88d;color:#00191d}.sw-fyb-split-buttons .reject{border:1px solid #ac7087;color:#ffdfdf;background:#3e2839}
+.sw-fyb-approved{font-size:12px;color:#81ffd4;font-weight:800}.sw-fyb-split-disclaimer{display:block;margin:14px 0;color:#a6bdcc;font-size:11px;line-height:1.55}
+.sw-fyb-split-cancel{display:block;margin-top:12px;width:100%;min-height:43px;border:1px solid #42718b;border-radius:10px;background:#122c46;color:#e4f5fc;font-weight:800}
+@media(max-width:420px){.sw-fyb-split-action{font-size:11px}.sw-fyb-split-dialog{padding-left:12px;padding-right:12px}}

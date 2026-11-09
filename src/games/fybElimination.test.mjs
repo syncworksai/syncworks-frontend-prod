@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal,fybRevealKing,fybCurrentKings,fybDealFromShoe,fybDealerDraw,fybPayRound} from "./fybElimination.mjs";
+import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal,fybRevealKing,fybCurrentKings,fybDealFromShoe,fybDealerDraw,fybPayRound,fybSplitPurse} from "./fybElimination.mjs";
 const hand=n=>[{rank:n,suit:"♠"}];
 test("three losses eliminate a seat, but do not finish when 2+ survivors",()=>{
  const r=fybRound({hands:[hand(4),hand(9),hand(12)],active:[0,1,2],losses:[2,1,0],chipCents:50});
@@ -127,4 +127,26 @@ test("FYB lost chips accumulate and final winner drags entire purse, conserving 
  const final=fybPayRound({stacks:handTwo.stacks,potCents:handTwo.potCents,losers:[0,1],chipCents:100,winner:2});
  assert.deepEqual(final.stacks,[1700,1800,2500]);assert.equal(final.dragCents,500);assert.equal(final.potCents,0);
  assert.equal(final.stacks.reduce((sum,n)=>sum+n,0),initial.reduce((sum,n)=>sum+n,0));
+});
+
+test("final two cannot split until BOTH independently approve",()=>{
+ const stacks=[1800,1500,1700],seats=[0,2];
+ assert.throws(()=>fybSplitPurse({stacks,potCents:700,seats,approvals:{0:true}}),/Both players/);
+ assert.throws(()=>fybSplitPurse({stacks,potCents:700,seats,approvals:{2:true}}),/Both players/);
+ assert.throws(()=>fybSplitPurse({stacks,potCents:700,seats:[0,1,2],approvals:{0:true,1:true,2:true}}),/exactly two/);
+ const agreed=fybSplitPurse({stacks,potCents:700,seats,approvals:{0:true,2:true}});
+ assert.deepEqual(agreed.stacks,[2150,1500,2050]);
+ assert.equal(agreed.potCents,0);
+ assert.equal(agreed.splitCents,700);
+ assert.equal(agreed.stacks.reduce((a,b)=>a+b,0),stacks.reduce((a,b)=>a+b,0)+700);
+});
+test("odd cents are awarded deterministically without losing a penny",()=>{
+ const p=fybSplitPurse({stacks:[100,100],potCents:101,seats:[1,0],approvals:{0:true,1:true}});
+ assert.deepEqual(p.payouts,{"0":51,"1":50});
+ assert.deepEqual(p.stacks,[151,150]);
+ assert.equal(p.stacks[0]+p.stacks[1],301);
+});
+test("empty purse and duplicated seat cannot bypass consent",()=>{
+ assert.throws(()=>fybSplitPurse({stacks:[500,500],potCents:0,seats:[0,1],approvals:{0:true,1:true}}),/No FYB purse/);
+ assert.throws(()=>fybSplitPurse({stacks:[500,500],potCents:100,seats:[0,0],approvals:{0:true}}),/exactly two/);
 });
