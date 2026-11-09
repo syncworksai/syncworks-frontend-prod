@@ -187,7 +187,7 @@ export default function CustomerPokerTable(){
   if((rebuyCounts[index]||0)>=4){setStatus("Maximum four $20 rebuys per player ($100 total).");return;}
   setRebuyCounts(old=>({...old,[index]:(old[index]||0)+1}));
   if(session==="playing")setChipStacks(old=>rebuyChips(old,index,add));
-  else setPeople(old=>old.map((p,i)=>i===index?{...p,chips:(p.chips??0)+add}:p));
+  else setChipStacks(old=>(old.length===people.length?old:people.map(p=>p.chips??2000)).map((v,i)=>i===index?v+add:v));
   setSittingOut(old=>({...old,[index]:false}));
   addLog(people[index].name+" rebought "+displayMoney(add)+" (rebuy "+((rebuyCounts[index]||0)+1)+"/4).");
   setStatus(people[index].name+" rebought "+displayMoney(add)+". No real money was charged.");
@@ -299,7 +299,7 @@ export default function CustomerPokerTable(){
    setChoices(preparedChoices(tableSize,fresh.hands,0).map((c,i)=>sittingOut[i]?"drop":c));setPhase("choosing");addLog("Three cards dealt. 3s are wild. Players choose Hold or Fold.");
   }
  }
- function start(){setSession("playing");setLog([]);dealOpening(0,null,{});}
+ function start(){setSession("playing");setLog([]);dealOpening(0,chipStacks.length===people.length?chipStacks:null,{});}
  function choose(c){if(phase!=="choosing"||currentIndex<0||people[currentIndex].kind==="computer")return;setChoices(old=>old.map((v,i)=>i===currentIndex?c:v));if(c==="drop")setHandFolds(old=>({...old,[currentIndex]:true}));setViewer(null);addLog(people[currentIndex].name+" is READY.");}
  function countdown(){if(phase!=="choosing"||!allReady)return;setPhase("countdown");addLog("Dealer started 3, 2, 1 countdown.");}
  function settleCurrentRound(){
