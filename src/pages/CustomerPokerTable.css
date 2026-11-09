@@ -434,3 +434,41 @@
 @keyframes sw-357-deal{0%{opacity:0;transform:translate(0,0) scale(.7)}18%{opacity:1}80%{opacity:1}100%{opacity:0;transform:translate(var(--to-x),var(--to-y)) scale(1)}}
 @media(max-width:430px){.sw-357-deal-fly.from-seat-0{--to-x:-95px;--to-y:-55px}.sw-357-deal-fly.from-seat-1{--to-x:0px;--to-y:-100px}.sw-357-deal-fly.from-seat-2{--to-x:95px;--to-y:-55px}.sw-357-deal-fly.from-seat-3{--to-x:95px;--to-y:70px}.sw-357-deal-fly.from-seat-4{--to-x:0px;--to-y:95px}.sw-357-deal-fly.from-seat-5{--to-x:-95px;--to-y:70px}}
 @media(prefers-reduced-motion:reduce){.sw-357-deal-fly{display:none}}
+
+/* Bozo mobile: fixed-height game surface; place detailed rules in Info, not in the play area. */
+.sw-bozo-choice{margin:7px 0}.sw-bozo-choice label{font-size:12px;font-weight:800;color:#d1e8f7;display:flex;align-items:center;gap:12px}
+.sw-bozo-choice select{background:#081c30;color:white;border:1px solid #69abc0;border-radius:9px;padding:8px;min-width:104px}
+.sw-bozo-clown-upcard{position:absolute;z-index:9;left:50%;top:8%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;background:#092137f0;border:1px solid #80dcea;border-radius:9px;padding:3px 7px;box-shadow:0 0 8px #000a;white-space:nowrap;pointer-events:none}
+.sw-bozo-clown-upcard span{font-size:10px;color:#b9dfe6;font-weight:800}.sw-bozo-clown-upcard strong{font-size:16px;color:#fff7c0}.sw-bozo-clown-upcard small{font-size:9px;color:#91cbd8}
+.sw-bozo-play-mode .sw-poker-compact-result{font-size:11px;line-height:1.2;padding:6px 8px!important;margin:3px 0!important}
+.sw-bozo-play-mode .sw-poker-compact-result h3{font-size:12px;margin:0 0 4px}
+.sw-bozo-play-mode .sw-poker-compact-result p{margin:3px 0;font-size:11px}
+.sw-bozo-play-mode .sw-poker-compact-result .sw-poker-winner-banner{font-size:11px;padding:5px;margin:3px 0}
+.sw-bozo-play-mode .sw-poker-compact-result .sw-poker-facecards{margin:4px auto;display:flex;justify-content:center;flex-wrap:nowrap;gap:3px}
+.sw-bozo-play-mode .sw-poker-compact-result .sw-poker-card{width:clamp(34px,10vw,52px);min-width:0;height:clamp(48px,12vw,65px);font-size:11px}
+.sw-bozo-play-mode .sw-poker-compact-result .sw-poker-card strong{font-size:12px}
+.sw-bozo-play-mode .sw-poker-compact-result .sw-poker-card b{font-size:16px}
+.sw-bozo-play-mode .sw-poker-compact-result button{min-height:28px;font-size:10px;padding:4px 8px}
+.sw-bozo-play-mode .sw-poker-session-status{display:none}
+.sw-bozo-play-mode .sw-poker-round{margin:3px 0}
+.sw-bozo-play-mode .sw-poker-action-top{font-size:11px}
+.sw-bozo-play-mode .sw-poker-action-buttons{gap:5px}
+.sw-bozo-play-mode .sw-poker-action{min-height:46px;font-size:12px;padding:8px}
+@media(max-width:600px){
+ .sw-bozo-play-mode{height:100dvh;min-height:0;overflow:hidden;padding-bottom:0!important}
+ .sw-bozo-play-mode .sw-poker-content{height:calc(100dvh - 120px - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;min-height:0;overflow:hidden}
+ .sw-bozo-play-mode .sw-poker-top{flex:0 0 auto;min-height:38px}
+ .sw-bozo-play-mode .sw-poker-session-strip{flex:0 0 auto}
+ .sw-bozo-play-mode .sw-poker-round{flex:0 0 auto}
+ .sw-bozo-play-mode .sw-poker-table-space{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;padding:38px 2px 44px}
+ .sw-bozo-play-mode .sw-poker-felt{flex:none;width:min(100%,calc((100dvh - 415px) * 1.52));max-width:100%;aspect-ratio:1.52/1}
+ .sw-bozo-play-mode .sw-poker-seat-avatar{width:33px;height:33px;font-size:12px}
+ .sw-bozo-play-mode .sw-poker-seat-nameplate{padding:2px 4px;min-width:64px}
+ .sw-bozo-play-mode .sw-poker-seat-nameplate strong{font-size:10px}
+ .sw-bozo-play-mode .sw-poker-seat-nameplate small{font-size:9px}
+ .sw-bozo-play-mode .sw-poker-compact-result{flex:0 0 auto;max-height:124px;overflow:hidden}
+ .sw-bozo-play-mode .sw-poker-sticky-actions{padding:6px 8px calc(8px + env(safe-area-inset-bottom,0px))}
+ .sw-bozo-play-mode .sw-poker-action.info{flex:0 0 50px;max-width:50px}
+}
+@media(max-width:600px) and (max-height:750px){.sw-bozo-play-mode .sw-poker-felt{width:min(100%,calc((100dvh - 370px)*1.52))}.sw-bozo-play-mode .sw-poker-table-space{padding:30px 2px 34px}}
+@media(prefers-reduced-motion:reduce){.sw-bozo-play-mode .sw-poker-compact-result *{scroll-behavior:auto}}
