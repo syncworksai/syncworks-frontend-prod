@@ -7,6 +7,8 @@ import {score442,naturalPair442,replace442,settle442,botExchange442} from "../ga
 import {capGutsResult,limitAnte,rebuyChips,centsFromDollars,pickPracticeBotChoice,fundedReplacement} from "../games/pokerPracticeSession.mjs";
 import {readCardNight,saveCardNight,clearCardNight} from "../games/cardNightTransfer.mjs";
 import PokerSessionBar from "../components/poker/PokerSessionBar";
+import CardClubTableSwitcher from "../components/poker/CardClubTableSwitcher";
+import {useAuth} from "../auth/AuthContext";
 import {buildPracticeSummary,savePracticeSummary} from "../games/pokerClubPracticeLedger.mjs";
 import {getCardRoom} from "../api/cardRooms";
 import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal,fybRevealKing,fybCurrentKings,fybDealFromShoe,fybDealerDraw,fybPayRound,fybSplitPurse,fybBotWantsPass,fybLocalSeat,canRevealOwnFybCard} from "../games/fybElimination.mjs";
@@ -26,6 +28,7 @@ const ALL_POKER_GAMES=[{code:"357",title:"3-5-7 DROP"},{code:"fyb",title:"FYB"},
 const cents=x=>Math.round(Number(x)*100);
 export default function CustomerPokerVariantTable({variant:providedVariant}){
  const [query]=useSearchParams(),nav=useNavigate();
+ const {user}=useAuth();
  const variant=providedVariant||query.get("game")||"fyb";
  const game=GAMES[variant]||GAMES.fyb;
  const groupId=query.get("group")||"",roomId=query.get("room")||"";
@@ -346,7 +349,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
    {step==="stud-result"&&<><p>All seven cards dealt. The next step is validated betting and natural-versus-wild showdown; this is a guided dealing demonstration, not an automatic pot award.</p><button className="sw-poker-button mt-2" onClick={()=>{setTab("hands");setDrawer(true)}}>Review stud cards</button></>}
   </section>}
  </div>
- {step!=="loading"&&<nav className="sw-poker-sticky-actions"><div className="sw-poker-action-top"><strong>♠ {centered}</strong><span>{variant==="fyb"?"FYB "+displayMoney(pot)+" · "+fybActive.length+" active":displayMoney(pot)+" / "+(cap==="unlimited"?"Unlimited":displayMoney(maxCents))}</span></div><div className="sw-poker-action-buttons">
+ {step!=="loading"&&<nav className="sw-poker-sticky-actions">{groupId&&<div className="sw-card-console-table-switch"><CardClubTableSwitcher groupId={groupId} currentRoomId={roomId} userId={user?.id} navigate={nav} compact/></div>}<div className="sw-poker-action-top"><strong>♠ {centered}</strong><span>{variant==="fyb"?"FYB "+displayMoney(pot)+" · "+fybActive.length+" active":displayMoney(pot)+" / "+(cap==="unlimited"?"Unlimited":displayMoney(maxCents))}</span></div><div className="sw-poker-action-buttons">
  {step==="ready"&&<button className="sw-poker-action hold grow" onClick={deal}>{variant==="bozo"&&bozoLocked?"Deal next Bozo hand":"Deal cards"}</button>}{step==="bozo-next"&&<span className="sw-poker-action-wait">Shuffling new deck · rules locked</span>}
  {step==="442-next"&&<span className="sw-poker-action-wait">Dealer passes · Dealing four new cards…</span>}{step==="442-draw"&&currentPlayer?.kind==="computer"&&<span className="sw-poker-action-wait">🤖 {currentPlayer.name} choosing exchanges…</span>}{step==="442-draw"&&currentPlayer?.kind!=="computer"&&<button className="sw-poker-action hold grow" onClick={()=>finish442Exchange(activeIndex,draw442Selected)}>Exchange {draw442Selected.length} · Continue</button>}{step==="fyb-next"&&<span className="sw-poker-action-wait">Dealer rotates · Shuffling the next hand…</span>}
  {step==="deciding"&&currentPlayer?.kind==="computer"&&<span className="sw-poker-action-wait">🤖 {currentPlayer.name} is deciding…</span>}
