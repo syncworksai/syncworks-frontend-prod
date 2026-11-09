@@ -266,10 +266,10 @@ export default function CustomerPokerTable(){
   const stack=previousChips||people.map(p=>Number.isFinite(p.chips)?p.chips:Math.max(0,Math.round(Number(startingChips)*100)));
   if(tableSize<2||tableSize>6){setStatus("Choose 2–6 players before dealing.");return;}
   if(!Number.isSafeInteger(anteCents)||anteCents<0||!Number.isSafeInteger(capCents)||capCents<1){setStatus("Set valid ante and pot-cap amounts.");return;}
-  const fresh=dealt357(createShuffledDeck(),tableSize);
-  if(previousPot>capCents){setStatus("The current pot exceeds the selected cap. Increase the cap or reset the practice session.");return;}
   const active=people.map((_,i)=>i).filter(i=>!sittingOut[i]);
   if(active.length<2){setStatus("At least two active players are required to deal.");return;}
+  const fresh=dealt357(createShuffledDeck(),tableSize,active);
+  if(previousPot>capCents){setStatus("The current pot exceeds the selected cap. Increase the cap or reset the practice session.");return;}
   const actualAnte=limitAnte({potCents:previousPot,capCents,anteCents,playerCount:active.length});
   if(stack.some((value,i)=>active.includes(i)&&value<actualAnte&&people[i]?.kind!=="computer")){
     setStatus("A player needs a rebuy before dealing. Use Rebuy in the bottom controls.");
@@ -287,7 +287,7 @@ export default function CustomerPokerTable(){
   setHands(fresh.hands);setDeck(fresh.deck);setRound(0);setHandFolds({});setDealAnimation({nonce:Date.now(),count:3});
   setChipStacks(afterAnte);setPot(newPot);setStrikes(previousStrikes||{});
   setReveal({});setRevealStep(0);setShowdownViewer(null);setChipAnimation(null);setOutcome(null);setViewer(null);setCounter(null);closeDrawer();
-  const instant=fresh.hands.flatMap((hand,i)=>instant357(hand)?[i]:[]);
+  const instant=fresh.hands.flatMap((hand,i)=>active.includes(i)&&instant357(hand)?[i]:[]);
   if(instant.length===1){
    const winner=instant[0];setChipStacks(afterAnte.map((v,i)=>i===winner?v+newPot:v));setPot(0);
    setOutcome({kind:"instant",winner,entered:[winner],delta:[],potDraggedCents:newPot,message:people[winner].name+" received 3-5-7 on the opening deal. Instant pot win!"});
