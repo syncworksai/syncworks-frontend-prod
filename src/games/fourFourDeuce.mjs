@@ -1,3 +1,4 @@
+import {fundedReplacement} from "./pokerPracticeSession.mjs";
 // Four Card Drop: four cards only. Fours always wild; no straights or flushes.
 const ranks = cards => cards.map(c => c.rank);
 const encode = values => values.reduce((n,v)=>n*15+v,0);
@@ -31,7 +32,7 @@ export function replace442({hands,deck,seat,indexes}){
  for(const i of indexes)nextHands[seat][i]=nextDeck.shift();
  return {hands:nextHands,deck:nextDeck};
 }
-export function settle442({hands,choices,potCents,capCents,anteCents}){
+export function settle442({hands,choices,potCents,capCents,anteCents,stacks}){
  const holders=choices.flatMap((c,i)=>c==="hold"?[i]:[]);
  if(!holders.length)return {kind:"all-drop",winner:null,losers:[],nextPot:potCents,delta:choices.map(()=>0),message:"Everyone dropped. Each player antes again for the next deal."};
  if(holders.length===1&&!naturalPair442(hands[holders[0]]))return {kind:"no-natural-pair",winner:null,losers:[],nextPot:potCents,delta:choices.map(()=>0),message:"Lone holder has no natural pair. The pot carries forward; everyone antes again."};
@@ -39,9 +40,10 @@ export function settle442({hands,choices,potCents,capCents,anteCents}){
  const best=Math.max(...ranked.map(x=>x.hand.score)),tied=ranked.filter(x=>x.hand.score===best);
  if(tied.length>1)return {kind:"tie-review",winner:null,losers:[],nextPot:potCents,delta:choices.map(()=>0),message:"Tied best four-card hands. Dealer review required; no chips moved."};
  const winner=tied[0].seat,losers=holders.filter(i=>i!==winner);
- const match=losers.length?Math.max(0,Math.min(potCents,Math.floor(capCents/losers.length))):0;
+ const capFinal=potCents>=capCents;
+ const match=capFinal?0:fundedReplacement({losers,stacks,potCents,capCents}).perLoser;
  const delta=choices.map((_,i)=>i===winner?potCents:losers.includes(i)?-match:0);
- return {kind:"drag",winner,losers,match,nextPot:match*losers.length,delta,hand:ranked.find(x=>x.seat===winner).hand,message:""+winner+" wins with "+ranked.find(x=>x.seat===winner).hand.name+", dragging the pot."};
+ return {kind:"drag",winner,losers,match,capFinal,nextPot:match*losers.length,delta,hand:ranked.find(x=>x.seat===winner).hand,message:capFinal?"Capped pot awarded to qualifying winner; new game.":winner+" wins with "+ranked.find(x=>x.seat===winner).hand.name+", dragging the pot."};
 }
 export function botExchange442(cards){
  const counts=new Map();for(const c of cards)if(c.rank!==4)counts.set(c.rank,(counts.get(c.rank)||0)+1);
