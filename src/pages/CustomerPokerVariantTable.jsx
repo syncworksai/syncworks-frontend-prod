@@ -30,12 +30,12 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  const groupId=query.get("group")||"",roomId=query.get("room")||"";
  const [rebuyCounts,setRebuyCounts]=useState({}),[sittingOut,setSittingOut]=useState({}),[cashouts,setCashouts]=useState([]),[virtualSessionId,setVirtualSessionId]=useState(()=>"practice-"+Date.now()+"-"+Math.random().toString(36).slice(2));
  const [players,setPlayers]=useState([]),[stacks,setStacks]=useState([]),[dealer,setDealer]=useState(0),[pot,setPot]=useState(0),[gameNumber,setGameNumber]=useState(1);
- const [ante,setAnte]=useState(variant==="fyb"?"1.50":query.get("ante")||"0.25"),[cap,setCap]=useState("50"),[sessionCapCents,setSessionCapCents]=useState(5000),[step,setStep]=useState("loading");
+ const [bozoHandSize,setBozoHandSize]=useState(5),[bozoLocked,setBozoLocked]=useState(false),[bozoLastResult,setBozoLastResult]=useState(null),[ante,setAnte]=useState(variant==="fyb"?"1.50":query.get("ante")||"0.25"),[cap,setCap]=useState("50"),[sessionCapCents,setSessionCapCents]=useState(5000),[step,setStep]=useState("loading");
  const [hands,setHands]=useState([]),[clown,setClown]=useState([]),[deck,setDeck]=useState([]),[decisions,setDecisions]=useState([]),[viewer,setViewer]=useState(null),[outcome,setOutcome]=useState(null),[log,setLog]=useState([]);
  const [drawer,setDrawer]=useState(false),[tab,setTab]=useState("hands"),[rebuy,setRebuy]=useState(false),[rebuySeat,setRebuySeat]=useState(0),[rebuyAmount,setRebuyAmount]=useState("20"),[status,setStatus]=useState("");
  const [fybTurn,setFybTurn]=useState(0),[fybSettlement,setFybSettlement]=useState(null),[draw442Turn,setDraw442Turn]=useState(0),[draw442Selected,setDraw442Selected]=useState([]),[showdown442,setShowdown442]=useState(null),[followers,setFollowers]=useState([]),[pendingFollower,setPendingFollower]=useState(false),[street,setStreet]=useState(0);
  const [dealerPick,setDealerPick]=useState(false),[fybLosses,setFybLosses]=useState([]),[fybHandNumber,setFybHandNumber]=useState(0),[fybLastMove,setFybLastMove]=useState(null),[fybActions,setFybActions]=useState({}),[fybAnimating,setFybAnimating]=useState(false),[fybAwaitNext,setFybAwaitNext]=useState(false),[fybRevealedKings,setFybRevealedKings]=useState({}),[fybDeckNumber,setFybDeckNumber]=useState(0),[fybDeckFlash,setFybDeckFlash]=useState(false),[splitOpen,setSplitOpen]=useState(false),[splitApprovals,setSplitApprovals]=useState({}),[splitDeclined,setSplitDeclined]=useState(""),[fybPreviousCard,setFybPreviousCard]=useState({});
- const maxCents=variant==="fyb"?1000000:cents(cap),fybStake=variant==="fyb"?fybStakeFromTotal(cents(ante)):null,anteCents=variant==="fyb"?(fybStake?.chipCents??NaN):cents(ante),index=players.length;
+ const maxCents=variant==="fyb"?1000000:cap==="unlimited"?100000000:cents(cap),fybStake=variant==="fyb"?fybStakeFromTotal(cents(ante)):null,anteCents=variant==="fyb"?(fybStake?.chipCents??NaN):cents(ante),index=players.length;
  const currentIndex=useMemo(()=>decisions.findIndex(v=>v===null),[decisions]);
  const fybActive=players.map((_,i)=>i).filter(i=>!sittingOut[i]&&(fybLosses[i]??0)<3);
  const fybSeatCoords=[{x:"21%",y:"9%"},{x:"50%",y:"-1%"},{x:"79%",y:"9%"},{x:"80%",y:"88%"},{x:"50%",y:"103%"},{x:"20%",y:"88%"}];
@@ -117,7 +117,8 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   if(players.length<2||players.length>6){setStatus("Choose a table with 2–6 seated players.");return;}
   if(!Number.isInteger(maxCents)||maxCents<=0||!Number.isInteger(anteCents)||anteCents<=0||anteCents>1000000){setStatus(variant==="fyb"?"Choose a total FYB stake divisible into three whole-cent chips (e.g., $1.50 or $3.00).":"Choose valid ante and pot amounts.");return;}
   if(variant!=="fyb"&&!takeAnte())return;
-  const draft=variant==="fyb"?{hands:[],deck:[],clown:[]}:localDeal(variant,players.length);
+  if(variant==="bozo"){setBozoLocked(true);setBozoLastResult(null);}
+  const draft=variant==="fyb"?{hands:[],deck:[],clown:[]}:localDeal(variant,players.length,variant==="bozo"?bozoHandSize:5);
   if(variant==="fyb"){
    const next=fybActive.filter(i=>i>=0);
    if(next.length<2){setStatus("FYB is over. Pass the dealer to select another game.");return;}
@@ -194,7 +195,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  function settleGuts(next){
   const entered=next.flatMap((v,i)=>v==="hold"?[i]:[]);
   const amount=pot;
-  if(!entered.length&&variant!=="442"){setOutcome({message:"All players folded. Pot carries forward."});setDecisions(next);setStep("result");return;}
+  if(!entered.length&&variant!=="442"){const message="Everyone dropped. Pot carries; the next fresh deal collects antes subject to the cap.";setOutcome({kind:"all-drop",gameFinished:false,message});if(variant==="bozo")setBozoLastResult({kind:"all-drop",penalties:[]});setDecisions(next);setStep("result");return;}
   if(variant==="442"){
    const result=settle442({hands,choices:next,potCents:pot,capCents:maxCents,anteCents,stacks});
    setDecisions(next);
@@ -208,12 +209,13 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   }
   const wild=clown[0]?.rank;
   const score=resolveBozoRound({choices:next.map(v=>v==="hold"?"hold":"drop"),hands,clown,wildRank:wild,potCents:amount});
+  setBozoLastResult(score);
   if(score.kind==="player-win")return settleGutsPay(score.winner,entered,next,amount);
   if(score.kind==="clown-win"){
    const each=pot>=maxCents?0:fundedReplacement({losers:entered,stacks,potCents:amount,capCents:maxCents-pot}).perLoser;
    const paid=stacks.map((v,i)=>v-(entered.includes(i)?each:0));
    setStacks(paid);setPot(pot+each*entered.length);
-   setOutcome({message:each===0?"Pot is capped or no chips remain. No further matching is charged; keep dealing until a player beats the Clown.":"The Clown wins! Each holding player matches "+displayMoney(each)+". The ghost never contributes chips."});
+   setOutcome({kind:"clown-win",gameFinished:false,match:each,losers:entered,message:each===0?"Pot is capped or no chips remain. No further matching; deal until a player beats the Clown.":"The Clown wins! Each holder matches "+displayMoney(each)+". The pot carries forward."});
   }else setOutcome({message:score.message});
   setDecisions(next);setStep("result");
  }
@@ -222,7 +224,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   const match=pot>=maxCents?0:fundedReplacement({losers,stacks,potCents:amount,capCents:maxCents}).perLoser;
   const nextStacks=stacks.map((v,i)=>v+(i===winner?amount:losers.includes(i)?-match:0));
   const newPot=match*losers.length;setStacks(nextStacks);setPot(newPot);
-  setOutcome({winner,amount,match,losers,gameFinished:newPot===0,message:players[winner].name+" drags "+displayMoney(amount)+". "+(pot>=maxCents?"Pot cap reached; no further matching. New dealer chooses a game.":losers.length+" losing holder(s) replenish "+displayMoney(match)+" each.")});
+  setOutcome({kind:"player-win",winner,amount,match,losers,gameFinished:newPot===0,message:players[winner].name+" beats the Clown and drags "+displayMoney(amount)+". "+(pot>=maxCents?"Pot clear; next dealer chooses a game.":losers.length+" losing holder(s) replace "+displayMoney(match)+" each.")});
   setDecisions(next);setStep("result");
  }
  function finish442Exchange(seat,indexes){
@@ -284,6 +286,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   },2000);
   return()=>clearTimeout(timer);
  },[variant,step,activeIndex,decisions,hands,clown,players]);
+ useEffect(()=>{if(variant!=="bozo"||step!=="bozo-next")return;const id=setTimeout(()=>deal(),520);return()=>clearTimeout(id);},[variant,step,bozoHandSize]);
  useEffect(()=>{if(variant!=="442"||step!=="442-next")return;const id=setTimeout(()=>deal(),650);return()=>clearTimeout(id);},[variant,step,dealer]);
  useEffect(()=>{if(variant!=="fyb"||step!=="fyb-next")return;
   const id=setTimeout(()=>deal(),650);
@@ -294,7 +297,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   return()=>clearTimeout(timer);
  },[fybDeckFlash,fybDeckNumber]);
  const reviewable=step==="result"||step==="stud-result";
- const centered=step==="442-next"?"Next 4/4 hand · Shuffling":step==="442-draw"&&activeIndex>=0?currentPlayer?.name+" · Exchange up to 3":step==="fyb-next"?"Next FYB hand · Shuffling":step==="deciding"&&activeIndex>=0?"Your turn: "+currentPlayer?.name:step==="fyb"&&activeIndex>=0?currentPlayer?.name+"'s turn":step==="stud"?"Stud street "+(street+1):reviewable?"Hand finished":game.tag;
+ const centered=step==="bozo-next"?"Next Bozo hand · Fresh deck":step==="442-next"?"Next 4/4 hand · Shuffling":step==="442-draw"&&activeIndex>=0?currentPlayer?.name+" · Exchange up to 3":step==="fyb-next"?"Next FYB hand · Shuffling":step==="deciding"&&activeIndex>=0?"Your turn: "+currentPlayer?.name:step==="fyb"&&activeIndex>=0?currentPlayer?.name+"'s turn":step==="stud"?"Stud street "+(street+1):reviewable?"Hand finished":game.tag;
  return <main className={"sw-poker-screen"+(variant==="fyb"&&step==="fyb"?" sw-fyb-play-mode":"")}><div className="sw-poker-content">
   <header className="sw-poker-top"><button type="button" className="sw-poker-back" onClick={()=>{store();nav(nextGameUrl);}}><ArrowLeft size={20}/></button><div className="sw-poker-symbol">S</div><div className="sw-poker-heading"><strong>SYNCWORKS POKER</strong><small>♠ Card Night · {game.title}</small></div><button type="button" className="sw-poker-icon-btn" onClick={()=>{setTab("rules");setDrawer(true)}} aria-label="Game information"><Info size={20}/></button></header>
   <PokerSessionBar players={players} stacks={stacks} groupId={groupId} roomId={roomId} gameNumber={gameNumber} onEnd={endLocalSession}/>
