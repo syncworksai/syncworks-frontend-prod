@@ -1,6 +1,7 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {Plus,CheckCircle,AlertTriangle,Copy,Users,Save,Trash2} from "lucide-react";
 import {sessionKey,money,parseMoney,createSession,sessionTotals,suggestedHistory,clubSummary,normalizeAlias} from "../../games/cardClubSessions.mjs";
+import {virtualStatsKey,practiceLifetime} from "../../games/pokerClubPracticeLedger.mjs";
 
 const draftRow=(player="",buyin="20")=>({player,buyin,rebuy:"0",payout:"0"});
 const emptyDraft=()=>({date:new Date().toISOString().slice(0,10),table:"Table 1",notes:"",opening:"0",closing:"0",rows:[draftRow(),draftRow(),draftRow(),draftRow()]});
@@ -13,6 +14,7 @@ export default function ClubSessionsPanel({groupId,playerNames=[]}){
  useEffect(()=>{if(!groupId)return;try{const raw=JSON.parse(localStorage.getItem(sessionKey(groupId))||"null");setData(raw&&Array.isArray(raw.sessions)?{...initialData(),...raw}:initialData());}catch{setData(initialData());}setDraft(emptyDraft());setNotice("");setError("");},[groupId]);
  function updateData(next){setData(next);try{localStorage.setItem(sessionKey(groupId),JSON.stringify(next));}catch{setError("Browser storage unavailable: changes may not survive a reload.");}}
  const totals=useMemo(()=>clubSummary(data.sessions,data.aliases),[data]);
+ const virtualStats=useMemo(()=>{try{return practiceLifetime(JSON.parse(localStorage.getItem(virtualStatsKey(groupId))||"[]"));}catch{return [];}},[groupId,data]);
  const mismatches=data.sessions.filter(s=>s.rows.length&&(!sessionTotals(s).balanced));
  const importHistory=()=>{
   const existing=new Set(data.sessions.map(s=>s.date+"|"+s.source+"|"+s.table));
@@ -92,6 +94,7 @@ export default function ClubSessionsPanel({groupId,playerNames=[]}){
    <form className="mt-3 grid grid-cols-[1fr_1fr_auto] gap-2" onSubmit={addAlias}><input className={classes} placeholder="Text name" value={aliasName} onChange={e=>setAliasName(e.target.value)}/><input className={classes} list="card-club-player-names" placeholder="Club member" value={aliasTarget} onChange={e=>setAliasTarget(e.target.value)}/><button className="rounded-lg border border-white/25 px-3 text-xs">Link</button></form>
    <p className="mt-3 text-xs text-slate-400">{Object.entries(data.aliases).map(([a,b])=>a+" → "+b).join(" · ")||"No aliases"}</p>
   </section>
+  <section className="rounded-2xl border border-violet-400/20 bg-violet-500/[.04] p-4"><h3 className="font-black">Virtual Poker Night Results</h3><p className="mt-1 text-xs text-slate-400">End a practice session to save its virtual-chip buy-ins, rebuys and cash-outs here. These stats are separate from manually entered historical dollar records, and stay on this device.</p>{virtualStats.map(p=><div key={p.name} className="flex justify-between gap-2 border-b border-white/10 py-2 text-xs"><div><strong>{p.name}</strong><p className="text-slate-400">{p.nights} sessions · In {money(p.spent)} · Out {money(p.received)}</p></div><strong className={p.net>=0?"text-emerald-300":"text-rose-300"}>{p.net>=0?"+":""}{money(p.net)}</strong></div>)}{!virtualStats.length&&<p className="mt-2 text-xs text-slate-400">No completed virtual sessions recorded yet.</p>}</section>
   <section className="rounded-2xl border border-emerald-400/20 bg-emerald-500/[.04] p-4"><h3 className="font-black">Lifetime session summary</h3><p className="mt-1 text-xs text-slate-400">Across all entered tables, including provisional history. Positive net means received more than contributed. Do not use provisional entries to claim a debt.</p>
    <div className="mt-3 space-y-2">{totals.map(x=><div key={x.player} className="flex items-center justify-between gap-3 border-b border-white/10 py-2 text-xs"><div><b>{x.player}</b><p className="text-slate-400">{x.nights} nights · in {money(x.spent)} · out {money(x.received)}</p></div><b className={x.net>=0?"text-emerald-300":"text-rose-300"}>{x.net>=0?"+":""}{money(x.net)}</b></div>)}{!totals.length&&<p className="text-xs text-slate-400">No entries yet.</p>}</div>
   </section>
