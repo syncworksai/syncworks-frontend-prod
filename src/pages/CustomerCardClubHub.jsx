@@ -1,7 +1,7 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {ArrowLeft,ArrowRight,Check,Copy,Plus,RefreshCcw,Trophy,Users,WalletCards} from "lucide-react";
 import {useNavigate,useSearchParams} from "react-router-dom";
-import {createGroup,createGroupInviteLink,getGroupMembers,getGroups,getMemberships} from "../api/social";
+import {createGroup,createGroupInviteLink,getGroupMembers,getGroups,getMemberships,acceptMembership,declineMembership} from "../api/social";
 import ClubSessionsPanel from "../components/poker/ClubSessionsPanel";
 
 const GAMES=[["357","3-5-7 DROP"],["fyb","FYB"],["queen-follower","Queen & the Follower"],["442","4/4/Deuce"],["bozo","Bozo · The Clown"],["manual","Manual Poker"]];
@@ -26,6 +26,11 @@ export default function CustomerCardClubHub(){
  const [invite,setInvite]=useState("");
  const [inviteCode,setInviteCode]=useState("");
  const selectedGroup=groups.find(g=>String(g.id)===String(selected));
+ const groupMemberships=memberships.filter(m=>String(m.group?.id??m.group)===String(selected));
+ const pendingRequests=groupMemberships.filter(m=>["PENDING","REQUESTED","PENDING_APPROVAL"].includes(String(m.status||"").toUpperCase()));
+ const ownerRoles=["OWNER","DIRECTOR","MANAGER"];
+ const userIdFromMembership=m=>m.user?.id??m.user;
+ const currentUserIsManager=groupMemberships.some(m=>ownerRoles.includes(String(m.role||"").toUpperCase())&&String(m.status).toUpperCase()==="ACTIVE"&&(m.is_current_user===true||m.is_me===true));
  const candidate=groups.filter(g=>["CLUB","COMMUNITY","OTHER"].includes(String(g.kind||"").toUpperCase())||["FRIENDS","HOBBIES"].includes(String(g.category||"").toUpperCase()));
  const playerNames=useMemo(()=>{
    const known=members.map(memberName).filter(Boolean);
@@ -60,6 +65,15 @@ export default function CustomerCardClubHub(){
  useEffect(()=>{let ok=true;Promise.all([getGroups(),getMemberships()]).then(([gs,ms])=>{if(ok){setGroups(gs);setMemberships(ms);}}).catch(e=>{if(ok)setError(e.message||"Unable to load groups");}).finally(()=>{if(ok)setLoading(false);});return()=>{ok=false;};},[]);
  useEffect(()=>{if(!selected)return;setLocal(readLocal(selected));try{const arr=JSON.parse(localStorage.getItem(key(selected)+"-players")||"[]");setCustomPlayers(Array.isArray(arr)?arr:[]);}catch{setCustomPlayers([]);}
  let valid=true;getGroupMembers(selected).then(rows=>{if(valid)setMembers(rows);}).catch(e=>{if(valid){setMembers([]);setError(e.message||"Unable to load members");}});return()=>{valid=false;};},[selected]);
+ async function refreshClubMembers(){
+  const [rows,ms]=await Promise.all([getGroupMembers(selected),getMemberships()]);setMembers(rows);setMemberships(ms);
+ }
+ async function decideRequest(id,approve){
+  if(busy)return;setBusy(true);setError("");setNotice("");
+  try{await (approve?acceptMembership(id):declineMembership(id));await refreshClubMembers();setNotice(approve?"Member approved. The player can now reopen their invitation and enter the club.":"Membership request declined.");}
+  catch(e){setError(e.response?.data?.detail||e.message||"Could not process membership request.");}
+  finally{setBusy(false);}
+ }
  function persistLocal(mutator){
    setLocal(old=>{const updated=mutator(old);try{localStorage.setItem(key(selected),JSON.stringify(updated));}catch{setError("Browser storage is unavailable; ledger preview may not persist.");}return updated;});
  }
@@ -104,6 +118,11 @@ export default function CustomerCardClubHub(){
    <section className="rounded-2xl border border-white/10 bg-white/[.03] p-4"><h2 className="mb-3 flex items-center gap-2 text-lg font-black"><Users size={20}/> Choose existing group</h2><input placeholder="Filter your groups" value={searchName} onChange={e=>setSearchName(e.target.value)} className={`mb-3 w-full ${appearance}`}/>{loading?<p className="text-xs text-slate-400">Loading your groups…</p>:<div className="max-h-72 space-y-2 overflow-y-auto">{candidate.filter(g=>g.name.toLowerCase().includes(searchName.toLowerCase())).map(g=><button type="button" key={g.id} onClick={()=>chooseGroup(g.id)} className="flex min-h-12 w-full items-center justify-between rounded-xl border border-white/10 p-3 text-left text-sm font-semibold">{g.name}<ArrowRight size={16}/></button>)}{candidate.length===0&&<p className="text-xs text-slate-400">No groups yet. Create one to begin.</p>}</div>}</section>
   </div></>:<>
    <section className="mb-4 rounded-2xl border border-violet-400/20 bg-violet-500/[.06] p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="text-[10px] font-bold uppercase tracking-widest text-violet-200">Card club · linked Social Group</div><h2 className="mt-1 text-2xl font-black">{selectedGroup.name}</h2><p className="mt-1 text-xs text-slate-400">{members.length} loaded members · {customPlayers.length} local placeholders</p></div><button type="button" onClick={()=>{setSelected("");setParams({});setNotice("");setError("");}} className="min-h-10 rounded-xl border border-white/20 px-3 text-xs">Switch group</button></div><div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={()=>nav(`/connect/groups/${selectedGroup.id}`)} className="rounded-xl border border-violet-400/30 px-3 py-2 text-xs font-bold">Open Social Group</button><button type="button" disabled={busy} onClick={makeInvite} className="rounded-xl border border-violet-400/30 px-3 py-2 text-xs font-bold">Generate member invite</button>{invite&&<button type="button" onClick={()=>navigator.clipboard?.writeText(invite)} className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/30 px-3 py-2 text-xs"><Copy size={14}/> Copy invite</button>}</div>{invite&&<div className="mt-3 space-y-2 rounded-xl border border-violet-400/20 p-3"><div className="text-xs text-violet-200">League invite code: <b>{inviteCode}</b></div><p className="break-all text-xs text-slate-300">{invite}</p><p className="text-[11px] text-slate-400">New players create a free profile; existing players sign in. Membership requests can require club approval.</p></div>}</section>
+   <section className="mb-4 rounded-2xl border border-cyan-400/25 bg-cyan-500/[.06] p-4" aria-label="Club membership requests">
+    <div className="flex items-center justify-between gap-2"><h3 className="text-sm font-black">Member requests {pendingRequests.length>0?"("+pendingRequests.length+")":""}</h3><button type="button" disabled={busy} onClick={()=>refreshClubMembers().catch(e=>setError(e.message||"Unable to refresh requests"))} className="flex min-h-10 items-center gap-2 rounded-lg border border-cyan-400/30 px-3 text-xs"><RefreshCcw size={14}/> Refresh</button></div>
+    <p className="mt-1 text-xs text-slate-400">Requests from the shared Card Club link appear here for authorized club managers. Approved members join the existing club, not a new one.</p>
+    {pendingRequests.length===0?<p className="mt-3 text-xs text-slate-300">No pending requests visible for this group.</p>:<div className="mt-3 space-y-2">{pendingRequests.map(m=><div key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/15 p-3"><div><b className="text-sm">{memberName(m)}</b><p className="text-[11px] text-slate-400">Requested membership · {String(m.status)}</p></div><div className="flex gap-2"><button type="button" disabled={busy} onClick={()=>decideRequest(m.id,true)} className="min-h-10 rounded-lg bg-emerald-300 px-3 text-xs font-black text-slate-950">Approve</button><button type="button" disabled={busy} onClick={()=>decideRequest(m.id,false)} className="min-h-10 rounded-lg border border-rose-300/30 px-3 text-xs text-rose-200">Decline</button></div></div>)}</div>}
+   </section>
    <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-4">{[["App games / manual hands",`${totalGames} / ${manualHands}`],["Recorded money in",fmt(overallIn)],["Recorded winnings",fmt(overallOut)],["Unsettled credits",fmt(outstanding)]].map(([title,value])=><div key={title} className="rounded-xl border border-white/10 bg-white/[.04] p-3"><div className="text-[10px] text-slate-400">{title}</div><div className="mt-1 text-lg font-black">{value}</div></div>)}</div>
    <section className="mb-4 grid gap-3 rounded-2xl border border-cyan-400/25 bg-gradient-to-r from-cyan-500/10 to-emerald-500/[.06] p-4 sm:grid-cols-[1fr_auto] sm:items-center"><div><div className="text-[10px] font-black uppercase tracking-widest text-cyan-300">League Poker Lobby</div><h3 className="mt-1 text-xl font-black">Your group, your table</h3><p className="mt-2 text-xs leading-5 text-slate-300">View the purse and standings here. Then enter a waiting room, assign seats and spin for the dealer. Online multiplayer seating is still in development.</p></div><button type="button" onClick={()=>nav(`/customer/games/new?group=${selected}`)} className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-5 text-sm font-black text-slate-950"><Users size={17}/> New Game · Create Room <ArrowRight size={16}/></button></section>
    <button type="button" onClick={()=>nav(`/customer/games/manual?group=${selected}`)} className="mb-4 flex min-h-14 w-full items-center justify-between rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 text-sm font-black text-emerald-200"><span>♠ Manual Poker · physical cards, digital chip tally</span><ArrowRight size={17}/></button>
