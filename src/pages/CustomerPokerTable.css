@@ -216,3 +216,17 @@
 .sw-poker-session-setup{display:flex;align-items:end;flex-wrap:wrap;gap:8px;background:#092338;border:1px solid #2f7390;border-radius:14px;padding:10px;margin:10px 0}.sw-poker-session-setup label{display:flex;flex-direction:column;gap:5px;flex:1;min-width:114px;font-size:11px;color:#c8e7f6;font-weight:800}.sw-poker-session-setup input,.sw-poker-session-setup select,.sw-poker-settings input,.sw-poker-settings select{width:100%;min-height:42px;background:#051428;border:1px solid #50829a;border-radius:9px;color:#fff;padding:8px}
 .sw-poker-session-setup button{min-height:42px;font-size:12px}.sw-poker-settings label{display:flex;flex-direction:column;gap:7px;margin:12px 0;color:#d3e5f2;font-size:12px}.sw-poker-settings p{font-size:12px;color:#a9c1d1;line-height:1.6}
 @media(max-width:390px){.sw-poker-action-top{flex-wrap:wrap}.sw-poker-quick-management{gap:5px}.sw-poker-quick-management button{font-size:10px}.sw-poker-session-status{font-size:10px}}
+
+/* FYB: three life chips, visible passes and eliminated seat styling. */
+.sw-fyb-strikes{display:flex;align-items:center;justify-content:center;gap:6px;margin:6px 0 1px;font-size:17px;line-height:1}
+.sw-fyb-strikes .live{color:#4dffd2;text-shadow:0 0 9px #14f6bb8c}
+.sw-fyb-strikes .spent{color:#475469;text-shadow:none}
+.sw-fyb-out{opacity:.51;filter:grayscale(.65)}
+.sw-fyb-out .sw-poker-seat-nameplate{border-color:#aa5472}
+.sw-fyb-out .sw-poker-seat-nameplate:after{content:"ELIMINATED";display:block;margin-top:4px;color:#ff9bb0;font-size:9px;letter-spacing:.08em;font-weight:900}
+.sw-fyb-turn-description{padding:10px 11px;background:#071d2e;border:1px solid #297490;border-radius:11px;color:#caeeff;font-size:12px;line-height:1.5;margin:8px 0}
+.sw-fyb-exchange{padding:11px;border:1px solid #5e9bce;border-radius:12px;background:linear-gradient(100deg,#12254a,#092638);color:#d1ebff;font-size:12px;line-height:1.5;margin:10px 0}
+.sw-fyb-card-backs{display:inline-flex;align-items:center;gap:7px;font-size:20px;color:#a6f1ff;padding-right:8px;vertical-align:middle}
+.sw-fyb-card-backs>span{animation:swFybSwapPulse .5s ease-in-out 1;color:#4be4c8}
+@keyframes swFybSwapPulse{0%{opacity:.2;transform:translateX(-5px)}55%{opacity:1;transform:translateX(4px)}100%{opacity:1;transform:translateX(0)}}
+@media(max-width:430px){.sw-fyb-strikes{font-size:13px;gap:3px}.sw-fyb-exchange{font-size:11px}.sw-fyb-card-backs{font-size:16px}}
