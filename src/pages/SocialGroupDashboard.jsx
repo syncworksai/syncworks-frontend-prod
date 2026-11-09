@@ -35,6 +35,8 @@ import {
   getGroupPaymentSettings,
   getGroups,
   getMemberships,
+  acceptMembership,
+  declineMembership,
   getSocialPaymentProfile,
   setGroupPlayerPassword,
   unfollowGroup,
@@ -160,7 +162,14 @@ export default function SocialGroupDashboard() {
   useEffect(() => { refresh(); }, [groupId]);
 
   const myMembership = memberships.find((row) => Number(row.group) === Number(groupId) && Number(row.user) === userId && row.status === "ACTIVE");
-  const managed = ["OWNER","DIRECTOR","MANAGER"].includes(myMembership?.role);
+  const managed = ["OWNER","DIRECTOR","MANAGER"].includes(myMembership?.role)||Number(group?.created_by?.id??group?.created_by)===userId&&userId>0;
+  const pendingMembers=memberships.filter(m=>Number(m.group?.id??m.group)===Number(groupId)&&["PENDING","REQUESTED","PENDING_APPROVAL"].includes(String(m.status||"").toUpperCase()));
+  async function reviewMembership(id,approve){
+    if(!managed||busy)return;
+    setBusy(true);setError("");setNotice("");
+    try{await (approve?acceptMembership(id):declineMembership(id));await refresh();setNotice(approve?"Member approved. They can now join the club.":"Membership request declined.");}
+    catch(e){setError(errorText(e));}finally{setBusy(false);}
+  }
   const isTeam = ["TEAM","CLUB"].includes(String(group?.kind || "").toUpperCase());
 
   const groupEvents = useMemo(() => {
@@ -400,6 +409,7 @@ export default function SocialGroupDashboard() {
 
       {tab==="Events" ? <Card title="Group events" body="Shared events automatically connect RSVP and SyncWorks Calendar."><div className="space-y-2">{groupEvents.map((row)=>{const flyer=row.flyer_image_url||row.flyer_url;return <button key={row.id} type="button" onClick={()=>navigate("/connect/events/"+row.id)} className="grid w-full grid-cols-[4.5rem_1fr_auto] items-center gap-3 rounded-xl border border-white/10 bg-white/[.025] p-2 text-left">{flyer?<img src={flyer} alt="" className="h-16 w-[4.5rem] rounded-lg object-cover"/>:<div className="grid h-16 w-[4.5rem] place-items-center rounded-lg bg-cyan-300/[.05]"><CalendarDays className="h-5 w-5 text-cyan-300"/></div>}<span className="min-w-0"><b className="block truncate text-xs text-white">{row.title}</b><span className="mt-1 block text-[9px] text-slate-500">{new Date(row.start_at).toLocaleString()}</span><span className="block text-[9px] text-slate-600">{row.venue_name||"Location TBD"}</span></span><ChevronRight className="h-4 w-4 text-slate-600"/></button>})}{!groupEvents.length?<div className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-slate-500">No group events yet.</div>:null}</div></Card> : null}
 
+      {tab==="Members"&&managed ? <Card title={"Join requests ("+pendingMembers.length+")"} body="Approve people who requested access using your club invite link."><div className="mb-3 flex justify-end"><Btn onClick={refresh} disabled={busy}>Refresh requests</Btn></div>{pendingMembers.length?pendingMembers.map(m=><div key={m.id} className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 p-3"><div><b className="text-xs">{m.user?.display_name||m.user?.email||m.user?.username||"Requested member "+m.id}</b><p className="text-[10px] text-slate-400">{m.status}</p></div><div className="flex gap-2"><Btn disabled={busy} primary onClick={()=>reviewMembership(m.id,true)}>Approve</Btn><Btn disabled={busy} onClick={()=>reviewMembership(m.id,false)}>Decline</Btn></div></div>):<p className="text-xs text-slate-400">No pending requests visible.</p>}</Card> : null}
       {tab==="Members" ? <Card title="Members" body="Active member directory. Email addresses stay private."><div className="mb-3 grid grid-cols-3 gap-2"><Metric label="Total" value={members.length}/><Metric label="Leaders" value={members.filter((row)=>["OWNER","DIRECTOR","MANAGER"].includes(row.role)).length} tone="violet"/><Metric label="Members" value={members.filter((row)=>row.role==="MEMBER").length} tone="green"/></div><div className="grid gap-2 sm:grid-cols-2">{members.map((row)=>{const initials=String(row.user?.display_name||"M").split(/\s+/).slice(0,2).map((part)=>part[0]).join("").toUpperCase();return <div key={row.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[.025] p-3"><div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-cyan-300/15 bg-cyan-300/10 text-xs font-black text-cyan-100">{initials}</div><div className="min-w-0 flex-1"><b className="block truncate text-xs text-white">{row.user?.display_name||"SyncWorks member"}</b><span className="text-[8px] font-black uppercase tracking-wide text-slate-500">{row.role}</span></div>{["OWNER","DIRECTOR","MANAGER"].includes(row.role)?<ShieldCheck className="h-4 w-4 text-violet-300"/>:null}</div>})}</div></Card> : null}
 
       {tab==="Chat" ? <TeamChatPanel groupId={Number(groupId)} userId={userId} canManage={managed} title="Group chat" noun="group"/> : null}
