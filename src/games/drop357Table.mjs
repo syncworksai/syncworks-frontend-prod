@@ -22,9 +22,9 @@ export function dealt357(deck,playerCount,activeSeats=Array.from({length:playerC
   for(let pass=0;pass<3;pass++)for(const player of activeSeats)hands[player].push(deck[next++]);
   return {hands,deck:deck.slice(next)};
 }
-export function addRoundCards(hands,deck) {
+export function addRoundCards(hands,deck,activeSeats=null) {
   const result=hands.map(hand=>[...hand]);
-  const active=result.flatMap((h,i)=>h.length?[i]:[]);
+  const active=activeSeats??result.flatMap((h,i)=>h.length?[i]:[]);
   if(deck.length<active.length*2)throw Error("Not enough cards left in this deck.");
   let index=0;
   for(let pass=0;pass<2;pass++)for(const i of active)result[i].push(deck[index++]);
