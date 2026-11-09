@@ -392,3 +392,19 @@
 .sw-357-end-flip{animation:sw-357-final-flip .55s ease both;animation-delay:var(--flip-delay,0ms)}
 @keyframes sw-357-final-flip{0%{transform:rotateY(0deg)}100%{transform:rotateY(180deg)}}
 @media(prefers-reduced-motion:reduce){.sw-fyb-showdown-card{animation:none;transform:translateX(-50%) rotateY(180deg)}.sw-fyb-chip-flight{animation:none;opacity:0}.sw-357-end-flip{animation:none;transform:rotateY(180deg)}}
+
+/* 4/4 Deuce: tappable four-card draw and final table showdown. */
+.sw-442-select-cards{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin:12px auto!important}
+.sw-442-pick{padding:4px;background:transparent;border:3px solid transparent;border-radius:13px;cursor:pointer;transition:transform .2s,border-color .2s}
+.sw-442-pick.selected{border-color:#ffd260;background:#70511766;transform:translateY(-9px);box-shadow:0 0 17px #ffca5466}
+.sw-442-pick:disabled{opacity:.7;cursor:default}
+.sw-442-pick .sw-poker-card{pointer-events:none}
+.sw-442-showdown{position:absolute;top:100%;left:50%;z-index:19;display:flex;gap:1px;transform:translateX(-50%);pointer-events:none;filter:drop-shadow(0 4px 6px #000b)}
+.sw-442-flip-card{width:25px;height:38px;display:grid;place-items:center;background:#eff6ff;color:#112139;border:1px solid #8ceaff;border-radius:4px;font-size:11px;font-weight:1000;white-space:nowrap;animation:sw-442-cardflip .64s ease both;animation-delay:var(--card-delay)}
+.sw-442-showdown.winner .sw-442-flip-card{border-color:#ffd25f;background:#fff5cb}
+.sw-442-showdown.loser .sw-442-flip-card{border-color:#fa8994}
+.sw-442-showdown small{position:absolute;top:100%;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:9px;padding:2px 5px;border-radius:8px;border:1px solid #f2c966;color:#ffde93;background:#322619;font-weight:1000}
+.sw-poker-seat.s3 .sw-442-showdown,.sw-poker-seat.s4 .sw-442-showdown,.sw-poker-seat.s5 .sw-442-showdown{top:auto;bottom:105%}
+@keyframes sw-442-cardflip{0%{opacity:0;transform:rotateY(90deg) scale(.75)}100%{opacity:1;transform:rotateY(0) scale(1)}}
+@media(max-width:430px){.sw-442-flip-card{width:19px;height:30px;font-size:9px}.sw-442-showdown small{font-size:8px}.sw-442-select-cards{gap:3px}.sw-442-pick{padding:2px}}
+@media(prefers-reduced-motion:reduce){.sw-442-flip-card{animation:none}}
