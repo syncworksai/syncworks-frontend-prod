@@ -112,3 +112,9 @@ export function fybBotWantsPass({card,previousCard=null,random=Math.random}){
  if(Number.isInteger(previousRank)&&rank>previousRank)probability=Math.min(probability,.22);
  return random()<probability;
 }
+
+// Keep an opponent's hand private while its automated turn is underway.
+// The local pass-and-play screen only offers a reveal to the active human seat.
+export function canRevealActiveCard({viewerSeat,activeSeat,actingPlayer}){
+ return Number.isInteger(activeSeat)&&activeSeat>=0&&viewerSeat===activeSeat&&actingPlayer?.kind!=="computer"&&!!actingPlayer;
+}
