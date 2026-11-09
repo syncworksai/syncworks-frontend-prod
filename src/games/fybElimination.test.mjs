@@ -47,3 +47,18 @@ test("blocked King stays revealed as source to the caller, not swapped",()=>{
  assert.equal(move.hands[1][0].rank,13);
  assert.match(move.event,/King blocked/);
 });
+
+test("dealer is last and may keep or draw after right-hand player acts",()=>{
+ const active=[0,1,2,3];
+ const order=fybOrder(active,2);
+ assert.deepEqual(order,[3,0,1,2]);
+ const hands=[hand(4),hand(9),hand(6),hand(8)];
+ const passToDealer=fybSwap({hands,deck:[{rank:11,suit:"♥"}],actor:1,next:2,pass:true,playerName:"Right",nextName:"Dealer"});
+ assert.equal(passToDealer.kind,"swap");
+ assert.equal(passToDealer.hands[2][0].rank,9);
+ assert.equal(passToDealer.hands[1][0].rank,6);
+ const keep=fybSwap({hands:passToDealer.hands,deck:passToDealer.deck,actor:2,next:null,pass:false,playerName:"Dealer"});
+ assert.equal(keep.kind,"keep");assert.equal(keep.hands[2][0].rank,9);
+ const draw=fybSwap({hands:passToDealer.hands,deck:passToDealer.deck,actor:2,next:null,pass:true,playerName:"Dealer"});
+ assert.equal(draw.kind,"draw");assert.equal(draw.hands[2][0].rank,11);
+});

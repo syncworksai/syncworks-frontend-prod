@@ -250,3 +250,20 @@
 .sw-fyb-king-front{transform:rotateY(180deg);background:#fff;color:#af1837;border-color:#ffcd4c}
 @keyframes sw-fyb-king-reveal{0%{transform:rotateY(0) scale(.8)}65%{transform:rotateY(190deg) scale(1.22)}100%{transform:rotateY(180deg) scale(1.05)}}
 @media(prefers-reduced-motion:reduce){.sw-fyb-flying-card,.sw-fyb-king-inner{animation-duration:.01ms!important}}
+
+/* FYB mobile polish: dealer choices are a one-time compact grid, never a narrow vertical label. */
+.sw-fyb-setup-panel{max-width:720px;margin:14px auto 12px;padding:18px!important}
+.sw-fyb-setup-panel>strong{display:block;font-size:17px}
+.sw-fyb-setup-panel>p{font-size:12px;line-height:1.6;color:#b6d1e6;margin:10px 0}
+.sw-fyb-setup-fields{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:12px 0}
+.sw-fyb-setup-fields label{display:flex;flex-direction:column;flex:1 1 180px;min-width:165px;color:#baf5ff;font-size:12px;font-weight:800;gap:7px}
+.sw-fyb-setup-fields input{width:100%;min-width:0;min-height:48px;background:#051227;color:#fff;border:1px solid #45738d;border-radius:12px;padding:11px 13px;font-size:16px}
+.sw-fyb-setup-fields .sw-fyb-stake-presets{flex:1 1 100%;min-width:0;padding:0}
+.sw-fyb-setup-summary{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;background:#082a37;border:1px solid #356b83;border-radius:10px;padding:10px 12px;font-size:12px;color:#a8dbeb}
+.sw-fyb-setup-summary strong{color:#a4f4cf}
+.sw-fyb-setup-panel .sw-poker-button.primary{min-height:48px}
+.sw-poker-screen .sw-fyb-turn-description{font-size:13px;padding:12px}
+.sw-fyb-table-animation .sw-fyb-flying-card{animation-duration:1.45s}
+.sw-fyb-table-animation .sw-fyb-king-inner{animation-duration:1.3s}
+.sw-fyb-action-label{min-width:64px;text-align:center}
+@media(max-width:430px){.sw-fyb-setup-panel{padding:14px!important}.sw-fyb-setup-fields{gap:9px}.sw-fyb-setup-fields label{min-width:100%;flex-basis:100%}.sw-fyb-stake-presets button{flex:1;min-width:0;padding:8px 7px;font-size:11px}.sw-fyb-setup-panel>p{font-size:12px}}
