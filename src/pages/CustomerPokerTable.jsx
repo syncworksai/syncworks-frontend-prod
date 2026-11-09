@@ -10,6 +10,7 @@ import "./CustomerPokerTable.css";
 import {HAND_RANKINGS_357,practiceHandInfo,estimatePracticeEquity} from "../games/practiceOdds357.mjs";
 import {rotationAfterPot,chooseVirtualDealer} from "../games/pokerDealerRotation.mjs";
 import {capGutsResult,limitAnte,rebuyChips,centsFromDollars,pickPracticeBotChoice} from "../games/pokerPracticeSession.mjs";
+import {readCardNight,saveCardNight,clearCardNight} from "../games/cardNightTransfer.mjs";
 
 const DEFAULT_PLAYERS=[{id:"local-you",name:"You",kind:"local"},{id:"local-zack",name:"Zack",kind:"guest"},{id:"local-russ",name:"Russ",kind:"guest"}];
 const TABLE_GAMES=[
@@ -140,11 +141,13 @@ export default function CustomerPokerTable(){
   if(dealerChoosing||nextCode==="357")return;
   const next=TABLE_GAMES.find(g=>g.code===nextCode);
   if(!next)return;
-  // Other engines have their own local prototype routes, not this 3-5-7 evaluator.
+  saveCardNight({groupId,roomId,people,stacks:chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??2000),pot,dealer,gameNumber:sessionGames,capCents});
+  // All other game choices open the same branded table shell.
   const qs=new URLSearchParams();
   if(groupId)qs.set("group",groupId);
   if(roomId)qs.set("room",roomId);
-  nav(next.path+(qs.toString()?"?"+qs.toString():""));
+  qs.set("game",nextCode);
+  nav("/customer/games/variant?"+qs.toString());
  }
  function finishGameAndPassDealer(){
   const rotation=rotationAfterPot({potCents:pot,dealer,playerCount:tableSize});
@@ -170,6 +173,7 @@ export default function CustomerPokerTable(){
  function restartPracticeSession(){
   // Explicit practice reset; reset the full ledger and current game together.
   const restored=people.map(p=>Number.isFinite(p.chips)?p.chips:roomMinimum??2000);
+  clearCardNight();
   setChipStacks(restored);setPot(0);setStrikes({});setDealer(0);setSessionGames(1);
   setSession("setup");setPhase("setup");setRound(0);setHands([]);setDeck([]);
   setChoices([]);setOutcome(null);setReveal({});setRevealStep(0);setChipAnimation(null);
@@ -190,10 +194,11 @@ export default function CustomerPokerTable(){
   // Other games have independent local prototypes; never imply chip ledger transfer.
   const next=TABLE_GAMES.find(g=>g.code===selectedGame);
   if(!next)return;
-  const q=new URLSearchParams({practice:"1",ante:String(ante),dealer:String(dealer),fromPoker:"1"});
+  saveCardNight({groupId,roomId,people,stacks:chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??2000),pot,dealer,gameNumber:sessionGames,capCents});
+  const q=new URLSearchParams({practice:"1",ante:String(ante),dealer:String(dealer),fromPoker:"1",game:selectedGame});
   if(groupId)q.set("group",groupId);
   if(roomId)q.set("room",roomId);
-  nav(next.path+"?"+q.toString());
+  nav("/customer/games/variant?"+q.toString());
  }
  function storeLocalSeats(updated){
   if(!groupId||roomId)return;
