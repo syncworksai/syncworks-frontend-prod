@@ -7,6 +7,7 @@ import {actCardRoom,createCardRoom,getCardRoom,listCardRooms} from "../api/cardR
 import "./CustomerPokerTable.css";
 import {rememberPokerRoom,clearPokerResume} from "../games/pokerResume.mjs";
 import CardClubTableSwitcher from "../components/poker/CardClubTableSwitcher";
+import {listPracticeGames} from "../games/cardPracticeResume.mjs";
 
 const GAMES=[["357","3-5-7 DROP"],["fyb","FYB"],["442","4/4/Deuce"],["bozo","Bozo · The Clown"],["queen-follower","Queen & the Follower"]];
 const dollars=c=>"$"+(Number(c||0)/100).toFixed(2);
@@ -41,6 +42,7 @@ function PokerTable({room,spinner,onJoin,onInvite,canJoin,canInvite,busy}) {
 export default function CustomerCardClubLiveLobby(){
  const nav=useNavigate(),[params,setParams]=useSearchParams(),groupId=params.get("group")||"";
  const {user}=useAuth();
+ const pausedPractice=listPracticeGames(user?.id,groupId);
  const [group,setGroup]=useState(null),[rooms,setRooms]=useState([]),[room,setRoom]=useState(null),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
  const [error,setError]=useState(""),[notice,setNotice]=useState(""),[serverUnavailable,setServerUnavailable]=useState(false);
  const [newName,setNewName]=useState("Saturday Poker"),[capacity,setCapacity]=useState(6),[buyIn,setBuyIn]=useState("20");
@@ -125,6 +127,7 @@ export default function CustomerCardClubLiveLobby(){
  return <main className="min-h-dvh bg-[#020817] px-3 pb-24 pt-[max(1rem,env(safe-area-inset-top))] text-white"><div className="mx-auto max-w-4xl">
  <header className="mb-4 flex items-center justify-between"><button onClick={()=>room?backToRooms():nav("/customer/games/clubs?group="+groupId)} className="flex min-h-11 items-center gap-2 rounded-xl border border-white/15 px-3 text-xs"><ArrowLeft size={16}/> {room?"Rooms":"League"}</button><div className="text-right"><div className="text-[10px] font-black uppercase tracking-widest text-cyan-300">SYNCWORKS CARD CLUB</div><h1 className="text-xl font-black">{group?.name||"Poker Lobby"}</h1></div></header>
  <div className="mb-3"><CardClubTableSwitcher groupId={groupId} currentRoomId={room?.id} userId={user?.id} navigate={nav}/></div>
+ {pausedPractice.length>0&&<div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3"><span className="text-xs font-bold text-emerald-200">Paused practice game available</span><button type="button" className="min-h-10 rounded-lg bg-emerald-300 px-3 text-xs font-black text-slate-950" onClick={()=>nav(pausedPractice[0].path)}>Continue game</button></div>}
  <p className="mb-3 rounded-xl border border-cyan-400/25 bg-cyan-500/10 p-3 text-[11px] leading-5 text-cyan-100"><b>Shared poker room:</b> Other approved club members can join these seats from their own phones. Hands and virtual pot gameplay currently run as an individual-device preview, not a shared hand.</p>
  {serverUnavailable&&<div className="mb-4 rounded-xl border border-amber-300/35 bg-amber-500/10 p-4 text-xs leading-5 text-amber-100"><b>Shared rooms not available on the server yet.</b> The new table screen is deployed as a preview while the Django room migration is verified. <button type="button" onClick={()=>nav("/customer/games/new?group="+groupId)} className="mt-3 block min-h-11 w-full rounded-xl bg-amber-300 px-3 font-black text-slate-950">Create a room in the new poker table</button></div>}
  {error&&<div role="alert" className="mb-3 rounded-xl border border-rose-400/30 p-3 text-xs text-rose-200">{error}</div>}
