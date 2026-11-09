@@ -70,3 +70,20 @@ test("everyone drops: each player antes, no cards are awarded",()=>{
  assert.deepEqual(result.delta,[-25,-25]);
  assert.equal(result.strikes[0],2);
 });
+
+test("folded players receive no fifth or seventh cards and no extra deck cards are used",()=>{
+ const deck=createShuffledDeck(()=>0.317);
+ const initial=dealt357(deck,6,[0,1,2,3]);
+ assert.equal(initial.hands[4].length,0);
+ assert.equal(initial.hands[5].length,0);
+ assert.equal(initial.deck.length,40);
+ const five=addRoundCards(initial.hands,initial.deck,[0,2]);
+ assert.equal(five.hands[0].length,5);assert.equal(five.hands[2].length,5);
+ assert.equal(five.hands[1].length,3);assert.equal(five.hands[3].length,3);
+ assert.equal(five.deck.length,36);
+ const seven=addRoundCards(five.hands,five.deck,[2]);
+ assert.equal(seven.hands[2].length,7);assert.equal(seven.hands[0].length,5);
+ assert.equal(seven.deck.length,34);
+ const all=initial.hands.flat().concat(initial.deck);
+ assert.equal(new Set(all.map(c=>c.rank+":"+c.suit)).size,52);
+});
