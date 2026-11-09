@@ -230,3 +230,23 @@
 .sw-fyb-card-backs>span{animation:swFybSwapPulse .5s ease-in-out 1;color:#4be4c8}
 @keyframes swFybSwapPulse{0%{opacity:.2;transform:translateX(-5px)}55%{opacity:1;transform:translateX(4px)}100%{opacity:1;transform:translateX(0)}}
 @media(max-width:430px){.sw-fyb-strikes{font-size:13px;gap:3px}.sw-fyb-exchange{font-size:11px}.sw-fyb-card-backs{font-size:16px}}
+
+/* FYB: dealer chooses total three-chip stake and cards visibly pass left. */
+.sw-fyb-stake-presets{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:5px 0;min-width:100%}
+.sw-fyb-stake-presets button{border:1px solid #366c89;border-radius:10px;background:#102b40;color:#d2f6ff;min-height:37px;padding:6px 11px;font-size:12px;font-weight:800}
+.sw-fyb-stake-presets button.selected{background:linear-gradient(110deg,#0c8199,#153a5c);border-color:#56e0e8;color:white}
+.sw-fyb-action-label{font-size:9px;font-weight:800;margin-top:3px;padding:3px 5px;background:#0d394c;color:#e2faff;border:1px solid #438daf}
+.sw-fyb-action-label.blocked{border-color:#ffbe55;background:#463519;color:#ffe2ac}
+.sw-fyb-action-label.keep{border-color:#26bf86;color:#affada}
+.sw-fyb-table-animation{position:absolute;inset:0;z-index:7;pointer-events:none;overflow:visible}
+.sw-fyb-flying-card{position:absolute;top:var(--fyb-y0);left:var(--fyb-x0);width:40px;height:56px;border:2px solid #8eeeff;border-radius:8px;background:linear-gradient(145deg,#0b4870,#061d3d);color:#b7f5ff;display:grid;place-items:center;font-size:27px;font-weight:900;box-shadow:0 5px 15px #000c;transform:translate(-50%,-50%);animation:sw-fyb-card-slide .85s ease-in-out 1 both}
+.sw-fyb-flying-card.return{animation-delay:.07s;background:linear-gradient(145deg,#234877,#101639)}
+.sw-fyb-flying-card.deck{background:linear-gradient(145deg,#4e2489,#10274a)}
+@keyframes sw-fyb-card-slide{0%{left:var(--fyb-x0);top:var(--fyb-y0);opacity:.95;transform:translate(-50%,-50%) scale(.88)}43%{opacity:1;transform:translate(-50%,-50%) scale(1.25) rotate(10deg)}82%{left:var(--fyb-x1);top:var(--fyb-y1);opacity:1;transform:translate(-50%,-50%) scale(1)}100%{left:var(--fyb-x1);top:var(--fyb-y1);opacity:0;transform:translate(-50%,-50%) scale(.75)}}
+.sw-fyb-king-flip{position:absolute;transform:translate(-50%,-50%);width:46px;height:65px;perspective:700px}
+.sw-fyb-king-inner{height:100%;width:100%;position:relative;transform-style:preserve-3d;animation:sw-fyb-king-reveal .7s ease-out 1 both}
+.sw-fyb-king-front,.sw-fyb-king-back{position:absolute;inset:0;display:grid;place-items:center;backface-visibility:hidden;border-radius:8px;border:2px solid #9bdeff;font-size:20px;font-weight:900;box-shadow:0 8px 15px #000a}
+.sw-fyb-king-back{background:#083850;color:#d0f7ff}
+.sw-fyb-king-front{transform:rotateY(180deg);background:#fff;color:#af1837;border-color:#ffcd4c}
+@keyframes sw-fyb-king-reveal{0%{transform:rotateY(0) scale(.8)}65%{transform:rotateY(190deg) scale(1.22)}100%{transform:rotateY(180deg) scale(1.05)}}
+@media(prefers-reduced-motion:reduce){.sw-fyb-flying-card,.sw-fyb-king-inner{animation-duration:.01ms!important}}
