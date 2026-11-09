@@ -337,3 +337,30 @@
  .sw-fyb-play-mode .sw-poker-seat-avatar{width:30px;height:30px}
  .sw-fyb-play-mode .sw-poker-seat-nameplate strong{font-size:9px}
 }
+
+/* 3-5-7 post-decision reveal: all seats flip together, no private cards before countdown. */
+.sw-357-seat-reveal{position:absolute;top:100%;left:50%;transform:translateX(-50%);display:flex;justify-content:center;gap:2px;z-index:12;pointer-events:none;white-space:nowrap;filter:drop-shadow(0 3px 5px #001b)}
+.sw-357-flip-card{width:clamp(17px,3vw,27px);height:clamp(27px,4.1vw,37px);position:relative;transform-style:preserve-3d;transition:transform .46s ease-in-out;transform:rotateY(0deg)}
+.sw-357-flip-card.flipped{transform:rotateY(180deg)}
+.sw-357-flip-back,.sw-357-flip-face{position:absolute;inset:0;display:grid;place-items:center;backface-visibility:hidden;border:1px solid #79e7ff;border-radius:4px;font-weight:900;font-size:clamp(9px,1.55vw,13px);box-shadow:0 2px 6px #0008}
+.sw-357-flip-back{background:repeating-linear-gradient(45deg,#172954 0 4px,#325a81 4px 8px);color:#8af4ff}
+.sw-357-flip-face{transform:rotateY(180deg);background:#f4f8ff;color:#11223c;border-color:#eaf7ff}
+.sw-357-flip-face.red{color:#ce2348}
+.sw-poker-seat.s3 .sw-357-seat-reveal,.sw-poker-seat.s4 .sw-357-seat-reveal,.sw-poker-seat.s5 .sw-357-seat-reveal{top:auto;bottom:100%}
+.sw-357-chip-to-pot{--sx:50%;--sy:50%;position:absolute;left:var(--sx);top:var(--sy);z-index:15;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:1px;transform:translate(-50%,-50%);animation:sw-357-chip-into-pot 1.5s ease-in forwards;animation-delay:var(--chip-delay,0ms);opacity:0}
+.sw-357-chip-to-pot.from-seat-0{--sx:21%;--sy:9%}
+.sw-357-chip-to-pot.from-seat-1{--sx:50%;--sy:-1%}
+.sw-357-chip-to-pot.from-seat-2{--sx:79%;--sy:9%}
+.sw-357-chip-to-pot.from-seat-3{--sx:80%;--sy:88%}
+.sw-357-chip-to-pot.from-seat-4{--sx:50%;--sy:103%}
+.sw-357-chip-to-pot.from-seat-5{--sx:20%;--sy:88%}
+.sw-357-moving-chip{display:grid;place-items:center;width:23px;height:23px;border:4px dashed #ffe0a4;border-radius:50%;background:#cd2847;color:#fff2be;font-size:12px;box-shadow:0 2px 11px #000b}
+.sw-357-chip-to-pot small{padding:2px 5px;border-radius:8px;background:#111d30;color:#fff5cb;border:1px solid #c5ad68;font-size:9px;font-weight:900}
+@keyframes sw-357-chip-into-pot{
+ 0%{left:var(--sx);top:var(--sy);opacity:0;transform:translate(-50%,-50%) scale(.5)}
+ 12%{opacity:1;transform:translate(-50%,-50%) scale(1.18)}
+ 78%{opacity:1}
+ 100%{left:50%;top:46%;opacity:0;transform:translate(-50%,-50%) scale(.65)}
+}
+@media(max-width:430px){.sw-357-seat-reveal{gap:1px}.sw-357-flip-card{width:17px;height:26px}.sw-357-flip-face,.sw-357-flip-back{font-size:9px}.sw-357-chip-to-pot small{font-size:8px}}
+@media(prefers-reduced-motion:reduce){.sw-357-flip-card{transition:none}.sw-357-chip-to-pot{animation:none;opacity:0}}
