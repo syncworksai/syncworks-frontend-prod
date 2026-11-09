@@ -3,6 +3,7 @@ import {useNavigate,useSearchParams} from "react-router-dom";
 import {ArrowLeft,Eye,EyeOff,Info,RotateCcw,ChevronRight} from "lucide-react";
 import {createShuffledDeck,displayMoney} from "../games/drop357Table.mjs";
 import {evaluateBozoHand,resolveBozoRound} from "../games/bozoRules.mjs";
+import {score442,naturalPair442,replace442,settle442,botExchange442} from "../games/fourFourDeuce.mjs";
 import {capGutsResult,limitAnte,rebuyChips,centsFromDollars,pickPracticeBotChoice} from "../games/pokerPracticeSession.mjs";
 import {readCardNight,saveCardNight,clearCardNight} from "../games/cardNightTransfer.mjs";
 import PokerSessionBar from "../components/poker/PokerSessionBar";
@@ -10,16 +11,16 @@ import {getCardRoom} from "../api/cardRooms";
 import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal,fybRevealKing,fybCurrentKings,fybDealFromShoe,fybDealerDraw,fybPayRound,fybSplitPurse,fybBotWantsPass,fybLocalSeat,canRevealOwnFybCard} from "../games/fybElimination.mjs";
 import "./CustomerPokerTable.css";
 
-const GAMES={fyb:{title:"FYB",tag:"Kings trump · Aces low"},442:{title:"4/4/Deuce",tag:"2s wild · 4s need a 2"},bozo:{title:"Bozo · The Clown",tag:"Beat the ghost hand"}, "queen-follower":{title:"Queen & the Follower",tag:"Dynamic stud wilds"}};
+const GAMES={fyb:{title:"FYB",tag:"Kings trump · Aces low"},442:{title:"4/4/Deuce",tag:"4 cards · 4s wild · Draw up to 3"},bozo:{title:"Bozo · The Clown",tag:"Beat the ghost hand"}, "queen-follower":{title:"Queen & the Follower",tag:"Dynamic stud wilds"}};
 const SYMBOL={1:"A",11:"J",12:"Q",13:"K",14:"A"};
 const label=c=>!c?"":(SYMBOL[c.rank]||c.rank)+c.suit;
 function PokerCard({c,hidden=false,wild=false}){if(!c)return <span className="sw-poker-card back">♠</span>;return <div className={"sw-poker-card"+(hidden?" back":["♥","♦"].includes(c.suit)?" red":"")}><strong>{hidden?"S":label(c)}</strong><b>{hidden?"♠":c.suit}</b>{wild&&!hidden&&<small>WILD</small>}</div>}
 function localDeal(game,count,size=5){
  const deck=createShuffledDeck();if(game==="fyb"){const cards=deck.map(c=>({...c,rank:c.rank===14?1:c.rank}));return {hands:Array.from({length:count},(_,i)=>[cards[i]]),deck:cards.slice(count),clown:[]};}
- const hands=Array.from({length:count},(_,i)=>deck.slice(i*size,(i+1)*size));
- return {hands,deck:deck.slice((count+1)*size),clown:game==="bozo"?deck.slice(count*size,(count+1)*size):[]};
+ const handSize=game==="442"?4:size;
+ const hands=Array.from({length:count},(_,i)=>deck.slice(i*handSize,(i+1)*handSize));
+ return {hands,deck:deck.slice(game==="bozo"?(count+1)*size:count*handSize),clown:game==="bozo"?deck.slice(count*size,(count+1)*size):[]};
 }
-function score442(cards){const deuce=cards.some(c=>c.rank===2);const mapped=cards.map(c=>deuce&&c.rank===4?{...c,rank:2}:c);return evaluateBozoHand(mapped,2)}
 const cents=x=>Math.round(Number(x)*100);
 export default function CustomerPokerVariantTable({variant:providedVariant}){
  const [query]=useSearchParams(),nav=useNavigate();
@@ -30,18 +31,18 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  const [ante,setAnte]=useState(variant==="fyb"?"1.50":query.get("ante")||"0.25"),[cap,setCap]=useState("50"),[step,setStep]=useState("loading");
  const [hands,setHands]=useState([]),[clown,setClown]=useState([]),[deck,setDeck]=useState([]),[decisions,setDecisions]=useState([]),[viewer,setViewer]=useState(null),[outcome,setOutcome]=useState(null),[log,setLog]=useState([]);
  const [drawer,setDrawer]=useState(false),[tab,setTab]=useState("hands"),[rebuy,setRebuy]=useState(false),[rebuySeat,setRebuySeat]=useState(0),[rebuyAmount,setRebuyAmount]=useState("20"),[status,setStatus]=useState("");
- const [fybSettlement,setFybSettlement]=useState(null),[followers,setFollowers]=useState([]),[pendingFollower,setPendingFollower]=useState(false),[street,setStreet]=useState(0);
+ const [draw442Turn,setDraw442Turn]=useState(0),[draw442Selected,setDraw442Selected]=useState([]),[showdown442,setShowdown442]=useState(null),[followers,setFollowers]=useState([]),[pendingFollower,setPendingFollower]=useState(false),[street,setStreet]=useState(0);
  const [dealerPick,setDealerPick]=useState(false),[fybLosses,setFybLosses]=useState([]),[fybHandNumber,setFybHandNumber]=useState(0),[fybLastMove,setFybLastMove]=useState(null),[fybActions,setFybActions]=useState({}),[fybAnimating,setFybAnimating]=useState(false),[fybAwaitNext,setFybAwaitNext]=useState(false),[fybRevealedKings,setFybRevealedKings]=useState({}),[fybDeckNumber,setFybDeckNumber]=useState(0),[fybDeckFlash,setFybDeckFlash]=useState(false),[splitOpen,setSplitOpen]=useState(false),[splitApprovals,setSplitApprovals]=useState({}),[splitDeclined,setSplitDeclined]=useState(""),[fybPreviousCard,setFybPreviousCard]=useState({});
  const maxCents=variant==="fyb"?1000000:cents(cap),fybStake=variant==="fyb"?fybStakeFromTotal(cents(ante)):null,anteCents=variant==="fyb"?(fybStake?.chipCents??NaN):cents(ante),index=players.length;
  const currentIndex=useMemo(()=>decisions.findIndex(v=>v===null),[decisions]);
  const fybActive=players.map((_,i)=>i).filter(i=>(fybLosses[i]??0)<3);
  const fybSeatCoords=[{x:"21%",y:"9%"},{x:"50%",y:"-1%"},{x:"79%",y:"9%"},{x:"80%",y:"88%"},{x:"50%",y:"103%"},{x:"20%",y:"88%"}];
  const order=useMemo(()=>variant==="fyb"?fybOrder(fybActive,dealer):players.map((_,i)=>(dealer+1+i)%players.length),[dealer,players,variant,fybLosses]);
- const activeIndex=variant==="fyb"?(order[fybTurn]??-1):(currentIndex<0?-1:currentIndex);
+ const activeIndex=variant==="fyb"?(order[fybTurn]??-1):variant==="442"&&step==="442-draw"?(order[draw442Turn]??-1):(currentIndex<0?-1:currentIndex);
  const fybDealerTurn=variant==="fyb"&&step==="fyb"&&activeIndex===dealer;
  const currentPlayer=players[activeIndex];
  const localSeat=fybLocalSeat(players);
- const activeCards=variant==="fyb"?null:(viewer===activeIndex?hands[activeIndex]:null);
+ const activeCards=variant==="fyb"?null:variant==="442"&&step==="442-draw"?hands[activeIndex]:(viewer===activeIndex?hands[activeIndex]:null);
  const ownFybCards=variant==="fyb"&&canRevealOwnFybCard({viewerSeat:viewer,localSeat,players})?hands[localSeat]:null;
  const potFull=pot>=maxCents;
  const botCount=players.filter(p=>p.kind==="computer").length;
@@ -121,9 +122,11 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
    setSplitOpen(false);setSplitApprovals({});setSplitDeclined("");setFybSettlement(null);setFybPreviousCard({});setFybHandNumber(n=>n+1);setFybLastMove(null);setFybActions({});setFybAnimating(false);setFybAwaitNext(false);setFybRevealedKings({});
   }
   setHands(draft.hands);setDeck(draft.deck);setClown(draft.clown);
+  if(variant==="442"){setDraw442Turn(0);setDraw442Selected([]);setShowdown442(null);}
   setViewer(variant==="fyb"?fybLocalSeat(players):null);setOutcome(null);setFybTurn(0);setFollowers([]);setPendingFollower(false);setStreet(0);
-  setDecisions(players.map(p=>p.kind==="computer"&&variant!=="bozo"?(Math.random()<0.38?"hold":"fold"):null));
+  setDecisions(players.map(p=>p.kind==="computer"&&variant!=="bozo"&&variant!=="442"?(Math.random()<0.38?"hold":"fold"):null));
   if(variant==="fyb")setStep("fyb");
+  else if(variant==="442")setStep("442-draw");
   else if(variant==="queen-follower"){setHands(players.map(()=>[]));setDeck(createShuffledDeck());setStep("stud");}
   else setStep("deciding");
   record("Cards dealt for "+game.title+". Virtual chips only.");
@@ -189,12 +192,15 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   const amount=pot;
   if(!entered.length){setOutcome({message:"All players folded. Pot carries forward."});setDecisions(next);setStep("result");return;}
   if(variant==="442"){
-   // 442 conditional wild evaluation: 4s become wild only when a deuce is held.
-   const ranked=entered.map(i=>({i,score:score442(hands[i]).score}));
-   const best=Math.max(...ranked.map(x=>x.score)),winners=ranked.filter(x=>x.score===best);
-   if(winners.length!==1){setOutcome({message:"Tie: dealer must review before chips move."});setStep("result");return;}
-   if(entered.length===1){setOutcome({message:"Lone player holds. This 442 house rule awards the pot to the lone holder.",winner:winners[0].i});}
-   return settleGutsPay(winners[0].i,entered,next,amount);
+   const result=settle442({hands,choices:next,potCents:pot,capCents:maxCents,anteCents});
+   setDecisions(next);
+   setShowdown442({...result,nonce:Date.now(),beforeStacks:[...stacks],potBefore:pot});
+   if(result.kind==="drag"){
+    setStacks(old=>old.map((v,i)=>v+result.delta[i]));
+    setPot(result.nextPot);
+   }
+   setOutcome({...result,gameFinished:result.kind==="drag"&&result.nextPot===0,message:result.kind==="drag"?players[result.winner].name+" wins with "+result.hand.name+" and drags "+displayMoney(pot)+". Losing holders replace "+displayMoney(result.match)+" each.":result.message});
+   setStep("result");record(result.message);return;
   }
   const wild=clown[0]?.rank;
   const score=resolveBozoRound({choices:next.map(v=>v==="hold"?"hold":"drop"),hands,clown,wildRank:wild,potCents:amount});
@@ -214,6 +220,15 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   const newPot=match*losers.length;setStacks(nextStacks);setPot(newPot);
   setOutcome({winner,amount,match,losers,message:players[winner].name+" drags "+displayMoney(amount)+". "+losers.length+" losing holder(s) replenish "+displayMoney(match)+" each."});
   setDecisions(next);setStep("result");
+ }
+ function finish442Exchange(seat,indexes){
+  if(variant!=="442"||step!=="442-draw"||activeIndex!==seat)return;
+  try{
+   const changed=replace442({hands,deck,seat,indexes});
+   setHands(changed.hands);setDeck(changed.deck);setDraw442Selected([]);record(players[seat].name+" exchanged "+indexes.length+" card(s).");
+   if(draw442Turn+1>=order.length){setStep("deciding");setDecisions(players.map(()=>null));}
+   else setDraw442Turn(v=>v+1);
+  }catch(e){setStatus(e.message);}
  }
  function chooseHold(choice){
   if(step!=="deciding"||activeIndex<0||currentPlayer?.kind==="computer")return;
@@ -241,6 +256,17 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  },[step,fybTurn,hands,players,fybAnimating,fybAwaitNext,fybPreviousCard]);
  // Delay each Bozo bot decision so the player sees the action sequence.
  // No automated opponent receives access to another player's private hand.
+ useEffect(()=>{if(variant!=="442"||step!=="442-draw"||currentPlayer?.kind!=="computer")return;
+  const id=setTimeout(()=>finish442Exchange(activeIndex,botExchange442(hands[activeIndex]||[])),1100);
+  return()=>clearTimeout(id);
+ },[variant,step,activeIndex,hands,currentPlayer?.kind]);
+ useEffect(()=>{if(variant!=="442"||step!=="deciding"||currentPlayer?.kind!=="computer")return;
+  const id=setTimeout(()=>{
+   const own=score442(hands[activeIndex]);const hold=own.category>=1&&Math.random()<.77||Math.random()<.08;
+   const next=decisions.map((v,i)=>i===activeIndex?(hold?"hold":"fold"):v);
+   setDecisions(next);if(next.every(Boolean))settleGuts(next);
+  },1200);return()=>clearTimeout(id);
+ },[variant,step,activeIndex,hands,currentPlayer?.kind,decisions]);
  useEffect(()=>{if(variant!=="bozo"||step!=="deciding"||activeIndex<0||currentPlayer?.kind!=="computer")return;
   const timer=setTimeout(()=>{
    const own=hands[activeIndex]||[];
@@ -252,6 +278,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   },2000);
   return()=>clearTimeout(timer);
  },[variant,step,activeIndex,decisions,hands,clown,players]);
+ useEffect(()=>{if(variant!=="442"||step!=="442-next")return;const id=setTimeout(()=>deal(),650);return()=>clearTimeout(id);},[variant,step,dealer]);
  useEffect(()=>{if(variant!=="fyb"||step!=="fyb-next")return;
   const id=setTimeout(()=>deal(),650);
   return()=>clearTimeout(id);
