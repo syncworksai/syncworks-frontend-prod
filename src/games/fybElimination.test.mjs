@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal,fybRevealKing,fybCurrentKings,fybDealFromShoe,fybDealerDraw,fybPayRound,fybSplitPurse} from "./fybElimination.mjs";
+import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal,fybRevealKing,fybCurrentKings,fybDealFromShoe,fybDealerDraw,fybPayRound,fybSplitPurse,fybBotWantsPass} from "./fybElimination.mjs";
 const hand=n=>[{rank:n,suit:"♠"}];
 test("three losses eliminate a seat, but do not finish when 2+ survivors",()=>{
  const r=fybRound({hands:[hand(4),hand(9),hand(12)],active:[0,1,2],losses:[2,1,0],chipCents:50});
@@ -149,4 +149,24 @@ test("odd cents are awarded deterministically without losing a penny",()=>{
 test("empty purse and duplicated seat cannot bypass consent",()=>{
  assert.throws(()=>fybSplitPurse({stacks:[500,500],potCents:0,seats:[0,1],approvals:{0:true,1:true}}),/No FYB purse/);
  assert.throws(()=>fybSplitPurse({stacks:[500,500],potCents:100,seats:[0,0],approvals:{0:true}}),/exactly two/);
+});
+
+test("virtual FYB player never passes a king and weighs low cards heavily",()=>{
+ assert.equal(fybBotWantsPass({card:hand(13)[0],random:()=>0}),false);
+ assert.equal(fybBotWantsPass({card:hand(2)[0],random:()=>0.5}),true);
+ assert.equal(fybBotWantsPass({card:hand(10)[0],random:()=>0.5}),false);
+});
+test("virtual bot that receives 3 in exchange for original 2 usually keeps improvement",()=>{
+ const hands=[hand(3),hand(2)];
+ const swapped=fybSwap({hands,deck:[],actor:0,next:1,pass:true,playerName:"Jake",nextName:"Bot"});
+ assert.equal(swapped.hands[0][0].rank,2);
+ assert.equal(swapped.hands[1][0].rank,3);
+ assert.equal(swapped.nextBefore.rank,2);
+ assert.equal(fybBotWantsPass({card:swapped.hands[1][0],previousCard:swapped.nextBefore,random:()=>0.5}),false);
+ assert.equal(fybBotWantsPass({card:swapped.hands[1][0],previousCard:swapped.nextBefore,random:()=>0.1}),true);
+});
+test("FYB bot decision depends only on its own card, never the next hidden hand",()=>{
+ const own=hand(3)[0];
+ assert.equal(fybBotWantsPass({card:own,random:()=>0.6}),true);
+ assert.throws(()=>fybBotWantsPass({card:null,random:()=>0.5}),/Missing virtual/);
 });
