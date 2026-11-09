@@ -5,7 +5,7 @@ import {getCardRoom,createCardRoom} from "../api/cardRooms";
 import {createGroupInviteLink} from "../api/social";
 import {useAuth} from "../auth/AuthContext";
 import {Share2} from "lucide-react";
-import {addRoundCards,cardRank,createShuffledDeck,dealt357,displayMoney,instant357,rate357,resolve357,THREE_FIVE_SEVEN} from "../games/drop357Table.mjs";
+import {addRoundCards,cardRank,createShuffledDeck,dealt357,displayMoney,instant357,rate357,resolve357,winningHandText357,THREE_FIVE_SEVEN} from "../games/drop357Table.mjs";
 import "./CustomerPokerTable.css";
 import {HAND_RANKINGS_357,practiceHandInfo,estimatePracticeEquity} from "../games/practiceOdds357.mjs";
 import {rotationAfterPot,chooseVirtualDealer} from "../games/pokerDealerRotation.mjs";
@@ -358,7 +358,7 @@ export default function CustomerPokerTable(){
  const canReveal=phase==="revealing"&&currentReveal!==undefined;
  const gameOver=pot===0&&phase==="resolved"&&(outcome?.kind==="drag"||outcome?.kind==="instant");
  const hasPracticeRecap=practiceMode&&phase==="resolved"&&people.some(p=>p.kind==="computer");
- const winnerHand=outcome?.winner!=null?rate357(hands[outcome.winner],round).name:null;
+ const winnerHand=outcome?.winner!=null?winningHandText357(hands[outcome.winner],round):null;
  const nextActionLabel=gameOver?"Pass dealer · Choose game":round===2||outcome?.kind==="all-drop"?"Next dealer · New 3-card hand":"Deal 2 more · "+THREE_FIVE_SEVEN[round+1]+"s wild";
  const doNext=()=>gameOver?finishGameAndPassDealer():next();
  useEffect(()=>{if(!drawerOpen)return;const onKey=e=>{if(e.key==="Escape")closeDrawer();};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey);},[drawerOpen]);
