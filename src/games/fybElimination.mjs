@@ -113,8 +113,14 @@ export function fybBotWantsPass({card,previousCard=null,random=Math.random}){
  return random()<probability;
 }
 
-// Keep an opponent's hand private while its automated turn is underway.
-// The local pass-and-play screen only offers a reveal to the active human seat.
-export function canRevealActiveCard({viewerSeat,activeSeat,actingPlayer}){
- return Number.isInteger(activeSeat)&&activeSeat>=0&&viewerSeat===activeSeat&&actingPlayer?.kind!=="computer"&&!!actingPlayer;
+// Private view belongs to the local seat, never to the moving action cursor.
+// In this local practice table, the first human seat is the device owner.
+// Remote multiplayer will resolve this from the authenticated seat identity.
+export function fybLocalSeat(players){
+ return Array.isArray(players)?players.findIndex(p=>p?.kind!=="computer"):-1;
+}
+export function canRevealOwnFybCard({viewerSeat,localSeat,players}){
+ return Number.isInteger(localSeat)&&localSeat>=0
+   &&players?.[localSeat]?.kind!=="computer"
+   &&viewerSeat===localSeat;
 }
