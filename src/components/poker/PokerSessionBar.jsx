@@ -1,6 +1,6 @@
 import React,{useMemo,useState} from "react";
 import {MessageCircle,LogOut,Send,Trophy,X} from "lucide-react";
-import {displayMoney} from "../games/drop357Table.mjs";
+import {displayMoney} from "../../games/drop357Table.mjs";
 import "./PokerSessionBar.css";
 
 // Session-only UI. Never implies shared chat or synchronized balances across devices.
