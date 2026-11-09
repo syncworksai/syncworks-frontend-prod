@@ -7,7 +7,7 @@ import {capGutsResult,limitAnte,rebuyChips,centsFromDollars,pickPracticeBotChoic
 import {readCardNight,saveCardNight,clearCardNight} from "../games/cardNightTransfer.mjs";
 import PokerSessionBar from "../components/poker/PokerSessionBar";
 import {getCardRoom} from "../api/cardRooms";
-import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal,fybRevealKing,fybCurrentKings,fybDealFromShoe,fybDealerDraw,fybPayRound,fybSplitPurse,fybBotWantsPass} from "../games/fybElimination.mjs";
+import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal,fybRevealKing,fybCurrentKings,fybDealFromShoe,fybDealerDraw,fybPayRound,fybSplitPurse,fybBotWantsPass,canRevealActiveCard} from "../games/fybElimination.mjs";
 import "./CustomerPokerTable.css";
 
 const GAMES={fyb:{title:"FYB",tag:"Kings trump · Aces low"},442:{title:"4/4/Deuce",tag:"2s wild · 4s need a 2"},bozo:{title:"Bozo · The Clown",tag:"Beat the ghost hand"}, "queen-follower":{title:"Queen & the Follower",tag:"Dynamic stud wilds"}};
@@ -40,8 +40,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  const activeIndex=variant==="fyb"?(order[fybTurn]??-1):(currentIndex<0?-1:currentIndex);
  const fybDealerTurn=variant==="fyb"&&step==="fyb"&&activeIndex===dealer;
  const currentPlayer=players[activeIndex];
- const canViewOwnCard=currentPlayer?.kind!=="computer"&&activeIndex>=0;
- const activeCards=canViewOwnCard&&viewer===activeIndex?hands[activeIndex]:null;
+ const activeCards=canRevealActiveCard({viewerSeat:viewer,activeSeat:activeIndex,actingPlayer:currentPlayer})?hands[activeIndex]:null;
  const potFull=pot>=maxCents;
  const botCount=players.filter(p=>p.kind==="computer").length;
  const nextGameUrl="/customer/games/table?"+new URLSearchParams({group:groupId,room:roomId,resumeGame:"1"}).toString();
