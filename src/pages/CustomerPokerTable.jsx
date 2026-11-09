@@ -157,6 +157,31 @@ export default function CustomerPokerTable(){
     addLog(people[next].name+" picked "+(TABLE_GAMES.find(g=>g.code===pick.game)?.label||pick.game)+" with "+pick.ante+" virtual ante.");
   }else{setSelectedGame("357");addLog(people[next]?.name+" is the next dealer. Choose the next game and ante.");}
  }
+ function confirmRebuy(){
+  const add=centsFromDollars(rebuyAmount),index=Number(rebuySeat);
+  if(add===null||add<=0||add>1000000||!people[index]){setStatus("Enter a valid virtual buy-in between $0.01 and $10,000.");return;}
+  if(session==="playing")setChipStacks(old=>rebuyChips(old,index,add));
+  else setPeople(old=>old.map((p,i)=>i===index?{...p,chips:(p.chips??0)+add}:p));
+  addLog(people[index].name+" added "+displayMoney(add)+" in virtual practice chips.");
+  setStatus(people[index].name+" rebought "+displayMoney(add)+". No real money was charged.");
+  setRebuyOpen(false);
+ }
+ function restartPracticeSession(){
+  // Explicit practice reset; reset the full ledger and current game together.
+  const restored=people.map(p=>Number.isFinite(p.chips)?p.chips:roomMinimum??2000);
+  setChipStacks(restored);setPot(0);setStrikes({});setDealer(0);setSessionGames(1);
+  setSession("setup");setPhase("setup");setRound(0);setHands([]);setDeck([]);
+  setChoices([]);setOutcome(null);setReveal({});setRevealStep(0);setChipAnimation(null);
+  setDealerChoosing(false);setSelectedGame("357");setViewer(null);setCounter(null);
+  setShowdownViewer(null);setLog([]);setResetConfirm(false);closeDrawer();
+  setStatus("Practice session restarted. Virtual chips and pot reset to original buy-ins; names and seats were retained.");
+ }
+ function setPotCap(value){
+  const next=centsFromDollars(value);
+  if(next===null||next<100){setStatus("Pot cap must be at least $1.");return;}
+  if(next<pot){setStatus("The cap cannot be lower than the existing pot. Finish or restart the session first.");return;}
+  setMaxPot((next/100).toFixed(2));setStatus("Hard maximum pot set to "+displayMoney(next)+". Match payments and antes will respect the cap.");
+ }
  function startDealerSelectedGame(){
   if(!dealerChoosing)return;
   if(!Number.isFinite(Number(ante))||Number(ante)<0||Number(ante)>100){setStatus("Choose an ante between $0 and $100.");return;}
