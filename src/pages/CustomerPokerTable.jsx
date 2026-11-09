@@ -1,4 +1,4 @@
-import React,{useEffect,useMemo,useState} from "react";
+import React,{useEffect,useMemo,useRef,useState} from "react";
 import {useNavigate,useSearchParams} from "react-router-dom";
 import {ArrowLeft,BookOpen,Check,ChevronRight,Eye,EyeOff,Info,Lightbulb,RotateCcw,Shield,Spade,Target,Users,WalletCards} from "lucide-react";
 import {getCardRoom,createCardRoom} from "../api/cardRooms";
@@ -12,6 +12,7 @@ import {rotationAfterPot,chooseVirtualDealer} from "../games/pokerDealerRotation
 import {capGutsResult,limitAnte,rebuyChips,centsFromDollars,pickPracticeBotChoice} from "../games/pokerPracticeSession.mjs";
 import {readCardNight,saveCardNight,clearCardNight} from "../games/cardNightTransfer.mjs";
 import PokerSessionBar from "../components/poker/PokerSessionBar";
+import {readPracticeGame,savePracticeGame,clearPracticeGame} from "../games/cardPracticeResume.mjs";
 import CardClubTableSwitcher from "../components/poker/CardClubTableSwitcher";
 import {buildPracticeSummary,savePracticeSummary} from "../games/pokerClubPracticeLedger.mjs";
 
@@ -46,6 +47,7 @@ export default function CustomerPokerTable(){
  // Real multiplayer hands must use server-authoritative cards and never receive hints/odds.
  const practiceMode=true;
  const isSharedRoom=Boolean(roomId); // Shared lobby is not an authoritative game service.
+ const restoredRef=useRef(false);
  const [people,setPeople]=useState(DEFAULT_PLAYERS);
  const [lobbyName,setLobbyName]=useState("Saturday Poker");
  const [dealer,setDealer]=useState(0),[session,setSession]=useState("setup");
@@ -93,14 +95,31 @@ export default function CustomerPokerTable(){
  const viewCards=myHandVisible&&privateSeatIndex>=0&&session==="playing"&&!isSharedRoom&&hands[privateSeatIndex]?.length?hands[privateSeatIndex]:null;
  const handInsight=useMemo(()=>practiceMode&&viewCards?practiceHandInfo(viewCards,round):null,[practiceMode,viewCards,round]);
  const equity=useMemo(()=>practiceMode&&viewCards?estimatePracticeEquity(viewCards,round):null,[practiceMode,viewCards,round]);
+ useEffect(()=>{
+  if(!user?.id||isSharedRoom){restoredRef.current=true;return;}
+  const saved=readPracticeGame(user.id,groupId,"357");
+  if(saved?.active&&Array.isArray(saved.people)&&saved.people.length>=2&&Array.isArray(saved.hands)&&Array.isArray(saved.chipStacks)){
+   setPeople(saved.people);setDealer(saved.dealer??0);setSession(saved.session||"playing");setPhase(["setup","choosing","resolved"].includes(saved.phase)?saved.phase:"resolved");setRound(saved.round??0);
+   setHands(saved.hands);setDeck(saved.deck||[]);setChoices(saved.choices||[]);setPot(saved.pot??0);setChipStacks(saved.chipStacks);
+   setStrikes(saved.strikes||{});setOutcome(saved.outcome||null);setHandFolds(saved.handFolds||{});setAnte(saved.ante||"0.25");setMaxPot(saved.maxPot||"50");
+   setStartingChips(saved.startingChips||"20");setSessionGames(saved.sessionGames||1);setRebuyCounts(saved.rebuyCounts||{});setSittingOut(saved.sittingOut||{});
+   setCashouts(saved.cashouts||[]);setVirtualSessionId(saved.virtualSessionId||("practice-"+Date.now()));setMyHandVisible(true);
+   setStatus("Practice game resumed where you left off.");
+  }
+  restoredRef.current=true;
+ },[user?.id,groupId,isSharedRoom]);
+ useEffect(()=>{
+  if(!restoredRef.current||!user?.id||isSharedRoom||session!=="playing")return;
+  savePracticeGame(user.id,groupId,"357",{active:true,people,dealer,session,phase,round,hands,deck,choices,pot,chipStacks,strikes,outcome,handFolds,ante,maxPot,startingChips,sessionGames,rebuyCounts,sittingOut,cashouts,virtualSessionId});
+ },[user?.id,groupId,isSharedRoom,people,dealer,session,phase,round,hands,deck,choices,pot,chipStacks,strikes,outcome,handFolds,ante,maxPot,startingChips,sessionGames,rebuyCounts,sittingOut,cashouts,virtualSessionId]);
  function addLog(message){setLog(old=>[{id:uid(),message,time:new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})},...old].slice(0,32));}
  useEffect(()=>{let mounted=true;
   if(roomId){getCardRoom(roomId).then(r=>{if(!mounted)return;setLobbyName(r.name||"Poker Table");if(Array.isArray(r.seats)&&r.seats.length>=2){if(params.get("resumeGame")!=="1"||!readCardNight(groupId,roomId))setPeople(r.seats.map(getPlayer));setStartingChips(String((r.virtual_buy_in_cents??2000)/100));setRoomMinimum(r.minimum_buy_in_cents??r.virtual_buy_in_cents??2000);setRoomCapacity(r.capacity||6);const idx=r.seats.findIndex(s=>s.position===r.dealer_position);if(idx>=0&&!(params.get("resumeGame")==="1"&&readCardNight(groupId,roomId)))setDealer(idx);setRemoteNotice(true);}}).catch(()=>{if(mounted)setStatus("Shared lobby unavailable; use the local preview with sample seats.");});}
-  else if(groupId){const r=readLocalRoom(groupId);if(r?.seats?.length){setLobbyName(r.name||"Poker Table");setPeople(r.seats.map(getPlayer));setStartingChips(String((r.buyInCents??2000)/100));setRoomMinimum(r.buyInCents??2000);setRoomCapacity(r.capacity||6);setRemoteNotice(false);}}
+  else if(groupId&&!readPracticeGame(user?.id,groupId,"357")){const r=readLocalRoom(groupId);if(r?.seats?.length){setLobbyName(r.name||"Poker Table");setPeople(r.seats.map(getPlayer));setStartingChips(String((r.buyInCents??2000)/100));setRoomMinimum(r.buyInCents??2000);setRoomCapacity(r.capacity||6);setRemoteNotice(false);}}
   return()=>{mounted=false;};
  },[groupId,roomId]);
  useEffect(()=>{
-  if(params.get("resumeGame")!=="1")return;
+  if(params.get("resumeGame")!=="1"||readPracticeGame(user?.id,groupId,"357"))return;
   const previous=readCardNight(groupId,roomId);if(!previous)return;
   setPeople(previous.people);setChipStacks(previous.stacks);setPot(previous.pot??0);
   setDealer(previous.dealer??0);setSessionGames(previous.gameNumber??1);
@@ -372,7 +391,7 @@ export default function CustomerPokerTable(){
    <span className="sw-poker-capsule">♙ {tableSize}</span>
    <button type="button" className="sw-poker-icon-btn" aria-label="Rules and strategy" onClick={()=>openDrawer("rules")}><Info size={20}/></button>
   </header>
-  <PokerSessionBar players={people.map(p=>({...p,chips:p.chips??Math.round(Number(startingChips)*100)}))} stacks={chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??Math.round(Number(startingChips)*100))} groupId={groupId} roomId={roomId} gameNumber={sessionGames} onEnd={()=>{try{savePracticeSummary(groupId,buildPracticeSummary({id:virtualSessionId,players:people,stacks:chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??2000),rebuyCounts,cashouts,pot,gameCount:sessionGames}));}catch(e){console.warn("Virtual session summary could not be saved",e);}clearCardNight();setSession("setup");setHands([]);setDeck([]);setPot(0);setViewer(null);nav(groupId?"/customer/games/clubs?group="+encodeURIComponent(groupId):"/customer/games");}}/>
+  <PokerSessionBar players={people.map(p=>({...p,chips:p.chips??Math.round(Number(startingChips)*100)}))} stacks={chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??Math.round(Number(startingChips)*100))} groupId={groupId} roomId={roomId} gameNumber={sessionGames} onEnd={()=>{try{savePracticeSummary(groupId,buildPracticeSummary({id:virtualSessionId,players:people,stacks:chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??2000),rebuyCounts,cashouts,pot,gameCount:sessionGames}));}catch(e){console.warn("Virtual session summary could not be saved",e);}clearCardNight();clearPracticeGame(user?.id,groupId,"357");setSession("setup");setHands([]);setDeck([]);setPot(0);setViewer(null);nav(groupId?"/customer/games/clubs?group="+encodeURIComponent(groupId):"/customer/games");}}/>
   <div className="sw-poker-session-status"><span>♣ Card Night · Game {sessionGames}</span><span>Max pot <b>{capText}</b> · {botStyle==="balanced"?"Balanced bots":botStyle==="cautious"?"Cautious bots":"Aggressive bots"}</span></div>
   <div className="sw-poker-round"><div className="sw-poker-round-badge"><div>♠ {gameName}</div><span>Round {round+1} · {wild}s Wild</span></div><div className="sw-poker-steps">{THREE_FIVE_SEVEN.map((n,i)=><div key={i} title={"Round "+(i+1)+": "+n+"s wild"} className={"sw-poker-step"+(i===round?" current":"")}>{i+1}</div>)}</div></div>
   {!roomId&&groupId&&session==="setup"&&roomMinimum!==null&&<section className="mb-3 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-3"><div className="text-sm font-black text-emerald-100">Want players on separate phones?</div><p className="mt-1 text-xs leading-5 text-slate-300">Create a shared waiting room in this Card Club with the same name, seat count and minimum buy-in. Local guests and dealt hands stay on this device, and synchronized game cards are not live yet.</p><button type="button" onClick={upgradeToLiveRoom} disabled={upgrading} className="sw-poker-button primary mt-3 w-full">{upgrading?"Creating shared room…":"♠ Make This a Live Waiting Room"}</button></section>}
