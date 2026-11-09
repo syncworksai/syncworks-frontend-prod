@@ -27,6 +27,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  const variant=providedVariant||query.get("game")||"fyb";
  const game=GAMES[variant]||GAMES.fyb;
  const groupId=query.get("group")||"",roomId=query.get("room")||"";
+ const [rebuyCounts,setRebuyCounts]=useState({}),[sittingOut,setSittingOut]=useState({}),[cashouts,setCashouts]=useState([]),[virtualSessionId,setVirtualSessionId]=useState(()=>"practice-"+Date.now()+"-"+Math.random().toString(36).slice(2));
  const [players,setPlayers]=useState([]),[stacks,setStacks]=useState([]),[dealer,setDealer]=useState(0),[pot,setPot]=useState(0),[gameNumber,setGameNumber]=useState(1);
  const [ante,setAnte]=useState(variant==="fyb"?"1.50":query.get("ante")||"0.25"),[cap,setCap]=useState("50"),[step,setStep]=useState("loading");
  const [hands,setHands]=useState([]),[clown,setClown]=useState([]),[deck,setDeck]=useState([]),[decisions,setDecisions]=useState([]),[viewer,setViewer]=useState(null),[outcome,setOutcome]=useState(null),[log,setLog]=useState([]);
@@ -35,9 +36,9 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  const [dealerPick,setDealerPick]=useState(false),[fybLosses,setFybLosses]=useState([]),[fybHandNumber,setFybHandNumber]=useState(0),[fybLastMove,setFybLastMove]=useState(null),[fybActions,setFybActions]=useState({}),[fybAnimating,setFybAnimating]=useState(false),[fybAwaitNext,setFybAwaitNext]=useState(false),[fybRevealedKings,setFybRevealedKings]=useState({}),[fybDeckNumber,setFybDeckNumber]=useState(0),[fybDeckFlash,setFybDeckFlash]=useState(false),[splitOpen,setSplitOpen]=useState(false),[splitApprovals,setSplitApprovals]=useState({}),[splitDeclined,setSplitDeclined]=useState(""),[fybPreviousCard,setFybPreviousCard]=useState({});
  const maxCents=variant==="fyb"?1000000:cents(cap),fybStake=variant==="fyb"?fybStakeFromTotal(cents(ante)):null,anteCents=variant==="fyb"?(fybStake?.chipCents??NaN):cents(ante),index=players.length;
  const currentIndex=useMemo(()=>decisions.findIndex(v=>v===null),[decisions]);
- const fybActive=players.map((_,i)=>i).filter(i=>(fybLosses[i]??0)<3);
+ const fybActive=players.map((_,i)=>i).filter(i=>!sittingOut[i]&&(fybLosses[i]??0)<3);
  const fybSeatCoords=[{x:"21%",y:"9%"},{x:"50%",y:"-1%"},{x:"79%",y:"9%"},{x:"80%",y:"88%"},{x:"50%",y:"103%"},{x:"20%",y:"88%"}];
- const order=useMemo(()=>variant==="fyb"?fybOrder(fybActive,dealer):players.map((_,i)=>(dealer+1+i)%players.length),[dealer,players,variant,fybLosses]);
+ const order=useMemo(()=>variant==="fyb"?fybOrder(fybActive,dealer):players.map((_,i)=>(dealer+1+i)%players.length).filter(i=>!sittingOut[i]),[dealer,players,variant,fybLosses,sittingOut]);
  const activeIndex=variant==="fyb"?(order[fybTurn]??-1):variant==="442"&&step==="442-draw"?(order[draw442Turn]??-1):(currentIndex<0?-1:currentIndex);
  const fybDealerTurn=variant==="fyb"&&step==="fyb"&&activeIndex===dealer;
  const currentPlayer=players[activeIndex];
@@ -50,13 +51,13 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  const record=(message)=>setLog(v=>[{id:Date.now()+Math.random(),message},...v].slice(0,45));
  useEffect(()=>{let mounted=true;
   const saved=readCardNight(groupId,roomId);
-  if(saved){setPlayers(saved.people);setStacks(saved.stacks);setDealer(saved.dealer??0);setPot(saved.pot??0);setCap(String((saved.capCents??5000)/100));setGameNumber(saved.gameNumber??1);setStep("ready");return()=>{mounted=false;};}
+  if(saved){setPlayers(saved.people);setStacks(saved.stacks);setDealer(saved.dealer??0);setPot(saved.pot??0);setCap(String((saved.capCents??5000)/100));setGameNumber(saved.gameNumber??1);setRebuyCounts(saved.rebuyCounts||{});setSittingOut(saved.sittingOut||{});setCashouts(saved.cashouts||[]);setVirtualSessionId(saved.virtualSessionId||("practice-"+Date.now()));setStep("ready");return()=>{mounted=false;};}
   if(roomId){getCardRoom(roomId).then(r=>{if(!mounted)return;const ps=r.seats?.map((p,i)=>({id:String(p.id??i),name:p.name||p.nickname||"Player "+(i+1),kind:p.is_computer?"computer":"human",chips:p.virtual_chips_cents??2000}))||[];setPlayers(ps);setStacks(ps.map(p=>p.chips));setStep("ready");}).catch(()=>{if(mounted){setStatus("Could not load room. Return to your poker lobby.");setStep("ready");}});}
   else {const p=[{id:"you",name:"You",kind:"human",chips:2000},{id:"bot",name:"Virtual Player 1",kind:"computer",chips:2000}];setPlayers(p);setStacks(p.map(x=>x.chips));setStep("ready");}
   return()=>{mounted=false;};
  },[groupId,roomId]);
  function store(nextStacks=stacks,nextPot=pot,nextDealer=dealer,nextGame=gameNumber){
-  saveCardNight({groupId,roomId,people:players,stacks:nextStacks,pot:nextPot,dealer:nextDealer,gameNumber:nextGame,capCents:maxCents});
+  saveCardNight({groupId,roomId,people:players,stacks:nextStacks,pot:nextPot,dealer:nextDealer,gameNumber:nextGame,capCents:maxCents,rebuyCounts,sittingOut,cashouts,virtualSessionId});
  }
  function quitToDealer(){
   const next=(dealer+1)%players.length;
@@ -124,7 +125,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   setHands(draft.hands);setDeck(draft.deck);setClown(draft.clown);
   if(variant==="442"){setDraw442Turn(0);setDraw442Selected([]);setShowdown442(null);}
   setViewer(variant==="fyb"?fybLocalSeat(players):null);setOutcome(null);setFybTurn(0);setFollowers([]);setPendingFollower(false);setStreet(0);
-  setDecisions(players.map(p=>p.kind==="computer"&&variant!=="bozo"&&variant!=="442"?(Math.random()<0.38?"hold":"fold"):null));
+  setDecisions(players.map((p,i)=>sittingOut[i]?"fold":p.kind==="computer"&&variant!=="bozo"&&variant!=="442"?(Math.random()<0.38?"hold":"fold"):null));
   if(variant==="fyb")setStep("fyb");
   else if(variant==="442")setStep("442-draw");
   else if(variant==="queen-follower"){setHands(players.map(()=>[]));setDeck(createShuffledDeck());setStep("stud");}
@@ -234,8 +235,10 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   if(next.every(Boolean))settleGuts(next);
  }
  function addRebuy(){
-  const n=centsFromDollars(rebuyAmount);if(n==null||n<=0){setStatus("Enter a valid rebuy.");return;}
-  setStacks(v=>rebuyChips(v,Number(rebuySeat),n));setRebuy(false);record(players[rebuySeat].name+" rebought "+displayMoney(n)+".");
+  const n=centsFromDollars(rebuyAmount),seat=Number(rebuySeat);
+  if(n!==2000){setStatus("Rebuys must be exactly $20.");return;}
+  if((rebuyCounts[seat]||0)>=4){setStatus("Maximum four $20 rebuys for this session ($100 including starting buy-in).");return;}
+  setRebuyCounts(old=>({...old,[seat]:(old[seat]||0)+1}));setStacks(v=>rebuyChips(v,seat,n));setSittingOut(old=>({...old,[seat]:false}));setRebuy(false);record(players[seat].name+" rebought "+displayMoney(n)+" ("+((rebuyCounts[seat]||0)+1)+"/4).");
  }
  // The active player's King turns face-up even when nobody attempted a pass.
  // This also reveals a dealer's King when the deal comes around to the dealer.
