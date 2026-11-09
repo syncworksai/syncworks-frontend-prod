@@ -30,7 +30,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  const [hands,setHands]=useState([]),[clown,setClown]=useState([]),[deck,setDeck]=useState([]),[decisions,setDecisions]=useState([]),[viewer,setViewer]=useState(null),[outcome,setOutcome]=useState(null),[log,setLog]=useState([]);
  const [drawer,setDrawer]=useState(false),[tab,setTab]=useState("hands"),[rebuy,setRebuy]=useState(false),[rebuySeat,setRebuySeat]=useState(0),[rebuyAmount,setRebuyAmount]=useState("20"),[status,setStatus]=useState("");
  const [fybTurn,setFybTurn]=useState(0),[followers,setFollowers]=useState([]),[pendingFollower,setPendingFollower]=useState(false),[street,setStreet]=useState(0);
- const [dealerPick,setDealerPick]=useState(false),[fybLosses,setFybLosses]=useState([]),[fybHandNumber,setFybHandNumber]=useState(0),[fybLastMove,setFybLastMove]=useState(null),[fybActions,setFybActions]=useState({}),[fybAnimating,setFybAnimating]=useState(false),[fybAwaitNext,setFybAwaitNext]=useState(false),[fybSettingsLocked,setFybSettingsLocked]=useState(false);
+ const [dealerPick,setDealerPick]=useState(false),[fybLosses,setFybLosses]=useState([]),[fybHandNumber,setFybHandNumber]=useState(0),[fybLastMove,setFybLastMove]=useState(null),[fybActions,setFybActions]=useState({}),[fybAnimating,setFybAnimating]=useState(false),[fybAwaitNext,setFybAwaitNext]=useState(false);
  const maxCents=variant==="fyb"?1000000:cents(cap),fybStake=variant==="fyb"?fybStakeFromTotal(cents(ante)):null,anteCents=variant==="fyb"?(fybStake?.chipCents??NaN):cents(ante),index=players.length;
  const currentIndex=useMemo(()=>decisions.findIndex(v=>v===null),[decisions]);
  const fybActive=players.map((_,i)=>i).filter(i=>(fybLosses[i]??0)<3);
@@ -77,7 +77,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
    const dealt=players.map(()=>[]);
    first.forEach((seat,index)=>{dealt[seat]=[cards[index]];});
    draft.hands=dealt;draft.deck=cards.slice(first.length);
-   setFybHandNumber(n=>n+1);setFybLastMove(null);setFybActions({});setFybAnimating(false);setFybAwaitNext(false);setFybSettingsLocked(true);
+   setFybHandNumber(n=>n+1);setFybLastMove(null);setFybActions({});setFybAnimating(false);setFybAwaitNext(false);
   }
   setHands(draft.hands);setDeck(draft.deck);setClown(draft.clown);
   setViewer(variant==="fyb"&&players[fybOrder(fybActive,dealer)[0]]?.kind!=="computer"?fybOrder(fybActive,dealer)[0]:null);setOutcome(null);setFybTurn(0);setFollowers([]);setPendingFollower(false);setStreet(0);
@@ -115,7 +115,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   setFybAnimating(true);
   record(moved.event);
   if(fybTurn+1<order.length){return;}
-  if(players[actor].kind!=="computer"&&moved.kind==="draw"){setFybAwaitNext(true);setViewer(actor);return;}
+  if(players[actor].kind!=="computer"&&moved.kind==="draw"){return;}
   finishFybRound(moved.hands);
 
  }
@@ -175,7 +175,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   setStacks(v=>rebuyChips(v,Number(rebuySeat),n));setRebuy(false);record(players[rebuySeat].name+" rebought "+displayMoney(n)+".");
  }
  useEffect(()=>{if(!fybAnimating||step!=="fyb")return;
-  const id=setTimeout(()=>{setFybAnimating(false);if(fybTurn+1<order.length){if(currentPlayer?.kind!=="computer"&&["swap","draw"].includes(fybLastMove?.kind)){setViewer(activeIndex);setFybAwaitNext(true);}else {const nextSeat=order[fybTurn+1];setViewer(players[nextSeat]?.kind==="computer"?null:nextSeat);setFybTurn(v=>v+1);}}},1550);
+  const id=setTimeout(()=>{setFybAnimating(false);if(fybTurn+1<order.length){if(currentPlayer?.kind!=="computer"&&["swap","draw"].includes(fybLastMove?.kind)){setViewer(activeIndex);setFybAwaitNext(true);}else {const nextSeat=order[fybTurn+1];setViewer(players[nextSeat]?.kind==="computer"?null:nextSeat);setFybTurn(v=>v+1);}}else if(currentPlayer?.kind!=="computer"&&fybLastMove?.kind==="draw"){setViewer(activeIndex);setFybAwaitNext(true);}},1550);
   return()=>clearTimeout(id);
  },[fybAnimating,fybTurn,step,order,activeIndex,currentPlayer?.kind,fybLastMove?.kind,players]);
  useEffect(()=>{if(step!=="fyb"||fybAnimating||fybAwaitNext||!currentPlayer||currentPlayer.kind!=="computer")return;
