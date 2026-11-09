@@ -44,6 +44,7 @@ export default function CustomerPokerTable(){
  // This frontend engine is an on-device practice round even when launched from a shared waiting room.
  // Real multiplayer hands must use server-authoritative cards and never receive hints/odds.
  const practiceMode=true;
+ const isSharedRoom=Boolean(roomId); // Shared lobby is not an authoritative game service.
  const [people,setPeople]=useState(DEFAULT_PLAYERS);
  const [lobbyName,setLobbyName]=useState("Saturday Poker");
  const [dealer,setDealer]=useState(0),[session,setSession]=useState("setup");
@@ -61,6 +62,7 @@ export default function CustomerPokerTable(){
  const [capDraft,setCapDraft]=useState("50");
  const [botStyle,setBotStyle]=useState("balanced"),[rebuyOpen,setRebuyOpen]=useState(false),[rebuySeat,setRebuySeat]=useState(0),[rebuyAmount,setRebuyAmount]=useState("20"),[sessionGames,setSessionGames]=useState(1),[resetConfirm,setResetConfirm]=useState(false);
  const [upgrading,setUpgrading]=useState(false);
+ const [turnRemaining,setTurnRemaining]=useState(30);
  const [seatEditor,setSeatEditor]=useState(false),[seatName,setSeatName]=useState(""),[seatBuyin,setSeatBuyin]=useState("20"),[seatError,setSeatError]=useState("");
  function openDrawer(tab="hands"){setDrawerTab(tab);setDrawerOpen(true);}
  function closeDrawer(){setDrawerOpen(false);setShowdownViewer(null);}
@@ -69,6 +71,11 @@ export default function CustomerPokerTable(){
  const wild=THREE_FIVE_SEVEN[round];
  const tableSize=people.length;
  const currentIndex=choices.findIndex(c=>c===null);
+ const localHumanSeats=people.flatMap((p,i)=>p.kind!=="computer"?[i]:[]);
+ const authenticatedSeat=people.findIndex(p=>p.kind!=="computer"&&String(p.id)===String(user?.id??""));
+ const privateSeatIndex=authenticatedSeat>=0?authenticatedSeat:localHumanSeats.length===1?localHumanSeats[0]:-1;
+ const activeHumanTurn=currentIndex>=0&&people[currentIndex]?.kind!=="computer";
+ const canActCurrent=activeHumanTurn&&!isSharedRoom&&privateSeatIndex===currentIndex;
  const allReady=choices.length===tableSize&&choices.every(c=>c!==null);
  const held=choices.flatMap((c,i)=>c==="hold"?[i]:[]);
  const revealOrder=useMemo(()=>held.slice().sort((a,b)=>((a-dealer+tableSize-1)%tableSize)-((b-dealer+tableSize-1)%tableSize)),[choices,dealer,tableSize]);
@@ -80,7 +87,7 @@ export default function CustomerPokerTable(){
  const totalRevealCards=revealOrder.reduce((sum,i)=>sum+(hands[i]?.length||0),0);
  const currentReveal=revealOrder.find(i=>(reveal[i]||0)<(hands[i]?.length||0));
  const displayIndex=currentIndex>=0?currentIndex:null;
- const viewCards=viewer!==null&&phase==="choosing"?hands[viewer]:null;
+ const viewCards=viewer!==null&&viewer===privateSeatIndex&&phase==="choosing"&&!isSharedRoom?hands[privateSeatIndex]:null;
  const handInsight=useMemo(()=>practiceMode&&viewCards?practiceHandInfo(viewCards,round):null,[practiceMode,viewCards,round]);
  const equity=useMemo(()=>practiceMode&&viewCards?estimatePracticeEquity(viewCards,round):null,[practiceMode,viewCards,round]);
  function addLog(message){setLog(old=>[{id:uid(),message,time:new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})},...old].slice(0,32));}
@@ -106,6 +113,18 @@ export default function CustomerPokerTable(){
     setStatus("Card night restored. Next dealer chooses a game and ante; virtual chips carry over.");
   }
  },[groupId,roomId]);
+ useEffect(()=>{
+  if(phase!=="choosing"||!activeHumanTurn||isSharedRoom){setTurnRemaining(30);return;}
+  const deadline=Date.now()+30000;
+  setTurnRemaining(30);
+  const clock=setInterval(()=>setTurnRemaining(Math.max(0,Math.ceil((deadline-Date.now())/1000))),200);
+  const timeout=setTimeout(()=>{
+   setChoices(old=>old.map((v,i)=>i===currentIndex&&v===null?"drop":v));
+   setHandFolds(old=>({...old,[currentIndex]:true}));setViewer(null);
+   addLog(people[currentIndex]?.name+" auto-folded after 30 seconds.");
+  },30000);
+  return()=>{clearInterval(clock);clearTimeout(timeout);};
+ },[phase,currentIndex,activeHumanTurn,isSharedRoom]);
  useEffect(()=>{if(phase!=="countdown")return;setCounter(3);const started=Date.now();const timer=setInterval(()=>{const elapsed=Math.floor((Date.now()-started)/1000);const remaining=3-elapsed;if(remaining<=0){clearInterval(timer);setCounter(null);setRevealStep(0);setPhase("revealing");setViewer(null);setShowdownViewer(null);addLog("Dealer countdown complete. Evaluating hands; cards show after the result.");}else setCounter(remaining);},120);return()=>clearInterval(timer);},[phase]);
  // Keep all cards concealed until the completed round is scored.
  // The finished result mounts each face-up hand with staggered flip animation.
@@ -268,6 +287,7 @@ export default function CustomerPokerTable(){
  function preparedChoices(size,cards=hands,stage=round){return people.slice(0,size).map((p,i)=>p.kind==="computer"?pickPracticeBotChoice(cards[i],stage,botStyle):null);}
  function dealOpening(previousPot=0,previousChips=null,previousStrikes=null){
   const stack=previousChips||people.map(p=>Number.isFinite(p.chips)?p.chips:Math.max(0,Math.round(Number(startingChips)*100)));
+  if(isSharedRoom){setStatus("Shared rooms are lobby-only. Secure server-side gameplay is not live yet; dealing here would expose other players\' cards.");return;}
   if(tableSize<2||tableSize>6){setStatus("Choose 2–6 players before dealing.");return;}
   if(!Number.isSafeInteger(anteCents)||anteCents<0||!Number.isSafeInteger(capCents)||capCents<1){setStatus("Set valid ante and pot-cap amounts.");return;}
   const active=people.map((_,i)=>i).filter(i=>!sittingOut[i]);
@@ -303,8 +323,8 @@ export default function CustomerPokerTable(){
   }
  }
  function start(){setSession("playing");setLog([]);dealOpening(0,chipStacks.length===people.length?chipStacks:null,{});}
- function choose(c){if(phase!=="choosing"||currentIndex<0||people[currentIndex].kind==="computer")return;setChoices(old=>old.map((v,i)=>i===currentIndex?c:v));if(c==="drop")setHandFolds(old=>({...old,[currentIndex]:true}));setViewer(null);addLog(people[currentIndex].name+" is READY.");}
- function countdown(){if(phase!=="choosing"||!allReady)return;setPhase("countdown");addLog("Dealer started 3, 2, 1 countdown.");}
+ function choose(c){if(phase!=="choosing"||currentIndex<0||!canActCurrent)return;setChoices(old=>old.map((v,i)=>i===currentIndex?c:v));if(c==="drop")setHandFolds(old=>({...old,[currentIndex]:true}));setViewer(null);addLog(people[currentIndex].name+" is READY.");}
+ function countdown(){if(isSharedRoom||phase!=="choosing"||!allReady)return;setPhase("countdown");addLog("Dealer started 3, 2, 1 countdown.");}
  function settleCurrentRound(){
   if(phase!=="revealing")return;
   setHandFolds(old=>({...old,...Object.fromEntries(choices.flatMap((c,i)=>c==="drop"?[[i,true]]:[]))}));
@@ -375,6 +395,7 @@ export default function CustomerPokerTable(){
      {chipAnimation?.contributions?.map(({seat,amount},index)=><div key={chipAnimation.nonce+"-"+seat} className={"sw-357-chip-to-pot from-seat-"+seat} style={{"--chip-delay":index*160+"ms"}} aria-hidden="true"><span className="sw-357-moving-chip">●</span><small>{displayMoney(amount)}</small></div>)}
     <div className="sw-poker-pot">{chipAnimation&&<div className={"sw-poker-chip-flight "+(chipAnimation.winner===null?"ante":"payout")} aria-hidden="true">🪙 {chipAnimation.winner!==null?"→ "+people[chipAnimation.winner]?.name:"Antes → Pot"}</div>}<div className="sw-poker-chip-stack"><span className="sw-poker-chip dark"/><span className="sw-poker-chip blue"/><span className="sw-poker-chip red"/></div><div className="sw-poker-pot-amount">Pot: {displayMoney(pot)}</div><div className="sw-poker-pot-small">Ante: {displayMoney(anteCents)} · Cap: {capText}</div></div>
     {counter!==null&&<div aria-live="assertive" className="sw-poker-decision-shadow">{counter}</div>}
+    {phase==="choosing"&&activeHumanTurn&&!isSharedRoom&&<div className={"sw-poker-your-turn"+(canActCurrent?" active":" waiting")} aria-live="polite"><strong>{canActCurrent?"YOUR TURN":"PLAYER TURN"}</strong><span>{turnRemaining}s</span></div>}
     {Array.from({length:session==="setup"?roomCapacity:tableSize},(_,i)=>{const p=people[i];return <div key={p?.id||"open-"+i} className={"sw-poker-seat s"+i+(p?"":" sw-poker-seat-empty")} aria-label={p?p.name+" "+(choices[i]!==null?"Ready":"Waiting"):"Open poker seat"}>
       {p?<Photo person={p}/>:<button type="button" aria-label={"Add player to seat "+(i+1)} disabled={session!=="setup"} className="sw-poker-empty-seat" onClick={()=>{setSeatBuyin(String((roomMinimum??2000)/100));setSeatEditor(true);}}>+</button>}
       <div className="sw-poker-seat-nameplate"><strong>{p?.name||"Open Seat"}</strong><small>{p?"◉ "+displayMoney(chipStacks[i]??p.chips??2000):"Tap to join"}</small></div>
@@ -388,7 +409,7 @@ export default function CustomerPokerTable(){
   {session!=="setup"&&<>
    {phase==="choosing"&&<div className="sw-poker-pov">
     <p className="sw-poker-pov-label">{allReady?"Everyone is ready — dealer may start countdown":currentPlayer?.name+" is choosing privately · "+readyCount+"/"+tableSize+" ready"}</p>
-    <div className="sw-poker-facecards">{viewCards?viewCards.map((c,i)=><Card key={i} card={c} wild={c.rank===wild}/>):(hands[displayIndex??0]||[]).map((c,i)=><Card key={i} card={c} hidden/>)}</div>
+    <div className="sw-poker-facecards">{viewCards?viewCards.map((c,i)=><Card key={i} card={c} wild={c.rank===wild}/>):(hands[privateSeatIndex>=0?privateSeatIndex:displayIndex??0]||[]).map((c,i)=><Card key={i} card={c} hidden/>)}</div>
 
 
     <p className="sw-poker-compact-note">{currentPlayer?"Use the sticky bar to Hold, Fold, or Hide cards.":"Everyone is ready. Start the countdown below."}</p>
@@ -416,7 +437,8 @@ export default function CustomerPokerTable(){
  {session==="playing"&&<nav className="sw-poker-sticky-actions" aria-label="Poker actions">
   <div className="sw-poker-action-top"><strong>♠ {phase==="choosing"?(currentPlayer?.name||"Dealer")+" · "+readyCount+"/"+tableSize+" ready":phase==="resolved"?"Round settled":phase==="revealing"?"Showdown in progress":phase==="countdown"?"3 · 2 · 1":"Poker"}</strong><div className="sw-poker-quick-management"><span>Pot {displayMoney(pot)} / {capText}</span><button type="button" onClick={()=>{setRebuySeat(0);setRebuyAmount("20");setRebuyOpen(true);}}>+ Rebuy</button><button type="button" onClick={()=>setResetConfirm(true)}>↻ Reset</button></div></div>
   <div className="sw-poker-action-buttons">
-   {phase==="choosing"&&currentPlayer?<><button type="button" className="sw-poker-action hide" onClick={()=>setViewer(v=>v===displayIndex?null:displayIndex)} aria-pressed={viewer===displayIndex}>{viewer===displayIndex?<><EyeOff size={17}/> Hide</>:<><Eye size={17}/> Show hand</>}</button><button type="button" className="sw-poker-action fold" onClick={()=>choose("drop")}>Fold</button><button type="button" className="sw-poker-action hold" onClick={()=>choose("hold")}>Hold</button></>:
+   {phase==="choosing"&&currentPlayer&&canActCurrent?<><button type="button" className="sw-poker-action hide" onClick={()=>setViewer(v=>v===privateSeatIndex?null:privateSeatIndex)} aria-pressed={viewer===privateSeatIndex}>{viewer===privateSeatIndex?<><EyeOff size={17}/> Hide</>:<><Eye size={17}/> Show my hand</>}</button><button type="button" className="sw-poker-action fold" onClick={()=>choose("drop")}>Fold</button><button type="button" className="sw-poker-action hold" onClick={()=>choose("hold")}>Hold</button></>:
+    phase==="choosing"&&currentPlayer?<span className="sw-poker-action-wait">Other player\'s turn · {turnRemaining}s · auto-fold at zero</span>:
    phase==="choosing"&&allReady?<button type="button" className="sw-poker-action hold grow" onClick={countdown}>Start 3 · 2 · 1 countdown</button>:
    phase==="resolved"?<button type="button" className="sw-poker-action hold grow" onClick={doNext}>{nextActionLabel} <ChevronRight size={16}/></button>:
    phase==="revealing"?<span className="sw-poker-action-wait">Evaluating held hands privately…</span>:
