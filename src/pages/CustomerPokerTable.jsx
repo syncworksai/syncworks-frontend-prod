@@ -101,13 +101,12 @@ export default function CustomerPokerTable(){
     setStatus("Card night restored. Next dealer chooses a game and ante; virtual chips carry over.");
   }
  },[groupId,roomId]);
- useEffect(()=>{if(phase!=="countdown")return;setCounter(3);const started=Date.now();const timer=setInterval(()=>{const elapsed=Math.floor((Date.now()-started)/1000);const remaining=3-elapsed;if(remaining<=0){clearInterval(timer);setCounter(null);setRevealStep(0);setPhase("revealing");setViewer(null);setShowdownViewer(null);addLog("Dealer countdown complete. Flipping all hands for the round.");}else setCounter(remaining);},120);return()=>clearInterval(timer);},[phase]);
- // Show all seats only after Hold/Fold choices lock and the countdown completes.
- // Flip one card in each hand per beat, with the final card settling before payout.
+ useEffect(()=>{if(phase!=="countdown")return;setCounter(3);const started=Date.now();const timer=setInterval(()=>{const elapsed=Math.floor((Date.now()-started)/1000);const remaining=3-elapsed;if(remaining<=0){clearInterval(timer);setCounter(null);setRevealStep(0);setPhase("revealing");setViewer(null);setShowdownViewer(null);addLog("Dealer countdown complete. Evaluating hands; cards show after the result.");}else setCounter(remaining);},120);return()=>clearInterval(timer);},[phase]);
+ // Keep all cards concealed until the completed round is scored.
+ // The finished result mounts each face-up hand with staggered flip animation.
  useEffect(()=>{
   if(phase!=="revealing")return;
-  if(revealStep<hands[0]?.length){const timer=setTimeout(()=>setRevealStep(v=>v+1),round===2?540:400);return()=>clearTimeout(timer);}
-  const timer=setTimeout(()=>settleCurrentRound(),900);return()=>clearTimeout(timer);
+  const timer=setTimeout(()=>settleCurrentRound(),850);return()=>clearTimeout(timer);
  },[phase,round,revealStep,choices,hands,pot,strikes]);
  useEffect(()=>{if(!chipAnimation)return;const timer=setTimeout(()=>setChipAnimation(null),4200);return()=>clearTimeout(timer);},[chipAnimation]);
  async function upgradeToLiveRoom(){
@@ -352,7 +351,7 @@ export default function CustomerPokerTable(){
       <div className="sw-poker-seat-nameplate"><strong>{p?.name||"Open Seat"}</strong><small>{p?"◉ "+displayMoney(chipStacks[i]??p.chips??2000):"Tap to join"}</small></div>
       {session==="playing"&&p&&<span className={"sw-poker-status"+(choices[i]!==null&&phase!=="setup"?" ready":"")}>{phase==="choosing"||phase==="countdown"?(choices[i]===null?"◷ Waiting":"✓ Ready"):phase==="revealing"||phase==="resolved"?(choices[i]==="hold"?"Held":choices[i]==="drop"?"Folded":"Waiting"):"At table"}</span>}
       {p&&chipAnimation?.winner===i&&<div className="sw-poker-win-pop">+{displayMoney(chipAnimation.amount)}</div>}{p&&chipAnimation?.contributions?.some(x=>x.seat===i)&&<div className="sw-poker-loss-pop">−{displayMoney(chipAnimation.contributions.find(x=>x.seat===i).amount)}</div>}
-       {p&&hands[i]?.length>0&&(phase==="revealing"||phase==="resolved")&&<div className="sw-357-seat-reveal" aria-label={p.name+" cards at showdown"}>{hands[i].map((c,j)=><div key={j} className={"sw-357-flip-card"+(phase==="resolved"||j<revealStep?" flipped":"")}><span className="sw-357-flip-back">♠</span><span className={"sw-357-flip-face"+(isRed(c.suit)?" red":"")}>{rankText(c)}{c.suit}</span></div>)}</div>}
+       {p&&hands[i]?.length>0&&phase==="resolved"&&<div className="sw-357-seat-reveal" aria-label={p.name+" cards at completed round showdown"}>{hands[i].map((c,j)=><div key={j} className="sw-357-flip-card sw-357-end-flip" style={{"--flip-delay":j*95+"ms"}}><span className="sw-357-flip-back">♠</span><span className={"sw-357-flip-face"+(isRed(c.suit)?" red":"")}>{rankText(c)}{c.suit}</span></div>)}</div>}
       {p&&dealer===i&&<span className="sw-poker-dealer">D</span>}
     </div>;})}
    </div>
@@ -367,9 +366,9 @@ export default function CustomerPokerTable(){
    </div>}
    {phase==="countdown"&&<div className="sw-poker-pov rounded-2xl border border-cyan-400/30 bg-cyan-400/5 p-4"><strong>Everyone is READY</strong><p className="mt-1 text-xs text-cyan-200">Synchronized-style countdown demonstration on this device.</p></div>}
    {phase==="revealing"&&<section className="sw-poker-pov sw-poker-panel sw-poker-showdown sw-poker-compact-result">
-    <h3><Eye size={17}/> {held.length===0?"Everyone folded":held.length===1?"Uncontested hold":round===2?"Seven-card showdown":"Flipping all cards"}</h3>
-    <p>All players’ cards flip at the end of the round. {held.length===0?"Everyone folded; pot carries forward.":"Comparing holding hands automatically."}</p>
-    {<p>Flipping {Math.min(revealStep,hands[0]?.length||0)}/{hands[0]?.length||0} cards per player. <button type="button" onClick={()=>openDrawer("hands")} className="sw-poker-text-action">View showdown</button></p>}
+    <h3><Eye size={17}/> {held.length===0?"Everyone folded":held.length===1?"Uncontested hold":"Comparing hands"}</h3>
+    <p>Cards remain hidden until the result. {held.length===0?"Everyone folded; pot carries forward.":"Comparing holding hands automatically."}</p>
+    
    </section>}
    {phase==="review"&&<section className="sw-poker-panel mx-auto max-w-xl"><h3>Dealer review required</h3><p>{outcome?.message||"More than one player was dealt 3-5-7. No automatic payout has been made."}</p><button type="button" onClick={()=>{setSession("setup");setPhase("setup");}} className="sw-poker-button mt-3">Restart demo</button></section>}
    {phase==="resolved"&&<section className="sw-poker-panel mx-auto max-w-xl sw-poker-result sw-poker-compact-result" aria-label="Round result">
@@ -404,7 +403,7 @@ export default function CustomerPokerTable(){
    <div className="sw-poker-drawer-body">
     {drawerTab==="hands"&&<>
       {phase==="choosing"&&<>{handInsight&&viewCards?<div className="sw-practice-hint"><strong>{handInsight.name}</strong><p>{handInsight.wildCount?handInsight.wildCount+" wild card(s) · ":""}{wild}s are wild. {round===0?"No flushes or straights in the 3-card round.":round===2?"Best five cards from seven.":"Five-card hand ranking."}</p>{equity&&<div className="sw-practice-equity"><div><b>{equity.percent}%</b><span>Estimate against one random hand</span></div><div className="sw-practice-equity-track"><i style={{width:equity.percent+"%"}}/></div><small>Practice simulation using {equity.trials} random hands, not the opponents' actual cards. Not a guaranteed win.</small></div>}</div>:<p>Tap <b>Show hand</b> in the bottom bar first to see your hand strength and estimated odds. Opponents' cards stay hidden until the round ends.</p>}</>}
-      {phase==="revealing"&&<><p>All players’ cards are flipping face-up after the locked decisions · {Math.min(revealStep,hands[0]?.length||0)}/{hands[0]?.length||0} cards.</p><div className="sw-poker-drawer-hands">{people.map((p,i)=><section key={p.id}><strong>{p.name} · {choices[i]==="hold"?"Held":"Folded"}</strong><div className="sw-poker-facecards">{hands[i]?.map((c,j)=><Card key={j} card={c} hidden={j>=revealStep} wild={c.rank===wild}/>)}</div></section>)}</div></>}
+      {phase==="revealing"&&<p>The hands are being evaluated. All cards will be shown after the round result.</p>}
       {phase==="resolved"&&<>{hasPracticeRecap?<><p>Full virtual-player hands are optional in practice mode. Folded players' cards were not shown during the decision.</p><div className="sw-poker-drawer-hands">{people.map((p,i)=>p.kind==="computer"&&hands[i]?<section key={p.id}><strong>{p.name} · {practiceHandInfo(hands[i],round)?.name||"Hand"}</strong><small>{choices[i]==="hold"?"Held":choices[i]==="drop"?"Folded":"Round complete"}</small><div className="sw-poker-facecards">{hands[i].map((c,j)=><Card key={j} card={c} wild={c.rank===wild}/>)}</div></section>:null)}</div></>:<p>No virtual-player hands to review for this round.</p>}</>}
       {phase==="countdown"&&<p>The decision countdown is underway. Opponents' hands stay private.</p>}
       {phase==="review"&&<p>Dealer review required. No automatic payout has been made.</p>}
