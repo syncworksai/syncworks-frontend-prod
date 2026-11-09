@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {score442,naturalPair442,replace442,settle442,botExchange442} from "./fourFourDeuce.mjs";
+import {createShuffledDeck} from "./drop357Table.mjs";
 const cards=(...r)=>r.map((rank,i)=>({rank,suit:["♠","♥","♦","♣"][i]}));
 test("four-card evaluator ignores straight and flush and 4 is always wild",()=>{
  assert.equal(score442(cards(5,6,7,8)).category,0);
@@ -49,4 +50,27 @@ test("losing holder cannot owe more chips than available",()=>{
  const hands=[cards(7,7,9,10),cards(8,8,8,4)];
  const r=settle442({hands,choices:["hold","hold"],potCents:150,capCents:1000,anteCents:25,stacks:[35,500]});
  assert.deepEqual(r.delta,[-35,150]);assert.equal(r.nextPot,35);
+});
+
+test("each 4/4 hand uses one new shuffled 52-card deck with no duplicate cards across six seats and 18 maximum draws",()=>{
+ for(let round=0;round<50;round++){
+  const shuffled=createShuffledDeck();
+  assert.equal(shuffled.length,52);
+  assert.equal(new Set(shuffled.map(c=>c.rank+"-"+c.suit)).size,52);
+  let hands=Array.from({length:6},(_,seat)=>shuffled.slice(seat*4,(seat+1)*4));
+  let deck=shuffled.slice(24);
+  const seenDealt=[...hands.flat()];
+  for(let seat=0;seat<6;seat++){
+   const drawn=deck.slice(0,3);
+   const result=replace442({hands,deck,seat,indexes:[0,1,2]});
+   hands=result.hands;deck=result.deck;
+   seenDealt.push(...drawn);
+  }
+  assert.equal(seenDealt.length,42);
+  assert.equal(new Set(seenDealt.map(c=>c.rank+"-"+c.suit)).size,42);
+  assert.equal(deck.length,10);
+  const fresh=createShuffledDeck();
+  assert.equal(fresh.length,52);
+  assert.equal(new Set(fresh.map(c=>c.rank+"-"+c.suit)).size,52);
+ }
 });
