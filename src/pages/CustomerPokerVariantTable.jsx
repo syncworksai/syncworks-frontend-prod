@@ -28,8 +28,8 @@ export default function CustomerPokerVariantTable({variant}){
  const [hands,setHands]=useState([]),[clown,setClown]=useState([]),[deck,setDeck]=useState([]),[decisions,setDecisions]=useState([]),[viewer,setViewer]=useState(null),[outcome,setOutcome]=useState(null),[log,setLog]=useState([]);
  const [drawer,setDrawer]=useState(false),[tab,setTab]=useState("hands"),[rebuy,setRebuy]=useState(false),[rebuySeat,setRebuySeat]=useState(0),[rebuyAmount,setRebuyAmount]=useState("20"),[status,setStatus]=useState("");
  const [fybTurn,setFybTurn]=useState(0),[followers,setFollowers]=useState([]),[pendingFollower,setPendingFollower]=useState(false),[street,setStreet]=useState(0);
- const [dealerPick,setDealerPick]=useState(false);
- const maxCents=cents(cap),anteCents=cents(ante),index=players.length;
+ const [dealerPick,setDealerPick]=useState(false),[fybLosses,setFybLosses]=useState([]);
+ const maxCents=variant==="fyb"?1000000:cents(cap),anteCents=cents(ante),index=players.length;
  const currentIndex=useMemo(()=>decisions.findIndex(v=>v===null),[decisions]);
  const order=useMemo(()=>players.map((_,i)=>(dealer+1+i)%players.length),[dealer,players]);
  const activeIndex=variant==="fyb"?order[fybTurn]:(currentIndex<0?-1:currentIndex);
@@ -62,7 +62,7 @@ export default function CustomerPokerVariantTable({variant}){
  function deal(){
   if(players.length<2||players.length>6){setStatus("Choose a table with 2–6 seated players.");return;}
   if(!Number.isInteger(maxCents)||maxCents<=0||!Number.isInteger(anteCents)||anteCents<0){setStatus("Choose valid ante and pot amounts.");return;}
-  if(!takeAnte())return;
+  if(variant!=="fyb"&&!takeAnte())return;
   const draft=localDeal(variant,players.length);
   setHands(draft.hands);setDeck(draft.deck);setClown(draft.clown);
   setViewer(null);setOutcome(null);setFybTurn(0);setFollowers([]);setPendingFollower(false);setStreet(0);
@@ -84,10 +84,13 @@ export default function CustomerPokerVariantTable({variant}){
   if(fybTurn===players.length-1){
    const lowest=Math.min(...updated.map(h=>h[0].rank));
    const losers=updated.map((h,i)=>h[0].rank===lowest?i:-1).filter(i=>i>=0);
-   const loss=Math.min(anteCents,Math.max(0,Math.floor((maxCents-pot)/losers.length)));
+   const loss=anteCents;
+   const updatedLosses=players.map((p,i)=>(fybLosses[i]||0)+(losers.includes(i)?1:0));
+   setFybLosses(updatedLosses);
+   const finished=updatedLosses.some(n=>n>=3);
    const newStacks=stacks.map((v,i)=>v-(losers.includes(i)?loss:0));
    const newPot=pot+loss*losers.length;setStacks(newStacks);setPot(newPot);
-   setOutcome({message:losers.map(i=>players[i].name).join(", ")+" had the lowest card ("+lowest+") and each pays "+displayMoney(loss),losers});
+   setOutcome({message:losers.map(i=>players[i].name).join(", ")+" had the lowest card ("+lowest+") and each pays "+displayMoney(loss)+(finished?". Three lost chips: FYB is complete, pass the dealer.":""),losers,gameFinished:finished});
    setStep("result");record("FYB hand complete. No showdown winner: lowest card(s) pay into the virtual purse.");
   }else setFybTurn(v=>v+1);
  }
@@ -156,8 +159,8 @@ export default function CustomerPokerVariantTable({variant}){
   <div className="sw-poker-round"><div className="sw-poker-round-badge"><div>♠ {game.title}</div><span>{game.tag}</span></div><span className="sw-poker-capsule">♙ {players.length}</span></div>
   <div className="sw-poker-session-status"><span>♣ Card Night · Game {gameNumber}</span><span>Dealer: {players[dealer]?.name||"Waiting"} · Hard cap {displayMoney(maxCents)}</span></div>
   {status&&<div role="status" className="sw-poker-practice-note">{status}</div>}
-  {step==="ready"&&<section className="sw-poker-game-choice"><strong>Ready for {game.title}</strong><p>Same SyncWorks table and seats. Play stays on this device; your virtual chip balances carry between games in this practice session.</p><div className="flex gap-2"><label className="flex-1">Ante / chip ($)<input type="number" step="0.01" min="0.01" value={ante} onChange={e=>setAnte(e.target.value)} className="w-full rounded-lg bg-slate-950 p-3"/></label><label className="flex-1">Max pot ($)<input type="number" min="1" value={cap} step="0.01" onChange={e=>setCap(e.target.value)} className="w-full rounded-lg bg-slate-950 p-3"/></label></div><button className="sw-poker-button primary mt-3 w-full" onClick={deal}>♠ Shuffle & Deal {game.title}</button></section>}
-  <div className="sw-poker-table-space"><div className="sw-poker-felt"><div className="sw-poker-felt-brand"><i>S</i>SYNCWORKS<br/>POKER</div><div className="sw-poker-pot"><div className="sw-poker-chip-stack"><span className="sw-poker-chip dark"/><span className="sw-poker-chip blue"/><span className="sw-poker-chip red"/></div><div className="sw-poker-pot-amount">Pot: {displayMoney(pot)}</div><div className="sw-poker-pot-small">{game.title} · Max {displayMoney(maxCents)}</div></div>
+  {step==="ready"&&<section className="sw-poker-game-choice"><strong>Ready for {game.title}</strong><p>Same SyncWorks table and seats. Play stays on this device; your virtual chip balances carry between games in this practice session.</p><div className="flex gap-2"><label className="flex-1">{variant==="fyb"?"Chip denomination ($)":"Ante ($)"}<input type="number" step="0.01" min="0.01" value={ante} onChange={e=>setAnte(e.target.value)} className="w-full rounded-lg bg-slate-950 p-3"/></label>{variant!=="fyb"&&<label className="flex-1">Max pot ($)<input type="number" min="1" value={cap} step="0.01" onChange={e=>setCap(e.target.value)} className="w-full rounded-lg bg-slate-950 p-3"/></label>}</div><button className="sw-poker-button primary mt-3 w-full" onClick={deal}>♠ Shuffle & Deal {game.title}</button></section>}
+  <div className="sw-poker-table-space"><div className="sw-poker-felt"><div className="sw-poker-felt-brand"><i>S</i>SYNCWORKS<br/>POKER</div><div className="sw-poker-pot"><div className="sw-poker-chip-stack"><span className="sw-poker-chip dark"/><span className="sw-poker-chip blue"/><span className="sw-poker-chip red"/></div><div className="sw-poker-pot-amount">Pot: {displayMoney(pot)}</div><div className="sw-poker-pot-small">{game.title} · {variant==="fyb"?"3-chip limit per player":"Max "+displayMoney(maxCents)}</div></div>
   {players.map((p,i)=><div className={"sw-poker-seat s"+i} key={p.id}><div className="sw-poker-seat-avatar">{p.kind==="computer"?"🤖":p.name.split(" ").map(x=>x[0]).slice(0,2).join("")}</div><div className="sw-poker-seat-nameplate"><strong>{p.name}</strong><small>◉ {displayMoney(stacks[i]??p.chips)}</small></div>{i===dealer&&<span className="sw-poker-dealer">D</span>}{step==="deciding"&&<span className="sw-poker-status">{decisions[i]?"✓ Ready":"Waiting"}</span>}</div>)}
   </div></div>
   {step!=="ready"&&<section className="sw-poker-panel sw-poker-compact-result"><h3>{centered}</h3>
@@ -168,12 +171,12 @@ export default function CustomerPokerVariantTable({variant}){
    {step==="stud-result"&&<><p>All seven cards dealt. The next step is validated betting and natural-versus-wild showdown; this is a guided dealing demonstration, not an automatic pot award.</p><button className="sw-poker-button mt-2" onClick={()=>{setTab("hands");setDrawer(true)}}>Review stud cards</button></>}
   </section>}
  </div>
- {step!=="loading"&&<nav className="sw-poker-sticky-actions"><div className="sw-poker-action-top"><strong>♠ {centered}</strong><span>{displayMoney(pot)} / {displayMoney(maxCents)}</span></div><div className="sw-poker-action-buttons">
+ {step!=="loading"&&<nav className="sw-poker-sticky-actions"><div className="sw-poker-action-top"><strong>♠ {centered}</strong><span>{displayMoney(pot)} {variant==="fyb"?"· No cap":"/ "+displayMoney(maxCents)}</span></div><div className="sw-poker-action-buttons">
  {step==="ready"&&<button className="sw-poker-action hold grow" onClick={deal}>Deal cards</button>}
  {step==="deciding"&&currentPlayer&&<><button className="sw-poker-action hide" onClick={()=>setViewer(v=>v===activeIndex?null:activeIndex)}>{viewer===activeIndex?<EyeOff size={15}/>:<Eye size={15}/>} {viewer===activeIndex?"Hide":"Show"}</button><button className="sw-poker-action fold" onClick={()=>chooseHold("fold")}>Fold</button><button className="sw-poker-action hold" onClick={()=>chooseHold("hold")}>Hold</button></>}
  {step==="fyb"&&currentPlayer&&<><button className="sw-poker-action hide" onClick={()=>setViewer(v=>v===activeIndex?null:activeIndex)}>Show / Hide</button><button className="sw-poker-action fold" onClick={()=>fybAction(true)}>Pass</button><button className="sw-poker-action hold" onClick={()=>fybAction(false)}>Keep</button></>}
  {step==="stud"&&<button className="sw-poker-action hold grow" onClick={dealStudStreet}>Deal next stud card · {street+1}/7</button>}
- {(step==="result"||step==="stud-result")&&<><button className="sw-poker-action hold grow" onClick={()=>{if(pot===0){quitToDealer();return;}setStep("ready");setOutcome(null);}}> {pot===0?"Pass Dealer · Next Game":"Next hand"} <ChevronRight size={17}/></button><button className="sw-poker-action hide" onClick={quitToDealer}>Choose Game</button></>}
+ {(step==="result"||step==="stud-result")&&<><button className="sw-poker-action hold grow" onClick={()=>{if(outcome?.gameFinished||pot===0){quitToDealer();return;}setStep("ready");setOutcome(null);}}> {outcome?.gameFinished||pot===0?"Pass Dealer · Next Game":"Next hand"} <ChevronRight size={17}/></button><button className="sw-poker-action hide" onClick={quitToDealer}>Choose Game</button></>}
  <button className="sw-poker-action info" onClick={()=>{setTab("rules");setDrawer(true)}}><Info size={18}/><span>Info</span></button></div></nav>}
  {drawer&&<div className="sw-poker-drawer-backdrop" onClick={()=>setDrawer(false)}><section className="sw-poker-drawer" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><div className="sw-poker-drawer-grip"/><div className="sw-poker-drawer-heading"><strong>♠ {game.title} · Table Details</strong><button className="sw-poker-drawer-close" onClick={()=>setDrawer(false)}>✕</button></div><div className="sw-poker-drawer-tabs">{["hands","rules","log","settings"].map(t=><button key={t} className={tab===t?"active":""} onClick={()=>setTab(t)}>{t}</button>)}</div><div className="sw-poker-drawer-body">
  {tab==="hands"&&<>{!reviewable?<p>Opponents' private cards are not revealed before a completed hand. You can view only your active hand.</p>:players.map((p,i)=><section className="sw-poker-drawer-hands" key={p.id}><strong>{p.name}</strong><div className="sw-poker-facecards">{hands[i]?.map((c,j)=><PokerCard c={c} key={j}/>)}</div></section>)}{variant==="bozo"&&reviewable&&<section><h3>Clown</h3><div className="sw-poker-facecards">{clown.map((c,i)=><PokerCard key={i} c={c}/>)}</div></section>}</>}
