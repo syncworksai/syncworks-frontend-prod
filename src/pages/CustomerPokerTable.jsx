@@ -267,19 +267,23 @@ export default function CustomerPokerTable(){
   if(!Number.isSafeInteger(anteCents)||anteCents<0||!Number.isSafeInteger(capCents)||capCents<1){setStatus("Set valid ante and pot-cap amounts.");return;}
   const fresh=dealt357(createShuffledDeck(),tableSize);
   if(previousPot>capCents){setStatus("The current pot exceeds the selected cap. Increase the cap or reset the practice session.");return;}
-  const actualAnte=limitAnte({potCents:previousPot,capCents,anteCents,playerCount:tableSize});
-  if(stack.some((value,i)=>value<actualAnte&&people[i]?.kind!=="computer")){
+  const active=people.map((_,i)=>i).filter(i=>!sittingOut[i]);
+  if(active.length<2){setStatus("At least two active players are required to deal.");return;}
+  const actualAnte=limitAnte({potCents:previousPot,capCents,anteCents,playerCount:active.length});
+  if(stack.some((value,i)=>active.includes(i)&&value<actualAnte&&people[i]?.kind!=="computer")){
     setStatus("A player needs a rebuy before dealing. Use Rebuy in the bottom controls.");
-    setRebuySeat(Math.max(0,stack.findIndex((value,i)=>value<actualAnte&&people[i]?.kind!=="computer")));
+    setRebuySeat(Math.max(0,stack.findIndex((value,i)=>active.includes(i)&&value<actualAnte&&people[i]?.kind!=="computer")));
     setRebuyOpen(true);return;
   }
-  const botRebuys=stack.map((value,i)=>people[i]?.kind==="computer"&&value<actualAnte?Math.max(2000,actualAnte-value):0);
+  const botRebuys=stack.map((value,i)=>active.includes(i)&&people[i]?.kind==="computer"&&value<actualAnte&&(rebuyCounts[i]||0)<4?2000:0);
+  if(active.some(i=>stack[i]+botRebuys[i]<actualAnte)){setStatus("A player must rebuy or sit out to continue.");return;}
+  if(botRebuys.some(Boolean))setRebuyCounts(old=>Object.fromEntries(people.map((_,i)=>[i,(old[i]||0)+(botRebuys[i]?1:0)])));
   const funded=stack.map((value,i)=>value+botRebuys[i]);
   if(botRebuys.some(Boolean))addLog("Practice virtual-player rebuys: "+botRebuys.map((n,i)=>n?people[i].name+" "+displayMoney(n):null).filter(Boolean).join(", "));
-  const afterAnte=funded.map(v=>v-actualAnte);
-  const newPot=previousPot+tableSize*actualAnte;
+  const afterAnte=funded.map((v,i)=>v-(active.includes(i)?actualAnte:0));
+  const newPot=previousPot+active.length*actualAnte;
   if(actualAnte<anteCents)addLog(actualAnte===0?"Pot cap reached: no more antes until a qualifying winner drags the pot.":"Pot cap reduced the starting ante to "+displayMoney(actualAnte)+" each.");
-  setHands(fresh.hands);setDeck(fresh.deck);setRound(0);
+  setHands(fresh.hands);setDeck(fresh.deck);setRound(0);setHandFolds({});setDealAnimation({nonce:Date.now(),count:3});
   setChipStacks(afterAnte);setPot(newPot);setStrikes(previousStrikes||{});
   setReveal({});setRevealStep(0);setShowdownViewer(null);setChipAnimation(null);setOutcome(null);setViewer(null);setCounter(null);closeDrawer();
   const instant=fresh.hands.flatMap((hand,i)=>instant357(hand)?[i]:[]);
@@ -290,15 +294,16 @@ export default function CustomerPokerTable(){
   }else if(instant.length>1){
    setPhase("review");addLog("Multiple 3-5-7 instant hands — dealer review required.");
   }else{
-   setChoices(preparedChoices(tableSize,fresh.hands,0));setPhase("choosing");addLog("Three cards dealt. 3s are wild. Players choose Hold or Fold.");
+   setChoices(preparedChoices(tableSize,fresh.hands,0).map((c,i)=>sittingOut[i]?"drop":c));setPhase("choosing");addLog("Three cards dealt. 3s are wild. Players choose Hold or Fold.");
   }
  }
  function start(){setSession("playing");setLog([]);dealOpening(0,null,{});}
- function choose(c){if(phase!=="choosing"||currentIndex<0||people[currentIndex].kind==="computer")return;setChoices(old=>old.map((v,i)=>i===currentIndex?c:v));setViewer(null);addLog(people[currentIndex].name+" is READY.");}
+ function choose(c){if(phase!=="choosing"||currentIndex<0||people[currentIndex].kind==="computer")return;setChoices(old=>old.map((v,i)=>i===currentIndex?c:v));if(c==="drop")setHandFolds(old=>({...old,[currentIndex]:true}));setViewer(null);addLog(people[currentIndex].name+" is READY.");}
  function countdown(){if(phase!=="choosing"||!allReady)return;setPhase("countdown");addLog("Dealer started 3, 2, 1 countdown.");}
  function settleCurrentRound(){
   if(phase!=="revealing")return;
-  const result=capGutsResult(resolve357({hands,round,choices,potCents:pot,strikes,anteCents}),{potCents:pot,capCents,anteCents,stacks:chipStacks});
+  setHandFolds(old=>({...old,...Object.fromEntries(choices.flatMap((c,i)=>c==="drop"?[[i,true]]:[]))}));
+   const result=capGutsResult(resolve357({hands,round,choices,potCents:pot,strikes,anteCents}),{potCents:pot,capCents,anteCents,stacks:chipStacks});
   setOutcome({...result,potDraggedCents:result.winner!==null&&result.winner!==undefined?pot:0});
   setStrikes(result.strikes);
   setChipStacks(previous=>previous.map((value,index)=>value+(result.delta[index]||0)));
@@ -319,7 +324,8 @@ export default function CustomerPokerTable(){
    dealOpening(pot,chipStacks,strikes);return;
   }
   const updated=addRoundCards(hands,deck);
-  setHands(updated.hands);setDeck(updated.deck);setRound(v=>v+1);setViewer(null);setShowdownViewer(null);setChoices(preparedChoices(tableSize,updated.hands,round+1));setReveal({});setRevealStep(0);setOutcome(null);setPhase("choosing");closeDrawer();
+  setDealAnimation({nonce:Date.now(),count:2});
+  setHands(updated.hands);setDeck(updated.deck);setRound(v=>v+1);setViewer(null);setShowdownViewer(null);setChoices(preparedChoices(tableSize,updated.hands,round+1).map((c,i)=>sittingOut[i]||handFolds[i]?"drop":c));setReveal({});setRevealStep(0);setOutcome(null);setPhase("choosing");closeDrawer();
   addLog("Two cards added to every hand. Only "+THREE_FIVE_SEVEN[round+1]+"s are wild.");
  }
  const currentPlayer=displayIndex!==null?people[displayIndex]:null;
@@ -360,7 +366,7 @@ export default function CustomerPokerTable(){
  {seatEditor&&session==="setup"&&<div className="sw-poker-modal-cover" role="presentation" onClick={()=>setSeatEditor(false)}><form className="sw-poker-modal" role="dialog" aria-modal="true" aria-label="Add poker player" onClick={e=>e.stopPropagation()} onSubmit={addGuestToTable}><div className="flex items-center justify-between"><h2 className="text-xl font-black">Add a player</h2><button type="button" className="sw-poker-button" onClick={()=>setSeatEditor(false)}>✕</button></div><p className="mt-2 text-xs text-slate-400">Local guest seat; no separate phone connection yet.</p><label className="mt-4 block text-xs text-slate-300">Display name<input autoFocus required maxLength={24} value={seatName} onChange={e=>setSeatName(e.target.value)} placeholder="e.g. Zack" className="mt-2 w-full rounded-xl border border-white/20 bg-slate-950 p-3 text-white"/></label><label className="mt-3 block text-xs text-slate-300">Virtual buy-in ($) · minimum {displayMoney(roomMinimum??0)}<input required type="number" min={(roomMinimum??0)/100} max="10000" step="0.01" value={seatBuyin} onChange={e=>setSeatBuyin(e.target.value)} className="mt-2 w-full rounded-xl border border-white/20 bg-slate-950 p-3 text-white"/></label>{seatError&&<p role="alert" className="mt-3 text-xs text-rose-300">{seatError}</p>}<button type="submit" className="sw-poker-button primary mt-4 w-full">Seat Player</button></form></div>}
   <div className="sw-poker-table-space">
    <div className="sw-poker-felt">
-    <div className="sw-poker-felt-brand"><i>S</i>SYNCWORKS<br/>POKER</div>
+    <div className="sw-poker-felt-brand"><i>S</i>SYNCWORKS<br/>POKER</div>{dealAnimation&&phase==="choosing"&&<div className="sw-357-deal-animation" key={dealAnimation.nonce} aria-hidden="true">{people.flatMap((p,i)=>sittingOut[i]?[]:Array.from({length:dealAnimation.count},(_,j)=><span key={i+"-"+j} className={"sw-357-deal-fly from-seat-"+i} style={{"--deal-delay":(i*120+j*70)+"ms"}}>♠</span>))}</div>}
      {chipAnimation?.contributions?.map(({seat,amount},index)=><div key={chipAnimation.nonce+"-"+seat} className={"sw-357-chip-to-pot from-seat-"+seat} style={{"--chip-delay":index*160+"ms"}} aria-hidden="true"><span className="sw-357-moving-chip">●</span><small>{displayMoney(amount)}</small></div>)}
     <div className="sw-poker-pot">{chipAnimation&&<div className={"sw-poker-chip-flight "+(chipAnimation.winner===null?"ante":"payout")} aria-hidden="true">🪙 {chipAnimation.winner!==null?"→ "+people[chipAnimation.winner]?.name:"Antes → Pot"}</div>}<div className="sw-poker-chip-stack"><span className="sw-poker-chip dark"/><span className="sw-poker-chip blue"/><span className="sw-poker-chip red"/></div><div className="sw-poker-pot-amount">Pot: {displayMoney(pot)}</div><div className="sw-poker-pot-small">Ante: {displayMoney(anteCents)} · Cap: {displayMoney(capCents)}</div></div>
     {counter!==null&&<div aria-live="assertive" className="sw-poker-decision-shadow">{counter}</div>}
