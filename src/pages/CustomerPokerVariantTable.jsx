@@ -9,7 +9,7 @@ import {getCardRoom} from "../api/cardRooms";
 import "./CustomerPokerTable.css";
 
 const GAMES={fyb:{title:"FYB",tag:"Kings trump · Aces low"},442:{title:"4/4/Deuce",tag:"2s wild · 4s need a 2"},bozo:{title:"Bozo · The Clown",tag:"Beat the ghost hand"}, "queen-follower":{title:"Queen & the Follower",tag:"Dynamic stud wilds"}};
-const SYMBOL={11:"J",12:"Q",13:"K",14:"A"};
+const SYMBOL={1:"A",11:"J",12:"Q",13:"K",14:"A"};
 const label=c=>!c?"":(SYMBOL[c.rank]||c.rank)+c.suit;
 function PokerCard({c,hidden=false,wild=false}){if(!c)return <span className="sw-poker-card back">♠</span>;return <div className={"sw-poker-card"+(hidden?" back":["♥","♦"].includes(c.suit)?" red":"")}><strong>{hidden?"S":label(c)}</strong><b>{hidden?"♠":c.suit}</b>{wild&&!hidden&&<small>WILD</small>}</div>}
 function localDeal(game,count,size=5){
@@ -62,7 +62,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  }
  function deal(){
   if(players.length<2||players.length>6){setStatus("Choose a table with 2–6 seated players.");return;}
-  if(!Number.isInteger(maxCents)||maxCents<=0||!Number.isInteger(anteCents)||anteCents<0){setStatus("Choose valid ante and pot amounts.");return;}
+  if(!Number.isInteger(maxCents)||maxCents<=0||!Number.isInteger(anteCents)||anteCents<0||anteCents>1000000){setStatus("Choose valid ante and pot amounts.");return;}
   if(variant!=="fyb"&&!takeAnte())return;
   const draft=localDeal(variant,players.length);
   setHands(draft.hands);setDeck(draft.deck);setClown(draft.clown);
@@ -156,7 +156,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  const reviewable=step==="result"||step==="stud-result";
  const centered=step==="deciding"&&activeIndex>=0?"Your turn: "+currentPlayer?.name:step==="fyb"&&activeIndex>=0?currentPlayer?.name+"'s turn":step==="stud"?"Stud street "+(street+1):reviewable?"Hand finished":game.tag;
  return <main className="sw-poker-screen"><div className="sw-poker-content">
-  <header className="sw-poker-top"><button type="button" className="sw-poker-back" onClick={()=>nav(nextGameUrl)}><ArrowLeft size={20}/></button><div className="sw-poker-symbol">S</div><div className="sw-poker-heading"><strong>SYNCWORKS POKER</strong><small>♠ Card Night · {game.title}</small></div><button type="button" className="sw-poker-icon-btn" onClick={()=>{setTab("rules");setDrawer(true)}} aria-label="Game information"><Info size={20}/></button></header>
+  <header className="sw-poker-top"><button type="button" className="sw-poker-back" onClick={()=>{store();nav(nextGameUrl);}}><ArrowLeft size={20}/></button><div className="sw-poker-symbol">S</div><div className="sw-poker-heading"><strong>SYNCWORKS POKER</strong><small>♠ Card Night · {game.title}</small></div><button type="button" className="sw-poker-icon-btn" onClick={()=>{setTab("rules");setDrawer(true)}} aria-label="Game information"><Info size={20}/></button></header>
   <div className="sw-poker-round"><div className="sw-poker-round-badge"><div>♠ {game.title}</div><span>{game.tag}</span></div><span className="sw-poker-capsule">♙ {players.length}</span></div>
   <div className="sw-poker-session-status"><span>♣ Card Night · Game {gameNumber}</span><span>Dealer: {players[dealer]?.name||"Waiting"} · Hard cap {displayMoney(maxCents)}</span></div>
   {status&&<div role="status" className="sw-poker-practice-note">{status}</div>}
