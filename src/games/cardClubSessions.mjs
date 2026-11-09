@@ -31,6 +31,7 @@ export const suggestedHistory=[
  {player:"Lilly",buyinCents:1000,rebuyCents:0,payoutCents:525},
  {player:"Russ",buyinCents:1000,rebuyCents:1000,payoutCents:1600}
  ]},
+ {date:"2026-09-27",table:"Saturday table",source:"user note",notes:"$20 initial buy-in per player confirmed; participant list, rebuy amounts, and payouts still need transcription. This is a draft only.",defaultBuyinCents:2000,rows:[]},
  {date:"2026-10-10",table:"Saturday table",source:"text-message screenshot",notes:"Provisional: user reports four $20 buy-ins. Text screenshot says Zach $19.25, Huddy $21, Ang. $27.75, Jake $11.25. Payouts short $0.75. Confirm names and opening/closing pot.",rows:[
  {player:"Jake",buyinCents:2000,rebuyCents:0,payoutCents:1125},
  {player:"Zack",buyinCents:2000,rebuyCents:0,payoutCents:1925},
