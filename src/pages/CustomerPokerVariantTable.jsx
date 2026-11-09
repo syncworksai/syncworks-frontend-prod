@@ -6,6 +6,7 @@ import {evaluateBozoHand,resolveBozoRound} from "../games/bozoRules.mjs";
 import {capGutsResult,limitAnte,rebuyChips,centsFromDollars,pickPracticeBotChoice} from "../games/pokerPracticeSession.mjs";
 import {readCardNight,saveCardNight} from "../games/cardNightTransfer.mjs";
 import {getCardRoom} from "../api/cardRooms";
+import {fybOrder,fybRound,fybNextDealer,fybSwap} from "../games/fybElimination.mjs";
 import "./CustomerPokerTable.css";
 
 const GAMES={fyb:{title:"FYB",tag:"Kings trump · Aces low"},442:{title:"4/4/Deuce",tag:"2s wild · 4s need a 2"},bozo:{title:"Bozo · The Clown",tag:"Beat the ghost hand"}, "queen-follower":{title:"Queen & the Follower",tag:"Dynamic stud wilds"}};
@@ -25,15 +26,16 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  const game=GAMES[variant]||GAMES.fyb;
  const groupId=query.get("group")||"",roomId=query.get("room")||"";
  const [players,setPlayers]=useState([]),[stacks,setStacks]=useState([]),[dealer,setDealer]=useState(0),[pot,setPot]=useState(0),[gameNumber,setGameNumber]=useState(1);
- const [ante,setAnte]=useState(query.get("ante")||"0.25"),[cap,setCap]=useState("50"),[step,setStep]=useState("loading");
+ const [ante,setAnte]=useState(variant==="fyb"?"0.50":query.get("ante")||"0.25"),[cap,setCap]=useState("50"),[step,setStep]=useState("loading");
  const [hands,setHands]=useState([]),[clown,setClown]=useState([]),[deck,setDeck]=useState([]),[decisions,setDecisions]=useState([]),[viewer,setViewer]=useState(null),[outcome,setOutcome]=useState(null),[log,setLog]=useState([]);
  const [drawer,setDrawer]=useState(false),[tab,setTab]=useState("hands"),[rebuy,setRebuy]=useState(false),[rebuySeat,setRebuySeat]=useState(0),[rebuyAmount,setRebuyAmount]=useState("20"),[status,setStatus]=useState("");
  const [fybTurn,setFybTurn]=useState(0),[followers,setFollowers]=useState([]),[pendingFollower,setPendingFollower]=useState(false),[street,setStreet]=useState(0);
- const [dealerPick,setDealerPick]=useState(false),[fybLosses,setFybLosses]=useState([]);
+ const [dealerPick,setDealerPick]=useState(false),[fybLosses,setFybLosses]=useState([]),[fybHandNumber,setFybHandNumber]=useState(0),[fybLastMove,setFybLastMove]=useState(null);
  const maxCents=variant==="fyb"?1000000:cents(cap),anteCents=cents(ante),index=players.length;
  const currentIndex=useMemo(()=>decisions.findIndex(v=>v===null),[decisions]);
- const order=useMemo(()=>players.map((_,i)=>(dealer+1+i)%players.length),[dealer,players]);
- const activeIndex=variant==="fyb"?order[fybTurn]:(currentIndex<0?-1:currentIndex);
+ const fybActive=players.map((_,i)=>i).filter(i=>(fybLosses[i]??0)<3);
+ const order=useMemo(()=>variant==="fyb"?fybOrder(fybActive,dealer):players.map((_,i)=>(dealer+1+i)%players.length),[dealer,players,variant,fybLosses]);
+ const activeIndex=variant==="fyb"?(order[fybTurn]??-1):(currentIndex<0?-1:currentIndex);
  const currentPlayer=players[activeIndex];
  const activeCards=viewer===activeIndex?hands[activeIndex]:null;
  const potFull=pot>=maxCents;
@@ -65,6 +67,16 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   if(!Number.isInteger(maxCents)||maxCents<=0||!Number.isInteger(anteCents)||anteCents<0||anteCents>1000000){setStatus("Choose valid ante and pot amounts.");return;}
   if(variant!=="fyb"&&!takeAnte())return;
   const draft=localDeal(variant,players.length);
+  if(variant==="fyb"){
+   const next=fybActive.filter(i=>i>=0);
+   if(next.length<2){setStatus("FYB is over. Pass the dealer to select another game.");return;}
+   const first=fybOrder(next,dealer);
+   const cards=createShuffledDeck().map(c=>({...c,rank:c.rank===14?1:c.rank}));
+   const dealt=players.map(()=>[]);
+   first.forEach((seat,index)=>{dealt[seat]=[cards[index]];});
+   draft.hands=dealt;draft.deck=cards.slice(first.length);
+   setFybHandNumber(n=>n+1);setFybLastMove(null);
+  }
   setHands(draft.hands);setDeck(draft.deck);setClown(draft.clown);
   setViewer(null);setOutcome(null);setFybTurn(0);setFollowers([]);setPendingFollower(false);setStreet(0);
   setDecisions(players.map(p=>p.kind==="computer"?(Math.random()<0.38?"hold":"fold"):null));
