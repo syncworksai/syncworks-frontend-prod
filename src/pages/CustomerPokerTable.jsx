@@ -47,7 +47,7 @@ export default function CustomerPokerTable(){
  const [people,setPeople]=useState(DEFAULT_PLAYERS);
  const [lobbyName,setLobbyName]=useState("Saturday Poker");
  const [dealer,setDealer]=useState(0),[session,setSession]=useState("setup");
- const [rebuyCounts,setRebuyCounts]=useState({}),[sittingOut,setSittingOut]=useState({}),[handFolds,setHandFolds]=useState({}),[cashouts,setCashouts]=useState([]),[dealAnimation,setDealAnimation]=useState(null);
+ const [virtualSessionId,setVirtualSessionId]=useState(()=>("practice-"+Date.now()+"-"+Math.random().toString(36).slice(2))),[rebuyCounts,setRebuyCounts]=useState({}),[sittingOut,setSittingOut]=useState({}),[handFolds,setHandFolds]=useState({}),[cashouts,setCashouts]=useState([]),[dealAnimation,setDealAnimation]=useState(null);
  const [phase,setPhase]=useState("setup"),[round,setRound]=useState(0),[hands,setHands]=useState([]),[deck,setDeck]=useState([]);
  const [choices,setChoices]=useState([]),[viewer,setViewer]=useState(null);
  const [counter,setCounter]=useState(null),[reveal,setReveal]=useState({}),[outcome,setOutcome]=useState(null);
@@ -94,7 +94,7 @@ export default function CustomerPokerTable(){
   const previous=readCardNight(groupId,roomId);if(!previous)return;
   setPeople(previous.people);setChipStacks(previous.stacks);setPot(previous.pot??0);
   setDealer(previous.dealer??0);setSessionGames(previous.gameNumber??1);
-  setRebuyCounts(previous.rebuyCounts||{});setSittingOut(previous.sittingOut||{});setCashouts(previous.cashouts||[]);
+  setRebuyCounts(previous.rebuyCounts||{});setSittingOut(previous.sittingOut||{});setCashouts(previous.cashouts||[]);setVirtualSessionId(previous.virtualSessionId||("practice-"+Date.now()));
   setMaxPot(previous.capCents===100000000?"unlimited":String((previous.capCents??5000)/100));setCapDraft(previous.capCents===100000000?"unlimited":String((previous.capCents??5000)/100));
   setDealerChoosing(true);setSession("setup");setPhase("setup");
   if(previous.people[previous.dealer??0]?.kind==="computer"){
@@ -161,7 +161,7 @@ export default function CustomerPokerTable(){
   if(dealerChoosing||nextCode==="357")return;
   const next=TABLE_GAMES.find(g=>g.code===nextCode);
   if(!next)return;
-  saveCardNight({groupId,roomId,people,stacks:chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??2000),pot,dealer,gameNumber:sessionGames,capCents,rebuyCounts,sittingOut,cashouts});
+  saveCardNight({groupId,roomId,people,stacks:chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??2000),pot,dealer,gameNumber:sessionGames,capCents,rebuyCounts,sittingOut,cashouts,virtualSessionId});
   // All other game choices open the same branded table shell.
   const qs=new URLSearchParams();
   if(groupId)qs.set("group",groupId);
@@ -201,15 +201,18 @@ export default function CustomerPokerTable(){
   if(session==="playing"&&phase!=="resolved"){setStatus("Finish the current round before leaving.");return;}
   const balance=chipStacks[index]??people[index]?.chips??0;
   if(balance<0){setStatus("Balance must be nonnegative before cashing out.");return;}
-  setCashouts(old=>[...old,{seat:index,name:people[index].name,chips:balance,at:new Date().toISOString()}]);setSittingOut(old=>({...old,[index]:true}));
-  setChipStacks(old=>old.map((v,i)=>i===index?0:v));
+  const nextCashouts=[...cashouts,{seat:index,name:people[index].name,chips:balance,at:new Date().toISOString()}];
+  const nextStacks=(chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??2000)).map((v,i)=>i===index?0:v);
+  try{savePracticeSummary(groupId,buildPracticeSummary({id:virtualSessionId,players:people,stacks:nextStacks,rebuyCounts,cashouts:nextCashouts,pot,gameCount:sessionGames}));}catch(e){setStatus("Could not save this cash-out to local statistics: "+e.message);return;}
+  setCashouts(nextCashouts);setSittingOut(old=>({...old,[index]:true}));
+  setChipStacks(nextStacks);
   setStatus(people[index].name+" cashed out "+displayMoney(balance)+" in virtual chips (local session record).");
  }
  function restartPracticeSession(){
   // Explicit practice reset; reset the full ledger and current game together.
   const restored=people.map(p=>Number.isFinite(p.chips)?p.chips:roomMinimum??2000);
   clearCardNight();
-  setChipStacks(restored);setPot(0);setStrikes({});setDealer(0);setSessionGames(1);setRebuyCounts({});setSittingOut({});setHandFolds({});setCashouts([]);
+  setChipStacks(restored);setPot(0);setStrikes({});setDealer(0);setSessionGames(1);setRebuyCounts({});setSittingOut({});setHandFolds({});setCashouts([]);setVirtualSessionId("practice-"+Date.now()+"-"+Math.random().toString(36).slice(2));
   setSession("setup");setPhase("setup");setRound(0);setHands([]);setDeck([]);
   setChoices([]);setOutcome(null);setReveal({});setRevealStep(0);setChipAnimation(null);
   setDealerChoosing(false);setSelectedGame("357");setViewer(null);setCounter(null);
@@ -229,7 +232,7 @@ export default function CustomerPokerTable(){
   // Other games have independent local prototypes; never imply chip ledger transfer.
   const next=TABLE_GAMES.find(g=>g.code===selectedGame);
   if(!next)return;
-  saveCardNight({groupId,roomId,people,stacks:chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??2000),pot,dealer,gameNumber:sessionGames,capCents,rebuyCounts,sittingOut,cashouts});
+  saveCardNight({groupId,roomId,people,stacks:chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??2000),pot,dealer,gameNumber:sessionGames,capCents,rebuyCounts,sittingOut,cashouts,virtualSessionId});
   const q=new URLSearchParams({practice:"1",ante:String(ante),dealer:String(dealer),fromPoker:"1",game:selectedGame});
   if(groupId)q.set("group",groupId);
   if(roomId)q.set("room",roomId);
@@ -344,7 +347,7 @@ export default function CustomerPokerTable(){
    <span className="sw-poker-capsule">♙ {tableSize}</span>
    <button type="button" className="sw-poker-icon-btn" aria-label="Rules and strategy" onClick={()=>openDrawer("rules")}><Info size={20}/></button>
   </header>
-  <PokerSessionBar players={people.map(p=>({...p,chips:p.chips??Math.round(Number(startingChips)*100)}))} stacks={chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??Math.round(Number(startingChips)*100))} groupId={groupId} roomId={roomId} gameNumber={sessionGames} onEnd={()=>{try{savePracticeSummary(groupId,buildPracticeSummary({players:people,stacks:chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??2000),rebuyCounts,cashouts,pot,gameCount:sessionGames}));}catch(e){console.warn("Virtual session summary could not be saved",e);}clearCardNight();setSession("setup");setHands([]);setDeck([]);setPot(0);setViewer(null);nav(groupId?"/customer/games/clubs?group="+encodeURIComponent(groupId):"/customer/games");}}/>
+  <PokerSessionBar players={people.map(p=>({...p,chips:p.chips??Math.round(Number(startingChips)*100)}))} stacks={chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??Math.round(Number(startingChips)*100))} groupId={groupId} roomId={roomId} gameNumber={sessionGames} onEnd={()=>{try{savePracticeSummary(groupId,buildPracticeSummary({id:virtualSessionId,players:people,stacks:chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??2000),rebuyCounts,cashouts,pot,gameCount:sessionGames}));}catch(e){console.warn("Virtual session summary could not be saved",e);}clearCardNight();setSession("setup");setHands([]);setDeck([]);setPot(0);setViewer(null);nav(groupId?"/customer/games/clubs?group="+encodeURIComponent(groupId):"/customer/games");}}/>
   <div className="sw-poker-session-status"><span>♣ Card Night · Game {sessionGames}</span><span>Max pot <b>{capText}</b> · {botStyle==="balanced"?"Balanced bots":botStyle==="cautious"?"Cautious bots":"Aggressive bots"}</span></div>
   <div className="sw-poker-round"><div className="sw-poker-round-badge"><div>♠ {gameName}</div><span>Round {round+1} · {wild}s Wild</span></div><div className="sw-poker-steps">{THREE_FIVE_SEVEN.map((n,i)=><div key={i} title={"Round "+(i+1)+": "+n+"s wild"} className={"sw-poker-step"+(i===round?" current":"")}>{i+1}</div>)}</div></div>
   {!roomId&&groupId&&session==="setup"&&roomMinimum!==null&&<section className="mb-3 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-3"><div className="text-sm font-black text-emerald-100">Want players on separate phones?</div><p className="mt-1 text-xs leading-5 text-slate-300">Create a shared waiting room in this Card Club with the same name, seat count and minimum buy-in. Local guests and dealt hands stay on this device, and synchronized game cards are not live yet.</p><button type="button" onClick={upgradeToLiveRoom} disabled={upgrading} className="sw-poker-button primary mt-3 w-full">{upgrading?"Creating shared room…":"♠ Make This a Live Waiting Room"}</button></section>}
