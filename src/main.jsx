@@ -12,6 +12,7 @@ import PMTenantEditOverlay from "./components/pm/PMTenantEditOverlay";
 import NutritionCoachGlobalAssist from "./components/customer-health/NutritionCoachGlobalAssist";
 import App from "./App";
 import AppCrashBoundary from "./components/AppCrashBoundary";
+import FeatureResumeTracker from "./components/navigation/FeatureResumeTracker";
 import PlatformDirectEntry from "./pages/PlatformDirectEntry";
 import PMPropertyCreate from "./pages/PMPropertyCreate";
 import PMProperties from "./pages/PMProperties";
@@ -88,6 +89,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
+        <FeatureResumeTracker />
         <AppCrashBoundary>
           <RoutedApplication />
         </AppCrashBoundary>
