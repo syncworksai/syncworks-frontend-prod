@@ -9,6 +9,7 @@ import {addRoundCards,cardRank,createShuffledDeck,dealt357,displayMoney,instant3
 import "./CustomerPokerTable.css";
 import {HAND_RANKINGS_357,practiceHandInfo,estimatePracticeEquity} from "../games/practiceOdds357.mjs";
 import {rotationAfterPot,chooseVirtualDealer} from "../games/pokerDealerRotation.mjs";
+import {capGutsResult,limitAnte,rebuyChips,centsFromDollars,pickPracticeBotChoice} from "../games/pokerPracticeSession.mjs";
 
 const DEFAULT_PLAYERS=[{id:"local-you",name:"You",kind:"local"},{id:"local-zack",name:"Zack",kind:"guest"},{id:"local-russ",name:"Russ",kind:"guest"}];
 const TABLE_GAMES=[
@@ -53,6 +54,7 @@ export default function CustomerPokerTable(){
  const [shareBusy,setShareBusy]=useState(false),[inviteUrl,setInviteUrl]=useState(""),[roomMinimum,setRoomMinimum]=useState(null),[roomCapacity,setRoomCapacity]=useState(6);
  const [selectedGame,setSelectedGame]=useState("357");
  const [dealerChoosing,setDealerChoosing]=useState(false);
+ const [botStyle,setBotStyle]=useState("balanced"),[rebuyOpen,setRebuyOpen]=useState(false),[rebuySeat,setRebuySeat]=useState(0),[rebuyAmount,setRebuyAmount]=useState("20"),[sessionGames,setSessionGames]=useState(1),[resetConfirm,setResetConfirm]=useState(false);
  const [upgrading,setUpgrading]=useState(false);
  const [seatEditor,setSeatEditor]=useState(false),[seatName,setSeatName]=useState(""),[seatBuyin,setSeatBuyin]=useState("20"),[seatError,setSeatError]=useState("");
  function openDrawer(tab="hands"){setDrawerTab(tab);setDrawerOpen(true);}
@@ -194,7 +196,7 @@ export default function CustomerPokerTable(){
    const virtualCount=people.filter(p=>p.kind==="computer").length;
    updateSeats(old=>[...old,{id:uid(),name:"Virtual Player "+(virtualCount+1),kind:"computer",chips:roomMinimum??2000}]);
  }
- function preparedChoices(size){return people.slice(0,size).map(p=>p.kind==="computer"?(Math.random()>.4?"hold":"drop"):null);}
+ function preparedChoices(size,cards=hands,stage=round){return people.slice(0,size).map((p,i)=>p.kind==="computer"?pickPracticeBotChoice(cards[i],stage,botStyle):null);}
  function dealOpening(previousPot=0,previousChips=null,previousStrikes=null){
   const stack=previousChips||people.map(p=>Number.isFinite(p.chips)?p.chips:Math.max(0,Math.round(Number(startingChips)*100)));
   if(tableSize<2||tableSize>6){setStatus("Choose 2–6 players before dealing.");return;}
@@ -213,7 +215,7 @@ export default function CustomerPokerTable(){
   }else if(instant.length>1){
    setPhase("review");addLog("Multiple 3-5-7 instant hands — dealer review required.");
   }else{
-   setChoices(preparedChoices(tableSize));setPhase("choosing");addLog("Three cards dealt. 3s are wild. Players choose Hold or Fold.");
+   setChoices(preparedChoices(tableSize,fresh.hands,0));setPhase("choosing");addLog("Three cards dealt. 3s are wild. Players choose Hold or Fold.");
   }
  }
  function start(){setSession("playing");setLog([]);dealOpening(0,null,{});}
@@ -242,7 +244,7 @@ export default function CustomerPokerTable(){
    dealOpening(pot,chipStacks,strikes);return;
   }
   const updated=addRoundCards(hands,deck);
-  setHands(updated.hands);setDeck(updated.deck);setRound(v=>v+1);setViewer(null);setShowdownViewer(null);setChoices(preparedChoices(tableSize));setReveal({});setRevealStep(0);setOutcome(null);setPhase("choosing");closeDrawer();
+  setHands(updated.hands);setDeck(updated.deck);setRound(v=>v+1);setViewer(null);setShowdownViewer(null);setChoices(preparedChoices(tableSize,updated.hands,round+1));setReveal({});setRevealStep(0);setOutcome(null);setPhase("choosing");closeDrawer();
   addLog("Two cards added to every hand. Only "+THREE_FIVE_SEVEN[round+1]+"s are wild.");
  }
  const currentPlayer=displayIndex!==null?people[displayIndex]:null;
