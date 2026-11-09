@@ -63,6 +63,7 @@ export default function CustomerPokerTable(){
  const [botStyle,setBotStyle]=useState("balanced"),[rebuyOpen,setRebuyOpen]=useState(false),[rebuySeat,setRebuySeat]=useState(0),[rebuyAmount,setRebuyAmount]=useState("20"),[sessionGames,setSessionGames]=useState(1),[resetConfirm,setResetConfirm]=useState(false);
  const [upgrading,setUpgrading]=useState(false);
  const [turnRemaining,setTurnRemaining]=useState(30);
+ const [myHandVisible,setMyHandVisible]=useState(true);
  const [seatEditor,setSeatEditor]=useState(false),[seatName,setSeatName]=useState(""),[seatBuyin,setSeatBuyin]=useState("20"),[seatError,setSeatError]=useState("");
  function openDrawer(tab="hands"){setDrawerTab(tab);setDrawerOpen(true);}
  function closeDrawer(){setDrawerOpen(false);setShowdownViewer(null);}
@@ -81,13 +82,14 @@ export default function CustomerPokerTable(){
  const revealOrder=useMemo(()=>held.slice().sort((a,b)=>((a-dealer+tableSize-1)%tableSize)-((b-dealer+tableSize-1)%tableSize)),[choices,dealer,tableSize]);
  const competingHolders=held.length>=2;
  const eligibleShowdownViewers=held.filter(i=>i===privateSeatIndex&&!isSharedRoom);
- const canSeeOtherHands=phase==="resolved"&&!isSharedRoom&&showdownViewer===privateSeatIndex&&eligibleShowdownViewers.includes(showdownViewer)&&competingHolders;
+ const isFinalShowdown=phase==="resolved"&&(round===2||pot===0);
+ const canSeeOtherHands=isFinalShowdown&&!isSharedRoom&&showdownViewer===privateSeatIndex&&eligibleShowdownViewers.includes(showdownViewer)&&competingHolders;
  const sevenCardReveal=round===2&&competingHolders;
  const revealedCount=Object.values(reveal).reduce((sum,n)=>sum+n,0);
  const totalRevealCards=revealOrder.reduce((sum,i)=>sum+(hands[i]?.length||0),0);
  const currentReveal=revealOrder.find(i=>(reveal[i]||0)<(hands[i]?.length||0));
  const displayIndex=currentIndex>=0?currentIndex:null;
- const viewCards=viewer!==null&&viewer===privateSeatIndex&&phase==="choosing"&&!isSharedRoom?hands[privateSeatIndex]:null;
+ const viewCards=myHandVisible&&privateSeatIndex>=0&&session==="playing"&&!isSharedRoom&&hands[privateSeatIndex]?.length?hands[privateSeatIndex]:null;
  const handInsight=useMemo(()=>practiceMode&&viewCards?practiceHandInfo(viewCards,round):null,[practiceMode,viewCards,round]);
  const equity=useMemo(()=>practiceMode&&viewCards?estimatePracticeEquity(viewCards,round):null,[practiceMode,viewCards,round]);
  function addLog(message){setLog(old=>[{id:uid(),message,time:new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})},...old].slice(0,32));}
@@ -308,7 +310,7 @@ export default function CustomerPokerTable(){
   const afterAnte=funded.map((v,i)=>v-(active.includes(i)?actualAnte:0));
   const newPot=previousPot+active.length*actualAnte;
   if(actualAnte<anteCents)addLog(actualAnte===0?"Pot cap reached: no more antes until a qualifying winner drags the pot.":"Pot cap reduced the starting ante to "+displayMoney(actualAnte)+" each.");
-  setHands(fresh.hands);setDeck(fresh.deck);setRound(0);setHandFolds({});setDealAnimation({nonce:Date.now(),count:3});
+  setHands(fresh.hands);setDeck(fresh.deck);setRound(0);setHandFolds({});setDealAnimation({nonce:Date.now(),count:3});setMyHandVisible(true);
   setChipStacks(afterAnte);setPot(newPot);setStrikes(previousStrikes||{});
   setReveal({});setRevealStep(0);setShowdownViewer(null);setChipAnimation(null);setOutcome(null);setViewer(null);setCounter(null);closeDrawer();
   const instant=fresh.hands.flatMap((hand,i)=>active.includes(i)&&instant357(hand)?[i]:[]);
@@ -347,7 +349,7 @@ export default function CustomerPokerTable(){
   if(round===2||outcome?.kind==="instant"||outcome?.kind==="all-drop") {const nextDealer=(dealer+1)%tableSize;setDealer(nextDealer);setHandFolds({});dealOpening(pot,chipStacks,strikes);addLog("Dealer passes to "+people[nextDealer]?.name+". Pot carries into a fresh three-card hand.");return;}
   const updated=addRoundCards(hands,deck,people.flatMap((_,i)=>!sittingOut[i]&&!handFolds[i]&&hands[i]?.length?[i]:[]));
   setDealAnimation({nonce:Date.now(),count:2});
-  setHands(updated.hands);setDeck(updated.deck);setRound(v=>v+1);setViewer(null);setShowdownViewer(null);setChoices(preparedChoices(tableSize,updated.hands,round+1).map((c,i)=>sittingOut[i]||handFolds[i]?"drop":c));setReveal({});setRevealStep(0);setOutcome(null);setPhase("choosing");closeDrawer();
+  setHands(updated.hands);setDeck(updated.deck);setRound(v=>v+1);setViewer(null);setShowdownViewer(null);setMyHandVisible(true);setChoices(preparedChoices(tableSize,updated.hands,round+1).map((c,i)=>sittingOut[i]||handFolds[i]?"drop":c));setReveal({});setRevealStep(0);setOutcome(null);setPhase("choosing");closeDrawer();
   addLog("Two cards added to every hand. Only "+THREE_FIVE_SEVEN[round+1]+"s are wild.");
  }
  const currentPlayer=displayIndex!==null?people[displayIndex]:null;
@@ -355,6 +357,7 @@ export default function CustomerPokerTable(){
  const canReveal=phase==="revealing"&&currentReveal!==undefined;
  const gameOver=pot===0&&phase==="resolved"&&(outcome?.kind==="drag"||outcome?.kind==="instant");
  const hasPracticeRecap=practiceMode&&phase==="resolved"&&people.some(p=>p.kind==="computer");
+ const winnerHand=outcome?.winner!=null?rate357(hands[outcome.winner],round).name:null;
  const nextActionLabel=gameOver?"Pass dealer · Choose game":round===2||outcome?.kind==="all-drop"?"Next dealer · New 3-card hand":"Deal 2 more · "+THREE_FIVE_SEVEN[round+1]+"s wild";
  const doNext=()=>gameOver?finishGameAndPassDealer():next();
  useEffect(()=>{if(!drawerOpen)return;const onKey=e=>{if(e.key==="Escape")closeDrawer();};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey);},[drawerOpen]);
