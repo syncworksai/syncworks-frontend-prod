@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal,fybRevealKing,fybCurrentKings,fybDealFromShoe,fybDealerDraw,fybPayRound,fybSplitPurse,fybBotWantsPass} from "./fybElimination.mjs";
+import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal,fybRevealKing,fybCurrentKings,fybDealFromShoe,fybDealerDraw,fybPayRound,fybSplitPurse,fybBotWantsPass,canRevealActiveCard} from "./fybElimination.mjs";
 const hand=n=>[{rank:n,suit:"♠"}];
 test("three losses eliminate a seat, but do not finish when 2+ survivors",()=>{
  const r=fybRound({hands:[hand(4),hand(9),hand(12)],active:[0,1,2],losses:[2,1,0],chipCents:50});
@@ -169,4 +169,12 @@ test("FYB bot decision depends only on its own card, never the next hidden hand"
  const own=hand(3)[0];
  assert.equal(fybBotWantsPass({card:own,random:()=>0.6}),true);
  assert.throws(()=>fybBotWantsPass({card:null,random:()=>0.5}),/Missing virtual/);
+});
+
+test("Show/Hide reveals only active human, never a virtual opponent or other seat",()=>{
+ const human={kind:"human",name:"You"},bot={kind:"computer",name:"Virtual Player"};
+ assert.equal(canRevealActiveCard({viewerSeat:2,activeSeat:2,actingPlayer:human}),true);
+ assert.equal(canRevealActiveCard({viewerSeat:2,activeSeat:3,actingPlayer:human}),false);
+ assert.equal(canRevealActiveCard({viewerSeat:2,activeSeat:2,actingPlayer:bot}),false);
+ assert.equal(canRevealActiveCard({viewerSeat:2,activeSeat:-1,actingPlayer:human}),false);
 });
