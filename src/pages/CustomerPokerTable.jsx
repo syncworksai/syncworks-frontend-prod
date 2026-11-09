@@ -214,6 +214,7 @@ export default function CustomerPokerTable(){
   const rotation=rotationAfterPot({potCents:pot,dealer,playerCount:tableSize});
   if(!rotation.gameFinished){setStatus("A replacement pot remains. This dealer continues until it is fully dragged.");return;}
   const next=rotation.nextDealer;
+  clearPracticeGame(user?.id,groupId,"357");
   setSessionGames(v=>v+1);setDealer(next);setPhase("setup");setSession("setup");setChoices([]);setViewer(null);closeDrawer();
   setShowdownViewer(null);setOutcome(null);setChipAnimation(null);setReveal({});
   setStrikes({});setHands([]);setDeck([]);setRound(0);setDealerChoosing(true);
