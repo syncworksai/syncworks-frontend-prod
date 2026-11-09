@@ -58,6 +58,22 @@ export function rate357(hand,round) {
   return evaluateBozoHand(hand,7);
 }
 
+export function winningHandText357(hand,round){
+ if(!Array.isArray(hand)||!hand.length)return "a winning hand";
+ const result=rate357(hand,round);
+ const name=String(result.name||"Winning hand").toLowerCase();
+ const wild=THREE_FIVE_SEVEN[round];
+ const wilds=hand.filter(c=>c.rank===wild).length;
+ const counts=Array.from({length:13},(_,i)=>i+2).map(rank=>({rank,count:hand.filter(c=>c.rank===rank&&rank!==wild).length+wilds})).sort((a,b)=>b.count-a.count||b.rank-a.rank);
+ const rank=counts[0]?.rank||14;
+ const plural={14:"Aces",13:"Kings",12:"Queens",11:"Jacks",10:"Tens",9:"Nines",8:"Eights",7:"Sevens",6:"Sixes",5:"Fives",4:"Fours",3:"Threes",2:"Twos"}[rank];
+ if(name.includes("five of a kind"))return "five "+plural;
+ if(name.includes("four of a kind"))return "four "+plural;
+ if(name.includes("three of a kind"))return "three "+plural;
+ if(name==="pair")return "a pair of "+plural;
+ return result.name||"a winning hand";
+}
+
 export function resolve357({hands,round,choices,potCents,strikes,anteCents}) {
   const entered=choices.flatMap((c,i)=>c==="hold"?[i]:[]);
   const scores=entered.map(i=>({index:i,...rate357(hands[i],round)}));
