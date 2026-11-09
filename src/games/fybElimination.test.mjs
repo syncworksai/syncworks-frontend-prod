@@ -190,3 +190,9 @@ test("a swap changes user's own card even if bot is next to act",()=>{
  assert.equal(canRevealOwnFybCard({viewerSeat:0,localSeat,players}),true);
  assert.equal(canRevealOwnFybCard({viewerSeat:1,localSeat,players}),false);
 });
+
+test("FYB chip loss cannot take a short virtual stack negative",()=>{
+ const result=fybPayRound({stacks:[25,400],potCents:50,losers:[0],chipCents:100,winner:null});
+ assert.deepEqual(result.stacks,[0,400]);assert.equal(result.potCents,75);
+ assert.equal(result.contributions[0].cents,25);
+});
