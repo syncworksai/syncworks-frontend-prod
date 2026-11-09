@@ -421,3 +421,16 @@
  .sw-fyb-showdown-card .sw-fyb-showdown-back{animation:none;transform:rotateY(180deg)}
  .sw-fyb-showdown-card .sw-fyb-showdown-face{animation:none;transform:rotateY(360deg)}
 }
+
+/* Each 3-5-7 street visually deals cards clockwise from the middle of the felt. */
+.sw-357-deal-animation{position:absolute;inset:0;pointer-events:none;z-index:8;overflow:hidden}
+.sw-357-deal-fly{position:absolute;left:50%;top:46%;width:18px;height:28px;display:grid;place-items:center;border:1px solid #83eaff;border-radius:4px;background:repeating-linear-gradient(40deg,#11294f 0 4px,#2e6185 4px 8px);color:#8defff;font-weight:1000;font-size:12px;opacity:0;animation:sw-357-deal .65s ease-out forwards;animation-delay:var(--deal-delay,0ms)}
+.sw-357-deal-fly.from-seat-0{--to-x:-145px;--to-y:-90px}
+.sw-357-deal-fly.from-seat-1{--to-x:0px;--to-y:-150px}
+.sw-357-deal-fly.from-seat-2{--to-x:145px;--to-y:-90px}
+.sw-357-deal-fly.from-seat-3{--to-x:145px;--to-y:100px}
+.sw-357-deal-fly.from-seat-4{--to-x:0px;--to-y:135px}
+.sw-357-deal-fly.from-seat-5{--to-x:-145px;--to-y:100px}
+@keyframes sw-357-deal{0%{opacity:0;transform:translate(0,0) scale(.7)}18%{opacity:1}80%{opacity:1}100%{opacity:0;transform:translate(var(--to-x),var(--to-y)) scale(1)}}
+@media(max-width:430px){.sw-357-deal-fly.from-seat-0{--to-x:-95px;--to-y:-55px}.sw-357-deal-fly.from-seat-1{--to-x:0px;--to-y:-100px}.sw-357-deal-fly.from-seat-2{--to-x:95px;--to-y:-55px}.sw-357-deal-fly.from-seat-3{--to-x:95px;--to-y:70px}.sw-357-deal-fly.from-seat-4{--to-x:0px;--to-y:95px}.sw-357-deal-fly.from-seat-5{--to-x:-95px;--to-y:70px}}
+@media(prefers-reduced-motion:reduce){.sw-357-deal-fly{display:none}}
