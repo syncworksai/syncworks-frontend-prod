@@ -6,6 +6,7 @@ import api from "../api/client";
 import { getIdentityProfile } from "../api/identity";
 import { useAuth } from "../auth/AuthContext";
 import {readPokerResume} from "../games/pokerResume.mjs";
+import {readFeatureResumes} from "../utils/featureResume.mjs";
 import CustomerDashboard from "./CustomerDashboard.jsx";
 import CustomerMobileHome from "../components/customer/CustomerMobileHome";
 import SyncAssistantStickyDock from "../components/sync/SyncAssistantStickyDock";
@@ -109,6 +110,7 @@ export default function CustomerDashboardResponsive() {
       <CustomerMobileHome
         displayName={firstName(user)}
         resumePokerRoomPath={readPokerResume(user)?.path||""}
+        resumeFeatureLocations={readFeatureResumes(user?.id)}
         profilePhotoUrl={profilePhotoUrl}
         tickets={tickets}
         invoices={invoices}
