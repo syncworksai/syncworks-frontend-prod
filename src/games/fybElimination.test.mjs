@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal,fybRevealKing,fybCurrentKings} from "./fybElimination.mjs";
+import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal,fybRevealKing,fybCurrentKings,fybDealFromShoe,fybDealerDraw,fybPayRound} from "./fybElimination.mjs";
 const hand=n=>[{rank:n,suit:"♠"}];
 test("three losses eliminate a seat, but do not finish when 2+ survivors",()=>{
  const r=fybRound({hands:[hand(4),hand(9),hand(12)],active:[0,1,2],losses:[2,1,0],chipCents:50});
@@ -88,4 +88,43 @@ test("reveal follows actual King card and clears from seat if it moves",()=>{
  assert.deepEqual(fybCurrentKings(shown,swap.hands),[]);
  const arrived=fybRevealKing(shown,swap.hands,1);
  assert.deepEqual(fybCurrentKings(arrived,swap.hands),[{seat:1,card:swap.hands[1][0]}]);
+});
+
+test("FYB keeps a single 52-card deck across consecutive hands",()=>{
+ const makeDeck=()=>Array.from({length:52},(_,i)=>({rank:i===0?14:2+(i%12),suit:"♠",id:i}));
+ let draws=0;
+ const fresh=()=>{draws++;return makeDeck();};
+ const one=fybDealFromShoe({deck:[],active:[1,2,0],playerCount:3,newDeck:fresh});
+ assert.equal(draws,1);assert.equal(one.newDeckCount,1);
+ assert.equal(one.deck.length,49);
+ assert.deepEqual(one.hands.map(h=>h[0].id),[2,0,1]);
+ const second=fybDealFromShoe({deck:one.deck,active:[0,1,2],playerCount:3,newDeck:fresh});
+ assert.equal(second.newDeckCount,0);assert.equal(draws,1);
+ assert.deepEqual(second.hands.map(h=>h[0].id),[3,4,5]);
+ assert.equal(second.deck.length,46);
+});
+test("new deck starts only when prior deck exhausts, even mid-hand",()=>{
+ let opens=0;const fresh=()=>{opens++;return Array.from({length:52},(_,i)=>({rank:2,suit:"♠",id:100+i}));};
+ const two=fybDealFromShoe({deck:[{rank:9,id:98},{rank:8,id:99}],active:[0,1,2],playerCount:3,newDeck:fresh});
+ assert.equal(opens,1);assert.equal(two.newDeckCount,1);
+ assert.deepEqual(two.hands.map(h=>h[0].id),[98,99,100]);
+ assert.equal(two.deck.length,51);
+});
+test("dealer draw consumes current deck, then replaces deck only if exhausted",()=>{
+ const hands=[hand(4),hand(7)];
+ let opens=0;const fresh=()=>{opens++;return Array.from({length:52},(_,i)=>({rank:5,suit:"♥",id:i}));};
+ const first=fybDealerDraw({hands,deck:[{rank:11,suit:"♣"}],actor:1,newDeck:fresh});
+ assert.equal(first.hands[1][0].rank,11);assert.equal(first.newDeckCount,0);assert.equal(first.deck.length,0);
+ const second=fybDealerDraw({hands:first.hands,deck:first.deck,actor:1,newDeck:fresh});
+ assert.equal(opens,1);assert.equal(second.newDeckCount,1);assert.equal(second.deck.length,51);
+});
+test("FYB lost chips accumulate and final winner drags entire purse, conserving virtual chips",()=>{
+ const initial=[2000,2000,2000];
+ const handOne=fybPayRound({stacks:initial,potCents:0,losers:[0,1],chipCents:100});
+ assert.deepEqual(handOne.stacks,[1900,1900,2000]);assert.equal(handOne.potCents,200);
+ const handTwo=fybPayRound({stacks:handOne.stacks,potCents:handOne.potCents,losers:[0],chipCents:100});
+ assert.equal(handTwo.potCents,300);
+ const final=fybPayRound({stacks:handTwo.stacks,potCents:handTwo.potCents,losers:[0,1],chipCents:100,winner:2});
+ assert.deepEqual(final.stacks,[1700,1800,2500]);assert.equal(final.dragCents,500);assert.equal(final.potCents,0);
+ assert.equal(final.stacks.reduce((sum,n)=>sum+n,0),initial.reduce((sum,n)=>sum+n,0));
 });
