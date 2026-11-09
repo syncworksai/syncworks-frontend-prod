@@ -152,7 +152,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  }
  // FYB is pass/keep with a King blocking an incoming swap. Dealer may draw off the deck.
  function fybAction(pass){
-  if(step!=="fyb"||fybTurn>=order.length||fybAnimating||fybAwaitNext)return;
+  if(step!=="fyb"||fybTurn>=order.length||fybAnimating)return;
   const actor=order[fybTurn],next=order[fybTurn+1];
   let moved;
   if(next==null&&pass){
@@ -167,9 +167,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   setFybActions(old=>({...old,[actor]:moved.kind}));
   setFybAnimating(true);
   record(moved.event);
-  if(fybTurn+1<order.length){return;}
-  if(players[actor].kind!=="computer"&&moved.kind==="draw"){return;}
-  finishFybRound(moved.hands);
+  // The animation timer advances the seat or settles the final dealer action.
 
  }
  // A seven-card stud demonstration while the advanced wagering/score engine is finished.
@@ -248,10 +246,10 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   }
  },[variant,step,activeIndex,hands]);
  useEffect(()=>{if(!fybAnimating||step!=="fyb")return;
-  const id=setTimeout(()=>{setFybAnimating(false);if(fybTurn+1<order.length){if(currentPlayer?.kind!=="computer"&&["swap","draw"].includes(fybLastMove?.kind)){setFybAwaitNext(true);}else {setFybTurn(v=>v+1);}}else if(currentPlayer?.kind!=="computer"&&fybLastMove?.kind==="draw"){setFybAwaitNext(true);}},1550);
+  const id=setTimeout(()=>{setFybAnimating(false);setFybAwaitNext(false);if(fybTurn+1<order.length){setFybTurn(v=>v+1);}else{finishFybRound(hands);}},1550);
   return()=>clearTimeout(id);
  },[fybAnimating,fybTurn,step,order,activeIndex,currentPlayer?.kind,fybLastMove?.kind,players]);
- useEffect(()=>{if(step!=="fyb"||fybAnimating||fybAwaitNext||!currentPlayer||currentPlayer.kind!=="computer")return;
+ useEffect(()=>{if(step!=="fyb"||fybAnimating||!currentPlayer||currentPlayer.kind!=="computer")return;
   const timer=setTimeout(()=>fybAction(fybBotWantsPass({card:hands[activeIndex]?.[0],previousCard:fybPreviousCard[activeIndex]})),2100);return()=>clearTimeout(timer);
  },[step,fybTurn,hands,players,fybAnimating,fybAwaitNext,fybPreviousCard]);
  // Delay each Bozo bot decision so the player sees the action sequence.
@@ -333,7 +331,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  {step==="deciding"&&currentPlayer&&currentPlayer.kind!=="computer"&&<><button className="sw-poker-action hide" onClick={()=>setViewer(v=>v===activeIndex?null:activeIndex)}>{viewer===activeIndex?<EyeOff size={15}/>:<Eye size={15}/>} {viewer===activeIndex?"Hide":"Show"}</button><button className="sw-poker-action fold" onClick={()=>chooseHold("fold")}>{variant==="442"?"Drop":"Fold"}</button><button className="sw-poker-action hold" onClick={()=>chooseHold("hold")}>Hold</button></>}
  {step==="fyb"&&localSeat>=0&&<div className="sw-fyb-sticky-card"><div className="sw-fyb-sticky-card-face" aria-label="Your private FYB card">{ownFybCards?.[0]?<PokerCard c={ownFybCards[0]}/>:<PokerCard c={hands[localSeat]?.[0]} hidden/>}</div><button className="sw-poker-action hide" onClick={()=>setViewer(v=>v===localSeat?null:localSeat)}>{viewer===localSeat?"Hide":"Show"} Card</button></div>}
  {step==="fyb"&&currentPlayer?.kind==="computer"&&<><button className="sw-poker-action fold" disabled>Pass Left</button><button className="sw-poker-action hold" disabled>Keep</button></>}
- {step==="fyb"&&currentPlayer&&currentPlayer.kind!=="computer"&&(fybAwaitNext?<button className="sw-poker-action hold grow" onClick={()=>{setFybAwaitNext(false);if(fybTurn+1>=order.length){finishFybRound(hands);}else {setFybTurn(v=>v+1);}}}>Continue <ChevronRight size={17}/></button>:<><button disabled={fybAnimating} className="sw-poker-action fold" onClick={()=>fybAction(true)}>{fybDealerTurn?"Draw Deck":"Pass Left"}</button><button disabled={fybAnimating} className="sw-poker-action hold" onClick={()=>fybAction(false)}>Keep</button></>)}
+ {step==="fyb"&&currentPlayer&&currentPlayer.kind!=="computer"&&<><button disabled={fybAnimating} className="sw-poker-action fold" onClick={()=>fybAction(true)}>{fybDealerTurn?"Draw Deck":"Pass Left"}</button><button disabled={fybAnimating} className="sw-poker-action hold" onClick={()=>fybAction(false)}>Keep</button></>}
  {variant==="fyb"&&step==="result"&&fybActive.length===2&&!outcome?.gameFinished&&pot>0&&<button className="sw-poker-action sw-fyb-split-action" onClick={startSplitOffer}>🤝 Offer Split</button>}
  {step==="stud"&&<button className="sw-poker-action hold grow" onClick={dealStudStreet}>Deal next stud card · {street+1}/7</button>}
  {(step==="result"||step==="stud-result")&&<><button className="sw-poker-action hold grow" onClick={()=>{if(outcome?.gameFinished||(variant!=="fyb"&&pot===0)){quitToDealer();return;}if(variant==="fyb"){setDealer(d=>fybNextDealer(fybActive,d));setStep("fyb-next");}else if(variant==="442"){setDealer(d=>(d+1)%players.length);setStep("442-next");}else setStep("ready");setOutcome(null);setFybLastMove(null);}}> {outcome?.gameFinished||variant!=="fyb"&&pot===0?"Next Dealer · Choose Game":variant==="fyb"?"Deal":variant==="442"?"Deal":"Next hand"} <ChevronRight size={17}/></button>{!outcome?.gameFinished&&<button className="sw-poker-action hide" onClick={quitToDealer}>Choose Game</button>}</>}
