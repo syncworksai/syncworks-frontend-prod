@@ -98,3 +98,29 @@ export function fybSplitPurse({stacks,potCents,seats,approvals}){
  const nextStacks=stacks.map((amount,i)=>amount+(payouts[i]??0));
  return {stacks:nextStacks,potCents:0,payouts,splitCents:potCents};
 }
+
+// A FYB virtual player acts only on its own currently held card and whether
+// that card improved from a previous exchange. Never inspect the next seat's
+// hidden card or future deck cards to decide.
+export function fybBotWantsPass({card,previousCard=null,random=Math.random}){
+ if(!card||!Number.isInteger(card.rank))throw Error("Missing virtual player's FYB card");
+ const rank=card.rank===14?1:card.rank;
+ if(rank===13)return false; // Kings trump and cannot be improved by a swap.
+ let probability=rank<=2?.92:rank===3?.78:rank===4?.7:rank<=6?.58:rank<=8?.42:rank<=10?.25:.12;
+ const previousRank=previousCard?.rank===14?1:previousCard?.rank;
+ // A bot that improved from a 2 to a 3 should usually keep its improvement.
+ if(Number.isInteger(previousRank)&&rank>previousRank)probability=Math.min(probability,.22);
+ return random()<probability;
+}
+
+// Private view belongs to the local seat, never to the moving action cursor.
+// In this local practice table, the first human seat is the device owner.
+// Remote multiplayer will resolve this from the authenticated seat identity.
+export function fybLocalSeat(players){
+ return Array.isArray(players)?players.findIndex(p=>p?.kind!=="computer"):-1;
+}
+export function canRevealOwnFybCard({viewerSeat,localSeat,players}){
+ return Number.isInteger(localSeat)&&localSeat>=0
+   &&players?.[localSeat]?.kind!=="computer"
+   &&viewerSeat===localSeat;
+}
