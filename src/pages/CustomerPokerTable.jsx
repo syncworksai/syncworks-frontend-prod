@@ -260,7 +260,7 @@ export default function CustomerPokerTable(){
   if(botRebuys.some(Boolean))addLog("Practice virtual-player rebuys: "+botRebuys.map((n,i)=>n?people[i].name+" "+displayMoney(n):null).filter(Boolean).join(", "));
   const afterAnte=funded.map(v=>v-actualAnte);
   const newPot=previousPot+tableSize*actualAnte;
-  if(actualAnte<anteCents)addLog("Pot cap reduced the starting ante to "+displayMoney(actualAnte)+" each.");
+  if(actualAnte<anteCents)addLog(actualAnte===0?"Pot cap reached: no more antes until a qualifying winner drags the pot.":"Pot cap reduced the starting ante to "+displayMoney(actualAnte)+" each.");
   setHands(fresh.hands);setDeck(fresh.deck);setRound(0);
   setChipStacks(afterAnte);setPot(newPot);setStrikes(previousStrikes||{});
   setReveal({});setRevealStep(0);setShowdownViewer(null);setChipAnimation(null);setOutcome(null);setViewer(null);setCounter(null);closeDrawer();
@@ -280,7 +280,7 @@ export default function CustomerPokerTable(){
  function countdown(){if(phase!=="choosing"||!allReady)return;setPhase("countdown");addLog("Dealer started 3, 2, 1 countdown.");}
  function settleCurrentRound(){
   if(phase!=="revealing")return;
-  const result=capGutsResult(resolve357({hands,round,choices,potCents:pot,strikes,anteCents}),{potCents:pot,capCents,anteCents});
+  const result=capGutsResult(resolve357({hands,round,choices,potCents:pot,strikes,anteCents}),{potCents:pot,capCents,anteCents,stacks:chipStacks});
   setOutcome({...result,potDraggedCents:result.winner!==null&&result.winner!==undefined?pot:0});
   setStrikes(result.strikes);
   setChipStacks(previous=>previous.map((value,index)=>value+(result.delta[index]||0)));
