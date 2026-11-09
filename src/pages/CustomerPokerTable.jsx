@@ -149,7 +149,7 @@ export default function CustomerPokerTable(){
   const rotation=rotationAfterPot({potCents:pot,dealer,playerCount:tableSize});
   if(!rotation.gameFinished){setStatus("A replacement pot remains. This dealer continues until it is fully dragged.");return;}
   const next=rotation.nextDealer;
-  setDealer(next);setPhase("setup");setSession("setup");setChoices([]);setViewer(null);closeDrawer();
+  setSessionGames(v=>v+1);setDealer(next);setPhase("setup");setSession("setup");setChoices([]);setViewer(null);closeDrawer();
   setShowdownViewer(null);setOutcome(null);setChipAnimation(null);setReveal({});
   setStrikes({});setHands([]);setDeck([]);setRound(0);setDealerChoosing(true);
   if(people[next]?.kind==="computer"){
@@ -202,8 +202,19 @@ export default function CustomerPokerTable(){
   if(tableSize<2||tableSize>6){setStatus("Choose 2–6 players before dealing.");return;}
   if(!Number.isSafeInteger(anteCents)||anteCents<0||!Number.isSafeInteger(capCents)||capCents<1){setStatus("Set valid ante and pot-cap amounts.");return;}
   const fresh=dealt357(createShuffledDeck(),tableSize);
-  const afterAnte=stack.map(v=>v-anteCents);
-  const newPot=previousPot+tableSize*anteCents;
+  if(previousPot>capCents){setStatus("The current pot exceeds the selected cap. Increase the cap or reset the practice session.");return;}
+  const actualAnte=limitAnte({potCents:previousPot,capCents,anteCents,playerCount:tableSize});
+  if(stack.some((value,i)=>value<actualAnte&&people[i]?.kind!=="computer")){
+    setStatus("A player needs a rebuy before dealing. Use Rebuy in the bottom controls.");
+    setRebuySeat(Math.max(0,stack.findIndex((value,i)=>value<actualAnte&&people[i]?.kind!=="computer")));
+    setRebuyOpen(true);return;
+  }
+  const botRebuys=stack.map((value,i)=>people[i]?.kind==="computer"&&value<actualAnte?Math.max(2000,actualAnte-value):0);
+  const funded=stack.map((value,i)=>value+botRebuys[i]);
+  if(botRebuys.some(Boolean))addLog("Practice virtual-player rebuys: "+botRebuys.map((n,i)=>n?people[i].name+" "+displayMoney(n):null).filter(Boolean).join(", "));
+  const afterAnte=funded.map(v=>v-actualAnte);
+  const newPot=previousPot+tableSize*actualAnte;
+  if(actualAnte<anteCents)addLog("Pot cap reduced the starting ante to "+displayMoney(actualAnte)+" each.");
   setHands(fresh.hands);setDeck(fresh.deck);setRound(0);
   setChipStacks(afterAnte);setPot(newPot);setStrikes(previousStrikes||{});
   setReveal({});setRevealStep(0);setShowdownViewer(null);setChipAnimation(null);setOutcome(null);setViewer(null);setCounter(null);closeDrawer();
@@ -223,7 +234,7 @@ export default function CustomerPokerTable(){
  function countdown(){if(phase!=="choosing"||!allReady)return;setPhase("countdown");addLog("Dealer started 3, 2, 1 countdown.");}
  function settleCurrentRound(){
   if(phase!=="revealing")return;
-  const result=resolve357({hands,round,choices,potCents:pot,strikes,anteCents});
+  const result=capGutsResult(resolve357({hands,round,choices,potCents:pot,strikes,anteCents}),{potCents:pot,capCents,anteCents});
   setOutcome({...result,potDraggedCents:result.winner!==null&&result.winner!==undefined?pot:0});
   setStrikes(result.strikes);
   setChipStacks(previous=>previous.map((value,index)=>value+(result.delta[index]||0)));
@@ -231,7 +242,7 @@ export default function CustomerPokerTable(){
   if(result.winner!==null&&result.winner!==undefined) {
     setChipAnimation({winner:result.winner,amount:pot,losers:result.entered.filter(i=>i!==result.winner)});
   }else if(result.kind==="all-drop"){
-    setChipAnimation({winner:null,amount:anteCents*tableSize,losers:[]});
+    setChipAnimation({winner:null,amount:result.nextPot-pot,losers:[]});
   }
   setPhase(result.kind==="tie-review"?"review":"resolved");
   addLog(result.message);
