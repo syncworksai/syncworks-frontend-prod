@@ -1,6 +1,6 @@
 // Club-local virtual poker stats; never handles or represents real-money settlement.
 export const virtualStatsKey=id=>"sw-poker-club-virtual-sessions-v1-"+String(id||"practice");
-export function buildPracticeSummary({players,stacks,rebuyCounts={},cashouts=[],pot=0,gameCount=1,date=new Date().toISOString().slice(0,10)}){
+export function buildPracticeSummary({players,stacks,rebuyCounts={},cashouts=[],pot=0,gameCount=1,date=new Date().toISOString().slice(0,10),id=null}){
  if(!Array.isArray(players)||!Array.isArray(stacks)||players.length!==stacks.length)throw Error("Invalid virtual practice session.");
  const rows=players.map((p,i)=>{
   const rebuys=rebuyCounts[i]||0;
@@ -13,13 +13,13 @@ export function buildPracticeSummary({players,stacks,rebuyCounts={},cashouts=[],
   const payoutCents=cashoutCents+remainingCents;
   return {id:String(p.id??i),name:p.name,kind:p.kind,buyinCents,rebuyCents:rebuys*2000,payoutCents,netCents:payoutCents-contributedCents,rebuys};
  });
- return {id:"practice-"+Date.now()+"-"+Math.random().toString(36).slice(2),date,gameCount,rows,remainingPotCents:pot,kind:"virtual",createdAt:new Date().toISOString()};
+ return {id:id||"practice-"+Date.now()+"-"+Math.random().toString(36).slice(2),date,gameCount,rows,remainingPotCents:pot,kind:"virtual",createdAt:new Date().toISOString()};
 }
 export function savePracticeSummary(groupId,summary){
  const key=virtualStatsKey(groupId);
  const prev=JSON.parse(localStorage.getItem(key)||"[]");
  const rows=Array.isArray(prev)?prev:[];
- localStorage.setItem(key,JSON.stringify([...rows,summary]));
+ localStorage.setItem(key,JSON.stringify([...rows.filter(old=>old.id!==summary.id),summary]));
  return true;
 }
 export function practiceLifetime(sessions){
