@@ -6,7 +6,7 @@ import {evaluateBozoHand,resolveBozoRound} from "../games/bozoRules.mjs";
 import {capGutsResult,limitAnte,rebuyChips,centsFromDollars,pickPracticeBotChoice} from "../games/pokerPracticeSession.mjs";
 import {readCardNight,saveCardNight} from "../games/cardNightTransfer.mjs";
 import {getCardRoom} from "../api/cardRooms";
-import {fybOrder,fybRound,fybNextDealer,fybSwap} from "../games/fybElimination.mjs";
+import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal} from "../games/fybElimination.mjs";
 import "./CustomerPokerTable.css";
 
 const GAMES={fyb:{title:"FYB",tag:"Kings trump · Aces low"},442:{title:"4/4/Deuce",tag:"2s wild · 4s need a 2"},bozo:{title:"Bozo · The Clown",tag:"Beat the ghost hand"}, "queen-follower":{title:"Queen & the Follower",tag:"Dynamic stud wilds"}};
@@ -26,14 +26,15 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  const game=GAMES[variant]||GAMES.fyb;
  const groupId=query.get("group")||"",roomId=query.get("room")||"";
  const [players,setPlayers]=useState([]),[stacks,setStacks]=useState([]),[dealer,setDealer]=useState(0),[pot,setPot]=useState(0),[gameNumber,setGameNumber]=useState(1);
- const [ante,setAnte]=useState(variant==="fyb"?"0.50":query.get("ante")||"0.25"),[cap,setCap]=useState("50"),[step,setStep]=useState("loading");
+ const [ante,setAnte]=useState(variant==="fyb"?"1.50":query.get("ante")||"0.25"),[cap,setCap]=useState("50"),[step,setStep]=useState("loading");
  const [hands,setHands]=useState([]),[clown,setClown]=useState([]),[deck,setDeck]=useState([]),[decisions,setDecisions]=useState([]),[viewer,setViewer]=useState(null),[outcome,setOutcome]=useState(null),[log,setLog]=useState([]);
  const [drawer,setDrawer]=useState(false),[tab,setTab]=useState("hands"),[rebuy,setRebuy]=useState(false),[rebuySeat,setRebuySeat]=useState(0),[rebuyAmount,setRebuyAmount]=useState("20"),[status,setStatus]=useState("");
  const [fybTurn,setFybTurn]=useState(0),[followers,setFollowers]=useState([]),[pendingFollower,setPendingFollower]=useState(false),[street,setStreet]=useState(0);
- const [dealerPick,setDealerPick]=useState(false),[fybLosses,setFybLosses]=useState([]),[fybHandNumber,setFybHandNumber]=useState(0),[fybLastMove,setFybLastMove]=useState(null);
- const maxCents=variant==="fyb"?1000000:cents(cap),anteCents=cents(ante),index=players.length;
+ const [dealerPick,setDealerPick]=useState(false),[fybLosses,setFybLosses]=useState([]),[fybHandNumber,setFybHandNumber]=useState(0),[fybLastMove,setFybLastMove]=useState(null),[fybActions,setFybActions]=useState({}),[fybAnimating,setFybAnimating]=useState(false),[fybAwaitNext,setFybAwaitNext]=useState(false);
+ const maxCents=variant==="fyb"?1000000:cents(cap),fybStake=variant==="fyb"?fybStakeFromTotal(cents(ante)):null,anteCents=variant==="fyb"?(fybStake?.chipCents??NaN):cents(ante),index=players.length;
  const currentIndex=useMemo(()=>decisions.findIndex(v=>v===null),[decisions]);
  const fybActive=players.map((_,i)=>i).filter(i=>(fybLosses[i]??0)<3);
+ const fybSeatCoords=[{x:"21%",y:"9%"},{x:"50%",y:"-1%"},{x:"79%",y:"9%"},{x:"80%",y:"88%"},{x:"50%",y:"103%"},{x:"20%",y:"88%"}];
  const order=useMemo(()=>variant==="fyb"?fybOrder(fybActive,dealer):players.map((_,i)=>(dealer+1+i)%players.length),[dealer,players,variant,fybLosses]);
  const activeIndex=variant==="fyb"?(order[fybTurn]??-1):(currentIndex<0?-1:currentIndex);
  const currentPlayer=players[activeIndex];
@@ -64,7 +65,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  }
  function deal(){
   if(players.length<2||players.length>6){setStatus("Choose a table with 2–6 seated players.");return;}
-  if(!Number.isInteger(maxCents)||maxCents<=0||!Number.isInteger(anteCents)||anteCents<0||anteCents>1000000){setStatus("Choose valid ante and pot amounts.");return;}
+  if(!Number.isInteger(maxCents)||maxCents<=0||!Number.isInteger(anteCents)||anteCents<=0||anteCents>1000000){setStatus(variant==="fyb"?"Choose a total FYB stake divisible into three whole-cent chips (e.g., $1.50 or $3.00).":"Choose valid ante and pot amounts.");return;}
   if(variant!=="fyb"&&!takeAnte())return;
   const draft=localDeal(variant,players.length);
   if(variant==="fyb"){
@@ -75,7 +76,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
    const dealt=players.map(()=>[]);
    first.forEach((seat,index)=>{dealt[seat]=[cards[index]];});
    draft.hands=dealt;draft.deck=cards.slice(first.length);
-   setFybHandNumber(n=>n+1);setFybLastMove(null);
+   setFybHandNumber(n=>n+1);setFybLastMove(null);setFybActions({});setFybAnimating(false);setFybAwaitNext(false);
   }
   setHands(draft.hands);setDeck(draft.deck);setClown(draft.clown);
   setViewer(null);setOutcome(null);setFybTurn(0);setFollowers([]);setPendingFollower(false);setStreet(0);
@@ -87,13 +88,15 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  }
  // FYB is pass/keep with a King blocking an incoming swap. Dealer may draw off the deck.
  function fybAction(pass){
-  if(step!=="fyb"||fybTurn>=order.length)return;
+  if(step!=="fyb"||fybTurn>=order.length||fybAnimating||fybAwaitNext)return;
   const actor=order[fybTurn],next=order[fybTurn+1];
   const moved=fybSwap({hands,deck,actor,next,pass,playerName:players[actor].name,nextName:next==null?"Dealer":players[next].name});
   setHands(moved.hands);setDeck(moved.deck);setViewer(null);
-  setFybLastMove({seat:actor,kind:moved.kind,event:moved.event});
+  setFybLastMove({seat:actor,to:next??null,kind:moved.kind,event:moved.event,blockedKing:moved.kind==="blocked"?hands[next]?.[0]:null,nonce:Date.now()});
+  setFybActions(old=>({...old,[actor]:moved.kind}));
+  setFybAnimating(true);
   record(moved.event);
-  if(fybTurn+1<order.length){setFybTurn(v=>v+1);return;}
+  if(fybTurn+1<order.length){return;}
   const roundResult=fybRound({hands:moved.hands,active:fybActive,losses:players.map((_,i)=>fybLosses[i]||0),chipCents:anteCents});
   setFybLosses(roundResult.nextLosses);
   // FYB is a fixed three-chip liability, not a pot-building game.
@@ -107,6 +110,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
     roundResult.gameOver?" All remaining players were eliminated together; dealer review required.":"");
   setOutcome({message,losers:roundResult.losers,eliminated:roundResult.eliminated,winner:roundResult.winner,gameFinished:roundResult.gameOver});
   setStep("result");
+  setFybAnimating(false);
   record(message);
  }
  // A seven-card stud demonstration while the advanced wagering/score engine is finished.
@@ -164,23 +168,32 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   const n=centsFromDollars(rebuyAmount);if(n==null||n<=0){setStatus("Enter a valid rebuy.");return;}
   setStacks(v=>rebuyChips(v,Number(rebuySeat),n));setRebuy(false);record(players[rebuySeat].name+" rebought "+displayMoney(n)+".");
  }
- useEffect(()=>{if(step!=="fyb"||!currentPlayer||currentPlayer.kind!=="computer")return;
+ useEffect(()=>{if(!fybAnimating||step!=="fyb")return;
+  const id=setTimeout(()=>{setFybAnimating(false);if(fybTurn+1<order.length){if(currentPlayer?.kind!=="computer"&&["swap","draw"].includes(fybLastMove?.kind)){setViewer(activeIndex);setFybAwaitNext(true);}else setFybTurn(v=>v+1);}},850);
+  return()=>clearTimeout(id);
+ },[fybAnimating,fybTurn,step,order.length,activeIndex,currentPlayer?.kind,fybLastMove?.kind]);
+ useEffect(()=>{if(step!=="fyb"||fybAnimating||fybAwaitNext||!currentPlayer||currentPlayer.kind!=="computer")return;
   const timer=setTimeout(()=>fybAction(Math.random()<0.45),700);return()=>clearTimeout(timer);
- },[step,fybTurn,hands,players]);
+ },[step,fybTurn,hands,players,fybAnimating,fybAwaitNext]);
  const reviewable=step==="result"||step==="stud-result";
  const centered=step==="deciding"&&activeIndex>=0?"Your turn: "+currentPlayer?.name:step==="fyb"&&activeIndex>=0?currentPlayer?.name+"'s turn":step==="stud"?"Stud street "+(street+1):reviewable?"Hand finished":game.tag;
  return <main className="sw-poker-screen"><div className="sw-poker-content">
   <header className="sw-poker-top"><button type="button" className="sw-poker-back" onClick={()=>{store();nav(nextGameUrl);}}><ArrowLeft size={20}/></button><div className="sw-poker-symbol">S</div><div className="sw-poker-heading"><strong>SYNCWORKS POKER</strong><small>♠ Card Night · {game.title}</small></div><button type="button" className="sw-poker-icon-btn" onClick={()=>{setTab("rules");setDrawer(true)}} aria-label="Game information"><Info size={20}/></button></header>
   <div className="sw-poker-round"><div className="sw-poker-round-badge"><div>♠ {game.title}</div><span>{game.tag}</span></div><span className="sw-poker-capsule">♙ {players.length}</span></div>
-  <div className="sw-poker-session-status"><span>♣ Card Night · Game {gameNumber}</span><span>Dealer: {players[dealer]?.name||"Waiting"} · {variant==="fyb"?fybActive.length+" active · "+displayMoney(anteCents*3)+" max loss":"Hard cap "+displayMoney(maxCents)}</span></div>
+  <div className="sw-poker-session-status"><span>♣ Card Night · Game {gameNumber}</span><span>Dealer: {players[dealer]?.name||"Waiting"} · {variant==="fyb"?fybActive.length+" active · "+displayMoney(cents(ante))+" total per player":"Hard cap "+displayMoney(maxCents)}</span></div>
   {status&&<div role="status" className="sw-poker-practice-note">{status}</div>}
-  {step==="ready"&&<section className="sw-poker-game-choice"><strong>Ready for {game.title}</strong><p>{variant==="fyb"?"Three strikes and out. Each player starts with three "+displayMoney(anteCents)+" virtual chips (a "+displayMoney(anteCents*3)+" maximum loss). Every hand, the player or players tied for lowest each lose one chip. No building pot. Last remaining player wins.":"Same SyncWorks table and seats. Play stays on this device; your virtual chip balances carry between games in this practice session."}</p><div className="flex gap-2"><label className="flex-1">{variant==="fyb"?"Chip denomination ($)":"Ante ($)"}<input type="number" step="0.01" min="0.01" value={ante} onChange={e=>setAnte(e.target.value)} className="w-full rounded-lg bg-slate-950 p-3"/></label>{variant!=="fyb"&&<label className="flex-1">Max pot ($)<input type="number" min="1" value={cap} step="0.01" onChange={e=>setCap(e.target.value)} className="w-full rounded-lg bg-slate-950 p-3"/></label>}</div><button className="sw-poker-button primary mt-3 w-full" onClick={deal}>♠ Shuffle & Deal {game.title}</button></section>}
-  <div className="sw-poker-table-space"><div className="sw-poker-felt"><div className="sw-poker-felt-brand"><i>S</i>SYNCWORKS<br/>POKER</div><div className="sw-poker-pot"><div className="sw-poker-chip-stack"><span className="sw-poker-chip dark"/><span className="sw-poker-chip blue"/><span className="sw-poker-chip red"/></div><div className="sw-poker-pot-amount">{variant==="fyb"?fybActive.length+" players active":"Pot: "+displayMoney(pot)}</div><div className="sw-poker-pot-small">{game.title} · {variant==="fyb"?"3 strikes · "+displayMoney(anteCents)+" each · no pot build":"Max "+displayMoney(maxCents)}</div></div>
-  {players.map((p,i)=><div className={"sw-poker-seat s"+i+(variant==="fyb"&&(fybLosses[i]??0)>=3?" sw-fyb-out":"")} key={p.id}><div className="sw-poker-seat-avatar">{p.kind==="computer"?"🤖":p.name.split(" ").map(x=>x[0]).slice(0,2).join("")}</div><div className="sw-poker-seat-nameplate"><strong>{p.name}</strong><small>◉ {displayMoney(stacks[i]??p.chips)}</small>{variant==="fyb"&&<span className="sw-fyb-strikes" aria-label={3-(fybLosses[i]??0)+" remaining chips"}>{[0,1,2].map(n=><span key={n} className={n<3-(fybLosses[i]??0)?"live":"spent"}>●</span>)}</span>}</div>{i===dealer&&<span className="sw-poker-dealer">D</span>}{step==="deciding"&&<span className="sw-poker-status">{decisions[i]?"✓ Ready":"Waiting"}</span>}</div>)}
+  {step==="ready"&&<section className="sw-poker-game-choice"><strong>Ready for {game.title}</strong><p>{variant==="fyb"?"Dealer sets the total FYB stake per player. Three chips worth "+displayMoney(anteCents)+" each, giving "+displayMoney(cents(ante))+" maximum loss. Lowest card loses one chip; three strikes and the player is eliminated. No growing pot. Last player wins.":"Same SyncWorks table and seats. Play stays on this device; your virtual chip balances carry between games in this practice session."}</p><div className="flex gap-2"><label className="flex-1">{variant==="fyb"?"Total FYB stake per player ($)":"Ante ($)"}<input type="number" step="0.01" min="0.01" value={ante} onChange={e=>setAnte(e.target.value)} className="w-full rounded-lg bg-slate-950 p-3"/></label>{variant==="fyb"&&<div className="sw-fyb-stake-presets">{["1.50","3.00","6.00"].map(total=><button type="button" key={total} className={ante===total?"selected":""} onClick={()=>setAnte(total)}>${total} total</button>)}</div>}{variant!=="fyb"&&<label className="flex-1">Max pot ($)<input type="number" min="1" value={cap} step="0.01" onChange={e=>setCap(e.target.value)} className="w-full rounded-lg bg-slate-950 p-3"/></label>}</div><button className="sw-poker-button primary mt-3 w-full" onClick={deal}>♠ Shuffle & Deal {game.title}</button></section>}
+  <div className="sw-poker-table-space"><div className="sw-poker-felt"><div className="sw-poker-felt-brand"><i>S</i>SYNCWORKS<br/>POKER</div><div className="sw-poker-pot"><div className="sw-poker-chip-stack"><span className="sw-poker-chip dark"/><span className="sw-poker-chip blue"/><span className="sw-poker-chip red"/></div><div className="sw-poker-pot-amount">{variant==="fyb"?fybActive.length+" players active":"Pot: "+displayMoney(pot)}</div><div className="sw-poker-pot-small">{game.title} · {variant==="fyb"?"Total "+displayMoney(cents(ante))+" · "+displayMoney(anteCents)+" per loss":"Max "+displayMoney(maxCents)}</div></div>
+  {players.map((p,i)=><div className={"sw-poker-seat s"+i+(variant==="fyb"&&(fybLosses[i]??0)>=3?" sw-fyb-out":"")} key={p.id}><div className="sw-poker-seat-avatar">{p.kind==="computer"?"🤖":p.name.split(" ").map(x=>x[0]).slice(0,2).join("")}</div><div className="sw-poker-seat-nameplate"><strong>{p.name}</strong><small>◉ {displayMoney(stacks[i]??p.chips)}</small>{variant==="fyb"&&<span className="sw-fyb-strikes" aria-label={3-(fybLosses[i]??0)+" remaining chips"}>{[0,1,2].map(n=><span key={n} className={n<3-(fybLosses[i]??0)?"live":"spent"}>●</span>)}</span>}</div>{i===dealer&&<span className="sw-poker-dealer">D</span>}{variant==="fyb"&&fybActions[i]&&<span className={"sw-poker-status sw-fyb-action-label "+fybActions[i]}>{({swap:"Swapped",keep:"Kept",blocked:"King blocked",draw:"Drew"})[fybActions[i]]}</span>}{step==="deciding"&&<span className="sw-poker-status">{decisions[i]?"✓ Ready":"Waiting"}</span>}</div>)}
+  {variant==="fyb"&&fybLastMove&&<div className="sw-fyb-table-animation" key={fybLastMove.nonce} aria-hidden="true">
+     {fybLastMove.kind==="swap"&&<><div className="sw-fyb-flying-card" style={{"--fyb-x0":fybSeatCoords[fybLastMove.seat]?.x,"--fyb-y0":fybSeatCoords[fybLastMove.seat]?.y,"--fyb-x1":fybSeatCoords[fybLastMove.to]?.x,"--fyb-y1":fybSeatCoords[fybLastMove.to]?.y}}>♠</div><div className="sw-fyb-flying-card return" style={{"--fyb-x0":fybSeatCoords[fybLastMove.to]?.x,"--fyb-y0":fybSeatCoords[fybLastMove.to]?.y,"--fyb-x1":fybSeatCoords[fybLastMove.seat]?.x,"--fyb-y1":fybSeatCoords[fybLastMove.seat]?.y}}>♠</div></>}
+     {fybLastMove.kind==="blocked"&&<div className="sw-fyb-king-flip" style={{left:fybSeatCoords[fybLastMove.to]?.x,top:fybSeatCoords[fybLastMove.to]?.y}}><div className="sw-fyb-king-inner"><div className="sw-fyb-king-back">♠</div><div className="sw-fyb-king-front">K {fybLastMove.blockedKing?.suit||"♠"}</div></div></div>}
+     {fybLastMove.kind==="draw"&&<div className="sw-fyb-flying-card deck" style={{"--fyb-x0":"50%","--fyb-y0":"50%","--fyb-x1":fybSeatCoords[fybLastMove.seat]?.x,"--fyb-y1":fybSeatCoords[fybLastMove.seat]?.y}}>♠</div>}
+    </div>}
   </div></div>
   {step!=="ready"&&<section className="sw-poker-panel sw-poker-compact-result"><h3>{centered}</h3>
    {step==="stud"&&<p>Queens are always wild; face-up followers: {followers.length?followers.join(", "):"none"}. {pendingFollower?"Follower trigger pending.":""}</p>}
-   {variant==="fyb"&&step==="fyb"&&<p className="sw-fyb-turn-description">↶ Pass left to {order[fybTurn+1]===undefined?"the top of the deck (dealer action)":players[order[fybTurn+1]]?.name}. A King blocks a pass. Keep your card or swap before the next player acts.</p>}{variant==="fyb"&&fybLastMove&&<p role="status" className="sw-fyb-exchange"><span className="sw-fyb-card-backs">🂠 <span>↔</span> 🂠</span> {fybLastMove.event}</p>}{step==="deciding"||step==="fyb"?<div className="sw-poker-facecards">{activeCards?activeCards.map((c,i)=><PokerCard key={i} c={c} wild={variant==="442"&&(c.rank===2||c.rank===4&&activeCards.some(x=>x.rank===2))||variant==="bozo"&&c.rank===clown[0]?.rank}/>):(hands[activeIndex]||[]).map((c,i)=><PokerCard key={i} c={c} hidden/>)}</div>:null}
+   {variant==="fyb"&&step==="fyb"&&<p className="sw-fyb-turn-description">↶ Pass left to {order[fybTurn+1]===undefined?"the top of the deck (dealer action)":players[order[fybTurn+1]]?.name}. A King blocks a pass. Keep your card or swap before the next player acts.</p>}{variant==="fyb"&&fybAwaitNext&&<p className="sw-fyb-turn-description">Your new card is displayed privately. Review it, then tap Hide & Continue before handing the phone to the next player.</p>}{variant==="fyb"&&fybLastMove&&<p role="status" aria-live="polite" className="sw-fyb-exchange"><span className="sw-fyb-card-backs">🂠 <span>↔</span> 🂠</span> {fybLastMove.event}</p>}{step==="deciding"||step==="fyb"?<div className="sw-poker-facecards">{activeCards?activeCards.map((c,i)=><PokerCard key={i} c={c} wild={variant==="442"&&(c.rank===2||c.rank===4&&activeCards.some(x=>x.rank===2))||variant==="bozo"&&c.rank===clown[0]?.rank}/>):(hands[activeIndex]||[]).map((c,i)=><PokerCard key={i} c={c} hidden/>)}</div>:null}
    {variant==="bozo"&&clown.length>0&&<p>🤡 Clown's exposed wild card: {label(clown[0])}. Its other cards stay concealed until resolution.</p>}
    {step==="result"&&<><div className="sw-poker-winner-banner">{variant==="fyb"?"♠ ":"🏆 "}{outcome?.message}</div><button className="sw-poker-button mt-2" onClick={()=>{setTab("hands");setDrawer(true)}}><Eye size={14} className="inline"/> Review cards</button></>}
    {step==="stud-result"&&<><p>All seven cards dealt. The next step is validated betting and natural-versus-wild showdown; this is a guided dealing demonstration, not an automatic pot award.</p><button className="sw-poker-button mt-2" onClick={()=>{setTab("hands");setDrawer(true)}}>Review stud cards</button></>}
@@ -189,7 +202,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  {step!=="loading"&&<nav className="sw-poker-sticky-actions"><div className="sw-poker-action-top"><strong>♠ {centered}</strong><span>{variant==="fyb"?"FYB · "+fybActive.length+" active · "+displayMoney(anteCents)+" / strike":displayMoney(pot)+" / "+displayMoney(maxCents)}</span></div><div className="sw-poker-action-buttons">
  {step==="ready"&&<button className="sw-poker-action hold grow" onClick={deal}>Deal cards</button>}
  {step==="deciding"&&currentPlayer&&<><button className="sw-poker-action hide" onClick={()=>setViewer(v=>v===activeIndex?null:activeIndex)}>{viewer===activeIndex?<EyeOff size={15}/>:<Eye size={15}/>} {viewer===activeIndex?"Hide":"Show"}</button><button className="sw-poker-action fold" onClick={()=>chooseHold("fold")}>Fold</button><button className="sw-poker-action hold" onClick={()=>chooseHold("hold")}>Hold</button></>}
- {step==="fyb"&&currentPlayer&&<><button className="sw-poker-action hide" onClick={()=>setViewer(v=>v===activeIndex?null:activeIndex)}>Show / Hide</button><button className="sw-poker-action fold" onClick={()=>fybAction(true)}>Pass</button><button className="sw-poker-action hold" onClick={()=>fybAction(false)}>Keep</button></>}
+ {step==="fyb"&&currentPlayer&&(fybAwaitNext?<button className="sw-poker-action hold grow" onClick={()=>{setFybAwaitNext(false);setViewer(null);setFybTurn(v=>v+1);}}>Hide & Continue <ChevronRight size={17}/></button>:<><button disabled={fybAnimating} className="sw-poker-action hide" onClick={()=>setViewer(v=>v===activeIndex?null:activeIndex)}>Show / Hide</button><button disabled={fybAnimating} className="sw-poker-action fold" onClick={()=>fybAction(true)}>Pass Left</button><button disabled={fybAnimating} className="sw-poker-action hold" onClick={()=>fybAction(false)}>Keep</button></>)}
  {step==="stud"&&<button className="sw-poker-action hold grow" onClick={dealStudStreet}>Deal next stud card · {street+1}/7</button>}
  {(step==="result"||step==="stud-result")&&<><button className="sw-poker-action hold grow" onClick={()=>{if(outcome?.gameFinished||(variant!=="fyb"&&pot===0)){quitToDealer();return;}if(variant==="fyb"){setDealer(d=>fybNextDealer(fybActive,d));}setStep("ready");setOutcome(null);setFybLastMove(null);}}> {outcome?.gameFinished||variant!=="fyb"&&pot===0?"Pass Dealer · Next Game":variant==="fyb"?"Next FYB hand":"Next hand"} <ChevronRight size={17}/></button><button className="sw-poker-action hide" onClick={quitToDealer}>Choose Game</button></>}
  <button className="sw-poker-action info" onClick={()=>{setTab("rules");setDrawer(true)}}><Info size={18}/><span>Info</span></button></div></nav>}

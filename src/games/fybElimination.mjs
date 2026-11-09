@@ -32,3 +32,10 @@ export function fybSwap({hands,deck,actor,next,pass,playerName,nextName}){
  updated[actor]=[neighbor];updated[next]=[before];
  return {hands:updated,deck:remaining,event:playerName+" passed left to "+nextName+" and swapped cards.",kind:"swap",before,after:neighbor,nextBefore:neighbor,nextAfter:before};
 }
+
+// The dealer enters a player's TOTAL maximum FYB liability, not the chip face value.
+// A total stake must divide evenly into three whole-cent chips.
+export function fybStakeFromTotal(totalCents){
+ if(!Number.isSafeInteger(totalCents)||totalCents<3||totalCents%FYB_STRIKES!==0)return null;
+ return {totalCents,chipCents:totalCents/FYB_STRIKES,strikes:FYB_STRIKES};
+}
