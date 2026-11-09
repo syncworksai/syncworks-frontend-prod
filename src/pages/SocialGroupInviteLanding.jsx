@@ -35,6 +35,7 @@ export default function SocialGroupInviteLanding() {
   const [done, setDone] = useState(null);
   const [shared, setShared] = useState("");
   const [requested, setRequested] = useState(false);
+  const [memberStatus,setMemberStatus]=useState("");
   const inviteUrl = window.location.origin + "/social/invite/" + token;
 
   useEffect(() => {
@@ -48,15 +49,16 @@ export default function SocialGroupInviteLanding() {
   }, [token]);
 
   useEffect(() => {
-    if (!user?.id || !preview?.group?.id || !nextPath) return undefined;
+    if (!user?.id || !preview?.group?.id) return undefined;
     let active = true;
     getMemberships()
       .then((rows) => {
         if (!active) return;
-        const alreadyMember = (Array.isArray(rows) ? rows : []).some(
-          (row) => Number(typeof row.group === "object" ? row.group?.id : row.group) === Number(preview.group.id) && row.status === "ACTIVE",
-        );
-        if (alreadyMember) navigate(nextPath, { replace: true });
+        const membership=(Array.isArray(rows)?rows:[]).find(row=>Number(row.group?.id??row.group)===Number(preview.group.id)&&Number(row.user?.id??row.user)===Number(user.id));
+        const status=String(membership?.status||"").toUpperCase();
+        setMemberStatus(status);
+        if(["PENDING","REQUESTED","PENDING_APPROVAL"].includes(status))setRequested(true);
+        if(status==="ACTIVE"&&nextPath)navigate(nextPath,{replace:true});
       })
       .catch(() => {});
     return () => { active = false; };
@@ -86,6 +88,7 @@ export default function SocialGroupInviteLanding() {
     try {
       const result = await requestJoinGroup(token);
       if (result?.already_member && nextPath) { navigate(nextPath,{replace:true}); return; }
+      if(result?.membership?.status)setMemberStatus(String(result.membership.status).toUpperCase());
       setRequested(true);
     } catch(err) { setError(errorText(err)); }
     finally { setBusy(false); }
@@ -128,7 +131,7 @@ export default function SocialGroupInviteLanding() {
               <p className="text-xs text-slate-300">Your invite code is <b className="break-all text-cyan-200">{token}</b>. Join using your free SyncWorks customer account.</p>
               {user ? <>
                 <div className="text-xs text-slate-300">Signed in as <b>{user.email}</b>.</div>
-                {requested ? <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-3 text-sm text-emerald-200">Your request was sent. A club manager must approve membership before you can enter the poker room. Reopen this same invitation after approval.</div> :
+                {requested ? <div className="rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-100">Membership request {memberStatus==="ACTIVE"?"approved": "submitted / pending approval"}. A club owner or manager must approve before you can join. Refresh this invitation after approval.</div> :
                   <button type="button" disabled={busy} onClick={requestClubJoin} className="min-h-12 w-full rounded-xl bg-violet-300 font-black text-slate-950 disabled:opacity-50">{busy ? "Submitting…" : "Request to join Card Club"}</button>}
                 <button type="button" onClick={()=>navigate(nextPath||"/customer/games/clubs")} className="min-h-11 w-full rounded-xl border border-white/20 text-xs font-bold">{nextPath?.includes("/customer/games/clubs/room")||nextPath?.includes("/customer/games/join")?"Open poker room (after approval)":"Open Card Clubs"}</button>
               </> : <div className="grid gap-2">
