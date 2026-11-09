@@ -91,8 +91,15 @@ export default function CustomerPokerTable(){
   setPeople(previous.people);setChipStacks(previous.stacks);setPot(previous.pot??0);
   setDealer(previous.dealer??0);setSessionGames(previous.gameNumber??1);
   setMaxPot(String((previous.capCents??5000)/100));setCapDraft(String((previous.capCents??5000)/100));
-  setDealerChoosing(true);setSession("setup");setPhase("setup");setSelectedGame("357");
-  setStatus("Card night restored: virtual chips and dealer retained.");
+  setDealerChoosing(true);setSession("setup");setPhase("setup");
+  if(previous.people[previous.dealer??0]?.kind==="computer"){
+    const pick=chooseVirtualDealer();
+    setSelectedGame(pick.game);setAnte(pick.ante);
+    setStatus(previous.people[previous.dealer??0].name+" is dealer and randomly chose "+(TABLE_GAMES.find(g=>g.code===pick.game)?.label||pick.game)+". Confirm to play.");
+  }else{
+    setSelectedGame("357");
+    setStatus("Card night restored. Next dealer chooses a game and ante; virtual chips carry over.");
+  }
  },[groupId,roomId]);
  useEffect(()=>{if(phase!=="countdown")return;setCounter(3);const started=Date.now();const timer=setInterval(()=>{const elapsed=Math.floor((Date.now()-started)/1000);const remaining=3-elapsed;if(remaining<=0){clearInterval(timer);setCounter(null);setRevealStep(0);setPhase("revealing");setViewer(null);setShowdownViewer(round===2&&choices.filter(c=>c==="hold").length>=2?choices.findIndex((c,i)=>c==="hold"&&people[i]?.kind!=="computer"):null);addLog("Dealer countdown complete. Comparing holders privately.");}else setCounter(remaining);},120);return()=>clearInterval(timer);},[phase]);
  // No showdown cards are exposed unless two or more players held.
