@@ -160,7 +160,7 @@ export default function CustomerPokerTable(){
   if(dealerChoosing||nextCode==="357")return;
   const next=TABLE_GAMES.find(g=>g.code===nextCode);
   if(!next)return;
-  saveCardNight({groupId,roomId,people,stacks:chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??2000),pot,dealer,gameNumber:sessionGames,capCents});
+  saveCardNight({groupId,roomId,people,stacks:chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??2000),pot,dealer,gameNumber:sessionGames,capCents,rebuyCounts,sittingOut,cashouts});
   // All other game choices open the same branded table shell.
   const qs=new URLSearchParams();
   if(groupId)qs.set("group",groupId);
@@ -201,6 +201,7 @@ export default function CustomerPokerTable(){
   const balance=chipStacks[index]??people[index]?.chips??0;
   if(balance<0){setStatus("Balance must be nonnegative before cashing out.");return;}
   setCashouts(old=>[...old,{seat:index,name:people[index].name,chips:balance,at:new Date().toISOString()}]);setSittingOut(old=>({...old,[index]:true}));
+  setChipStacks(old=>old.map((v,i)=>i===index?0:v));
   setStatus(people[index].name+" cashed out "+displayMoney(balance)+" in virtual chips (local session record).");
  }
  function restartPracticeSession(){
@@ -227,7 +228,7 @@ export default function CustomerPokerTable(){
   // Other games have independent local prototypes; never imply chip ledger transfer.
   const next=TABLE_GAMES.find(g=>g.code===selectedGame);
   if(!next)return;
-  saveCardNight({groupId,roomId,people,stacks:chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??2000),pot,dealer,gameNumber:sessionGames,capCents});
+  saveCardNight({groupId,roomId,people,stacks:chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??2000),pot,dealer,gameNumber:sessionGames,capCents,rebuyCounts,sittingOut,cashouts});
   const q=new URLSearchParams({practice:"1",ante:String(ante),dealer:String(dealer),fromPoker:"1",game:selectedGame});
   if(groupId)q.set("group",groupId);
   if(roomId)q.set("room",roomId);
