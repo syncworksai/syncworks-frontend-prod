@@ -408,3 +408,16 @@
 @keyframes sw-442-cardflip{0%{opacity:0;transform:rotateY(90deg) scale(.75)}100%{opacity:1;transform:rotateY(0) scale(1)}}
 @media(max-width:430px){.sw-442-flip-card{width:19px;height:30px;font-size:9px}.sw-442-showdown small{font-size:8px}.sw-442-select-cards{gap:3px}.sw-442-pick{padding:2px}}
 @media(prefers-reduced-motion:reduce){.sw-442-flip-card{animation:none}}
+
+/* FYB showdown: flip just the two card faces, not the wrapper or loser caption.
+   Rotating the entire wrapper mirrored LOWEST and payment labels on iOS Safari. */
+.sw-fyb-showdown-card{animation:none!important;transform:translateX(-50%)!important}
+.sw-fyb-showdown-card .sw-fyb-showdown-back{animation:swFybBackFlip .65s ease both;transform:rotateY(0deg)}
+.sw-fyb-showdown-card .sw-fyb-showdown-face{animation:swFybFaceFlip .65s ease both;transform:rotateY(180deg)}
+.sw-fyb-showdown-card small{transform:translateX(-50%)!important;backface-visibility:visible;text-align:center}
+@keyframes swFybBackFlip{from{transform:rotateY(0deg)}to{transform:rotateY(180deg)}}
+@keyframes swFybFaceFlip{from{transform:rotateY(180deg)}to{transform:rotateY(360deg)}}
+@media(prefers-reduced-motion:reduce){
+ .sw-fyb-showdown-card .sw-fyb-showdown-back{animation:none;transform:rotateY(180deg)}
+ .sw-fyb-showdown-card .sw-fyb-showdown-face{animation:none;transform:rotateY(360deg)}
+}
