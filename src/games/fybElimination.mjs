@@ -80,10 +80,11 @@ export function fybDealerDraw({hands,deck,actor,newDeck}){
 // survivor is known, award the entire purse and leave no unclaimed FYB pot.
 export function fybPayRound({stacks,potCents,losers,chipCents,winner=null}){
  if(!Array.isArray(stacks)||!Number.isSafeInteger(potCents)||potCents<0||!Number.isSafeInteger(chipCents)||chipCents<0)throw Error("Invalid FYB accounting");
- const paid=losers.length*chipCents;
+ const contributions=losers.map(seat=>({seat,cents:Math.min(chipCents,Math.max(0,stacks[seat]??0))}));
+ const paid=contributions.reduce((total,entry)=>total+entry.cents,0);
  const purse=potCents+paid;
- const next=stacks.map((n,i)=>n-(losers.includes(i)?chipCents:0)+(i===winner?purse:0));
- return {stacks:next,potCents:winner===null?purse:0,dragCents:winner===null?0:purse,paidCents:paid};
+ const next=stacks.map((n,i)=>n-(contributions.find(c=>c.seat===i)?.cents??0)+(i===winner?purse:0));
+ return {stacks:next,potCents:winner===null?purse:0,dragCents:winner===null?0:purse,paidCents:paid,contributions};
 }
 
 // A split is available only while exactly two eligible players remain.
