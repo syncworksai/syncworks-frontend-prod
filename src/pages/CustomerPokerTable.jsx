@@ -9,6 +9,8 @@ import {addRoundCards,cardRank,createShuffledDeck,dealt357,displayMoney,instant3
 import "./CustomerPokerTable.css";
 import {HAND_RANKINGS_357,practiceHandInfo,estimatePracticeEquity} from "../games/practiceOdds357.mjs";
 import {rotationAfterPot,chooseVirtualDealer} from "../games/pokerDealerRotation.mjs";
+import {capGutsResult,limitAnte,rebuyChips,centsFromDollars,pickPracticeBotChoice} from "../games/pokerPracticeSession.mjs";
+import {readCardNight,saveCardNight,clearCardNight} from "../games/cardNightTransfer.mjs";
 
 const DEFAULT_PLAYERS=[{id:"local-you",name:"You",kind:"local"},{id:"local-zack",name:"Zack",kind:"guest"},{id:"local-russ",name:"Russ",kind:"guest"}];
 const TABLE_GAMES=[
@@ -53,6 +55,8 @@ export default function CustomerPokerTable(){
  const [shareBusy,setShareBusy]=useState(false),[inviteUrl,setInviteUrl]=useState(""),[roomMinimum,setRoomMinimum]=useState(null),[roomCapacity,setRoomCapacity]=useState(6);
  const [selectedGame,setSelectedGame]=useState("357");
  const [dealerChoosing,setDealerChoosing]=useState(false);
+ const [capDraft,setCapDraft]=useState("50");
+ const [botStyle,setBotStyle]=useState("balanced"),[rebuyOpen,setRebuyOpen]=useState(false),[rebuySeat,setRebuySeat]=useState(0),[rebuyAmount,setRebuyAmount]=useState("20"),[sessionGames,setSessionGames]=useState(1),[resetConfirm,setResetConfirm]=useState(false);
  const [upgrading,setUpgrading]=useState(false);
  const [seatEditor,setSeatEditor]=useState(false),[seatName,setSeatName]=useState(""),[seatBuyin,setSeatBuyin]=useState("20"),[seatError,setSeatError]=useState("");
  function openDrawer(tab="hands"){setDrawerTab(tab);setDrawerOpen(true);}
@@ -76,9 +80,18 @@ export default function CustomerPokerTable(){
  const equity=useMemo(()=>practiceMode&&viewCards?estimatePracticeEquity(viewCards,round):null,[practiceMode,viewCards,round]);
  function addLog(message){setLog(old=>[{id:uid(),message,time:new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})},...old].slice(0,32));}
  useEffect(()=>{let mounted=true;
-  if(roomId){getCardRoom(roomId).then(r=>{if(!mounted)return;setLobbyName(r.name||"Poker Table");if(Array.isArray(r.seats)&&r.seats.length>=2){setPeople(r.seats.map(getPlayer));setStartingChips(String((r.virtual_buy_in_cents??2000)/100));setRoomMinimum(r.minimum_buy_in_cents??r.virtual_buy_in_cents??2000);setRoomCapacity(r.capacity||6);const idx=r.seats.findIndex(s=>s.position===r.dealer_position);if(idx>=0)setDealer(idx);setRemoteNotice(true);}}).catch(()=>{if(mounted)setStatus("Shared lobby unavailable; use the local preview with sample seats.");});}
+  if(roomId){getCardRoom(roomId).then(r=>{if(!mounted)return;setLobbyName(r.name||"Poker Table");if(Array.isArray(r.seats)&&r.seats.length>=2){if(params.get("resumeGame")!=="1"||!readCardNight(groupId,roomId))setPeople(r.seats.map(getPlayer));setStartingChips(String((r.virtual_buy_in_cents??2000)/100));setRoomMinimum(r.minimum_buy_in_cents??r.virtual_buy_in_cents??2000);setRoomCapacity(r.capacity||6);const idx=r.seats.findIndex(s=>s.position===r.dealer_position);if(idx>=0&&!(params.get("resumeGame")==="1"&&readCardNight(groupId,roomId)))setDealer(idx);setRemoteNotice(true);}}).catch(()=>{if(mounted)setStatus("Shared lobby unavailable; use the local preview with sample seats.");});}
   else if(groupId){const r=readLocalRoom(groupId);if(r?.seats?.length){setLobbyName(r.name||"Poker Table");setPeople(r.seats.map(getPlayer));setStartingChips(String((r.buyInCents??2000)/100));setRoomMinimum(r.buyInCents??2000);setRoomCapacity(r.capacity||6);setRemoteNotice(false);}}
   return()=>{mounted=false;};
+ },[groupId,roomId]);
+ useEffect(()=>{
+  if(params.get("resumeGame")!=="1")return;
+  const previous=readCardNight(groupId,roomId);if(!previous)return;
+  setPeople(previous.people);setChipStacks(previous.stacks);setPot(previous.pot??0);
+  setDealer(previous.dealer??0);setSessionGames(previous.gameNumber??1);
+  setMaxPot(String((previous.capCents??5000)/100));setCapDraft(String((previous.capCents??5000)/100));
+  setDealerChoosing(true);setSession("setup");setPhase("setup");setSelectedGame("357");
+  setStatus("Card night restored: virtual chips and dealer retained.");
  },[groupId,roomId]);
  useEffect(()=>{if(phase!=="countdown")return;setCounter(3);const started=Date.now();const timer=setInterval(()=>{const elapsed=Math.floor((Date.now()-started)/1000);const remaining=3-elapsed;if(remaining<=0){clearInterval(timer);setCounter(null);setRevealStep(0);setPhase("revealing");setViewer(null);setShowdownViewer(round===2&&choices.filter(c=>c==="hold").length>=2?choices.findIndex((c,i)=>c==="hold"&&people[i]?.kind!=="computer"):null);addLog("Dealer countdown complete. Comparing holders privately.");}else setCounter(remaining);},120);return()=>clearInterval(timer);},[phase]);
  // No showdown cards are exposed unless two or more players held.
@@ -137,23 +150,51 @@ export default function CustomerPokerTable(){
   if(dealerChoosing||nextCode==="357")return;
   const next=TABLE_GAMES.find(g=>g.code===nextCode);
   if(!next)return;
-  // Other engines have their own local prototype routes, not this 3-5-7 evaluator.
+  saveCardNight({groupId,roomId,people,stacks:chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??2000),pot,dealer,gameNumber:sessionGames,capCents});
+  // All other game choices open the same branded table shell.
   const qs=new URLSearchParams();
   if(groupId)qs.set("group",groupId);
   if(roomId)qs.set("room",roomId);
-  nav(next.path+(qs.toString()?"?"+qs.toString():""));
+  qs.set("game",nextCode);
+  nav("/customer/games/variant?"+qs.toString());
  }
  function finishGameAndPassDealer(){
   const rotation=rotationAfterPot({potCents:pot,dealer,playerCount:tableSize});
   if(!rotation.gameFinished){setStatus("A replacement pot remains. This dealer continues until it is fully dragged.");return;}
   const next=rotation.nextDealer;
-  setDealer(next);setPhase("setup");setSession("setup");setChoices([]);setViewer(null);closeDrawer();
+  setSessionGames(v=>v+1);setDealer(next);setPhase("setup");setSession("setup");setChoices([]);setViewer(null);closeDrawer();
   setShowdownViewer(null);setOutcome(null);setChipAnimation(null);setReveal({});
   setStrikes({});setHands([]);setDeck([]);setRound(0);setDealerChoosing(true);
   if(people[next]?.kind==="computer"){
     const pick=chooseVirtualDealer();setSelectedGame(pick.game);setAnte(pick.ante);
     addLog(people[next].name+" picked "+(TABLE_GAMES.find(g=>g.code===pick.game)?.label||pick.game)+" with "+pick.ante+" virtual ante.");
   }else{setSelectedGame("357");addLog(people[next]?.name+" is the next dealer. Choose the next game and ante.");}
+ }
+ function confirmRebuy(){
+  const add=centsFromDollars(rebuyAmount),index=Number(rebuySeat);
+  if(add===null||add<=0||add>1000000||!people[index]){setStatus("Enter a valid virtual buy-in between $0.01 and $10,000.");return;}
+  if(session==="playing")setChipStacks(old=>rebuyChips(old,index,add));
+  else setPeople(old=>old.map((p,i)=>i===index?{...p,chips:(p.chips??0)+add}:p));
+  addLog(people[index].name+" added "+displayMoney(add)+" in virtual practice chips.");
+  setStatus(people[index].name+" rebought "+displayMoney(add)+". No real money was charged.");
+  setRebuyOpen(false);
+ }
+ function restartPracticeSession(){
+  // Explicit practice reset; reset the full ledger and current game together.
+  const restored=people.map(p=>Number.isFinite(p.chips)?p.chips:roomMinimum??2000);
+  clearCardNight();
+  setChipStacks(restored);setPot(0);setStrikes({});setDealer(0);setSessionGames(1);
+  setSession("setup");setPhase("setup");setRound(0);setHands([]);setDeck([]);
+  setChoices([]);setOutcome(null);setReveal({});setRevealStep(0);setChipAnimation(null);
+  setDealerChoosing(false);setSelectedGame("357");setViewer(null);setCounter(null);
+  setShowdownViewer(null);setLog([]);setResetConfirm(false);closeDrawer();
+  setStatus("Practice session restarted. Virtual chips and pot reset to original buy-ins; names and seats were retained.");
+ }
+ function setPotCap(value){
+  const next=centsFromDollars(value);
+  if(next===null||next<100){setStatus("Pot cap must be at least $1.");return;}
+  if(next<pot){setStatus("The cap cannot be lower than the existing pot. Finish or restart the session first.");return;}
+  setMaxPot((next/100).toFixed(2));setCapDraft((next/100).toFixed(2));setStatus("Hard maximum pot set to "+displayMoney(next)+". Match payments and antes will respect the cap.");
  }
  function startDealerSelectedGame(){
   if(!dealerChoosing)return;
@@ -162,10 +203,11 @@ export default function CustomerPokerTable(){
   // Other games have independent local prototypes; never imply chip ledger transfer.
   const next=TABLE_GAMES.find(g=>g.code===selectedGame);
   if(!next)return;
-  const q=new URLSearchParams({practice:"1",ante:String(ante),dealer:String(dealer),fromPoker:"1"});
+  saveCardNight({groupId,roomId,people,stacks:chipStacks.length===people.length?chipStacks:people.map(p=>p.chips??2000),pot,dealer,gameNumber:sessionGames,capCents});
+  const q=new URLSearchParams({practice:"1",ante:String(ante),dealer:String(dealer),fromPoker:"1",game:selectedGame});
   if(groupId)q.set("group",groupId);
   if(roomId)q.set("room",roomId);
-  nav(next.path+"?"+q.toString());
+  nav("/customer/games/variant?"+q.toString());
  }
  function storeLocalSeats(updated){
   if(!groupId||roomId)return;
@@ -194,14 +236,25 @@ export default function CustomerPokerTable(){
    const virtualCount=people.filter(p=>p.kind==="computer").length;
    updateSeats(old=>[...old,{id:uid(),name:"Virtual Player "+(virtualCount+1),kind:"computer",chips:roomMinimum??2000}]);
  }
- function preparedChoices(size){return people.slice(0,size).map(p=>p.kind==="computer"?(Math.random()>.4?"hold":"drop"):null);}
+ function preparedChoices(size,cards=hands,stage=round){return people.slice(0,size).map((p,i)=>p.kind==="computer"?pickPracticeBotChoice(cards[i],stage,botStyle):null);}
  function dealOpening(previousPot=0,previousChips=null,previousStrikes=null){
   const stack=previousChips||people.map(p=>Number.isFinite(p.chips)?p.chips:Math.max(0,Math.round(Number(startingChips)*100)));
   if(tableSize<2||tableSize>6){setStatus("Choose 2–6 players before dealing.");return;}
   if(!Number.isSafeInteger(anteCents)||anteCents<0||!Number.isSafeInteger(capCents)||capCents<1){setStatus("Set valid ante and pot-cap amounts.");return;}
   const fresh=dealt357(createShuffledDeck(),tableSize);
-  const afterAnte=stack.map(v=>v-anteCents);
-  const newPot=previousPot+tableSize*anteCents;
+  if(previousPot>capCents){setStatus("The current pot exceeds the selected cap. Increase the cap or reset the practice session.");return;}
+  const actualAnte=limitAnte({potCents:previousPot,capCents,anteCents,playerCount:tableSize});
+  if(stack.some((value,i)=>value<actualAnte&&people[i]?.kind!=="computer")){
+    setStatus("A player needs a rebuy before dealing. Use Rebuy in the bottom controls.");
+    setRebuySeat(Math.max(0,stack.findIndex((value,i)=>value<actualAnte&&people[i]?.kind!=="computer")));
+    setRebuyOpen(true);return;
+  }
+  const botRebuys=stack.map((value,i)=>people[i]?.kind==="computer"&&value<actualAnte?Math.max(2000,actualAnte-value):0);
+  const funded=stack.map((value,i)=>value+botRebuys[i]);
+  if(botRebuys.some(Boolean))addLog("Practice virtual-player rebuys: "+botRebuys.map((n,i)=>n?people[i].name+" "+displayMoney(n):null).filter(Boolean).join(", "));
+  const afterAnte=funded.map(v=>v-actualAnte);
+  const newPot=previousPot+tableSize*actualAnte;
+  if(actualAnte<anteCents)addLog("Pot cap reduced the starting ante to "+displayMoney(actualAnte)+" each.");
   setHands(fresh.hands);setDeck(fresh.deck);setRound(0);
   setChipStacks(afterAnte);setPot(newPot);setStrikes(previousStrikes||{});
   setReveal({});setRevealStep(0);setShowdownViewer(null);setChipAnimation(null);setOutcome(null);setViewer(null);setCounter(null);closeDrawer();
@@ -213,7 +266,7 @@ export default function CustomerPokerTable(){
   }else if(instant.length>1){
    setPhase("review");addLog("Multiple 3-5-7 instant hands — dealer review required.");
   }else{
-   setChoices(preparedChoices(tableSize));setPhase("choosing");addLog("Three cards dealt. 3s are wild. Players choose Hold or Fold.");
+   setChoices(preparedChoices(tableSize,fresh.hands,0));setPhase("choosing");addLog("Three cards dealt. 3s are wild. Players choose Hold or Fold.");
   }
  }
  function start(){setSession("playing");setLog([]);dealOpening(0,null,{});}
@@ -221,7 +274,7 @@ export default function CustomerPokerTable(){
  function countdown(){if(phase!=="choosing"||!allReady)return;setPhase("countdown");addLog("Dealer started 3, 2, 1 countdown.");}
  function settleCurrentRound(){
   if(phase!=="revealing")return;
-  const result=resolve357({hands,round,choices,potCents:pot,strikes,anteCents});
+  const result=capGutsResult(resolve357({hands,round,choices,potCents:pot,strikes,anteCents}),{potCents:pot,capCents,anteCents});
   setOutcome({...result,potDraggedCents:result.winner!==null&&result.winner!==undefined?pot:0});
   setStrikes(result.strikes);
   setChipStacks(previous=>previous.map((value,index)=>value+(result.delta[index]||0)));
@@ -229,7 +282,7 @@ export default function CustomerPokerTable(){
   if(result.winner!==null&&result.winner!==undefined) {
     setChipAnimation({winner:result.winner,amount:pot,losers:result.entered.filter(i=>i!==result.winner)});
   }else if(result.kind==="all-drop"){
-    setChipAnimation({winner:null,amount:anteCents*tableSize,losers:[]});
+    setChipAnimation({winner:null,amount:result.nextPot-pot,losers:[]});
   }
   setPhase(result.kind==="tie-review"?"review":"resolved");
   addLog(result.message);
@@ -242,7 +295,7 @@ export default function CustomerPokerTable(){
    dealOpening(pot,chipStacks,strikes);return;
   }
   const updated=addRoundCards(hands,deck);
-  setHands(updated.hands);setDeck(updated.deck);setRound(v=>v+1);setViewer(null);setShowdownViewer(null);setChoices(preparedChoices(tableSize));setReveal({});setRevealStep(0);setOutcome(null);setPhase("choosing");closeDrawer();
+  setHands(updated.hands);setDeck(updated.deck);setRound(v=>v+1);setViewer(null);setShowdownViewer(null);setChoices(preparedChoices(tableSize,updated.hands,round+1));setReveal({});setRevealStep(0);setOutcome(null);setPhase("choosing");closeDrawer();
   addLog("Two cards added to every hand. Only "+THREE_FIVE_SEVEN[round+1]+"s are wild.");
  }
  const currentPlayer=displayIndex!==null?people[displayIndex]:null;
@@ -262,11 +315,13 @@ export default function CustomerPokerTable(){
    <span className="sw-poker-capsule">♙ {tableSize}</span>
    <button type="button" className="sw-poker-icon-btn" aria-label="Rules and strategy" onClick={()=>openDrawer("rules")}><Info size={20}/></button>
   </header>
+  <div className="sw-poker-session-status"><span>♣ Card Night · Game {sessionGames}</span><span>Max pot <b>{displayMoney(capCents)}</b> · {botStyle==="balanced"?"Balanced bots":botStyle==="cautious"?"Cautious bots":"Aggressive bots"}</span></div>
   <div className="sw-poker-round"><div className="sw-poker-round-badge"><div>♠ {gameName}</div><span>Round {round+1} · {wild}s Wild</span></div><div className="sw-poker-steps">{THREE_FIVE_SEVEN.map((n,i)=><div key={i} title={"Round "+(i+1)+": "+n+"s wild"} className={"sw-poker-step"+(i===round?" current":"")}>{i+1}</div>)}</div></div>
   {!roomId&&groupId&&session==="setup"&&roomMinimum!==null&&<section className="mb-3 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-3"><div className="text-sm font-black text-emerald-100">Want players on separate phones?</div><p className="mt-1 text-xs leading-5 text-slate-300">Create a shared waiting room in this Card Club with the same name, seat count and minimum buy-in. Local guests and dealt hands stay on this device, and synchronized game cards are not live yet.</p><button type="button" onClick={upgradeToLiveRoom} disabled={upgrading} className="sw-poker-button primary mt-3 w-full">{upgrading?"Creating shared room…":"♠ Make This a Live Waiting Room"}</button></section>}
   {session==="setup"&&<section className="sw-poker-game-choice" aria-label="Choose the poker game"><label htmlFor="sw-poker-game-select">{dealerChoosing?people[dealer]?.name+" is dealer · Choose next game":"Dealer's game choice"}</label><select id="sw-poker-game-select" value={selectedGame} onChange={e=>changeGame(e.target.value)}>{TABLE_GAMES.map(g=><option key={g.code} value={g.code}>{g.label}</option>)}</select><p>{dealerChoosing?"Previous game finished. Set the next game and ante. Other game prototypes do not share this table's chip ledger yet.":"3-5-7 uses this branded table. Other games open their existing local game screens until the shared table engine is complete."}</p>
  {dealerChoosing&&<><label htmlFor="sw-dealer-ante">Next ante ($)</label><div className="flex flex-wrap gap-2">{["0.25","0.50","1.00"].map(a=><button type="button" key={a} onClick={()=>setAnte(a)} className={"sw-poker-button "+(ante===a?"primary":"")}>{a}</button>)}</div><input id="sw-dealer-ante" type="number" min="0" max="100" step="0.01" value={ante} onChange={e=>setAnte(e.target.value)} className="min-h-11 w-full rounded-lg border border-cyan-300/30 bg-slate-950 p-2"/><button type="button" onClick={startDealerSelectedGame} className="sw-poker-button gold mt-3 w-full">♠ Start {TABLE_GAMES.find(g=>g.code===selectedGame)?.label||"Selected Game"}</button></>}
  </section>}
+  {session==="setup"&&<section className="sw-poker-session-setup"><label>Maximum pot ($)<input type="number" value={capDraft} min="1" max="10000" step="0.01" onChange={e=>setCapDraft(e.target.value)}/></label><button type="button" className="sw-poker-button" onClick={()=>setPotCap(capDraft)}>Set Max Pot</button><label>Virtual opponents<select value={botStyle} onChange={e=>setBotStyle(e.target.value)}><option value="cautious">Cautious</option><option value="balanced">Balanced</option><option value="aggressive">Aggressive</option></select></label></section>}
   {session==="setup"&&!dealerChoosing&&<section className="sw-poker-quick-setup" aria-label="Poker table seating">
   <div className="sw-poker-quick-header"><div><strong>YOUR TABLE · {tableSize}/{roomCapacity} PLAYERS</strong><p>Choose players, add up to five virtual opponents, then deal.</p></div><span className="sw-poker-purse">♠ {displayMoney(people.reduce((sum,p)=>sum+(p.chips??roomMinimum??2000),0))} chips</span></div>
   <div className="sw-poker-quick-actions"><button type="button" className="sw-poker-button primary" disabled={tableSize>=roomCapacity} onClick={()=>{setSeatBuyin(String((roomMinimum??2000)/100));setSeatEditor(true);setSeatError("");}}><Users size={16} className="mr-1 inline"/> + Add Player</button><button type="button" className="sw-poker-button" disabled={tableSize>=roomCapacity} onClick={addComputerToTable}>🤖 Add Virtual Player ({people.filter(p=>p.kind==="computer").length}/{roomCapacity-people.filter(p=>p.kind!=="computer").length})</button></div>
@@ -315,17 +370,17 @@ export default function CustomerPokerTable(){
      <button type="button" onClick={()=>openDrawer("log")} className="sw-poker-button"><BookOpen size={15} className="mr-1 inline"/> Round details</button>
     </div>
     {gameOver&&<p className="sw-poker-compact-note">Pot cleared · next dealer chooses the game and ante.</p>}
-    {pot>=capCents&&<p className="sw-poker-compact-note">Pot cap reached · dealer review required.</p>}
+    {pot>=capCents&&<p className="sw-poker-compact-note">Maximum pot reached · new contributions are capped.</p>}
    </section>}
   </>}
  </div>
 
  {session==="playing"&&<nav className="sw-poker-sticky-actions" aria-label="Poker actions">
-  <div className="sw-poker-action-top"><strong>♠ {phase==="choosing"?(currentPlayer?.name||"Dealer")+" · "+readyCount+"/"+tableSize+" ready":phase==="resolved"?"Round settled":phase==="revealing"?"Showdown in progress":phase==="countdown"?"3 · 2 · 1":"Poker"}</strong><span>Pot {displayMoney(pot)}</span></div>
+  <div className="sw-poker-action-top"><strong>♠ {phase==="choosing"?(currentPlayer?.name||"Dealer")+" · "+readyCount+"/"+tableSize+" ready":phase==="resolved"?"Round settled":phase==="revealing"?"Showdown in progress":phase==="countdown"?"3 · 2 · 1":"Poker"}</strong><div className="sw-poker-quick-management"><span>Pot {displayMoney(pot)} / {displayMoney(capCents)}</span><button type="button" onClick={()=>{setRebuySeat(0);setRebuyAmount("20");setRebuyOpen(true);}}>+ Rebuy</button><button type="button" onClick={()=>setResetConfirm(true)}>↻ Reset</button></div></div>
   <div className="sw-poker-action-buttons">
    {phase==="choosing"&&currentPlayer?<><button type="button" className="sw-poker-action hide" onClick={()=>setViewer(v=>v===displayIndex?null:displayIndex)} aria-pressed={viewer===displayIndex}>{viewer===displayIndex?<><EyeOff size={17}/> Hide</>:<><Eye size={17}/> Show hand</>}</button><button type="button" className="sw-poker-action fold" onClick={()=>choose("drop")}>Fold</button><button type="button" className="sw-poker-action hold" onClick={()=>choose("hold")}>Hold</button></>:
    phase==="choosing"&&allReady?<button type="button" className="sw-poker-action hold grow" onClick={countdown}>Start 3 · 2 · 1 countdown</button>:
-   phase==="resolved"?<button type="button" disabled={!gameOver&&pot>=capCents} className="sw-poker-action hold grow" onClick={doNext}>{nextActionLabel} <ChevronRight size={16}/></button>:
+   phase==="resolved"?<button type="button" className="sw-poker-action hold grow" onClick={doNext}>{nextActionLabel} <ChevronRight size={16}/></button>:
    phase==="revealing"?<button type="button" className="sw-poker-action hide grow" onClick={()=>openDrawer("hands")}><Eye size={16}/> View showdown</button>:
    <span className="sw-poker-action-wait">Waiting for the round…</span>}
    <button type="button" className="sw-poker-action info" onClick={()=>openDrawer(phase==="resolved"?"hands":"rules")} aria-label="Open game information and hand review"><Info size={19}/><span>Info</span></button>
@@ -335,7 +390,7 @@ export default function CustomerPokerTable(){
   <section role="dialog" aria-modal="true" aria-label="Poker details" className="sw-poker-drawer" onClick={e=>e.stopPropagation()}>
    <div className="sw-poker-drawer-grip" aria-hidden="true"/>
    <div className="sw-poker-drawer-heading"><div><strong>♠ Table Details</strong><small>Practice mode · {gameName} · {wild}s wild</small></div><button type="button" className="sw-poker-drawer-close" aria-label="Close table details" onClick={closeDrawer}>✕</button></div>
-   <div role="tablist" aria-label="Poker details" className="sw-poker-drawer-tabs">{[["hands","Hands"],["ranks","Rankings"],["strategy","Tips"],["rules","Rules"],["log","Log"]].map(([tab,label])=><button type="button" key={tab} role="tab" aria-selected={drawerTab===tab} onClick={()=>setDrawerTab(tab)} className={drawerTab===tab?"active":""}>{label}</button>)}</div>
+   <div role="tablist" aria-label="Poker details" className="sw-poker-drawer-tabs">{[["hands","Hands"],["ranks","Rankings"],["strategy","Tips"],["rules","Rules"],["log","Log"],["settings","Settings"]].map(([tab,label])=><button type="button" key={tab} role="tab" aria-selected={drawerTab===tab} onClick={()=>setDrawerTab(tab)} className={drawerTab===tab?"active":""}>{label}</button>)}</div>
    <div className="sw-poker-drawer-body">
     {drawerTab==="hands"&&<>
       {phase==="choosing"&&<>{handInsight&&viewCards?<div className="sw-practice-hint"><strong>{handInsight.name}</strong><p>{handInsight.wildCount?handInsight.wildCount+" wild card(s) · ":""}{wild}s are wild. {round===0?"No flushes or straights in the 3-card round.":round===2?"Best five cards from seven.":"Five-card hand ranking."}</p>{equity&&<div className="sw-practice-equity"><div><b>{equity.percent}%</b><span>Estimate against one random hand</span></div><div className="sw-practice-equity-track"><i style={{width:equity.percent+"%"}}/></div><small>Practice simulation using {equity.trials} random hands, not the opponents' actual cards. Not a guaranteed win.</small></div>}</div>:<p>Tap <b>Show hand</b> in the bottom bar first to see your hand strength and estimated odds. Opponents' cards stay hidden until the round ends.</p>}</>}
@@ -345,9 +400,12 @@ export default function CustomerPokerTable(){
       {phase==="review"&&<p>Dealer review required. No automatic payout has been made.</p>}
     </>}
     {(drawerTab==="ranks"||drawerTab==="strategy"||drawerTab==="rules")&&<div className="sw-poker-drawer-prose">{helperContent(drawerTab,round)}</div>}
-    {drawerTab==="log"&&<><h3>Round details</h3>{phase==="resolved"&&<div className="sw-poker-drawer-summary"><p>{outcome?.message}</p><p>Winner's pot: {displayMoney(outcome?.potDraggedCents??0)} · Next pot: {displayMoney(pot)}</p>{outcome?.kind==="drag"&&outcome.entered.filter(i=>i!==outcome.winner).map(i=><p key={people[i].id}>{people[i].name} replaces {displayMoney(outcome.potDraggedCents??0)}</p>)}</div>}<h3>Player chip balances</h3>{people.map((p,i)=><div key={p.id} className="sw-poker-drawer-ledger"><span>{p.name}</span><b>{displayMoney(chipStacks[i]??p.chips??0)}</b></div>)}<h3>Game log</h3>{log.length?log.map(entry=><p className="sw-poker-drawer-log-entry" key={entry.id}><span>{entry.time}</span>{entry.message}</p>):<p>No actions yet.</p>}</>}
+    {drawerTab==="settings"&&<div className="sw-poker-settings"><h3>Table limits</h3><label>Hard maximum pot ($)<input type="number" min="1" max="10000" step="0.01" value={capDraft} onChange={e=>setCapDraft(e.target.value)}/></label><button type="button" className="sw-poker-button mt-2" onClick={()=>setPotCap(capDraft)}>Apply maximum pot</button><p>At the cap, losers' replacement payments are reduced evenly. The pot can no longer increase beyond this limit in practice play.</p><label>Virtual player behavior<select value={botStyle} onChange={e=>setBotStyle(e.target.value)}><option value="cautious">Cautious · fewer holds</option><option value="balanced">Balanced · stronger hands hold more</option><option value="aggressive">Aggressive · holds more often</option></select></label><p>Balanced is recommended with six seats. Aggressive increases the frequency of holding.</p><button type="button" className="sw-poker-button" onClick={()=>setRebuyOpen(true)}>+ Rebuy chips</button><button type="button" className="sw-poker-button mt-2" onClick={()=>setResetConfirm(true)}>↻ Reset practice session</button></div>}
+    {drawerTab==="log"&&<><h3>Round details</h3>{phase==="resolved"&&<div className="sw-poker-drawer-summary"><p>{outcome?.message}</p><p>Winner's pot: {displayMoney(outcome?.potDraggedCents??0)} · Next pot: {displayMoney(pot)}</p>{outcome?.kind==="drag"&&outcome.entered.filter(i=>i!==outcome.winner).map(i=><p key={people[i].id}>{people[i].name} replaces {displayMoney(outcome.matchingAmountCents??outcome.potDraggedCents??0)}</p>)}</div>}<h3>Player chip balances</h3>{people.map((p,i)=><div key={p.id} className="sw-poker-drawer-ledger"><span>{p.name}</span><b>{displayMoney(chipStacks[i]??p.chips??0)}</b></div>)}<h3>Game log</h3>{log.length?log.map(entry=><p className="sw-poker-drawer-log-entry" key={entry.id}><span>{entry.time}</span>{entry.message}</p>):<p>No actions yet.</p>}</>}
    </div>
   </section>
  </div>}
+ {rebuyOpen&&<div className="sw-poker-modal-cover" role="presentation" onClick={()=>setRebuyOpen(false)}><section role="dialog" aria-modal="true" aria-label="Rebuy virtual chips" className="sw-poker-modal" onClick={e=>e.stopPropagation()}><h2 className="text-xl font-black">+ Rebuy virtual chips</h2><p className="mt-2 text-sm text-slate-300">Add practice chips to a player. This does not change the pot or charge money.</p><label className="mt-4 block text-sm">Player<select className="mt-1 w-full rounded-lg border border-cyan-400/30 bg-slate-950 p-3" value={rebuySeat} onChange={e=>setRebuySeat(Number(e.target.value))}>{people.map((p,i)=><option key={p.id} value={i}>{p.name} · {displayMoney(chipStacks[i]??p.chips??0)}</option>)}</select></label><label className="mt-3 block text-sm">Add chips ($)<input className="mt-1 w-full rounded-lg border border-cyan-400/30 bg-slate-950 p-3" type="number" step="0.01" min="0.01" max="10000" value={rebuyAmount} onChange={e=>setRebuyAmount(e.target.value)}/></label><div className="mt-4 flex gap-2"><button className="sw-poker-button" type="button" onClick={()=>setRebuyOpen(false)}>Cancel</button><button className="sw-poker-button primary flex-1" type="button" onClick={confirmRebuy}>Confirm Rebuy</button></div></section></div>}
+ {resetConfirm&&<div className="sw-poker-modal-cover" role="presentation" onClick={()=>setResetConfirm(false)}><section role="dialog" aria-modal="true" aria-label="Reset practice session" className="sw-poker-modal" onClick={e=>e.stopPropagation()}><h2 className="text-xl font-black">↻ Reset practice session?</h2><p className="mt-2 text-sm text-slate-300">The pot returns to $0, players return to their starting virtual buy-ins, and all hands and strikes are cleared. Seats and names stay the same. This cannot be undone.</p><div className="mt-4 flex gap-2"><button type="button" className="sw-poker-button" onClick={()=>setResetConfirm(false)}>Keep playing</button><button type="button" className="sw-poker-button primary flex-1" onClick={restartPracticeSession}>Reset Session</button></div></section></div>}
  </main>;
 }
