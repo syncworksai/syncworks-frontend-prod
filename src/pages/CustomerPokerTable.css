@@ -703,3 +703,19 @@
  .sw-card-console-active .sw-poker-felt{width:min(100%,calc((100dvh - var(--sw-console-shell) - var(--sw-console-actions) - 205px)*1.52))!important}
  .sw-card-console-active .sw-card-console-hand>.sw-poker-card{height:clamp(39px,12vw,58px)!important}
 }
+
+/* Compact in-game table navigation without a second sticky bar or extra scroll height. */
+.sw-card-console-table-switch{position:absolute;left:8px;top:6px;z-index:7;max-width:105px}
+.sw-card-console-table-switch>div>div:first-of-type>button{min-height:31px;padding:5px 7px;font-size:10px;gap:3px}
+.sw-card-console-table-switch [aria-label="Club table switcher"]{
+ position:absolute;bottom:calc(100% + 5px);left:0;
+ width:min(320px,calc(100vw - 20px));max-height:min(330px,48dvh);
+ background:#061529;z-index:1200;overflow-y:auto
+}
+.sw-poker-sticky-actions:has(.sw-card-console-table-switch) .sw-poker-action-top{padding-left:112px;min-height:32px;gap:3px}
+.sw-poker-sticky-actions:has(.sw-card-console-table-switch) .sw-poker-action-top strong{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:10px}
+@media(max-width:390px){
+ .sw-card-console-table-switch{max-width:94px;left:6px}
+ .sw-poker-sticky-actions:has(.sw-card-console-table-switch) .sw-poker-action-top{padding-left:98px}
+ .sw-poker-sticky-actions:has(.sw-card-console-table-switch) .sw-poker-quick-management>span{display:none}
+}
