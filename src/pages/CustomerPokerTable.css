@@ -530,3 +530,13 @@
  .sw-unified-setup-mode .sw-poker-sticky-actions{padding:6px 9px calc(8px + env(safe-area-inset-bottom,0px))}
 }
 @media(max-width:380px){.sw-poker-unified-controls{gap:5px}.sw-poker-unified-controls select,.sw-poker-unified-controls input{font-size:11px!important;padding:4px!important}.sw-unified-setup-mode .sw-poker-felt{width:min(100%,calc((100dvh - 350px)*1.52))}}
+
+/* Local practice countdown. In online mode the server must own this deadline. */
+.sw-poker-your-turn{position:absolute;z-index:16;left:50%;top:20%;transform:translateX(-50%);display:flex;gap:9px;align-items:center;justify-content:center;pointer-events:none;white-space:nowrap;border-radius:14px;border:2px solid #edbd43;background:#1b1705ed;padding:7px 14px;box-shadow:0 0 16px #ffc83888,0 0 33px #ffc83840;animation:sw-poker-turn-glow 1.7s ease-in-out infinite alternate}
+.sw-poker-your-turn strong{font-size:15px;letter-spacing:.08em;color:#ffe278}
+.sw-poker-your-turn span{font-size:14px;color:#fff3c4;font-variant-numeric:tabular-nums;font-weight:900}
+.sw-poker-your-turn.waiting{border-color:#68849b;background:#081627ec;box-shadow:none;animation:none}
+.sw-poker-your-turn.waiting strong{color:#bdccdb;font-size:12px}
+@keyframes sw-poker-turn-glow{from{box-shadow:0 0 10px #ffce5366}to{box-shadow:0 0 26px #ffce53aa,0 0 42px #ffc33844}}
+@media(max-width:600px){.sw-poker-your-turn{top:19%;padding:5px 10px;gap:7px}.sw-poker-your-turn strong{font-size:12px}.sw-poker-your-turn span{font-size:12px}}
+@media(prefers-reduced-motion:reduce){.sw-poker-your-turn{animation:none}}
