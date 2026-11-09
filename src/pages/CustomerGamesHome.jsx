@@ -2,6 +2,7 @@ import React,{useEffect,useMemo,useState} from "react";
 import {useNavigate,useSearchParams} from "react-router-dom";
 import {ArrowLeft,ArrowRight,Club,Plus,Users,Trophy,WalletCards} from "lucide-react";
 import {getGroups} from "../api/social";
+import {CARD_CONSOLE_GAMES,CARD_GAME_CATEGORIES} from "../games/cardConsoleCatalog.mjs";
 
 export default function CustomerGamesHome(){
  const nav=useNavigate(),[params]=useSearchParams();
@@ -13,9 +14,9 @@ export default function CustomerGamesHome(){
   <header className="mb-5 flex items-center justify-between gap-3"><button onClick={()=>nav("/customer")} className="flex min-h-11 items-center gap-2 rounded-xl border border-white/15 px-3 text-xs"><ArrowLeft size={17}/> Customer</button><span className="text-[10px] font-black tracking-[.2em] text-cyan-300">SYNCWORKS GAMES</span></header>
   <section className="overflow-hidden rounded-[1.8rem] border border-cyan-300/20 bg-gradient-to-br from-[#14243b] via-[#061426] to-[#080b20] p-5 shadow-xl">
    <div className="text-[10px] font-black uppercase tracking-widest text-emerald-300">Your league. Your table.</div>
-   <h1 className="mt-2 text-3xl font-black">Poker Night</h1><p className="mt-2 max-w-xl text-xs leading-5 text-slate-300">Create a league, invite friends, check lifetime standings and join its poker lobby. Games are selected inside the room—not before it.</p>
+   <h1 className="mt-2 text-3xl font-black">Card Console</h1><p className="mt-2 max-w-xl text-xs leading-5 text-slate-300">One club, multiple tables and many kinds of card night. Practice modes are available now; secure cross-phone multiplayer and additional game engines are under development.</p>
    <button type="button" onClick={()=>nav("/customer/games/new")} className="mt-4 flex min-h-12 w-full items-center justify-center rounded-xl bg-cyan-400 px-4 text-sm font-black text-slate-950">＋ New Game · Create room</button>
-   <div className="mt-4 flex gap-2 text-xs"><span className="rounded-full border border-white/15 bg-white/5 px-3 py-1">5 card games</span><span className="rounded-full border border-white/15 bg-white/5 px-3 py-1">Manual Poker</span></div>
+   <div className="mt-4 flex gap-2 text-xs"><span className="rounded-full border border-white/15 bg-white/5 px-3 py-1">Five poker variants in practice/prototype</span><span className="rounded-full border border-white/15 bg-white/5 px-3 py-1">Club scorekeeping</span></div>
   </section>
   <div className="mt-5 grid gap-4 md:grid-cols-[1.1fr_.9fr]">
    <section className="rounded-2xl border border-white/10 bg-white/[.035] p-4"><h2 className="flex items-center gap-2 text-lg font-black"><Club className="text-cyan-300"/> Choose your league</h2>
@@ -32,6 +33,11 @@ export default function CustomerGamesHome(){
      <div className="mt-auto space-y-2 pt-5"><button disabled={!group} onClick={()=>nav(`/customer/games/clubs?group=${group.id}`)} className="min-h-12 w-full rounded-xl bg-emerald-400 font-black text-slate-950 disabled:opacity-40">Enter league dashboard</button><button disabled={!group} onClick={()=>nav(`/customer/games/new?group=${group.id}`)} className="min-h-12 w-full rounded-xl border border-cyan-300/30 font-bold text-cyan-200 disabled:opacity-40">Create new poker room</button></div>
    </section>
   </div>
+  <section className="mt-5 rounded-2xl border border-cyan-300/20 bg-white/[.025] p-4" aria-labelledby="sw-console-library-heading">
+   <h2 id="sw-console-library-heading" className="text-lg font-black">Card Game Library</h2>
+   <p className="mt-1 text-xs leading-5 text-slate-300">Browse by how you want to play. Games marked Planned are concepts, not playable yet. Clubs and tables will be shared across future game engines.</p>
+   <div className="mt-4 grid gap-3 sm:grid-cols-2">{CARD_GAME_CATEGORIES.map(category=><article key={category.id} className="rounded-xl border border-white/10 bg-slate-900/60 p-3"><h3 className="text-sm font-black text-cyan-100">{category.label}</h3><p className="mt-1 text-[11px] text-slate-400">{category.description}</p><ul className="mt-3 space-y-2">{CARD_CONSOLE_GAMES.filter(game=>game.category===category.id).map(game=><li key={game.id} className="flex items-center justify-between gap-3 text-xs"><span>{game.name}</span><span className="shrink-0 rounded-md border border-white/15 px-2 py-1 text-[10px] text-slate-300">{game.status==="practice"?"Practice":game.status==="prototype"?"Prototype":"Planned"}</span></li>)}</ul></article>)}</div>
+  </section>
   <p className="mt-4 text-center text-[11px] leading-5 text-amber-200">Game rooms and virtual tallies are currently a local beta preview. Other devices cannot join the same live game yet. SyncWorks holds no game funds.</p>
  </div></main>;
 }
