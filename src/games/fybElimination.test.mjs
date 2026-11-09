@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal,fybRevealKing,fybCurrentKings,fybDealFromShoe,fybDealerDraw,fybPayRound,fybSplitPurse,fybBotWantsPass,canRevealActiveCard} from "./fybElimination.mjs";
+import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal,fybRevealKing,fybCurrentKings,fybDealFromShoe,fybDealerDraw,fybPayRound,fybSplitPurse,fybBotWantsPass,fybLocalSeat,canRevealOwnFybCard} from "./fybElimination.mjs";
 const hand=n=>[{rank:n,suit:"♠"}];
 test("three losses eliminate a seat, but do not finish when 2+ survivors",()=>{
  const r=fybRound({hands:[hand(4),hand(9),hand(12)],active:[0,1,2],losses:[2,1,0],chipCents:50});
@@ -171,10 +171,22 @@ test("FYB bot decision depends only on its own card, never the next hidden hand"
  assert.throws(()=>fybBotWantsPass({card:null,random:()=>0.5}),/Missing virtual/);
 });
 
-test("Show/Hide reveals only active human, never a virtual opponent or other seat",()=>{
- const human={kind:"human",name:"You"},bot={kind:"computer",name:"Virtual Player"};
- assert.equal(canRevealActiveCard({viewerSeat:2,activeSeat:2,actingPlayer:human}),true);
- assert.equal(canRevealActiveCard({viewerSeat:2,activeSeat:3,actingPlayer:human}),false);
- assert.equal(canRevealActiveCard({viewerSeat:2,activeSeat:2,actingPlayer:bot}),false);
- assert.equal(canRevealActiveCard({viewerSeat:2,activeSeat:-1,actingPlayer:human}),false);
+
+test("FYB Show/Hide follows local user's seat, not the changing actor",()=>{
+ const players=[{kind:"human",name:"You"},{kind:"computer",name:"Bot A"},{kind:"computer",name:"Bot B"}];
+ const own=fybLocalSeat(players);
+ assert.equal(own,0);
+ assert.equal(canRevealOwnFybCard({viewerSeat:0,localSeat:own,players}),true);
+ assert.equal(canRevealOwnFybCard({viewerSeat:1,localSeat:own,players}),false);
+ assert.equal(canRevealOwnFybCard({viewerSeat:2,localSeat:own,players}),false);
+ assert.equal(canRevealOwnFybCard({viewerSeat:null,localSeat:own,players}),false);
+ assert.equal(fybLocalSeat([{kind:"computer"},{kind:"computer"}]),-1);
+});
+test("a swap changes user's own card even if bot is next to act",()=>{
+ const hands=[hand(3),hand(2)];
+ const swapped=fybSwap({hands,deck:[],actor:0,next:1,pass:true,playerName:"You",nextName:"Bot"});
+ const players=[{kind:"human"},{kind:"computer"}],localSeat=fybLocalSeat(players);
+ assert.equal(swapped.hands[localSeat][0].rank,2);
+ assert.equal(canRevealOwnFybCard({viewerSeat:0,localSeat,players}),true);
+ assert.equal(canRevealOwnFybCard({viewerSeat:1,localSeat,players}),false);
 });
