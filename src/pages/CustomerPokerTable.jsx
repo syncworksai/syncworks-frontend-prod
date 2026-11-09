@@ -275,13 +275,13 @@ export default function CustomerPokerTable(){
   const fresh=dealt357(createShuffledDeck(),tableSize,active);
   if(previousPot>capCents){setStatus("The current pot exceeds the selected cap. Increase the cap or reset the practice session.");return;}
   const actualAnte=limitAnte({potCents:previousPot,capCents,anteCents,playerCount:active.length});
-  if(stack.some((value,i)=>active.includes(i)&&value<actualAnte&&people[i]?.kind!=="computer")){
+  if(stack.some((value,i)=>active.includes(i)&&value<Math.max(1,actualAnte)&&people[i]?.kind!=="computer")){
     setStatus("A player needs a rebuy before dealing. Use Rebuy in the bottom controls.");
-    setRebuySeat(Math.max(0,stack.findIndex((value,i)=>active.includes(i)&&value<actualAnte&&people[i]?.kind!=="computer")));
+    setRebuySeat(Math.max(0,stack.findIndex((value,i)=>active.includes(i)&&value<Math.max(1,actualAnte)&&people[i]?.kind!=="computer")));
     setRebuyOpen(true);return;
   }
-  const botRebuys=stack.map((value,i)=>active.includes(i)&&people[i]?.kind==="computer"&&value<actualAnte&&(rebuyCounts[i]||0)<4?2000:0);
-  if(active.some(i=>stack[i]+botRebuys[i]<actualAnte)){setStatus("A player must rebuy or sit out to continue.");return;}
+  const botRebuys=stack.map((value,i)=>active.includes(i)&&people[i]?.kind==="computer"&&value<Math.max(1,actualAnte)&&(rebuyCounts[i]||0)<4?2000:0);
+  if(active.some(i=>stack[i]+botRebuys[i]<Math.max(1,actualAnte))){setStatus("A player must rebuy or sit out to continue.");return;}
   if(botRebuys.some(Boolean))setRebuyCounts(old=>Object.fromEntries(people.map((_,i)=>[i,(old[i]||0)+(botRebuys[i]?1:0)])));
   const funded=stack.map((value,i)=>value+botRebuys[i]);
   if(botRebuys.some(Boolean))addLog("Practice virtual-player rebuys: "+botRebuys.map((n,i)=>n?people[i].name+" "+displayMoney(n):null).filter(Boolean).join(", "));
