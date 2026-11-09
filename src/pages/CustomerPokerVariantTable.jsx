@@ -11,6 +11,7 @@ import CardClubTableSwitcher from "../components/poker/CardClubTableSwitcher";
 import {useAuth} from "../auth/AuthContext";
 import {buildPracticeSummary,savePracticeSummary} from "../games/pokerClubPracticeLedger.mjs";
 import {getCardRoom} from "../api/cardRooms";
+import {readPracticeGame,savePracticeGame,clearPracticeGame} from "../games/cardPracticeResume.mjs";
 import {fybOrder,fybRound,fybNextDealer,fybSwap,fybStakeFromTotal,fybRevealKing,fybCurrentKings,fybDealFromShoe,fybDealerDraw,fybPayRound,fybSplitPurse,fybBotWantsPass,fybLocalSeat,canRevealOwnFybCard} from "../games/fybElimination.mjs";
 import "./CustomerPokerTable.css";
 
@@ -29,6 +30,7 @@ const cents=x=>Math.round(Number(x)*100);
 export default function CustomerPokerVariantTable({variant:providedVariant}){
  const [query]=useSearchParams(),nav=useNavigate();
  const {user}=useAuth();
+ const [checkpointReady,setCheckpointReady]=useState(false);
  const variant=providedVariant||query.get("game")||"fyb";
  const game=GAMES[variant]||GAMES.fyb;
  const groupId=query.get("group")||"",roomId=query.get("room")||"";
@@ -56,12 +58,31 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  const record=(message)=>setLog(v=>[{id:Date.now()+Math.random(),message},...v].slice(0,45));
  useEffect(()=>{let mounted=true;
   setBozoLocked(false);setBozoLastResult(null);setStatus("");setViewer(null);setOutcome(null);
+  const resume=!roomId&&readPracticeGame(user?.id,groupId,variant);
+  if(resume?.active&&Array.isArray(resume.players)&&resume.players.length>=2&&Array.isArray(resume.stacks)&&resume.stacks.length===resume.players.length){
+   setPlayers(resume.players);setStacks(resume.stacks);setDealer(resume.dealer??0);setPot(resume.pot??0);setGameNumber(resume.gameNumber??1);
+   setHands(resume.hands||[]);setDeck(resume.deck||[]);setClown(resume.clown||[]);setDecisions(resume.decisions||[]);
+   setBozoHandSize(resume.bozoHandSize||5);setBozoLocked(!!resume.bozoLocked);setBozoLastResult(resume.bozoLastResult||null);
+   setAnte(resume.ante||"0.25");setCap(resume.cap||"50");setSessionCapCents(resume.sessionCapCents??5000);
+   setRebuyCounts(resume.rebuyCounts||{});setSittingOut(resume.sittingOut||{});setCashouts(resume.cashouts||[]);
+   setVirtualSessionId(resume.virtualSessionId||("practice-"+Date.now()));setOutcome(resume.outcome||null);
+   setFybTurn(resume.fybTurn??0);setFybLosses(resume.fybLosses||[]);setFybDeckNumber(resume.fybDeckNumber??0);
+   setFybActions(resume.fybActions||{});setFybRevealedKings(resume.fybRevealedKings||{});setFybPreviousCard(resume.fybPreviousCard||{});
+   setDraw442Turn(resume.draw442Turn??0);setDraw442Selected(resume.draw442Selected||[]);setShowdown442(resume.showdown442||null);
+   setFollowers(resume.followers||[]);setStreet(resume.street??0);setViewer(null);
+   setStep(resume.step==="loading"?"ready":resume.step);setStatus("Practice game restored — continue your hand.");setCheckpointReady(true);
+   return()=>{mounted=false;};
+  }
   const saved=readCardNight(groupId,roomId);
-  if(saved){setPlayers(saved.people);setStacks(saved.stacks);setDealer(saved.dealer??0);setPot(saved.pot??0);setCap(saved.capCents===100000000?"unlimited":String((saved.capCents??5000)/100));setSessionCapCents(saved.capCents??5000);setGameNumber(saved.gameNumber??1);setRebuyCounts(saved.rebuyCounts||{});setSittingOut(saved.sittingOut||{});setCashouts(saved.cashouts||[]);setVirtualSessionId(saved.virtualSessionId||("practice-"+Date.now()));setStep("ready");return()=>{mounted=false;};}
-  if(roomId){getCardRoom(roomId).then(r=>{if(!mounted)return;const ps=r.seats?.map((p,i)=>({id:String(p.id??i),name:p.name||p.nickname||"Player "+(i+1),kind:p.is_computer?"computer":"human",chips:p.virtual_chips_cents??2000}))||[];setPlayers(ps);setStacks(ps.map(p=>p.chips));setStep("ready");}).catch(()=>{if(mounted){setStatus("Could not load room. Return to your poker lobby.");setStep("ready");}});}
-  else {const p=[{id:"you",name:"You",kind:"human",chips:2000},{id:"bot",name:"Virtual Player 1",kind:"computer",chips:2000}];setPlayers(p);setStacks(p.map(x=>x.chips));setStep("ready");}
+  if(saved){setPlayers(saved.people);setStacks(saved.stacks);setDealer(saved.dealer??0);setPot(saved.pot??0);setCap(saved.capCents===100000000?"unlimited":String((saved.capCents??5000)/100));setSessionCapCents(saved.capCents??5000);setGameNumber(saved.gameNumber??1);setRebuyCounts(saved.rebuyCounts||{});setSittingOut(saved.sittingOut||{});setCashouts(saved.cashouts||[]);setVirtualSessionId(saved.virtualSessionId||("practice-"+Date.now()));setStep("ready");setCheckpointReady(true);return()=>{mounted=false;};}
+  if(roomId){getCardRoom(roomId).then(r=>{if(!mounted)return;const ps=r.seats?.map((p,i)=>({id:String(p.id??i),name:p.name||p.nickname||"Player "+(i+1),kind:p.is_computer?"computer":"human",chips:p.virtual_chips_cents??2000}))||[];setPlayers(ps);setStacks(ps.map(p=>p.chips));setStep("ready");setCheckpointReady(true);}).catch(()=>{if(mounted){setStatus("Could not load room. Return to your poker lobby.");setStep("ready");setCheckpointReady(true);}});}
+  else {const p=[{id:"you",name:"You",kind:"human",chips:2000},{id:"bot",name:"Virtual Player 1",kind:"computer",chips:2000}];setPlayers(p);setStacks(p.map(x=>x.chips));setStep("ready");setCheckpointReady(true);}
   return()=>{mounted=false;};
- },[groupId,roomId,variant]);
+ },[groupId,roomId,variant,user?.id]);
+ useEffect(()=>{
+  if(!checkpointReady||!user?.id||roomId||["loading","ready"].includes(step))return;
+  savePracticeGame(user.id,groupId,variant,{active:true,players,stacks,dealer,pot,gameNumber,hands,deck,clown,decisions,bozoHandSize,bozoLocked,bozoLastResult,ante,cap,sessionCapCents,rebuyCounts,sittingOut,cashouts,virtualSessionId,outcome,fybTurn,fybLosses,fybDeckNumber,fybActions,fybRevealedKings,fybPreviousCard,draw442Turn,draw442Selected,showdown442,followers,street,step});
+ },[checkpointReady,user?.id,groupId,roomId,variant,players,stacks,dealer,pot,gameNumber,hands,deck,clown,decisions,bozoHandSize,bozoLocked,bozoLastResult,ante,cap,sessionCapCents,rebuyCounts,sittingOut,cashouts,virtualSessionId,outcome,fybTurn,fybLosses,fybDeckNumber,fybActions,fybRevealedKings,fybPreviousCard,draw442Turn,draw442Selected,showdown442,followers,street,step]);
  function store(nextStacks=stacks,nextPot=pot,nextDealer=dealer,nextGame=gameNumber){
   saveCardNight({groupId,roomId,people:players,stacks:nextStacks,pot:nextPot,dealer:nextDealer,gameNumber:nextGame,capCents:sessionCapCents,rebuyCounts,sittingOut,cashouts,virtualSessionId});
  }
@@ -84,7 +105,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  }
  function endLocalSession(){
   try{savePracticeSummary(groupId,buildPracticeSummary({id:virtualSessionId,players,stacks,rebuyCounts,cashouts,pot,gameCount:gameNumber}));}catch(e){console.warn("Virtual history could not be saved",e);}
-  clearCardNight();
+  clearCardNight();clearPracticeGame(user?.id,groupId,variant);
   setViewer(null);setHands([]);setDeck([]);setFybLastMove(null);
   nav(groupId?"/customer/games/clubs?group="+encodeURIComponent(groupId):"/customer/games");
  }
