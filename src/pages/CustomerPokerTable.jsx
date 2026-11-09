@@ -195,7 +195,7 @@ export default function CustomerPokerTable(){
  }
  function sitOutPlayer(index){
   if(session==="playing"&&phase!=="resolved"){setStatus("Finish the current round before sitting out.");return;}
-  setSittingOut(old=>({...old,[index]:true}));setStatus(people[index].name+" is sitting out; their chips remain saved.");
+  setSittingOut(old=>({...old,[index]:true}));setHandFolds(old=>({...old,[index]:true}));setStatus(people[index].name+" is sitting out; their chips remain saved.");
  }
  function cashOutPlayer(index){
   if(session==="playing"&&phase!=="resolved"){setStatus("Finish the current round before leaving.");return;}
