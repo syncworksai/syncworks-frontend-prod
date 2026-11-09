@@ -61,7 +61,7 @@ export default function CustomerPokerTable(){
  const [upgrading,setUpgrading]=useState(false);
  const [seatEditor,setSeatEditor]=useState(false),[seatName,setSeatName]=useState(""),[seatBuyin,setSeatBuyin]=useState("20"),[seatError,setSeatError]=useState("");
  function openDrawer(tab="hands"){setDrawerTab(tab);setDrawerOpen(true);}
- function closeDrawer(){setDrawerOpen(false);}
+ function closeDrawer(){setDrawerOpen(false);setShowdownViewer(null);}
  const anteCents=Math.round(Number(ante)*100),capCents=Math.round(Number(maxPot)*100);
  const wild=THREE_FIVE_SEVEN[round];
  const tableSize=people.length;
@@ -70,7 +70,8 @@ export default function CustomerPokerTable(){
  const held=choices.flatMap((c,i)=>c==="hold"?[i]:[]);
  const revealOrder=useMemo(()=>held.slice().sort((a,b)=>((a-dealer+tableSize-1)%tableSize)-((b-dealer+tableSize-1)%tableSize)),[choices,dealer,tableSize]);
  const competingHolders=held.length>=2;
- const canSeeOtherHands=showdownViewer!==null&&choices[showdownViewer]==="hold"&&competingHolders;
+ const eligibleShowdownViewers=held.filter(i=>people[i]?.kind!=="computer");
+ const canSeeOtherHands=phase==="resolved"&&showdownViewer!==null&&eligibleShowdownViewers.includes(showdownViewer)&&competingHolders;
  const sevenCardReveal=round===2&&competingHolders;
  const revealedCount=Object.values(reveal).reduce((sum,n)=>sum+n,0);
  const totalRevealCards=revealOrder.reduce((sum,i)=>sum+(hands[i]?.length||0),0);
@@ -351,7 +352,7 @@ export default function CustomerPokerTable(){
       <div className="sw-poker-seat-nameplate"><strong>{p?.name||"Open Seat"}</strong><small>{p?"◉ "+displayMoney(chipStacks[i]??p.chips??2000):"Tap to join"}</small></div>
       {session==="playing"&&p&&<span className={"sw-poker-status"+(choices[i]!==null&&phase!=="setup"?" ready":"")}>{phase==="choosing"||phase==="countdown"?(choices[i]===null?"◷ Waiting":"✓ Ready"):phase==="revealing"||phase==="resolved"?(choices[i]==="hold"?"Held":choices[i]==="drop"?"Folded":"Waiting"):"At table"}</span>}
       {p&&chipAnimation?.winner===i&&<div className="sw-poker-win-pop">+{displayMoney(chipAnimation.amount)}</div>}{p&&chipAnimation?.contributions?.some(x=>x.seat===i)&&<div className="sw-poker-loss-pop">−{displayMoney(chipAnimation.contributions.find(x=>x.seat===i).amount)}</div>}
-       {p&&hands[i]?.length>0&&phase==="resolved"&&<div className="sw-357-seat-reveal" aria-label={p.name+" cards at completed round showdown"}>{hands[i].map((c,j)=><div key={j} className="sw-357-flip-card sw-357-end-flip" style={{"--flip-delay":j*95+"ms"}}><span className="sw-357-flip-back">♠</span><span className={"sw-357-flip-face"+(isRed(c.suit)?" red":"")}>{rankText(c)}{c.suit}</span></div>)}</div>}
+       {p&&hands[i]?.length>0&&phase==="resolved"&&canSeeOtherHands&&choices[i]==="hold"&&<div className="sw-357-seat-reveal" aria-label={p.name+" cards at completed round showdown"}>{hands[i].map((c,j)=><div key={j} className="sw-357-flip-card sw-357-end-flip" style={{"--flip-delay":j*95+"ms"}}><span className="sw-357-flip-back">♠</span><span className={"sw-357-flip-face"+(isRed(c.suit)?" red":"")}>{rankText(c)}{c.suit}</span></div>)}</div>}
       {p&&dealer===i&&<span className="sw-poker-dealer">D</span>}
     </div>;})}
    </div>
@@ -367,7 +368,7 @@ export default function CustomerPokerTable(){
    {phase==="countdown"&&<div className="sw-poker-pov rounded-2xl border border-cyan-400/30 bg-cyan-400/5 p-4"><strong>Everyone is READY</strong><p className="mt-1 text-xs text-cyan-200">Synchronized-style countdown demonstration on this device.</p></div>}
    {phase==="revealing"&&<section className="sw-poker-pov sw-poker-panel sw-poker-showdown sw-poker-compact-result">
     <h3><Eye size={17}/> {held.length===0?"Everyone folded":held.length===1?"Uncontested hold":"Comparing hands"}</h3>
-    <p>Cards remain hidden until the result. {held.length===0?"Everyone folded; pot carries forward.":"Comparing holding hands automatically."}</p>
+    <p>Cards remain private. {held.length===0?"Everyone folded; pot carries forward.":"Only holders may review other holders after the result."}</p>
     
    </section>}
    {phase==="review"&&<section className="sw-poker-panel mx-auto max-w-xl"><h3>Dealer review required</h3><p>{outcome?.message||"More than one player was dealt 3-5-7. No automatic payout has been made."}</p><button type="button" onClick={()=>{setSession("setup");setPhase("setup");}} className="sw-poker-button mt-3">Restart demo</button></section>}
@@ -375,7 +376,7 @@ export default function CustomerPokerTable(){
     <h3>🏆 Round {round+1} result</h3>
     {outcome?.winner!==null&&outcome?.winner!==undefined?<div className="sw-poker-winner-banner">{outcome.kind==="lone-strike"?"♠ "+people[outcome.winner].name+" · Uncontested Hold":"🏆 "+people[outcome.winner].name+" · DRAGS "+displayMoney(outcome?.potDraggedCents??0)}</div>:<p>{outcome?.kind==="all-drop"?"Everyone folded · pot carries forward":outcome?.message}</p>}
     <div className="sw-poker-result-actions">
-     {practiceMode&&<button type="button" onClick={()=>openDrawer("hands")} className="sw-poker-button"><Eye size={15} className="mr-1 inline"/> Review hands</button>}
+     {practiceMode&&<button type="button" onClick={()=>openDrawer("hands")} className="sw-poker-button"><Eye size={15} className="mr-1 inline"/> Holder-only review</button>}
      <button type="button" onClick={()=>openDrawer("log")} className="sw-poker-button"><BookOpen size={15} className="mr-1 inline"/> Round details</button>
     </div>
     {gameOver&&<p className="sw-poker-compact-note">Pot cleared · next dealer chooses the game and ante.</p>}
@@ -390,7 +391,7 @@ export default function CustomerPokerTable(){
    {phase==="choosing"&&currentPlayer?<><button type="button" className="sw-poker-action hide" onClick={()=>setViewer(v=>v===displayIndex?null:displayIndex)} aria-pressed={viewer===displayIndex}>{viewer===displayIndex?<><EyeOff size={17}/> Hide</>:<><Eye size={17}/> Show hand</>}</button><button type="button" className="sw-poker-action fold" onClick={()=>choose("drop")}>Fold</button><button type="button" className="sw-poker-action hold" onClick={()=>choose("hold")}>Hold</button></>:
    phase==="choosing"&&allReady?<button type="button" className="sw-poker-action hold grow" onClick={countdown}>Start 3 · 2 · 1 countdown</button>:
    phase==="resolved"?<button type="button" className="sw-poker-action hold grow" onClick={doNext}>{nextActionLabel} <ChevronRight size={16}/></button>:
-   phase==="revealing"?<button type="button" className="sw-poker-action hide grow" onClick={()=>openDrawer("hands")}><Eye size={16}/> View showdown</button>:
+   phase==="revealing"?<span className="sw-poker-action-wait">Evaluating held hands privately…</span>:
    <span className="sw-poker-action-wait">Waiting for the round…</span>}
    <button type="button" className="sw-poker-action info" onClick={()=>openDrawer(phase==="resolved"?"hands":"rules")} aria-label="Open game information and hand review"><Info size={19}/><span>Info</span></button>
   </div>
@@ -403,8 +404,8 @@ export default function CustomerPokerTable(){
    <div className="sw-poker-drawer-body">
     {drawerTab==="hands"&&<>
       {phase==="choosing"&&<>{handInsight&&viewCards?<div className="sw-practice-hint"><strong>{handInsight.name}</strong><p>{handInsight.wildCount?handInsight.wildCount+" wild card(s) · ":""}{wild}s are wild. {round===0?"No flushes or straights in the 3-card round.":round===2?"Best five cards from seven.":"Five-card hand ranking."}</p>{equity&&<div className="sw-practice-equity"><div><b>{equity.percent}%</b><span>Estimate against one random hand</span></div><div className="sw-practice-equity-track"><i style={{width:equity.percent+"%"}}/></div><small>Practice simulation using {equity.trials} random hands, not the opponents' actual cards. Not a guaranteed win.</small></div>}</div>:<p>Tap <b>Show hand</b> in the bottom bar first to see your hand strength and estimated odds. Opponents' cards stay hidden until the round ends.</p>}</>}
-      {phase==="revealing"&&<p>The hands are being evaluated. All cards will be shown after the round result.</p>}
-      {phase==="resolved"&&<>{hasPracticeRecap?<><p>Full virtual-player hands are optional in practice mode. Folded players' cards were not shown during the decision.</p><div className="sw-poker-drawer-hands">{people.map((p,i)=>p.kind==="computer"&&hands[i]?<section key={p.id}><strong>{p.name} · {practiceHandInfo(hands[i],round)?.name||"Hand"}</strong><small>{choices[i]==="hold"?"Held":choices[i]==="drop"?"Folded":"Round complete"}</small><div className="sw-poker-facecards">{hands[i].map((c,j)=><Card key={j} card={c} wild={c.rank===wild}/>)}</div></section>:null)}</div></>:<p>No virtual-player hands to review for this round.</p>}</>}
+      {phase==="revealing"&&<p>Hands are being evaluated. Only holders may inspect other holding hands after settlement; folded cards stay private.</p>}
+      {phase==="resolved"&&<><p>{!competingHolders?"No cards revealed: fewer than two players held.":"Only a player who held may inspect other holders' cards. Folded hands stay private."}</p>{competingHolders&&<div className="sw-poker-drawer-buttons">{eligibleShowdownViewers.map(i=><button key={people[i].id} type="button" className={showdownViewer===i?"active":""} onClick={()=>setShowdownViewer(v=>v===i?null:i)}>{showdownViewer===i?"Hide cards":"View as "+people[i].name}</button>)}{showdownViewer!==null&&<button type="button" onClick={()=>setShowdownViewer(null)}>Hide all</button>}</div>}{canSeeOtherHands?<div className="sw-poker-drawer-hands">{held.map(i=><section key={people[i].id}><strong>{people[i].name} · Held</strong><div className="sw-poker-facecards">{hands[i]?.map((c,j)=><Card key={j} card={c} wild={c.rank===wild}/>)}</div></section>)}</div>:<p>{competingHolders?"Pass the device to a holding player, then select their name to review the held hands.":"Only the pot and result are shown."}</p>}</>}
       {phase==="countdown"&&<p>The decision countdown is underway. Opponents' hands stay private.</p>}
       {phase==="review"&&<p>Dealer review required. No automatic payout has been made.</p>}
     </>}
