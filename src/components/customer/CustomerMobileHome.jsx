@@ -3,6 +3,8 @@ import {
   AlertTriangle,
   CalendarDays,
   ChevronRight,
+  History,
+  RotateCcw,
   CircleDollarSign,
   CloudSun,
   CreditCard,
@@ -95,6 +97,7 @@ function Panel({ eyebrow, title, action, onAction, children, className = "" }) {
 export default function CustomerMobileHome({
   displayName,
   resumePokerRoomPath,
+  resumeFeatureLocations=[],
   profilePhotoUrl,
   tickets,
   invoices,
@@ -114,6 +117,7 @@ export default function CustomerMobileHome({
   const nav = useNavigate();
   const [query, setQuery] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
+  const [showAllResumes,setShowAllResumes] = useState(false);
   const [events, setEvents] = useState([]);
   const [finance, setFinance] = useState(null);
   const [weather, setWeather] = useState(null);
@@ -217,6 +221,12 @@ export default function CustomerMobileHome({
 
       <div className="mt-4 -mx-3 flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none]">{[[Users,"Social",()=>nav("/connect")],[ShoppingBag,"Shop Assist",()=>nav("/customer/store")],[CalendarDays,"Calendar",onOpenCalendar],[Mail,"Inbox",onOpenMessages],[ReceiptText,"Invoices",onOpenInvoices],[Dumbbell,"Health",onOpenHealth],[CircleDollarSign,"Money",onOpenMoney],[Mic2,"Briefing",onOpenAudioSummary]].map(([Icon,label,action]) => <button key={label} type="button" onClick={action} className="min-w-[82px] rounded-2xl border border-white/10 bg-white/[.025] p-3 text-left"><Icon className="h-4 w-4 text-cyan-300" /><div className="mt-2 text-[9px] font-black text-white">{label}</div></button>)}</div>
 
+      {resumeFeatureLocations.length>0&&<section aria-label="Pick up where you left off" className="mt-3 rounded-[1.25rem] border border-cyan-300/30 bg-gradient-to-br from-cyan-500/[.10] via-[#08142d] to-violet-500/[.06] p-3.5 shadow-[0_0_24px_rgba(34,211,238,.06)]">
+        <div className="mb-2 flex items-center justify-between gap-2"><div className="flex items-center gap-2"><History className="h-4 w-4 text-cyan-300"/><h2 className="text-[13px] font-black text-white">Pick Up Where You Left Off</h2></div><span className="text-[9px] font-bold uppercase tracking-wider text-cyan-200">This device</span></div>
+        <button type="button" onClick={()=>nav(resumeFeatureLocations[0].path)} className="flex min-h-14 w-full items-center justify-between gap-2 rounded-xl border border-emerald-300/35 bg-emerald-500/10 p-3 text-left"><span className="flex min-w-0 items-center gap-3"><RotateCcw className="h-5 w-5 shrink-0 text-emerald-200"/><span className="min-w-0"><strong className="block truncate text-[12px] text-white">Continue {resumeFeatureLocations[0].label}</strong><small className="block truncate text-[10px] text-emerald-200">Return to your last page</small></span></span><ChevronRight className="h-5 w-5 shrink-0 text-emerald-200"/></button>
+        {resumeFeatureLocations.length>1&&<><div className="mt-2 grid grid-cols-2 gap-2">{resumeFeatureLocations.slice(1,showAllResumes?undefined:3).map(item=><button type="button" key={item.feature} onClick={()=>nav(item.path)} className="flex min-h-11 items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/20 p-2.5 text-left"><span className="min-w-0"><strong className="block truncate text-[10px] text-white">{item.label}</strong><span className="block truncate text-[9px] text-slate-400">Last page</span></span><ChevronRight className="h-3.5 w-3.5 shrink-0 text-cyan-300"/></button>)}</div>{resumeFeatureLocations.length>3&&<button type="button" onClick={()=>setShowAllResumes(v=>!v)} className="mt-2 min-h-9 w-full text-center text-[10px] font-bold text-cyan-200">{showAllResumes?"Show fewer":"See all "+resumeFeatureLocations.length+" saved locations"}</button>}</>}
+        <p className="mt-2 text-[9px] leading-4 text-slate-400">Returns to your last page in each feature. Unfinished work is restored only where that feature supports saving drafts or sessions.</p>
+      </section>}
       {resumePokerRoomPath ? <button type="button" onClick={() => nav(resumePokerRoomPath)} className="mt-3 flex min-h-16 w-full items-center justify-between gap-3 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-4 text-left"><span className="flex items-center gap-3"><span className="text-2xl">♠</span><span><strong className="block text-sm text-white">Return to Poker Room</strong><span className="block text-[11px] text-emerald-200">Rejoin your last active table · saved seats</span></span></span><ChevronRight className="h-5 w-5 text-emerald-300"/></button> : null}
       <button type="button" onClick={() => nav("/customer/games/new")} className="mt-3 flex min-h-16 w-full items-center justify-between gap-3 rounded-2xl border border-cyan-300/35 bg-cyan-500/10 p-4 text-left"><span className="flex items-center gap-3"><span className="text-2xl">♠</span><span><strong className="block text-sm text-white">New Game</strong><span className="block text-[11px] text-cyan-100">Create poker room · set buy-in · share invite</span></span></span><span className="text-cyan-300">＋</span></button>
       <button type="button" onClick={() => nav("/customer/games")} className="mt-3 flex min-h-14 w-full items-center gap-3 rounded-2xl border border-amber-400/25 bg-amber-500/[.06] p-3 text-left"><span className="text-2xl">♠</span><span className="min-w-0 flex-1"><span className="block text-xs font-black text-white">Games & Card Clubs · 5 games</span><span className="block text-[10px] text-slate-400">Create leagues, invite friends, play cards & track wins</span></span><ChevronRight className="h-4 w-4 text-amber-300" /></button>
