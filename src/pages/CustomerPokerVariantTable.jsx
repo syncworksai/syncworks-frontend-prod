@@ -87,25 +87,27 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  }
  // FYB is pass/keep with a King blocking an incoming swap. Dealer may draw off the deck.
  function fybAction(pass){
-  if(step!=="fyb"||fybTurn>=players.length)return;
-  const actor=order[fybTurn];const next=order[fybTurn+1];
-  const updated=hands.map(h=>h.slice()),d=deck.slice();
-  if(pass&&next===undefined){updated[actor]=[d.shift()||updated[actor][0]];record(players[actor].name+" draws from the deck.");}
-  else if(pass&&updated[next]?.[0]?.rank!==13){const old=updated[actor][0];updated[actor]=[updated[next][0]];updated[next]=[old];record(players[actor].name+" swaps with "+players[next].name);}
-  else record(players[actor].name+(pass?" meets a King: swap blocked.":" keeps their card."));
-  setHands(updated);setDeck(d);setViewer(null);
-  if(fybTurn===players.length-1){
-   const lowest=Math.min(...updated.map(h=>h[0].rank));
-   const losers=updated.map((h,i)=>h[0].rank===lowest?i:-1).filter(i=>i>=0);
-   const loss=anteCents;
-   const updatedLosses=players.map((p,i)=>(fybLosses[i]||0)+(losers.includes(i)?1:0));
-   setFybLosses(updatedLosses);
-   const finished=updatedLosses.some(n=>n>=3);
-   const newStacks=stacks.map((v,i)=>v-(losers.includes(i)?loss:0));
-   const newPot=pot+loss*losers.length;setStacks(newStacks);setPot(newPot);
-   setOutcome({message:losers.map(i=>players[i].name).join(", ")+" had the lowest card ("+lowest+") and each pays "+displayMoney(loss)+(finished?". Three lost chips: FYB is complete, pass the dealer.":""),losers,gameFinished:finished});
-   setStep("result");record("FYB hand complete. No showdown winner: lowest card(s) pay into the virtual purse.");
-  }else setFybTurn(v=>v+1);
+  if(step!=="fyb"||fybTurn>=order.length)return;
+  const actor=order[fybTurn],next=order[fybTurn+1];
+  const moved=fybSwap({hands,deck,actor,next,pass,playerName:players[actor].name,nextName:next==null?"Dealer":players[next].name});
+  setHands(moved.hands);setDeck(moved.deck);setViewer(null);
+  setFybLastMove({seat:actor,kind:moved.kind,event:moved.event});
+  record(moved.event);
+  if(fybTurn+1<order.length){setFybTurn(v=>v+1);return;}
+  const roundResult=fybRound({hands:moved.hands,active:fybActive,losses:players.map((_,i)=>fybLosses[i]||0),chipCents:anteCents});
+  setFybLosses(roundResult.nextLosses);
+  // FYB is a fixed three-chip liability, not a pot-building game.
+  // Deduct exactly one virtual chip per losing seat. Preserve other games' pots.
+  setStacks(old=>old.map((amount,i)=>amount-(roundResult.losers.includes(i)?anteCents:0)));
+  const loserNames=roundResult.losers.map(i=>players[i].name);
+  const elimNames=roundResult.eliminated.map(i=>players[i].name);
+  const message=loserNames.join(", ")+" had the lowest card ("+(SYMBOL[roundResult.low]||roundResult.low)+") · each loses 1 chip ("+displayMoney(anteCents)+")."+
+   (elimNames.length?" Eliminated: "+elimNames.join(", ")+".":"")+
+   (roundResult.winner!==null?" "+players[roundResult.winner].name+" is the last player standing!":
+    roundResult.gameOver?" All remaining players were eliminated together; dealer review required.":"");
+  setOutcome({message,losers:roundResult.losers,eliminated:roundResult.eliminated,winner:roundResult.winner,gameFinished:roundResult.gameOver});
+  setStep("result");
+  record(message);
  }
  // A seven-card stud demonstration while the advanced wagering/score engine is finished.
  function dealStudStreet(){
