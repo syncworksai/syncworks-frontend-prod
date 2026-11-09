@@ -1,6 +1,7 @@
 import React,{useMemo,useState} from "react";
 import {MessageCircle,LogOut,Send,Trophy,X} from "lucide-react";
 import {displayMoney} from "../../games/drop357Table.mjs";
+import {sessionKey,clubSummary} from "../../games/cardClubSessions.mjs";
 import "./PokerSessionBar.css";
 
 // Session-only UI. Never implies shared chat or synchronized balances across devices.
@@ -13,7 +14,10 @@ export default function PokerSessionBar({players=[],stacks=[],groupId="",roomId=
  const [chatOpen,setChatOpen]=useState(false),[confirmEnd,setConfirmEnd]=useState(false),[draft,setDraft]=useState("");
  const storageKey=KEY+String(groupId||"practice")+"_"+String(roomId||"local");
  const [messages,setMessages]=useState(()=>{try{const entries=JSON.parse(sessionStorage.getItem(storageKey)||"[]");return Array.isArray(entries)?entries.slice(-50):[];}catch{return [];}});
- const ranked=useMemo(()=>rankedPokerPlayers(players,stacks),[players,stacks]);
+ const ranked=useMemo(()=>{
+   if(!groupId)return [];
+   try{const saved=JSON.parse(localStorage.getItem(sessionKey(groupId))||"null");return saved?.sessions?clubSummary(saved.sessions,saved.aliases||{}).map(p=>({id:p.player,name:p.player,net:p.net})):[];}catch{return [];}
+ },[groupId,gameNumber]);
  function send(e){
   e.preventDefault();const msg=draft.trim();if(!msg||msg.length>300)return;
   const sender=players.find(p=>p.kind!=="computer")?.name||"You";
@@ -24,9 +28,9 @@ export default function PokerSessionBar({players=[],stacks=[],groupId="",roomId=
  return <>
  <div className="sw-poker-session-strip" aria-label="Poker session controls">
   <button type="button" className="sw-poker-top-mini danger" onClick={()=>setConfirmEnd(true)} title="End local practice session"><LogOut size={14}/> End</button>
-  <div className="sw-poker-leader-marquee" aria-label="Current session leaderboard" title="Leaders ranked by chip gains since the session buy-in">
-   <div className="sw-poker-leader-track"><span className="sw-poker-leader-heading"><Trophy size={13}/> Session Leaders</span>
-    {ranked.length?ranked.slice(0,5).map((p,i)=><span key={p.id} className="sw-poker-leader-entry"><strong>#{i+1}</strong> {p.name} <b>{p.net>=0?"+":""}{displayMoney(p.net)}</b></span>):<span>Waiting for players</span>}
+  <div className="sw-poker-leader-marquee" aria-label="Club historical leaderboard on this device" title="Group lifetime totals from locally entered club session history, not this current practice session">
+   <div className="sw-poker-leader-track"><span className="sw-poker-leader-heading"><Trophy size={13}/> Club History · This Device</span>
+    {ranked.length?ranked.slice(0,5).map((p,i)=><span key={p.id} className="sw-poker-leader-entry"><strong>#{i+1}</strong> {p.name} <b>{p.net>=0?"+":""}{displayMoney(p.net)}</b></span>):<span>No club history saved here yet</span>}
    </div>
   </div>
   <button type="button" className="sw-poker-top-mini chat" onClick={()=>setChatOpen(true)} aria-label="Open local table chat" title="Local table chat"><MessageCircle size={17}/></button>
