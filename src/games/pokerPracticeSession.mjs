@@ -9,7 +9,7 @@ export function capGutsResult(result,{potCents,capCents,anteCents}){
  if(!result||!Number.isSafeInteger(capCents)||capCents<=0)throw Error("Invalid settlement");
  if(result.kind==="all-drop"){
    const perPerson=limitAnte({potCents,capCents,anteCents,playerCount:result.delta.length});
-   return {...result,nextPot:Math.min(capCents,potCents+perPerson*result.delta.length),delta:result.delta.map(()=>-perPerson),message:result.message+(perPerson<anteCents?" Pot cap limited the added antes.":"")};
+   return {...result,nextPot:Math.min(capCents,potCents+perPerson*result.delta.length),delta:result.delta.map(()=>perPerson===0?0:-perPerson),message:result.message+(perPerson<anteCents?" Pot cap limited the added antes.":"")};
  }
  if(result.kind!=="drag"||result.winner==null)return result;
  const losers=result.entered.filter(i=>i!==result.winner);
