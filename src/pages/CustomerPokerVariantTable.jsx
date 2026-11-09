@@ -19,8 +19,9 @@ function localDeal(game,count,size=5){
 }
 function score442(cards){const deuce=cards.some(c=>c.rank===2);const mapped=cards.map(c=>deuce&&c.rank===4?{...c,rank:2}:c);return evaluateBozoHand(mapped,2)}
 const cents=x=>Math.round(Number(x)*100);
-export default function CustomerPokerVariantTable({variant}){
+export default function CustomerPokerVariantTable({variant:providedVariant}){
  const [query]=useSearchParams(),nav=useNavigate();
+ const variant=providedVariant||query.get("game")||"fyb";
  const game=GAMES[variant]||GAMES.fyb;
  const groupId=query.get("group")||"",roomId=query.get("room")||"";
  const [players,setPlayers]=useState([]),[stacks,setStacks]=useState([]),[dealer,setDealer]=useState(0),[pot,setPot]=useState(0),[gameNumber,setGameNumber]=useState(1);
