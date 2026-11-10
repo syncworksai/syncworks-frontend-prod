@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {evaluateBozoHand,resolveBozoRound} from "./bozoRules.mjs";
+import {evaluateBozoHand,resolveBozoRound,chooseBozoBotAction} from "./bozoRules.mjs";
 import {createShuffledDeck} from "./drop357Table.mjs";
 const c=(rank,suit="♠")=>({rank,suit});
 const cards=(...r)=>r.map((n,i)=>c(n,["♠","♥","♦","♣"][i%4]));
@@ -42,4 +42,19 @@ test("nobody holds: pot is carried to the next ante without immediate double cha
  const result=resolveBozoRound({choices:["drop","drop"],hands:[cards(2,3,4,5,6),cards(7,8,9,10,11)],clown:cards(4,6,8,10,12),wildRank:4,potCents:275});
  assert.equal(result.kind,"all-drop");assert.equal(result.nextPotCents,275);
  assert.equal(result.penalties.length,0);
+});
+
+test("Bozo AI holds strong hands but drops weak ones without seeing opponents",()=>{
+ const strong=cards(14,14,14,14,9);
+ const weak=cards(2,5,8,11,13);
+ assert.equal(chooseBozoBotAction({hand:strong,wildRank:3,potCents:200,stackCents:2000,random:()=>0.7}),"hold");
+ assert.equal(chooseBozoBotAction({hand:weak,wildRank:3,potCents:1600,stackCents:2000,random:()=>0.5}),"fold");
+ assert.equal(chooseBozoBotAction({hand:strong,wildRank:3,stackCents:0,random:()=>0}),"fold");
+});
+test("Bozo AI style changes probability but does not guarantee a win",()=>{
+ const hand=cards(10,10,6,8,14);
+ const cautious=chooseBozoBotAction({hand,wildRank:3,style:"cautious",random:()=>0.15});
+ const aggressive=chooseBozoBotAction({hand,wildRank:3,style:"aggressive",random:()=>0.15});
+ assert.equal(cautious,"fold");
+ assert.equal(aggressive,"hold");
 });
