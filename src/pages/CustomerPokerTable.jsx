@@ -61,6 +61,7 @@ export default function CustomerPokerTable(){
  const [drawerOpen,setDrawerOpen]=useState(false),[drawerTab,setDrawerTab]=useState("hands"),[status,setStatus]=useState(""),[log,setLog]=useState([]),[remoteNotice,setRemoteNotice]=useState(false);
  const [shareBusy,setShareBusy]=useState(false),[inviteUrl,setInviteUrl]=useState(""),[roomMinimum,setRoomMinimum]=useState(null),[roomCapacity,setRoomCapacity]=useState(6);
  const [selectedGame,setSelectedGame]=useState("357");
+ const [dealerBozoSize,setDealerBozoSize]=useState(5);
  const [dealerChoosing,setDealerChoosing]=useState(false);
  const [capDraft,setCapDraft]=useState("50");
  const [botStyle,setBotStyle]=useState("balanced"),[rebuyOpen,setRebuyOpen]=useState(false),[rebuySeat,setRebuySeat]=useState(0),[rebuyAmount,setRebuyAmount]=useState("20"),[sessionGames,setSessionGames]=useState(1),[resetConfirm,setResetConfirm]=useState(false);
@@ -294,6 +295,7 @@ export default function CustomerPokerTable(){
   const q=new URLSearchParams({practice:"1",ante:String(ante),dealer:String(dealer),fromPoker:"1",game:selectedGame});
   if(groupId)q.set("group",groupId);
   if(roomId)q.set("room",roomId);
+  if(selectedGame==="bozo")q.set("handSize",String(dealerBozoSize));
   nav("/customer/games/variant?"+q.toString());
  }
  function storeLocalSeats(updated){
@@ -415,7 +417,8 @@ export default function CustomerPokerTable(){
   {session==="setup"&&<section className="sw-poker-game-choice sw-poker-unified-choice" aria-label="Dealer game setup">
    <label htmlFor="sw-poker-game-select">{dealerChoosing?people[dealer]?.name+" · Dealer's game choice":"Dealer's game choice"}</label>
    <select id="sw-poker-game-select" value={selectedGame} onChange={e=>changeGame(e.target.value)}>{TABLE_GAMES.map(g=><option key={g.code} value={g.code}>{g.label}</option>)}</select>
-   <div className="sw-poker-unified-controls"><label>Ante ($)<input type="number" inputMode="decimal" min="0.01" step="0.01" value={ante} onChange={e=>setAnte(e.target.value)}/></label><label>Maximum pot<select value={capDraft} onChange={e=>{setCapDraft(e.target.value);setPotCap(e.target.value);}}><option value="10">$10</option><option value="20">$20</option><option value="50">$50</option><option value="unlimited">Unlimited</option></select></label></div>
+   {selectedGame==="bozo"&&<div className="sw-poker-unified-controls"><label>Bozo hand size<select value={dealerBozoSize} onChange={e=>setDealerBozoSize(Number(e.target.value))}><option value={5}>5 cards</option><option value={7}>7 cards</option></select></label><span className="self-end text-xs text-cyan-200">Locked after first deal</span></div>}
+    <div className="sw-poker-unified-controls"><label>Ante ($)<input type="number" inputMode="decimal" min="0.01" step="0.01" value={ante} onChange={e=>setAnte(e.target.value)}/></label><label>Maximum pot<select value={capDraft} onChange={e=>{setCapDraft(e.target.value);setPotCap(e.target.value);}}><option value="10">$10</option><option value="20">$20</option><option value="50">$50</option><option value="unlimited">Unlimited</option></select></label></div>
    {dealerChoosing&&<button type="button" onClick={startDealerSelectedGame} className="sw-poker-button gold">♠ Start {TABLE_GAMES.find(g=>g.code===selectedGame)?.label||"Selected Game"}</button>}
   </section>}
   {session==="setup"&&<section className="sw-poker-session-setup sw-poker-bot-setup"><label>Virtual opponents<select value={botStyle} onChange={e=>setBotStyle(e.target.value)}><option value="cautious">Cautious</option><option value="balanced">Balanced</option><option value="aggressive">Aggressive</option></select></label></section>}
