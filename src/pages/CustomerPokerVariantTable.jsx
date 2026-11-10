@@ -147,10 +147,12 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  function takeAnte(){
   const actual=limitAnte({potCents:pot,capCents:maxCents,anteCents,playerCount:players.length});
   if(stacks.some((v,i)=>!sittingOut[i]&&players[i].kind!=="computer"&&v<Math.max(1,actual))){setStatus("A player needs a $20 rebuy or must sit out.");setRebuy(true);return false;}
-  const bustedBots=players.flatMap((p,i)=>p.kind==="computer"&&!sittingOut[i]&&stacks[i]<Math.max(1,actual)?[i]:[]);
+  const bustedBots=players.flatMap((p,i)=>p.kind==="computer"&&!sittingOut[i]&&stacks[i]<Math.max(25,actual)?[i]:[]);
   const active=players.flatMap((p,i)=>!sittingOut[i]&&!bustedBots.includes(i)?[i]:[]);
   if(bustedBots.length)setSittingOut(old=>({...old,...Object.fromEntries(bustedBots.map(i=>[i,true]))}));
   if(!active.length){setStatus("No funded players remain. End the practice game or add players.");return false;}
+  const brokeHuman=active.find(i=>players[i].kind!=="computer"&&stacks[i]<Math.max(25,actual));
+  if(brokeHuman!==undefined){setRebuySeat(brokeHuman);setRebuy(true);setStatus(players[brokeHuman].name+" owes chips. Rebuy or sit out before the next hand.");return false;}
   const nextStacks=stacks.map((v,i)=>active.includes(i)?v-actual:v);
   setStacks(nextStacks);setPot(v=>v+actual*active.length);
   if(bustedBots.length)record(bustedBots.map(i=>players[i].name).join(", ")+" eliminated · AI bots never rebuy.");
@@ -267,10 +269,15 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  }
  function settleGutsPay(winner,entered,next,amount){
   const losers=entered.filter(i=>i!==winner);
-  const match=pot>=maxCents?0:fundedReplacement({losers,stacks,potCents:amount,capCents:maxCents}).perLoser;
-  const nextStacks=stacks.map((v,i)=>v+(i===winner?amount:losers.includes(i)?-match:0));
-  const newPot=match*losers.length;setStacks(nextStacks);setPot(newPot);
-  setOutcome({kind:"player-win",winner,amount,match,losers,gameFinished:newPot===0,message:players[winner].name+" beats the Clown and drags "+displayMoney(amount)+". "+(pot>=maxCents?"Pot clear; next dealer chooses a game.":losers.length+" losing holder(s) replace "+displayMoney(match)+" each.")});
+  // The pot cap never forgives a losing holder's debt. The winner takes
+  // the center pot, losing holders replace it, and overflow goes to winner.
+  const match=amount;
+  const replacement=match*losers.length;
+  const newPot=Math.min(maxCents,replacement);
+  const bonus=Math.max(0,replacement-newPot);
+  const nextStacks=stacks.map((v,i)=>v+(i===winner?amount+bonus:losers.includes(i)?-match:0));
+  setStacks(nextStacks);setPot(newPot);
+  setOutcome({kind:"player-win",winner,amount,match,losers,bonusToWinnerCents:bonus,gameFinished:newPot===0,message:players[winner].name+" beats the Clown and drags "+displayMoney(amount)+". "+losers.length+" losing holder(s) owe "+displayMoney(match)+" each."+(bonus?" "+displayMoney(bonus)+" excess paid to winner above the pot cap.":"")});
   setDecisions(next);setStep("result");
  }
  function finish442Exchange(seat,indexes){
