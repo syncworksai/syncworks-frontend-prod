@@ -92,6 +92,7 @@ export function fybPayRound({stacks,potCents,losers,chipCents,winner=null}){
 export function fybSplitPurse({stacks,potCents,seats,approvals}){
  if(!Array.isArray(stacks)||!Array.isArray(seats)||seats.length!==2||seats[0]===seats[1]||!seats.every(i=>Number.isInteger(i)&&i>=0&&i<stacks.length))throw Error("Split requires exactly two eligible seats");
  if(!Number.isSafeInteger(potCents)||potCents<=0)throw Error("No FYB purse available to split");
+ if(potCents%25!==0)throw Error("FYB purse must be in 25-cent chips before splitting.");
  if(!seats.every(i=>approvals?.[i]===true))throw Error("Both players must approve");
  const ordered=[...seats].sort((a,b)=>a-b);
  const quarterUnits=Math.floor(potCents/25);const first=Math.ceil(quarterUnits/2)*25,second=potCents-first;
