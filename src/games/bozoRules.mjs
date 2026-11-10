@@ -118,3 +118,20 @@ export function resolveBozoRound({choices,hands,clown,wildRank,potCents}) {
   const losers=holders.filter(i=>i!==winner);
   return {kind:"player-win",winner,clownHand,playerHands,nextPotCents:losers.length*potCents,dragCents:potCents,penalties:losers.map(i=>({player:i,cents:potCents})),message:"A player beat the Clown and all other holders. They drag the pot; losing holders replace it for the next hand."};
 }
+
+/**
+ * Practice-only Bozo bot: no peeking at the Clown's hidden cards or rival hands.
+ * A stronger evaluated hand encourages a Hold; risk grows with pot/stack ratio.
+ * Chance remains uncertain, especially with two or more possible opponents.
+ */
+export function chooseBozoBotAction({hand,wildRank,potCents=0,stackCents=2000,style="balanced",random=Math.random}){
+ if(!Array.isArray(hand)||![5,7].includes(hand.length)||!Number.isFinite(wildRank))return "fold";
+ if(stackCents<=0)return "fold";
+ const result=evaluateBozoHand(hand,wildRank);
+ const category=Math.floor(result.score/(15**5));
+ const base=[0.04,0.22,0.42,0.69,0.8,0.84,0.93,0.96,0.98,0.99][Math.max(0,Math.min(9,category))];
+ const styleOffset=style==="aggressive"?.17:style==="cautious"?-.15:0;
+ const risk=Math.min(0.36,(Math.max(0,potCents)/Math.max(1,stackCents))*0.32);
+ const odds=Math.min(.995,Math.max(.01,base+styleOffset-risk));
+ return random()<odds?"hold":"fold";
+}
