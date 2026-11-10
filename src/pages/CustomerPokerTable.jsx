@@ -338,9 +338,9 @@ export default function CustomerPokerTable(){
   let actualAnte=limitAnte({potCents:previousPot,capCents,anteCents,playerCount:Math.max(1,active.length)});
   const bustedBots=people.flatMap((p,i)=>p.kind==="computer"&&!sittingOut[i]&&(!active.includes(i)||stack[i]<Math.max(1,actualAnte))?[i]:[]);
   if(bustedBots.length){active=active.filter(i=>!bustedBots.includes(i));setSittingOut(old=>({...old,...Object.fromEntries(bustedBots.map(i=>[i,true]))}));addLog(bustedBots.map(i=>people[i].name).join(", ")+" out of chips · no AI rebuy.");}
-  if(active.length<2){setStatus("Fewer than two funded players remain. AI bots cannot rebuy.");return;}
+  if(active.length<1){setStatus("No funded players remain. A human must rebuy before a new deal.");return;}
   actualAnte=limitAnte({potCents:previousPot,capCents,anteCents,playerCount:active.length});
-  if(stack.some((value,i)=>active.includes(i)&&value<Math.max(1,actualAnte)&&people[i]?.kind!=="computer")){
+  if(stack.some((value,i)=>active.includes(i)&&value<Math.max(25,actualAnte)&&people[i]?.kind!=="computer")){
    setStatus("A human player needs a rebuy or must sit out before dealing.");setRebuySeat(stack.findIndex((value,i)=>active.includes(i)&&value<Math.max(1,actualAnte)&&people[i]?.kind!=="computer"));setRebuyOpen(true);return;
   }
   const fresh=dealt357(createShuffledDeck(),tableSize,active);
@@ -358,7 +358,7 @@ export default function CustomerPokerTable(){
   }else if(instant.length>1){
    setPhase("review");addLog("Multiple 3-5-7 instant hands — dealer review required.");
   }else{
-   setChoices(preparedChoices(tableSize,fresh.hands,0).map((c,i)=>sittingOut[i]?"drop":c));setPhase("choosing");addLog("Three cards dealt. 3s are wild. Players choose Drop or Hold.");
+   setChoices(preparedChoices(tableSize,fresh.hands,0).map((c,i)=>!active.includes(i)?"drop":c));setPhase("choosing");addLog("Three cards dealt. 3s are wild. Players choose Drop or Hold.");
   }
  }
  function start(){setSession("playing");setLog([]);dealOpening(0,chipStacks.length===people.length?chipStacks:null,{});}
@@ -387,7 +387,7 @@ export default function CustomerPokerTable(){
   if(round===2||outcome?.kind==="instant") {const nextDealer=(dealer+1)%tableSize;setDealer(nextDealer);setHandFolds({});dealOpening(pot,chipStacks,strikes);addLog("Dealer passes to "+people[nextDealer]?.name+". Pot carries into a fresh three-card hand.");return;}
   const updated=ensure357Street({hands,deck,round:round+1,sittingOut});
   setDealAnimation({nonce:Date.now(),count:2});
-  setHands(updated.hands);setDeck(updated.deck);setRound(v=>v+1);setViewer(null);setShowdownViewer(null);setMyHandVisible(true);setHandFolds({});setChoices(preparedChoices(tableSize,updated.hands,round+1).map((c,i)=>sittingOut[i]?"drop":c));setReveal({});setRevealStep(0);setOutcome(null);setPhase("choosing");closeDrawer();
+  setHands(updated.hands);setDeck(updated.deck);setRound(v=>v+1);setViewer(null);setShowdownViewer(null);setMyHandVisible(true);setHandFolds({});setChoices(preparedChoices(tableSize,updated.hands,round+1).map((c,i)=>sittingOut[i]||!updated.hands[i]?.length?"drop":c));setReveal({});setRevealStep(0);setOutcome(null);setPhase("choosing");closeDrawer();
   addLog("Two cards added to all "+updated.eligible.length+" seated hands, including players who folded the prior round. Only "+THREE_FIVE_SEVEN[round+1]+"s are wild.");
  }
  const currentPlayer=displayIndex!==null?people[displayIndex]:null;
@@ -438,13 +438,19 @@ export default function CustomerPokerTable(){
      {chipAnimation?.contributions?.map(({seat,amount},index)=><div key={chipAnimation.nonce+"-"+seat} className={"sw-357-chip-to-pot from-seat-"+seat} style={{"--chip-delay":index*160+"ms"}} aria-hidden="true"><span className="sw-357-moving-chip">●</span><small>{displayMoney(amount)}</small></div>)}
     <div className="sw-poker-pot">{chipAnimation&&<div className={"sw-poker-chip-flight "+(chipAnimation.winner===null?"ante":"payout")} aria-hidden="true">🪙 {chipAnimation.winner!==null?"→ "+people[chipAnimation.winner]?.name:"Antes → Pot"}</div>}<div className="sw-poker-chip-stack"><span className="sw-poker-chip dark"/><span className="sw-poker-chip blue"/><span className="sw-poker-chip red"/></div><div className="sw-poker-pot-amount">Pot: {displayMoney(pot)}</div><div className="sw-poker-pot-small">Ante: {displayMoney(anteCents)} · Cap: {capText}</div></div>
     {counter!==null&&<div aria-live="assertive" className="sw-poker-decision-shadow">{counter}</div>}
+   {phase==="resolved"&&<div className={"sw-357-round-winner-banner sw-357-table-winner"+(outcome?.winner!=null?" sw-357-banner-win":"")} role="status">
+     {outcome?.winner!=null?<><strong className="sw-357-banner-title">🏆 WINNER · {people[outcome.winner]?.name}</strong><span className="sw-357-banner-detail">{winnerHand} · Pot won {displayMoney(outcome.potDraggedCents??0)}{outcome?.entered?.length>1?" · "+outcome.entered.filter(i=>i!==outcome.winner).length+" loser(s) replace "+displayMoney(outcome.matchingAmountCents??0):""}</span></>:
+     outcome?.kind==="lone-strike"?<><strong className="sw-357-banner-title">Uncontested hold · {people[outcome.entered?.[0]]?.name}</strong><span className="sw-357-banner-detail">{strikes[outcome.entered?.[0]]||0}/3 dots filled · Pot carries to next round</span></>:
+     <><strong className="sw-357-banner-title">{outcome?.kind==="all-drop"?"Everyone dropped":"Round settled"}</strong><span className="sw-357-banner-detail">{outcome?.kind==="all-drop"?"Pot carries · all seated players continue":outcome?.message}</span></>}
+     {competingHolders&&eligibleShowdownViewers.length>0&&<button type="button" onClick={()=>openDrawer("hands")} className="sw-357-review-holders">View held hands · {held.length} players</button>}
+    </div>}
     {phase==="choosing"&&activeHumanTurn&&!isSharedRoom&&<div className={"sw-poker-your-turn"+(canActCurrent?" active":" waiting")} aria-live="polite"><strong>{canActCurrent?"YOUR TURN":"PLAYER TURN"}</strong><span>{turnRemaining}s</span></div>}
     {Array.from({length:session==="setup"?roomCapacity:tableSize},(_,i)=>{const p=people[i];return <div key={p?.id||"open-"+i} className={"sw-poker-seat s"+i+(p?"":" sw-poker-seat-empty")} aria-label={p?p.name+" "+(choices[i]!==null?"Ready":"Waiting"):"Open poker seat"}>
       {p?<Photo person={p}/>:<button type="button" aria-label={"Add player to seat "+(i+1)} disabled={session!=="setup"} className="sw-poker-empty-seat" onClick={()=>{setSeatBuyin(String((roomMinimum??2000)/100));setSeatEditor(true);}}>+</button>}
-      <div className="sw-poker-seat-nameplate"><strong>{p?.name||"Open Seat"}</strong><small>{p?"◉ "+displayMoney(chipStacks[i]??p.chips??2000):"Tap to join"}</small></div>
+      <div className="sw-poker-seat-nameplate"><strong>{p?.name||"Open Seat"}</strong><small>{p?"◉ "+displayMoney(chipStacks[i]??p.chips??2000)+(chipStacks[i]<0?" · REBUY":""):"Tap to join"}</small></div>
       {session==="playing"&&p&&<span className={"sw-poker-status"+(choices[i]!==null&&phase!=="setup"?" ready":"")}>{phase==="choosing"||phase==="countdown"?(choices[i]===null?"◷ Waiting":"✓ Ready"):phase==="revealing"||phase==="resolved"?(choices[i]==="hold"?"Held":choices[i]==="drop"?"Dropped":"Waiting"):"At table"}</span>}
       {session==="playing"&&p&&<div className="sw-357-strike-dots" aria-label={(strikes[i]||0)+" of 3 uncontested holds"}>{[0,1,2].map(n=><span key={n} className={n<(strikes[i]||0)?"filled":""}/>)}</div>}
-      {p&&chipAnimation?.winner===i&&<div className="sw-poker-win-pop">+{displayMoney(chipAnimation.amount)}</div>}{p&&chipAnimation?.contributions?.some(x=>x.seat===i)&&<div className="sw-poker-loss-pop">−{displayMoney(chipAnimation.contributions.find(x=>x.seat===i).amount)}</div>}
+      {p&&chipAnimation?.winner===i&&<div className="sw-poker-win-pop">🏆 +{displayMoney(chipAnimation.amount+(outcome?.bonusToWinnerCents||0))}</div>}{p&&chipAnimation?.contributions?.some(x=>x.seat===i)&&<div className="sw-poker-loss-pop">−{displayMoney(chipAnimation.contributions.find(x=>x.seat===i).amount)}</div>}
        {p&&hands[i]?.length>0&&phase==="resolved"&&canSeeOtherHands&&choices[i]==="hold"&&<div className="sw-357-seat-reveal" aria-label={p.name+" cards at completed round showdown"}>{hands[i].map((c,j)=><div key={j} className="sw-357-flip-card sw-357-end-flip" style={{"--flip-delay":j*95+"ms"}}><span className="sw-357-flip-back">♠</span><span className={"sw-357-flip-face"+(isRed(c.suit)?" red":"")}>{rankText(c)}{c.suit}</span></div>)}</div>}
       {p&&dealer===i&&<span className="sw-poker-dealer">D</span>}
     </div>;})}
@@ -465,12 +471,7 @@ export default function CustomerPokerTable(){
     
    </section>}
    {phase==="review"&&<section className="sw-poker-panel mx-auto max-w-xl"><h3>Dealer review required</h3><p>{outcome?.message||"More than one player was dealt 3-5-7. No automatic payout has been made."}</p><button type="button" onClick={()=>{setSession("setup");setPhase("setup");}} className="sw-poker-button mt-3">Restart demo</button></section>}
-   {phase==="resolved"&&<div className={"sw-357-round-winner-banner"+(outcome?.winner!=null?" sw-357-banner-win":"")} role="status">
-     {outcome?.winner!=null?<><strong className="sw-357-banner-title">🏆 WINNER · {people[outcome.winner]?.name}</strong><span className="sw-357-banner-detail">{winnerHand} · Won {displayMoney(outcome.potDraggedCents??0)}{outcome?.entered?.length>1?" · "+outcome.entered.filter(i=>i!==outcome.winner).length+" loser(s) replace "+displayMoney(outcome.matchingAmountCents??0):""}</span></>:
-     outcome?.kind==="lone-strike"?<><strong className="sw-357-banner-title">Uncontested hold · {people[outcome.entered?.[0]]?.name}</strong><span className="sw-357-banner-detail">{strikes[outcome.entered?.[0]]||0}/3 dots filled · Pot carries to next round</span></>:
-     <><strong className="sw-357-banner-title">{outcome?.kind==="all-drop"?"Everyone folded":"Round settled"}</strong><span className="sw-357-banner-detail">{outcome?.kind==="all-drop"?"Pot carries · all seated players continue":outcome?.message}</span></>}
-     {competingHolders&&eligibleShowdownViewers.length>0&&<button type="button" onClick={()=>openDrawer("hands")} className="sw-357-review-holders">View held hands · {held.length} players</button>}
-    </div>}
+
   </>}
  </div>
 
