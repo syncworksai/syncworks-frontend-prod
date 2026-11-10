@@ -719,3 +719,25 @@
  .sw-poker-sticky-actions:has(.sw-card-console-table-switch) .sw-poker-action-top{padding-left:98px}
  .sw-poker-sticky-actions:has(.sw-card-console-table-switch) .sw-poker-quick-management>span{display:none}
 }
+
+/* Settled 3/5/7 round: compact winner announcement, never displaces hand off screen. */
+.sw-357-round-winner-banner{
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:2px;flex:0 0 auto;min-height:40px;max-width:690px;width:100%;
+ margin:3px auto 0;padding:6px 9px;border:1px solid #4a8ba1;
+ border-radius:12px;background:linear-gradient(120deg,#082331,#151d31);
+ text-align:center;line-height:1.25;
+}
+.sw-357-banner-win{border-color:#ffd05b;background:linear-gradient(115deg,#261b07,#142a2c,#261b07);box-shadow:0 0 16px #e7b85144}
+.sw-357-banner-title{font-weight:950;font-size:clamp(12px,3.2vw,18px);letter-spacing:.025em;color:#e9f7ff}
+.sw-357-banner-win .sw-357-banner-title{color:#ffe38f;text-shadow:0 0 10px #ffc832a3;animation:sw-357-winner-pulse 1.5s ease-in-out infinite alternate}
+.sw-357-banner-detail{color:#d5e9ef;font-size:clamp(9px,2.6vw,12px);max-width:100%;overflow-wrap:anywhere}
+.sw-357-review-holders{font-size:10px;color:#a7f3d0;font-weight:800;text-decoration:underline;text-underline-offset:3px;min-height:27px;padding:3px 9px}
+@media(max-width:650px){
+ .sw-357-playing .sw-357-round-winner-banner{padding:4px 7px;margin:2px auto 0;min-height:36px}
+ .sw-357-playing .sw-357-banner-title{font-size:12px}
+ .sw-357-playing .sw-357-banner-detail{font-size:9px}
+ .sw-357-playing .sw-357-review-holders{min-height:24px;font-size:9px}
+ .sw-357-playing .sw-poker-table-space{padding-top:24px;padding-bottom:31px}
+}
+@media(prefers-reduced-motion:reduce){.sw-357-banner-win .sw-357-banner-title{animation:none}}
