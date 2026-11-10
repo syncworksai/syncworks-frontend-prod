@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {createShuffledDeck,dealt357,addRoundCards,instant357,rate357,resolve357,winningHandText357} from "./drop357Table.mjs";
+import {createShuffledDeck,dealt357,addRoundCards,advance357Street,instant357,rate357,resolve357,winningHandText357} from "./drop357Table.mjs";
 
 const c=(rank,suit="♠")=>({rank,suit});
 
@@ -101,4 +101,30 @@ test("three uncontested holds accumulate as three dots before dragging the pot",
 test("winner hand text spells out matching rank for four Aces with wild fives",()=>{
  const hand=[c(14),c(14,"♥"),c(14,"♦"),c(5,"♣"),c(9,"♠")];
  assert.equal(winningHandText357(hand,1),"four Aces");
+});
+
+test("a fold in 3 cards does not exclude that player from the five or seven card street",()=>{
+ const opening=dealt357(createShuffledDeck(()=>0.32),5);
+ const threeDecisions=["hold","hold","drop","drop","drop"];
+ const first=resolve357({hands:opening.hands,round:0,choices:threeDecisions,potCents:250,strikes:{},anteCents:25});
+ assert.deepEqual(first.entered,[0,1]); // only two contest the three-card pot
+ const five=advance357Street({hands:opening.hands,deck:opening.deck});
+ assert.deepEqual(five.eligible,[0,1,2,3,4]);
+ assert.deepEqual(five.hands.map(h=>h.length),[5,5,5,5,5]);
+ for(let i=0;i<5;i++)assert.deepEqual(five.hands[i].slice(0,3),opening.hands[i]);
+ const second=resolve357({hands:five.hands,round:1,choices:["hold","drop","hold","drop","drop"],potCents:250,strikes:first.strikes,anteCents:25});
+ assert.deepEqual(second.entered,[0,2]); // player 2 dropped on the first street but reentered
+ const seven=advance357Street({hands:five.hands,deck:five.deck});
+ assert.deepEqual(seven.eligible,[0,1,2,3,4]);
+ assert.deepEqual(seven.hands.map(h=>h.length),[7,7,7,7,7]);
+ assert.equal(seven.deck.length,52-5*7);
+ for(let i=0;i<5;i++)assert.deepEqual(seven.hands[i].slice(0,5),five.hands[i]);
+});
+test("a genuinely sitting-out seat does not get cards in the next street",()=>{
+ const first=dealt357(createShuffledDeck(()=>0.31),3);
+ const five=advance357Street({hands:first.hands,deck:first.deck,sittingOut:{1:true}});
+ assert.deepEqual(five.hands.map(h=>h.length),[5,3,5]);
+});
+test("winner banner hand text identifies the ranks in a natural full house",()=>{
+ assert.equal(winningHandText357([c(10),c(10,"♥"),c(10,"♦"),c(2),c(2,"♥")],1),"full house — Tens over Twos");
 });
