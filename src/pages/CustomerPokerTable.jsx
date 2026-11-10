@@ -403,7 +403,7 @@ export default function CustomerPokerTable(){
  },[continueCountdown,phase,sameDeviceHumanTable,gameOver]);
  useEffect(()=>{if(!drawerOpen)return;const onKey=e=>{if(e.key==="Escape")closeDrawer();};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey);},[drawerOpen]);
  return <main className={"sw-poker-screen"+(session==="playing"?" sw-357-playing sw-card-console-active":"")}><div className="sw-poker-content">
-  <header className="sw-poker-top"><PokerLandscapeControl/>
+  <header className="sw-poker-top"><button type="button" className="sw-poker-lounge-home" onClick={()=>nav("/customer/games")} aria-label="Return to Poker Lounge">⌂ <span>Lounge</span></button><PokerLandscapeControl/>
    <button type="button" className="sw-poker-back" onClick={()=>nav(groupId?"/customer/games/new?group="+encodeURIComponent(groupId):"/customer/games")} aria-label="Back to lobby"><ArrowLeft size={21}/></button>
    <div className="sw-poker-symbol" aria-label="SyncWorks">S</div>
    <div className="sw-poker-heading"><strong>SYNCWORKS POKER</strong><small>♧ {lobbyName} · Private table preview</small></div>
