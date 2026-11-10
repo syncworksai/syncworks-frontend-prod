@@ -9,6 +9,7 @@ import {capGutsResult,limitAnte,rebuyChips,centsFromDollars,pickPracticeBotChoic
 import {readCardNight,saveCardNight,clearCardNight} from "../games/cardNightTransfer.mjs";
 import PokerSessionBar from "../components/poker/PokerSessionBar";
 import CardClubTableSwitcher from "../components/poker/CardClubTableSwitcher";
+import PokerLandscapeControl from "../components/poker/PokerLandscapeControl";
 import {useAuth} from "../auth/AuthContext";
 import {buildPracticeSummary,savePracticeSummary} from "../games/pokerClubPracticeLedger.mjs";
 import {getCardRoom} from "../api/cardRooms";
@@ -355,7 +356,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  const reviewable=step==="result"||step==="stud-result";
  const centered=step==="bozo-next"?"Next Bozo hand · Fresh deck":step==="442-next"?"Next 4/4 hand · Shuffling":step==="442-draw"&&activeIndex>=0?currentPlayer?.name+" · Exchange up to 3":step==="fyb-next"?"Next FYB hand · Shuffling":step==="deciding"&&activeIndex>=0?"Your turn: "+currentPlayer?.name:step==="fyb"&&activeIndex>=0?currentPlayer?.name+"'s turn":step==="stud"?"Stud street "+(street+1):reviewable?"Hand finished":game.tag;
  return <main className={"sw-poker-screen"+(variant==="fyb"&&step==="fyb"?" sw-fyb-play-mode":"")+(variant==="bozo"&&bozoLocked?" sw-bozo-play-mode":"")+(step!=="loading"&&step!=="ready"?" sw-card-console-active":"")+(step==="ready"&&!(variant==="bozo"&&bozoLocked)?" sw-unified-setup-mode":"")}><div className="sw-poker-content">
-  <header className="sw-poker-top"><button type="button" className="sw-poker-back" onClick={()=>{if(variant==="bozo"&&bozoLocked&&pot>0){setStatus("Bozo rules stay locked until the entire pot is dragged. Continue playing, or end the session.");return;}store();nav(nextGameUrl);}}><ArrowLeft size={20}/></button><div className="sw-poker-symbol">S</div><div className="sw-poker-heading"><strong>SYNCWORKS POKER</strong><small>♠ Card Night · {game.title}</small></div><button type="button" className="sw-poker-icon-btn" onClick={()=>{setTab("rules");setDrawer(true)}} aria-label="Game information"><Info size={20}/></button></header>
+  <header className="sw-poker-top"><PokerLandscapeControl/><button type="button" className="sw-poker-back" onClick={()=>{if(variant==="bozo"&&bozoLocked&&pot>0){setStatus("Bozo rules stay locked until the entire pot is dragged. Continue playing, or end the session.");return;}store();nav(nextGameUrl);}}><ArrowLeft size={20}/></button><div className="sw-poker-symbol">S</div><div className="sw-poker-heading"><strong>SYNCWORKS POKER</strong><small>♠ Card Night · {game.title}</small></div><button type="button" className="sw-poker-icon-btn" onClick={()=>{setTab("rules");setDrawer(true)}} aria-label="Game information"><Info size={20}/></button></header>
   <PokerSessionBar players={players} stacks={stacks} groupId={groupId} roomId={roomId} gameNumber={gameNumber} onEnd={endLocalSession}/>
   <div className="sw-poker-round"><div className="sw-poker-round-badge"><div>♠ {game.title}</div><span>{game.tag}</span></div><span className="sw-poker-capsule">♙ {players.length}</span></div>
   {variant==="fyb"&&fybDeckFlash&&<div className="sw-fyb-new-deck-flash" role="status" aria-live="polite">♠ NEW DECK · 52 cards</div>}
