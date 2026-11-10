@@ -296,7 +296,7 @@ export default function CustomerPokerTable(){
   const q=new URLSearchParams({practice:"1",ante:String(ante),dealer:String(dealer),fromPoker:"1",game:selectedGame});
   if(groupId)q.set("group",groupId);
   if(roomId)q.set("room",roomId);
-  if(selectedGame==="bozo")q.set("handSize",String(dealerBozoSize));
+  if(selectedGame==="bozo"){q.set("handSize",String(dealerBozoSize));q.set("botStyle",botStyle);}
   nav("/customer/games/variant?"+q.toString());
  }
  function storeLocalSeats(updated){
