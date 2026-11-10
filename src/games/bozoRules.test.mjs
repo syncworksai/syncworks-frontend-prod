@@ -71,15 +71,15 @@ test("Two holders against the Clown collectively double a one-dollar purse",()=>
  assert.deepEqual(paid.payments,{"0":50,"1":50});
 });
 test("Three holders split an odd-cent Clown match without increasing pot more than once",()=>{
- const result=bozoClownContributions({holders:[0,1,2],stacks:[100,100,100],potCents:101,capCents:500});
- assert.equal(result.nextPotCents,202);
- assert.equal(Object.values(result.payments).reduce((sum,v)=>sum+v,0),101);
- assert.ok(Math.max(...Object.values(result.payments))-Math.min(...Object.values(result.payments))<=1);
+ const result=bozoClownContributions({holders:[0,1,2],stacks:[100,100,100],potCents:100,capCents:500});
+ assert.equal(result.nextPotCents,200);
+ assert.equal(Object.values(result.payments).reduce((sum,v)=>sum+v,0),100);
+ assert.ok(Math.max(...Object.values(result.payments))-Math.min(...Object.values(result.payments))<=25);assert.ok(Object.values(result.payments).every(x=>x%25===0));
 });
-test("Clown settlement honors cap and funded balances without negative stacks",()=>{
+test("Clown settlement honors cap while short stacks can owe whole quarters",()=>{
  const result=bozoClownContributions({holders:[0,1],stacks:[10,100],potCents:100,capCents:150});
  assert.equal(result.nextPotCents,150);
- assert.deepEqual(result.payments,{"0":10,"1":40});
+ assert.deepEqual(result.payments,{"0":25,"1":25});assert.equal(10-result.payments[0],-15);
  const capped=bozoClownContributions({holders:[0,1],stacks:[100,100],potCents:100,capCents:100});
  assert.equal(capped.totalCents,0);assert.equal(capped.nextPotCents,100);
 });
