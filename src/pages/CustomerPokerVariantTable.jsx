@@ -32,6 +32,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  const {user}=useAuth();
  const [checkpointReady,setCheckpointReady]=useState(false);
  const [bozoSeconds,setBozoSeconds]=useState(30);
+ const [bozoBotStyle,setBozoBotStyle]=useState(["balanced","cautious","aggressive"].includes(query.get("botStyle"))?query.get("botStyle"):"balanced");
  const variant=providedVariant||query.get("game")||"fyb";
  const game=GAMES[variant]||GAMES.fyb;
  const groupId=query.get("group")||"",roomId=query.get("room")||"";
@@ -63,7 +64,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   if(resume?.active&&Array.isArray(resume.players)&&resume.players.length>=2&&Array.isArray(resume.stacks)&&resume.stacks.length===resume.players.length){
    setPlayers(resume.players);setStacks(resume.stacks);setDealer(resume.dealer??0);setPot(resume.pot??0);setGameNumber(resume.gameNumber??1);
    setHands(resume.hands||[]);setDeck(resume.deck||[]);setClown(resume.clown||[]);setDecisions(resume.decisions||[]);
-   setBozoHandSize(resume.bozoHandSize||5);setBozoLocked(!!resume.bozoLocked);setBozoLastResult(resume.bozoLastResult||null);
+   setBozoHandSize(resume.bozoHandSize||5);setBozoBotStyle(resume.bozoBotStyle||"balanced");setBozoLocked(!!resume.bozoLocked);setBozoLastResult(resume.bozoLastResult||null);
    setAnte(resume.ante||"0.25");setCap(resume.cap||"50");setSessionCapCents(resume.sessionCapCents??5000);
    setRebuyCounts(resume.rebuyCounts||{});setSittingOut(resume.sittingOut||{});setCashouts(resume.cashouts||[]);
    setVirtualSessionId(resume.virtualSessionId||("practice-"+Date.now()));setOutcome(resume.outcome||null);
@@ -82,7 +83,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  },[groupId,roomId,variant,user?.id]);
  useEffect(()=>{
   if(!checkpointReady||!user?.id||roomId||["loading","ready"].includes(step))return;
-  savePracticeGame(user.id,groupId,variant,{active:true,players,stacks,dealer,pot,gameNumber,hands,deck,clown,decisions,bozoHandSize,bozoLocked,bozoLastResult,ante,cap,sessionCapCents,rebuyCounts,sittingOut,cashouts,virtualSessionId,outcome,fybTurn,fybLosses,fybDeckNumber,fybActions,fybRevealedKings,fybPreviousCard,draw442Turn,draw442Selected,showdown442,followers,street,step});
+  savePracticeGame(user.id,groupId,variant,{active:true,players,stacks,dealer,pot,gameNumber,hands,deck,clown,decisions,bozoHandSize,bozoBotStyle,bozoLocked,bozoLastResult,ante,cap,sessionCapCents,rebuyCounts,sittingOut,cashouts,virtualSessionId,outcome,fybTurn,fybLosses,fybDeckNumber,fybActions,fybRevealedKings,fybPreviousCard,draw442Turn,draw442Selected,showdown442,followers,street,step});
  },[checkpointReady,user?.id,groupId,roomId,variant,players,stacks,dealer,pot,gameNumber,hands,deck,clown,decisions,bozoHandSize,bozoLocked,bozoLastResult,ante,cap,sessionCapCents,rebuyCounts,sittingOut,cashouts,virtualSessionId,outcome,fybTurn,fybLosses,fybDeckNumber,fybActions,fybRevealedKings,fybPreviousCard,draw442Turn,draw442Selected,showdown442,followers,street,step]);
  function store(nextStacks=stacks,nextPot=pot,nextDealer=dealer,nextGame=gameNumber){
   saveCardNight({groupId,roomId,people:players,stacks:nextStacks,pot:nextPot,dealer:nextDealer,gameNumber:nextGame,capCents:sessionCapCents,rebuyCounts,sittingOut,cashouts,virtualSessionId});
@@ -322,7 +323,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  useEffect(()=>{if(variant!=="bozo"||step!=="deciding"||activeIndex<0||currentPlayer?.kind!=="computer")return;
   const timer=setTimeout(()=>{
    const own=hands[activeIndex]||[];
-   const choice=chooseBozoBotAction({hand:own,wildRank:clown[0]?.rank,potCents:pot,stackCents:stacks[activeIndex]??0,style:query.get("botStyle")||"balanced"});
+   const choice=chooseBozoBotAction({hand:own,wildRank:clown[0]?.rank,potCents:pot,stackCents:stacks[activeIndex]??0,style:bozoBotStyle});
    const next=decisions.map((v,i)=>i===activeIndex?choice:v);
    setDecisions(next);setViewer(null);
    if(next.every(Boolean))settleGuts(next);
@@ -363,7 +364,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
    <label htmlFor="sw-variant-game-select">Dealer's game choice</label>
    <select id="sw-variant-game-select" value={variant} onChange={e=>changeDealerGame(e.target.value)}>{ALL_POKER_GAMES.map(g=><option key={g.code} value={g.code}>{g.title}</option>)}</select>
    <div className="sw-poker-unified-controls">
-    {variant==="bozo"&&<label>Cards<select value={bozoHandSize} onChange={e=>setBozoHandSize(Number(e.target.value))}><option value={5}>5 cards</option><option value={7}>7 cards</option></select></label>}
+    {variant==="bozo"&&<><label>Cards<select value={bozoHandSize} onChange={e=>setBozoHandSize(Number(e.target.value))}><option value={5}>5 cards</option><option value={7}>7 cards</option></select></label><label>AI style<select value={bozoBotStyle} onChange={e=>setBozoBotStyle(e.target.value)}><option value="cautious">Cautious</option><option value="balanced">Balanced</option><option value="aggressive">Aggressive</option></select></label></>}
     {variant==="fyb"?<label>Total stake ($)<input inputMode="decimal" type="number" min="0.03" step="0.03" value={ante} onChange={e=>setAnte(e.target.value)}/></label>:<><label>Ante ($)<input inputMode="decimal" type="number" min="0.01" step="0.01" value={ante} onChange={e=>setAnte(e.target.value)}/></label><label>Maximum pot<select value={cap} onChange={e=>setCap(e.target.value)}><option value="10">$10</option><option value="20">$20</option><option value="50">$50</option><option value="unlimited">Unlimited</option></select></label></>}
    </div>
    {variant==="fyb"&&<p className="sw-poker-setup-hint">Three strikes · {fybStake?displayMoney(fybStake.chipCents)+" per loss":"Total must divide into three whole-cent chips"}</p>}
