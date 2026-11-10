@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {createShuffledDeck,dealt357,addRoundCards,advance357Street,instant357,rate357,resolve357,winningHandText357} from "./drop357Table.mjs";
+import {createShuffledDeck,dealt357,addRoundCards,advance357Street,ensure357Street,instant357,rate357,resolve357,winningHandText357} from "./drop357Table.mjs";
 
 const c=(rank,suit="♠")=>({rank,suit});
 
@@ -127,4 +127,25 @@ test("a genuinely sitting-out seat does not get cards in the next street",()=>{
 });
 test("winner banner hand text identifies the ranks in a natural full house",()=>{
  assert.equal(winningHandText357([c(10),c(10,"♥"),c(10,"♦"),c(2),c(2,"♥")],1),"full house — Tens over Twos");
+});
+
+test("round-two recovery fills missing two cards for all five seated players",()=>{
+ const opening=dealt357(createShuffledDeck(()=>0.29),5);
+ const next=ensure357Street({hands:opening.hands,deck:opening.deck,round:1});
+ assert.equal(next.dealt,10);
+ assert.deepEqual(next.hands.map(h=>h.length),[5,5,5,5,5]);
+ assert.deepEqual(next.hands[2].slice(0,3),opening.hands[2]);
+ const noOp=ensure357Street({hands:next.hands,deck:next.deck,round:1});
+ assert.equal(noOp.dealt,0);
+ assert.deepEqual(noOp.hands,next.hands);
+});
+test("recovered 7-card hand fills only missing positions, never redraws existing cards",()=>{
+ const opening=dealt357(createShuffledDeck(()=>0.24),5);
+ const five=ensure357Street({hands:opening.hands,deck:opening.deck,round:1});
+ const broken=five.hands.map((h,i)=>i===0?h.slice(0,3):h);
+ const restored=ensure357Street({hands:broken,deck:five.deck,round:2});
+ assert.deepEqual(restored.hands.map(h=>h.length),[7,7,7,7,7]);
+ assert.deepEqual(restored.hands[0].slice(0,3),broken[0]);
+ assert.equal(restored.dealt,12);
+ assert.equal(new Set(restored.hands.flat().map(c=>c.rank+c.suit)).size,restored.hands.flat().length);
 });
