@@ -474,7 +474,7 @@ export default function CustomerPokerTable(){
   </>}
  </div>
 
- {session==="playing"&&<nav className="sw-poker-sticky-actions" aria-label="Poker actions">
+ {session==="playing"&&<nav className="sw-poker-sticky-actions" aria-label="Poker actions"><div className="sw-poker-sticky-landscape"><PokerLandscapeControl/></div>
   {groupId&&<div className="sw-card-console-table-switch"><CardClubTableSwitcher groupId={groupId} currentRoomId={roomId} userId={user?.id} navigate={nav} compact/></div>}
   <div className="sw-poker-action-top"><strong>♠ {phase==="choosing"?(currentPlayer?.name||"Dealer")+" · "+readyCount+"/"+tableSize+" ready":phase==="resolved"?"Round settled":phase==="revealing"?"Showdown in progress":phase==="countdown"?"3 · 2 · 1":"Poker"}</strong><div className="sw-poker-quick-management"><span>Pot {displayMoney(pot)} / {capText}</span><button type="button" onClick={()=>{setRebuySeat(0);setRebuyAmount("20");setRebuyOpen(true);}}>+ Rebuy</button><button type="button" onClick={()=>setResetConfirm(true)}>↻ Reset</button></div></div>
   <div className="sw-poker-action-buttons">
