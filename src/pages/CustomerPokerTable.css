@@ -893,3 +893,8 @@
 @keyframes sw-victory-flash{0%{opacity:0;transform:translate(-50%,-50%) scale(.45);filter:brightness(3)}13%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}26%{transform:translate(-50%,-50%) scale(1)}65%{opacity:1;filter:brightness(1.25)}100%{opacity:0;transform:translate(-50%,-57%) scale(1);filter:brightness(1)}}
 @media(max-width:600px){.sw-poker-coach-inline{padding:4px 7px;margin:1px auto 4px}.sw-poker-coach-description{gap:5px}.sw-poker-coach-description span{font-size:14px}.sw-poker-coach-description span small{font-size:7px}.sw-357-video-victory{padding:9px 4px;top:45%}}
 @media(prefers-reduced-motion:reduce){.sw-357-video-victory{animation:none;opacity:1}.sw-357-banner-temporary.sw-357-table-winner{opacity:1}}
+
+/* One-tap Lounge return on all local poker screens. */
+.sw-poker-lounge-home{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:4px;padding:5px 8px;border:1px solid #7ccfe9;border-radius:10px;background:linear-gradient(110deg,#123046,#21153d);color:#b7f4ff;font-size:11px;font-weight:950;min-height:36px}
+.sw-poker-lounge-home span{display:inline}
+@media(max-width:550px){.sw-poker-lounge-home{padding:6px;font-size:16px}.sw-poker-lounge-home span{display:none}}
