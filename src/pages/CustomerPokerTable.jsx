@@ -243,6 +243,7 @@ export default function CustomerPokerTable(){
  function confirmRebuy(){
   const add=centsFromDollars(rebuyAmount),index=Number(rebuySeat);
   if(add!==2000||!people[index]){setStatus("Each rebuy is exactly $20.");return;}
+  if(people[index].kind==="computer"){setStatus("AI opponents cannot rebuy. They leave when their chips are exhausted.");return;}
   if((rebuyCounts[index]||0)>=4){setStatus("Maximum four $20 rebuys per player ($100 total).");return;}
   setRebuyCounts(old=>({...old,[index]:(old[index]||0)+1}));
   if(session==="playing")setChipStacks(old=>rebuyChips(old,index,add));
@@ -331,22 +332,18 @@ export default function CustomerPokerTable(){
   if(isSharedRoom){setStatus("Shared rooms are lobby-only. Secure server-side gameplay is not live yet; dealing here would expose other players\' cards.");return;}
   if(tableSize<2||tableSize>6){setStatus("Choose 2–6 players before dealing.");return;}
   if(!Number.isSafeInteger(anteCents)||anteCents<0||!Number.isSafeInteger(capCents)||capCents<1){setStatus("Set valid ante and pot-cap amounts.");return;}
-  const active=people.map((_,i)=>i).filter(i=>!sittingOut[i]);
-  if(active.length<2){setStatus("At least two active players are required to deal.");return;}
-  const fresh=dealt357(createShuffledDeck(),tableSize,active);
-  if(previousPot>capCents){setStatus("The current pot exceeds the selected cap. Increase the cap or reset the practice session.");return;}
-  const actualAnte=limitAnte({potCents:previousPot,capCents,anteCents,playerCount:active.length});
+  let active=people.map((_,i)=>i).filter(i=>!sittingOut[i]&&!(people[i]?.kind==="computer"&&stack[i]<=0));
+  if(previousPot>capCents){setStatus("The current pot exceeds the selected cap. Increase the cap or reset practice.");return;}
+  let actualAnte=limitAnte({potCents:previousPot,capCents,anteCents,playerCount:Math.max(1,active.length)});
+  const bustedBots=active.filter(i=>people[i]?.kind==="computer"&&stack[i]<Math.max(1,actualAnte));
+  if(bustedBots.length){active=active.filter(i=>!bustedBots.includes(i));setSittingOut(old=>({...old,...Object.fromEntries(bustedBots.map(i=>[i,true]))}));addLog(bustedBots.map(i=>people[i].name).join(", ")+" out of chips · no AI rebuy.");}
+  if(active.length<2){setStatus("Fewer than two funded players remain. AI bots cannot rebuy.");return;}
+  actualAnte=limitAnte({potCents:previousPot,capCents,anteCents,playerCount:active.length});
   if(stack.some((value,i)=>active.includes(i)&&value<Math.max(1,actualAnte)&&people[i]?.kind!=="computer")){
-    setStatus("A player needs a rebuy before dealing. Use Rebuy in the bottom controls.");
-    setRebuySeat(Math.max(0,stack.findIndex((value,i)=>active.includes(i)&&value<Math.max(1,actualAnte)&&people[i]?.kind!=="computer")));
-    setRebuyOpen(true);return;
+   setStatus("A human player needs a rebuy or must sit out before dealing.");setRebuySeat(stack.findIndex((value,i)=>active.includes(i)&&value<Math.max(1,actualAnte)&&people[i]?.kind!=="computer"));setRebuyOpen(true);return;
   }
-  const botRebuys=stack.map((value,i)=>active.includes(i)&&people[i]?.kind==="computer"&&value<Math.max(1,actualAnte)&&(rebuyCounts[i]||0)<4?2000:0);
-  if(active.some(i=>stack[i]+botRebuys[i]<Math.max(1,actualAnte))){setStatus("A player must rebuy or sit out to continue.");return;}
-  if(botRebuys.some(Boolean))setRebuyCounts(old=>Object.fromEntries(people.map((_,i)=>[i,(old[i]||0)+(botRebuys[i]?1:0)])));
-  const funded=stack.map((value,i)=>value+botRebuys[i]);
-  if(botRebuys.some(Boolean))addLog("Practice virtual-player rebuys: "+botRebuys.map((n,i)=>n?people[i].name+" "+displayMoney(n):null).filter(Boolean).join(", "));
-  const afterAnte=funded.map((v,i)=>v-(active.includes(i)?actualAnte:0));
+  const fresh=dealt357(createShuffledDeck(),tableSize,active);
+  const afterAnte=stack.map((v,i)=>v-(active.includes(i)?actualAnte:0));
   const newPot=previousPot+active.length*actualAnte;
   if(actualAnte<anteCents)addLog(actualAnte===0?"Pot cap reached: no more antes until a qualifying winner drags the pot.":"Pot cap reduced the starting ante to "+displayMoney(actualAnte)+" each.");
   setHands(fresh.hands);setDeck(fresh.deck);setRound(0);setHandFolds({});setDealAnimation({nonce:Date.now(),count:3});setMyHandVisible(true);
