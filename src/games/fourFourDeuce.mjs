@@ -20,7 +20,7 @@ export function score442(cards){
   const category=top===4?4:top===3?3:pair.length===2?2:top===2?1:0;
   const kickers=category===4?[groups[0][0]]:category===3?[groups[0][0],groups[1][0]]:category===2?pair.map(g=>g[0]).sort((a,b)=>b-a):category===1?[groups[0][0],...groups.slice(1).map(g=>g[0]).sort((a,b)=>b-a)]:[...ranks(fixed),...assigned].sort((a,b)=>b-a);
   const score=category*15**4+encode([...kickers,...Array(4).fill(0)].slice(0,4));
-  if(!best||score>best.score)best={score,category,name:["High card","Pair","Two pair","Three of a kind","Four of a kind"][category]};
+  if(!best||score>best.score)best={score,category,kickers,name:["High card","Pair","Two pair","Three of a kind","Four of a kind"][category]};
  };
  visit([]);
  return best;
