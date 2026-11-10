@@ -2,7 +2,7 @@ import React,{useEffect,useMemo,useState} from "react";
 import {useNavigate,useSearchParams} from "react-router-dom";
 import {ArrowLeft,Eye,EyeOff,Info,RotateCcw,ChevronRight} from "lucide-react";
 import {createShuffledDeck,displayMoney} from "../games/drop357Table.mjs";
-import {evaluateBozoHand,resolveBozoRound,chooseBozoBotAction} from "../games/bozoRules.mjs";
+import {evaluateBozoHand,resolveBozoRound,chooseBozoBotAction,bozoClownContributions} from "../games/bozoRules.mjs";
 import {score442,naturalPair442,replace442,settle442,botExchange442} from "../games/fourFourDeuce.mjs";
 import {capGutsResult,limitAnte,rebuyChips,centsFromDollars,pickPracticeBotChoice,fundedReplacement} from "../games/pokerPracticeSession.mjs";
 import {readCardNight,saveCardNight,clearCardNight} from "../games/cardNightTransfer.mjs";
@@ -253,10 +253,13 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   setBozoLastResult(score);
   if(score.kind==="player-win")return settleGutsPay(score.winner,entered,next,amount);
   if(score.kind==="clown-win"){
-   const each=pot>=maxCents?0:fundedReplacement({losers:entered,stacks,potCents:amount,capCents:maxCents-pot}).perLoser;
-   const paid=stacks.map((v,i)=>v-(entered.includes(i)?each:0));
-   setStacks(paid);setPot(pot+each*entered.length);
-   setOutcome({kind:"clown-win",gameFinished:false,match:each,losers:entered,message:each===0?"Pot is capped or no chips remain. No further matching; deal until a player beats the Clown.":"The Clown wins! Each holder matches "+displayMoney(each)+". The pot carries forward."});
+   const result=bozoClownContributions({holders:entered,stacks,potCents:amount,capCents:maxCents});
+   const paid=stacks.map((v,i)=>v-(result.payments[i]||0));
+   setStacks(paid);setPot(result.nextPotCents);
+   const breakdown=entered.map(i=>players[i].name+" pays "+displayMoney(result.payments[i]||0)).join(" · ");
+   const message=result.totalCents===0?"The Clown wins. No extra matching permitted by pot cap or balances; pot carries.":"The Clown wins! Holders together replace "+displayMoney(result.totalCents)+". Pot now "+displayMoney(result.nextPotCents)+". "+breakdown+".";
+   setOutcome({kind:"clown-win",gameFinished:false,matches:result.payments,losers:entered,message});
+   record(message);
   }else setOutcome({message:score.message});
   setDecisions(next);setStep("result");
  }
