@@ -40,10 +40,12 @@ export function settle442({hands,choices,potCents,capCents,anteCents,stacks}){
  const best=Math.max(...ranked.map(x=>x.hand.score)),tied=ranked.filter(x=>x.hand.score===best);
  if(tied.length>1)return {kind:"tie-review",winner:null,losers:[],nextPot:potCents,delta:choices.map(()=>0),message:"Tied best four-card hands. Dealer review required; no chips moved."};
  const winner=tied[0].seat,losers=holders.filter(i=>i!==winner);
- const capFinal=potCents>=capCents;
- const match=capFinal?0:fundedReplacement({losers,stacks,potCents,capCents}).perLoser;
- const delta=choices.map((_,i)=>i===winner?potCents:losers.includes(i)?-match:0);
- return {kind:"drag",winner,losers,match,capFinal,nextPot:match*losers.length,delta,hand:ranked.find(x=>x.seat===winner).hand,message:capFinal?"Capped pot awarded to qualifying winner; new game.":winner+" wins with "+ranked.find(x=>x.seat===winner).hand.name+", dragging the pot."};
+ const match=potCents;
+ const replacement=match*losers.length;
+ const nextPot=Math.min(capCents,replacement);
+ const bonus=Math.max(0,replacement-nextPot);
+ const delta=choices.map((_,i)=>i===winner?potCents+bonus:losers.includes(i)?-match:0);
+ return {kind:"drag",winner,losers,match,capFinal:false,nextPot,bonusToWinnerCents:bonus,delta,hand:ranked.find(x=>x.seat===winner).hand,message:"Winner drags existing pot. Losing holders owe "+(match/100).toFixed(2)+" each. The central pot stays capped and excess flows to the winner."};
 }
 export function botExchange442(cards){
  const counts=new Map();for(const c of cards)if(c.rank!==4)counts.set(c.rank,(counts.get(c.rank)||0)+1);
