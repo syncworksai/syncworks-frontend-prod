@@ -395,19 +395,21 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  {step==="stud"&&<button className="sw-poker-action hold grow" onClick={dealStudStreet}>Deal next stud card · {street+1}/7</button>}
  {(step==="result"||step==="stud-result")&&<><button className="sw-poker-action hold grow" onClick={()=>{if(outcome?.gameFinished||(variant!=="fyb"&&pot===0)){quitToDealer();return;}if(variant==="fyb"){setDealer(d=>fybNextDealer(fybActive,d));setStep("fyb-next");}else if(variant==="442"){setDealer(d=>(d+1)%players.length);setStep("442-next");}else if(variant==="bozo"){setStep("bozo-next");}else setStep("ready");setOutcome(null);setFybLastMove(null);}}> {outcome?.gameFinished||variant!=="fyb"&&pot===0?"Next Dealer · Choose Game":variant==="fyb"?"Deal":variant==="442"?"Deal":variant==="bozo"?"Deal next hand":"Next hand"} <ChevronRight size={17}/></button>{!outcome?.gameFinished&&variant!=="bozo"&&<button className="sw-poker-action hide" onClick={quitToDealer}>Choose Game</button>}</>}
  <button className="sw-poker-action info" onClick={()=>{setTab(variant==="fyb"?"activity":"rules");setDrawer(true)}}><Info size={18}/><span>Info</span></button></div></nav>}
- {splitOpen&&<div className="sw-poker-drawer-backdrop sw-fyb-split-shade" onClick={()=>setSplitOpen(false)}>
-  <section className="sw-fyb-split-dialog" role="dialog" aria-modal="true" aria-label="Agree to split the FYB purse" onClick={e=>e.stopPropagation()}>
-   <header><h3>🤝 Split the FYB purse?</h3><button type="button" aria-label="Cancel split" onClick={()=>setSplitOpen(false)}>×</button></header>
-   <p>Two players remain. Both must agree. The shared <strong>{displayMoney(pot)}</strong> virtual purse will be divided equally and FYB ends. If either declines, play continues and no chips move.</p>
-   <div className="sw-fyb-split-votes">{fybActive.map(i=><div className="sw-fyb-split-player" key={players[i].id||i}>
-    <strong>{players[i].name}</strong><small>{splitApprovals[i]?"✓ Agreed":"Waiting for decision"}</small>
-    {splitApprovals[i]?<span className="sw-fyb-approved">✓ Approved</span>:<div className="sw-fyb-split-buttons">
-     <button type="button" className="approve" onClick={()=>players[i].kind==="computer"?askVirtualSplit(i):respondToSplit(i,true)}>{players[i].kind==="computer"?"Ask Virtual Player":"Agree to split"}</button>
-     {players[i].kind!=="computer"&&<button type="button" className="reject" onClick={()=>respondToSplit(i,false)}>Decline</button>}
-    </div>}
-   </div>)}</div>
-   <small className="sw-fyb-split-disclaimer">Local practice: human players approve on this device. Virtual players simulate their own decisions. No real funds are transferred.</small>
-   <button className="sw-fyb-split-cancel" type="button" onClick={()=>setSplitOpen(false)}>Continue playing instead</button>
+ {splitOpen&&<div className="sw-poker-drawer-backdrop sw-fyb-split-shade">
+  <section className="sw-fyb-split-dialog" role="dialog" aria-modal="true" aria-label="FYB split proposal" onClick={e=>e.stopPropagation()}>
+   <header><h3>🤝 Split proposal</h3></header>
+   <p><strong>{players[splitProposer]?.name}</strong> suggests splitting the <strong>{displayMoney(pot)}</strong> FYB purse. {players[fybActive.find(i=>i!==splitProposer)]?.name}, accept or decline?</p>
+   <div className="sw-fyb-split-votes">
+    <div className="sw-fyb-split-player"><strong>{players[splitProposer]?.name}</strong><small>✓ Proposed · agreed</small></div>
+    {fybActive.filter(i=>i!==splitProposer).map(i=><div className="sw-fyb-split-player" key={players[i].id||i}>
+     <strong>{players[i].name}</strong><small>{players[i].kind==="computer"?"🤖 Considering offer…":"Decision required"}</small>
+     {players[i].kind!=="computer"&&<div className="sw-fyb-split-buttons">
+      <button type="button" className="approve" onClick={()=>respondToSplit(i,true)}>Accept</button>
+      <button type="button" className="reject" onClick={()=>respondToSplit(i,false)}>Decline</button>
+     </div>}
+    </div>)}
+   </div>
+   <small className="sw-fyb-split-disclaimer">One offer per FYB game. If declined, both remaining players continue until the game ends. Practice approvals are on this device; live multiplayer voting is not yet enabled.</small>
   </section>
  </div>}
  {drawer&&<div className="sw-poker-drawer-backdrop" onClick={()=>setDrawer(false)}><section className="sw-poker-drawer" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><div className="sw-poker-drawer-grip"/><div className="sw-poker-drawer-heading"><strong>♠ {game.title} · Table Details</strong><button className="sw-poker-drawer-close" onClick={()=>setDrawer(false)}>✕</button></div><div className="sw-poker-drawer-tabs">{(variant==="fyb"?["activity","hands","rules","log","settings"]:["hands","rules","log","settings"]).map(t=><button key={t} className={tab===t?"active":""} onClick={()=>setTab(t)}>{t}</button>)}</div><div className="sw-poker-drawer-body">
