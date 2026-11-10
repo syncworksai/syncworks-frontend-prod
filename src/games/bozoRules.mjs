@@ -101,6 +101,32 @@ export function evaluateBozoHand(cards, wildRank) {
     return !best || result.score>best.score ? result:best;
   },null);
 }
+/**
+ * On a Clown win the holders collectively replace ONE pot, not one
+ * full pot apiece. Split the required contribution as evenly as possible,
+ * never charging more than a player's remaining virtual stack or the cap.
+ */
+export function bozoClownContributions({holders,stacks,potCents,capCents=Number.MAX_SAFE_INTEGER}){
+ if(!Array.isArray(holders)||!Array.isArray(stacks)||!Number.isSafeInteger(potCents)||potCents<0)throw Error("Invalid Bozo matching inputs");
+ const limit=Math.max(0,Math.min(potCents,capCents-potCents));
+ const payments=Object.fromEntries(holders.map(i=>[i,0]));
+ let remaining=limit;
+ let available=holders.filter(i=>Number.isInteger(i)&&i>=0&&i<stacks.length&&Number.isSafeInteger(stacks[i])&&stacks[i]>0);
+ // Water-fill in large equal increments, then distribute final odd cents.
+ while(remaining>0&&available.length){
+  const chunk=Math.max(1,Math.floor(remaining/available.length));
+  let paid=0;
+  for(const i of available){
+   const contribution=Math.min(chunk,Math.max(0,stacks[i]-payments[i]),remaining-paid);
+   payments[i]+=contribution;paid+=contribution;
+  }
+  if(!paid)break;
+  remaining-=paid;
+  available=available.filter(i=>stacks[i]>payments[i]);
+ }
+ return {payments,totalCents:limit-remaining,nextPotCents:potCents+limit-remaining};
+}
+
 export function resolveBozoRound({choices,hands,clown,wildRank,potCents}) {
   const holders = choices.flatMap((choice,i)=>choice==="hold"?[i]:[]);
   if (!holders.length) return {kind:"all-drop", nextPotCents:potCents, dragCents:0, penalties:[], message:"Everyone dropped. Re-ante and deal again."};
@@ -112,7 +138,8 @@ export function resolveBozoRound({choices,hands,clown,wildRank,potCents}) {
     return {kind:"tie-review",clownHand,playerHands,nextPotCents:potCents,dragCents:0,penalties:[],message:"Tied winning hands require a dealer ruling. No automatic ledger movement."};
   }
   if (clownHand.score===highest) {
-    return {kind:"clown-win",clownHand,playerHands,nextPotCents:potCents*(holders.length+1),dragCents:0,penalties:holders.map(i=>({player:i,cents:potCents})),message:"The Clown guards the pot. Every holder matches it; the pot carries over."};
+    const base=Math.floor(potCents/holders.length),remainder=potCents%holders.length;
+    return {kind:"clown-win",clownHand,playerHands,nextPotCents:potCents*2,dragCents:0,penalties:holders.map((i,n)=>({player:i,cents:base+(n<remainder?1:0)})),message:"The Clown wins. Holding players collectively match the current pot once; the doubled pot carries forward."};
   }
   const winner=topPlayers[0].i;
   const losers=holders.filter(i=>i!==winner);
