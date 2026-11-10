@@ -30,6 +30,15 @@ export function addRoundCards(hands,deck,activeSeats=null) {
   for(let pass=0;pass<2;pass++)for(const i of active)result[i].push(deck[index++]);
   return {hands:result,deck:deck.slice(index)};
 }
+/**
+ * Each street is a fresh HOLD/FOLD contest, not an elimination tournament.
+ * Prior-round folds never remove a seated player from the 5- and 7-card deal.
+ */
+export function advance357Street({hands,deck,sittingOut={}}){
+ const eligible=hands.flatMap((hand,i)=>hand.length>0&&!sittingOut[i]?[i]:[]);
+ const next=addRoundCards(hands,deck,eligible);
+ return {...next,eligible};
+}
 export const instant357=hand=>hand.length===3&&hand.map(c=>c.rank).sort((a,b)=>a-b).join(",")==="3,5,7";
 
 function evaluateThree(hand,wildRank=3) {
@@ -71,6 +80,16 @@ export function winningHandText357(hand,round){
  if(name.includes("four of a kind"))return "four "+plural;
  if(name.includes("three of a kind"))return "three "+plural;
  if(name==="pair")return "a pair of "+plural;
+ if(name.includes("full house")){
+  // Find the strongest triplet + pair achievable using the current wild rank.
+  for(let trips=14;trips>=2;trips--)for(let pair=14;pair>=2;pair--){
+   if(trips===pair)continue;
+   const triple=hand.filter(c=>c.rank===trips&&c.rank!==wild).length;
+   const doubles=hand.filter(c=>c.rank===pair&&c.rank!==wild).length;
+   const wildForTrips=Math.max(0,3-triple),wildForPair=Math.max(0,2-doubles);
+   if(wildForTrips+wildForPair<=wilds)return "full house — "+({14:"Aces",13:"Kings",12:"Queens",11:"Jacks",10:"Tens",9:"Nines",8:"Eights",7:"Sevens",6:"Sixes",5:"Fives",4:"Fours",3:"Threes",2:"Twos"}[trips])+" over "+({14:"Aces",13:"Kings",12:"Queens",11:"Jacks",10:"Tens",9:"Nines",8:"Eights",7:"Sevens",6:"Sixes",5:"Fives",4:"Fours",3:"Threes",2:"Twos"}[pair]);
+  }
+ }
  return result.name||"a winning hand";
 }
 
