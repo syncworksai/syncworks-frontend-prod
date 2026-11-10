@@ -15,7 +15,7 @@ export function createShuffledDeck(random=Math.random) {
 }
 
 export function dealt357(deck,playerCount,activeSeats=Array.from({length:playerCount},(_,i)=>i)) {
-  if (playerCount<2 || playerCount>6 || activeSeats.length<2 || new Set(activeSeats).size!==activeSeats.length || activeSeats.some(i=>!Number.isInteger(i)||i<0||i>=playerCount)||deck.length<activeSeats.length*7) throw new Error("A single deck supports 2–6 active players here.");
+  if (playerCount<2 || playerCount>6 || activeSeats.length<1 || new Set(activeSeats).size!==activeSeats.length || activeSeats.some(i=>!Number.isInteger(i)||i<0||i>=playerCount)||deck.length<activeSeats.length*7) throw new Error("A single deck supports 1–6 active seats here.");
   const hands=Array.from({length:playerCount},()=>[]);
   let next=0;
   // Deal only to seated players who have not left the table; preserves a single deck.
@@ -123,7 +123,7 @@ export function resolve357({hands,round,choices,potCents,strikes,anteCents}) {
     return {kind:"all-drop",winner:null,entered,scores,
       nextPot:potCents+anteCents*hands.length,
       delta:hands.map(()=>-anteCents),strikes:currentStrikes,
-      message:"Everyone folded. Each player antes again and the pot carries forward."};
+      message:"Everyone dropped. Pot carries; ante is collected only when the next hand begins."};
   }
   if(entered.length===1){
     const only=entered[0];
