@@ -741,3 +741,21 @@
  .sw-357-playing .sw-poker-table-space{padding-top:24px;padding-bottom:31px}
 }
 @media(prefers-reduced-motion:reduce){.sw-357-banner-win .sw-357-banner-title{animation:none}}
+
+/* Universal settled-hand result banner: used by Bozo, 4/4/Deuce and FYB. */
+.sw-console-winner-announcement{
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:3px;max-width:100%;width:100%;border-radius:12px;
+ padding:8px 10px;text-align:center;line-height:1.25;
+ overflow-wrap:anywhere;
+}
+.sw-console-winner-announcement strong{font-weight:950;font-size:clamp(12px,3.3vw,18px)}
+.sw-console-winner-announcement span{font-weight:600;font-size:clamp(10px,2.8vw,13px)}
+.sw-console-winner-announcement.is-winner{border:1px solid #eac15b;background:linear-gradient(120deg,#302006,#10423a,#302006);color:#ffe39a;box-shadow:0 0 18px #efb84655}
+.sw-console-winner-announcement.is-winner strong{text-shadow:0 0 10px #ffc75485}
+.sw-console-winner-announcement.is-carry{border:1px solid #3e8fa7;background:linear-gradient(120deg,#082937,#102338);color:#b8e6f4}
+@media(max-width:650px){
+ .sw-poker-compact-result .sw-console-winner-announcement{padding:5px 7px;gap:2px}
+ .sw-poker-compact-result .sw-console-winner-announcement strong{font-size:12px}
+ .sw-poker-compact-result .sw-console-winner-announcement span{font-size:10px}
+}
