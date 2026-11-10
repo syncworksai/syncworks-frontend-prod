@@ -80,7 +80,7 @@ export function fybDealerDraw({hands,deck,actor,newDeck}){
 // survivor is known, award the entire purse and leave no unclaimed FYB pot.
 export function fybPayRound({stacks,potCents,losers,chipCents,winner=null}){
  if(!Array.isArray(stacks)||!Number.isSafeInteger(potCents)||potCents<0||!Number.isSafeInteger(chipCents)||chipCents<0)throw Error("Invalid FYB accounting");
- const contributions=losers.map(seat=>({seat,cents:Math.min(chipCents,Math.max(0,stacks[seat]??0))}));
+ const contributions=losers.map(seat=>({seat,cents:chipCents})); // Negative balances become debts until human rebuy.
  const paid=contributions.reduce((total,entry)=>total+entry.cents,0);
  const purse=potCents+paid;
  const next=stacks.map((n,i)=>n-(contributions.find(c=>c.seat===i)?.cents??0)+(i===winner?purse:0));
@@ -94,7 +94,7 @@ export function fybSplitPurse({stacks,potCents,seats,approvals}){
  if(!Number.isSafeInteger(potCents)||potCents<=0)throw Error("No FYB purse available to split");
  if(!seats.every(i=>approvals?.[i]===true))throw Error("Both players must approve");
  const ordered=[...seats].sort((a,b)=>a-b);
- const first=Math.ceil(potCents/2),second=Math.floor(potCents/2);
+ const quarterUnits=Math.floor(potCents/25);const first=Math.ceil(quarterUnits/2)*25,second=potCents-first;
  const payouts={[ordered[0]]:first,[ordered[1]]:second};
  const nextStacks=stacks.map((amount,i)=>amount+(payouts[i]??0));
  return {stacks:nextStacks,potCents:0,payouts,splitCents:potCents};
