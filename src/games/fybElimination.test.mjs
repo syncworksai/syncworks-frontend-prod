@@ -140,11 +140,11 @@ test("final two cannot split until BOTH independently approve",()=>{
  assert.equal(agreed.splitCents,700);
  assert.equal(agreed.stacks.reduce((a,b)=>a+b,0),stacks.reduce((a,b)=>a+b,0)+700);
 });
-test("odd cents are awarded deterministically without losing a penny",()=>{
- const p=fybSplitPurse({stacks:[100,100],potCents:101,seats:[1,0],approvals:{0:true,1:true}});
- assert.deepEqual(p.payouts,{"0":51,"1":50});
- assert.deepEqual(p.stacks,[151,150]);
- assert.equal(p.stacks[0]+p.stacks[1],301);
+test("an uneven purse splits in whole quarter chips",()=>{
+ const p=fybSplitPurse({stacks:[100,100],potCents:125,seats:[1,0],approvals:{0:true,1:true}});
+ assert.deepEqual(p.payouts,{"0":75,"1":50});
+ assert.deepEqual(p.stacks,[175,150]);
+ assert.equal(p.stacks[0]+p.stacks[1],325);
 });
 test("empty purse and duplicated seat cannot bypass consent",()=>{
  assert.throws(()=>fybSplitPurse({stacks:[500,500],potCents:0,seats:[0,1],approvals:{0:true,1:true}}),/No FYB purse/);
@@ -191,8 +191,8 @@ test("a swap changes user's own card even if bot is next to act",()=>{
  assert.equal(canRevealOwnFybCard({viewerSeat:1,localSeat,players}),false);
 });
 
-test("FYB chip loss cannot take a short virtual stack negative",()=>{
+test("FYB chip debt can take a short virtual stack negative until rebuy",()=>{
  const result=fybPayRound({stacks:[25,400],potCents:50,losers:[0],chipCents:100,winner:null});
- assert.deepEqual(result.stacks,[0,400]);assert.equal(result.potCents,75);
- assert.equal(result.contributions[0].cents,25);
+ assert.deepEqual(result.stacks,[-75,400]);assert.equal(result.potCents,150);
+ assert.equal(result.contributions[0].cents,100);
 });
