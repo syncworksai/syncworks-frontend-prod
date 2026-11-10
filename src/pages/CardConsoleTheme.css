@@ -1,0 +1,34 @@
+/* SYNCWORKS Card Console · neon lounge visual system */
+.sw-console-lobby{background:radial-gradient(ellipse at 70% 0%,#151d45,transparent 46%),radial-gradient(ellipse at 10% 22%,#1c1042,transparent 43%),#030713;color:#f4f7ff}
+.sw-console-hero{position:relative;isolation:isolate;overflow:hidden;border:1px solid #8070b977;border-radius:23px;padding:clamp(14px,3vw,28px);background:radial-gradient(ellipse at 55% 68%,#6625a266,transparent 53%),linear-gradient(130deg,#090f21,#15102a 54%,#050b17);box-shadow:0 15px 50px #000c,inset 0 0 0 1px #38314b,0 0 27px #662ce522}
+.sw-console-hero-glow{pointer-events:none;position:absolute;inset:0;z-index:-1;background:repeating-linear-gradient(90deg,transparent,transparent 58px,#49e9ff09 59px,transparent 61px),radial-gradient(ellipse at 18% 100%,#0cb6fa33,transparent 40%),radial-gradient(ellipse at 90% 95%,#a34cff33,transparent 35%)}
+.sw-console-hero-header{display:flex;align-items:start;justify-content:space-between;gap:12px;position:relative;z-index:2}
+.sw-console-eyebrow{font-size:10px;font-weight:900;letter-spacing:.16em;color:#8eefff}
+.sw-console-hero h1{font-size:clamp(21px,4.5vw,38px);line-height:1.05;font-weight:1000;letter-spacing:.08em;margin:7px 0}
+.sw-console-hero h1 span{display:block;background:linear-gradient(90deg,#f7faff,#70dcff 40%,#b18fff);color:transparent;background-clip:text}
+.sw-console-hero-header p{max-width:440px;font-size:12px;line-height:1.5;color:#b8ccdf}
+.sw-console-free{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;border:1px solid #e3bd6a8f;background:#261e11c9;color:#ffe3a5;border-radius:999px;padding:7px 9px;font-size:10px;font-weight:900}
+.sw-console-stage{height:clamp(166px,26vw,295px);max-width:850px;margin:-2px auto -6px;position:relative;display:flex;align-items:end;justify-content:center}
+.sw-console-stage:before{content:"";position:absolute;inset:5% 3% 5%;border-radius:40%;background:radial-gradient(ellipse at center,#7a33ef30,transparent 65%);filter:blur(16px)}
+.sw-console-stage-table{position:relative;width:min(84%,650px);height:74%;border-radius:50% / 47%;transform:perspective(400px) rotateX(10deg);background:radial-gradient(ellipse at 50% 45%,#292b47,#0f1429 70%);border:9px solid #24202a;box-shadow:0 0 0 2px #d2a452,inset 0 0 0 3px #b78a48,inset 0 0 15px 8px #0c244e,0 7px 0 2px #9855dc,0 12px 0 3px #00ceff,0 18px 20px #020109,0 0 33px #8549ff88}
+.sw-console-stage-inset{position:absolute;inset:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid #42a8f955;border-radius:50%;box-shadow:inset 0 0 30px #451a7c66}
+.sw-console-stage-monogram{font-weight:1000;font-style:italic;font-size:clamp(34px,6vw,66px);background:linear-gradient(150deg,#4fddff,#824ff7);background-clip:text;color:transparent;line-height:1;text-shadow:0 0 27px #8f4dff77}
+.sw-console-stage-wordmark{font-size:clamp(7px,1.3vw,13px);letter-spacing:.32em;font-weight:900;text-align:center;color:#a8dafa}
+.sw-console-stage-lamps{position:absolute;inset:0;pointer-events:none;display:flex;justify-content:space-around;align-items:flex-start}
+.sw-console-stage-lamps i{width:30px;height:7px;border-radius:0 0 100% 100%;background:#d2a568;box-shadow:0 0 17px #ffba67,0 12px 70px 29px #9b59ff25}
+.sw-console-stage-chips{position:absolute;left:17%;bottom:29%;display:flex;gap:2px;transform:rotate(-10deg)}
+.sw-console-stage-chips i{display:block;width:21px;height:10px;border-radius:50%;border:3px dashed #e4eaf4;background:#0b72c0;box-shadow:0 6px #063d7d,0 11px #0c243a}
+.sw-console-stage-chips i:nth-child(2){background:#b32b54;box-shadow:0 6px #70172d,0 11px #0c243a}.sw-console-stage-chips i:nth-child(3){background:#211c30}
+.sw-console-hero-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;position:relative;z-index:2}
+.sw-console-hero-button{min-height:65px;border-radius:15px;border:1px solid #55f5ec;display:flex;gap:10px;align-items:center;text-align:left;padding:10px 14px;color:#efffff;background:linear-gradient(115deg,#084a4a,#072430);box-shadow:0 0 17px #18cefa44}
+.sw-console-hero-button.resume{border-color:#51b9ff;background:linear-gradient(115deg,#12325f,#0b182e);box-shadow:0 0 17px #238aff44}
+.sw-console-hero-button span{min-width:0;flex:1}.sw-console-hero-button strong{font-weight:900;font-size:clamp(12px,2vw,17px);display:block}.sw-console-hero-button small{color:#b9d9ef;font-size:10px;display:block}
+.sw-console-hero-button:focus-visible,.sw-console-shortcuts button:focus-visible{outline:2px solid #ffe3a4;outline-offset:3px}
+.sw-console-shortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:12px}
+.sw-console-shortcuts button{min-height:69px;padding:10px 4px;border:1px solid #6a7ca488;border-radius:14px;background:linear-gradient(150deg,#19223a,#080d1d);color:#def7ff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:850;box-shadow:inset 0 1px #c0e7ff1a}
+.sw-console-shortcuts svg{color:#58dfff}
+.sw-console-library article{border-color:#6f78aa50;background:linear-gradient(140deg,#111b32,#0a1023)}
+.sw-console-library h3{color:#bdefff}
+@media(min-width:880px){.sw-console-hero{min-height:440px}.sw-console-stage{height:260px;margin-top:-34px}}
+@media(max-width:410px){.sw-console-hero-header p{font-size:11px}.sw-console-hero{padding:13px}.sw-console-stage{height:167px}.sw-console-hero-button{padding:8px;gap:6px;min-height:58px}.sw-console-hero-button svg{width:17px}.sw-console-stage-chips{bottom:25%}}
+@media(prefers-reduced-motion:reduce){.sw-console-hero-button,.sw-console-shortcuts button{transition:none}}
