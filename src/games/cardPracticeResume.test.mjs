@@ -2,6 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readPracticeGame,savePracticeGame,clearPracticeGame,listPracticeGames,practiceGamePath} from "./cardPracticeResume.mjs";
 const data=new Map();
+globalThis.localStorage={
+ setItem(k,v){data.set(k,String(v));},
+ getItem(k){return data.has(k)?data.get(k):null;},
+ removeItem(k){data.delete(k);},
+ key(i){return [...data.keys()][i]??null;},
+ get length(){return data.size;}
+};
 globalThis.sessionStorage={
  setItem(k,v){data.set(k,String(v));},
  getItem(k){return data.has(k)?data.get(k):null;},
@@ -35,4 +42,11 @@ test("completed or old checkpoints are not offered as Continue Game",()=>{
  const key=[...data.keys()].find(k=>k.endsWith(":fyb"));
  data.set(key,JSON.stringify({...JSON.parse(data.get(key)),updatedAt:Date.now()-90000000}));
  assert.equal(listPracticeGames("100","12").length,0);
+});
+
+test("a saved hand remains available after session storage is cleared",()=>{
+ data.clear();
+ savePracticeGame("100","12","bozo",{active:true,step:"deciding",pot:525});
+ assert.equal(readPracticeGame("100","12","bozo").pot,525);
+ assert.equal(listPracticeGames("100","12").length,1);
 });
