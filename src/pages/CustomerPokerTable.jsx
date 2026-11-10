@@ -5,7 +5,7 @@ import {getCardRoom,createCardRoom} from "../api/cardRooms";
 import {createGroupInviteLink} from "../api/social";
 import {useAuth} from "../auth/AuthContext";
 import {Share2} from "lucide-react";
-import {advance357Street,cardRank,createShuffledDeck,dealt357,displayMoney,instant357,rate357,resolve357,winningHandText357,THREE_FIVE_SEVEN} from "../games/drop357Table.mjs";
+import {advance357Street,ensure357Street,cardRank,createShuffledDeck,dealt357,displayMoney,instant357,rate357,resolve357,winningHandText357,THREE_FIVE_SEVEN} from "../games/drop357Table.mjs";
 import "./CustomerPokerTable.css";
 import {HAND_RANKINGS_357,practiceHandInfo,estimatePracticeEquity} from "../games/practiceOdds357.mjs";
 import {rotationAfterPot,chooseVirtualDealer} from "../games/pokerDealerRotation.mjs";
@@ -35,8 +35,8 @@ function Card({card,hidden=false,wild=false}) {if(!card)return null;return <div 
 function Photo({person}){return <div className="sw-poker-seat-avatar">{person?.photo?<img src={person.photo} alt="" onError={e=>{e.currentTarget.style.display="none";}}/>:(person?.kind==="computer"?"🤖":(person?.name||"?").split(/\s+/).map(v=>v[0]).slice(0,2).join("").toUpperCase())}</div>;}
 function helperContent(page,round){
  if(page==="ranks")return <><p>Strongest to weakest, using the active round’s wild rank. The instant 3-5-7 opening hand overrides regular rankings.</p><div className="sw-practice-rank-list">{HAND_RANKINGS_357[round].map((name,i)=><div key={name}><span>{i+1}</span><strong>{name}</strong></div>)}</div><p>Round 1 (three cards): straights and flushes do not count. Rounds 2–3: five-card poker categories apply; seven cards use the strongest five-card combination. Wild cards can create five of a kind.</p></>;
- if(page==="strategy")return <><p>Beginner reminders — not a promise of winning:</p><p><b>3-card stage:</b> Pairs and three of a kind matter. Straights and flushes do not count. Your 3s are wild only during this round.</p><p><b>5- and 7-card stages:</b> Look for combinations helped by the current wild rank. Former wilds become ordinary cards.</p><p>Holding exposes you to a full match-the-pot loss if another holder has the stronger hand. Dropping avoids that penalty.</p></>;
- return <><p>One continuous seven-card deal: all seated players start with 3 cards (3s wild), receive 2 more (5s wild), then 2 more (7s wild). Folding removes a player from the current round only; they still receive cards and may Hold in the next round.</p><p>Everyone privately chooses <b>Hold</b> or <b>Fold</b>. Ready means a decision was saved, not what it was. The dealer starts a 3, 2, 1 reveal after all are ready.</p><p>After each 3-, 5-, and 7-card round settles, only players who held can review one another\'s cards from that round. Folded players never see those hands. The strongest holder drags the current pot; other losing holders match the allowed replacement amount into the next pot.</p><p>One holder needs three cumulative uncontested holds to drag the pot. If everyone folds, each antes again. An opening 3-5-7 hand instantly wins the pot.</p><p>The pot cap pauses play for dealer review; this preview never moves real money.</p></>;
+ if(page==="strategy")return <><p>Beginner reminders — not a promise of winning:</p><p><b>3-card stage:</b> Pairs and three of a kind matter. Straights and flushes do not count. Your 3s are wild only during this round.</p><p><b>5- and 7-card stages:</b> Look for combinations helped by the current wild rank. Former wilds become ordinary cards.</p><p>Holding exposes you to a match-the-pot loss if another holder has the stronger hand. Dropping avoids that penalty for this round only.</p></>;
+ return <><p>One continuous seven-card deal: all seated players start with 3 cards (3s wild), receive 2 more (5s wild), then 2 more (7s wild). Folding removes a player from the current round only; they still receive cards and may Hold in the next round.</p><p>Everyone privately chooses <b>Hold</b> or <b>Drop</b>. Ready means a decision was saved, not what it was. The dealer starts a 3, 2, 1 reveal after all are ready.</p><p>After each 3-, 5-, and 7-card round settles, only players who held can review one another\'s cards from that round. Folded players never see those hands. The strongest holder drags the current pot; other losing holders match the allowed replacement amount into the next pot.</p><p>One holder needs three cumulative uncontested holds to drag the pot. If everyone folds, each antes again. An opening 3-5-7 hand instantly wins the pot.</p><p>The pot cap pauses play for dealer review; this preview never moves real money.</p></>;
 }
 export default function CustomerPokerTable(){
  const nav=useNavigate(),[params]=useSearchParams();
@@ -112,6 +112,22 @@ export default function CustomerPokerTable(){
   if(!restoredRef.current||!user?.id||isSharedRoom||session!=="playing")return;
   savePracticeGame(user.id,groupId,"357",{active:true,people,dealer,session,phase,round,hands,deck,choices,pot,chipStacks,strikes,outcome,handFolds,ante,maxPot,startingChips,sessionGames,rebuyCounts,sittingOut,cashouts,virtualSessionId});
  },[user?.id,groupId,isSharedRoom,people,dealer,session,phase,round,hands,deck,choices,pot,chipStacks,strikes,outcome,handFolds,ante,maxPot,startingChips,sessionGames,rebuyCounts,sittingOut,cashouts,virtualSessionId]);
+ // Older on-device checkpoints sometimes recorded the new street number
+ // without its two additional cards. Complete only missing cards, preserving
+ // the original deck and every card already held by a seated player.
+ useEffect(()=>{
+  if(isSharedRoom||session!=="playing"||round===0||!["choosing","resolved"].includes(phase)||!hands.length)return;
+  const expected=[3,5,7][round];
+  const missing=hands.some((hand,i)=>hand?.length>0&&!sittingOut[i]&&hand.length<expected);
+  if(!missing)return;
+  try{
+   const repaired=ensure357Street({hands,deck,round,sittingOut});
+   if(!repaired.dealt)return;
+   setHands(repaired.hands);setDeck(repaired.deck);
+   setDealAnimation({nonce:Date.now(),count:repaired.dealt>hands.length?2:repaired.dealt});
+   setStatus("Restored "+repaired.dealt+" missing cards so this "+expected+"-card round can continue.");
+  }catch(e){setStatus("Cannot complete this round from its saved deck: "+e.message+" Please reset this practice hand.");}
+ },[isSharedRoom,session,round,phase,hands,deck,sittingOut]);
  function addLog(message){setLog(old=>[{id:uid(),message,time:new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})},...old].slice(0,32));}
  useEffect(()=>{let mounted=true;
   if(roomId){getCardRoom(roomId).then(r=>{if(!mounted)return;setLobbyName(r.name||"Poker Table");if(Array.isArray(r.seats)&&r.seats.length>=2){if(params.get("resumeGame")!=="1"||!readCardNight(groupId,roomId))setPeople(r.seats.map(getPlayer));setStartingChips(String((r.virtual_buy_in_cents??2000)/100));setRoomMinimum(r.minimum_buy_in_cents??r.virtual_buy_in_cents??2000);setRoomCapacity(r.capacity||6);const idx=r.seats.findIndex(s=>s.position===r.dealer_position);if(idx>=0&&!(params.get("resumeGame")==="1"&&readCardNight(groupId,roomId)))setDealer(idx);setRemoteNotice(true);}}).catch(()=>{if(mounted)setStatus("Shared lobby unavailable; use the local preview with sample seats.");});}
@@ -342,7 +358,7 @@ export default function CustomerPokerTable(){
   }else if(instant.length>1){
    setPhase("review");addLog("Multiple 3-5-7 instant hands — dealer review required.");
   }else{
-   setChoices(preparedChoices(tableSize,fresh.hands,0).map((c,i)=>sittingOut[i]?"drop":c));setPhase("choosing");addLog("Three cards dealt. 3s are wild. Players choose Hold or Fold.");
+   setChoices(preparedChoices(tableSize,fresh.hands,0).map((c,i)=>sittingOut[i]?"drop":c));setPhase("choosing");addLog("Three cards dealt. 3s are wild. Players choose Drop or Hold.");
   }
  }
  function start(){setSession("playing");setLog([]);dealOpening(0,chipStacks.length===people.length?chipStacks:null,{});}
@@ -369,7 +385,7 @@ export default function CustomerPokerTable(){
   if(phase!=="resolved")return;
   if(pot===0&&(outcome?.kind==="drag"||outcome?.kind==="instant")){finishGameAndPassDealer();return;}
   if(round===2||outcome?.kind==="instant") {const nextDealer=(dealer+1)%tableSize;setDealer(nextDealer);setHandFolds({});dealOpening(pot,chipStacks,strikes);addLog("Dealer passes to "+people[nextDealer]?.name+". Pot carries into a fresh three-card hand.");return;}
-  const updated=advance357Street({hands,deck,sittingOut});
+  const updated=ensure357Street({hands,deck,round:round+1,sittingOut});
   setDealAnimation({nonce:Date.now(),count:2});
   setHands(updated.hands);setDeck(updated.deck);setRound(v=>v+1);setViewer(null);setShowdownViewer(null);setMyHandVisible(true);setHandFolds({});setChoices(preparedChoices(tableSize,updated.hands,round+1).map((c,i)=>sittingOut[i]?"drop":c));setReveal({});setRevealStep(0);setOutcome(null);setPhase("choosing");closeDrawer();
   addLog("Two cards added to all "+updated.eligible.length+" seated hands, including players who folded the prior round. Only "+THREE_FIVE_SEVEN[round+1]+"s are wild.");
@@ -425,7 +441,7 @@ export default function CustomerPokerTable(){
     {Array.from({length:session==="setup"?roomCapacity:tableSize},(_,i)=>{const p=people[i];return <div key={p?.id||"open-"+i} className={"sw-poker-seat s"+i+(p?"":" sw-poker-seat-empty")} aria-label={p?p.name+" "+(choices[i]!==null?"Ready":"Waiting"):"Open poker seat"}>
       {p?<Photo person={p}/>:<button type="button" aria-label={"Add player to seat "+(i+1)} disabled={session!=="setup"} className="sw-poker-empty-seat" onClick={()=>{setSeatBuyin(String((roomMinimum??2000)/100));setSeatEditor(true);}}>+</button>}
       <div className="sw-poker-seat-nameplate"><strong>{p?.name||"Open Seat"}</strong><small>{p?"◉ "+displayMoney(chipStacks[i]??p.chips??2000):"Tap to join"}</small></div>
-      {session==="playing"&&p&&<span className={"sw-poker-status"+(choices[i]!==null&&phase!=="setup"?" ready":"")}>{phase==="choosing"||phase==="countdown"?(choices[i]===null?"◷ Waiting":"✓ Ready"):phase==="revealing"||phase==="resolved"?(choices[i]==="hold"?"Held":choices[i]==="drop"?"Folded":"Waiting"):"At table"}</span>}
+      {session==="playing"&&p&&<span className={"sw-poker-status"+(choices[i]!==null&&phase!=="setup"?" ready":"")}>{phase==="choosing"||phase==="countdown"?(choices[i]===null?"◷ Waiting":"✓ Ready"):phase==="revealing"||phase==="resolved"?(choices[i]==="hold"?"Held":choices[i]==="drop"?"Dropped":"Waiting"):"At table"}</span>}
       {session==="playing"&&p&&<div className="sw-357-strike-dots" aria-label={(strikes[i]||0)+" of 3 uncontested holds"}>{[0,1,2].map(n=><span key={n} className={n<(strikes[i]||0)?"filled":""}/>)}</div>}
       {p&&chipAnimation?.winner===i&&<div className="sw-poker-win-pop">+{displayMoney(chipAnimation.amount)}</div>}{p&&chipAnimation?.contributions?.some(x=>x.seat===i)&&<div className="sw-poker-loss-pop">−{displayMoney(chipAnimation.contributions.find(x=>x.seat===i).amount)}</div>}
        {p&&hands[i]?.length>0&&phase==="resolved"&&canSeeOtherHands&&choices[i]==="hold"&&<div className="sw-357-seat-reveal" aria-label={p.name+" cards at completed round showdown"}>{hands[i].map((c,j)=><div key={j} className="sw-357-flip-card sw-357-end-flip" style={{"--flip-delay":j*95+"ms"}}><span className="sw-357-flip-back">♠</span><span className={"sw-357-flip-face"+(isRed(c.suit)?" red":"")}>{rankText(c)}{c.suit}</span></div>)}</div>}
@@ -443,8 +459,8 @@ export default function CustomerPokerTable(){
    </div>}
    {phase==="countdown"&&<div className="sw-poker-pov rounded-2xl border border-cyan-400/30 bg-cyan-400/5 p-4"><strong>Everyone is READY</strong><p className="mt-1 text-xs text-cyan-200">Synchronized-style countdown demonstration on this device.</p></div>}
    {phase==="revealing"&&<section className="sw-poker-pov sw-poker-panel sw-poker-showdown sw-poker-compact-result">
-    <h3><Eye size={17}/> {held.length===0?"Everyone folded":held.length===1?"Uncontested hold":"Comparing hands"}</h3>
-    <p>Cards remain private until the street settles. {held.length===0?"Everyone folded; pot carries forward.":"Only holders may review the other holders of this street after the result."}</p>
+    <h3><Eye size={17}/> {held.length===0?"Everyone dropped":held.length===1?"Uncontested hold":"Comparing hands"}</h3>
+    <p>Cards remain private until the street settles. {held.length===0?"Everyone dropped; pot carries forward.":"Only holders may review the other holders of this street after the result."}</p>
     
    </section>}
    {phase==="review"&&<section className="sw-poker-panel mx-auto max-w-xl"><h3>Dealer review required</h3><p>{outcome?.message||"More than one player was dealt 3-5-7. No automatic payout has been made."}</p><button type="button" onClick={()=>{setSession("setup");setPhase("setup");}} className="sw-poker-button mt-3">Restart demo</button></section>}
@@ -463,7 +479,7 @@ export default function CustomerPokerTable(){
   <div className="sw-poker-action-buttons">
    {isSharedRoom&&<span className="sw-poker-action-wait">Shared lobby only · secure real-time dealing is not yet available</span>}
    {!isSharedRoom&&privateSeatIndex>=0&&<button type="button" className="sw-poker-action hide sw-357-show-toggle" onClick={()=>setMyHandVisible(v=>!v)} aria-pressed={myHandVisible}>{myHandVisible?<><EyeOff size={16}/> Hide</>:<><Eye size={16}/> Show</>}</button>}
-   {!isSharedRoom&&phase==="choosing"&&currentPlayer&&canActCurrent?<><button type="button" className="sw-poker-action fold" onClick={()=>choose("drop")}>Fold</button><button type="button" className="sw-poker-action hold" onClick={()=>choose("hold")}>Hold</button></>:
+   {!isSharedRoom&&phase==="choosing"&&currentPlayer&&canActCurrent?<><button type="button" className="sw-poker-action fold" onClick={()=>choose("drop")}>Drop</button><button type="button" className="sw-poker-action hold" onClick={()=>choose("hold")}>Hold</button></>:
     !isSharedRoom&&phase==="choosing"&&currentPlayer?<span className="sw-poker-action-wait">Waiting for {currentPlayer.name} · {turnRemaining}s</span>:
     !isSharedRoom&&phase==="choosing"&&allReady?<button type="button" className="sw-poker-action hold grow" onClick={countdown}>3 · 2 · 1 Reveal</button>:
     !isSharedRoom&&phase==="resolved"?<button type="button" className="sw-poker-action hold grow" onClick={doNext}>{nextActionLabel} <ChevronRight size={16}/></button>:
