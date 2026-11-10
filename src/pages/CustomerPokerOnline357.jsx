@@ -83,7 +83,7 @@ export default function CustomerPokerOnline357(){
    </section>
    {result&&["result","continue","finished"].includes(phase)&&<div className="sw-online-result" role="status"><Trophy size={18}/><span>{result.type==="carry"?"Everyone dropped · Pot carries":result.type==="uncontested"?(winner?.name+" holds uncontested · "+players.find(p=>p.position===result.winner)?.strikes+"/3 strikes"):result.type==="tie"?"Tie — pot carries":result.type==="game_winner"?"GAME WINNER · "+winner?.name+" · "+money(result.payout_cents):"WINNER · "+winner?.name+" · "+result.hand+" · "+money(result.payout_cents)}</span></div>}
    <nav className="sw-online-actions" aria-label="Online poker actions">
-    {phase==="not_started"&&<button onClick={()=>action("start")} disabled={!game?.can_start||busy} className="sw-online-primary">♠ {game?.is_host?"Start synchronized table":"Waiting for host"}</button>}
+    {phase==="not_started"&&<button onClick={()=>action("start")} disabled={!game?.can_start||!game?.is_host||busy} className="sw-online-primary">♠ {game?.is_host?"Start synchronized table":"Waiting for host"}</button>}
     {phase==="choosing"&&<>{canChoose?<><button disabled={busy} onClick={()=>action("drop")} className="sw-online-drop">DROP</button><button disabled={busy} onClick={()=>action("hold")} className="sw-online-hold">HOLD</button></>:<span className="sw-online-wait">{myAction?"✓ Your choice is locked":"Waiting for other players"} · {remaining}s</span>}</>}
     {phase==="result"&&<button onClick={()=>action("continue")} disabled={busy} className="sw-online-primary">CONTINUE · 10s countdown</button>}
     {phase==="continue"&&<div className="sw-online-wait">Everyone advances together in <strong>{remaining}s</strong></div>}
