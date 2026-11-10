@@ -4,7 +4,7 @@ import {limitAnte,capGutsResult,rebuyChips,pickPracticeBotChoice,centsFromDollar
 test("a $50 cap limits a 4-loser matching pot and conserves chips",()=>{
  const r=capGutsResult({kind:"drag",winner:0,entered:[0,1,2,3,4],delta:[2500,-2500,-2500,-2500,-2500],nextPot:10000,message:"Drag"}, {potCents:2500,capCents:5000,anteCents:25,stacks:[2000,2000,2000,2000,2000]});
  assert.equal(r.nextPot,5000);
- assert.deepEqual(r.delta,[2500,-1250,-1250,-1250,-1250]);
+ assert.deepEqual(r.delta,[7500,-2500,-2500,-2500,-2500]);
  assert.equal(r.delta.reduce((sum,x)=>sum+x,0)+r.nextPot-2500,0);
 });
 test("at cap a no-holder round cannot add an ante",()=>{
@@ -25,13 +25,25 @@ test("balanced bots fold weak hands more and aggressive is opt-in",()=>{
  assert.equal(pickPracticeBotChoice(weak,0,"aggressive",()=>0.5),"hold");
 });
 
-test("full pot awards winner without any replacement liability",()=>{
+test("a capped pot still charges the full loser liability and carries forward",()=>{
  const r=capGutsResult({kind:"drag",winner:0,entered:[0,1],delta:[5000,-5000],nextPot:5000,message:"Drag"},
  {potCents:5000,capCents:5000,anteCents:25,stacks:[1200,400]});
- assert.deepEqual(r.delta,[5000,0]);assert.equal(r.nextPot,0);assert.equal(r.capFinal,true);
+ assert.deepEqual(r.delta,[5000,-5000]);assert.equal(r.nextPot,5000);assert.equal(r.matchingAmountCents,5000);assert.equal(400+r.delta[1],-4600);
 });
-test("short losing chip balance caps matching without a negative stack",()=>{
+test("short losing chip balance becomes debt rather than forgiving the match",()=>{
  const r=capGutsResult({kind:"drag",winner:0,entered:[0,1,2],delta:[300,-300,-300],nextPot:600,message:"Drag"},
  {potCents:300,capCents:2000,anteCents:25,stacks:[100,60,200]});
- assert.deepEqual(r.delta,[300,-60,-60]);assert.equal(r.nextPot,120);
+ assert.deepEqual(r.delta,[300,-300,-300]);assert.equal(r.nextPot,600);
+});
+
+test("all wagers use 25-cent chips; no fractional pennies",()=>{
+ assert.equal(centsFromDollars("0.30"),25);
+ assert.equal(centsFromDollars("0.37"),25);
+ assert.equal(centsFromDollars("0.40"),50);
+ const x=capGutsResult({kind:"drag",winner:0,entered:[0,1,2],delta:[-1,-1,-1]},{
+  potCents:250,capCents:300,anteCents:25,stacks:[250,25,25]
+ });
+ assert.equal(x.nextPot,300);
+ assert.deepEqual(x.delta,[450,-250,-250]);
+ assert.equal(x.bonusToWinnerCents,200);
 });
