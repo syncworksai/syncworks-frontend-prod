@@ -865,3 +865,12 @@
  .sw-357-table-winner .sw-357-review-holders{font-size:9px}
 }
 @media(prefers-reduced-motion:reduce){.sw-357-table-winner,.sw-poker-win-pop{animation:none}}
+
+/* Ambient nightclub glow and direct-to-winner capped-pot chip effects. */
+@keyframes sw-lounge-electric{0%,100%{filter:brightness(1);opacity:.84}48%{filter:brightness(1.32);opacity:1}52%{filter:brightness(1.08);opacity:.91}}
+@keyframes sw-pot-overflow-fly{0%{opacity:0;transform:translate(-50%,55px) scale(.45)}32%{opacity:1;transform:translate(-50%,-18px) scale(1.22)}75%{opacity:1;transform:translate(-50%,-56px) scale(1)}100%{opacity:0;transform:translate(-50%,-91px) scale(.75)}}
+.sw-card-console-active .sw-poker-table-space::before{animation:sw-lounge-electric 6s ease-in-out infinite}
+.sw-357-capped-bonus{position:absolute;z-index:60;left:50%;top:22%;max-width:80%;transform:translateX(-50%);color:#ffe6a4;text-shadow:0 0 9px #f7ad2c,0 0 18px #a765ff;font-weight:950;font-size:clamp(11px,2.5vw,16px);white-space:nowrap;animation:sw-pot-overflow-fly 2.3s ease-out both;pointer-events:none}
+.sw-357-capped-bonus span{color:#8cf5ff;font-size:22px;vertical-align:middle}
+.sw-card-console-active .sw-poker-felt-brand i{text-shadow:0 0 12px #38bdff,0 0 20px #8d55e4}
+@media(prefers-reduced-motion:reduce){.sw-card-console-active .sw-poker-table-space::before,.sw-357-capped-bonus{animation:none}}
