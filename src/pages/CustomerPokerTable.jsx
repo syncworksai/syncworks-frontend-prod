@@ -7,7 +7,7 @@ import {useAuth} from "../auth/AuthContext";
 import {Share2} from "lucide-react";
 import {ensure357Street,cardRank,createShuffledDeck,dealt357,displayMoney,rate357,resolve357,winningHandText357,THREE_FIVE_SEVEN} from "../games/drop357Table.mjs";
 import "./CustomerPokerTable.css";
-import {HAND_RANKINGS_357,practiceHandInfo,estimatePracticeEquity} from "../games/practiceOdds357.mjs";
+import {HAND_RANKINGS_357,practiceHandInfo,estimatePracticeEquity,practiceKeyCardIndices} from "../games/practiceOdds357.mjs";
 import {rotationAfterPot,chooseVirtualDealer} from "../games/pokerDealerRotation.mjs";
 import {capGutsResult,limitAnte,rebuyChips,centsFromDollars,pickPracticeBotChoice} from "../games/pokerPracticeSession.mjs";
 import {readCardNight,saveCardNight,clearCardNight} from "../games/cardNightTransfer.mjs";
@@ -69,6 +69,8 @@ export default function CustomerPokerTable(){
  const [upgrading,setUpgrading]=useState(false);
  const [turnRemaining,setTurnRemaining]=useState(30);
  const [myHandVisible,setMyHandVisible]=useState(true);
+ const [coachOpen,setCoachOpen]=useState(true);
+ const [winnerFlash,setWinnerFlash]=useState(false);
  const [seatEditor,setSeatEditor]=useState(false),[seatName,setSeatName]=useState(""),[seatBuyin,setSeatBuyin]=useState("20"),[seatError,setSeatError]=useState("");
  function openDrawer(tab="hands"){setDrawerTab(tab);setDrawerOpen(true);}
  function closeDrawer(){setDrawerOpen(false);setShowdownViewer(null);}
@@ -97,6 +99,8 @@ export default function CustomerPokerTable(){
  const viewCards=myHandVisible&&privateSeatIndex>=0&&session==="playing"&&!isSharedRoom&&hands[privateSeatIndex]?.length?hands[privateSeatIndex]:null;
  const handInsight=useMemo(()=>practiceMode&&viewCards?practiceHandInfo(viewCards,round):null,[practiceMode,viewCards,round]);
  const equity=useMemo(()=>practiceMode&&viewCards?estimatePracticeEquity(viewCards,round):null,[practiceMode,viewCards,round]);
+ const keyCardIndices=useMemo(()=>practiceMode&&viewCards?practiceKeyCardIndices(viewCards,round):[],[practiceMode,viewCards,round]);
+ useEffect(()=>{if(phase!=="resolved"||outcome?.winner==null){setWinnerFlash(false);return;}setWinnerFlash(true);const t=setTimeout(()=>setWinnerFlash(false),2700);return()=>clearTimeout(t);},[phase,outcome?.winner,outcome?.kind,round]);
  useEffect(()=>{
   if(!user?.id||isSharedRoom){restoredRef.current=true;return;}
   const saved=readPracticeGame(user.id,groupId,"357");
@@ -389,7 +393,7 @@ export default function CustomerPokerTable(){
  const gameOver=pot===0&&phase==="resolved"&&(outcome?.kind==="drag"||outcome?.kind==="instant");
  const hasPracticeRecap=practiceMode&&phase==="resolved"&&people.some(p=>p.kind==="computer");
  const winnerHand=outcome?.winner!=null?winningHandText357(hands[outcome.winner],round):null;
- const nextActionLabel=gameOver?"Pass dealer · Choose game":round===2?"Next 3-card hand · Pot carries":"Deal 2 more · "+THREE_FIVE_SEVEN[round+1]+"s wild";
+ const nextActionLabel=gameOver?"Continue · Choose Game":round===2?"Continue · New Hand":"Deal Next · "+(THREE_FIVE_SEVEN[round+1])+" Cards";
  const doNext=()=>gameOver?finishGameAndPassDealer():next();
  useEffect(()=>{if(!drawerOpen)return;const onKey=e=>{if(e.key==="Escape")closeDrawer();};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey);},[drawerOpen]);
  return <main className={"sw-poker-screen"+(session==="playing"?" sw-357-playing sw-card-console-active":"")}><div className="sw-poker-content">
@@ -432,7 +436,8 @@ export default function CustomerPokerTable(){
     <div className="sw-poker-pot">{chipAnimation&&<div className={"sw-poker-chip-flight "+(chipAnimation.winner===null?"ante":"payout")} aria-hidden="true">🪙 {chipAnimation.winner!==null?"→ "+people[chipAnimation.winner]?.name:"Antes → Pot"}</div>}<div className="sw-poker-chip-stack"><span className="sw-poker-chip dark"/><span className="sw-poker-chip blue"/><span className="sw-poker-chip red"/></div><div className="sw-poker-pot-amount">Pot: {displayMoney(pot)}</div><div className="sw-poker-pot-small">Ante: {displayMoney(anteCents)} · Cap: {capText}</div></div>
     {counter!==null&&<div aria-live="assertive" className="sw-poker-decision-shadow">{counter}</div>}
     {phase==="resolved"&&outcome?.winner!=null&&outcome?.bonusToWinnerCents>0&&<div className="sw-357-capped-bonus" key={chipAnimation?.nonce||"bonus"} aria-hidden="true"><span>✦</span> +{displayMoney(outcome.bonusToWinnerCents)} direct to {people[outcome.winner]?.name}</div>}
-   {phase==="resolved"&&<div className={"sw-357-round-winner-banner sw-357-table-winner"+(outcome?.winner!=null?" sw-357-banner-win":"")} role="status">
+   {phase==="resolved"&&outcome?.winner!=null&&winnerFlash&&<div className="sw-357-video-victory" key={outcome?.winner+"-"+round+"-"+chipAnimation?.nonce} role="status" aria-live="polite"><span>✦ ROUND WINNER ✦</span><strong>{people[outcome.winner]?.name}</strong><small>{winnerHand} · {displayMoney(outcome.potDraggedCents??0)}</small></div>}
+    {phase==="resolved"&&<div className={"sw-357-round-winner-banner sw-357-table-winner"+(outcome?.winner!=null?" sw-357-banner-win":"")+(winnerFlash?" sw-357-banner-temporary":"")} role="status">
      {outcome?.winner!=null?<><strong className="sw-357-banner-title">🏆 {pot===0?"GAME WINNER":"ROUND WINNER"} · {people[outcome.winner]?.name}</strong><span className="sw-357-banner-detail">{winnerHand} · Pot won {displayMoney(outcome.potDraggedCents??0)}{outcome?.entered?.length>1?" · "+outcome.entered.filter(i=>i!==outcome.winner).length+" loser(s) replace "+displayMoney(outcome.matchingAmountCents??0):""}</span></>:
      outcome?.kind==="lone-strike"?<><strong className="sw-357-banner-title">Uncontested hold · {people[outcome.entered?.[0]]?.name}</strong><span className="sw-357-banner-detail">{strikes[outcome.entered?.[0]]||0}/3 dots filled · Pot carries to next round</span></>:
      <><strong className="sw-357-banner-title">{outcome?.kind==="all-drop"?"Everyone dropped":"Round settled"}</strong><span className="sw-357-banner-detail">{outcome?.kind==="all-drop"?"Pot carries · all seated players continue":outcome?.message}</span></>}
@@ -452,8 +457,9 @@ export default function CustomerPokerTable(){
   </div>
   {session!=="setup"&&<>
    {(phase==="choosing"||phase==="resolved")&&<div className="sw-poker-pov sw-357-persistent-hand">
-    <p className="sw-poker-pov-label">My cards · {hands[privateSeatIndex]?.length||0} dealt · {wild}s wild {phase==="choosing"&&currentPlayer?"· "+readyCount+"/"+tableSize+" ready":""}</p>
-    <div className="sw-poker-facecards sw-357-one-row">{viewCards?viewCards.map((c,i)=><div key={i} className={"sw-357-hand-position"+(dealAnimation?.count===2&&i>=hands[privateSeatIndex].length-2&&phase==="choosing"?" sw-357-new-card":"")} style={{"--card-index":i}}><Card card={c} wild={c.rank===wild}/></div>):(hands[privateSeatIndex>=0?privateSeatIndex:displayIndex??0]||[]).map((c,i)=><div key={i} className="sw-357-hand-position"><Card card={c} hidden/></div>)}</div>
+    <p className="sw-poker-pov-label">♠ YOUR HAND · {hands[privateSeatIndex]?.length||0} cards · {wild}s wild {phase==="choosing"&&currentPlayer?"· "+readyCount+"/"+tableSize+" ready":""}</p>
+    {practiceMode&&viewCards&&<div className="sw-poker-coach-inline"><button type="button" onClick={()=>setCoachOpen(v=>!v)} aria-expanded={coachOpen} className="sw-poker-coach-label">♟ Practice Coach {coachOpen?"⌃":"⌄"}</button>{coachOpen&&<div className="sw-poker-coach-description"><strong>{handInsight?.name||"Review hand"}</strong><span>{equity?.percent??"—"}% <small>vs 1 random hand</small></span><button type="button" onClick={()=>openDrawer("hands")}>Why?</button></div>}</div>}
+    <div className="sw-poker-facecards sw-357-one-row">{viewCards?viewCards.map((c,i)=><div key={i} className={"sw-357-hand-position"+(practiceMode&&coachOpen&&keyCardIndices.includes(i)?" sw-coach-key-card":"")+(dealAnimation?.count===2&&i>=hands[privateSeatIndex].length-2&&phase==="choosing"?" sw-357-new-card":"")} style={{"--card-index":i}}><Card card={c} wild={c.rank===wild}/></div>):(hands[privateSeatIndex>=0?privateSeatIndex:displayIndex??0]||[]).map((c,i)=><div key={i} className="sw-357-hand-position"><Card card={c} hidden/></div>)}</div>
 
 
     
