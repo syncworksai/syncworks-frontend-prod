@@ -1,38 +1,44 @@
-// Virtual-chip safeguards for the local SyncWorks poker session.
-// A pot cap is a HARD central-purse limit: never mint chips or let pot exceed it.
-export const centsFromDollars=value=>{if(String(value).trim()==="")return null;const n=Number(value);return Number.isFinite(n)&&n>=0&&n<=10000?Math.round(n*100):null;};
+// Virtual-chip accounting. Amounts are in cents, wagered in quarter-chip units.
+// Debts are allowed at settlement but never permit a negative-balance seat to
+// enter the NEXT hand before a human rebuys. Bots never rebuy.
+export const CHIP_UNIT=25;
+export const roundChip=value=>Math.round(value/CHIP_UNIT)*CHIP_UNIT;
+export const centsFromDollars=value=>{
+ if(String(value).trim()==="")return null;
+ const n=Number(value);
+ return Number.isFinite(n)&&n>=0&&n<=10000?roundChip(Math.round(n*100)):null;
+};
 export function limitAnte({potCents,capCents,anteCents,playerCount}){
  if(!Number.isSafeInteger(capCents)||capCents<=0||!Number.isInteger(playerCount)||playerCount<=0)throw Error("Invalid pot cap");
- return Math.max(0,Math.min(anteCents,Math.floor((capCents-Math.min(potCents,capCents))/playerCount)));
+ const room=Math.max(0,capCents-Math.min(potCents,capCents));
+ return Math.max(0,roundChip(Math.min(anteCents,Math.floor(room/playerCount)/CHIP_UNIT*CHIP_UNIT)));
 }
-// All chip amounts are virtual cents. Never debit a stack below zero.
-// At a full cap the next qualifying pot winner takes it; no replacement pot.
 export function fundedReplacement({losers,stacks,potCents,capCents}){
  if(!Array.isArray(stacks))throw Error("Missing chip stacks");
- const funds=losers.map(i=>Math.max(0,Math.floor(stacks[i]??0)));
- const capRoom=Math.max(0,capCents);
- const wanted=Math.min(potCents,losers.length?Math.floor(capRoom/losers.length):0);
- const perLoser=Math.max(0,Math.min(wanted,...funds));
- return {perLoser,contributions:losers.map(i=>({seat:i,cents:perLoser}))};
+ // Losing holders incur the full liability. Cap applies to the CENTER pot,
+ // not to each player's debt. Surplus from capped rounds goes to the winner.
+ const match=roundChip(Math.max(0,potCents));
+ return {perLoser:match,contributions:losers.map(i=>({seat:i,cents:match}))};
 }
 export function capGutsResult(result,{potCents,capCents,anteCents,stacks}){
  if(!result||!Number.isSafeInteger(capCents)||capCents<=0||!Array.isArray(stacks))throw Error("Invalid settlement");
  if(result.kind==="all-drop"){
-   // Ante is collected once, when the following hand is dealt.
-   return {...result,nextPot:potCents,delta:result.delta.map(()=>0),
-    message:potCents>=capCents?"Pot cap reached. No more antes; deal until there is a qualifying winner.":"Everyone dropped. Pot carries; next hand collects antes once."};
+  // Ante is charged only when the following fresh hand is dealt.
+  return {...result,nextPot:potCents,delta:result.delta.map(()=>0),matchingAmountCents:0,
+   message:potCents>=capCents?"Pot cap reached; no more antes. Everyone can compete for the same capped pot.":"Everyone dropped. Pot carries; next hand collects antes once."};
  }
  if(result.kind!=="drag"||result.winner==null)return result;
  const losers=result.entered.filter(i=>i!==result.winner);
- if(potCents>=capCents){
-   return {...result,nextPot:0,delta:result.delta.map((_,i)=>i===result.winner?potCents:0),matchingAmountCents:0,capFinal:true,
-    message:"Pot cap reached: winner drags "+(potCents/100).toFixed(2)+". No additional matching. Next dealer chooses a game."};
- }
- const {perLoser}=fundedReplacement({losers,stacks,potCents,capCents});
- return {...result,nextPot:perLoser*losers.length,
-   delta:result.delta.map((_,i)=>i===result.winner?potCents:losers.includes(i)?-perLoser:0),
-   matchingAmountCents:perLoser,
-   message:result.message+(perLoser<potCents?" Replacement limited to available virtual chips and the pot cap.":"")};
+ const match=roundChip(potCents);
+ const total=match*losers.length;
+ const nextPot=Math.min(capCents,total);
+ const bonus=Math.max(0,total-nextPot);
+ return {...result,nextPot,
+  delta:result.delta.map((_,i)=>i===result.winner?potCents+bonus:losers.includes(i)?-match:0),
+  matchingAmountCents:match,bonusToWinnerCents:bonus,
+  message:"Winner takes "+(potCents/100).toFixed(2)+" from the pot; each losing holder owes "+(match/100).toFixed(2)+
+   ". "+(bonus?"Pot cap holds "+(nextPot/100).toFixed(2)+"; "+(bonus/100).toFixed(2)+" excess paid directly to winner.":"Losers replenish the next pot.")+
+   " Unpaid balances may go negative and require a rebuy before the next hand."};
 }
 export function rebuyChips(stacks,index,amountCents){
  if(!Array.isArray(stacks)||!Number.isInteger(index)||index<0||index>=stacks.length||!Number.isSafeInteger(amountCents)||amountCents<=0||amountCents>1000000)throw Error("Invalid rebuy");
