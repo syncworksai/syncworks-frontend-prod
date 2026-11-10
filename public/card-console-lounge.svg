@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Futuristic neon card lounge with purple and blue lights">
+<defs>
+ <linearGradient id="wall" x2="1" y2="1"><stop stop-color="#050719"/><stop offset=".48" stop-color="#16102d"/><stop offset="1" stop-color="#020817"/></linearGradient>
+ <linearGradient id="floor" x2=".5" y2="1"><stop stop-color="#101029"/><stop offset="1" stop-color="#02030c"/></linearGradient>
+ <linearGradient id="rim"><stop stop-color="#ac7138"/><stop offset=".18" stop-color="#fbd989"/><stop offset=".42" stop-color="#613e28"/><stop offset=".67" stop-color="#edb85b"/><stop offset="1" stop-color="#795337"/></linearGradient>
+ <linearGradient id="lamp" x2=".1" y2="1"><stop stop-color="#f9e4af"/><stop offset=".5" stop-color="#f6b44c"/><stop offset="1" stop-color="#4c1d22"/></linearGradient>
+ <radialGradient id="violet"><stop stop-color="#b360ff" stop-opacity=".6"/><stop offset="1" stop-color="#b360ff" stop-opacity="0"/></radialGradient>
+ <radialGradient id="cyan"><stop stop-color="#07d9ff" stop-opacity=".45"/><stop offset="1" stop-color="#07d9ff" stop-opacity="0"/></radialGradient>
+ <filter id="glow"><feGaussianBlur stdDeviation="9"/></filter><filter id="soft"><feGaussianBlur stdDeviation="22"/></filter>
+ <pattern id="leather" width="45" height="45" patternUnits="userSpaceOnUse"><path d="M0 0L45 45M45 0L0 45" stroke="#ffffff" stroke-opacity=".025" stroke-width="1"/></pattern>
+ <g id="bottle"><path d="M-7 0h14v12l9 13v53q-16 10-32 0V25l9-13z" fill="#17274c" stroke="#27bfff" stroke-opacity=".5" stroke-width="2"/><rect x="-5" y="35" width="10" height="14" fill="#ffb856" opacity=".43"/></g>
+</defs>
+<rect width="1600" height="900" fill="url(#wall)"/>
+<path d="M0 540h1600v360H0z" fill="url(#floor)"/>
+<ellipse cx="280" cy="240" rx="500" ry="310" fill="url(#violet)"/><ellipse cx="1290" cy="200" rx="450" ry="310" fill="url(#cyan)"/>
+<g stroke="#64348d" stroke-width="3" opacity=".6"><path d="M0 90h1600M0 120h1600M0 420h1600M0 470h1600"/></g>
+<g stroke="#e9bb70" stroke-width="8" opacity=".6"><path d="M0 155h590M1010 155h590M0 430h580M1020 430h580"/></g>
+<g opacity=".8"><rect x="35" y="170" width="480" height="240" rx="12" fill="#0b071b" stroke="#503c70" stroke-width="6"/><rect x="1085" y="170" width="480" height="240" rx="12" fill="#0b071b" stroke="#503c70" stroke-width="6"/>
+<path d="M43 245h465M43 335h465M1092 245h465M1092 335h465" stroke="#8a5379" stroke-width="9"/>
+<g transform="translate(100 185)"><use href="#bottle"/><use href="#bottle" x="55"/><use href="#bottle" x="125"/><use href="#bottle" x="205"/><use href="#bottle" x="280"/><use href="#bottle" x="350"/></g>
+<g transform="translate(1150 185)"><use href="#bottle"/><use href="#bottle" x="55"/><use href="#bottle" x="125"/><use href="#bottle" x="205"/><use href="#bottle" x="280"/><use href="#bottle" x="350"/></g>
+<g transform="translate(100 277)"><use href="#bottle"/><use href="#bottle" x="65"/><use href="#bottle" x="135"/><use href="#bottle" x="240"/><use href="#bottle" x="320"/></g>
+<g transform="translate(1150 277)"><use href="#bottle"/><use href="#bottle" x="65"/><use href="#bottle" x="135"/><use href="#bottle" x="240"/><use href="#bottle" x="320"/></g></g>
+<g><path d="M800 0v165" stroke="#bc8c55" stroke-width="6"/><path d="M770 159h60l28 47h-116z" fill="url(#lamp)" stroke="#fbdc9d" stroke-width="4"/><ellipse cx="800" cy="240" rx="260" ry="180" fill="#f5c164" opacity=".1" filter="url(#soft)"/></g>
+<g><path d="M340 0v235M1260 0v235" stroke="#8d6b69" stroke-width="5"/><path d="M314 231h52l24 44h-100zM1234 231h52l24 44h-100z" fill="url(#lamp)" stroke="#ebc17a" stroke-width="3"/></g>
+<g transform="translate(800 335)"><path d="M-80-100h160L70-60H-80L-57-36H54L35-12H-63L-95 25H87L62 60H-83" fill="none" stroke="#8652ff" stroke-width="20" stroke-linejoin="round" filter="url(#glow)"/><path d="M-80-100h160L70-60H-80L-57-36H54L35-12H-63L-95 25H87L62 60H-83" fill="none" stroke="#9d6aff" stroke-width="8" stroke-linejoin="round"/></g>
+<path d="M0 560q800-100 1600 0" fill="none" stroke="#a655ff" stroke-width="7" opacity=".65" filter="url(#glow)"/>
+<path d="M0 585q800-125 1600 0" fill="none" stroke="#19cbfa" stroke-width="3" opacity=".8"/>
+<rect width="1600" height="900" fill="url(#leather)"/>
+<rect width="1600" height="900" fill="#02040a" opacity=".2"/>
+</svg>
