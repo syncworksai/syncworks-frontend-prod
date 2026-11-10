@@ -28,7 +28,7 @@ function localDeal(game,count,size=5){
  return {hands,deck:deck.slice(game==="bozo"?(count+1)*size:count*handSize),clown:game==="bozo"?deck.slice(count*size,(count+1)*size):[]};
 }
 const ALL_POKER_GAMES=[{code:"357",title:"3-5-7 DROP"},{code:"fyb",title:"FYB"},{code:"442",title:"4/4/Deuce"},{code:"bozo",title:"Bozo · The Clown"},{code:"queen-follower",title:"Queen & the Follower"}];
-const cents=x=>Math.round(Number(x)*100);
+const cents=x=>Math.round(Number(x)*4)*25;
 export default function CustomerPokerVariantTable({variant:providedVariant}){
  const [query]=useSearchParams(),nav=useNavigate();
  const {user}=useAuth();
@@ -375,7 +375,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
    <select id="sw-variant-game-select" value={variant} onChange={e=>changeDealerGame(e.target.value)}>{ALL_POKER_GAMES.map(g=><option key={g.code} value={g.code}>{g.title}</option>)}</select>
    <div className="sw-poker-unified-controls">
     {variant==="bozo"&&<><label>Cards<select value={bozoHandSize} onChange={e=>setBozoHandSize(Number(e.target.value))}><option value={5}>5 cards</option><option value={7}>7 cards</option></select></label><label>AI style<select value={bozoBotStyle} onChange={e=>setBozoBotStyle(e.target.value)}><option value="cautious">Cautious</option><option value="balanced">Balanced</option><option value="aggressive">Aggressive</option></select></label></>}
-    {variant==="fyb"?<label>Total stake ($)<input inputMode="decimal" type="number" min="0.03" step="0.03" value={ante} onChange={e=>setAnte(e.target.value)}/></label>:<><label>Ante ($)<input inputMode="decimal" type="number" min="0.01" step="0.01" value={ante} onChange={e=>setAnte(e.target.value)}/></label><label>Maximum pot<select value={cap} onChange={e=>setCap(e.target.value)}><option value="10">$10</option><option value="20">$20</option><option value="50">$50</option><option value="unlimited">Unlimited</option></select></label></>}
+    {variant==="fyb"?<label>Total stake ($)<input inputMode="decimal" type="number" min="0.75" step="0.75" value={ante} onChange={e=>setAnte(e.target.value)}/></label>:<><label>Ante ($)<input inputMode="decimal" type="number" min="0.25" step="0.25" value={ante} onChange={e=>setAnte(e.target.value)}/></label><label>Maximum pot<select value={cap} onChange={e=>setCap(e.target.value)}><option value="10">$10</option><option value="20">$20</option><option value="50">$50</option><option value="unlimited">Unlimited</option></select></label></>}
    </div>
    {variant==="fyb"&&<p className="sw-poker-setup-hint">Three strikes · {fybStake?displayMoney(fybStake.chipCents)+" per loss":"Total must divide into three whole-cent chips"}</p>}
    {variant==="442"&&<p className="sw-poker-setup-hint">4 cards · Wild 4s · Exchange up to 3</p>}
