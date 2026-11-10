@@ -39,6 +39,28 @@ export function advance357Street({hands,deck,sittingOut={}}){
  const next=addRoundCards(hands,deck,eligible);
  return {...next,eligible};
 }
+/** Repair a resumed 3-5-7 street whose displayed round advanced before its
+ * cards were persisted. Only missing cards are dealt, from the SAME deck;
+ * never replace or duplicate any existing cards. A seated player who dropped
+ * in a previous street still receives the next two cards.
+ */
+export function ensure357Street({hands,deck,round,sittingOut={}}){
+ const target=[3,5,7][round];
+ if(!target||!Array.isArray(hands)||!Array.isArray(deck))throw Error("Invalid 3-5-7 street");
+ const result=hands.map(hand=>[...hand]);
+ const eligible=result.flatMap((hand,i)=>hand.length>0&&!sittingOut[i]?[i]:[]);
+ if(eligible.some(i=>result[i].length>target))throw Error("A hand has more cards than its current street permits.");
+ let needed=eligible.reduce((sum,i)=>sum+Math.max(0,target-result[i].length),0);
+ if(deck.length<needed)throw Error("Not enough remaining cards to complete this street.");
+ let offset=0;
+ while(needed>0){
+  for(const i of eligible){
+   if(result[i].length>=target)continue;
+   result[i].push(deck[offset++]);needed--;
+  }
+ }
+ return {hands:result,deck:deck.slice(offset),dealt:offset,eligible};
+}
 export const instant357=hand=>hand.length===3&&hand.map(c=>c.rank).sort((a,b)=>a-b).join(",")==="3,5,7";
 
 function evaluateThree(hand,wildRank=3) {
