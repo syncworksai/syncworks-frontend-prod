@@ -37,6 +37,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  const [bozoSeconds,setBozoSeconds]=useState(30);
  const [practiceCoachOpen,setPracticeCoachOpen]=useState(true);
  const [winFlashVisible,setWinFlashVisible]=useState(false);
+ const [continueSeconds,setContinueSeconds]=useState(null);
  const [bozoBotStyle,setBozoBotStyle]=useState(["balanced","cautious","aggressive"].includes(query.get("botStyle"))?query.get("botStyle"):"balanced");
  const variant=providedVariant||query.get("game")||"fyb";
  const game=GAMES[variant]||GAMES.fyb;
@@ -366,6 +367,19 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  },[fybDeckFlash,fybDeckNumber]);
  const winnerDisplay=step==="result"?describePokerResult({variant,outcome,players,hands,clownResult:variant==="bozo"&&clown.length&&clown[0]?.rank?evaluateBozoHand(clown,clown[0].rank):null,bozoResult:bozoLastResult,fybSettlement}):null;
  useEffect(()=>{if(step!=="result"||!outcome){setWinFlashVisible(false);return;}setWinFlashVisible(true);const t=setTimeout(()=>setWinFlashVisible(false),2700);return()=>clearTimeout(t);},[step,outcome]);
+ const localHumanOnly=!roomId&&players.length>=2&&players.every(p=>p.kind!=="computer");
+ const proceedFromResult=()=>{
+  if(outcome?.gameFinished||(variant!=="fyb"&&pot===0)){quitToDealer();return;}
+  if(variant==="fyb"){setDealer(d=>fybNextDealer(fybActive,d));setStep("fyb-next");}
+  else if(variant==="442"){setDealer(d=>(d+1)%players.length);setStep("442-next");}
+  else if(variant==="bozo"){setStep("bozo-next");}
+  else setStep("ready");
+  setOutcome(null);setFybLastMove(null);
+ };
+ useEffect(()=>{if(step!=="result"||!localHumanOnly||continueSeconds===null)return;
+  if(continueSeconds===0){setContinueSeconds(null);proceedFromResult();return;}
+  const t=setTimeout(()=>setContinueSeconds(v=>v===null?null:v-1),1000);return()=>clearTimeout(t);
+ },[step,continueSeconds,localHumanOnly]);
  const reviewable=step==="result"||step==="stud-result";
  const centered=step==="bozo-next"?"Next Bozo hand · Fresh deck":step==="442-next"?"Next 4/4 hand · Shuffling":step==="442-draw"&&activeIndex>=0?currentPlayer?.name+" · Exchange up to 3":step==="fyb-next"?"Next FYB hand · Shuffling":step==="deciding"&&activeIndex>=0?"Your turn: "+currentPlayer?.name:step==="fyb"&&activeIndex>=0?currentPlayer?.name+"'s turn":step==="stud"?"Stud street "+(street+1):reviewable?"Hand finished":game.tag;
  return <main className={"sw-poker-screen"+(variant==="fyb"&&step==="fyb"?" sw-fyb-play-mode":"")+(variant==="bozo"&&bozoLocked?" sw-bozo-play-mode":"")+(step!=="loading"&&step!=="ready"?" sw-card-console-active":"")+(step==="ready"&&!(variant==="bozo"&&bozoLocked)?" sw-unified-setup-mode":"")}><div className="sw-poker-content">
@@ -413,7 +427,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
  {step==="fyb"&&currentPlayer&&currentPlayer.kind!=="computer"&&<><button disabled={fybAnimating} className="sw-poker-action fold" onClick={()=>fybAction(true)}>{fybDealerTurn?"Draw Deck":"Pass Left"}</button><button disabled={fybAnimating} className="sw-poker-action hold" onClick={()=>fybAction(false)}>Keep</button></>}
  {variant==="fyb"&&step==="result"&&fybActive.length===2&&fybActive.includes(localSeat)&&!splitAttempted&&!outcome?.gameFinished&&pot>0&&<button className="sw-poker-action sw-fyb-split-action" onClick={startSplitOffer}>🤝 Offer Split</button>}
  {step==="stud"&&<button className="sw-poker-action hold grow" onClick={dealStudStreet}>Deal next stud card · {street+1}/7</button>}
- {(step==="result"||step==="stud-result")&&<><button className="sw-poker-action hold grow" onClick={()=>{if(outcome?.gameFinished||(variant!=="fyb"&&pot===0)){quitToDealer();return;}if(variant==="fyb"){setDealer(d=>fybNextDealer(fybActive,d));setStep("fyb-next");}else if(variant==="442"){setDealer(d=>(d+1)%players.length);setStep("442-next");}else if(variant==="bozo"){setStep("bozo-next");}else setStep("ready");setOutcome(null);setFybLastMove(null);}}> {outcome?.gameFinished||variant!=="fyb"&&pot===0?"Continue · Choose Game":variant==="fyb"?"Continue":variant==="442"?"Continue":variant==="bozo"?"Deal Next":"Continue"} <ChevronRight size={17}/></button>{!outcome?.gameFinished&&variant!=="bozo"&&<button className="sw-poker-action hide" onClick={quitToDealer}>Choose Game</button>}</>}
+ {(step==="result"||step==="stud-result")&&<><button className="sw-poker-action hold grow" disabled={continueSeconds!==null} onClick={()=>localHumanOnly&&step==="result"?setContinueSeconds(v=>v===null?10:v):proceedFromResult()}> {continueSeconds!==null?"Continuing in "+continueSeconds+"s":outcome?.gameFinished||variant!=="fyb"&&pot===0?"Continue · Choose Game":variant==="bozo"?"Deal Next":"Continue"} <ChevronRight size={17}/></button>{!outcome?.gameFinished&&variant!=="bozo"&&<button className="sw-poker-action hide" onClick={quitToDealer}>Choose Game</button>}</>}
  <button className="sw-poker-action info" onClick={()=>{setTab(variant==="fyb"?"activity":"rules");setDrawer(true)}}><Info size={18}/><span>Info</span></button></div></nav>}
  {splitOpen&&<div className="sw-poker-drawer-backdrop sw-fyb-split-shade">
   <section className="sw-fyb-split-dialog" role="dialog" aria-modal="true" aria-label="FYB split proposal" onClick={e=>e.stopPropagation()}>
