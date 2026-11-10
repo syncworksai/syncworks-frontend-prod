@@ -826,3 +826,42 @@
  .sw-bozo-clown-upcard{transform:translate(-50%,-50%) scale(.7)}
 }
 @media(prefers-reduced-motion:reduce){.sw-console-winner-announcement,.sw-poker-action{animation:none!important}}
+
+/* Neon Lounge V2: real vector background artwork behind the table,
+   plus a winner overlay ON the felt (never below the fixed screen). */
+.sw-poker-table-space{position:relative;isolation:isolate}
+.sw-poker-table-space::before{
+ content:"";position:absolute;inset:-22px -12px -30px;z-index:-1;pointer-events:none;
+ background:linear-gradient(180deg,#050b1b2e,#07071670),url("/card-console-lounge.svg") center/cover no-repeat;
+ border-radius:18px;opacity:.95;
+ box-shadow:inset 0 0 65px 20px #030612;
+}
+.sw-card-console-active .sw-poker-felt{
+ background:radial-gradient(ellipse at 48% 37%,#1c2440,#121324 52%,#090b16 90%)!important;
+ border-color:#6d4828!important;
+ box-shadow:inset 0 0 0 3px #f5cb76,inset 0 0 0 8px #3e2945,inset 0 0 0 11px #19d9fe,0 0 0 2px #6a37d7,0 8px 0 #6945a3,0 16px 0 #0785d2,0 24px 34px #02020ad9,0 0 30px #ae5cfc88!important;
+}
+.sw-card-console-active .sw-poker-felt::before{box-shadow:inset 0 0 30px #67369d65}
+.sw-357-table-winner{
+ position:absolute;z-index:55;left:50%;bottom:18%;transform:translateX(-50%);
+ width:min(74%,470px);max-width:none;min-height:0;margin:0;
+ border:2px solid #ffdb7b!important;
+ background:linear-gradient(100deg,#120d21ee,#322017f5,#14102cee)!important;
+ box-shadow:0 0 23px #efc2599c,0 0 31px #8555ff90,inset 0 0 20px #783c6955!important;
+ padding:7px 12px!important;
+ animation:sw-winner-appear .55s cubic-bezier(.2,.75,.3,1) both;
+}
+.sw-357-table-winner .sw-357-banner-title{color:#ffe4a1!important;font-size:clamp(11px,2.4vw,18px)}
+.sw-357-table-winner .sw-357-banner-detail{font-size:clamp(9px,2vw,13px);color:#eff1fa}
+.sw-357-table-winner:not(.sw-357-banner-win){border-color:#64aace!important;background:#071b32ee!important;box-shadow:0 0 16px #19afff48!important}
+@keyframes sw-winner-appear{from{opacity:0;filter:brightness(2);transform:translate(-50%,35%) scale(.8)}70%{filter:brightness(1.4)}to{opacity:1;filter:brightness(1);transform:translate(-50%,0) scale(1)}}
+.sw-357-chip-to-pot{filter:drop-shadow(0 0 9px #efc46d)}
+.sw-poker-win-pop{animation:sw-winner-appear .45s ease-out both;text-shadow:0 0 14px #ffe078}
+@media(max-width:600px){
+ .sw-poker-table-space::before{inset:-22px -6px -32px;background-position:center 28%}
+ .sw-357-table-winner{bottom:18%;width:min(76%,330px);padding:5px 8px!important}
+ .sw-357-table-winner .sw-357-banner-title{font-size:11px}
+ .sw-357-table-winner .sw-357-banner-detail{font-size:9px}
+ .sw-357-table-winner .sw-357-review-holders{font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){.sw-357-table-winner,.sw-poker-win-pop{animation:none}}
