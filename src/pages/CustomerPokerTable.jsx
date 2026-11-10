@@ -5,7 +5,7 @@ import {getCardRoom,createCardRoom} from "../api/cardRooms";
 import {createGroupInviteLink} from "../api/social";
 import {useAuth} from "../auth/AuthContext";
 import {Share2} from "lucide-react";
-import {ensure357Street,cardRank,createShuffledDeck,dealt357,displayMoney,instant357,rate357,resolve357,winningHandText357,THREE_FIVE_SEVEN} from "../games/drop357Table.mjs";
+import {ensure357Street,cardRank,createShuffledDeck,dealt357,displayMoney,rate357,resolve357,winningHandText357,THREE_FIVE_SEVEN} from "../games/drop357Table.mjs";
 import "./CustomerPokerTable.css";
 import {HAND_RANKINGS_357,practiceHandInfo,estimatePracticeEquity} from "../games/practiceOdds357.mjs";
 import {rotationAfterPot,chooseVirtualDealer} from "../games/pokerDealerRotation.mjs";
@@ -35,9 +35,9 @@ function getPlayer(p,i){return {id:String(p.user_id||p.id||uid()),name:p.nicknam
 function Card({card,hidden=false,wild=false}) {if(!card)return null;return <div className={"sw-poker-card"+(hidden?" back":isRed(card.suit)?" red":"")} aria-label={hidden?"Face down card":rankText(card)+" of "+card.suit}>{hidden?<><strong>S</strong><b>♠</b></>:<><strong>{rankText(card)} {card.suit}</strong><b>{card.suit}</b>{wild&&<small>WILD</small>}</>}</div>;}
 function Photo({person}){return <div className="sw-poker-seat-avatar">{person?.photo?<img src={person.photo} alt="" onError={e=>{e.currentTarget.style.display="none";}}/>:(person?.kind==="computer"?"🤖":(person?.name||"?").split(/\s+/).map(v=>v[0]).slice(0,2).join("").toUpperCase())}</div>;}
 function helperContent(page,round){
- if(page==="ranks")return <><p>Strongest to weakest, using the active round’s wild rank. The instant 3-5-7 opening hand overrides regular rankings.</p><div className="sw-practice-rank-list">{HAND_RANKINGS_357[round].map((name,i)=><div key={name}><span>{i+1}</span><strong>{name}</strong></div>)}</div><p>Round 1 (three cards): straights and flushes do not count. Rounds 2–3: five-card poker categories apply; seven cards use the strongest five-card combination. Wild cards can create five of a kind.</p></>;
+ if(page==="ranks")return <><p>Strongest to weakest, using the active round’s wild rank. An opening 3-5-7 combination does not automatically end the game; the hand participates in normal ranking.</p><div className="sw-practice-rank-list">{HAND_RANKINGS_357[round].map((name,i)=><div key={name}><span>{i+1}</span><strong>{name}</strong></div>)}</div><p>Round 1 (three cards): straights and flushes do not count. Rounds 2–3: five-card poker categories apply; seven cards use the strongest five-card combination. Wild cards can create five of a kind.</p></>;
  if(page==="strategy")return <><p>Beginner reminders — not a promise of winning:</p><p><b>3-card stage:</b> Pairs and three of a kind matter. Straights and flushes do not count. Your 3s are wild only during this round.</p><p><b>5- and 7-card stages:</b> Look for combinations helped by the current wild rank. Former wilds become ordinary cards.</p><p>Holding exposes you to a match-the-pot loss if another holder has the stronger hand. Dropping avoids that penalty for this round only.</p></>;
- return <><p>One continuous seven-card deal: all seated players start with 3 cards (3s wild), receive 2 more (5s wild), then 2 more (7s wild). Folding removes a player from the current round only; they still receive cards and may Hold in the next round.</p><p>Everyone privately chooses <b>Hold</b> or <b>Drop</b>. Ready means a decision was saved, not what it was. The dealer starts a 3, 2, 1 reveal after all are ready.</p><p>After each 3-, 5-, and 7-card round settles, only players who held can review one another\'s cards from that round. Folded players never see those hands. The strongest holder drags the current pot; other losing holders match the allowed replacement amount into the next pot.</p><p>One holder needs three cumulative uncontested holds to drag the pot. If everyone folds, each antes again. An opening 3-5-7 hand instantly wins the pot.</p><p>The pot cap pauses play for dealer review; this preview never moves real money.</p></>;
+ return <><p>One continuous seven-card deal: all seated players start with 3 cards (3s wild), receive 2 more (5s wild), then 2 more (7s wild). Folding removes a player from the current round only; they still receive cards and may Hold in the next round.</p><p>Everyone privately chooses <b>Hold</b> or <b>Drop</b>. Ready means a decision was saved, not what it was. The dealer starts a 3, 2, 1 reveal after all are ready.</p><p>After each 3-, 5-, and 7-card round settles, only players who held can review one another\'s cards from that round. Folded players never see those hands. The strongest holder drags the current pot; other losing holders match the allowed replacement amount into the next pot.</p><p>One holder needs three cumulative uncontested holds to drag the pot. If everyone drops, the pot carries; the next hand collects an ante only if the cap allows it.</p><p>At the cap the central pot remains fixed, but holding losers still owe their full match; this preview never moves real money.</p></>;
 }
 export default function CustomerPokerTable(){
  const nav=useNavigate(),[params]=useSearchParams();
@@ -350,16 +350,9 @@ export default function CustomerPokerTable(){
   setHands(fresh.hands);setDeck(fresh.deck);setRound(0);setHandFolds({});setDealAnimation({nonce:Date.now(),count:3});setMyHandVisible(true);
   setChipStacks(afterAnte);setPot(newPot);setStrikes(previousStrikes||{});
   setReveal({});setRevealStep(0);setShowdownViewer(null);setChipAnimation(null);setOutcome(null);setViewer(null);setCounter(null);closeDrawer();
-  const instant=fresh.hands.flatMap((hand,i)=>active.includes(i)&&instant357(hand)?[i]:[]);
-  if(instant.length===1){
-   const winner=instant[0];setChipStacks(afterAnte.map((v,i)=>i===winner?v+newPot:v));setPot(0);
-   setOutcome({kind:"instant",winner,entered:[winner],delta:[],potDraggedCents:newPot,message:people[winner].name+" received 3-5-7 on the opening deal. Instant pot win!"});
-   setPhase("resolved");addLog(people[winner].name+" dealt natural 3-5-7 — instant win.");
-  }else if(instant.length>1){
-   setPhase("review");addLog("Multiple 3-5-7 instant hands — dealer review required.");
-  }else{
-   setChoices(preparedChoices(tableSize,fresh.hands,0).map((c,i)=>!active.includes(i)?"drop":c));setPhase("choosing");addLog("Three cards dealt. 3s are wild. Players choose Drop or Hold.");
-  }
+  setChoices(preparedChoices(tableSize,fresh.hands,0).map((c,i)=>!active.includes(i)?"drop":c));
+  setPhase("choosing");
+  addLog("Three cards dealt. 3s are wild. Drop or Hold; the opening deal does not instantly award the pot.");
  }
  function start(){setSession("playing");setLog([]);dealOpening(0,chipStacks.length===people.length?chipStacks:null,{});}
  function choose(c){if(phase!=="choosing"||currentIndex<0||!canActCurrent)return;setChoices(old=>old.map((v,i)=>i===currentIndex?c:v));if(c==="drop")setHandFolds(old=>({...old,[currentIndex]:true}));setViewer(null);addLog(people[currentIndex].name+" is READY.");}
