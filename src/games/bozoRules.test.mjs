@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {evaluateBozoHand,resolveBozoRound,chooseBozoBotAction} from "./bozoRules.mjs";
+import {evaluateBozoHand,resolveBozoRound,chooseBozoBotAction,bozoClownContributions} from "./bozoRules.mjs";
 import {createShuffledDeck} from "./drop357Table.mjs";
 const c=(rank,suit="♠")=>({rank,suit});
 const cards=(...r)=>r.map((n,i)=>c(n,["♠","♥","♦","♣"][i%4]));
@@ -57,4 +57,35 @@ test("Bozo AI style changes probability but does not guarantee a win",()=>{
  const aggressive=chooseBozoBotAction({hand,wildRank:3,style:"aggressive",random:()=>0.15});
  assert.equal(cautious,"fold");
  assert.equal(aggressive,"hold");
+});
+
+test("Two holders against the Clown collectively double a one-dollar purse",()=>{
+ const clown=cards(13,13,9,9,2);
+ const weak=cards(3,5,7,8,10),other=cards(4,5,6,7,8);
+ const result=resolveBozoRound({choices:["hold","hold","drop"],hands:[weak,other,cards(2,4,6,8,10)],clown,wildRank:13,potCents:100});
+ assert.equal(result.kind,"clown-win");
+ assert.equal(result.nextPotCents,200);
+ assert.deepEqual(result.penalties,[{player:0,cents:50},{player:1,cents:50}]);
+ const paid=bozoClownContributions({holders:[0,1],stacks:[2000,2000,2000],potCents:100,capCents:5000});
+ assert.equal(paid.totalCents,100);assert.equal(paid.nextPotCents,200);
+ assert.deepEqual(paid.payments,{"0":50,"1":50});
+});
+test("Three holders split an odd-cent Clown match without increasing pot more than once",()=>{
+ const result=bozoClownContributions({holders:[0,1,2],stacks:[100,100,100],potCents:101,capCents:500});
+ assert.equal(result.nextPotCents,202);
+ assert.equal(Object.values(result.payments).reduce((sum,v)=>sum+v,0),101);
+ assert.ok(Math.max(...Object.values(result.payments))-Math.min(...Object.values(result.payments))<=1);
+});
+test("Clown settlement honors cap and funded balances without negative stacks",()=>{
+ const result=bozoClownContributions({holders:[0,1],stacks:[10,100],potCents:100,capCents:150});
+ assert.equal(result.nextPotCents,150);
+ assert.deepEqual(result.payments,{"0":10,"1":40});
+ const capped=bozoClownContributions({holders:[0,1],stacks:[100,100],potCents:100,capCents:100});
+ assert.equal(capped.totalCents,0);assert.equal(capped.nextPotCents,100);
+});
+test("No holders never triggers a Clown payout or pot match",()=>{
+ const clown=cards(13,13,9,9,2),weak=cards(3,5,7,8,10);
+ const result=resolveBozoRound({choices:["drop","drop"],hands:[weak,weak],clown,wildRank:13,potCents:100});
+ assert.equal(result.kind,"all-drop");assert.equal(result.nextPotCents,100);
+ assert.deepEqual(result.penalties,[]);
 });
