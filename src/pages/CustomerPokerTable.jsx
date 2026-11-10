@@ -326,7 +326,7 @@ export default function CustomerPokerTable(){
    const virtualCount=people.filter(p=>p.kind==="computer").length;
    updateSeats(old=>[...old,{id:uid(),name:"Virtual Player "+(virtualCount+1),kind:"computer",chips:roomMinimum??2000}]);
  }
- function preparedChoices(size,cards=hands,stage=round){return people.slice(0,size).map((p,i)=>p.kind==="computer"?pickPracticeBotChoice(cards[i],stage,botStyle):null);}
+ function preparedChoices(size,cards=hands,stage=round){return people.slice(0,size).map((p,i)=>p.kind==="computer"?!cards[i]?.length?"drop":pickPracticeBotChoice(cards[i],stage,botStyle):null);}
  function dealOpening(previousPot=0,previousChips=null,previousStrikes=null){
   const stack=previousChips||people.map(p=>Number.isFinite(p.chips)?p.chips:Math.max(0,Math.round(Number(startingChips)*100)));
   if(isSharedRoom){setStatus("Shared rooms are lobby-only. Secure server-side gameplay is not live yet; dealing here would expose other players\' cards.");return;}
@@ -335,7 +335,7 @@ export default function CustomerPokerTable(){
   let active=people.map((_,i)=>i).filter(i=>!sittingOut[i]&&!(people[i]?.kind==="computer"&&stack[i]<=0));
   if(previousPot>capCents){setStatus("The current pot exceeds the selected cap. Increase the cap or reset practice.");return;}
   let actualAnte=limitAnte({potCents:previousPot,capCents,anteCents,playerCount:Math.max(1,active.length)});
-  const bustedBots=active.filter(i=>people[i]?.kind==="computer"&&stack[i]<Math.max(1,actualAnte));
+  const bustedBots=people.flatMap((p,i)=>p.kind==="computer"&&!sittingOut[i]&&(!active.includes(i)||stack[i]<Math.max(1,actualAnte))?[i]:[]);
   if(bustedBots.length){active=active.filter(i=>!bustedBots.includes(i));setSittingOut(old=>({...old,...Object.fromEntries(bustedBots.map(i=>[i,true]))}));addLog(bustedBots.map(i=>people[i].name).join(", ")+" out of chips · no AI rebuy.");}
   if(active.length<2){setStatus("Fewer than two funded players remain. AI bots cannot rebuy.");return;}
   actualAnte=limitAnte({potCents:previousPot,capCents,anteCents,playerCount:active.length});
