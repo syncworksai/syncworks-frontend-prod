@@ -71,6 +71,7 @@ export default function CustomerPokerTable(){
  const [myHandVisible,setMyHandVisible]=useState(true);
  const [coachOpen,setCoachOpen]=useState(true);
  const [winnerFlash,setWinnerFlash]=useState(false);
+ const [continueCountdown,setContinueCountdown]=useState(null);
  const [seatEditor,setSeatEditor]=useState(false),[seatName,setSeatName]=useState(""),[seatBuyin,setSeatBuyin]=useState("20"),[seatError,setSeatError]=useState("");
  function openDrawer(tab="hands"){setDrawerTab(tab);setDrawerOpen(true);}
  function closeDrawer(){setDrawerOpen(false);setShowdownViewer(null);}
@@ -395,6 +396,11 @@ export default function CustomerPokerTable(){
  const winnerHand=outcome?.winner!=null?winningHandText357(hands[outcome.winner],round):null;
  const nextActionLabel=gameOver?"Continue · Choose Game":round===2?"Continue · New Hand":"Deal Next · "+(THREE_FIVE_SEVEN[round+1])+" Cards";
  const doNext=()=>gameOver?finishGameAndPassDealer():next();
+ const sameDeviceHumanTable=!isSharedRoom&&people.length>=2&&people.every(p=>p.kind!=="computer");
+ useEffect(()=>{if(phase!=="resolved"||!sameDeviceHumanTable||continueCountdown===null)return;
+  if(continueCountdown<=0){setContinueCountdown(null);if(gameOver)finishGameAndPassDealer();else next();return;}
+  const timer=setTimeout(()=>setContinueCountdown(v=>v===null?null:v-1),1000);return()=>clearTimeout(timer);
+ },[continueCountdown,phase,sameDeviceHumanTable,gameOver]);
  useEffect(()=>{if(!drawerOpen)return;const onKey=e=>{if(e.key==="Escape")closeDrawer();};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey);},[drawerOpen]);
  return <main className={"sw-poker-screen"+(session==="playing"?" sw-357-playing sw-card-console-active":"")}><div className="sw-poker-content">
   <header className="sw-poker-top"><PokerLandscapeControl/>
@@ -484,7 +490,7 @@ export default function CustomerPokerTable(){
    {!isSharedRoom&&phase==="choosing"&&currentPlayer&&canActCurrent?<><button type="button" className="sw-poker-action fold" onClick={()=>choose("drop")}>Drop</button><button type="button" className="sw-poker-action hold" onClick={()=>choose("hold")}>Hold</button></>:
     !isSharedRoom&&phase==="choosing"&&currentPlayer?<span className="sw-poker-action-wait">Waiting for {currentPlayer.name} · {turnRemaining}s</span>:
     !isSharedRoom&&phase==="choosing"&&allReady?<button type="button" className="sw-poker-action hold grow" onClick={countdown}>3 · 2 · 1 Reveal</button>:
-    !isSharedRoom&&phase==="resolved"?<button type="button" className="sw-poker-action hold grow" onClick={doNext}>{nextActionLabel} <ChevronRight size={16}/></button>:
+    !isSharedRoom&&phase==="resolved"?<button type="button" className="sw-poker-action hold grow" onClick={()=>sameDeviceHumanTable?setContinueCountdown(v=>v===null?10:v):doNext()} disabled={continueCountdown!==null}>{continueCountdown!==null?"Continuing in "+continueCountdown+"s":nextActionLabel} <ChevronRight size={16}/></button>:
     phase==="revealing"?<span className="sw-poker-action-wait">Evaluating hands privately…</span>:
     <span className="sw-poker-action-wait">Waiting for round…</span>}
    <button type="button" className="sw-poker-action info" onClick={()=>openDrawer("log")} aria-label="Show round results"><BookOpen size={19}/><span>Results</span></button><button type="button" className="sw-poker-action info" onClick={()=>openDrawer("rules")} aria-label="Open game information"><Info size={19}/><span>Info</span></button>
