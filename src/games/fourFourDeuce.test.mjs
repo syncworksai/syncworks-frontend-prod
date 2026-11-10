@@ -39,17 +39,17 @@ test("best four-card holder drags and loser matches pot within cap",()=>{
  const r=settle442({hands,choices:["hold","hold"],potCents:150,capCents:1000,anteCents:25,stacks:[500,500]});
  assert.equal(r.winner,1);assert.deepEqual(r.delta,[-150,150]);assert.equal(r.nextPot,150);
  const capped=settle442({hands,choices:["hold","hold"],potCents:150,capCents:100,anteCents:25,stacks:[500,500]});
- assert.deepEqual(capped.delta,[0,150]);assert.equal(capped.nextPot,0);assert.equal(capped.capFinal,true);
+ assert.deepEqual(capped.delta,[-150,200]);assert.equal(capped.nextPot,100);assert.equal(capped.bonusToWinnerCents,50);
 });
 test("bot conserves wild fours and existing natural pairs",()=>{
  assert.deepEqual(botExchange442(cards(4,8,8,11)),[3]);
  assert.equal(botExchange442(cards(3,7,9,11)).length,3);
 });
 
-test("losing holder cannot owe more chips than available",()=>{
+test("losing holder can owe more than current chips and must rebuy before next hand",()=>{
  const hands=[cards(7,7,9,10),cards(8,8,8,4)];
  const r=settle442({hands,choices:["hold","hold"],potCents:150,capCents:1000,anteCents:25,stacks:[35,500]});
- assert.deepEqual(r.delta,[-35,150]);assert.equal(r.nextPot,35);
+ assert.deepEqual(r.delta,[-150,150]);assert.equal(r.nextPot,150);assert.equal(35+r.delta[0],-115);
 });
 
 test("each 4/4 hand uses one new shuffled 52-card deck with no duplicate cards across six seats and 18 maximum draws",()=>{
