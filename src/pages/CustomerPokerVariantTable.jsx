@@ -174,7 +174,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   setHands(draft.hands);setDeck(draft.deck);setClown(draft.clown);
   if(variant==="442"){setDraw442Turn(0);setDraw442Selected([]);setShowdown442(null);}
   setViewer(variant==="fyb"?fybLocalSeat(players):null);setOutcome(null);setFybTurn(0);setFollowers([]);setPendingFollower(false);setStreet(0);
-  setDecisions(players.map((p,i)=>sittingOut[i]?"fold":p.kind==="computer"&&variant!=="bozo"&&variant!=="442"?(Math.random()<0.38?"hold":"fold"):null));
+  setDecisions(players.map((p,i)=>sittingOut[i]||p.kind==="computer"&&stacks[i]<Math.max(1,anteCents)?"fold":p.kind==="computer"&&variant!=="bozo"&&variant!=="442"?(Math.random()<0.38?"hold":"fold"):null));
   if(variant==="fyb")setStep("fyb");
   else if(variant==="442")setStep("442-draw");
   else if(variant==="queen-follower"){setHands(players.map(()=>[]));setDeck(createShuffledDeck());setStep("stud");}
@@ -329,6 +329,16 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
   },2000);
   return()=>clearTimeout(timer);
  },[variant,step,activeIndex,decisions,hands,clown,players]);
+ // Bozo: 30-second real-time limit on each human decision. Timeout means Drop.
+ useEffect(()=>{
+  if(variant!=="bozo"||step!=="deciding"||activeIndex<0||currentPlayer?.kind==="computer")return;
+  const deadline=Date.now()+30000;setBozoSeconds(30);
+  const interval=setInterval(()=>{
+   const left=Math.max(0,Math.ceil((deadline-Date.now())/1000));setBozoSeconds(left);
+   if(left===0){clearInterval(interval);chooseHold("fold");setStatus("30 seconds expired — automatic Drop.");}
+  },250);
+  return()=>clearInterval(interval);
+ },[variant,step,activeIndex,currentPlayer?.kind]);
  useEffect(()=>{if(variant!=="bozo"||step!=="bozo-next")return;const id=setTimeout(()=>deal(),520);return()=>clearTimeout(id);},[variant,step,bozoHandSize]);
  useEffect(()=>{if(variant!=="442"||step!=="442-next")return;const id=setTimeout(()=>deal(),650);return()=>clearTimeout(id);},[variant,step,dealer]);
  useEffect(()=>{if(variant!=="fyb"||step!=="fyb-next")return;
@@ -375,7 +385,7 @@ export default function CustomerPokerVariantTable({variant:providedVariant}){
    {step==="stud-result"&&<><p>All seven cards dealt. The next step is validated betting and natural-versus-wild showdown; this is a guided dealing demonstration, not an automatic pot award.</p><button className="sw-poker-button mt-2" onClick={()=>{setTab("hands");setDrawer(true)}}>Review stud cards</button></>}
   </section>}
  </div>
- {step!=="loading"&&<nav className="sw-poker-sticky-actions">{groupId&&<div className="sw-card-console-table-switch"><CardClubTableSwitcher groupId={groupId} currentRoomId={roomId} userId={user?.id} navigate={nav} compact/></div>}<div className="sw-poker-action-top"><strong>♠ {centered}</strong><span>{variant==="fyb"?"FYB "+displayMoney(pot)+" · "+fybActive.length+" active":displayMoney(pot)+" / "+(cap==="unlimited"?"Unlimited":displayMoney(maxCents))}</span></div><div className="sw-poker-action-buttons">
+ {step!=="loading"&&<nav className="sw-poker-sticky-actions">{groupId&&<div className="sw-card-console-table-switch"><CardClubTableSwitcher groupId={groupId} currentRoomId={roomId} userId={user?.id} navigate={nav} compact/></div>}<div className="sw-poker-action-top"><strong>♠ {centered}{variant==="bozo"&&step==="deciding"&&currentPlayer?.kind!=="computer"&&<span className="ml-2 text-amber-300" role="timer">⏱ {bozoSeconds}s</span>}</strong><span>{variant==="fyb"?"FYB "+displayMoney(pot)+" · "+fybActive.length+" active":displayMoney(pot)+" / "+(cap==="unlimited"?"Unlimited":displayMoney(maxCents))}</span></div><div className="sw-poker-action-buttons">
  {step==="ready"&&<button className="sw-poker-action hold grow" onClick={deal}>{variant==="bozo"&&bozoLocked?"Deal next Bozo hand":"Deal cards"}</button>}{step==="bozo-next"&&<span className="sw-poker-action-wait">Shuffling new deck · rules locked</span>}
  {step==="442-next"&&<span className="sw-poker-action-wait">Dealer passes · Dealing four new cards…</span>}{step==="442-draw"&&currentPlayer?.kind==="computer"&&<span className="sw-poker-action-wait">🤖 {currentPlayer.name} choosing exchanges…</span>}{step==="442-draw"&&currentPlayer?.kind!=="computer"&&<button className="sw-poker-action hold grow" onClick={()=>finish442Exchange(activeIndex,draw442Selected)}>Exchange {draw442Selected.length} · Continue</button>}{step==="fyb-next"&&<span className="sw-poker-action-wait">Dealer rotates · Shuffling the next hand…</span>}
  {step==="deciding"&&currentPlayer?.kind==="computer"&&<span className="sw-poker-action-wait">🤖 {currentPlayer.name} is deciding…</span>}
