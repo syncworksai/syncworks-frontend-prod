@@ -15,13 +15,13 @@ export default function CustomerGamesHome(){
  useEffect(()=>{let active=true;getGroups().then(rows=>{if(active){setGroups(rows);if(!selected&&rows.length===1)setSelected(String(rows[0].id));}}).catch(e=>{if(active)setError(e.message||"Unable to load leagues");}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[]);
  const group=groups.find(g=>String(g.id)===selected);
  const resumed=useMemo(()=>listPracticeGames(user?.id,selected),[user?.id,selected]);
- const quickActions=[{name:"Tables",icon:Layers,to:group?`/customer/games/clubs?group=${group.id}`:"/customer/games/clubs"},{name:"Clubs",icon:Users,to:"/customer/games/clubs"},{name:"Practice",icon:Gamepad2,to:group?`/customer/games/table?group=${group.id}`:"/customer/games/table"},{name:"Stats",icon:Trophy,to:group?`/customer/games/clubs?group=${group.id}`:"/customer/games/clubs"}];
+ const quickActions=[{name:"Create Table",icon:Plus,to:group?`/customer/games/clubs/room?group=${group.id}`:"/customer/games/clubs"},{name:"Join Table",icon:Layers,to:group?`/customer/games/clubs/room?group=${group.id}`:"/customer/games/clubs"},{name:"Card Clubs",icon:Users,to:"/customer/games/clubs"},{name:"Practice",icon:Gamepad2,to:group?`/customer/games/table?group=${group.id}`:"/customer/games/table"},{name:"Standings",icon:Trophy,to:group?`/customer/games/clubs?group=${group.id}`:"/customer/games/clubs"}];
  return <main className="sw-console-lobby min-h-dvh px-4 pb-24 pt-[max(1.25rem,env(safe-area-inset-top))] text-white"><div className="mx-auto max-w-6xl">
-  <header className="mb-5 flex items-center justify-between gap-3"><button onClick={()=>nav("/customer")} className="flex min-h-11 items-center gap-2 rounded-xl border border-white/15 px-3 text-xs"><ArrowLeft size={17}/> Customer</button><span className="text-[10px] font-black tracking-[.2em] text-cyan-300">SYNCWORKS GAMES</span></header>
+  <header className="mb-5 flex items-center justify-between gap-3"><button onClick={()=>nav("/customer")} className="flex min-h-11 items-center gap-2 rounded-xl border border-white/15 px-3 text-xs"><ArrowLeft size={17}/> Customer</button><span className="text-[10px] font-black tracking-[.2em] text-cyan-300">POKER LOUNGE</span></header>
   <section className="sw-console-hero" aria-label="Card Console casino lounge">
    <div className="sw-console-hero-glow" aria-hidden="true"/>
    <div className="sw-console-hero-header">
-    <div><div className="sw-console-eyebrow">YOUR CLUB · YOUR TABLE · YOUR CARD NIGHT</div><h1>SYNCWORKS <span>CARD CONSOLE</span></h1><p>Play together, from wherever you are. Join a club, practice your favorite card games, and keep your nights connected.</p></div>
+    <div><div className="sw-console-eyebrow">THE POKER LOUNGE · PLAY YOUR WAY</div><h1>SYNCWORKS <span>POKER LOUNGE</span></h1><p>One place for your clubs, live tables, local practice, and every card game. Return to a saved hand or set up your next card night.</p></div>
     <span className="sw-console-free"><ShieldCheck size={15}/> FREE BETA</span>
    </div>
    <div className="sw-console-stage">
@@ -30,11 +30,11 @@ export default function CustomerGamesHome(){
     <div className="sw-console-stage-chips" aria-hidden="true"><i/><i/><i/></div>
    </div>
    <div className="sw-console-hero-actions">
-    <button type="button" onClick={()=>nav(group?"/customer/games/clubs?group="+group.id:"/customer/games/clubs")} className="sw-console-hero-button play"><Spade size={22}/><span><strong>Enter Card Club</strong><small>Lobby, friends & tables</small></span><ArrowRight size={19}/></button>
-    <button type="button" onClick={()=>nav(resumed[0]?.path||(group?"/customer/games/clubs?group="+group.id:"/customer/games/clubs"))} className="sw-console-hero-button resume"><Play size={22}/><span><strong>{resumed.length?"Resume Game":"Your Game Lobby"}</strong><small>{resumed.length?"Pick up your saved hand":"Find your table"}</small></span><ArrowRight size={19}/></button>
+    <button type="button" onClick={()=>nav(group?"/customer/games/clubs?group="+group.id:"/customer/games/clubs")} className="sw-console-hero-button play"><Spade size={22}/><span><strong>Open Card Club</strong><small>Create or join a live table</small></span><ArrowRight size={19}/></button>
+    <button type="button" onClick={()=>nav(resumed[0]?.path||(group?"/customer/games/clubs?group="+group.id:"/customer/games/clubs"))} className="sw-console-hero-button resume"><Play size={22}/><span><strong>{resumed.length?"Continue Last Game":"Choose a New Game"}</strong><small>{resumed.length?"Resume your practice cards":"Browse available tables"}</small></span><ArrowRight size={19}/></button>
    </div>
   </section>
-  <nav className="sw-console-shortcuts" aria-label="Card Console shortcuts">{quickActions.map(action=><button type="button" key={action.name} onClick={()=>nav(action.to)}><action.icon size={19}/><span>{action.name}</span></button>)}</nav>
+  <nav className="sw-console-shortcuts sw-console-main-nav" aria-label="Poker Lounge actions">{quickActions.map(action=><button type="button" key={action.name} onClick={()=>nav(action.to)}><action.icon size={19}/><span>{action.name}</span></button>)}</nav>
   <div className="mt-5 grid gap-4 md:grid-cols-[1.1fr_.9fr]">
    <section className="rounded-2xl border border-white/10 bg-white/[.035] p-4"><h2 className="flex items-center gap-2 text-lg font-black"><Club className="text-cyan-300"/> Choose your league</h2>
     <p className="mt-1 text-xs text-slate-400">Up to 100+ members can belong to a league; individual tables have limited seats.</p>
@@ -55,6 +55,6 @@ export default function CustomerGamesHome(){
    <p className="mt-1 text-xs leading-5 text-slate-300">Browse by how you want to play. Games marked Planned are concepts, not playable yet. Clubs and tables will be shared across future game engines.</p>
    <div className="mt-4 grid gap-3 sm:grid-cols-2">{CARD_GAME_CATEGORIES.map(category=><article key={category.id} className="rounded-xl border border-white/10 bg-slate-900/60 p-3"><h3 className="text-sm font-black text-cyan-100">{category.label}</h3><p className="mt-1 text-[11px] text-slate-400">{category.description}</p><ul className="mt-3 space-y-2">{CARD_CONSOLE_GAMES.filter(game=>game.category===category.id).map(game=><li key={game.id} className="flex items-center justify-between gap-3 text-xs"><span>{game.name}</span><span className="shrink-0 rounded-md border border-white/15 px-2 py-1 text-[10px] text-slate-300">{game.status==="practice"?"Practice":game.status==="prototype"?"Prototype":"Planned"}</span></li>)}</ul></article>)}</div>
   </section>
-  <p className="mt-4 text-center text-[11px] leading-5 text-amber-200">Game rooms and virtual tallies are currently a local beta preview. Other devices cannot join the same live game yet. SyncWorks holds no game funds.</p>
+  <p className="mt-4 text-center text-[11px] leading-5 text-amber-200">Live 3-5-7 is being prepared for cross-phone play; other games remain local practice. All chips are virtual. SyncWorks holds no game funds.</p>
  </div></main>;
 }
