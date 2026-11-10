@@ -5,7 +5,7 @@ import {getCardRoom,createCardRoom} from "../api/cardRooms";
 import {createGroupInviteLink} from "../api/social";
 import {useAuth} from "../auth/AuthContext";
 import {Share2} from "lucide-react";
-import {advance357Street,ensure357Street,cardRank,createShuffledDeck,dealt357,displayMoney,instant357,rate357,resolve357,winningHandText357,THREE_FIVE_SEVEN} from "../games/drop357Table.mjs";
+import {ensure357Street,cardRank,createShuffledDeck,dealt357,displayMoney,instant357,rate357,resolve357,winningHandText357,THREE_FIVE_SEVEN} from "../games/drop357Table.mjs";
 import "./CustomerPokerTable.css";
 import {HAND_RANKINGS_357,practiceHandInfo,estimatePracticeEquity} from "../games/practiceOdds357.mjs";
 import {rotationAfterPot,chooseVirtualDealer} from "../games/pokerDealerRotation.mjs";
@@ -116,7 +116,7 @@ export default function CustomerPokerTable(){
  // without its two additional cards. Complete only missing cards, preserving
  // the original deck and every card already held by a seated player.
  useEffect(()=>{
-  if(isSharedRoom||session!=="playing"||round===0||!["choosing","resolved"].includes(phase)||!hands.length)return;
+  if(isSharedRoom||session!=="playing"||round===0||phase!=="choosing"||!hands.length)return;
   const expected=[3,5,7][round];
   const missing=hands.some((hand,i)=>hand?.length>0&&!sittingOut[i]&&hand.length<expected);
   if(!missing)return;
