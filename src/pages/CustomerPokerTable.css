@@ -874,3 +874,22 @@
 .sw-357-capped-bonus span{color:#8cf5ff;font-size:22px;vertical-align:middle}
 .sw-card-console-active .sw-poker-felt-brand i{text-shadow:0 0 12px #38bdff,0 0 20px #8d55e4}
 @media(prefers-reduced-motion:reduce){.sw-card-console-active .sw-poker-table-space::before,.sw-357-capped-bonus{animation:none}}
+
+/* PRACTICE COACH: own hand is easily located, with estimated 1-opponent
+   equity and highlighted contributing cards. Never expose bot hole cards. */
+.sw-poker-coach-inline{width:min(100%,620px);margin:2px auto 6px;padding:5px 10px;border:1px solid #76d9ffd9;border-radius:11px;background:linear-gradient(110deg,#071b34eb,#161032eb);box-shadow:0 0 14px #1fbbff46;position:relative;z-index:9;color:#e8f9ff}
+.sw-poker-coach-label{font-size:10px;font-weight:950;color:#88ecff;letter-spacing:.075em}
+.sw-poker-coach-description{display:flex;gap:8px;align-items:center;justify-content:space-between;font-size:clamp(10px,2.4vw,13px);margin-top:3px}
+.sw-poker-coach-description strong{color:#ffde86;font-weight:950;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.sw-poker-coach-description span{font-size:17px;color:#86ffe3;font-weight:1000;white-space:nowrap}
+.sw-poker-coach-description span small{font-size:8px;color:#badbeb;font-weight:650}
+.sw-poker-coach-description>button{border:1px solid #67badc;border-radius:8px;padding:4px 7px;color:#ccf7ff;font-size:10px}
+.sw-357-hand-position.sw-coach-key-card .sw-poker-card{border:2px solid #ffe28d!important;box-shadow:0 0 0 2px #b47d2e55,0 0 13px #e9ad43a1,0 5px 8px #0008!important}
+.sw-357-video-victory{position:absolute;z-index:200;left:50%;top:43%;width:min(93%,520px);pointer-events:none;text-align:center;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 7px;background:linear-gradient(100deg,transparent,#090917e8 12%,#311f23ef 50%,#080a1af2 87%,transparent);border-top:2px solid #ffd56e;border-bottom:2px solid #6deaff;color:#fff3c8;box-shadow:0 0 60px #e9a63f73,0 0 48px #7a52ff7a;animation:sw-victory-flash 2.7s ease both}
+.sw-357-video-victory span{font-size:clamp(11px,3vw,20px);font-weight:1000;letter-spacing:.15em;color:#ffe487;text-shadow:0 0 19px #fff19a}
+.sw-357-video-victory strong{font-size:clamp(18px,4vw,32px);font-weight:1000;text-shadow:0 0 14px #fff8d3,0 0 27px #af5fff}
+.sw-357-video-victory small{font-size:clamp(10px,2.6vw,16px);font-weight:900;color:#b9f5ff}
+.sw-357-banner-temporary.sw-357-table-winner{opacity:0;pointer-events:none}
+@keyframes sw-victory-flash{0%{opacity:0;transform:translate(-50%,-50%) scale(.45);filter:brightness(3)}13%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}26%{transform:translate(-50%,-50%) scale(1)}65%{opacity:1;filter:brightness(1.25)}100%{opacity:0;transform:translate(-50%,-57%) scale(1);filter:brightness(1)}}
+@media(max-width:600px){.sw-poker-coach-inline{padding:4px 7px;margin:1px auto 4px}.sw-poker-coach-description{gap:5px}.sw-poker-coach-description span{font-size:14px}.sw-poker-coach-description span small{font-size:7px}.sw-357-video-victory{padding:9px 4px;top:45%}}
+@media(prefers-reduced-motion:reduce){.sw-357-video-victory{animation:none;opacity:1}.sw-357-banner-temporary.sw-357-table-winner{opacity:1}}
