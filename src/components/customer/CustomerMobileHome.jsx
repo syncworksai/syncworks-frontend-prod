@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   AlertTriangle,
   CalendarDays,
@@ -230,14 +231,14 @@ export default function CustomerMobileHome({
         <p className="mt-2 text-[9px] leading-4 text-slate-400">Returns to your last page in each feature. Unfinished work is restored only where that feature supports saving drafts or sessions.</p>
       </section>}
       {resumePokerRoomPath ? <button type="button" onClick={() => setGamesQuickOpen(true)} className="mt-3 flex min-h-16 w-full items-center justify-between gap-3 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-4 text-left"><span className="flex items-center gap-3"><span className="text-2xl">♠</span><span><strong className="block text-sm text-white">Return to Poker Room</strong><span className="block text-[11px] text-emerald-200">Rejoin your last active table · saved seats</span></span></span><ChevronRight className="h-5 w-5 text-emerald-300"/></button> : null}
-      {gamesQuickOpen ? (
-        <div className="fixed inset-0 z-[300] flex items-end justify-center bg-slate-950/85 p-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:items-center" role="presentation" onClick={() => setGamesQuickOpen(false)}>
-          <section role="dialog" aria-modal="true" aria-label="Games quick navigation" onClick={(event) => event.stopPropagation()} className="w-full max-w-md rounded-3xl border border-cyan-300/30 bg-[#0b1428] p-5 shadow-[0_25px_90px_rgba(0,0,0,.7)]">
+      {gamesQuickOpen ? createPortal(
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto bg-slate-950/90 px-4 py-[max(2rem,env(safe-area-inset-top))] backdrop-blur-sm" role="presentation" onClick={() => setGamesQuickOpen(false)}>
+          <section role="dialog" aria-modal="true" aria-label="Games quick navigation" onClick={(event) => event.stopPropagation()} className="relative my-auto w-full max-w-md max-h-[calc(100dvh-5rem)] overflow-y-auto rounded-3xl border border-cyan-300/30 bg-[#0b1428] p-5 shadow-[0_25px_90px_rgba(0,0,0,.7)]">
             <div className="mb-4 flex items-center justify-between"><div><p className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-300">Quick navigation</p><h2 className="mt-1 text-xl font-black text-white">Games & Card Clubs</h2></div><button type="button" aria-label="Close games menu" onClick={() => setGamesQuickOpen(false)} className="rounded-xl border border-white/15 p-2 text-slate-200"><X className="h-5 w-5"/></button></div>
             {resumePokerRoomPath ? <button type="button" onClick={() => nav(resumePokerRoomPath)} className="mb-3 flex min-h-14 w-full items-center justify-between rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-4 text-left"><span><span className="block text-sm font-black text-white">Continue current game</span><span className="mt-1 block text-xs text-emerald-200">Return to your saved poker room</span></span><ChevronRight className="h-5 w-5 text-emerald-200"/></button> : <p className="mb-3 rounded-xl border border-white/10 p-3 text-xs text-slate-400">No saved active table on this device.</p>}
             <button type="button" onClick={() => nav("/customer/games")} className="flex min-h-14 w-full items-center justify-between rounded-2xl border border-cyan-300/30 bg-cyan-500/10 p-4 text-left"><span><span className="block text-sm font-black text-white">Games dashboard</span><span className="mt-1 block text-xs text-cyan-200">Browse rooms, clubs and practice games</span></span><ChevronRight className="h-5 w-5 text-cyan-200"/></button>
           </section>
-        </div>
+        </div>, document.body
       ) : null}
       <button type="button" onClick={() => nav("/customer/games/new")} className="mt-3 flex min-h-16 w-full items-center justify-between gap-3 rounded-2xl border border-cyan-300/35 bg-cyan-500/10 p-4 text-left"><span className="flex items-center gap-3"><span className="text-2xl">♠</span><span><strong className="block text-sm text-white">New Game</strong><span className="block text-[11px] text-cyan-100">Create poker room · set buy-in · share invite</span></span></span><span className="text-cyan-300">＋</span></button>
       <button type="button" onClick={() => nav("/customer/games")} className="mt-3 flex min-h-14 w-full items-center gap-3 rounded-2xl border border-amber-400/25 bg-amber-500/[.06] p-3 text-left"><span className="text-2xl">♠</span><span className="min-w-0 flex-1"><span className="block text-xs font-black text-white">Games & Card Clubs · 5 games</span><span className="block text-[10px] text-slate-400">Create leagues, invite friends, play cards & track wins</span></span><ChevronRight className="h-4 w-4 text-amber-300" /></button>
