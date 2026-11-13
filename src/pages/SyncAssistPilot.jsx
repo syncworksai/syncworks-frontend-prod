@@ -27,11 +27,11 @@ export default function SyncAssistPilot() {
   async function refresh() {
     setLoading(true);
     try {
-      const result = await api.get("/sync-ai/assist/pilot/");
+      const result = await api.get("/sync-ai/assist/pilot/", { timeout: 15000 });
       setData(result.data);
       setError("");
     } catch (err) {
-      setError(err?.response?.data?.detail || "Unable to load the private pilot.");
+      setError(err?.response?.data?.detail || (err?.code === "ECONNABORTED" ? "The SyncWorks server took too long to respond. Try again." : "Unable to load Sync Assist data. Check your connection and retry."));
     } finally {
       setLoading(false);
     }
@@ -91,7 +91,7 @@ export default function SyncAssistPilot() {
   }
 
   return (
-    <main className="relative min-h-dvh bg-[#020617] px-4 pb-36 pt-5 text-white">
+    <main className="relative min-h-dvh bg-[#020617] px-4 pb-36 pt-28 text-white sm:pt-24">
       <div className="mx-auto max-w-4xl">
         <button type="button" onClick={() => navigate("/sync")} className="mb-5 inline-flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-200"><ArrowLeft size={16}/> Back to SYNC</button>
         <header className="mb-5 rounded-3xl border border-cyan-300/25 bg-gradient-to-br from-[#091c32] to-[#120c2c] p-5">
@@ -100,6 +100,12 @@ export default function SyncAssistPilot() {
           <div className="mt-3 flex items-center gap-2 text-xs font-bold text-amber-200"><ShieldCheck size={16}/> Pilot access only · Automation worker not yet enabled</div>
         </header>
         {!permitted ? <div role="alert" className="rounded-2xl border border-rose-400/35 p-5 text-rose-200">This feature is restricted to the private pilot account.</div> : <>
+          {(loading || (error && !data)) && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-cyan-400/25 bg-slate-900/75 p-3" role="status">
+              <p className="text-xs text-slate-300">{loading ? "Connecting to SyncWorks… Your records will appear when the server responds." : "Your records could not be loaded. No scan has run."}</p>
+              <button type="button" onClick={refresh} disabled={loading} className="min-h-10 rounded-lg border border-cyan-400/35 px-4 text-xs font-black text-cyan-100 disabled:opacity-50">Retry</button>
+            </div>
+          )}
           {error && <div role="alert" className="mb-4 rounded-xl border border-rose-400/40 bg-rose-950/30 p-3 text-sm text-rose-200">{error}</div>}
           <div className="mb-5 grid grid-cols-3 gap-2">
             {[[Clock3, "Pending", data?.counts?.pending ?? "—"],[CheckCircle2, "Approved", data?.counts?.approved ?? "—"],[XCircle, "Rejected", data?.counts?.rejected ?? "—"]].map(([Icon,label,count]) => <div key={label} className="rounded-2xl border border-slate-700/70 bg-slate-900/50 p-3"><Icon size={20} className="text-cyan-300"/><div className="mt-2 text-2xl font-black">{count}</div><p className="text-xs text-slate-400">{label}</p></div>)}
@@ -108,18 +114,18 @@ export default function SyncAssistPilot() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-sm font-black">Background discovery</h2>
               <span className={`rounded-full border px-3 py-1 text-xs font-bold ${data?.scheduler_status === "observed_recently" ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-200" : "border-amber-400/30 bg-amber-500/10 text-amber-200"}`}>
-                {data?.scheduler_status === "observed_recently" ? "Recent scheduled runs verified" : "Scheduled runs not verified"}
+                {!data ? "Waiting for server" : data?.scheduler_status === "observed_recently" ? "Recent scheduled runs verified" : "Scheduled runs not verified"}
               </span>
             </div>
             <p className="mt-2 text-xs leading-5 text-slate-400">
-              {data?.last_scheduled_run ? `Last recorded scheduled scan: ${new Date(data.last_scheduled_run).toLocaleString()}.` : "No recorded scheduled worker run. Manual scans do not count as unattended automation."}
+              {!data ? "Background status will be shown after the server responds." : data?.last_scheduled_run ? `Last recorded scheduled scan: ${new Date(data.last_scheduled_run).toLocaleString()}.` : "No recorded scheduled worker run. Manual scans do not count as unattended automation."}
               {" "}Approving a task never sends messages or payments.
             </p>
           </section>
           <section className="mb-5 rounded-2xl border border-cyan-400/25 bg-cyan-500/5 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div><h2 className="font-black text-white">Business discovery</h2><p className="mt-1 text-xs text-slate-400">{data?.last_discovery_scan ? `Last scan: ${new Date(data.last_discovery_scan.at).toLocaleString()} · ${data.last_discovery_scan.created} new tasks` : "No verified scan recorded yet."}</p></div>
-              <button type="button" disabled={busy || loading} onClick={runScan} className="min-h-11 rounded-xl border border-cyan-400/40 bg-cyan-500/15 px-4 text-xs font-black text-cyan-100 disabled:opacity-50">Scan my businesses</button>
+              <div><h2 className="font-black text-white">Business discovery</h2><p className="mt-1 text-xs text-slate-400">{data?.last_discovery_scan ? `Last scan: ${new Date(data.last_discovery_scan.at).toLocaleString()} · ${data.last_discovery_scan.created} new tasks` : !data ? "Waiting for server to load scan history…" : "No scan record found."}</p></div>
+              <button type="button" disabled={busy || loading || !data} onClick={runScan} className="min-h-11 rounded-xl border border-cyan-400/40 bg-cyan-500/15 px-4 text-xs font-black text-cyan-100 disabled:opacity-50">Scan my businesses</button>
             </div>
             {data?.last_discovery_scan?.checked && (
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3" aria-label="Sources checked">
@@ -156,7 +162,7 @@ export default function SyncAssistPilot() {
             <label className="block text-xs font-bold text-slate-300">Instructions (optional)
               <textarea maxLength={2000} rows={3} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe what the assistant should prepare for review." className="mt-1 block w-full rounded-xl border border-slate-600 bg-[#101a2d] p-3 text-sm text-white placeholder:text-slate-500"/>
             </label>
-            <button disabled={busy || !title.trim()} type="submit" className="min-h-11 w-full rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 py-3 text-sm font-black disabled:opacity-50">Save for review</button>
+            <button disabled={busy || !data || !title.trim()} type="submit" className="min-h-11 w-full rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 py-3 text-sm font-black disabled:opacity-50">Save for review</button>
           </form>
           <section className="rounded-3xl border border-white/10 bg-slate-900/25 p-5">
             <div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-black">Task activity & approvals</h2><button type="button" disabled={busy || loading} onClick={refresh} className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold text-cyan-200">Refresh</button></div>
