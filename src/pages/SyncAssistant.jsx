@@ -8,6 +8,8 @@ import {
   CheckCircle2,
   CloudSun,
   Headphones,
+  Settings2,
+  ChevronRight,
   History,
   LoaderCircle,
   Mic,
@@ -151,6 +153,7 @@ export default function SyncAssistant() {
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(true);
+  const [mobilePanel, setMobilePanel] = useState(null);
 
   const selectedVoice = useMemo(
     () =>
@@ -292,7 +295,7 @@ export default function SyncAssistant() {
 
     if (greeting) {
       const greetingText = workspace === "pm"
-        ? "Property Management SYNC is ready. What can I do for you today?"
+        ? "Property Management SYNC is ready. What can I do for you?"
         : workspace === "business"
         ? "Business SYNC is ready. What can I do for you today?"
         : "SYNC is ready. What can I do for you today?";
@@ -380,11 +383,18 @@ export default function SyncAssistant() {
     sendMessage(prompt, { forceSpeak: true });
   }
 
+  useEffect(() => {
+    if (!mobilePanel) return;
+    const onEscape = (event) => { if (event.key === "Escape") setMobilePanel(null); };
+    document.addEventListener("keydown", onEscape);
+    return () => document.removeEventListener("keydown", onEscape);
+  }, [mobilePanel]);
+
   return (
     <div className="min-h-dvh bg-[#020617] text-slate-100">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.16),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(139,92,246,0.15),transparent_36%)]" />
 
-      <header className="sticky top-0 z-40 border-b border-slate-800/90 bg-slate-950/88 px-4 py-3 backdrop-blur-xl">
+      <header className="hidden lg:block border-b border-slate-800/90 bg-slate-950/88 px-4 py-3 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
           <button
             type="button"
@@ -432,18 +442,22 @@ export default function SyncAssistant() {
         </div>
       </header>
 
-      <main className="relative mx-auto max-w-5xl space-y-5 px-4 pb-24 pt-5">
-        {pilotAccess ? <button type="button" onClick={() => navigate("/sync/assist")} className="flex min-h-14 w-full items-center justify-between rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/15 to-violet-500/10 p-4 text-left text-sm font-black text-cyan-100"><span>Sync Assist · Private Business Control Center</span><span aria-hidden="true">→</span></button> : null}
-        <section className="overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-950/72 p-5 shadow-[0_0_70px_rgba(34,211,238,0.10)] md:p-8">
+      <main className="relative mx-auto max-w-5xl space-y-4 px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-3 lg:space-y-5 lg:pb-24 lg:pt-5">
+        <div className="flex items-center justify-between gap-2 lg:hidden">
+          <div><p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">SYNC ASSIST</p><h1 className="text-lg font-black">Your command center</h1></div>
+          <button type="button" onClick={() => setMobilePanel("settings")} aria-label="SYNC settings" className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-500/10"><Settings2 className="h-5 w-5"/></button>
+        </div>
+        {pilotAccess ? <button type="button" onClick={() => navigate("/sync/assist")} className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/15 to-violet-500/10 px-3 py-2 text-left text-xs font-black text-cyan-100 lg:min-h-14 lg:rounded-2xl lg:p-4 lg:text-sm"><span>Business Control Center · Private pilot</span><ChevronRight className="h-4 w-4 shrink-0"/></button> : null}
+        <section className="overflow-hidden rounded-2xl border border-cyan-400/20 bg-slate-950/72 p-3 shadow-[0_0_70px_rgba(34,211,238,0.10)] lg:rounded-[2rem] lg:p-5 md:p-8">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">
+              <div className="hidden text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200 lg:block">
                 Connected to your secure SyncWorks profile
               </div>
-              <h1 className="mt-3 text-3xl font-black tracking-tight text-white md:text-5xl">
+              <h1 className="mt-1 text-xl font-black tracking-tight text-white lg:mt-3 lg:text-3xl md:text-5xl">
                 What can I do for you today?
               </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+              <p className="hidden mt-3 max-w-2xl text-sm leading-6 text-slate-300 lg:block">
                 Tap once to hear your full profile and current updates, or speak a
                 command while you are moving.
               </p>
@@ -466,19 +480,19 @@ export default function SyncAssistant() {
             </div>
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          <div className="mt-3 grid grid-cols-3 gap-2 lg:mt-6 lg:gap-3">
             <button
               type="button"
               onClick={() => setWorkspace("personal")}
-              className={`rounded-3xl border p-4 text-left ${
+              className={`min-w-0 rounded-xl border p-2 text-center lg:rounded-3xl lg:p-4 lg:text-left ${
                 workspace === "personal"
                   ? "border-cyan-400/40 bg-cyan-500/12"
                   : "border-slate-800 bg-slate-950/70"
               }`}
             >
-              <UserRound className="h-5 w-5 text-cyan-200" />
-              <div className="mt-3 font-black text-white">Personal SYNC</div>
-              <div className="mt-1 text-xs leading-5 text-slate-400">
+              <UserRound className="mx-auto h-5 w-5 text-cyan-200 lg:mx-0" />
+              <div className="mt-1 text-[11px] font-black text-white lg:mt-3 lg:text-base">Personal</div>
+              <div className="mt-1 hidden text-xs leading-5 text-slate-400 lg:block">
                 Profile, requests, Health, finance, and Personal updates.
               </div>
             </button>
@@ -493,34 +507,34 @@ export default function SyncAssistant() {
                   setNotice("Choose an active business before opening Business SYNC.");
                 }
               }}
-              className={`rounded-3xl border p-4 text-left ${
+              className={`min-w-0 rounded-xl border p-2 text-center lg:rounded-3xl lg:p-4 lg:text-left ${
                 workspace === "business"
                   ? "border-violet-400/40 bg-violet-500/12"
                   : "border-slate-800 bg-slate-950/70"
               } ${businessAvailable ? "" : "opacity-60"}`}
             >
-              <BriefcaseBusiness className="h-5 w-5 text-violet-200" />
-              <div className="mt-3 font-black text-white">Business SYNC</div>
-              <div className="mt-1 text-xs leading-5 text-slate-400">
+              <BriefcaseBusiness className="mx-auto h-5 w-5 text-violet-200 lg:mx-0" />
+              <div className="mt-1 text-[11px] font-black text-white lg:mt-3 lg:text-base">Business</div>
+              <div className="mt-1 hidden text-xs leading-5 text-slate-400 lg:block">
                 {businessAvailable
                   ? "Jobs, leads, approvals, messages, and operations."
                   : "Select a Business workspace first."}
               </div>
             </button>
             <button type="button" onClick={() => { setWorkspace("pm"); setNotice("PM SYNC requires an authorized Property Management portfolio."); }}
-              className={`rounded-3xl border p-4 text-left ${workspace === "pm" ? "border-emerald-400/40 bg-emerald-500/10" : "border-slate-800 bg-slate-950/70"}`}>
-              <Building2 className="h-5 w-5 text-emerald-200" />
-              <div className="mt-3 font-black text-white">PM SYNC</div>
-              <div className="mt-1 text-xs leading-5 text-slate-400">Property, maintenance and work-order oversight.</div>
+              className={`min-w-0 rounded-xl border p-2 text-center lg:rounded-3xl lg:p-4 lg:text-left ${workspace === "pm" ? "border-emerald-400/40 bg-emerald-500/10" : "border-slate-800 bg-slate-950/70"}`}>
+              <Building2 className="mx-auto h-5 w-5 text-emerald-200 lg:mx-0" />
+              <div className="mt-1 text-[11px] font-black text-white lg:mt-3 lg:text-base">Property</div>
+              <div className="mt-1 hidden text-xs leading-5 text-slate-400 lg:block">Property, maintenance and work-order oversight.</div>
             </button>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid grid-cols-2 gap-2 lg:mt-5 lg:gap-3">
             <button
               type="button"
               onClick={readFullProfile}
               disabled={sending || !aiReady}
-              className="inline-flex min-h-20 items-center justify-center gap-3 rounded-3xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 px-5 text-left font-black text-white disabled:opacity-45"
+              className="inline-flex min-h-14 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 px-5 text-left font-black text-white disabled:opacity-45"
             >
               {sending ? (
                 <LoaderCircle className="h-6 w-6 animate-spin" />
@@ -530,8 +544,8 @@ export default function SyncAssistant() {
                 <Play className="h-6 w-6" />
               )}
               <span>
-                <span className="block">Read my full profile</span>
-                <span className="mt-1 block text-xs font-medium text-cyan-100">
+                <span className="block text-sm lg:text-base">Brief me</span>
+                <span className="mt-1 hidden text-xs font-medium text-cyan-100 lg:block">
                   Speak every available update
                 </span>
               </span>
@@ -546,7 +560,7 @@ export default function SyncAssistant() {
                   ? stopListening
                   : () => startListening({ greeting: true })
               }
-              className={`inline-flex min-h-20 items-center justify-center gap-3 rounded-3xl border px-5 text-left font-black ${
+              className={`inline-flex min-h-14 items-center justify-center gap-2 rounded-xl border px-3 text-left text-sm font-black lg:min-h-20 lg:rounded-3xl lg:px-5 ${
                 speaking || listening
                   ? "border-rose-300/35 bg-rose-500/15 text-rose-100"
                   : "border-cyan-300/35 bg-cyan-500/15 text-cyan-100"
@@ -565,14 +579,14 @@ export default function SyncAssistant() {
                     ? "Stop listening"
                     : "What can I do for you?"}
                 </span>
-                <span className="mt-1 block text-xs font-medium opacity-80">
+                <span className="mt-1 hidden text-xs font-medium opacity-80 lg:block">
                   {listening ? "SYNC is listening now" : "Start voice command"}
                 </span>
               </span>
             </button>
           </div>
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <div className="mt-4 hidden gap-2 sm:grid-cols-2 lg:grid">
             <button
               type="button"
               onClick={prepareAppointment}
@@ -602,7 +616,7 @@ export default function SyncAssistant() {
             </button>
           </div>
 
-          <div className="mt-5 rounded-3xl border border-slate-700 bg-slate-950/85 p-3">
+          <div className="mt-3 rounded-xl border border-slate-700 bg-slate-950/85 p-2 lg:mt-5 lg:rounded-3xl lg:p-3">
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
@@ -612,19 +626,19 @@ export default function SyncAssistant() {
                   sendMessage();
                 }
               }}
-              rows={4}
+              rows={2}
               maxLength={6000}
               placeholder={`Tell ${workspace === "business" ? "Business" : "Personal"} SYNC what you need...`}
-              className="w-full resize-none bg-transparent px-2 py-2 text-base text-white outline-none placeholder:text-slate-600"
+              className="w-full resize-none bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-slate-600 lg:text-base"
             />
 
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-1 flex flex-wrap gap-2 lg:mt-3">
               <button
                 type="button"
                 onClick={
                   listening ? stopListening : () => startListening({ greeting: false })
                 }
-                className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border px-5 text-sm font-black ${
+                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-black lg:min-h-12 lg:rounded-2xl lg:px-5 lg:text-sm ${
                   listening
                     ? "border-rose-300/35 bg-rose-500/15 text-rose-100"
                     : "border-cyan-300/35 bg-cyan-500/15 text-cyan-100"
@@ -642,7 +656,7 @@ export default function SyncAssistant() {
                 type="button"
                 onClick={() => sendMessage()}
                 disabled={sending || !aiReady}
-                className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 px-5 text-sm font-black text-white disabled:opacity-45"
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 px-5 text-sm font-black text-white disabled:opacity-45"
               >
                 {sending ? (
                   <LoaderCircle className="h-5 w-5 animate-spin" />
@@ -659,6 +673,14 @@ export default function SyncAssistant() {
           ) : null}
         </section>
 
+        <div className="grid grid-cols-3 gap-2 lg:hidden">
+          {[["shortcuts", "Shortcuts", Sparkles], ["tools", "Tools", Bot], ["settings", "Settings", Settings2]].map(([id, label, Icon]) => (
+            <button key={id} type="button" onClick={() => setMobilePanel(id)} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border border-cyan-400/25 bg-cyan-500/10 text-xs font-black text-cyan-100"><Icon className="h-4 w-4"/>{label}</button>
+          ))}
+        </div>
+        <div className={mobilePanel === "shortcuts" ? "fixed inset-0 z-[250] flex items-end justify-center bg-black/85 px-2 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(.75rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:contents" : "hidden lg:contents"}>
+          <div role="dialog" aria-modal={mobilePanel === "shortcuts" ? "true" : undefined} aria-label="SYNC shortcuts" className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto overscroll-contain rounded-2xl bg-[#081326] lg:contents">
+            <button type="button" onClick={() => setMobilePanel(null)} className="sticky top-0 z-10 flex min-h-12 w-full items-center justify-between border-b border-cyan-400/20 bg-[#081326] px-4 text-sm font-black text-white lg:hidden">Voice shortcuts <X className="h-5 w-5"/></button>
         <section className="rounded-[2rem] border border-slate-800 bg-slate-950/65 p-5">
           <div className="flex items-center gap-3">
             <Sparkles className="h-5 w-5 text-cyan-200" />
@@ -678,7 +700,16 @@ export default function SyncAssistant() {
             ))}
           </div>
         </section>
+          </div>
+        </div>
 
+        <div className={mobilePanel === "tools" ? "fixed inset-0 z-[250] flex items-end justify-center bg-black/85 px-2 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(.75rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:contents" : "hidden lg:contents"}>
+          <div role="dialog" aria-modal={mobilePanel === "tools" ? "true" : undefined} aria-label="SYNC tools" className="max-h-[calc(100dvh-2rem)] w-full max-w-xl space-y-4 overflow-y-auto overscroll-contain rounded-2xl bg-[#081326] p-3 lg:contents lg:p-0">
+            <button type="button" onClick={() => setMobilePanel(null)} className="sticky top-0 z-10 flex min-h-12 w-full items-center justify-between border-b border-cyan-400/20 bg-[#081326] px-4 text-sm font-black text-white lg:hidden">Tools & workflows <X className="h-5 w-5"/></button>
+        <div className="grid grid-cols-2 gap-2 lg:hidden">
+          <button type="button" onClick={prepareAppointment} className="min-h-14 rounded-xl border border-violet-300/30 bg-violet-500/10 px-3 text-left text-xs font-black text-white"><CalendarDays className="mb-1 h-4 w-4 text-violet-200"/>Prepare appointment</button>
+          <button type="button" onClick={prepareWeather} disabled={sending || !aiReady} className="min-h-14 rounded-xl border border-cyan-300/30 bg-cyan-500/10 px-3 text-left text-xs font-black text-white disabled:opacity-50"><CloudSun className="mb-1 h-4 w-4 text-cyan-200"/>Location weather</button>
+        </div>
         <SyncWorkflowIntake workspace={workspace} onNotice={setNotice} />
 
         {workspace !== "pm" ? <SyncActionStudio
@@ -686,7 +717,12 @@ export default function SyncAssistant() {
           disabled={sending || !aiReady}
           onNotice={setNotice}
         /> : null}
+          </div>
+        </div>
 
+        <div className={mobilePanel === "settings" ? "fixed inset-0 z-[250] flex items-end justify-center bg-black/85 px-2 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(.75rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:contents" : "hidden lg:contents"}>
+          <div role="dialog" aria-modal={mobilePanel === "settings" ? "true" : undefined} aria-label="SYNC settings" className="max-h-[calc(100dvh-2rem)] w-full max-w-xl space-y-4 overflow-y-auto overscroll-contain rounded-2xl bg-[#081326] p-3 lg:contents lg:p-0">
+            <button type="button" onClick={() => setMobilePanel(null)} className="sticky top-0 z-10 flex min-h-12 w-full items-center justify-between border-b border-cyan-400/20 bg-[#081326] px-4 text-sm font-black text-white lg:hidden">SYNC settings <X className="h-5 w-5"/></button>
         <section className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-4">
             <ShieldCheck className="h-5 w-5 text-emerald-200" />
@@ -768,6 +804,8 @@ export default function SyncAssistant() {
             ))}
           </div>
         </section>
+          </div>
+        </div>
 
         {answer ? (
           <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4">
