@@ -104,6 +104,18 @@ export default function SyncAssistPilot() {
           <div className="mb-5 grid grid-cols-3 gap-2">
             {[[Clock3, "Pending", data?.counts?.pending ?? "—"],[CheckCircle2, "Approved", data?.counts?.approved ?? "—"],[XCircle, "Rejected", data?.counts?.rejected ?? "—"]].map(([Icon,label,count]) => <div key={label} className="rounded-2xl border border-slate-700/70 bg-slate-900/50 p-3"><Icon size={20} className="text-cyan-300"/><div className="mt-2 text-2xl font-black">{count}</div><p className="text-xs text-slate-400">{label}</p></div>)}
           </div>
+          <section className="mb-4 rounded-2xl border border-white/10 bg-slate-900/50 p-4" aria-label="Background automation status">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-black">Background discovery</h2>
+              <span className={`rounded-full border px-3 py-1 text-xs font-bold ${data?.scheduler_status === "observed_recently" ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-200" : "border-amber-400/30 bg-amber-500/10 text-amber-200"}`}>
+                {data?.scheduler_status === "observed_recently" ? "Recent scheduled runs verified" : "Scheduled runs not verified"}
+              </span>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-slate-400">
+              {data?.last_scheduled_run ? `Last recorded scheduled scan: ${new Date(data.last_scheduled_run).toLocaleString()}.` : "No recorded scheduled worker run. Manual scans do not count as unattended automation."}
+              {" "}Approving a task never sends messages or payments.
+            </p>
+          </section>
           <section className="mb-5 rounded-2xl border border-cyan-400/25 bg-cyan-500/5 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div><h2 className="font-black text-white">Business discovery</h2><p className="mt-1 text-xs text-slate-400">{data?.last_discovery_scan ? `Last scan: ${new Date(data.last_discovery_scan.at).toLocaleString()} · ${data.last_discovery_scan.created} new tasks` : "No verified scan recorded yet."}</p></div>
