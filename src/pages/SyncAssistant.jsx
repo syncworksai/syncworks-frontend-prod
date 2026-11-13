@@ -706,6 +706,10 @@ export default function SyncAssistant() {
         <div className={mobilePanel === "tools" ? "fixed inset-0 z-[250] flex items-end justify-center bg-black/85 px-2 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(.75rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:contents" : "hidden lg:contents"}>
           <div role="dialog" aria-modal={mobilePanel === "tools" ? "true" : undefined} aria-label="SYNC tools" className="max-h-[calc(100dvh-2rem)] w-full max-w-xl space-y-4 overflow-y-auto overscroll-contain rounded-2xl bg-[#081326] p-3 lg:contents lg:p-0">
             <button type="button" onClick={() => setMobilePanel(null)} className="sticky top-0 z-10 flex min-h-12 w-full items-center justify-between border-b border-cyan-400/20 bg-[#081326] px-4 text-sm font-black text-white lg:hidden">Tools & workflows <X className="h-5 w-5"/></button>
+        <div className="grid grid-cols-2 gap-2 lg:hidden">
+          <button type="button" onClick={prepareAppointment} className="min-h-14 rounded-xl border border-violet-300/30 bg-violet-500/10 px-3 text-left text-xs font-black text-white"><CalendarDays className="mb-1 h-4 w-4 text-violet-200"/>Prepare appointment</button>
+          <button type="button" onClick={prepareWeather} disabled={sending || !aiReady} className="min-h-14 rounded-xl border border-cyan-300/30 bg-cyan-500/10 px-3 text-left text-xs font-black text-white disabled:opacity-50"><CloudSun className="mb-1 h-4 w-4 text-cyan-200"/>Location weather</button>
+        </div>
         <SyncWorkflowIntake workspace={workspace} onNotice={setNotice} />
 
         {workspace !== "pm" ? <SyncActionStudio
