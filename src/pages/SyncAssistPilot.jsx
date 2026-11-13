@@ -61,6 +61,20 @@ export default function SyncAssistPilot() {
     }
   }
 
+  async function runScan() {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await api.post("/sync-ai/assist/pilot/scan/");
+      setData(result.data);
+    } catch (err) {
+      setError(err?.response?.data?.detail || "Unable to run the scan.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function decide(task, decision) {
     if (busy) return;
     setBusy(true);
@@ -90,6 +104,13 @@ export default function SyncAssistPilot() {
           <div className="mb-5 grid grid-cols-3 gap-2">
             {[[Clock3, "Pending", data?.counts?.pending ?? "—"],[CheckCircle2, "Approved", data?.counts?.approved ?? "—"],[XCircle, "Rejected", data?.counts?.rejected ?? "—"]].map(([Icon,label,count]) => <div key={label} className="rounded-2xl border border-slate-700/70 bg-slate-900/50 p-3"><Icon size={20} className="text-cyan-300"/><div className="mt-2 text-2xl font-black">{count}</div><p className="text-xs text-slate-400">{label}</p></div>)}
           </div>
+          <section className="mb-5 rounded-2xl border border-cyan-400/25 bg-cyan-500/5 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div><h2 className="font-black text-white">Business discovery</h2><p className="mt-1 text-xs text-slate-400">{data?.last_discovery_scan ? `Last scan: ${new Date(data.last_discovery_scan.at).toLocaleString()} · ${data.last_discovery_scan.created} new tasks` : "No verified scan recorded yet."}</p></div>
+              <button type="button" disabled={busy || loading} onClick={runScan} className="min-h-11 rounded-xl border border-cyan-400/40 bg-cyan-500/15 px-4 text-xs font-black text-cyan-100 disabled:opacity-50">Scan my businesses</button>
+            </div>
+            <p className="mt-3 text-xs leading-5 text-amber-200">Manual read-only scan. No background schedule is active; no messages or payments will be sent.</p>
+          </section>
           <form onSubmit={createTask} className="mb-5 space-y-3 rounded-3xl border border-cyan-400/20 bg-slate-900/35 p-5">
             <h2 className="flex items-center gap-2 text-lg font-black"><ClipboardCheck className="text-cyan-300"/> Prepare a task</h2>
             <label className="block text-xs font-bold text-slate-300">Type
