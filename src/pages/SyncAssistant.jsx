@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getActiveBusinessId } from "../api/client";
+import { useAuth } from "../auth/AuthContext";
 import SyncActionStudio from "../components/sync/SyncActionStudio";
 import SyncWorkflowIntake from "../components/sync/SyncWorkflowIntake";
 import {
@@ -113,6 +114,8 @@ function findBrowserVoice(option, voices) {
 
 export default function SyncAssistant() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const pilotAccess = String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com";
   const location = useLocation();
   const recognitionRef = useRef(null);
   const speechRef = useRef(null);
@@ -430,6 +433,7 @@ export default function SyncAssistant() {
       </header>
 
       <main className="relative mx-auto max-w-5xl space-y-5 px-4 pb-24 pt-5">
+        {pilotAccess ? <button type="button" onClick={() => navigate("/sync/assist")} className="flex min-h-14 w-full items-center justify-between rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/15 to-violet-500/10 p-4 text-left text-sm font-black text-cyan-100"><span>Sync Assist · Private Business Control Center</span><span aria-hidden="true">→</span></button> : null}
         <section className="overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-950/72 p-5 shadow-[0_0_70px_rgba(34,211,238,0.10)] md:p-8">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
