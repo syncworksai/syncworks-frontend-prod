@@ -381,20 +381,20 @@ export default function SyncAssistant() {
     <div className="min-h-dvh bg-[#020617] text-slate-100">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.16),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(139,92,246,0.15),transparent_36%)]" />
 
-      <header className="sticky top-0 z-40 border-b border-slate-800/90 bg-slate-950/88 px-4 py-3 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
+      <header className="relative z-10 border-b border-slate-800/90 bg-slate-950/88 px-3 py-3 backdrop-blur-xl sm:px-4">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 sm:gap-3">
           <button
             type="button"
             onClick={() => navigate(returnTo)}
-            className="inline-flex h-11 items-center gap-2 rounded-2xl border border-slate-700 bg-slate-950 px-4 text-sm font-black text-slate-200"
+            className="inline-flex h-11 shrink-0 items-center gap-1 rounded-2xl border border-slate-700 bg-slate-950 px-3 text-xs font-black text-slate-200 sm:gap-2 sm:px-4 sm:text-sm"
           >
             <ArrowLeft className="h-4 w-4" />
             Back
           </button>
 
-          <div className="text-center">
+          <div className="min-w-0 flex-1 text-center">
             <div className="text-lg font-black text-white">SYNC</div>
-            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
+            <div className="text-[8px] font-black uppercase tracking-[0.12em] text-cyan-200 sm:text-[10px] sm:tracking-[0.2em]">
               Voice command center
             </div>
           </div>
