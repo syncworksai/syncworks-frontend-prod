@@ -109,6 +109,28 @@ export default function SyncAssistPilot() {
               <div><h2 className="font-black text-white">Business discovery</h2><p className="mt-1 text-xs text-slate-400">{data?.last_discovery_scan ? `Last scan: ${new Date(data.last_discovery_scan.at).toLocaleString()} · ${data.last_discovery_scan.created} new tasks` : "No verified scan recorded yet."}</p></div>
               <button type="button" disabled={busy || loading} onClick={runScan} className="min-h-11 rounded-xl border border-cyan-400/40 bg-cyan-500/15 px-4 text-xs font-black text-cyan-100 disabled:opacity-50">Scan my businesses</button>
             </div>
+            {data?.last_discovery_scan?.checked && (
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3" aria-label="Sources checked">
+                {[
+                  ["Owned businesses", "businesses"],
+                  ["Service requests", "service_requests"],
+                  ["Service tickets", "tickets"],
+                  ["Invoices", "invoices"],
+                  ["PM work orders", "pm_work_orders"],
+                  ["PM rent charges", "pm_rent_charges"],
+                ].map(([label, key]) => (
+                  <div key={key} className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
+                    <div className="text-lg font-black text-cyan-200">{data.last_discovery_scan.checked[key] ?? 0}</div>
+                    <div className="text-xs text-slate-400">{label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {data?.last_discovery_scan?.checked?.businesses === 0 ? (
+              <p className="mt-3 text-xs text-amber-200">No active, non-demo businesses owned by this account were found. Check the business or PM company ownership before expecting tasks.</p>
+            ) : data?.last_discovery_scan?.found === 0 ? (
+              <p className="mt-3 text-xs text-slate-300">No records currently meet the attention rules. Existing completed or paid records are excluded.</p>
+            ) : null}
             <p className="mt-3 text-xs leading-5 text-amber-200">Manual read-only scan. No background schedule is active; no messages or payments will be sent.</p>
           </section>
           <form onSubmit={createTask} className="mb-5 space-y-3 rounded-3xl border border-cyan-400/20 bg-slate-900/35 p-5">
