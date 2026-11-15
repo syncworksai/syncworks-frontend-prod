@@ -23,6 +23,9 @@ export default function SyncAssistPilot() {
   const [kind, setKind] = useState("LEAD_FOLLOW_UP");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [connections, setConnections] = useState(null);
+  const [connectionsError, setConnectionsError] = useState("");
+  const [showConnections, setShowConnections] = useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -41,6 +44,16 @@ export default function SyncAssistPilot() {
     if (permitted) refresh();
     else setLoading(false);
   }, [permitted]);
+
+  async function loadConnections() {
+    setConnectionsError("");
+    try {
+      const response = await api.get("/sync-ai/assist/pilot/internal-connections/", { timeout: 15000 });
+      setConnections(response.data);
+    } catch (err) {
+      setConnectionsError(err?.response?.data?.detail || "Could not load your internal businesses.");
+    }
+  }
 
   async function createTask(event) {
     event.preventDefault();
@@ -107,6 +120,26 @@ export default function SyncAssistPilot() {
             </div>
           )}
           {error && <div role="alert" className="mb-4 rounded-xl border border-rose-400/40 bg-rose-950/30 p-3 text-sm text-rose-200">{error}</div>}
+          <section className="mb-4 rounded-2xl border border-cyan-400/25 bg-slate-900/50 p-4">
+            <button type="button" aria-expanded={showConnections} onClick={() => { setShowConnections(!showConnections); if (!showConnections) loadConnections(); }} className="flex min-h-11 w-full items-center justify-between gap-2 text-left font-black text-cyan-100">
+              <span>My SyncWorks businesses <span className="block text-xs font-normal text-slate-400">Internal CRM + property management · Social setup saved for later</span></span>
+              <span aria-hidden="true">{showConnections ? "−" : "+"}</span>
+            </button>
+            {showConnections && <div className="mt-3 space-y-3">
+              {connectionsError && <p role="alert" className="text-sm text-rose-200">{connectionsError}</p>}
+              <button type="button" onClick={loadConnections} className="min-h-10 rounded-xl border border-cyan-400/30 px-3 text-xs font-black text-cyan-100">Refresh business connections</button>
+              {connections && <p className="text-xs text-slate-300">{connections.counts.visible} accessible businesses · {connections.counts.scan_eligible} eligible for owner-only discovery</p>}
+              {connections?.internal_businesses?.length === 0 && <p className="text-xs text-amber-200">No active owned or managed non-demo businesses linked to this user. Business onboarding/ownership needs review.</p>}
+              {connections?.internal_businesses?.map(biz => <article key={biz.id} className="rounded-xl border border-white/10 bg-slate-950/50 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-sm text-white">{biz.name}</strong><span className="text-[11px] text-cyan-200">{biz.access} · {biz.properties} PM properties</span></div>
+                <p className="mt-1 text-xs text-slate-400">{biz.scan_eligible ? "Eligible for existing read-only discovery" : "Manager-visible · not scanned automatically"}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {biz.social.map(channel => <span key={channel.channel} className="rounded-lg border border-white/10 px-2 py-1 text-[11px] text-slate-300">{channel.channel}: {channel.status === "profile_saved" ? "Profile saved" : "Not configured"}</span>)}
+                </div>
+                <p className="mt-2 text-[11px] text-amber-200">Social and WhatsApp APIs not connected. No posting or messaging.</p>
+              </article>)}
+            </div>}
+          </section>
           <button type="button" onClick={() => navigate("/sync/assist/communications")} className="mb-4 flex min-h-14 w-full items-center justify-between rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/15 to-violet-600/10 p-4 text-left font-black text-cyan-100"><span>Jarvis Communications Hub <span className="block text-xs font-normal text-slate-400">WhatsApp · SMS · Phone setup and inbox</span></span><span aria-hidden="true">→</span></button>
           <div className="mb-5 grid grid-cols-3 gap-2">
             {[[Clock3, "Pending", data?.counts?.pending ?? "—"],[CheckCircle2, "Approved", data?.counts?.approved ?? "—"],[XCircle, "Rejected", data?.counts?.rejected ?? "—"]].map(([Icon,label,count]) => <div key={label} className="rounded-2xl border border-slate-700/70 bg-slate-900/50 p-3"><Icon size={20} className="text-cyan-300"/><div className="mt-2 text-2xl font-black">{count}</div><p className="text-xs text-slate-400">{label}</p></div>)}
