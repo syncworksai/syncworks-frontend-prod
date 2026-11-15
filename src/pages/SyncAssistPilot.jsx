@@ -120,6 +120,7 @@ export default function SyncAssistPilot() {
             </div>
           )}
           {error && <div role="alert" className="mb-4 rounded-xl border border-rose-400/40 bg-rose-950/30 p-3 text-sm text-rose-200">{error}</div>}
+          <button type="button" onClick={() => navigate("/sync/assist/growth")} className="mb-4 flex min-h-14 w-full items-center justify-between rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-emerald-500/15 to-cyan-600/10 p-4 text-left font-black text-cyan-100"><span>Jarvis Growth Center <span className="block text-xs font-normal text-slate-400">Business prospects · Personalized outreach drafts · Pipeline</span></span><span aria-hidden="true">→</span></button>
           <section className="mb-4 rounded-2xl border border-cyan-400/25 bg-slate-900/50 p-4">
             <button type="button" aria-expanded={showConnections} onClick={() => { setShowConnections(!showConnections); if (!showConnections) loadConnections(); }} className="flex min-h-11 w-full items-center justify-between gap-2 text-left font-black text-cyan-100">
               <span>My SyncWorks businesses <span className="block text-xs font-normal text-slate-400">Internal CRM + property management · Social setup saved for later</span></span>
