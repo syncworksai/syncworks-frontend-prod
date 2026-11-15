@@ -142,6 +142,7 @@ import SettingsHub from "./pages/SettingsHub";
 import LearningCenter from "./pages/LearningCenter";
 import SyncAssistant from "./pages/SyncAssistant";
 import SyncAssistPilot from "./pages/SyncAssistPilot";
+import SyncAssistCommunications from "./pages/SyncAssistCommunications";
 import SyncHistory from "./pages/SyncHistory";
 import SyncVoiceDemo from "./pages/SyncVoiceDemo";
 
@@ -188,6 +189,7 @@ export default function App() {
         <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
         <Route path="/sync" element={<ProtectedRoute><SyncAssistant /></ProtectedRoute>} />
         <Route path="/sync/assist" element={<ProtectedRoute><SyncAssistPilot /></ProtectedRoute>} />
+        <Route path="/sync/assist/communications" element={<ProtectedRoute><SyncAssistCommunications /></ProtectedRoute>} />
         <Route path="/sync/history" element={<ProtectedRoute><SyncHistory /></ProtectedRoute>} />
         <Route path="/sync/voice" element={<ProtectedRoute><SyncVoiceDemo /></ProtectedRoute>} />
         <Route path="/newsfeed" element={<ProtectedRoute><Newsfeed /></ProtectedRoute>} />
