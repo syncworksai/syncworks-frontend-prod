@@ -4,10 +4,10 @@ import "./JarvisAvatar.css";
 
 export const AVATAR_STORAGE_KEY="sw-jarvis-avatar-v1";
 export const AVATARS=[
-  {id:"executive-female",name:"Avery",style:"Executive",presentation:"Female",skin:"#d8a17f",shade:"#a36b51",hair:"#261d24",outfit:"#172b50",accent:"#d8b271"},
-  {id:"executive-male",name:"Alexander",style:"Executive",presentation:"Male",skin:"#bc8263",shade:"#895641",hair:"#211e21",outfit:"#152133",accent:"#c3ab86"},
-  {id:"future-female",name:"Nova",style:"Futuristic",presentation:"Female",skin:"#e8b398",shade:"#b07965",hair:"#cbb9a9",outfit:"#102f48",accent:"#52defd"},
-  {id:"future-male",name:"Orion",style:"Futuristic",presentation:"Male",skin:"#bb8a70",shade:"#855844",hair:"#151c2c",outfit:"#2d2055",accent:"#ad65ff"},
+  {id:"executive-female",name:"Victoria",style:"Executive",presentation:"Female",skin:"#d8a17f",shade:"#a36b51",hair:"#261d24",outfit:"#172b50",accent:"#d8b271"},
+  {id:"executive-male",name:"James",style:"Executive",presentation:"Male",skin:"#bc8263",shade:"#895641",hair:"#211e21",outfit:"#152133",accent:"#c3ab86"},
+  {id:"future-female",name:"Elizabeth",style:"Futuristic",presentation:"Female",skin:"#e8b398",shade:"#b07965",hair:"#cbb9a9",outfit:"#102f48",accent:"#52defd"},
+  {id:"future-male",name:"William",style:"Futuristic",presentation:"Male",skin:"#bb8a70",shade:"#855844",hair:"#151c2c",outfit:"#2d2055",accent:"#ad65ff"},
 ];
 
 export function loadAvatarChoice(){
