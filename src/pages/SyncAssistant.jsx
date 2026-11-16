@@ -165,7 +165,7 @@ export default function SyncAssistant() {
     return entry ? {
       ...avatar,
       name: entry.name,
-      role: String(entry.role).replaceAll("_", " ").toLowerCase().replace(/\\b\\w/g, (char) => char.toUpperCase()),
+      role: String(entry.role).toLowerCase().split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" "),
       executionStatus: entry.execution_status,
     } : avatar;
   }), [teamEmployees]);
