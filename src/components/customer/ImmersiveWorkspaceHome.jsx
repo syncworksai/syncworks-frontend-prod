@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { CalendarDays, CheckCheck, ClipboardPlus, Command, ArrowUpRight, BriefcaseBusiness, Building2, ChartNoAxesCombined, HeartPulse, Spade, ShoppingBag, Sparkles, Clock3, LayoutGrid, Mail, Palette, SunMedium } from "lucide-react";
 import "./ImmersiveWorkspaceHome.css";
 import "./OfficePhotoBackground.css";
+import "./OfficePhotoRefinements.css";
 
 const destinations = [
   { label:"Business", detail:"Customers & operations", path:"/sbo", icon:BriefcaseBusiness, className:"business" },
