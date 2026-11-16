@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { TRAINING_CANDLES, buildTrainingRows, resolvePracticeTrade } from "../src/utils/tradingTutorial.mjs";
+import { TRAINING_CANDLES, buildTrainingRows, resolvePracticeTrade, explainTrainingSignal } from "../src/utils/tradingTutorial.mjs";
 
 test("tutorial prices and OHLC structure are valid and deterministic",()=>{
   const rows = buildTrainingRows();
@@ -26,4 +26,14 @@ test("tutorial has both wait and breakout teaching examples",()=>{
   const rows=buildTrainingRows();
   assert.ok(rows.some(c=>c.signal==="WAIT"));
   assert.ok(rows.some(c=>c.signal!=="WAIT"),"Synthetic replay must include a qualifying setup");
+});
+
+test("WAIT teaching explanation lists missed gates without changing signal",()=>{
+  const rows=buildTrainingRows();
+  const candle=rows.find(row=>row.signal==="WAIT"&&row.upper!=null&&row.close>row.upper);
+  assert.ok(candle,"Expected a breakout that lacks at least one confirmation");
+  const result=explainTrainingSignal(candle);
+  assert.match(result.summary,/WAIT — missing/);
+  assert.ok(result.checks.some(check=>!check.passed));
+  assert.equal(candle.signal,"WAIT");
 });
