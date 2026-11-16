@@ -7,7 +7,7 @@ export default function MobileCustomerCommandCenter({ name, brief, attentionCoun
   const [activePanel, setActivePanel] = useState(null);
   const open = (route) => { setActivePanel(null); onNavigate(route); };
   const modules = [
-    { label: "Office", sub: "Work & property", Icon: BriefcaseBusiness, action: () => onOpenWorkspace("daily") },
+    { label: "Office", sub: "Work & property", Icon: BriefcaseBusiness, action: () => onOpenWorkspace("office") },
     { label: "My Day", sub: "Agenda & tasks", Icon: CalendarDays, action: () => setActivePanel("day") },
     { label: "Health", sub: "Fitness & wellness", Icon: Dumbbell, action: () => open("/customer/health") },
     { label: "Finance", sub: "Money & payments", Icon: WalletCards, action: () => open("/customer/finance") },
