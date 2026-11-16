@@ -73,6 +73,41 @@ export default function CustomerDashboardResponsive() {
   const phoneMode = viewportMode === "portrait";
   const dayTradingEnabled = String(user?.email || "").trim().toLowerCase() === DAY_TRADING_EMAIL;
 
+  // Temporary compatibility guard for the obsolete globally injected SYNC
+  // promotion banner. The persistent center SYNC navigation remains available.
+  // Scope this to Customer portrait only and target the exact banner label.
+  useEffect(() => {
+    if (!phoneMode || typeof document === "undefined") return undefined;
+    const hidden = new Map();
+    let frame = 0;
+    const hideLegacyBanner = () => {
+      frame = 0;
+      for (const element of document.querySelectorAll('[class*="fixed"],[class*="sticky"]')) {
+        if (!element.textContent?.includes("Manage SYNC Assistant")) continue;
+        const rect = element.getBoundingClientRect();
+        if (rect.height > 180 || rect.width > window.innerWidth || rect.bottom < window.innerHeight * .5) continue;
+        if (!hidden.has(element)) {
+          hidden.set(element, [element.style.getPropertyValue("display"), element.style.getPropertyPriority("display")]);
+          element.style.setProperty("display", "none", "important");
+        }
+      }
+    };
+    const observer = new MutationObserver(() => {
+      if (!frame) frame = window.requestAnimationFrame(hideLegacyBanner);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    hideLegacyBanner();
+    return () => {
+      observer.disconnect();
+      if (frame) window.cancelAnimationFrame(frame);
+      hidden.forEach(([value, priority], element) => {
+        if (value) element.style.setProperty("display", value, priority);
+        else element.style.removeProperty("display");
+      });
+    };
+  }, [phoneMode]);
+
+
   async function load() {
     setLoading(true);
     const [ticketResult, invoiceResult, identityResult, calendarResult] = await Promise.allSettled([
