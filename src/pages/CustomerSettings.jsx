@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import api from "../api/client";
 import ModeBar from "../components/ModeBar";
+import { WorkspaceAppearancePanel, useWorkspaceAppearance } from "../components/customer/CustomerWorkspace";
 import Button from "../components/ui/Button";
 
 function Field({ label, children, hint }) {
@@ -28,6 +29,7 @@ function coercePrefix(v) {
 export default function CustomerSettings() {
   const nav = useNavigate();
   const loc = useLocation();
+  const [workspaceAppearance, updateWorkspaceAppearance] = useWorkspaceAppearance();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -207,6 +209,10 @@ export default function CustomerSettings() {
       />
 
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+        <section className="rounded-2xl border border-cyan-400/25 bg-[#101722] p-5 text-white" aria-label="Workspace appearance">
+          <h2 className="text-lg font-bold">Workspace Appearance</h2>
+          <WorkspaceAppearancePanel settings={workspaceAppearance} update={updateWorkspaceAppearance} />
+        </section>
         <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-6">
           {loading ? <div className="text-sm text-slate-400">Loading…</div> : null}
 
