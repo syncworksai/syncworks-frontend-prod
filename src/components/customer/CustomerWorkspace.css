@@ -120,3 +120,97 @@
 .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > main > section:first-child{
   border-color:var(--sw-workspace-line);
 }
+
+/* V5: Return to a framed executive-command-center with navigation / workspace / intelligence rails.
+   Original theme and Games routes deliberately remain unchanged. */
+@media (min-width:1024px) {
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-personal-panels.sw-customer-v3 {
+    max-width:1800px;
+    width:min(100%,1800px);
+    padding-inline:clamp(14px,1.4vw,26px);
+  }
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail {
+    display:grid;
+    grid-template-columns:194px minmax(0,1fr);
+    gap:16px;
+    align-items:start;
+  }
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:first-child {
+    display:block !important;
+    grid-column:1;
+    grid-row:1 / span 2;
+    position:sticky;
+    top:16px;
+    max-height:calc(100dvh - 36px);
+    overflow-y:auto;
+    scrollbar-width:thin;
+    background:var(--sw-workspace-panel) !important;
+    border:1px solid var(--sw-workspace-line) !important;
+    border-radius:20px;
+  }
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:first-child > .space-y-1 > button:nth-child(n) {
+    display:flex !important;
+  }
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:first-child > .space-y-1::after {
+    display:none;
+  }
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > main {
+    grid-column:2;
+    grid-row:1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:last-child {
+    grid-column:2;
+    grid-row:2;
+    position:static;
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:14px;
+    margin:0;
+  }
+}
+@media (min-width:1440px) {
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail {
+    grid-template-columns:194px minmax(0,1fr) 268px !important;
+  }
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > main {
+    grid-column:2;
+    grid-row:1;
+  }
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:last-child {
+    grid-column:3;
+    grid-row:1;
+    display:flex;
+    flex-direction:column;
+    position:sticky;
+    top:16px;
+    max-height:calc(100dvh - 32px);
+    overflow-y:auto;
+    scrollbar-width:thin;
+    gap:14px;
+  }
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:last-child > section {
+    width:100%;
+    min-width:0;
+  }
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:last-child > section:last-child {
+    grid-column:auto;
+  }
+}
+@media (min-width:1024px) and (max-width:1439px) {
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:last-child {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media (max-width:1023px) {
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:first-child {display:none!important;}
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > main {min-width:0;}
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:last-child {
+    grid-column:auto;display:grid;position:static;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;
+  }
+}
+.sw-workspace-root[data-workspace-theme="light"] .sw-customer-three-rail > aside:first-child .text-white,
+.sw-workspace-root[data-workspace-theme="light"] .sw-customer-three-rail > aside:last-child .text-white {color:#14293d!important;}
