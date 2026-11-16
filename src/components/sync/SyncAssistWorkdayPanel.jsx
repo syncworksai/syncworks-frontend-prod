@@ -18,6 +18,8 @@ const STATUS = ["PLANNED", "IN_PROGRESS", "BLOCKED", "AWAITING_APPROVAL", "COMPL
 
 export default function SyncAssistWorkdayPanel() {
   const [data, setData] = useState(null);
+  const [jobs, setJobs] = useState([]);
+  const [workerStatus, setWorkerStatus] = useState(null);
   const [goal, setGoal] = useState("");
   const [role, setRole] = useState("RESEARCH_ANALYST");
   const [task, setTask] = useState("");
@@ -31,8 +33,13 @@ export default function SyncAssistWorkdayPanel() {
 
   const refresh = useCallback(async () => {
     try {
-      const response = await api.get(BASE, { timeout: 15000 });
+      const [response, jobResponse] = await Promise.all([
+        api.get(BASE, { timeout: 15000 }),
+        api.get(BASE + "jobs/", { timeout: 15000 }),
+      ]);
       setData(response.data);
+      setJobs(jobResponse.data.jobs || []);
+      setWorkerStatus(jobResponse.data);
       setError("");
     } catch (err) {
       setError(err?.response?.data?.detail || "Unable to load workday goals.");
@@ -85,6 +92,34 @@ export default function SyncAssistWorkdayPanel() {
     }
   }
 
+  async function queueGoal(goalId) {
+    if (busy) return;
+    setBusy(true); setError("");
+    try {
+      await api.post(BASE + "jobs/", {
+        goal_id: goalId, allow_background_internal: true,
+      });
+      await refresh();
+    } catch (err) {
+      setError(err?.response?.data?.detail || "Unable to queue this goal.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cancelGoal(goalId) {
+    if (busy) return;
+    setBusy(true); setError("");
+    try {
+      await api.post(BASE + "jobs/" + encodeURIComponent(goalId) + "/cancel/");
+      await refresh();
+    } catch (err) {
+      setError(err?.response?.data?.detail || "Unable to cancel the queued job.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function updateStep(goalId, step) {
     const current = editing[step.id] || {};
     const status = current.status || step.status;
@@ -100,6 +135,7 @@ export default function SyncAssistWorkdayPanel() {
         { status, evidence, owner_attested: status === "COMPLETED" },
       );
       setData(response.data);
+      await refresh();
       setEditing((previous) => {
         const copy = { ...previous };
         delete copy[step.id];
@@ -119,7 +155,7 @@ export default function SyncAssistWorkdayPanel() {
           <p className="text-[11px] font-black uppercase tracking-widest text-cyan-200">Workforce command center</p>
           <h2 className="mt-1 text-xl font-black">Goals and employee assignments</h2>
           <p className="mt-2 text-xs leading-5 text-slate-300">
-            Plan coordinated work, record progress and verify outcomes. These assignments are not yet executed by AI workers.
+            Run restricted research and drafting tasks, review real receipts, and optionally enroll internal work in the durable background queue.
           </p>
         </div>
         <button type="button" disabled={busy} onClick={refresh} className="min-h-10 rounded-xl border border-cyan-400/30 px-3 text-xs font-bold text-cyan-100">Refresh</button>
@@ -131,6 +167,10 @@ export default function SyncAssistWorkdayPanel() {
           </span>
         ))}
       </div>}
+      {workerStatus && <p className="mt-3 text-xs text-amber-200">
+        Durable queue records are available. Independent worker deployed: {workerStatus.worker_deployed ? "reported active" : "not yet verified"}.
+        Jobs execute unattended only after a separately configured worker is enabled.
+      </p>}
       {error && <p role="alert" className="mt-3 rounded-xl border border-rose-400/30 p-3 text-xs text-rose-200">{error}</p>}
       <form onSubmit={createGoal} className="mt-4 space-y-3 rounded-2xl border border-white/10 p-4">
         <label className="block text-xs font-bold text-slate-200">Business goal
