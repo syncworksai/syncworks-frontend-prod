@@ -1,9 +1,16 @@
 import axios from "axios";
 
-const baseURL =
-  import.meta.env.VITE_API_BASE_URL ||
-  import.meta.env.VITE_API_BASE ||
-  "http://127.0.0.1:8000/api/v1";
+// Preview builds use a same-origin Vercel rewrite to avoid cross-origin login
+// requests. Production still uses the configured backend URL unchanged.
+const isVercelPreview =
+  typeof window !== "undefined" &&
+  window.location.hostname.endsWith("-syncworksai-3548s-projects.vercel.app");
+
+const baseURL = isVercelPreview
+  ? "/api/v1"
+  : (import.meta.env.VITE_API_BASE_URL ||
+     import.meta.env.VITE_API_BASE ||
+     "http://127.0.0.1:8000/api/v1");
 
 const TOKEN_KEY = "sw_token";
 const ACTIVE_BIZ_KEY = "sw_active_business_id";
