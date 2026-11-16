@@ -5,6 +5,7 @@ import api from "../api/client";
 const API = "/sync-ai/freelance/pilot";
 const box = "rounded-2xl border border-white/10 bg-slate-900/75 p-5";
 const field = "w-full rounded-xl border border-white/15 bg-slate-950 p-3 text-sm text-white focus:border-cyan-400 focus:outline-none";
+const STEPS = ["Confirm funded contract", "Define deliverables and deadline", "Confirm file-processing permission", "Process and validate", "Review exceptions", "Approve manual delivery"];
 const button = "inline-flex items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-500/15 px-4 py-2 text-sm font-semibold text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40";
 function errorMessage(e){const d=e?.response?.data?.detail;return typeof d==="string"?d:typeof d==="object"?JSON.stringify(d):"The connection could not be completed. Check backend deployment and your login.";}
 function downloadBlob(data,filename){
@@ -35,9 +36,9 @@ export default function FreelanceSecurePanel({mode="projects"}){
    setProjects(r.data.projects||[]);setTitle("");setBudget("");
   }catch(e){setError(errorMessage(e));}finally{setBusy(false);}
  };
- const updateStatus=async(id,status)=>{
+ const updateProject=async(id,changes)=>{
   setBusy(true);setError("");
-  try{const r=await api.patch(API+"/projects/"+encodeURIComponent(id)+"/",{status});setProjects(r.data.projects||[]);}
+  try{const r=await api.patch(API+"/projects/"+encodeURIComponent(id)+"/",changes);setProjects(r.data.projects||[]);}
   catch(e){setError(errorMessage(e));}finally{setBusy(false);}
  };
  const process=async(e)=>{
@@ -68,7 +69,7 @@ export default function FreelanceSecurePanel({mode="projects"}){
     <input value={budget} type="number" min="0" max="100000" step="0.01" onChange={e=>setBudget(e.target.value)} className={field} placeholder="Budget $"/>
     <button className={button} disabled={busy||!title.trim()} type="submit">Create project</button>
    </form>
-   <div className="mt-5 space-y-2">{projects.length?projects.map(p=><div key={p.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-950/60 p-3"><div><p className="font-semibold text-white">{p.title}</p><p className="mt-1 text-xs text-slate-400">Recorded budget: ${Number(p.budget||0).toFixed(2)}</p></div><select disabled={busy} value={p.status||"Saved"} onChange={e=>updateStatus(p.id,e.target.value)} aria-label={`Status of ${p.title}`} className={field}>{["Saved","Contracted","In progress","Submitted","Paid","Declined"].map(s=><option key={s}>{s}</option>)}</select></div>):<p className="text-sm text-slate-400">No backend projects yet. Add your first project above.</p>}</div>
+   <div className="mt-5 space-y-3">{projects.length?projects.map(p=><div key={p.id} className="rounded-xl border border-white/10 bg-slate-950/60 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-semibold text-white">{p.title}</p><p className="mt-1 text-xs text-slate-400">Recorded budget: ${Number(p.budget||0).toFixed(2)}</p></div><select disabled={busy} value={p.status||"Saved"} onChange={e=>updateProject(p.id,{status:e.target.value})} aria-label={`Status of ${p.title}`} className={field}>{["Saved","Contracted","In progress","Submitted","Paid","Declined"].map(s=><option key={s}>{s}</option>)}</select></div><p className="mt-3 text-xs font-semibold text-slate-300">Backend delivery checklist</p><div className="mt-2 grid gap-2 sm:grid-cols-2">{STEPS.map((step,index)=><label className="flex items-start gap-2 text-xs text-slate-300" key={step}><input type="checkbox" disabled={busy} checked={(p.project_checks||[]).includes(index)} onChange={e=>updateProject(p.id,{project_checks:e.target.checked?[...(p.project_checks||[]),index]:(p.project_checks||[]).filter(i=>i!==index)})}/>{step}</label>)}</div></div>):<p className="text-sm text-slate-400">No backend projects yet. Add your first project above.</p>}</div>
   </div>:<>
     <div className={box}><h3 className="flex items-center gap-2 text-lg font-bold text-white"><FileUp size={18}/> Secure API CSV processor</h3><p className="mt-2 text-sm text-slate-400">Upload a UTF-8 CSV up to 512 KB. Results return directly to your browser; the API does not retain uploaded files or cleaned contents. Test with synthetic data until the security review is complete.</p>
      <form onSubmit={process} className="mt-4 space-y-3"><label className="block text-xs text-slate-400">Project reference (optional metadata only)<select className={`${field} mt-1`} value={projectId} onChange={e=>setProjectId(e.target.value)}><option value="">Practice / unassigned</option>{projects.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>
