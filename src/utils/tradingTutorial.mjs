@@ -38,7 +38,7 @@ export function resolvePracticeTrade(trade, candle) {
   const targetHit = trade.side==="LONG" ? candle.high>=trade.target : candle.low<=trade.target;
   if (!stopHit&&!targetHit) return trade;
   const exit=stopHit?trade.stop:trade.target;
-  return {...trade,exit,closed:true,outcome:stopHit?"STOP HIT":"TARGET HIT",resultR:(exit-trade.entry)*(trade.side==="LONG"?1:-1)/trade.risk};
+  return closePracticeTrade(trade,exit,stopHit?"STOP HIT":"TARGET HIT");
 }
 
 
@@ -52,4 +52,26 @@ export function explainTrainingSignal(c) {
   ];
   const missing=checks.filter(x=>!x.passed).map(x=>x.label);
   return {summary:c.signal!=="WAIT"?c.signal+" — review risk before practice entry":missing.length?"WAIT — missing "+missing.join(", "):"WAIT — bullish checks not sufficient; inspect short-side conditions",checks};
+}
+
+export const SIM_MNQ_POINT_VALUE = 2; // $2 per MNQ index point, per micro contract.
+export const SIM_ROUND_TRIP_FEE = 2.50; // Illustrative fixed commission and costs, not an actual broker quote.
+export function closePracticeTrade(trade, price, outcome = "MANUAL CLOSE") {
+  if (!trade || trade.closed || !Number.isFinite(price)) return trade;
+  const gross = (price - trade.entry) * (trade.side === "LONG" ? 1 : -1) * SIM_MNQ_POINT_VALUE;
+  const netPnl = gross - SIM_ROUND_TRIP_FEE;
+  return {...trade, exit:price, closed:true, outcome, grossPnl:gross, netPnl,
+    resultR: (price - trade.entry) * (trade.side === "LONG" ? 1 : -1) / trade.risk};
+}
+export function practiceStats(trades, startingBalance = 10000) {
+  let equity = startingBalance, peak = equity, maxDrawdown = 0;
+  let wins=0, grossProfit=0, grossLoss=0;
+  trades.forEach(trade => {
+    const pnl = Number(trade.netPnl) || 0;
+    equity += pnl; peak = Math.max(peak,equity); maxDrawdown = Math.max(maxDrawdown,peak-equity);
+    if (pnl > 0) {wins += 1; grossProfit += pnl;} else if (pnl < 0) grossLoss += -pnl;
+  });
+  const netPnl = equity-startingBalance;
+  return {count:trades.length,wins,winRate:trades.length?100*wins/trades.length:0,netPnl,balance:equity,
+    maxDrawdown,profitFactor:grossLoss>0?grossProfit/grossLoss:null,avgTrade:trades.length?netPnl/trades.length:0};
 }
