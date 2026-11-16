@@ -904,7 +904,7 @@ export default function SyncAssistant() {
             <JarvisAvatar id={avatarId} state={speaking?"speaking":listening?"listening":sending?"thinking":"idle"} size="hero"/>
             <div className="min-w-0 flex-1 space-y-3">
               <p className="text-sm text-slate-300">{speaking?"Speaking":listening?"Listening":sending?"Preparing an answer":"Ready when you are"}</p>
-              <button type="button" onClick={()=>{setAvatarOpen(false);listening?stopListening():startListening({greeting:false});}} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-3 text-sm font-bold text-white"><Mic size={17}/>{listening?"Stop listening":"Speak to {selectedAssistant.name}"}</button>
+              <button type="button" onClick={()=>{setAvatarOpen(false);listening?stopListening():startListening({greeting:false});}} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-3 text-sm font-bold text-white"><Mic size={17}/>{listening?"Stop listening":`Speak to ${selectedAssistant.name}`}</button>
               <button type="button" onClick={()=>speaking?stopSpeaking():speak("Hello. I'm your SyncWorks assistant. How may I help you today?",{force:true})} className="min-h-11 w-full rounded-xl border border-cyan-400/40 px-3 text-xs font-bold text-cyan-100">{speaking?"Stop voice":"Hear a preview"}</button>
             </div>
           </div>
