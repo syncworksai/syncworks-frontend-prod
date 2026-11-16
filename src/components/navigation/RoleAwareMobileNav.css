@@ -35,3 +35,32 @@
 .sw-nav-settings-actions .primary{border-color:rgba(103,232,249,.4);background:linear-gradient(135deg,#0891b2,#4f46e5);color:#fff}
 @media(min-width:640px){.sw-nav-settings-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){.sw-role-mobile-nav-center-orb,.sw-role-mobile-nav-center-orb:after{animation:none!important}}
+
+/* The shared phone dock follows the selected office theme. The center SYNC
+   entry is now the only persistent assistant launch point. */
+@media(max-width:767px){
+  body[data-sw-office-scope="work"] .sw-role-mobile-nav{
+    background:color-mix(in srgb,var(--office-page-panel,rgba(4,12,25,.85)) 85%,transparent);
+    border-color:var(--office-page-border,rgba(90,181,226,.3));
+    -webkit-backdrop-filter:blur(15px);
+    backdrop-filter:blur(15px);
+    box-shadow:0 -8px 30px rgba(0,0,0,.22);
+  }
+  body[data-sw-office-scope="work"] .sw-role-mobile-nav-grid>button{
+    min-height:3.3rem;
+    font-size:.62rem;
+  }
+  body[data-sw-office-scope="work"] .sw-role-mobile-nav-grid .icon svg{
+    width:1.22rem;height:1.22rem;
+  }
+  body[data-sw-office-scope="work"] .sw-role-mobile-nav-grid>button.active{
+    color:var(--office-page-ink,#e8f5ff);
+    background:color-mix(in srgb,var(--office-page-border,#38bdf8) 26%,transparent);
+  }
+  body[data-sw-office-theme="light"] .sw-role-mobile-nav-grid>button{
+    color:#4b504e;
+  }
+  body[data-sw-office-theme="light"] .sw-role-mobile-nav-center{
+    color:#153f51!important;
+  }
+}
