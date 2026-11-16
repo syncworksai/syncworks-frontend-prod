@@ -4,6 +4,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { Line, LineChart, CartesianGrid, Tooltip, XAxis, YAxis, ResponsiveContainer, ReferenceLine } from "recharts";
 import { useAuth } from "../auth/AuthContext";
 import TradingJarvisPanel from "../components/trading/TradingJarvisPanel";
+import TradingStrategyLab from "../components/trading/TradingStrategyLab";
 import { requestStockCandles, stockFeedConfigured } from "../api/stockMarketFeed";
 
 const ACCOUNT = "jacoblord7@outlook.com";
@@ -197,6 +198,7 @@ export default function DayTradingStocks() {
         <Panel title="Jarvis entry / exit planner"><div className="flex items-center gap-2 text-xs text-slate-400"><Waves size={16}/>Rules-based draft, not personalized financial advice or a prediction.</div>{result?.plan ? <div className="mt-3 space-y-2 text-sm">{[["Direction",result.bullish?"Potential long":"Potential short"],["Illustrative entry",fmt(result.plan.entry)],["Stop / invalidation",fmt(result.plan.stop)],["2R objective",fmt(result.plan.target)],["Risk per share",fmt(result.plan.risk)]].map(([k,v])=><div key={k} className="flex justify-between"><span className="text-slate-400">{k}</span><strong>{v}</strong></div>)}<div className="mt-4 flex items-center gap-2"><label className="text-xs text-slate-400">Paper risk budget ($) <input type="number" min="1" step="1" value={riskDollars} onChange={(e)=>setRiskDollars(e.target.value)} className="ml-2 w-20 rounded-lg border border-white/20 bg-slate-950 p-2 text-white"/></label><button onClick={logPaperPlan} className="rounded-lg bg-cyan-500/20 px-3 py-2 text-xs font-bold text-cyan-100">Log paper plan</button></div></div> : <p className="mt-3 text-sm text-slate-400">No eligible setup. Wait for aligned trend + channel break + acceptable volume; stop and targets require a valid structure.</p>}</Panel>
         <Panel title="Paper trade journal"><div className="flex items-start gap-2 text-xs text-slate-400"><ShieldAlert size={16} className="shrink-0"/>Session-only notes; refreshing the page clears them. No brokerage orders, no auto-trades.</div>{journal.length ? <div className="mt-3 space-y-2">{journal.map((item,i)=><div key={item.time+i} className="rounded-lg bg-white/5 p-2 text-xs"><strong>{item.symbol} {item.side} · {item.shares} shares</strong><div className="mt-1 text-slate-400">Entry {fmt(item.entry)} • Stop {fmt(item.stop)} • Target {fmt(item.target)}</div></div>)}</div> : <p className="mt-3 text-xs text-slate-500">No paper trades logged.</p>}</Panel>
       </div>
+      <TradingStrategyLab initialSymbol={symbol} />
       <p className="pb-4 text-center text-xs text-slate-500">Research prototype · CSV import or optional strict read-only endpoint · For live operation configure a licensed market-data service, timestamp validation, backtests and alerting. No brokerage credentials or live order execution.</p>
     </div>
   </main>;
