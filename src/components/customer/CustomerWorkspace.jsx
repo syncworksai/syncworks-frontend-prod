@@ -7,13 +7,13 @@ export const WORKSPACE_THEMES = ["legacy", "classic", "future", "modern", "light
 const SETTINGS_KEY = "sw_workspace_appearance_v1";
 const DEFAULTS = { theme: "legacy", motion: true, compact: false };
 const APPS = [
-  ["Calendar", "/calendar", CalendarDays], ["Tasks", "/customer/todo", ListTodo],
+  ["Calendar", "/calendar", CalendarDays], ["Tasks", "/customer/tasks", ListTodo],
   ["Inbox", "/customer/inbox", Inbox], ["Business", "/sbo", BriefcaseBusiness],
   ["Property", "/pm", Building2], ["Finance", "/customer/finance", Wallet],
   ["Health", "/customer/health", Heart], ["Trading", "/customer/day-trading-futures", TrendingUp],
   ["Games", "/customer/games", Spade], ["Shop Assist", "/customer/store", ShoppingBag],
   ["Social", "/connect", Users], ["Weather", "/customer/weather", CloudSun],
-  ["Traffic", "/customer/traffic", MapPinned], ["Settings", "/settings", Settings],
+  ["Traffic", "/customer/traffic", MapPinned], ["Settings", "/customer/settings", Settings],
 ];
 export function readWorkspaceAppearance() {
   try {
