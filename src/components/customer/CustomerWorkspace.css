@@ -46,3 +46,8 @@
 .sw-workspace-root[data-workspace-motion="false"] * {animation-duration:.01ms!important;transition-duration:.01ms!important;}
 @media (prefers-reduced-motion:reduce) {.sw-workspace-root * {animation-duration:.01ms!important;transition-duration:.01ms!important;}}
 @media(max-width:767px){.sw-workspace-switcher{padding:8px 12px;}.sw-workspace-switcher button{padding:0 10px;}.sw-workspace-current{width:100%;margin:0;}.sw-workspace-drawer {padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(safe-area-inset-bottom));}.sw-workspace-theme-sample{height:70px;}}
+
+/* In redesigned modes, primary sidebar is intentionally limited to four destinations.
+   Every other destination remains available in the Workspaces launcher. */
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > aside:first-child > .space-y-1 > button:nth-child(n+5) { display:none; }
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > aside:first-child > .space-y-1::after { content:"More tools in Workspaces ↑";display:block;padding:16px 10px 4px;color:var(--sw-workspace-accent);font-size:11px;line-height:1.5; }
