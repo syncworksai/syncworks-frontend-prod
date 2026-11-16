@@ -5,7 +5,7 @@ const COLORS={up:"#34d399",down:"#fb7185",ema7:"#38bdf8",ema9:"#eab308",vwap:"#a
 const W=780,H=380,L=56,R=18,T=18,PB=278,VT=303,VB=349;
 const fmt=v=>Number(v).toFixed(1);
 
-export default function TrainingCandlestickChart({bars,trade,lastClosedTrade}) {
+export default function TrainingCandlestickChart({bars,trade,lastClosedTrade,completed=[]}) {
   if (!bars?.length) return null;
   const values=bars.flatMap(b=>[b.high,b.low,b.ema7,b.ema9,b.vwap,b.upper,b.lower].filter(Number.isFinite));
   if(trade)values.push(trade.entry,trade.stop,trade.target);
@@ -29,15 +29,25 @@ export default function TrainingCandlestickChart({bars,trade,lastClosedTrade}) {
         {bars.map((bar,i)=>{const color=bar.close>=bar.open?COLORS.up:COLORS.down,cx=x(i),top=Math.min(y(bar.open),y(bar.close)),bottom=Math.max(y(bar.open),y(bar.close));return <g key={bar.time} className={i===bars.length-1?"sw-training-new-bar":""}><line x1={cx} y1={y(bar.high)} x2={cx} y2={y(bar.low)} stroke={color} strokeWidth="1.5"/><rect x={cx-bw/2} y={top} width={bw} height={Math.max(1.6,bottom-top)} rx=".7" fill={color}/></g>;})}
         {lines.map(([key,,color])=>paths(key).map((p,i)=><polyline key={key+i} points={p} fill="none" stroke={color} strokeWidth={key==="ema7"?2:1.4} strokeDasharray={key==="upper"||key==="lower"?"5 4":undefined} opacity=".95"/>))}
         {trade&&[["ENTRY",trade.entry,"#93c5fd"],["STOP",trade.stop,"#fb7185"],["2R",trade.target,"#4ade80"]].map(([name,value,color])=><g key={name}><line x1={L} x2={W-R} y1={y(value)} y2={y(value)} stroke={color} strokeDasharray="7 4"/><text x={W-R-6} y={y(value)-4} textAnchor="end" fontSize="10" fontWeight="700" fill={color}>{name} {fmt(value)}</text></g>)}
+        {completed.map((item,i)=>{
+          const entryAt=bars.findIndex(bar=>bar.time===item.entryTime);
+          const exitAt=bars.findIndex(bar=>bar.time===item.exitTime);
+          return <g key={item.entryTime+"-"+i}>
+            {entryAt>=0&&exitAt>=0&&<line x1={x(entryAt)} y1={y(item.entry)} x2={x(exitAt)} y2={y(item.exit)} stroke={item.netPnl>=0?"#4ade80":"#fb7185"} strokeWidth="1.6" strokeDasharray="3 3"/>}
+            {entryAt>=0&&<g><circle cx={x(entryAt)} cy={y(item.entry)} r="6" fill="#38bdf8" stroke="#020617" strokeWidth="2"/><text x={x(entryAt)} y={y(item.entry)-11} fontSize="11" fill="#93c5fd" textAnchor="middle">{item.side==="LONG"?"BUY":"SELL"}</text></g>}
+            {exitAt>=0&&<g><circle cx={x(exitAt)} cy={y(item.exit)} r="7" fill={item.netPnl>=0?"#4ade80":"#fb7185"} stroke="#020617" strokeWidth="2"/><text x={x(exitAt)} y={y(item.exit)+19} fontSize="10" fill={item.netPnl>=0?"#4ade80":"#fb7185"} textAnchor="middle">EXIT {item.netPnl>=0?"+":""}{Number(item.netPnl).toFixed(2)}</text></g>}
+          </g>;
+        })}
         {last.signal!=="WAIT"&&!trade&&<g><circle cx={x(bars.length-1)} cy={y(last.close)} r="10" fill={last.signal.startsWith("LONG")?COLORS.up:COLORS.down} fillOpacity=".25"/><circle cx={x(bars.length-1)} cy={y(last.close)} r="3" fill={last.signal.startsWith("LONG")?COLORS.up:COLORS.down}/></g>}
       </g>
       <line x1={L} x2={W-R} y1={VT-6} y2={VT-6} stroke="#334155"/><text x="7" y={VT+11} fontSize="10" fill="#94a3b8">VOL</text>
       {bars.map((b,i)=>{const h=b.volume/maxVol*(VB-VT);return <rect key={b.time} x={x(i)-bw/2} y={VB-h} width={bw} height={h} fill={b.close>=b.open?COLORS.up:COLORS.down} opacity=".7"/>;})}
       {bars.map((bar,i)=>i%Math.max(1,Math.ceil(bars.length/8))===0?<text key={bar.time} x={x(i)} y="367" fontSize="10" textAnchor="middle" fill="#94a3b8">{bar.time}</text>:null)}
-      {lastClosedTrade&&<text x={W-R-7} y={VT+10} textAnchor="end" fontSize="11" fill={lastClosedTrade.resultR>=0?"#4ade80":"#fb7185"}>{lastClosedTrade.outcome}: {Number(lastClosedTrade.resultR).toFixed(2)}R</text>}
+
     </svg>
     <div className="flex flex-wrap gap-x-3 gap-y-1 px-1 text-[10px]">{[["Up",COLORS.up],["Down",COLORS.down],...lines.map(([,label,color])=>[label,color])].map(([name,color])=><span key={name} className="flex items-center gap-1 text-slate-300"><span style={{background:color}} className="inline-block h-2 w-2 rounded-sm"/>{name}</span>)}</div>
     <p className="px-1 pt-2 text-xs text-amber-200">{review.summary}</p>
+    {lastClosedTrade&&<p className="px-1 pt-1 text-[11px] text-slate-400">Last closed trade: {lastClosedTrade.outcome} · {Number(lastClosedTrade.resultR).toFixed(2)}R. Entry and exit appear on their respective candles where visible.</p>}
     <style>{'@keyframes sw-candle-grow{from{opacity:.15;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}.sw-training-new-bar{animation:sw-candle-grow .3s ease-out}@media(prefers-reduced-motion:reduce){.sw-training-new-bar{animation:none}}'}</style>
   </div>;
 }
