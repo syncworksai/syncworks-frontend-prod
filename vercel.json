@@ -3,77 +3,117 @@
     {
       "source": "/",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/customer",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/customer/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/sbo",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/sbo/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/pm",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/pm/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/platform",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/platform/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/manifest.webmanifest",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/sw.js",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/service-worker.js",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
       ]
     }
   ],
   "rewrites": [
+    {
+      "source": "/api/v1/:path*",
+      "destination": "https://api.syncworksapp.com/api/v1/:path*"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
