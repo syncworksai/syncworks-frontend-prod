@@ -128,14 +128,6 @@ export default function CustomerDashboardResponsive() {
         onOpenWorkspace={area => window.dispatchEvent(new CustomEvent("sw:workspace-open", { detail: area }))}
       />
 
-      {dayTradingEnabled ? (
-        <button type="button" onClick={() => nav("/customer/day-trading-futures")} className="mt-3 flex w-full items-center gap-3 rounded-[1.2rem] border border-emerald-400/25 bg-emerald-500/[.07] p-3 text-left shadow-[0_0_28px_rgba(16,185,129,.08)]">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-emerald-400/25 bg-emerald-500/10 text-emerald-200"><Activity className="h-4 w-4" /></span>
-          <span className="min-w-0 flex-1"><span className="block text-[11px] font-black text-white">Day Trade</span><span className="mt-0.5 block text-[9px] leading-4 text-slate-500">MNQ futures signal dashboard · analysis mode</span></span>
-          <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-amber-200">Signal only</span>
-        </button>
-      ) : null}
-
       {/* App-level RoleAwareMobileNav owns the single bottom bar and its SYNC action.
            Do not render a second sticky nav here. */}
     </div>
