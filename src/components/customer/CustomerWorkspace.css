@@ -51,3 +51,27 @@
    Every other destination remains available in the Workspaces launcher. */
 .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > aside:first-child > .space-y-1 > button:nth-child(n+5) { display:none; }
 .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > aside:first-child > .space-y-1::after { content:"More tools in Workspaces ↑";display:block;padding:16px 10px 4px;color:var(--sw-workspace-accent);font-size:11px;line-height:1.5; }
+
+/* V2: render immersive home ahead of live data, retaining summary metrics and workflows below. */
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > main > section:first-child > div:first-child > div:first-child { display:none; }
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > main > section:first-child { padding:14px 18px; }
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > main > section:first-child > div:nth-child(2) { margin-top:0; }
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid { grid-template-columns:minmax(0,1fr) !important; }
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > aside:first-child { display:none !important; }
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > main { min-width:0; }
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > aside:last-child { grid-column:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(265px,1fr));align-items:start;gap:16px;position:static;margin:0; }
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > aside:last-child > section { margin:0; }
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > main > section,
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > aside:last-child > section { border-radius:22px;backdrop-filter:blur(16px); }
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-workspace-switcher { backdrop-filter:blur(20px); }
+.sw-workspace-root[data-workspace-theme="classic"] .sw-customer-v3 > .grid > main > section,
+.sw-workspace-root[data-workspace-theme="classic"] .sw-customer-v3 > .grid > aside:last-child > section {box-shadow:0 16px 44px rgba(0,0,0,.28), inset 0 1px rgba(235,182,95,.08);}
+.sw-workspace-root[data-workspace-theme="light"] .sw-customer-v3 .bg-black\/20,
+.sw-workspace-root[data-workspace-theme="light"] .sw-customer-v3 .bg-white\/\[\.025\] { background-color:rgba(222,234,242,.7) !important; }
+.sw-workspace-root[data-workspace-theme="light"] .sw-customer-v3 .text-cyan-200 {color:#176889!important;}
+.sw-workspace-root[data-workspace-theme="light"] .sw-customer-v3 .text-violet-200 {color:#75509d!important;}
+.sw-workspace-root[data-workspace-theme="light"] .sw-customer-v3 .text-emerald-200 {color:#126f56!important;}
+/* Drawer uses a body-level portal to clear the root stacking context and fixed widgets. */
+.sw-workspace-overlay{z-index:2147483000;}
+@media(max-width:1100px){.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > aside:last-child{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > aside:last-child{grid-template-columns:1fr}}
