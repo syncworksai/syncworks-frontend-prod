@@ -64,7 +64,7 @@ export default function SyncAssistantLauncher() {
         unread: unseen.length,
         pending: steps.filter((step) => step.status === "AWAITING_APPROVAL").length,
         running: jobs.filter((job) => job.state === "QUEUED" || job.state === "RUNNING" || job.state === "RETRY").length,
-        completed: unseen.filter((receipt) => receipt.status === "COMPLETED").length,
+        completed: receipts.filter((receipt) => receipt.status === "COMPLETED").length,
         receipts,
         available: true,
       });
@@ -83,7 +83,7 @@ export default function SyncAssistantLauncher() {
         const ids = Array.isArray(seen) ? seen.filter((id) => typeof id === "string") : [];
         const all = [...new Set([...ids, ...workdayStatus.receipts.map((receipt) => receipt.id)])].slice(-300);
         window.localStorage.setItem(seenKey, JSON.stringify(all));
-        setWorkdayStatus((previous) => ({ ...previous, unread: 0, completed: 0 }));
+        setWorkdayStatus((previous) => ({ ...previous, unread: 0 }));
       } catch { /* Do not prevent opening the assistant if storage is blocked. */ }
     }
   };
@@ -151,7 +151,7 @@ export default function SyncAssistantLauncher() {
                       <span className="inline-flex items-center gap-1"><Clock3 size={13} /> {workdayStatus.running} queued/running</span>
                       <span className="text-amber-200">{workdayStatus.pending} awaiting review</span>
                       {workdayStatus.unread > 0 && <span className="text-rose-200">{workdayStatus.unread} new results</span>}
-                      {workdayStatus.completed > 0 && <span className="inline-flex items-center gap-1 text-emerald-200"><Check size={13} /> {workdayStatus.completed} owner-confirmed</span>}
+                      {workdayStatus.completed > 0 && <span className="inline-flex items-center gap-1 text-emerald-200"><Check size={13} /> {workdayStatus.completed} owner-confirmed completed</span>}
                     </div>
                   )}
                 </div>
