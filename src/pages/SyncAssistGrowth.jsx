@@ -15,6 +15,9 @@ export default function SyncAssistGrowth() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [offer, setOffer] = useState(null);
+  const [offerOpen, setOfferOpen] = useState(false);
+  const [offerSaved, setOfferSaved] = useState("");
   const [form, setForm] = useState({company: "", niche: "home_services", website: "", public_contact: "", observation: "", channel: "EMAIL"});
   const field = (key, value) => setForm(v => ({...v, [key]: value}));
   async function refresh() {
@@ -23,7 +26,22 @@ export default function SyncAssistGrowth() {
     catch (e) { setError(e?.response?.data?.detail || "Unable to load prospect queue."); }
     finally { setBusy(false); }
   }
-  useEffect(() => {if (pilot) refresh();}, [pilot]);
+  useEffect(() => {
+    if (pilot) {
+      refresh();
+      api.get("/sync-ai/assist/pilot/growth/campaign/", {timeout: 15000}).then(r => setOffer(r.data.campaign)).catch(() => setError("Campaign settings unavailable; prospecting remains available."));
+    }
+  }, [pilot]);
+  async function saveOffer(e) {
+    e.preventDefault(); setBusy(true); setOfferSaved("");
+    try {
+      const r = await api.post("/sync-ai/assist/pilot/growth/campaign/", offer);
+      setOffer(r.data.campaign);
+      setOfferSaved("Saved for drafting only. Free access and checkout prices are unchanged.");
+      setError("");
+    } catch(err) { setError(err?.response?.data?.detail || "Unable to save campaign settings."); }
+    finally { setBusy(false); }
+  }
   async function add(e) {
     e.preventDefault(); setBusy(true); setError("");
     try {
@@ -49,6 +67,20 @@ export default function SyncAssistGrowth() {
       </header>
       {!pilot ? <p role="alert" className="mt-4 text-rose-200">Private pilot only.</p> : <>
         {error && <p role="alert" className="mt-4 rounded-xl border border-rose-400/40 bg-rose-950/30 p-3 text-sm text-rose-200">{error}</p>}
+        <section className="mt-4 rounded-2xl border border-emerald-400/20 bg-slate-900/50 p-4">
+          <button type="button" aria-expanded={offerOpen} onClick={() => setOfferOpen(!offerOpen)} className="flex min-h-11 w-full items-center justify-between gap-2 text-left font-black text-emerald-200">
+            <span>Free-adoption campaign <span className="block text-xs font-normal text-slate-400">Edit the founding-business invitation · No automatic sends</span></span><span aria-hidden="true">{offerOpen ? "−" : "+"}</span>
+          </button>
+          {offerOpen && <form onSubmit={saveOffer} className="mt-3 space-y-3">
+            {!offer && <p className="text-sm text-slate-300">Loading campaign settings…</p>}
+            {offer && <>
+              {[["name", "Campaign name", 100], ["offer", "Free offer wording", 700], ["call_to_action", "Invitation / call to action", 220]].map(([key,label,limit]) => <label key={key} className="block text-xs font-bold text-slate-300">{label}<textarea required rows={key==="offer"?3:2} maxLength={limit} value={offer[key]} onChange={e=>setOffer(v=>({...v,[key]:e.target.value}))} className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-950 p-3 text-sm text-white"/></label>)}
+              <p className="text-xs leading-5 text-amber-200">This edits the campaign text only. It does not enable a 90-day trial, change Stripe pricing, send a message, or publish content.</p>
+              <button disabled={busy} type="submit" className="min-h-11 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-5 text-sm font-black disabled:opacity-50">Save campaign wording</button>
+              {offerSaved && <p role="status" className="text-xs text-emerald-200">{offerSaved}</p>}
+            </>}
+          </form>}
+        </section>
         <section className="mt-4 rounded-2xl border border-white/10 bg-slate-900/50 p-4">
           <h2 className="mb-3 font-black">Add a business prospect</h2>
           <form onSubmit={add} className="space-y-3">
