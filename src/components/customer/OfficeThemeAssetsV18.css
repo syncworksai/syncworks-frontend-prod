@@ -1,0 +1,42 @@
+/* V18 — four uploaded, purpose-selected office environments.
+ * Required public assets: /office-themes/{classic-office,syncworks-future,modern-dark,clean-light}.webp
+ * This CSS only ships AFTER all four images exist in public/office-themes/.
+ * Original workspace and poker game screens stay untouched.
+ */
+.sw-workspace-root[data-workspace-theme="classic"] {--sw-room-image:url("/office-themes/classic-office.webp");--sw-room-position:50% 53%;--sw-room-overlay:rgba(13,8,6,.26)}
+.sw-workspace-root[data-workspace-theme="future"] {--sw-room-image:url("/office-themes/syncworks-future.webp");--sw-room-position:51% 53%;--sw-room-overlay:rgba(4,9,23,.26)}
+.sw-workspace-root[data-workspace-theme="modern"] {--sw-room-image:url("/office-themes/modern-dark.webp");--sw-room-position:51% 52%;--sw-room-overlay:rgba(10,13,17,.30)}
+.sw-workspace-root[data-workspace-theme="light"] {--sw-room-image:url("/office-themes/clean-light.webp");--sw-room-position:50% 48%;--sw-room-overlay:rgba(249,247,241,.14)}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-office-art {
+  background-image:var(--sw-room-image)!important;
+  background-size:cover!important;
+  background-position:var(--sw-room-position)!important;
+  background-repeat:no-repeat!important;
+  filter:none!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-office-art::before {
+  background:linear-gradient(180deg,var(--sw-room-overlay),transparent 38%,var(--sw-room-overlay))!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-office-light,
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-office-frame,
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-office-shelf,
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-office-desk {
+  display:none!important;
+}
+.sw-workspace-root[data-workspace-theme="classic"] .sw-customer-three-rail .sw-lobby-content {
+  background:linear-gradient(90deg,rgba(19,12,8,.70),rgba(19,12,8,.34) 43%,rgba(19,12,8,.08) 80%)!important;
+}
+.sw-workspace-root[data-workspace-theme="future"] .sw-customer-three-rail .sw-lobby-content {
+  background:linear-gradient(90deg,rgba(3,11,25,.73),rgba(3,11,25,.30) 43%,rgba(3,11,25,.07) 80%)!important;
+}
+.sw-workspace-root[data-workspace-theme="modern"] .sw-customer-three-rail .sw-lobby-content {
+  background:linear-gradient(90deg,rgba(12,16,19,.64),rgba(12,16,19,.29) 43%,rgba(12,16,19,.09) 80%)!important;
+}
+.sw-workspace-root[data-workspace-theme="light"] .sw-customer-three-rail .sw-lobby-content {
+  background:linear-gradient(90deg,rgba(255,255,252,.85),rgba(255,255,252,.42) 52%,rgba(255,255,252,.13) 85%)!important;
+}
+@media(max-width:760px) {
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-office-art{
+   background-position:center center!important;
+ }
+}
