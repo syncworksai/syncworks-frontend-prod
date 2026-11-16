@@ -277,6 +277,22 @@ export default function RoleAwareMobileNav() {
           </section>
         </div>
       )}
+      {navMode === "CUSTOMER" && pathname === "/customer" && (
+        <div className="sw-mobile-bots-dock lg:hidden" role="group" aria-label="Your docked AI employees">
+          <span className="sw-mobile-bots-label">AI TEAM</span>
+          <div className="sw-mobile-bots-people">
+            {AVATARS.map((worker) => (
+              <button type="button" key={worker.id} aria-label={`Open ${worker.name}, ${worker.role}`}
+                onClick={() => navigateAssistant(worker.role === "Chief of Staff" ? "/sync/assist/chief" : "/sync/assist")}
+                title={`${worker.name} · ${worker.role}`}>
+                <img src={worker.photo} alt="" loading="eager" />
+                <span>{worker.name}</span>
+              </button>
+            ))}
+          </div>
+          <button type="button" className="sw-mobile-bots-expand" onClick={() => setAiTeamOpen(true)} aria-label="Expand AI team">View all</button>
+        </div>
+      )}
       <nav className="sw-role-mobile-nav lg:hidden" aria-label="Mobile quick navigation">
         <div className="sw-role-mobile-nav-grid">
           {renderedItems.slice(0, 2).map((item) => <NavButton key={item.id} item={item} onClick={() => openItem(item)} />)}
