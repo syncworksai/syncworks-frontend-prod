@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { TRAINING_CANDLES, buildTrainingRows, resolvePracticeTrade } from "../src/utils/tradingTutorial.mjs";
+import { TRAINING_CANDLES, buildTrainingRows, resolvePracticeTrade, explainTrainingSignal, closePracticeTrade, practiceStats } from "../src/utils/tradingTutorial.mjs";
 
 test("tutorial prices and OHLC structure are valid and deterministic",()=>{
   const rows = buildTrainingRows();
@@ -26,4 +26,34 @@ test("tutorial has both wait and breakout teaching examples",()=>{
   const rows=buildTrainingRows();
   assert.ok(rows.some(c=>c.signal==="WAIT"));
   assert.ok(rows.some(c=>c.signal!=="WAIT"),"Synthetic replay must include a qualifying setup");
+});
+
+test("WAIT teaching explanation lists missed gates without changing signal",()=>{
+  const rows=buildTrainingRows();
+  const candle=rows.find(row=>row.signal==="WAIT"&&row.upper!=null&&row.close>row.upper);
+  assert.ok(candle,"Expected a breakout that lacks at least one confirmation");
+  const result=explainTrainingSignal(candle);
+  assert.match(result.summary,/WAIT — missing/);
+  assert.ok(result.checks.some(check=>!check.passed));
+  assert.equal(candle.signal,"WAIT");
+});
+
+test("paper MNQ trades include point value and illustrative costs",()=>{
+  const trade={side:"LONG",entry:21000,stop:20995,target:21010,risk:5,entryTime:"T+1"};
+  const closed=closePracticeTrade(trade,21010,"MANUAL CLOSE");
+  assert.equal(closed.netPnl,17.5);
+  const stats=practiceStats([closed]);
+  assert.equal(stats.count,1);
+  assert.equal(stats.winRate,100);
+  assert.equal(stats.balance,10017.5);
+  assert.equal(stats.maxDrawdown,0);
+});
+test("losing paper trade affects win rate and drawdown",()=>{
+  const trade={side:"SHORT",entry:21000,stop:21005,target:20990,risk:5};
+  const closed=resolvePracticeTrade(trade,{low:20998,high:21006});
+  assert.equal(closed.outcome,"STOP HIT");
+  assert.equal(closed.netPnl,-12.5);
+  const stats=practiceStats([closed]);
+  assert.equal(stats.winRate,0);
+  assert.equal(stats.maxDrawdown,12.5);
 });

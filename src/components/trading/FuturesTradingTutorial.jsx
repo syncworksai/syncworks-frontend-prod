@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { BookOpen, Play, Pause, RotateCcw, StepForward, ShieldAlert, Target, Volume2 } from "lucide-react";
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
-import { buildTrainingRows, TRAINING_CANDLES, resolvePracticeTrade } from "../../utils/tradingTutorial.mjs";
+import TrainingCandlestickChart from "./TrainingCandlestickChart";
+import { buildTrainingRows, TRAINING_CANDLES, resolvePracticeTrade, explainTrainingSignal, closePracticeTrade, practiceStats, SIM_MNQ_POINT_VALUE, SIM_ROUND_TRIP_FEE } from "../../utils/tradingTutorial.mjs";
 
 const ROWS = buildTrainingRows(TRAINING_CANDLES);
 const LESSONS = [
@@ -23,7 +23,9 @@ export default function FuturesTradingTutorial() {
   const [trade,setTrade]=useState(null);
   const [completed,setCompleted]=useState([]);
   const [feedback,setFeedback]=useState("Advance candles to find an aligned setup, or select a lesson.");
+  const stats=useMemo(()=>practiceStats(completed),[completed]);
   const current=ROWS[step];
+  const explanation=explainTrainingSignal(current);
   const next=step+1 < ROWS.length;
   const visible=useMemo(()=>ROWS.slice(Math.max(0,step-54),step+1),[step]);
   useEffect(()=>{
@@ -33,32 +35,31 @@ export default function FuturesTradingTutorial() {
   },[playing,speed,next]);
   useEffect(()=>{if(!next)setPlaying(false);},[next]);
   function advance(){
-    if(!next)return;
-    const nextRow=ROWS[step+1];
-    if(trade&&!trade.closed){
-      const updated=resolvePracticeTrade(trade,nextRow);
-      if(updated.closed){setCompleted(old=>[...old,updated]);setTrade(null);setFeedback("Practice position closed: "+updated.outcome+" ("+money(updated.resultR)+"R). This is synthetic data.");}
-    }
-    setStep(s=>s+1);
+    if(next)setStep(s=>Math.min(ROWS.length-1,s+1));
   }
   // Resolve open positions on animation ticks, not just the Step button.
   useEffect(()=>{
     if(!trade||trade.closed||step<trade.entryIndex)return;
     const updated=resolvePracticeTrade(trade,ROWS[step]);
-    if(updated.closed){setCompleted(old=>[...old,updated]);setTrade(null);setFeedback("Practice position closed: "+updated.outcome+" ("+money(updated.resultR)+"R).");}
+    if(updated.closed){setCompleted(old=>[...old,{...updated,exitTime:ROWS[step].time}]);setTrade(null);setFeedback("Practice position closed: "+updated.outcome+" ("+money(updated.resultR)+"R).");}
   },[step,trade]);
-  function enterPractice(){
-    if(trade){setFeedback("Close the existing practice position before entering another.");return;}
-    if(!next){setFeedback("End of demonstration. Restart to practice.");return;}
-    if(current.signal==="WAIT"){setFeedback("WAIT is correct: no qualified simulated setup on this candle.");return;}
-    const side=current.signal.startsWith("LONG")?"LONG":"SHORT";
-    const entry=ROWS[step+1].open; // demo uses known next open only when entered, no future price presented as live quote
-    const stop=side==="LONG" ? current.low : current.high;
-    const risk=side==="LONG" ? entry-stop : stop-entry;
-    if(!(risk>0)){setFeedback("The next-open price invalidates this practice stop. Do not enter.");return;}
-    const newTrade={side,entry,stop,target:entry+(side==="LONG"?2:-2)*risk,risk,entryIndex:step+1};
-    setTrade(newTrade);setFeedback("Simulated "+side+" entered at next candle open. Stop and 2R target are now tracked. No real trade placed.");
+  function enterPractice(side){
+    if(trade){setFeedback("Close your current paper position first.");return;}
+    if(!next){setFeedback("Replay completed. Restart to practice another trade.");return;}
+    const entry=ROWS[step+1].open, stop=side==="LONG"?current.low:current.high;
+    const risk=side==="LONG"?entry-stop:stop-entry;
+    if(!(risk>0)){setFeedback("Stop is on the wrong side of the entry. Wait for a valid practice setup.");return;}
+    const newTrade={side,entry,stop,target:entry+(side==="LONG"?2:-2)*risk,risk,entryIndex:step+1,entryTime:ROWS[step+1].time,signalAtEntry:current.signal};
+    setPlaying(false);setTrade(newTrade);
+    setFeedback("Paper "+(side==="LONG"?"BUY":"SELL")+" filled at next simulated candle open. "+(current.signal==="WAIT"?"There was no aligned setup; evaluate the risk of ignoring WAIT.":"Compare this entry with Jarvis's teaching signal."));
     setStep(step+1);
+  }
+  function closeManual(){
+    if(!trade)return;
+    const closed=closePracticeTrade(trade,current.close);
+    setCompleted(old=>[...old,{...closed,exitTime:current.time}]);
+    setTrade(null);setPlaying(false);
+    setFeedback("Paper position manually closed: "+(closed.netPnl>=0?"+":"")+"$"+money(closed.netPnl)+" net including illustrative cost.");
   }
   function reset(){setStep(23);setPlaying(false);setTrade(null);setCompleted([]);setFeedback("Simulation restarted. No broker account or live market prices are involved.");}
   return <section className="mt-4 rounded-3xl border border-violet-400/25 bg-gradient-to-br from-[#101329] via-[#080f22] to-[#070a18] p-4 text-slate-100 sm:p-5" aria-label="Interactive practice trading tutorial">
@@ -72,21 +73,7 @@ export default function FuturesTradingTutorial() {
           <div><span className="text-[10px] uppercase text-slate-500">Simulated candle</span><div className="text-sm font-bold">{step+1} / {ROWS.length} · Close {money(current.close)}</div></div>
           <div className={"rounded-lg border px-3 py-2 text-xs font-black "+(current.signal==="WAIT"?"border-slate-500/30 text-slate-300":current.signal.startsWith("LONG")?"border-emerald-400/40 bg-emerald-400/10 text-emerald-200":"border-rose-400/40 bg-rose-400/10 text-rose-200")}>{current.signal}</div>
         </div>
-        <div className="h-72 w-full rounded-xl border border-white/10 bg-[#050c1a] p-2 sm:h-80" aria-label="Simulated price chart with EMA, VWAP and Donchian channels">
-          <ResponsiveContainer width="100%" height="100%"><LineChart data={visible} margin={{top:10,right:12,left:0,bottom:8}}>
-            <CartesianGrid stroke="#1e293b" strokeDasharray="3 4"/>
-            <XAxis dataKey="time" tick={{fontSize:10,fill:"#94a3b8"}} interval="preserveStartEnd"/>
-            <YAxis domain={["auto","auto"]} tick={{fontSize:10,fill:"#94a3b8"}} width={60}/>
-            <Tooltip contentStyle={{background:"#0f172a",border:"1px solid #334155",fontSize:12}} formatter={(v)=>money(v)} />
-            <Line dataKey="close" name="Close (simulated)" type="linear" stroke="#38bdf8" strokeWidth={2.5} dot={false} isAnimationActive={false}/>
-            <Line dataKey="ema7" name="EMA 7" stroke="#34d399" dot={false} isAnimationActive={false}/>
-            <Line dataKey="ema9" name="EMA 9" stroke="#fbbf24" dot={false} isAnimationActive={false}/>
-            <Line dataKey="vwap" name="Session VWAP" stroke="#a78bfa" dot={false} isAnimationActive={false}/>
-            <Line dataKey="upper" name="Prior channel high" stroke="#f472b6" strokeDasharray="5 4" dot={false} connectNulls={false} isAnimationActive={false}/>
-            <Line dataKey="lower" name="Prior channel low" stroke="#fb7185" strokeDasharray="5 4" dot={false} connectNulls={false} isAnimationActive={false}/>
-            {trade&&<><ReferenceLine y={trade.entry} stroke="#93c5fd" strokeDasharray="3 3" label={{value:"Entry",fill:"#93c5fd",fontSize:10}}/><ReferenceLine y={trade.stop} stroke="#f87171" label={{value:"Stop",fill:"#f87171",fontSize:10}}/><ReferenceLine y={trade.target} stroke="#4ade80" label={{value:"Target",fill:"#4ade80",fontSize:10}}/></>}
-          </LineChart></ResponsiveContainer>
-        </div>
+        <TrainingCandlestickChart bars={visible} trade={trade} lastClosedTrade={completed.at(-1)} />
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" onClick={()=>setPlaying(x=>!x)} disabled={!next} className="flex items-center gap-2 rounded-xl bg-violet-500/20 px-3 py-2 text-xs font-bold text-violet-100 disabled:opacity-40">{playing?<Pause size={15}/>:<Play size={15}/>} {playing?"Pause":"Play"}</button>
           <button type="button" onClick={()=>{setPlaying(false);advance();}} disabled={!next} className="flex items-center gap-2 rounded-xl border border-white/20 px-3 py-2 text-xs font-bold disabled:opacity-40"><StepForward size={15}/> Next candle</button>
@@ -101,11 +88,36 @@ export default function FuturesTradingTutorial() {
         ].map(([label,value])=><div key={label} className="rounded-xl border border-white/10 bg-black/20 p-3"><div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div><div className="mt-1 text-xs font-bold">{value}</div></div>)}</div>
         <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-3">
           <div className="flex items-center gap-2 text-xs font-black text-cyan-200"><Target size={15}/> Practice entry / stop / exit</div>
-          <p className="mt-2 text-xs text-slate-300">{current.signal==="WAIT"?"No aligned breakout on the current closed candle. Watch and wait.":"Simulated "+current.signal+". You may practice a next-bar-open entry with signal-candle stop and 2R objective."}</p>
-          <button type="button" onClick={()=>{setPlaying(false);enterPractice();}} disabled={current.signal==="WAIT"||!!trade||!next} className="mt-3 rounded-lg bg-emerald-500/20 px-3 py-2 text-xs font-black text-emerald-200 disabled:cursor-not-allowed disabled:opacity-30">Enter paper trade on next bar</button>
+          <p className="mt-2 text-xs text-slate-300">{current.signal==="WAIT"?explanation.summary:"Simulated "+current.signal+". You may practice a next-bar-open entry with signal-candle stop and 2R objective."}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" onClick={()=>enterPractice("LONG")} disabled={!!trade||!next} className="rounded-xl border border-emerald-400/30 bg-emerald-500/20 px-4 py-2.5 text-xs font-black text-emerald-100 disabled:opacity-30">BUY / LONG · Paper</button>
+            <button type="button" onClick={()=>enterPractice("SHORT")} disabled={!!trade||!next} className="rounded-xl border border-rose-400/30 bg-rose-500/20 px-4 py-2.5 text-xs font-black text-rose-100 disabled:opacity-30">SELL / SHORT · Paper</button>
+            <button type="button" onClick={closeManual} disabled={!trade} className="rounded-xl border border-amber-400/30 bg-amber-500/15 px-4 py-2.5 text-xs font-black text-amber-100 disabled:opacity-30">CLOSE TRADE</button>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-400">Buy opens a long, Sell opens a short, Close exits a position. All entries fill on the next simulated candle's open, regardless of Jarvis's WAIT classification. One paper MNQ contract; no real orders.</p>
           {trade&&<p className="mt-2 text-xs text-slate-300">{trade.side} · Entry {money(trade.entry)} · Stop {money(trade.stop)} · Target {money(trade.target)} · Risk {money(trade.risk)} points</p>}
           <p role="status" className="mt-2 text-xs text-amber-200">{feedback}</p>
           {completed.length>0&&<div className="mt-2 text-xs text-slate-300">{completed.length} practice trade(s) closed · Last result: {money(completed.at(-1).resultR)}R ({completed.at(-1).outcome})</div>}
+        </div>
+        <div className="rounded-xl border border-cyan-400/20 bg-slate-950/60 p-3">
+          <div className="text-xs font-black uppercase tracking-widest text-cyan-200">Paper account / Performance</div>
+          <p className="mt-1 text-[11px] text-slate-400">Fabricated prices · Starting balance $10,000 · One simulated MNQ contract. Unrealized P&L excluded. Restart clears this session.</p>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {[
+              ["Paper balance","$"+money(stats.balance)],
+              ["Realized net P&L",(stats.netPnl>=0?"+":"")+"$"+money(stats.netPnl)],
+              ["Win rate",stats.count?stats.winRate.toFixed(1)+"%":"—"],
+              ["Trades / wins",stats.count+" / "+stats.wins],
+              ["Average trade","$"+money(stats.avgTrade)],
+              ["Max drawdown","$"+money(stats.maxDrawdown)]
+            ].map(([title,value])=><div key={title} className="rounded-lg border border-white/10 bg-black/30 p-2"><div className="text-[10px] text-slate-500">{title}</div><div className="mt-1 text-sm font-black">{value}</div></div>)}
+          </div>
+          <div className="mt-3 text-xs font-bold text-slate-300">Simulated trade history</div>
+          {completed.length?<div className="mt-2 max-h-52 overflow-x-auto overflow-y-auto"><table className="w-full min-w-[490px] text-left text-xs">
+            <thead className="text-slate-500"><tr><th className="p-2">Side</th><th className="p-2">Entry</th><th className="p-2">Exit</th><th className="p-2">Outcome</th><th className="p-2">Net P&L</th></tr></thead>
+            <tbody>{completed.slice().reverse().map((item,index)=><tr key={item.entryTime+index} className="border-t border-white/10"><td className="p-2">{item.side}</td><td className="p-2">{money(item.entry)}</td><td className="p-2">{money(item.exit)}</td><td className="p-2">{item.outcome}</td><td className={"p-2 font-bold "+(item.netPnl>0?"text-emerald-300":"text-rose-300")}>{(item.netPnl>=0?"+":"")+"$"+money(item.netPnl)}</td></tr>)}</tbody>
+          </table></div>:<p className="mt-2 text-xs text-slate-500">No closed paper trades. Buy or Sell, then Close or let the stop/target close the trade.</p>}
+          <p className="mt-2 text-[11px] text-slate-500">Assumptions: $ {SIM_MNQ_POINT_VALUE} per MNQ index point and $ {money(SIM_ROUND_TRIP_FEE)} fixed round-trip cost per trade. No slippage, real broker fees, gaps or actual execution constraints. Simulated P&L is not evidence of real profitability.</p>
         </div>
       </div>
       <div className="min-w-0 space-y-3">
@@ -127,6 +139,7 @@ export default function FuturesTradingTutorial() {
             <p><strong>Breakout:</strong> {current.upper===null?"Channel needs 20 historical candles.":current.close>current.upper?"Close above previous 20-bar high.":current.close<current.lower?"Close below previous 20-bar low.":"Inside the previous channel."}</p>
             <p><strong>Volume:</strong> {current.volRatio===null?"Not enough bars.":current.volRatio.toFixed(2)+"× recent average."}</p>
             <p><strong>Decision:</strong> <span className="font-black text-cyan-200">{current.signal}</span> is a teaching classification, not a trading recommendation.</p>
+            <div className="space-y-2 border-t border-white/10 pt-3">{explanation.checks.map(check=><div key={check.label} className="flex gap-2"><span className={check.passed?"text-emerald-300":"text-amber-300"}>{check.passed?"✓":"○"}</span><span><strong>{check.label}:</strong> {check.detail}</span></div>)}</div>
           </div>
         </div>
         <div className="flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100/80"><ShieldAlert size={16} className="mt-0.5 shrink-0"/>This is deliberately synthetic, not historical MNQ data. Replay reveals price one bar at a time, but the predefined scenario and simplified fills cannot establish a profitable strategy. Browser animation is not market connectivity or autonomous trading.</div>
