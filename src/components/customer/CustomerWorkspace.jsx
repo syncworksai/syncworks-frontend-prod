@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { Palette, LayoutGrid, X, CalendarDays, ListTodo, Inbox, BriefcaseBusiness, Building2, Wallet, Heart, TrendingUp, Spade, ShoppingBag, Users, CloudSun, MapPinned, Settings, RotateCcw } from "lucide-react";
+import { useAuth } from "../../auth/AuthContext";
+import { Palette, LayoutGrid, X, CalendarDays, ListTodo, Inbox, BriefcaseBusiness, Building2, Wallet, Heart, Flame, TrendingUp, Spade, ShoppingBag, Users, CloudSun, MapPinned, Settings, RotateCcw } from "lucide-react";
 import "./CustomerWorkspace.css";
 import "./OfficeThemeIntegrationV16.css";
 import "./OfficeDrawersV21.css";
@@ -67,6 +68,8 @@ export function WorkspaceAppearancePanel({ settings, update }) {
 }
 export default function CustomerWorkspace({ settings, update, phoneMode = false, dayTradingEnabled = false }) {
   const nav = useNavigate();
+  const { user } = useAuth();
+  const forgeEnabled = String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com";
   const [panel, setPanel] = useState(null);
   const [closing, setClosing] = useState(false);
   useEffect(() => { const open = (event) => { if (["apps", "appearance", "daily", "personal", "business"].includes(event?.detail)) { setClosing(false); setPanel(event.detail); } }; window.addEventListener("sw:workspace-open", open); return () => window.removeEventListener("sw:workspace-open", open); }, []);
@@ -80,6 +83,7 @@ export default function CustomerWorkspace({ settings, update, phoneMode = false,
   const apps = [
     ...(activeCategory ? activeCategory.items : APPS).filter(([name]) => dayTradingEnabled || name !== "Trading"),
     ...(dayTradingEnabled && (panel === "business" || panel === "apps") ? [["Freelance Work", "/customer/freelance/overview", BriefcaseBusiness]] : []),
+    ...(forgeEnabled && (panel === "apps" || panel === "personal") ? [["The Forge", "/customer/forge", Flame]] : []),
   ];
   const close = () => { setClosing(true); window.setTimeout(() => { setPanel(null); setClosing(false); }, settings.motion ? 230 : 0); };
   const go = (path) => { setClosing(true); window.setTimeout(() => { setPanel(null); nav(path); }, settings.motion ? 200 : 0); };
