@@ -88,3 +88,39 @@
   }
   .sw-role-mobile-nav-center.is-sync .sw-role-mobile-nav-center-orb::after {display:none;}
 }
+
+
+/* Customer home: compact AI employee tray opened by the single SYNC cube.
+   Never permanently occupy dashboard height or cover the center navigation. */
+.sw-mobile-ai-team-shade {
+  position:fixed; inset:0; z-index:115;
+  background:rgba(1,7,17,.38);
+  display:flex; justify-content:center; align-items:flex-end;
+  padding:12px 12px calc(6.1rem + env(safe-area-inset-bottom));
+}
+.sw-mobile-ai-team-panel {
+  width:min(100%,420px);
+  border:1px solid rgba(93,204,246,.43);
+  border-radius:22px;
+  padding:14px;
+  background:rgba(4,15,33,.93);
+  color:#eef9ff;
+  box-shadow:0 14px 50px rgba(0,0,0,.5);
+  -webkit-backdrop-filter:blur(16px);
+  backdrop-filter:blur(16px);
+}
+.sw-mobile-ai-team-head {display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.sw-mobile-ai-team-head div {display:flex;flex-direction:column;gap:2px;}
+.sw-mobile-ai-team-head span {font-size:10px;letter-spacing:.16em;font-weight:900;color:#68dff9;}
+.sw-mobile-ai-team-head strong {font-size:17px;}
+.sw-mobile-ai-team-head button {width:36px;height:36px;border:1px solid rgba(255,255,255,.24);border-radius:11px;font-size:17px;}
+.sw-mobile-ai-team-grid {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
+.sw-mobile-ai-team-grid button {display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;border-radius:13px;border:1px solid rgba(126,202,242,.19);background:rgba(13,28,48,.65);padding:9px 3px;}
+.sw-mobile-ai-team-grid img {display:block;width:49px;height:49px;object-fit:cover;object-position:top;border-radius:50%;border:1px solid rgba(135,219,255,.52);}
+.sw-mobile-ai-team-grid strong {font-size:12px;line-height:1.2;}
+.sw-mobile-ai-team-grid small {font-size:9px;color:#bcd0df;line-height:1.2;text-align:center;}
+.sw-mobile-ai-team-all {display:block;width:100%;margin-top:11px;min-height:40px;text-align:center;border:1px solid rgba(116,210,245,.36);border-radius:12px;font-weight:800;font-size:12px;background:rgba(42,113,159,.22);}
+@media(max-width:767px) and (max-height:650px) {
+  .sw-mobile-ai-team-shade {padding-bottom:calc(5rem + env(safe-area-inset-bottom));}
+  .sw-mobile-ai-team-panel {max-height:calc(100dvh - 8rem);overflow-y:auto;}
+}
