@@ -47,6 +47,7 @@ import "../components/customer/ImmersiveSceneV19.css";
 import "../components/customer/OfficeFlowV20.css";
 import "../components/customer/OfficeTwoScreenV22.css";
 import "../components/customer/OfficePhotoVisibilityV23.css";
+import "../components/customer/LobbyReadabilityV24.css";
 
 const DAY_TRADING_EMAIL = "jacoblord7@outlook.com";
 
@@ -131,7 +132,7 @@ function Metric({ icon: Icon, label, value, detail, color = "cyan", onClick }) {
 
 function AttentionItem({ title, detail, urgent = false, onClick }) {
   return (
-    <button type="button" onClick={onClick} className={`w-full rounded-2xl border p-4 text-left transition hover:-translate-y-px ${urgent ? "border-rose-400/35 bg-rose-500/[.12]" : "border-amber-400/30 bg-amber-500/[.10]"}`}>
+    <button type="button" onClick={onClick} className={`sw-lobby-attention-item w-full rounded-2xl border p-4 text-left transition hover:-translate-y-px ${urgent ? "border-rose-400/35 bg-rose-500/[.12]" : "border-amber-400/30 bg-amber-500/[.10]"}`}>
       <div className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-[.15em] ${urgent ? "text-rose-200" : "text-amber-200"}`}><AlertTriangle className="h-4 w-4" />{title}</div>
       <div className="mt-2 text-sm font-bold leading-5 text-white">{detail}</div>
     </button>
@@ -321,8 +322,8 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
           </div>
         </main>
 
-        <aside className="min-w-0 space-y-4 lg:col-start-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 2xl:col-start-auto 2xl:block 2xl:sticky 2xl:top-4 2xl:space-y-4">
-          <section className="rounded-[1.6rem] border border-white/10 bg-slate-950/75 p-4 shadow-[0_20px_60px_rgba(0,0,0,.25)] backdrop-blur-xl">
+        <aside className="sw-lobby-alert-rail min-w-0 space-y-4 lg:col-start-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 2xl:col-start-auto 2xl:block 2xl:sticky 2xl:top-4 2xl:space-y-4">
+          <section className="sw-lobby-alerts rounded-[1.6rem] border border-white/10 bg-slate-950/75 p-4 shadow-[0_20px_60px_rgba(0,0,0,.25)] backdrop-blur-xl">
             <div className="flex items-center justify-between gap-2"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-amber-200">Alerts</div><h2 className="mt-1 text-lg font-black text-white">Needs attention</h2></div><AlertTriangle className={`h-5 w-5 ${alertCount ? "text-rose-300" : "text-emerald-300"}`} /></div>
             <div className="mt-4 space-y-3">
               {overdueInvoices.slice(0, 2).map((item, index) => <AttentionItem key={`overdue-${item?.id || index}`} urgent title="Past due" detail={`${item?.memo || item?.title || "Payment"} · ${money(item?.balance_due ?? item?.total ?? 0)}`} onClick={() => nav("/customer/invoices")} />)}
