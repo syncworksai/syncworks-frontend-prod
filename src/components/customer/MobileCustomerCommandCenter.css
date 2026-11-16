@@ -48,3 +48,65 @@
 @media(prefers-reduced-motion:reduce) {
   .sw-mobile-rotate { transition:none; }
 }
+
+
+/* V2: Mobile reuses the identical uploaded desktop office photographs and theme variables.
+   The root scene is provided by OfficeThemeAssetsV18 and ImmersiveSceneV19.
+   No separate mobile image copies or inline URLs are necessary. */
+@media (max-width:767px) {
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) {
+    background-image:linear-gradient(180deg,rgba(5,10,20,.24),rgba(5,10,20,.07) 35%,rgba(5,10,20,.32)),var(--sw-room-image)!important;
+    background-size:cover,cover!important;
+    background-position:center center,var(--sw-room-position,center)!important;
+    background-repeat:no-repeat!important;
+    background-attachment:scroll,scroll!important;
+    min-height:100dvh;
+  }
+  .sw-workspace-root[data-workspace-theme="classic"] {
+    background-image:linear-gradient(180deg,rgba(27,14,7,.27),rgba(27,14,7,.06) 38%,rgba(27,14,7,.30)),var(--sw-room-image)!important;
+  }
+  .sw-workspace-root[data-workspace-theme="light"] {
+    background-image:linear-gradient(180deg,rgba(251,241,224,.14),rgba(251,241,224,.02) 40%,rgba(251,241,224,.24)),var(--sw-room-image)!important;
+  }
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-mobile-command {
+    --mc-glass:color-mix(in srgb,var(--sw-lobby-glass) 40%,transparent);
+    --mc-line:var(--sw-lobby-border);
+    --mc-accent:var(--sw-workspace-accent,#70defb);
+    color:var(--sw-ui-text,#f6faff);
+  }
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-mobile-command :is(.sw-mobile-brief-copy,.sw-mobile-module strong,.sw-mobile-command-status strong,.sw-mobile-command-actions button) {
+    color:var(--sw-ui-text,#f6faff);
+    text-shadow:0 1px 10px rgba(0,0,0,.36);
+  }
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-mobile-command :is(.sw-mobile-module small,.sw-mobile-command-status small) {
+    color:var(--sw-ui-muted,#cbd5e1);
+  }
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-mobile-command .sw-mobile-facts button {
+    color:var(--sw-ui-text,#f6faff);
+  }
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-mobile-command :is(.sw-mobile-module,.sw-mobile-command-brief,.sw-mobile-icon-button,.sw-mobile-command-status,.sw-mobile-command-actions button) {
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 5px 18px rgba(0,0,0,.12);
+    -webkit-backdrop-filter:blur(8px) saturate(115%);
+    backdrop-filter:blur(8px) saturate(115%);
+  }
+  .sw-workspace-root[data-workspace-theme="light"] .sw-mobile-command {
+    --mc-glass:rgba(255,247,234,.38);
+    --mc-accent:#176d72;
+  }
+  .sw-workspace-root[data-workspace-theme="light"] .sw-mobile-command :is(.sw-mobile-brief-copy,.sw-mobile-module strong,.sw-mobile-command-status strong,.sw-mobile-command-actions button) {
+    text-shadow:none;
+  }
+  .sw-workspace-root[data-workspace-theme="light"] .sw-mobile-command :is(.sw-mobile-command-status small,.sw-mobile-module small) {
+    color:#54483d;
+  }
+  .sw-workspace-root[data-workspace-theme="classic"] .sw-mobile-command {
+    --mc-glass:rgba(38,21,12,.34);
+    --mc-accent:#e8bc7a;
+  }
+  .sw-workspace-root[data-workspace-theme="modern"] .sw-mobile-command {
+    --mc-glass:rgba(20,25,31,.31);
+  }
+  .sw-workspace-root[data-workspace-theme="future"] .sw-mobile-command {
+    --mc-glass:rgba(3,13,35,.28);
+  }
+}
