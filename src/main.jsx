@@ -23,6 +23,7 @@ import PMLeasing from "./pages/PMLeasing";
 import PMPayments from "./pages/PMPayments";
 import "./index.css";
 import "./mobile-production.css";
+import "./components/customer/OfficeGlobalV21.css";
 
 const SYNCWORKS_BUILD = "2026.09.24-sports-gamebook-practice-v2";
 
@@ -49,6 +50,34 @@ retireLegacyAppCaches();
 function RoutedApplication() {
   const location = useLocation();
   const pathname = location.pathname.replace(/\/+$/, "") || "/";
+  React.useEffect(() => {
+    const applyAppearance = () => {
+      let appearance = "legacy";
+      try {
+        const stored = JSON.parse(localStorage.getItem("sw_workspace_appearance_v1") || "null");
+        if (["classic", "future", "modern", "light"].includes(stored?.theme)) appearance = stored.theme;
+      } catch { /* local storage unavailable */ }
+      const isGame = /^\/customer\/(games|game|poker|fyb|bozo|442|card-club)/i.test(pathname);
+      const isWork = /^(\/customer|\/sbo|\/pm|\/sync|\/calendar|\/settings|\/tickets|\/connect)(\/|$)/.test(pathname);
+      if (!isGame && isWork && appearance !== "legacy") {
+        document.body.dataset.swOfficeScope = "work";
+        document.body.dataset.swOfficeTheme = appearance;
+      } else {
+        delete document.body.dataset.swOfficeScope;
+        delete document.body.dataset.swOfficeTheme;
+      }
+    };
+    applyAppearance();
+    window.addEventListener("sw:workspace-appearance", applyAppearance);
+    window.addEventListener("storage", applyAppearance);
+    return () => {
+      window.removeEventListener("sw:workspace-appearance", applyAppearance);
+      window.removeEventListener("storage", applyAppearance);
+      delete document.body.dataset.swOfficeScope;
+      delete document.body.dataset.swOfficeTheme;
+    };
+  }, [pathname]);
+
 
   // GOD MODE owns its route completely. Do not render the shared App shell,
   // global mobile navigation, onboarding gates, or controller overlays around it.
