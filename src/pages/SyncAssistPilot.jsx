@@ -133,6 +133,7 @@ export default function SyncAssistPilot() {
             </div>
           )}
           {error && <div role="alert" className="mb-4 rounded-xl border border-rose-400/40 bg-rose-950/30 p-3 text-sm text-rose-200">{error}</div>}
+          <button type="button" onClick={() => navigate("/sync/assist/daily")} className="mb-4 flex min-h-16 w-full items-center justify-between rounded-2xl border border-cyan-400/35 bg-gradient-to-r from-cyan-700/25 to-violet-700/20 p-4 text-left font-black text-cyan-100"><span>Jarvis Daily · My to-do list<span className="block text-xs font-normal text-slate-400">Today's priorities · Property · Business · Personal</span></span><span aria-hidden="true">→</span></button>
           <section className="mb-4 rounded-2xl border border-cyan-400/25 bg-slate-900/50 p-4">
             <button type="button" aria-expanded={operationsOpen} onClick={() => { setOperationsOpen(!operationsOpen); if (!operationsOpen) loadOperations(); }} className="flex min-h-11 w-full items-center justify-between gap-2 text-left font-black text-cyan-100">
               <span>Jarvis Operations Brief <span className="block text-xs font-normal text-slate-400">Internal business, invoices, maintenance and property tasks</span></span>
