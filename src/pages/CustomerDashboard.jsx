@@ -109,7 +109,7 @@ function NavButton({ icon: Icon, label, onClick, color = "cyan", active = false,
   return (
     <button type="button" onClick={onClick} className={`sw-customer-nav-entry flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition hover:-translate-y-px ${active ? `sw-customer-nav-active ${tone[color]}` : "border-transparent text-slate-400 hover:border-white/10 hover:bg-white/[.04] hover:text-white"}`}>
       <span className={`sw-customer-nav-icon grid h-9 w-9 shrink-0 place-items-center rounded-xl border ${tone[color]}`}><Icon className="h-4 w-4" /></span>
-      <span className="min-w-0 flex-1 truncate text-xs font-black">{label}</span>
+      <span className="min-w-0 flex-1 truncate text-xs font-black">{label}</span><ChevronRight aria-hidden="true" className="sw-customer-nav-drawer-arrow h-3.5 w-3.5 shrink-0" />
       {badge ? <span className="rounded-full border border-white/10 bg-white/[.05] px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-slate-300">{badge}</span> : null}
     </button>
   );
