@@ -62,6 +62,22 @@ export default function SyncAssistWorkdayPanel() {
     }
   }
 
+  async function runInternalStep(goalId) {
+    if (busy) return;
+    setBusy(true); setError("");
+    try {
+      const response = await api.post(
+        BASE + encodeURIComponent(goalId) + "/run/", {},
+        { timeout: 20000 },
+      );
+      setData(response.data);
+    } catch (err) {
+      setError(err?.response?.data?.detail || "No internal task could be executed. Check approvals or retry.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function updateStep(goalId, step) {
     const current = editing[step.id] || {};
     const status = current.status || step.status;
@@ -148,6 +164,21 @@ export default function SyncAssistWorkdayPanel() {
                 return <div key={step.id} className="rounded-xl border border-white/10 p-3">
                   <div className="text-[10px] font-bold uppercase tracking-wide text-cyan-200">{step.role.replaceAll("_", " ")} · {step.status.replaceAll("_", " ")}</div>
                   <p className="mt-1 break-words text-xs text-slate-200">{step.task}</p>
+                  {step.worker_receipt && <div className="mt-3 space-y-2 rounded-xl border border-cyan-400/20 bg-cyan-950/20 p-3">
+                    <p className="text-xs font-bold text-cyan-200">Actual internal execution receipt</p>
+                    <p className="text-xs text-slate-200">{step.worker_receipt.message}</p>
+                    <p className="text-[11px] text-slate-400">Receipt: {step.worker_receipt.receipt_id} · {step.worker_receipt.output?.length || 0} records · {step.worker_receipt.messages_sent} messages sent</p>
+                    {(step.worker_receipt.output || []).map((record, index) => (
+                      <div key={index} className="rounded-lg border border-white/10 p-2 text-xs">
+                        {record.company && <strong className="block text-white">{record.company}</strong>}
+                        {record.website && <span className="block break-all text-slate-300">Owner-entered URL (unverified): {record.website}</span>}
+                        {record.observation && <p className="mt-1 text-slate-300">{record.observation}</p>}
+                        {record.draft && <p className="mt-1 whitespace-pre-wrap text-slate-300">Unsent outreach draft: {record.draft}</p>}
+                        {record.result && <p className="mt-1 text-slate-300">{record.result} · {record.records} records</p>}
+                      </div>
+                    ))}
+                    <p className="text-[10px] text-amber-200">Provenance and output are stored in the receipt. User-entered business claims have not been independently verified.</p>
+                  </div>}
                   {step.evidence && <p className="mt-2 whitespace-pre-wrap break-words text-xs text-slate-400">Recorded evidence: {step.evidence}</p>}
                   {step.status === "COMPLETED" ? <p className="mt-2 text-xs text-emerald-200">Owner-attested completion. Not independently verified by an AI worker.</p> : <div className="mt-3 space-y-2">
                     <select aria-label="Assignment status" value={selection} onChange={(event) => setEditing((old) => ({ ...old, [step.id]: { ...old[step.id], status: event.target.value } }))} className="min-h-11 w-full rounded-lg border border-slate-600 bg-slate-950 p-2 text-xs">
@@ -162,7 +193,7 @@ export default function SyncAssistWorkdayPanel() {
           </article>
         ))}
       </div>
-      <p className="mt-4 text-[11px] leading-5 text-amber-200">This pilot tracks owner-assigned work and evidence. Automated tool execution, sending messages and external changes remain disabled.</p>
+      <p className="mt-4 text-[11px] leading-5 text-amber-200">This pilot tracks owner-assigned work and evidence. Restricted internal work can run on demand. External web research, messaging and third-party changes remain disabled.</p>
     </section>
   );
 }
