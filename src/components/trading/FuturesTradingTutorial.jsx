@@ -43,7 +43,7 @@ export default function FuturesTradingTutorial() {
   }
   // Resolve open positions on animation ticks, not just the Step button.
   useEffect(()=>{
-    if(!trade||trade.closed||step<=trade.entryIndex)return;
+    if(!trade||trade.closed||step<trade.entryIndex)return;
     const updated=resolvePracticeTrade(trade,ROWS[step]);
     if(updated.closed){setCompleted(old=>[...old,updated]);setTrade(null);setFeedback("Practice position closed: "+updated.outcome+" ("+money(updated.resultR)+"R).");}
   },[step,trade]);
