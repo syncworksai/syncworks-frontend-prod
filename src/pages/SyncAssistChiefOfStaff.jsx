@@ -2,7 +2,7 @@ import React,{useEffect,useState} from "react";
 import {useNavigate} from "react-router-dom";
 import {ArrowLeft,RefreshCw,Plus,ChevronDown,Mail,CheckCircle2,Palette} from "lucide-react";
 import api from "../api/client";
-import {JarvisAvatar,JarvisAvatarPicker,useJarvisAvatar} from "../components/sync/JarvisAvatar";
+import {JarvisAvatar} from "../components/sync/JarvisAvatar";
 import "./SyncAssistChiefOfStaff.css";
 import {useAuth} from "../auth/AuthContext";
 
@@ -24,7 +24,7 @@ export default function SyncAssistChiefOfStaff(){
     try {const saved=window.localStorage.getItem("sw-assist-chief-theme");return THEMES[saved]?saved:"future";}catch{return "future";}
   });
   const [themeOpen,setThemeOpen]=useState(false);
-  const {avatarId,choose:chooseAvatar}=useJarvisAvatar();
+  const avatarId = "executive-female"; // Victoria is permanently assigned to Chief of Staff.
   const [avatarTalking,setAvatarTalking]=useState(false);
   const avatarSpeech=React.useRef(null);
   useEffect(()=>()=>{try{if(avatarSpeech.current&&window.speechSynthesis?.speaking)window.speechSynthesis.cancel();}catch{}},[]);
@@ -99,8 +99,8 @@ export default function SyncAssistChiefOfStaff(){
     <section aria-label="My Jarvis animated assistant" className={`mb-4 flex flex-col items-center gap-3 rounded-3xl border p-3 shadow-xl backdrop-blur-xl sm:flex-row sm:justify-center sm:p-4 ${design.border} ${design.panel}`}>
       <JarvisAvatar id={avatarId} state={avatarTalking?"speaking":"idle"} size="hero"/>
       <div className="w-full max-w-md space-y-2">
-        <p className={`text-[11px] font-black uppercase tracking-widest ${isLight?"text-slate-700":design.accent}`}>Meet your chief of staff</p>
-        <JarvisAvatarPicker value={avatarId} onChange={chooseAvatar} compact/>
+        <p className={`text-[11px] font-black uppercase tracking-widest ${isLight?"text-slate-700":design.accent}`}>Your Chief of Staff</p>
+        <p className={`text-sm font-bold ${textColor}`}>Victoria — Chief of Staff</p>
         <button type="button" onClick={previewAssistant} className={`min-h-11 w-full rounded-xl border px-4 text-xs font-black ${isLight?"border-slate-400 bg-white text-slate-900":"border-cyan-400/40 bg-cyan-500/10 text-cyan-100"}`}>{avatarTalking?"Stop voice preview":"Hear your assistant speak"}</button>
         <p className={`text-[11px] ${subText}`}>Choose from four animated assistants. The preview uses available device voices.</p>
       </div>
