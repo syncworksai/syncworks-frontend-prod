@@ -28,6 +28,7 @@ import { getActiveBusinessId } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import SyncActionStudio from "../components/sync/SyncActionStudio";
 import SyncWorkflowIntake from "../components/sync/SyncWorkflowIntake";
+import {JarvisAvatar, JarvisAvatarPicker, useJarvisAvatar} from "../components/sync/JarvisAvatar";
 import {
   getSyncAiErrorMessage,
   getSyncAiStatus,
@@ -154,6 +155,7 @@ export default function SyncAssistant() {
   const [speaking, setSpeaking] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(true);
   const [mobilePanel, setMobilePanel] = useState(null);
+  const {avatarId,choose:chooseAvatar}=useJarvisAvatar();
 
   const selectedVoice = useMemo(
     () =>
@@ -447,6 +449,18 @@ export default function SyncAssistant() {
           <div><p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">SYNC ASSIST</p><h1 className="text-lg font-black">Your command center</h1></div>
           <button type="button" onClick={() => setMobilePanel("settings")} aria-label="SYNC settings" className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-500/10"><Settings2 className="h-5 w-5"/></button>
         </div>
+        <section aria-label="Your animated Jarvis assistant" className="flex flex-col items-center gap-3 rounded-2xl border border-cyan-400/20 bg-[#04152d]/80 p-3 sm:flex-row sm:items-center sm:justify-center sm:p-4">
+          <JarvisAvatar id={avatarId} state={speaking?"speaking":listening?"listening":sending?"thinking":"idle"} size="hero"/>
+          <div className="w-full max-w-sm space-y-2">
+            <div className="text-xs font-black uppercase tracking-widest text-cyan-200">Your personal assistant</div>
+            <p className="text-sm text-slate-200">{speaking?"Speaking now":listening?"Listening to your command":sending?"Preparing your answer":"Ready for your next command"}</p>
+            <JarvisAvatarPicker value={avatarId} onChange={chooseAvatar}/>
+            <button type="button" onClick={()=>speaking?stopSpeaking():speak("Hello. I'm your SyncWorks assistant. I'm ready to help organize your day.",{force:true})} className="min-h-11 w-full rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-4 text-xs font-bold text-cyan-100">
+              {speaking?"Stop avatar voice":"Hear my assistant"}
+            </button>
+            <p className="text-[11px] text-slate-400">Mouth movement follows speech playback state; accurate phoneme lip sync is a future upgrade.</p>
+          </div>
+        </section>
         {pilotAccess ? <button type="button" onClick={() => navigate("/sync/assist")} className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/15 to-violet-500/10 px-3 py-2 text-left text-xs font-black text-cyan-100 lg:min-h-14 lg:rounded-2xl lg:p-4 lg:text-sm"><span>Business Control Center · Private pilot</span><ChevronRight className="h-4 w-4 shrink-0"/></button> : null}
         <section className="overflow-hidden rounded-2xl border border-cyan-400/20 bg-slate-950/72 p-3 shadow-[0_0_70px_rgba(34,211,238,0.10)] lg:rounded-[2rem] lg:p-5 md:p-8">
           <div className="flex flex-wrap items-start justify-between gap-3">
