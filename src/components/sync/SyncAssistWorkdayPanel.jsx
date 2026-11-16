@@ -180,7 +180,7 @@ export default function SyncAssistWorkdayPanel() {
                   <div className="text-[10px] font-bold uppercase tracking-wide text-cyan-200">{step.role.replaceAll("_", " ")} · {step.status.replaceAll("_", " ")}</div>
                   <p className="mt-1 break-words text-xs text-slate-200">{step.task}</p>
                   {step.worker_receipt && <div className="mt-3 space-y-2 rounded-xl border border-cyan-400/20 bg-cyan-950/20 p-3">
-                    <p className="text-xs font-bold text-cyan-200">Actual internal execution receipt</p>
+                    <p className="text-xs font-bold text-cyan-200">Recorded execution receipt</p>
                     <p className="text-xs text-slate-200">{step.worker_receipt.message}</p>
                     <p className="text-[11px] text-slate-400">Receipt: {step.worker_receipt.receipt_id} · {step.worker_receipt.output?.length || 0} records · {step.worker_receipt.messages_sent} messages sent</p>
                     {(step.worker_receipt.output || []).map((record, index) => (
