@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { Palette, LayoutGrid, X, CalendarDays, ListTodo, Inbox, BriefcaseBusiness, Building2, Wallet, Heart, TrendingUp, Spade, ShoppingBag, Users, CloudSun, MapPinned, Settings, RotateCcw } from "lucide-react";
 import "./CustomerWorkspace.css";
+import "./OfficeThemeIntegrationV16.css";
 
 export const WORKSPACE_THEMES = ["legacy", "classic", "future", "modern", "light"];
 const SETTINGS_KEY = "sw_workspace_appearance_v1";

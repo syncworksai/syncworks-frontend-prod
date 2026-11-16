@@ -1,0 +1,136 @@
+/* Customer workspace V16: a coordinated room, header and built-in drawer rail.
+   Changes are scoped to the Customer Dashboard's opt-in appearances.
+   Original layout and game tables intentionally keep their existing styles. */
+.sw-workspace-root[data-workspace-theme="classic"] {
+ --sw-room-surface:#1a120e;--sw-room-header:#21160f;--sw-room-header-ink:#f7e5c8;
+ --sw-room-header-line:rgba(219,169,95,.46);--sw-room-detail:rgba(225,182,114,.16);
+}
+.sw-workspace-root[data-workspace-theme="future"] {
+ --sw-room-surface:#071427;--sw-room-header:#07132a;--sw-room-header-ink:#edf8ff;
+ --sw-room-header-line:rgba(40,196,255,.48);--sw-room-detail:rgba(54,163,241,.15);
+}
+.sw-workspace-root[data-workspace-theme="modern"] {
+ --sw-room-surface:#1a252b;--sw-room-header:#1b2730;--sw-room-header-ink:#ecf2f4;
+ --sw-room-header-line:rgba(168,193,206,.37);--sw-room-detail:rgba(167,194,206,.13);
+}
+.sw-workspace-root[data-workspace-theme="light"] {
+ --sw-room-surface:#ecf3f4;--sw-room-header:#f8f9f7;--sw-room-header-ink:#173344;
+ --sw-room-header-line:rgba(55,109,135,.27);--sw-room-detail:rgba(55,109,135,.10);
+}
+/* The ModeBar lives inside DashboardShell and previously forced midnight blue,
+   regardless of the appearance. Remove only its decorative layers. */
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-modebar {
+ background:var(--sw-room-header)!important;
+ border-color:var(--sw-room-header-line)!important;
+ color:var(--sw-room-header-ink)!important;
+ box-shadow:inset 0 -1px var(--sw-room-header-line),0 8px 26px rgba(0,0,0,.11);
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-modebar > .pointer-events-none {
+ opacity:0!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-modebar .text-slate-100,
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-modebar .text-white,
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-modebar .text-slate-200 {
+ color:var(--sw-room-header-ink)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-modebar button[title="Open menu"],
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-modebar button[title="Open SyncWorks menu"]{
+ border-color:var(--sw-room-header-line)!important;
+ background:var(--sw-room-detail)!important;
+ color:var(--sw-room-header-ink)!important;
+}
+.sw-workspace-root[data-workspace-theme="light"] .sw-modebar .text-cyan-200,
+.sw-workspace-root[data-workspace-theme="light"] .sw-modebar .text-slate-400,
+.sw-workspace-root[data-workspace-theme="light"] .sw-modebar .text-slate-300 {
+ color:#426678!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-workspace-switcher {
+ background:var(--sw-room-surface)!important;
+ border-color:var(--sw-room-header-line)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-workspace-switcher > button {
+ border-color:var(--sw-room-header-line)!important;
+ background:var(--sw-room-detail)!important;
+ color:var(--sw-ui-text)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-workspace-switcher > button:hover {
+ border-color:var(--sw-ui-accent)!important;
+ background:var(--sw-ui-surface-hover)!important;
+}
+/* Navigation now reads as slim file-drawer tabs: their active edge is inset into
+   the rail. They remain direct links and are not fake nonfunctional drawers. */
+@media(min-width:1024px){
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:first-child {
+   padding:12px 8px 16px 11px;
+   box-shadow:inset -3px 0 0 var(--sw-room-detail),0 14px 40px rgba(0,0,0,.13);
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-nav-entry {
+   position:relative;
+   border-radius:12px 5px 5px 12px!important;
+   border-right:2px solid var(--sw-ui-border)!important;
+   padding-inline:11px 9px!important;
+   transition:background .18s ease,transform .18s ease,border-color .18s ease;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-nav-entry:hover {
+   transform:translateX(2px);
+   border-right-color:var(--sw-ui-accent)!important;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-nav-entry.sw-customer-nav-active {
+   border-right:3px solid var(--sw-ui-accent)!important;
+   background:var(--sw-ui-highlight)!important;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-nav-icon {
+   height:31px;width:31px;border-radius:9px;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-nav-drawer-arrow {
+   display:block;
+   color:var(--sw-ui-accent);
+   opacity:.7;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-nav-entry:hover .sw-customer-nav-drawer-arrow{
+   opacity:1;transform:translateX(2px);
+ }
+}
+.sw-workspace-root[data-workspace-theme="legacy"] .sw-customer-nav-drawer-arrow {display:none}
+/* Four actual visual treatments: old-money study, neon studio, graphite
+   office and bright daylight. Existing photograph sources are retained while
+   their material, crop and overlay are independently art-directed. */
+.sw-workspace-root[data-workspace-theme="classic"] .sw-customer-three-rail .sw-immersive-office-art{
+ background-image:linear-gradient(90deg,rgba(22,13,8,.28),transparent 72%),var(--sw-office-modern-photo)!important;
+ filter:sepia(.25) saturate(.86) contrast(1.08) brightness(.91)!important;
+}
+.sw-workspace-root[data-workspace-theme="future"] .sw-customer-three-rail .sw-immersive-office-art{
+ background-image:linear-gradient(90deg,rgba(2,8,22,.18),transparent 72%),var(--sw-office-neon-photo)!important;
+ filter:saturate(1.22) contrast(1.1) brightness(.88)!important;
+}
+.sw-workspace-root[data-workspace-theme="modern"] .sw-customer-three-rail .sw-immersive-office-art{
+ background-image:linear-gradient(90deg,rgba(20,29,36,.40),rgba(20,29,36,.18)),var(--sw-office-modern-photo)!important;
+ filter:grayscale(.83) contrast(1.13) brightness(.87)!important;
+ background-position:78% center!important;
+}
+.sw-workspace-root[data-workspace-theme="light"] .sw-customer-three-rail .sw-immersive-office-art{
+ background-image:linear-gradient(90deg,rgba(248,248,244,.50),rgba(241,247,246,.22)),var(--sw-office-modern-photo)!important;
+ filter:saturate(.58) brightness(1.45) contrast(.77)!important;
+ background-position:83% center!important;
+}
+.sw-workspace-root[data-workspace-theme="light"] .sw-customer-three-rail .sw-immersive-content{
+ background:linear-gradient(90deg,rgba(251,251,248,.83),rgba(251,251,248,.55) 57%,rgba(251,251,248,.20))!important;
+}
+.sw-workspace-root[data-workspace-theme="modern"] .sw-customer-three-rail .sw-immersive-content{
+ background:linear-gradient(90deg,rgba(11,19,24,.85),rgba(11,19,24,.55) 60%,rgba(11,19,24,.28))!important;
+}
+.sw-workspace-root[data-workspace-theme="light"] .sw-customer-three-rail .sw-immersive-welcome{
+ text-shadow:none!important;
+}
+.sw-workspace-root[data-workspace-theme="light"] .sw-customer-three-rail .sw-immersive-welcome h1{
+ color:#143244!important;
+}
+.sw-workspace-root[data-workspace-theme="light"] .sw-customer-three-rail .sw-immersive-welcome p{
+ color:#3a5362!important;
+}
+@media(max-width:1023px) {
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-modebar {box-shadow:inset 0 -1px var(--sw-room-header-line)}
+}
+@media(prefers-reduced-motion:reduce){
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-nav-entry{transition:none!important}
+}
