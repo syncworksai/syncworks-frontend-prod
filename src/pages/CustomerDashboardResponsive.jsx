@@ -8,7 +8,7 @@ import { useAuth } from "../auth/AuthContext";
 import {readPokerResume} from "../games/pokerResume.mjs";
 import {readFeatureResumes} from "../utils/featureResume.mjs";
 import CustomerDashboard from "./CustomerDashboard.jsx";
-import CustomerMobileHome from "../components/customer/CustomerMobileHome";
+import MobileCustomerCommandCenter from "../components/customer/MobileCustomerCommandCenter";
 import CustomerWorkspace, { useWorkspaceAppearance } from "../components/customer/CustomerWorkspace";
 import SyncAssistantStickyDock from "../components/sync/SyncAssistantStickyDock";
 
@@ -67,6 +67,7 @@ export default function CustomerDashboardResponsive() {
   const [tickets, setTickets] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [identity, setIdentity] = useState(null);
+  const [calendarEvents, setCalendarEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dockOpen, setDockOpen] = useState(false);
   const viewportMode = useViewportMode();
@@ -75,14 +76,16 @@ export default function CustomerDashboardResponsive() {
 
   async function load() {
     setLoading(true);
-    const [ticketResult, invoiceResult, identityResult] = await Promise.allSettled([
+    const [ticketResult, invoiceResult, identityResult, calendarResult] = await Promise.allSettled([
       api.get("/tickets/"),
       api.get("/sync-ai/customer/invoices/"),
       getIdentityProfile(),
+      api.get("/personal-calendar/events/", { params: { status: "ACTIVE" } }),
     ]);
     setTickets(ticketResult.status === "fulfilled" ? safeList(ticketResult.value?.data) : []);
     setInvoices(invoiceResult.status === "fulfilled" ? safeList(invoiceResult.value?.data) : []);
     setIdentity(identityResult.status === "fulfilled" ? identityResult.value : null);
+    setCalendarEvents(calendarResult.status === "fulfilled" ? safeList(calendarResult.value?.data) : []);
     setLoading(false);
   }
 
@@ -92,6 +95,9 @@ export default function CustomerDashboardResponsive() {
   const dueInvoices = useMemo(() => invoices.filter((item) => !["PAID", "VOID"].includes(String(item?.derived_state || item?.status || "").toUpperCase())), [invoices]);
   const totalDue = useMemo(() => dueInvoices.reduce((sum, item) => sum + Number(item?.balance_due ?? item?.total ?? 0), 0), [dueInvoices]);
   const profilePhotoUrl = String(identity?.identity?.profile_photo_url || "").trim();
+  const todayEvents = calendarEvents.filter(item => item?.start_at && new Date(item.start_at).toDateString() === new Date().toDateString());
+  const overdueCount = dueInvoices.filter(item => ["OVERDUE", "PAST_DUE"].includes(String(item?.derived_state || item?.status || "").toUpperCase())).length;
+  const mobileBrief = [todayEvents.length ? `${todayEvents.length} event${todayEvents.length === 1 ? "" : "s"} scheduled today.` : "Your calendar is clear today.", overdueCount ? `${overdueCount} overdue payment${overdueCount === 1 ? "" : "s"} need attention.` : dueInvoices.length ? `${dueInvoices.length} payment item${dueInvoices.length === 1 ? "" : "s"} to review.` : "No urgent payment alerts.", openTickets.length ? `${openTickets.length} active service request${openTickets.length === 1 ? "" : "s"}.` : ""].filter(Boolean).join(" ");
 
   function playBriefing() {
     setDockOpen(true);
@@ -111,25 +117,21 @@ export default function CustomerDashboardResponsive() {
   return (
     <div className="sw-workspace-root min-h-dvh px-3 pb-24 pt-3 text-slate-100" data-workspace-theme={workspaceAppearance.theme} data-workspace-motion={workspaceAppearance.motion} data-workspace-compact={workspaceAppearance.compact} data-sw-layout="portrait" data-sw-visual="midnight">
       <CustomerWorkspace settings={workspaceAppearance} update={updateWorkspaceAppearance} phoneMode dayTradingEnabled={dayTradingEnabled} />
-      <CustomerMobileHome
-        displayName={firstName(user)}
-        resumePokerRoomPath={readPokerResume(user)?.path||""}
-        resumeFeatureLocations={readFeatureResumes(user?.id)}
-        profilePhotoUrl={profilePhotoUrl}
-        tickets={tickets}
-        invoices={invoices}
-        openCount={openTickets.length}
-        totalDue={totalDue}
-        loading={loading}
-        onNewRequest={() => nav("/customer/new-request")}
-        onOpenTicket={(id) => nav(`/tickets/${id}`)}
-        onOpenRequests={() => nav("/customer/tickets")}
-        onOpenCalendar={() => nav("/calendar")}
-        onOpenMessages={() => nav("/customer/inbox")}
-        onOpenInvoices={() => nav("/customer/invoices")}
-        onOpenMoney={() => nav("/customer/finance")}
-        onOpenHealth={() => nav("/customer/health")}
-        onOpenAudioSummary={playBriefing}
+      <MobileCustomerCommandCenter
+        name={firstName(user)}
+        theme={workspaceAppearance.theme}
+        brief={mobileBrief}
+        attentionCount={overdueCount}
+        todayEvents={todayEvents.length}
+        openTickets={openTickets.length}
+        weatherValue="Weather"
+        workout={null}
+        minimums={totalDue.toLocaleString("en-US", { style: "currency", currency: "USD" })}
+        businessConnected={false}
+        pmConnected={false}
+        tenantConnected={false}
+        onNavigate={nav}
+        onOpenWorkspace={area => window.dispatchEvent(new CustomEvent("sw:workspace-open", { detail: area }))}
       />
 
       {dayTradingEnabled ? (
