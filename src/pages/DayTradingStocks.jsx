@@ -3,6 +3,7 @@ import { Activity, ArrowLeft, BarChart3, FileUp, ShieldAlert, Waves } from "luci
 import { Navigate, useNavigate } from "react-router-dom";
 import { Line, LineChart, CartesianGrid, Tooltip, XAxis, YAxis, ResponsiveContainer, ReferenceLine } from "recharts";
 import { useAuth } from "../auth/AuthContext";
+import TradingJarvisPanel from "../components/trading/TradingJarvisPanel";
 
 const ACCOUNT = "jacoblord7@outlook.com";
 const COLORS = { price: "#38bdf8", fast: "#34d399", slow: "#fbbf24", upper: "#c084fc", lower: "#fb7185" };
@@ -140,6 +141,7 @@ export default function DayTradingStocks() {
         <p className="mt-3 text-xs text-slate-500">Expected CSV: date,open,high,low,close,volume (ascending chronological order). Use completed candles, the same timeframe for comparisons, and a licensed/trusted source. Dates and prices are not independently verified.</p>
         {message && <p role="status" className="mt-2 text-xs text-amber-200">{message}</p>}
       </Panel>
+      <TradingJarvisPanel symbol={symbol} mode="historical" signal={result?.status || "WAIT"} reason={result?.rationale || "Upload verified candles to begin analysis."} timestamp={result?.last?.time} identity={data?.filename || ""} live={false} details={[{label:"Market participation",value:datesMatch ? breadth : "SPY/RSP not aligned"},{label:"Donchian",value:result?.breakout},{label:"Relative volume",value:result?.last?.volumeRatio != null ? fmt(result.last.volumeRatio)+"×" : "No data"}]}/>
       <div className="grid gap-3 md:grid-cols-3">
         <Panel title="Signal"><strong className={"text-2xl " + (result?.bullish ? "text-emerald-300" : result?.bearish ? "text-rose-300" : "text-amber-200")}>{result?.status || "NO DATA"}</strong><p className="mt-2 text-sm text-slate-400">{result?.rationale || "Upload candles to generate an evidence-based analysis."}</p></Panel>
         <Panel title="SPY vs RSP market breadth"><strong className="text-lg">{datesMatch ? breadth : "NEEDS MATCHING DATA"}</strong><p className="mt-2 text-xs text-slate-400">SPY: {spy?.trend || "—"} • RSP: {rsp?.trend || "—"}. Compare aligned timestamps and intervals. Breadth alone does not forecast returns.</p></Panel>
