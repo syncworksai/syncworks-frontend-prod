@@ -27,6 +27,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { getActiveBusinessId } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import SyncActionStudio from "../components/sync/SyncActionStudio";
+import SyncAssistTeamDrawer from "../components/sync/SyncAssistTeamDrawer";
 import SyncWorkflowIntake from "../components/sync/SyncWorkflowIntake";
 import {AVATARS, JarvisAvatar, JarvisAvatarPicker, useJarvisAvatar} from "../components/sync/JarvisAvatar";
 import {
@@ -158,7 +159,17 @@ export default function SyncAssistant() {
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [officeBackground, setOfficeBackground] = useState(() => {try{return localStorage.getItem("sw-jarvis-office-bg")!=="off";}catch{return true;}});
   const {avatarId,choose:chooseAvatar}=useJarvisAvatar();
-  const selectedAssistant = AVATARS.find((assistant) => assistant.id === avatarId) || AVATARS[0];
+  const [teamEmployees, setTeamEmployees] = useState([]);
+  const configuredAvatars = useMemo(() => AVATARS.map((avatar) => {
+    const entry = teamEmployees.find((row) => row.id === avatar.id);
+    return entry ? {
+      ...avatar,
+      name: entry.name,
+      role: String(entry.role).replaceAll("_", " ").toLowerCase().replace(/\\b\\w/g, (char) => char.toUpperCase()),
+      executionStatus: entry.execution_status,
+    } : avatar;
+  }), [teamEmployees]);
+  const selectedAssistant = configuredAvatars.find((assistant) => assistant.id === avatarId) || configuredAvatars[0];
 
   const selectedVoice = useMemo(
     () =>
@@ -461,6 +472,7 @@ export default function SyncAssistant() {
           <button type="button" onClick={() => setMobilePanel("settings")} aria-label="SYNC settings" className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-500/10"><Settings2 className="h-5 w-5"/></button>
         </div>
         {pilotAccess ? <div className="flex justify-end"><button type="button" onClick={() => navigate("/sync/assist")} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-400/30 bg-slate-950/70 px-3 py-2 text-xs font-bold text-cyan-100">Business Control Center <ChevronRight className="h-4 w-4"/></button></div> : null}
+        {pilotAccess && <div className="flex justify-end"><SyncAssistTeamDrawer onTeamChange={setTeamEmployees}/></div>}
         <section className="overflow-hidden rounded-2xl border border-cyan-400/25 bg-[#031222]/85 p-4 shadow-[0_0_60px_rgba(34,211,238,0.08)] backdrop-blur-xl lg:rounded-[2rem] lg:p-7">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -891,7 +903,7 @@ export default function SyncAssistant() {
       </main>
       <div className="fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom))] right-3 z-[180] max-w-[calc(100vw-1.5rem)] lg:bottom-7 lg:right-24" aria-label="SYNC AI employee dock">
         <div className="flex items-end gap-2 sm:gap-3">
-          {AVATARS.map((assistant) => (
+          {configuredAvatars.map((assistant) => (
             <button
               key={assistant.id}
               type="button"
@@ -921,7 +933,7 @@ export default function SyncAssistant() {
               <button type="button" onClick={()=>speaking?stopSpeaking():speak("Hello. I'm your SyncWorks assistant. How may I help you today?",{force:true})} className="min-h-11 w-full rounded-xl border border-cyan-400/40 px-3 text-xs font-bold text-cyan-100">{speaking?"Stop voice":"Hear a preview"}</button>
             </div>
           </div>
-          <div className="mt-4"><JarvisAvatarPicker value={avatarId} onChange={chooseAvatar}/></div>
+          {pilotAccess ? <p className="mt-4 text-xs text-slate-300">To edit team names and role assignments, use Manage AI team on this page.</p> : <div className="mt-4"><JarvisAvatarPicker value={avatarId} onChange={chooseAvatar}/></div>}
           <label className="mt-4 flex items-center justify-between gap-3 text-sm text-slate-200"><span>Office background</span><input type="checkbox" checked={officeBackground} onChange={e=>setOfficeBackground(e.target.checked)} className="h-5 w-5 accent-cyan-500"/></label>
           <p className="mt-2 text-xs text-slate-400">Each portrait identifies a specialist. This window uses the shared SYNC voice assistant; selecting a profile does not activate a separate background worker. Appearance and office preferences are saved on this device.</p>
         </section>
