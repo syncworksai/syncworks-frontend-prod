@@ -54,6 +54,7 @@ import CustomerAppointments from "./pages/CustomerAppointments";
 import CustomerProfessionalDiscover from "./pages/CustomerProfessionalDiscover";
 import AffiliateDashboard from "./pages/AffiliateDashboard";
 import DayTradingFutures from "./pages/DayTradingFutures";
+import DayTradingStocks from "./pages/DayTradingStocks";
 
 import SboDashboard from "./pages/SboDashboard";
 import SboGrowth from "./pages/SboGrowth";
@@ -263,6 +264,7 @@ export default function App() {
         <Route path="/customer/health" element={<ProtectedRoute><CustomerHealth /></ProtectedRoute>} />
         <Route path="/customer/edge" element={<ProtectedRoute><CustomerEdgeBtc15m /></ProtectedRoute>} />
         <Route path="/customer/edge/sports" element={<ProtectedRoute><CustomerEdge /></ProtectedRoute>} />
+        <Route path="/customer/day-trading-stocks" element={<ProtectedRoute><DayTradingStocks /></ProtectedRoute>} />
         <Route path="/customer/day-trading-futures" element={<ProtectedRoute><DayTradingFutures /></ProtectedRoute>} />
         <Route path="/customer/tasks" element={<ProtectedRoute><CustomerTasks /></ProtectedRoute>} />
         <Route path="/customer/plans" element={<ProtectedRoute><CustomerPlans /></ProtectedRoute>} />

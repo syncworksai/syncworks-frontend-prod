@@ -233,7 +233,7 @@ export default function CustomerDashboard() {
             <NavButton icon={Spade} label="New Game" onClick={() => nav("/customer/games/new")} color="cyan" />
             <NavButton icon={Spade} label="Games" onClick={() => nav("/customer/games")} color="violet" />
             <NavButton icon={Search} label="EDGE" onClick={() => nav("/customer/edge")} color="violet" />
-            {dayTradingEnabled ? <NavButton icon={Activity} label="Day Trade" onClick={() => nav("/customer/day-trading-futures")} color="emerald" badge="LIVE" /> : null}
+            {dayTradingEnabled ? <NavButton icon={Activity} label="Day Trade" onClick={() => nav("/customer/day-trading-stocks")} color="emerald" badge="RESEARCH" /> : null}
           </div>
           <div className="my-3 h-px bg-white/10" />
           <NavButton icon={Settings} label="Connections & settings" onClick={() => nav("/settings?tab=CONNECTIONS")} color="sky" />
