@@ -1,8 +1,14 @@
 import React from "react";
 import { ShoppingBag } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { useWorkspaceAppearance } from "./CustomerWorkspace";
 
 export default function PersonalStorefrontDock() {
+  const location = useLocation();
+  const [appearance] = useWorkspaceAppearance();
+  // Premium Customer home includes the same destination in its sidebar and app tiles.
+  // Keep the dock on Original and other eligible Customer pages.
+  if (location.pathname === "/customer" && appearance.theme !== "legacy") return null;
   return (
     <Link
       to="/customer/store"
