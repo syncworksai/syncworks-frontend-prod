@@ -281,10 +281,10 @@ export default function RoleAwareMobileNav() {
         <div className="sw-role-mobile-nav-grid">
           {renderedItems.slice(0, 2).map((item) => <NavButton key={item.id} item={item} onClick={() => openItem(item)} />)}
           <button type="button" className={`sw-role-mobile-nav-center ${center.sync ? "is-sync" : ""}`} onClick={openCenter} aria-label={center.sync ? "Open your SYNC AI employee team" : `New ${center.label}`} aria-expanded={center.sync && navMode === "CUSTOMER" && pathname === "/customer" ? aiTeamOpen : undefined}>
-            <span className="sw-role-mobile-nav-center-orb"><img src="/brand/syncworks-start-logo.png" alt="" /></span>
+            <span className="sw-role-mobile-nav-center-orb"><img src="/brands/syncworks-icon-192.png" alt="" /></span>
             <span>{center.label}</span>
           </button>
-          {renderedItems.slice(2, 4).map((item) => <NavButton key={item.id} item={item} onClick={() => navigate(item.target)} />)}
+          {renderedItems.slice(2, 4).map((item) => <NavButton key={item.id} item={item} onClick={() => openItem(item)} />)}
         </div>
       </nav>
     </>
