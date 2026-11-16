@@ -889,16 +889,29 @@ export default function SyncAssistant() {
           </div>
         ) : null}
       </main>
-      <div className="fixed bottom-[calc(7.5rem+env(safe-area-inset-bottom))] right-20 z-[180] lg:bottom-7 lg:right-24">
-        <button type="button" aria-label={`Open ${avatarId.includes("male")?"Jarvis":"Jarvis"} avatar controls`} aria-expanded={avatarOpen} onClick={()=>setAvatarOpen(v=>!v)} className="group relative flex items-center gap-2 rounded-full border border-cyan-300/55 bg-[#061b32]/95 p-1 shadow-[0_0_24px_rgba(6,182,212,.35)] backdrop-blur-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200">
-          <div className="h-14 w-14 overflow-hidden rounded-full sm:h-16 sm:w-16">
-            <JarvisAvatar id={avatarId} state={speaking?"speaking":listening?"listening":sending?"thinking":"idle"} size="mini" label={false}/>
-          </div>
-          <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[#061b32] bg-emerald-400" aria-hidden="true"/>
-        </button>
+      <div className="fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom))] right-3 z-[180] max-w-[calc(100vw-1.5rem)] lg:bottom-6 lg:right-24" aria-label="SYNC AI employee dock">
+        <div className="flex items-end gap-1.5 rounded-2xl border border-cyan-300/25 bg-[#061323]/90 p-1.5 shadow-[0_0_28px_rgba(6,182,212,.22)] backdrop-blur-xl sm:gap-2">
+          {AVATARS.map((assistant) => (
+            <button
+              key={assistant.id}
+              type="button"
+              aria-label={`Open ${assistant.name} — ${assistant.role} assistant controls`}
+              aria-pressed={avatarOpen && avatarId === assistant.id}
+              title={`${assistant.name} — ${assistant.role}`}
+              onClick={() => { chooseAvatar(assistant.id); setAvatarOpen(true); }}
+              className={`relative flex min-w-0 flex-col items-center gap-1 rounded-xl px-1.5 py-1 text-center transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200 ${avatarId === assistant.id ? "bg-cyan-400/10" : ""}`}
+            >
+              <span className={`block h-10 w-10 overflow-hidden rounded-full border-2 sm:h-12 sm:w-12 ${avatarId === assistant.id ? "border-cyan-300 shadow-[0_0_16px_rgba(34,211,238,.35)]" : "border-white/20"}`}>
+                <img src={assistant.photo} alt="" className="h-full w-full object-cover object-top" />
+              </span>
+              <span className="max-w-[66px] truncate text-[10px] font-bold text-white">{assistant.name}</span>
+              <span className="max-w-[80px] text-[9px] leading-tight text-slate-300">{assistant.role}</span>
+            </button>
+          ))}
+        </div>
       </div>
-      {avatarOpen&&<div className="fixed inset-0 z-[240] flex items-end justify-center bg-slate-950/65 p-3 pb-[calc(8.5rem+env(safe-area-inset-bottom))] backdrop-blur-sm lg:items-end lg:justify-end lg:pb-28 lg:pr-24" onMouseDown={e=>{if(e.target===e.currentTarget)setAvatarOpen(false);}}>
-        <section role="dialog" aria-modal="true" aria-label="Jarvis assistant controls" className="max-h-[min(72dvh,580px)] w-full max-w-md overflow-y-auto rounded-3xl border border-cyan-400/45 bg-[#061326] p-4 shadow-2xl">
+      {avatarOpen&&<div className="fixed inset-0 z-[240] flex items-end justify-center bg-slate-950/65 p-3 pb-[calc(9rem+env(safe-area-inset-bottom))] backdrop-blur-sm lg:items-end lg:justify-end lg:pb-36 lg:pr-24" onMouseDown={e=>{if(e.target===e.currentTarget)setAvatarOpen(false);}}>
+        <section role="dialog" aria-modal="true" aria-label={`${selectedAssistant.name} — ${selectedAssistant.role} assistant controls`} className="max-h-[min(72dvh,580px)] w-full max-w-md overflow-y-auto rounded-3xl border border-cyan-400/45 bg-[#061326] p-4 shadow-2xl">
           <div className="mb-3 flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-widest text-cyan-200">Your personal assistant</p><h2 className="text-xl font-black">Meet {selectedAssistant.name} — {selectedAssistant.role}</h2></div><button onClick={()=>setAvatarOpen(false)} className="grid h-11 w-11 place-items-center rounded-xl border border-white/20" aria-label="Close assistant"><X size={20}/></button></div>
           <div className="flex items-center justify-center gap-3">
             <JarvisAvatar id={avatarId} state={speaking?"speaking":listening?"listening":sending?"thinking":"idle"} size="hero"/>
@@ -910,7 +923,7 @@ export default function SyncAssistant() {
           </div>
           <div className="mt-4"><JarvisAvatarPicker value={avatarId} onChange={chooseAvatar}/></div>
           <label className="mt-4 flex items-center justify-between gap-3 text-sm text-slate-200"><span>Office background</span><input type="checkbox" checked={officeBackground} onChange={e=>setOfficeBackground(e.target.checked)} className="h-5 w-5 accent-cyan-500"/></label>
-          <p className="mt-2 text-xs text-slate-400">Avatar and office preferences are saved on this device. Notifications remain separate.</p>
+          <p className="mt-2 text-xs text-slate-400">Each portrait identifies a specialist. This window uses the shared SYNC voice assistant; selecting a profile does not activate a separate background worker. Appearance and office preferences are saved on this device.</p>
         </section>
       </div>}
     </div>
