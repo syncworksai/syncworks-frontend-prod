@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import "./CustomerForge.css";
+import ForgeStudio from "./ForgeStudio";
 
 const OWNER = "jacoblord7@outlook.com";
 const routine = [
@@ -44,7 +45,7 @@ const minutes = time => { const [h,m] = time.split(":").map(Number); return h*60
 const dateKey = () => {const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;};
 const storageKey = email => `syncworks-forge-v1:${email}:${dateKey()}`;
 function read(key) { try { return JSON.parse(window.localStorage.getItem(key) || "{}"); } catch { return {}; } }
-const tabs = [{id:"today",name:"Today",icon:CalendarDays},{id:"vision",name:"Vision",icon:Sparkles},{id:"coach",name:"Coach",icon:Headphones},{id:"review",name:"Review",icon:Moon}];
+const tabs = [{id:"today",name:"Today",icon:CalendarDays},{id:"studio",name:"Studio",icon:Headphones},{id:"vision",name:"Vision",icon:Sparkles},{id:"coach",name:"Coach",icon:BookOpen},{id:"review",name:"Review",icon:Moon}];
 const shortcuts = [{label:"Calendar",path:"/calendar",icon:CalendarDays},{label:"Health & training",path:"/customer/health",icon:Dumbbell},{label:"Trading desk",path:"/customer/day-trading-futures",icon:TrendingUp},{label:"Tasks",path:"/customer/tasks",icon:Target},{label:"Freelance work",path:"/customer/freelance/overview",icon:Wallet}];
 
 export default function CustomerForge() {
@@ -103,7 +104,7 @@ export default function CustomerForge() {
   }
   function openRoutineAction(block){
     if(block.route) return null;
-    return block.title==="Breakfast & learning"?()=>setTab("coach"):()=>setTab("vision");
+    return block.title==="Breakfast & learning"?()=>setTab("studio"):()=>setTab("vision");
   }
   if(!permitted) return <main className="min-h-screen bg-slate-950 px-6 pt-28 text-white"><h1 className="text-2xl font-semibold">Private pilot</h1><p className="mt-3 text-slate-400">The Forge is not available for this account.</p><Link to="/customer" className="mt-6 inline-block text-amber-200">Return to office</Link></main>;
   return <main className="forge-v2 min-h-screen pt-24 pb-28 text-[#f8f2e8] sm:pt-28">
@@ -131,7 +132,7 @@ export default function CustomerForge() {
               <button type="button" className="forge-v2-primary" onClick={speaking?stopSpeech:speakBrief} disabled={!focus}>{speaking?<Square size={16}/>:<Volume2 size={17}/>} {speaking?"Stop briefing":"Hear my next step"}</button>
               {focus && (focus.route?<Link className="forge-v2-secondary" to={focus.route}>Open {focus.action}<ArrowRight size={15}/></Link>:<button className="forge-v2-secondary" onClick={openRoutineAction(focus)} type="button">{focus.action}<ArrowRight size={15}/></button>)}
             </div>
-            <p className="forge-v2-smallnote">Guidance is based on your sample routine, not live calendar availability.</p>
+            <p className="forge-v2-smallnote">Guidance is based on your sample routine, not live calendar availability. <button type="button" onClick={()=>setTab("studio")} className="forge-v2-textlink">Open guided studio <ArrowRight size={14}/></button></p>
           </section>
           <section className="forge-v2-intent">
             <div className="forge-v2-eyebrow"><Target size={14}/> TODAY'S DIRECTION</div>
@@ -156,7 +157,8 @@ export default function CustomerForge() {
         })}</div>
         <section className="forge-v2-shortcuts"><div className="forge-v2-section-heading"><div><p className="forge-v2-overline">ONE ECOSYSTEM</p><h2>Connected workspaces</h2></div></div><div className="forge-v2-shortcut-grid">{shortcuts.map(({label,path,icon:Icon})=><Link to={path} key={path} className="forge-v2-shortcut"><Icon size={19}/><span>{label}</span><ArrowRight size={15}/></Link>)}</div><p className="forge-v2-smallnote">These links open existing SyncWorks tools; Forge does not yet sync their data or schedules.</p></section>
       </div>}
-      {tab==="vision"&&<section className="forge-v2-appear"><div className="forge-v2-section-heading"><div><p className="forge-v2-overline">THE PERSON YOU'RE BECOMING</p><h2>Vision into action</h2><p className="forge-v2-subtitle">The lifestyle is the vision. Today's actions are the proof.</p></div></div><div className="forge-v2-vision-grid">{visions.map(({icon:Icon,title,anchor,body,action,route,link})=><article key={title} className="forge-v2-vision-card"><Icon size={28}/><p className="forge-v2-overline">{anchor}</p><h3>{title}</h3><p>{body}</p><div className="forge-v2-proof"><strong>ONE ACTION TODAY</strong><span>{action}</span></div>{route?<Link to={route} className="forge-v2-textlink">{link}<ArrowRight size={15}/></Link>:<button type="button" onClick={()=>setTab("coach")} className="forge-v2-textlink">{link}<ArrowRight size={15}/></button>}</article>)}</div></section>}
+      {tab==="studio"&&<ForgeStudio/>}
+      {tab==="vision"&&<section className="forge-v2-appear"><div className="forge-v2-section-heading"><div><p className="forge-v2-overline">THE PERSON YOU'RE BECOMING</p><h2>Vision into action</h2><p className="forge-v2-subtitle">The lifestyle is the vision. Today's actions are the proof.</p></div></div><div className="forge-v2-vision-grid">{visions.map(({icon:Icon,title,anchor,body,action,route,link})=><article key={title} className="forge-v2-vision-card"><Icon size={28}/><p className="forge-v2-overline">{anchor}</p><h3>{title}</h3><p>{body}</p><div className="forge-v2-proof"><strong>ONE ACTION TODAY</strong><span>{action}</span></div>{route?<Link to={route} className="forge-v2-textlink">{link}<ArrowRight size={15}/></Link>:<button type="button" onClick={()=>setTab("studio")} className="forge-v2-textlink">{link}<ArrowRight size={15}/></button>}</article>)}</div></section>}
       {tab==="coach"&&<section className="forge-v2-appear forge-v2-coach-layout"><div className="forge-v2-coach-orb"><span className={speaking?"forge-v2-orb speaking":"forge-v2-orb"}><Headphones size={52}/></span><p className="forge-v2-overline">YOUR PERFORMANCE COACH</p><h2>Listen. Reflect. Act.</h2><p>Short audio lessons you can play while getting ready, walking or winding down.</p><span className="forge-v2-smallnote">Browser speech prototype — not a live conversational AI.</span></div><div className="forge-v2-coach-panel"><p className="forge-v2-overline">CHOOSE YOUR SESSION</p><div className="forge-v2-lessons">{lessons.map((l,i)=><button className={coach===i?"selected":""} type="button" key={l.title} onClick={()=>{stopSpeech();setCoach(i);}}><span><strong>{l.title}</strong><small>{l.author}</small></span><ChevronRight size={16}/></button>)}</div><blockquote>{lessons[coach].script}</blockquote><div className="forge-v2-actions"><button type="button" className="forge-v2-primary" onClick={()=>speaking?stopSpeech():say(lessons[coach].script)}>{speaking?<Pause size={17}/>:<Play size={17}/>} {speaking?"Stop session":"Listen to session"}</button><button type="button" className="forge-v2-secondary" onClick={stopSpeech}><Square size={15}/> Stop audio</button></div></div></section>}
       {tab==="review"&&<section className="forge-v2-appear forge-v2-review"><div className="forge-v2-section-heading"><div><p className="forge-v2-overline">RECOVERY IS PART OF PROGRESS</p><h2>Close the day well</h2></div></div><div className="forge-v2-two-col"><article className="forge-v2-intent"><div className="forge-v2-eyebrow"><Moon size={16}/> WIND-DOWN</div><label htmlFor="forge-bed-v2">Target bedtime</label><input id="forge-bed-v2" type="time" value={bedtime} onChange={e=>setBedtime(e.target.value)}/><p>For a 4 AM wake-up, 8:00–8:30 PM is a reasonable sleep target. Move the wake-up time when family obligations require it.</p><Link to="/customer/health" className="forge-v2-textlink">Sleep & recovery <ArrowRight size={16}/></Link></article><article className="forge-v2-intent"><div className="forge-v2-eyebrow"><Check size={16}/> TODAY'S REVIEW</div><h2>{done} of {routine.length} victories</h2><div className="forge-v2-meter"><span style={{width:progress+"%"}}/></div><p>Progress is not perfection. Look at what mattered, what you learned and what should change tomorrow.</p><button type="button" className="forge-v2-secondary" onClick={()=>setTab("today")}><RotateCcw size={15}/> Return to timeline</button></article></div></section>}
       <footer className="forge-v2-footer"><WandSparkles size={15}/> Private pilot · Personal performance, separate from Chief of Staff · Check-ins are saved only in this browser · No automated reminders or AI scheduling yet</footer>
