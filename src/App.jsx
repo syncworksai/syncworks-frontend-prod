@@ -141,6 +141,7 @@ import CashFeeInvoices from "./pages/CashFeeInvoices";
 import SettingsHub from "./pages/SettingsHub";
 import LearningCenter from "./pages/LearningCenter";
 import SyncAssistant from "./pages/SyncAssistant";
+import SyncAITeam from "./pages/SyncAITeam";
 import SyncAssistPilot from "./pages/SyncAssistPilot";
 import SyncAssistCommunications from "./pages/SyncAssistCommunications";
 import SyncAssistGrowth from "./pages/SyncAssistGrowth";
@@ -192,6 +193,7 @@ export default function App() {
         <Route path="/platform/support" element={<PlatformRoute><PlatformSupportRequests /></PlatformRoute>} />
         <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
         <Route path="/sync" element={<ProtectedRoute><SyncAssistant /></ProtectedRoute>} />
+        <Route path="/sync/team" element={<ProtectedRoute><SyncAITeam /></ProtectedRoute>} />
         <Route path="/sync/assist" element={<ProtectedRoute><SyncAssistPilot /></ProtectedRoute>} />
         <Route path="/sync/assist/communications" element={<ProtectedRoute><SyncAssistCommunications /></ProtectedRoute>} />
         <Route path="/sync/assist/growth" element={<ProtectedRoute><SyncAssistGrowth /></ProtectedRoute>} />
