@@ -2,6 +2,7 @@ import React,{useEffect,useState} from "react";
 import {useNavigate} from "react-router-dom";
 import {ArrowLeft,RefreshCw,Plus,ChevronDown,Mail,CheckCircle2,Palette} from "lucide-react";
 import api from "../api/client";
+import "./SyncAssistChiefOfStaff.css";
 import {useAuth} from "../auth/AuthContext";
 
 const BASE="/sync-ai/assist/pilot/chief/";
@@ -57,15 +58,15 @@ export default function SyncAssistChiefOfStaff(){
   }
   const open=cases.filter(x=>x.status!=="RESOLVED");
   const areas=["PROPERTY","BUSINESS","FINANCE","GROWTH","PERSONAL"];
-  return <main className={`relative min-h-dvh px-4 pb-32 pt-28 sm:px-6 ${textColor}`} style={{backgroundColor:isLight?"#e6eef5":"#020617"}}>
-    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0" style={{backgroundImage:`${design.cover},url("${design.image}")`,backgroundSize:"cover",backgroundPosition:"center center"}}/>
+  return <main className={`relative min-h-dvh px-4 pb-32 pt-28 sm:px-6 ${textColor} ${isLight?"sw-chief-light":""}`} style={{backgroundColor:isLight?"#e6eef5":"#020617"}}>
+    <div aria-hidden="true" className="sw-chief-wallpaper pointer-events-none fixed inset-0 z-0" style={{backgroundImage:`${design.cover},url("${design.image}")`,backgroundSize:"cover",backgroundPosition:"center center"}}/>
     <div className="relative z-10 mx-auto w-full max-w-6xl">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className={`text-[10px] font-black uppercase tracking-[.2em] ${isLight?"text-slate-700":design.accent}`}>Your workspace · {design.label}</div>
         <button type="button" onClick={()=>setThemeOpen(v=>!v)} aria-expanded={themeOpen} className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 text-xs font-bold backdrop-blur-xl ${design.border} ${design.panel}`}><Palette size={17}/> Change theme</button>
       </div>
       {themeOpen&&<div className={`mb-4 grid grid-cols-1 gap-2 rounded-2xl border p-3 backdrop-blur-xl sm:grid-cols-3 ${design.border} ${design.panel}`}>
-        {Object.entries(THEMES).map(([key,value])=><button key={key} type="button" onClick={()=>chooseTheme(key)} aria-pressed={theme===key} className={`overflow-hidden rounded-xl border text-left transition focus:outline-none focus:ring-2 focus:ring-sky-400 ${theme===key?"border-amber-400":"border-slate-500/35"}`}>
+        {Object.entries(THEMES).map(([key,value])=><button key={key} type="button" onClick={()=>chooseTheme(key)} aria-pressed={theme===key} className={`sw-chief-theme-button overflow-hidden rounded-xl border text-left transition focus:outline-none focus:ring-2 focus:ring-sky-400 ${theme===key?"border-amber-400":"border-slate-500/35"}`}>
           <img src={value.image} alt="" loading="lazy" className="h-20 w-full object-cover"/>
           <span className={`block px-3 py-2 text-xs font-bold ${isLight?"bg-white text-slate-900":"bg-slate-950 text-white"}`}>{value.label}{theme===key?" · Selected":""}</span>
         </button>)}
