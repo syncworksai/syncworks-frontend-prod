@@ -926,7 +926,7 @@ export default function SyncAssistant() {
         <section role="dialog" aria-modal="true" aria-label={`${selectedAssistant.name} — ${selectedAssistant.role} assistant controls`} className="max-h-[min(72dvh,580px)] w-full max-w-md overflow-y-auto rounded-3xl border border-cyan-400/45 bg-[#061326] p-4 shadow-2xl">
           <div className="mb-3 flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-widest text-cyan-200">Your personal assistant</p><h2 className="text-xl font-black">Meet {selectedAssistant.name} — {selectedAssistant.role}</h2></div><button onClick={()=>setAvatarOpen(false)} className="grid h-11 w-11 place-items-center rounded-xl border border-white/20" aria-label="Close assistant"><X size={20}/></button></div>
           <div className="flex items-center justify-center gap-3">
-            <JarvisAvatar id={avatarId} state={speaking?"speaking":listening?"listening":sending?"thinking":"idle"} size="hero"/>
+            <JarvisAvatar id={avatarId} displayName={selectedAssistant.name} displayRole={selectedAssistant.role} state={speaking?"speaking":listening?"listening":sending?"thinking":"idle"} size="hero"/>
             <div className="min-w-0 flex-1 space-y-3">
               <p className="text-sm text-slate-300">{speaking?"Speaking":listening?"Listening":sending?"Preparing an answer":"Ready when you are"}</p>
               <button type="button" onClick={()=>{setAvatarOpen(false);listening?stopListening():startListening({greeting:false});}} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-3 text-sm font-bold text-white"><Mic size={17}/>{listening?"Stop listening":`Speak to ${selectedAssistant.name}`}</button>
