@@ -37,6 +37,7 @@ import CustomerMarketplaceAvailability from "./pages/CustomerMarketplaceAvailabi
 import CustomerSettings from "./pages/CustomerSettings";
 import CustomerFinance from "./pages/CustomerFinance";
 import CustomerHealth from "./pages/CustomerHealth";
+import CustomerForge from "./pages/CustomerForge";
 import CustomerEdge from "./pages/CustomerEdge";
 import CustomerEdgeBtc15m from "./pages/CustomerEdgeBtc15m";
 import CustomerPlans from "./pages/CustomerPlans";
@@ -236,6 +237,7 @@ export default function App() {
         <Route path="/billing/cash-fee-invoices" element={<ProtectedRoute><CashFeeInvoices /></ProtectedRoute>} />
         <Route path="/sales/*" element={<Navigate to="/customer" replace />} />
         <Route path="/customer" element={<ProtectedRoute><CustomerDashboard /></ProtectedRoute>} />
+        <Route path="/customer/forge" element={<ProtectedRoute><CustomerForge /></ProtectedRoute>} />
         <Route path="/customer/games" element={<ProtectedRoute><CustomerGamesHome /></ProtectedRoute>} />
         <Route path="/customer/games/library" element={<ProtectedRoute><CustomerGamesLibrary /></ProtectedRoute>} />
         <Route path="/customer/games/clubs/room" element={<ProtectedRoute><CustomerCardClubLiveLobby /></ProtectedRoute>} />
