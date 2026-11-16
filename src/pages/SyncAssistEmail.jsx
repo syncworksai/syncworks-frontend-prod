@@ -78,7 +78,7 @@ export default function SyncAssistEmail() {
   function compose(message) {
     setSelected(message||null);
     setDraft(null);setConfirm(false);setNotice("");setDirection("");
-    setForm(message ? {recipient:message.from,subject:message.subject,body:"",reply_to_id:message.id} : {recipient:"",subject:"",body:"",reply_to_id:""});
+    setForm(message ? {recipient:message.reply_to||message.from,subject:message.subject,body:"",reply_to_id:message.id} : {recipient:"",subject:"",body:"",reply_to_id:""});
     setEditor(true);
   }
   async function saveDraft(e) {
