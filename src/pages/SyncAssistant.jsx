@@ -459,7 +459,7 @@ export default function SyncAssistant() {
           <div><p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">SYNC ASSIST</p><h1 className="text-lg font-black">Your command center</h1></div>
           <button type="button" onClick={() => setMobilePanel("settings")} aria-label="SYNC settings" className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-500/10"><Settings2 className="h-5 w-5"/></button>
         </div>
-        {pilotAccess ? <div className="flex justify-end"><button type="button" onClick={() => navigate("/sync/assist")} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-400/30 bg-slate-950/70 px-3 py-2 text-xs font-bold text-cyan-100">Business Control Center <ChevronRight className="h-4 w-4"/></button></div> : null}
+        <div className="flex flex-wrap justify-end gap-2"><button type="button" onClick={() => navigate("/sync/team")} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-400/30 bg-slate-950/70 px-3 py-2 text-xs font-bold text-cyan-100"><Bot className="h-4 w-4"/> My AI Team <ChevronRight className="h-4 w-4"/></button>{pilotAccess ? <button type="button" onClick={() => navigate("/sync/assist")} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-400/30 bg-slate-950/70 px-3 py-2 text-xs font-bold text-cyan-100">Business Control Center <ChevronRight className="h-4 w-4"/></button> : null}</div>
         <section className="overflow-hidden rounded-2xl border border-cyan-400/25 bg-[#031222]/85 p-4 shadow-[0_0_60px_rgba(34,211,238,0.08)] backdrop-blur-xl lg:rounded-[2rem] lg:p-7">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
