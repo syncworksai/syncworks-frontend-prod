@@ -56,8 +56,8 @@
 .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > main > section:first-child > div:first-child > div:first-child { display:none; }
 .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > main > section:first-child { padding:14px 18px; }
 .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > main > section:first-child > div:nth-child(2) { margin-top:0; }
-.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid { grid-template-columns:minmax(0,1fr) !important; }
-.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > aside:first-child { display:none !important; }
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid { grid-template-columns:minmax(0,1fr); }
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > aside:first-child { display:none; }
 .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > main { min-width:0; }
 .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > aside:last-child { grid-column:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(265px,1fr));align-items:start;gap:16px;position:static;margin:0; }
 .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .grid > aside:last-child > section { margin:0; }
@@ -214,3 +214,48 @@
 }
 .sw-workspace-root[data-workspace-theme="light"] .sw-customer-three-rail > aside:first-child .text-white,
 .sw-workspace-root[data-workspace-theme="light"] .sw-customer-three-rail > aside:last-child .text-white {color:#14293d!important;}
+
+/* V6 regression fix: the V2 one-column !important rule forced implicit CSS grid
+   columns, causing 40px-wide intelligence cards. Explicit tracks at all widths. */
+@media(min-width:1440px){
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .sw-customer-three-rail {
+   grid-template-columns:194px minmax(0,1fr) 280px !important;
+   grid-template-rows:auto !important;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .sw-customer-three-rail > aside:first-child{
+   grid-column:1 !important;grid-row:1 !important;display:block !important;min-width:0;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .sw-customer-three-rail > main{
+   grid-column:2 !important;grid-row:1 !important;min-width:0;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .sw-customer-three-rail > aside:last-child{
+   grid-column:3 !important;grid-row:1 !important;min-width:0;max-width:100%;
+   display:flex !important;flex-direction:column !important;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .sw-customer-three-rail > aside:last-child > section{
+   min-width:0;max-width:100%;overflow-wrap:anywhere;
+ }
+}
+@media(min-width:1024px) and (max-width:1439px){
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .sw-customer-three-rail{
+   grid-template-columns:190px minmax(0,1fr) !important;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .sw-customer-three-rail > aside:first-child{
+   grid-column:1 !important;grid-row:1/span 2 !important;display:block !important;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .sw-customer-three-rail > main{
+   grid-column:2 !important;grid-row:1 !important;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .sw-customer-three-rail > aside:last-child{
+   grid-column:2 !important;grid-row:2 !important;min-width:0;
+ }
+}
+@media(max-width:1023px){
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .sw-customer-three-rail{
+   grid-template-columns:minmax(0,1fr) !important;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .sw-customer-three-rail > main,
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .sw-customer-three-rail > aside:last-child {
+   grid-column:1 !important;min-width:0;
+ }
+}
