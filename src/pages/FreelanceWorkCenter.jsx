@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { NavLink, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import FreelanceJobsPage from "./FreelanceJobsPage";
+import { useWorkspaceAppearance, WORKSPACE_THEMES } from "../components/customer/CustomerWorkspace";
+import "./FreelanceOfficeThemes.css";
 import FreelanceOverviewDashboard from "./FreelanceOverviewDashboard";
 import FreelanceProjectsPage from "./FreelanceProjectsPage";
 import FreelanceAutomationStudio from "./FreelanceAutomationStudio";
@@ -53,6 +55,7 @@ function JobForm({onAdd}) {
 }
 export default function FreelanceWorkCenter(){
  const {user}=useAuth(), nav=useNavigate(), {section="overview"}=useParams();
+ const [appearance, updateAppearance] = useWorkspaceAppearance();
  const email=String(user?.email||"").trim().toLowerCase();
  const enabled=email===PILOT_EMAIL;
  const key=String(user?.id||email);
@@ -67,9 +70,9 @@ export default function FreelanceWorkCenter(){
  if(!enabled) return <Navigate to="/customer" replace/>;
  if(!SECTIONS.some(([id])=>id===section))return <Navigate to="/customer/freelance/overview" replace/>;
  const byStatus=(statuses)=>items.filter(j=>statuses.includes(j.status));
- return <main className="min-h-dvh bg-[#060d19] px-4 pb-16 pt-6 text-slate-100 sm:px-7" data-sw-feature="freelance-pilot">
+ return <main className="sw-freelance-root min-h-dvh bg-[#060d19] px-4 pb-16 pt-6 text-slate-100 sm:px-7" data-sw-feature="freelance-pilot" data-workspace-theme={appearance.theme} data-workspace-motion={appearance.motion}>
  <div className="mx-auto max-w-6xl">
- <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><button onClick={()=>nav("/customer")} type="button" className={linkClass}><ArrowLeft size={16}/> Customer Workspace</button><span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200">Founder visual pilot · Demo</span></div>
+ <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><button onClick={()=>nav("/customer")} type="button" className={linkClass}><ArrowLeft size={16}/> Customer Workspace</button><div className="flex flex-wrap items-center gap-2"><label className="text-xs font-semibold" htmlFor="freelance-theme">Office theme</label><select id="freelance-theme" aria-label="SyncWorks office theme" className="rounded-xl border border-white/20 bg-slate-900/80 px-3 py-2 text-sm" value={appearance.theme} onChange={e=>updateAppearance({theme:e.target.value})}>{WORKSPACE_THEMES.map(k=><option key={k} value={k}>{{legacy:"Original",classic:"Classic Office",future:"SyncWorks Future",modern:"Modern Dark",light:"Clean Light"}[k]}</option>)}</select><span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200">Founder visual pilot · Demo</span></div></div>
  <header className="mb-7"><p className="text-xs font-black uppercase tracking-[.22em] text-cyan-300">SYNCWORKS / WORKSPACE</p><h1 className="mt-2 text-3xl font-black text-white">Freelance Work Center</h1><p className="mt-2 max-w-2xl text-sm text-slate-400">Jobs, proposals, projects, local automation, earnings and Jarvis in one place. Upwork is not yet connected; job and earnings figures are manually recorded pilot values.</p></header>
  <nav aria-label="Freelance sections" className="mb-7 flex gap-2 overflow-x-auto pb-2">{SECTIONS.map(([id,label,Icon])=><NavLink key={id} to={`/customer/freelance/${id}`} className={({isActive})=>`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold ${isActive?"border-cyan-400/40 bg-cyan-500/20 text-cyan-100":"border-white/10 bg-slate-900/65 text-slate-300 hover:bg-slate-800"}`}><Icon size={15}/>{label}</NavLink>)}</nav>
  {section==="overview"&&<FreelanceOverviewDashboard items={items} totals={totals}/>}
