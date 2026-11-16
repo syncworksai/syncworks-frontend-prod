@@ -1,0 +1,114 @@
+/* V23 — resolve the giant opaque "frosted" Home card.
+   Earlier V19 set backdrop-filter:blur(20px) on every main section, including
+   the hero. Transparency alone couldn't restore the photographic room.
+   Keep this file last so no older photo/card rules can recreate that blur. */
+
+/* Home only: let the full-page office photograph remain sharp behind the UI. */
+.sw-workspace-root:not([data-workspace-theme="legacy"])
+ .sw-customer-three-rail > main > section.sw-immersive-home {
+  background:transparent!important;
+  background-image:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+}
+
+/* Remove the remaining flat wash. A faint localized scrim behind headline
+   handles contrast, without covering the entire center panel. */
+.sw-workspace-root:not([data-workspace-theme="legacy"])
+ .sw-customer-three-rail .sw-immersive-home .sw-lobby-content {
+  background:transparent!important;
+  background-image:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+
+.sw-workspace-root:not([data-workspace-theme="legacy"])
+ .sw-customer-three-rail .sw-immersive-home .sw-immersive-welcome {
+  position:relative;
+  isolation:isolate;
+  padding:12px 17px 16px;
+  margin:-12px -17px 0;
+  max-width:min(690px,100%);
+  background:radial-gradient(ellipse at 20% 25%,rgba(4,10,18,.24),transparent 76%);
+  border:0;
+  border-radius:12px;
+}
+.sw-workspace-root[data-workspace-theme="classic"]
+ .sw-customer-three-rail .sw-immersive-home .sw-immersive-welcome {
+  background:radial-gradient(ellipse at 20% 30%,rgba(16,9,6,.34),transparent 76%);
+}
+.sw-workspace-root[data-workspace-theme="light"]
+ .sw-customer-three-rail .sw-immersive-home .sw-immersive-welcome {
+  background:radial-gradient(ellipse at 20% 30%,rgba(249,239,222,.44),transparent 76%);
+}
+.sw-workspace-root[data-workspace-theme="light"]
+ .sw-customer-three-rail .sw-immersive-home .sw-immersive-welcome h1,
+.sw-workspace-root[data-workspace-theme="light"]
+ .sw-customer-three-rail .sw-immersive-home .sw-immersive-welcome p {
+  text-shadow:0 1px 7px rgba(255,250,235,.65);
+}
+
+/* This is an action, not a secondary card around the action. */
+.sw-workspace-root:not([data-workspace-theme="legacy"])
+ .sw-customer-three-rail .sw-immersive-home .sw-lobby-primary {
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  padding:0!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"])
+ .sw-customer-three-rail .sw-immersive-home .sw-lobby-primary-caption {
+  text-shadow:0 1px 8px rgba(0,0,0,.3);
+}
+.sw-workspace-root[data-workspace-theme="light"]
+ .sw-customer-three-rail .sw-immersive-home .sw-lobby-primary-caption {
+  text-shadow:0 1px 7px rgba(255,251,239,.9);
+}
+
+.sw-workspace-root:not([data-workspace-theme="legacy"])
+ .sw-customer-three-rail .sw-immersive-home .sw-lobby-bottom {
+  background:transparent!important;
+  border-top:1px solid color-mix(in srgb,var(--sw-lobby-border) 35%,transparent)!important;
+  box-shadow:none!important;
+}
+
+/* Floating nav and alerts remain distinct controls rather than solid rails. */
+.sw-workspace-root:not([data-workspace-theme="legacy"])
+ .sw-customer-three-rail > aside:first-child {
+  background:color-mix(in srgb,var(--sw-lobby-glass) 30%,transparent)!important;
+  backdrop-filter:blur(7px)!important;
+  -webkit-backdrop-filter:blur(7px)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"])
+ .sw-customer-three-rail > aside:last-child > section {
+  background:color-mix(in srgb,var(--sw-lobby-glass) 30%,transparent)!important;
+  backdrop-filter:blur(8px)!important;
+  -webkit-backdrop-filter:blur(8px)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"])
+ .sw-customer-three-rail .sw-office-sidebar-categories button {
+  background:color-mix(in srgb,var(--sw-ui-surface) 31%,transparent)!important;
+}
+
+/* Reduced-transparency users get readable local panels, but the center photo
+   itself still remains a background rather than a solid box. */
+@media(prefers-reduced-transparency:reduce) {
+  .sw-workspace-root:not([data-workspace-theme="legacy"])
+   .sw-customer-three-rail .sw-immersive-home .sw-immersive-welcome {
+    background:var(--sw-lobby-glass)!important;
+  }
+  .sw-workspace-root:not([data-workspace-theme="legacy"])
+   .sw-customer-three-rail > aside:first-child,
+  .sw-workspace-root:not([data-workspace-theme="legacy"])
+   .sw-customer-three-rail > aside:last-child > section {
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+    background:var(--sw-lobby-glass)!important;
+  }
+}
