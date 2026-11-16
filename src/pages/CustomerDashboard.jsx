@@ -14,6 +14,7 @@ import {
   Dumbbell,
   HeartHandshake,
   Home,
+  LayoutGrid,
   Gamepad2,
   Layers3,
   Zap,
@@ -43,6 +44,7 @@ import CalendarDailySnapshot from "../components/calendar/CalendarDailySnapshot"
 import DashboardShell from "../components/dashboard/DashboardShell";
 import ImmersiveWorkspaceHome from "../components/customer/ImmersiveWorkspaceHome";
 import "../components/customer/ImmersiveSceneV19.css";
+import "../components/customer/OfficeFlowV20.css";
 
 const DAY_TRADING_EMAIL = "jacoblord7@outlook.com";
 
@@ -147,6 +149,8 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
   const [finance, setFinance] = useState(null);
   const [weather, setWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
+  const [showDashboardDetails, setShowDashboardDetails] = useState(false);
+  const [showActivity, setShowActivity] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -224,7 +228,14 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
       <div className="sw-customer-three-rail grid w-full grid-cols-1 items-start gap-5 pb-10 lg:grid-cols-[210px_minmax(0,1fr)] 2xl:grid-cols-[230px_minmax(0,1fr)_310px]">
         <aside className="hidden lg:block sticky top-4 rounded-[1.6rem] border border-sky-400/15 bg-[#090F1C]/90 p-3 shadow-[0_20px_60px_rgba(0,0,0,.25)] backdrop-blur-xl">
           <div className="px-3 pb-2 text-[9px] font-black uppercase tracking-[.18em] text-cyan-300/70">Personal workspace</div>
-          <div className="space-y-1">
+          {workspaceTheme !== "legacy" ? <div className="sw-office-sidebar-categories" aria-label="Office drawers">
+            {[
+              {name:"Daily",description:"Agenda & priorities",icon:CalendarDays},
+              {name:"Personal",description:"Your life",icon:Home},
+              {name:"Business",description:"Work & property",icon:BriefcaseBusiness},
+              {name:"Apps",description:"Explore tools",icon:LayoutGrid},
+            ].map(({name,description,icon:Icon}) => <button type="button" key={name} onClick={()=>window.dispatchEvent(new CustomEvent("sw:workspace-open",{detail:name.toLowerCase()}))}><Icon size={20}/><span><strong>{name}</strong><small>{description}</small></span><ChevronRight size={15}/></button>)}
+          </div> : <><div className="space-y-1">
             <NavButton icon={Home} label="Home" active onClick={() => nav("/customer")} color="cyan" />
             <NavButton icon={CalendarDays} label="Calendar" onClick={() => nav("/calendar")} color="sky" />
             <NavButton icon={ListTodo} label="To-do" onClick={() => nav("/customer/tasks")} color="amber" />
@@ -241,11 +252,25 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
             {dayTradingEnabled ? <NavButton icon={Activity} label="Day Trade" onClick={() => nav("/customer/day-trading-futures")} color="emerald" badge="LIVE" /> : null}
           </div>
           <div className="my-3 h-px bg-white/10" />
-          <NavButton icon={Settings} label="Connections & settings" onClick={() => nav("/settings?tab=CONNECTIONS")} color="sky" />
+          <NavButton icon={Settings} label="Connections & settings" onClick={() => nav("/settings?tab=CONNECTIONS")} color="sky" /></>}
         </aside>
 
         <main className="min-w-0 space-y-5">
           {workspaceTheme !== "legacy" ? <ImmersiveWorkspaceHome displayName={firstName(user)} theme={workspaceTheme} onOpenLauncher={() => window.dispatchEvent(new CustomEvent("sw:workspace-open", { detail: "apps" }))} onOpenAppearance={() => window.dispatchEvent(new CustomEvent("sw:workspace-open", { detail: "appearance" }))} /> : null}
+          {workspaceTheme !== "legacy" && <section id="sw-office-workdesk" className="sw-office-workdesk" aria-label="Today's office">
+            <div className="sw-office-workdesk-top">
+              <div><span className="sw-office-eyebrow">YOUR OFFICE · TODAY</span><h2>What are we working on today?</h2><p>Start with your priorities. Everything else is one drawer away.</p></div>
+              <button type="button" className="sw-office-briefing" onClick={()=>nav("/sync")}><Sparkles size={17}/> Get my SYNC briefing <ChevronRight size={16}/></button>
+            </div>
+            <div className="sw-office-briefing-text" aria-label="Current snapshot">{brief}</div>
+            <div className="sw-office-priorities">
+              <button type="button" onClick={()=>nav("/customer/tasks")}><strong>Tasks</strong><span>Review what needs doing</span><ChevronRight size={16}/></button>
+              <button type="button" onClick={()=>nav("/calendar")}><strong>Schedule</strong><span>{todayEvents.length ? `${todayEvents.length} event${todayEvents.length===1?"":"s"} today` : "Plan your day"}</span><ChevronRight size={16}/></button>
+              <button type="button" onClick={()=>nav("/customer/invoices")}><strong>Needs attention</strong><span>{dueInvoices.length ? `${dueInvoices.length} payment item${dueInvoices.length===1?"":"s"}` : "Review outstanding items"}</span><ChevronRight size={16}/></button>
+            </div>
+            <button type="button" className="sw-office-more" aria-expanded={showDashboardDetails} onClick={()=>setShowDashboardDetails(v=>!v)}>{showDashboardDetails ? "Hide detailed dashboard" : "View detailed dashboard"} <ChevronRight size={16}/></button>
+          </section>}
+          <div className="sw-office-advanced" hidden={workspaceTheme !== "legacy" && !showDashboardDetails}>
           <section className="rounded-[1.8rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_90%_0%,rgba(168,85,247,.20),transparent_33%),radial-gradient(circle_at_0%_100%,rgba(34,211,238,.14),transparent_30%),linear-gradient(145deg,rgba(8,18,35,.98),rgba(2,6,23,.98))] p-6 shadow-[0_20px_70px_rgba(0,0,0,.35)]">
             <div className="flex items-start justify-between gap-5">
               <div><div className="text-[10px] font-black uppercase tracking-[.22em] text-cyan-200">Personal command center</div><h1 className="mt-2 text-3xl font-black text-white">Good afternoon, {firstName(user)}.</h1><p className="mt-2 max-w-2xl text-sm text-slate-400">Your day, destinations, money, health and connected life — prioritized in one place.</p></div>
@@ -282,6 +307,7 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
           </div>
 
           <AroundYouPanel />
+          </div>
         </main>
 
         <aside className="min-w-0 space-y-4 lg:col-start-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 2xl:col-start-auto 2xl:block 2xl:sticky 2xl:top-4 2xl:space-y-4">
@@ -296,14 +322,15 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
             </div>
           </section>
 
-          <section className="rounded-[1.6rem] border border-cyan-400/20 bg-cyan-500/[.05] p-4">
+          <div className="sw-office-extra-activity" hidden={workspaceTheme !== "legacy" && !showActivity}><section className="rounded-[1.6rem] border border-cyan-400/20 bg-cyan-500/[.05] p-4">
             <div className="flex items-center justify-between"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-200">Updates</div><h3 className="mt-1 text-base font-black text-white">Across your connected life</h3></div><button type="button" onClick={() => nav("/sync/history")} className="text-[9px] font-black text-cyan-200">History</button></div>
             <div className="mt-3 space-y-2">{updates.length ? updates.map((item, index) => { const Icon = item.icon; return <button key={`${item.title}-${index}`} type="button" onClick={() => nav(item.route)} className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[.025] p-3 text-left"><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border ${tone[item.tone] || tone.cyan}`}><Icon className="h-4 w-4" /></span><span className="min-w-0 flex-1"><span className="block truncate text-[10px] font-black text-white">{item.title}</span><span className="mt-0.5 block truncate text-[9px] text-slate-500">{item.detail}</span></span><ChevronRight className="h-4 w-4 text-slate-600" /></button>; }) : <div className="rounded-xl border border-white/10 bg-white/[.025] p-3 text-[10px] leading-4 text-slate-500">No new updates. Read items can quietly fall out of Home while remaining available in history.</div>}</div>
           </section>
 
           <section className="rounded-[1.6rem] border border-violet-400/20 bg-violet-500/[.06] p-4 max-xl:col-span-2">
             <div className="text-[9px] font-black uppercase tracking-[.18em] text-violet-200">Quick capture</div><h3 className="mt-1 text-base font-black text-white">Turn a message into an action</h3><p className="mt-2 text-[11px] leading-5 text-slate-400">Paste or forward appointment details to SYNC, then confirm before adding them to your calendar.</p><button type="button" onClick={() => nav("/sync?prompt=Help%20me%20turn%20an%20appointment%20message%20into%20a%20calendar%20event.")} className="mt-3 w-full rounded-xl border border-violet-300/25 bg-violet-500/10 px-3 py-2.5 text-xs font-black text-violet-100">Open smart capture</button>
-          </section>
+          </section></div>
+          {workspaceTheme !== "legacy" && <button type="button" className="sw-office-activity-toggle" aria-expanded={showActivity} onClick={()=>setShowActivity(v=>!v)}>{showActivity ? "Hide activity & quick capture" : "View activity & quick capture"} <ChevronRight size={15}/></button>}
         </aside>
       </div>
     </DashboardShell>

@@ -8,6 +8,12 @@ import "./OfficeThemeIntegrationV16.css";
 export const WORKSPACE_THEMES = ["legacy", "classic", "future", "modern", "light"];
 const SETTINGS_KEY = "sw_workspace_appearance_v1";
 const DEFAULTS = { theme: "legacy", motion: true, compact: false };
+export const OFFICE_CATEGORIES = [
+  {id:"daily",name:"Daily",description:"Your agenda, tasks, messages and requests",items:[["Calendar","/calendar",CalendarDays],["Tasks","/customer/tasks",ListTodo],["Inbox","/customer/inbox",Inbox],["New service request","/customer/new-request",LayoutGrid]]},
+  {id:"personal",name:"Personal",description:"Money, wellbeing and your connections",items:[["Finance","/customer/finance",Wallet],["Health","/customer/health",Heart],["Connections","/settings?tab=CONNECTIONS",Settings]]},
+  {id:"business",name:"Business",description:"Work, properties and service operations",items:[["Business","/sbo",BriefcaseBusiness],["Property","/pm",Building2],["Services","/customer/marketplace",LayoutGrid]]},
+  {id:"apps",name:"Apps",description:"Games, local discovery, weather and tools",items:[["Games","/customer/games",Spade],["Social","/connect",Users],["Shop Assist","/customer/store",ShoppingBag],["Weather","/customer/weather",CloudSun],["Traffic","/customer/traffic",MapPinned],["Local","/customer/discover",MapPinned],["Trading","/customer/day-trading-futures",TrendingUp]]},
+];
 const APPS = [
   ["Calendar", "/calendar", CalendarDays], ["Tasks", "/customer/tasks", ListTodo],
   ["Inbox", "/customer/inbox", Inbox], ["Business", "/sbo", BriefcaseBusiness],
@@ -61,14 +67,15 @@ export function WorkspaceAppearancePanel({ settings, update }) {
 export default function CustomerWorkspace({ settings, update, phoneMode = false, dayTradingEnabled = false }) {
   const nav = useNavigate();
   const [panel, setPanel] = useState(null);
-  useEffect(() => { const open = (event) => { if (["apps", "appearance"].includes(event?.detail)) setPanel(event.detail); }; window.addEventListener("sw:workspace-open", open); return () => window.removeEventListener("sw:workspace-open", open); }, []);
+  useEffect(() => { const open = (event) => { if (["apps", "appearance", "daily", "personal", "business"].includes(event?.detail)) setPanel(event.detail); }; window.addEventListener("sw:workspace-open", open); return () => window.removeEventListener("sw:workspace-open", open); }, []);
   useEffect(() => {
     if (!panel) return;
     const onKey = e => { if (e.key === "Escape") setPanel(null); };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [panel]);
-  const apps = APPS.filter(([name]) => dayTradingEnabled || name !== "Trading");
+  const activeCategory = OFFICE_CATEGORIES.find((category) => category.id === panel);
+  const apps = (activeCategory ? activeCategory.items : APPS).filter(([name]) => dayTradingEnabled || name !== "Trading");
   const go = (path) => { setPanel(null); nav(path); };
   return <>
     <div className={`sw-workspace-switcher ${phoneMode ? "sw-workspace-switcher-mobile" : ""}`} role="group" aria-label="Workspace controls">
@@ -77,9 +84,9 @@ export default function CustomerWorkspace({ settings, update, phoneMode = false,
       <span className="sw-workspace-current">{settings.theme === "legacy" ? "Original" : settings.theme === "classic" ? "Classic Office" : settings.theme === "future" ? "SyncWorks Future" : settings.theme === "modern" ? "Modern Dark" : "Clean Light"}</span>
     </div>
     {panel && createPortal(<div className="sw-workspace-overlay" onMouseDown={() => setPanel(null)}>
-      <aside className="sw-workspace-drawer" role="dialog" aria-modal="true" aria-label={panel === "apps" ? "Workspace launcher" : "Appearance settings"} onMouseDown={e => e.stopPropagation()}>
-        <header><div><span className="sw-workspace-eyebrow">SYNCWORKS / PERSONAL</span><h2>{panel === "apps" ? "Your workspaces" : "Appearance settings"}</h2></div><button type="button" className="sw-workspace-close" onClick={() => setPanel(null)} aria-label="Close"><X size={20}/></button></header>
-        {panel === "apps" ? <><p className="sw-workspace-description">Your tools, organized in one place. Games keep their dedicated interface.</p><div className="sw-workspace-app-grid">{apps.map(([name, path, Icon]) => <button type="button" key={name} onClick={() => go(path)}><Icon size={22}/><span>{name}</span></button>)}</div></> : <WorkspaceAppearancePanel settings={settings} update={update}/>}
+      <aside className="sw-workspace-drawer" role="dialog" aria-modal="true" aria-label={panel === "appearance" ? "Appearance settings" : "Workspace launcher"} onMouseDown={e => e.stopPropagation()}>
+        <header><div><span className="sw-workspace-eyebrow">SYNCWORKS / PERSONAL</span><h2>{panel === "appearance" ? "Appearance settings" : (activeCategory?.name || "Your workspaces")}</h2></div><button type="button" className="sw-workspace-close" onClick={() => setPanel(null)} aria-label="Close"><X size={20}/></button></header>
+        {panel !== "appearance" ? <><p className="sw-workspace-description">{activeCategory?.description || "Choose a category, then open the tool you need. Games keep their dedicated interface."}</p>{!activeCategory && <div className="sw-office-drawer-categories">{OFFICE_CATEGORIES.map(({id,name}) => <button type="button" key={id} onClick={() => setPanel(id)}>{name}</button>)}</div>}<div className="sw-workspace-app-grid">{apps.map(([name, path, Icon]) => <button type="button" key={name} onClick={() => go(path)}><Icon size={22}/><span>{name}</span></button>)}</div>{activeCategory && <button type="button" className="sw-workspace-reset" onClick={() => setPanel("apps")}>← All categories</button>}</> : <WorkspaceAppearancePanel settings={settings} update={update}/>}
       </aside>
     </div>, document.body)}
   </>;

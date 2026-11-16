@@ -1,0 +1,62 @@
+/* V20: simplify the room into a navigable office, not a button grid. */
+.sw-office-sidebar-categories{display:flex;flex-direction:column;gap:10px;padding:5px 0 12px}
+.sw-office-sidebar-categories button{width:100%;min-height:74px;display:flex;align-items:center;gap:10px;text-align:left;padding:12px;border:1px solid var(--sw-lobby-border);border-radius:13px;background:var(--sw-ui-surface);color:var(--sw-ui-text);box-shadow:inset 0 1px 0 #ffffff12;transition:background .2s,border-color .2s,transform .2s}
+.sw-office-sidebar-categories button:hover{border-color:var(--sw-workspace-accent);background:var(--sw-ui-surface-hover);transform:translateX(2px)}
+.sw-office-sidebar-categories button>svg:first-child{color:var(--sw-workspace-accent);flex-shrink:0}
+.sw-office-sidebar-categories button>svg:last-child{margin-left:auto;opacity:.66;flex-shrink:0}
+.sw-office-sidebar-categories button span{display:flex;flex:1;flex-direction:column;gap:5px;min-width:0}
+.sw-office-sidebar-categories button strong{font-size:13px;font-weight:800}
+.sw-office-sidebar-categories button small{font-size:10px;color:var(--sw-ui-muted);line-height:1.25}
+.sw-office-categories{display:flex;justify-content:center;align-items:center;gap:clamp(9px,2vw,28px);margin:16px auto 0;position:relative;z-index:3;flex-wrap:wrap}
+.sw-office-categories button{display:inline-flex;align-items:center;gap:6px;padding:8px 3px;border:0;border-bottom:1px solid var(--sw-workspace-line);color:var(--sw-ui-text);background:transparent;font-size:clamp(13px,1.2vw,17px);font-weight:750;letter-spacing:.02em;text-shadow:0 2px 12px #0007}
+.sw-office-categories button:hover,.sw-office-categories button:focus-visible{color:var(--sw-workspace-accent);border-color:var(--sw-workspace-accent)}
+.sw-office-categories button svg{opacity:.7}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-lobby-primary{margin:auto auto 26px!important}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-lobby-content{min-height:490px!important}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-home{min-height:490px!important}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-lobby-bottom{border-top:1px solid var(--sw-lobby-border);margin-top:12px!important}
+.sw-office-workdesk{scroll-margin-top:110px;border:1px solid var(--sw-lobby-border)!important;border-radius:20px;background:var(--sw-lobby-glass)!important;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:clamp(20px,2.4vw,35px);box-shadow:0 18px 43px #0004}
+.sw-office-workdesk-top{display:flex;justify-content:space-between;gap:18px;align-items:center}
+.sw-office-eyebrow{font-size:10px;letter-spacing:.18em;font-weight:900;color:var(--sw-workspace-accent)}
+.sw-office-workdesk h2{font-family:Georgia,serif;font-size:clamp(25px,2.1vw,35px);line-height:1.25;color:var(--sw-ui-text);margin:9px 0 5px}
+.sw-office-workdesk p{font-size:13px;color:var(--sw-ui-muted)}
+.sw-office-briefing{display:flex;align-items:center;justify-content:center;gap:9px;min-height:43px;min-width:180px;padding:10px 12px;border-radius:11px;border:1px solid var(--sw-lobby-border);color:var(--sw-ui-text);background:var(--sw-ui-surface);font-size:12px;font-weight:800}
+.sw-office-briefing:hover{border-color:var(--sw-workspace-accent)}
+.sw-office-briefing-text{margin:22px 0 10px;border-left:2px solid var(--sw-workspace-accent);padding:5px 13px;font-size:13px;line-height:1.7;color:var(--sw-ui-text);background:color-mix(in srgb,var(--sw-ui-surface) 52%,transparent)}
+.sw-office-priorities{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:21px}
+.sw-office-priorities button{display:grid;grid-template-columns:1fr auto;gap:5px 10px;align-items:center;text-align:left;padding:17px;border:1px solid var(--sw-lobby-border);border-radius:13px;background:var(--sw-ui-surface);color:var(--sw-ui-text);transition:border-color .15s,transform .15s}
+.sw-office-priorities button:hover{border-color:var(--sw-workspace-accent);transform:translateY(-2px)}
+.sw-office-priorities button strong{grid-column:1;font-size:15px}
+.sw-office-priorities button span{grid-column:1;font-size:11px;color:var(--sw-ui-muted)}
+.sw-office-priorities button svg{grid-column:2;grid-row:1/3;color:var(--sw-workspace-accent)}
+.sw-office-more,.sw-office-activity-toggle{display:inline-flex;align-items:center;justify-content:center;gap:8px;align-self:start;min-height:37px;border:1px solid var(--sw-lobby-border);border-radius:10px;padding:9px 14px;color:var(--sw-ui-text);background:var(--sw-ui-surface);font-size:11px;font-weight:800}
+.sw-office-more{margin-top:19px}
+.sw-office-more:hover,.sw-office-activity-toggle:hover{border-color:var(--sw-workspace-accent)}
+.sw-office-advanced[hidden],.sw-office-extra-activity[hidden]{display:none!important}
+.sw-office-advanced>*+*{margin-top:18px}
+.sw-office-extra-activity:not([hidden]){display:flex;flex-direction:column;gap:14px}
+.sw-office-activity-toggle{width:100%}
+.sw-office-drawer-categories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:15px 0 20px}
+.sw-office-drawer-categories button{border:1px solid rgba(109,171,218,.33);border-radius:12px;padding:14px;min-height:54px;font-size:14px;font-weight:800;text-align:left;color:#e8f2fa;background:rgba(34,66,91,.24)}
+.sw-office-drawer-categories button:hover{background:rgba(34,102,153,.35);border-color:#38bdf8}
+/* The mode bar contains its own midnight decorative layer. Remove that layer
+   only when an office appearance is active; the bar itself uses the theme glass. */
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-modebar>.pointer-events-none{display:none!important}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-modebar>.absolute.inset-0{display:none!important}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-modebar{background:var(--sw-lobby-head)!important;color:var(--sw-room-header-ink)!important;border-color:var(--sw-lobby-border)!important}
+.sw-workspace-root[data-workspace-theme="light"] .sw-office-categories button{text-shadow:none}
+.sw-workspace-root[data-workspace-theme="light"] .sw-office-workdesk{box-shadow:0 13px 35px #54432c2e}
+@media(max-width:1023px){
+ .sw-office-priorities{grid-template-columns:1fr}
+ .sw-office-workdesk-top{align-items:flex-start;flex-direction:column}
+ .sw-office-briefing{min-width:0}
+}
+@media(max-width:760px){
+ .sw-office-categories{justify-content:space-around;gap:9px;margin-top:12px}
+ .sw-office-categories button{font-size:13px;padding:7px 3px}
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-lobby-content{min-height:450px!important}
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-home{min-height:450px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .sw-office-sidebar-categories button,.sw-office-priorities button{transition:none}
+}
