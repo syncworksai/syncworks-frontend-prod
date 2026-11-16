@@ -1,0 +1,80 @@
+/* V21 — portal drawers inherit the selected appearance, not midnight blue.
+   Data attribute is placed directly on the body-level portal, beyond root isolation. */
+.sw-workspace-overlay-themed{
+ --office-drawer-bg:#0c1726;--office-drawer-text:#f4f8ff;--office-drawer-muted:#a7bdd0;
+ --office-drawer-accent:#35c8fb;--office-drawer-border:rgba(74,179,243,.36);
+ --office-drawer-tile:rgba(28,51,76,.64);--office-drawer-tile-hover:rgba(41,87,122,.75);
+ --office-drawer-photo:none;
+ animation:sw-office-shade-in .24s ease-out both;
+}
+.sw-workspace-overlay-themed[data-office-drawer-theme="classic"]{
+ --office-drawer-bg:#21160f;--office-drawer-text:#f8ecdb;--office-drawer-muted:#c5b093;
+ --office-drawer-accent:#e6b96e;--office-drawer-border:rgba(222,171,99,.42);
+ --office-drawer-tile:rgba(66,43,28,.72);--office-drawer-tile-hover:rgba(92,58,31,.84);
+ --office-drawer-photo:url("/office-themes/classic-office.webp");
+}
+.sw-workspace-overlay-themed[data-office-drawer-theme="future"]{
+ --office-drawer-bg:#071229;--office-drawer-text:#f0f8ff;--office-drawer-muted:#9ebcdd;
+ --office-drawer-accent:#25d3fd;--office-drawer-border:rgba(49,187,249,.44);
+ --office-drawer-tile:rgba(12,40,81,.73);--office-drawer-tile-hover:rgba(20,63,112,.86);
+ --office-drawer-photo:url("/office-themes/syncworks-future.webp");
+}
+.sw-workspace-overlay-themed[data-office-drawer-theme="modern"]{
+ --office-drawer-bg:#20272e;--office-drawer-text:#f1f3f6;--office-drawer-muted:#abb9c4;
+ --office-drawer-accent:#b1c9db;--office-drawer-border:rgba(178,202,221,.38);
+ --office-drawer-tile:rgba(43,56,67,.76);--office-drawer-tile-hover:rgba(57,72,84,.92);
+ --office-drawer-photo:url("/office-themes/modern-dark.webp");
+}
+.sw-workspace-overlay-themed[data-office-drawer-theme="light"]{
+ --office-drawer-bg:#f1e5d3;--office-drawer-text:#352c24;--office-drawer-muted:#786451;
+ --office-drawer-accent:#1c777b;--office-drawer-border:rgba(146,112,74,.4);
+ --office-drawer-tile:rgba(255,250,240,.85);--office-drawer-tile-hover:rgba(246,230,209,.96);
+ --office-drawer-photo:url("/office-themes/clean-light.webp");
+}
+.sw-workspace-overlay-themed .sw-office-theme-drawer{
+ color:var(--office-drawer-text)!important;
+ background-color:var(--office-drawer-bg)!important;
+ background-image:linear-gradient(110deg,var(--office-drawer-bg) 10%,color-mix(in srgb,var(--office-drawer-bg) 88%,transparent) 70%),var(--office-drawer-photo)!important;
+ background-size:cover!important;background-position:center!important;
+ border-color:var(--office-drawer-border)!important;
+ transform-origin:right center;
+ animation:sw-office-slide-in .32s cubic-bezier(.2,.85,.2,1) both;
+}
+.sw-workspace-overlay-themed.sw-workspace-overlay-closing{animation:sw-office-shade-out .23s ease-in both}
+.sw-workspace-overlay-themed.sw-workspace-overlay-closing .sw-office-theme-drawer{animation:sw-office-slide-out .23s ease-in both}
+.sw-workspace-overlay-themed .sw-workspace-eyebrow,
+.sw-workspace-overlay-themed .sw-workspace-check{color:var(--office-drawer-accent)!important}
+.sw-workspace-overlay-themed .sw-workspace-description,
+.sw-workspace-overlay-themed .sw-workspace-preferences > p,
+.sw-workspace-overlay-themed .sw-workspace-preferences > small,
+.sw-workspace-overlay-themed .sw-workspace-theme small{color:var(--office-drawer-muted)!important}
+.sw-workspace-overlay-themed .sw-workspace-app-grid button,
+.sw-workspace-overlay-themed .sw-office-drawer-categories button,
+.sw-workspace-overlay-themed .sw-workspace-reset,
+.sw-workspace-overlay-themed .sw-workspace-close{
+ color:var(--office-drawer-text)!important;
+ background:var(--office-drawer-tile)!important;
+ border-color:var(--office-drawer-border)!important;
+ box-shadow:inset 0 1px 0 #ffffff10;
+}
+.sw-workspace-overlay-themed .sw-workspace-app-grid button:hover,
+.sw-workspace-overlay-themed .sw-office-drawer-categories button:hover,
+.sw-workspace-overlay-themed .sw-workspace-reset:hover{
+ background:var(--office-drawer-tile-hover)!important;
+ border-color:var(--office-drawer-accent)!important;
+}
+.sw-workspace-overlay-themed .sw-workspace-app-grid button svg{color:var(--office-drawer-accent)}
+.sw-workspace-overlay-themed .sw-workspace-theme{
+ color:var(--office-drawer-text)!important;background:var(--office-drawer-tile)!important;border-color:var(--office-drawer-border)!important;
+}
+.sw-workspace-overlay-themed .sw-workspace-theme.selected{border-color:var(--office-drawer-accent)!important}
+.sw-workspace-overlay-themed :is(button,input):focus-visible{outline:2px solid var(--office-drawer-accent);outline-offset:3px}
+@keyframes sw-office-slide-in{from{transform:translateX(103%);opacity:.8}to{transform:translateX(0);opacity:1}}
+@keyframes sw-office-slide-out{from{transform:translateX(0);opacity:1}to{transform:translateX(103%);opacity:.75}}
+@keyframes sw-office-shade-in{from{background:rgba(0,0,0,0);backdrop-filter:blur(0)}to{background:rgba(0,0,0,.65);backdrop-filter:blur(5px)}}
+@keyframes sw-office-shade-out{from{opacity:1}to{opacity:0}}
+.sw-workspace-overlay-themed[data-office-drawer-motion="false"],
+.sw-workspace-overlay-themed[data-office-drawer-motion="false"] .sw-office-theme-drawer{animation:none!important}
+@media(prefers-reduced-motion:reduce){
+ .sw-workspace-overlay-themed,.sw-workspace-overlay-themed .sw-office-theme-drawer{animation:none!important}
+}
