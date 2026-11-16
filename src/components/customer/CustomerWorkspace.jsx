@@ -67,7 +67,7 @@ export default function CustomerWorkspace({ settings, update, phoneMode = false,
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [panel]);
-  const apps = APPS.filter(([name]) => dayTradingEnabled || name !== "Trading");
+  const apps = [...APPS.filter(([name]) => dayTradingEnabled || name !== "Trading"), ...(dayTradingEnabled ? [["Freelance Work", "/customer/freelance/overview", BriefcaseBusiness]] : [])];
   const go = (path) => { setPanel(null); nav(path); };
   return <>
     <div className={`sw-workspace-switcher ${phoneMode ? "sw-workspace-switcher-mobile" : ""}`} role="group" aria-label="Workspace controls">
