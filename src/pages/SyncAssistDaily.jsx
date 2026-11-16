@@ -72,6 +72,7 @@ export default function SyncAssistDaily() {
         <button type="submit" disabled={loading || !form.title.trim()} className="min-h-11 w-full rounded-xl bg-cyan-600 px-3 font-black disabled:opacity-40">Save to today's list</button>
       </form>}
 
+      <button type="button" onClick={()=>navigate("/sync/assist/chief")} className="mt-4 flex min-h-14 w-full items-center justify-between rounded-2xl border border-purple-400/30 bg-gradient-to-r from-purple-500/15 to-cyan-500/15 p-4 text-left font-black text-cyan-100"><span>Chief of Staff briefing<span className="block text-xs font-normal text-slate-400">Priorities · Unresolved issues · Business & property snapshot</span></span><span aria-hidden="true">→</span></button>
       <button type="button" onClick={()=>navigate("/sync/assist/email")} className="mt-4 flex min-h-14 w-full items-center justify-between rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/15 to-violet-600/15 p-4 text-left font-black text-cyan-100"><span>Jarvis Mail Desk<span className="block text-xs font-normal text-slate-400">Connect Outlook · Read inbox · Draft · Send with approval</span></span><span aria-hidden="true">→</span></button>
       <section className="mt-4 rounded-2xl border border-amber-400/20 bg-slate-900/50 p-3">
         <div className="flex items-center gap-2 text-sm font-bold text-amber-200"><Mail size={18}/> {outlookStatus?.connected ? "Outlook connected to Jarvis Mail Desk" : outlookStatus?.configured ? "Outlook ready to connect" : "Outlook not linked inside SyncWorks"}</div>
