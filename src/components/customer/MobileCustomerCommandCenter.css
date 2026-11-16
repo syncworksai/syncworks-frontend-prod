@@ -156,3 +156,60 @@
     display:none;
   }
 }
+
+
+/* V3: photo-first, minimal glass buttons. Scoped only to the portrait Customer page. */
+@media (max-width: 767px) {
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-mobile-command {
+    --mc-glass:rgba(4, 13, 28, .10);
+    --mc-line:color-mix(in srgb,var(--sw-workspace-accent,#70defb) 42%,transparent);
+    gap:clamp(8px,1.15dvh,11px);
+  }
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-mobile-command :is(
+    .sw-mobile-module,.sw-mobile-command-brief,.sw-mobile-icon-button,.sw-mobile-command-actions button
+  ) {
+    background:var(--mc-glass)!important;
+    border:1px solid var(--mc-line)!important;
+    -webkit-backdrop-filter:blur(2px) saturate(108%);
+    backdrop-filter:blur(2px) saturate(108%);
+    box-shadow:inset 0 1px rgba(255,255,255,.08),0 2px 12px rgba(0,0,0,.10);
+  }
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-mobile-module {
+    border-radius:16px;
+    padding:clamp(10px,1.5dvh,14px);
+  }
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-mobile-command-brief {
+    border-radius:18px;
+    min-height:100px;
+  }
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-mobile-module strong,
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-mobile-brief-copy {
+    font-weight:800;
+    text-shadow:0 2px 9px rgba(0,0,0,.74);
+  }
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-mobile-module small {
+    font-weight:650;
+    color:#e1e9f1;
+    text-shadow:0 1px 7px rgba(0,0,0,.85);
+  }
+  .sw-workspace-root[data-sw-layout="portrait"][data-workspace-theme="light"] .sw-mobile-command {
+    --mc-glass:rgba(255,249,241,.10);
+    --mc-line:rgba(130,101,72,.54);
+  }
+  .sw-workspace-root[data-sw-layout="portrait"][data-workspace-theme="light"] .sw-mobile-command :is(
+    .sw-mobile-module strong,.sw-mobile-brief-copy,.sw-mobile-module small
+  ) {
+    color:#27221e;
+    text-shadow:0 1px 4px rgba(255,255,255,.85);
+  }
+  .sw-workspace-root[data-sw-layout="portrait"][data-workspace-theme="classic"] .sw-mobile-command {
+    --mc-glass:rgba(34,16,8,.11);
+    --mc-line:rgba(217,168,103,.62);
+  }
+  .sw-workspace-root[data-sw-layout="portrait"][data-workspace-theme="modern"] .sw-mobile-command {
+    --mc-glass:rgba(14,18,23,.12);
+  }
+  .sw-workspace-root[data-sw-layout="portrait"][data-workspace-theme="future"] .sw-mobile-command {
+    --mc-glass:rgba(2,11,25,.09);
+  }
+}

@@ -69,7 +69,6 @@ export default function CustomerDashboardResponsive() {
   const [identity, setIdentity] = useState(null);
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [dockOpen, setDockOpen] = useState(false);
   const viewportMode = useViewportMode();
   const phoneMode = viewportMode === "portrait";
   const dayTradingEnabled = String(user?.email || "").trim().toLowerCase() === DAY_TRADING_EMAIL;
@@ -98,11 +97,6 @@ export default function CustomerDashboardResponsive() {
   const todayEvents = calendarEvents.filter(item => item?.start_at && new Date(item.start_at).toDateString() === new Date().toDateString());
   const overdueCount = dueInvoices.filter(item => ["OVERDUE", "PAST_DUE"].includes(String(item?.derived_state || item?.status || "").toUpperCase())).length;
   const mobileBrief = [todayEvents.length ? `${todayEvents.length} event${todayEvents.length === 1 ? "" : "s"} scheduled today.` : "Your calendar is clear today.", overdueCount ? `${overdueCount} overdue payment${overdueCount === 1 ? "" : "s"} need attention.` : dueInvoices.length ? `${dueInvoices.length} payment item${dueInvoices.length === 1 ? "" : "s"} to review.` : "No urgent payment alerts.", openTickets.length ? `${openTickets.length} active service request${openTickets.length === 1 ? "" : "s"}.` : ""].filter(Boolean).join(" ");
-
-  function playBriefing() {
-    setDockOpen(true);
-    window.setTimeout(() => window.dispatchEvent(new CustomEvent("sync-assistant:play-briefing")), 30);
-  }
 
   if (!phoneMode) {
     return (
@@ -142,15 +136,8 @@ export default function CustomerDashboardResponsive() {
         </button>
       ) : null}
 
-      <nav className="sw-personal-dock fixed inset-x-3 bottom-[max(.45rem,env(safe-area-inset-bottom))] z-[150] grid grid-cols-5 items-end rounded-[1.3rem] border border-white/10 bg-[#030817]/95 px-2 py-2 shadow-[0_-10px_50px_rgba(2,6,23,.8)] backdrop-blur-2xl">
-        <button type="button" onClick={() => nav("/customer")} className="flex flex-col items-center gap-1 text-[9px] font-black text-cyan-200"><Home className="h-4 w-4" />Home</button>
-        <button type="button" onClick={() => nav("/customer/marketplace")} className="flex flex-col items-center gap-1 text-[9px] font-black text-slate-400"><LayoutGrid className="h-4 w-4" />Services</button>
-        <button type="button" onClick={() => setDockOpen(true)} className="mx-auto -mt-7 flex flex-col items-center gap-1 text-[9px] font-black text-cyan-200" aria-label="Open SYNC Assistant"><span className="sw-cube-launcher grid h-12 w-12 place-items-center overflow-hidden rounded-2xl"><img src="/brands/syncworks-icon-192.png" alt="" className="h-full w-full object-contain" /></span>SYNC</button>
-        <button type="button" onClick={() => nav("/customer/inbox")} className="flex flex-col items-center gap-1 text-[9px] font-black text-slate-400"><Inbox className="h-4 w-4" />Inbox</button>
-        <button type="button" onClick={() => nav("/customer/settings")} className="flex flex-col items-center gap-1 text-[9px] font-black text-slate-400"><MoreHorizontal className="h-4 w-4" />More</button>
-      </nav>
-
-      {dockOpen ? <SyncAssistantStickyDock displayName={firstName(user)} /> : null}
+      {/* App-level RoleAwareMobileNav owns the single bottom bar and its SYNC action.
+           Do not render a second sticky nav here. */}
     </div>
   );
 }

@@ -32,9 +32,6 @@ export default function MobileCustomerCommandCenter({ name, brief, attentionCoun
       <div className="sw-mobile-module-grid">
         {modules.map(({ label, sub, Icon, action }) => <button type="button" key={label} className="sw-mobile-module" onClick={action}><Icon size={22}/><strong>{label}</strong><small>{sub}</small></button>)}
       </div>
-      <button type="button" className="sw-mobile-command-status" onClick={() => open("/sync")}>
-        <span className="sw-mobile-status-orb"><Sparkles size={22}/></span><span><strong>SYNC Assist</strong><small>Open your AI team & tasks</small></span><ChevronRight size={18}/>
-      </button>
       <div className="sw-mobile-command-actions">
         <button type="button" onClick={() => open("/customer/new-request")}><Plus size={17}/> New request</button>
         <button type="button" onClick={() => onOpenWorkspace("apps")}><Grid2X2 size={17}/> All apps</button>
