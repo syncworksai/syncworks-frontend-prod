@@ -1,3 +1,4 @@
+import FreelanceSecurePanel from "./FreelanceSecurePanel";
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BriefcaseBusiness, ClipboardCheck, ArrowRight, Clock3, ShieldAlert, CheckCircle2, ExternalLink } from "lucide-react";
@@ -14,6 +15,7 @@ export default function FreelanceProjectsPage({items,updateJob}){
  const startStudio=(id)=>nav(`/customer/freelance/studio?job=${encodeURIComponent(id)}`);
  return <section>
   <header className="mb-5"><p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-cyan-200"><BriefcaseBusiness size={15}/> Project operations</p><h2 className="mt-1 text-2xl font-bold text-white">Projects & delivery pipeline</h2><p className="mt-2 max-w-2xl text-sm text-slate-400">Your contract workflow, approvals, deliverables, and next actions. Jobs are manually tracked and not synchronized with Upwork yet.</p></header>
+  <div className="mb-5"><FreelanceSecurePanel mode="projects"/></div>
   <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
    {[[ "Active",items.filter(j=>ACTIVE.includes(j.status)).length ],["Awaiting delivery",items.filter(j=>j.status==="Submitted").length],["Marked paid",items.filter(j=>j.status==="Paid").length]].map(([label,value])=><div className={panel} key={label}><p className="text-xs text-slate-400">{label}</p><p className="mt-2 text-2xl font-bold text-white">{value}</p></div>)}
   </div>
