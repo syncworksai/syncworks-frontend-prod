@@ -905,7 +905,7 @@ export default function SyncAssistant() {
                 <img src={assistant.photo} alt="" className="h-full w-full object-cover object-top" />
               </span>
               <span className="max-w-[66px] truncate text-[10px] font-bold text-white">{assistant.name}</span>
-              <span className="max-w-[70px] truncate text-[9px] text-slate-400">{assistant.role}</span>
+              <span className="max-w-[80px] text-[9px] leading-tight text-slate-300">{assistant.role}</span>
             </button>
           ))}
         </div>
