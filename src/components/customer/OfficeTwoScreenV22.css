@@ -1,0 +1,141 @@
+/* V22 two-scene experience: the photographic Home is a room, not a card.
+   Office is an addressable focused work screen; legacy/Games unaffected. */
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > main > .sw-immersive-home{
+  background:transparent!important;
+  box-shadow:none!important;
+  border:0!important;
+  min-height:calc(100dvh - 190px)!important;
+  border-radius:0!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-lobby-content{
+  background:linear-gradient(90deg,rgba(5,10,16,.34),rgba(5,10,16,.04) 55%,rgba(5,10,16,.10))!important;
+  min-height:calc(100dvh - 190px)!important;
+  display:flex;
+  flex-direction:column;
+  padding:clamp(18px,3vw,54px)!important;
+}
+.sw-workspace-root[data-workspace-theme="classic"] .sw-customer-three-rail .sw-lobby-content{
+  background:linear-gradient(90deg,rgba(19,11,7,.42),rgba(19,11,7,.03) 58%,rgba(19,11,7,.14))!important;
+}
+.sw-workspace-root[data-workspace-theme="light"] .sw-customer-three-rail .sw-lobby-content{
+  background:linear-gradient(90deg,rgba(245,232,212,.32),rgba(245,232,212,.04) 58%,rgba(245,232,212,.15))!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-lobby-primary{
+  margin:auto auto auto!important;
+  padding:16px;
+  border-radius:22px;
+  background:color-mix(in srgb,var(--sw-lobby-glass) 18%,transparent);
+  backdrop-filter:blur(2px);
+  -webkit-backdrop-filter:blur(2px);
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-lobby-start{
+  border-radius:13px!important;
+  min-height:66px;
+  padding-inline:28px;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-hero{
+  min-height:0!important;
+  padding-top:10px;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-lobby-bottom{
+  background:transparent;
+  border-top:1px solid var(--sw-lobby-border);
+  padding-top:12px;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:first-child{
+  background:color-mix(in srgb,var(--sw-lobby-glass) 43%,transparent)!important;
+  border-color:color-mix(in srgb,var(--sw-lobby-border) 62%,transparent)!important;
+  box-shadow:0 12px 37px #0002!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-office-sidebar-categories button{
+  background:color-mix(in srgb,var(--sw-ui-surface) 35%,transparent)!important;
+  border-color:color-mix(in srgb,var(--sw-lobby-border) 65%,transparent)!important;
+  box-shadow:none!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-office-sidebar-categories button:hover,
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-office-sidebar-categories button:focus-visible{
+  background:var(--sw-ui-surface-hover)!important;
+  border-color:var(--sw-workspace-accent)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:last-child > section,
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:last-child > .sw-office-extra-activity section{
+  background:color-mix(in srgb,var(--sw-lobby-glass) 48%,transparent)!important;
+  border-color:color-mix(in srgb,var(--sw-lobby-border) 70%,transparent)!important;
+  box-shadow:0 10px 28px #0002!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-office-workdesk{
+  min-height:calc(100dvh - 220px);
+  display:flex;flex-direction:column;
+  justify-content:flex-start;
+  padding:clamp(20px,3vw,48px)!important;
+  background:color-mix(in srgb,var(--sw-lobby-glass) 52%,transparent)!important;
+  box-shadow:0 10px 42px #0003!important;
+  border-color:color-mix(in srgb,var(--sw-lobby-border) 70%,transparent)!important;
+}
+.sw-office-home-return{
+  display:inline-flex;
+  width:max-content;
+  padding:8px 0;
+  margin-bottom:18px;
+  background:transparent;
+  color:var(--sw-ui-text);
+  font-size:12px;
+  font-weight:750;
+  opacity:.84;
+}
+.sw-office-home-return:hover{text-decoration:underline;opacity:1}
+.sw-office-quick-toggle{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  align-self:flex-start;
+  min-height:48px;
+  padding:11px 17px;
+  margin-top:21px;
+  border:1px solid var(--sw-workspace-accent);
+  border-radius:12px;
+  background:var(--sw-ui-surface-hover);
+  color:var(--sw-ui-text);
+  font-size:13px;font-weight:850;
+  box-shadow:0 5px 21px var(--sw-lobby-glow);
+}
+.sw-office-quick-items{
+  display:flex;flex-wrap:wrap;gap:10px;
+  margin-top:12px;
+  padding:10px;
+  border:1px solid var(--sw-lobby-border);
+  border-radius:14px;
+  width:max-content;
+  max-width:100%;
+  background:var(--sw-lobby-glass);
+}
+.sw-office-quick-items button{
+  display:inline-flex;gap:9px;align-items:center;
+  min-height:42px;
+  border:1px solid var(--sw-lobby-border);
+  border-radius:10px;
+  padding:8px 12px;
+  color:var(--sw-ui-text);
+  background:var(--sw-ui-surface);
+  font-size:12px;font-weight:750;
+}
+.sw-office-quick-items button:hover,.sw-office-quick-items button:focus-visible{
+  border-color:var(--sw-workspace-accent);background:var(--sw-ui-surface-hover);
+}
+.sw-office-more{
+  align-self:flex-start;
+  background:transparent!important;
+  border-color:transparent!important;
+  text-decoration:underline;
+  text-underline-offset:4px;
+}
+@media(max-width:760px){
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > main > .sw-immersive-home,
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-lobby-content{min-height:calc(100dvh - 235px)!important}
+ .sw-office-quick-items{width:100%}
+ .sw-office-quick-items button{flex:1 1 130px}
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-office-workdesk{min-height:calc(100dvh - 195px)}
+}
+@media(prefers-reduced-transparency:reduce){
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-lobby-content{
+  background:var(--sw-lobby-glass)!important;
+ }
+}
