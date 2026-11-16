@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Activity, ArrowDownRight, ArrowLeft, ArrowUpRight, Gauge, Radio, RefreshCw, ShieldAlert, Signal, TimerReset, Waves } from "lucide-react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import FuturesTradingTutorial from "../components/trading/FuturesTradingTutorial";
 
 const ALLOWED_EMAIL = "jacoblord7@outlook.com";
 const SIGNAL_URL = String(import.meta.env.VITE_FUTURES_SIGNAL_URL || "").trim();
@@ -170,6 +171,8 @@ export default function DayTradingFutures() {
 
         {!SIGNAL_URL ? <section className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/[.05] p-4"><div className="text-sm font-black text-amber-100">Live market data is the only missing piece.</div><p className="mt-1 text-xs leading-5 text-amber-100/65">The UI is intentionally disconnected from brokerage accounts. When the local market-data agent is ready, point <code className="rounded bg-black/30 px-1.5 py-0.5">VITE_FUTURES_SIGNAL_URL</code> at its read-only signal endpoint. No Render trade execution is required.</p></section> : null}
         {error ? <div className="mt-3 text-xs text-rose-300">{error}</div> : null}
+
+        <FuturesTradingTutorial />
 
         <section className="mt-4 rounded-2xl border border-white/10 bg-slate-950/55 p-4">
           <div className="text-[9px] font-black uppercase tracking-[.18em] text-violet-300">V1 rules loaded</div>
