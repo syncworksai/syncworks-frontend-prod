@@ -144,6 +144,7 @@ import SyncAssistant from "./pages/SyncAssistant";
 import SyncAssistPilot from "./pages/SyncAssistPilot";
 import SyncAssistCommunications from "./pages/SyncAssistCommunications";
 import SyncAssistGrowth from "./pages/SyncAssistGrowth";
+import SyncAssistDaily from "./pages/SyncAssistDaily";
 import SyncHistory from "./pages/SyncHistory";
 import SyncVoiceDemo from "./pages/SyncVoiceDemo";
 
@@ -192,6 +193,7 @@ export default function App() {
         <Route path="/sync/assist" element={<ProtectedRoute><SyncAssistPilot /></ProtectedRoute>} />
         <Route path="/sync/assist/communications" element={<ProtectedRoute><SyncAssistCommunications /></ProtectedRoute>} />
         <Route path="/sync/assist/growth" element={<ProtectedRoute><SyncAssistGrowth /></ProtectedRoute>} />
+        <Route path="/sync/assist/daily" element={<ProtectedRoute><SyncAssistDaily /></ProtectedRoute>} />
         <Route path="/sync/history" element={<ProtectedRoute><SyncHistory /></ProtectedRoute>} />
         <Route path="/sync/voice" element={<ProtectedRoute><SyncVoiceDemo /></ProtectedRoute>} />
         <Route path="/newsfeed" element={<ProtectedRoute><Newsfeed /></ProtectedRoute>} />
