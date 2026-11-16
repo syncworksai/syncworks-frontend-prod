@@ -1,0 +1,69 @@
+/* Shared appearance for app work pages. Explicit exclusion: poker and other Games routes. 
+   Existing page content and controls remain functional; this sets the environment and shared shell. */
+body[data-sw-office-scope="work"]{
+ --office-page-bg:#091523;--office-page-ink:#eef7ff;--office-page-accent:#36cbf8;
+ --office-page-panel:rgba(10,24,39,.84);--office-page-border:rgba(58,169,222,.28);
+ --office-page-image:none;--office-page-header:rgba(7,18,30,.87);
+ background-color:var(--office-page-bg)!important;
+}
+body[data-sw-office-scope="work"][data-sw-office-theme="classic"]{
+ --office-page-bg:#1a110c;--office-page-ink:#f7ead7;--office-page-accent:#e9ba74;
+ --office-page-panel:rgba(32,19,13,.85);--office-page-border:rgba(222,171,97,.37);
+ --office-page-image:url("/office-themes/classic-office.webp");
+ --office-page-header:rgba(27,15,10,.88);
+}
+body[data-sw-office-scope="work"][data-sw-office-theme="future"]{
+ --office-page-bg:#071027;--office-page-ink:#e7f7ff;--office-page-accent:#2dcffd;
+ --office-page-panel:rgba(4,19,40,.88);--office-page-border:rgba(53,176,246,.38);
+ --office-page-image:url("/office-themes/syncworks-future.webp");
+ --office-page-header:rgba(4,15,35,.87);
+}
+body[data-sw-office-scope="work"][data-sw-office-theme="modern"]{
+ --office-page-bg:#1b2429;--office-page-ink:#ecf2f4;--office-page-accent:#b0c9da;
+ --office-page-panel:rgba(25,34,41,.88);--office-page-border:rgba(174,199,216,.32);
+ --office-page-image:url("/office-themes/modern-dark.webp");
+ --office-page-header:rgba(18,26,33,.89);
+}
+body[data-sw-office-scope="work"][data-sw-office-theme="light"]{
+ --office-page-bg:#eee2d2;--office-page-ink:#382c22;--office-page-accent:#18777c;
+ --office-page-panel:rgba(250,241,225,.89);--office-page-border:rgba(167,134,97,.37);
+ --office-page-image:url("/office-themes/clean-light.webp");
+ --office-page-header:rgba(246,234,214,.88);
+}
+/* Supports any common DashboardShell pages; doesn't blindly recolor arbitrary
+   contents, charts, payments or custom mode components. */
+body[data-sw-office-scope="work"] [data-sw-shell="dashboard"]{
+ background-color:var(--office-page-bg)!important;
+ background-image:linear-gradient(105deg,color-mix(in srgb,var(--office-page-bg) 83%,transparent),color-mix(in srgb,var(--office-page-bg) 59%,transparent)),var(--office-page-image)!important;
+ background-size:cover!important;
+ background-attachment:fixed!important;
+}
+body[data-sw-office-scope="work"] [data-sw-shell="dashboard"]>.pointer-events-none{
+ opacity:.08!important;
+}
+body[data-sw-office-scope="work"] .sw-modebar{
+ background:var(--office-page-header)!important;
+ border-color:var(--office-page-border)!important;
+ color:var(--office-page-ink)!important;
+ backdrop-filter:blur(16px)!important;
+}
+body[data-sw-office-scope="work"] .sw-modebar>.pointer-events-none,
+body[data-sw-office-scope="work"] .sw-modebar>.absolute.inset-0{display:none!important}
+body[data-sw-office-scope="work"] .sw-modebar button[title="Open menu"]{
+ color:var(--office-page-ink)!important;background:var(--office-page-panel)!important;border-color:var(--office-page-border)!important;
+}
+body[data-sw-office-scope="work"][data-sw-office-theme="light"] .sw-modebar .text-white,
+body[data-sw-office-scope="work"][data-sw-office-theme="light"] .sw-modebar .text-slate-100,
+body[data-sw-office-scope="work"][data-sw-office-theme="light"] .sw-modebar .text-slate-200{
+ color:var(--office-page-ink)!important;
+}
+/* Reusable scoped palette hooks for future work pages without forcing redesign. */
+body[data-sw-office-scope="work"] .sw-office-shared-panel{
+ background:var(--office-page-panel);border:1px solid var(--office-page-border);color:var(--office-page-ink);backdrop-filter:blur(16px)
+}
+@media(max-width:760px){
+ body[data-sw-office-scope="work"] [data-sw-shell="dashboard"]{background-attachment:scroll!important}
+}
+@media(prefers-reduced-transparency:reduce){
+ body[data-sw-office-scope="work"] .sw-office-shared-panel{backdrop-filter:none}
+}
