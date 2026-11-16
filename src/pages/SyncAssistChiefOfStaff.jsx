@@ -2,6 +2,7 @@ import React,{useEffect,useState} from "react";
 import {useNavigate} from "react-router-dom";
 import {ArrowLeft,RefreshCw,Plus,ChevronDown,Mail,CheckCircle2,Palette} from "lucide-react";
 import api from "../api/client";
+import {JarvisAvatar,JarvisAvatarPicker,useJarvisAvatar} from "../components/sync/JarvisAvatar";
 import "./SyncAssistChiefOfStaff.css";
 import {useAuth} from "../auth/AuthContext";
 
@@ -23,6 +24,25 @@ export default function SyncAssistChiefOfStaff(){
     try {const saved=window.localStorage.getItem("sw-assist-chief-theme");return THEMES[saved]?saved:"future";}catch{return "future";}
   });
   const [themeOpen,setThemeOpen]=useState(false);
+  const {avatarId,choose:chooseAvatar}=useJarvisAvatar();
+  const [avatarTalking,setAvatarTalking]=useState(false);
+  const avatarSpeech=React.useRef(null);
+  useEffect(()=>()=>{try{if(avatarSpeech.current&&window.speechSynthesis?.speaking)window.speechSynthesis.cancel();}catch{}},[]);
+  function previewAssistant(){
+    if(avatarTalking){window.speechSynthesis?.cancel();setAvatarTalking(false);avatarSpeech.current=null;return;}
+    if(!window.speechSynthesis||typeof window.SpeechSynthesisUtterance!=="function"){setNotice("Audio preview is unavailable in this browser.");return;}
+    const utterance=new window.SpeechSynthesisUtterance("Good morning. I am your SyncWorks chief of staff. Let us review your priorities.");
+    utterance.lang="en-US";utterance.rate=.98;
+    const voices=window.speechSynthesis.getVoices()||[];
+    const feminine=avatarId.includes("female");
+    const hints=feminine?["samantha","jenny","aria","zira","female"]:["guy","daniel","alex","david","male"];
+    const selected=voices.find(v=>v.lang?.toLowerCase().startsWith("en")&&hints.some(h=>v.name.toLowerCase().includes(h)));
+    if(selected)utterance.voice=selected;
+    utterance.onstart=()=>setAvatarTalking(true);
+    utterance.onend=()=>{setAvatarTalking(false);avatarSpeech.current=null;};
+    utterance.onerror=()=>{setAvatarTalking(false);avatarSpeech.current=null;};
+    avatarSpeech.current=utterance;window.speechSynthesis.speak(utterance);
+  }
   const design=THEMES[theme]||THEMES.future;
   const isLight=theme==="daylight";
   const textColor=isLight?"text-slate-900":"text-white";
@@ -76,6 +96,15 @@ export default function SyncAssistChiefOfStaff(){
       <button type="button" onClick={()=>navigate("/sync/assist/daily")} className="flex min-h-11 items-center gap-2 rounded-xl border border-white/20 px-3 text-sm"><ArrowLeft size={17}/> Jarvis Daily</button>
       <button type="button" onClick={refresh} disabled={busy||!authorized} className="flex min-h-11 items-center gap-2 rounded-xl border border-cyan-400/30 px-3 text-sm"><RefreshCw size={16}/> Refresh</button>
     </div>
+    <section aria-label="My Jarvis animated assistant" className={`mb-4 flex flex-col items-center gap-3 rounded-3xl border p-3 shadow-xl backdrop-blur-xl sm:flex-row sm:justify-center sm:p-4 ${design.border} ${design.panel}`}>
+      <JarvisAvatar id={avatarId} state={avatarTalking?"speaking":"idle"} size="hero"/>
+      <div className="w-full max-w-md space-y-2">
+        <p className={`text-[11px] font-black uppercase tracking-widest ${isLight?"text-slate-700":design.accent}`}>Meet your chief of staff</p>
+        <JarvisAvatarPicker value={avatarId} onChange={chooseAvatar} compact/>
+        <button type="button" onClick={previewAssistant} className={`min-h-11 w-full rounded-xl border px-4 text-xs font-black ${isLight?"border-slate-400 bg-white text-slate-900":"border-cyan-400/40 bg-cyan-500/10 text-cyan-100"}`}>{avatarTalking?"Stop voice preview":"Hear your assistant speak"}</button>
+        <p className={`text-[11px] ${subText}`}>Choose from four animated assistants. The preview uses available device voices.</p>
+      </div>
+    </section>
     <section className={`rounded-3xl border p-5 shadow-2xl backdrop-blur-xl ${design.border} ${design.panel}`}>
       <p className={`text-xs font-black uppercase tracking-widest ${isLight?"text-slate-700":design.accent}`}>Jarvis · Chief of Staff</p>
       <h1 className="mt-2 text-2xl font-black">Your daily intelligence</h1>
