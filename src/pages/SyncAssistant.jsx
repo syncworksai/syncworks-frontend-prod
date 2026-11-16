@@ -24,7 +24,7 @@ import {
   X,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { getActiveBusinessId } from "../api/client";
+import api, { getActiveBusinessId } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import SyncActionStudio from "../components/sync/SyncActionStudio";
 import SyncAssistTeamDrawer from "../components/sync/SyncAssistTeamDrawer";
@@ -160,6 +160,38 @@ export default function SyncAssistant() {
   const [officeBackground, setOfficeBackground] = useState(() => {try{return localStorage.getItem("sw-jarvis-office-bg")!=="off";}catch{return true;}});
   const {avatarId,choose:chooseAvatar}=useJarvisAvatar();
   const [teamEmployees, setTeamEmployees] = useState([]);
+  const [roleProgress, setRoleProgress] = useState(null);
+  useEffect(() => {
+    if (!pilotAccess) return;
+    let active = true;
+    const refreshProgress = async () => {
+      try {
+        const response = await api.get("/sync-ai/assist/pilot/workday/", { timeout: 12000 });
+        if (!active) return;
+        const steps = (response?.data?.goals || []).flatMap((goal) => goal.steps || []);
+        const byRole = {};
+        for (const step of steps) {
+          const status = byRole[step.role] || { review: 0, complete: 0 };
+          if (step.status === "AWAITING_APPROVAL") status.review += 1;
+          if (step.status === "COMPLETED") status.complete += 1;
+          byRole[step.role] = status;
+        }
+        setRoleProgress(byRole);
+      } catch {
+        if (active) setRoleProgress(null); // unavailable is not equivalent to zero.
+      }
+    };
+    refreshProgress();
+    const timer = window.setInterval(refreshProgress, 30000);
+    const onFocus = () => refreshProgress();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [pilotAccess]);
+
   const configuredAvatars = useMemo(() => AVATARS.map((avatar) => {
     const entry = teamEmployees.find((row) => row.id === avatar.id);
     return entry ? {
@@ -917,6 +949,17 @@ export default function SyncAssistant() {
             >
               <span className={`relative block h-12 w-12 overflow-hidden rounded-full border-2 bg-[#061323] shadow-[0_5px_20px_rgba(0,0,0,.55)] transition-transform group-hover:-translate-y-1 sm:h-14 sm:w-14 ${avatarId === assistant.id ? "border-cyan-300 shadow-[0_0_21px_rgba(34,211,238,.55)]" : "border-cyan-300/45 shadow-[0_0_16px_rgba(34,211,238,.2)]"}`}>
                 <img src={assistant.photo} alt="" className="h-full w-full object-cover object-top" />
+                {pilotAccess && roleProgress && (() => {
+                  const match = teamEmployees.find((entry) => entry.id === assistant.id);
+                  const key = match?.role || assistant.role.toUpperCase().replaceAll(" ", "_");
+                  const progress = roleProgress[key];
+                  if (!progress) return null;
+                  return <>
+                    {progress.review > 0 && <span title={progress.review + " tasks awaiting your approval"} className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white ring-2 ring-[#061323]">{progress.review > 99 ? "99+" : progress.review}</span>}
+                    {progress.complete > 0 && <span title={progress.complete + " owner-confirmed completed tasks"} className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white ring-2 ring-[#061323]"><CheckCircle2 className="h-3.5 w-3.5"/></span>}
+                  </>;
+                })()}
+
               </span>
               <span className="rounded-md bg-[#020817]/85 px-1.5 py-0.5 text-center text-[10px] font-bold leading-tight text-white shadow-lg backdrop-blur-sm">{assistant.name}</span>
               <span className="max-w-full rounded-md bg-[#020817]/85 px-1 py-0.5 text-center text-[9px] leading-tight text-slate-200 shadow-lg backdrop-blur-sm">{assistant.role}</span>
