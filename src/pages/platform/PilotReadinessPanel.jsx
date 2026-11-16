@@ -110,6 +110,27 @@ export default function PilotReadinessPanel() {
     {notice?<p role="status" className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">{notice}</p>:null}
     {loading && !data?<p role="status" className="rounded-xl border border-slate-700 bg-slate-900/60 p-5 text-sm text-slate-300">Loading founder-only evidence…</p>:null}
     {data ? <>
+      <section className="rounded-2xl border border-violet-400/25 bg-slate-900/50 p-4" aria-label="God Mode Test Lab">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div><h3 className="text-base font-black text-white">God Mode Test Lab · role coverage</h3>
+            <p className="mt-1 text-xs leading-5 text-slate-300">
+              Test identities are specifications only. Use distinct synthetic staging accounts and
+              controlled email addresses; never grant God Mode to ordinary tester accounts.
+            </p>
+          </div>
+          <span className="rounded-xl border border-amber-400/30 px-3 py-2 text-xs font-bold text-amber-200">
+            {data.test_lab?.accounts_provisioned ? "Provisioning reported" : "Accounts not provisioned"}
+          </span>
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {(data.test_lab?.personas || []).map(persona => <div key={persona.id} className="rounded-xl border border-white/10 bg-black/20 p-3">
+            <p className="text-xs font-bold text-cyan-200">{persona.role}</p>
+            <p className="mt-1 text-xs text-slate-300">{persona.scenario}</p>
+            <p className="mt-1 text-[10px] text-slate-500">{persona.id.replaceAll("_", " ")}</p>
+          </div>)}
+        </div>
+        <p className="mt-3 text-xs text-amber-200">Test across real mobile and desktop sessions with captured evidence. AI may evaluate results, but only God Mode can record and approve release sign-offs.</p>
+      </section>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
           ["Passed",summary.passed,"text-emerald-200"],
