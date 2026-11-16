@@ -1,43 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { Sparkles } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
-
-import { getJarvisProduct } from "../../api/jarvisProduct";
+import React from "react";
+import { useLocation } from "react-router-dom";
 import LegacySyncAssistantLauncher from "./SyncAssistantLauncher.jsx";
 
+// The Customer home already has the single central SYNC action in
+// RoleAwareMobileNav. The old product promotion here duplicated that action,
+// covered content, and overlapped the mobile nav and AI employee dock.
+// Keep the legacy launcher unchanged for every other route.
 export default function SyncAssistantLauncherRouter() {
   const location = useLocation();
-  const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
-
-  useEffect(() => {
-    if (location.pathname !== "/customer") return;
-    getJarvisProduct().then(setProfile).catch(() => setProfile(null));
-  }, [location.pathname]);
-
-  if (location.pathname !== "/customer") {
-    return React.createElement(LegacySyncAssistantLauncher);
-  }
-
-  return React.createElement(
-    "button",
-    {
-      type: "button",
-      onClick: () => navigate("/upgrade?product=assistant&return=/customer"),
-      className: "fixed bottom-24 right-4 z-[85] flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-2xl border border-cyan-300/40 bg-slate-950/95 px-4 py-3 text-left shadow-[0_0_38px_rgba(34,211,238,.24)] backdrop-blur-xl lg:bottom-6 lg:right-6",
-      "aria-label": "Set up SYNC Assistant",
-    },
-    React.createElement(
-      "span",
-      { className: "grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-600 text-white" },
-      React.createElement(Sparkles, { className: "h-5 w-5" })
-    ),
-    React.createElement(
-      "span",
-      null,
-      React.createElement("span", { className: "block text-[10px] font-black uppercase tracking-[.18em] text-cyan-200" }, "SYNC Assistant"),
-      React.createElement("span", { className: "block text-sm font-black text-white" }, profile?.onboarding_complete ? "Manage SYNC Assistant" : "Set up SYNC Assistant"),
-      React.createElement("span", { className: "block text-[11px] text-slate-400" }, profile ? `${profile.setup_score || 0}% ready · connect your life` : "Calendar, Health, Money, work and home")
-    )
-  );
+  if (location.pathname.replace(/\/+$/, "") === "/customer") return null;
+  return <LegacySyncAssistantLauncher />;
 }
