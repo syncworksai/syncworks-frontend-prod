@@ -29,18 +29,21 @@ const ITEM_LIBRARY = {
   sports: { label: "Sports", icon: Trophy, routes: { CUSTOMER: "/connect/sports" } },
   map: { label: "Map", icon: MapPinned, routes: { CUSTOMER: "/calendar", SBO: "/calendar", EMPLOYEE: "/calendar", PM: "/pm/calendar" } },
   tools: { label: "Tools", icon: Wrench, routes: { CUSTOMER: "/settings", SBO: "/sbo/settings", EMPLOYEE: "/employee/settings", PM: "/pm/settings" } },
+  workspace: { label: "Office", icon: LayoutGrid, routes: { CUSTOMER: "/customer?workspace=apps" } },
+  new_request: { label: "Request", icon: Wrench, routes: { CUSTOMER: "/customer/new-request" } },
+  health: { label: "Health", icon: Home, routes: { CUSTOMER: "/customer/health" } },
   more: { label: "More", icon: Settings, routes: { CUSTOMER: "/settings", SBO: "/sbo/settings", EMPLOYEE: "/employee/settings", PM: "/pm/settings" } },
 };
 
 const DEFAULTS = {
-  CUSTOMER: ["home", "requests", "schedule", "more"],
+  CUSTOMER: ["home", "workspace", "new_request", "more"],
   SBO: ["home", "requests", "inbox", "more"],
   EMPLOYEE: ["home", "schedule", "inbox", "requests"],
   PM: ["home", "schedule", "inbox", "more"],
 };
 
 const ALLOWED = {
-  CUSTOMER: ["home", "requests", "schedule", "inbox", "marketplace", "sports", "map", "tools", "more"],
+  CUSTOMER: ["home", "workspace", "new_request", "health", "requests", "schedule", "inbox", "marketplace", "sports", "map", "tools", "more"],
   SBO: ["home", "requests", "schedule", "inbox", "customers", "marketplace", "map", "tools", "more"],
   EMPLOYEE: ["home", "requests", "schedule", "inbox", "customers", "map", "tools", "more"],
   PM: ["home", "requests", "schedule", "inbox", "customers", "map", "tools", "more"],
@@ -48,7 +51,7 @@ const ALLOWED = {
 
 function storageKey(mode, user) {
   const identity = user?.id || user?.pk || user?.email || "anon";
-  return `${STORAGE_PREFIX}:${identity}:${mode}`;
+  return `${mode === "CUSTOMER" ? "sw_mobile_nav_v2" : STORAGE_PREFIX}:${identity}:${mode}`;
 }
 
 function readPreference(mode, user) {
@@ -77,6 +80,7 @@ function routeFor(itemId, mode) {
 }
 
 function routeMatches(pathname, target) {
+  if (String(target || "").includes("?workspace=")) return false;
   const cleanTarget = String(target || "").split("?")[0];
   if (["/customer", "/sbo", "/employee", "/pm"].includes(cleanTarget)) return pathname === cleanTarget;
   return pathname.startsWith(cleanTarget);

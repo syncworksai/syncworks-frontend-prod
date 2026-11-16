@@ -14,13 +14,13 @@ export const OFFICE_CATEGORIES = [
   {id:"daily",name:"Daily",description:"Your agenda, tasks, messages and requests",items:[["Calendar","/calendar",CalendarDays],["Tasks","/customer/tasks",ListTodo],["Inbox","/customer/inbox",Inbox],["New service request","/customer/new-request",LayoutGrid]]},
   {id:"personal",name:"Personal",description:"Money, wellbeing and your connections",items:[["Finance","/customer/finance",Wallet],["Health","/customer/health",Heart],["Connections","/settings?tab=CONNECTIONS",Settings]]},
   {id:"business",name:"Business",description:"Work, properties and service operations",items:[["Business","/sbo",BriefcaseBusiness],["Property","/pm",Building2],["Services","/customer/marketplace",LayoutGrid]]},
-  {id:"apps",name:"Apps",description:"Games, local discovery, weather and tools",items:[["Games","/customer/games",Spade],["Social","/connect",Users],["Shop Assist","/customer/store",ShoppingBag],["Weather","/customer/weather",CloudSun],["Traffic","/customer/traffic",MapPinned],["Local","/customer/discover",MapPinned],["Trading","/customer/day-trading-futures",TrendingUp]]},
+  {id:"apps",name:"Apps",description:"Games, local discovery, weather and tools",items:[["Games","/customer/games",Spade],["Social","/connect",Users],["Shop Assist","/customer/store",ShoppingBag],["Weather","/customer/weather",CloudSun],["Traffic","/customer/traffic",MapPinned],["Local","/customer/discover",MapPinned],["Day Trade","/customer/day-trading-futures",TrendingUp]]},
 ];
 const APPS = [
   ["Calendar", "/calendar", CalendarDays], ["Tasks", "/customer/tasks", ListTodo],
   ["Inbox", "/customer/inbox", Inbox], ["Business", "/sbo", BriefcaseBusiness],
   ["Property", "/pm", Building2], ["Finance", "/customer/finance", Wallet],
-  ["Health", "/customer/health", Heart], ["Trading", "/customer/day-trading-futures", TrendingUp],
+  ["Health", "/customer/health", Heart], ["Day Trade", "/customer/day-trading-futures", TrendingUp],
   ["Games", "/customer/games", Spade], ["Shop Assist", "/customer/store", ShoppingBag],
   ["Social", "/connect", Users], ["Weather", "/customer/weather", CloudSun],
   ["Traffic", "/customer/traffic", MapPinned], ["Settings", "/customer/settings", Settings],
@@ -79,9 +79,18 @@ export default function CustomerWorkspace({ settings, update, phoneMode = false,
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [panel]);
+  useEffect(() => {
+    if (!phoneMode) return;
+    const query = new URLSearchParams(window.location.search);
+    if (query.get("workspace") === "apps") {
+      setClosing(false);
+      setPanel("apps");
+      window.history.replaceState(window.history.state, "", window.location.pathname);
+    }
+  }, [phoneMode]);
   const activeCategory = OFFICE_CATEGORIES.find((category) => category.id === panel);
   const apps = [
-    ...(activeCategory ? activeCategory.items : APPS).filter(([name]) => dayTradingEnabled || name !== "Trading"),
+    ...(activeCategory ? activeCategory.items : APPS).filter(([name]) => dayTradingEnabled || name !== "Day Trade"),
     ...(dayTradingEnabled && (panel === "business" || panel === "apps") ? [["Freelance Work", "/customer/freelance/overview", BriefcaseBusiness]] : []),
     ...(forgeEnabled && (panel === "apps" || panel === "personal") ? [["The Forge", "/customer/forge", Flame]] : []),
   ];
@@ -90,7 +99,7 @@ export default function CustomerWorkspace({ settings, update, phoneMode = false,
   return <>
     <div className={`sw-workspace-switcher ${phoneMode ? "sw-workspace-switcher-mobile" : ""}`} role="group" aria-label="Workspace controls">
       <button type="button" onClick={() => {setClosing(false);setPanel("apps");}}><LayoutGrid size={16}/> <span>Workspaces</span></button>
-      <button type="button" onClick={() => {setClosing(false);setPanel("appearance");}}><Palette size={16}/> <span>Appearance</span></button>
+      <button type="button" className={phoneMode ? "sw-workspace-settings-gear" : ""} aria-label={phoneMode ? "Page settings and appearance" : undefined} title={phoneMode ? "Page settings and appearance" : undefined} onClick={() => {setClosing(false);setPanel("appearance");}}>{phoneMode ? <Settings size={20}/> : <Palette size={16}/>} <span>{phoneMode ? "Settings" : "Appearance"}</span></button>
       <span className="sw-workspace-current">{settings.theme === "legacy" ? "Original" : settings.theme === "classic" ? "Classic Office" : settings.theme === "future" ? "SyncWorks Future" : settings.theme === "modern" ? "Modern Dark" : "Clean Light"}</span>
     </div>
     {panel && createPortal(<div className={`sw-workspace-overlay sw-workspace-overlay-themed ${closing ? "sw-workspace-overlay-closing" : ""}`} data-office-drawer-theme={settings.theme} data-office-drawer-motion={settings.motion} onMouseDown={close}>
