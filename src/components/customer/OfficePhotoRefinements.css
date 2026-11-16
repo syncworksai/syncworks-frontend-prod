@@ -1,4 +1,4 @@
-/* V13: photographic composition pass.
+/* V14: photographic visibility correction after screenshot testing.
    Preserve the sourced images and unobstructed UI; only adjust premium Customer home.
    A dark scrim lets the photographic office show as atmosphere, rather than making
    the large logo in the photograph look like an interactive element behind buttons. */
@@ -11,28 +11,28 @@
  .sw-customer-three-rail .sw-immersive-office-art {
   background-size:cover !important;
   background-position:52% 40% !important;
-  filter:brightness(.76) saturate(.87) !important;
+  filter:brightness(1.12) saturate(1.04) !important;
 }
 .sw-workspace-root[data-workspace-theme="classic"]
  .sw-customer-three-rail .sw-immersive-office-art{
-  filter:brightness(.72) sepia(.17) saturate(.74) !important;
+  filter:brightness(1.12) sepia(.08) saturate(.94) !important;
 }
 .sw-workspace-root:is([data-workspace-theme="classic"],[data-workspace-theme="future"])
  .sw-customer-three-rail .sw-immersive-content{
   /* Center scrim is intentionally strongest across headings, quick actions and cards. */
   background:linear-gradient(90deg,
-    rgba(5,6,10,.90) 0%,
-    rgba(5,6,10,.83) 37%,
-    rgba(5,6,10,.79) 68%,
-    rgba(5,6,10,.58) 100%) !important;
+    rgba(5,6,10,.73) 0%,
+    rgba(5,6,10,.54) 37%,
+    rgba(5,6,10,.36) 68%,
+    rgba(5,6,10,.20) 100%) !important;
 }
 .sw-workspace-root[data-workspace-theme="classic"]
  .sw-customer-three-rail .sw-immersive-content{
   background:linear-gradient(90deg,
-    rgba(17,10,8,.92) 0%,
-    rgba(19,11,9,.85) 39%,
-    rgba(21,12,10,.78) 68%,
-    rgba(17,10,8,.56) 100%) !important;
+    rgba(17,10,8,.74) 0%,
+    rgba(19,11,9,.53) 39%,
+    rgba(21,12,10,.34) 68%,
+    rgba(17,10,8,.18) 100%) !important;
 }
 .sw-workspace-root:is([data-workspace-theme="classic"],[data-workspace-theme="future"],[data-workspace-theme="modern"])
  .sw-customer-three-rail .sw-immersive-destination,
@@ -48,7 +48,7 @@
 @media(max-width:760px){
  .sw-workspace-root:is([data-workspace-theme="classic"],[data-workspace-theme="future"])
   .sw-customer-three-rail .sw-immersive-content{
-   background:rgba(8,10,18,.86)!important;
+   background:linear-gradient(90deg,rgba(8,10,18,.79),rgba(8,10,18,.56))!important;
  }
  .sw-workspace-root:is([data-workspace-theme="classic"],[data-workspace-theme="future"])
   .sw-customer-three-rail .sw-immersive-office-art{
@@ -60,4 +60,13 @@
   .sw-customer-three-rail .sw-immersive-content{
    background:rgba(8,10,17,.94)!important;
  }
+}
+/* Preserve a readable foreground on top of the brighter photo. */
+.sw-workspace-root:is([data-workspace-theme="classic"],[data-workspace-theme="future"])
+ .sw-customer-three-rail .sw-immersive-content {
+  text-shadow:0 1px 12px rgba(0,0,0,.55);
+}
+.sw-workspace-root:is([data-workspace-theme="classic"],[data-workspace-theme="future"])
+ .sw-customer-three-rail .sw-immersive-welcome p {
+  color:#f2f3f6;
 }
