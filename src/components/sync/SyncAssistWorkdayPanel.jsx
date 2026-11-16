@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import api from "../../api/client";
+import SyncAssistWorkHistory from "./SyncAssistWorkHistory";
 
 const BASE = "/sync-ai/assist/pilot/workday/";
 const ROLES = [
@@ -64,6 +65,18 @@ export default function SyncAssistWorkdayPanel() {
       .catch(() => { /* Workday remains available if team preferences cannot load. */ });
     return () => { active = false; };
   }, []);
+
+  function reuseHistoricalGoal(record) {
+    // Reuse is a new task draft. It cannot overwrite completed work or undo
+    // external actions; the original audit event remains intact.
+    setGoal(String(record.goal || "").slice(0, 500));
+    setDraftSteps((Array.isArray(record.steps) ? record.steps : [])
+      .filter((step) => ROLES.some(([id]) => id === step.role) && typeof step.task === "string")
+      .slice(0, 8).map((step) => ({ role: step.role, task: step.task.slice(0, 500) })));
+    setPublicMode(false);
+    setPublicQuery("");
+    setError("");
+  }
 
   function addStep() {
     if (!task.trim() || draftSteps.length >= 8) return;
@@ -173,7 +186,10 @@ export default function SyncAssistWorkdayPanel() {
             Run restricted research and drafting tasks, review real receipts, and optionally enroll internal work in the durable background queue.
           </p>
         </div>
-        <button type="button" disabled={busy} onClick={refresh} className="min-h-10 rounded-xl border border-cyan-400/30 px-3 text-xs font-bold text-cyan-100">Refresh</button>
+        <div className="flex flex-wrap gap-2">
+          <SyncAssistWorkHistory goals={data?.goals || []} onReuse={reuseHistoricalGoal}/>
+          <button type="button" disabled={busy} onClick={refresh} className="min-h-10 rounded-xl border border-cyan-400/30 px-3 text-xs font-bold text-cyan-100">Refresh</button>
+        </div>
       </div>
       {data && <div className="mt-3 flex flex-wrap gap-2 text-xs">
         {Object.entries(data.counts || {}).filter(([, count]) => count > 0).map(([name, count]) => (
@@ -228,6 +244,18 @@ export default function SyncAssistWorkdayPanel() {
             <div className="flex flex-wrap items-start justify-between gap-2">
               <h3 className="max-w-xl break-words text-sm font-black">{item.goal}</h3>
               <span className="rounded-lg border border-cyan-400/25 px-2 py-1 text-[10px] font-bold text-cyan-200">{item.status.replaceAll("_", " ")}</span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" disabled={busy || item.status === "COMPLETED"}
+                onClick={() => runInternalStep(item.id)}
+                className="min-h-10 rounded-lg border border-cyan-400/35 px-3 text-xs font-bold text-cyan-100 disabled:opacity-40">Run one internal step</button>
+              <button type="button" disabled={busy || item.status === "COMPLETED"}
+                onClick={() => queueGoal(item.id)}
+                className="min-h-10 rounded-lg border border-amber-400/30 px-3 text-xs font-bold text-amber-200 disabled:opacity-40">Authorize internal queue</button>
+              {jobs.some((job) => String(job.goal_id) === String(item.id) && ["QUEUED", "RUNNING", "WAITING", "RETRY"].includes(job.state)) &&
+                <button type="button" disabled={busy} onClick={() => cancelGoal(item.id)} className="min-h-10 rounded-lg border border-rose-400/30 px-3 text-xs font-bold text-rose-200 disabled:opacity-40">Cancel job</button>}
+              {jobs.filter((job) => String(job.goal_id) === String(item.id)).map((job) =>
+                <span key={job.id} className="self-center text-[11px] text-slate-300">Queue: {job.state.replaceAll("_", " ")}</span>)}
             </div>
             <div className="mt-3 space-y-3">
               {item.steps.map((step) => {
