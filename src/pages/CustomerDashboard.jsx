@@ -43,6 +43,7 @@ import AroundYouPanel from "../components/customer/AroundYouPanel";
 import CalendarDailySnapshot from "../components/calendar/CalendarDailySnapshot";
 import DashboardShell from "../components/dashboard/DashboardShell";
 import ImmersiveWorkspaceHome from "../components/customer/ImmersiveWorkspaceHome";
+import MobileCustomerCommandCenter from "../components/customer/MobileCustomerCommandCenter";
 import "../components/customer/ImmersiveSceneV19.css";
 import "../components/customer/OfficeFlowV20.css";
 import "../components/customer/OfficeTwoScreenV22.css";
@@ -231,6 +232,7 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
   return (
     <DashboardShell title="Dashboard" modeBarTitle="Dashboard" maxWidth="max-w-none" className="sw-personal-panels sw-customer-v3 px-4 sm:px-6 lg:px-6 xl:px-8">
       
+      <MobileCustomerCommandCenter name={firstName(user)} brief={brief} attentionCount={attentionCount} todayEvents={todayEvents.length} openTickets={openTickets.length} weatherValue={weatherValue} workout={workout} minimums={money(minimums)} businessConnected={businessConnected} pmConnected={pmConnected} tenantConnected={tenantConnected} theme={workspaceTheme} onNavigate={nav} onOpenWorkspace={(area) => window.dispatchEvent(new CustomEvent("sw:workspace-open", { detail: area }))} />
       <div className="sw-customer-three-rail grid w-full grid-cols-1 items-start gap-5 pb-10 lg:grid-cols-[210px_minmax(0,1fr)] 2xl:grid-cols-[230px_minmax(0,1fr)_310px]">
         <aside className="hidden lg:block sticky top-4 rounded-[1.6rem] border border-sky-400/15 bg-[#090F1C]/90 p-3 shadow-[0_20px_60px_rgba(0,0,0,.25)] backdrop-blur-xl">
           <div className="px-3 pb-2 text-[9px] font-black uppercase tracking-[.18em] text-cyan-300/70">Personal workspace</div>
