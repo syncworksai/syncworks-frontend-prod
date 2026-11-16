@@ -70,6 +70,7 @@ export default function CustomerWorkspace({ settings, update, phoneMode = false,
   return <>
     <div className={`sw-workspace-switcher ${phoneMode ? "sw-workspace-switcher-mobile" : ""}`} role="group" aria-label="Workspace controls">
       <button type="button" onClick={() => setPanel("apps")}><LayoutGrid size={16}/> <span>Workspaces</span></button>
+      {dayTradingEnabled && <button type="button" onClick={() => go("/customer/day-trading-futures")} aria-label="Open futures trading cockpit"><TrendingUp size={16}/> <span>Day Trading</span></button>}
       <button type="button" onClick={() => setPanel("appearance")}><Palette size={16}/> <span>Appearance</span></button>
       <span className="sw-workspace-current">{settings.theme === "legacy" ? "Original" : settings.theme === "classic" ? "Classic Office" : settings.theme === "future" ? "SyncWorks Future" : settings.theme === "modern" ? "Modern Dark" : "Clean Light"}</span>
     </div>
