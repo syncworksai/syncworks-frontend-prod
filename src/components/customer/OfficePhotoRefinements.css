@@ -70,3 +70,45 @@
  .sw-customer-three-rail .sw-immersive-welcome p {
   color:#f2f3f6;
 }
+
+/* V15 photo-composition fix: avoid stacking separate dark overlays on the photograph.
+   Shift photographic framing to the room's right-hand furnishings so the oversized
+   embedded wall logo is mostly outside the visible crop. Keep the content scrim local. */
+@media (min-width:1024px) {
+ .sw-workspace-root[data-workspace-theme="classic"] .sw-customer-three-rail .sw-immersive-office-art {
+   background-image:var(--sw-office-modern-photo) !important;
+   background-size:185% auto !important;
+   background-position:100% 44% !important;
+   background-repeat:no-repeat !important;
+   filter:brightness(.96) sepia(.10) saturate(.94) !important;
+ }
+ .sw-workspace-root[data-workspace-theme="future"] .sw-customer-three-rail .sw-immersive-office-art {
+   background-image:var(--sw-office-neon-photo) !important;
+   background-size:185% auto !important;
+   background-position:100% 44% !important;
+   background-repeat:no-repeat !important;
+   filter:brightness(.96) saturate(1.1) !important;
+ }
+ .sw-workspace-root:is([data-workspace-theme="classic"],[data-workspace-theme="future"]) .sw-customer-three-rail .sw-immersive-office-art::before {
+   background:linear-gradient(to bottom,rgba(0,0,0,.02),rgba(0,0,0,.08) 78%,rgba(0,0,0,.22)) !important;
+ }
+ .sw-workspace-root[data-workspace-theme="classic"] .sw-customer-three-rail .sw-immersive-content {
+   background:linear-gradient(90deg,rgba(18,10,7,.83) 0%,rgba(18,10,7,.75) 37%,rgba(18,10,7,.55) 66%,rgba(18,10,7,.28) 100%) !important;
+ }
+ .sw-workspace-root[data-workspace-theme="future"] .sw-customer-three-rail .sw-immersive-content {
+   background:linear-gradient(90deg,rgba(3,8,22,.85) 0%,rgba(3,8,22,.76) 37%,rgba(3,8,22,.55) 66%,rgba(3,8,22,.30) 100%) !important;
+ }
+}
+/* Fallback at smaller widths: maintain room lighting and readable quick actions. */
+@media(min-width:761px) and (max-width:1023px) {
+ .sw-workspace-root[data-workspace-theme="classic"] .sw-customer-three-rail .sw-immersive-office-art {
+   background-image:var(--sw-office-modern-photo) !important;
+   background-size:cover !important;
+   filter:brightness(.91) sepia(.08) !important;
+ }
+ .sw-workspace-root[data-workspace-theme="future"] .sw-customer-three-rail .sw-immersive-office-art {
+   background-image:var(--sw-office-neon-photo) !important;
+   background-size:cover !important;
+   filter:brightness(.92) !important;
+ }
+}
