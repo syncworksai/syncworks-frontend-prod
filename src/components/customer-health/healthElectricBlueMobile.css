@@ -302,3 +302,35 @@
   .sw-health-mini-card { padding:.62rem; }
   .sw-health-mini-card .sw-health-ring { width:58px; }
 }
+
+
+/* Workout-first entry point: keeps the SyncWorks electric-blue visual language. */
+.sw-health-studio-entry {
+  position: relative; overflow: hidden; margin: .75rem 0 1rem; padding: 1rem;
+  border: 1px solid rgba(61,181,255,.45); border-radius: 1.4rem;
+  color: #eaf6ff; background: linear-gradient(125deg,rgba(3,16,36,.94),rgba(13,25,57,.8) 65%,rgba(69,29,131,.32));
+  box-shadow: inset 0 1px 0 rgba(195,225,255,.11), 0 10px 36px rgba(0,0,0,.3), 0 0 28px rgba(37,130,255,.1);
+}
+.sw-health-studio-entry__top,.sw-health-studio-entry__top>span,.sw-health-studio-entry__actions{display:flex;align-items:center;gap:.55rem}
+.sw-health-studio-entry__top{justify-content:space-between;font-size:.66rem;font-weight:800;letter-spacing:.14em;color:#7ccaff}
+.sw-health-studio-entry__status{font-size:.6rem;color:#9ee9ce}
+.sw-health-studio-entry__status span{width:7px;height:7px;background:#4decc3;border-radius:50%;box-shadow:0 0 10px #4decc3}
+.sw-health-studio-entry__body{display:flex;align-items:center;justify-content:space-between;gap:1rem;min-height:100px}
+.sw-health-studio-entry__body>div{position:relative;z-index:1;flex:1;min-width:0}
+.sw-health-studio-entry__eyebrow{font-size:.65rem;letter-spacing:.14em;color:#aabddd;margin:.65rem 0 .2rem}
+.sw-health-studio-entry__body h2{font-size:clamp(1.35rem,4.5vw,2rem);line-height:1.12;font-weight:850;margin:0;overflow-wrap:anywhere}
+.sw-health-studio-entry__meta{color:#b3c7e5;font-size:.77rem;margin-top:.55rem}
+.sw-health-studio-entry__body img{width:35%;max-width:180px;aspect-ratio:1.3;object-fit:cover;object-position:center;border-radius:.8rem;mask-image:linear-gradient(to right, transparent,black 18%)}
+.sw-health-studio-entry__actions{gap:.55rem;margin-top:.5rem}
+.sw-health-studio-entry__actions button{min-height:49px;border-radius:.85rem;font-size:.82rem;font-weight:800;display:flex;align-items:center;justify-content:center;gap:.4rem;transition:transform .16s ease,filter .16s ease}
+.sw-health-studio-entry__actions button:active{transform:scale(.98)}
+.sw-health-studio-entry__start{flex:1.5;color:#021327;background:linear-gradient(120deg,#40c3ff,#6ba5ff);box-shadow:0 0 18px rgba(50,163,255,.28)}
+.sw-health-studio-entry__coach{flex:1;color:#cdeaff;border:1px solid rgba(95,179,255,.38);background:rgba(31,63,111,.28)}
+.sw-health-studio-entry__note{font-size:.65rem;color:#8caed4;margin:.75rem 0 0}
+@media(max-width:390px){
+ .sw-health-studio-entry{padding:.8rem}
+ .sw-health-studio-entry__body img{width:28%}
+ .sw-health-studio-entry__actions{flex-direction:column;align-items:stretch}
+ .sw-health-studio-entry__actions button{width:100%}
+}
+@media(prefers-reduced-motion:reduce){.sw-health-studio-entry__actions button{transition:none}}
