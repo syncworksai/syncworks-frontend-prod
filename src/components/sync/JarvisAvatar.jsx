@@ -31,8 +31,10 @@ export function useJarvisAvatar(){
   return {avatarId,choose};
 }
 
-export function JarvisAvatar({id="executive-female",state="idle",size="hero",label=true}){
+export function JarvisAvatar({id="executive-female",state="idle",size="hero",label=true,displayName,displayRole}){
   const config=AVATARS.find(v=>v.id===id)||AVATARS[0];
+  const assistantName=displayName||config.name;
+  const assistantRole=displayRole||config.role;
   const [photoReady,setPhotoReady]=useState(false);
   useEffect(()=>setPhotoReady(false),[id]);
   const female=config.presentation==="Female",future=config.style==="Futuristic";
@@ -40,9 +42,9 @@ export function JarvisAvatar({id="executive-female",state="idle",size="hero",lab
   const gradId="avatar-outfit-"+id;
   return <div className={`jarvis-avatar jarvis-avatar--${stage} jarvis-avatar--${size} ${photoReady?"jarvis-avatar--photographic":""}`} style={{"--avatar-accent":config.accent,"--mouth-x":config.mouthX,"--mouth-y":config.mouthY}}>
     <div className="jarvis-avatar__halo" aria-hidden="true"/>
-    <img key={config.photo} className="jarvis-avatar__photo" src={config.photo} alt={`${config.name} - ${config.role}, virtual assistant`} loading="eager" decoding="async" onLoad={()=>setPhotoReady(true)} onError={()=>setPhotoReady(false)} />
+    <img key={config.photo} className="jarvis-avatar__photo" src={config.photo} alt={`${assistantName} - ${assistantRole}, virtual assistant`} loading="eager" decoding="async" onLoad={()=>setPhotoReady(true)} onError={()=>setPhotoReady(false)} />
     {photoReady&&<img key={config.photo+"-mouth"} className="jarvis-avatar__photo-mouth" src={config.photo} alt="" aria-hidden="true" draggable="false" />}
-    {!photoReady&&<svg className="jarvis-avatar__portrait" viewBox="0 0 260 300" role="img" aria-label={`${config.name} - ${config.role}, virtual assistant, ${stage}`}>
+    {!photoReady&&<svg className="jarvis-avatar__portrait" viewBox="0 0 260 300" role="img" aria-label={`${assistantName} - ${assistantRole}, virtual assistant, ${stage}`}>
       <defs>
         <linearGradient id={gradId} x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor={config.outfit}/><stop offset="1" stopColor="#070d1e"/></linearGradient>
         <radialGradient id={"avatar-skin-"+id} cx="40%" cy="25%" r="85%"><stop offset="0" stopColor={config.skin}/><stop offset="1" stopColor={config.shade}/></radialGradient>
@@ -75,7 +77,7 @@ export function JarvisAvatar({id="executive-female",state="idle",size="hero",lab
       </g>
     </svg>}
     <div className="jarvis-avatar__wave" aria-hidden="true"><i/><i/><i/><i/><i/></div>
-    {label&&<div className="jarvis-avatar__caption"><strong>{config.name} · {config.role}</strong><span>{stage==="idle"?"Ready":stage==="thinking"?"Thinking":stage==="speaking"?"Speaking":"Listening"}</span></div>}
+    {label&&<div className="jarvis-avatar__caption"><strong>{assistantName} · {assistantRole}</strong><span>{stage==="idle"?"Ready":stage==="thinking"?"Thinking":stage==="speaking"?"Speaking":"Listening"}</span></div>}
   </div>;
 }
 

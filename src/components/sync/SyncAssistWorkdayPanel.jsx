@@ -20,6 +20,7 @@ export default function SyncAssistWorkdayPanel() {
   const [data, setData] = useState(null);
   const [jobs, setJobs] = useState([]);
   const [workerStatus, setWorkerStatus] = useState(null);
+  const [teamEmployees, setTeamEmployees] = useState([]);
   const [goal, setGoal] = useState("");
   const [role, setRole] = useState("RESEARCH_ANALYST");
   const [task, setTask] = useState("");
@@ -49,6 +50,20 @@ export default function SyncAssistWorkdayPanel() {
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    let active = true;
+    api.get("/sync-ai/assist/pilot/team/", { timeout: 15000 })
+      .then(({ data }) => {
+        if (!active) return;
+        const configured = Array.isArray(data?.employees) ? data.employees : [];
+        setTeamEmployees(configured);
+        if (configured.length) {
+          setRole((current) => configured.some((entry) => entry.role === current) ? current : configured[0].role);
+        }
+      })
+      .catch(() => { /* Workday remains available if team preferences cannot load. */ });
+    return () => { active = false; };
+  }, []);
 
   function addStep() {
     if (!task.trim() || draftSteps.length >= 8) return;
@@ -179,7 +194,9 @@ export default function SyncAssistWorkdayPanel() {
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="block text-xs font-bold text-slate-200">Assigned employee
             <select value={role} onChange={(event) => setRole(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-600 bg-slate-950 p-2 text-sm text-white">
-              {ROLES.map(([id, name]) => <option value={id} key={id}>{name}</option>)}
+              {(teamEmployees.length
+                ? teamEmployees.map((employee) => [employee.role, employee.name + " — " + (ROLES.find(([id]) => id === employee.role)?.[1] || employee.role)])
+                : ROLES).map(([id, name]) => <option value={id} key={id}>{name}</option>)}
             </select>
           </label>
           <label className="block text-xs font-bold text-slate-200">Assignment
