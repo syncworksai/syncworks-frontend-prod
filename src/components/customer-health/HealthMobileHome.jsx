@@ -297,6 +297,30 @@ export default function HealthMobileHome({
         </div>
       </section>
 
+      <section className="sw-health-studio-entry" aria-label="Today's workout studio">
+        <div className="sw-health-studio-entry__top">
+          <span><Dumbbell size={16} /> LIVE WORKOUT STUDIO</span>
+          <span className="sw-health-studio-entry__status"><span /> READY</span>
+        </div>
+        <div className="sw-health-studio-entry__body">
+          <div>
+            <p className="sw-health-studio-entry__eyebrow">YOUR NEXT SESSION</p>
+            <h2>{workoutName}</h2>
+            <p className="sw-health-studio-entry__meta">{workoutExercises || "Custom"} exercises · {workoutSets || "Custom"} sets · ~{workoutMinutes} min</p>
+          </div>
+          <img src="/health/exercises/bench-press/bench-press-hero.png" alt="" aria-hidden="true" loading="lazy" />
+        </div>
+        <div className="sw-health-studio-entry__actions">
+          <button type="button" className="sw-health-studio-entry__start" onClick={() => nextWorkout ? onStartWorkout?.(nextWorkout) : onOpen?.("plan-today")}>
+            <Dumbbell size={20} /> {nextWorkout ? "Start workout" : "Build today's workout"} <ChevronRight size={18} />
+          </button>
+          <button type="button" className="sw-health-studio-entry__coach" onClick={() => onOpen?.("coach-chat")}>
+            <BrainCircuit size={18} /> Ask AI Coach
+          </button>
+        </div>
+        <p className="sw-health-studio-entry__note">Guided exercises · Set tracking · Recovery-aware coaching</p>
+      </section>
+
       <section className="sw-health-panel sw-health-core-flow">
         <div className="sw-health-section-head">
           <span>Your health plan</span>
