@@ -415,7 +415,7 @@ export default function SyncAssistant() {
   }, [mobilePanel]);
 
   return (
-    <div className="min-h-dvh bg-[#020617] text-slate-100">
+    <div className="min-h-dvh bg-[#020617] text-slate-100 lg:h-dvh lg:overflow-hidden">
       <div aria-hidden="true" className="pointer-events-none fixed inset-0" style={{backgroundImage: officeBackground ? 'linear-gradient(90deg,rgba(2,6,23,.94),rgba(2,6,23,.79) 50%,rgba(2,6,23,.89)),url("/assist-themes/executive-office.svg")' : 'radial-gradient(circle at 30% 10%,rgba(34,211,238,.12),transparent 40%),radial-gradient(circle at 80% 80%,rgba(139,92,246,.12),transparent 40%)',backgroundSize:"cover",backgroundPosition:"center",backgroundAttachment:"fixed"}} />
 
       <header className="hidden lg:block border-b border-slate-800/90 bg-slate-950/88 px-4 py-3 backdrop-blur-xl">
@@ -466,23 +466,25 @@ export default function SyncAssistant() {
         </div>
       </header>
 
-      <main className="relative mx-auto max-w-6xl space-y-3 px-4 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-3 lg:space-y-4 lg:pb-24 lg:pt-5">
+      <main className="relative mx-auto max-w-6xl space-y-3 px-4 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-3 lg:h-[calc(100dvh-4.5rem)] lg:space-y-2 lg:overflow-hidden lg:pb-4 lg:pt-2">
         <div className="flex items-center justify-between gap-2 lg:hidden">
           <div><p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">SYNC ASSIST</p><h1 className="text-lg font-black">Your command center</h1></div>
           <button type="button" onClick={() => setMobilePanel("settings")} aria-label="SYNC settings" className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-500/10"><Settings2 className="h-5 w-5"/></button>
         </div>
-        {pilotAccess ? <div className="flex justify-end"><button type="button" onClick={() => navigate("/sync/assist")} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-400/30 bg-slate-950/70 px-3 py-2 text-xs font-bold text-cyan-100">Business Control Center <ChevronRight className="h-4 w-4"/></button></div> : null}
-        {pilotAccess && <div className="flex justify-end"><SyncAssistTeamDrawer onTeamChange={setTeamEmployees}/></div>}
-        <section className="overflow-hidden rounded-2xl border border-cyan-400/25 bg-[#031222]/85 p-4 shadow-[0_0_60px_rgba(34,211,238,0.08)] backdrop-blur-xl lg:rounded-[2rem] lg:p-7">
+        {pilotAccess && <div className="flex flex-wrap justify-end gap-2">
+          <button type="button" onClick={() => navigate("/sync/assist")} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-400/30 bg-slate-950/70 px-3 py-2 text-xs font-bold text-cyan-100">Workday & results <ChevronRight className="h-4 w-4"/></button>
+          <SyncAssistTeamDrawer onTeamChange={setTeamEmployees}/>
+        </div>}
+        <section className="overflow-hidden rounded-2xl border border-cyan-400/25 bg-[#031222]/85 p-4 shadow-[0_0_60px_rgba(34,211,238,0.08)] backdrop-blur-xl lg:rounded-[2rem] lg:p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <div className="hidden text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200 lg:block">
                 Connected to your secure SyncWorks profile
               </div>
-              <h1 className="mt-1 text-xl font-black tracking-tight text-white lg:mt-3 lg:text-3xl md:text-5xl">
+              <h1 className="mt-1 text-xl font-black tracking-tight text-white lg:mt-2 lg:text-2xl md:text-3xl">
                 What can I do for you today?
               </h1>
-              <p className="hidden mt-3 max-w-2xl text-sm leading-6 text-slate-300 lg:block">
+              <p className="hidden mt-2 max-w-2xl text-xs leading-5 text-slate-300 lg:block">
                 Tap once to hear your full profile and current updates, or speak a
                 command while you are moving.
               </p>
@@ -505,19 +507,19 @@ export default function SyncAssistant() {
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-3 gap-2 lg:mt-5 lg:gap-3">
+          <div className="mt-3 grid grid-cols-3 gap-2 lg:mt-3 lg:gap-3">
             <button
               type="button"
               onClick={() => setWorkspace("personal")}
-              className={`min-w-0 rounded-xl border p-2 text-center lg:rounded-3xl lg:p-4 lg:text-left ${
+              className={`min-w-0 rounded-xl border p-2 text-center lg:rounded-2xl lg:p-2 lg:text-left ${
                 workspace === "personal"
                   ? "border-cyan-400/40 bg-cyan-500/12"
                   : "border-slate-800 bg-slate-950/70"
               }`}
             >
               <UserRound className="mx-auto h-5 w-5 text-cyan-200 lg:mx-0" />
-              <div className="mt-1 text-[11px] font-black text-white lg:mt-3 lg:text-base">Personal</div>
-              <div className="mt-1 hidden text-xs leading-5 text-slate-400 lg:block">
+              <div className="mt-1 text-[11px] font-black text-white lg:mt-1 lg:text-sm">Personal</div>
+              <div className="mt-1 hidden text-[11px] leading-4 text-slate-400 lg:block">
                 Profile, requests, Health, finance, and Personal updates.
               </div>
             </button>
@@ -585,7 +587,7 @@ export default function SyncAssistant() {
                   ? stopListening
                   : () => startListening({ greeting: true })
               }
-              className={`inline-flex min-h-14 items-center justify-center gap-2 rounded-xl border px-3 text-left text-sm font-black lg:min-h-20 lg:rounded-3xl lg:px-5 ${
+              className={`inline-flex min-h-14 items-center justify-center gap-2 rounded-xl border px-3 text-left text-sm font-black lg:min-h-14 lg:rounded-2xl lg:px-4 ${
                 speaking || listening
                   ? "border-rose-300/35 bg-rose-500/15 text-rose-100"
                   : "border-cyan-300/35 bg-cyan-500/15 text-cyan-100"
@@ -611,7 +613,7 @@ export default function SyncAssistant() {
             </button>
           </div>
 
-          <div className="mt-4 hidden gap-2 sm:grid-cols-2 lg:hidden">
+          <div className="hidden gap-2 sm:grid-cols-2 lg:hidden">
             <button
               type="button"
               onClick={prepareAppointment}
@@ -641,7 +643,7 @@ export default function SyncAssistant() {
             </button>
           </div>
 
-          <div className="mt-3 rounded-xl border border-slate-700 bg-slate-950/85 p-2 lg:mt-5 lg:rounded-3xl lg:p-3">
+          <div className="mt-3 rounded-xl border border-slate-700 bg-slate-950/85 p-2 lg:mt-2 lg:rounded-2xl lg:p-2">
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
@@ -663,7 +665,7 @@ export default function SyncAssistant() {
                 onClick={
                   listening ? stopListening : () => startListening({ greeting: false })
                 }
-                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-black lg:min-h-12 lg:rounded-2xl lg:px-5 lg:text-sm ${
+                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-black lg:min-h-11 lg:rounded-xl lg:px-3 lg:text-xs ${
                   listening
                     ? "border-rose-300/35 bg-rose-500/15 text-rose-100"
                     : "border-cyan-300/35 bg-cyan-500/15 text-cyan-100"
@@ -703,8 +705,8 @@ export default function SyncAssistant() {
             <button key={id} type="button" onClick={() => setMobilePanel(id)} className="flex min-h-12 flex-row items-center justify-center gap-2 rounded-xl border border-cyan-400/25 bg-slate-950/70 text-xs font-black text-cyan-100"><Icon className="h-4 w-4"/>{label}</button>
           ))}
         </div>
-        <div className={mobilePanel === "shortcuts" ? "fixed inset-0 z-[250] flex items-end justify-center bg-black/85 px-2 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(.75rem,env(safe-area-inset-bottom))] backdrop-blur-md" : "hidden lg:contents"}>
-          <div role="dialog" aria-modal={mobilePanel === "shortcuts" ? "true" : undefined} aria-label="SYNC shortcuts" className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto overscroll-contain rounded-2xl bg-[#081326]">
+        <div className={mobilePanel === "shortcuts" ? "fixed inset-0 z-[250] flex items-end justify-end bg-black/85 px-2 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(.75rem,env(safe-area-inset-bottom))] backdrop-blur-md" : "hidden"}>
+          <div role="dialog" aria-modal={mobilePanel === "shortcuts" ? "true" : undefined} aria-label="SYNC shortcuts" className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto overscroll-contain rounded-2xl bg-[#081326] lg:h-full lg:max-h-full lg:rounded-l-2xl">
             <button type="button" onClick={() => setMobilePanel(null)} className="sticky top-0 z-10 flex min-h-12 w-full items-center justify-between border-b border-cyan-400/20 bg-[#081326] px-4 text-sm font-black text-white ">Voice shortcuts <X className="h-5 w-5"/></button>
         <section className="rounded-[2rem] border border-slate-800 bg-slate-950/65 p-5">
           <div className="flex items-center gap-3">
@@ -728,8 +730,8 @@ export default function SyncAssistant() {
           </div>
         </div>
 
-        <div className={mobilePanel === "tools" ? "fixed inset-0 z-[250] flex items-end justify-center bg-black/85 px-2 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(.75rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:contents" : "hidden lg:contents"}>
-          <div role="dialog" aria-modal={mobilePanel === "tools" ? "true" : undefined} aria-label="SYNC tools" className="max-h-[calc(100dvh-2rem)] w-full max-w-xl space-y-4 overflow-y-auto overscroll-contain rounded-2xl bg-[#081326] p-3 lg:p-3">
+        <div className={mobilePanel === "tools" ? "fixed inset-0 z-[250] flex items-end justify-end bg-black/85 px-2 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(.75rem,env(safe-area-inset-bottom))] backdrop-blur-md" : "hidden"}>
+          <div role="dialog" aria-modal={mobilePanel === "tools" ? "true" : undefined} aria-label="SYNC tools" className="max-h-[calc(100dvh-2rem)] w-full max-w-xl space-y-4 overflow-y-auto overscroll-contain rounded-2xl bg-[#081326] p-3 lg:h-full lg:max-h-full lg:rounded-l-2xl">
             <button type="button" onClick={() => setMobilePanel(null)} className="sticky top-0 z-10 flex min-h-12 w-full items-center justify-between border-b border-cyan-400/20 bg-[#081326] px-4 text-sm font-black text-white ">Tools & workflows <X className="h-5 w-5"/></button>
         <div className="grid grid-cols-2 gap-2 lg:hidden">
           <button type="button" onClick={prepareAppointment} className="min-h-14 rounded-xl border border-violet-300/30 bg-violet-500/10 px-3 text-left text-xs font-black text-white"><CalendarDays className="mb-1 h-4 w-4 text-violet-200"/>Prepare appointment</button>
@@ -745,8 +747,8 @@ export default function SyncAssistant() {
           </div>
         </div>
 
-        <div className={mobilePanel === "settings" ? "fixed inset-0 z-[250] flex items-end justify-center bg-black/85 px-2 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(.75rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:contents" : "hidden lg:contents"}>
-          <div role="dialog" aria-modal={mobilePanel === "settings" ? "true" : undefined} aria-label="SYNC settings" className="max-h-[calc(100dvh-2rem)] w-full max-w-xl space-y-4 overflow-y-auto overscroll-contain rounded-2xl bg-[#081326] p-3 lg:contents lg:p-0">
+        <div className={mobilePanel === "settings" ? "fixed inset-0 z-[250] flex items-end justify-end bg-black/85 px-2 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(.75rem,env(safe-area-inset-bottom))] backdrop-blur-md" : "hidden"}>
+          <div role="dialog" aria-modal={mobilePanel === "settings" ? "true" : undefined} aria-label="SYNC settings" className="max-h-[calc(100dvh-2rem)] w-full max-w-xl space-y-4 overflow-y-auto overscroll-contain rounded-2xl bg-[#081326] p-3 lg:h-full lg:max-h-full lg:rounded-l-2xl">
             <button type="button" onClick={() => setMobilePanel(null)} className="sticky top-0 z-10 flex min-h-12 w-full items-center justify-between border-b border-cyan-400/20 bg-[#081326] px-4 text-sm font-black text-white ">SYNC settings <X className="h-5 w-5"/></button>
         <section className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-3xl border border-slate-800 bg-slate-950/55 p-4">
@@ -907,10 +909,10 @@ export default function SyncAssistant() {
             <button
               key={assistant.id}
               type="button"
-              aria-label={`Open ${assistant.name} — ${assistant.role} assistant controls`}
+              aria-label={`Open ${assistant.name} — ${assistant.role} work dashboard`}
               aria-pressed={avatarOpen && avatarId === assistant.id}
               title={`${assistant.name} — ${assistant.role}`}
-              onClick={() => { chooseAvatar(assistant.id); setAvatarOpen(true); }}
+              onClick={() => { if (pilotAccess) navigate("/sync/assist/employee/" + encodeURIComponent(assistant.id)); else { chooseAvatar(assistant.id); setAvatarOpen(true); } }}
               className="group relative flex w-[67px] flex-col items-center gap-1 sm:w-[80px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200"
             >
               <span className={`relative block h-12 w-12 overflow-hidden rounded-full border-2 bg-[#061323] shadow-[0_5px_20px_rgba(0,0,0,.55)] transition-transform group-hover:-translate-y-1 sm:h-14 sm:w-14 ${avatarId === assistant.id ? "border-cyan-300 shadow-[0_0_21px_rgba(34,211,238,.55)]" : "border-cyan-300/45 shadow-[0_0_16px_rgba(34,211,238,.2)]"}`}>
