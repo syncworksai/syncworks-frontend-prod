@@ -40,3 +40,16 @@ export function resolvePracticeTrade(trade, candle) {
   const exit=stopHit?trade.stop:trade.target;
   return {...trade,exit,closed:true,outcome:stopHit?"STOP HIT":"TARGET HIT",resultR:(exit-trade.entry)*(trade.side==="LONG"?1:-1)/trade.risk};
 }
+
+
+export function explainTrainingSignal(c) {
+  if(!c)return {summary:"No candle yet",checks:[]};
+  const checks=[
+    {label:"EMA pressure",passed:c.ema7>c.ema9,detail:"EMA 7 must be above EMA 9 for a long setup"},
+    {label:"Above VWAP",passed:c.close>c.vwap,detail:"Close must be above simulated session VWAP"},
+    {label:"Donchian break",passed:c.upper!=null&&c.close>c.upper,detail:"Close must exceed previous 20-bar high"},
+    {label:"Volume confirmation",passed:c.volRatio!=null&&c.volRatio>=1.15,detail:"Relative volume must be at least 1.15×"}
+  ];
+  const missing=checks.filter(x=>!x.passed).map(x=>x.label);
+  return {summary:c.signal!=="WAIT"?c.signal+" — review risk before practice entry":missing.length?"WAIT — missing "+missing.join(", "):"WAIT — bullish checks not sufficient; inspect short-side conditions",checks};
+}
