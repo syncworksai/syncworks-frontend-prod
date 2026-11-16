@@ -216,9 +216,8 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
 
   return (
     <DashboardShell title="Dashboard" modeBarTitle="Dashboard" maxWidth="max-w-none" className="sw-personal-panels sw-customer-v3 px-4 sm:px-6 lg:px-6 xl:px-8">
-      {workspaceTheme !== "legacy" ? <ImmersiveWorkspaceHome displayName={firstName(user)} theme={workspaceTheme} onOpenLauncher={() => window.dispatchEvent(new CustomEvent("sw:workspace-open", { detail: "apps" }))} onOpenAppearance={() => window.dispatchEvent(new CustomEvent("sw:workspace-open", { detail: "appearance" }))} /> : null}
       
-      <div className="grid w-full grid-cols-1 items-start gap-5 pb-10 lg:grid-cols-[210px_minmax(0,1fr)] 2xl:grid-cols-[230px_minmax(0,1fr)_310px]">
+      <div className="sw-customer-three-rail grid w-full grid-cols-1 items-start gap-5 pb-10 lg:grid-cols-[210px_minmax(0,1fr)] 2xl:grid-cols-[230px_minmax(0,1fr)_310px]">
         <aside className="hidden lg:block sticky top-4 rounded-[1.6rem] border border-sky-400/15 bg-[#090F1C]/90 p-3 shadow-[0_20px_60px_rgba(0,0,0,.25)] backdrop-blur-xl">
           <div className="px-3 pb-2 text-[9px] font-black uppercase tracking-[.18em] text-cyan-300/70">Personal workspace</div>
           <div className="space-y-1">
@@ -242,6 +241,7 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
         </aside>
 
         <main className="min-w-0 space-y-5">
+          {workspaceTheme !== "legacy" ? <ImmersiveWorkspaceHome displayName={firstName(user)} theme={workspaceTheme} onOpenLauncher={() => window.dispatchEvent(new CustomEvent("sw:workspace-open", { detail: "apps" }))} onOpenAppearance={() => window.dispatchEvent(new CustomEvent("sw:workspace-open", { detail: "appearance" }))} /> : null}
           <section className="rounded-[1.8rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_90%_0%,rgba(168,85,247,.20),transparent_33%),radial-gradient(circle_at_0%_100%,rgba(34,211,238,.14),transparent_30%),linear-gradient(145deg,rgba(8,18,35,.98),rgba(2,6,23,.98))] p-6 shadow-[0_20px_70px_rgba(0,0,0,.35)]">
             <div className="flex items-start justify-between gap-5">
               <div><div className="text-[10px] font-black uppercase tracking-[.22em] text-cyan-200">Personal command center</div><h1 className="mt-2 text-3xl font-black text-white">Good afternoon, {firstName(user)}.</h1><p className="mt-2 max-w-2xl text-sm text-slate-400">Your day, destinations, money, health and connected life — prioritized in one place.</p></div>
