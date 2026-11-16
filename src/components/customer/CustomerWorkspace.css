@@ -441,3 +441,43 @@
   border:7px solid rgba(126,87,53,.7);
   background:linear-gradient(145deg,rgba(56,37,24,.52),rgba(24,17,13,.82));
 }
+
+/* V9: one natural page scroll, readable navigation and unobstructed utility rail.
+   Scoped to redesigned customer workspace; legacy and Games are unchanged. */
+@media (min-width:1024px) {
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .sw-customer-three-rail > aside:first-child,
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .sw-customer-three-rail > aside:last-child {
+   position:static !important;
+   top:auto !important;
+   max-height:none !important;
+   height:auto !important;
+   overflow:visible !important;
+   overscroll-behavior:auto;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .sw-customer-three-rail > aside:last-child {
+   padding-bottom:130px;
+   align-self:start;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .sw-customer-three-rail > aside:first-child {
+   padding-bottom:16px;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-customer-nav-entry > span:nth-child(2) {
+   white-space:normal !important;
+   overflow:visible !important;
+   text-overflow:clip !important;
+   overflow-wrap:break-word;
+ }
+}
+@media (min-width:1440px) {
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .sw-customer-three-rail {
+   grid-template-columns:214px minmax(0,1fr) 288px !important;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:last-child > section {
+   overflow:visible !important;
+ }
+}
+@media (min-width:1024px) and (max-width:1439px) {
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-v3 > .sw-customer-three-rail {
+   grid-template-columns:206px minmax(0,1fr) !important;
+ }
+}
