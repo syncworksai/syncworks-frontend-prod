@@ -490,3 +490,51 @@
  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:last-child > section:last-child {order:1}
  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:last-child > section:nth-child(2) {order:2}
 }
+
+/* Mobile-only workspace toolbar: pin it directly beneath the permanent 57px
+   global header (which starts 58px below the iPhone status bar). */
+@media (max-width: 767px) {
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-workspace-switcher-mobile {
+    position:sticky;
+    top:115px;
+    z-index:35;
+    padding:7px 10px;
+    gap:8px;
+    flex-wrap:nowrap;
+    background:color-mix(in srgb,var(--sw-workspace-panel) 62%,transparent)!important;
+    -webkit-backdrop-filter:blur(13px);
+    backdrop-filter:blur(13px);
+    border:1px solid var(--sw-workspace-line);
+    border-radius:0 0 12px 12px;
+  }
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-workspace-switcher-mobile > button:first-child {
+    flex:1 1 auto;
+    min-width:0;
+    justify-content:center;
+  }
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-workspace-switcher-mobile .sw-workspace-settings-gear {
+    flex:0 0 44px;
+    width:44px;
+    min-height:44px;
+    display:grid;
+    place-items:center;
+    padding:0;
+    border-radius:14px;
+    background:color-mix(in srgb,var(--sw-workspace-accent) 8%,transparent)!important;
+  }
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-workspace-settings-gear span { display:none; }
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-workspace-current {
+    flex:0 1 35%;
+    min-width:0;
+    width:auto;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:10px;
+    margin:0;
+    text-align:right;
+  }
+}
+@media (min-width: 640px) and (max-width: 767px) {
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-workspace-switcher-mobile {top:57px;}
+}
