@@ -11,6 +11,7 @@ const automationOptions=["High","Medium","Low","Unknown"];
 const riskOptions=["Low","Review needed","High","Unknown"];
 function estimateMinutes(label){return {"Under 30 min":30,"30–60 min":60,"1–2 hours":120,"2–5 hours":300,"Over 5 hours":480}[label]||null;}
 function jobScore(job) {
+ if(job.type==="Hourly")return {label:"Hourly listing",detail:"Rate is hourly, not a fixed project payout; review hours and schedule separately",hourly:null,tone:"text-slate-300"};
  const budget=number(job.budget),minutes=estimateMinutes(job.estimate),automation=job.automation||"Unknown",risk=job.risk||"Unknown";
  const hourly=minutes?budget/(minutes/60):null;
  if(!hourly)return {label:"Needs review",detail:"Add a time estimate before deciding",hourly:null,tone:"text-slate-300"};
@@ -33,7 +34,7 @@ function Opportunity({job,updateJob,deleteJob}){
  "Assess scope, feasibility, platform/client automation permission, required verification, potential effective earnings after fees and proposal cost, and whether to apply. Do not assert that this is a live/verified posting. Draft a concise honest proposal but do not submit, contact anyone, or use confidential client data."].join("\n");
  return <article className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 sm:p-5">
   <div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0 flex-1">
-   <h3 className="text-base font-bold text-white">{job.title}</h3><p className="mt-1 text-xs text-slate-400">{job.platform||"Freelance"} · {job.type||"Fixed price"} · {fmt(job.budget)} estimated budget</p>
+   <h3 className="text-base font-bold text-white">{job.title}</h3><p className="mt-1 text-xs text-slate-400">{job.platform||"Freelance"} · {job.type||"Fixed price"} · {fmt(job.budget)} {job.type==="Hourly"?"hourly advertised rate":"estimated budget"}</p>
   </div><div className="flex gap-2"><button className="rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-200 hover:bg-white/10" onClick={()=>setExpanded(v=>!v)} type="button" aria-expanded={expanded}>{expanded?"Close details":"Evaluate"}</button><button type="button" title="Delete local record" aria-label={`Delete ${job.title}`} className="rounded-xl border border-rose-400/20 p-2 text-rose-300 hover:bg-rose-500/10" onClick={()=>{if(window.confirm("Delete this local opportunity?"))deleteJob(job.id)}}><Trash2 size={16}/></button></div></div>
   <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><div><span className={`text-xs font-bold ${score.tone}`}>{score.label}</span>{score.hourly!==null&&<span className="ml-2 text-xs text-slate-400">~{fmt(score.hourly)}/estimated work hour</span>}</div><Select label="Pipeline" value={job.status||"Saved"} options={STATUSES} onChange={status=>updateJob(job.id,{status})}/></div>
   {job.url&&<a className="mt-3 inline-flex items-center gap-1 text-xs text-cyan-200 hover:underline" target="_blank" rel="noopener noreferrer" href={job.url}>View original job <ExternalLink size={13}/></a>}
