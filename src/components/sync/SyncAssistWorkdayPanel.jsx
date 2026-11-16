@@ -21,6 +21,8 @@ export default function SyncAssistWorkdayPanel() {
   const [goal, setGoal] = useState("");
   const [role, setRole] = useState("RESEARCH_ANALYST");
   const [task, setTask] = useState("");
+  const [publicMode, setPublicMode] = useState(false);
+  const [publicQuery, setPublicQuery] = useState("");
   const [draftSteps, setDraftSteps] = useState([]);
   const [editing, setEditing] = useState({});
   const [error, setError] = useState("");
@@ -52,9 +54,14 @@ export default function SyncAssistWorkdayPanel() {
     if (busy || !goal.trim() || !draftSteps.length) return;
     setBusy(true); setError("");
     try {
-      const response = await api.post(BASE, { goal: goal.trim(), steps: draftSteps });
+      const response = await api.post(BASE, {
+        goal: goal.trim(), steps: draftSteps,
+        source_mode: publicMode ? "PUBLIC_SEARCH" : "INTERNAL_ONLY",
+        public_search_query: publicMode ? publicQuery.trim() : "",
+        allow_external_search: publicMode,
+      });
       setData(response.data);
-      setGoal(""); setDraftSteps([]);
+      setGoal(""); setDraftSteps([]); setPublicMode(false); setPublicQuery("");
     } catch (err) {
       setError(err?.response?.data?.detail || "Unable to create the workday goal.");
     } finally {
@@ -139,6 +146,14 @@ export default function SyncAssistWorkdayPanel() {
             <input value={task} onChange={(event) => setTask(event.target.value)} maxLength={500} placeholder="Describe the employee's job" className="mt-1 min-h-11 w-full rounded-xl border border-slate-600 bg-slate-950 p-3 text-sm text-white"/>
           </label>
         </div>
+        <label className="flex items-start gap-2 text-xs text-slate-200">
+          <input type="checkbox" checked={publicMode} onChange={(event) => setPublicMode(event.target.checked)} className="mt-1"/>
+          <span>Use public web search for Research Analyst assignments. I authorize sending only the search query below to the configured search provider. Search results are unverified and require review.</span>
+        </label>
+        {publicMode && <label className="block text-xs font-bold text-slate-200">Public search query (no private or customer information)
+          <input required minLength={4} maxLength={120} value={publicQuery} onChange={(event) => setPublicQuery(event.target.value)} placeholder="e.g. commercial property management companies in Birmingham Alabama" className="mt-1 min-h-11 w-full rounded-xl border border-slate-600 bg-slate-950 p-3 text-sm text-white"/>
+          <span className="mt-1 block font-normal text-amber-200">Only available when the backend search integration is configured and enabled.</span>
+        </label>}
         <button type="button" disabled={!task.trim() || draftSteps.length >= 8} onClick={addStep} className="min-h-10 rounded-xl border border-cyan-400/30 px-4 text-xs font-bold text-cyan-100 disabled:opacity-40">Add assignment</button>
         {draftSteps.map((step, index) => (
           <div key={index} className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-slate-950/50 p-2 text-xs">
@@ -146,7 +161,7 @@ export default function SyncAssistWorkdayPanel() {
             <button type="button" onClick={() => setDraftSteps((items) => items.filter((_, i) => i !== index))} aria-label={"Remove assignment " + (index + 1)} className="min-h-9 shrink-0 rounded-lg border border-white/20 px-2">Remove</button>
           </div>
         ))}
-        <button type="submit" disabled={busy || !goal.trim() || draftSteps.length === 0} className="min-h-11 w-full rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 p-3 text-sm font-bold disabled:opacity-40">Create coordinated goal</button>
+        <button type="submit" disabled={busy || !goal.trim() || draftSteps.length === 0 || (publicMode && (publicQuery.trim().length < 4 || !draftSteps.some((step) => step.role === "RESEARCH_ANALYST")))} className="min-h-11 w-full rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 p-3 text-sm font-bold disabled:opacity-40">Create coordinated goal</button>
       </form>
       <div className="mt-4 space-y-3">
         {!loaded && <p className="text-xs text-slate-400">Loading recorded goals…</p>}
@@ -171,7 +186,10 @@ export default function SyncAssistWorkdayPanel() {
                     {(step.worker_receipt.output || []).map((record, index) => (
                       <div key={index} className="rounded-lg border border-white/10 p-2 text-xs">
                         {record.company && <strong className="block text-white">{record.company}</strong>}
-                        {record.website && <span className="block break-all text-slate-300">Owner-entered URL (unverified): {record.website}</span>}
+                        {record.title && <strong className="block text-white">{record.title}</strong>}
+                        {record.snippet && <p className="mt-1 text-slate-300">{record.snippet}</p>}
+                        {record.source_url && <span className="block break-all text-slate-300">Reference: {record.source_url}</span>}
+                        {record.website && <span className="block break-all text-slate-300">Source URL (content not independently verified): {record.website}</span>}
                         {record.observation && <p className="mt-1 text-slate-300">{record.observation}</p>}
                         {record.draft && <p className="mt-1 whitespace-pre-wrap text-slate-300">Unsent outreach draft: {record.draft}</p>}
                         {record.result && <p className="mt-1 text-slate-300">{record.result} · {record.records} records</p>}
@@ -193,7 +211,7 @@ export default function SyncAssistWorkdayPanel() {
           </article>
         ))}
       </div>
-      <p className="mt-4 text-[11px] leading-5 text-amber-200">This pilot tracks owner-assigned work and evidence. Restricted internal work can run on demand. External web research, messaging and third-party changes remain disabled.</p>
+      <p className="mt-4 text-[11px] leading-5 text-amber-200">This pilot tracks owner-assigned work and evidence. Restricted work can run on demand. Public research requires consent and server configuration. Messaging and third-party changes remain disabled.</p>
     </section>
   );
 }
