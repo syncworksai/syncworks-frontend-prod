@@ -4,10 +4,10 @@ import "./JarvisAvatar.css";
 
 export const AVATAR_STORAGE_KEY="sw-jarvis-avatar-v1";
 export const AVATARS=[
-  {id:"executive-female",name:"Victoria",style:"Executive",presentation:"Female",photo:"/jarvis-avatars/victoria.jpeg",mouthX:"49%",mouthY:"34%",skin:"#d8a17f",shade:"#a36b51",hair:"#261d24",outfit:"#172b50",accent:"#d8b271"},
-  {id:"executive-male",name:"James",style:"Executive",presentation:"Male",photo:"/jarvis-avatars/james.jpeg",mouthX:"49%",mouthY:"43%",skin:"#bc8263",shade:"#895641",hair:"#211e21",outfit:"#152133",accent:"#c3ab86"},
-  {id:"future-female",name:"Elizabeth",style:"Modern",presentation:"Female",photo:"/jarvis-avatars/elizabeth.jpeg",mouthX:"49%",mouthY:"39%",skin:"#e8b398",shade:"#b07965",hair:"#cbb9a9",outfit:"#102f48",accent:"#52defd"},
-  {id:"future-male",name:"William",style:"Modern",presentation:"Male",photo:"/jarvis-avatars/william.jpeg",mouthX:"50%",mouthY:"38%",skin:"#bb8a70",shade:"#855844",hair:"#151c2c",outfit:"#2d2055",accent:"#ad65ff"},
+  {id:"executive-female",name:"Victoria",role:"Chief of Staff",style:"Executive",presentation:"Female",photo:"/jarvis-avatars/victoria.jpeg",mouthX:"49%",mouthY:"34%",skin:"#d8a17f",shade:"#a36b51",hair:"#261d24",outfit:"#172b50",accent:"#d8b271"},
+  {id:"executive-male",name:"James",role:"Sales Manager",style:"Executive",presentation:"Male",photo:"/jarvis-avatars/james.jpeg",mouthX:"49%",mouthY:"43%",skin:"#bc8263",shade:"#895641",hair:"#211e21",outfit:"#152133",accent:"#c3ab86"},
+  {id:"future-female",name:"Elizabeth",role:"Marketing Manager",style:"Modern",presentation:"Female",photo:"/jarvis-avatars/elizabeth.jpeg",mouthX:"49%",mouthY:"39%",skin:"#e8b398",shade:"#b07965",hair:"#cbb9a9",outfit:"#102f48",accent:"#52defd"},
+  {id:"future-male",name:"William",role:"Research Analyst",style:"Modern",presentation:"Male",photo:"/jarvis-avatars/william.jpeg",mouthX:"50%",mouthY:"38%",skin:"#bb8a70",shade:"#855844",hair:"#151c2c",outfit:"#2d2055",accent:"#ad65ff"},
 ];
 
 export function loadAvatarChoice(){
@@ -40,9 +40,9 @@ export function JarvisAvatar({id="executive-female",state="idle",size="hero",lab
   const gradId="avatar-outfit-"+id;
   return <div className={`jarvis-avatar jarvis-avatar--${stage} jarvis-avatar--${size} ${photoReady?"jarvis-avatar--photographic":""}`} style={{"--avatar-accent":config.accent,"--mouth-x":config.mouthX,"--mouth-y":config.mouthY}}>
     <div className="jarvis-avatar__halo" aria-hidden="true"/>
-    <img key={config.photo} className="jarvis-avatar__photo" src={config.photo} alt={`${config.name}, ${config.presentation.toLowerCase()} ${config.style.toLowerCase()} virtual assistant`} loading="eager" decoding="async" onLoad={()=>setPhotoReady(true)} onError={()=>setPhotoReady(false)} />
+    <img key={config.photo} className="jarvis-avatar__photo" src={config.photo} alt={`${config.name} - ${config.role}, virtual assistant`} loading="eager" decoding="async" onLoad={()=>setPhotoReady(true)} onError={()=>setPhotoReady(false)} />
     {photoReady&&<img key={config.photo+"-mouth"} className="jarvis-avatar__photo-mouth" src={config.photo} alt="" aria-hidden="true" draggable="false" />}
-    {!photoReady&&<svg className="jarvis-avatar__portrait" viewBox="0 0 260 300" role="img" aria-label={`${config.name}, ${config.presentation.toLowerCase()} ${config.style.toLowerCase()} virtual assistant, ${stage}`}>
+    {!photoReady&&<svg className="jarvis-avatar__portrait" viewBox="0 0 260 300" role="img" aria-label={`${config.name} - ${config.role}, virtual assistant, ${stage}`}>
       <defs>
         <linearGradient id={gradId} x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor={config.outfit}/><stop offset="1" stopColor="#070d1e"/></linearGradient>
         <radialGradient id={"avatar-skin-"+id} cx="40%" cy="25%" r="85%"><stop offset="0" stopColor={config.skin}/><stop offset="1" stopColor={config.shade}/></radialGradient>
@@ -75,7 +75,7 @@ export function JarvisAvatar({id="executive-female",state="idle",size="hero",lab
       </g>
     </svg>}
     <div className="jarvis-avatar__wave" aria-hidden="true"><i/><i/><i/><i/><i/></div>
-    {label&&<div className="jarvis-avatar__caption"><strong>{config.name}</strong><span>{stage==="idle"?"Ready":stage==="thinking"?"Thinking":stage==="speaking"?"Speaking":"Listening"}</span></div>}
+    {label&&<div className="jarvis-avatar__caption"><strong>{config.name} · {config.role}</strong><span>{stage==="idle"?"Ready":stage==="thinking"?"Thinking":stage==="speaking"?"Speaking":"Listening"}</span></div>}
   </div>;
 }
 
@@ -84,14 +84,14 @@ export function JarvisAvatarPicker({value,onChange,compact=false}){
   const current=AVATARS.find(a=>a.id===value)||AVATARS[0];
   return <div className="jarvis-avatar-picker">
     <button type="button" className="jarvis-avatar-picker__toggle" aria-expanded={open} onClick={()=>setOpen(v=>!v)}>
-      <span>Assistant: {current.name}</span><ChevronDown size={16}/>
+      <span>Assistant: {current.name} — {current.role}</span><ChevronDown size={16}/>
     </button>
     {open&&<div className="jarvis-avatar-picker__grid" role="group" aria-label="Choose your assistant">
       {AVATARS.map(a=><button key={a.id} type="button" aria-pressed={current.id===a.id} onClick={()=>{onChange(a.id);setOpen(false);}} className={`jarvis-avatar-picker__option ${current.id===a.id?"is-selected":""}`}>
         <JarvisAvatar id={a.id} size="mini" label={false}/>
-        <strong>{a.name}</strong><small>{a.presentation} · {a.style}</small>
+        <strong>{a.name} — {a.role}</strong><small>{a.style}</small>
       </button>)}
     </div>}
-    {!compact&&<p className="jarvis-avatar-picker__hint">Choose your assistant's appearance. Voice selection is separate. This choice is saved on this device.</p>}
+    {!compact&&<p className="jarvis-avatar-picker__hint">Each portrait identifies a team role. Appearance selection is saved on this device; selecting a portrait does not activate a different worker.</p>}
   </div>;
 }

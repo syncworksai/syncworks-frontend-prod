@@ -28,7 +28,7 @@ import { getActiveBusinessId } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import SyncActionStudio from "../components/sync/SyncActionStudio";
 import SyncWorkflowIntake from "../components/sync/SyncWorkflowIntake";
-import {JarvisAvatar, JarvisAvatarPicker, useJarvisAvatar} from "../components/sync/JarvisAvatar";
+import {AVATARS, JarvisAvatar, JarvisAvatarPicker, useJarvisAvatar} from "../components/sync/JarvisAvatar";
 import {
   getSyncAiErrorMessage,
   getSyncAiStatus,
@@ -158,6 +158,7 @@ export default function SyncAssistant() {
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [officeBackground, setOfficeBackground] = useState(() => {try{return localStorage.getItem("sw-jarvis-office-bg")!=="off";}catch{return true;}});
   const {avatarId,choose:chooseAvatar}=useJarvisAvatar();
+  const selectedAssistant = AVATARS.find((assistant) => assistant.id === avatarId) || AVATARS[0];
 
   const selectedVoice = useMemo(
     () =>
@@ -898,12 +899,12 @@ export default function SyncAssistant() {
       </div>
       {avatarOpen&&<div className="fixed inset-0 z-[240] flex items-end justify-center bg-slate-950/65 p-3 pb-[calc(8.5rem+env(safe-area-inset-bottom))] backdrop-blur-sm lg:items-end lg:justify-end lg:pb-28 lg:pr-24" onMouseDown={e=>{if(e.target===e.currentTarget)setAvatarOpen(false);}}>
         <section role="dialog" aria-modal="true" aria-label="Jarvis assistant controls" className="max-h-[min(72dvh,580px)] w-full max-w-md overflow-y-auto rounded-3xl border border-cyan-400/45 bg-[#061326] p-4 shadow-2xl">
-          <div className="mb-3 flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-widest text-cyan-200">Your personal assistant</p><h2 className="text-xl font-black">Meet Jarvis</h2></div><button onClick={()=>setAvatarOpen(false)} className="grid h-11 w-11 place-items-center rounded-xl border border-white/20" aria-label="Close assistant"><X size={20}/></button></div>
+          <div className="mb-3 flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-widest text-cyan-200">Your personal assistant</p><h2 className="text-xl font-black">Meet {selectedAssistant.name} — {selectedAssistant.role}</h2></div><button onClick={()=>setAvatarOpen(false)} className="grid h-11 w-11 place-items-center rounded-xl border border-white/20" aria-label="Close assistant"><X size={20}/></button></div>
           <div className="flex items-center justify-center gap-3">
             <JarvisAvatar id={avatarId} state={speaking?"speaking":listening?"listening":sending?"thinking":"idle"} size="hero"/>
             <div className="min-w-0 flex-1 space-y-3">
               <p className="text-sm text-slate-300">{speaking?"Speaking":listening?"Listening":sending?"Preparing an answer":"Ready when you are"}</p>
-              <button type="button" onClick={()=>{setAvatarOpen(false);listening?stopListening():startListening({greeting:false});}} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-3 text-sm font-bold text-white"><Mic size={17}/>{listening?"Stop listening":"Speak to Jarvis"}</button>
+              <button type="button" onClick={()=>{setAvatarOpen(false);listening?stopListening():startListening({greeting:false});}} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-3 text-sm font-bold text-white"><Mic size={17}/>{listening?"Stop listening":`Speak to ${selectedAssistant.name}`}</button>
               <button type="button" onClick={()=>speaking?stopSpeaking():speak("Hello. I'm your SyncWorks assistant. How may I help you today?",{force:true})} className="min-h-11 w-full rounded-xl border border-cyan-400/40 px-3 text-xs font-bold text-cyan-100">{speaking?"Stop voice":"Hear a preview"}</button>
             </div>
           </div>
