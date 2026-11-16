@@ -9,6 +9,7 @@ import {readPokerResume} from "../games/pokerResume.mjs";
 import {readFeatureResumes} from "../utils/featureResume.mjs";
 import CustomerDashboard from "./CustomerDashboard.jsx";
 import CustomerMobileHome from "../components/customer/CustomerMobileHome";
+import CustomerWorkspace, { useWorkspaceAppearance } from "../components/customer/CustomerWorkspace";
 import SyncAssistantStickyDock from "../components/sync/SyncAssistantStickyDock";
 
 const DAY_TRADING_EMAIL = "jacoblord7@outlook.com";
@@ -62,6 +63,7 @@ function useViewportMode() {
 export default function CustomerDashboardResponsive() {
   const nav = useNavigate();
   const { user } = useAuth();
+  const [workspaceAppearance, updateWorkspaceAppearance] = useWorkspaceAppearance();
   const [tickets, setTickets] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [identity, setIdentity] = useState(null);
@@ -98,7 +100,8 @@ export default function CustomerDashboardResponsive() {
 
   if (!phoneMode) {
     return (
-      <div data-sw-layout="landscape" data-sw-visual="midnight">
+      <div className="sw-workspace-root" data-workspace-theme={workspaceAppearance.theme} data-workspace-motion={workspaceAppearance.motion} data-workspace-compact={workspaceAppearance.compact} data-sw-layout="landscape" data-sw-visual="midnight">
+        <CustomerWorkspace settings={workspaceAppearance} update={updateWorkspaceAppearance} dayTradingEnabled={dayTradingEnabled} />
         <CustomerDashboard />
         <SyncAssistantStickyDock displayName={firstName(user)} defaultMinimized />
       </div>
@@ -106,7 +109,8 @@ export default function CustomerDashboardResponsive() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#020617] px-3 pb-24 pt-3 text-slate-100" data-sw-layout="portrait" data-sw-visual="midnight">
+    <div className="sw-workspace-root min-h-dvh px-3 pb-24 pt-3 text-slate-100" data-workspace-theme={workspaceAppearance.theme} data-workspace-motion={workspaceAppearance.motion} data-workspace-compact={workspaceAppearance.compact} data-sw-layout="portrait" data-sw-visual="midnight">
+      <CustomerWorkspace settings={workspaceAppearance} update={updateWorkspaceAppearance} phoneMode dayTradingEnabled={dayTradingEnabled} />
       <CustomerMobileHome
         displayName={firstName(user)}
         resumePokerRoomPath={readPokerResume(user)?.path||""}
