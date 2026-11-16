@@ -538,3 +538,20 @@
 @media (min-width: 640px) and (max-width: 767px) {
   .sw-workspace-root[data-sw-layout="portrait"] .sw-workspace-switcher-mobile {top:57px;}
 }
+
+/* The global app header is already position:fixed. Give its light theme proper
+   contrast and keep it above the sticky office toolbar. */
+@media(max-width:639px){
+  body[data-sw-office-scope="work"][data-sw-office-theme="light"] [data-syncworks-global-header="true"]{
+    background:rgba(246,238,224,.96)!important;
+    border-color:rgba(149,115,78,.28)!important;
+  }
+  body[data-sw-office-scope="work"][data-sw-office-theme="light"] [data-syncworks-global-header="true"] .text-white{
+    color:#2d261f!important;
+  }
+  body[data-sw-office-scope="work"][data-sw-office-theme="light"] [data-syncworks-global-header="true"] button[aria-label="Open SyncWorks app navigation"]{
+    color:#195c69!important;
+    background:rgba(28,112,132,.07)!important;
+    border-color:rgba(28,112,132,.32)!important;
+  }
+}
