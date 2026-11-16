@@ -45,6 +45,7 @@ export default function SyncAssistEmployeeDashboard() {
     (event.kind === "WORKER_RECEIPT" && event.role === role) ||
     (event.kind === "OWNER_PROGRESS" && tasks.some((step) => step.id === event.step_id))
   )), [events, tasks, role]);
+  const historyMayBeIncomplete = events.length >= 100;
   const counts = {
     running: tasks.filter((step) => ["PLANNED", "IN_PROGRESS"].includes(step.status)).length,
     review: tasks.filter((step) => step.status === "AWAITING_APPROVAL").length,
@@ -97,7 +98,7 @@ export default function SyncAssistEmployeeDashboard() {
         </section>
         <div className="grid shrink-0 grid-cols-4 gap-2">
           {[
-            ["In progress", counts.running, "text-cyan-200"],
+            ["Planned / active", counts.running, "text-cyan-200"],
             ["Needs approval", counts.review, "text-amber-200"],
             ["Completed", counts.completed, "text-emerald-200"],
             ["Blocked", counts.blocked, "text-rose-200"],
@@ -133,7 +134,8 @@ export default function SyncAssistEmployeeDashboard() {
                 <p className="mt-1 text-xs text-slate-200">{event.message || event.evidence || "Recorded event"}</p>
                 {event.receipt_id && <p className="mt-1 break-all text-[10px] text-slate-400">Receipt ID: {event.receipt_id}</p>}
                 {event.output?.length > 0 && <details className="mt-2 text-xs"><summary className="cursor-pointer text-cyan-200">Inspect stored output and sources</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-all text-[10px]">{JSON.stringify({output:event.output,sources:event.sources},null,2)}</pre></details>}
-              </article>) : <p className="p-4 text-sm text-slate-300">No employee execution receipts or owner reviews yet. This is not proof of completed work.</p>)}
+              </article>) : <p className="p-4 text-sm text-slate-300">No employee execution receipts or owner reviews in the latest history window. This is not proof of completed work.</p>)}
+            {!loading && !error && activeTab === "history" && historyMayBeIncomplete && <p className="rounded-lg border border-amber-400/25 p-2 text-xs text-amber-200">Only the most recent 100 events are loaded. Open Workday History to filter by a specific goal for older records.</p>}
             {!loading && !error && activeTab === "duties" &&
               <div className="space-y-3 rounded-xl border border-white/10 p-4">
                 <div className="flex items-start gap-2 text-sm"><ShieldCheck className="mt-0.5 shrink-0 text-cyan-300" size={18}/><p>{duties[role] || "No permitted worker integration has been implemented for this role."}</p></div>
