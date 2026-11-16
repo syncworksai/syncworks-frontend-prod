@@ -947,8 +947,8 @@ export default function SyncAssistant() {
               onClick={() => { if (pilotAccess) navigate("/sync/assist/employee/" + encodeURIComponent(assistant.id)); else { chooseAvatar(assistant.id); setAvatarOpen(true); } }}
               className="group relative flex w-[67px] flex-col items-center gap-1 sm:w-[80px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200"
             >
-              <span className={`relative block h-12 w-12 overflow-hidden rounded-full border-2 bg-[#061323] shadow-[0_5px_20px_rgba(0,0,0,.55)] transition-transform group-hover:-translate-y-1 sm:h-14 sm:w-14 ${avatarId === assistant.id ? "border-cyan-300 shadow-[0_0_21px_rgba(34,211,238,.55)]" : "border-cyan-300/45 shadow-[0_0_16px_rgba(34,211,238,.2)]"}`}>
-                <img src={assistant.photo} alt="" className="h-full w-full object-cover object-top" />
+              <span className={`relative block h-12 w-12 rounded-full border-2 bg-[#061323] shadow-[0_5px_20px_rgba(0,0,0,.55)] transition-transform group-hover:-translate-y-1 sm:h-14 sm:w-14 ${avatarId === assistant.id ? "border-cyan-300 shadow-[0_0_21px_rgba(34,211,238,.55)]" : "border-cyan-300/45 shadow-[0_0_16px_rgba(34,211,238,.2)]"}`}>
+                <img src={assistant.photo} alt="" className="h-full w-full rounded-full object-cover object-top" />
                 {pilotAccess && roleProgress && (() => {
                   const match = teamEmployees.find((entry) => entry.id === assistant.id);
                   const key = match?.role || assistant.role.toUpperCase().replaceAll(" ", "_");
