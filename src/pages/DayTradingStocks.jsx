@@ -1,8 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Activity, ArrowLeft, BarChart3, FileUp, ShieldAlert, Waves } from "lucide-react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Line, LineChart, CartesianGrid, Tooltip, XAxis, YAxis, ResponsiveContainer, ReferenceLine } from "recharts";
 import { useAuth } from "../auth/AuthContext";
+import TradingJarvisPanel from "../components/trading/TradingJarvisPanel";
+import { requestStockCandles, stockFeedConfigured } from "../api/stockMarketFeed";
 
 const ACCOUNT = "jacoblord7@outlook.com";
 const COLORS = { price: "#38bdf8", fast: "#34d399", slow: "#fbbf24", upper: "#c084fc", lower: "#fb7185" };
@@ -85,17 +87,47 @@ export default function DayTradingStocks() {
   const { user } = useAuth();
   const allowed = String(user?.email || "").trim().toLowerCase() === ACCOUNT;
   const [symbol, setSymbol] = useState("SPY");
+  const [feedEnabled, setFeedEnabled] = useState(false);
+  const [feedStatus, setFeedStatus] = useState("not connected");
+  const [marketDatasets, setMarketDatasets] = useState({});
   const [channel, setChannel] = useState(20);
   const [datasets, setDatasets] = useState({});
   const [message, setMessage] = useState("");
   const [riskDollars, setRiskDollars] = useState(25);
   const [journal, setJournal] = useState([]);
-  const data = datasets[symbol];
+  const data = feedEnabled ? marketDatasets[symbol] : datasets[symbol];
   const result = useMemo(() => analyze(data?.candles, channel), [data, channel]);
-  const spy = useMemo(() => analyze(datasets.SPY?.candles, channel), [datasets.SPY, channel]);
-  const rsp = useMemo(() => analyze(datasets.RSP?.candles, channel), [datasets.RSP, channel]);
+  const spyData = feedEnabled ? marketDatasets : datasets;
+  const spy = useMemo(() => analyze(spyData.SPY?.candles, channel), [spyData.SPY, channel]);
+  const rsp = useMemo(() => analyze(spyData.RSP?.candles, channel), [spyData.RSP, channel]);
   const breadth = spy && rsp ? (spy.trend === "UP" && rsp.trend === "UP" ? "BROAD PARTICIPATION" : spy.trend === "UP" && rsp.trend !== "UP" ? "NARROW / MEGACAP-LED" : spy.trend === "DOWN" && rsp.trend === "DOWN" ? "BROAD WEAKNESS" : "DIVERGENT / MIXED") : "UPLOAD SPY + RSP";
   const datesMatch = spy && rsp && spy.last.time === rsp.last.time;
+
+  useEffect(() => {
+    if (!feedEnabled || !stockFeedConfigured) return undefined;
+    let cancelled = false;
+    let timer;
+    let controller;
+    async function poll() {
+      controller = new AbortController();
+      try {
+        const symbols = [...new Set(["SPY", "RSP", symbol])];
+        const results = await Promise.all(symbols.map((name) => requestStockCandles(name, controller.signal)));
+        if (cancelled) return;
+        const map = Object.fromEntries(results.map((value) => [value.symbol, {...value, filename: "Verified endpoint: " + value.timeframe}]));
+        setMarketDatasets(map);
+        setFeedStatus("connected");
+      } catch (error) {
+        if (cancelled) return;
+        setFeedStatus(error?.message || "Feed disconnected");
+        setMarketDatasets({});
+      } finally {
+        if (!cancelled) timer = window.setTimeout(poll, 15000);
+      }
+    }
+    poll();
+    return () => { cancelled = true; controller?.abort(); if (timer) window.clearTimeout(timer); };
+  }, [feedEnabled, symbol]);
 
   async function importFile(event) {
     const file = event.target.files?.[0];
@@ -136,10 +168,13 @@ export default function DayTradingStocks() {
           <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-sm font-bold text-cyan-200"><FileUp size={16}/> Upload {symbol} CSV<input type="file" accept=".csv,text/csv" onChange={importFile} className="hidden" /></label>
           <label className="text-xs text-slate-400">Donchian lookback <select value={channel} onChange={(e)=>setChannel(Number(e.target.value))} className="ml-2 rounded-lg border border-white/20 bg-slate-950 p-2 text-white">{[10,20,55].map((n)=><option key={n} value={n}>{n} candles</option>)}</select></label>
           <span className="text-xs text-slate-400">{data ? data.filename + " • " + data.candles.length + " candles" : "No market data loaded"}</span>
+          {stockFeedConfigured && <button type="button" onClick={() => setFeedEnabled((v)=>!v)} className="rounded-lg border border-cyan-400/30 px-3 py-2 text-xs text-cyan-200">{feedEnabled ? "Use imported CSV" : "Connect read-only feed"}</button>}
+          <span className="text-xs text-slate-500">Market feed: {feedEnabled ? feedStatus : "off"}</span>
         </div>
         <p className="mt-3 text-xs text-slate-500">Expected CSV: date,open,high,low,close,volume (ascending chronological order). Use completed candles, the same timeframe for comparisons, and a licensed/trusted source. Dates and prices are not independently verified.</p>
         {message && <p role="status" className="mt-2 text-xs text-amber-200">{message}</p>}
       </Panel>
+      <TradingJarvisPanel symbol={symbol} mode={feedEnabled ? "stock-feed" : "historical"} signal={result?.status || "WAIT"} reason={result?.rationale || "Upload verified candles to begin analysis."} timestamp={result?.last?.time} identity={data?.timeframe || "CSV"} live={feedEnabled && feedStatus === "connected" && Boolean(data?.updated_at) && Boolean(result?.last?.time)} details={[{label:"Market participation",value:datesMatch ? breadth : "SPY/RSP not aligned"},{label:"Donchian",value:result?.breakout},{label:"Relative volume",value:result?.last?.volumeRatio != null ? fmt(result.last.volumeRatio)+"×" : "No data"}]}/>
       <div className="grid gap-3 md:grid-cols-3">
         <Panel title="Signal"><strong className={"text-2xl " + (result?.bullish ? "text-emerald-300" : result?.bearish ? "text-rose-300" : "text-amber-200")}>{result?.status || "NO DATA"}</strong><p className="mt-2 text-sm text-slate-400">{result?.rationale || "Upload candles to generate an evidence-based analysis."}</p></Panel>
         <Panel title="SPY vs RSP market breadth"><strong className="text-lg">{datesMatch ? breadth : "NEEDS MATCHING DATA"}</strong><p className="mt-2 text-xs text-slate-400">SPY: {spy?.trend || "—"} • RSP: {rsp?.trend || "—"}. Compare aligned timestamps and intervals. Breadth alone does not forecast returns.</p></Panel>
@@ -162,7 +197,7 @@ export default function DayTradingStocks() {
         <Panel title="Jarvis entry / exit planner"><div className="flex items-center gap-2 text-xs text-slate-400"><Waves size={16}/>Rules-based draft, not personalized financial advice or a prediction.</div>{result?.plan ? <div className="mt-3 space-y-2 text-sm">{[["Direction",result.bullish?"Potential long":"Potential short"],["Illustrative entry",fmt(result.plan.entry)],["Stop / invalidation",fmt(result.plan.stop)],["2R objective",fmt(result.plan.target)],["Risk per share",fmt(result.plan.risk)]].map(([k,v])=><div key={k} className="flex justify-between"><span className="text-slate-400">{k}</span><strong>{v}</strong></div>)}<div className="mt-4 flex items-center gap-2"><label className="text-xs text-slate-400">Paper risk budget ($) <input type="number" min="1" step="1" value={riskDollars} onChange={(e)=>setRiskDollars(e.target.value)} className="ml-2 w-20 rounded-lg border border-white/20 bg-slate-950 p-2 text-white"/></label><button onClick={logPaperPlan} className="rounded-lg bg-cyan-500/20 px-3 py-2 text-xs font-bold text-cyan-100">Log paper plan</button></div></div> : <p className="mt-3 text-sm text-slate-400">No eligible setup. Wait for aligned trend + channel break + acceptable volume; stop and targets require a valid structure.</p>}</Panel>
         <Panel title="Paper trade journal"><div className="flex items-start gap-2 text-xs text-slate-400"><ShieldAlert size={16} className="shrink-0"/>Session-only notes; refreshing the page clears them. No brokerage orders, no auto-trades.</div>{journal.length ? <div className="mt-3 space-y-2">{journal.map((item,i)=><div key={item.time+i} className="rounded-lg bg-white/5 p-2 text-xs"><strong>{item.symbol} {item.side} · {item.shares} shares</strong><div className="mt-1 text-slate-400">Entry {fmt(item.entry)} • Stop {fmt(item.stop)} • Target {fmt(item.target)}</div></div>)}</div> : <p className="mt-3 text-xs text-slate-500">No paper trades logged.</p>}</Panel>
       </div>
-      <p className="pb-4 text-center text-xs text-slate-500">Research prototype · CSV-only · For real-time operation add a licensed market-data service, timestamp validation, backtests and alerting. No brokerage credentials or live order execution.</p>
+      <p className="pb-4 text-center text-xs text-slate-500">Research prototype · CSV import or optional strict read-only endpoint · For live operation configure a licensed market-data service, timestamp validation, backtests and alerting. No brokerage credentials or live order execution.</p>
     </div>
   </main>;
 }

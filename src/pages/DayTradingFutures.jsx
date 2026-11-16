@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Activity, ArrowDownRight, ArrowLeft, ArrowUpRight, Gauge, Radio, RefreshCw, ShieldAlert, Signal, TimerReset, Waves } from "lucide-react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import TradingJarvisPanel from "../components/trading/TradingJarvisPanel";
 
 const ALLOWED_EMAIL = "jacoblord7@outlook.com";
 const SIGNAL_URL = String(import.meta.env.VITE_FUTURES_SIGNAL_URL || "").trim();
@@ -154,6 +155,18 @@ export default function DayTradingFutures() {
           </div>
         </section>
 
+        <div className="mt-4">
+          <TradingJarvisPanel
+            symbol={snapshot?.symbol || "MNQ"}
+            mode="futures"
+            signal={action === "LONG" || action === "SHORT" ? action : "WAIT"}
+            reason={snapshot?.reason || "Waiting for completed candle confirmation."}
+            timestamp={snapshot?.candle_closed_at || null}
+            identity={snapshot?.timeframe || "1m"}
+            live={status === "live" && Boolean(snapshot?.candle_closed_at) && Boolean(snapshot?.updated_at) && Number.isFinite(Date.parse(snapshot.updated_at)) && Date.now() - Date.parse(snapshot.updated_at) >= 0 && Date.now() - Date.parse(snapshot.updated_at) < 30000 && snapshot?.confirmed === true}
+            details={[{label:"Feed",value:status},{label:"Timeframe",value:snapshot?.timeframe || "1m"},{label:"Setup",value:snapshot?.setup || "Wait"}]}
+          />
+        </div>
         <section className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <IndicatorCard label="Pressure" icon={Waves} value={snapshot?.indicators?.pressure} />
           <IndicatorCard label="Location / VWAP" icon={Activity} value={snapshot?.indicators?.location} />
