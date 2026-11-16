@@ -107,8 +107,8 @@ const tone = {
 
 function NavButton({ icon: Icon, label, onClick, color = "cyan", active = false, badge }) {
   return (
-    <button type="button" onClick={onClick} className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition hover:-translate-y-px ${active ? tone[color] : "border-transparent text-slate-400 hover:border-white/10 hover:bg-white/[.04] hover:text-white"}`}>
-      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border ${tone[color]}`}><Icon className="h-4 w-4" /></span>
+    <button type="button" onClick={onClick} className={`sw-customer-nav-entry flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition hover:-translate-y-px ${active ? `sw-customer-nav-active ${tone[color]}` : "border-transparent text-slate-400 hover:border-white/10 hover:bg-white/[.04] hover:text-white"}`}>
+      <span className={`sw-customer-nav-icon grid h-9 w-9 shrink-0 place-items-center rounded-xl border ${tone[color]}`}><Icon className="h-4 w-4" /></span>
       <span className="min-w-0 flex-1 truncate text-xs font-black">{label}</span>
       {badge ? <span className="rounded-full border border-white/10 bg-white/[.05] px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-slate-300">{badge}</span> : null}
     </button>
@@ -131,7 +131,7 @@ function AttentionItem({ title, detail, urgent = false, onClick }) {
 }
 
 function SectionCard({ eyebrow, title, action, onAction, children, className = "" }) {
-  return <section className={`rounded-[1.6rem] border border-white/10 bg-slate-950/65 p-4 ${className}`}><div className="flex items-start justify-between gap-3"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-200">{eyebrow}</div><h2 className="mt-1 text-base font-black text-white">{title}</h2></div>{action ? <button type="button" onClick={onAction} className="text-[10px] font-black text-cyan-200">{action}</button> : null}</div>{children}</section>;
+  return <section className={`sw-customer-section rounded-[1.6rem] border border-white/10 bg-slate-950/65 p-4 ${className}`}><div className="flex items-start justify-between gap-3"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-200">{eyebrow}</div><h2 className="mt-1 text-base font-black text-white">{title}</h2></div>{action ? <button type="button" onClick={onAction} className="text-[10px] font-black text-cyan-200">{action}</button> : null}</div>{children}</section>;
 }
 
 export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
