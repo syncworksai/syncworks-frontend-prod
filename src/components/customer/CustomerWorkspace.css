@@ -481,3 +481,12 @@
    grid-template-columns:206px minmax(0,1fr) !important;
  }
 }
+
+/* V10: in premium modes keep urgent alerts first, actionable capture second,
+   and less-urgent updates below. Quick Capture is also in the hero quick actions.
+   Original dashboard is intentionally untouched. */
+@media(min-width:1440px){
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:last-child > section:first-child {order:0}
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:last-child > section:last-child {order:1}
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:last-child > section:nth-child(2) {order:2}
+}
