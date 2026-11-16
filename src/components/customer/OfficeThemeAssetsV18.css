@@ -40,3 +40,19 @@
    background-position:center center!important;
  }
 }
+
+/* Photo selection buttons show matching thumbnail assets, while retaining the
+   original gradient fallback until each preview file has loaded. */
+.sw-workspace-theme-sample {position:relative;overflow:hidden;}
+.sw-workspace-theme-sample img {
+ display:block;width:100%;height:100%;object-fit:cover;object-position:center;
+ border-radius:inherit;filter:none;
+}
+.sw-workspace-theme.selected .sw-workspace-theme-sample {
+ outline:2px solid var(--sw-workspace-accent,#38bdf8);
+ outline-offset:2px;
+}
+.sw-workspace-theme:focus-visible {
+ outline:2px solid var(--sw-workspace-accent,#38bdf8);
+ outline-offset:3px;
+}
