@@ -76,6 +76,22 @@ export default function SyncAssistDaily() {
         <p className="mt-1 text-xs leading-5 text-slate-400">Outlook is available in ChatGPT, but the app needs its own authorized Microsoft connection before Jarvis can read and summarize your mailbox each morning. Email, calendar sync and automatic brief delivery are not active here.</p>
       </section>
 
+      {data && data.summary.open===0 && <section className="mt-4 rounded-2xl border border-cyan-400/25 bg-[#0a1830] p-4">
+        <h2 className="text-base font-black text-cyan-100">Why is my task list empty?</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-300">{data.data_diagnostics?.empty_reason || "No open tasks are currently available in this view."}</p>
+        <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+          {[
+            ["Owned businesses",data.data_diagnostics?.owned_businesses],
+            ["Managed businesses",data.data_diagnostics?.managed_businesses_not_in_owner_scan],
+            ["PM properties",data.data_diagnostics?.owned_properties],
+          ].map(([label,n])=><div key={label} className="rounded-xl border border-white/10 p-2"><strong className="block text-lg text-white">{n ?? "—"}</strong><span className="text-slate-400">{label}</span></div>)}
+        </div>
+        <p className="mt-3 text-xs leading-5 text-slate-400">Current scanner checks specific open/overdue records; recent service requests and tickets are limited to 30 days. Manager access does not automatically authorize financial scans.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button type="button" onClick={()=>navigate("/sync/assist")} className="min-h-10 rounded-xl border border-cyan-400/30 px-3 text-xs font-bold text-cyan-100">Check business connections</button>
+          <button type="button" onClick={()=>setAdding(true)} className="min-h-10 rounded-xl border border-slate-600 px-3 text-xs font-bold text-white">Add my first task</button>
+        </div>
+      </section>}
       <section className="mt-5">
         <div className="mb-3 flex items-center justify-between gap-2"><h2 className="text-lg font-black">Your priorities</h2><label className="flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" checked={showAll} onChange={e=>setShowAll(e.target.checked)}/> Show completed</label></div>
         <div className="mb-3 flex gap-2 overflow-x-auto pb-1">{FILTERS.map(v=><button key={v} type="button" onClick={()=>setFilter(v)} className={`min-h-10 shrink-0 rounded-xl border px-3 text-xs font-black ${filter===v?"border-cyan-400 bg-cyan-900/40 text-cyan-100":"border-slate-700 text-slate-400"}`}>{v[0]+v.slice(1).toLowerCase()}</button>)}</div>
