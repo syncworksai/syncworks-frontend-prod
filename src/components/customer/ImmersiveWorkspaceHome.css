@@ -115,3 +115,42 @@
   border:12px ridge #62462e;
   box-shadow:inset 0 0 0 1px rgba(250,182,92,.3),0 18px 32px rgba(0,0,0,.6),0 0 60px rgba(207,123,45,.17);
 }
+
+/* V5 rails reduce center width: use purposeful two-row launcher instead of six cramped tiles. */
+@media (min-width:1024px) {
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-home {
+   margin:0;
+   min-height:0;
+   border-radius:22px;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-content {
+   padding:clamp(19px,2vw,29px);
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-hero {
+   min-height:220px;
+   grid-template-columns:minmax(0,1fr);
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-focus {
+   display:none;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-welcome h1 {
+   font-size:clamp(29px,2.5vw,39px);
+   max-width:680px;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-action-strip {
+   grid-template-columns:repeat(3,minmax(0,1fr));
+   gap:9px;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-action-strip button {
+   min-height:61px;
+   flex-direction:row;
+   gap:9px;
+   padding:8px;
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-destinations {
+   grid-template-columns:repeat(3,minmax(0,1fr));
+ }
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-destination {
+   min-height:124px;
+ }
+}
