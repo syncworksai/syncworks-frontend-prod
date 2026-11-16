@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { validateJournal, unrealizedPracticePnl, equitySeries, reviewPracticeTrade } from "../src/utils/tradingPracticeJournal.mjs";
 import { TRAINING_CANDLES, buildTrainingRows, resolvePracticeTrade, explainTrainingSignal, closePracticeTrade, practiceStats } from "../src/utils/tradingTutorial.mjs";
 
 test("tutorial prices and OHLC structure are valid and deterministic",()=>{
@@ -56,4 +57,21 @@ test("losing paper trade affects win rate and drawdown",()=>{
   const stats=practiceStats([closed]);
   assert.equal(stats.winRate,0);
   assert.equal(stats.maxDrawdown,12.5);
+});
+
+test("unrealized simulated P&L is distinct from closed equity",()=>{
+  const trade={side:"SHORT",entry:21000,stop:21005,target:20990,risk:5};
+  assert.deepEqual(unrealizedPracticePnl(trade,20996),{gross:8,estimatedNet:5.5,r:0.8});
+  assert.equal(equitySeries([])[0].equity,10000);
+});
+test("validated journal produces consistent equity, performance and reviews",()=>{
+  const long={side:"LONG",entry:100,stop:98,target:104,risk:2,entryIndex:25,entryTime:"T+26",exitIndex:28,exitTime:"T+29",signalAtEntry:"WAIT"};
+  const first={...closePracticeTrade(long,104,"TARGET HIT"),exitIndex:28,exitTime:"T+29"};
+  const second={...closePracticeTrade({...long,entryTime:"T+30"},98,"STOP HIT"),exitIndex:30,exitTime:"T+31"};
+  const validated=validateJournal([first,null,{side:"JUNK"},second]);
+  assert.equal(validated.length,2);
+  assert.deepEqual(equitySeries(validated).map(x=>x.equity),[10000,10005.5,9999]);
+  assert.equal(reviewPracticeTrade(first).aligned,false);
+  assert.match(reviewPracticeTrade(first).summary,/did not match/);
+  assert.match(reviewPracticeTrade(second).details.at(-1),/did not make simulated profit/);
 });
