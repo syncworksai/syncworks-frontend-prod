@@ -6,7 +6,7 @@ import { AVATARS } from "./JarvisAvatar";
 const BASE = "/sync-ai/assist/pilot/team/";
 const DEFAULTS = AVATARS.map((assistant) => ({
   id: assistant.id, name: assistant.name, role: assistant.role.toUpperCase().replaceAll(" ", "_"),
-  execution_status: ["CHIEF_OF_STAFF", "SALES_MANAGER", "RESEARCH_ANALYST"].includes(assistant.role.toUpperCase().replaceAll(" ", "_")) ? "internal_pilot" : "not_implemented",
+  execution_status: ["CHIEF_OF_STAFF", "SALES_MANAGER", "RESEARCH_ANALYST", "MARKETING_MANAGER", "EXECUTIVE_ASSISTANT"].includes(assistant.role.toUpperCase().replaceAll(" ", "_")) ? "internal_pilot" : "not_implemented",
 }));
 const clean = (items) => items.map(({ id, name, role }) => ({ id, name, role }));
 const label = (role) => role.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
@@ -74,7 +74,7 @@ export default function SyncAssistTeamDrawer({ onTeamChange }) {
               {loading && <p role="status" className="text-sm text-slate-300">Loading your team…</p>}
               {!loading && employees.map((employee) => {
                 const portrait = AVATARS.find((a) => a.id === employee.id);
-                const executable = employee.execution_status === "internal_pilot";
+                const executable = ["CHIEF_OF_STAFF", "SALES_MANAGER", "RESEARCH_ANALYST", "MARKETING_MANAGER", "EXECUTIVE_ASSISTANT"].includes(employee.role);
                 return <div key={employee.id} className="rounded-2xl border border-white/15 bg-slate-900/50 p-3">
                   <div className="mb-3 flex items-center gap-3">
                     <img src={portrait?.photo} alt="" className="h-12 w-12 rounded-full border border-cyan-300/45 object-cover object-top"/>
@@ -95,7 +95,7 @@ export default function SyncAssistTeamDrawer({ onTeamChange }) {
               })}
               {error && <p role="alert" className="rounded-lg border border-rose-400/30 p-3 text-xs text-rose-200">{error}</p>}
               {notice && <p role="status" className="flex items-center gap-2 text-xs text-emerald-200"><Check size={16}/>{notice}</p>}
-              <p className="text-[11px] leading-5 text-amber-200">This does not enable background scheduling, email sending, customer changes, or payments. Each employee needs separate authorized tool tests before activation.</p>
+              <p className="text-[11px] leading-5 text-amber-200">This does not enable background scheduling, email sending, customer changes, or payments. Internal-pilot tasks require matching source records and owner approval. Other roles still need separate authorized tool integrations before activation.</p>
             </div>
             <div className="flex items-center gap-2 border-t border-white/10 bg-[#071225] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <button type="button" onClick={() => setOpen(false)} className="inline-flex min-h-11 items-center gap-1 rounded-xl border border-white/20 px-3 text-sm"><ChevronLeft size={16}/> Back</button>
