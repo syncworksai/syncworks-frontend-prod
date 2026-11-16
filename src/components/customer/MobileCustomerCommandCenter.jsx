@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { AlertTriangle, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, CloudSun, Clock3, Dumbbell, Grid2X2, Inbox, LayoutGrid, MapPin, Plus, Sparkles, WalletCards } from "lucide-react";
+import { AlertTriangle, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, CloudSun, Clock3, Grid2X2, Inbox, LayoutGrid, MapPin, Plus, Sparkles, WalletCards } from "lucide-react";
 import "./MobileCustomerCommandCenter.css";
 
 function shortDate(date) {
@@ -12,7 +12,7 @@ function weatherLocation(weather) {
   const place = weather?.location || {};
   return [place.city || place.name || place.locality, place.state || place.region].filter(Boolean).join(", ") || "Your location";
 }
-export default function MobileCustomerCommandCenter({ name, brief, attentionCount, todayEvents, openTickets, weather, weatherState, notifications = [], workout, minimums, businessConnected, pmConnected, tenantConnected, onNavigate, onOpenWorkspace, theme }) {
+export default function MobileCustomerCommandCenter({ name, brief, attentionCount, todayEvents, calendarEvents = [], openTickets, weather, weatherState, notifications = [], workout, minimums, businessConnected, pmConnected, tenantConnected, onNavigate, onOpenWorkspace, theme }) {
   const [now, setNow] = useState(() => new Date());
   const [activePanel, setActivePanel] = useState(null);
   useEffect(() => {
@@ -28,12 +28,23 @@ export default function MobileCustomerCommandCenter({ name, brief, attentionCoun
   const temperatureLabel = hasTemperature ? `${Math.round(temperature)}°F` : weatherState === "loading" ? "Loading…" : "Unavailable";
   const condition = weather?.current?.description || weather?.current?.condition || "Tap for forecast";
   const visibleNotifications = notifications.slice(0, 2);
-  const modules = [
-    { label: "Office", Icon: BriefcaseBusiness, action: () => onOpenWorkspace("office") },
-    { label: "My Day", sub: "Agenda & tasks", Icon: CalendarDays, action: () => setActivePanel("day") },
-    { label: "Health", sub: "Fitness & wellness", Icon: Dumbbell, action: () => open("/customer/health") },
-    { label: "Finance", sub: "Money & payments", Icon: WalletCards, action: () => open("/customer/finance") },
-  ];
+  // A compact rolling hourly agenda: show the current hour and next three.
+  // Render only recorded calendar events; do not invent appointments.
+  const currentHour = new Date(now);
+  currentHour.setMinutes(0, 0, 0);
+  const hourlySlots = Array.from({ length: 4 }, (_, index) => {
+    const start = new Date(currentHour.getTime() + index * 60 * 60 * 1000);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const matches = calendarEvents.filter((item) => {
+      const value = item?.start_at || item?.start;
+      if (!value) return false;
+      const time = new Date(value);
+      return !Number.isNaN(time.getTime()) && time >= start && time < end;
+    });
+    return { start, events: matches, active: index === 0 };
+  });
+  const hourText = (date) => new Intl.DateTimeFormat("en-US", {hour:"numeric",hour12:true}).format(date);
+  const eventText = (event) => String(event?.title || event?.name || "Calendar event");
   return (
     <section className="sw-mobile-command" data-mobile-theme={theme} aria-label="Mobile personal command center">
       <div className="sw-mobile-command-top">
@@ -59,12 +70,28 @@ export default function MobileCustomerCommandCenter({ name, brief, attentionCoun
           </button>
         </div>
       </div>
-      <div className="sw-mobile-module-grid">
-        {modules.map(({ label, sub, Icon, action }) => <button type="button" key={label} className="sw-mobile-module" onClick={action}><Icon size={22}/><strong>{label}</strong>{sub && <small>{sub}</small>}</button>)}
-      </div>
-      <div className="sw-mobile-command-actions">
-        <button type="button" onClick={() => open("/customer/new-request")}><Plus size={17}/> New request</button>
-        <button type="button" onClick={() => onOpenWorkspace("apps")}><Grid2X2 size={17}/> All apps</button>
+      <section className="sw-mobile-hourly-agenda" aria-label="My Day hourly calendar">
+        <div className="sw-mobile-hourly-heading">
+          <span><CalendarDays size={17}/> MY DAY <small>Hourly agenda</small></span>
+          <button type="button" onClick={() => open("/calendar")}>Calendar <ChevronRight size={16}/></button>
+        </div>
+        <div className="sw-mobile-hourly-rows">
+          {hourlySlots.map(({ start, events, active }) => (
+            <button type="button" className={active ? "sw-mobile-hour-row is-current" : "sw-mobile-hour-row"} key={start.toISOString()} onClick={() => open("/calendar")} aria-label={`${hourText(start)}: ${events.length ? events.map(eventText).join(", ") : "Nothing scheduled"}`}>
+              <time dateTime={start.toISOString()}>{hourText(start)}</time>
+              <span className="sw-mobile-hour-line" aria-hidden="true"/>
+              <span className="sw-mobile-hour-events">
+                {events.length ? <><strong>{eventText(events[0])}</strong>{events.length > 1 && <small>+{events.length - 1} more</small>}</> : <small>{active ? "No event this hour" : "Open"}</small>}
+              </span>
+              {active && <span className="sw-mobile-hour-now">NOW</span>}
+            </button>
+          ))}
+        </div>
+      </section>
+      <div className="sw-mobile-command-actions sw-mobile-actions-three">
+        <button type="button" onClick={() => onOpenWorkspace("office")}><BriefcaseBusiness size={17}/> Office</button>
+        <button type="button" onClick={() => open("/customer/new-request")}><Plus size={17}/> New Request</button>
+        <button type="button" onClick={() => onOpenWorkspace("apps")}><Grid2X2 size={17}/> Apps</button>
       </div>
       {activePanel && <div className="sw-mobile-sheet-backdrop" onClick={() => setActivePanel(null)} role="presentation"><div className="sw-mobile-sheet" role="dialog" aria-modal="true" aria-label={activePanel === "day" ? "Today's agenda" : "Updates"} onClick={e => e.stopPropagation()}>
         <div className="sw-mobile-sheet-head"><strong>{activePanel === "day" ? "Your day" : "Needs attention"}</strong><button type="button" onClick={() => setActivePanel(null)}>Close</button></div>

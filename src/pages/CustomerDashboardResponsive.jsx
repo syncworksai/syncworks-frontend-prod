@@ -152,6 +152,7 @@ export default function CustomerDashboardResponsive() {
         brief={mobileBrief}
         attentionCount={overdueCount}
         todayEvents={todayEvents.length}
+        calendarEvents={calendarEvents}
         openTickets={openTickets.length}
         weatherValue="Weather"
         weather={liveWeather}
