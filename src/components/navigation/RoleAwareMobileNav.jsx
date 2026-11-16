@@ -29,21 +29,23 @@ const ITEM_LIBRARY = {
   sports: { label: "Sports", icon: Trophy, routes: { CUSTOMER: "/connect/sports" } },
   map: { label: "Map", icon: MapPinned, routes: { CUSTOMER: "/calendar", SBO: "/calendar", EMPLOYEE: "/calendar", PM: "/pm/calendar" } },
   tools: { label: "Tools", icon: Wrench, routes: { CUSTOMER: "/settings", SBO: "/sbo/settings", EMPLOYEE: "/employee/settings", PM: "/pm/settings" } },
-  workspace: { label: "Office", icon: LayoutGrid, routes: { CUSTOMER: "/customer?workspace=apps" } },
+  workspace: { label: "Office", icon: LayoutGrid, routes: { CUSTOMER: "/customer?workspace=office" } },
+  apps: { label: "Apps", icon: LayoutGrid, routes: { CUSTOMER: "/customer?workspace=apps" } },
+  appearance: { label: "Settings", icon: Settings, routes: { CUSTOMER: "/customer?workspace=appearance" } },
   new_request: { label: "Request", icon: Wrench, routes: { CUSTOMER: "/customer/new-request" } },
   health: { label: "Health", icon: Home, routes: { CUSTOMER: "/customer/health" } },
   more: { label: "More", icon: Settings, routes: { CUSTOMER: "/settings", SBO: "/sbo/settings", EMPLOYEE: "/employee/settings", PM: "/pm/settings" } },
 };
 
 const DEFAULTS = {
-  CUSTOMER: ["home", "workspace", "new_request", "more"],
+  CUSTOMER: ["home", "workspace", "apps", "appearance"],
   SBO: ["home", "requests", "inbox", "more"],
   EMPLOYEE: ["home", "schedule", "inbox", "requests"],
   PM: ["home", "schedule", "inbox", "more"],
 };
 
 const ALLOWED = {
-  CUSTOMER: ["home", "workspace", "new_request", "health", "requests", "schedule", "inbox", "marketplace", "sports", "map", "tools", "more"],
+  CUSTOMER: ["home", "workspace", "apps", "appearance", "new_request", "health", "requests", "schedule", "inbox", "marketplace", "sports", "map", "tools", "more"],
   SBO: ["home", "requests", "schedule", "inbox", "customers", "marketplace", "map", "tools", "more"],
   EMPLOYEE: ["home", "requests", "schedule", "inbox", "customers", "map", "tools", "more"],
   PM: ["home", "requests", "schedule", "inbox", "customers", "map", "tools", "more"],
@@ -51,7 +53,7 @@ const ALLOWED = {
 
 function storageKey(mode, user) {
   const identity = user?.id || user?.pk || user?.email || "anon";
-  return `${mode === "CUSTOMER" ? "sw_mobile_nav_v2" : STORAGE_PREFIX}:${identity}:${mode}`;
+  return `${mode === "CUSTOMER" ? "sw_mobile_nav_v3" : STORAGE_PREFIX}:${identity}:${mode}`;
 }
 
 function readPreference(mode, user) {
@@ -155,7 +157,7 @@ export function MobileNavSettings() {
       </div>
       <div className="sw-nav-settings-preview">
         {items.slice(0, 2).map((itemId) => <PreviewItem key={`left-${itemId}`} itemId={itemId} />)}
-        <div className={`sw-nav-settings-center-preview ${center?.sync ? "sync" : ""}`}><div className="sw-nav-settings-center-orb"><img src="/brand/syncworks-start-logo.png" alt="" /></div><span>{center?.label || "Action"}</span></div>
+        <div className={`sw-nav-settings-center-preview ${center?.sync ? "sync" : ""}`}><div className="sw-nav-settings-center-orb"><img src="/brands/syncworks-icon-192.png" alt="" /></div><span>{center?.label || "Action"}</span></div>
         {items.slice(2, 4).map((itemId) => <PreviewItem key={`right-${itemId}`} itemId={itemId} />)}
       </div>
       <div className="sw-nav-settings-grid">
@@ -223,6 +225,16 @@ export default function RoleAwareMobileNav() {
     const target = routeFor(itemId, navMode);
     return { id: itemId, label: item?.label || itemId, Icon: item?.icon || Home, target, active: routeMatches(pathname, target), badge: itemId === "inbox" ? unread : 0 };
   });
+  const openItem = (item) => {
+    const target = item.target;
+    const query = new URL(target, window.location.origin);
+    const drawer = query.searchParams.get("workspace");
+    if (navMode === "CUSTOMER" && drawer && pathname === "/customer") {
+      window.dispatchEvent(new CustomEvent("sw:workspace-open", { detail: drawer }));
+      return;
+    }
+    navigate(target);
+  };
 
   function openCenter() {
     if (center.sync) {
@@ -236,7 +248,7 @@ export default function RoleAwareMobileNav() {
     <>
       <nav className="sw-role-mobile-nav lg:hidden" aria-label="Mobile quick navigation">
         <div className="sw-role-mobile-nav-grid">
-          {renderedItems.slice(0, 2).map((item) => <NavButton key={item.id} item={item} onClick={() => navigate(item.target)} />)}
+          {renderedItems.slice(0, 2).map((item) => <NavButton key={item.id} item={item} onClick={() => openItem(item)} />)}
           <button type="button" className={`sw-role-mobile-nav-center ${center.sync ? "is-sync" : ""}`} onClick={openCenter} aria-label={center.sync ? "Open SYNC assistant" : `New ${center.label}`}>
             <span className="sw-role-mobile-nav-center-orb"><img src="/brand/syncworks-start-logo.png" alt="" /></span>
             <span>{center.label}</span>
