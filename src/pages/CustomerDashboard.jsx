@@ -14,6 +14,9 @@ import {
   Dumbbell,
   HeartHandshake,
   Home,
+  Gamepad2,
+  Layers3,
+  Zap,
   Inbox,
   ListTodo,
   MapPin,
@@ -39,6 +42,7 @@ import AroundYouPanel from "../components/customer/AroundYouPanel";
 import CalendarDailySnapshot from "../components/calendar/CalendarDailySnapshot";
 import DashboardShell from "../components/dashboard/DashboardShell";
 import ImmersiveWorkspaceHome from "../components/customer/ImmersiveWorkspaceHome";
+import "../components/customer/ImmersiveSceneV19.css";
 
 const DAY_TRADING_EMAIL = "jacoblord7@outlook.com";
 
@@ -229,11 +233,11 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
             <NavButton icon={MapPinned} label="Traffic" onClick={() => nav("/customer/traffic")} color="rose" badge="LIVE" />
             <NavButton icon={CloudSun} label="Weather" onClick={() => nav("/customer/weather")} color="sky" badge="LIVE" />
             <NavButton icon={ShoppingBag} label="Shop Assist" onClick={() => nav("/customer/store")} color="emerald" />
-            <NavButton icon={Store} label="Services" onClick={() => nav("/customer/marketplace")} color="cyan" />
+            <NavButton icon={Layers3} label="Services" onClick={() => nav("/customer/marketplace")} color="cyan" />
             <NavButton icon={Network} label="Social" onClick={() => nav("/connect")} color="fuchsia" />
-            <NavButton icon={Spade} label="New Game" onClick={() => nav("/customer/games/new")} color="cyan" />
-            <NavButton icon={Spade} label="Games" onClick={() => nav("/customer/games")} color="violet" />
-            <NavButton icon={Search} label="EDGE" onClick={() => nav("/customer/edge")} color="violet" />
+            <NavButton icon={Gamepad2} label="New Game" onClick={() => nav("/customer/games/new")} color="cyan" />
+            <NavButton icon={Gamepad2} label="Games" onClick={() => nav("/customer/games")} color="violet" />
+            <NavButton icon={Zap} label="EDGE" onClick={() => nav("/customer/edge")} color="violet" />
             {dayTradingEnabled ? <NavButton icon={Activity} label="Day Trade" onClick={() => nav("/customer/day-trading-futures")} color="emerald" badge="LIVE" /> : null}
           </div>
           <div className="my-3 h-px bg-white/10" />
