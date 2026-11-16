@@ -110,3 +110,49 @@
     --mc-glass:rgba(3,13,35,.28);
   }
 }
+
+/* Real portrait route: CustomerDashboardResponsive renders this component directly.
+   Scope sizing to phone layout, never the desktop CustomerDashboard. */
+@media(max-width:767px) {
+  .sw-workspace-root[data-sw-layout="portrait"] {
+    background-size:cover,cover!important;
+    background-position:center,var(--sw-room-position,center)!important;
+    background-repeat:no-repeat!important;
+    min-height:100dvh;
+  }
+  .sw-workspace-root[data-sw-layout="portrait"] > .sw-mobile-command {
+    display:flex!important;
+    width:100%;
+    height:calc(100dvh - 272px);
+    min-height:0;
+    max-height:none;
+    overflow:hidden;
+    margin-top:10px;
+    margin-bottom:0;
+    position:relative;
+    z-index:1;
+  }
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-mobile-command-brief {
+    min-height:112px;
+  }
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-mobile-module-grid {
+    min-height:150px;
+  }
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-mobile-brief-copy {
+    -webkit-line-clamp:2;
+  }
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-mobile-brief-copy.expanded {
+    -webkit-line-clamp:unset;
+  }
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-mobile-command-actions {
+    display:flex;
+  }
+}
+@media(max-width:767px) and (max-height:740px) {
+  .sw-workspace-root[data-sw-layout="portrait"] > .sw-mobile-command {
+    height:calc(100dvh - 235px);
+  }
+  .sw-workspace-root[data-sw-layout="portrait"] .sw-mobile-command-actions {
+    display:none;
+  }
+}
