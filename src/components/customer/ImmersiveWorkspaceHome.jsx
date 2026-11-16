@@ -49,29 +49,17 @@ export default function ImmersiveWorkspaceHome({ displayName = "there", theme, o
           <button type="button" onClick={()=>nav("/sync")}><Sparkles size={18}/><span>Get my daily briefing</span><ArrowUpRight size={16}/></button>
         </div>
       </div>
-      <div className="sw-lobby-edge sw-lobby-edge-left" aria-label="Quick access">
-        <button type="button" onClick={()=>nav("/calendar")}><CalendarDays size={23}/><span>Calendar</span></button>
-        <button type="button" onClick={()=>nav("/customer/tasks")}><CheckCheck size={23}/><span>Tasks</span></button>
-        <button type="button" onClick={()=>nav("/customer/inbox")}><Mail size={23}/><span>Inbox</span></button>
-      </div>
-      <div className="sw-lobby-edge sw-lobby-edge-right" aria-label="Your destinations">
-        <button type="button" onClick={()=>nav("/sbo")}><BriefcaseBusiness size={23}/><span>Business</span></button>
-        <button type="button" onClick={()=>nav("/pm")}><Building2 size={23}/><span>Property</span></button>
-        <button type="button" onClick={()=>nav("/customer/finance")}><ChartNoAxesCombined size={23}/><span>Finance</span></button>
-      </div>
+      <nav className="sw-office-categories" aria-label="Explore your office">
+        {["Daily","Personal","Business","Apps"].map((name)=> <button key={name} type="button" onClick={()=>window.dispatchEvent(new CustomEvent("sw:workspace-open",{detail:name.toLowerCase()}))}>{name}<ArrowUpRight size={14}/></button>)}
+      </nav>
       <div className="sw-lobby-primary">
-        <span className="sw-lobby-primary-caption">YOUR DAY STARTS HERE</span>
-        <button type="button" className="sw-lobby-start" onClick={onOpenLauncher}><LayoutGrid size={22}/><span>OPEN MY WORKSPACES</span><ArrowUpRight size={19}/></button>
-        <button type="button" className="sw-lobby-secondary" onClick={()=>nav("/customer/new-request")}><ClipboardPlus size={16}/> New service request</button>
+        <span className="sw-lobby-primary-caption">YOUR OFFICE IS READY</span>
+        <button type="button" className="sw-lobby-start" onClick={()=>document.getElementById("sw-office-workdesk")?.scrollIntoView({behavior:"smooth",block:"start"})}><LayoutGrid size={22}/><span>ENTER MY OFFICE</span><ArrowUpRight size={19}/></button>
+        <button type="button" className="sw-lobby-secondary" onClick={()=>nav("/sync")}><ClipboardPlus size={16}/> Get a briefing</button>
       </div>
-      <div className="sw-immersive-workspaces-heading sw-lobby-more">
-        <div><span className="sw-immersive-mini">EXPLORE YOUR DESTINATIONS</span><h2>My Workspaces</h2></div>
-        <button type="button" onClick={()=>setShowAll(v=>!v)} aria-expanded={showAll}>{showAll?"Hide destinations":"View all destinations"} <ArrowUpRight size={15}/></button>
-      </div>
-      {showAll && <div className="sw-immersive-destinations">{destinations.map(({label,detail,path,icon:Icon,className})=><button className={`sw-immersive-destination sw-immersive-destination-${className}`} key={label} type="button" onClick={()=>nav(path)}><span className="sw-immersive-destination-icon"><Icon size={24}/></span><strong>{label}</strong><small>{detail}</small><ArrowUpRight className="sw-immersive-destination-arrow" size={15}/></button>)}</div>}
       <div className="sw-immersive-bottom sw-lobby-bottom">
-        <span><Clock3 size={15}/> Scroll for your live dashboard and daily briefing.</span>
-        <button type="button" onClick={()=>nav("/customer/weather")}><SunMedium size={15}/> Check weather <ArrowUpRight size={13}/></button>
+        <span><Clock3 size={15}/> Your priorities and next steps are in the Office below.</span>
+        <button type="button" onClick={onOpenLauncher}><SunMedium size={15}/> Explore tools <ArrowUpRight size={13}/></button>
       </div>
     </div>
   </section>;
