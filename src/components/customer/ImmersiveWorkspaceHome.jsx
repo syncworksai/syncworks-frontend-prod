@@ -16,7 +16,7 @@ const actionItems = [
  {label:"Calendar", path:"/calendar", icon:CalendarDays},
  {label:"My tasks", path:"/customer/tasks", icon:CheckCheck},
  {label:"Inbox", path:"/customer/inbox", icon:Mail},
- {label:"Ask SYNC", path:"/sync", icon:Sparkles},
+ {label:"Quick capture", path:"/sync?prompt=Help%20me%20turn%20an%20appointment%20message%20into%20a%20calendar%20event.", icon:ClipboardPlus},
 ];
 export default function ImmersiveWorkspaceHome({ displayName = "there", theme, onOpenLauncher, onOpenAppearance }) {
   const nav = useNavigate();
