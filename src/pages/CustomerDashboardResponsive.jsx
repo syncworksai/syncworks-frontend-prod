@@ -4,6 +4,8 @@ import { Activity, Home, Inbox, LayoutGrid, MoreHorizontal } from "lucide-react"
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { getIdentityProfile } from "../api/identity";
+import { getBrowserCurrentLocation } from "../api/locationContext";
+import { getLiveWeather } from "../api/liveContext";
 import { useAuth } from "../auth/AuthContext";
 import {readPokerResume} from "../games/pokerResume.mjs";
 import {readFeatureResumes} from "../utils/featureResume.mjs";
@@ -68,6 +70,8 @@ export default function CustomerDashboardResponsive() {
   const [invoices, setInvoices] = useState([]);
   const [identity, setIdentity] = useState(null);
   const [calendarEvents, setCalendarEvents] = useState([]);
+  const [liveWeather, setLiveWeather] = useState(null);
+  const [weatherState, setWeatherState] = useState("loading");
   const [loading, setLoading] = useState(true);
   const viewportMode = useViewportMode();
   const phoneMode = viewportMode === "portrait";
@@ -103,6 +107,17 @@ export default function CustomerDashboardResponsive() {
   }
 
   useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (!phoneMode) return undefined;
+    let active = true;
+    // Browser permission governs whether the dashboard can show location weather.
+    // If denied or unavailable, show an honest fallback rather than invented values.
+    getBrowserCurrentLocation({ enableHighAccuracy:false, timeout:9000, maximumAge:300000 })
+      .then((position) => getLiveWeather(position))
+      .then((data) => { if (active) { setLiveWeather(data || null); setWeatherState(data ? "ready" : "unavailable"); } })
+      .catch(() => { if (active) { setLiveWeather(null); setWeatherState("unavailable"); } });
+    return () => { active = false; };
+  }, [phoneMode]);
 
   const openTickets = useMemo(() => tickets.filter((item) => !["COMPLETED", "CLOSED", "CANCELLED", "PAID"].includes(String(item?.status || "").toUpperCase())), [tickets]);
   const dueInvoices = useMemo(() => invoices.filter((item) => !["PAID", "VOID"].includes(String(item?.derived_state || item?.status || "").toUpperCase())), [invoices]);
@@ -110,6 +125,12 @@ export default function CustomerDashboardResponsive() {
   const profilePhotoUrl = String(identity?.identity?.profile_photo_url || "").trim();
   const todayEvents = calendarEvents.filter(item => item?.start_at && new Date(item.start_at).toDateString() === new Date().toDateString());
   const overdueCount = dueInvoices.filter(item => ["OVERDUE", "PAST_DUE"].includes(String(item?.derived_state || item?.status || "").toUpperCase())).length;
+  const weatherAlerts = Array.isArray(liveWeather?.alerts) ? liveWeather.alerts : [];
+  const notificationItems = [
+    ...(overdueCount ? [{ id: "overdue", label: `${overdueCount} overdue payment${overdueCount === 1 ? "" : "s"}`, route: "/customer/finance" }] : []),
+    ...(dueInvoices.length > overdueCount ? [{ id: "payments", label: `${dueInvoices.length - overdueCount} payment${dueInvoices.length - overdueCount === 1 ? "" : "s"} to review`, route: "/customer/finance" }] : []),
+    ...weatherAlerts.slice(0, 1).map((item) => ({ id: "weather-alert", label: String(item?.event || item?.headline || "Weather advisory"), route: "/customer/weather" })),
+  ];
   const mobileBrief = [todayEvents.length ? `${todayEvents.length} event${todayEvents.length === 1 ? "" : "s"} scheduled today.` : "Your calendar is clear today.", overdueCount ? `${overdueCount} overdue payment${overdueCount === 1 ? "" : "s"} need attention.` : dueInvoices.length ? `${dueInvoices.length} payment item${dueInvoices.length === 1 ? "" : "s"} to review.` : "No urgent payment alerts.", openTickets.length ? `${openTickets.length} active service request${openTickets.length === 1 ? "" : "s"}.` : ""].filter(Boolean).join(" ");
 
   if (!phoneMode) {
@@ -133,6 +154,9 @@ export default function CustomerDashboardResponsive() {
         todayEvents={todayEvents.length}
         openTickets={openTickets.length}
         weatherValue="Weather"
+        weather={liveWeather}
+        weatherState={weatherState}
+        notifications={notificationItems}
         workout={null}
         minimums={totalDue.toLocaleString("en-US", { style: "currency", currency: "USD" })}
         businessConnected={false}
