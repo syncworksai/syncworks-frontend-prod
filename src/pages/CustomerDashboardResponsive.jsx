@@ -73,6 +73,20 @@ export default function CustomerDashboardResponsive() {
   const phoneMode = viewportMode === "portrait";
   const dayTradingEnabled = String(user?.email || "").trim().toLowerCase() === DAY_TRADING_EMAIL;
 
+  // Customer phone home is a fixed-height cockpit. Lock only this route's document
+  // scroll; drawers/sheets keep their own scrolling and other pages are unaffected.
+  useEffect(() => {
+    if (!phoneMode) return undefined;
+    document.documentElement.classList.add("sw-customer-home-scroll-locked");
+    document.body.classList.add("sw-customer-home-scroll-locked");
+    window.scrollTo(0, 0);
+    return () => {
+      document.documentElement.classList.remove("sw-customer-home-scroll-locked");
+      document.body.classList.remove("sw-customer-home-scroll-locked");
+    };
+  }, [phoneMode]);
+
+
   async function load() {
     setLoading(true);
     const [ticketResult, invoiceResult, identityResult, calendarResult] = await Promise.allSettled([
@@ -109,7 +123,7 @@ export default function CustomerDashboardResponsive() {
   }
 
   return (
-    <div className="sw-workspace-root min-h-dvh px-3 pb-24 pt-3 text-slate-100" data-workspace-theme={workspaceAppearance.theme} data-workspace-motion={workspaceAppearance.motion} data-workspace-compact={workspaceAppearance.compact} data-sw-layout="portrait" data-sw-visual="midnight">
+    <div className="sw-workspace-root sw-customer-mobile-viewport px-3 text-slate-100" data-workspace-theme={workspaceAppearance.theme} data-workspace-motion={workspaceAppearance.motion} data-workspace-compact={workspaceAppearance.compact} data-sw-layout="portrait" data-sw-visual="midnight">
       <CustomerWorkspace settings={workspaceAppearance} update={updateWorkspaceAppearance} phoneMode dayTradingEnabled={dayTradingEnabled} />
       <MobileCustomerCommandCenter
         name={firstName(user)}
