@@ -4,10 +4,10 @@ import "./JarvisAvatar.css";
 
 export const AVATAR_STORAGE_KEY="sw-jarvis-avatar-v1";
 export const AVATARS=[
-  {id:"executive-female",name:"Victoria",style:"Executive",presentation:"Female",skin:"#d8a17f",shade:"#a36b51",hair:"#261d24",outfit:"#172b50",accent:"#d8b271"},
-  {id:"executive-male",name:"James",style:"Executive",presentation:"Male",skin:"#bc8263",shade:"#895641",hair:"#211e21",outfit:"#152133",accent:"#c3ab86"},
-  {id:"future-female",name:"Elizabeth",style:"Futuristic",presentation:"Female",skin:"#e8b398",shade:"#b07965",hair:"#cbb9a9",outfit:"#102f48",accent:"#52defd"},
-  {id:"future-male",name:"William",style:"Futuristic",presentation:"Male",skin:"#bb8a70",shade:"#855844",hair:"#151c2c",outfit:"#2d2055",accent:"#ad65ff"},
+  {id:"executive-female",name:"Victoria",style:"Executive",presentation:"Female",photo:"/jarvis-avatars/victoria.jpeg",mouthX:"49%",mouthY:"34%",skin:"#d8a17f",shade:"#a36b51",hair:"#261d24",outfit:"#172b50",accent:"#d8b271"},
+  {id:"executive-male",name:"James",style:"Executive",presentation:"Male",photo:"/jarvis-avatars/james.jpeg",mouthX:"49%",mouthY:"43%",skin:"#bc8263",shade:"#895641",hair:"#211e21",outfit:"#152133",accent:"#c3ab86"},
+  {id:"future-female",name:"Elizabeth",style:"Modern",presentation:"Female",photo:"/jarvis-avatars/elizabeth.jpeg",mouthX:"49%",mouthY:"39%",skin:"#e8b398",shade:"#b07965",hair:"#cbb9a9",outfit:"#102f48",accent:"#52defd"},
+  {id:"future-male",name:"William",style:"Modern",presentation:"Male",photo:"/jarvis-avatars/william.jpeg",mouthX:"50%",mouthY:"38%",skin:"#bb8a70",shade:"#855844",hair:"#151c2c",outfit:"#2d2055",accent:"#ad65ff"},
 ];
 
 export function loadAvatarChoice(){
@@ -33,12 +33,16 @@ export function useJarvisAvatar(){
 
 export function JarvisAvatar({id="executive-female",state="idle",size="hero",label=true}){
   const config=AVATARS.find(v=>v.id===id)||AVATARS[0];
+  const [photoReady,setPhotoReady]=useState(false);
+  useEffect(()=>setPhotoReady(false),[id]);
   const female=config.presentation==="Female",future=config.style==="Futuristic";
   const stage=["idle","listening","thinking","speaking"].includes(state)?state:"idle";
   const gradId="avatar-outfit-"+id;
-  return <div className={`jarvis-avatar jarvis-avatar--${stage} jarvis-avatar--${size}`} style={{"--avatar-accent":config.accent}}>
+  return <div className={`jarvis-avatar jarvis-avatar--${stage} jarvis-avatar--${size} ${photoReady?"jarvis-avatar--photographic":""}`} style={{"--avatar-accent":config.accent,"--mouth-x":config.mouthX,"--mouth-y":config.mouthY}}>
     <div className="jarvis-avatar__halo" aria-hidden="true"/>
-    <svg className="jarvis-avatar__portrait" viewBox="0 0 260 300" role="img" aria-label={`${config.name}, ${config.presentation.toLowerCase()} ${config.style.toLowerCase()} virtual assistant, ${stage}`}>
+    <img key={config.photo} className="jarvis-avatar__photo" src={config.photo} alt={`${config.name}, ${config.presentation.toLowerCase()} ${config.style.toLowerCase()} virtual assistant`} loading="eager" decoding="async" onLoad={()=>setPhotoReady(true)} onError={()=>setPhotoReady(false)} />
+    {photoReady&&<img key={config.photo+"-mouth"} className="jarvis-avatar__photo-mouth" src={config.photo} alt="" aria-hidden="true" draggable="false" />}
+    {!photoReady&&<svg className="jarvis-avatar__portrait" viewBox="0 0 260 300" role="img" aria-label={`${config.name}, ${config.presentation.toLowerCase()} ${config.style.toLowerCase()} virtual assistant, ${stage}`}>
       <defs>
         <linearGradient id={gradId} x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor={config.outfit}/><stop offset="1" stopColor="#070d1e"/></linearGradient>
         <radialGradient id={"avatar-skin-"+id} cx="40%" cy="25%" r="85%"><stop offset="0" stopColor={config.skin}/><stop offset="1" stopColor={config.shade}/></radialGradient>
@@ -69,7 +73,7 @@ export function JarvisAvatar({id="executive-female",state="idle",size="hero",lab
         {!female&&<path d="M65 93q-4-42 16-63 29-34 72-19 44 8 44 80l-13-19-2-24-24-18-32 5-32 14-18 29z" fill={config.hair}/>}
         {future&&<path d="M77 48q55-30 102 1" stroke={config.accent} strokeWidth="3" opacity=".65" fill="none"/>}
       </g>
-    </svg>
+    </svg>}
     <div className="jarvis-avatar__wave" aria-hidden="true"><i/><i/><i/><i/><i/></div>
     {label&&<div className="jarvis-avatar__caption"><strong>{config.name}</strong><span>{stage==="idle"?"Ready":stage==="thinking"?"Thinking":stage==="speaking"?"Speaking":"Listening"}</span></div>}
   </div>;
