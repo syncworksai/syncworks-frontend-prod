@@ -1,10 +1,15 @@
 import React,{useEffect,useState} from "react";
 import {useNavigate} from "react-router-dom";
-import {ArrowLeft,RefreshCw,Plus,ChevronDown,Mail,CheckCircle2} from "lucide-react";
+import {ArrowLeft,RefreshCw,Plus,ChevronDown,Mail,CheckCircle2,Palette} from "lucide-react";
 import api from "../api/client";
 import {useAuth} from "../auth/AuthContext";
 
 const BASE="/sync-ai/assist/pilot/chief/";
+const THEMES = {
+  executive: {label:"Executive Office",image:"/assist-themes/executive-office.svg",accent:"text-amber-200",border:"border-amber-300/35",panel:"bg-[#100e12]/90",cover:"linear-gradient(180deg,rgba(9,8,12,.32),rgba(9,8,12,.73) 55%,rgba(9,8,12,.91))"},
+  future: {label:"Future Command",image:"/assist-themes/future-command.svg",accent:"text-cyan-200",border:"border-cyan-300/35",panel:"bg-[#061427]/85",cover:"linear-gradient(180deg,rgba(2,9,25,.18),rgba(2,9,25,.67) 55%,rgba(2,9,25,.88))"},
+  daylight: {label:"Daylight Studio",image:"/assist-themes/daylight-workspace.svg",accent:"text-slate-900",border:"border-slate-300/80",panel:"bg-white/90",cover:"linear-gradient(180deg,rgba(244,248,252,.15),rgba(244,248,252,.56) 45%,rgba(232,240,247,.78))"},
+};
 const EMPTY={title:"",details:"",next_step:"",category:"PROPERTY",priority:"HIGH"};
 export default function SyncAssistChiefOfStaff(){
   const navigate=useNavigate();
@@ -13,6 +18,19 @@ export default function SyncAssistChiefOfStaff(){
   const [brief,setBrief]=useState(null),[cases,setCases]=useState([]),[busy,setBusy]=useState(false);
   const [error,setError]=useState(""),[notice,setNotice]=useState("");
   const [expanded,setExpanded]=useState("cases"),[adding,setAdding]=useState(false);
+  const [theme,setTheme]=useState(()=>{
+    try {const saved=window.localStorage.getItem("sw-assist-chief-theme");return THEMES[saved]?saved:"future";}catch{return "future";}
+  });
+  const [themeOpen,setThemeOpen]=useState(false);
+  const design=THEMES[theme]||THEMES.future;
+  const isLight=theme==="daylight";
+  const textColor=isLight?"text-slate-900":"text-white";
+  const subText=isLight?"text-slate-700":"text-slate-300";
+  function chooseTheme(next) {
+    if(!THEMES[next])return;
+    setTheme(next);setThemeOpen(false);
+    try{window.localStorage.setItem("sw-assist-chief-theme",next);}catch{}
+  }
   const [form,setForm]=useState(EMPTY),[resolution,setResolution]=useState({}),[showResolved,setShowResolved]=useState(false);
   async function refresh(){
     setBusy(true);setError("");
@@ -39,36 +57,49 @@ export default function SyncAssistChiefOfStaff(){
   }
   const open=cases.filter(x=>x.status!=="RESOLVED");
   const areas=["PROPERTY","BUSINESS","FINANCE","GROWTH","PERSONAL"];
-  return <main className="min-h-dvh bg-[#020617] px-4 pb-32 pt-28 text-white"><div className="mx-auto max-w-3xl">
+  return <main className={`relative min-h-dvh px-4 pb-32 pt-28 sm:px-6 ${textColor}`} style={{backgroundColor:isLight?"#e6eef5":"#020617"}}>
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0" style={{backgroundImage:`${design.cover},url("${design.image}")`,backgroundSize:"cover",backgroundPosition:"center center"}}/>
+    <div className="relative z-10 mx-auto w-full max-w-6xl">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className={`text-[10px] font-black uppercase tracking-[.2em] ${isLight?"text-slate-700":design.accent}`}>Your workspace · {design.label}</div>
+        <button type="button" onClick={()=>setThemeOpen(v=>!v)} aria-expanded={themeOpen} className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 text-xs font-bold backdrop-blur-xl ${design.border} ${design.panel}`}><Palette size={17}/> Change theme</button>
+      </div>
+      {themeOpen&&<div className={`mb-4 grid grid-cols-1 gap-2 rounded-2xl border p-3 backdrop-blur-xl sm:grid-cols-3 ${design.border} ${design.panel}`}>
+        {Object.entries(THEMES).map(([key,value])=><button key={key} type="button" onClick={()=>chooseTheme(key)} aria-pressed={theme===key} className={`overflow-hidden rounded-xl border text-left transition focus:outline-none focus:ring-2 focus:ring-sky-400 ${theme===key?"border-amber-400":"border-slate-500/35"}`}>
+          <img src={value.image} alt="" loading="lazy" className="h-20 w-full object-cover"/>
+          <span className={`block px-3 py-2 text-xs font-bold ${isLight?"bg-white text-slate-900":"bg-slate-950 text-white"}`}>{value.label}{theme===key?" · Selected":""}</span>
+        </button>)}
+        <p className={`sm:col-span-3 text-xs ${subText}`}>Saved on this device. Only the appearance changes; Jarvis data, permissions and actions stay the same.</p>
+      </div>}
     <div className="mb-4 flex items-center justify-between gap-2">
       <button type="button" onClick={()=>navigate("/sync/assist/daily")} className="flex min-h-11 items-center gap-2 rounded-xl border border-white/20 px-3 text-sm"><ArrowLeft size={17}/> Jarvis Daily</button>
       <button type="button" onClick={refresh} disabled={busy||!authorized} className="flex min-h-11 items-center gap-2 rounded-xl border border-cyan-400/30 px-3 text-sm"><RefreshCw size={16}/> Refresh</button>
     </div>
-    <section className="rounded-3xl border border-cyan-400/30 bg-gradient-to-br from-[#06263a] to-[#1b123c] p-5">
-      <p className="text-xs font-black uppercase tracking-widest text-cyan-200">Jarvis · Chief of Staff</p>
+    <section className={`rounded-3xl border p-5 shadow-2xl backdrop-blur-xl ${design.border} ${design.panel}`}>
+      <p className={`text-xs font-black uppercase tracking-widest ${isLight?"text-slate-700":design.accent}`}>Jarvis · Chief of Staff</p>
       <h1 className="mt-2 text-2xl font-black">Your daily intelligence</h1>
-      <p className="mt-2 text-sm leading-6 text-slate-300">What needs attention, what remains unresolved, and where to go next.</p>
+      <p className={`mt-2 text-sm leading-6 ${subText}`}>What needs attention, what remains unresolved, and where to go next.</p>
       <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-        {[[brief?.counts?.tasks_open,"Tasks"],[brief?.counts?.cases_open,"Open cases"],[brief?.counts?.cases_high,"High priority cases"]].map(([n,l])=><div key={l} className="rounded-xl border border-white/15 bg-slate-950/40 p-3"><div className="text-2xl font-black">{n??"—"}</div><p className="text-[11px] text-slate-300">{l}</p></div>)}
+        {[[brief?.counts?.tasks_open,"Tasks"],[brief?.counts?.cases_open,"Open cases"],[brief?.counts?.cases_high,"High priority cases"]].map(([n,l])=><div key={l} className={`rounded-xl border p-3 ${isLight?"border-slate-300 bg-white/70":"border-white/15 bg-slate-950/40"}`}><div className="text-2xl font-black">{n??"—"}</div><p className={`text-[11px] ${subText}`}>{l}</p></div>)}
       </div>
-      <p className="mt-3 text-xs text-slate-400">{brief?.date||"On-demand"} · Not a scheduled or complete inbox briefing</p>
+      <p className={`mt-3 text-xs ${subText}`}>{brief?.date||"On-demand"} · Not a scheduled or complete inbox briefing</p>
     </section>
     {error&&<p role="alert" className="mt-3 rounded-xl border border-rose-400/40 p-3 text-sm text-rose-200">{error}</p>}
     {notice&&<p role="status" className="mt-3 rounded-xl border border-emerald-400/30 p-3 text-sm text-emerald-200">{notice}</p>}
     {!authorized&&<p className="mt-3 text-rose-200">Private pilot account only.</p>}
-    {brief?.sections?.map(s=><section key={s.key} className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-[#0b1429]">
+    {brief?.sections?.map(s=><section key={s.key} className={`mt-3 overflow-hidden rounded-2xl border shadow-lg backdrop-blur-xl ${design.border} ${design.panel}`}>
       <button type="button" onClick={()=>setExpanded(v=>v===s.key?"":s.key)} aria-expanded={expanded===s.key} className="flex min-h-16 w-full items-center justify-between gap-3 p-4 text-left">
-        <span className="min-w-0"><strong className="block text-sm text-white">{s.title}</strong><span className="mt-1 block text-xs leading-5 text-slate-300">{s.headline}</span></span><ChevronDown size={18} className={expanded===s.key?"rotate-180 text-cyan-200":"text-slate-400"}/>
+        <span className="min-w-0"><strong className={`block text-sm ${textColor}`}>{s.title}</strong><span className={`mt-1 block text-xs leading-5 ${subText}`}>{s.headline}</span></span><ChevronDown size={18} className={expanded===s.key?"rotate-180 text-cyan-200":"text-slate-400"}/>
       </button>
       {expanded===s.key&&<div className="border-t border-white/10 p-4">
         <p className="text-xs leading-5 text-slate-400">Source: {s.scope}</p>
-        {(s.items||[]).map((x,i)=><div key={i} className="mt-3 rounded-xl border border-white/10 p-3"><p className="text-sm font-bold">{x.title}</p><p className="mt-1 text-xs text-cyan-200">{x.next_action}</p></div>)}
+        {(s.items||[]).map((x,i)=><div key={i} className="mt-3 rounded-xl border border-white/10 p-3"><p className={`text-sm font-bold ${textColor}`}>{x.title}</p><p className="mt-1 text-xs text-cyan-200">{x.next_action}</p></div>)}
         {s.key==="email"&&<button onClick={()=>navigate("/sync/assist/email")} className="mt-3 flex min-h-11 items-center gap-2 rounded-xl border border-cyan-400/30 px-4 text-sm text-cyan-200"><Mail size={16}/> Open Mail Desk</button>}
         {s.key==="today"&&<button onClick={()=>navigate("/sync/assist/daily")} className="mt-3 min-h-11 rounded-xl border border-cyan-400/30 px-4 text-sm text-cyan-200">Open task list</button>}
         {s.key==="cases"&&<button onClick={()=>setAdding(true)} className="mt-3 flex min-h-11 items-center gap-2 rounded-xl border border-cyan-400/30 px-4 text-sm text-cyan-200"><Plus size={16}/> Track an issue</button>}
       </div>}
     </section>)}
-    <section className="mt-5 rounded-2xl border border-cyan-400/25 bg-slate-900/50 p-4">
+    <section className={`mt-5 rounded-2xl border p-4 shadow-lg backdrop-blur-xl ${design.border} ${design.panel}`}>
       <div className="flex items-center justify-between gap-2"><h2 className="text-lg font-black">Unresolved issue register</h2><button onClick={()=>setAdding(v=>!v)} className="flex min-h-10 items-center gap-1 rounded-lg bg-cyan-900 px-3 text-xs font-bold"><Plus size={15}/> Add case</button></div>
       <p className="mt-2 text-xs leading-5 text-slate-400">Owner-entered facts only. Jarvis will never assume a payment dispute is resolved from silence.</p>
       {adding&&<form onSubmit={create} className="mt-4 space-y-3 rounded-xl border border-white/10 p-3">
