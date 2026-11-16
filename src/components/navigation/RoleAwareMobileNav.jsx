@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { AVATARS } from "../sync/JarvisAvatar";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   CalendarDays,
@@ -177,6 +178,8 @@ export default function RoleAwareMobileNav() {
   const navMode = navModeFromPath(pathname, mode, location.search);
   const [items, setItems] = useState(() => navMode ? readPreference(navMode, user) : []);
   const [unread, setUnread] = useState(0);
+  const [aiTeamOpen, setAiTeamOpen] = useState(false);
+  useEffect(() => setAiTeamOpen(false), [location.pathname, location.search]);
 
   const hidden = useMemo(() => {
     if (!navMode) return true;
@@ -237,19 +240,47 @@ export default function RoleAwareMobileNav() {
   };
 
   function openCenter() {
+    if (center.sync && navMode === "CUSTOMER" && pathname === "/customer") {
+      setAiTeamOpen((value) => !value);
+      return;
+    }
     if (center.sync) {
       navigate(`/sync?return=${encodeURIComponent(location.pathname + location.search)}`);
       return;
     }
     navigate(center.route);
   }
+  const navigateAssistant = (path) => {
+    setAiTeamOpen(false);
+    navigate(path);
+  };
 
   return (
     <>
+      {aiTeamOpen && navMode === "CUSTOMER" && pathname === "/customer" && (
+        <div className="sw-mobile-ai-team-shade lg:hidden" onClick={() => setAiTeamOpen(false)}>
+          <section className="sw-mobile-ai-team-panel" role="dialog" aria-modal="true" aria-label="Your SYNC AI employees" onClick={(event) => event.stopPropagation()}>
+            <div className="sw-mobile-ai-team-head">
+              <div><span>SYNC ASSIST</span><strong>Your AI employees</strong></div>
+              <button type="button" onClick={() => setAiTeamOpen(false)} aria-label="Close AI employee menu">✕</button>
+            </div>
+            <div className="sw-mobile-ai-team-grid">
+              {AVATARS.map((worker) => (
+                <button type="button" key={worker.id} onClick={() => navigateAssistant(worker.role === "Chief of Staff" ? "/sync/assist/chief" : "/sync/assist")} aria-label={`Open ${worker.name}, ${worker.role}`}>
+                  <img src={worker.photo} alt="" loading="lazy" />
+                  <strong>{worker.name}</strong>
+                  <small>{worker.role}</small>
+                </button>
+              ))}
+            </div>
+            <button type="button" className="sw-mobile-ai-team-all" onClick={() => navigateAssistant("/sync/assist")}>Open SYNC Assist workspace</button>
+          </section>
+        </div>
+      )}
       <nav className="sw-role-mobile-nav lg:hidden" aria-label="Mobile quick navigation">
         <div className="sw-role-mobile-nav-grid">
           {renderedItems.slice(0, 2).map((item) => <NavButton key={item.id} item={item} onClick={() => openItem(item)} />)}
-          <button type="button" className={`sw-role-mobile-nav-center ${center.sync ? "is-sync" : ""}`} onClick={openCenter} aria-label={center.sync ? "Open SYNC assistant" : `New ${center.label}`}>
+          <button type="button" className={`sw-role-mobile-nav-center ${center.sync ? "is-sync" : ""}`} onClick={openCenter} aria-label={center.sync ? "Open your SYNC AI employee team" : `New ${center.label}`} aria-expanded={center.sync && navMode === "CUSTOMER" && pathname === "/customer" ? aiTeamOpen : undefined}>
             <span className="sw-role-mobile-nav-center-orb"><img src="/brand/syncworks-start-logo.png" alt="" /></span>
             <span>{center.label}</span>
           </button>
