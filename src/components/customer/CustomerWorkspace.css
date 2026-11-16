@@ -259,3 +259,135 @@
    grid-column:1 !important;min-width:0;
  }
 }
+
+/* V7 appearance tokens. Semantic alerts retain their severity colors; navigation,
+   action buttons, workspaces and ordinary panels use the selected appearance. */
+.sw-workspace-root[data-workspace-theme="classic"] {
+ --sw-ui-accent:#e6bd79; --sw-ui-accent-strong:#d4a450;
+ --sw-ui-text:#fff4dc; --sw-ui-muted:#c4ae91; --sw-ui-surface:rgba(29,18,13,.94);
+ --sw-ui-surface-hover:rgba(77,48,29,.85); --sw-ui-ink-on-accent:#20130d;
+ --sw-ui-border:rgba(207,156,87,.34); --sw-ui-highlight:rgba(199,145,73,.15);
+ --sw-ui-tile:linear-gradient(155deg,rgba(66,40,24,.91),rgba(19,14,13,.98));
+}
+.sw-workspace-root[data-workspace-theme="future"] {
+ --sw-ui-accent:#44d8ff; --sw-ui-accent-strong:#13b6f3;
+ --sw-ui-text:#e8f5ff; --sw-ui-muted:#94b3d5; --sw-ui-surface:rgba(6,17,41,.95);
+ --sw-ui-surface-hover:rgba(16,52,92,.85); --sw-ui-ink-on-accent:#041a2d;
+ --sw-ui-border:rgba(46,158,234,.37); --sw-ui-highlight:rgba(31,152,247,.14);
+ --sw-ui-tile:linear-gradient(155deg,rgba(14,49,88,.91),rgba(7,14,34,.98));
+}
+.sw-workspace-root[data-workspace-theme="modern"] {
+ --sw-ui-accent:#c5d4dc; --sw-ui-accent-strong:#93acbb;
+ --sw-ui-text:#edf3f7; --sw-ui-muted:#a1b0bb; --sw-ui-surface:rgba(20,27,34,.96);
+ --sw-ui-surface-hover:rgba(47,62,73,.9); --sw-ui-ink-on-accent:#17242c;
+ --sw-ui-border:rgba(164,187,200,.27); --sw-ui-highlight:rgba(169,191,201,.12);
+ --sw-ui-tile:linear-gradient(155deg,rgba(43,59,69,.95),rgba(18,25,32,.98));
+}
+.sw-workspace-root[data-workspace-theme="light"] {
+ --sw-ui-accent:#196886; --sw-ui-accent-strong:#125d7d;
+ --sw-ui-text:#173143; --sw-ui-muted:#526c7a; --sw-ui-surface:rgba(250,251,249,.97);
+ --sw-ui-surface-hover:rgba(223,236,242,.98); --sw-ui-ink-on-accent:#fff;
+ --sw-ui-border:rgba(74,121,143,.28); --sw-ui-highlight:rgba(54,118,149,.12);
+ --sw-ui-tile:linear-gradient(155deg,rgba(255,255,255,.99),rgba(229,237,238,.98));
+}
+/* Sidebar: each icon and selected route reflects one accent, rather than
+   the preexisting mixed Tailwind tone classes. */
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-customer-nav-entry {
+ color:var(--sw-ui-muted)!important;
+ border-color:transparent!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-customer-nav-entry:hover,
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-customer-nav-entry:focus-visible {
+ color:var(--sw-ui-text)!important;
+ border-color:var(--sw-ui-border)!important;
+ background:var(--sw-ui-highlight)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-customer-nav-entry.sw-customer-nav-active {
+ color:var(--sw-ui-text)!important;
+ background:var(--sw-ui-highlight)!important;
+ border-color:var(--sw-ui-border)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-customer-nav-icon {
+ color:var(--sw-ui-accent)!important;
+ background:var(--sw-ui-highlight)!important;
+ border-color:var(--sw-ui-border)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:first-child > div:first-child {
+ color:var(--sw-ui-accent)!important;
+}
+/* Navigation launcher, secondary controls and SYNC entry points. */
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-workspace-switcher button {
+ background:var(--sw-ui-surface);border-color:var(--sw-ui-border);color:var(--sw-ui-text);
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-workspace-switcher button:hover {
+ background:var(--sw-ui-surface-hover);
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-immersive-action-strip button,
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-immersive-destination {
+ color:var(--sw-ui-text)!important;
+ border-color:var(--sw-ui-border)!important;
+ background:var(--sw-ui-tile)!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 10px 24px rgba(0,0,0,.11);
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-immersive-action-strip button:hover,
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-immersive-destination:hover {
+ background:var(--sw-ui-surface-hover)!important;
+ border-color:var(--sw-ui-accent)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-immersive-action-strip svg,
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-immersive-destination svg,
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-immersive-destination-icon {
+ color:var(--sw-ui-accent)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-immersive-destination strong {
+ color:var(--sw-ui-text)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-immersive-destination small {
+ color:var(--sw-ui-muted)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-immersive-destination:before {
+ opacity:.17;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-immersive-ask {
+ background:var(--sw-ui-accent-strong)!important;
+ color:var(--sw-ui-ink-on-accent)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-immersive-customize {
+ background:var(--sw-ui-surface)!important;
+ border-color:var(--sw-ui-border)!important;
+ color:var(--sw-ui-text)!important;
+}
+/* The ordinary info cards use the theme; urgent and warning/status
+   content intentionally keeps meaning-preserving amber/rose/emerald. */
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-section {
+ background:var(--sw-ui-surface)!important;
+ border-color:var(--sw-ui-border)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-section > div:first-child .text-cyan-200,
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-section > div:first-child button {
+ color:var(--sw-ui-accent)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:last-child > section:nth-child(2) {
+ background:var(--sw-ui-surface)!important;
+ border-color:var(--sw-ui-border)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:last-child > section:nth-child(2) > div > div > button > span:first-child {
+ color:var(--sw-ui-accent)!important;
+ background:var(--sw-ui-highlight)!important;
+ border-color:var(--sw-ui-border)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:last-child > section:nth-child(2) button {
+ border-color:var(--sw-ui-border);
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail > aside:last-child > section:nth-child(2) button:hover {
+ background:var(--sw-ui-highlight);
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail :is(button,a):focus-visible {
+ outline:2px solid var(--sw-ui-accent)!important;outline-offset:2px;
+}
+.sw-workspace-root[data-workspace-theme="light"] .sw-customer-three-rail > aside:last-child > section:nth-child(2) .text-slate-500 {
+ color:var(--sw-ui-muted)!important;
+}
+@media(prefers-reduced-motion:reduce){
+ .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-customer-nav-entry {transition:none!important;}
+}
