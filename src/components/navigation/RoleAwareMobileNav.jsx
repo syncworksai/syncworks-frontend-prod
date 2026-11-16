@@ -29,7 +29,7 @@ const ITEM_LIBRARY = {
   sports: { label: "Sports", icon: Trophy, routes: { CUSTOMER: "/connect/sports" } },
   map: { label: "Map", icon: MapPinned, routes: { CUSTOMER: "/calendar", SBO: "/calendar", EMPLOYEE: "/calendar", PM: "/pm/calendar" } },
   tools: { label: "Tools", icon: Wrench, routes: { CUSTOMER: "/settings", SBO: "/sbo/settings", EMPLOYEE: "/employee/settings", PM: "/pm/settings" } },
-  workspace: { label: "Office", icon: LayoutGrid, routes: { CUSTOMER: "/customer?workspace=daily" } },
+  workspace: { label: "Office", icon: LayoutGrid, routes: { CUSTOMER: "/customer?workspace=office" } },
   apps: { label: "Apps", icon: LayoutGrid, routes: { CUSTOMER: "/customer?workspace=apps" } },
   appearance: { label: "Settings", icon: Settings, routes: { CUSTOMER: "/customer?workspace=appearance" } },
   new_request: { label: "Request", icon: Wrench, routes: { CUSTOMER: "/customer/new-request" } },
