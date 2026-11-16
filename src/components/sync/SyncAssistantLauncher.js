@@ -9,5 +9,5 @@ import LegacySyncAssistantLauncher from "./SyncAssistantLauncher.jsx";
 export default function SyncAssistantLauncherRouter() {
   const location = useLocation();
   if (location.pathname.replace(/\/+$/, "") === "/customer") return null;
-  return <LegacySyncAssistantLauncher />;
+  return React.createElement(LegacySyncAssistantLauncher);
 }
