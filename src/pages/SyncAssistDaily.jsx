@@ -15,6 +15,7 @@ export default function SyncAssistDaily() {
   const [data,setData] = useState(null);
   const [loading,setLoading] = useState(false);
   const [error,setError] = useState("");
+  const [outlookStatus,setOutlookStatus] = useState(null);
   const [filter,setFilter] = useState("ALL");
   const [showAll,setShowAll] = useState(false);
   const [adding,setAdding] = useState(false);
@@ -26,7 +27,7 @@ export default function SyncAssistDaily() {
     catch(e) {setError(e?.response?.data?.detail || "Daily briefing is unavailable. Try again.");}
     finally {setLoading(false);}
   }
-  useEffect(()=>{if(authorized) refresh();},[authorized]);
+  useEffect(()=>{if(authorized) {refresh();api.get("/sync-ai/assist/pilot/outlook/status/").then(r=>setOutlookStatus(r.data)).catch(()=>setOutlookStatus(null));}},[authorized]);
   async function create(e) {
     e.preventDefault();setLoading(true);setError("");
     try {const r=await api.post(ENDPOINT,form);setData(r.data);setAdding(false);setForm({title:"",description:"",priority:"MEDIUM",category:"PERSONAL"});}
@@ -73,8 +74,8 @@ export default function SyncAssistDaily() {
 
       <button type="button" onClick={()=>navigate("/sync/assist/email")} className="mt-4 flex min-h-14 w-full items-center justify-between rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/15 to-violet-600/15 p-4 text-left font-black text-cyan-100"><span>Jarvis Mail Desk<span className="block text-xs font-normal text-slate-400">Connect Outlook · Read inbox · Draft · Send with approval</span></span><span aria-hidden="true">→</span></button>
       <section className="mt-4 rounded-2xl border border-amber-400/20 bg-slate-900/50 p-3">
-        <div className="flex items-center gap-2 text-sm font-bold text-amber-200"><Mail size={18}/> Outlook inbox not linked inside SyncWorks</div>
-        <p className="mt-1 text-xs leading-5 text-slate-400">Outlook is available in ChatGPT, but the app needs its own authorized Microsoft connection before Jarvis can read and summarize your mailbox each morning. Email, calendar sync and automatic brief delivery are not active here.</p>
+        <div className="flex items-center gap-2 text-sm font-bold text-amber-200"><Mail size={18}/> {outlookStatus?.connected ? "Outlook connected to Jarvis Mail Desk" : outlookStatus?.configured ? "Outlook ready to connect" : "Outlook not linked inside SyncWorks"}</div>
+        <p className="mt-1 text-xs leading-5 text-slate-400">{outlookStatus?.connected ? "Outlook can be viewed on demand in Mail Desk. Automated daily email classification and scheduled brief delivery are not enabled yet." : "Outlook is available in ChatGPT, but the app needs its own authorized Microsoft connection before Jarvis can read your mailbox. Email and automatic brief delivery are not active here."}</p>
       </section>
 
       {data && data.summary.open===0 && <section className="mt-4 rounded-2xl border border-cyan-400/25 bg-[#0a1830] p-4">
