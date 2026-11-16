@@ -26,6 +26,9 @@ export default function SyncAssistPilot() {
   const [connections, setConnections] = useState(null);
   const [connectionsError, setConnectionsError] = useState("");
   const [showConnections, setShowConnections] = useState(false);
+  const [operations, setOperations] = useState(null);
+  const [operationsError, setOperationsError] = useState("");
+  const [operationsOpen, setOperationsOpen] = useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -52,6 +55,16 @@ export default function SyncAssistPilot() {
       setConnections(response.data);
     } catch (err) {
       setConnectionsError(err?.response?.data?.detail || "Could not load your internal businesses.");
+    }
+  }
+
+  async function loadOperations() {
+    setOperationsError("");
+    try {
+      const response = await api.get("/sync-ai/assist/pilot/operations/brief/", {timeout: 15000});
+      setOperations(response.data);
+    } catch (err) {
+      setOperationsError(err?.response?.data?.detail || "Could not load the business operations briefing.");
     }
   }
 
@@ -120,6 +133,25 @@ export default function SyncAssistPilot() {
             </div>
           )}
           {error && <div role="alert" className="mb-4 rounded-xl border border-rose-400/40 bg-rose-950/30 p-3 text-sm text-rose-200">{error}</div>}
+          <section className="mb-4 rounded-2xl border border-cyan-400/25 bg-slate-900/50 p-4">
+            <button type="button" aria-expanded={operationsOpen} onClick={() => { setOperationsOpen(!operationsOpen); if (!operationsOpen) loadOperations(); }} className="flex min-h-11 w-full items-center justify-between gap-2 text-left font-black text-cyan-100">
+              <span>Jarvis Operations Brief <span className="block text-xs font-normal text-slate-400">Internal business, invoices, maintenance and property tasks</span></span>
+              <span aria-hidden="true">{operationsOpen ? "−" : "+"}</span>
+            </button>
+            {operationsOpen && <div className="mt-3 space-y-3">
+              <button type="button" onClick={loadOperations} className="min-h-10 rounded-xl border border-cyan-400/35 px-4 text-xs font-bold text-cyan-200">Refresh operations</button>
+              {operationsError && <p role="alert" className="text-sm text-rose-200">{operationsError}</p>}
+              {!operations && !operationsError && <p className="text-xs text-slate-400">Loading internal data…</p>}
+              {operations && <>
+                <p className="text-xs text-slate-300">Owner-linked businesses: {operations.business_work.counts.businesses || 0}. Read-only snapshot, not an unattended scan.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(operations.business_work.counts).filter(([key])=>key!=="businesses").map(([key,value])=><div key={key} className="rounded-xl border border-white/10 p-3"><strong className="block text-lg text-white">{value}</strong><span className="text-[11px] text-slate-400">{key.replaceAll("_"," ")}</span></div>)}
+                </div>
+                {operations.business_work.items.slice(0,8).map((item,i)=><div key={i} className="rounded-xl border border-white/10 p-3"><strong className="text-sm">{item.title}</strong><p className="mt-1 text-xs leading-5 text-slate-400">{item.description}</p></div>)}
+                <p className="text-xs text-amber-200">Outlook: not connected to SyncWorks. Email reading, drafts and sending remain disabled until secure authorization.</p>
+              </>}
+            </div>}
+          </section>
           <button type="button" onClick={() => navigate("/sync/assist/growth")} className="mb-4 flex min-h-14 w-full items-center justify-between rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-emerald-500/15 to-cyan-600/10 p-4 text-left font-black text-cyan-100"><span>Jarvis Growth Center <span className="block text-xs font-normal text-slate-400">Business prospects · Personalized outreach drafts · Pipeline</span></span><span aria-hidden="true">→</span></button>
           <section className="mb-4 rounded-2xl border border-cyan-400/25 bg-slate-900/50 p-4">
             <button type="button" aria-expanded={showConnections} onClick={() => { setShowConnections(!showConnections); if (!showConnections) loadConnections(); }} className="flex min-h-11 w-full items-center justify-between gap-2 text-left font-black text-cyan-100">
