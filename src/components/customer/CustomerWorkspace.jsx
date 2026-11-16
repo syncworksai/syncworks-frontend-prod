@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { Palette, LayoutGrid, X, CalendarDays, ListTodo, Inbox, BriefcaseBusiness, Building2, Wallet, Heart, TrendingUp, Spade, ShoppingBag, Users, CloudSun, MapPinned, Settings, RotateCcw } from "lucide-react";
 import "./CustomerWorkspace.css";
@@ -59,6 +60,7 @@ export function WorkspaceAppearancePanel({ settings, update }) {
 export default function CustomerWorkspace({ settings, update, phoneMode = false, dayTradingEnabled = false }) {
   const nav = useNavigate();
   const [panel, setPanel] = useState(null);
+  useEffect(() => { const open = (event) => { if (["apps", "appearance"].includes(event?.detail)) setPanel(event.detail); }; window.addEventListener("sw:workspace-open", open); return () => window.removeEventListener("sw:workspace-open", open); }, []);
   useEffect(() => {
     if (!panel) return;
     const onKey = e => { if (e.key === "Escape") setPanel(null); };
@@ -73,11 +75,11 @@ export default function CustomerWorkspace({ settings, update, phoneMode = false,
       <button type="button" onClick={() => setPanel("appearance")}><Palette size={16}/> <span>Appearance</span></button>
       <span className="sw-workspace-current">{settings.theme === "legacy" ? "Original" : settings.theme === "classic" ? "Classic Office" : settings.theme === "future" ? "SyncWorks Future" : settings.theme === "modern" ? "Modern Dark" : "Clean Light"}</span>
     </div>
-    {panel && <div className="sw-workspace-overlay" onMouseDown={() => setPanel(null)}>
+    {panel && createPortal(<div className="sw-workspace-overlay" onMouseDown={() => setPanel(null)}>
       <aside className="sw-workspace-drawer" role="dialog" aria-modal="true" aria-label={panel === "apps" ? "Workspace launcher" : "Appearance settings"} onMouseDown={e => e.stopPropagation()}>
         <header><div><span className="sw-workspace-eyebrow">SYNCWORKS / PERSONAL</span><h2>{panel === "apps" ? "Your workspaces" : "Appearance settings"}</h2></div><button type="button" className="sw-workspace-close" onClick={() => setPanel(null)} aria-label="Close"><X size={20}/></button></header>
         {panel === "apps" ? <><p className="sw-workspace-description">Your tools, organized in one place. Games keep their dedicated interface.</p><div className="sw-workspace-app-grid">{apps.map(([name, path, Icon]) => <button type="button" key={name} onClick={() => go(path)}><Icon size={22}/><span>{name}</span></button>)}</div></> : <WorkspaceAppearancePanel settings={settings} update={update}/>}
       </aside>
-    </div>}
+    </div>, document.body)}
   </>;
 }

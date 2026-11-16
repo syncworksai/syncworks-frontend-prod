@@ -38,6 +38,7 @@ import { useAuth } from "../auth/AuthContext";
 import AroundYouPanel from "../components/customer/AroundYouPanel";
 import CalendarDailySnapshot from "../components/calendar/CalendarDailySnapshot";
 import DashboardShell from "../components/dashboard/DashboardShell";
+import ImmersiveWorkspaceHome from "../components/customer/ImmersiveWorkspaceHome";
 
 const DAY_TRADING_EMAIL = "jacoblord7@outlook.com";
 
@@ -133,7 +134,7 @@ function SectionCard({ eyebrow, title, action, onAction, children, className = "
   return <section className={`rounded-[1.6rem] border border-white/10 bg-slate-950/65 p-4 ${className}`}><div className="flex items-start justify-between gap-3"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-200">{eyebrow}</div><h2 className="mt-1 text-base font-black text-white">{title}</h2></div>{action ? <button type="button" onClick={onAction} className="text-[10px] font-black text-cyan-200">{action}</button> : null}</div>{children}</section>;
 }
 
-export default function CustomerDashboard() {
+export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
   const nav = useNavigate();
   const { user, profiles, myBusinesses, moduleAccess } = useAuth();
   const [tickets, setTickets] = useState([]);
@@ -215,6 +216,7 @@ export default function CustomerDashboard() {
 
   return (
     <DashboardShell title="Dashboard" modeBarTitle="Dashboard" maxWidth="max-w-none" className="sw-personal-panels sw-customer-v3 px-4 sm:px-6 lg:px-6 xl:px-8">
+      {workspaceTheme !== "legacy" ? <ImmersiveWorkspaceHome displayName={firstName(user)} theme={workspaceTheme} onOpenLauncher={() => window.dispatchEvent(new CustomEvent("sw:workspace-open", { detail: "apps" }))} onOpenAppearance={() => window.dispatchEvent(new CustomEvent("sw:workspace-open", { detail: "appearance" }))} /> : null}
       
       <div className="grid w-full grid-cols-1 items-start gap-5 pb-10 lg:grid-cols-[210px_minmax(0,1fr)] 2xl:grid-cols-[230px_minmax(0,1fr)_310px]">
         <aside className="hidden lg:block sticky top-4 rounded-[1.6rem] border border-sky-400/15 bg-[#090F1C]/90 p-3 shadow-[0_20px_60px_rgba(0,0,0,.25)] backdrop-blur-xl">

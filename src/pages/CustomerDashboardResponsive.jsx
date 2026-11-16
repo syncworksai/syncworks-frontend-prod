@@ -102,7 +102,7 @@ export default function CustomerDashboardResponsive() {
     return (
       <div className="sw-workspace-root" data-workspace-theme={workspaceAppearance.theme} data-workspace-motion={workspaceAppearance.motion} data-workspace-compact={workspaceAppearance.compact} data-sw-layout="landscape" data-sw-visual="midnight">
         <CustomerWorkspace settings={workspaceAppearance} update={updateWorkspaceAppearance} dayTradingEnabled={dayTradingEnabled} />
-        <CustomerDashboard />
+        <CustomerDashboard workspaceTheme={workspaceAppearance.theme} />
         <SyncAssistantStickyDock displayName={firstName(user)} defaultMinimized />
       </div>
     );
