@@ -1,0 +1,69 @@
+/* Premium workspace, opt-in. All content is functional navigation, never fabricated metrics. */
+.sw-immersive-home{position:relative;isolation:isolate;overflow:hidden;min-height:540px;border-radius:28px;border:1px solid var(--sw-workspace-line,rgba(70,162,231,.35));margin:0 0 18px;box-shadow:0 30px 100px rgba(0,0,0,.38),inset 0 1px rgba(255,255,255,.12);background:linear-gradient(155deg,rgba(5,15,28,.55),rgba(2,9,24,.96));color:#f8fafc}
+.sw-immersive-office-art{position:absolute;inset:0;z-index:-1;overflow:hidden;background:radial-gradient(ellipse at 76% 27%,rgba(34,116,214,.18),transparent 41%),linear-gradient(115deg,#050b18 9%,#14233c 48%,#080c18 100%)}
+.sw-immersive-office-art:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0px,transparent 68px,rgba(255,255,255,.018) 70px),radial-gradient(ellipse at 34% 100%,rgba(67,111,163,.20),transparent 58%);}
+.sw-immersive-office-light{position:absolute;width:40%;height:4px;top:12%;right:6%;background:linear-gradient(90deg,transparent,rgba(82,188,255,.66),transparent);box-shadow:0 0 65px 25px rgba(55,126,241,.16);transform:rotate(-3deg)}
+.sw-immersive-office-frame{position:absolute;right:8%;top:12%;width:26%;height:43%;border:12px solid rgba(0,0,0,.47);box-shadow:inset 0 0 0 1px rgba(146,182,235,.35),0 20px 35px rgba(0,0,0,.35);background:linear-gradient(135deg,#192740,#0b1325 70%)}
+.sw-immersive-office-shelf{position:absolute;right:1%;top:0;width:9%;height:82%;opacity:.45;background:repeating-linear-gradient(90deg,rgba(0,0,0,.4) 0 6px,rgba(100,140,191,.11) 7px 10px,transparent 11px 19px)}
+.sw-immersive-office-desk{position:absolute;right:-7%;bottom:-110px;width:88%;height:210px;background:linear-gradient(160deg,rgba(7,11,19,.98),rgba(33,39,55,.8) 40%,#080a10);transform:skewY(-4deg);box-shadow:0 -8px 50px #0007}
+.sw-immersive-content{position:relative;padding:clamp(19px,2.8vw,40px);background:linear-gradient(90deg,rgba(3,9,22,.69),rgba(3,9,22,.18) 80%)}
+.sw-immersive-hero{min-height:245px;display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,300px);gap:20px;align-items:center}
+.sw-immersive-kicker,.sw-immersive-mini{font-size:10px;letter-spacing:.19em;font-weight:850;color:var(--sw-workspace-accent,#49c5fa)}
+.sw-immersive-kicker{display:flex;align-items:center;gap:10px}
+.sw-immersive-live-dot{width:7px;height:7px;background:#31d9af;border-radius:50%;box-shadow:0 0 12px #31d9af}
+.sw-immersive-kicker-line{height:1px;width:48px;background:linear-gradient(90deg,var(--sw-workspace-accent),transparent)}
+.sw-immersive-welcome h1{font-family:Georgia,'Times New Roman',serif;font-size:clamp(27px,3.15vw,49px);line-height:1.12;letter-spacing:-.025em;font-weight:500;max-width:650px;margin:18px 0 10px}
+.sw-immersive-welcome h1 em{font-style:normal;color:var(--sw-workspace-accent)}
+.sw-immersive-welcome p{max-width:470px;font-size:13px;line-height:1.7;color:#d3dbe9}
+.sw-immersive-top-actions{display:flex;flex-wrap:wrap;gap:10px;margin:23px 0 0}
+.sw-immersive-top-actions button{display:flex;align-items:center;justify-content:center;gap:10px;border-radius:13px;padding:12px 17px;min-height:44px;font-weight:750;font-size:12px;transition:transform .18s,border-color .18s}
+.sw-immersive-top-actions button:hover{transform:translateY(-2px)}
+.sw-immersive-ask{background:var(--sw-workspace-accent);color:#041321;border:1px solid transparent}
+.sw-immersive-customize{background:rgba(4,10,24,.64);border:1px solid rgba(255,255,255,.28);color:#fff}
+.sw-immersive-focus{border:1px solid rgba(255,255,255,.22);border-radius:18px;padding:15px;background:rgba(5,11,23,.72);box-shadow:0 22px 40px rgba(0,0,0,.3);backdrop-filter:blur(20px)}
+.sw-immersive-focus-caption{display:flex;gap:10px;align-items:center;font-size:10px;letter-spacing:.13em;font-weight:800;color:var(--sw-workspace-accent);padding:6px 6px 11px}
+.sw-immersive-focus button{display:flex;align-items:center;gap:10px;width:100%;min-height:43px;border-top:1px solid rgba(255,255,255,.1);text-align:left;font-size:11px;color:#f8fafc}
+.sw-immersive-focus button svg:first-child{color:var(--sw-workspace-accent)}
+.sw-immersive-focus button span{flex:1}
+.sw-immersive-action-strip{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-top:16px}
+.sw-immersive-action-strip button{min-height:76px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;border:1px solid rgba(255,255,255,.18);background:rgba(4,11,23,.69);backdrop-filter:blur(14px);border-radius:15px;color:#ecf5ff;font-weight:740;font-size:11px;transition:background .18s,transform .18s}
+.sw-immersive-action-strip button svg{color:var(--sw-workspace-accent)}
+.sw-immersive-action-strip button:hover,.sw-immersive-destination:hover{transform:translateY(-3px);border-color:var(--sw-workspace-accent)}
+.sw-immersive-workspaces-heading{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-top:28px;margin-bottom:12px}
+.sw-immersive-workspaces-heading h2{font-family:Georgia,'Times New Roman',serif;font-size:26px;margin-top:4px}
+.sw-immersive-workspaces-heading button,.sw-immersive-bottom button{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--sw-workspace-accent)}
+.sw-immersive-destinations{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.sw-immersive-destination{min-height:150px;position:relative;display:flex;align-items:flex-start;flex-direction:column;justify-content:flex-end;gap:6px;text-align:left;padding:16px 12px;border:1px solid rgba(255,255,255,.18);border-radius:16px;overflow:hidden;background:linear-gradient(160deg,#152d41,#071422);transition:transform .18s,border-color .18s}
+.sw-immersive-destination:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 60% 0%,rgba(82,183,252,.2),transparent 61%);pointer-events:none}
+.sw-immersive-destination-property{background:linear-gradient(140deg,#1b3440,#0d2223)}
+.sw-immersive-destination-finance{background:linear-gradient(140deg,#12383b,#091e26)}
+.sw-immersive-destination-health{background:linear-gradient(140deg,#40302f,#19151e)}
+.sw-immersive-destination-games{background:linear-gradient(140deg,#312047,#1c1429)}
+.sw-immersive-destination-shop{background:linear-gradient(140deg,#483922,#211920)}
+.sw-immersive-destination-icon{display:grid;place-items:center;width:43px;height:43px;margin-bottom:auto;border:1px solid rgba(255,255,255,.18);border-radius:13px;background:rgba(0,0,0,.22);color:var(--sw-workspace-accent)}
+.sw-immersive-destination strong{font-size:13px;font-weight:850;color:#fff}
+.sw-immersive-destination small{font-size:10px;line-height:1.45;color:#ccd9e3}
+.sw-immersive-destination-arrow{position:absolute;right:12px;top:16px;color:#e5f4ff}
+.sw-immersive-bottom{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:19px;padding-top:13px;border-top:1px solid rgba(255,255,255,.14)}
+.sw-immersive-bottom > span{display:flex;align-items:center;gap:8px;color:#cdd6e5;font-size:11px}
+.sw-workspace-root[data-workspace-theme="classic"] .sw-immersive-office-art{background:radial-gradient(ellipse at 75% 30%,rgba(222,139,64,.36),transparent 48%),repeating-linear-gradient(90deg,#24140d 0 80px,#2c1b12 82px 88px,#160d09 95px)}
+.sw-workspace-root[data-workspace-theme="classic"] .sw-immersive-office-light{background:#ffd493;box-shadow:0 0 95px 40px rgba(231,136,48,.25)}
+.sw-workspace-root[data-workspace-theme="classic"] .sw-immersive-office-frame{border:12px ridge #614026;background:linear-gradient(140deg,#5d3920,#1b120c)}
+.sw-workspace-root[data-workspace-theme="classic"] .sw-immersive-office-desk{background:linear-gradient(145deg,#2c170d,#64412b 48%,#130b08)}
+.sw-workspace-root[data-workspace-theme="classic"] .sw-immersive-ask{color:#241307}
+.sw-workspace-root[data-workspace-theme="modern"] .sw-immersive-office-art{background:linear-gradient(125deg,#1f2b33,#0d1115)}
+.sw-workspace-root[data-workspace-theme="modern"] .sw-immersive-office-frame{border:8px solid #2b3941;background:#172129}
+.sw-workspace-root[data-workspace-theme="light"] .sw-immersive-home{color:#132d39;border-color:#abbfcc;background:#fff;box-shadow:0 20px 65px rgba(51,82,105,.15)}
+.sw-workspace-root[data-workspace-theme="light"] .sw-immersive-office-art{background:linear-gradient(125deg,#fffaf0,#cbdce5)}
+.sw-workspace-root[data-workspace-theme="light"] .sw-immersive-office-frame{border:9px solid #b7cdd8;background:linear-gradient(135deg,#fff,#d7e7ed)}
+.sw-workspace-root[data-workspace-theme="light"] .sw-immersive-office-desk{background:linear-gradient(140deg,#c7b198,#e6d6c2)}
+.sw-workspace-root[data-workspace-theme="light"] .sw-immersive-content{background:linear-gradient(90deg,rgba(255,255,255,.75),rgba(255,255,255,.38))}
+.sw-workspace-root[data-workspace-theme="light"] .sw-immersive-welcome p,.sw-workspace-root[data-workspace-theme="light"] .sw-immersive-bottom > span{color:#40596b}
+.sw-workspace-root[data-workspace-theme="light"] .sw-immersive-focus,.sw-workspace-root[data-workspace-theme="light"] .sw-immersive-action-strip button{background:rgba(255,255,255,.84);border-color:#bdcbd2;color:#15303e}
+.sw-workspace-root[data-workspace-theme="light"] .sw-immersive-focus button{color:#15303e;border-color:#cedae1}
+.sw-workspace-root[data-workspace-theme="light"] .sw-immersive-customize{background:#fff;color:#183747;border-color:#9eb3bf}
+.sw-workspace-root[data-workspace-theme="light"] .sw-immersive-ask{color:white}
+.sw-workspace-root[data-workspace-theme="light"] .sw-immersive-bottom{border-color:#b8cbd5}
+@media (max-width:1190px){.sw-immersive-destinations{grid-template-columns:repeat(3,minmax(0,1fr))}.sw-immersive-action-strip{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:760px){.sw-immersive-hero{grid-template-columns:1fr}.sw-immersive-focus{display:none}.sw-immersive-home{border-radius:20px}.sw-immersive-destinations{grid-template-columns:repeat(2,minmax(0,1fr))}.sw-immersive-action-strip{grid-template-columns:repeat(3,minmax(0,1fr))}.sw-immersive-destination{min-height:128px}}
+@media(prefers-reduced-motion:reduce){.sw-immersive-home *{transition:none!important}}
