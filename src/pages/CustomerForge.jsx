@@ -41,6 +41,7 @@ export default function CustomerForge() {
   const permitted = email === OWNER;
   const [tab,setTab] = useState("today");
   const [completed,setCompleted] = useState({});
+  const [loadedKey,setLoadedKey] = useState("");
   const [intent,setIntent] = useState("");
   const [coach,setCoach] = useState(0);
   const [bedtime,setBedtime] = useState("20:00");
@@ -51,11 +52,12 @@ export default function CustomerForge() {
     setCompleted(saved.completed || {});
     setIntent(saved.intent || "");
     setBedtime(saved.bedtime || "20:00");
+    setLoadedKey(key);
   }, [permitted,key]);
   useEffect(() => {
-    if (!permitted) return;
+    if (!permitted || loadedKey !== key) return;
     localStorage.setItem(key, JSON.stringify({completed,intent,bedtime}));
-  }, [permitted,key,completed,intent,bedtime]);
+  }, [permitted,key,loadedKey,completed,intent,bedtime]);
   const done = useMemo(() => blocks.filter((_,i)=>completed[i]).length,[completed]);
   function speak() {
     if (!("speechSynthesis" in window)) return;
