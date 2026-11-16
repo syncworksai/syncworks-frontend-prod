@@ -77,7 +77,10 @@ export default function CustomerWorkspace({ settings, update, phoneMode = false,
     return () => document.removeEventListener("keydown", onKey);
   }, [panel]);
   const activeCategory = OFFICE_CATEGORIES.find((category) => category.id === panel);
-  const apps = (activeCategory ? activeCategory.items : APPS).filter(([name]) => dayTradingEnabled || name !== "Trading");
+  const apps = [
+    ...(activeCategory ? activeCategory.items : APPS).filter(([name]) => dayTradingEnabled || name !== "Trading"),
+    ...(dayTradingEnabled && (panel === "business" || panel === "apps") ? [["Freelance Work", "/customer/freelance/overview", BriefcaseBusiness]] : []),
+  ];
   const close = () => { setClosing(true); window.setTimeout(() => { setPanel(null); setClosing(false); }, settings.motion ? 230 : 0); };
   const go = (path) => { setClosing(true); window.setTimeout(() => { setPanel(null); nav(path); }, settings.motion ? 200 : 0); };
   return <>
