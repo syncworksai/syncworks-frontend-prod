@@ -59,6 +59,7 @@ export function WorkspaceAppearancePanel({ settings, update }) {
 export default function CustomerWorkspace({ settings, update, phoneMode = false, dayTradingEnabled = false }) {
   const nav = useNavigate();
   const [panel, setPanel] = useState(null);
+  useEffect(() => { const open = (event) => { if (["apps", "appearance"].includes(event?.detail)) setPanel(event.detail); }; window.addEventListener("sw:workspace-open", open); return () => window.removeEventListener("sw:workspace-open", open); }, []);
   useEffect(() => {
     if (!panel) return;
     const onKey = e => { if (e.key === "Escape") setPanel(null); };
