@@ -17,7 +17,6 @@ const scripts = {
   meditate: "Welcome to your private meditation. Sit comfortably, or lie down. Let the shoulders soften. Breathe gently, without forcing it. Notice the weight of your body. When thoughts appear, let them pass without judgment. Return to this breath. You do not need to solve everything in this moment. You can come back to clarity, and choose your next action with intention.",
   breath: "Welcome to guided breathing. Breathe gently through your nose if comfortable. Follow the circle: breathe in for four, breathe out for six. Do not force or hold your breath. If you feel dizzy or uncomfortable, stop and return to your natural breathing."
 };
-const sequence = [{label:"Breathe in",length:4},{label:"Breathe out",length:6}];
 
 export default function ForgeStudio(){
   const [selected,setSelected] = useState("breath");
@@ -32,7 +31,6 @@ export default function ForgeStudio(){
   const audioUrlRef=useRef("");
   const requestRef=useRef(null);
   const active= sessions.find(s=>s.id===selected) || sessions[0];
-  const phase = sequence[Math.floor(phaseSeconds / 4) === 0 ? 0 : 1]; // below calculated by ten-second cycle
   const inBreath = phaseSeconds % 10 < 4;
   const phaseLabel = inBreath ? "BREATHE IN" : "BREATHE OUT";
   const phaseRemaining = inBreath ? 4-(phaseSeconds%10) : 10-(phaseSeconds%10);
