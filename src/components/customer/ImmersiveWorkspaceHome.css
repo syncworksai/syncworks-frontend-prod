@@ -67,3 +67,51 @@
 @media (max-width:1190px){.sw-immersive-destinations{grid-template-columns:repeat(3,minmax(0,1fr))}.sw-immersive-action-strip{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:760px){.sw-immersive-hero{grid-template-columns:1fr}.sw-immersive-focus{display:none}.sw-immersive-home{border-radius:20px}.sw-immersive-destinations{grid-template-columns:repeat(2,minmax(0,1fr))}.sw-immersive-action-strip{grid-template-columns:repeat(3,minmax(0,1fr))}.sw-immersive-destination{min-height:128px}}
 @media(prefers-reduced-motion:reduce){.sw-immersive-home *{transition:none!important}}
+
+/* Screenshot pass V4: focused hero hierarchy, polished materials, better visual balance. */
+@media(min-width:1024px){
+  .sw-immersive-home {min-height:0}
+  .sw-immersive-hero {min-height:222px;grid-template-columns:minmax(0,1.15fr) minmax(240px,.65fr)}
+  .sw-immersive-content {padding:clamp(22px,2.2vw,33px)}
+  .sw-immersive-action-strip {margin-top:9px}
+  .sw-immersive-workspaces-heading {margin-top:22px}
+  .sw-immersive-destination {min-height:132px}
+  .sw-immersive-welcome h1 {font-size:clamp(31px,2.55vw,43px);max-width:580px}
+  .sw-immersive-focus {max-width:340px;justify-self:end;width:100%}
+}
+.sw-immersive-top-actions button:focus-visible,
+.sw-immersive-action-strip button:focus-visible,
+.sw-immersive-destination:focus-visible,
+.sw-immersive-focus button:focus-visible {outline:2px solid var(--sw-workspace-accent);outline-offset:3px}
+.sw-workspace-root[data-workspace-theme="classic"] .sw-immersive-home{
+  box-shadow:0 24px 70px rgba(10,5,3,.42), inset 0 0 0 1px rgba(237,181,91,.14);
+}
+.sw-workspace-root[data-workspace-theme="classic"] .sw-immersive-office-art{
+  background:
+    radial-gradient(ellipse at 79% 28%,rgba(245,164,75,.28),transparent 41%),
+    linear-gradient(90deg,rgba(13,8,6,.72),rgba(29,17,11,.17) 55%,rgba(17,9,6,.28)),
+    repeating-linear-gradient(90deg,#1b100c 0 80px,#2b1a12 83px 94px,#140c09 99px);
+}
+.sw-workspace-root[data-workspace-theme="classic"] .sw-immersive-office-art:before{
+  background:
+    linear-gradient(0deg,rgba(0,0,0,.37),transparent 48%),
+    repeating-linear-gradient(90deg,transparent 0 78px,rgba(229,169,96,.055) 80px 82px,rgba(0,0,0,.22) 86px 95px),
+    radial-gradient(ellipse at 63% 10%,rgba(248,181,98,.11),transparent 58%);
+}
+.sw-workspace-root[data-workspace-theme="classic"] .sw-immersive-focus{
+  background:linear-gradient(140deg,rgba(28,17,12,.95),rgba(13,10,12,.9));
+  border-color:rgba(221,168,95,.47);
+  box-shadow:0 25px 55px rgba(0,0,0,.42),inset 0 1px rgba(255,221,165,.13);
+}
+.sw-workspace-root[data-workspace-theme="classic"] .sw-immersive-action-strip button{
+  background:linear-gradient(155deg,rgba(25,17,14,.93),rgba(9,10,16,.91));
+  border-color:rgba(217,159,78,.30);
+}
+.sw-workspace-root[data-workspace-theme="classic"] .sw-immersive-destination{
+  border-color:rgba(210,156,89,.37);
+  box-shadow:inset 0 1px rgba(255,225,167,.07),0 10px 24px rgba(0,0,0,.18);
+}
+.sw-workspace-root[data-workspace-theme="classic"] .sw-immersive-office-frame{
+  border:12px ridge #62462e;
+  box-shadow:inset 0 0 0 1px rgba(250,182,92,.3),0 18px 32px rgba(0,0,0,.6),0 0 60px rgba(207,123,45,.17);
+}
