@@ -103,7 +103,7 @@ export default function CustomerDashboardResponsive() {
       <div className="sw-workspace-root" data-workspace-theme={workspaceAppearance.theme} data-workspace-motion={workspaceAppearance.motion} data-workspace-compact={workspaceAppearance.compact} data-sw-layout="landscape" data-sw-visual="midnight">
         <CustomerWorkspace settings={workspaceAppearance} update={updateWorkspaceAppearance} dayTradingEnabled={dayTradingEnabled} />
         <CustomerDashboard workspaceTheme={workspaceAppearance.theme} />
-        <SyncAssistantStickyDock displayName={firstName(user)} defaultMinimized />
+        {workspaceAppearance.theme === "legacy" ? <SyncAssistantStickyDock displayName={firstName(user)} defaultMinimized /> : null}
       </div>
     );
   }
