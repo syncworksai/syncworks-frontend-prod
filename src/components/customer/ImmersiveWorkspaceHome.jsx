@@ -5,6 +5,7 @@ import "./ImmersiveWorkspaceHome.css";
 import "./OfficePhotoBackground.css";
 import "./OfficePhotoRefinements.css";
 import "./GameLobbyV17.css";
+import "./OfficeThemeAssetsV18.css";
 
 const destinations = [
   { label:"Business", detail:"Customers & operations", path:"/sbo", icon:BriefcaseBusiness, className:"business" },
