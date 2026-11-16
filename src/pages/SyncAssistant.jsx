@@ -889,8 +889,8 @@ export default function SyncAssistant() {
           </div>
         ) : null}
       </main>
-      <div className="fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom))] right-3 z-[180] max-w-[calc(100vw-1.5rem)] lg:bottom-6 lg:right-24" aria-label="SYNC AI employee dock">
-        <div className="flex items-end gap-1.5 rounded-2xl border border-cyan-300/25 bg-[#061323]/90 p-1.5 shadow-[0_0_28px_rgba(6,182,212,.22)] backdrop-blur-xl sm:gap-2">
+      <div className="fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom))] right-3 z-[180] max-w-[calc(100vw-1.5rem)] lg:bottom-7 lg:right-24" aria-label="SYNC AI employee dock">
+        <div className="flex items-end gap-2 sm:gap-3">
           {AVATARS.map((assistant) => (
             <button
               key={assistant.id}
@@ -899,13 +899,13 @@ export default function SyncAssistant() {
               aria-pressed={avatarOpen && avatarId === assistant.id}
               title={`${assistant.name} — ${assistant.role}`}
               onClick={() => { chooseAvatar(assistant.id); setAvatarOpen(true); }}
-              className={`relative flex min-w-0 flex-col items-center gap-1 rounded-xl px-1.5 py-1 text-center transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200 ${avatarId === assistant.id ? "bg-cyan-400/10" : ""}`}
+              className="group relative flex w-[67px] flex-col items-center gap-1 sm:w-[80px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200"
             >
-              <span className={`block h-10 w-10 overflow-hidden rounded-full border-2 sm:h-12 sm:w-12 ${avatarId === assistant.id ? "border-cyan-300 shadow-[0_0_16px_rgba(34,211,238,.35)]" : "border-white/20"}`}>
+              <span className={`relative block h-12 w-12 overflow-hidden rounded-full border-2 bg-[#061323] shadow-[0_5px_20px_rgba(0,0,0,.55)] transition-transform group-hover:-translate-y-1 sm:h-14 sm:w-14 ${avatarId === assistant.id ? "border-cyan-300 shadow-[0_0_21px_rgba(34,211,238,.55)]" : "border-cyan-300/45 shadow-[0_0_16px_rgba(34,211,238,.2)]"}`}>
                 <img src={assistant.photo} alt="" className="h-full w-full object-cover object-top" />
               </span>
-              <span className="max-w-[66px] truncate text-[10px] font-bold text-white">{assistant.name}</span>
-              <span className="max-w-[80px] text-[9px] leading-tight text-slate-300">{assistant.role}</span>
+              <span className="rounded-md bg-[#020817]/85 px-1.5 py-0.5 text-center text-[10px] font-bold leading-tight text-white shadow-lg backdrop-blur-sm">{assistant.name}</span>
+              <span className="max-w-full rounded-md bg-[#020817]/85 px-1 py-0.5 text-center text-[9px] leading-tight text-slate-200 shadow-lg backdrop-blur-sm">{assistant.role}</span>
             </button>
           ))}
         </div>
