@@ -231,3 +231,48 @@
     max-width: none;
   }
 }
+
+/* Customer Dashboard-style centered review modal: the surrounding page never
+   scrolls, employee choices remain visible, and long evidence scrolls only
+   inside its own focused panel. */
+.sw-assist-themed .sw-assist-task-overlay {
+  justify-content: center;
+  align-items: center;
+  padding: 12px 16px;
+}
+.sw-assist-themed .sw-assist-centered-task {
+  width: min(960px, calc(100vw - 40px));
+  max-width: 960px;
+  height: min(690px, calc(100% - 12px));
+  margin: 0;
+  border-radius: 24px;
+  border: 1px solid rgba(var(--assist-accent),.44);
+  background: var(--assist-glass-strong);
+  box-shadow: 0 25px 85px rgba(0,0,0,.5), 0 0 34px rgba(var(--assist-accent),.15);
+}
+.sw-assist-themed .sw-assist-task-choice {
+  background: rgba(10,35,66,.55);
+}
+.sw-assist-themed .sw-assist-task-choice[aria-pressed="true"] {
+  background: rgba(var(--assist-accent),.14);
+  border-color: rgba(var(--assist-accent),.75);
+  box-shadow: inset 0 1px rgba(255,255,255,.08),0 0 16px rgba(var(--assist-accent),.12);
+}
+.sw-assist-themed .sw-assist-task-choice:focus-visible {
+  outline: 2px solid rgba(var(--assist-accent),.95);
+  outline-offset: 2px;
+}
+.sw-assist-themed .sw-assist-focused-task {background: rgba(4,17,38,.5);}
+.sw-assist-themed .sw-assist-focused-details {scrollbar-width: thin; scrollbar-color: rgba(var(--assist-accent),.35) transparent;}
+@media (max-width:767px) {
+  .sw-assist-themed .sw-assist-task-overlay {padding:8px;}
+  .sw-assist-themed .sw-assist-centered-task {
+    width:100%;
+    max-width:none;
+    height:calc(100% - 8px);
+    border-radius:18px;
+  }
+}
+@media (max-height:710px) and (min-width:768px) {
+  .sw-assist-themed .sw-assist-centered-task {height:calc(100% - 8px);}
+}
