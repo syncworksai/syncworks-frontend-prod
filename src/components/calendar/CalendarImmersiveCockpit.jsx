@@ -28,6 +28,7 @@ export default function CalendarImmersiveCockpit({events,loading,error,notice,on
   const [focusDate,setFocusDate]=useState(()=>new Date());
   const [view,setView]=useState("day");
   const [filter,setFilter]=useState("ALL");
+  const [businessFilter,setBusinessFilter]=useState("");
   const [drawer,setDrawer]=useState("");
   const [selected,setSelected]=useState(null);
   React.useEffect(()=>{
@@ -36,13 +37,15 @@ export default function CalendarImmersiveCockpit({events,loading,error,notice,on
     window.addEventListener("storage",handle);
     return ()=>{window.removeEventListener("sw:workspace-appearance",handle);window.removeEventListener("storage",handle);};
   },[]);
+  const businessChoices=useMemo(()=>Array.from(new Map(events.filter(e=>e?.metadata?.business_id).map(e=>[String(e.metadata.business_id),{id:String(e.metadata.business_id),name:e.metadata.business_name || "Business"}])).values()).sort((a,b)=>a.name.localeCompare(b.name)),[events]);
   const visible=useMemo(()=>events.filter(e=>{
+    if(businessFilter && (filter==="BUSINESS") && String(e?.metadata?.business_id || "")!==businessFilter)return false;
     if(filter==="ALL")return true;
     const group=eventGroup(e);
     if(filter==="PERSONAL")return !["HEALTH","TICKET","TASK"].includes(group)&&eventCategory(e)==="PERSONAL";
     if(filter==="BUSINESS")return group==="TICKET"||(!["TASK","HEALTH"].includes(group)&&eventCategory(e)==="BUSINESS");
     return group===filter;
-  }),[events,filter]);
+  }),[events,filter,businessFilter]);
   const days=useMemo(()=>{
     if(view==="day")return [focusDate];
     if(view==="week")return Array.from({length:7},(_,i)=>dateShift(startMonday(focusDate),i));
@@ -82,6 +85,12 @@ export default function CalendarImmersiveCockpit({events,loading,error,notice,on
           <button aria-label="Next period" type="button" onClick={()=>move(1)}><ChevronRight size={19}/></button>
         </div>
       </div>
+      {filter==="BUSINESS" && businessChoices.length>1 && <label className="sw-cal-business-filter">Business
+        <select value={businessFilter} onChange={e=>setBusinessFilter(e.target.value)}>
+          <option value="">All businesses</option>
+          {businessChoices.map(b=><option value={b.id} key={b.id}>{b.name}</option>)}
+        </select>
+      </label>}
       <div className="sw-cal-filters" role="group" aria-label="Calendar filters">
         {filters.map(([key,title])=><button type="button" aria-pressed={filter===key} className={filter===key?"selected":""} key={key} onClick={()=>setFilter(key)}>{title}</button>)}
       </div>
@@ -99,7 +108,7 @@ export default function CalendarImmersiveCockpit({events,loading,error,notice,on
                     <button type="button" className="sw-cal-hour-label" aria-label={`Add event at ${hourLabel}`}
                       onClick={()=>onCreate("EVENT",focusDate,hour)}>{hourLabel}</button>
                     <div className="sw-cal-hour-content">{rows.map(e=><button key={e.id} type="button" className={`sw-cal-event sw-cal-event--${eventCategory(e).toLowerCase()} ${new Date(e.start_at).getTime() < hourStart.getTime() ? "sw-cal-event-continued":""}`} onClick={()=>openDetails(e)}>
-                      <span className="sw-cal-event-body"><strong>{e.title}</strong><small><span className={`sw-cal-event-category-label ${eventCategory(e).toLowerCase()}`}>{eventCategory(e)==="BUSINESS"?"Business":"Personal"}</span> {timeLabel(e)}{e.end_at?" – "+new Date(e.end_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):""}{routeAddress(e)?" · "+routeAddress(e):""}</small></span>
+                      <span className="sw-cal-event-body"><strong>{e.title}</strong><small><span className={`sw-cal-event-category-label ${eventCategory(e).toLowerCase()}`}>{eventCategory(e)==="BUSINESS"?(e?.metadata?.business_name || "Business"):"Personal"}</span> {timeLabel(e)}{e.end_at?" – "+new Date(e.end_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):""}{routeAddress(e)?" · "+routeAddress(e):""}</small></span>
                       <ChevronRight size={17}/>
                     </button>)}</div>
                   </div>
