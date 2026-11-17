@@ -4,11 +4,14 @@ import { getHealthWorkoutProgression } from "../../api/customerHealth";
 export default function HealthStrengthProgression({ open, onClose }) {
   const [result, setResult] = useState(null);
   const [status, setStatus] = useState("idle");
+  const [attempt, setAttempt] = useState(0);
+  const [errorText, setErrorText] = useState("");
 
   useEffect(() => {
     if (!open) return undefined;
     let active = true;
     setStatus("loading");
+    setErrorText("");
     getHealthWorkoutProgression()
       .then((data) => {
         if (!active) return;
@@ -18,10 +21,21 @@ export default function HealthStrengthProgression({ open, onClose }) {
       .catch((error) => {
         if (!active) return;
         console.error("Unable to load Health progression:", error);
+        const code = error?.response?.status;
+        const message = code === 404
+          ? "The Strength Progression service is not available on the connected backend yet."
+          : code === 401 || code === 403
+          ? "Your Health session could not be authorized. Please sign in again before retrying."
+          : error?.code === "ECONNABORTED"
+          ? "The Health service did not respond within 12 seconds. Your data remains unchanged."
+          : code >= 500
+          ? "The Health service encountered a server error while loading your stats."
+          : "We couldn't retrieve your workout stats. Check your connection and try again.";
+        setErrorText(message);
         setStatus("error");
       });
     return () => { active = false; };
-  }, [open]);
+  }, [open, attempt]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -48,8 +62,13 @@ export default function HealthStrengthProgression({ open, onClose }) {
         </header>
         <div className="sw-health-strength-body">
           {status === "loading" ? <p role="status">Loading your logged workout stats…</p> : null}
-          {status === "error" ? <div role="alert">
-            Your workout stats could not be loaded. Return to Health and try again. No workout data has been changed.
+          {status === "error" ? <div role="alert" className="sw-health-strength-error">
+            <strong>Unable to load strength stats</strong>
+            <p>{errorText}</p>
+            <p>Your workout history has not been changed.</p>
+            <button type="button" onClick={() => setAttempt((previous) => previous + 1)}>
+              Try again
+            </button>
           </div> : null}
           {status === "ready" ? (
             <>
