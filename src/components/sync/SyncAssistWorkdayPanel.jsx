@@ -32,6 +32,7 @@ export default function SyncAssistWorkdayPanel() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const [selectedGoalId, setSelectedGoalId] = useState(null);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [allGoalsOpen, setAllGoalsOpen] = useState(false);
@@ -191,6 +192,21 @@ export default function SyncAssistWorkdayPanel() {
         { status, evidence, owner_attested: status === "COMPLETED" },
       );
       setData(response.data);
+      // Only dismiss after the server confirms every assignment in this goal
+      // is completed. A partial approval, failed save, or other status keeps
+      // the modal open so the user can continue reviewing pending work.
+      const updatedGoal = (response.data?.goals || []).find(
+        (item) => String(item.id) === String(goalId),
+      );
+      const allCompleted = status === "COMPLETED" &&
+        updatedGoal?.status === "COMPLETED" &&
+        updatedGoal.steps?.length > 0 &&
+        updatedGoal.steps.every((item) => item.status === "COMPLETED");
+      if (allCompleted) {
+        setSelectedGoalId(null);
+        setSelectedTaskId(null);
+        setSuccessMessage("Goal completed. Both employees' work and receipts are saved in Work history.");
+      }
       await refresh();
       setEditing((previous) => {
         const copy = { ...previous };
@@ -230,6 +246,7 @@ export default function SyncAssistWorkdayPanel() {
         Durable queue records are available. Independent worker deployed: {workerStatus.worker_deployed ? "reported active" : "not yet verified"}.
         Jobs execute unattended only after a separately configured worker is enabled.
       </p>}
+      {successMessage && <div role="status" className="mt-1 flex shrink-0 items-center justify-between gap-2 rounded-lg border border-emerald-400/35 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-100"><span>{successMessage}</span><button type="button" onClick={() => setSuccessMessage("")} aria-label="Dismiss completion confirmation" className="rounded-md border border-emerald-400/35 px-2 py-1">Dismiss</button></div>}
       {error && <div role="alert" className="mt-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-rose-400/30 bg-rose-950/20 p-2 text-xs text-rose-200"><span>{error}</span><button type="button" onClick={refresh} disabled={busy} className="shrink-0 rounded-lg border border-rose-400/40 px-2 py-1">Retry</button></div>}
       <div className="mt-2 grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-y-auto lg:grid-cols-[minmax(320px,0.95fr)_minmax(360px,1.05fr)] lg:overflow-hidden">
       <form onSubmit={createGoal} className="sw-assist-surface min-h-0 space-y-2 overflow-hidden rounded-xl border border-white/10 p-2.5">
