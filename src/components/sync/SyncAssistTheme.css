@@ -276,3 +276,26 @@
 @media (max-height:710px) and (min-width:768px) {
   .sw-assist-themed .sw-assist-centered-task {height:calc(100% - 8px);}
 }
+
+/* A backdrop-filter ancestor establishes a containing block for fixed children.
+   Disable only the Workday card's filter while a full-screen review modal is
+   open. Otherwise the overlay is anchored to the card's 400px height rather
+   than the browser viewport and cuts off receipts/approval controls. */
+.sw-assist-themed .sw-assist-workday.sw-assist-modal-open {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+/* Keep the popup centered in the usable viewport below global navigation.
+   Only the focused evidence region scrolls; the approval footer stays visible. */
+.sw-assist-themed .sw-assist-task-overlay {
+  position: fixed;
+  inset: 57px 0 0;
+  height: calc(100dvh - 57px);
+  overflow: hidden;
+}
+@media (max-width: 767px) {
+  .sw-assist-themed .sw-assist-task-overlay {
+    inset: 115px 0 0;
+    height: calc(100dvh - 115px);
+  }
+}
