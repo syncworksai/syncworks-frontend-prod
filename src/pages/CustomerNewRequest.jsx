@@ -1,12 +1,27 @@
 // src/pages/CustomerNewRequest.jsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { CalendarClock } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import UniversalTicketCreator from "../components/requests/new-request/UniversalTicketCreator";
+import { readWorkspaceAppearance } from "../components/customer/CustomerWorkspace";
 import { MARKETPLACE_MODES } from "../components/requests/new-request/requestMarketplaceCatalog";
 
 export default function CustomerNewRequest() {
   const navigate = useNavigate();
+  const [appearance, setAppearance] = useState(readWorkspaceAppearance);
+  useEffect(() => {
+    const sync = () => setAppearance(readWorkspaceAppearance());
+    window.addEventListener("sw:workspace-appearance",sync);
+    window.addEventListener("storage",sync);
+    document.documentElement.classList.add("sw-new-request-viewport-locked");
+    document.body.classList.add("sw-new-request-viewport-locked");
+    return () => {
+      window.removeEventListener("sw:workspace-appearance",sync);
+      window.removeEventListener("storage",sync);
+      document.documentElement.classList.remove("sw-new-request-viewport-locked");
+      document.body.classList.remove("sw-new-request-viewport-locked");
+    };
+  }, []);
   const location = useLocation();
   const jarvisDetails = typeof location.state?.jarvisDescription === "string" ? location.state.jarvisDescription.slice(0, 3000) : "";
 
@@ -21,12 +36,12 @@ export default function CustomerNewRequest() {
   }
 
   return (
-    <div>
-      <div className="fixed right-3 top-24 z-[60] sm:right-5">
+    <div className="sw-new-request-page" data-theme={appearance.theme} data-motion={appearance.motion ? "on" : "off"}>
+      <div className="sw-new-request-availability">
         <button
           type="button"
           onClick={() => navigate("/customer/marketplace")}
-          className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-cyan-400/30 bg-slate-950/95 px-4 text-xs font-black text-cyan-100 shadow-xl backdrop-blur"
+          className="sw-new-request-availability-button inline-flex min-h-11 items-center gap-2 rounded-2xl border border-cyan-400/30 px-4 text-xs font-black"
         >
           <CalendarClock className="h-4 w-4" />
           Check real availability
