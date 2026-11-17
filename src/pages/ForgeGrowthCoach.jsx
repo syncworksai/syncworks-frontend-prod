@@ -43,6 +43,7 @@ export default function ForgeGrowthCoach({email,chapter,open,onClose}){
         chapter_excerpt:chapter.paragraphs.slice(0,3).join(" ").slice(0,2500),
         focus_areas:profile.areas,
         approach:profile.approach,
+        history:messages.slice(-8).map(m=>({role:m.role,text:m.text.slice(0,1800)})),
       },{timeout:45000});
       setMessages(prev=>[...prev,{role:"coach",text:String(response.data?.answer||"I couldn't produce a response.")}]);
     }catch(ex){
