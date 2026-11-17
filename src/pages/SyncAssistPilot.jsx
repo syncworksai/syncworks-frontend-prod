@@ -30,6 +30,7 @@ export default function SyncAssistPilot() {
   const [operations, setOperations] = useState(null);
   const [operationsError, setOperationsError] = useState("");
   const [operationsOpen, setOperationsOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -118,13 +119,13 @@ export default function SyncAssistPilot() {
   }
 
   return (
-    <main className="relative min-h-dvh bg-[#020617] px-4 pb-36 pt-28 text-white sm:pt-24">
-      <div className="mx-auto max-w-4xl">
-        <button type="button" onClick={() => navigate("/sync")} className="mb-5 inline-flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-200"><ArrowLeft size={16}/> Back to SYNC</button>
-        <header className="mb-5 rounded-3xl border border-cyan-300/25 bg-gradient-to-br from-[#091c32] to-[#120c2c] p-5">
-          <div className="flex items-center gap-3"><Bot className="h-8 w-8 text-cyan-300"/><div><p className="text-xs font-black uppercase tracking-[.17em] text-cyan-200">Private pilot</p><h1 className="text-2xl font-black">Sync Assist Control Center</h1></div></div>
-          <p className="mt-3 text-sm leading-6 text-slate-300">Prepare business tasks, record approvals and track what's waiting. This first stage does not execute approved tasks or send customer communications.</p>
-          <div className="mt-3 flex items-center gap-2 text-xs font-bold text-amber-200"><ShieldCheck size={16}/> Pilot access only · Automation worker not yet enabled</div>
+    <main className="relative h-[100dvh] overflow-hidden bg-[#020617] px-3 pb-3 pt-24 text-white lg:pt-20" style={{backgroundImage: 'linear-gradient(100deg,rgba(2,6,23,.94),rgba(2,6,23,.84)),url("/assist-themes/executive-office.svg")', backgroundSize:"cover", backgroundPosition:"center"}}>
+      <div className="mx-auto flex h-full max-w-7xl flex-col gap-2 overflow-hidden">
+        <div className="flex shrink-0 items-center justify-between gap-2"><button type="button" onClick={() => navigate("/sync")} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-xs text-slate-200"><ArrowLeft size={15}/> Back to SYNC</button><button type="button" onClick={() => setToolsOpen(true)} className="min-h-10 rounded-xl border border-cyan-400/35 bg-slate-950/80 px-3 text-xs font-bold text-cyan-100">More pilot tools</button></div>
+        <header className="shrink-0 rounded-2xl border border-cyan-300/25 bg-gradient-to-br from-[#091c32]/95 to-[#120c2c]/95 p-3">
+          <div className="flex items-center gap-3"><Bot className="h-6 w-6 text-cyan-300"/><div><p className="text-[10px] font-black uppercase tracking-[.17em] text-cyan-200">Private pilot</p><h1 className="text-lg font-black">Sync Assist · Workday Test Center</h1></div></div>
+          <p className="mt-1 text-[11px] leading-4 text-slate-300">Assign employees, run an authorized internal step, inspect receipts, and review work history.</p>
+          <div className="mt-1 flex items-center gap-2 text-[11px] font-bold text-amber-200"><ShieldCheck size={13}/> Private pilot · Unattended worker not verified</div>
         </header>
         {!permitted ? <div role="alert" className="rounded-2xl border border-rose-400/35 p-5 text-rose-200">This feature is restricted to the private pilot account.</div> : <>
           {(loading || (error && !data)) && (
@@ -134,7 +135,8 @@ export default function SyncAssistPilot() {
             </div>
           )}
           {error && <div role="alert" className="mb-4 rounded-xl border border-rose-400/40 bg-rose-950/30 p-3 text-sm text-rose-200">{error}</div>}
-          <SyncAssistWorkdayPanel />
+          <div className="min-h-0 flex-1 overflow-hidden"><SyncAssistWorkdayPanel /></div>
+          {toolsOpen && <div className="fixed inset-0 z-[260] flex justify-end bg-slate-950/75 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) setToolsOpen(false); }}><section role="dialog" aria-modal="true" aria-label="Additional Sync Assist pilot tools" className="flex h-full w-full max-w-xl flex-col border-l border-cyan-300/30 bg-[#061327] text-white"><div className="flex shrink-0 items-center justify-between border-b border-white/10 p-4"><h2 className="text-lg font-black">Other pilot tools</h2><button type="button" onClick={() => setToolsOpen(false)} className="min-h-11 rounded-xl border border-white/20 px-4 text-sm">Close</button></div><div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
           <button type="button" onClick={() => navigate("/sync/assist/daily")} className="mb-4 flex min-h-16 w-full items-center justify-between rounded-2xl border border-cyan-400/35 bg-gradient-to-r from-cyan-700/25 to-violet-700/20 p-4 text-left font-black text-cyan-100"><span>Jarvis Daily · My to-do list<span className="block text-xs font-normal text-slate-400">Today's priorities · Property · Business · Personal</span></span><span aria-hidden="true">→</span></button>
           <section className="mb-4 rounded-2xl border border-cyan-400/25 bg-slate-900/50 p-4">
             <button type="button" aria-expanded={operationsOpen} onClick={() => { setOperationsOpen(!operationsOpen); if (!operationsOpen) loadOperations(); }} className="flex min-h-11 w-full items-center justify-between gap-2 text-left font-black text-cyan-100">
@@ -246,6 +248,7 @@ export default function SyncAssistPilot() {
               {task.status === "PENDING" ? <div className="mt-3 flex gap-2"><button disabled={busy} onClick={() => decide(task,"APPROVE")} className="min-h-10 flex-1 rounded-xl border border-emerald-400/40 bg-emerald-500/10 text-xs font-bold text-emerald-200 disabled:opacity-50">Approve (record only)</button><button disabled={busy} onClick={() => decide(task,"REJECT")} className="min-h-10 flex-1 rounded-xl border border-rose-400/30 bg-rose-500/10 text-xs font-bold text-rose-200 disabled:opacity-50">Reject</button></div> : <p className="mt-2 text-xs text-slate-400">{task.status === "APPROVED" ? "Approved for future authorized execution. Nothing has been sent." : "Rejected; no action taken."}</p>}
             </article>)}</div>
           </section>
+          </div></section></div>}
         </>}
       </div>
     </main>
