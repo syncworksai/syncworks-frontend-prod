@@ -109,3 +109,27 @@
   .forge3-workspace,.forge3-sidebar{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);background:rgba(17,12,13,.7)}
 }
 @media(prefers-reduced-motion:reduce){.forge3-glow{animation:none!important}}
+
+
+/* Forge v6: non-scrolling feature preview; scroll is reserved for the explicit reading pop-out. */
+.forge3-reading-home{flex:1;min-height:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:clamp(12px,2.5vw,30px);overflow:hidden;border:1px solid rgba(241,194,111,.3);border-radius:17px;background:radial-gradient(circle at 85% 25%,rgba(187,101,38,.14),transparent 50%),linear-gradient(125deg,rgba(18,11,13,.62),rgba(48,29,21,.37));}
+.forge3-reading-symbol{display:grid;place-items:center;width:72px;height:72px;border-radius:22px;color:#ecc38a;border:1px solid rgba(245,203,137,.38);background:rgba(24,15,14,.5);margin-bottom:16px;box-shadow:0 0 35px rgba(241,178,91,.08)}
+.forge3-reading-home h3{font:500 clamp(24px,2.7vw,35px)/1.2 Georgia,serif;color:#ffebc9;margin:10px 0}
+.forge3-reading-home>p{max-width:65ch;color:#eadac7;font-size:clamp(12px,1vw,15px);line-height:1.7;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.forge3-reading-home-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.forge3-reading-takeaway{border-top:1px solid rgba(241,194,111,.24);margin-top:22px;padding-top:16px;max-width:68ch}
+.forge3-reading-takeaway strong{font-size:10px;color:#f2c786;letter-spacing:.15em}.forge3-reading-takeaway p{color:#e4d4c4;font-size:12px;line-height:1.55;margin-top:8px}
+.forge3-reading-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vw,34px);background:rgba(6,5,6,.82);-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px);animation:forge-v2-rise .23s ease both}
+.forge3-reading-dialog{display:flex;flex-direction:column;width:min(900px,100%);height:min(820px,92dvh);min-height:0;background:linear-gradient(140deg,rgba(36,24,21,.98),rgba(12,12,14,.98));border:1px solid rgba(239,194,114,.65);border-radius:20px;box-shadow:0 30px 100px rgba(0,0,0,.7);overflow:hidden}
+.forge3-reading-dialog-head{flex-shrink:0;padding:21px 27px;display:flex;justify-content:space-between;gap:16px;align-items:flex-start;border-bottom:1px solid rgba(239,194,114,.25)}
+.forge3-reading-dialog-head h2{font:500 clamp(27px,3vw,40px) Georgia,serif;color:#ffedcf;margin:7px 0}
+.forge3-reading-dialog-head p{font-size:12px;color:#c9b6a0}
+.forge3-reading-close{color:#ffe9c3;background:rgba(97,55,30,.4);border:1px solid rgba(244,199,123,.45);border-radius:12px;width:38px;height:38px;display:grid;place-items:center}
+.forge3-reading-dialog-body{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:clamp(20px,3vw,34px);scrollbar-color:#a78151 #1a1615}
+.forge3-reading-dialog-body p{max-width:72ch;font:400 clamp(16px,1.5vw,20px)/1.85 Georgia,serif;color:#f0e4d1;margin:0 auto 22px}
+.forge3-reading-dialog-body .forge3-dropcap:first-letter{font-size:2.8em;float:left;line-height:.85;padding:6px 11px 0 0;color:#e9c58a}
+.forge3-reading-dialog-body .forge3-chapter-end{margin:20px auto 0}
+.forge3-reading-dialog-actions{display:flex;align-items:center;flex-wrap:wrap;gap:9px;padding:13px 22px;flex-shrink:0;border-top:1px solid rgba(239,194,114,.25)}
+@media(max-width:720px){.forge3-reading-home{padding:14px}.forge3-reading-symbol{width:45px;height:45px;margin-bottom:7px}.forge3-reading-symbol svg{width:26px}.forge3-reading-home h3{font-size:23px;margin:5px 0}.forge3-reading-home>p{-webkit-line-clamp:2;font-size:11px}.forge3-reading-home-actions{margin-top:10px}.forge3-reading-takeaway{padding-top:9px;margin-top:10px}.forge3-reading-takeaway p{font-size:10px;margin-top:4px}.forge3-reading-dialog{height:95dvh}.forge3-reading-dialog-head{padding:16px}.forge3-reading-dialog-actions{padding:10px}}
+@media(max-height:680px){.forge3-reading-symbol{display:none}.forge3-reading-home-actions{margin-top:9px}.forge3-reading-takeaway{margin-top:9px;padding-top:8px}.forge3-reading-home h3{margin:4px 0}.forge3-reading-home>p{-webkit-line-clamp:2}}
+@media(prefers-reduced-motion:reduce){.forge3-reading-overlay{animation:none!important}}
