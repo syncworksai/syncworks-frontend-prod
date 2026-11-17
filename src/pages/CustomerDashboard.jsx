@@ -170,13 +170,21 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
     Promise.allSettled([
       api.get("/tickets/"),
       api.get("/sync-ai/customer/invoices/"),
-      api.get("/personal-calendar/events/", { params: { status: "ACTIVE" } }),
+      (async () => {
+        const rows = [];
+        for (let page = 1; page <= 40; page += 1) {
+          const response = await api.get("/personal-calendar/events/", { params: { status: "ACTIVE", page } });
+          rows.push(...safeList(response.data));
+          if (!response.data?.next) return rows;
+        }
+        return rows;
+      })(),
       api.get("/personal-finance/dashboard/"),
     ]).then(([ticketResult, invoiceResult, calendarResult, financeResult]) => {
       if (!mounted) return;
       setTickets(ticketResult.status === "fulfilled" ? safeList(ticketResult.value?.data) : []);
       setInvoices(invoiceResult.status === "fulfilled" ? safeList(invoiceResult.value?.data) : []);
-      setCalendarEvents(calendarResult.status === "fulfilled" ? safeList(calendarResult.value?.data) : []);
+      setCalendarEvents(calendarResult.status === "fulfilled" ? calendarResult.value : []);
       setFinance(financeResult.status === "fulfilled" ? (financeResult.value?.data || {}) : null);
     });
 

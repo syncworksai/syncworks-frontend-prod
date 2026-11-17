@@ -12,6 +12,15 @@ const dateShift=(date,days)=>{const d=new Date(date);d.setDate(d.getDate()+days)
 const startMonday=date=>{const d=new Date(date);d.setDate(d.getDate()-((d.getDay()+6)%7));return d;};
 const timeLabel=e=>e.all_day?"All day":new Date(e.start_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
 const eventGroup=e=>e?.metadata?.entity_type==="TASK"?"TASK":String(e.source||"MANUAL").toUpperCase();
+const eventCategory=e=>String(e?.metadata?.event_category || (e?.metadata?.business_id ? "BUSINESS" : "PERSONAL")).toUpperCase()==="BUSINESS"?"BUSINESS":"PERSONAL";
+const spansHour=(event,hourStart)=>{
+  if(event.all_day)return false;
+  const start=new Date(event.start_at).getTime();
+  if(!Number.isFinite(start))return false;
+  const rawEnd=new Date(event.end_at || event.start_at).getTime();
+  const end=Number.isFinite(rawEnd)&&rawEnd>start?rawEnd:start+3600000;
+  return start < hourStart.getTime()+3600000 && end > hourStart.getTime();
+};
 function routeAddress(e){return e?.metadata?.routing_address_override||[e?.location_name,e?.address_line1,e?.city,e?.state,e?.postal_code].filter(Boolean).join(", ");}
 const filters=[["ALL","All"],["PERSONAL","Personal"],["TASK","Tasks"],["TICKET","Services"],["HEALTH","Health"],["BUSINESS","Business"]];
 export default function CalendarImmersiveCockpit({events,loading,error,notice,onCreate,onEdit,onRoute,onConnect,onRefresh,onCapture,captureText,setCaptureText,onVoice,nextEvent,onUpdated}) {
@@ -30,8 +39,8 @@ export default function CalendarImmersiveCockpit({events,loading,error,notice,on
   const visible=useMemo(()=>events.filter(e=>{
     if(filter==="ALL")return true;
     const group=eventGroup(e);
-    if(filter==="PERSONAL")return ["MANUAL","GOOGLE","MICROSOFT","OUTLOOK","APPLE"].includes(group);
-    if(filter==="BUSINESS")return ["SYNC","SOCIAL","TICKET","SYSTEM"].includes(group);
+    if(filter==="PERSONAL")return !["HEALTH","TICKET","TASK"].includes(group)&&eventCategory(e)==="PERSONAL";
+    if(filter==="BUSINESS")return group==="TICKET"||(!["TASK","HEALTH"].includes(group)&&eventCategory(e)==="BUSINESS");
     return group===filter;
   }),[events,filter]);
   const days=useMemo(()=>{
@@ -81,15 +90,16 @@ export default function CalendarImmersiveCockpit({events,loading,error,notice,on
           <div className="sw-cal-agenda-heading"><strong>{focusDate.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</strong><span>{chosenDay.length} scheduled</span></div>
           <div className="sw-cal-hour-list">
             {Array.from({length:18},(_,index)=>index+5).map(hour=>{
-              const rows=chosenDay.filter(event=>!event.all_day&&new Date(event.start_at).getHours()===hour);
+              const hourStart=new Date(focusDate.getFullYear(),focusDate.getMonth(),focusDate.getDate(),hour);
+              const rows=chosenDay.filter(event=>spansHour(event,hourStart));
               const isNow=dateKey(focusDate)===dateKey(new Date())&&hour===new Date().getHours();
               const hourLabel=new Date(2020,0,1,hour).toLocaleTimeString("en-US",{hour:"numeric"});
               return rows.length
                 ? <div className={`sw-cal-hour-row ${isNow?"is-now":""}`} key={hour}>
                     <button type="button" className="sw-cal-hour-label" aria-label={`Add event at ${hourLabel}`}
                       onClick={()=>onCreate("EVENT",focusDate,hour)}>{hourLabel}</button>
-                    <div className="sw-cal-hour-content">{rows.map(e=><button key={e.id} type="button" className="sw-cal-event" onClick={()=>openDetails(e)}>
-                      <span className="sw-cal-event-body"><strong>{e.title}</strong><small>{timeLabel(e)} · {eventGroup(e)}{routeAddress(e)?" · "+routeAddress(e):""}</small></span>
+                    <div className="sw-cal-hour-content">{rows.map(e=><button key={e.id} type="button" className={`sw-cal-event sw-cal-event--${eventCategory(e).toLowerCase()} ${new Date(e.start_at).getTime() < hourStart.getTime() ? "sw-cal-event-continued":""}`} onClick={()=>openDetails(e)}>
+                      <span className="sw-cal-event-body"><strong>{e.title}</strong><small><span className={`sw-cal-event-category-label ${eventCategory(e).toLowerCase()}`}>{eventCategory(e)==="BUSINESS"?"Business":"Personal"}</span> {timeLabel(e)}{e.end_at?" – "+new Date(e.end_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):""}{routeAddress(e)?" · "+routeAddress(e):""}</small></span>
                       <ChevronRight size={17}/>
                     </button>)}</div>
                   </div>
