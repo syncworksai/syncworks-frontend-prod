@@ -8,6 +8,16 @@ function shortDate(date) {
 function shortTime(date) {
   return new Intl.DateTimeFormat("en-US", {hour:"numeric",minute:"2-digit",hour12:true}).format(date);
 }
+function eventCategory(event) {
+  return String(event?.metadata?.event_category || (event?.metadata?.business_id ? "BUSINESS" : "PERSONAL")).toUpperCase() === "BUSINESS" ? "BUSINESS" : "PERSONAL";
+}
+function eventIntervalOverlaps(event, start, end) {
+  const eventStart = new Date(event?.start_at || event?.start).getTime();
+  if (!Number.isFinite(eventStart)) return false;
+  const candidateEnd = new Date(event?.end_at || event?.end || event?.start_at).getTime();
+  const eventEnd = Number.isFinite(candidateEnd) && candidateEnd > eventStart ? candidateEnd : eventStart + 3600000;
+  return eventStart < end.getTime() && eventEnd > start.getTime();
+}
 function weatherLocation(weather) {
   const place = weather?.location || {};
   return [place.city || place.name || place.locality, place.state || place.region].filter(Boolean).join(", ") || "Your location";
@@ -35,12 +45,7 @@ export default function MobileCustomerCommandCenter({ name, brief, attentionCoun
   const hourlySlots = Array.from({ length: 4 }, (_, index) => {
     const start = new Date(currentHour.getTime() + index * 60 * 60 * 1000);
     const end = new Date(start.getTime() + 60 * 60 * 1000);
-    const matches = calendarEvents.filter((item) => {
-      const value = item?.start_at || item?.start;
-      if (!value) return false;
-      const time = new Date(value);
-      return !Number.isNaN(time.getTime()) && time >= start && time < end;
-    });
+    const matches = calendarEvents.filter(item => !item?.all_day && eventIntervalOverlaps(item,start,end)).sort((a,b)=>new Date(a.start_at)-new Date(b.start_at));
     return { start, events: matches, active: index === 0 };
   });
   const hourText = (date) => new Intl.DateTimeFormat("en-US", {hour:"numeric",hour12:true}).format(date);
@@ -77,11 +82,11 @@ export default function MobileCustomerCommandCenter({ name, brief, attentionCoun
         </div>
         <div className="sw-mobile-hourly-rows">
           {hourlySlots.map(({ start, events, active }) => (
-            <button type="button" className={active ? "sw-mobile-hour-row is-current" : "sw-mobile-hour-row"} key={start.toISOString()} onClick={() => open("/calendar")} aria-label={`${hourText(start)}: ${events.length ? events.map(eventText).join(", ") : "Nothing scheduled"}`}>
+            <button type="button" className={`sw-mobile-hour-row ${active ? "is-current" : ""} ${events.length ? "has-event" : ""} ${events[0] ? "is-"+eventCategory(events[0]).toLowerCase() : ""}`} key={start.toISOString()} onClick={() => open("/calendar")} aria-label={`${hourText(start)}: ${events.length ? events.map(eventText).join(", ") : "Nothing scheduled"}`}>
               <time dateTime={start.toISOString()}>{hourText(start)}</time>
               <span className="sw-mobile-hour-line" aria-hidden="true"/>
               <span className="sw-mobile-hour-events">
-                {events.length ? <><strong>{eventText(events[0])}</strong>{events.length > 1 && <small>+{events.length - 1} more</small>}</> : <small>{active ? "No event this hour" : "Open"}</small>}
+                {events.length ? <><strong>{eventText(events[0])}</strong><small>{eventCategory(events[0]) === "BUSINESS" ? "Business" : "Personal"} · {shortTime(new Date(events[0].start_at))}{events[0].end_at ? "–"+shortTime(new Date(events[0].end_at)) : ""}</small>{events.length > 1 && <small>+{events.length - 1} more</small>}</> : <small>{active ? "No event this hour" : "Open"}</small>}
               </span>
               {active && <span className="sw-mobile-hour-now">NOW</span>}
             </button>
