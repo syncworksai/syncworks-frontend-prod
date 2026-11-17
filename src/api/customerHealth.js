@@ -205,6 +205,6 @@ export async function updateHealthGodModeFeedbackStatus(
 }
 
 export async function getHealthWorkoutProgression() {
-  const response = await api.get("/customer-health/workout-sessions/progression/");
+  const response = await api.get("/customer-health/workout-sessions/progression/", { timeout: 12000 });
   return response.data;
 }
