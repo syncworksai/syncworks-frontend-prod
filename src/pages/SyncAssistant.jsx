@@ -224,8 +224,13 @@ export default function SyncAssistant() {
 
   useEffect(() => {
     let active = true;
-    getSyncAiStatus()
-      .then((data) => {
+    let checking = false;
+    let lastConnectionError = "";
+    async function verifySyncAvailability() {
+      if (!active || checking || document.hidden) return;
+      checking = true;
+      try {
+        const data = await getSyncAiStatus();
         if (!active) return;
         setStatus({
           loading: false,
@@ -233,19 +238,31 @@ export default function SyncAssistant() {
           configured: Boolean(data.configured),
           model: data.model || "",
         });
-      })
-      .catch((error) => {
+        if (lastConnectionError) {
+          const staleError = lastConnectionError;
+          setNotice((message) => message === staleError ? "" : message);
+          lastConnectionError = "";
+        }
+      } catch (error) {
         if (!active) return;
-        setStatus({
-          loading: false,
-          enabled: false,
-          configured: false,
-          model: "",
-        });
-        setNotice(getSyncAiErrorMessage(error));
-      });
+        setStatus({ loading: false, enabled: false, configured: false, model: "" });
+        const message = getSyncAiErrorMessage(error);
+        lastConnectionError = message;
+        setNotice((current) => current && current !== lastConnectionError ? current : message);
+      } finally {
+        checking = false;
+      }
+    }
+    verifySyncAvailability();
+    const checkOnReturn = () => { if (!document.hidden) verifySyncAvailability(); };
+    const interval = window.setInterval(verifySyncAvailability, 30000);
+    window.addEventListener("focus", checkOnReturn);
+    document.addEventListener("visibilitychange", checkOnReturn);
     return () => {
       active = false;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", checkOnReturn);
+      document.removeEventListener("visibilitychange", checkOnReturn);
     };
   }, []);
 
