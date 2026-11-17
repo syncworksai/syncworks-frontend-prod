@@ -537,3 +537,25 @@
 @media (max-width:1023px) {
   .sw-health-recovery-layer {display:none !important}
 }
+
+
+/* Adaptive workout alerts must never become narrow grid items. */
+.sw-health-adaptive-chip {display:none}
+@media (min-width:1024px) {
+  .sw-health-home > .sw-health-adaptive-alert {display:none !important}
+  .sw-health-home > .sw-health-resume {grid-column:1/-1;min-height:44px}
+  .sw-health-home[data-health-panel="today"] .sw-health-adaptive-chip {
+    display:inline-flex;align-items:center;justify-content:center;gap:.35rem;
+    min-height:36px;max-width:220px;padding:.4rem .65rem;
+    border:1px solid rgba(197,134,255,.42);border-radius:999px;
+    background:rgba(96,42,165,.23);color:#e9d7ff;
+    font-size:.69rem;font-weight:850;white-space:nowrap;
+  }
+  .sw-health-home[data-health-panel="today"] .sw-health-adaptive-chip:focus-visible {
+    outline:2px solid #d7a8ff;outline-offset:3px;
+  }
+}
+@media (min-width:1024px) and (max-width:1199px) {
+  .sw-health-home .sw-health-quick-actions {gap:.35rem}
+  .sw-health-home .sw-health-adaptive-chip {font-size:.62rem;padding:.35rem .45rem}
+}
