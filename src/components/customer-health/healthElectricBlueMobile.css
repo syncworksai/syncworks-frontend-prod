@@ -302,3 +302,38 @@
   .sw-health-mini-card { padding:.62rem; }
   .sw-health-mini-card .sw-health-ring { width:58px; }
 }
+
+
+/* SyncWorks Health gym environment: shared artwork for web and mobile.
+   Asset committed to public/health/health background.png. */
+.health-obsidian-electric {
+  background-image:
+    linear-gradient(180deg, rgba(1, 5, 16, .72) 0%, rgba(1, 7, 20, .57) 43%, rgba(1, 5, 16, .8) 100%),
+    url("/health/health%20background.png") !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+  background-size: cover !important;
+  background-attachment: fixed !important;
+}
+.health-obsidian-electric .sw-health-home {
+  background: transparent;
+}
+.health-obsidian-electric .sw-health-panel {
+  background-color: rgba(3, 11, 26, .80);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+@media (max-width: 1023px) {
+  /* Avoid iOS fixed-background repaint and preserve a stable gym canvas. */
+  .health-obsidian-electric {
+    background-attachment: scroll !important;
+    background-position: center top !important;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .health-obsidian-electric .sw-health-panel {
+    background-color: rgba(3, 11, 26, .97);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
