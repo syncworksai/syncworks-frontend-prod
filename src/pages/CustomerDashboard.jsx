@@ -49,6 +49,7 @@ import "../components/customer/OfficeFlowV20.css";
 import "../components/customer/OfficeTwoScreenV22.css";
 import "../components/customer/OfficePhotoVisibilityV23.css";
 import "../components/customer/LobbyReadabilityV24.css";
+import "../components/customer/LobbyFinishV25.css";
 
 const DAY_TRADING_EMAIL = "jacoblord7@outlook.com";
 
