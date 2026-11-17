@@ -1,3 +1,4 @@
+import "../components/customer/DesktopCustomerCockpit.css";
 import React, { useEffect, useMemo, useState } from "react";
 import "../styles/personalMidnight.css";
 import { Activity, Home, Inbox, LayoutGrid, MoreHorizontal } from "lucide-react";
@@ -77,6 +78,19 @@ export default function CustomerDashboardResponsive() {
   const phoneMode = viewportMode === "portrait";
   const dayTradingEnabled = String(user?.email || "").trim().toLowerCase() === DAY_TRADING_EMAIL;
 
+  // Preserve one-screen command center on desktop as well. Only its three
+  // dashboard rails may scroll internally; other application routes are free.
+  useEffect(() => {
+    if (phoneMode) return undefined;
+    document.documentElement.classList.add("sw-customer-desktop-home-locked");
+    document.body.classList.add("sw-customer-desktop-home-locked");
+    window.scrollTo(0, 0);
+    return () => {
+      document.documentElement.classList.remove("sw-customer-desktop-home-locked");
+      document.body.classList.remove("sw-customer-desktop-home-locked");
+    };
+  }, [phoneMode]);
+
   // Customer phone home is a fixed-height cockpit. Lock only this route's document
   // scroll; drawers/sheets keep their own scrolling and other pages are unaffected.
   useEffect(() => {
@@ -135,7 +149,7 @@ export default function CustomerDashboardResponsive() {
 
   if (!phoneMode) {
     return (
-      <div className="sw-workspace-root" data-workspace-theme={workspaceAppearance.theme} data-workspace-motion={workspaceAppearance.motion} data-workspace-compact={workspaceAppearance.compact} data-sw-layout="landscape" data-sw-visual="midnight">
+      <div className="sw-workspace-root sw-desktop-customer-cockpit" data-workspace-theme={workspaceAppearance.theme} data-workspace-motion={workspaceAppearance.motion} data-workspace-compact={workspaceAppearance.compact} data-sw-layout="landscape" data-sw-visual="midnight">
         <CustomerWorkspace settings={workspaceAppearance} update={updateWorkspaceAppearance} dayTradingEnabled={dayTradingEnabled} />
         <CustomerDashboard workspaceTheme={workspaceAppearance.theme} />
         {workspaceAppearance.theme === "legacy" ? <SyncAssistantStickyDock displayName={firstName(user)} defaultMinimized /> : null}

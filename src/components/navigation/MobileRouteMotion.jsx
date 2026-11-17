@@ -8,10 +8,14 @@ function readMotion() {
   catch { return true; }
 }
 function routeTransition(path) {
-  // Keep auth, invitations, real-time game tables and live screens unchanged.
-  if (!/^\/(customer(?:\/|$)|sync(?:\/|$)|calendar(?:\/|$)|sbo(?:\/|$)|pm(?:\/|$))/.test(path)) return "none";
-  if (/^\/sync(?:\/|$)/.test(path)) return "hologram";
+  // The app-level motion system applies to every signed-in page, including
+  // New Request, Inbox, profile, settings and routes opened from the hamburger.
+  // Keep authentication, invite links, live cards/tables and real-time score
+  // interfaces instant to avoid interrupting active interaction.
+  if (/^\/(?:login|register|forgot-password|reset-password|onboarding|employee\/invite|accept-invite|gamecast|sports\/invite|sports\/team-invite|social\/invite)(?:\/|$)/.test(path)) return "none";
   if (/^\/customer\/games\/(?:table|clubs\/room|play)(?:\/|$)/.test(path)) return "none";
+  if (/^\/connect\/groups\/[^/]+\/sports\/games\//.test(path)) return "none";
+  if (/^\/sync(?:\/|$)/.test(path)) return "hologram";
   return "fade-zoom";
 }
 export default function MobileRouteMotion({ children }) {
