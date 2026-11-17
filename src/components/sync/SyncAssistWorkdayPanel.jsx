@@ -34,6 +34,10 @@ export default function SyncAssistWorkdayPanel() {
   const [loaded, setLoaded] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [budgetOpen, setBudgetOpen] = useState(false);
+  const [budgetRole, setBudgetRole] = useState("");
+  const [budgetAmount, setBudgetAmount] = useState("3.00");
+  const [budgetBusy, setBudgetBusy] = useState(false);
+  const [budgetError, setBudgetError] = useState("");
   const [selectedGoalId, setSelectedGoalId] = useState(null);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [allGoalsOpen, setAllGoalsOpen] = useState(false);
@@ -89,6 +93,23 @@ export default function SyncAssistWorkdayPanel() {
       .catch(() => { /* Workday remains available if team preferences cannot load. */ });
     return () => { active = false; };
   }, []);
+
+  async function saveEmployeeBudget(event) {
+    event.preventDefault();
+    if (!budgetRole || budgetBusy) return;
+    setBudgetBusy(true); setBudgetError("");
+    try {
+      const { data: budget } = await api.post("/sync-ai/assist/pilot/budget/", {
+        role: budgetRole, limit_usd: budgetAmount,
+      }, { timeout: 15000 });
+      setWorkerStatus((previous) => ({ ...previous, pilot_budget: budget }));
+      setBudgetRole("");
+    } catch (err) {
+      setBudgetError(err?.response?.data?.detail || "Could not update employee allowance.");
+    } finally {
+      setBudgetBusy(false);
+    }
+  }
 
   function reuseHistoricalGoal(record) {
     // Reuse is a new task draft. It cannot overwrite completed work or undo
@@ -378,6 +399,28 @@ export default function SyncAssistWorkdayPanel() {
             <div className="h-2 overflow-hidden rounded-full bg-slate-700" role="progressbar" aria-label="Monthly paid tool budget reserved" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100,Math.round(100 * Number(workerStatus.pilot_budget.reserved_usd)/10))}><div className="h-full bg-cyan-400" style={{width:`${Math.min(100,100*Number(workerStatus.pilot_budget.reserved_usd)/10)}%`}} /></div>
             <p className="text-xs text-slate-300">Period: {workerStatus.pilot_budget.period}. Usage by role:</p>
             {Object.entries(workerStatus.pilot_budget.by_role || {}).length ? Object.entries(workerStatus.pilot_budget.by_role).map(([name,amount])=><div key={name} className="flex justify-between border-b border-white/10 pb-1 text-xs"><span>{name.replaceAll("_"," ")}</span><strong>${amount}</strong></div>) : <p className="text-xs text-slate-400">No paid-tool reservations recorded yet. Current internal specialists use zero model API calls.</p>}
+            <div className="rounded-xl border border-cyan-400/20 p-3">
+              <h3 className="text-sm font-bold text-cyan-100">Employee spending limits</h3>
+              <p className="mt-1 text-[11px] text-slate-400">Each role has a monthly sub-limit within the shared $10 cap. Price figures are planning targets, not active subscription billing.</p>
+              <div className="mt-2 space-y-1">
+                {Object.entries(workerStatus.pilot_budget.employee_budgets || {}).map(([role, detail]) =>
+                  <div key={role} className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 py-1 text-[11px]">
+                    <span>{role.replaceAll("_", " ")}</span>
+                    <span className="text-slate-300">Used ${detail.reserved_usd} / ${detail.limit_usd}</span>
+                    <button type="button" className="rounded-lg border border-cyan-400/30 px-2 py-1 text-cyan-100" onClick={() => { setBudgetRole(role); setBudgetAmount(detail.limit_usd); setBudgetError(""); }}>Edit</button>
+                  </div>
+                )}
+              </div>
+              {budgetRole && <form onSubmit={saveEmployeeBudget} className="mt-3 flex flex-wrap items-end gap-2">
+                <label className="text-xs text-slate-200">Monthly limit for {budgetRole.replaceAll("_", " ")}
+                  <input type="number" min="0" max="10" step="0.01" required value={budgetAmount} onChange={(event) => setBudgetAmount(event.target.value)} className="mt-1 block w-28 rounded-lg border border-white/25 bg-slate-900 p-2 text-white"/>
+                </label>
+                <button type="submit" disabled={budgetBusy} className="min-h-10 rounded-lg border border-cyan-400/40 px-3 text-xs font-bold text-cyan-100 disabled:opacity-50">{budgetBusy ? "Saving…" : "Save limit"}</button>
+                <button type="button" className="min-h-10 px-2 text-xs" onClick={() => setBudgetRole("")}>Cancel</button>
+              </form>}
+              {budgetError && <p role="alert" className="mt-2 text-xs text-rose-200">{budgetError}</p>}
+            </div>
+            {workerStatus.pilot_budget.alerts?.length > 0 && <p role="alert" className="text-xs font-bold text-amber-200">Tracked budget thresholds reached: {workerStatus.pilot_budget.alerts.map((alert) => alert.threshold_percent + "%").join(", ")}.</p>}
             <p className="rounded-lg border border-amber-400/35 bg-amber-950/15 p-3 text-xs text-amber-100"><strong>Not a total hosting bill or universal charge cap.</strong> Render Cron, database, web hosting and providers not wired into this guard are excluded. Provider invoices and billing alerts must be checked separately. New unmetered paid tools remain disabled.</p>
             <button type="button" onClick={() => { setBudgetOpen(false); refresh(); }} className="min-h-10 rounded-lg border border-cyan-400/40 px-3 text-xs font-bold text-cyan-100">Refresh budget</button>
           </div> : <p className="mt-4 text-xs text-amber-200">Budget data unavailable. Do not assume zero spending; retry Refresh.</p>}
