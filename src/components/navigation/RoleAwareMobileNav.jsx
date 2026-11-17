@@ -9,6 +9,7 @@ import {
   MapPinned,
   MessageSquareText,
   Settings,
+  Sparkles,
   Trophy,
   Users,
   Wrench,
@@ -158,7 +159,7 @@ export function MobileNavSettings() {
       </div>
       <div className="sw-nav-settings-preview">
         {items.slice(0, 2).map((itemId) => <PreviewItem key={`left-${itemId}`} itemId={itemId} />)}
-        <div className={`sw-nav-settings-center-preview ${center?.sync ? "sync" : ""}`}><div className="sw-nav-settings-center-orb"><img src="/brands/syncworks-icon-192.png" alt="" /></div><span>{center?.label || "Action"}</span></div>
+        <div className={`sw-nav-settings-center-preview ${center?.sync ? "sync" : ""}`}><div className="sw-nav-settings-center-orb">{center?.sync ? <Sparkles aria-hidden="true" size={25} strokeWidth={2.2} /> : <img src="/brands/syncworks-icon-192.png" alt="" />}</div><span>{center?.label || "Action"}</span></div>
         {items.slice(2, 4).map((itemId) => <PreviewItem key={`right-${itemId}`} itemId={itemId} />)}
       </div>
       <div className="sw-nav-settings-grid">
@@ -297,7 +298,7 @@ export default function RoleAwareMobileNav() {
         <div className="sw-role-mobile-nav-grid">
           {renderedItems.slice(0, 2).map((item) => <NavButton key={item.id} item={item} onClick={() => openItem(item)} />)}
           <button type="button" className={`sw-role-mobile-nav-center ${center.sync ? "is-sync" : ""}`} onClick={openCenter} aria-label={center.sync ? "Open your SYNC AI employee team" : `New ${center.label}`} aria-expanded={center.sync && navMode === "CUSTOMER" && pathname === "/customer" ? aiTeamOpen : undefined}>
-            <span className="sw-role-mobile-nav-center-orb"><img src="/brands/syncworks-icon-192.png" alt="" /></span>
+            <span className="sw-role-mobile-nav-center-orb">{center.sync ? <Sparkles aria-hidden="true" size={27} strokeWidth={2.3} /> : <img src="/brands/syncworks-icon-192.png" alt="" />}</span>
             <span>{center.label}</span>
           </button>
           {renderedItems.slice(2, 4).map((item) => <NavButton key={item.id} item={item} onClick={() => openItem(item)} />)}
