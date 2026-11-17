@@ -58,8 +58,9 @@ export const SIM_MNQ_POINT_VALUE = 2; // $2 per MNQ index point, per micro contr
 export const SIM_ROUND_TRIP_FEE = 2.50; // Illustrative fixed commission and costs, not an actual broker quote.
 export function closePracticeTrade(trade, price, outcome = "MANUAL CLOSE") {
   if (!trade || trade.closed || !Number.isFinite(price)) return trade;
-  const gross = (price - trade.entry) * (trade.side === "LONG" ? 1 : -1) * SIM_MNQ_POINT_VALUE;
-  const netPnl = gross - SIM_ROUND_TRIP_FEE;
+  const quantity = Math.max(1, Number.isInteger(trade.quantity) ? trade.quantity : 1);
+  const gross = (price - trade.entry) * (trade.side === "LONG" ? 1 : -1) * SIM_MNQ_POINT_VALUE * quantity;
+  const netPnl = gross - SIM_ROUND_TRIP_FEE * quantity;
   return {...trade, exit:price, closed:true, outcome, grossPnl:gross, netPnl,
     resultR: (price - trade.entry) * (trade.side === "LONG" ? 1 : -1) / trade.risk};
 }
@@ -74,4 +75,18 @@ export function practiceStats(trades, startingBalance = 10000) {
   const netPnl = equity-startingBalance;
   return {count:trades.length,wins,winRate:trades.length?100*wins/trades.length:0,netPnl,balance:equity,
     maxDrawdown,profitFactor:grossLoss>0?grossProfit/grossLoss:null,avgTrade:trades.length?netPnl/trades.length:0};
+}
+
+export const SIM_MNQ_TICK_SIZE = 0.25;
+export const SIM_MNQ_TICK_VALUE = SIM_MNQ_POINT_VALUE * SIM_MNQ_TICK_SIZE;
+export function paperOrderEstimate({quantity=1,stopPoints=5,rewardRatio=2}={}) {
+  if (!Number.isInteger(quantity) || quantity<1 || quantity>10 ||
+      !Number.isFinite(stopPoints) || stopPoints<0.25 || stopPoints>100 ||
+      !Number.isFinite(rewardRatio) || rewardRatio<1 || rewardRatio>5) return null;
+  const ticks = stopPoints / SIM_MNQ_TICK_SIZE;
+  if(Math.abs(ticks-Math.round(ticks))>1e-8) return null;
+  return {quantity, stopPoints, stopTicks:Math.round(ticks),rewardRatio,
+    riskDollars:stopPoints*SIM_MNQ_POINT_VALUE*quantity+SIM_ROUND_TRIP_FEE*quantity,
+    grossTargetDollars:stopPoints*rewardRatio*SIM_MNQ_POINT_VALUE*quantity,
+    estimatedNetTarget:stopPoints*rewardRatio*SIM_MNQ_POINT_VALUE*quantity-SIM_ROUND_TRIP_FEE*quantity};
 }
