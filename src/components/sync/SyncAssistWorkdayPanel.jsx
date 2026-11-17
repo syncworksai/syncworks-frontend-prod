@@ -290,7 +290,7 @@ export default function SyncAssistWorkdayPanel() {
               {jobs.filter((job) => String(job.goal_id) === String(item.id)).map((job) =>
                 <span key={job.id} className="self-center text-[11px] text-slate-300">Queue: {job.state.replaceAll("_", " ")}</span>)}
             </div>
-            <div className="mt-3 space-y-3">
+            <div className="sw-assist-step-grid mt-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
               {item.steps.map((step) => {
                 const edit = editing[step.id] || {};
                 const selection = edit.status || step.status;
