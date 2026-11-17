@@ -29,8 +29,9 @@ export function writePracticeJournal(userId, rows) {
 }
 export function unrealizedPracticePnl(trade, price) {
   if (!trade || !Number.isFinite(price)) return null;
-  const gross = (price - trade.entry) * (trade.side === "LONG" ? 1 : -1) * SIM_MNQ_POINT_VALUE;
-  return {gross, estimatedNet:gross - SIM_ROUND_TRIP_FEE, r:(price-trade.entry)*(trade.side==="LONG"?1:-1)/trade.risk};
+  const quantity = Math.max(1,Number.isInteger(trade.quantity)?trade.quantity:1);
+  const gross = (price - trade.entry) * (trade.side === "LONG" ? 1 : -1) * SIM_MNQ_POINT_VALUE * quantity;
+  return {gross, estimatedNet:gross - SIM_ROUND_TRIP_FEE*quantity, r:(price-trade.entry)*(trade.side==="LONG"?1:-1)/trade.risk};
 }
 export function equitySeries(trades,initial=10000) {
   return validateJournal(trades).reduce((data,r,i)=>{
