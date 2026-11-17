@@ -21,6 +21,40 @@ const spansHour=(event,hourStart)=>{
   const end=Number.isFinite(rawEnd)&&rawEnd>start?rawEnd:start+3600000;
   return start < hourStart.getTime()+3600000 && end > hourStart.getTime();
 };
+// Place each event ONCE across its entire duration. Group overlapping
+// appointments into side-by-side lanes, rather than repeating hourly cards.
+const FIRST_HOUR=5, LAST_HOUR=23;
+function layoutTimedEvents(events,day){
+  const startOfDay=new Date(day.getFullYear(),day.getMonth(),day.getDate()).getTime();
+  const windowStart=startOfDay+FIRST_HOUR*3600000;
+  const windowEnd=startOfDay+LAST_HOUR*3600000;
+  const total=windowEnd-windowStart;
+  const timed=events.filter(e=>!e.all_day).map(event=>{
+    const start=new Date(event.start_at).getTime();
+    const candidateEnd=new Date(event.end_at||event.start_at).getTime();
+    const end=Number.isFinite(candidateEnd)&&candidateEnd>start?candidateEnd:start+3600000;
+    return {event,start:Math.max(windowStart,start),end:Math.min(windowEnd,end)};
+  }).filter(item=>Number.isFinite(item.start)&&item.end>item.start).sort((a,b)=>a.start-b.start||b.end-a.end);
+  const groups=[];let group=[],groupEnd=-Infinity;
+  for(const item of timed){
+    if(group.length&&item.start>=groupEnd){groups.push(group);group=[];groupEnd=-Infinity;}
+    group.push(item);groupEnd=Math.max(groupEnd,item.end);
+  }
+  if(group.length)groups.push(group);
+  return groups.flatMap(items=>{
+    const laneEnds=[];
+    const placed=items.map(item=>{
+      let lane=laneEnds.findIndex(end=>end<=item.start);
+      if(lane===-1){lane=laneEnds.length;laneEnds.push(item.end);}else laneEnds[lane]=item.end;
+      return {...item,lane};
+    });
+    return placed.map(item=>({
+      event:item.event,lane:item.lane,lanes:laneEnds.length,
+      top:(item.start-windowStart)/total*100,
+      height:(item.end-item.start)/total*100
+    }));
+  });
+}
 function routeAddress(e){return e?.metadata?.routing_address_override||[e?.location_name,e?.address_line1,e?.city,e?.state,e?.postal_code].filter(Boolean).join(", ");}
 const filters=[["ALL","All"],["PERSONAL","Personal"],["TASK","Tasks"],["TICKET","Services"],["HEALTH","Health"],["BUSINESS","Business"]];
 export default function CalendarImmersiveCockpit({events,loading,error,notice,onCreate,onEdit,onRoute,onConnect,onRefresh,onCapture,captureText,setCaptureText,onVoice,nextEvent,onUpdated}) {
@@ -97,30 +131,33 @@ export default function CalendarImmersiveCockpit({events,loading,error,notice,on
       <div className="sw-cal-agenda" aria-label="Schedule list">
         {view==="day" ? <>
           <div className="sw-cal-agenda-heading"><strong>{focusDate.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</strong><span>{chosenDay.length} scheduled</span></div>
-          <div className="sw-cal-hour-list">
-            {Array.from({length:18},(_,index)=>index+5).map(hour=>{
-              const hourStart=new Date(focusDate.getFullYear(),focusDate.getMonth(),focusDate.getDate(),hour);
-              const rows=chosenDay.filter(event=>spansHour(event,hourStart));
-              const isNow=dateKey(focusDate)===dateKey(new Date())&&hour===new Date().getHours();
-              const hourLabel=new Date(2020,0,1,hour).toLocaleTimeString("en-US",{hour:"numeric"});
-              return rows.length
-                ? <div className={`sw-cal-hour-row ${isNow?"is-now":""}`} key={hour}>
-                    <button type="button" className="sw-cal-hour-label" aria-label={`Add event at ${hourLabel}`}
-                      onClick={()=>onCreate("EVENT",focusDate,hour)}>{hourLabel}</button>
-                    <div className="sw-cal-hour-content">{rows.map(e=><button key={e.id} type="button" className={`sw-cal-event sw-cal-event--${eventCategory(e).toLowerCase()} ${new Date(e.start_at).getTime() < hourStart.getTime() ? "sw-cal-event-continued":""}`} onClick={()=>openDetails(e)}>
-                      <span className="sw-cal-event-body"><strong>{e.title}</strong><small><span className={`sw-cal-event-category-label ${eventCategory(e).toLowerCase()}`}>{eventCategory(e)==="BUSINESS"?(e?.metadata?.business_name || "Business"):"Personal"}</span> {timeLabel(e)}{e.end_at?" – "+new Date(e.end_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):""}{routeAddress(e)?" · "+routeAddress(e):""}</small></span>
-                      <ChevronRight size={17}/>
-                    </button>)}</div>
-                  </div>
-                : <button type="button" className={`sw-cal-hour-row sw-cal-hour-row--empty ${isNow?"is-now":""}`} key={hour}
-                    aria-label={`Add event at ${hourLabel}`} onClick={()=>onCreate("EVENT",focusDate,hour)}>
-                    <span className="sw-cal-hour-label">{hourLabel}</span>
-                    <span className="sw-cal-open-slot">Open</span>
-                  </button>;
-            })}
-            {chosenDay.filter(event=>event.all_day).map(e=><button key={e.id} type="button" className="sw-cal-event sw-cal-all-day" onClick={()=>openDetails(e)}>
+          {chosenDay.some(event=>event.all_day) && <div className="sw-cal-all-day-events">
+            {chosenDay.filter(event=>event.all_day).map(e=><button key={e.id} type="button" className={`sw-cal-event sw-cal-all-day sw-cal-event--${eventCategory(e).toLowerCase()}`} onClick={()=>openDetails(e)}>
               <span className="sw-cal-event-time">All day</span><span className="sw-cal-event-body"><strong>{e.title}</strong></span><ChevronRight size={17}/>
             </button>)}
+          </div>}
+          <div className="sw-cal-time-grid">
+            {Array.from({length:18},(_,index)=>index+5).map(hour=>{
+              const isNow=dateKey(focusDate)===dateKey(new Date())&&hour===new Date().getHours();
+              const hourLabel=new Date(2020,0,1,hour).toLocaleTimeString("en-US",{hour:"numeric"});
+              return <button type="button" key={hour} className={`sw-cal-grid-hour ${isNow?"is-now":""}`} onClick={()=>onCreate("EVENT",focusDate,hour)} aria-label={`Create an event at ${hourLabel}`}>
+                <span className="sw-cal-grid-hour-label">{hourLabel}</span>
+                <span className="sw-cal-grid-hour-space" aria-hidden="true"></span>
+              </button>;
+            })}
+            <div className="sw-cal-timed-event-overlay">
+              {layoutTimedEvents(chosenDay,focusDate).map(({event,top,height,lane,lanes})=><button
+                key={event.id} type="button"
+                className={`sw-cal-duration-event sw-cal-event--${eventCategory(event).toLowerCase()}`}
+                style={{top:`${top}%`,height:`${height}%`,left:`calc(${lane / lanes * 100}% + 2px)`,width:`calc(${100 / lanes}% - 4px)`}}
+                onClick={()=>openDetails(event)}
+                aria-label={`${event.title}, ${timeLabel(event)} to ${event.end_at?new Date(event.end_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):"one hour later"}`}
+              >
+                <strong>{event.title}</strong>
+                <span>{timeLabel(event)} – {event.end_at?new Date(event.end_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):"1 hour"} </span>
+                <small>{eventCategory(event)==="BUSINESS"?(event.metadata?.business_name||"Business"):"Personal"}</small>
+              </button>)}
+            </div>
           </div>
         </> : <div className={view==="month"?"sw-cal-month-list":"sw-cal-week-list"}>
           {matchingDays.map(({day,items})=><button type="button" key={dateKey(day)} className={`sw-cal-day-row ${dateKey(day)===dateKey(focusDate)?"is-current":""}`} onClick={()=>{setFocusDate(day);setView("day");}}>
