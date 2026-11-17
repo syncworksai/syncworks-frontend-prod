@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { AVATARS } from "../sync/JarvisAvatar";
+import { AVATARS, getAvatarPhotoForUser } from "../sync/JarvisAvatar";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   CalendarDays,
@@ -286,7 +286,7 @@ export default function RoleAwareMobileNav() {
             <div className="sw-mobile-ai-team-grid">
               {AVATARS.map((worker) => (
                 <button type="button" key={worker.id} onClick={() => navigateAssistant(worker.role === "Chief of Staff" ? "/sync/assist/chief" : "/sync/assist")} aria-label={`Open ${worker.name}, ${worker.role}`}>
-                  <img src={worker.photo} alt="" loading="lazy" />
+                  <img src={getAvatarPhotoForUser(worker, user)} alt="" loading="lazy" />
                   <strong>{worker.name}</strong>
                   <small>{worker.role}</small>
                 </button>
@@ -304,7 +304,7 @@ export default function RoleAwareMobileNav() {
               <button type="button" key={worker.id} aria-label={`Open ${worker.name}, ${worker.role}`}
                 onClick={() => navigateAssistant(worker.role === "Chief of Staff" ? "/sync/assist/chief" : "/sync/assist")}
                 title={`${worker.name} · ${worker.role}`}>
-                <img src={worker.photo} alt="" loading="eager" />
+                <img src={getAvatarPhotoForUser(worker, user)} alt="" loading="eager" />
                 <span>{worker.name}</span>
               </button>
             ))}
