@@ -119,7 +119,7 @@ export default function SyncAssistPilot() {
   }
 
   return (
-    <main className="relative h-[100dvh] overflow-hidden bg-[#020617] px-3 pb-3 pt-24 text-white lg:pt-20" style={{backgroundImage: 'linear-gradient(100deg,rgba(2,6,23,.94),rgba(2,6,23,.84)),url("/assist-themes/executive-office.svg")', backgroundSize:"cover", backgroundPosition:"center"}}>
+    <main className="relative h-[calc(100dvh-115px)] min-h-0 overflow-hidden bg-[#020617] px-3 pb-3 pt-3 text-white sm:h-[calc(100dvh-57px)]" style={{backgroundImage: 'linear-gradient(100deg,rgba(2,6,23,.94),rgba(2,6,23,.84)),url("/assist-themes/executive-office.svg")', backgroundSize:"cover", backgroundPosition:"center"}}>
       <div className="mx-auto flex h-full max-w-7xl flex-col gap-2 overflow-hidden">
         <div className="flex shrink-0 items-center justify-between gap-2"><button type="button" onClick={() => navigate("/sync")} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-xs text-slate-200"><ArrowLeft size={15}/> Back to SYNC</button><button type="button" onClick={() => setToolsOpen(true)} className="min-h-10 rounded-xl border border-cyan-400/35 bg-slate-950/80 px-3 text-xs font-bold text-cyan-100">More pilot tools</button></div>
         <header className="shrink-0 rounded-2xl border border-cyan-300/25 bg-gradient-to-br from-[#091c32]/95 to-[#120c2c]/95 p-3">
