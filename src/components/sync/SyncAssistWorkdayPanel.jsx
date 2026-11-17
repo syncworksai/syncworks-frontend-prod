@@ -33,6 +33,7 @@ export default function SyncAssistWorkdayPanel() {
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [budgetOpen, setBudgetOpen] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState(null);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [allGoalsOpen, setAllGoalsOpen] = useState(false);
@@ -231,6 +232,7 @@ export default function SyncAssistWorkdayPanel() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {workerStatus?.pilot_budget && <button type="button" onClick={() => setBudgetOpen(true)} className="min-h-10 rounded-xl border border-emerald-400/30 bg-emerald-900/10 px-3 text-xs font-black text-emerald-100" title="Shared monthly agent paid-tool budget">AI budget ${workerStatus.pilot_budget.remaining_usd} left</button>}
           <SyncAssistWorkHistory goals={data?.goals || []} onReuse={reuseHistoricalGoal}/>
           <button type="button" disabled={busy} onClick={refresh} className="min-h-10 rounded-xl border border-cyan-400/30 px-3 text-xs font-bold text-cyan-100">Refresh</button>
         </div>
@@ -366,6 +368,19 @@ export default function SyncAssistWorkdayPanel() {
               </div>;
             })}
           </div>
+        </section>
+      </div>}
+      {budgetOpen && <div className="sw-assist-dialog-overlay fixed inset-0 z-[260] flex items-center justify-center p-3" onMouseDown={(event) => { if (event.target === event.currentTarget) setBudgetOpen(false); }}>
+        <section role="dialog" aria-modal="true" aria-label="Sync Assist shared pilot budget" className="sw-assist-secondary-dialog flex max-h-[min(650px,90dvh)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-cyan-400/35 p-4 text-white">
+          <div className="flex shrink-0 items-start justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-widest text-cyan-200">God Mode / AI Workforce</p><h2 className="mt-1 text-xl font-black">Shared pilot budget</h2><p className="mt-1 text-xs text-slate-300">All AI employees share this monthly paid-tool allowance.</p></div><button type="button" onClick={() => setBudgetOpen(false)} className="min-h-10 rounded-lg border border-white/20 px-3 text-xs font-bold">Close</button></div>
+          {workerStatus?.pilot_budget ? <div className="mt-4 min-h-0 space-y-3 overflow-y-auto text-sm">
+            <div className="grid grid-cols-3 gap-2">{[["Monthly cap",workerStatus.pilot_budget.limit_usd],["Reserved",workerStatus.pilot_budget.reserved_usd],["Remaining",workerStatus.pilot_budget.remaining_usd]].map(([title,value])=><div key={title} className="rounded-xl border border-cyan-400/20 bg-slate-950/35 p-3"><p className="text-[11px] text-slate-300">{title}</p><p className="mt-1 text-lg font-black">${value}</p></div>)}</div>
+            <div className="h-2 overflow-hidden rounded-full bg-slate-700" role="progressbar" aria-label="Monthly paid tool budget reserved" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100,Math.round(100 * Number(workerStatus.pilot_budget.reserved_usd)/10))}><div className="h-full bg-cyan-400" style={{width:`${Math.min(100,100*Number(workerStatus.pilot_budget.reserved_usd)/10)}%`}} /></div>
+            <p className="text-xs text-slate-300">Period: {workerStatus.pilot_budget.period}. Usage by role:</p>
+            {Object.entries(workerStatus.pilot_budget.by_role || {}).length ? Object.entries(workerStatus.pilot_budget.by_role).map(([name,amount])=><div key={name} className="flex justify-between border-b border-white/10 pb-1 text-xs"><span>{name.replaceAll("_"," ")}</span><strong>${amount}</strong></div>) : <p className="text-xs text-slate-400">No paid-tool reservations recorded yet. Current internal specialists use zero model API calls.</p>}
+            <p className="rounded-lg border border-amber-400/35 bg-amber-950/15 p-3 text-xs text-amber-100"><strong>Not a total hosting bill or universal charge cap.</strong> Render Cron, database, web hosting and providers not wired into this guard are excluded. Provider invoices and billing alerts must be checked separately. New unmetered paid tools remain disabled.</p>
+            <button type="button" onClick={() => { setBudgetOpen(false); refresh(); }} className="min-h-10 rounded-lg border border-cyan-400/40 px-3 text-xs font-bold text-cyan-100">Refresh budget</button>
+          </div> : <p className="mt-4 text-xs text-amber-200">Budget data unavailable. Do not assume zero spending; retry Refresh.</p>}
         </section>
       </div>}
       {allGoalsOpen && <div className="sw-assist-dialog-overlay fixed inset-0 z-[260] flex justify-end" onMouseDown={(event) => { if (event.target === event.currentTarget) setAllGoalsOpen(false); }}><section role="dialog" aria-modal="true" aria-label="All goals" className="sw-assist-secondary-dialog flex h-full w-full max-w-lg flex-col border-l border-cyan-400/30 text-white"><div className="flex shrink-0 items-center justify-between border-b border-white/10 p-3"><h2 className="text-base font-black">All coordinated goals</h2><button type="button" onClick={() => setAllGoalsOpen(false)} className="min-h-10 rounded-lg border border-white/20 px-3 text-xs">Close</button></div><div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">{(data?.goals || []).map((item) => <button type="button" key={item.id} onClick={() => { setAllGoalsOpen(false); setSelectedGoalId(item.id); }} className="block w-full rounded-xl border border-white/15 bg-slate-900/40 p-3 text-left text-xs"><strong className="block">{item.goal}</strong><span className="mt-1 block text-cyan-200">{item.status.replaceAll("_", " ")} · View details</span></button>)}</div></section></div>}
