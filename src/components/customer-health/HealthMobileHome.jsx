@@ -130,15 +130,16 @@ export default function HealthMobileHome({
   const [dayKey, setDayKey] = useState(() => localYmd());
   const [desktopPanel, setDesktopPanel] = useState("today");
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
 
   useEffect(() => {
-    if (!toolsOpen) return undefined;
+    if (!toolsOpen && !recoveryOpen) return undefined;
     const closeOnEscape = (event) => {
-      if (event.key === "Escape") setToolsOpen(false);
+      if (event.key === "Escape") { setToolsOpen(false); setRecoveryOpen(false); }
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [toolsOpen]);
+  }, [toolsOpen, recoveryOpen]);
   const [previousWorkout, setPreviousWorkout] = useState(null);
 
   const firstName =
@@ -411,7 +412,13 @@ export default function HealthMobileHome({
       <section className="sw-health-panel sw-health-quick-panel">
         <div className="sw-health-section-head">
           <span>Today at a glance</span>
-          <button type="button" onClick={onEditDailyGoals}>Log progress <ChevronRight size={13} /></button>
+          <div className="sw-health-quick-actions">
+            <button type="button" className="sw-health-recovery-trigger" onClick={() => setRecoveryOpen(true)}
+              aria-haspopup="dialog" aria-expanded={recoveryOpen}>
+              <HeartPulse size={15} /> Recovery {readiness}%
+            </button>
+            <button type="button" onClick={onEditDailyGoals}>Log progress <ChevronRight size={13} /></button>
+          </div>
         </div>
         <div className="sw-health-quick-grid">
           <QuickLog icon={Dumbbell} label="Workout" active onClick={() => nextWorkout ? onStartWorkout?.(nextWorkout) : onOpen?.("plan-today")} />
@@ -477,6 +484,41 @@ export default function HealthMobileHome({
           </button>
         </section>
       </div>
+
+      {recoveryOpen ? (
+        <div className="sw-health-tools-layer sw-health-recovery-layer" role="presentation">
+          <button type="button" className="sw-health-tools-backdrop"
+            aria-label="Close recovery details" onClick={() => setRecoveryOpen(false)} />
+          <aside className="sw-health-tools-drawer sw-health-recovery-drawer" role="dialog"
+            aria-modal="true" aria-label="Readiness and recovery details">
+            <div className="sw-health-tools-head">
+              <div><small>SYNCWORKS HEALTH</small><h2>Readiness & Recovery</h2>
+                <p>Your current recovery snapshot and daily check-in.</p></div>
+              <button type="button" className="sw-health-tools-close"
+                aria-label="Close recovery details" onClick={() => setRecoveryOpen(false)}><X size={22} /></button>
+            </div>
+            <div className="sw-health-recovery-content">
+              <div className="sw-health-recovery-score">
+                <Ring value={readiness} label="Readiness" />
+                <p>Readiness is an estimate based on available check-in data, not a medical assessment.</p>
+              </div>
+              <div className="sw-health-recovery-breakdown">
+                <MetricBar label="Soreness" value={100 - soreness} detail={soreness < 40 ? "Low" : soreness < 65 ? "Med" : "High"} />
+                <MetricBar label="Sleep quality" value={sleepQuality} detail={sleepQuality > 78 ? "Good" : "Fair"} />
+                <MetricBar label="Energy" value={energy} detail={energy > 84 ? "High" : "Good"} />
+              </div>
+              <button type="button" className="sw-health-recovery-checkin"
+                onClick={() => { setRecoveryOpen(false); onOpen?.("daily-goals"); }}>
+                <HeartPulse size={18} /> Update daily recovery check-in <ChevronRight size={16} />
+              </button>
+              <button type="button" className="sw-health-recovery-sleep"
+                onClick={() => { setRecoveryOpen(false); onOpen?.("sleep"); }}>
+                <Moon size={18} /> Review sleep planner <ChevronRight size={16} />
+              </button>
+            </div>
+          </aside>
+        </div>
+      ) : null}
 
       <section className="sw-health-panel sw-health-readiness-card">
         <div className="sw-health-section-title">Readiness & recovery</div>
