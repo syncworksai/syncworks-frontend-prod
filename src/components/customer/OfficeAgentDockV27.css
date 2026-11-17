@@ -1,0 +1,121 @@
+/* V27: compact, theme-aware pinned AI employee dock for desktop Office.
+   Portraits and routes reuse existing Sync Assist pilot assets; config dots are
+   NOT execution, online-presence, or completion indicators. */
+.sw-office-agents{
+  position:fixed;
+  z-index:66;
+  bottom:clamp(12px,2vh,22px);
+  left:50%;
+  transform:translateX(-50%);
+  width:min(845px,calc(100vw - 390px));
+  min-width:410px;
+  color:var(--sw-ui-text);
+  background:color-mix(in srgb,var(--sw-lobby-glass) 68%,transparent);
+  border:1px solid color-mix(in srgb,var(--sw-workspace-accent) 55%,var(--sw-lobby-border));
+  border-radius:18px;
+  box-shadow:0 16px 46px rgba(0,0,0,.34),0 0 26px var(--sw-lobby-glow);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  overflow:hidden;
+}
+.sw-office-agents-head{
+  display:flex;gap:12px;align-items:center;
+  padding:8px 12px 5px 16px;
+}
+.sw-office-agents-heading{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:10px;font-weight:900;letter-spacing:.13em;
+  color:var(--sw-ui-text);
+}
+.sw-office-agents-heading svg{color:var(--sw-workspace-accent)}
+.sw-office-agents-state{font-size:10px;color:var(--sw-ui-text);opacity:.73;margin-left:auto;white-space:nowrap}
+.sw-office-agents-collapse{
+  display:grid;place-items:center;min-width:30px;min-height:30px;
+  color:var(--sw-ui-text);border:1px solid var(--sw-lobby-border);
+  background:transparent;border-radius:9px;
+}
+.sw-office-agents-content{
+  display:flex;align-items:center;gap:10px;
+  padding:3px 12px 12px;
+}
+.sw-office-agents-portraits{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  align-items:stretch;gap:6px;flex:1;min-width:0;
+}
+.sw-office-agent{
+  position:relative;display:flex;align-items:center;gap:8px;
+  min-width:0;min-height:55px;padding:5px 8px;
+  color:var(--sw-ui-text);
+  border-radius:11px;border:1px solid transparent;
+  background:color-mix(in srgb,var(--sw-ui-surface) 24%,transparent);
+  text-align:left;
+  transition:background .18s,border-color .18s,transform .18s;
+}
+.sw-office-agent img{
+  flex-shrink:0;width:40px;height:40px;object-fit:cover;
+  object-position:center top;border-radius:50%;
+  border:1px solid var(--sw-workspace-accent);
+  background:var(--sw-ui-surface);
+}
+.sw-office-agent-names{min-width:0;display:flex;flex-direction:column;gap:2px}
+.sw-office-agent-names strong{font-size:12px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sw-office-agent-names small{font-size:10px;color:var(--sw-ui-text);opacity:.8;line-height:1.2}
+.sw-office-agent-dot{
+  position:absolute;right:7px;top:7px;width:6px;height:6px;
+  background:var(--sw-ui-muted);border-radius:50%;
+}
+.sw-office-agent-dot.is-configured{background:var(--sw-workspace-accent)}
+.sw-office-agent:hover,.sw-office-agent:focus-visible{
+  background:color-mix(in srgb,var(--sw-lobby-glass) 65%,transparent);
+  border-color:var(--sw-workspace-accent);
+  transform:translateY(-2px);
+}
+.sw-office-agents-actions{display:flex;gap:5px;align-items:center;flex-shrink:0}
+.sw-office-agents-actions button{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px 10px;min-height:38px;
+  font-size:11px;font-weight:850;
+  color:var(--sw-ui-text);
+  background:color-mix(in srgb,var(--sw-ui-surface) 33%,transparent);
+  border:1px solid var(--sw-lobby-border);border-radius:10px;
+}
+.sw-office-agents-actions button:hover,
+.sw-office-agents-actions button:focus-visible,
+.sw-office-agents-collapse:focus-visible{
+  outline:2px solid var(--sw-workspace-accent);outline-offset:1px;
+}
+.sw-office-agents.is-collapsed{width:min(350px,calc(100vw - 32px));min-width:0}
+.sw-office-agents.is-collapsed .sw-office-agents-head{padding-bottom:8px}
+.sw-workspace-root:has(.sw-office-agents) .sw-office-workdesk{padding-bottom:150px!important}
+@media(max-width:1250px){
+ .sw-office-agents{width:min(740px,calc(100vw - 310px))}
+ .sw-office-agent-names small{font-size:9px}
+}
+@media(max-width:950px){
+ .sw-office-agents{width:min(720px,calc(100vw - 24px));min-width:0;bottom:80px}
+ .sw-office-agent{flex-direction:column;text-align:center;padding:6px 4px}
+ .sw-office-agent img{height:36px;width:36px}
+ .sw-office-agent-names strong{font-size:11px}
+ .sw-office-agent-names small{display:none}
+ .sw-office-agents-actions>button:first-child{font-size:0;gap:0}
+ .sw-office-agents-actions>button:first-child svg{width:19px;height:19px}
+ .sw-workspace-root:has(.sw-office-agents) .sw-office-workdesk{padding-bottom:190px!important}
+}
+@media(max-width:520px){
+ .sw-office-agents{width:calc(100vw - 18px);bottom:75px;border-radius:15px}
+ .sw-office-agents-head{padding:6px 10px 2px}
+ .sw-office-agents-content{padding:2px 8px 7px}
+ .sw-office-agents-portraits{gap:2px}
+ .sw-office-agent{min-height:48px;padding:3px 1px}
+ .sw-office-agent img{width:30px;height:30px}
+ .sw-office-agent-names strong{font-size:10px}
+ .sw-office-agents-actions{gap:3px}
+ .sw-office-agents-actions button{padding:7px;min-height:32px}
+}
+@media(prefers-reduced-motion:reduce){
+ .sw-office-agent{transition:none}
+ .sw-office-agent:hover{transform:none}
+}
+@media(prefers-reduced-transparency:reduce){
+ .sw-office-agents{backdrop-filter:none;background:var(--sw-lobby-glass)}
+}
