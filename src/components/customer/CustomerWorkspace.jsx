@@ -62,7 +62,7 @@ export function WorkspaceAppearancePanel({ settings, update }) {
       ["modern", "Modern Dark", "Minimal and refined"],
       ["light", "Clean Light", "Bright and airy"],
     ].map(([id, label, detail]) => <button type="button" key={id} aria-pressed={settings.theme === id} className={`sw-workspace-theme sw-workspace-theme-${id} ${settings.theme === id ? "selected" : ""}`} onClick={() => update({theme:id})}><span className="sw-workspace-theme-sample">{id !== "legacy" && <img src={`/office-themes/${id === "classic" ? "classic-office" : id === "future" ? "syncworks-future" : id === "modern" ? "modern-dark" : "clean-light"}-preview.webp`} alt="" loading="lazy" onError={e => { e.currentTarget.hidden = true; }} />}</span><strong>{label}</strong><small>{detail}</small>{settings.theme === id && <span className="sw-workspace-check">✓ Selected</span>}</button>)}</div>
-    <label className="sw-workspace-option"><input type="checkbox" checked={settings.motion} onChange={e => update({motion:e.target.checked})}/> Subtle visual transitions</label>
+    <label className="sw-workspace-option"><input type="checkbox" checked={settings.motion} onChange={e => update({motion:e.target.checked})}/> Immersive page transitions</label>
     <label className="sw-workspace-option"><input type="checkbox" checked={settings.compact} onChange={e => update({compact:e.target.checked})}/> Compact dashboard spacing</label>
     <button type="button" className="sw-workspace-reset" onClick={() => update(DEFAULTS)}><RotateCcw size={15}/> Restore original appearance</button>
     <small>Preferences are saved on this device. Account-wide syncing can be added when a preferences API is available.</small>
@@ -98,8 +98,9 @@ export default function CustomerWorkspace({ settings, update, phoneMode = false,
     ...(dayTradingEnabled && (panel === "business" || panel === "apps") ? [["Freelance Work", "/customer/freelance/overview", BriefcaseBusiness]] : []),
     ...(forgeEnabled && (panel === "apps" || panel === "personal") ? [["The Forge", "/customer/forge", Flame]] : []),
   ];
-  const close = () => { setClosing(true); window.setTimeout(() => { setPanel(null); setClosing(false); }, settings.motion ? 360 : 0); };
-  const go = (path) => { setClosing(true); window.setTimeout(() => { setPanel(null); nav(path); }, settings.motion ? 300 : 0); };
+  const motionActive = settings.motion && !(typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const close = () => { setClosing(true); window.setTimeout(() => { setPanel(null); setClosing(false); }, motionActive ? 360 : 0); };
+  const go = (path) => { setClosing(true); window.setTimeout(() => { setPanel(null); nav(path); }, motionActive ? 300 : 0); };
   return <>
     {!phoneMode && <div className="sw-workspace-switcher" role="group" aria-label="Workspace controls">
       <button type="button" onClick={() => {setClosing(false);setPanel("apps");}}><LayoutGrid size={16}/> <span>Workspaces</span></button>
