@@ -1,5 +1,5 @@
 // src/components/requests/new-request/UniversalTicketCreator.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import api from "../../../api/client";
 import {
   readRequestProviderPrefill,
@@ -12,6 +12,7 @@ import {
 } from "../../../utils/savedCustomers";
 
 import RequestStepNav from "../RequestStepNav";
+import "./UniversalTicketImmersive.css";
 import RequestDetailsCard from "../RequestDetailsCard";
 import RequestLocationCard from "../RequestLocationCard";
 
@@ -105,13 +106,13 @@ function RequestRouteChooser({
   onRemoveProvider,
 }) {
   return (
-    <section className="rounded-[2rem] border border-slate-800 bg-slate-950/55 p-4 md:p-5">
+    <section className="sw-new-request-route rounded-[2rem] border border-slate-800 bg-slate-950/55 p-4 md:p-5">
       <div className="text-sm font-black text-white">How should SyncWorks route this?</div>
       <div className="mt-1 text-xs leading-5 text-slate-400">
         Use the open marketplace or send the request directly to a provider you trust.
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <div className="sw-new-request-route-grid mt-4 grid gap-3 sm:grid-cols-2">
         <button
           type="button"
           onClick={() => setRouteMode("MARKETPLACE")}
@@ -227,7 +228,7 @@ function BottomActions({
   const isLast = step === STEPS.length - 1;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-800 bg-[#020617]/95 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 shadow-[0_-18px_45px_rgba(0,0,0,0.45)] backdrop-blur-xl md:sticky md:bottom-3 md:rounded-3xl md:border">
+    <div className="sw-new-request-bottom-actions fixed inset-x-0 bottom-0 z-50 border-t border-slate-800 bg-[#020617]/95 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 shadow-[0_-18px_45px_rgba(0,0,0,0.45)] backdrop-blur-xl md:sticky md:bottom-3 md:rounded-3xl md:border">
       <div className="mx-auto grid max-w-4xl grid-cols-[auto_auto_1fr] items-center gap-2">
         <button type="button" onClick={onHome} className="min-h-11 rounded-2xl border border-slate-800 bg-slate-950/80 px-3 text-xs font-black text-slate-300">
           Home
@@ -292,6 +293,8 @@ export default function UniversalTicketCreator({
   const isBusinessInternal = mode === MARKETPLACE_MODES.BUSINESS_INTERNAL;
 
   const [step, setStep] = useState(0);
+  const stageRef = useRef(null);
+  const [stageDirection, setStageDirection] = useState("forward");
   const initialProvider = useMemo(() => readRequestProviderPrefill(), []);
   const [savedProviders, setSavedProviders] = useState(() => readSavedProviders());
   const [routeMode, setRouteModeState] = useState(
@@ -401,7 +404,8 @@ export default function UniversalTicketCreator({
 
   function scrollFlowTop() {
     window.requestAnimationFrame(() => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (stageRef.current) stageRef.current.scrollTo({ top: 0, behavior: "instant" });
+      else window.scrollTo({ top: 0, behavior: "instant" });
     });
   }
 
@@ -665,6 +669,7 @@ export default function UniversalTicketCreator({
   }
 
   function goToStep(nextStep) {
+    setStageDirection(nextStep < step ? "back" : "forward");
     setStep(Math.max(0, Math.min(STEPS.length - 1, nextStep)));
     setNavMessage("");
     scrollFlowTop();
@@ -787,9 +792,9 @@ export default function UniversalTicketCreator({
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100">
-      <div className="mx-auto max-w-4xl px-4 py-5 pb-32 md:py-7 md:pb-7">
-        <div className="mb-5 rounded-[2rem] border border-slate-800 bg-slate-950/55 p-4 shadow-[0_0_40px_rgba(15,23,42,0.45)] md:p-5">
+    <div className="sw-new-request-root text-slate-100">
+      <div className="sw-new-request-frame mx-auto max-w-4xl px-4 py-5 pb-32 md:py-7 md:pb-7">
+        <div className="sw-new-request-header mb-5 rounded-[2rem] border border-slate-800 bg-slate-950/55 p-4 shadow-[0_0_40px_rgba(15,23,42,0.45)] md:p-5">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -846,7 +851,8 @@ export default function UniversalTicketCreator({
           </FormAlert>
         ) : null}
 
-        <div className="mt-5 space-y-5 pb-28 md:pb-0">
+        <div className="sw-new-request-workspace mt-5 space-y-5 pb-28 md:pb-0" ref={stageRef} aria-label={`${STEPS[step].label} request step`}>
+          <div key={step} className="sw-new-request-stage" data-direction={stageDirection}>
           {step === 0 ? (
             <>
               {!isBusinessInternal ? (
@@ -1044,6 +1050,7 @@ export default function UniversalTicketCreator({
             />
           ) : null}
 
+          </div>
           <BottomActions
             step={step}
             canContinue={canContinueCurrentStep()}
