@@ -83,18 +83,21 @@ export default function CalendarImmersiveCockpit({events,loading,error,notice,on
             {Array.from({length:18},(_,index)=>index+5).map(hour=>{
               const rows=chosenDay.filter(event=>!event.all_day&&new Date(event.start_at).getHours()===hour);
               const isNow=dateKey(focusDate)===dateKey(new Date())&&hour===new Date().getHours();
-              return <div className={`sw-cal-hour-row ${isNow?"is-now":""}`} key={hour}>
-                <button type="button" className="sw-cal-hour-label" aria-label={`Add event at ${new Date(2020,0,1,hour).toLocaleTimeString("en-US",{hour:"numeric"})}`}
-                  onClick={()=>onCreate("EVENT",focusDate,hour)}>
-                  {new Date(2020,0,1,hour).toLocaleTimeString("en-US",{hour:"numeric"})}
-                </button>
-                <div className="sw-cal-hour-content">
-                  {rows.length?rows.map(e=><button key={e.id} type="button" className="sw-cal-event" onClick={()=>openDetails(e)}>
-                    <span className="sw-cal-event-body"><strong>{e.title}</strong><small>{timeLabel(e)} · {eventGroup(e)}{routeAddress(e)?" · "+routeAddress(e):""}</small></span>
-                    <ChevronRight size={17}/>
-                  </button>):<button type="button" className="sw-cal-open-slot" onClick={()=>onCreate("EVENT",focusDate,hour)} aria-label={`Schedule at ${new Date(2020,0,1,hour).toLocaleTimeString("en-US",{hour:"numeric"})}`}>+ Add</button>}
-                </div>
-              </div>;
+              const hourLabel=new Date(2020,0,1,hour).toLocaleTimeString("en-US",{hour:"numeric"});
+              return rows.length
+                ? <div className={`sw-cal-hour-row ${isNow?"is-now":""}`} key={hour}>
+                    <button type="button" className="sw-cal-hour-label" aria-label={`Add event at ${hourLabel}`}
+                      onClick={()=>onCreate("EVENT",focusDate,hour)}>{hourLabel}</button>
+                    <div className="sw-cal-hour-content">{rows.map(e=><button key={e.id} type="button" className="sw-cal-event" onClick={()=>openDetails(e)}>
+                      <span className="sw-cal-event-body"><strong>{e.title}</strong><small>{timeLabel(e)} · {eventGroup(e)}{routeAddress(e)?" · "+routeAddress(e):""}</small></span>
+                      <ChevronRight size={17}/>
+                    </button>)}</div>
+                  </div>
+                : <button type="button" className={`sw-cal-hour-row sw-cal-hour-row--empty ${isNow?"is-now":""}`} key={hour}
+                    aria-label={`Add event at ${hourLabel}`} onClick={()=>onCreate("EVENT",focusDate,hour)}>
+                    <span className="sw-cal-hour-label">{hourLabel}</span>
+                    <span className="sw-cal-open-slot">Open</span>
+                  </button>;
             })}
             {chosenDay.filter(event=>event.all_day).map(e=><button key={e.id} type="button" className="sw-cal-event sw-cal-all-day" onClick={()=>openDetails(e)}>
               <span className="sw-cal-event-time">All day</span><span className="sw-cal-event-body"><strong>{e.title}</strong></span><ChevronRight size={17}/>
