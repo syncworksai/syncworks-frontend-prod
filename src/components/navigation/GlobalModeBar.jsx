@@ -73,6 +73,7 @@ export default function GlobalModeBar() {
   }, []);
   const [pmWorkspace, setPmWorkspace] = useState(null);
   const rootRef = useRef(null);
+  const menuRef = useRef(null);
   const businessWorkspaces = useMemo(() => {
     const seen = new Set();
     return (Array.isArray(myBusinesses) ? myBusinesses : []).map(member => {
@@ -120,7 +121,7 @@ export default function GlobalModeBar() {
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
   useEffect(() => {
-    function close(event) { if (!rootRef.current?.contains(event.target)) setOpen(false); }
+    function close(event) { if (!rootRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) setOpen(false); }
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
   }, []);
@@ -151,7 +152,8 @@ export default function GlobalModeBar() {
         </div>
         <div className="flex shrink-0 items-center gap-2">{showConnectNotifications ? <NotificationsBell inline /> : null}<button type="button" onClick={() => setOpen((value) => !value)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-3 text-sm font-black text-cyan-100" aria-label="Open SyncWorks app navigation" aria-expanded={open}><MenuIcon open={open} /><span>Menu</span></button></div>
       </div>
-      {open ? <>
+    </div>
+    {open ? <div ref={menuRef} className="sw-global-menu-layer" data-menu-theme={menuTheme} data-header-motion={menuMotion ? "on" : "off"}>
         <button type="button" className="sw-global-menu-shade fixed inset-x-0 bottom-0 top-[115px] sm:top-[57px] z-[321] bg-black/70" aria-label="Close app navigation" onClick={() => setOpen(false)} />
         <section role="dialog" aria-modal="true" aria-label="SyncWorks dashboards and navigation" className="sw-global-menu-drawer fixed left-3 right-3 top-[123px] sm:top-[65px] z-[322]">
           <header className="sw-global-menu-head">
@@ -180,7 +182,6 @@ export default function GlobalModeBar() {
           </div>
           <footer className="sw-global-menu-foot"><span className="sw-global-menu-live-dot" />{menuTheme === "classic" ? "Classic Office" : menuTheme === "future" ? "SyncWorks Future" : menuTheme === "modern" ? "Modern Dark" : menuTheme === "light" ? "Clean Light" : "SyncWorks Original"} <span>·</span> Theme synced</footer>
         </section>
-      </> : null}
-    </div>
+    </div> : null}
   </>, document.body);
 }
