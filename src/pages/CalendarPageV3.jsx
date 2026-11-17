@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 
 import api from "../api/client";
+import { useAuth } from "../auth/AuthContext";
 import "./CalendarMobileWorkspace.css";
 import "./CalendarPortalFix.css";
 import "./CalendarCompactEditorV31.css";
@@ -122,6 +123,8 @@ function blankDraft(kind = "EVENT") {
   return {
     kind,
     event_category: "PERSONAL",
+    business_id: "",
+    business_name: "",
     title: "",
     date: ymd(),
     time: "09:00",
@@ -169,6 +172,8 @@ function draftFromEvent(event) {
     ...blankDraft(kind),
     kind,
     event_category: String(event?.metadata?.event_category || (event?.metadata?.business_id ? "BUSINESS" : "PERSONAL")).toUpperCase() === "BUSINESS" ? "BUSINESS" : "PERSONAL",
+    business_id: String(event?.metadata?.business_id || ""),
+    business_name: String(event?.metadata?.business_name || ""),
     title: event.title || "",
     date: ymd(start),
     time: localTime(start),
@@ -477,6 +482,8 @@ export default function CalendarPageV3() {
   const [savingEvent, setSavingEvent] = useState(false);
   const [saveIssue, setSaveIssue] = useState("");
   const [editingEvent, setEditingEvent] = useState(null);
+  const { myBusinesses = [] } = useAuth();
+  const businessOptions = useMemo(() => (Array.isArray(myBusinesses) ? myBusinesses : []).map(b => ({ id: String(b.id || b.business_id || ""), name: String(b.business_name || b.name || b.legal_name || b.dba_name || "").trim() })).filter(b => b.id && b.name), [myBusinesses]);
   const [draft, setDraft] = useState(() => blankDraft("EVENT"));
   const [captureText, setCaptureText] = useState("");
   const [listening, setListening] = useState(false);
@@ -747,6 +754,11 @@ export default function CalendarPageV3() {
       setError("Add a title first.");
       return;
     }
+    if (draft.kind === "EVENT" && draft.event_category === "BUSINESS" && !draft.business_id) {
+      setEditorSection("details");
+      setSaveIssue("Choose which business this event belongs to.");
+      return;
+    }
     const start = new Date(`${draft.date}T${draft.all_day ? "00:00" : draft.time || "09:00"}`);
     const end = new Date(`${draft.end_date || draft.date}T${draft.all_day ? "23:59" : draft.end_time || "10:00"}`);
     if (end < start) {
@@ -758,6 +770,8 @@ export default function CalendarPageV3() {
       ...(editingEvent?.metadata || {}),
       entity_type: draft.kind,
       event_category: draft.event_category === "BUSINESS" ? "BUSINESS" : "PERSONAL",
+      business_id: draft.event_category === "BUSINESS" && draft.business_id ? draft.business_id : null,
+      business_name: draft.event_category === "BUSINESS" ? (businessOptions.find(b => b.id === draft.business_id)?.name || draft.business_name || "") : "",
       weather_dependent: Boolean(draft.weather_dependent),
       fixed: !draft.flexible,
     };
@@ -981,9 +995,17 @@ export default function CalendarPageV3() {
             <div className="sw-cal-editor-panel" data-editor-panel="details" data-active={editorSection === "details"}>
             {draft.kind === "EVENT" && <fieldset className="sw-cal-event-category" aria-label="Event type">
               <legend>Calendar label</legend>
-              <button type="button" aria-pressed={draft.event_category !== "BUSINESS"} className={draft.event_category !== "BUSINESS" ? "selected personal" : ""} onClick={() => setDraft(value => ({...value,event_category:"PERSONAL"}))}>Personal</button>
+              <button type="button" aria-pressed={draft.event_category !== "BUSINESS"} className={draft.event_category !== "BUSINESS" ? "selected personal" : ""} onClick={() => setDraft(value => ({...value,event_category:"PERSONAL",business_id:"",business_name:""}))}>Personal</button>
               <button type="button" aria-pressed={draft.event_category === "BUSINESS"} className={draft.event_category === "BUSINESS" ? "selected business" : ""} onClick={() => setDraft(value => ({...value,event_category:"BUSINESS"}))}>Business</button>
             </fieldset>}
+            {draft.kind === "EVENT" && draft.event_category === "BUSINESS" && <label className="sw-cal-business-selector">Which business?
+              <select value={draft.business_id} onChange={event => { const selected = businessOptions.find(b => b.id === event.target.value); setDraft(value=>({...value,business_id:event.target.value,business_name:selected?.name || ""})); }}>
+                <option value="">Choose a business</option>
+                {businessOptions.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                {draft.business_id && !businessOptions.some(b => b.id === draft.business_id) ? <option value={draft.business_id}>{draft.business_name || "Previously selected business"}</option> : null}
+              </select>
+              {!businessOptions.length && !draft.business_id && <small>No connected businesses found. Add one from your workspace.</small>}
+            </label>}
             <label className="text-xs text-slate-400 lg:col-span-2">Title<input value={draft.title} onChange={(event) => setDraft((value) => ({ ...value, title: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
             <label className="text-xs text-slate-400">Date<input type="date" value={draft.date} onChange={(event) => setDraft((value) => ({ ...value, date: event.target.value, end_date: value.end_date < event.target.value ? event.target.value : value.end_date }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
             <label className="text-xs text-slate-400">Start time<input disabled={draft.all_day} type="time" value={draft.time} onChange={(event) => setDraft((value) => ({ ...value, time: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none disabled:opacity-40" /></label>
