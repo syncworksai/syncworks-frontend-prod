@@ -79,11 +79,27 @@ export default function CalendarImmersiveCockpit({events,loading,error,notice,on
       <div className="sw-cal-agenda" aria-label="Schedule list">
         {view==="day" ? <>
           <div className="sw-cal-agenda-heading"><strong>{focusDate.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</strong><span>{chosenDay.length} scheduled</span></div>
-          {chosenDay.length?chosenDay.map(e=><button key={e.id} type="button" className="sw-cal-event" onClick={()=>openDetails(e)}>
-            <span className="sw-cal-event-time">{timeLabel(e)}</span>
-            <span className="sw-cal-event-body"><strong>{e.title}</strong><small>{eventGroup(e)}{routeAddress(e)?" · "+routeAddress(e):""}</small></span>
-            <ChevronRight size={17}/>
-          </button>):<div className="sw-cal-empty"><CalendarDays size={30}/><strong>Nothing scheduled for this day</strong><span>Add an event or ask SYNC to organize your time.</span><button type="button" onClick={()=>onCreate("EVENT",focusDate)}><Plus size={15}/> Add an event</button></div>}
+          <div className="sw-cal-hour-list">
+            {Array.from({length:18},(_,index)=>index+5).map(hour=>{
+              const rows=chosenDay.filter(event=>!event.all_day&&new Date(event.start_at).getHours()===hour);
+              const isNow=dateKey(focusDate)===dateKey(new Date())&&hour===new Date().getHours();
+              return <div className={`sw-cal-hour-row ${isNow?"is-now":""}`} key={hour}>
+                <button type="button" className="sw-cal-hour-label" aria-label={`Add event at ${new Date(2020,0,1,hour).toLocaleTimeString("en-US",{hour:"numeric"})}`}
+                  onClick={()=>onCreate("EVENT",focusDate,hour)}>
+                  {new Date(2020,0,1,hour).toLocaleTimeString("en-US",{hour:"numeric"})}
+                </button>
+                <div className="sw-cal-hour-content">
+                  {rows.length?rows.map(e=><button key={e.id} type="button" className="sw-cal-event" onClick={()=>openDetails(e)}>
+                    <span className="sw-cal-event-body"><strong>{e.title}</strong><small>{timeLabel(e)} · {eventGroup(e)}{routeAddress(e)?" · "+routeAddress(e):""}</small></span>
+                    <ChevronRight size={17}/>
+                  </button>):<button type="button" className="sw-cal-open-slot" onClick={()=>onCreate("EVENT",focusDate,hour)} aria-label={`Schedule at ${new Date(2020,0,1,hour).toLocaleTimeString("en-US",{hour:"numeric"})}`}>+ Add</button>}
+                </div>
+              </div>;
+            })}
+            {chosenDay.filter(event=>event.all_day).map(e=><button key={e.id} type="button" className="sw-cal-event sw-cal-all-day" onClick={()=>openDetails(e)}>
+              <span className="sw-cal-event-time">All day</span><span className="sw-cal-event-body"><strong>{e.title}</strong></span><ChevronRight size={17}/>
+            </button>)}
+          </div>
         </> : <div className={view==="month"?"sw-cal-month-list":"sw-cal-week-list"}>
           {matchingDays.map(({day,items})=><button type="button" key={dateKey(day)} className={`sw-cal-day-row ${dateKey(day)===dateKey(focusDate)?"is-current":""}`} onClick={()=>{setFocusDate(day);setView("day");}}>
             <span className="sw-cal-day-label">{day.toLocaleDateString("en-US",{weekday:"short"})}<strong>{day.getDate()}</strong></span>
