@@ -29,6 +29,7 @@ export default function FuturesTradingTutorial() {
   const [trade,setTrade]=useState(null);
   const [completed,setCompleted]=useState([]);
   const [journal,setJournal]=useState(()=>readPracticeJournal(userId));
+  const [journalOwner,setJournalOwner]=useState(userId);
   const [selectedTrade,setSelectedTrade]=useState(null);
   const [expanded,setExpanded]=useState(false);
   const [contracts,setContracts]=useState(1);
@@ -44,8 +45,8 @@ export default function FuturesTradingTutorial() {
   const unrealized=unrealizedPracticePnl(trade,ROWS[step].close);
   const selectedJournalTrade=selectedTrade || journal.at(-1);
   const review=reviewPracticeTrade(selectedJournalTrade || completed.at(-1));
-  useEffect(()=>{setJournal(readPracticeJournal(userId));},[userId]);
-  useEffect(()=>{if(userId)writePracticeJournal(userId,journal);},[userId,journal]);
+  useEffect(()=>{setJournal(readPracticeJournal(userId));setJournalOwner(userId);},[userId]);
+  useEffect(()=>{if(userId&&journalOwner===userId)writePracticeJournal(userId,journal);},[userId,journal,journalOwner]);
   function recordClosed(closed){setCompleted(old=>[...old,closed]);setJournal(old=>[...old,closed].slice(-300));setSelectedTrade(closed);setJournalNote("");}
   function editJournalNote(value){setJournalNote(value);if(!selectedJournalTrade)return;setJournal(old=>old.map(t=>t.entryTime===selectedJournalTrade.entryTime&&t.exitTime===selectedJournalTrade.exitTime?{...t,note:value.slice(0,3000)}:t));setSelectedTrade(t=>t?{...t,note:value.slice(0,3000)}:t);}
 
