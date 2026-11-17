@@ -1,0 +1,94 @@
+/* Calendar viewport: fixed app shell and an internally scrolling schedule.
+   The event editor is a focused sheet, not another mile-long section. */
+.sw-calendar-page{
+  height:calc(100dvh - 57px);
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  overflow:hidden;
+}
+.sw-calendar-page .sw-calendar-workspace{
+  flex:1 1 auto;min-height:0;
+  overflow-y:auto;overflow-x:hidden;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+}
+.sw-calendar-composer{
+  position:fixed!important;
+  top:calc(57px + 12px);
+  right:clamp(12px,3vw,35px);
+  bottom:14px;
+  width:min(560px,calc(100vw - 24px));
+  z-index:115;
+  margin:0!important;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  overflow:hidden;
+  border-color:rgba(92,207,247,.65)!important;
+  background:rgba(5,15,36,.96)!important;
+  -webkit-backdrop-filter:blur(18px);
+  backdrop-filter:blur(18px);
+  box-shadow:0 22px 85px rgba(0,0,0,.58);
+}
+.sw-calendar-composer > div:first-child{flex:0 0 auto;}
+.sw-calendar-composer .sw-calendar-save-error{
+  flex:0 0 auto;margin-top:12px;
+  max-height:85px;overflow:auto;
+}
+.sw-calendar-composer .sw-calendar-composer-fields{
+  min-height:0;
+  flex:1 1 auto;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  padding-bottom:12px;
+  scrollbar-width:thin;
+}
+.sw-calendar-composer .sw-calendar-composer-fields > div:last-child{
+  position:sticky;
+  bottom:0;
+  z-index:2;
+  border-radius:14px;
+  padding:9px;
+  margin-top:10px;
+  background:rgba(5,15,36,.95);
+  backdrop-filter:blur(12px);
+  border:1px solid rgba(92,207,247,.35);
+}
+.sw-calendar-composer .sw-calendar-save-button{
+  min-height:46px!important;
+  font-size:13px!important;
+}
+@media(max-width:767px){
+ .sw-calendar-page{height:calc(100dvh - 115px - 5.6rem - env(safe-area-inset-bottom));}
+ .sw-calendar-page .sw-calendar-workspace{
+   padding:9px 12px 10px!important;
+ }
+ .sw-calendar-composer{
+   top:calc(115px + 5px);
+   left:8px;right:8px;
+   bottom:calc(5.75rem + env(safe-area-inset-bottom));
+   width:auto;
+   border-radius:20px!important;
+   padding:12px!important;
+ }
+ .sw-calendar-composer .sw-calendar-composer-fields{
+   margin-top:9px!important;
+   gap:9px!important;
+ }
+ .sw-calendar-composer .sw-calendar-composer-fields > div:last-child{
+   position:sticky;bottom:0;
+ }
+ .sw-calendar-composer .sw-calendar-save-button{min-height:46px!important;}
+}
+@media(prefers-reduced-motion:no-preference){
+ .sw-calendar-composer{animation:sw-calendar-sheet-in .32s cubic-bezier(.2,.85,.3,1) both;}
+}
+@keyframes sw-calendar-sheet-in{
+ from{opacity:.2;transform:translateY(32px) scale(.975)}
+ to{opacity:1;transform:none}
+}
+@media(prefers-reduced-motion:reduce){
+ .sw-calendar-composer{animation:none!important;transform:none!important;}
+}
