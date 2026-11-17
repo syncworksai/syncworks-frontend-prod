@@ -179,10 +179,12 @@
    overflow: hidden;
  }
  .sw-assist-themed .sw-assist-detail-dialog {
-   width: min(45vw, 800px);
-   max-width: 800px;
-   margin: 12px 14px 12px 0;
-   height: calc(100% - 24px);
+   /* Review is a temporary full workspace, not a narrow settings drawer.
+      Close remains fixed in the header, so the parent screen never scrolls. */
+   width: min(88vw, 1440px);
+   max-width: 1440px;
+   margin: 6px auto;
+   height: calc(100% - 12px);
    border: 1px solid var(--assist-accent-soft);
    border-radius: 22px;
    overflow: hidden;
@@ -205,4 +207,27 @@
 }
 @media (prefers-reduced-motion: reduce) {
  .sw-assist-themed .sw-assist-task-card {transition:none;transform:none!important;}
+}
+
+/* Wider task receipts and approvals: two teammates can be reviewed without
+   navigating down a single column. Small devices remain single-column. */
+@media (min-width: 1280px) {
+  .sw-assist-themed .sw-assist-step-grid > .sw-assist-step-card {
+    min-width: 0;
+  }
+  .sw-assist-themed .sw-assist-detail-card {
+    padding: 16px 20px;
+  }
+  .sw-assist-themed .sw-assist-step-card {
+    padding: 14px;
+  }
+  .sw-assist-themed .sw-assist-detail-dialog .sw-assist-receipt {
+    padding: 12px;
+  }
+}
+@media (min-width: 768px) and (max-width: 1279px) {
+  .sw-assist-themed .sw-assist-detail-dialog {
+    width: calc(100vw - 32px);
+    max-width: none;
+  }
 }
