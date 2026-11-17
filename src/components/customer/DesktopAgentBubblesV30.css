@@ -1,0 +1,83 @@
+/* Desktop only: four independent circular AI bubbles and a move handle.
+   Positioned within the already reserved bottom dock; dragging moves the
+   visible group, never the mobile employee tray. */
+@media(min-width:768px){
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock{overflow:visible!important;position:relative;z-index:30;}
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock > .sw-office-agents--bubbles{
+   width:max-content!important;max-width:100%!important;
+   min-height:72px!important;height:auto!important;max-height:98px!important;
+   padding:5px 11px!important;gap:11px!important;
+   display:flex!important;align-items:center!important;
+   border:1px solid color-mix(in srgb,var(--sw-lobby-border) 44%,transparent)!important;
+   border-radius:55px!important;
+   background:color-mix(in srgb,var(--sw-lobby-glass) 32%,transparent)!important;
+   box-shadow:0 5px 22px #0003!important;
+   transform:translate(var(--sw-team-x,0px),var(--sw-team-y,0px))!important;
+   transition:none!important;
+   pointer-events:auto;
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agents-heading{
+   white-space:nowrap;font-size:10px;letter-spacing:.07em;
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agents-state{font-size:9px;}
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agents-head{min-width:84px!important;}
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agents-content{
+   flex:0 1 auto!important;width:auto!important;align-items:center;gap:12px!important;
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agents-portraits{
+   display:flex!important;grid-template-columns:none!important;flex:0 1 auto!important;
+   gap:clamp(12px,2vw,29px)!important;
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent{
+   width:clamp(55px,5.8vw,84px)!important;min-width:0!important;
+   min-height:66px!important;border:0!important;
+   background:transparent!important;
+   padding:0!important;display:flex!important;
+   flex-direction:column!important;gap:3px!important;justify-content:center;
+   text-align:center;align-items:center;
+   transform:none!important;
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent img{
+   width:clamp(39px,3.9vw,50px)!important;height:clamp(39px,3.9vw,50px)!important;
+   border-radius:50%!important;border:2px solid var(--sw-workspace-accent)!important;
+   box-shadow:0 0 9px color-mix(in srgb,var(--sw-workspace-accent) 30%,transparent);
+   transition:box-shadow .17s,transform .17s;
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent:hover img,
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent:focus-visible img{
+   transform:translateY(-3px);box-shadow:0 0 15px var(--sw-workspace-accent);
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent-names{
+   display:block!important;flex:none!important;width:100%;
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent-names strong{
+   display:block!important;font-size:10px!important;max-width:100%;
+   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent-names small{display:none!important;}
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent-chevron{display:none!important;}
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agents-actions{
+   gap:5px;align-items:center;flex:0 0 auto;
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agents-actions button{
+   min-height:34px;font-size:10px;
+ }
+ .sw-office-bubbles-controls{display:flex;flex-direction:column;gap:2px;align-items:center;flex:0 0 auto;}
+ .sw-office-bubbles-controls button{
+   display:grid;place-items:center;width:29px;height:28px;
+   border:1px solid var(--sw-lobby-border);border-radius:9px;
+   color:var(--sw-ui-text);background:color-mix(in srgb,var(--sw-lobby-glass) 65%,transparent);
+ }
+ .sw-office-bubbles-grip{touch-action:none;cursor:grab;}
+ .sw-office-bubbles-grip:active{cursor:grabbing;}
+ .sw-office-bubbles-controls button:focus-visible{outline:2px solid var(--sw-workspace-accent);}
+}
+@media(min-width:768px) and (max-width:1170px){
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agents--bubbles .sw-office-agents-head{display:none;}
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent{width:56px!important;}
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agents-portraits{gap:10px!important;}
+}
+@media(max-width:767px){.sw-office-bubbles-controls{display:none!important;}}
+@media(prefers-reduced-motion:reduce){
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent img{transition:none!important;}
+}
