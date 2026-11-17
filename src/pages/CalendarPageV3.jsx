@@ -30,6 +30,7 @@ import {
 import api from "../api/client";
 import "./CalendarMobileWorkspace.css";
 import "./CalendarPortalFix.css";
+import "./CalendarCompactEditorV31.css";
 import { getCalendarConnections } from "../api/calendarConnections";
 import { getCustomerHealthProfile, patchCustomerHealthProfile } from "../api/customerHealth";
 import CalendarConnectionsDrawer from "../components/CalendarConnectionsDrawer";
