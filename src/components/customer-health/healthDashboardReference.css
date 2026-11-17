@@ -466,3 +466,40 @@
   .sw-health-home .sw-health-desktop-grid {grid-template-columns:minmax(0,1fr)}
   .sw-health-home .sw-health-profile-card {display:none}
 }
+
+
+/* SyncWorks Health Command Center: compact cockpit + holographic tool drawer. */
+.sw-health-tools-layer { position:fixed; inset:0; z-index:2147481100; display:flex; justify-content:flex-end; }
+.sw-health-tools-backdrop { position:absolute; inset:0; border:0; border-radius:0 !important; background:rgba(0,5,17,.70); backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px); }
+.sw-health-tools-drawer {
+  position:relative; display:flex; flex-direction:column; width:min(440px,100vw); height:100dvh; overflow:hidden;
+  border-left:1px solid rgba(72,201,255,.55);
+  background:linear-gradient(160deg,rgba(6,25,51,.97),rgba(3,8,23,.98) 62%,rgba(24,12,60,.97));
+  box-shadow:-25px 0 80px rgba(0,0,0,.6),-4px 0 25px rgba(40,178,255,.16);
+  color:#eaf8ff; animation:sw-health-tools-enter .22s ease-out;
+}
+.sw-health-tools-head {display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:calc(1.3rem + env(safe-area-inset-top)) 1.25rem 1.1rem;border-bottom:1px solid rgba(77,204,252,.25)}
+.sw-health-tools-head small {font-size:.65rem;letter-spacing:.18em;font-weight:900;color:#67e8f9}
+.sw-health-tools-head h2 {font-size:1.65rem;font-weight:900;margin:.3rem 0}
+.sw-health-tools-head p {font-size:.78rem;line-height:1.5;color:#a6bfd7}
+.sw-health-tools-close {display:grid;place-items:center;flex:none;min-width:44px;min-height:44px;border:1px solid rgba(103,232,249,.35);border-radius:13px;background:rgba(37,99,235,.13);color:#eaf8ff}
+.sw-health-tools-grid {display:grid;grid-template-columns:1fr;gap:.6rem;align-content:start;overflow-y:auto;min-height:0;overscroll-behavior:contain;padding:1rem 1.1rem calc(1.5rem + env(safe-area-inset-bottom))}
+.sw-health-tool-item {display:flex;align-items:center;gap:.9rem;min-height:68px;width:100%;padding:.65rem .85rem;border:1px solid rgba(70,173,235,.27);border-radius:14px;background:rgba(29,60,112,.20);color:#ebf8ff;text-align:left;transition:background .18s ease,border-color .18s ease,transform .18s ease}
+.sw-health-tool-item:hover {border-color:rgba(103,232,249,.7);background:rgba(24,105,156,.27);transform:translateX(-2px)}
+.sw-health-tool-item:focus-visible,.sw-health-tools-close:focus-visible {outline:2px solid #7edcff;outline-offset:3px}
+.sw-health-tool-icon {width:42px;height:42px;flex:none;display:grid;place-items:center;border-radius:13px;color:#65dfff;border:1px solid rgba(60,200,240,.25);background:rgba(27,106,148,.17)}
+.sw-health-tool-text {display:flex;flex:1;min-width:0;flex-direction:column;gap:.2rem}
+.sw-health-tool-text strong {font-size:.85rem;font-weight:850}
+.sw-health-tool-text small {font-size:.7rem;color:#a2bad4}
+@keyframes sw-health-tools-enter {from{transform:translateX(20px);opacity:.6}to{transform:translateX(0);opacity:1}}
+@media(max-width:1023px){.sw-health-tools-layer,.sw-health-focus-switcher {display:none !important}}
+@media(prefers-reduced-motion:reduce){.sw-health-tools-drawer{animation:none}.sw-health-tool-item{transition:none}}
+@media(min-width:1024px){
+  /* Today's quick actions remain, while detailed metrics move to the drawer.
+     This removes the tall profile card from the first-screen cockpit. */
+  .sw-health-home[data-health-panel="today"] .sw-health-profile-card {display:none}
+  .sw-health-home[data-health-panel="today"] .sw-health-desktop-grid {grid-template-columns:minmax(0,1fr)}
+  .sw-health-home[data-health-panel="today"] .sw-health-workout-card {grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr)}
+  .sw-health-home[data-health-panel="today"] > .sw-health-insight {display:none}
+  .sw-health-home .sw-health-tools-toggle {border-color:rgba(110,221,255,.52);color:#d9f7ff;background:rgba(8,82,134,.30)}
+}
