@@ -126,6 +126,7 @@ export default function HealthMobileHome({
   onEditDailyGoals,
 }) {
   const [dayKey, setDayKey] = useState(() => localYmd());
+  const [desktopPanel, setDesktopPanel] = useState("today");
   const [previousWorkout, setPreviousWorkout] = useState(null);
 
   const firstName =
@@ -278,7 +279,21 @@ export default function HealthMobileHome({
   }
 
   return (
-    <section className="sw-health-home text-white">
+    <section className="sw-health-home text-white" data-health-panel={desktopPanel}>
+      <div className="sw-health-focus-switcher" role="group" aria-label="Health dashboard focus">
+        <span className="sw-health-focus-switcher__title">MY HEALTH STUDIO</span>
+        {[
+          ["today", "Today", Dumbbell],
+          ["plan", "My Plan", CalendarDays],
+          ["insights", "Insights", BarChart3],
+        ].map(([key, label, Icon]) => (
+          <button key={key} type="button" aria-pressed={desktopPanel === key}
+            className={desktopPanel === key ? "is-current" : ""}
+            onClick={() => setDesktopPanel(key)}>
+            <Icon size={15} /> {label}
+          </button>
+        ))}
+      </div>
       <section className="sw-health-hero">
         <img className="sw-health-hero__logo" src="/health/syncworks-health-s-glow.png" alt="" aria-hidden="true" />
         <div className="sw-health-hero__copy">
