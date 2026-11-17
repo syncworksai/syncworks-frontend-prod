@@ -1,0 +1,147 @@
+/* V25 - the premium office Lobby is a scene, not a grid of panels.
+ * These overrides intentionally apply only to non-legacy Home, never the Office
+ * work view or Games. They follow V24 to resolve older competing declarations. */
+
+/* Limit the readability haze to a feathered patch around words.
+ * A pseudo-element has a soft alpha falloff, not a rectangular card edge. */
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-home .sw-immersive-welcome {
+  position:relative!important;
+  isolation:isolate;
+  padding:14px 12px 14px 0!important;
+  margin:0!important;
+  background:none!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  max-width:min(755px,100%);
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-home .sw-immersive-welcome::before{
+  content:"";
+  pointer-events:none;
+  position:absolute;
+  inset:-22px -38px -22px -25px;
+  z-index:-1;
+  border-radius:45%;
+  background:radial-gradient(ellipse at 35% 45%,rgba(2,11,25,.49) 0%,rgba(2,11,25,.26) 43%,transparent 79%);
+}
+.sw-workspace-root[data-workspace-theme="classic"] .sw-customer-three-rail .sw-immersive-home .sw-immersive-welcome::before{
+  background:radial-gradient(ellipse at 36% 46%,rgba(14,8,5,.59),rgba(14,8,5,.23) 52%,transparent 80%);
+}
+.sw-workspace-root[data-workspace-theme="modern"] .sw-customer-three-rail .sw-immersive-home .sw-immersive-welcome::before{
+  background:radial-gradient(ellipse at 36% 46%,rgba(11,16,22,.58),rgba(11,16,22,.24) 52%,transparent 80%);
+}
+.sw-workspace-root[data-workspace-theme="light"] .sw-customer-three-rail .sw-immersive-home .sw-immersive-welcome::before{
+  background:radial-gradient(ellipse at 38% 45%,rgba(255,249,237,.82),rgba(255,249,237,.36) 49%,transparent 79%);
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-home .sw-immersive-welcome h1{
+  max-width:700px;
+  font-weight:650!important;
+  line-height:1.16!important;
+  text-wrap:balance;
+  text-shadow:0 2px 10px rgba(1,5,12,.68)!important;
+}
+.sw-workspace-root[data-workspace-theme="light"] .sw-customer-three-rail .sw-immersive-home .sw-immersive-welcome h1{
+  text-shadow:0 1px 8px rgba(255,252,246,.95)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-home .sw-immersive-welcome p{
+  font-size:clamp(13px,.9vw,15px)!important;
+  line-height:1.5!important;
+  font-weight:700!important;
+  text-shadow:0 2px 8px rgba(0,0,0,.68)!important;
+}
+.sw-workspace-root[data-workspace-theme="light"] .sw-customer-three-rail .sw-immersive-home .sw-immersive-welcome p{
+  text-shadow:0 1px 7px rgba(255,253,247,.97)!important;
+}
+/* A subtle lift and an accent rim, rather than a colored rectangle on each category. */
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-office-sidebar-categories button{
+  background:rgba(6,14,27,.10)!important;
+  border:1px solid color-mix(in srgb,var(--sw-lobby-border) 45%,transparent)!important;
+  box-shadow:none!important;
+  backdrop-filter:blur(2px)!important;
+  -webkit-backdrop-filter:blur(2px)!important;
+  transition:transform .19s ease,background-color .19s ease,border-color .19s ease,box-shadow .19s ease!important;
+}
+.sw-workspace-root[data-workspace-theme="light"] .sw-office-sidebar-categories button{
+  background:rgba(255,249,238,.22)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-office-sidebar-categories button:hover,
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-office-sidebar-categories button:focus-visible{
+  transform:translateX(4px)!important;
+  background:var(--sw-lobby-chip-hover)!important;
+  border-color:var(--sw-workspace-accent)!important;
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--sw-workspace-accent) 40%,transparent),0 0 22px var(--sw-lobby-glow)!important;
+}
+/* Shrink-wrap the alert rail. Previous responsive grid/sticky sizing stretched it
+   to the height of the Home scene and left an empty transparent box below alerts. */
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-lobby-alert-rail{
+  align-self:start!important;
+  align-content:start!important;
+  height:max-content!important;
+  min-height:0!important;
+  max-height:none!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:10px!important;
+  padding:0!important;
+  margin:0!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-lobby-alert-rail > .sw-lobby-alerts{
+  flex:0 0 auto!important;
+  height:auto!important;
+  min-height:0!important;
+  margin:0!important;
+  border-color:color-mix(in srgb,var(--sw-lobby-border) 53%,transparent)!important;
+  padding:14px!important;
+  border-radius:15px!important;
+  background:color-mix(in srgb,var(--sw-lobby-glass) 27%,transparent)!important;
+  backdrop-filter:blur(4px)!important;
+  -webkit-backdrop-filter:blur(4px)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-lobby-alerts > div:nth-child(2) {
+  margin-top:10px!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-lobby-alert-rail .sw-lobby-attention-item{
+  padding:11px 12px!important;
+  background:color-mix(in srgb,var(--sw-lobby-glass) 25%,transparent)!important;
+  border-color:color-mix(in srgb,var(--sw-lobby-border) 62%,transparent)!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-lobby-alerts h2 {
+  font-size:16px!important;
+  line-height:1.35!important;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-immersive-home .sw-lobby-start{
+  transition:transform .2s ease,box-shadow .2s ease,filter .2s ease!important;
+  will-change:transform;
+}
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-immersive-home .sw-lobby-start:hover,
+.sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-immersive-home .sw-lobby-start:focus-visible{
+  transform:translateY(-3px) scale(1.018)!important;
+  filter:brightness(1.07);
+  box-shadow:0 10px 32px var(--sw-lobby-glow)!important;
+}
+@media(max-width:760px){
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-three-rail .sw-immersive-home .sw-immersive-welcome::before{
+    inset:-12px -14px;
+  }
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-lobby-alert-rail{position:static!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-office-sidebar-categories button,
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-immersive-home .sw-lobby-start{
+    transition:none!important;will-change:auto;
+  }
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-immersive-home .sw-lobby-start:hover{
+    transform:none!important;
+  }
+}
+@media(prefers-reduced-transparency:reduce){
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-lobby-alert-rail > .sw-lobby-alerts,
+  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-office-sidebar-categories button{
+    background:var(--sw-lobby-glass)!important;
+    backdrop-filter:none!important;
+  }
+}
