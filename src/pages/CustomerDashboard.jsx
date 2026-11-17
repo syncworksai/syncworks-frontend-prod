@@ -329,8 +329,8 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
           </div>
         </main>
 
-        <aside className="sw-lobby-alert-rail min-w-0 space-y-4 lg:col-start-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 2xl:col-start-auto 2xl:block 2xl:sticky 2xl:top-4 2xl:space-y-4">
-          {workspaceTheme !== "legacy" && <OfficeAgentDock user={user} placement={inOffice ? "office" : "home"} />}
+        <aside className="sw-lobby-alert-rail sw-desktop-alerts-under-office min-w-0 space-y-4 lg:col-start-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 2xl:col-start-auto 2xl:block 2xl:sticky 2xl:top-4 2xl:space-y-4">
+          
           <section className="sw-lobby-alerts rounded-[1.6rem] border border-white/10 bg-slate-950/75 p-4 shadow-[0_20px_60px_rgba(0,0,0,.25)] backdrop-blur-xl">
             <div className="flex items-center justify-between gap-2"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-amber-200">Alerts</div><h2 className="mt-1 text-lg font-black text-white">Needs attention</h2></div><AlertTriangle className={`h-5 w-5 ${alertCount ? "text-rose-300" : "text-emerald-300"}`} /></div>
             <div className="mt-4 space-y-3">
@@ -353,6 +353,7 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
           {workspaceTheme !== "legacy" && inOffice && <button type="button" className="sw-office-activity-toggle" aria-expanded={showActivity} onClick={()=>setShowActivity(v=>!v)}>{showActivity ? "Hide activity & quick capture" : "View activity & quick capture"} <ChevronRight size={15}/></button>}
         </aside>
       </div>
+      {workspaceTheme !== "legacy" && <div className="sw-desktop-office-team-dock" aria-label="Your AI employee dock"><OfficeAgentDock user={user} placement="home" /></div>}
     </DashboardShell>
   );
 }
