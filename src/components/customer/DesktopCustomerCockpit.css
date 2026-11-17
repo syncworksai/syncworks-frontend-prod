@@ -1,0 +1,103 @@
+/* Customer desktop cockpit V1: the browser/document stays fixed, while
+   individual intelligence rails and advanced detail panels can scroll inside
+   their allotted space. Scoped to desktop CUSTOMER home, not other pages. */
+@media(min-width:768px) {
+  html.sw-customer-desktop-home-locked,
+  body.sw-customer-desktop-home-locked {
+    height:100%;
+    overflow:hidden!important;
+    overscroll-behavior:none;
+  }
+  .sw-workspace-root.sw-desktop-customer-cockpit[data-sw-layout="landscape"] {
+    box-sizing:border-box;
+    height:calc(100dvh - 57px);
+    min-height:0!important;
+    max-height:calc(100dvh - 57px);
+    overflow:hidden!important;
+    display:flex;
+    flex-direction:column;
+  }
+  .sw-desktop-customer-cockpit > .sw-workspace-switcher {
+    flex:0 0 auto;
+    margin-bottom:0;
+  }
+  .sw-desktop-customer-cockpit [data-sw-shell="dashboard"] {
+    display:flex;
+    flex-direction:column;
+    height:100%;
+    flex:1 1 auto;
+    min-height:0!important;
+    overflow:hidden!important;
+  }
+  .sw-desktop-customer-cockpit [data-sw-shell="dashboard"] > main.sw-customer-v3 {
+    box-sizing:border-box;
+    display:flex;
+    flex-direction:column;
+    min-height:0!important;
+    flex:1 1 auto;
+    overflow:hidden!important;
+    padding-top:8px;
+    padding-bottom:8px!important;
+  }
+  .sw-desktop-customer-cockpit .sw-customer-three-rail {
+    flex:1 1 auto;
+    height:100%;
+    min-height:0;
+    overflow:hidden;
+    padding-bottom:0!important;
+    align-items:stretch!important;
+    grid-template-rows:minmax(0,1fr)!important;
+  }
+  .sw-desktop-customer-cockpit .sw-customer-three-rail > main,
+  .sw-desktop-customer-cockpit .sw-customer-three-rail > aside {
+    box-sizing:border-box;
+    min-height:0!important;
+    max-height:100%!important;
+    overflow-y:auto!important;
+    overscroll-behavior:contain;
+    scrollbar-width:thin;
+    -webkit-overflow-scrolling:touch;
+  }
+  .sw-desktop-customer-cockpit .sw-customer-three-rail > main {
+    margin:0;
+    padding:0 4px 10px;
+  }
+  .sw-desktop-customer-cockpit .sw-customer-three-rail > aside:last-child {
+    position:relative!important;
+    top:auto!important;
+    align-self:stretch;
+    grid-row:1!important;
+    overflow-x:hidden;
+    display:flex!important;
+    flex-direction:column!important;
+  }
+  .sw-desktop-customer-cockpit .sw-customer-three-rail > aside:first-child {
+    position:relative!important;
+    top:auto!important;
+    align-self:stretch;
+  }
+  /* Previously the alert rail sat on a second grid row, forcing document
+     scrolling. All three live as bounded rails in the first viewport row. */
+  .sw-desktop-customer-cockpit .sw-customer-v3 > .sw-customer-three-rail {
+    display:grid!important;
+    grid-template-columns:clamp(155px,15vw,194px) minmax(0,1fr) clamp(220px,22vw,280px)!important;
+    gap:clamp(9px,1vw,16px)!important;
+  }
+  .sw-desktop-customer-cockpit .sw-customer-three-rail > aside:first-child {
+    grid-column:1!important;grid-row:1!important;
+  }
+  .sw-desktop-customer-cockpit .sw-customer-three-rail > main {
+    grid-column:2!important;grid-row:1!important;
+  }
+  .sw-desktop-customer-cockpit .sw-customer-three-rail > aside:last-child {
+    grid-column:3!important;grid-row:1!important;
+  }
+}
+@media(min-width:768px) and (max-width:1023px) {
+  .sw-desktop-customer-cockpit .sw-customer-v3 > .sw-customer-three-rail {
+    grid-template-columns:minmax(0,1fr) minmax(205px,32vw)!important;
+  }
+  .sw-desktop-customer-cockpit .sw-customer-three-rail > aside:first-child {display:none!important;}
+  .sw-desktop-customer-cockpit .sw-customer-three-rail > main {grid-column:1!important;}
+  .sw-desktop-customer-cockpit .sw-customer-three-rail > aside:last-child {grid-column:2!important;}
+}
