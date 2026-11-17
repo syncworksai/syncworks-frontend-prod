@@ -43,15 +43,27 @@ export function resolvePracticeTrade(trade, candle) {
 
 
 export function explainTrainingSignal(c) {
-  if(!c)return {summary:"No candle yet",checks:[]};
-  const checks=[
-    {label:"EMA pressure",passed:c.ema7>c.ema9,detail:"EMA 7 must be above EMA 9 for a long setup"},
-    {label:"Above VWAP",passed:c.close>c.vwap,detail:"Close must be above simulated session VWAP"},
-    {label:"Donchian break",passed:c.upper!=null&&c.close>c.upper,detail:"Close must exceed previous 20-bar high"},
-    {label:"Volume confirmation",passed:c.volRatio!=null&&c.volRatio>=1.15,detail:"Relative volume must be at least 1.15×"}
+  if(!c)return {summary:"No candle yet",checks:[],longChecks:[],shortChecks:[]};
+  const baseVol={label:"Volume confirmation",passed:c.volRatio!=null&&c.volRatio>=1.15,detail:"Relative volume must be at least 1.15×"};
+  const longChecks=[
+    {label:"EMA pressure",passed:c.ema7>c.ema9,detail:"EMA 7 above EMA 9"},
+    {label:"Above VWAP",passed:c.close>c.vwap,detail:"Close above simulated VWAP"},
+    {label:"Donchian break",passed:c.upper!=null&&c.close>c.upper,detail:"Close above prior 20-bar high"},
+    baseVol
   ];
+  const shortChecks=[
+    {label:"EMA pressure",passed:c.ema7<c.ema9,detail:"EMA 7 below EMA 9"},
+    {label:"Below VWAP",passed:c.close<c.vwap,detail:"Close below simulated VWAP"},
+    {label:"Donchian break",passed:c.lower!=null&&c.close<c.lower,detail:"Close below prior 20-bar low"},
+    baseVol
+  ];
+  const isShort=c.signal==="SHORT WATCH";
+  const checks=isShort?shortChecks:longChecks;
   const missing=checks.filter(x=>!x.passed).map(x=>x.label);
-  return {summary:c.signal!=="WAIT"?c.signal+" — review risk before practice entry":missing.length?"WAIT — missing "+missing.join(", "):"WAIT — bullish checks not sufficient; inspect short-side conditions",checks};
+  const summary=c.signal!=="WAIT"
+    ? c.signal+" — review risk, spreads and confirmation before a paper entry"
+    : "WAIT — long: "+longChecks.filter(x=>!x.passed).map(x=>x.label).join(", ")+"; short: "+shortChecks.filter(x=>!x.passed).map(x=>x.label).join(", ");
+  return {summary,checks,longChecks,shortChecks,missing};
 }
 
 export const SIM_MNQ_POINT_VALUE = 2; // $2 per MNQ index point, per micro contract.

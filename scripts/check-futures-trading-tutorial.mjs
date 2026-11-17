@@ -34,7 +34,9 @@ test("WAIT teaching explanation lists missed gates without changing signal",()=>
   const candle=rows.find(row=>row.signal==="WAIT"&&row.upper!=null&&row.close>row.upper);
   assert.ok(candle,"Expected a breakout that lacks at least one confirmation");
   const result=explainTrainingSignal(candle);
-  assert.match(result.summary,/WAIT — missing/);
+  assert.match(result.summary,/WAIT — long:/);
+  assert.equal(result.longChecks.length,4);
+  assert.equal(result.shortChecks.length,4);
   assert.ok(result.checks.some(check=>!check.passed));
   assert.equal(candle.signal,"WAIT");
 });
