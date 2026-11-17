@@ -5,7 +5,7 @@ const COLORS={up:"#34d399",down:"#fb7185",ema7:"#38bdf8",ema9:"#eab308",vwap:"#a
 const W=780,H=380,L=56,R=18,T=18,PB=278,VT=303,VB=349;
 const fmt=v=>Number(v).toFixed(1);
 
-export default function TrainingCandlestickChart({bars,trade,lastClosedTrade,completed=[]}) {
+export default function TrainingCandlestickChart({bars,trade,lastClosedTrade,completed=[],compact=false}) {
   if (!bars?.length) return null;
   const values=bars.flatMap(b=>[b.high,b.low,b.ema7,b.ema9,b.vwap,b.upper,b.lower].filter(Number.isFinite));
   if(trade)values.push(trade.entry,trade.stop,trade.target);
@@ -17,12 +17,12 @@ export default function TrainingCandlestickChart({bars,trade,lastClosedTrade,com
   const last=bars[bars.length-1],review=explainTrainingSignal(last);
   const lines=[["ema7","EMA7",COLORS.ema7],["ema9","EMA9",COLORS.ema9],["vwap","VWAP",COLORS.vwap],["upper","DC High",COLORS.upper],["lower","DC Low",COLORS.lower]];
   const paths=(key)=>{let parts=[],current=[];bars.forEach((b,i)=>{if(Number.isFinite(b[key]))current.push(x(i)+","+y(b[key]));else if(current.length){parts.push(current.join(" "));current=[];}});if(current.length)parts.push(current.join(" "));return parts;};
-  return <div className="w-full overflow-hidden rounded-xl border border-white/10 bg-[#050c1a] p-2">
+  return <div className={compact?"flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-[#050c1a] p-2":"w-full overflow-hidden rounded-xl border border-white/10 bg-[#050c1a] p-2"}>
     <div className="flex flex-wrap items-center justify-between gap-2 px-1 pb-2 text-[10px] text-slate-400">
       <strong className="text-white">SIMULATED CANDLES + VOLUME</strong>
       <span>O {fmt(last.open)} · H {fmt(last.high)} · L {fmt(last.low)} · C {fmt(last.close)}</span>
     </div>
-    <svg viewBox={"0 0 "+W+" "+H} width="100%" role="img" aria-label={"Simulated green and red candlestick chart with volume and indicators. Last close "+fmt(last.close)}>
+    <svg viewBox={"0 0 "+W+" "+H} width="100%" height={compact?"100%":undefined} className={compact?"min-h-0 flex-1":""} preserveAspectRatio="none" role="img" aria-label={"Simulated green and red candlestick chart with volume and indicators. Last close "+fmt(last.close)}>
       <defs><clipPath id="sw-practice-price"><rect x={L} y={T} width={W-L-R} height={PB-T}/></clipPath></defs>
       {Array.from({length:5},(_,i)=>{const value=lo+(hi-lo)*(i/4),yy=y(value);return <g key={i}><line x1={L} x2={W-R} y1={yy} y2={yy} stroke="#203047" strokeDasharray="3 5"/><text x={L-7} y={yy+4} textAnchor="end" fontSize="10" fill="#94a3b8">{fmt(value)}</text></g>;})}
       <g clipPath="url(#sw-practice-price)">
@@ -46,8 +46,8 @@ export default function TrainingCandlestickChart({bars,trade,lastClosedTrade,com
 
     </svg>
     <div className="flex flex-wrap gap-x-3 gap-y-1 px-1 text-[10px]">{[["Up",COLORS.up],["Down",COLORS.down],...lines.map(([,label,color])=>[label,color])].map(([name,color])=><span key={name} className="flex items-center gap-1 text-slate-300"><span style={{background:color}} className="inline-block h-2 w-2 rounded-sm"/>{name}</span>)}</div>
-    <p className="px-1 pt-2 text-xs text-amber-200">{review.summary}</p>
-    {lastClosedTrade&&<p className="px-1 pt-1 text-[11px] text-slate-400">Last closed trade: {lastClosedTrade.outcome} · {Number(lastClosedTrade.resultR).toFixed(2)}R. Entry and exit appear on their respective candles where visible.</p>}
+    {!compact&&<p className="px-1 pt-2 text-xs text-amber-200">{review.summary}</p>}
+    {!compact&&lastClosedTrade&&<p className="px-1 pt-1 text-[11px] text-slate-400">Last closed trade: {lastClosedTrade.outcome} · {Number(lastClosedTrade.resultR).toFixed(2)}R. Entry and exit appear on their respective candles where visible.</p>}
     <style>{'@keyframes sw-candle-grow{from{opacity:.15;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}.sw-training-new-bar{animation:sw-candle-grow .3s ease-out}@media(prefers-reduced-motion:reduce){.sw-training-new-bar{animation:none}}'}</style>
   </div>;
 }
