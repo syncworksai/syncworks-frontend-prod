@@ -52,6 +52,7 @@ import "../components/customer/OfficePhotoVisibilityV23.css";
 import "../components/customer/LobbyReadabilityV24.css";
 import "../components/customer/LobbyFinishV25.css";
 import "../components/customer/OfficeImmersiveV26.css";
+import "../components/customer/OfficeTeamPlacementV28.css";
 
 const DAY_TRADING_EMAIL = "jacoblord7@outlook.com";
 
@@ -268,7 +269,7 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
 
         <main className="min-w-0 space-y-5">
           {workspaceTheme !== "legacy" && !inOffice ? <ImmersiveWorkspaceHome displayName={firstName(user)} theme={workspaceTheme} onOpenLauncher={() => window.dispatchEvent(new CustomEvent("sw:workspace-open", { detail: "apps" }))} onOpenAppearance={() => window.dispatchEvent(new CustomEvent("sw:workspace-open", { detail: "appearance" }))} /> : null}
-          {inOffice && <OfficeAgentDock user={user} />}
+          
           {inOffice && <section id="sw-office-workdesk" className="sw-office-workdesk" aria-label="Today's office">
             <div className="sw-office-workdesk-top">
               <div><button type="button" className="sw-office-home-return" onClick={()=>nav("/customer")}>← Back to Home</button><span className="sw-office-eyebrow">YOUR OFFICE · TODAY</span><h2>What are we working on today?</h2><p>Start with your priorities. Everything else is one drawer away.</p></div>
@@ -329,6 +330,7 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
         </main>
 
         <aside className="sw-lobby-alert-rail min-w-0 space-y-4 lg:col-start-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 2xl:col-start-auto 2xl:block 2xl:sticky 2xl:top-4 2xl:space-y-4">
+          {workspaceTheme !== "legacy" && <OfficeAgentDock user={user} placement={inOffice ? "office" : "home"} />}
           <section className="sw-lobby-alerts rounded-[1.6rem] border border-white/10 bg-slate-950/75 p-4 shadow-[0_20px_60px_rgba(0,0,0,.25)] backdrop-blur-xl">
             <div className="flex items-center justify-between gap-2"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-amber-200">Alerts</div><h2 className="mt-1 text-lg font-black text-white">Needs attention</h2></div><AlertTriangle className={`h-5 w-5 ${alertCount ? "text-rose-300" : "text-emerald-300"}`} /></div>
             <div className="mt-4 space-y-3">
