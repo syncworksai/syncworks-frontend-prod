@@ -28,6 +28,7 @@ import api, { getActiveBusinessId } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import SyncActionStudio from "../components/sync/SyncActionStudio";
 import SyncAssistTeamDrawer from "../components/sync/SyncAssistTeamDrawer";
+import SyncConnectionDiagnostics from "../components/sync/SyncConnectionDiagnostics";
 import SyncWorkflowIntake from "../components/sync/SyncWorkflowIntake";
 import {AVATARS, JarvisAvatar, JarvisAvatarPicker, useJarvisAvatar} from "../components/sync/JarvisAvatar";
 import {
@@ -554,6 +555,9 @@ export default function SyncAssistant() {
                 ? `Online${status.model ? ` · ${status.model}` : ""}`
                 : "AI unavailable"}
             </div>
+          </div>
+          <div className="mt-2 flex justify-end">
+            <SyncConnectionDiagnostics />
           </div>
 
           <div className="mt-3 grid grid-cols-3 gap-2 lg:mt-3 lg:gap-3">
