@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 
 import api from "../api/client";
+import "./CalendarMobileWorkspace.css";
 import { getCalendarConnections } from "../api/calendarConnections";
 import { getCustomerHealthProfile, patchCustomerHealthProfile } from "../api/customerHealth";
 import CalendarConnectionsDrawer from "../components/CalendarConnectionsDrawer";
@@ -457,6 +458,8 @@ export default function CalendarPageV3() {
   const [selectedDay, setSelectedDay] = useState(() => new Date());
   const [monthStart, setMonthStart] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [showComposer, setShowComposer] = useState(false);
+  const [savingEvent, setSavingEvent] = useState(false);
+  const [saveIssue, setSaveIssue] = useState("");
   const [editingEvent, setEditingEvent] = useState(null);
   const [draft, setDraft] = useState(() => blankDraft("EVENT"));
   const [captureText, setCaptureText] = useState("");
@@ -472,8 +475,16 @@ export default function CalendarPageV3() {
     let lastError = null;
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
-        const response = await api.get("/personal-calendar/events/", { params: { status: "ACTIVE" } });
-        const rows = safeList(response.data);
+        const collected = [];
+        // The API paginates in ascending start_at order. Fetching only page
+        // one makes newly created appointments disappear on long-lived accounts.
+        for (let page = 1; page <= 40; page += 1) {
+          const response = await api.get("/personal-calendar/events/", { params: { status: "ACTIVE", page } });
+          collected.push(...safeList(response.data));
+          if (!response.data?.next) break;
+          if (page === 40) throw new Error("Calendar has more than 40 pages; narrow the date range.");
+        }
+        const rows = collected;
         eventsRef.current = rows;
         setEvents(rows);
         try { window.localStorage.setItem(CALENDAR_CACHE_KEY, JSON.stringify(rows)); } catch { /* optional */ }
@@ -709,14 +720,18 @@ export default function CalendarPageV3() {
   }
 
   async function saveEvent() {
+    if (savingEvent) return;
+    setSaveIssue("");
     const title = String(draft.title || "").trim();
     if (!title) {
+      setSaveIssue("Add a title first.");
       setError("Add a title first.");
       return;
     }
     const start = new Date(`${draft.date}T${draft.all_day ? "00:00" : draft.time || "09:00"}`);
     const end = new Date(`${draft.end_date || draft.date}T${draft.all_day ? "23:59" : draft.end_time || "10:00"}`);
     if (end < start) {
+      setSaveIssue("The end must be after the start.");
       setError("The end must be after the start.");
       return;
     }
@@ -752,17 +767,44 @@ export default function CalendarPageV3() {
       source: "MANUAL",
       metadata,
     };
+    setSavingEvent(true);
     try {
-      if (editingEvent) await api.patch(`/personal-calendar/events/${editingEvent.id}/`, payload);
-      else await api.post("/personal-calendar/events/", payload);
+      const response = editingEvent
+        ? await api.patch(`/personal-calendar/events/${editingEvent.id}/`, payload)
+        : await api.post("/personal-calendar/events/", payload);
+      const savedId = response?.data?.id || editingEvent?.id;
+      if (!savedId) throw new Error("The calendar server did not return an event ID.");
+      // Independently verify the event exists in the user's database.
+      const verified = await api.get(`/personal-calendar/events/${savedId}/`);
+      if (String(verified?.data?.id) !== String(savedId)) {
+        throw new Error("The saved event could not be verified.");
+      }
+      const committed = verified.data;
+      setEvents(current => {
+        const rest = current.filter(event => String(event.id) !== String(savedId));
+        return [...rest, committed].sort((a,b) => new Date(a.start_at) - new Date(b.start_at));
+      });
+      eventsRef.current = [...eventsRef.current.filter(event => String(event.id) !== String(savedId)), committed];
       setShowComposer(false);
       setEditingEvent(null);
       setDraft(blankDraft("EVENT"));
       setCaptureText("");
-      setNotice(editingEvent ? "Calendar item updated." : "Added to your master calendar.");
+      setSaveIssue("");
+      setError("");
+      setNotice(editingEvent ? "Calendar item saved and verified." : "Event saved and verified in SyncWorks.");
+      // Don't roll back a successful verified save if the full-calendar
+      // refresh later fails; the persisted event stays visible in state.
       await loadEvents({ silent: true });
     } catch (saveError) {
-      setError(saveError?.response?.data?.detail || "Could not save this calendar item.");
+      const body = saveError?.response?.data;
+      const fields = body && typeof body === "object"
+        ? Object.entries(body).map(([field, message]) => `${field}: ${Array.isArray(message) ? message.join(", ") : String(message)}`).join(" · ")
+        : "";
+      const message = fields || (typeof body === "string" ? body : "") || saveError?.message || "Could not save this calendar item.";
+      setSaveIssue(message);
+      setError(message);
+    } finally {
+      setSavingEvent(false);
     }
   }
 
@@ -834,9 +876,9 @@ export default function CalendarPageV3() {
   const nextDriveUrl = nextEvent ? eventDriveUrl(nextEvent) : "";
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100">
+    <div className="sw-calendar-page min-h-screen bg-[#020617] text-slate-100">
       <ModeBar title="Calendar" subtitle="Your master schedule for SYNC Assist" />
-      <main className="mx-auto w-full max-w-[1680px] px-3 py-3 pb-28 sm:px-4 lg:px-6 lg:pb-8">
+      <main className="sw-calendar-workspace mx-auto w-full max-w-[1680px] px-3 py-3 pb-28 sm:px-4 lg:px-6 lg:pb-8">
         {notice ? <div className="mb-3 rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3 text-xs text-emerald-100">{notice}</div> : null}
         {error ? <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-rose-400/20 bg-rose-500/10 p-3 text-xs text-rose-100"><span>{error}</span><button type="button" onClick={() => loadEvents()} className="rounded-lg border border-rose-300/25 px-3 py-1.5 font-black">Retry</button></div> : null}
 
@@ -890,7 +932,7 @@ export default function CalendarPageV3() {
           )}
         </section>
 
-        {showComposer ? <section id="calendar-event-composer" className="mt-4 scroll-mt-24 rounded-[1.5rem] border border-cyan-400/20 bg-cyan-500/[.04] p-4 sm:p-5">
+        {showComposer ? <section id="calendar-event-composer" role="dialog" aria-modal="true" aria-label={editingEvent ? "Edit calendar item" : "New calendar item"} className="sw-calendar-composer mt-4 scroll-mt-24 rounded-[1.5rem] border border-cyan-400/20 bg-cyan-500/[.04] p-4 sm:p-5">
           <div className="flex items-center justify-between gap-3"><div className="text-sm font-black text-white">{editingEvent ? `Edit ${draft.kind === "TASK" ? "task" : "event"}` : `Create ${draft.kind === "TASK" ? "task" : "event"}`}</div><button type="button" onClick={() => { setShowComposer(false); setEditingEvent(null); }} className="rounded-xl border border-white/10 px-3 py-2 text-[10px] font-black text-slate-400">Close</button></div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label className="text-xs text-slate-400 lg:col-span-2">Title<input value={draft.title} onChange={(event) => setDraft((value) => ({ ...value, title: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
@@ -909,7 +951,7 @@ export default function CalendarPageV3() {
             <label className="text-xs text-slate-400">Repeat<select value={draft.recurrence} onChange={(event) => setDraft((value) => ({ ...value, recurrence: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none"><option value="NONE">Does not repeat</option><option value="DAILY">Daily</option><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option></select></label>
             {draft.kind === "EVENT" ? <label className="flex min-h-11 items-center gap-3 rounded-xl border border-amber-400/15 bg-amber-500/[.04] px-3 text-xs font-bold text-amber-100"><input type="checkbox" checked={draft.weather_dependent} onChange={(event) => setDraft((value) => ({ ...value, weather_dependent: event.target.checked }))} className="h-4 w-4 accent-amber-400" />Weather aware</label> : null}
             <label className="text-xs text-slate-400 sm:col-span-2 lg:col-span-4">Notes<textarea rows={2} value={draft.description} onChange={(event) => setDraft((value) => ({ ...value, description: event.target.value }))} className="mt-1 w-full resize-none rounded-xl border border-white/10 bg-slate-950/80 p-3 text-sm text-white outline-none" /></label>
-            <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-4">{editingEvent ? <button type="button" onClick={removeEditingEvent} className="min-h-10 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 text-[11px] font-black text-rose-100">Remove</button> : null}<button type="button" onClick={saveEvent} className="min-h-10 flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 text-[11px] font-black text-white">{editingEvent ? "Save changes" : draft.kind === "TASK" ? "Save task" : "Save event"}</button></div>
+            <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-4">{editingEvent ? <button type="button" onClick={removeEditingEvent} className="min-h-10 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 text-[11px] font-black text-rose-100">Remove</button> : null}<button type="button" onClick={saveEvent} disabled={savingEvent} className="sw-calendar-save-button min-h-10 flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 text-[11px] font-black text-white disabled:opacity-50">{savingEvent ? "Saving & verifying…" : editingEvent ? "Save changes" : draft.kind === "TASK" ? "Save task" : "Save event"}</button></div>
           </div>
         </section> : null}
 

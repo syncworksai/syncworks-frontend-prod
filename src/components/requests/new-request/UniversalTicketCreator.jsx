@@ -925,6 +925,7 @@ export default function UniversalTicketCreator({
                 </section>
               ) : null}
               <MarketplaceSearchPanel
+                compact={!isBusinessInternal}
                 selectedService={selectedService}
                 setSelectedService={handleServiceSelect}
                 mode={mode}
