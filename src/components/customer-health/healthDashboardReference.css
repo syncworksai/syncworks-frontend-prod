@@ -359,7 +359,7 @@
 /* Desktop Health cockpit. The user switches panels rather than scrolling
    through every dashboard widget; mobile retains its existing responsive flow. */
 .sw-health-focus-switcher { display:none; }
-@media (min-width:1200px) and (min-height:750px) {
+@media (min-width: 1024px) {
   .sw-health-home {
     display:grid;
     grid-template-columns:repeat(12,minmax(0,1fr));
@@ -446,4 +446,23 @@
   @media (prefers-reduced-motion:reduce) {
     .sw-health-focus-switcher button {transition:none}
   }
+}
+
+/* Prevent short laptop/browser windows from falling back to the long page. */
+@media (min-width:1024px) and (max-height:800px) {
+  .sw-health-home .sw-health-focus-switcher {min-height:32px}
+  .sw-health-home > .sw-health-hero {min-height:185px !important;padding:.9rem 1.15rem !important}
+  .sw-health-home .sw-health-hero h1 {font-size:clamp(2.15rem,3.4vw,3.25rem)}
+  .sw-health-home .sw-health-hero__logo {width:130px !important;height:130px !important}
+  .sw-health-home .sw-health-workout-card,
+  .sw-health-home .sw-health-workout-art {min-height:185px !important;max-height:198px !important}
+  .sw-health-home .sw-health-quick-log {min-height:60px}
+  .sw-health-home > .sw-health-quick-panel,
+  .sw-health-home > .sw-health-readiness-card {padding:.6rem}
+}
+@media (min-width:1024px) and (max-width:1199px) {
+  .sw-health-home > .sw-health-hero {grid-column:span 5}
+  .sw-health-home > .sw-health-desktop-grid {grid-column:span 7}
+  .sw-health-home .sw-health-desktop-grid {grid-template-columns:minmax(0,1fr)}
+  .sw-health-home .sw-health-profile-card {display:none}
 }

@@ -386,3 +386,34 @@
     -webkit-backdrop-filter: none;
   }
 }
+
+
+/* The original gym asset is intentionally dark. Present it as an environment,
+   not beneath a second nearly-black filter. Keep cards readable. */
+.health-obsidian-electric .sw-health-environment-image {
+  filter: brightness(1.7) saturate(1.35) contrast(1.04);
+  transform: scale(1.015);
+  transform-origin: center;
+}
+.health-obsidian-electric .sw-health-environment-tint {
+  background: linear-gradient(180deg, rgba(1,5,16,.17), rgba(1,7,20,.11) 55%, rgba(1,5,16,.37));
+}
+.health-obsidian-electric .sw-health-hero {
+  background: rgba(1,9,24,.27) !important;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.health-obsidian-electric .sw-health-panel,
+.health-obsidian-electric .sw-health-flow-action {
+  background: rgba(1,9,24,.27) !important;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+@media (max-width: 1023px) {
+  .health-obsidian-electric .sw-health-environment-image {background-position: center top !important;filter:brightness(1.4) saturate(1.25)}
+  .health-obsidian-electric .sw-health-environment-tint {background:linear-gradient(180deg,rgba(1,5,16,.24),rgba(1,6,17,.3))}
+  .health-obsidian-electric .sw-health-panel {background:rgba(1,9,24,.47) !important}
+}
+@media (prefers-reduced-transparency:reduce) {
+  .health-obsidian-electric .sw-health-panel {background:rgba(1,9,24,.90) !important;backdrop-filter:none;-webkit-backdrop-filter:none}
+}
