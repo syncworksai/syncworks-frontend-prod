@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { BriefcaseBusiness, ChevronRight, Grip, MessageCircle, RefreshCw, RotateCcw, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
-import { AVATARS } from "../sync/JarvisAvatar";
+import { AVATARS, getAvatarPhotoForUser } from "../sync/JarvisAvatar";
 import "./OfficeAgentDockV27.css";
 
 // One source of truth for the private-pilot employees. Membership is NOT live
@@ -62,8 +62,9 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
 
   const roster = useMemo(() => AVATARS.map((avatar) => ({
     ...avatar,
+    photo: getAvatarPhotoForUser(avatar, user),
     configured: employees.some((worker) => worker.id === avatar.id),
-  })), [employees]);
+  })), [employees, user?.email]);
 
   if (!permitted) return null;
   const office = placement === "office";
