@@ -292,6 +292,15 @@ export default function SyncAssistWorkdayPanel() {
                   </div>
                   <span className="rounded-lg border border-cyan-400/25 px-2 py-1 text-xs font-bold text-cyan-200">{item.status.replaceAll("_", " ")}</span>
                 </div>
+                <div className="sw-assist-execution-bar flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-cyan-400/20 bg-slate-950/35 p-2">
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" disabled={busy || item.status === "COMPLETED"} onClick={() => runInternalStep(item.id)} className="min-h-11 rounded-lg border border-cyan-400/50 bg-cyan-500/15 px-4 text-xs font-black text-cyan-100 disabled:opacity-40">Run next internal step</button>
+                    <button type="button" disabled={busy || item.status === "COMPLETED"} onClick={() => queueGoal(item.id)} className="min-h-10 rounded-lg border border-amber-400/30 px-3 text-xs font-bold text-amber-200 disabled:opacity-40">Authorize internal queue</button>
+                    {jobs.some(job => String(job.goal_id) === String(item.id) && ["QUEUED","RUNNING","WAITING","RETRY"].includes(job.state)) &&
+                      <button type="button" disabled={busy} onClick={() => cancelGoal(item.id)} className="min-h-10 rounded-lg border border-rose-400/30 px-3 text-xs text-rose-200">Cancel job</button>}
+                  </div>
+                  <span className="text-[10px] text-slate-300">Internal tasks only · No outbound sends</span>
+                </div>
                 <div className="sw-assist-employee-choices grid shrink-0 grid-cols-1 gap-2 sm:grid-cols-2">
                   {item.steps.map((step) =>
                     <button key={step.id} type="button" onClick={() => setSelectedTaskId(step.id)} aria-pressed={chosen?.id === step.id}
@@ -336,15 +345,7 @@ export default function SyncAssistWorkdayPanel() {
                       </div>}
                   </div>
                 </div>}
-                <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-2">
-                  <div className="flex flex-wrap gap-2">
-                    <button type="button" disabled={busy || item.status === "COMPLETED"} onClick={() => runInternalStep(item.id)} className="min-h-10 rounded-lg border border-cyan-400/40 px-3 text-xs font-bold text-cyan-100 disabled:opacity-40">Run one internal step</button>
-                    <button type="button" disabled={busy || item.status === "COMPLETED"} onClick={() => queueGoal(item.id)} className="min-h-10 rounded-lg border border-amber-400/30 px-3 text-xs font-bold text-amber-200 disabled:opacity-40">Authorize internal queue</button>
-                    {jobs.some(job => String(job.goal_id) === String(item.id) && ["QUEUED","RUNNING","WAITING","RETRY"].includes(job.state)) &&
-                      <button type="button" disabled={busy} onClick={() => cancelGoal(item.id)} className="min-h-10 rounded-lg border border-rose-400/30 px-3 text-xs text-rose-200">Cancel job</button>}
-                  </div>
-                  <span className="text-[10px] text-slate-300">Internal tasks only · No outbound sends</span>
-                </div>
+
               </div>;
             })}
           </div>
