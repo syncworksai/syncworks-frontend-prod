@@ -30,7 +30,7 @@ import "./CalendarMobileWorkspace.css";
 import { getCalendarConnections } from "../api/calendarConnections";
 import { getCustomerHealthProfile, patchCustomerHealthProfile } from "../api/customerHealth";
 import CalendarConnectionsDrawer from "../components/CalendarConnectionsDrawer";
-import ModeBar from "../components/ModeBar";
+import CalendarImmersiveCockpit from "../components/calendar/CalendarImmersiveCockpit";
 import PlaceSearchField from "../components/PlaceSearchField";
 import TravelWeatherAssistCard from "../components/TravelWeatherAssistCard";
 
@@ -584,7 +584,7 @@ export default function CalendarPageV3() {
     setEditingEvent(null);
     setDraft(next);
     setShowComposer(true);
-    window.requestAnimationFrame(() => document.getElementById("calendar-event-composer")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+
   }
 
   function editEvent(event) {
@@ -877,8 +877,25 @@ export default function CalendarPageV3() {
 
   return (
     <div className="sw-calendar-page min-h-screen bg-[#020617] text-slate-100">
-      <ModeBar title="Calendar" subtitle="Your master schedule for SYNC Assist" />
+
       <main className="sw-calendar-workspace mx-auto w-full max-w-[1680px] px-3 py-3 pb-28 sm:px-4 lg:px-6 lg:pb-8">
+        <CalendarImmersiveCockpit
+          events={events}
+          loading={loading}
+          error={error}
+          notice={notice}
+          onCreate={openNew}
+          onEdit={editEvent}
+          onRoute={openRouteEditor}
+          onConnect={() => setDrawerOpen(true)}
+          onRefresh={() => { loadEvents(); loadConnections(); loadHealth(); }}
+          onCapture={prepareCapture}
+          captureText={captureText}
+          setCaptureText={setCaptureText}
+          onVoice={startVoiceCapture}
+          nextEvent={nextEvent}
+          onUpdated={() => loadEvents({ silent: true })}
+        />
         {notice ? <div className="mb-3 rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3 text-xs text-emerald-100">{notice}</div> : null}
         {error ? <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-rose-400/20 bg-rose-500/10 p-3 text-xs text-rose-100"><span>{error}</span><button type="button" onClick={() => loadEvents()} className="rounded-lg border border-rose-300/25 px-3 py-1.5 font-black">Retry</button></div> : null}
 
@@ -955,7 +972,7 @@ export default function CalendarPageV3() {
           </div>
         </section> : null}
 
-        {routingEvent ? <section className="mt-4 rounded-[1.5rem] border border-amber-400/20 bg-amber-500/[.05] p-4"><div className="flex items-start justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-amber-200">Routing address</div><h2 className="mt-1 text-lg font-black text-white">{routingEvent.title}</h2><p className="mt-1 text-xs text-slate-400">This local address override stays in SyncWorks even when Google or Outlook refreshes the event.</p></div><button type="button" onClick={() => setRoutingEvent(null)} className="rounded-xl border border-white/10 px-3 py-2 text-[10px] font-black text-slate-400">Close</button></div><div className="mt-3"><PlaceSearchField value={routeDraft.label || routeDraft.address} onChange={(value) => setRouteDraft((current) => ({ ...current, label: value, address: value }))} onSelect={(place) => setRouteDraft({ label: place.location_name || place.address_line1 || "", address: [place.address_line1, place.city, place.state, place.postal_code].filter(Boolean).join(", ") || place.location_name, latitude: place.latitude, longitude: place.longitude })} /></div><div className="mt-3 flex flex-wrap gap-2"><ActionButton onClick={saveRouteOverride} tone="amber"><MapPin className="h-3.5 w-3.5" />Save routing address</ActionButton>{eventDriveUrl({ ...routingEvent, metadata: { ...(routingEvent.metadata || {}), routing_address_override: routeDraft.address, routing_address_label: routeDraft.label, routing_latitude: routeDraft.latitude, routing_longitude: routeDraft.longitude } }) ? <a href={eventDriveUrl({ ...routingEvent, metadata: { ...(routingEvent.metadata || {}), routing_address_override: routeDraft.address, routing_address_label: routeDraft.label, routing_latitude: routeDraft.latitude, routing_longitude: routeDraft.longitude } })} target="_blank" rel="noreferrer" className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-white/10 px-3 text-[10px] font-black text-slate-200"><Navigation className="h-3.5 w-3.5" />Preview drive</a> : null}</div></section> : null}
+        {routingEvent ? <section className="sw-calendar-route-drawer mt-4 rounded-[1.5rem] border border-amber-400/20 bg-amber-500/[.05] p-4"><div className="flex items-start justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-amber-200">Routing address</div><h2 className="mt-1 text-lg font-black text-white">{routingEvent.title}</h2><p className="mt-1 text-xs text-slate-400">This local address override stays in SyncWorks even when Google or Outlook refreshes the event.</p></div><button type="button" onClick={() => setRoutingEvent(null)} className="rounded-xl border border-white/10 px-3 py-2 text-[10px] font-black text-slate-400">Close</button></div><div className="mt-3"><PlaceSearchField value={routeDraft.label || routeDraft.address} onChange={(value) => setRouteDraft((current) => ({ ...current, label: value, address: value }))} onSelect={(place) => setRouteDraft({ label: place.location_name || place.address_line1 || "", address: [place.address_line1, place.city, place.state, place.postal_code].filter(Boolean).join(", ") || place.location_name, latitude: place.latitude, longitude: place.longitude })} /></div><div className="mt-3 flex flex-wrap gap-2"><ActionButton onClick={saveRouteOverride} tone="amber"><MapPin className="h-3.5 w-3.5" />Save routing address</ActionButton>{eventDriveUrl({ ...routingEvent, metadata: { ...(routingEvent.metadata || {}), routing_address_override: routeDraft.address, routing_address_label: routeDraft.label, routing_latitude: routeDraft.latitude, routing_longitude: routeDraft.longitude } }) ? <a href={eventDriveUrl({ ...routingEvent, metadata: { ...(routingEvent.metadata || {}), routing_address_override: routeDraft.address, routing_address_label: routeDraft.label, routing_latitude: routeDraft.latitude, routing_longitude: routeDraft.longitude } })} target="_blank" rel="noreferrer" className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-white/10 px-3 text-[10px] font-black text-slate-200"><Navigation className="h-3.5 w-3.5" />Preview drive</a> : null}</div></section> : null}
 
         {pendingServices.length ? <section className="mt-4 rounded-[1.5rem] border border-amber-400/25 bg-amber-500/[.06] p-4"><div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em] text-amber-200"><AlertTriangle className="h-4 w-4" />Service schedule changes</div><div className="mt-3 grid gap-2 md:grid-cols-2">{pendingServices.map((event) => <EventBlock key={event.id} event={event} conflict={false} onEdit={editEvent} onRoute={openRouteEditor} onServiceResponse={respondToService} onMoveFlexible={moveFlexible} onToggleTask={toggleTask} />)}</div></section> : null}
 
