@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { validateJournal, unrealizedPracticePnl, equitySeries, reviewPracticeTrade } from "../src/utils/tradingPracticeJournal.mjs";
-import { TRAINING_CANDLES, buildTrainingRows, resolvePracticeTrade, explainTrainingSignal, closePracticeTrade, practiceStats } from "../src/utils/tradingTutorial.mjs";
+import { TRAINING_CANDLES, buildTrainingRows, resolvePracticeTrade, explainTrainingSignal, closePracticeTrade, practiceStats, paperOrderEstimate } from "../src/utils/tradingTutorial.mjs";
 
 test("tutorial prices and OHLC structure are valid and deterministic",()=>{
   const rows = buildTrainingRows();
@@ -74,4 +74,17 @@ test("validated journal produces consistent equity, performance and reviews",()=
   assert.equal(reviewPracticeTrade(first).aligned,false);
   assert.match(reviewPracticeTrade(first).summary,/did not match/);
   assert.match(reviewPracticeTrade(second).details.at(-1),/did not make simulated profit/);
+});
+
+test("MNQ order estimate expresses ticks, points and per-contract risk",()=>{
+  const plan=paperOrderEstimate({quantity:2,stopPoints:5,rewardRatio:2});
+  assert.equal(plan.stopTicks,20);
+  assert.equal(plan.riskDollars,25);
+  assert.equal(plan.estimatedNetTarget,35);
+  assert.equal(paperOrderEstimate({quantity:1,stopPoints:0.3,rewardRatio:2}),null);
+});
+test("multiple contracts scale simulated realized and unrealized P&L",()=>{
+  const trade={side:"LONG",entry:21000,stop:20995,target:21010,risk:5,quantity:3};
+  const result=closePracticeTrade(trade,21010);
+  assert.equal(result.netPnl,52.5);
 });
