@@ -42,6 +42,8 @@ export function JarvisAvatar({id="executive-female",state="idle",size="hero",lab
   const config=AVATARS.find(v=>v.id===id)||AVATARS[0];
   const { user } = useAuth();
   const photo = getAvatarPhotoForUser(config, user);
+  // A static headshot has no tracked lip landmarks: keep the photo intact and use the speaking waveform.
+  const usePhotoMouthOverlay = !photo.startsWith("/lady10.png");
   const assistantName=displayName||config.name;
   const assistantRole=displayRole||config.role;
   const [photoReady,setPhotoReady]=useState(false);
@@ -52,7 +54,7 @@ export function JarvisAvatar({id="executive-female",state="idle",size="hero",lab
   return <div className={`jarvis-avatar jarvis-avatar--${stage} jarvis-avatar--${size} ${photoReady?"jarvis-avatar--photographic":""}`} style={{"--avatar-accent":config.accent,"--mouth-x":config.mouthX,"--mouth-y":config.mouthY}}>
     <div className="jarvis-avatar__halo" aria-hidden="true"/>
     <img key={photo} className="jarvis-avatar__photo" src={photo} alt={`${assistantName} - ${assistantRole}, virtual assistant`} loading="eager" decoding="async" onLoad={()=>setPhotoReady(true)} onError={()=>setPhotoReady(false)} />
-    {photoReady&&<img key={photo+"-mouth"} className="jarvis-avatar__photo-mouth" src={photo} alt="" aria-hidden="true" draggable="false" />}
+    {photoReady&&usePhotoMouthOverlay&&<img key={photo+"-mouth"} className="jarvis-avatar__photo-mouth" src={photo} alt="" aria-hidden="true" draggable="false" />}
     {!photoReady&&<svg className="jarvis-avatar__portrait" viewBox="0 0 260 300" role="img" aria-label={`${assistantName} - ${assistantRole}, virtual assistant, ${stage}`}>
       <defs>
         <linearGradient id={gradId} x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor={config.outfit}/><stop offset="1" stopColor="#070d1e"/></linearGradient>
