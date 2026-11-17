@@ -86,6 +86,7 @@ export default function CustomerForge(){
   const [audioState,setAudioState]=useState("idle");
   const [audioStatus,setAudioStatus]=useState("");
   const [voiceType,setVoiceType]=useState("natural");
+  const [audioError,setAudioError]=useState("");
   const [breathing,setBreathing]=useState(false);
   const [breathSeconds,setBreathSeconds]=useState(0);
   const [video,setVideo]=useState("");
@@ -137,10 +138,12 @@ export default function CustomerForge(){
   },[breathing]);
   function stopAudio(){
     playId.current+=1;
+    setAudioError("");
     if(abortRef.current){abortRef.current.abort();abortRef.current=null;}
-    if(audioEl.current){audioEl.current.pause();audioEl.current.onended?.();audioEl.current.removeAttribute("src");audioEl.current=null;}
+    if(audioEl.current){audioEl.current.pause();audioEl.current.onended=null;audioEl.current.onerror=null;audioEl.current.removeAttribute("src");audioEl.current=null;}
     if(audioUrl.current){URL.revokeObjectURL(audioUrl.current);audioUrl.current="";}
     if("speechSynthesis" in window)window.speechSynthesis.cancel();
+    if("mediaSession" in navigator){navigator.mediaSession.playbackState="none";}
     setAudioState("idle");setAudioStatus("");
   }
   useEffect(()=>()=>{playId.current+=1;if(abortRef.current)abortRef.current.abort();if(audioEl.current)audioEl.current.pause();if(audioUrl.current)URL.revokeObjectURL(audioUrl.current);window.speechSynthesis?.cancel();},[]);
@@ -157,6 +160,16 @@ export default function CustomerForge(){
     }
     setAudioState("playing");next();
   }
+  function setupCarMediaSession(){
+    if(!("mediaSession" in navigator))return;
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({title:chapter.title, artist:"The Forge · SyncWorks", album:"Personal Performance Library"});
+      navigator.mediaSession.setActionHandler("play",()=>{if(audioEl.current){audioEl.current.play().then(()=>setAudioState("playing")).catch(()=>setAudioStatus("Tap Play to resume"));}});
+      navigator.mediaSession.setActionHandler("pause",()=>{audioEl.current?.pause();setAudioState("paused");});
+      navigator.mediaSession.setActionHandler("stop",()=>stopAudio());
+      navigator.mediaSession.playbackState="playing";
+    } catch { /* unsupported headset, OS, or media session action */ }
+  }
   async function naturalNarrate(text,token){
     const parts=splitAudio(text,840);
     setAudioStatus("Preparing natural narration...");
@@ -167,9 +180,10 @@ export default function CustomerForge(){
       if(token!==playId.current)return;
       const url=URL.createObjectURL(response.data);audioUrl.current=url;
       const player=new Audio(url);audioEl.current=player;
+      player.preload="auto";
       await new Promise((resolve,reject)=>{
         player.onended=resolve;player.onerror=()=>reject(new Error("Audio playback failed"));
-        player.play().then(()=>{if(token===playId.current){setAudioState("playing");setAudioStatus(`Natural voice · part ${i+1} of ${parts.length}`);}}).catch(reject);
+        player.play().then(()=>{if(token===playId.current){setupCarMediaSession();setAudioState("playing");setAudioStatus(`Natural voice · part ${i+1} of ${parts.length}`);}}).catch(reject);
       });
       if(audioUrl.current){URL.revokeObjectURL(audioUrl.current);audioUrl.current="";}
     }
@@ -182,8 +196,9 @@ export default function CustomerForge(){
     try {await naturalNarrate(text,token);}
     catch(e){
       if(token!==playId.current)return;
-      setAudioStatus("Natural voice unavailable; using device narration.");
-      browserNarrate(text,token);
+      setAudioState("idle");
+      setAudioError("Natural narration was unavailable. Device speech may not connect reliably to Bluetooth or vehicle audio.");
+      setAudioStatus("Choose Device voice to listen through this browser.");
     }
   }
   function toggleAudio(){
@@ -232,7 +247,7 @@ export default function CustomerForge(){
               </div>
               <div className="forge3-reading-takeaway"><strong>YOUR CHALLENGE</strong><p>{chapter.challenge}</p></div>
             </div>:<div className="forge3-listen-room"><div className={audioState==="playing"?"forge3-orb speaking":"forge3-orb"}><Headphones size={52}/></div><p>{chapter.description}</p><blockquote>{chapter.paragraphs[0]}</blockquote><div className="forge3-listen-note">The full chapter is narrated, not just this excerpt.</div></div>}
-            <div className="forge3-player"><div className="forge3-play-buttons"><button className="forge3-mainbtn" type="button" onClick={toggleAudio} disabled={audioState==="loading"}>{audioState==="playing"?<Pause size={18}/>:<Play size={18}/>} {audioState==="loading"?"Preparing...":audioState==="paused"?"Resume":audioState==="playing"?"Pause":"Listen to chapter"}</button><button className="forge3-iconbtn" type="button" onClick={stopAudio} title="Stop narration" aria-label="Stop narration"><Square size={17}/></button></div><label>Voice <select value={voiceType} onChange={e=>{stopAudio();setVoiceType(e.target.value);}}><option value="natural">Natural AI voice</option><option value="device">Device voice</option></select></label><span className="forge3-audio-status" role="status">{audioStatus||"Headphone-ready listening"}</span></div>
+            <div className="forge3-player"><div className="forge3-play-buttons"><button className="forge3-mainbtn" type="button" onClick={toggleAudio} disabled={audioState==="loading"}>{audioState==="playing"?<Pause size={18}/>:<Play size={18}/>} {audioState==="loading"?"Preparing...":audioState==="paused"?"Resume":audioState==="playing"?"Pause":"Listen to chapter"}</button><button className="forge3-iconbtn" type="button" onClick={stopAudio} title="Stop narration" aria-label="Stop narration"><Square size={17}/></button></div><label>Voice <select value={voiceType} onChange={e=>{stopAudio();setVoiceType(e.target.value);}}><option value="natural">Natural AI voice</option><option value="device">Device voice</option></select></label><span className="forge3-audio-status" role="status">{audioError||audioStatus||"Headphone-ready listening"}</span></div>
           </>}
           {mode==="breathe"&&<><div className="forge3-stage-intro"><div><span className="forge3-overline">GUIDED MEDITATION</span><h2>Return to the present</h2><p>Five minutes · Gentle 4-in / 6-out rhythm</p></div><Wind size={35}/></div><div className="forge3-breathe-center"><div className={breathing?"forge3-breathe-orb running":"forge3-breathe-orb"} data-inhale={inhale}><span>{inhale?"BREATHE IN":"BREATHE OUT"}</span><strong>{inhale?4-breathSeconds%10:10-breathSeconds%10}</strong><small>{formatTime(remaining)} remaining</small></div><p>Relax your shoulders. Breathe comfortably. No breath holding is required.</p></div><div className="forge3-player"><button className="forge3-mainbtn" type="button" onClick={()=>setBreathing(v=>!v)} disabled={breathSeconds>=300}>{breathing?<Pause size={18}/>:<Play size={18}/>} {breathing?"Pause":"Start breathing"}</button><button className="forge3-iconbtn" type="button" onClick={()=>{setBreathing(false);setBreathSeconds(0);}}><RotateCcw size={17}/></button><button className="forge3-softbtn" onClick={()=>startAudio("Settle into a comfortable posture. Relax your face and shoulders. Breathe gently in through the nose for four counts, and breathe out slowly for six counts. Follow the moving circle. If you feel lightheaded, return to your natural breath. You do not need to force anything.")} type="button"><Volume2 size={16}/> Guided introduction</button><button className="forge3-iconbtn" onClick={stopAudio} type="button" title="Stop voice"><Square size={16}/></button></div></>}
           {mode==="watch"&&<><div className="forge3-stage-intro"><div><span className="forge3-overline">GUIDED VIDEO LIBRARY</span><h2>Learn by watching</h2><p>Yoga and movement without leaving The Forge.</p></div><Play size={35}/></div><div className="forge3-video-options">{videos.map(v=><button key={v.id} className={video===v.id?"selected":""} type="button" onClick={()=>{stopAudio();setVideo(v.id);}}><strong>{v.title}</strong><small>{v.by} · {v.note}</small></button>)}</div><div className="forge3-video-stage">{video?<iframe key={video} src={`https://www.youtube-nocookie.com/embed/${video}?rel=0`} title={videos.find(x=>x.id===video)?.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen loading="lazy" referrerPolicy="strict-origin-when-cross-origin"/>:<div className="forge3-video-empty"><Play size={38}/><span>Choose a practice above to open the player.</span></div>}</div>{video&&<a href={`https://www.youtube.com/watch?v=${video}`} target="_blank" rel="noopener noreferrer" className="forge3-youtube-link">If the video cannot be embedded, open on YouTube <ExternalLink size={15}/></a>}</>}
