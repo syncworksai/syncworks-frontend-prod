@@ -180,6 +180,25 @@ export default function RoleAwareMobileNav() {
   const [items, setItems] = useState(() => navMode ? readPreference(navMode, user) : []);
   const [unread, setUnread] = useState(0);
   const [aiTeamOpen, setAiTeamOpen] = useState(false);
+  // The global dock is rendered outside the themed CustomerWorkspace root.
+  // Keep its theme in sync with the user's saved appearance without changing
+  // the appearance of non-Customer dashboards.
+  const [customerTheme, setCustomerTheme] = useState(() => {
+    try { return JSON.parse(window.localStorage.getItem("sw_workspace_appearance_v1") || "{}")?.theme || "legacy"; }
+    catch { return "legacy"; }
+  });
+  useEffect(() => {
+    const syncTheme = () => {
+      try { setCustomerTheme(JSON.parse(window.localStorage.getItem("sw_workspace_appearance_v1") || "{}")?.theme || "legacy"); }
+      catch { setCustomerTheme("legacy"); }
+    };
+    window.addEventListener("sw:workspace-appearance", syncTheme);
+    window.addEventListener("storage", syncTheme);
+    return () => {
+      window.removeEventListener("sw:workspace-appearance", syncTheme);
+      window.removeEventListener("storage", syncTheme);
+    };
+  }, []);
   useEffect(() => setAiTeamOpen(false), [location.pathname, location.search]);
 
   const hidden = useMemo(() => {
@@ -241,11 +260,10 @@ export default function RoleAwareMobileNav() {
   };
 
   function openCenter() {
-    if (center.sync && navMode === "CUSTOMER" && pathname === "/customer") {
-      setAiTeamOpen((value) => !value);
-      return;
-    }
+    // The separate employee dock already opens individual bots and the team tray.
+    // The center SYNC button is the direct launch point for the main assistant.
     if (center.sync) {
+      setAiTeamOpen(false);
       navigate(`/sync?return=${encodeURIComponent(location.pathname + location.search)}`);
       return;
     }
@@ -294,10 +312,10 @@ export default function RoleAwareMobileNav() {
           <button type="button" className="sw-mobile-bots-expand" onClick={() => setAiTeamOpen(true)} aria-label="Expand AI team">View all</button>
         </div>
       )}
-      <nav className="sw-role-mobile-nav lg:hidden" aria-label="Mobile quick navigation">
+      <nav className="sw-role-mobile-nav lg:hidden" aria-label="Mobile quick navigation" data-sync-theme={navMode === "CUSTOMER" ? customerTheme : undefined}>
         <div className="sw-role-mobile-nav-grid">
           {renderedItems.slice(0, 2).map((item) => <NavButton key={item.id} item={item} onClick={() => openItem(item)} />)}
-          <button type="button" className={`sw-role-mobile-nav-center ${center.sync ? "is-sync" : ""}`} onClick={openCenter} aria-label={center.sync ? "Open your SYNC AI employee team" : `New ${center.label}`} aria-expanded={center.sync && navMode === "CUSTOMER" && pathname === "/customer" ? aiTeamOpen : undefined}>
+          <button type="button" className={`sw-role-mobile-nav-center ${center.sync ? "is-sync" : ""}`} onClick={openCenter} aria-label={center.sync ? "Open SYNC Assistant" : `New ${center.label}`}>
             <span className="sw-role-mobile-nav-center-orb">{center.sync ? <Sparkles aria-hidden="true" size={27} strokeWidth={2.3} /> : <img src="/brands/syncworks-icon-192.png" alt="" />}</span>
             <span>{center.label}</span>
           </button>
