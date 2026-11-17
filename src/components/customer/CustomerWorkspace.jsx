@@ -7,6 +7,7 @@ import { MobileNavSettings } from "../navigation/RoleAwareMobileNav";
 import "./CustomerWorkspace.css";
 import "./OfficeThemeIntegrationV16.css";
 import "./OfficeDrawersV21.css";
+import "./MobileWorkspaceMotion.css";
 
 export const WORKSPACE_THEMES = ["legacy", "classic", "future", "modern", "light"];
 const SETTINGS_KEY = "sw_workspace_appearance_v1";
@@ -97,16 +98,16 @@ export default function CustomerWorkspace({ settings, update, phoneMode = false,
     ...(dayTradingEnabled && (panel === "business" || panel === "apps") ? [["Freelance Work", "/customer/freelance/overview", BriefcaseBusiness]] : []),
     ...(forgeEnabled && (panel === "apps" || panel === "personal") ? [["The Forge", "/customer/forge", Flame]] : []),
   ];
-  const close = () => { setClosing(true); window.setTimeout(() => { setPanel(null); setClosing(false); }, settings.motion ? 230 : 0); };
-  const go = (path) => { setClosing(true); window.setTimeout(() => { setPanel(null); nav(path); }, settings.motion ? 200 : 0); };
+  const close = () => { setClosing(true); window.setTimeout(() => { setPanel(null); setClosing(false); }, phoneMode && settings.motion ? 260 : settings.motion ? 230 : 0); };
+  const go = (path) => { setClosing(true); window.setTimeout(() => { setPanel(null); nav(path); }, phoneMode && settings.motion ? 235 : settings.motion ? 200 : 0); };
   return <>
     {!phoneMode && <div className="sw-workspace-switcher" role="group" aria-label="Workspace controls">
       <button type="button" onClick={() => {setClosing(false);setPanel("apps");}}><LayoutGrid size={16}/> <span>Workspaces</span></button>
       <button type="button" onClick={() => {setClosing(false);setPanel("appearance");}}><Palette size={16}/> <span>Appearance</span></button>
       <span className="sw-workspace-current">{settings.theme === "legacy" ? "Original" : settings.theme === "classic" ? "Classic Office" : settings.theme === "future" ? "SyncWorks Future" : settings.theme === "modern" ? "Modern Dark" : "Clean Light"}</span>
     </div>}
-    {panel && createPortal(<div className={`sw-workspace-overlay sw-workspace-overlay-themed ${closing ? "sw-workspace-overlay-closing" : ""}`} data-office-drawer-theme={settings.theme} data-office-drawer-motion={settings.motion} onMouseDown={close}>
-      <aside className="sw-workspace-drawer sw-office-theme-drawer" role="dialog" aria-modal="true" aria-label={panel === "appearance" ? "Appearance settings" : "Workspace launcher"} onMouseDown={e => e.stopPropagation()}>
+    {panel && createPortal(<div className={`sw-workspace-overlay sw-workspace-overlay-themed ${closing ? "sw-workspace-overlay-closing" : ""}`} data-office-drawer-theme={settings.theme} data-office-drawer-motion={settings.motion} data-mobile-transition={phoneMode ? (panel === "office" || ["daily","personal","business"].includes(panel) ? "hologram" : panel === "appearance" ? "side" : "bottom") : undefined} onMouseDown={close}>
+      <aside className="sw-workspace-drawer sw-office-theme-drawer" role="dialog" aria-modal="true" aria-label={panel === "appearance" ? "Appearance settings" : "Workspace launcher"} onMouseDown={e => e.stopPropagation()}>{phoneMode && panel === "apps" && <span className="sw-mobile-drawer-grip" aria-hidden="true" />}
         <header><div><span className="sw-workspace-eyebrow">SYNCWORKS / PERSONAL</span><h2>{panel === "appearance" ? "Appearance settings" : (activeCategory?.name || (panel === "office" ? "Your office" : "Your apps"))}</h2></div><button type="button" className="sw-workspace-close" onClick={close} aria-label="Close"><X size={20}/></button></header>
         {panel !== "appearance" ? <><p className="sw-workspace-description">{activeCategory?.description || "Choose a category, then open the tool you need. Games keep their dedicated interface."}</p>{panel === "office" && <div className="sw-office-drawer-categories">{OFFICE_CATEGORIES.map(({id,name}) => <button type="button" key={id} onClick={() => setPanel(id)}>{name}</button>)}</div>}{panel !== "office" && <div className="sw-workspace-app-grid">{apps.map(([name, path, Icon]) => <button type="button" key={name} onClick={() => go(path)}><Icon size={22}/><span>{name}</span></button>)}</div>}{activeCategory && <button type="button" className="sw-workspace-reset" onClick={() => setPanel("office")}>← All categories</button>}</> : <><WorkspaceAppearancePanel settings={settings} update={update}/>{phoneMode && <MobileNavSettings />}</>}
       </aside>

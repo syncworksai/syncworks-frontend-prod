@@ -1,0 +1,127 @@
+/* Mobile navigation motion V1. Portal transition type is supplied by
+   CustomerWorkspace; desktop drawer geometry and animation are unchanged. */
+@media (max-width:767px) {
+  .sw-workspace-overlay-themed[data-mobile-transition] {
+    top:115px;
+    bottom:calc(10.25rem + env(safe-area-inset-bottom));
+    z-index:65;
+    align-items:stretch;
+    overflow:hidden;
+    background:rgba(1,6,18,.36);
+    -webkit-backdrop-filter:blur(3px);
+    backdrop-filter:blur(3px);
+    animation:sw-mobile-backdrop-in .22s ease-out both;
+  }
+  .sw-workspace-overlay-themed[data-mobile-transition] .sw-office-theme-drawer {
+    min-height:0;
+    max-height:100%;
+    box-sizing:border-box;
+    overscroll-behavior:contain;
+    scrollbar-width:thin;
+    border:1px solid var(--office-drawer-border);
+    border-radius:20px;
+    padding:clamp(14px,2vh,22px);
+    padding-bottom:20px;
+    box-shadow:0 15px 50px rgba(0,0,0,.42);
+    animation-duration:.28s;
+    animation-timing-function:cubic-bezier(.2,.8,.2,1);
+  }
+  /* Office feels like an illuminated glass panel materializing in the room. */
+  .sw-workspace-overlay-themed[data-mobile-transition="hologram"] {
+    align-items:center;
+    justify-content:center;
+    padding:8px 12px;
+  }
+  .sw-workspace-overlay-themed[data-mobile-transition="hologram"] .sw-office-theme-drawer {
+    width:100%;
+    height:auto;
+    max-height:100%;
+    border-radius:19px;
+    background-image:linear-gradient(120deg,color-mix(in srgb,var(--office-drawer-bg) 86%,transparent),color-mix(in srgb,var(--office-drawer-bg) 67%,transparent)),var(--office-drawer-photo)!important;
+    -webkit-backdrop-filter:blur(16px);
+    backdrop-filter:blur(16px);
+    transform-origin:center;
+    animation-name:sw-mobile-hologram-in;
+  }
+  .sw-workspace-overlay-themed[data-mobile-transition="hologram"]:not(.sw-workspace-overlay-closing) .sw-office-theme-drawer::before {
+    content:"";
+    position:sticky;
+    z-index:1;
+    display:block;
+    top:0;
+    width:100%;
+    height:2px;
+    pointer-events:none;
+    background:linear-gradient(90deg,transparent,var(--office-drawer-accent),transparent);
+    opacity:.65;
+  }
+  .sw-workspace-overlay-themed[data-mobile-transition="hologram"].sw-workspace-overlay-closing .sw-office-theme-drawer {
+    animation-name:sw-mobile-hologram-out;
+  }
+  /* Apps use a conventional accessible bottom sheet above persistent dock. */
+  .sw-workspace-overlay-themed[data-mobile-transition="bottom"] {
+    align-items:flex-end;
+    justify-content:stretch;
+  }
+  .sw-workspace-overlay-themed[data-mobile-transition="bottom"] .sw-office-theme-drawer {
+    width:100%;
+    height:auto;
+    max-height:100%;
+    border-radius:23px 23px 0 0;
+    animation-name:sw-mobile-bottom-in;
+  }
+  .sw-workspace-overlay-themed[data-mobile-transition="bottom"].sw-workspace-overlay-closing .sw-office-theme-drawer {
+    animation-name:sw-mobile-bottom-out;
+  }
+  .sw-mobile-drawer-grip {
+    display:block;
+    width:42px;
+    height:4px;
+    border-radius:6px;
+    margin:-3px auto 12px;
+    background:var(--office-drawer-muted);
+    opacity:.75;
+  }
+  /* Settings preserves the classic right-side drawer affordance. */
+  .sw-workspace-overlay-themed[data-mobile-transition="side"] {
+    align-items:stretch;
+    justify-content:flex-end;
+  }
+  .sw-workspace-overlay-themed[data-mobile-transition="side"] .sw-office-theme-drawer {
+    width:min(92vw,420px);
+    height:100%;
+    border-radius:20px 0 0 20px;
+    animation-name:sw-mobile-side-in;
+  }
+  .sw-workspace-overlay-themed[data-mobile-transition="side"].sw-workspace-overlay-closing .sw-office-theme-drawer {
+    animation-name:sw-mobile-side-out;
+  }
+  .sw-workspace-overlay-themed[data-mobile-transition].sw-workspace-overlay-closing {
+    animation:sw-mobile-backdrop-out .24s ease-in both;
+  }
+}
+@keyframes sw-mobile-backdrop-in {from{opacity:0}to{opacity:1}}
+@keyframes sw-mobile-backdrop-out {from{opacity:1}to{opacity:0}}
+@keyframes sw-mobile-hologram-in {from{opacity:0;transform:perspective(750px) translateY(14px) rotateX(9deg) scale(.90);filter:brightness(1.55)}to{opacity:1;transform:perspective(750px) translateY(0) rotateX(0) scale(1);filter:brightness(1)}}
+@keyframes sw-mobile-hologram-out {from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(.94)}}
+@keyframes sw-mobile-bottom-in {from{opacity:.9;transform:translateY(100%)}to{opacity:1;transform:translateY(0)}}
+@keyframes sw-mobile-bottom-out {from{opacity:1;transform:translateY(0)}to{opacity:.9;transform:translateY(100%)}}
+@keyframes sw-mobile-side-in {from{transform:translateX(105%)}to{transform:translateX(0)}}
+@keyframes sw-mobile-side-out {from{transform:translateX(0)}to{transform:translateX(105%)}}
+@media(max-width:767px) and (max-height:700px) {
+  .sw-workspace-overlay-themed[data-mobile-transition] {top:80px;bottom:calc(9rem + env(safe-area-inset-bottom));}
+}
+@media(prefers-reduced-motion:reduce) {
+  .sw-workspace-overlay-themed[data-mobile-transition],
+  .sw-workspace-overlay-themed[data-mobile-transition] .sw-office-theme-drawer {
+    animation:none!important;
+    transform:none!important;
+    filter:none!important;
+  }
+}
+.sw-workspace-overlay-themed[data-mobile-transition][data-office-drawer-motion="false"],
+.sw-workspace-overlay-themed[data-mobile-transition][data-office-drawer-motion="false"] .sw-office-theme-drawer {
+  animation:none!important;
+  transform:none!important;
+  filter:none!important;
+}

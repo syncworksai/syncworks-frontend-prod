@@ -1,0 +1,26 @@
+/* In-app mobile page entries: preserve normal router/history, no simulated pages.
+   The CSS is scoped to phones and honors both user preference and OS reduced motion. */
+@media(max-width:767px) {
+  .sw-mobile-route-stage { min-width:0; }
+  .sw-mobile-route-stage[data-mobile-route-motion="fade-zoom"] > *:first-child {
+    transform-origin:50% 34%;
+    animation:sw-mobile-route-fade-zoom .23s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .sw-mobile-route-stage[data-mobile-route-motion="hologram"] > *:first-child {
+    transform-origin:50% 45%;
+    animation:sw-mobile-route-hologram .28s cubic-bezier(.16,.8,.22,1) both;
+  }
+}
+@keyframes sw-mobile-route-fade-zoom {
+  from {opacity:.45;transform:scale(.985) translateY(6px);}
+  to {opacity:1;transform:scale(1) translateY(0);}
+}
+@keyframes sw-mobile-route-hologram {
+  from {opacity:.12;transform:perspective(900px) translateY(12px) rotateX(3deg) scale(.96);filter:brightness(1.35);}
+  to {opacity:1;transform:perspective(900px) translateY(0) rotateX(0) scale(1);filter:brightness(1);}
+}
+@media(prefers-reduced-motion:reduce) {
+  .sw-mobile-route-stage[data-mobile-route-motion] > *:first-child {
+    animation:none!important;transform:none!important;filter:none!important;opacity:1!important;
+  }
+}
