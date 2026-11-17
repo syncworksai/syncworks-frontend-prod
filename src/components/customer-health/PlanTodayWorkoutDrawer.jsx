@@ -1,5 +1,6 @@
 // src/components/customer-health/PlanTodayWorkoutDrawer.jsx
 import React, { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { buildAdaptiveWorkout } from "./healthAdaptiveWorkoutGenerator";
 import { HEALTH_EXERCISE_CATALOG } from "./healthExerciseCatalog";
@@ -584,7 +585,7 @@ function trimForDuration(exercises, duration) {
   return exercises.slice(0, limits[duration] || 6);
 }
 
-export default function PlanTodayWorkoutDrawer({
+function PlanTodayWorkoutContent({
   open,
   onClose,
   profile,
@@ -707,8 +708,8 @@ export default function PlanTodayWorkoutDrawer({
 
   const soreAreas = plan?.avoided_sore_areas || [];
 
-  return (
-    <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/80 p-3 backdrop-blur-md sm:items-center">
+  return createPortal(
+    <div className="fixed inset-0 z-[2147483000] flex items-end justify-center bg-black/75 p-3 backdrop-blur-md sm:items-center" role="presentation">
       <button
         type="button"
         aria-label="Close plan today"
@@ -991,6 +992,59 @@ export default function PlanTodayWorkoutDrawer({
           </div>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body
+  );
+}
+
+/**
+ * Keep this failure local to the workout builder. A bad exercise payload should
+ * never blank the entire Health page or trap the user behind an empty backdrop.
+ */
+class PlanTodayErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { failed: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error) {
+    console.error("SyncWorks Health workout builder failed to render:", error);
+  }
+
+  render() {
+    if (this.state.failed && this.props.open && typeof document !== "undefined") {
+      return createPortal(
+        <div className="fixed inset-0 z-[2147483000] flex items-center justify-center bg-[#020817]/95 p-4">
+          <section role="alertdialog" aria-modal="true" aria-label="Workout builder unavailable"
+            className="w-full max-w-lg rounded-3xl border border-cyan-300/40 bg-[#071629] p-6 text-white shadow-2xl">
+            <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">SyncWorks Health</p>
+            <h2 className="mt-3 text-xl font-black">Workout builder couldn't open</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              Your saved workouts haven't been changed. Close this panel to return
+              to Health and try again.
+            </p>
+            <button type="button" onClick={this.props.onClose}
+              className="mt-5 min-h-11 rounded-xl border border-cyan-300/50 bg-cyan-300/15 px-5 text-sm font-bold text-cyan-100">
+              Back to Health
+            </button>
+          </section>
+        </div>,
+        document.body
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function PlanTodayWorkoutDrawer(props) {
+  return (
+    <PlanTodayErrorBoundary key={props.open ? "open" : "closed"}
+      open={props.open} onClose={props.onClose}>
+      <PlanTodayWorkoutContent {...props} />
+    </PlanTodayErrorBoundary>
   );
 }
