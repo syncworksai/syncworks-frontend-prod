@@ -7,6 +7,7 @@ import { MobileNavSettings } from "../navigation/RoleAwareMobileNav";
 import "./CustomerWorkspace.css";
 import "./OfficeThemeIntegrationV16.css";
 import "./OfficeDrawersV21.css";
+import "./MobileWorkspaceMotion.css";
 
 export const WORKSPACE_THEMES = ["legacy", "classic", "future", "modern", "light"];
 const SETTINGS_KEY = "sw_workspace_appearance_v1";
