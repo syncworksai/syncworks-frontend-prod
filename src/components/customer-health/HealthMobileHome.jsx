@@ -433,6 +433,9 @@ export default function HealthMobileHome({
               aria-haspopup="dialog" aria-expanded={recoveryOpen}>
               <HeartPulse size={15} /> Recovery {readiness}%
             </button>
+            <button type="button" className="sw-health-strength-quick-link" onClick={() => setProgressionOpen(true)}>
+              My Strength <ChevronRight size={13} />
+            </button>
             <button type="button" onClick={onEditDailyGoals}>Log progress <ChevronRight size={13} /></button>
           </div>
         </div>
