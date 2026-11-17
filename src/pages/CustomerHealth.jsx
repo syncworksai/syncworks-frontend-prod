@@ -3420,16 +3420,16 @@ export default function CustomerHealth() {
     <div className="health-ui-polish health-obsidian-electric min-h-dvh overflow-x-hidden bg-[#020617] pb-24 text-slate-100 lg:pb-0">
       <div className="pointer-events-none fixed inset-0" aria-hidden="true">
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 sw-health-environment-image"
           style={{
             backgroundImage: 'url("/health/health%20background.png")',
-            backgroundPosition: "center center",
+            backgroundPosition: "center 60%",
             backgroundRepeat: "no-repeat",
             backgroundSize: "cover",
           }}
         />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(1,5,16,0.42),rgba(1,7,20,0.36)_45%,rgba(1,5,16,0.70))]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,0.06),transparent_30%),radial-gradient(circle_at_top_right,rgba(34,211,238,0.06),transparent_32%)]" />
+        <div className="absolute inset-0 sw-health-environment-tint" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,0.035),transparent_30%),radial-gradient(circle_at_top_right,rgba(34,211,238,0.04),transparent_32%)]" />
       </div>
 
       <HealthAppHeader
