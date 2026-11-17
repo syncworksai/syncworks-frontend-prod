@@ -1,3 +1,4 @@
+import FreelanceExecutionMonitor from "./FreelanceExecutionMonitor";
 import React, { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { FileSpreadsheet, ShieldCheck, Download, AlertTriangle, RotateCcw, ClipboardCheck, Bot, FileCheck2 } from "lucide-react";
@@ -84,6 +85,7 @@ export default function FreelanceAutomationStudio({items,updateJob}){
   <div className="mb-5"><p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-cyan-200"><FileSpreadsheet size={15}/> Local automation pilot</p><h2 className="mt-1 text-2xl font-bold text-white">AI Automation Studio</h2><p className="mt-2 max-w-3xl text-sm text-slate-400">Start with a working, deterministic CSV cleanup tool. Parsing and downloads happen in this browser. AI-assisted transformations, remote jobs, cloud storage, Excel and PDF processing are not yet connected.</p></div>
   <div className="mb-5 flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-500/5 p-4 text-xs leading-5 text-amber-100"><AlertTriangle className="mt-0.5 shrink-0" size={18}/><span>Use synthetic or non-confidential test CSV files only. The pilot has no server-enforced account entitlement or approved client-data storage. Files remain in browser memory and are not intentionally persisted, but this is not yet a production privacy guarantee.</span></div>
   
+  <div className="mb-5"><FreelanceExecutionMonitor/></div>
   <div className="grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
    <div className="space-y-4">
     <div className={card}>
