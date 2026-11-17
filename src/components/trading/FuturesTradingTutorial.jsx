@@ -37,6 +37,7 @@ export default function FuturesTradingTutorial() {
   const [chartView,setChartView]=useState("candles");
   const [detailPanel,setDetailPanel]=useState(null);
   const [journalNote,setJournalNote]=useState("");
+  const [coachQuestion,setCoachQuestion]=useState("why");
   const [feedback,setFeedback]=useState("Advance candles to find an aligned setup, or select a lesson.");
   const stats=useMemo(()=>practiceStats(journal),[journal]);
   const equity=useMemo(()=>equitySeries(journal),[journal]);
@@ -153,6 +154,10 @@ export default function FuturesTradingTutorial() {
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-white/10 bg-black/20 p-3">
           <div className="flex items-center gap-2 text-xs font-black"><Volume2 size={15}/> What Jarvis is reading</div>
+          <div className="mt-2 flex flex-wrap gap-1">
+            {[["why","Why WAIT?"],["setup","What confirms?"],["risk","What is my risk?"]].map(([id,label])=><button key={id} type="button" aria-pressed={coachQuestion===id} onClick={()=>setCoachQuestion(id)} className={coachQuestion===id?"rounded-md border border-cyan-400/40 bg-cyan-500/15 px-2 py-1 text-[10px] text-cyan-100":"rounded-md border border-white/10 px-2 py-1 text-[10px] text-slate-400"}>{label}</button>)}
+          </div>
+          <p role="status" className="mt-2 rounded-lg border border-white/10 bg-slate-950 p-2 text-xs leading-5 text-cyan-100">{coachQuestion==="why"?explanation.summary:coachQuestion==="setup"?"Long setup: "+explanation.longChecks.map(x=>(x.passed?"✓ ":"○ ")+x.label).join(" · ")+"; short setup: "+explanation.shortChecks.map(x=>(x.passed?"✓ ":"○ ")+x.label).join(" · "):trade?"Current simulated stop: "+money(trade.risk)+" points per contract; "+(trade.quantity||1)+" contract(s). Estimated net stop loss uses the simulated fee assumptions.":"Choose contracts and a stop in the paper order ticket; dollar risk is estimated there before entering. A missing setup is a reason to wait."}</p>
           <div className="mt-3 space-y-3 text-xs text-slate-300">
             <p><strong>Pressure:</strong> EMA 7 is {current.ema7>current.ema9?"above":"at or below"} EMA 9.</p>
             <p><strong>Location:</strong> Price is {current.close>current.vwap?"above":"at or below"} simulated VWAP.</p>
