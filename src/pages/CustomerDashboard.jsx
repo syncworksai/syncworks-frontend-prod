@@ -346,7 +346,7 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
           {workspaceTheme !== "legacy" && inOffice && <button type="button" className="sw-office-activity-toggle" aria-expanded={showActivity} onClick={()=>setShowActivity(v=>!v)}>{showActivity ? "Hide activity & quick capture" : "View activity & quick capture"} <ChevronRight size={15}/></button>}
         </aside>
       </div>
-      {workspaceTheme !== "legacy" && <div className="sw-desktop-office-team-dock" aria-label="Your AI employee dock"><OfficeAgentDock user={user} placement="home" /></div>}
+      {workspaceTheme !== "legacy" && <div className="sw-desktop-office-team-dock" aria-label="Your AI employee dock"><OfficeAgentDock user={user} placement="home" theme={workspaceTheme} /></div>}
     </DashboardShell>
   );
 }
