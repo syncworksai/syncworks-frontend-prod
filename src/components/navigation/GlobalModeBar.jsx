@@ -60,9 +60,12 @@ export default function GlobalModeBar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [menuSection, setMenuSection] = useState("dashboards");
+  const [businessExpanded, setBusinessExpanded] = useState(false);
+  const [menuTheme, setMenuTheme] = useState("legacy");
   const [menuMotion, setMenuMotion] = useState(true);
   useEffect(() => {
-    const sync = () => { try { setMenuMotion(JSON.parse(localStorage.getItem("sw_workspace_appearance_v1") || "{}")?.motion !== false); } catch { setMenuMotion(true); } };
+    const sync = () => { try { const prefs = JSON.parse(localStorage.getItem("sw_workspace_appearance_v1") || "{}"); setMenuMotion(prefs?.motion !== false); setMenuTheme(["legacy","future","classic","modern","light"].includes(prefs?.theme) ? prefs.theme : "legacy"); } catch { setMenuMotion(true); setMenuTheme("legacy"); } };
     sync();
     window.addEventListener("sw:workspace-appearance", sync);
     window.addEventListener("storage", sync);
@@ -109,6 +112,13 @@ export default function GlobalModeBar() {
   };
 
   useEffect(() => setOpen(false), [location.pathname, location.search]);
+  useEffect(() => { if (open) { setMenuSection("dashboards"); setBusinessExpanded(mode === "SBO"); } }, [open, mode]);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = event => { if (event.key === "Escape") setOpen(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
   useEffect(() => {
     function close(event) { if (!rootRef.current?.contains(event.target)) setOpen(false); }
     document.addEventListener("pointerdown", close);
@@ -129,11 +139,11 @@ export default function GlobalModeBar() {
 
   if (!isAuthed || hidden || typeof document === "undefined") return null;
   const chooseMode = (key) => { setMode(key); setOpen(false); };
-  const linkClass = (active = false) => ["flex min-h-12 items-center justify-between rounded-2xl border px-4 text-left text-sm font-bold transition", active ? "border-cyan-400/45 bg-cyan-400/12 text-cyan-100" : "border-slate-800 bg-slate-950/70 text-slate-200 hover:border-cyan-500/25 hover:bg-cyan-500/8"].join(" ");
+  const linkClass = (active = false) => `sw-global-menu-item${active ? " is-active" : ""}`;
 
   return createPortal(<>
     <style>{`[data-pm-command-shell] > header{top:${BAR_HEIGHT}px!important}[data-pm-command-shell] > aside{top:${BAR_HEIGHT}px!important}@media(max-width:639px){[data-pm-command-shell] > header{top:${MOBILE_SHELL_TOP}px!important}[data-pm-command-shell] > aside{top:${MOBILE_SHELL_TOP}px!important}}`}</style>
-    <div ref={rootRef} data-syncworks-global-header="true" data-header-motion={menuMotion ? "on" : "off"} className="fixed inset-x-0 top-[58px] sm:top-0 z-[320] h-[57px] border-b border-cyan-400/15 bg-[#020617]/98 px-3 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.38)] backdrop-blur-xl">
+    <div ref={rootRef} data-syncworks-global-header="true" data-header-motion={menuMotion ? "on" : "off"} data-menu-theme={menuTheme} className="fixed inset-x-0 top-[58px] sm:top-0 z-[320] h-[57px] border-b border-cyan-400/15 bg-[#020617]/98 px-3 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.38)] backdrop-blur-xl">
       <div className="mx-auto flex h-full max-w-[1900px] items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           {showBack ? <button type="button" onClick={goBack} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[.035] text-slate-300 transition hover:border-cyan-400/30 hover:text-cyan-100" aria-label="Back to previous SyncWorks section"><BackIcon /></button> : null}
@@ -143,19 +153,33 @@ export default function GlobalModeBar() {
       </div>
       {open ? <>
         <button type="button" className="sw-global-menu-shade fixed inset-x-0 bottom-0 top-[115px] sm:top-[57px] z-[321] bg-black/70" aria-label="Close app navigation" onClick={() => setOpen(false)} />
-        <div className="sw-global-menu-drawer fixed left-3 right-3 top-[123px] sm:top-[65px] z-[322] max-h-[calc(100dvh-8.5rem)] sm:max-h-[calc(100dvh-5rem)] overflow-y-auto rounded-[28px] border border-cyan-400/25 bg-[#050b16] p-4 shadow-[0_28px_90px_rgba(0,0,0,0.78)] sm:left-auto sm:w-[420px]">
-          <div className="mb-3 flex items-center justify-between px-1"><div><div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">SyncWorks</div><div className="mt-1 text-sm font-bold text-white">App navigation</div></div><button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300">Close</button></div>
-          <div className="grid gap-2">
-            <Link to="/customer" onClick={() => chooseMode("CUSTOMER")} className={linkClass(mode === "CUSTOMER")}><span>Personal</span>{mode === "CUSTOMER" ? <span className="text-[10px] text-cyan-300">Current</span> : null}</Link>
-            {businessWorkspaces.map(item => <button type="button" key={`business-${item.id}`} onClick={() => selectBusiness(item.id)} className={linkClass(mode === "SBO" && String(activeBusinessId) === String(item.id))}><span className="min-w-0 truncate">{item.name}</span><span className="text-[10px] text-emerald-300">Business</span></button>)}
-            {pmWorkspace ? <Link to="/pm" onClick={() => chooseMode("PM")} className={linkClass(mode === "PM")}><span className="min-w-0 truncate">{pmWorkspace.name}</span><span className="text-[10px] text-violet-300">Property Management</span></Link> : null}
-            {modes.filter(([key]) => !["CUSTOMER","SBO","PM"].includes(key)).map(([key,item]) => <Link key={key} to={item.to} onClick={() => chooseMode(key)} className={linkClass(mode === key)}>{item.label}</Link>)}
-            <Link to="/onboarding/business" onClick={() => setOpen(false)} className={linkClass(false)}>+ Add a Business</Link>
-            <Link to="/onboarding/property-management" onClick={() => setOpen(false)} className={linkClass(false)}>+ Add a PM Company</Link>
+        <section role="dialog" aria-modal="true" aria-label="SyncWorks dashboards and navigation" className="sw-global-menu-drawer fixed left-3 right-3 top-[123px] sm:top-[65px] z-[322]">
+          <header className="sw-global-menu-head">
+            <div><div className="sw-global-menu-eyebrow">SYNCWORKS · COMMAND NAVIGATION</div><h2>My workspaces</h2><p>Switch dashboards without leaving your office.</p></div>
+            <button type="button" className="sw-global-menu-close" onClick={() => setOpen(false)} aria-label="Close workspace navigation">✕</button>
+          </header>
+          <div className="sw-global-menu-tabs" role="tablist" aria-label="Navigation groups">
+            <button type="button" role="tab" aria-selected={menuSection === "dashboards"} className={menuSection === "dashboards" ? "is-active" : ""} onClick={() => setMenuSection("dashboards")}>Dashboards</button>
+            <button type="button" role="tab" aria-selected={menuSection === "shortcuts"} className={menuSection === "shortcuts" ? "is-active" : ""} onClick={() => setMenuSection("shortcuts")}>Quick links</button>
           </div>
-          <div className="my-4 border-t border-slate-800" />
-          <div className="grid gap-2 sm:grid-cols-2">{EXTRA_ROUTES.map((item) => { const active = location.pathname === item.to || location.pathname.startsWith(`${item.to}/`); return <Link key={item.label} to={item.to} onClick={() => setOpen(false)} className={linkClass(active)}>{item.label}</Link>; })}{isGodMode ? <Link to="/platform?tab=overview" onClick={() => setOpen(false)} className="flex min-h-12 items-center rounded-2xl border border-fuchsia-400/30 bg-fuchsia-400/10 px-4 text-sm font-black text-fuchsia-100">Legacy Admin Dashboard</Link> : null}</div>
-        </div>
+          <div className="sw-global-menu-panel" role="tabpanel">
+          {menuSection === "dashboards" ? <>
+            <Link to="/customer" onClick={() => chooseMode("CUSTOMER")} className={linkClass(mode === "CUSTOMER")}><span className="sw-global-menu-symbol">⌂</span><span className="sw-global-menu-text"><strong>Personal</strong><small>Home and daily life</small></span>{mode === "CUSTOMER" ? <em>Current</em> : <span className="sw-global-menu-chevron">›</span>}</Link>
+            {businessWorkspaces.length > 0 && <div className="sw-global-menu-group">
+              <button type="button" className="sw-global-menu-group-toggle" onClick={() => setBusinessExpanded(value => !value)} aria-expanded={businessExpanded}><span className="sw-global-menu-symbol">▦</span><span className="sw-global-menu-text"><strong>Businesses</strong><small>{businessWorkspaces.length} connected workspace{businessWorkspaces.length === 1 ? "" : "s"}</small></span><span className="sw-global-menu-chevron">{businessExpanded ? "⌃" : "⌄"}</span></button>
+              {businessExpanded && <div className="sw-global-menu-businesses">{businessWorkspaces.map(item => <button type="button" key={`business-${item.id}`} onClick={() => selectBusiness(item.id)} className={linkClass(mode === "SBO" && String(activeBusinessId) === String(item.id))}><span className="sw-global-menu-symbol">▣</span><span className="sw-global-menu-text"><strong>{item.name}</strong><small>Business workspace</small></span><span className="sw-global-menu-chevron">›</span></button>)}</div>}
+            </div>}
+            {pmWorkspace ? <Link to="/pm" onClick={() => chooseMode("PM")} className={linkClass(mode === "PM")}><span className="sw-global-menu-symbol">⌂</span><span className="sw-global-menu-text"><strong>{pmWorkspace.name}</strong><small>Property Management</small></span><span className="sw-global-menu-chevron">›</span></Link> : null}
+            {modes.filter(([key]) => !["CUSTOMER","SBO","PM"].includes(key)).map(([key,item]) => <Link key={key} to={item.to} onClick={() => chooseMode(key)} className={linkClass(mode === key)}><span className="sw-global-menu-symbol">◈</span><span className="sw-global-menu-text"><strong>{item.label}</strong><small>Open dashboard</small></span><span className="sw-global-menu-chevron">›</span></Link>)}
+          </> : <>
+            {EXTRA_ROUTES.map(item => {const active = location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);return <Link key={item.label} to={item.to} onClick={() => setOpen(false)} className={linkClass(active)}><span className="sw-global-menu-symbol">◇</span><span className="sw-global-menu-text"><strong>{item.label}</strong><small>Open workspace</small></span><span className="sw-global-menu-chevron">›</span></Link>;})}
+            <Link to="/onboarding/business" onClick={() => setOpen(false)} className={linkClass(false)}><span className="sw-global-menu-symbol">＋</span><span className="sw-global-menu-text"><strong>Add a Business</strong><small>Connect another workspace</small></span></Link>
+            <Link to="/onboarding/property-management" onClick={() => setOpen(false)} className={linkClass(false)}><span className="sw-global-menu-symbol">＋</span><span className="sw-global-menu-text"><strong>Add a PM Company</strong><small>Set up property management</small></span></Link>
+            {isGodMode ? <Link to="/platform?tab=overview" onClick={() => setOpen(false)} className={linkClass(false)}><span className="sw-global-menu-symbol">◇</span><span className="sw-global-menu-text"><strong>Legacy Admin Dashboard</strong><small>Platform tools</small></span></Link> : null}
+          </>}
+          </div>
+          <footer className="sw-global-menu-foot"><span className="sw-global-menu-live-dot" />{menuTheme === "classic" ? "Classic Office" : menuTheme === "future" ? "SyncWorks Future" : menuTheme === "modern" ? "Modern Dark" : menuTheme === "light" ? "Clean Light" : "SyncWorks Original"} <span>·</span> Theme synced</footer>
+        </section>
       </> : null}
     </div>
   </>, document.body);
