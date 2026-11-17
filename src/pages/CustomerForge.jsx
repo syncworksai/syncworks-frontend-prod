@@ -1,167 +1,204 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowLeft, ArrowRight, Activity, BookOpen, BriefcaseBusiness, CalendarDays,
-  Check, ChevronRight, Clock3, Dumbbell, Flame, Heart, Headphones, Moon,
-  Pause, Play, RotateCcw, ShieldCheck, Sparkles, Square, Sun, Target,
-  TrendingUp, UserRound, Volume2, Wallet, WandSparkles
+  ArrowLeft, ArrowRight, BookOpen, Brain, CalendarClock, Check, ChevronRight,
+  CirclePause, CirclePlay, Dumbbell, ExternalLink, Flame, Heart,
+  Headphones, Moon, Pause, Play, RotateCcw, ShieldCheck, Sparkles,
+  Square, Sun, Target, Volume2, Wind
 } from "lucide-react";
+import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import "./CustomerForge.css";
-import ForgeStudio from "./ForgeStudio";
+import { forgeChapters } from "./forgeChapters";
+import "./CustomerForgeV3.css";
 
 const OWNER = "jacoblord7@outlook.com";
-const routine = [
-  { time:"04:00", title:"Wake & prime", detail:"Hydrate, brush teeth, cool face rinse, set your intention.", icon:Sun, lane:"RITUAL", route:"/customer/health", action:"Health" },
-  { time:"04:15", title:"Move & listen", detail:"Mobility, conditioning and a focused audio lesson.", icon:Activity, lane:"BODY", route:"/customer/health", action:"Open training" },
-  { time:"05:15", title:"Breakfast & learning", detail:"Prepare breakfast. Learn one useful idea while you cook.", icon:BookOpen, lane:"MIND", route:null, action:"Start lesson" },
-  { time:"06:15", title:"Market preparation", detail:"Economic calendar, scenarios, risk plan and journal.", icon:TrendingUp, lane:"WEALTH", route:"/customer/day-trading-futures", action:"Trading desk" },
-  { time:"07:15", title:"Trading focus", detail:"Execute the plan. Protect risk. Review your decisions.", icon:Target, lane:"WEALTH", route:"/customer/day-trading-futures", action:"Trading desk" },
-  { time:"09:00", title:"Train your craft", detail:"Strength training, golf, softball or recovery as planned.", icon:Dumbbell, lane:"BODY", route:"/customer/health", action:"Training" },
-  { time:"10:30", title:"Groom & dress", detail:"Shower, shave or trim, skincare, dress with intention.", icon:UserRound, lane:"IDENTITY", route:null, action:"View vision" },
-  { time:"11:00", title:"Family & lunch", detail:"Healthy lunch and undistracted time with your child.", icon:Heart, lane:"FAMILY", route:"/customer/family", action:"Family" },
-  { time:"13:00", title:"Build SyncWorks", detail:"One meaningful product, customer or business deliverable.", icon:BriefcaseBusiness, lane:"WORK", route:"/customer/tasks", action:"Open tasks" },
-  { time:"15:30", title:"Income sprint", detail:"Upwork delivery, proposals, leads and follow-ups.", icon:Wallet, lane:"WEALTH", route:"/customer/freelance/overview", action:"Freelance" },
-  { time:"17:00", title:"Family evening", detail:"Dinner, playtime and your family's bedtime routine.", icon:Heart, lane:"FAMILY", route:"/calendar", action:"Calendar" },
-  { time:"19:30", title:"Reflect & recover", detail:"Review the day, meditate, plan and protect sleep.", icon:Moon, lane:"RECOVERY", route:"/customer/health", action:"Health" }
+const pad = v => String(v).padStart(2, "0");
+const dateId = date => `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
+const schedule = [
+  {time:"04:00",title:"Wake & prime",category:"Ritual",action:"breathe",detail:"Hydrate, brush teeth, face rinse, intention"},
+  {time:"04:15",title:"Move & listen",category:"Body",action:"listen",detail:"Mobility, cardio and a daily chapter"},
+  {time:"05:15",title:"Breakfast & learn",category:"Mind",action:"read",detail:"Cook a healthy breakfast, learn one idea"},
+  {time:"06:15",title:"Market prep",category:"Wealth",href:"/customer/day-trading-futures",detail:"Economic calendar, setups and risk"},
+  {time:"07:15",title:"Trading window",category:"Wealth",href:"/customer/day-trading-futures",detail:"Follow your plan; review your decisions"},
+  {time:"09:00",title:"Train your craft",category:"Body",href:"/customer/health",detail:"Lifting, athletic practice or recovery"},
+  {time:"10:30",title:"Groom & dress",category:"Identity",action:"reflect",detail:"Shower, shave, skincare, wardrobe"},
+  {time:"11:00",title:"Family & lunch",category:"Family",href:"/customer/family",detail:"Cook, play and be present"},
+  {time:"13:00",title:"Build SyncWorks",category:"Work",href:"/customer/tasks",detail:"One product or customer deliverable"},
+  {time:"15:30",title:"Income sprint",category:"Work",href:"/customer/freelance/overview",detail:"Upwork, leads and paid work"},
+  {time:"17:00",title:"Family evening",category:"Family",href:"/calendar",detail:"Dinner, playtime and bedtime routine"},
+  {time:"19:30",title:"Reflect & rest",category:"Recovery",action:"reflect",detail:"Review, meditate and prepare for sleep"}
 ];
-const visions = [
-  { icon:UserRound, title:"Identity & style", anchor:"Present with confidence", body:"Grooming, clothing, posture, communication and the way you carry yourself.", action:"Prepare tomorrow's outfit. Practice a clear 30-second introduction.", route:"/customer/settings", link:"Personal settings" },
-  { icon:TrendingUp, title:"Wealth & freedom", anchor:"Build, don't just dream", body:"Develop income, sound financial habits and opportunities to grow SyncWorks.", action:"Ship one outcome that serves a customer or earns income.", route:"/customer/finance", link:"Finance" },
-  { icon:Dumbbell, title:"Athletic excellence", anchor:"Train with purpose", body:"Lifting, recovery, conditioning, golf, softball and skill development.", action:"Track your next workout and practice one athletic skill.", route:"/customer/health", link:"Health & training" },
-  { icon:BookOpen, title:"Intellectual growth", anchor:"Learn to think better", body:"Philosophy, history, business, psychology and challenging assumptions.", action:"Explain an idea in your own words and test what you believe.", route:null, link:"Coach lesson" },
-  { icon:Heart, title:"Family & character", anchor:"Be present", body:"Build the life you want with the people who matter most.", action:"Protect a screen-free family block.", route:"/customer/family", link:"Family" },
-  { icon:Target, title:"Execution & discipline", anchor:"Make progress visible", body:"Prioritize, follow through, review results and adjust without burning out.", action:"Identify today's most important deliverable.", route:"/customer/tasks", link:"Tasks" }
+const modes=[
+  {id:"read",title:"Read",icon:BookOpen},
+  {id:"listen",title:"Listen",icon:Headphones},
+  {id:"breathe",title:"Breathe",icon:Wind},
+  {id:"watch",title:"Watch",icon:Play},
+  {id:"reflect",title:"Reflect",icon:Brain}
 ];
-const lessons = [
-  { title:"Examine your assumptions", author:"Socratic reflection", script:"What belief are you accepting without examining it? What evidence would change your mind? Choose one honest action today." },
-  { title:"Control the controllable", author:"Stoic reflection", script:"You do not control every result. You control preparation, judgment and action. Identify what is within your control, and give it your best attention." },
-  { title:"The disciplined trader", author:"Trading psychology", script:"A successful trading session is one where you follow the plan and manage risk. Do not confuse luck with skill. Define your invalidation before you act." },
-  { title:"Walk into the room", author:"Confidence & presence", script:"Stand tall, relax your shoulders, speak with clarity, listen carefully and make a useful offer. Confidence grows through preparation and practice." },
-  { title:"Return to the present", author:"Guided breathing", script:"Settle into a comfortable position. Inhale gently. Exhale slowly. Notice the body relaxing. You can return your attention to the present moment." }
+const videos=[
+  {id:"j7rKKpwdXNE",title:"Beginner yoga",by:"Yoga With Adriene",note:"10-minute guided practice"},
+  {id:"R0__e0QTtQw",title:"Nervous system reset",by:"Yoga With Adriene",note:"Gentle movement and reset"}
 ];
-const pad = n => String(n).padStart(2,"0");
-const minutes = time => { const [h,m] = time.split(":").map(Number); return h*60+m; };
-const dateKey = () => {const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;};
-const storageKey = email => `syncworks-forge-v1:${email}:${dateKey()}`;
-function read(key) { try { return JSON.parse(window.localStorage.getItem(key) || "{}"); } catch { return {}; } }
-const tabs = [{id:"today",name:"Today",icon:CalendarDays},{id:"studio",name:"Studio",icon:Headphones},{id:"vision",name:"Vision",icon:Sparkles},{id:"coach",name:"Coach",icon:BookOpen},{id:"review",name:"Review",icon:Moon}];
-const shortcuts = [{label:"Calendar",path:"/calendar",icon:CalendarDays},{label:"Health & training",path:"/customer/health",icon:Dumbbell},{label:"Trading desk",path:"/customer/day-trading-futures",icon:TrendingUp},{label:"Tasks",path:"/customer/tasks",icon:Target},{label:"Freelance work",path:"/customer/freelance/overview",icon:Wallet}];
+const keyFor = email => `syncworks-forge-v1:${email}:${dateId(new Date())}`;
+function readSaved(key) {try {return JSON.parse(localStorage.getItem(key) || "{}");}catch {return {};}}
+function splitAudio(text, max=700){
+  const sentences=String(text).match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[];
+  const pieces=[];let current="";
+  for(const sentence of sentences){
+    if((current+" "+sentence).length>max && current){pieces.push(current.trim());current="";}
+    if(sentence.length>max){for(let i=0;i<sentence.length;i+=max)pieces.push(sentence.slice(i,i+max));}
+    else current+=" "+sentence;
+  }
+  if(current.trim())pieces.push(current.trim());
+  return pieces;
+}
+const formatTime = mins => `${pad(Math.floor(mins/60))}:${pad(mins%60)}`;
+const reflectionKey = email => `syncworks-forge-reflect:${email}:${dateId(new Date())}`;
 
-export default function CustomerForge() {
-  const { user } = useAuth();
-  const email = String(user?.email || "").trim().toLowerCase();
-  const permitted = email === OWNER;
-  const key = storageKey(email);
-  const [tab,setTab] = useState("today");
-  const [completed,setCompleted] = useState({});
-  const [loadedKey,setLoadedKey] = useState("");
-  const [intent,setIntent] = useState("");
-  const [bedtime,setBedtime] = useState("20:00");
-  const [coach,setCoach] = useState(0);
-  const [speaking,setSpeaking] = useState(false);
-  const [now,setNow] = useState(()=>new Date());
-  const speechRef = useRef(null);
+export default function CustomerForge(){
+  const {user}=useAuth();
+  const email=String(user?.email||"").trim().toLowerCase();
+  const permitted=email===OWNER;
+  const [now,setNow]=useState(()=>new Date());
+  const [mode,setMode]=useState("read");
+  const [chapterId,setChapterId]=useState(forgeChapters[0].id);
+  const [done,setDone]=useState({});
+  const [intent,setIntent]=useState("");
+  const [loadedKey,setLoadedKey]=useState("");
+  const [journal,setJournal]=useState("");
+  const [audioState,setAudioState]=useState("idle");
+  const [audioStatus,setAudioStatus]=useState("");
+  const [voiceType,setVoiceType]=useState("natural");
+  const [breathing,setBreathing]=useState(false);
+  const [breathSeconds,setBreathSeconds]=useState(0);
+  const [video,setVideo]=useState("");
+  const audioEl=useRef(null),audioUrl=useRef(""),abortRef=useRef(null),playId=useRef(0);
+  const synthParts=useRef([]),synthIndex=useRef(0);
+  const key=keyFor(email);
+  const chapter=forgeChapters.find(c=>c.id===chapterId)||forgeChapters[0];
+  const todayChapter=forgeChapters[Math.floor(new Date(dateId(now)+"T12:00:00").getTime()/86400000)%forgeChapters.length];
+  const completed=schedule.filter((_,i)=>done[i]).length;
+  const currentMin=now.getHours()*60+now.getMinutes();
+  const scheduledIndex=schedule.reduce((n,x,i)=>currentMin>=Number(x.time.slice(0,2))*60+Number(x.time.slice(3))?i:n,-1);
+  const focusIndex=scheduledIndex>=0&&!done[scheduledIndex]?scheduledIndex:schedule.findIndex((_,i)=>i>scheduledIndex&&!done[i]);
+  const active=focusIndex>=0?schedule[focusIndex]:null;
+  const breathCycle=breathSeconds%10, inhale=breathCycle<4;
+  const remaining=Math.max(0,300-breathSeconds);
+  const script=`${chapter.title}. ${chapter.lens}. ${chapter.paragraphs.join(" ")} Takeaway. ${chapter.takeaway} Today's challenge. ${chapter.challenge}`;
+
   useEffect(()=>{
-    if(!permitted) return;
-    const saved=read(key);
-    setCompleted(saved.completed || {});
-    setIntent(saved.intent || "");
-    setBedtime(saved.bedtime || "20:00");
-    setLoadedKey(key);
-  },[permitted,key]);
-  useEffect(()=>{
-    if(!permitted || loadedKey!==key) return;
-    try {localStorage.setItem(key,JSON.stringify({completed,intent,bedtime}));} catch { /* optional local prototype storage */ }
-  },[completed,intent,bedtime,permitted,key,loadedKey]);
-  useEffect(()=>{
-    const interval=window.setInterval(()=>setNow(new Date()),60000);
-    return ()=>window.clearInterval(interval);
+    const timer=window.setInterval(()=>setNow(new Date()),1000);
+    return ()=>window.clearInterval(timer);
   },[]);
-  useEffect(()=>()=>{if(typeof window!=="undefined" && window.speechSynthesis) window.speechSynthesis.cancel();},[]);
-  const done=useMemo(()=>routine.filter((_,i)=>completed[i]).length,[completed]);
-  const clock=now.getHours()*60+now.getMinutes();
-  const currentIndex=routine.reduce((idx,block,i)=>clock>=minutes(block.time)?i:idx,-1);
-  const nextIndex=routine.findIndex((block,i)=>i>currentIndex && !completed[i]);
-  const focusIndex=currentIndex>=0 && !completed[currentIndex]?currentIndex:nextIndex>=0?nextIndex:routine.findIndex((_,i)=>!completed[i]);
-  const focus=focusIndex>=0?routine[focusIndex]:null;
-  const focusIsCurrent=focusIndex===currentIndex;
-  const nextTime=focus?minutes(focus.time):0;
-  const until=focus?Math.max(0,nextTime-clock):0;
-  const progress=Math.round(done/routine.length*100);
-  function stopSpeech(){ if(window.speechSynthesis) window.speechSynthesis.cancel();setSpeaking(false); }
-  function say(script){
-    if(!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance=new SpeechSynthesisUtterance(script);
-    utterance.rate=.91; utterance.pitch=1;
-    utterance.onend=()=>setSpeaking(false); utterance.onerror=()=>setSpeaking(false);
-    speechRef.current=utterance;setSpeaking(true);window.speechSynthesis.speak(utterance);
+  useEffect(()=>{
+    if(!permitted)return;
+    const saved=readSaved(key);setDone(saved.completed||{});setIntent(saved.intent||"");setLoadedKey(key);
+    try{setJournal(localStorage.getItem(reflectionKey(email))||"");}catch{setJournal("");}
+  },[permitted,email,key]);
+  useEffect(()=>{
+    if(!permitted||loadedKey!==key)return;
+    try{localStorage.setItem(key,JSON.stringify({completed:done,intent}));}catch{/* local pilot only */}
+  },[permitted,loadedKey,key,done,intent]);
+  useEffect(()=>{if(!permitted||loadedKey!==key)return;try{localStorage.setItem(reflectionKey(email),journal);}catch{/* optional */}},[permitted,loadedKey,key,email,journal]);
+  useEffect(()=>{
+    if(!breathing)return;
+    const timer=window.setInterval(()=>setBreathSeconds(x=>{if(x>=299){setBreathing(false);return 300;}return x+1;}),1000);
+    return ()=>window.clearInterval(timer);
+  },[breathing]);
+  function stopAudio(){
+    playId.current+=1;
+    if(abortRef.current){abortRef.current.abort();abortRef.current=null;}
+    if(audioEl.current){audioEl.current.pause();audioEl.current.removeAttribute("src");audioEl.current=null;}
+    if(audioUrl.current){URL.revokeObjectURL(audioUrl.current);audioUrl.current="";}
+    if("speechSynthesis" in window)window.speechSynthesis.cancel();
+    setAudioState("idle");setAudioStatus("");
   }
-  function speakBrief(){
-    if(!focus) return;
-    say(`Your next mission is ${focus.title}. ${focus.detail} ${intent ? "Your priority today is "+intent+"." : "Take one focused step forward today."}`);
+  useEffect(()=>()=>{playId.current+=1;if(abortRef.current)abortRef.current.abort();if(audioEl.current)audioEl.current.pause();if(audioUrl.current)URL.revokeObjectURL(audioUrl.current);window.speechSynthesis?.cancel();},[]);
+  function browserNarrate(text,token){
+    if(!("speechSynthesis" in window)) {setAudioStatus("Speech isn't supported on this device.");setAudioState("idle");return;}
+    synthParts.current=splitAudio(text,240);synthIndex.current=0;
+    function next(){
+      if(token!==playId.current)return;
+      if(synthIndex.current>=synthParts.current.length){setAudioState("idle");setAudioStatus("Chapter finished.");return;}
+      const utterance=new SpeechSynthesisUtterance(synthParts.current[synthIndex.current++]);
+      utterance.rate=.92;utterance.pitch=.95;utterance.onend=next;
+      utterance.onerror=()=>{if(token===playId.current){setAudioState("idle");setAudioStatus("Device speech ended.");}};
+      window.speechSynthesis.speak(utterance);
+    }
+    setAudioState("playing");next();
   }
-  function openRoutineAction(block){
-    if(block.route) return null;
-    return block.title==="Breakfast & learning"?()=>setTab("studio"):()=>setTab("vision");
+  async function naturalNarrate(text,token){
+    const parts=splitAudio(text,690);
+    setAudioStatus("Preparing natural narration...");
+    for(let i=0;i<parts.length;i++){
+      if(token!==playId.current)return;
+      const controller=new AbortController();abortRef.current=controller;
+      const response=await api.post("/customer-health/forge/voice/speak/",{text:parts[i],energy:"calm"},{responseType:"blob",signal:controller.signal,timeout:30000});
+      if(token!==playId.current)return;
+      const url=URL.createObjectURL(response.data);audioUrl.current=url;
+      const player=new Audio(url);audioEl.current=player;
+      await new Promise((resolve,reject)=>{
+        player.onended=resolve;player.onerror=()=>reject(new Error("Audio playback failed"));
+        player.play().then(()=>{if(token===playId.current){setAudioState("playing");setAudioStatus(`Natural voice · part ${i+1} of ${parts.length}`);}}).catch(reject);
+      });
+      if(audioUrl.current){URL.revokeObjectURL(audioUrl.current);audioUrl.current="";}
+    }
+    if(token===playId.current){setAudioState("idle");setAudioStatus("Chapter finished.");}
   }
-  if(!permitted) return <main className="min-h-screen bg-slate-950 px-6 pt-28 text-white"><h1 className="text-2xl font-semibold">Private pilot</h1><p className="mt-3 text-slate-400">The Forge is not available for this account.</p><Link to="/customer" className="mt-6 inline-block text-amber-200">Return to office</Link></main>;
-  return <main className="forge-v2 min-h-screen pt-24 pb-28 text-[#f8f2e8] sm:pt-28">
-    <div className="forge-v2-glow" aria-hidden="true"/>
-    <div className="forge-v2-inner">
-      <div className="forge-v2-topline"><Link to="/customer" className="forge-v2-back"><ArrowLeft size={16}/> My office</Link><span className="forge-v2-private"><ShieldCheck size={14}/> PRIVATE PERFORMANCE STUDIO</span></div>
-      <header className="forge-v2-hero">
-        <div className="forge-v2-hero-pattern" aria-hidden="true"><span className="forge-v2-ring forge-v2-ring-one"/><span className="forge-v2-ring forge-v2-ring-two"/><Flame className="forge-v2-hero-flame" strokeWidth={1}/></div>
-        <div className="forge-v2-hero-copy">
-          <p className="forge-v2-overline">SYNCWORKS <span>/</span> YOUR PERSONAL OPERATING SYSTEM</p>
-          <h1>THE <em>FORGE</em></h1>
-          <p className="forge-v2-tagline">Forge the mind. Strengthen the body. Build the life.</p>
-          <div className="forge-v2-metrics"><span><strong>{pad(now.getHours())}:{pad(now.getMinutes())}</strong><small>LOCAL TIME</small></span><span><strong>{done}<b> / {routine.length}</b></strong><small>DAILY VICTORIES</small></span><span><strong>{progress}%</strong><small>MISSION PROGRESS</small></span></div>
-          <div className="forge-v2-meter" role="progressbar" aria-label="Daily progress" aria-valuenow={done} aria-valuemin={0} aria-valuemax={routine.length}><span style={{width:progress+"%"}}/></div>
+  async function startAudio(text=script){
+    stopAudio();const token=playId.current;
+    if(voiceType==="device"){setAudioStatus("Device voice narration");browserNarrate(text,token);return;}
+    setAudioState("loading");
+    try {await naturalNarrate(text,token);}
+    catch(e){
+      if(token!==playId.current)return;
+      setAudioStatus("Natural voice unavailable; using device narration.");
+      browserNarrate(text,token);
+    }
+  }
+  function toggleAudio(){
+    if(audioState==="paused"){
+      if(audioEl.current)audioEl.current.play();
+      else window.speechSynthesis?.resume();
+      setAudioState("playing");return;
+    }
+    if(audioState==="playing"){
+      if(audioEl.current)audioEl.current.pause();
+      else window.speechSynthesis?.pause();
+      setAudioState("paused");return;
+    }
+    startAudio();
+  }
+  function setActiveMode(next){if(next!==mode)stopAudio();setMode(next);}
+  function startRoutine(item){if(item.action)setActiveMode(item.action);}
+  if(!permitted)return <main className="min-h-screen bg-slate-950 px-6 pt-28 text-white"><h1 className="text-xl">Private pilot</h1><Link to="/customer">Return to office</Link></main>;
+  return <main className="forge3">
+    <div className="forge3-glow" aria-hidden="true"/>
+    <header className="forge3-header">
+      <div className="forge3-identity"><Link to="/customer" className="forge3-back" aria-label="Back to my office"><ArrowLeft size={18}/></Link><div className="forge3-mark"><Flame size={23}/></div><div><span>SYNCWORKS / PRIVATE STUDIO</span><h1>THE <em>FORGE</em></h1></div></div>
+      <div className="forge3-header-actions"><div className="forge3-header-clock"><strong>{pad(now.getHours())}:{pad(now.getMinutes())}</strong><small>{now.toLocaleDateString(undefined,{month:"short",day:"numeric",weekday:"short"})}</small></div><span className="forge3-pill"><ShieldCheck size={13}/> Personal pilot</span></div>
+    </header>
+    <div className="forge3-main">
+      <section className="forge3-workspace">
+        <nav className="forge3-modes" aria-label="Forge experiences">{modes.map(({id,title,icon:Icon})=><button key={id} type="button" className={mode===id?"selected":""} aria-pressed={mode===id} onClick={()=>setActiveMode(id)}><Icon size={18}/><span>{title}</span></button>)}</nav>
+        <div className="forge3-stage">
+          {(mode==="read"||mode==="listen")&&<>
+            <div className="forge3-stage-intro"><div><span className="forge3-overline">{mode==="listen"?"THE DAILY AUDIOBOOK":"TODAY'S READING"} · ORIGINAL FORGE LESSON</span><h2>{chapter.title}</h2><p>{chapter.lens} · {chapter.length}</p></div><span className="forge3-book-icon"><BookOpen size={33}/></span></div>
+            <div className="forge3-chapter-select"><label htmlFor="forge3-lesson">Chapter</label><select id="forge3-lesson" value={chapterId} onChange={e=>{stopAudio();setChapterId(e.target.value);}}>{forgeChapters.map(c=><option key={c.id} value={c.id}>{c.title}</option>)}</select><button type="button" onClick={()=>{stopAudio();setChapterId(todayChapter.id);}} className="forge3-softbtn">Today's pick</button></div>
+            {mode==="read"?<div className="forge3-reader" tabIndex={0} aria-label="Chapter reading"><p className="forge3-dropcap">{chapter.paragraphs[0]}</p>{chapter.paragraphs.slice(1).map((p,i)=><p key={i}>{p}</p>)}<div className="forge3-chapter-end"><strong>APPLY IT TODAY</strong><p>{chapter.challenge}</p><button type="button" onClick={()=>setActiveMode("reflect")}>Reflect on this chapter <ChevronRight size={16}/></button></div></div>:<div className="forge3-listen-room"><div className={audioState==="playing"?"forge3-orb speaking":"forge3-orb"}><Headphones size={52}/></div><p>{chapter.description}</p><blockquote>{chapter.paragraphs[0]}</blockquote><div className="forge3-listen-note">The full chapter is narrated, not just this excerpt.</div></div>}
+            <div className="forge3-player"><div className="forge3-play-buttons"><button className="forge3-mainbtn" type="button" onClick={toggleAudio} disabled={audioState==="loading"}>{audioState==="playing"?<Pause size={18}/>:<Play size={18}/>} {audioState==="loading"?"Preparing...":audioState==="paused"?"Resume":audioState==="playing"?"Pause":"Listen to chapter"}</button><button className="forge3-iconbtn" type="button" onClick={stopAudio} title="Stop narration" aria-label="Stop narration"><Square size={17}/></button></div><label>Voice <select value={voiceType} onChange={e=>{stopAudio();setVoiceType(e.target.value);}}><option value="natural">Natural AI voice</option><option value="device">Device voice</option></select></label><span className="forge3-audio-status" role="status">{audioStatus||"Headphone-ready listening"}</span></div>
+          </>}
+          {mode==="breathe"&&<><div className="forge3-stage-intro"><div><span className="forge3-overline">GUIDED MEDITATION</span><h2>Return to the present</h2><p>Five minutes · Gentle 4-in / 6-out rhythm</p></div><Wind size={35}/></div><div className="forge3-breathe-center"><div className={breathing?"forge3-breathe-orb running":"forge3-breathe-orb"} data-inhale={inhale}><span>{inhale?"BREATHE IN":"BREATHE OUT"}</span><strong>{inhale?4-breathSeconds%10:10-breathSeconds%10}</strong><small>{formatTime(Math.floor((300-breathSeconds)/60)*60+(300-breathSeconds)%60)} remaining</small></div><p>Relax your shoulders. Breathe comfortably. No breath holding is required.</p></div><div className="forge3-player"><button className="forge3-mainbtn" type="button" onClick={()=>setBreathing(v=>!v)} disabled={breathSeconds>=300}>{breathing?<Pause size={18}/>:<Play size={18}/>} {breathing?"Pause":"Start breathing"}</button><button className="forge3-iconbtn" type="button" onClick={()=>{setBreathing(false);setBreathSeconds(0);}}><RotateCcw size={17}/></button><button className="forge3-softbtn" onClick={()=>startAudio("Settle into a comfortable posture. Relax your face and shoulders. Breathe gently in through the nose for four counts, and breathe out slowly for six counts. Follow the moving circle. If you feel lightheaded, return to your natural breath. You do not need to force anything.")} type="button"><Volume2 size={16}/> Guided introduction</button><button className="forge3-iconbtn" onClick={stopAudio} type="button" title="Stop voice"><Square size={16}/></button></div></>}
+          {mode==="watch"&&<><div className="forge3-stage-intro"><div><span className="forge3-overline">GUIDED VIDEO LIBRARY</span><h2>Learn by watching</h2><p>Yoga and movement without leaving The Forge.</p></div><Play size={35}/></div><div className="forge3-video-options">{videos.map(v=><button key={v.id} className={video===v.id?"selected":""} type="button" onClick={()=>{stopAudio();setVideo(v.id);}}><strong>{v.title}</strong><small>{v.by} · {v.note}</small></button>)}</div><div className="forge3-video-stage">{video?<iframe key={video} src={`https://www.youtube-nocookie.com/embed/${video}?rel=0`} title={videos.find(x=>x.id===video)?.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen loading="lazy" referrerPolicy="strict-origin-when-cross-origin"/>:<div className="forge3-video-empty"><Play size={38}/><span>Choose a practice above to open the player.</span></div>}</div>{video&&<a href={`https://www.youtube.com/watch?v=${video}`} target="_blank" rel="noopener noreferrer" className="forge3-youtube-link">If the video cannot be embedded, open on YouTube <ExternalLink size={15}/></a>}</>}
+          {mode==="reflect"&&<><div className="forge3-stage-intro"><div><span className="forge3-overline">THE EXAMINED LIFE</span><h2>Turn wisdom into action</h2><p>Journal privately and carry today's lesson forward.</p></div><Brain size={35}/></div><div className="forge3-reflect"><div className="forge3-reflect-prompt"><span>QUESTION OF THE DAY</span><h3>{chapter.question}</h3><p><strong>Today's challenge:</strong> {chapter.challenge}</p></div><label htmlFor="forge3-reflection">Your thoughts</label><textarea id="forge3-reflection" value={journal} onChange={e=>setJournal(e.target.value)} placeholder="What did I learn? How can I apply it today? What should I practice tomorrow?"/><p>Saved in this browser for today's private reflection. Backend sync is not yet available.</p><div className="forge3-quicklinks"><Link to="/customer/health"><Dumbbell size={16}/> Training</Link><Link to="/calendar"><CalendarClock size={16}/> Calendar</Link><Link to="/customer/tasks"><Target size={16}/> Tasks</Link></div></div></>}
         </div>
-      </header>
-      <nav className="forge-v2-nav" aria-label="Forge sections">{tabs.map(({id,name,icon:Icon})=><button key={id} type="button" aria-current={tab===id?"page":undefined} className={tab===id?"forge-v2-tab selected":"forge-v2-tab"} onClick={()=>{stopSpeech();setTab(id);}}><Icon size={17}/>{name}</button>)}</nav>
-      {tab==="today"&&<div className="forge-v2-appear">
-        <div className="forge-v2-two-col">
-          <section className="forge-v2-focus" aria-label="Current mission">
-            <div className="forge-v2-eyebrow"><span className="forge-v2-live-dot"/> {focusIsCurrent?"CURRENT MISSION":"UP NEXT"} <span className="forge-v2-focus-time">{focus?.time||"All done"} {focus && !focusIsCurrent && until>0?`· IN ${Math.floor(until/60)?Math.floor(until/60)+"H ":""}${until%60}M`:""}</span></div>
-            <h2>{focus?.title || "You've completed your mission."}</h2>
-            <p>{focus?.detail || "Recover, reflect and prepare for tomorrow."}</p>
-            <div className="forge-v2-actions">
-              <button type="button" className="forge-v2-primary" onClick={speaking?stopSpeech:speakBrief} disabled={!focus}>{speaking?<Square size={16}/>:<Volume2 size={17}/>} {speaking?"Stop briefing":"Hear my next step"}</button>
-              {focus && (focus.route?<Link className="forge-v2-secondary" to={focus.route}>Open {focus.action}<ArrowRight size={15}/></Link>:<button className="forge-v2-secondary" onClick={openRoutineAction(focus)} type="button">{focus.action}<ArrowRight size={15}/></button>)}
-            </div>
-            <p className="forge-v2-smallnote">Guidance is based on your sample routine, not live calendar availability. <button type="button" onClick={()=>setTab("studio")} className="forge-v2-textlink">Open guided studio <ArrowRight size={14}/></button></p>
-          </section>
-          <section className="forge-v2-intent">
-            <div className="forge-v2-eyebrow"><Target size={14}/> TODAY'S DIRECTION</div>
-            <h2>One day. One clear priority.</h2>
-            <label htmlFor="forge-intent-v2">What would make today worthwhile?</label>
-            <textarea rows={3} id="forge-intent-v2" value={intent} onChange={e=>setIntent(e.target.value)} placeholder="Finish the client pilot. Follow my trading plan. Be present with my child."/>
-            <p className="forge-v2-smallnote">Saved on this device for today.</p>
-          </section>
-        </div>
-        <div className="forge-v2-section-heading"><div><p className="forge-v2-overline">YOUR OPERATING RHYTHM</p><h2>Today's timeline</h2></div><Link to="/calendar" className="forge-v2-textlink"><CalendarDays size={16}/> Open calendar <ChevronRight size={16}/></Link></div>
-        <div className="forge-v2-timeline">{routine.map((block,i)=>{
-          const Icon=block.icon;const finished=!!completed[i];const active=i===focusIndex;
-          return <article className={`forge-v2-mission ${finished?"completed":""} ${active?"active":""}`} key={block.time} style={{"--forge-index":i}}>
-            <div className="forge-v2-time">{block.time}</div>
-            <div className="forge-v2-node"><Icon size={18}/></div>
-            <div className="forge-v2-mission-text"><div className="forge-v2-mission-title"><h3>{block.title}</h3><span>{block.lane}</span></div><p>{block.detail}</p></div>
-            <div className="forge-v2-mission-controls">
-              {block.route?<Link to={block.route} className="forge-v2-open" title={block.action} aria-label={"Open "+block.action+" for "+block.title}><ArrowRight size={18}/></Link>:<button type="button" onClick={openRoutineAction(block)} className="forge-v2-open" title={block.action} aria-label={block.action+" for "+block.title}><ArrowRight size={18}/></button>}
-              <button type="button" className="forge-v2-check" aria-pressed={finished} onClick={()=>setCompleted(p=>({...p,[i]:!p[i]}))} aria-label={finished?"Mark "+block.title+" incomplete":"Complete "+block.title}><Check size={16}/></button>
-            </div>
-          </article>;
-        })}</div>
-        <section className="forge-v2-shortcuts"><div className="forge-v2-section-heading"><div><p className="forge-v2-overline">ONE ECOSYSTEM</p><h2>Connected workspaces</h2></div></div><div className="forge-v2-shortcut-grid">{shortcuts.map(({label,path,icon:Icon})=><Link to={path} key={path} className="forge-v2-shortcut"><Icon size={19}/><span>{label}</span><ArrowRight size={15}/></Link>)}</div><p className="forge-v2-smallnote">These links open existing SyncWorks tools; Forge does not yet sync their data or schedules.</p></section>
-      </div>}
-      {tab==="studio"&&<ForgeStudio/>}
-      {tab==="vision"&&<section className="forge-v2-appear"><div className="forge-v2-section-heading"><div><p className="forge-v2-overline">THE PERSON YOU'RE BECOMING</p><h2>Vision into action</h2><p className="forge-v2-subtitle">The lifestyle is the vision. Today's actions are the proof.</p></div></div><div className="forge-v2-vision-grid">{visions.map(({icon:Icon,title,anchor,body,action,route,link})=><article key={title} className="forge-v2-vision-card"><Icon size={28}/><p className="forge-v2-overline">{anchor}</p><h3>{title}</h3><p>{body}</p><div className="forge-v2-proof"><strong>ONE ACTION TODAY</strong><span>{action}</span></div>{route?<Link to={route} className="forge-v2-textlink">{link}<ArrowRight size={15}/></Link>:<button type="button" onClick={()=>setTab("studio")} className="forge-v2-textlink">{link}<ArrowRight size={15}/></button>}</article>)}</div></section>}
-      {tab==="coach"&&<section className="forge-v2-appear forge-v2-coach-layout"><div className="forge-v2-coach-orb"><span className={speaking?"forge-v2-orb speaking":"forge-v2-orb"}><Headphones size={52}/></span><p className="forge-v2-overline">YOUR PERFORMANCE COACH</p><h2>Listen. Reflect. Act.</h2><p>Short audio lessons you can play while getting ready, walking or winding down.</p><span className="forge-v2-smallnote">Browser speech prototype — not a live conversational AI.</span></div><div className="forge-v2-coach-panel"><p className="forge-v2-overline">CHOOSE YOUR SESSION</p><div className="forge-v2-lessons">{lessons.map((l,i)=><button className={coach===i?"selected":""} type="button" key={l.title} onClick={()=>{stopSpeech();setCoach(i);}}><span><strong>{l.title}</strong><small>{l.author}</small></span><ChevronRight size={16}/></button>)}</div><blockquote>{lessons[coach].script}</blockquote><div className="forge-v2-actions"><button type="button" className="forge-v2-primary" onClick={()=>speaking?stopSpeech():say(lessons[coach].script)}>{speaking?<Pause size={17}/>:<Play size={17}/>} {speaking?"Stop session":"Listen to session"}</button><button type="button" className="forge-v2-secondary" onClick={stopSpeech}><Square size={15}/> Stop audio</button></div></div></section>}
-      {tab==="review"&&<section className="forge-v2-appear forge-v2-review"><div className="forge-v2-section-heading"><div><p className="forge-v2-overline">RECOVERY IS PART OF PROGRESS</p><h2>Close the day well</h2></div></div><div className="forge-v2-two-col"><article className="forge-v2-intent"><div className="forge-v2-eyebrow"><Moon size={16}/> WIND-DOWN</div><label htmlFor="forge-bed-v2">Target bedtime</label><input id="forge-bed-v2" type="time" value={bedtime} onChange={e=>setBedtime(e.target.value)}/><p>For a 4 AM wake-up, 8:00–8:30 PM is a reasonable sleep target. Move the wake-up time when family obligations require it.</p><Link to="/customer/health" className="forge-v2-textlink">Sleep & recovery <ArrowRight size={16}/></Link></article><article className="forge-v2-intent"><div className="forge-v2-eyebrow"><Check size={16}/> TODAY'S REVIEW</div><h2>{done} of {routine.length} victories</h2><div className="forge-v2-meter"><span style={{width:progress+"%"}}/></div><p>Progress is not perfection. Look at what mattered, what you learned and what should change tomorrow.</p><button type="button" className="forge-v2-secondary" onClick={()=>setTab("today")}><RotateCcw size={15}/> Return to timeline</button></article></div></section>}
-      <footer className="forge-v2-footer"><WandSparkles size={15}/> Private pilot · Personal performance, separate from Chief of Staff · Check-ins are saved only in this browser · No automated reminders or AI scheduling yet</footer>
+      </section>
+      <aside className="forge3-sidebar" aria-label="Your daily plan"><div className="forge3-side-head"><span className="forge3-overline">YOUR DAY AT A GLANCE</span><h2>Mission control</h2><p>{completed} / {schedule.length} completed</p><div className="forge3-progress"><span style={{width:completed/schedule.length*100+"%"}}/></div></div>
+        <div className="forge3-current"><span className="forge3-overline"><span className="forge3-status-dot"/> {active?"YOUR NEXT STEP":"DAY COMPLETE"}</span><h3>{active?.title||"All missions reviewed"}</h3><p>{active?.detail||"Rest, reflect, and prepare for tomorrow."}</p>{active&&(active.href?<Link to={active.href}>Open activity <ArrowRight size={15}/></Link>:<button onClick={()=>startRoutine(active)} type="button">Start activity <ArrowRight size={15}/></button>)}</div>
+        <div className="forge3-side-list" tabIndex={0} aria-label="Today's planned activities">{schedule.map((item,i)=><div className={`forge3-side-item ${done[i]?"done":""} ${focusIndex===i?"active":""}`} key={item.time}><span className="forge3-item-time">{item.time}</span><div><strong>{item.title}</strong><small>{item.category}</small></div>{item.action?<button aria-label={"Open "+item.title} onClick={()=>startRoutine(item)} type="button"><ChevronRight size={15}/></button>:<Link aria-label={"Open "+item.title} to={item.href}><ChevronRight size={15}/></Link>}<button className="forge3-item-check" type="button" aria-label={done[i]?"Mark incomplete":"Mark complete"} aria-pressed={!!done[i]} onClick={()=>setDone(p=>({...p,[i]:!p[i]}))}><Check size={14}/></button></div>)}</div>
+        <div className="forge3-side-bottom"><label htmlFor="forge3-intent">TODAY'S MAIN PRIORITY</label><input id="forge3-intent" placeholder="Your one important outcome..." value={intent} onChange={e=>setIntent(e.target.value)}/><Link to="/calendar">Open SyncWorks calendar <ChevronRight size={15}/></Link></div>
+      </aside>
     </div>
+    <footer className="forge3-footer"><span><Sparkles size={14}/> Build your life, one intentional action at a time.</span><span>Private pilot · Forge coach is separate from Chief of Staff · Chapters are original · Audio uses AI narration when available</span></footer>
   </main>;
 }
