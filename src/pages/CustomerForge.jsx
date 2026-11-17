@@ -14,7 +14,7 @@ import "./CustomerForgeV3.css";
 const OWNER = "jacoblord7@outlook.com";
 const pad = v => String(v).padStart(2, "0");
 const dateId = date => `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
-const schedule = [
+const defaultSchedule = [
   {time:"04:00",title:"Wake & prime",category:"Ritual",action:"breathe",detail:"Hydrate, brush teeth, face rinse, intention"},
   {time:"04:15",title:"Move & listen",category:"Body",action:"listen",detail:"Mobility, cardio and a daily chapter"},
   {time:"05:15",title:"Breakfast & learn",category:"Mind",action:"read",detail:"Cook a healthy breakfast, learn one idea"},
@@ -54,6 +54,19 @@ function splitAudio(text, max=700){
 }
 const formatTime = mins => `${pad(Math.floor(mins/60))}:${pad(mins%60)}`;
 const reflectionKey = email => `syncworks-forge-reflect:${email}:${dateId(new Date())}`;
+const routineKey = email => `syncworks-forge-routine:${email}`;
+function safeRoutine(email){
+  try {
+    const stored = JSON.parse(localStorage.getItem(routineKey(email)) || "null");
+    if (!Array.isArray(stored) || stored.length !== defaultSchedule.length) return defaultSchedule;
+    return defaultSchedule.map((item,i)=>({
+      ...item,
+      title: typeof stored[i]?.title === "string" && stored[i].title.trim() ? stored[i].title.trim().slice(0,65) : item.title,
+      time: /^([01]\\d|2[0-3]):[0-5]\\d$/.test(stored[i]?.time || "") ? stored[i].time : item.time,
+      detail: typeof stored[i]?.detail === "string" && stored[i].detail.trim() ? stored[i].detail.trim().slice(0,160) : item.detail,
+    }));
+  } catch { return defaultSchedule; }
+}
 
 export default function CustomerForge(){
   const {user}=useAuth();
@@ -63,6 +76,9 @@ export default function CustomerForge(){
   const [mode,setMode]=useState("read");
   const [chapterId,setChapterId]=useState(()=>forgeChapters[Math.floor(new Date(dateId(new Date())+"T12:00:00").getTime()/86400000)%forgeChapters.length].id);
   const [done,setDone]=useState({});
+  const [schedule,setSchedule]=useState(defaultSchedule);
+  const [routineReady,setRoutineReady]=useState(false);
+  const [editingRoutine,setEditingRoutine]=useState(false);
   const [intent,setIntent]=useState("");
   const [loadedKey,setLoadedKey]=useState("");
   const [journal,setJournal]=useState("");
@@ -77,11 +93,12 @@ export default function CustomerForge(){
   const key=keyFor(email);
   const chapter=forgeChapters.find(c=>c.id===chapterId)||forgeChapters[0];
   const todayChapter=forgeChapters[Math.floor(new Date(dateId(now)+"T12:00:00").getTime()/86400000)%forgeChapters.length];
-  const completed=schedule.filter((_,i)=>done[i]).length;
+  const ordered=schedule.map((item,id)=>({...item,id})).sort((a,b)=>a.time.localeCompare(b.time) || a.id-b.id);
+  const completed=ordered.filter(item=>done[item.id]).length;
   const currentMin=now.getHours()*60+now.getMinutes();
-  const scheduledIndex=schedule.reduce((n,x,i)=>currentMin>=Number(x.time.slice(0,2))*60+Number(x.time.slice(3))?i:n,-1);
-  const focusIndex=scheduledIndex>=0&&!done[scheduledIndex]?scheduledIndex:schedule.findIndex((_,i)=>i>scheduledIndex&&!done[i]);
-  const active=focusIndex>=0?schedule[focusIndex]:null;
+  const scheduledIndex=ordered.reduce((n,x,i)=>currentMin>=Number(x.time.slice(0,2))*60+Number(x.time.slice(3))?i:n,-1);
+  const focusIndex=scheduledIndex>=0&&!done[ordered[scheduledIndex].id]?scheduledIndex:ordered.findIndex((item,i)=>i>scheduledIndex&&!done[item.id]);
+  const active=focusIndex>=0?ordered[focusIndex]:null;
   const breathCycle=breathSeconds%10, inhale=breathCycle<4;
   const remaining=Math.max(0,300-breathSeconds);
   const script=`${chapter.title}. ${chapter.lens}. ${chapter.paragraphs.join(" ")} Takeaway. ${chapter.takeaway} Today's challenge. ${chapter.challenge}`;
@@ -100,6 +117,18 @@ export default function CustomerForge(){
     try{localStorage.setItem(key,JSON.stringify({completed:done,intent}));}catch{/* local pilot only */}
   },[permitted,loadedKey,key,done,intent]);
   useEffect(()=>{if(!permitted||loadedKey!==key)return;try{localStorage.setItem(reflectionKey(email),journal);}catch{/* optional */}},[permitted,loadedKey,key,email,journal]);
+  useEffect(()=>{
+    if(!permitted)return;
+    setRoutineReady(false);
+    setSchedule(safeRoutine(email));
+    setRoutineReady(true);
+  },[permitted,email]);
+  useEffect(()=>{
+    if(!permitted || !routineReady)return;
+    try{localStorage.setItem(routineKey(email),JSON.stringify(schedule));}catch{/* optional local pilot routine */}
+  },[permitted,routineReady,email,schedule]);
+  function updateRoutine(id,field,value){setSchedule(items=>items.map((item,i)=>i===id?{...item,[field]:value}:item));}
+  function restoreRoutine(){setSchedule(defaultSchedule.map(x=>({...x})));}
   useEffect(()=>{
     if(!breathing)return;
     const timer=window.setInterval(()=>setBreathSeconds(x=>{if(x>=299){setBreathing(false);return 300;}return x+1;}),1000);
@@ -193,9 +222,18 @@ export default function CustomerForge(){
           {mode==="reflect"&&<><div className="forge3-stage-intro"><div><span className="forge3-overline">THE EXAMINED LIFE</span><h2>Turn wisdom into action</h2><p>Journal privately and carry today's lesson forward.</p></div><Brain size={35}/></div><div className="forge3-reflect"><div className="forge3-reflect-prompt"><span>QUESTION OF THE DAY</span><h3>{chapter.question}</h3><p><strong>Today's challenge:</strong> {chapter.challenge}</p></div><label htmlFor="forge3-reflection">Your thoughts</label><textarea id="forge3-reflection" value={journal} onChange={e=>setJournal(e.target.value)} placeholder="What did I learn? How can I apply it today? What should I practice tomorrow?"/><p>Saved in this browser for today's private reflection. Backend sync is not yet available.</p><div className="forge3-quicklinks"><Link to="/customer/health"><Dumbbell size={16}/> Training</Link><Link to="/calendar"><CalendarClock size={16}/> Calendar</Link><Link to="/customer/tasks"><Target size={16}/> Tasks</Link></div></div></>}
         </div>
       </section>
-      <aside className="forge3-sidebar" aria-label="Your daily plan"><div className="forge3-side-head"><span className="forge3-overline">YOUR DAY AT A GLANCE</span><h2>Mission control</h2><p>{completed} / {schedule.length} completed</p><div className="forge3-progress"><span style={{width:completed/schedule.length*100+"%"}}/></div></div>
+      <aside className="forge3-sidebar" aria-label="Your daily plan"><div className="forge3-side-head"><span className="forge3-overline">YOUR DAY AT A GLANCE</span><div className="forge3-side-title"><h2>Mission control</h2><button type="button" onClick={()=>setEditingRoutine(v=>!v)}>{editingRoutine?"Done":"Edit"}</button></div><p>{completed} / {schedule.length} completed</p><div className="forge3-progress"><span style={{width:completed/schedule.length*100+"%"}}/></div></div>
         <div className="forge3-current"><span className="forge3-overline"><span className="forge3-status-dot"/> {active?"YOUR NEXT STEP":"DAY COMPLETE"}</span><h3>{active?.title||"All missions reviewed"}</h3><p>{active?.detail||"Rest, reflect, and prepare for tomorrow."}</p>{active&&(active.href?<Link to={active.href}>Open activity <ArrowRight size={15}/></Link>:<button onClick={()=>startRoutine(active)} type="button">Start activity <ArrowRight size={15}/></button>)}</div>
-        <div className="forge3-side-list" tabIndex={0} aria-label="Today's planned activities">{schedule.map((item,i)=><div className={`forge3-side-item ${done[i]?"done":""} ${focusIndex===i?"active":""}`} key={item.time}><span className="forge3-item-time">{item.time}</span><div><strong>{item.title}</strong><small>{item.category}</small></div>{item.action?<button aria-label={"Open "+item.title} onClick={()=>startRoutine(item)} type="button"><ChevronRight size={15}/></button>:<Link aria-label={"Open "+item.title} to={item.href}><ChevronRight size={15}/></Link>}<button className="forge3-item-check" type="button" aria-label={done[i]?"Mark incomplete":"Mark complete"} aria-pressed={!!done[i]} onClick={()=>setDone(p=>({...p,[i]:!p[i]}))}><Check size={14}/></button></div>)}</div>
+        {editingRoutine ? <div className="forge3-side-list forge3-routine-editor" aria-label="Edit routine" tabIndex={0}>
+          <p className="forge3-editor-help">Changes stay on this device and become your default daily routine. Times can overlap; arrange them to fit your family and recovery.</p>
+          {schedule.map((item,i)=><div className="forge3-edit-row" key={i}>
+            <label htmlFor={`forge3-time-${i}`}>{item.category}</label>
+            <input id={`forge3-time-${i}`} aria-label={"Time for "+item.title} type="time" value={item.time} onChange={e=>updateRoutine(i,"time",e.target.value)} />
+            <input aria-label={"Name for "+item.category} maxLength={65} value={item.title} onChange={e=>updateRoutine(i,"title",e.target.value)} />
+            <input aria-label={"Instructions for "+item.title} maxLength={160} value={item.detail} onChange={e=>updateRoutine(i,"detail",e.target.value)} />
+          </div>)}
+          <button type="button" className="forge3-reset-routine" onClick={restoreRoutine}><RotateCcw size={14}/> Restore sample schedule</button>
+        </div> : <div className="forge3-side-list" tabIndex={0} aria-label="Today's planned activities">{ordered.map((item,i)=><div className={`forge3-side-item ${done[item.id]?"done":""} ${focusIndex===i?"active":""}`} key={item.id}><span className="forge3-item-time">{item.time}</span><div><strong>{item.title}</strong><small>{item.category}</small></div>{item.action?<button aria-label={"Open "+item.title} onClick={()=>startRoutine(item)} type="button"><ChevronRight size={15}/></button>:<Link aria-label={"Open "+item.title} to={item.href}><ChevronRight size={15}/></Link>}<button className="forge3-item-check" type="button" aria-label={done[item.id]?"Mark incomplete":"Mark complete"} aria-pressed={!!done[item.id]} onClick={()=>setDone(p=>({...p,[item.id]:!p[item.id]}))}><Check size={14}/></button></div>)}</div>}
         <div className="forge3-side-bottom"><label htmlFor="forge3-intent">TODAY'S MAIN PRIORITY</label><input id="forge3-intent" placeholder="Your one important outcome..." value={intent} onChange={e=>setIntent(e.target.value)}/><Link to="/calendar">Open SyncWorks calendar <ChevronRight size={15}/></Link></div>
       </aside>
     </div>
