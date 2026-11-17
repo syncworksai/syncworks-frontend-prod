@@ -1,0 +1,218 @@
+/* Desktop only: four independent circular AI bubbles and a move handle.
+   Positioned within the already reserved bottom dock; dragging moves the
+   visible group, never the mobile employee tray. */
+@media(min-width:768px){
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock{overflow:visible!important;position:relative;z-index:30;}
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock > .sw-office-agents--bubbles{
+   width:max-content!important;max-width:100%!important;
+   min-height:72px!important;height:auto!important;max-height:98px!important;
+   padding:5px 11px!important;gap:11px!important;
+   display:flex!important;align-items:center!important;
+   border:1px solid color-mix(in srgb,var(--sw-lobby-border) 44%,transparent)!important;
+   border-radius:55px!important;
+   background:color-mix(in srgb,var(--sw-lobby-glass) 32%,transparent)!important;
+   box-shadow:0 5px 22px #0003!important;
+   transform:translate(var(--sw-team-x,0px),var(--sw-team-y,0px))!important;
+   transition:none!important;
+   pointer-events:auto;
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agents-heading{
+   white-space:nowrap;font-size:10px;letter-spacing:.07em;
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agents-state{font-size:9px;}
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agents-head{min-width:84px!important;}
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agents-content{
+   flex:0 1 auto!important;width:auto!important;align-items:center;gap:12px!important;
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agents-portraits{
+   display:flex!important;grid-template-columns:none!important;flex:0 1 auto!important;
+   gap:clamp(12px,2vw,29px)!important;
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent{
+   width:clamp(55px,5.8vw,84px)!important;min-width:0!important;
+   min-height:66px!important;border:0!important;
+   background:transparent!important;
+   padding:0!important;display:flex!important;
+   flex-direction:column!important;gap:3px!important;justify-content:center;
+   text-align:center;align-items:center;
+   transform:none!important;
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent img{
+   width:clamp(39px,3.9vw,50px)!important;height:clamp(39px,3.9vw,50px)!important;
+   border-radius:50%!important;border:2px solid var(--sw-workspace-accent)!important;
+   box-shadow:0 0 9px color-mix(in srgb,var(--sw-workspace-accent) 30%,transparent);
+   transition:box-shadow .17s,transform .17s;
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent:hover img,
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent:focus-visible img{
+   transform:translateY(-3px);box-shadow:0 0 15px var(--sw-workspace-accent);
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent-names{
+   display:block!important;flex:none!important;width:100%;
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent-names strong{
+   display:block!important;font-size:10px!important;max-width:100%;
+   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent-names small{display:none!important;}
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent-chevron{display:none!important;}
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agents-actions{
+   gap:5px;align-items:center;flex:0 0 auto;
+ }
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agents-actions button{
+   min-height:34px;font-size:10px;
+ }
+ .sw-office-bubbles-controls{display:flex;flex-direction:column;gap:2px;align-items:center;flex:0 0 auto;}
+ .sw-office-bubbles-controls button{
+   display:grid;place-items:center;width:29px;height:28px;
+   border:1px solid var(--sw-lobby-border);border-radius:9px;
+   color:var(--sw-ui-text);background:color-mix(in srgb,var(--sw-lobby-glass) 65%,transparent);
+ }
+ .sw-office-bubbles-grip{touch-action:none;cursor:grab;}
+ .sw-office-bubbles-grip:active{cursor:grabbing;}
+ .sw-office-bubbles-controls button:focus-visible{outline:2px solid var(--sw-workspace-accent);}
+}
+@media(min-width:768px) and (max-width:1170px){
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agents--bubbles .sw-office-agents-head{display:none;}
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent{width:56px!important;}
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agents-portraits{gap:10px!important;}
+}
+@media(max-width:767px){.sw-office-bubbles-controls{display:none!important;}}
+@media(prefers-reduced-motion:reduce){
+ .sw-desktop-customer-cockpit .sw-desktop-office-team-dock .sw-office-agent img{transition:none!important;}
+}
+
+/* The bubble dock is now portal-mounted directly under document.body. This
+   prevents the one-screen dashboard's overflow:hidden rails from clipping
+   the dock while it is dragged to another part of the desktop viewport. */
+@media(min-width:768px){
+  .sw-desktop-office-team-dock > .sw-desktop-bubble-placeholder{display:block;height:83px;}
+  body > .sw-office-agents--bubbles {
+    --sw-workspace-accent:#69dcf9;
+    --sw-ui-text:#eaf8ff;
+    --sw-lobby-glass:rgba(5,17,36,.87);
+    --sw-lobby-border:rgba(110,212,244,.32);
+    --sw-ui-surface:rgba(26,53,82,.56);
+    position:fixed!important;
+    z-index:90!important;
+    bottom:14px!important;
+    left:50%!important;
+    width:max-content!important;
+    max-width:calc(100vw - 24px)!important;
+    height:auto!important;min-height:73px!important;
+    padding:6px 13px!important;
+    display:flex!important;
+    flex-direction:row!important;
+    align-items:center!important;
+    gap:12px!important;
+    border-radius:55px!important;
+    border:1px solid var(--sw-lobby-border)!important;
+    background:color-mix(in srgb,var(--sw-lobby-glass) 67%,transparent)!important;
+    box-shadow:0 12px 32px rgba(0,0,0,.32)!important;
+    color:var(--sw-ui-text)!important;
+    backdrop-filter:blur(13px);
+    -webkit-backdrop-filter:blur(13px);
+    transform:translate(calc(-50% + var(--sw-team-x,0px)),var(--sw-team-y,0px))!important;
+    transition:none!important;
+  }
+  body > .sw-office-agents--bubbles[data-bubble-theme="classic"] {
+    --sw-workspace-accent:#edc68a;--sw-ui-text:#fff2db;
+    --sw-lobby-glass:rgba(36,25,16,.85);--sw-lobby-border:rgba(233,185,110,.48);
+    --sw-ui-surface:rgba(92,61,32,.62);
+  }
+  body > .sw-office-agents--bubbles[data-bubble-theme="modern"] {
+    --sw-workspace-accent:#c2d4e2;--sw-ui-text:#f2f7fa;
+    --sw-lobby-glass:rgba(21,27,34,.88);--sw-lobby-border:rgba(171,191,208,.44);
+    --sw-ui-surface:rgba(65,80,94,.60);
+  }
+  body > .sw-office-agents--bubbles[data-bubble-theme="light"] {
+    --sw-workspace-accent:#247f88;--sw-ui-text:#292a27;
+    --sw-lobby-glass:rgba(252,245,233,.88);--sw-lobby-border:rgba(70,124,128,.49);
+    --sw-ui-surface:rgba(237,239,226,.71);
+  }
+  body > .sw-office-agents--bubbles[data-bubble-theme="legacy"] {
+    --sw-workspace-accent:#77d4f4;
+  }
+  body > .sw-office-agents--bubbles .sw-office-agents-head{
+    display:flex!important;flex-direction:column!important;align-items:flex-start!important;
+    min-width:83px!important;gap:4px!important;margin:0!important;
+  }
+  body > .sw-office-agents--bubbles .sw-office-agents-heading{font-size:10px!important;white-space:nowrap;}
+  body > .sw-office-agents--bubbles .sw-office-agents-state{font-size:9px!important;}
+  body > .sw-office-agents--bubbles .sw-office-agents-content{
+    display:flex!important;flex-direction:row!important;align-items:center!important;gap:12px!important;
+  }
+  body > .sw-office-agents--bubbles .sw-office-agents-portraits{
+    display:flex!important;flex-direction:row!important;gap:clamp(10px,1.8vw,26px)!important;
+  }
+  body > .sw-office-agents--bubbles .sw-office-agent{
+    display:flex!important;flex-direction:column!important;align-items:center!important;
+    justify-content:center!important;gap:3px!important;
+    min-height:65px!important;width:clamp(55px,5.8vw,82px)!important;
+    padding:0!important;border:none!important;background:transparent!important;
+    color:var(--sw-ui-text)!important;transform:none!important;
+  }
+  body > .sw-office-agents--bubbles .sw-office-agent img{
+    height:clamp(40px,3.8vw,49px)!important;width:clamp(40px,3.8vw,49px)!important;
+    border-radius:50%!important;border:2px solid var(--sw-workspace-accent)!important;
+    box-shadow:0 0 9px color-mix(in srgb,var(--sw-workspace-accent) 40%,transparent);
+  }
+  body > .sw-office-agents--bubbles .sw-office-agent:hover img{box-shadow:0 0 18px var(--sw-workspace-accent);}
+  body > .sw-office-agents--bubbles .sw-office-agent-names{display:block!important;min-width:0!important;width:100%!important;flex:none!important;text-align:center!important;}
+  body > .sw-office-agents--bubbles .sw-office-agent-names strong{font-size:10px!important;display:block!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  body > .sw-office-agents--bubbles .sw-office-agent-names small,
+  body > .sw-office-agents--bubbles .sw-office-agent-chevron{display:none!important;}
+  body > .sw-office-agents--bubbles .sw-office-agents-actions{display:flex!important;gap:5px!important;align-items:center;}
+  body > .sw-office-agents--bubbles .sw-office-agents-actions button{font-size:10px!important;white-space:nowrap;}
+  body > .sw-office-agents--bubbles .sw-office-agent-detail{
+    position:absolute!important;bottom:calc(100% + 8px)!important;right:10px!important;
+    z-index:4!important;width:260px!important;border:1px solid var(--sw-lobby-border)!important;
+    background:var(--sw-lobby-glass)!important;box-shadow:0 15px 40px #0007!important;
+  }
+  body > .sw-office-agents--bubbles .sw-office-bubbles-controls{display:flex!important;flex-direction:column;gap:3px;}
+  body > .sw-office-agents--bubbles .sw-office-bubbles-controls button{
+    display:grid;place-items:center;width:29px;height:27px;padding:0!important;
+    border:1px solid var(--sw-lobby-border);border-radius:8px;
+    background:var(--sw-ui-surface);color:var(--sw-ui-text);
+  }
+  body > .sw-office-agents--bubbles .sw-office-bubbles-grip{cursor:grab;touch-action:none;}
+  body > .sw-office-agents--bubbles .sw-office-bubbles-grip:active{cursor:grabbing;}
+}
+@media(min-width:768px) and (max-width:1120px){
+  body > .sw-office-agents--bubbles .sw-office-agents-head{display:none!important;}
+  body > .sw-office-agents--bubbles .sw-office-agent{width:55px!important;}
+  body > .sw-office-agents--bubbles .sw-office-agents-actions button:first-child{font-size:0!important;}
+  body > .sw-office-agents--bubbles{gap:8px!important;padding:5px 9px!important;}
+}
+@media(max-width:767px){body > .sw-office-agents--bubbles{display:none!important;}}
+
+/* Floating individual portraits, not one heavy rectangular team card. */
+@media(min-width:768px){
+ body > .sw-office-agents--bubbles {
+   border:0!important;
+   border-radius:0!important;
+   background:transparent!important;
+   box-shadow:none!important;
+   backdrop-filter:none!important;
+   -webkit-backdrop-filter:none!important;
+ }
+ body > .sw-office-agents--bubbles .sw-office-agent img{
+   background:var(--sw-lobby-glass)!important;
+   box-shadow:0 0 0 3px color-mix(in srgb,var(--sw-lobby-glass) 65%,transparent),0 0 14px color-mix(in srgb,var(--sw-workspace-accent) 46%,transparent)!important;
+ }
+ body > .sw-office-agents--bubbles .sw-office-agent-names strong{
+   text-shadow:0 1px 5px #000,0 2px 10px #000!important;
+ }
+ body > .sw-office-agents--bubbles .sw-office-agents-head{
+   padding:7px 9px!important;
+   background:var(--sw-lobby-glass)!important;
+   border:1px solid var(--sw-lobby-border)!important;
+   border-radius:13px!important;
+ }
+ body > .sw-office-agents--bubbles .sw-office-agents-actions{
+   padding:5px!important;
+   background:var(--sw-lobby-glass)!important;
+   border:1px solid var(--sw-lobby-border)!important;
+   border-radius:12px!important;
+ }
+}

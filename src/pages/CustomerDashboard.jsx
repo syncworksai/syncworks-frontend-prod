@@ -44,6 +44,8 @@ import CalendarDailySnapshot from "../components/calendar/CalendarDailySnapshot"
 import DashboardShell from "../components/dashboard/DashboardShell";
 import ImmersiveWorkspaceHome from "../components/customer/ImmersiveWorkspaceHome";
 import OfficeAgentDock from "../components/customer/OfficeAgentDockV27";
+import DesktopActionAlerts from "../components/customer/DesktopActionAlerts";
+import "../components/customer/DesktopAgentBubblesV30.css";
 import MobileCustomerCommandCenter from "../components/customer/MobileCustomerCommandCenter";
 import "../components/customer/ImmersiveSceneV19.css";
 import "../components/customer/OfficeFlowV20.css";
@@ -331,16 +333,7 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
 
         <aside className="sw-lobby-alert-rail sw-desktop-alerts-under-office min-w-0 space-y-4 lg:col-start-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 2xl:col-start-auto 2xl:block 2xl:sticky 2xl:top-4 2xl:space-y-4">
           
-          <section className="sw-lobby-alerts rounded-[1.6rem] border border-white/10 bg-slate-950/75 p-4 shadow-[0_20px_60px_rgba(0,0,0,.25)] backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-2"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-amber-200">Alerts</div><h2 className="mt-1 text-lg font-black text-white">Needs attention</h2></div><AlertTriangle className={`h-5 w-5 ${alertCount ? "text-rose-300" : "text-emerald-300"}`} /></div>
-            <div className="mt-4 space-y-3">
-              {overdueInvoices.slice(0, 2).map((item, index) => <AttentionItem key={`overdue-${item?.id || index}`} urgent title="Past due" detail={`${item?.memo || item?.title || "Payment"} · ${money(item?.balance_due ?? item?.total ?? 0)}`} onClick={() => nav("/customer/invoices")} />)}
-              {urgentTickets.slice(0, 2).map((item, index) => <AttentionItem key={`urgent-${item?.id || index}`} urgent title="Urgent request" detail={item?.title || item?.category_name || item?.category || "Service request needs attention"} onClick={() => nav(item?.id ? `/tickets/${item.id}` : "/customer/tickets")} />)}
-              {safeList(weather?.alerts).slice(0, 1).map((item, index) => <AttentionItem key={`weather-${index}`} urgent title="Weather alert" detail={item?.event || item?.headline || "Weather alert in your area"} onClick={() => nav("/customer/weather")} />)}
-              {!alertCount && dueInvoices.slice(0, 2).map((item, index) => <AttentionItem key={`due-${item?.id || index}`} title="Payment due" detail={`${item?.memo || item?.title || "Payment"} · ${money(item?.balance_due ?? item?.total ?? 0)}`} onClick={() => nav("/customer/invoices")} />)}
-              {!alertCount && !dueInvoices.length ? <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/[.08] p-4"><div className="text-[10px] font-black uppercase tracking-[.14em] text-emerald-200">Clear</div><div className="mt-2 text-sm font-bold text-white">No urgent action required.</div><div className="mt-1 text-[10px] leading-4 text-slate-500">Routine activity stays in Updates. Alerts are reserved for things that truly need attention.</div></div> : null}
-            </div>
-          </section>
+          <DesktopActionAlerts overdueInvoices={overdueInvoices} urgentTickets={urgentTickets} weatherAlerts={safeList(weather?.alerts)} dueInvoices={dueInvoices} money={money} isOverdue={invoiceIsOverdue} onNavigate={nav} />
 
           <div className="sw-office-extra-activity" hidden={workspaceTheme !== "legacy" && (!inOffice || !showActivity)}><section className="rounded-[1.6rem] border border-cyan-400/20 bg-cyan-500/[.05] p-4">
             <div className="flex items-center justify-between"><div><div className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-200">Updates</div><h3 className="mt-1 text-base font-black text-white">Across your connected life</h3></div><button type="button" onClick={() => nav("/sync/history")} className="text-[9px] font-black text-cyan-200">History</button></div>
@@ -353,7 +346,7 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
           {workspaceTheme !== "legacy" && inOffice && <button type="button" className="sw-office-activity-toggle" aria-expanded={showActivity} onClick={()=>setShowActivity(v=>!v)}>{showActivity ? "Hide activity & quick capture" : "View activity & quick capture"} <ChevronRight size={15}/></button>}
         </aside>
       </div>
-      {workspaceTheme !== "legacy" && <div className="sw-desktop-office-team-dock" aria-label="Your AI employee dock"><OfficeAgentDock user={user} placement="home" /></div>}
+      {workspaceTheme !== "legacy" && <div className="sw-desktop-office-team-dock" aria-label="Your AI employee dock"><OfficeAgentDock user={user} placement="home" theme={workspaceTheme} /></div>}
     </DashboardShell>
   );
 }

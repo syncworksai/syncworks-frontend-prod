@@ -1,0 +1,30 @@
+@media(min-width:768px){
+.sw-desktop-action-alerts{position:relative;padding:12px;border:1px solid var(--sw-lobby-border);border-radius:16px;color:var(--sw-ui-text);background:color-mix(in srgb,var(--sw-lobby-glass) 78%,transparent);backdrop-filter:blur(10px)}
+.sw-alert-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.sw-alert-eyebrow{display:flex;align-items:center;gap:5px;font-size:9px;font-weight:900;letter-spacing:.1em;color:var(--sw-workspace-accent)}.sw-alert-head h2{font-size:14px;font-weight:900}.sw-alert-count{border:1px solid currentColor;border-radius:99px;padding:3px 8px;color:var(--sw-workspace-accent);font-size:11px}
+.sw-alert-items{display:grid;gap:8px}.sw-alert-item{display:flex;align-items:flex-start;gap:2px;border-radius:12px;min-height:64px;border:1px solid;box-shadow:inset 3px 0 0 currentColor}.sw-alert-item--critical{color:#ff777f;border-color:rgba(255,106,113,.7);background:rgba(145,20,30,.39)}.sw-alert-item--warning{color:#ffd36d;border-color:rgba(245,181,65,.7);background:rgba(140,91,13,.38)}
+.sw-alert-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px;align-items:flex-start;text-align:left;padding:10px 4px 10px 12px}.sw-alert-main>span{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:900;letter-spacing:.05em}.sw-alert-main strong{font-size:11px;line-height:1.35;color:#fff;overflow-wrap:anywhere}.sw-alert-dismiss{flex:0 0 29px;height:30px;margin:5px;border:1px solid currentColor;border-radius:9px;color:inherit;display:grid;place-items:center;background:#0002}.sw-alert-dismiss:hover,.sw-alert-dismiss:focus-visible{outline:2px solid currentColor;outline-offset:1px}
+.sw-alert-clear{border:1px solid #34d39966;border-radius:10px;background:#064e3b33;padding:14px;font-size:12px}.sw-alert-archived-link{display:flex;align-items:center;gap:6px;margin-top:9px;font-size:11px}
+.sw-alert-dialog-backdrop{position:fixed!important;inset:0!important;z-index:2147483020!important;display:grid;place-items:center;padding:18px;background:rgba(2,6,16,.72);backdrop-filter:blur(5px)}.sw-alert-dialog{width:min(440px,95vw);max-height:80dvh;overflow-y:auto;padding:18px;border:1px solid var(--sw-workspace-accent);border-radius:19px;background:var(--sw-lobby-glass);color:var(--sw-ui-text);box-shadow:0 18px 80px #0009}.sw-alert-dialog-heading{display:flex;justify-content:space-between;align-items:center}.sw-alert-dialog-heading strong{font-size:17px}.sw-alert-dialog-heading button{padding:8px;border:1px solid var(--sw-lobby-border);border-radius:9px}.sw-alert-dialog p{font-size:12px;margin:10px 0 16px}.sw-alert-options{display:grid;gap:8px}.sw-alert-options button{display:flex;gap:12px;align-items:center;text-align:left;padding:12px;border:1px solid var(--sw-lobby-border);border-radius:12px;background:var(--sw-ui-surface);color:var(--sw-ui-text)}.sw-alert-options button:hover,.sw-alert-options button:focus-visible{border-color:var(--sw-workspace-accent);outline:1px solid var(--sw-workspace-accent)}.sw-alert-options button span{display:flex;flex-direction:column;gap:3px;font-size:13px;font-weight:850}.sw-alert-options button small{font-size:10px;opacity:.75;font-weight:500}.sw-alert-safety{border-top:1px solid var(--sw-lobby-border);font-size:10px;margin-top:14px;padding-top:11px;line-height:1.4}.sw-alert-archive-row{display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid var(--sw-lobby-border);padding:11px 0;font-size:11px}.sw-alert-archive-row button{display:flex;align-items:center;gap:5px;border:1px solid var(--sw-lobby-border);border-radius:8px;padding:7px}
+}
+@media(prefers-reduced-motion:reduce){.sw-desktop-action-alerts *{animation:none!important;transition:none!important}}
+/* Body-portal dialogs need their own colors; workspace CSS variables are
+   intentionally scoped to the office and do not inherit through portals. */
+@media(min-width:768px){
+ body > .sw-alert-dialog-backdrop .sw-alert-dialog{
+   color:#eef7ff!important;
+   background:rgba(7,20,40,.97)!important;
+   border-color:rgba(109,216,247,.7)!important;
+   backdrop-filter:blur(16px);
+ }
+ body > .sw-alert-dialog-backdrop .sw-alert-options button{
+   color:#eef7ff!important;
+   background:rgba(31,57,86,.75)!important;
+   border-color:rgba(109,216,247,.33)!important;
+ }
+ body > .sw-alert-dialog-backdrop .sw-alert-dialog-heading button,
+ body > .sw-alert-dialog-backdrop .sw-alert-archive-row button{
+   color:#eef7ff!important;
+   border-color:rgba(109,216,247,.4)!important;
+ }
+ body > .sw-alert-dialog-backdrop .sw-alert-safety{border-color:rgba(109,216,247,.3)!important;}
+}

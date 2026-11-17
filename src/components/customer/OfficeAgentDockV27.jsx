@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { BriefcaseBusiness, ChevronRight, MessageCircle, RefreshCw, Users } from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { BriefcaseBusiness, ChevronRight, Grip, MessageCircle, RefreshCw, RotateCcw, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { AVATARS } from "../sync/JarvisAvatar";
@@ -7,13 +8,43 @@ import "./OfficeAgentDockV27.css";
 
 // One source of truth for the private-pilot employees. Membership is NOT live
 // activity or proof that an agent is currently executing a task.
-export default function OfficeAgentDock({ user, placement = "home" }) {
+export default function OfficeAgentDock({ user, placement = "home", theme = "future" }) {
   const nav = useNavigate();
   const permitted = String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com";
   const [employees, setEmployees] = useState([]);
   const [fetchState, setFetchState] = useState("loading");
   const [version, setVersion] = useState(0);
   const [selected, setSelected] = useState(null);
+  const dockRef = useRef(null);
+  const dragStart = useRef(null);
+  const moveable = placement === "home";
+  const [offset, setOffset] = useState(() => {
+    try { const o = JSON.parse(localStorage.getItem("sw_desktop_agent_dock_position_v1") || "{}"); return {x:Number(o.x) || 0,y:Number(o.y) || 0}; }
+    catch {return {x:0,y:0};}
+  });
+  function dragBegin(event) {
+    if (!moveable || event.button !== 0) return;
+    const rect = dockRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragStart.current = {x:event.clientX,y:event.clientY,offset,rect};
+  }
+  function dragMove(event) {
+    if (!dragStart.current) return;
+    const {x,y,offset:initial,rect} = dragStart.current;
+    const left = rect.left - initial.x, right = rect.right - initial.x;
+    const top = rect.top - initial.y, bottom = rect.bottom - initial.y;
+    setOffset({
+      x: Math.round(Math.min(window.innerWidth - right - 8, Math.max(8 - left, initial.x + event.clientX - x))),
+      y: Math.round(Math.min(window.innerHeight - bottom - 8, Math.max(72 - top, initial.y + event.clientY - y)))
+    });
+  }
+  function dragEnd() {dragStart.current = null;}
+  useEffect(() => {
+    if (!moveable) return;
+    try {localStorage.setItem("sw_desktop_agent_dock_position_v1", JSON.stringify(offset));} catch {}
+  }, [offset.x,offset.y,moveable]);
 
   useEffect(() => {
     if (!permitted) return;
@@ -42,8 +73,8 @@ export default function OfficeAgentDock({ user, placement = "home" }) {
     ? `/sync/assist/employee/${encodeURIComponent(person.id)}`
     : "/sync/assist");
 
-  return (
-    <section className={`sw-office-agents sw-office-agents--${placement}`} aria-label={office ? "Chief of Staff" : "My AI team"}>
+  const dock = (
+    <section data-bubble-theme={theme} ref={dockRef} style={moveable ? {"--sw-team-x": offset.x + "px", "--sw-team-y": offset.y + "px"} : undefined} className={`sw-office-agents sw-office-agents--${placement} ${moveable ? "sw-office-agents--bubbles" : ""}`} aria-label={office ? "Chief of Staff" : "My AI team"}>
       <div className="sw-office-agents-head">
         <span className="sw-office-agents-heading"><Users size={16} aria-hidden="true" /> {office ? "CHIEF OF STAFF" : "MY AI TEAM"}</span>
         <span className="sw-office-agents-state">
@@ -53,6 +84,12 @@ export default function OfficeAgentDock({ user, placement = "home" }) {
            `${employees.length} configured`}
         </span>
       </div>
+      {moveable && <div className="sw-office-bubbles-controls">
+        <button type="button" className="sw-office-bubbles-grip" aria-label="Drag to move AI team dock" title="Drag to reposition AI team"
+          onPointerDown={dragBegin} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd}><Grip size={19}/></button>
+        {(offset.x !== 0 || offset.y !== 0) && <button type="button" title="Reset dock position" aria-label="Reset dock position"
+          onClick={() => setOffset({x:0,y:0})}><RotateCcw size={15}/></button>}
+      </div>}
       <div className="sw-office-agents-content">
         <div className="sw-office-agents-portraits">
           {shown.map((person) => (
@@ -81,4 +118,5 @@ export default function OfficeAgentDock({ user, placement = "home" }) {
       </div>
     </section>
   );
+  return moveable ? <><div className="sw-desktop-bubble-placeholder" aria-hidden="true" />{createPortal(dock, document.body)}</> : dock;
 }
