@@ -503,3 +503,37 @@
   .sw-health-home[data-health-panel="today"] > .sw-health-insight {display:none}
   .sw-health-home .sw-health-tools-toggle {border-color:rgba(110,221,255,.52);color:#d9f7ff;background:rgba(8,82,134,.30)}
 }
+
+
+/* Recovery is available one tap away instead of below the Today viewport. */
+.sw-health-quick-actions {display:flex;align-items:center;gap:.7rem}
+.sw-health-quick-actions .sw-health-recovery-trigger {
+  display:none;align-items:center;gap:.4rem;
+  padding:.35rem .65rem;border:1px solid rgba(86,218,235,.47);
+  border-radius:999px;background:rgba(16,102,129,.25);
+  color:#a9f5ff;font-size:.69rem;font-weight:850;
+}
+.sw-health-recovery-content {padding:1.4rem;display:flex;flex-direction:column;gap:1.25rem;overflow-y:auto;overscroll-behavior:contain;min-height:0}
+.sw-health-recovery-score {display:flex;align-items:center;gap:1rem}
+.sw-health-recovery-score .sw-health-ring {width:125px;flex:none}
+.sw-health-recovery-score p {font-size:.78rem;line-height:1.6;color:#b9cddd;max-width:220px}
+.sw-health-recovery-breakdown {display:grid;gap:1rem;border:1px solid rgba(70,173,235,.27);border-radius:1rem;padding:1rem;background:rgba(14,40,77,.28)}
+.sw-health-recovery-checkin,.sw-health-recovery-sleep {
+  display:flex;align-items:center;gap:.65rem;width:100%;min-height:48px;
+  border:1px solid rgba(70,173,235,.37);border-radius:.85rem;
+  background:rgba(23,93,144,.25);color:#e6f8ff;padding:.8rem 1rem;
+  font-size:.8rem;font-weight:800;text-align:left;
+}
+.sw-health-recovery-checkin svg:last-child,.sw-health-recovery-sleep svg:last-child {margin-left:auto}
+.sw-health-recovery-checkin:focus-visible,.sw-health-recovery-sleep:focus-visible,.sw-health-recovery-trigger:focus-visible {outline:2px solid #8aeaff;outline-offset:3px}
+@media (min-width:1024px) {
+  .sw-health-home[data-health-panel="today"] > .sw-health-readiness-card {display:none !important}
+  .sw-health-home[data-health-panel="today"] .sw-health-recovery-trigger {display:inline-flex}
+  .sw-health-home[data-health-panel="today"] > .sw-health-quick-panel {grid-column:span 8}
+  .sw-health-home[data-health-panel="today"] > .sw-health-desktop-grid {grid-column:1/-1}
+  .sw-health-home[data-health-panel="today"] > .sw-health-hero {grid-column:span 4}
+  .sw-health-home[data-health-panel="today"] {row-gap:.55rem}
+}
+@media (max-width:1023px) {
+  .sw-health-recovery-layer {display:none !important}
+}
