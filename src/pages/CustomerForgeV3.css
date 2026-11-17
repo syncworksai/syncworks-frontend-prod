@@ -36,7 +36,7 @@
 @media(max-width:720px){.forge3-side-title{gap:4px}.forge3-side-title button{padding:5px;font-size:10px}.forge3-editor-help{font-size:10px}.forge3-edit-row{grid-template-columns:1fr 1fr;margin-bottom:8px;padding:7px}.forge3-edit-row input{font-size:11px}}
 
 
-/* Forge v5 — supplied Spartan/stoic hall scene. Upload asset to /public/forge/forge-background.webp.
+/* Forge v5 — supplied Spartan/stoic hall scene. Upload asset to /public/forge/forge-background.png.
    The image is kept still for sharpness; slow light shimmer is a separate reduced-motion-safe layer. */
 .forge3 {
   --gold:#f0cb83;
@@ -46,7 +46,7 @@
   background-color:#100d0c;
   background-image:
     linear-gradient(90deg,rgba(7,8,10,.48) 0%,rgba(10,8,9,.43) 45%,rgba(8,8,9,.33) 100%),
-    url("/forge/forge-background.webp"),
+    url("/forge/forge-background.png"),
     radial-gradient(ellipse at 70% 35%,#624022 0%,#15100f 58%,#09090a 100%);
   background-repeat:no-repeat;
   background-position:center,center,center;
