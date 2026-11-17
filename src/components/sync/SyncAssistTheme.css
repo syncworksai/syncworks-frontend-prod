@@ -1,0 +1,174 @@
+/* Sync Assist uses the same appearance preference and office image assets as
+   Customer Dashboard. Scoped to the pilot route; no global theme changes. */
+.sw-assist-themed {
+  --assist-accent: 45, 210, 247;
+  --assist-accent-soft: rgba(45,210,247,.32);
+  --assist-glass: rgba(4, 15, 34, .56);
+  --assist-glass-strong: rgba(4, 15, 34, .77);
+  --assist-ink: #f4f9ff;
+  --assist-room-image: url("/assist-themes/executive-office.svg");
+  --assist-room-shade: linear-gradient(115deg,rgba(2,9,24,.84),rgba(2,8,23,.58));
+  --assist-room-position: center;
+  position: relative;
+  isolation: isolate;
+  background: #061427;
+  color: var(--assist-ink);
+}
+.sw-assist-themed[data-assist-theme="classic"] {
+  --assist-accent: 224, 174, 101;
+  --assist-accent-soft: rgba(224,174,101,.36);
+  --assist-glass: rgba(30,20,13,.60);
+  --assist-glass-strong: rgba(22,14,10,.82);
+  --assist-room-image: url("/office-themes/classic-office.webp");
+  --assist-room-shade: linear-gradient(115deg,rgba(20,12,7,.77),rgba(19,11,8,.48));
+}
+.sw-assist-themed[data-assist-theme="future"] {
+  --assist-accent: 75, 205, 255;
+  --assist-accent-soft: rgba(85,140,255,.44);
+  --assist-glass: rgba(5,15,37,.52);
+  --assist-glass-strong: rgba(4,13,34,.76);
+  --assist-room-image: url("/office-themes/syncworks-future.webp");
+  --assist-room-shade: linear-gradient(115deg,rgba(2,8,28,.70),rgba(14,5,42,.44));
+}
+.sw-assist-themed[data-assist-theme="modern"] {
+  --assist-accent: 153, 194, 216;
+  --assist-accent-soft: rgba(155,195,215,.27);
+  --assist-glass: rgba(15,22,30,.58);
+  --assist-glass-strong: rgba(12,19,27,.82);
+  --assist-room-image: url("/office-themes/modern-dark.webp");
+  --assist-room-shade: linear-gradient(115deg,rgba(8,13,21,.78),rgba(9,14,20,.50));
+}
+.sw-assist-themed[data-assist-theme="light"] {
+  --assist-accent: 86, 193, 225;
+  --assist-accent-soft: rgba(51,152,185,.35);
+  /* Dark readable floating panels on a bright office photograph. */
+  --assist-glass: rgba(10,31,46,.60);
+  --assist-glass-strong: rgba(7,26,43,.84);
+  --assist-room-image: url("/office-themes/clean-light.webp");
+  --assist-room-shade: linear-gradient(115deg,rgba(15,40,58,.26),rgba(15,40,58,.13));
+}
+.sw-assist-themed::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background-image: var(--assist-room-shade), var(--assist-room-image);
+  background-size: cover;
+  background-position: var(--assist-room-position);
+}
+.sw-assist-themed .sw-assist-panel,
+.sw-assist-themed .sw-assist-surface,
+.sw-assist-themed .sw-assist-task-card,
+.sw-assist-themed .sw-assist-detail-card,
+.sw-assist-themed .sw-assist-step-card,
+.sw-assist-themed .sw-assist-receipt {
+  border-color: rgba(var(--assist-accent),.22);
+  background: var(--assist-glass);
+  backdrop-filter: blur(20px) saturate(130%);
+  -webkit-backdrop-filter: blur(20px) saturate(130%);
+  box-shadow: inset 0 1px rgba(255,255,255,.055), 0 10px 32px rgba(0,0,0,.13);
+}
+.sw-assist-themed .sw-assist-banner {
+  background: linear-gradient(115deg,var(--assist-glass-strong),rgba(39,19,71,.39));
+}
+.sw-assist-themed .sw-assist-task-card {
+  transition: border-color .2s ease, background-color .2s ease, transform .2s ease;
+  background: rgba(4,15,34,.34);
+}
+.sw-assist-themed .sw-assist-task-card:hover {
+  border-color: rgba(var(--assist-accent),.48);
+  background: rgba(13,35,59,.56);
+  transform: translateY(-2px);
+}
+.sw-assist-themed .sw-assist-dialog-overlay {
+  background: rgba(1,5,18,.52);
+  backdrop-filter: blur(11px);
+  -webkit-backdrop-filter: blur(11px);
+}
+.sw-assist-themed .sw-assist-detail-dialog {
+  position: relative;
+  isolation: isolate;
+  color: #f4f9ff;
+  border-color: var(--assist-accent-soft);
+  background: var(--assist-glass-strong);
+  box-shadow: -20px 0 65px rgba(0,0,0,.30),-1px 0 30px var(--assist-accent-soft);
+  backdrop-filter: blur(30px) saturate(130%);
+  -webkit-backdrop-filter: blur(30px) saturate(130%);
+}
+.sw-assist-themed .sw-assist-detail-dialog::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  opacity: .32;
+  background-image: var(--assist-room-shade),var(--assist-room-image);
+  background-size: cover;
+  background-position: center;
+}
+.sw-assist-themed .sw-assist-detail-header {
+  border-color: rgba(var(--assist-accent),.24);
+  background: linear-gradient(100deg,rgba(var(--assist-accent),.12),rgba(121,70,220,.10));
+  box-shadow: inset 0 -1px rgba(var(--assist-accent),.16);
+}
+.sw-assist-themed .sw-assist-detail-card {
+  background: rgba(4,14,31,.39);
+}
+.sw-assist-themed .sw-assist-step-card {
+  background: rgba(4,14,31,.36);
+}
+.sw-assist-themed .sw-assist-receipt {
+  background: linear-gradient(135deg,rgba(14,71,94,.33),rgba(17,22,57,.32));
+}
+.sw-assist-themed .sw-assist-detail-dialog button,
+.sw-assist-themed .sw-assist-detail-dialog select,
+.sw-assist-themed .sw-assist-detail-dialog textarea {
+  transition: border-color .18s ease, background-color .18s ease, box-shadow .18s ease;
+}
+.sw-assist-themed .sw-assist-detail-dialog button:focus-visible,
+.sw-assist-themed .sw-assist-detail-dialog select:focus-visible,
+.sw-assist-themed .sw-assist-detail-dialog textarea:focus-visible {
+  outline: 2px solid rgba(var(--assist-accent),.85);
+  outline-offset: 2px;
+}
+.sw-assist-themed .sw-assist-detail-dialog button:hover:not(:disabled) {
+  border-color: rgba(var(--assist-accent),.7);
+  background-color: rgba(var(--assist-accent),.10);
+}
+.sw-assist-themed .sw-assist-detail-dialog select,
+.sw-assist-themed .sw-assist-detail-dialog textarea {
+  background: rgba(2,9,24,.65);
+  border-color: rgba(var(--assist-accent),.25);
+}
+.sw-assist-themed .sw-assist-detail-dialog select:focus,
+.sw-assist-themed .sw-assist-detail-dialog textarea:focus {
+  border-color: rgba(var(--assist-accent),.7);
+  box-shadow: 0 0 0 2px rgba(var(--assist-accent),.12);
+}
+@media (min-width:768px) {
+ .sw-assist-themed .sw-assist-detail-dialog {
+   width: min(45vw, 800px);
+   max-width: 800px;
+   margin: 12px 14px 12px 0;
+   height: calc(100% - 24px);
+   border: 1px solid var(--assist-accent-soft);
+   border-radius: 22px;
+   overflow: hidden;
+ }
+}
+@media (max-width:767px) {
+ .sw-assist-themed .sw-assist-detail-dialog {width:100%;max-width:none;}
+}
+@media (prefers-reduced-motion: no-preference) {
+ .sw-assist-themed[data-assist-motion="on"] .sw-assist-detail-dialog {
+   animation: sw-assist-hologram-in .26s cubic-bezier(.2,.7,.2,1) both;
+ }
+ @keyframes sw-assist-hologram-in {
+   from {opacity:0;transform:translateX(20px) scale(.985);filter:blur(6px);}
+   to {opacity:1;transform:translateX(0) scale(1);filter:blur(0);}
+ }
+}
+@media (prefers-reduced-motion: reduce) {
+ .sw-assist-themed .sw-assist-task-card {transition:none;transform:none!important;}
+}
