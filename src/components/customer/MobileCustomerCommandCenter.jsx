@@ -86,7 +86,7 @@ export default function MobileCustomerCommandCenter({ name, brief, attentionCoun
               <time dateTime={start.toISOString()}>{hourText(start)}</time>
               <span className="sw-mobile-hour-line" aria-hidden="true"/>
               <span className="sw-mobile-hour-events">
-                {events.length ? <><strong>{eventText(events[0])}</strong><small>{eventCategory(events[0]) === "BUSINESS" ? "Business" : "Personal"} · {shortTime(new Date(events[0].start_at))}{events[0].end_at ? "–"+shortTime(new Date(events[0].end_at)) : ""}</small>{events.length > 1 && <small>+{events.length - 1} more</small>}</> : <small>{active ? "No event this hour" : "Open"}</small>}
+                {events.length ? <><strong>{eventText(events[0])}</strong><small>{eventCategory(events[0]) === "BUSINESS" ? (events[0]?.metadata?.business_name || "Business") : "Personal"} · {shortTime(new Date(events[0].start_at))}{events[0].end_at ? "–"+shortTime(new Date(events[0].end_at)) : ""}</small>{events.length > 1 && <small>+{events.length - 1} more</small>}</> : <small>{active ? "No event this hour" : "Open"}</small>}
               </span>
               {active && <span className="sw-mobile-hour-now">NOW</span>}
             </button>
