@@ -5,6 +5,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SyncAssistantLauncher from "./components/sync/SyncAssistantLauncher";
 import RoleAwareMobileNav from "./components/navigation/RoleAwareMobileNav";
+import MobileRouteMotion from "./components/navigation/MobileRouteMotion";
 import IdentityOnboardingGate from "./components/identity/IdentityOnboardingGate";
 import PlatformRoute from "./components/PlatformRoute";
 
@@ -175,6 +176,7 @@ export default function App() {
   return (
     <div className="sw-autoglow">
       <Suspense fallback={<RouteLoading />}>
+      <MobileRouteMotion>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -338,6 +340,7 @@ export default function App() {
         <Route path="/" element={<ProtectedRoute><Navigate to="/customer" replace /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+      </MobileRouteMotion>
       </Suspense>
       <IdentityOnboardingGate />
       <SyncAssistantLauncher />
