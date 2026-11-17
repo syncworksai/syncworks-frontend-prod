@@ -1,3 +1,4 @@
+import "../components/customer/DesktopCustomerCockpit.css";
 import React, { useEffect, useMemo, useState } from "react";
 import "../styles/personalMidnight.css";
 import { Activity, Home, Inbox, LayoutGrid, MoreHorizontal } from "lucide-react";
