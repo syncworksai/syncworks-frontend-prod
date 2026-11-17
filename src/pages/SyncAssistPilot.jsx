@@ -4,6 +4,9 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import SyncAssistWorkdayPanel from "../components/sync/SyncAssistWorkdayPanel";
+import { useWorkspaceAppearance } from "../components/customer/CustomerWorkspace";
+import "../components/sync/SyncAssistTheme.css";
+
 
 const PILOT = "jacoblord7@outlook.com";
 const OPTIONS = [
@@ -15,6 +18,7 @@ const OPTIONS = [
 
 export default function SyncAssistPilot() {
   const navigate = useNavigate();
+  const [workspaceAppearance] = useWorkspaceAppearance();
   const { user } = useAuth();
   const permitted = String(user?.email || "").trim().toLowerCase() === PILOT;
   const [data, setData] = useState(null);
@@ -119,10 +123,10 @@ export default function SyncAssistPilot() {
   }
 
   return (
-    <main className="relative h-[calc(100dvh-115px)] min-h-0 overflow-hidden bg-[#020617] px-3 pb-3 pt-3 text-white sm:h-[calc(100dvh-57px)]" style={{backgroundImage: 'linear-gradient(100deg,rgba(2,6,23,.94),rgba(2,6,23,.84)),url("/assist-themes/executive-office.svg")', backgroundSize:"cover", backgroundPosition:"center"}}>
+    <main data-assist-theme={workspaceAppearance.theme} data-assist-motion={workspaceAppearance.motion ? "on" : "off"} className="sw-assist-themed relative h-[calc(100dvh-115px)] min-h-0 overflow-hidden bg-[#020617] px-3 pb-3 pt-3 text-white sm:h-[calc(100dvh-57px)]">
       <div className="mx-auto flex h-full max-w-7xl flex-col gap-2 overflow-hidden">
         <div className="flex shrink-0 items-center justify-between gap-2"><button type="button" onClick={() => navigate("/sync")} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-xs text-slate-200"><ArrowLeft size={15}/> Back to SYNC</button><button type="button" onClick={() => setToolsOpen(true)} className="min-h-10 rounded-xl border border-cyan-400/35 bg-slate-950/80 px-3 text-xs font-bold text-cyan-100">More pilot tools</button></div>
-        <header className="shrink-0 rounded-2xl border border-cyan-300/25 bg-gradient-to-br from-[#091c32]/95 to-[#120c2c]/95 p-3">
+        <header className="sw-assist-panel sw-assist-banner shrink-0 rounded-2xl border border-cyan-300/25 p-3">
           <div className="flex items-center gap-3"><Bot className="h-6 w-6 text-cyan-300"/><div><p className="text-[10px] font-black uppercase tracking-[.17em] text-cyan-200">Private pilot</p><h1 className="text-lg font-black">Sync Assist · Workday Test Center</h1></div></div>
           <p className="mt-1 text-[11px] leading-4 text-slate-300">Assign employees, run an authorized internal step, inspect receipts, and review work history.</p>
           <div className="mt-1 flex items-center gap-2 text-[11px] font-bold text-amber-200"><ShieldCheck size={13}/> Private pilot · Unattended worker not verified</div>

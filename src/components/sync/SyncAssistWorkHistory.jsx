@@ -39,9 +39,9 @@ export default function SyncAssistWorkHistory({ goals = [], onReuse }) {
       className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-400/30 px-3 text-xs font-bold text-cyan-100 hover:border-cyan-300">
       <Archive size={15}/> Work history
     </button>
-    {open && <div className="fixed inset-0 z-[260] flex justify-end bg-slate-950/75 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
-      <section role="dialog" aria-modal="true" aria-label="Sync Assist employee work history" className="flex h-full w-full max-w-xl flex-col border-l border-cyan-400/35 bg-[#071225] text-white shadow-2xl">
-        <header className="flex items-center justify-between gap-3 border-b border-white/10 p-4">
+    {open && <div className="sw-assist-dialog-overlay fixed inset-0 z-[260] flex justify-end" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
+      <section role="dialog" aria-modal="true" aria-label="Sync Assist employee work history" className="sw-assist-secondary-dialog flex h-full w-full max-w-xl flex-col border-l border-cyan-400/35 text-white shadow-2xl">
+        <header className="sw-assist-detail-header flex items-center justify-between gap-3 border-b border-white/10 p-4">
           <div><p className="text-[10px] font-black uppercase tracking-widest text-cyan-300">Sync Assist · Evidence vault</p>
             <h2 className="text-xl font-black">Employee Work History</h2></div>
           <button type="button" onClick={() => setOpen(false)} className="grid h-11 w-11 place-items-center rounded-xl border border-white/20" aria-label="Close work history"><X size={20}/></button>
@@ -59,7 +59,7 @@ export default function SyncAssistWorkHistory({ goals = [], onReuse }) {
           {!busy && !error && !events.length && <p className="text-sm text-slate-400">No recorded work yet. Create an assignment to begin the audit trail.</p>}
           {!busy && events.map((event) => {
             const goal = goals.find((item) => item.id === event.goal_id);
-            return <article key={event.event_id} className="space-y-2 rounded-2xl border border-white/15 bg-slate-900/45 p-3">
+            return <article key={event.event_id} className="sw-assist-step-card space-y-2 rounded-2xl border border-white/15 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <strong className="text-xs text-cyan-200">{kindLabel[event.kind] || event.kind}</strong>
                 <time className="text-[11px] text-slate-400" dateTime={event.timestamp}>{niceDate(event.timestamp)}</time>
