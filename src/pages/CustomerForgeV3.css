@@ -18,3 +18,19 @@
 @media(max-width:390px){.forge3-identity h1{font-size:22px}.forge3-header-clock{display:none}.forge3-main{grid-template-rows:minmax(0,1fr) 90px}.forge3-sidebar{grid-template-columns:105px 1fr}.forge3-side-head{padding:8px}.forge3-side-head h2{font-size:14px}.forge3-side-head .forge3-overline{font-size:8px}.forge3-stage-intro{margin-bottom:8px}.forge3-stage-intro h2{font-size:22px}.forge3-stage-intro p{font-size:10px}.forge3-chapter-select .forge3-softbtn{display:none}}
 @media(max-height:650px) and (min-width:721px){.forge3{padding-top:76px}.forge3-header{min-height:48px;margin-bottom:7px}.forge3-side-head{padding:12px}.forge3-current{padding:10px}.forge3-stage-intro{margin-bottom:8px}.forge3-stage-intro h2{font-size:28px}.forge3-player{padding-top:7px}.forge3-modes{padding:7px}.forge3-modes button{padding:8px}}
 @media(prefers-reduced-motion:reduce){.forge3 *, .forge3 *::before,.forge3 *::after{animation:none!important;transition:none!important}}
+
+
+/* Forge v4: compact, keyboard-accessible routine editor within the existing sidebar. */
+.forge3-side-title{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.forge3-side-title button{border:1px solid rgba(232,199,143,.42);color:#e9cd9d;border-radius:9px;padding:7px 11px;font-size:11px;font-weight:800;background:rgba(224,189,129,.08)}
+.forge3-side-title button:hover{background:rgba(224,189,129,.18)}
+.forge3-routine-editor{padding:11px!important;display:block}
+.forge3-editor-help{color:#b6c6d3;font-size:11px;line-height:1.5;margin:2px 3px 14px}
+.forge3-edit-row{display:grid;grid-template-columns:85px 1fr;gap:7px;padding:10px 8px;margin-bottom:10px;border:1px solid rgba(226,198,153,.2);border-radius:11px;background:rgba(18,31,48,.73)}
+.forge3-edit-row label{align-self:center;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#d6bc8f;font-weight:800}
+.forge3-edit-row input{min-width:0;width:100%;padding:8px 9px;border:1px solid rgba(226,198,153,.24);border-radius:8px;background:#0d1a2c;color:#f9efdd;color-scheme:dark;font-size:11px}
+.forge3-edit-row input:nth-of-type(2),.forge3-edit-row input:nth-of-type(3){grid-column:1 / -1}
+.forge3-edit-row input:focus-visible{outline:2px solid #ebca8e;outline-offset:1px}
+.forge3-reset-routine{display:flex;gap:7px;align-items:center;justify-content:center;width:100%;border:1px solid rgba(227,197,145,.34);color:#eccf9e;padding:11px;border-radius:10px;font-size:11px;font-weight:750}
+.forge3-reset-routine:hover{background:rgba(227,197,145,.13)}
+@media(max-width:720px){.forge3-side-title{gap:4px}.forge3-side-title button{padding:5px;font-size:10px}.forge3-editor-help{font-size:10px}.forge3-edit-row{grid-template-columns:1fr 1fr;margin-bottom:8px;padding:7px}.forge3-edit-row input{font-size:11px}}
