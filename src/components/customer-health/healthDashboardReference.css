@@ -559,3 +559,31 @@
   .sw-health-home .sw-health-quick-actions {gap:.35rem}
   .sw-health-home .sw-health-adaptive-chip {font-size:.62rem;padding:.35rem .45rem}
 }
+
+
+/* Profile-specific strength trends drawer. */
+.sw-health-strength-layer{position:fixed;inset:0;z-index:2147482000;display:flex;justify-content:flex-end}
+.sw-health-strength-backdrop{position:absolute;inset:0;background:rgba(0,6,20,.73);border:0;border-radius:0!important;backdrop-filter:blur(5px)}
+.sw-health-strength-panel{position:relative;display:flex;flex-direction:column;width:min(520px,100vw);height:100dvh;overflow:hidden;border-left:1px solid rgba(78,213,255,.45);background:linear-gradient(145deg,rgba(5,23,47,.98),rgba(3,7,23,.99) 65%,rgba(36,16,67,.97));box-shadow:-25px 0 85px rgba(0,0,0,.54);color:#eaf7ff}
+.sw-health-strength-head{display:flex;align-items:start;justify-content:space-between;gap:.8rem;padding:calc(1.2rem + env(safe-area-inset-top)) 1.2rem 1.1rem;border-bottom:1px solid rgba(76,185,255,.24)}
+.sw-health-strength-head small{font-size:.65rem;font-weight:850;letter-spacing:.15em;color:#6cdfff}
+.sw-health-strength-head h2{font-size:1.6rem;font-weight:900;margin:.2rem 0}
+.sw-health-strength-head p{font-size:.78rem;color:#a8bfd6}
+.sw-health-strength-head button{min-width:44px;min-height:44px;border:1px solid rgba(83,206,255,.45);border-radius:12px;background:rgba(49,116,158,.20)}
+.sw-health-strength-body{display:flex;flex-direction:column;gap:.8rem;overflow-y:auto;min-height:0;padding:1rem 1.2rem calc(2rem + env(safe-area-inset-bottom))}
+.sw-health-strength-summary{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
+.sw-health-strength-summary>div,.sw-health-strength-exercise{border:1px solid rgba(70,184,250,.32);border-radius:1rem;background:rgba(13,46,83,.27);padding:1rem}
+.sw-health-strength-summary strong{display:block;font-size:1.5rem}
+.sw-health-strength-summary span,.sw-health-strength-exercise small{font-size:.72rem;color:#acc3d8}
+.sw-health-strength-exercise{display:flex;flex-direction:column;gap:.75rem}
+.sw-health-strength-title{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.sw-health-strength-title strong{font-size:.94rem}
+.sw-health-strength-title>span{font-size:.66rem;color:#83e8ff}
+.sw-health-strength-stats{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.sw-health-strength-stats>div{display:flex;flex-direction:column;gap:.2rem;border:1px solid rgba(95,199,250,.16);padding:.7rem;border-radius:.8rem;background:rgba(2,13,31,.48)}
+.sw-health-strength-stats strong{font-size:1.05rem}
+.sw-health-strength-stats span,.sw-health-strength-exercise p{font-size:.76rem;color:#cad8e7}
+.sw-health-strength-disclaimer{font-size:.72rem;color:#a5b9ce;line-height:1.5}
+.sw-health-strength-head button:focus-visible,.sw-health-progression-toggle:focus-visible{outline:2px solid #81dfff;outline-offset:3px}
+@media(min-width:1024px){.sw-health-home .sw-health-progression-toggle{border:1px solid rgba(98,222,255,.35);background:rgba(17,96,143,.2);color:#d7f5ff}}
+@media(max-width:1023px){.sw-health-progression-toggle{display:none}}
