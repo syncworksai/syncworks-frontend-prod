@@ -74,6 +74,7 @@ export default function CustomerForge(){
   const permitted=email===OWNER;
   const [now,setNow]=useState(()=>new Date());
   const [mode,setMode]=useState("read");
+  const [readingOpen,setReadingOpen]=useState(false);
   const [chapterId,setChapterId]=useState(()=>forgeChapters[Math.floor(new Date(dateId(new Date())+"T12:00:00").getTime()/86400000)%forgeChapters.length].id);
   const [done,setDone]=useState({});
   const [schedule,setSchedule]=useState(defaultSchedule);
@@ -199,6 +200,12 @@ export default function CustomerForge(){
     startAudio();
   }
   function setActiveMode(next){if(next!==mode)stopAudio();setMode(next);}
+  useEffect(()=>{
+    if(!readingOpen)return undefined;
+    const onKey=e=>{if(e.key==="Escape")setReadingOpen(false);};
+    window.addEventListener("keydown",onKey);
+    return ()=>window.removeEventListener("keydown",onKey);
+  },[readingOpen]);
   function startRoutine(item){if(item.action)setActiveMode(item.action);}
   if(!permitted)return <main className="min-h-screen bg-slate-950 px-6 pt-28 text-white"><h1 className="text-xl">Private pilot</h1><Link to="/customer">Return to office</Link></main>;
   return <main className="forge3">
@@ -214,7 +221,17 @@ export default function CustomerForge(){
           {(mode==="read"||mode==="listen")&&<>
             <div className="forge3-stage-intro"><div><span className="forge3-overline">{mode==="listen"?"THE DAILY AUDIOBOOK":"TODAY'S READING"} · ORIGINAL FORGE LESSON</span><h2>{chapter.title}</h2><p>{chapter.lens} · {chapter.length}</p></div><span className="forge3-book-icon"><BookOpen size={33}/></span></div>
             <div className="forge3-chapter-select"><label htmlFor="forge3-lesson">Chapter</label><select id="forge3-lesson" value={chapterId} onChange={e=>{stopAudio();setChapterId(e.target.value);}}>{forgeChapters.map(c=><option key={c.id} value={c.id}>{c.title}</option>)}</select><button type="button" onClick={()=>{stopAudio();setChapterId(todayChapter.id);}} className="forge3-softbtn">Today's pick</button></div>
-            {mode==="read"?<div className="forge3-reader" tabIndex={0} aria-label="Chapter reading"><p className="forge3-dropcap">{chapter.paragraphs[0]}</p>{chapter.paragraphs.slice(1).map((p,i)=><p key={i}>{p}</p>)}<div className="forge3-chapter-end"><strong>APPLY IT TODAY</strong><p>{chapter.challenge}</p><button type="button" onClick={()=>setActiveMode("reflect")}>Reflect on this chapter <ChevronRight size={16}/></button></div></div>:<div className="forge3-listen-room"><div className={audioState==="playing"?"forge3-orb speaking":"forge3-orb"}><Headphones size={52}/></div><p>{chapter.description}</p><blockquote>{chapter.paragraphs[0]}</blockquote><div className="forge3-listen-note">The full chapter is narrated, not just this excerpt.</div></div>}
+            {mode==="read"?<div className="forge3-reading-home">
+              <div className="forge3-reading-symbol" aria-hidden="true"><BookOpen size={52}/></div>
+              <span className="forge3-overline">TODAY'S CHAPTER · PERSONAL DEVELOPMENT</span>
+              <h3>{chapter.description}</h3>
+              <p>{chapter.paragraphs[0].slice(0,260)}...</p>
+              <div className="forge3-reading-home-actions">
+                <button type="button" className="forge3-mainbtn" onClick={()=>setReadingOpen(true)}><BookOpen size={17}/> Open today's reading <ArrowRight size={16}/></button>
+                <button type="button" className="forge3-softbtn" onClick={()=>setActiveMode("listen")}><Headphones size={17}/> Audio experience</button>
+              </div>
+              <div className="forge3-reading-takeaway"><strong>YOUR CHALLENGE</strong><p>{chapter.challenge}</p></div>
+            </div>:<div className="forge3-listen-room"><div className={audioState==="playing"?"forge3-orb speaking":"forge3-orb"}><Headphones size={52}/></div><p>{chapter.description}</p><blockquote>{chapter.paragraphs[0]}</blockquote><div className="forge3-listen-note">The full chapter is narrated, not just this excerpt.</div></div>}
             <div className="forge3-player"><div className="forge3-play-buttons"><button className="forge3-mainbtn" type="button" onClick={toggleAudio} disabled={audioState==="loading"}>{audioState==="playing"?<Pause size={18}/>:<Play size={18}/>} {audioState==="loading"?"Preparing...":audioState==="paused"?"Resume":audioState==="playing"?"Pause":"Listen to chapter"}</button><button className="forge3-iconbtn" type="button" onClick={stopAudio} title="Stop narration" aria-label="Stop narration"><Square size={17}/></button></div><label>Voice <select value={voiceType} onChange={e=>{stopAudio();setVoiceType(e.target.value);}}><option value="natural">Natural AI voice</option><option value="device">Device voice</option></select></label><span className="forge3-audio-status" role="status">{audioStatus||"Headphone-ready listening"}</span></div>
           </>}
           {mode==="breathe"&&<><div className="forge3-stage-intro"><div><span className="forge3-overline">GUIDED MEDITATION</span><h2>Return to the present</h2><p>Five minutes · Gentle 4-in / 6-out rhythm</p></div><Wind size={35}/></div><div className="forge3-breathe-center"><div className={breathing?"forge3-breathe-orb running":"forge3-breathe-orb"} data-inhale={inhale}><span>{inhale?"BREATHE IN":"BREATHE OUT"}</span><strong>{inhale?4-breathSeconds%10:10-breathSeconds%10}</strong><small>{formatTime(remaining)} remaining</small></div><p>Relax your shoulders. Breathe comfortably. No breath holding is required.</p></div><div className="forge3-player"><button className="forge3-mainbtn" type="button" onClick={()=>setBreathing(v=>!v)} disabled={breathSeconds>=300}>{breathing?<Pause size={18}/>:<Play size={18}/>} {breathing?"Pause":"Start breathing"}</button><button className="forge3-iconbtn" type="button" onClick={()=>{setBreathing(false);setBreathSeconds(0);}}><RotateCcw size={17}/></button><button className="forge3-softbtn" onClick={()=>startAudio("Settle into a comfortable posture. Relax your face and shoulders. Breathe gently in through the nose for four counts, and breathe out slowly for six counts. Follow the moving circle. If you feel lightheaded, return to your natural breath. You do not need to force anything.")} type="button"><Volume2 size={16}/> Guided introduction</button><button className="forge3-iconbtn" onClick={stopAudio} type="button" title="Stop voice"><Square size={16}/></button></div></>}
@@ -237,6 +254,13 @@ export default function CustomerForge(){
         <div className="forge3-side-bottom"><label htmlFor="forge3-intent">TODAY'S MAIN PRIORITY</label><input id="forge3-intent" placeholder="Your one important outcome..." value={intent} onChange={e=>setIntent(e.target.value)}/><Link to="/calendar">Open SyncWorks calendar <ChevronRight size={15}/></Link></div>
       </aside>
     </div>
+    {readingOpen&&<div className="forge3-reading-overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setReadingOpen(false);}}>
+      <section className="forge3-reading-dialog" role="dialog" aria-modal="true" aria-labelledby="forge3-reading-heading">
+        <header className="forge3-reading-dialog-head"><div><span className="forge3-overline">THE FORGE · DAILY READING</span><h2 id="forge3-reading-heading">{chapter.title}</h2><p>{chapter.lens} · {chapter.length}</p></div><button type="button" className="forge3-reading-close" onClick={()=>setReadingOpen(false)} aria-label="Close today's reading">✕</button></header>
+        <div className="forge3-reading-dialog-body" tabIndex={0}><p className="forge3-dropcap">{chapter.paragraphs[0]}</p>{chapter.paragraphs.slice(1).map((p,i)=><p key={i}>{p}</p>)}<div className="forge3-chapter-end"><strong>APPLY IT TODAY</strong><p>{chapter.challenge}</p></div></div>
+        <div className="forge3-reading-dialog-actions"><button type="button" className="forge3-mainbtn" onClick={()=>{setReadingOpen(false);setActiveMode("listen");startAudio();}}><Headphones size={17}/> Listen to full chapter</button><button type="button" className="forge3-softbtn" onClick={()=>{setReadingOpen(false);setActiveMode("reflect");}}>Reflect on lesson <ChevronRight size={16}/></button><button type="button" className="forge3-softbtn" onClick={()=>setReadingOpen(false)}>Close</button></div>
+      </section>
+    </div>}
     <footer className="forge3-footer"><span><Sparkles size={14}/> Build your life, one intentional action at a time.</span><span>Private pilot · Forge coach is separate from Chief of Staff · Chapters are original · Audio uses AI narration when available</span></footer>
   </main>;
 }
