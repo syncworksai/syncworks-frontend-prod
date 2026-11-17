@@ -43,6 +43,7 @@ import AroundYouPanel from "../components/customer/AroundYouPanel";
 import CalendarDailySnapshot from "../components/calendar/CalendarDailySnapshot";
 import DashboardShell from "../components/dashboard/DashboardShell";
 import ImmersiveWorkspaceHome from "../components/customer/ImmersiveWorkspaceHome";
+import OfficeAgentDock from "../components/customer/OfficeAgentDockV27";
 import MobileCustomerCommandCenter from "../components/customer/MobileCustomerCommandCenter";
 import "../components/customer/ImmersiveSceneV19.css";
 import "../components/customer/OfficeFlowV20.css";
@@ -267,6 +268,7 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
 
         <main className="min-w-0 space-y-5">
           {workspaceTheme !== "legacy" && !inOffice ? <ImmersiveWorkspaceHome displayName={firstName(user)} theme={workspaceTheme} onOpenLauncher={() => window.dispatchEvent(new CustomEvent("sw:workspace-open", { detail: "apps" }))} onOpenAppearance={() => window.dispatchEvent(new CustomEvent("sw:workspace-open", { detail: "appearance" }))} /> : null}
+          {inOffice && <OfficeAgentDock user={user} />}
           {inOffice && <section id="sw-office-workdesk" className="sw-office-workdesk" aria-label="Today's office">
             <div className="sw-office-workdesk-top">
               <div><button type="button" className="sw-office-home-return" onClick={()=>nav("/customer")}>← Back to Home</button><span className="sw-office-eyebrow">YOUR OFFICE · TODAY</span><h2>What are we working on today?</h2><p>Start with your priorities. Everything else is one drawer away.</p></div>
