@@ -34,3 +34,78 @@
 .forge3-reset-routine{display:flex;gap:7px;align-items:center;justify-content:center;width:100%;border:1px solid rgba(227,197,145,.34);color:#eccf9e;padding:11px;border-radius:10px;font-size:11px;font-weight:750}
 .forge3-reset-routine:hover{background:rgba(227,197,145,.13)}
 @media(max-width:720px){.forge3-side-title{gap:4px}.forge3-side-title button{padding:5px;font-size:10px}.forge3-editor-help{font-size:10px}.forge3-edit-row{grid-template-columns:1fr 1fr;margin-bottom:8px;padding:7px}.forge3-edit-row input{font-size:11px}}
+
+
+/* Forge v5 — supplied Spartan/stoic hall scene. Upload asset to /public/forge/forge-background.webp.
+   The image is kept still for sharpness; slow light shimmer is a separate reduced-motion-safe layer. */
+.forge3 {
+  --gold:#f0cb83;
+  --pale:#fff0d6;
+  --muted:#d6c7b5;
+  --line:rgba(241,194,111,.3);
+  background-color:#100d0c;
+  background-image:
+    linear-gradient(90deg,rgba(7,8,10,.48) 0%,rgba(10,8,9,.43) 45%,rgba(8,8,9,.33) 100%),
+    url("/forge/forge-background.webp"),
+    radial-gradient(ellipse at 70% 35%,#624022 0%,#15100f 58%,#09090a 100%);
+  background-repeat:no-repeat;
+  background-position:center,center,center;
+  background-size:cover,cover,cover;
+}
+.forge3-glow {
+  z-index:-1;
+  opacity:.8;
+  background:
+    radial-gradient(ellipse at 83% 31%,rgba(255,166,48,.15),transparent 44%),
+    radial-gradient(ellipse at 16% 70%,rgba(140,24,32,.14),transparent 48%),
+    linear-gradient(110deg,transparent 8%,rgba(244,181,81,.08) 48%,transparent 75%);
+  background-size:100% 100%,100% 100%,220% 100%;
+  animation:forge3-torchlight 17s ease-in-out infinite;
+}
+.forge3-workspace,.forge3-sidebar{
+  background:linear-gradient(120deg,rgba(15,13,14,.62),rgba(26,19,18,.55));
+  border:1px solid rgba(242,198,127,.4);
+  box-shadow:0 16px 45px rgba(0,0,0,.27),inset 0 1px 0 rgba(255,222,155,.07);
+  -webkit-backdrop-filter:blur(11px) saturate(110%);
+  backdrop-filter:blur(11px) saturate(110%);
+}
+.forge3-modes{background:rgba(12,10,11,.36);border-bottom-color:rgba(238,190,112,.25)}
+.forge3-modes button{color:#efe1cd}
+.forge3-modes button:hover{background:rgba(208,153,63,.09);border-color:rgba(244,200,123,.3)}
+.forge3-modes button.selected{background:linear-gradient(120deg,rgba(174,113,46,.32),rgba(89,27,24,.27));border-color:rgba(245,200,118,.78);color:#fff0cf;box-shadow:inset 0 1px 0 rgba(255,214,148,.13)}
+.forge3-reader{
+  background:linear-gradient(120deg,rgba(17,13,14,.73),rgba(35,24,21,.61));
+  border-color:rgba(241,193,119,.28);
+  -webkit-backdrop-filter:blur(7px);
+  backdrop-filter:blur(7px);
+}
+.forge3-chapter-end,.forge3-reflect-prompt{
+  border-color:rgba(241,193,119,.32);
+}
+.forge3-reflect-prompt{background:rgba(65,29,22,.39)}
+.forge3-listen-room{background:radial-gradient(ellipse at center,rgba(181,92,27,.16),transparent 64%)}
+.forge3-stage-intro p,.forge3-reader p,.forge3-current p{color:#f2e3d1}
+.forge3-overline,.forge3-identity span,.forge3-reflect label{color:#f5cc83}
+.forge3-side-head,.forge3-current,.forge3-side-bottom{background-color:rgba(15,12,12,.14);border-color:rgba(237,189,109,.24)}
+.forge3-side-item{border-bottom-color:rgba(242,195,118,.23)}
+.forge3-side-item.active{background:rgba(116,52,25,.34);border-color:rgba(243,197,112,.66)}
+.forge3-side-item strong,.forge3-side-item .forge3-item-time{color:#ffebcd}
+.forge3-back,.forge3-mark,.forge3-pill{background:rgba(21,12,13,.58);border-color:rgba(241,192,109,.45)}
+.forge3-mark{background:radial-gradient(circle at 28% 24%,rgba(182,106,40,.62),rgba(31,14,16,.83) 76%)}
+.forge3-mainbtn{background:linear-gradient(120deg,#ffe0a4,#d79c4c);color:#24150c;border-color:#ffd38a}
+.forge3-iconbtn,.forge3-softbtn{background:rgba(41,19,18,.58);border-color:rgba(247,200,125,.41);color:#ffdfab}
+.forge3-reflect textarea,.forge3-side-bottom input,.forge3 select,.forge3-edit-row input{background:rgba(19,13,14,.82);border-color:rgba(235,190,117,.38);color:#fff1d8}
+.forge3-video-stage{border-color:rgba(235,190,117,.45)}
+.forge3-footer{color:#f1dec0;text-shadow:0 1px 7px rgba(0,0,0,.8)}
+.forge3-breathe-orb{background:radial-gradient(circle at 31% 22%,#b38252,#633b2a 49%,#1f1518 79%);box-shadow:0 0 65px rgba(228,128,39,.28),inset 0 0 38px rgba(250,201,141,.22)}
+.forge3-orb{background:radial-gradient(circle at 32% 23%,#b88a5d,#5a3328 48%,#1e161a 76%);box-shadow:0 0 65px rgba(224,138,55,.22)}
+.forge3:focus-within button:focus-visible,.forge3 a:focus-visible{outline:2px solid #ffcf82;outline-offset:2px}
+@keyframes forge3-torchlight{
+  0%,100%{background-position:center,center,0% 50%;opacity:.62}
+  50%{background-position:center,center,100% 50%;opacity:.95}
+}
+@media(max-width:720px){
+  .forge3{background-position:center,36% center,center}
+  .forge3-workspace,.forge3-sidebar{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);background:rgba(17,12,13,.7)}
+}
+@media(prefers-reduced-motion:reduce){.forge3-glow{animation:none!important}}
