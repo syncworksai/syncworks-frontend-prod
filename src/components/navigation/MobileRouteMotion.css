@@ -1,26 +1,31 @@
-/* In-app mobile page entries: preserve normal router/history, no simulated pages.
-   The CSS is scoped to phones and honors both user preference and OS reduced motion. */
-@media(max-width:767px) {
-  .sw-mobile-route-stage { min-width:0; }
-  .sw-mobile-route-stage[data-mobile-route-motion="fade-zoom"] > *:first-child {
-    transform-origin:50% 34%;
-    animation:sw-mobile-route-fade-zoom .23s cubic-bezier(.2,.7,.2,1) both;
-  }
-  .sw-mobile-route-stage[data-mobile-route-motion="hologram"] > *:first-child {
-    transform-origin:50% 45%;
-    animation:sw-mobile-route-hologram .28s cubic-bezier(.16,.8,.22,1) both;
-  }
+/* SyncWorks route entrance V2: visible yet fast, desktop and mobile.
+   Do not animate the router or global navigation; only the routed page. */
+.sw-mobile-route-stage {min-width:0;isolation:isolate;}
+.sw-mobile-route-stage[data-mobile-route-motion="fade-zoom"] > *:first-child {
+  transform-origin:50% 28%;
+  animation:sw-route-enter .38s cubic-bezier(.16,.85,.25,1) both;
 }
-@keyframes sw-mobile-route-fade-zoom {
-  from {opacity:.45;transform:scale(.985) translateY(6px);}
-  to {opacity:1;transform:scale(1) translateY(0);}
+.sw-mobile-route-stage[data-mobile-route-motion="hologram"] > *:first-child {
+  transform-origin:50% 40%;
+  animation:sw-route-hologram-enter .46s cubic-bezier(.17,.82,.2,1) both;
 }
-@keyframes sw-mobile-route-hologram {
-  from {opacity:.12;transform:perspective(900px) translateY(12px) rotateX(3deg) scale(.96);filter:brightness(1.35);}
-  to {opacity:1;transform:perspective(900px) translateY(0) rotateX(0) scale(1);filter:brightness(1);}
+@keyframes sw-route-enter {
+  0% {opacity:.18;transform:translate3d(0,22px,0) scale(.955);filter:blur(5px);}
+  65% {opacity:.94;transform:translate3d(0,-2px,0) scale(1.008);filter:blur(0);}
+  100% {opacity:1;transform:none;filter:none;}
 }
+@keyframes sw-route-hologram-enter {
+  0% {opacity:.08;transform:perspective(1100px) translate3d(0,35px,0) rotateX(8deg) scale(.89);filter:brightness(1.7) blur(7px);}
+  62% {opacity:1;transform:perspective(1100px) translate3d(0,-5px,0) rotateX(-1deg) scale(1.01);filter:brightness(1.12) blur(0);}
+  100% {opacity:1;transform:none;filter:none;}
+}
+/* Respect the device's accessibility preference. The in-app motion toggle
+   maps transition to none, and thus skips the keyframes automatically. */
 @media(prefers-reduced-motion:reduce) {
   .sw-mobile-route-stage[data-mobile-route-motion] > *:first-child {
-    animation:none!important;transform:none!important;filter:none!important;opacity:1!important;
+    animation:none!important;
+    transform:none!important;
+    filter:none!important;
+    opacity:1!important;
   }
 }
