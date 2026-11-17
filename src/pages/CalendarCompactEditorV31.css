@@ -219,3 +219,8 @@ body > .sw-calendar-composer .sw-cal-event-category .selected.business{
  background:rgba(137,77,24,.55);border-color:#ffca7f;
 }
 body > .sw-calendar-composer .sw-cal-event-category button:focus-visible{outline:2px solid var(--cal-sheet-accent);outline-offset:2px;}
+
+
+body > .sw-calendar-composer .sw-cal-business-selector{grid-column:1 / -1!important;display:flex;flex-direction:column;gap:4px;color:var(--cal-sheet-muted);font-size:11px;font-weight:700}
+body > .sw-calendar-composer .sw-cal-business-selector select{width:100%;height:38px;min-width:0;border:1px solid var(--cal-sheet-line);border-radius:9px;padding:6px 9px;color:#f9fbff;background:#10243b;font-size:12px}
+body > .sw-calendar-composer .sw-cal-business-selector small{font-size:10px;color:var(--cal-sheet-muted)}
