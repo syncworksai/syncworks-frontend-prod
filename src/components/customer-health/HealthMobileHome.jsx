@@ -12,6 +12,8 @@ import {
   Home,
   Mic2,
   Moon,
+  Menu,
+  X,
   Ruler,
   Scale,
   SmilePlus,
@@ -127,6 +129,16 @@ export default function HealthMobileHome({
 }) {
   const [dayKey, setDayKey] = useState(() => localYmd());
   const [desktopPanel, setDesktopPanel] = useState("today");
+  const [toolsOpen, setToolsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!toolsOpen) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setToolsOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [toolsOpen]);
   const [previousWorkout, setPreviousWorkout] = useState(null);
 
   const firstName =
@@ -293,7 +305,49 @@ export default function HealthMobileHome({
             <Icon size={15} /> {label}
           </button>
         ))}
+        <button type="button" className="sw-health-tools-toggle"
+          aria-haspopup="dialog" aria-expanded={toolsOpen}
+          onClick={() => setToolsOpen(true)}>
+          <Menu size={16} /> All Tools
+        </button>
       </div>
+      {toolsOpen ? (
+        <div className="sw-health-tools-layer" role="presentation">
+          <button type="button" className="sw-health-tools-backdrop"
+            aria-label="Close Health tools" onClick={() => setToolsOpen(false)} />
+          <aside className="sw-health-tools-drawer" role="dialog" aria-modal="true"
+            aria-label="SyncWorks Health tools">
+            <div className="sw-health-tools-head">
+              <div>
+                <small>SYNCWORKS HEALTH</small>
+                <h2>Command Center</h2>
+                <p>Choose where to go. Your workout stays available.</p>
+              </div>
+              <button type="button" className="sw-health-tools-close"
+                aria-label="Close Health tools" onClick={() => setToolsOpen(false)}><X size={22} /></button>
+            </div>
+            <div className="sw-health-tools-grid">
+              {[
+                { label: "Start Workout", detail: "Launch your guided session", icon: Dumbbell, action: () => nextWorkout ? onStartWorkout?.(nextWorkout) : onOpen?.("plan-today") },
+                { label: "Workout Library", detail: "Exercises and previous sessions", icon: Activity, action: () => onOpen?.("my-workouts") },
+                { label: "Build My Plan", detail: "Set up or revise your training", icon: CalendarDays, action: () => onOpen?.("questionnaire") },
+                { label: "Nutrition", detail: "Meals, macros and food logging", icon: Utensils, action: () => onOpen?.("nutrition-dashboard") },
+                { label: "Recovery", detail: "Sleep and daily check-in", icon: Moon, action: () => onOpen?.("daily-goals") },
+                { label: "Body Metrics", detail: "Measurements and health profile", icon: Scale, action: () => onOpen?.("profile-intake") },
+                { label: "Performance", detail: "Trends, progress and records", icon: BarChart3, action: () => onOpen?.("progress") },
+                { label: "SYNC AI Coach", detail: "Ask questions and adjust your plan", icon: BrainCircuit, action: () => onOpen?.("coach-chat") },
+              ].map(({label,detail,icon:Icon,action}) => (
+                <button key={label} type="button" className="sw-health-tool-item"
+                  onClick={() => { setToolsOpen(false); action(); }}>
+                  <span className="sw-health-tool-icon"><Icon size={20} /></span>
+                  <span className="sw-health-tool-text"><strong>{label}</strong><small>{detail}</small></span>
+                  <ChevronRight size={16} />
+                </button>
+              ))}
+            </div>
+          </aside>
+        </div>
+      ) : null}
       <section className="sw-health-hero">
         <img className="sw-health-hero__logo" src="/health/syncworks-health-s-glow.png" alt="" aria-hidden="true" />
         <div className="sw-health-hero__copy">
