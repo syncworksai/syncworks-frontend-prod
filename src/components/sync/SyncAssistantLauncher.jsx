@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Bell, Check, Clock3, MessageCircle, UserRound, X } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
-import { AVATARS } from "./JarvisAvatar";
+import { AVATARS, getAvatarPhotoForUser } from "./JarvisAvatar";
 import api from "../../api/client";
 import SyncAlertDrawer from "./SyncAlertDrawer";
 
@@ -170,7 +170,7 @@ export default function SyncAssistantLauncher() {
                 <div className="mb-3 grid gap-1.5">
                   {AVATARS.map((assistant) => (
                     <div key={assistant.id} className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/20 px-2 py-1.5">
-                      <img src={assistant.photo} alt="" className="h-8 w-8 rounded-full object-cover object-top" />
+                      <img src={getAvatarPhotoForUser(assistant, user)} alt="" className="h-8 w-8 rounded-full object-cover object-top" />
                       <span className="text-xs text-slate-200"><strong className="text-white">{assistant.name}</strong> — {assistant.role}</span>
                     </div>
                   ))}
@@ -186,7 +186,7 @@ export default function SyncAssistantLauncher() {
             )}
             <button type="button" aria-expanded={chiefOpen} aria-label="Open Victoria Chief of Staff dock" title="Victoria — Chief of Staff" onClick={toggleChief}
               className="group flex min-h-14 items-center gap-2 rounded-full border border-cyan-300/45 bg-[#061327]/95 py-1.5 pl-1.5 pr-3 text-left text-white shadow-[0_0_26px_rgba(34,211,238,.22)] transition hover:border-cyan-300">
-              <span className="relative block h-11 w-11 shrink-0"><img src={chiefAvatar.photo} alt="" className="h-11 w-11 rounded-full border border-cyan-300/55 object-cover object-top" />
+              <span className="relative block h-11 w-11 shrink-0"><img src={getAvatarPhotoForUser(chiefAvatar, user)} alt="" className="h-11 w-11 rounded-full border border-cyan-300/55 object-cover object-top" />
                 {workdayStatus.available && workdayStatus.unread > 0 && <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white ring-2 ring-slate-950" aria-label={`${workdayStatus.unread} new workday results`}>{workdayStatus.unread > 99 ? "99+" : workdayStatus.unread}</span>}
                 {workdayStatus.available && workdayStatus.completed > 0 && <span className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white ring-2 ring-slate-950" title="Owner-attested completion"><Check size={13} strokeWidth={3} /></span>}
               </span>
