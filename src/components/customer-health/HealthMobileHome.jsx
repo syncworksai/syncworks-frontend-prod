@@ -413,6 +413,13 @@ export default function HealthMobileHome({
         <div className="sw-health-section-head">
           <span>Today at a glance</span>
           <div className="sw-health-quick-actions">
+            {decision?.revised ? (
+              <button type="button" className="sw-health-adaptive-chip"
+                title={decision?.reason || "SYNC adjusted your workout around recovery"}
+                onClick={() => decision?.needsRebuild ? onOpen?.("planner") : onStartWorkout?.(decision?.workout)}>
+                <Sparkles size={15} /> SYNC adjusted plan <ChevronRight size={13} />
+              </button>
+            ) : null}
             <button type="button" className="sw-health-recovery-trigger" onClick={() => setRecoveryOpen(true)}
               aria-haspopup="dialog" aria-expanded={recoveryOpen}>
               <HeartPulse size={15} /> Recovery {readiness}%
