@@ -21,7 +21,6 @@ export default function CalendarImmersiveCockpit({events,loading,error,notice,on
   const [filter,setFilter]=useState("ALL");
   const [drawer,setDrawer]=useState("");
   const [selected,setSelected]=useState(null);
-  const [confirmText,setConfirmText]=useState("");
   React.useEffect(()=>{
     const handle=()=>setAppearance(readWorkspaceAppearance());
     window.addEventListener("sw:workspace-appearance",handle);
@@ -106,7 +105,7 @@ export default function CalendarImmersiveCockpit({events,loading,error,notice,on
             <p>Tell SYNC what you need scheduled. Review the draft before saving it to your calendar.</p>
             <label htmlFor="sw-cal-capture">Describe an appointment</label>
             <textarea id="sw-cal-capture" rows={3} value={captureText} onChange={e=>setCaptureText(e.target.value)} placeholder="Meet the client Friday at 11 AM at their office" />
-            <div className="sw-cal-drawer-buttons"><button type="button" className="sw-cal-primary" onClick={()=>{onCapture();close();}} disabled={!captureText.trim()}><Sparkles size={16}/> Prepare event</button><button type="button" onClick={onVoice}><Mic size={16}/> Speak</button></div>
+            <div className="sw-cal-drawer-buttons"><button type="button" className="sw-cal-primary" onClick={()=>{onCapture();close();}} disabled={!captureText.trim()}><Sparkles size={16}/> Prepare event</button><button type="button" onClick={()=>{onVoice();close();}}><Mic size={16}/> Speak</button></div>
             <div className="sw-cal-assistant-row"><strong>Upcoming trip preparation</strong>{nextEvent?<TravelWeatherAssistCard event={nextEvent} onUpdated={onUpdated}/>:<p>No upcoming events to prepare for.</p>}</div>
           </>:selected?<>
             <div className="sw-cal-event-info"><Clock3 size={17}/>{new Date(selected.start_at).toLocaleString("en-US",{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})} {selected.end_at&&"– "+new Date(selected.end_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}</div>
