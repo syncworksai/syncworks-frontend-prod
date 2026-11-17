@@ -6,7 +6,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import BusinessProfileEditController from "./components/business/BusinessProfileEditController";
 import BusinessSettingsLoadGuard from "./components/business/BusinessSettingsLoadGuard";
 import BusinessLiveAuditGuard from "./components/business/BusinessLiveAuditGuard";
-import PersonalStorefrontDock from "./components/customer/PersonalStorefrontDock";
 import PMShell from "./components/pm/PMShell";
 import PMTenantEditOverlay from "./components/pm/PMTenantEditOverlay";
 import NutritionCoachGlobalAssist from "./components/customer-health/NutritionCoachGlobalAssist";
@@ -95,14 +94,12 @@ function RoutedApplication() {
   const isPmDashboard = pathname === "/pm";
   const isPmRoute = isPmDashboard || pathname.startsWith("/pm/");
   const directPage = directPages[pathname];
-  const showPersonalStorefrontDock = pathname.startsWith("/customer") && pathname !== "/customer/store";
 
   const routedContent = directPage ? (
     <ProtectedRoute>{directPage}</ProtectedRoute>
   ) : (
     <>
       <App />
-      {showPersonalStorefrontDock ? <PersonalStorefrontDock /> : null}
       <BusinessProfileEditController />
       <BusinessSettingsLoadGuard />
       <BusinessLiveAuditGuard />
