@@ -23,6 +23,17 @@ export default function SyncAssistantLauncher() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [chiefOpen, setChiefOpen] = useState(false);
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  useEffect(() => {
+    const onDialog = (event) => {
+      const opened = Boolean(event?.detail?.open);
+      setTaskDialogOpen(opened);
+      if (opened) setChiefOpen(false);
+    };
+    window.addEventListener("sync-assist:task-dialog", onDialog);
+    return () => window.removeEventListener("sync-assist:task-dialog", onDialog);
+  }, []);
+
   // The Chief of Staff has a stable identity; changing a portrait elsewhere
   // must not silently turn another specialist into the Chief of Staff.
   const chiefAvatar = AVATARS.find((a) => a.role === "Chief of Staff") || AVATARS[0];
@@ -131,7 +142,7 @@ export default function SyncAssistantLauncher() {
 
   return (
     <>
-      <div className={`fixed bottom-24 right-4 z-[80] flex flex-col items-end gap-3 lg:bottom-6 lg:right-6 ${mobileVisible ? "" : "hidden lg:flex"}`}>
+      <div className={`fixed bottom-24 right-4 z-[80] flex flex-col items-end gap-3 lg:bottom-6 lg:right-6 ${taskDialogOpen && showChief ? "hidden" : mobileVisible ? "" : "hidden lg:flex"}`}>
         {showChief && (
           <>
             {chiefOpen && (
