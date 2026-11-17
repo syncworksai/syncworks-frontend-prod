@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle, Archive, Bell, Clock3, RotateCcw, Trash2, X } from "lucide-react";
 import "./DesktopActionAlerts.css";
 
@@ -85,7 +86,7 @@ export default function DesktopActionAlerts({ overdueInvoices = [], urgentTicket
         )) : <div className="sw-alert-clear">All clear — no active dashboard alerts.</div>}
       </div>
       {archived.length > 0 && <button type="button" className="sw-alert-archived-link" onClick={() => setShowArchive(true)}><Archive size={14}/> Archived ({archived.length})</button>}
-      {chosen && selected && <div className="sw-alert-dialog-backdrop" role="presentation" onMouseDown={() => setChosen(null)}>
+      {chosen && selected && createPortal(<div className="sw-alert-dialog-backdrop" role="presentation" onMouseDown={() => setChosen(null)}>
         <div className="sw-alert-dialog" role="dialog" aria-modal="true" aria-label="Manage dashboard notification" onMouseDown={e => e.stopPropagation()}>
           <div className="sw-alert-dialog-heading"><strong>Manage notification</strong><button type="button" onClick={() => setChosen(null)} aria-label="Close"><X size={18}/></button></div>
           <p>{selected.detail}</p>
@@ -96,13 +97,13 @@ export default function DesktopActionAlerts({ overdueInvoices = [], urgentTicket
           </div>
           <div className="sw-alert-safety">These options don't delete or change the underlying payment, request or weather record.</div>
         </div>
-      </div>}
-      {showArchive && <div className="sw-alert-dialog-backdrop" onMouseDown={() => setShowArchive(false)} role="presentation">
+      </div>, document.body)}
+      {showArchive && createPortal(<div className="sw-alert-dialog-backdrop" onMouseDown={() => setShowArchive(false)} role="presentation">
         <div className="sw-alert-dialog" role="dialog" aria-modal="true" aria-label="Archived alerts" onMouseDown={e => e.stopPropagation()}>
           <div className="sw-alert-dialog-heading"><strong>Archived alerts</strong><button type="button" onClick={() => setShowArchive(false)} aria-label="Close"><X size={18}/></button></div>
           {archived.map(item => <div className="sw-alert-archive-row" key={stableKey(item)}><span>{item.detail}</span><button type="button" onClick={() => update(item,"restore")}><RotateCcw size={15}/> Restore</button></div>)}
         </div>
-      </div>}
+      </div>, document.body)}
     </section>
   );
 }
