@@ -7,3 +7,24 @@
 .sw-alert-dialog-backdrop{position:fixed!important;inset:0!important;z-index:2147483020!important;display:grid;place-items:center;padding:18px;background:rgba(2,6,16,.72);backdrop-filter:blur(5px)}.sw-alert-dialog{width:min(440px,95vw);max-height:80dvh;overflow-y:auto;padding:18px;border:1px solid var(--sw-workspace-accent);border-radius:19px;background:var(--sw-lobby-glass);color:var(--sw-ui-text);box-shadow:0 18px 80px #0009}.sw-alert-dialog-heading{display:flex;justify-content:space-between;align-items:center}.sw-alert-dialog-heading strong{font-size:17px}.sw-alert-dialog-heading button{padding:8px;border:1px solid var(--sw-lobby-border);border-radius:9px}.sw-alert-dialog p{font-size:12px;margin:10px 0 16px}.sw-alert-options{display:grid;gap:8px}.sw-alert-options button{display:flex;gap:12px;align-items:center;text-align:left;padding:12px;border:1px solid var(--sw-lobby-border);border-radius:12px;background:var(--sw-ui-surface);color:var(--sw-ui-text)}.sw-alert-options button:hover,.sw-alert-options button:focus-visible{border-color:var(--sw-workspace-accent);outline:1px solid var(--sw-workspace-accent)}.sw-alert-options button span{display:flex;flex-direction:column;gap:3px;font-size:13px;font-weight:850}.sw-alert-options button small{font-size:10px;opacity:.75;font-weight:500}.sw-alert-safety{border-top:1px solid var(--sw-lobby-border);font-size:10px;margin-top:14px;padding-top:11px;line-height:1.4}.sw-alert-archive-row{display:flex;justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid var(--sw-lobby-border);padding:11px 0;font-size:11px}.sw-alert-archive-row button{display:flex;align-items:center;gap:5px;border:1px solid var(--sw-lobby-border);border-radius:8px;padding:7px}
 }
 @media(prefers-reduced-motion:reduce){.sw-desktop-action-alerts *{animation:none!important;transition:none!important}}
+/* Body-portal dialogs need their own colors; workspace CSS variables are
+   intentionally scoped to the office and do not inherit through portals. */
+@media(min-width:768px){
+ body > .sw-alert-dialog-backdrop .sw-alert-dialog{
+   color:#eef7ff!important;
+   background:rgba(7,20,40,.97)!important;
+   border-color:rgba(109,216,247,.7)!important;
+   backdrop-filter:blur(16px);
+ }
+ body > .sw-alert-dialog-backdrop .sw-alert-options button{
+   color:#eef7ff!important;
+   background:rgba(31,57,86,.75)!important;
+   border-color:rgba(109,216,247,.33)!important;
+ }
+ body > .sw-alert-dialog-backdrop .sw-alert-dialog-heading button,
+ body > .sw-alert-dialog-backdrop .sw-alert-archive-row button{
+   color:#eef7ff!important;
+   border-color:rgba(109,216,247,.4)!important;
+ }
+ body > .sw-alert-dialog-backdrop .sw-alert-safety{border-color:rgba(109,216,247,.3)!important;}
+}
