@@ -35,16 +35,33 @@ export default function SyncAssistWorkdayPanel() {
 
   const refresh = useCallback(async () => {
     try {
-      const [response, jobResponse] = await Promise.all([
+      // A queue status error must not hide otherwise accessible goals.
+      const [goalResult, jobResult] = await Promise.allSettled([
         api.get(BASE, { timeout: 15000 }),
         api.get(BASE + "jobs/", { timeout: 15000 }),
       ]);
-      setData(response.data);
-      setJobs(jobResponse.data.jobs || []);
-      setWorkerStatus(jobResponse.data);
-      setError("");
+      if (goalResult.status === "fulfilled") {
+        setData(goalResult.value.data);
+      }
+      if (jobResult.status === "fulfilled") {
+        setJobs(jobResult.value.data.jobs || []);
+        setWorkerStatus(jobResult.value.data);
+      } else {
+        setWorkerStatus(null);
+      }
+      if (goalResult.status === "rejected") {
+        const err = goalResult.reason;
+        const code = Number(err?.response?.status || 0);
+        setError(err?.response?.data?.detail || (code ? `Workday goals request failed (HTTP ${code}). Check the signed-in session or try Refresh.` : "Could not reach the workday goals API. Check connection or try Refresh."));
+      } else if (jobResult.status === "rejected") {
+        const err = jobResult.reason;
+        const code = Number(err?.response?.status || 0);
+        setError(code ? `Background queue status unavailable (HTTP ${code}). Goal creation and manual steps may still work.` : "Background queue status is unreachable. Goal creation and manual steps may still work.");
+      } else {
+        setError("");
+      }
     } catch (err) {
-      setError(err?.response?.data?.detail || "Unable to load workday goals.");
+      setError(err?.response?.data?.detail || "Unable to load workday goals. Please retry.");
     } finally {
       setLoaded(true);
     }
@@ -86,19 +103,24 @@ export default function SyncAssistWorkdayPanel() {
 
   async function createGoal(event) {
     event.preventDefault();
-    if (busy || !goal.trim() || !draftSteps.length) return;
+    const steps = task.trim() && draftSteps.length < 8
+      ? [...draftSteps, { role, task: task.trim() }]
+      : draftSteps;
+    if (busy || !goal.trim() || !steps.length || (publicMode && (publicQuery.trim().length < 4 || !steps.some((step) => step.role === "RESEARCH_ANALYST")))) return;
     setBusy(true); setError("");
     try {
       const response = await api.post(BASE, {
-        goal: goal.trim(), steps: draftSteps,
+        goal: goal.trim(), steps,
         source_mode: publicMode ? "PUBLIC_SEARCH" : "INTERNAL_ONLY",
         public_search_query: publicMode ? publicQuery.trim() : "",
         allow_external_search: publicMode,
       });
       setData(response.data);
-      setGoal(""); setDraftSteps([]); setPublicMode(false); setPublicQuery("");
+      setGoal(""); setTask(""); setDraftSteps([]); setPublicMode(false); setPublicQuery("");
+      setLoaded(true);
     } catch (err) {
-      setError(err?.response?.data?.detail || "Unable to create the workday goal.");
+      const status = Number(err?.response?.status || 0);
+      setError(err?.response?.data?.detail || (status ? `Could not create goal (HTTP ${status}).` : "Unable to contact the workday API to create your goal."));
     } finally {
       setBusy(false);
     }
@@ -177,12 +199,12 @@ export default function SyncAssistWorkdayPanel() {
   }
 
   return (
-    <section className="mb-5 rounded-3xl border border-cyan-400/30 bg-slate-900/50 p-4 sm:p-5" aria-label="AI workforce workday">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-cyan-400/30 bg-slate-900/55 p-3 sm:p-4" aria-label="AI workforce workday">
+      <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-black uppercase tracking-widest text-cyan-200">Workforce command center</p>
-          <h2 className="mt-1 text-xl font-black">Goals and employee assignments</h2>
-          <p className="mt-2 text-xs leading-5 text-slate-300">
+          <h2 className="mt-1 text-lg font-black">Goals and employee assignments</h2>
+          <p className="mt-1 hidden text-xs leading-5 text-slate-300 md:block">
             Run restricted research and drafting tasks, review real receipts, and optionally enroll internal work in the durable background queue.
           </p>
         </div>
@@ -191,19 +213,20 @@ export default function SyncAssistWorkdayPanel() {
           <button type="button" disabled={busy} onClick={refresh} className="min-h-10 rounded-xl border border-cyan-400/30 px-3 text-xs font-bold text-cyan-100">Refresh</button>
         </div>
       </div>
-      {data && <div className="mt-3 flex flex-wrap gap-2 text-xs">
+      {data && <div className="mt-2 flex shrink-0 flex-wrap gap-2 text-xs">
         {Object.entries(data.counts || {}).filter(([, count]) => count > 0).map(([name, count]) => (
           <span key={name} className="rounded-lg border border-white/15 bg-slate-950/70 px-3 py-2">
             <strong className="text-cyan-200">{count}</strong> {name.replaceAll("_", " ")}
           </span>
         ))}
       </div>}
-      {workerStatus && <p className="mt-3 text-xs text-amber-200">
+      {workerStatus && <p className="mt-2 shrink-0 text-[11px] text-amber-200">
         Durable queue records are available. Independent worker deployed: {workerStatus.worker_deployed ? "reported active" : "not yet verified"}.
         Jobs execute unattended only after a separately configured worker is enabled.
       </p>}
-      {error && <p role="alert" className="mt-3 rounded-xl border border-rose-400/30 p-3 text-xs text-rose-200">{error}</p>}
-      <form onSubmit={createGoal} className="mt-4 space-y-3 rounded-2xl border border-white/10 p-4">
+      {error && <div role="alert" className="mt-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-rose-400/30 bg-rose-950/20 p-2 text-xs text-rose-200"><span>{error}</span><button type="button" onClick={refresh} disabled={busy} className="shrink-0 rounded-lg border border-rose-400/40 px-2 py-1">Retry</button></div>}
+      <div className="mt-3 grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto lg:grid-cols-[minmax(320px,0.95fr)_minmax(360px,1.05fr)] lg:overflow-hidden">
+      <form onSubmit={createGoal} className="min-h-0 space-y-2 overflow-y-auto rounded-xl border border-white/10 bg-slate-950/35 p-3">
         <label className="block text-xs font-bold text-slate-200">Business goal
           <textarea required value={goal} onChange={(event) => setGoal(event.target.value)} maxLength={500} rows={2} placeholder="e.g. Build a qualified property management lead pipeline" className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-950 p-3 text-sm text-white"/>
         </label>
@@ -227,16 +250,18 @@ export default function SyncAssistWorkdayPanel() {
           <input required minLength={4} maxLength={120} value={publicQuery} onChange={(event) => setPublicQuery(event.target.value)} placeholder="e.g. commercial property management companies in Birmingham Alabama" className="mt-1 min-h-11 w-full rounded-xl border border-slate-600 bg-slate-950 p-3 text-sm text-white"/>
           <span className="mt-1 block font-normal text-amber-200">Only available when the backend search integration is configured and enabled.</span>
         </label>}
-        <button type="button" disabled={!task.trim() || draftSteps.length >= 8} onClick={addStep} className="min-h-10 rounded-xl border border-cyan-400/30 px-4 text-xs font-bold text-cyan-100 disabled:opacity-40">Add assignment</button>
+        <button type="button" disabled={!task.trim() || draftSteps.length >= 8} onClick={addStep} className="min-h-10 rounded-xl border border-cyan-400/30 px-4 text-xs font-bold text-cyan-100 disabled:opacity-40">Add another assignment (optional)</button>
         {draftSteps.map((step, index) => (
           <div key={index} className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-slate-950/50 p-2 text-xs">
             <span className="min-w-0 break-words">{step.role.replaceAll("_", " ")} · {step.task}</span>
             <button type="button" onClick={() => setDraftSteps((items) => items.filter((_, i) => i !== index))} aria-label={"Remove assignment " + (index + 1)} className="min-h-9 shrink-0 rounded-lg border border-white/20 px-2">Remove</button>
           </div>
         ))}
-        <button type="submit" disabled={busy || !goal.trim() || draftSteps.length === 0 || (publicMode && (publicQuery.trim().length < 4 || !draftSteps.some((step) => step.role === "RESEARCH_ANALYST")))} className="min-h-11 w-full rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 p-3 text-sm font-bold disabled:opacity-40">Create coordinated goal</button>
+        <button type="submit" disabled={busy || !goal.trim() || (!task.trim() && draftSteps.length === 0) || (publicMode && (publicQuery.trim().length < 4 || !(role === "RESEARCH_ANALYST" && task.trim()) && !draftSteps.some((step) => step.role === "RESEARCH_ANALYST")))} className="min-h-11 w-full rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 p-3 text-sm font-bold disabled:opacity-40">{busy ? "Saving goal…" : "Create goal & assign employee"}</button>
+        <p className="text-[11px] text-slate-400">One employee: enter both fields and click Create. Add another assignment only for multi-employee jobs.</p>
       </form>
-      <div className="mt-4 space-y-3">
+      <div className="min-h-0 space-y-3 overflow-y-auto rounded-xl border border-white/10 bg-slate-950/25 p-3">
+        <h3 className="text-sm font-black text-white">Assigned work & results</h3>
         {!loaded && <p className="text-xs text-slate-400">Loading recorded goals…</p>}
         {loaded && data?.goals?.length === 0 && <p className="text-xs text-slate-400">No coordinated goals saved yet.</p>}
         {(data?.goals || []).map((item) => (
@@ -296,7 +321,8 @@ export default function SyncAssistWorkdayPanel() {
           </article>
         ))}
       </div>
-      <p className="mt-4 text-[11px] leading-5 text-amber-200">This pilot tracks owner-assigned work and evidence. Restricted work can run on demand. Public research requires consent and server configuration. Messaging and third-party changes remain disabled.</p>
+      </div>
+      <p className="mt-2 shrink-0 text-[10px] leading-4 text-amber-200">Pilot: internal execution only · No unattended external actions, messaging, or third-party changes.</p>
     </section>
   );
 }
