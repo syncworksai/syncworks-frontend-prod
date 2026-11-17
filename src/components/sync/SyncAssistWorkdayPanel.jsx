@@ -203,7 +203,7 @@ export default function SyncAssistWorkdayPanel() {
   }
 
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-cyan-400/30 bg-slate-900/55 p-2 sm:p-3" aria-label="AI workforce workday">
+    <section className="sw-assist-panel sw-assist-workday flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-cyan-400/30 p-2 sm:p-3" aria-label="AI workforce workday">
       <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-black uppercase tracking-widest text-cyan-200">Workforce command center</p>
@@ -230,7 +230,7 @@ export default function SyncAssistWorkdayPanel() {
       </p>}
       {error && <div role="alert" className="mt-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-rose-400/30 bg-rose-950/20 p-2 text-xs text-rose-200"><span>{error}</span><button type="button" onClick={refresh} disabled={busy} className="shrink-0 rounded-lg border border-rose-400/40 px-2 py-1">Retry</button></div>}
       <div className="mt-2 grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-y-auto lg:grid-cols-[minmax(320px,0.95fr)_minmax(360px,1.05fr)] lg:overflow-hidden">
-      <form onSubmit={createGoal} className="min-h-0 space-y-2 overflow-hidden rounded-xl border border-white/10 bg-slate-950/35 p-2.5">
+      <form onSubmit={createGoal} className="sw-assist-surface min-h-0 space-y-2 overflow-hidden rounded-xl border border-white/10 p-2.5">
         <label className="block text-xs font-bold text-slate-200">Business goal
           <textarea required value={goal} onChange={(event) => setGoal(event.target.value)} maxLength={500} rows={1} placeholder="e.g. Build a qualified property management lead pipeline" className="mt-1 w-full resize-none rounded-lg border border-slate-600 bg-slate-950 p-2 text-sm text-white"/>
         </label>
@@ -259,11 +259,11 @@ export default function SyncAssistWorkdayPanel() {
         <button type="submit" disabled={busy || !goal.trim() || (!task.trim() && draftSteps.length === 0) || (publicMode && (publicQuery.trim().length < 4 || !(role === "RESEARCH_ANALYST" && task.trim()) && !draftSteps.some((step) => step.role === "RESEARCH_ANALYST")))} className="min-h-10 w-full rounded-lg bg-gradient-to-r from-cyan-500 to-violet-600 px-3 py-2 text-sm font-bold disabled:opacity-40">{busy ? "Saving goal…" : "Create goal & assign employee"}</button>
 
       </form>
-      <div className="min-h-0 space-y-2 overflow-hidden rounded-xl border border-white/10 bg-slate-950/25 p-2.5">
+      <div className="sw-assist-surface min-h-0 space-y-2 overflow-hidden rounded-xl border border-white/10 p-2.5">
         <h3 className="text-sm font-black text-white">Assigned work & results</h3>
         {!loaded && <p className="text-xs text-slate-400">Loading recorded goals…</p>}
         {loaded && data?.goals?.length === 0 && <p className="text-xs text-slate-400">No coordinated goals saved yet.</p>}
-        {(data?.goals || []).slice(0,3).map((item) => <article key={item.id} className="rounded-xl border border-white/15 bg-slate-950/50 p-2.5">
+        {(data?.goals || []).slice(0,3).map((item) => <article key={item.id} className="sw-assist-task-card rounded-xl border border-white/15 p-2.5">
           <div className="flex items-start justify-between gap-2"><h4 className="min-w-0 flex-1 line-clamp-2 text-xs font-bold leading-5">{item.goal}</h4><span className="shrink-0 rounded-lg border border-cyan-400/25 px-2 py-1 text-[10px] text-cyan-200">{item.status.replaceAll("_", " ")}</span></div>
           <p className="mt-1 text-[11px] text-slate-400">{item.steps?.length || 0} assignment(s) · {(item.steps || []).filter(step => step.worker_receipt).length} receipt(s)</p>
           <button type="button" onClick={() => setSelectedGoalId(item.id)} className="mt-2 min-h-9 rounded-lg border border-cyan-400/35 px-3 text-xs font-bold text-cyan-100">View more · Review / run</button>
@@ -271,9 +271,9 @@ export default function SyncAssistWorkdayPanel() {
         {(data?.goals || []).length > 3 && <button type="button" onClick={() => setAllGoalsOpen(true)} className="min-h-9 rounded-xl border border-white/20 text-xs font-bold text-cyan-200">View all goals ({(data?.goals || []).length})</button>}
       </div>
       </div>
-      {selectedGoalId && <div className="fixed inset-0 z-[260] flex justify-end bg-slate-950/75 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedGoalId(null); }}><section role="dialog" aria-modal="true" aria-label="Goal details and execution" className="flex h-full w-full max-w-2xl flex-col border-l border-cyan-400/30 bg-[#061327] text-white"><div className="flex shrink-0 items-center justify-between border-b border-white/10 p-3"><h2 className="text-base font-black">Task details · Receipts · Approval</h2><button type="button" onClick={() => setSelectedGoalId(null)} className="min-h-10 rounded-lg border border-white/20 px-3 text-xs">Close</button></div><div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+      {selectedGoalId && <div className="sw-assist-dialog-overlay fixed inset-0 z-[260] flex justify-end" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedGoalId(null); }}><section role="dialog" aria-modal="true" aria-label="Goal details and execution" className="sw-assist-detail-dialog flex h-full w-full max-w-2xl flex-col border-l border-cyan-400/30 text-white"><div className="sw-assist-detail-header flex shrink-0 items-center justify-between border-b border-white/10 p-4"><div><p className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-200">Sync Assist · Employee work</p><h2 className="mt-1 text-base font-black">Task details · Receipts · Approval</h2></div><button type="button" onClick={() => setSelectedGoalId(null)} className="min-h-10 rounded-lg border border-white/20 px-3 text-xs">Close</button></div><div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
         {(data?.goals || []).filter((item) => item.id === selectedGoalId).map((item) => (
-          <article key={item.id} className="rounded-2xl border border-white/15 bg-slate-950/40 p-4">
+          <article key={item.id} className="sw-assist-detail-card rounded-2xl border border-white/15 p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <h3 className="max-w-xl break-words text-sm font-black">{item.goal}</h3>
               <span className="rounded-lg border border-cyan-400/25 px-2 py-1 text-[10px] font-bold text-cyan-200">{item.status.replaceAll("_", " ")}</span>
@@ -294,10 +294,10 @@ export default function SyncAssistWorkdayPanel() {
               {item.steps.map((step) => {
                 const edit = editing[step.id] || {};
                 const selection = edit.status || step.status;
-                return <div key={step.id} className="rounded-xl border border-white/10 p-3">
+                return <div key={step.id} className="sw-assist-step-card rounded-xl border border-white/10 p-3">
                   <div className="text-[10px] font-bold uppercase tracking-wide text-cyan-200">{step.role.replaceAll("_", " ")} · {step.status.replaceAll("_", " ")}</div>
                   <p className="mt-1 break-words text-xs text-slate-200">{step.task}</p>
-                  {step.worker_receipt && <div className="mt-3 space-y-2 rounded-xl border border-cyan-400/20 bg-cyan-950/20 p-3">
+                  {step.worker_receipt && <div className="sw-assist-receipt mt-3 space-y-2 rounded-xl border border-cyan-400/20 p-3">
                     <p className="text-xs font-bold text-cyan-200">Recorded execution receipt</p>
                     <p className="text-xs text-slate-200">{step.worker_receipt.message}</p>
                     <p className="text-[11px] text-slate-400">Receipt: {step.worker_receipt.receipt_id} · {step.worker_receipt.output?.length || 0} records · {step.worker_receipt.messages_sent} messages sent</p>
