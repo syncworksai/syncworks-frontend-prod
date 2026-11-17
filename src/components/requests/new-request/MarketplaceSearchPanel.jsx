@@ -99,9 +99,12 @@ export default function MarketplaceSearchPanel({
   categoryLoading = false,
   categoryLoadError = "",
   onNext = null,
+  compact = false,
 }) {
   const [query, setQuery] = useState("");
   const [selectedVerticalKey, setSelectedVerticalKey] = useState("");
+  const [showCategories, setShowCategories] = useState(false);
+  const [showAllResults, setShowAllResults] = useState(false);
 
   const isBusinessInternal = mode === "BUSINESS_INTERNAL";
 
@@ -169,7 +172,7 @@ export default function MarketplaceSearchPanel({
   }
 
   return (
-    <div className="space-y-4">
+    <div className={compact ? "sw-marketplace-compact space-y-3" : "space-y-4"}>
       <section className="relative overflow-hidden rounded-[2rem] border border-cyan-500/20 bg-slate-950/55 p-5 shadow-[0_0_70px_rgba(34,211,238,0.10)] md:p-6">
         <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-cyan-500/14 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-28 left-1/4 h-72 w-72 rounded-full bg-fuchsia-500/12 blur-3xl" />
@@ -272,7 +275,7 @@ export default function MarketplaceSearchPanel({
         </div>
       ) : null}
 
-      <section className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4 md:p-5">
+      <section className="sw-marketplace-categories rounded-3xl border border-slate-800 bg-slate-950/45 p-4 md:p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-sm font-black text-slate-100">
@@ -294,7 +297,8 @@ export default function MarketplaceSearchPanel({
           ) : null}
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+        {compact && <button type="button" aria-expanded={showCategories} className="sw-marketplace-category-toggle" onClick={() => setShowCategories(value => !value)}>{showCategories ? "Hide categories" : "Browse categories"}</button>}
+        {(!compact || showCategories) && <div className="sw-marketplace-category-grid mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
           {verticals.map((vertical) => (
             <VerticalCard
               key={vertical.key}
@@ -308,10 +312,10 @@ export default function MarketplaceSearchPanel({
               }}
             />
           ))}
-        </div>
+        </div>}
       </section>
 
-      <section className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4 md:p-5">
+      <section className="sw-marketplace-results rounded-3xl border border-slate-800 bg-slate-950/45 p-4 md:p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-sm font-black text-slate-100">
@@ -333,7 +337,7 @@ export default function MarketplaceSearchPanel({
 
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {resolvedRows.length ? (
-            resolvedRows.map((service) => (
+            (compact && !showAllResults ? resolvedRows.slice(0, 5) : resolvedRows).map((service) => (
               <ServiceChip
                 key={service.key}
                 service={service}
@@ -349,6 +353,7 @@ export default function MarketplaceSearchPanel({
             </div>
           )}
         </div>
+        {compact && resolvedRows.length > 5 && <button type="button" className="sw-marketplace-more" onClick={() => setShowAllResults(value => !value)}>{showAllResults ? "Show fewer" : `Show all ${resolvedRows.length} options`}</button>}
       </section>
     </div>
   );
