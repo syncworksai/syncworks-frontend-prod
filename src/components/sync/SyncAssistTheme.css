@@ -82,6 +82,7 @@
   transform: translateY(-2px);
 }
 .sw-assist-themed .sw-assist-dialog-overlay {
+  top: 57px;
   background: rgba(1,5,18,.52);
   backdrop-filter: blur(11px);
   -webkit-backdrop-filter: blur(11px);
@@ -158,6 +159,7 @@
  }
 }
 @media (max-width:767px) {
+ .sw-assist-themed .sw-assist-dialog-overlay {top:115px;}
  .sw-assist-themed .sw-assist-detail-dialog {width:100%;max-width:none;}
 }
 @media (prefers-reduced-motion: no-preference) {
