@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { BriefcaseBusiness, ChevronRight, Grip, MessageCircle, RefreshCw, RotateCcw, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
@@ -7,7 +8,7 @@ import "./OfficeAgentDockV27.css";
 
 // One source of truth for the private-pilot employees. Membership is NOT live
 // activity or proof that an agent is currently executing a task.
-export default function OfficeAgentDock({ user, placement = "home" }) {
+export default function OfficeAgentDock({ user, placement = "home", theme = "future" }) {
   const nav = useNavigate();
   const permitted = String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com";
   const [employees, setEmployees] = useState([]);
@@ -117,4 +118,5 @@ export default function OfficeAgentDock({ user, placement = "home" }) {
       </div>
     </section>
   );
+  return moveable ? <><div className="sw-desktop-bubble-placeholder" aria-hidden="true" />{createPortal(dock, document.body)}</> : dock;
 }
