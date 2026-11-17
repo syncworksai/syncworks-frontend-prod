@@ -452,3 +452,14 @@
   .sw-mobile-hour-row time {flex-basis:49px;}
   .sw-mobile-hourly-rows {gap:4px;}
 }
+
+
+/* Show saved calendar appointments throughout their actual time range. */
+.sw-mobile-hour-row.has-event{border-color:rgba(72,184,235,.67)!important;background:rgba(8,57,83,.32)!important;}
+.sw-mobile-hour-row.has-event.is-business{border-color:rgba(240,184,91,.72)!important;background:rgba(108,64,20,.30)!important;}
+.sw-mobile-hour-row.has-event.is-personal{border-color:rgba(85,210,192,.7)!important;background:rgba(7,88,83,.25)!important;}
+.sw-mobile-hour-row.has-event .sw-mobile-hour-events{min-width:0;display:flex;flex-direction:column;gap:2px;overflow:hidden;}
+.sw-mobile-hour-row.has-event .sw-mobile-hour-events strong,
+.sw-mobile-hour-row.has-event .sw-mobile-hour-events small{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sw-mobile-hour-row.has-event.is-business .sw-mobile-hour-events small{color:#ffcf8d!important;}
+.sw-mobile-hour-row.has-event.is-personal .sw-mobile-hour-events small{color:#a5f3e3!important;}
