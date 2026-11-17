@@ -14,7 +14,7 @@ export const AVATARS=[
 // Pilot-specific portrait only. Do not change the shared avatar manifest for customers.
 export const getAvatarPhotoForUser = (avatar, user) =>
   avatar?.id === "executive-female" && String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com"
-    ? "/lady10.png"
+    ? "/lady10.png?v=pilot-victoria-20261117"
     : avatar?.photo;
 
 export function loadAvatarChoice(){
