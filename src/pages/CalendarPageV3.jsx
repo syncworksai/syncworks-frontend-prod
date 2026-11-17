@@ -470,6 +470,7 @@ export default function CalendarPageV3() {
   const [selectedDay, setSelectedDay] = useState(() => new Date());
   const [monthStart, setMonthStart] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [showComposer, setShowComposer] = useState(false);
+  const [editorSection, setEditorSection] = useState("details");
   const [savingEvent, setSavingEvent] = useState(false);
   const [saveIssue, setSaveIssue] = useState("");
   const [editingEvent, setEditingEvent] = useState(null);
@@ -585,6 +586,7 @@ export default function CalendarPageV3() {
   const todayWorkoutEvent = todayEvents.find((event) => sourceKey(event) === "HEALTH");
 
   function openNew(kind = "EVENT", day = new Date(), hour = null) {
+    setEditorSection("details");
     const next = blankDraft(kind);
     next.date = ymd(day);
     next.end_date = ymd(day);
@@ -600,6 +602,7 @@ export default function CalendarPageV3() {
   }
 
   function editEvent(event) {
+    setEditorSection("details");
     if (!editableEvent(event)) return;
     setEditingEvent(event);
     setDraft(draftFromEvent(event));
@@ -965,7 +968,13 @@ export default function CalendarPageV3() {
         {showComposer ? createPortal(<section data-calendar-theme={readWorkspaceAppearance().theme} id="calendar-event-composer" role="dialog" aria-modal="true" aria-label={editingEvent ? "Edit calendar item" : "New calendar item"} className="sw-calendar-composer mt-4 scroll-mt-24 rounded-[1.5rem] border border-cyan-400/20 bg-cyan-500/[.04] p-4 sm:p-5">
           <div className="flex items-center justify-between gap-3"><div className="text-sm font-black text-white">{editingEvent ? `Edit ${draft.kind === "TASK" ? "task" : "event"}` : `Create ${draft.kind === "TASK" ? "task" : "event"}`}</div><button type="button" onClick={() => { setShowComposer(false); setEditingEvent(null); }} className="rounded-xl border border-white/10 px-3 py-2 text-[10px] font-black text-slate-400">Close</button></div>
           {saveIssue ? <div className="sw-cal-save-error" role="alert">{saveIssue}</div> : null}
-          <div className="sw-calendar-composer-fields mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <nav className="sw-cal-editor-tabs" aria-label="Event details sections">
+            <button type="button" aria-pressed={editorSection === "details"} className={editorSection === "details" ? "is-active" : ""} onClick={() => setEditorSection("details")}>Event & time</button>
+            <button type="button" aria-pressed={editorSection === "location"} className={editorSection === "location" ? "is-active" : ""} onClick={() => setEditorSection("location")}>Location{draft.address_line1 ? " ✓" : ""}</button>
+            <button type="button" aria-pressed={editorSection === "options"} className={editorSection === "options" ? "is-active" : ""} onClick={() => setEditorSection("options")}>More</button>
+          </nav>
+          <div className="sw-calendar-composer-fields">
+            <div className="sw-cal-editor-panel" data-editor-panel="details" data-active={editorSection === "details"}>
             <label className="text-xs text-slate-400 lg:col-span-2">Title<input value={draft.title} onChange={(event) => setDraft((value) => ({ ...value, title: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
             <label className="text-xs text-slate-400">Date<input type="date" value={draft.date} onChange={(event) => setDraft((value) => ({ ...value, date: event.target.value, end_date: value.end_date < event.target.value ? event.target.value : value.end_date }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
             <label className="text-xs text-slate-400">Start time<input disabled={draft.all_day} type="time" value={draft.time} onChange={(event) => setDraft((value) => ({ ...value, time: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none disabled:opacity-40" /></label>
@@ -973,15 +982,21 @@ export default function CalendarPageV3() {
             <label className="text-xs text-slate-400">End time<input disabled={draft.all_day} type="time" value={draft.end_time} onChange={(event) => setDraft((value) => ({ ...value, end_time: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none disabled:opacity-40" /></label>
             {draft.kind === "EVENT" ? <label className="flex min-h-11 items-center gap-3 rounded-xl border border-white/10 bg-slate-950/80 px-3 text-xs font-bold text-slate-300"><input type="checkbox" checked={draft.all_day} onChange={(event) => setDraft((value) => ({ ...value, all_day: event.target.checked }))} className="h-4 w-4 accent-cyan-400" />All day</label> : <label className="text-xs text-slate-400">Priority<select value={draft.task_priority} onChange={(event) => setDraft((value) => ({ ...value, task_priority: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none"><option value="LOW">Low</option><option value="NORMAL">Normal</option><option value="HIGH">High</option></select></label>}
             <label className="flex min-h-11 items-center gap-3 rounded-xl border border-violet-400/15 bg-violet-500/[.04] px-3 text-xs font-bold text-violet-100"><input type="checkbox" checked={draft.flexible} onChange={(event) => setDraft((value) => ({ ...value, flexible: event.target.checked }))} className="h-4 w-4 accent-violet-400" />Flexible</label>
+            </div>
+          <div className="sw-cal-editor-panel" data-editor-panel="location" data-active={editorSection === "location"}>
+            <p className="sw-cal-editor-hint">Search an address or venue. Details fill automatically when you select a result.</p>
             <div className="sm:col-span-2 lg:col-span-4"><PlaceSearchField value={draft.location_name || draft.address_line1} onChange={(value) => setDraft((current) => ({ ...current, location_name: value }))} onSelect={(place) => setDraft((current) => ({ ...current, location_name: place.location_name, address_line1: place.address_line1, city: place.city || "", state: place.state || "", postal_code: place.postal_code || "", latitude: place.latitude, longitude: place.longitude }))} /></div>
             <label className="text-xs text-slate-400 lg:col-span-2">Street address<input value={draft.address_line1} onChange={(event) => setDraft((value) => ({ ...value, address_line1: event.target.value }))} placeholder="Exact work/home/venue address for routing" className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
             <label className="text-xs text-slate-400">City<input value={draft.city} onChange={(event) => setDraft((value) => ({ ...value, city: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
             <div className="grid grid-cols-2 gap-2"><label className="text-xs text-slate-400">State<input value={draft.state} onChange={(event) => setDraft((value) => ({ ...value, state: event.target.value.toUpperCase() }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label><label className="text-xs text-slate-400">ZIP<input value={draft.postal_code} onChange={(event) => setDraft((value) => ({ ...value, postal_code: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label></div>
+            </div>
+          <div className="sw-cal-editor-panel" data-editor-panel="options" data-active={editorSection === "options"}>
             <label className="text-xs text-slate-400">Arrive early<input type="number" min="0" max="240" value={draft.arrival_buffer_minutes} onChange={(event) => setDraft((value) => ({ ...value, arrival_buffer_minutes: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
             <label className="text-xs text-slate-400">Reminder<input type="number" min="0" value={draft.reminder_minutes} onChange={(event) => setDraft((value) => ({ ...value, reminder_minutes: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
             <label className="text-xs text-slate-400">Repeat<select value={draft.recurrence} onChange={(event) => setDraft((value) => ({ ...value, recurrence: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none"><option value="NONE">Does not repeat</option><option value="DAILY">Daily</option><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option></select></label>
             {draft.kind === "EVENT" ? <label className="flex min-h-11 items-center gap-3 rounded-xl border border-amber-400/15 bg-amber-500/[.04] px-3 text-xs font-bold text-amber-100"><input type="checkbox" checked={draft.weather_dependent} onChange={(event) => setDraft((value) => ({ ...value, weather_dependent: event.target.checked }))} className="h-4 w-4 accent-amber-400" />Weather aware</label> : null}
             <label className="text-xs text-slate-400 sm:col-span-2 lg:col-span-4">Notes<textarea rows={2} value={draft.description} onChange={(event) => setDraft((value) => ({ ...value, description: event.target.value }))} className="mt-1 w-full resize-none rounded-xl border border-white/10 bg-slate-950/80 p-3 text-sm text-white outline-none" /></label>
+          </div>
           </div>
             <div className="sw-cal-composer-footer flex flex-wrap gap-2">{editingEvent ? <button type="button" onClick={removeEditingEvent} className="min-h-10 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 text-[11px] font-black text-rose-100">Remove</button> : null}<button type="button" onClick={saveEvent} disabled={savingEvent} className="sw-calendar-save-button min-h-10 flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 text-[11px] font-black text-white disabled:opacity-50">{savingEvent ? "Saving & verifying…" : editingEvent ? "Save changes" : draft.kind === "TASK" ? "Save task" : "Save event"}</button></div>
         </section>, document.body) : null}
