@@ -8,6 +8,7 @@ export default function PersonalStorefrontDock() {
   const [appearance] = useWorkspaceAppearance();
   // Premium Customer home includes the same destination in its sidebar and app tiles.
   // Keep the dock on Original and other eligible Customer pages.
+  if (location.pathname === "/customer/forge") return null;
   if (location.pathname === "/customer" && appearance.theme !== "legacy") return null;
   return (
     <Link
