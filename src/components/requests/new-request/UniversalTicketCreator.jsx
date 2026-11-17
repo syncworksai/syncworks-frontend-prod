@@ -289,6 +289,7 @@ export default function UniversalTicketCreator({
   title = "",
   subtitle = "",
   initialDetails = "",
+  onOpenAvailability = null,
 }) {
   const isBusinessInternal = mode === MARKETPLACE_MODES.BUSINESS_INTERNAL;
 
@@ -822,6 +823,9 @@ export default function UniversalTicketCreator({
               </p>
             </div>
 
+            <div className="sw-new-request-head-actions">
+              {typeof onOpenAvailability === "function" && <button type="button" onClick={onOpenAvailability}
+                className="sw-new-request-check-availability">Check availability</button>}
             {onCancel ? (
               <button
                 type="button"
@@ -831,6 +835,7 @@ export default function UniversalTicketCreator({
                 Cancel
               </button>
             ) : null}
+            </div>
           </div>
 
           <div className="mt-5">
@@ -851,8 +856,8 @@ export default function UniversalTicketCreator({
           </FormAlert>
         ) : null}
 
-        <div className="sw-new-request-workspace mt-5 space-y-5 pb-28 md:pb-0" ref={stageRef} aria-label={`${STEPS[step].label} request step`}>
-          <div key={step} className="sw-new-request-stage" data-direction={stageDirection}>
+        <div className="sw-new-request-workspace mt-5 space-y-5 pb-28 md:pb-0" aria-label={`${STEPS[step].label} request step`}>
+          <div key={step} className="sw-new-request-stage" data-direction={stageDirection} ref={stageRef}>
           {step === 0 ? (
             <>
               {!isBusinessInternal ? (
