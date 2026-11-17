@@ -1,0 +1,25 @@
+/* Global hamburger navigation uses the same animated glass language across
+   mobile and desktop. Menu remains a real navigable panel, not a fake overlay. */
+[data-syncworks-global-header="true"][data-header-motion="on"] .sw-global-menu-drawer {
+  transform-origin:top right;
+  animation:sw-header-menu-open .38s cubic-bezier(.16,.83,.24,1) both;
+  border-color:rgba(101,213,247,.52);
+  box-shadow:0 25px 75px rgba(0,0,0,.59),0 0 25px rgba(61,177,243,.15);
+  -webkit-backdrop-filter:blur(18px);
+  backdrop-filter:blur(18px);
+}
+[data-syncworks-global-header="true"][data-header-motion="on"] .sw-global-menu-shade{
+  animation:sw-header-shade-in .34s ease-out both;
+}
+@keyframes sw-header-menu-open{
+  0%{opacity:0;transform:perspective(850px) translate3d(0,-35px,0) rotateX(-7deg) scale(.94);filter:brightness(1.35);}
+  75%{opacity:1;transform:perspective(850px) translate3d(0,3px,0) rotateX(1deg) scale(1.01);filter:brightness(1.05);}
+  100%{opacity:1;transform:none;filter:none;}
+}
+@keyframes sw-header-shade-in{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){
+  [data-syncworks-global-header="true"] .sw-global-menu-drawer,
+  [data-syncworks-global-header="true"] .sw-global-menu-shade{
+    animation:none!important;transform:none!important;filter:none!important;
+  }
+}
