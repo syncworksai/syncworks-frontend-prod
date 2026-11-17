@@ -197,3 +197,75 @@
   }
   .sw-nav-settings-center-preview.sync .sw-nav-settings-center-orb svg {filter:none;}
 }
+
+
+/* V7: center SYNC is a primary assistant launcher, not a duplicate employee tray.
+   The dock is outside the workspace root; data-sync-theme is synchronized from
+   the saved Customer appearance setting and updated immediately on changes. */
+@media(max-width:767px){
+  .sw-role-mobile-nav[data-sync-theme] {
+    --sync-center-bg:linear-gradient(155deg,#0f5b84,#0a2749 68%,#071629);
+    --sync-center-border:rgba(113,222,244,.68);
+    --sync-center-ink:#e5fbff;
+    --sync-center-label:#c6f7ff;
+  }
+  .sw-role-mobile-nav[data-sync-theme="classic"] {
+    --sync-center-bg:linear-gradient(155deg,#71502d,#362515 70%,#251b13);
+    --sync-center-border:rgba(239,198,130,.78);
+    --sync-center-ink:#fff1d3;
+    --sync-center-label:#f0cc91;
+  }
+  .sw-role-mobile-nav[data-sync-theme="future"] {
+    --sync-center-bg:linear-gradient(145deg,#075d8d,#223477 62%,#321957);
+    --sync-center-border:rgba(96,222,253,.86);
+    --sync-center-ink:#d8faff;
+    --sync-center-label:#8eeaff;
+  }
+  .sw-role-mobile-nav[data-sync-theme="modern"] {
+    --sync-center-bg:linear-gradient(155deg,#465363,#242e38 65%,#171e26);
+    --sync-center-border:rgba(191,204,217,.7);
+    --sync-center-ink:#f2f6fa;
+    --sync-center-label:#d5e0e9;
+  }
+  .sw-role-mobile-nav[data-sync-theme="light"] {
+    --sync-center-bg:linear-gradient(155deg,#e5f5f2,#c7dedb 65%,#a4c9ce);
+    --sync-center-border:#3e858c;
+    --sync-center-ink:#195d68;
+    --sync-center-label:#e1fbff;
+  }
+  .sw-role-mobile-nav[data-sync-theme] .sw-role-mobile-nav-center.is-sync {
+    color:var(--sync-center-label)!important;
+  }
+  .sw-role-mobile-nav[data-sync-theme] .sw-role-mobile-nav-center.is-sync .sw-role-mobile-nav-center-orb {
+    background:var(--sync-center-bg)!important;
+    border:1px solid var(--sync-center-border)!important;
+    box-shadow:0 3px 13px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.14)!important;
+  }
+  .sw-role-mobile-nav[data-sync-theme] .sw-role-mobile-nav-center.is-sync .sw-role-mobile-nav-center-orb svg {
+    color:var(--sync-center-ink)!important;
+  }
+  .sw-role-mobile-nav[data-sync-theme] .sw-role-mobile-nav-center.is-sync:focus-visible .sw-role-mobile-nav-center-orb {
+    outline:2px solid var(--sync-center-border);
+    outline-offset:3px;
+  }
+  .sw-workspace-overlay[data-office-drawer-theme="classic"] .sw-nav-settings-center-preview.sync .sw-nav-settings-center-orb {
+    background:linear-gradient(155deg,#71502d,#362515 70%,#251b13);
+    border-color:rgba(239,198,130,.78);
+    color:#fff1d3;
+  }
+  .sw-workspace-overlay[data-office-drawer-theme="future"] .sw-nav-settings-center-preview.sync .sw-nav-settings-center-orb {
+    background:linear-gradient(145deg,#075d8d,#223477 62%,#321957);
+    border-color:rgba(96,222,253,.86);
+    color:#d8faff;
+  }
+  .sw-workspace-overlay[data-office-drawer-theme="modern"] .sw-nav-settings-center-preview.sync .sw-nav-settings-center-orb {
+    background:linear-gradient(155deg,#465363,#242e38 65%,#171e26);
+    border-color:rgba(191,204,217,.7);
+    color:#f2f6fa;
+  }
+  .sw-workspace-overlay[data-office-drawer-theme="light"] .sw-nav-settings-center-preview.sync .sw-nav-settings-center-orb {
+    background:linear-gradient(155deg,#e5f5f2,#c7dedb 65%,#a4c9ce);
+    border-color:#3e858c;
+    color:#195d68;
+  }
+}
