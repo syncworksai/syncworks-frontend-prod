@@ -133,3 +133,11 @@
 @media(max-width:720px){.forge3-reading-home{padding:14px}.forge3-reading-symbol{width:45px;height:45px;margin-bottom:7px}.forge3-reading-symbol svg{width:26px}.forge3-reading-home h3{font-size:23px;margin:5px 0}.forge3-reading-home>p{-webkit-line-clamp:2;font-size:11px}.forge3-reading-home-actions{margin-top:10px}.forge3-reading-takeaway{padding-top:9px;margin-top:10px}.forge3-reading-takeaway p{font-size:10px;margin-top:4px}.forge3-reading-dialog{height:95dvh}.forge3-reading-dialog-head{padding:16px}.forge3-reading-dialog-actions{padding:10px}}
 @media(max-height:680px){.forge3-reading-symbol{display:none}.forge3-reading-home-actions{margin-top:9px}.forge3-reading-takeaway{margin-top:9px;padding-top:8px}.forge3-reading-home h3{margin:4px 0}.forge3-reading-home>p{-webkit-line-clamp:2}}
 @media(prefers-reduced-motion:reduce){.forge3-reading-overlay{animation:none!important}}
+
+
+/* Forge v9: accessible contextual discussion entry point without increasing outer-page scroll. */
+.forge3-reflect-coach-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;flex-shrink:0}
+.forge3-reflect-coach-actions p{font-size:11px;color:#d2bea3;line-height:1.45;max-width:430px}
+.forge3-reflect-coach-actions .forge3-mainbtn{min-height:40px}
+@media(max-width:720px){.forge3-reflect-coach-actions{gap:6px}.forge3-reflect-coach-actions p{font-size:10px}.forge3-reflect-coach-actions .forge3-mainbtn{min-height:36px;padding:7px 9px}}
+@media(max-height:720px){.forge3-reflect-coach-actions p{display:none}}
