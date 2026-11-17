@@ -30,7 +30,7 @@ import SyncActionStudio from "../components/sync/SyncActionStudio";
 import SyncAssistTeamDrawer from "../components/sync/SyncAssistTeamDrawer";
 import SyncConnectionDiagnostics from "../components/sync/SyncConnectionDiagnostics";
 import SyncWorkflowIntake from "../components/sync/SyncWorkflowIntake";
-import {AVATARS, JarvisAvatar, JarvisAvatarPicker, useJarvisAvatar} from "../components/sync/JarvisAvatar";
+import {AVATARS, JarvisAvatar, JarvisAvatarPicker, useJarvisAvatar, getAvatarPhotoForUser} from "../components/sync/JarvisAvatar";
 import {
   getSyncAiErrorMessage,
   getSyncAiStatus,
@@ -197,11 +197,12 @@ export default function SyncAssistant() {
     const entry = teamEmployees.find((row) => row.id === avatar.id);
     return entry ? {
       ...avatar,
+      photo: getAvatarPhotoForUser(avatar, user),
       name: entry.name,
       role: String(entry.role).toLowerCase().split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" "),
       executionStatus: entry.execution_status,
-    } : avatar;
-  }), [teamEmployees]);
+    } : {...avatar, photo: getAvatarPhotoForUser(avatar, user)};
+  }), [teamEmployees, user?.email]);
   const selectedAssistant = configuredAvatars.find((assistant) => assistant.id === avatarId) || configuredAvatars[0];
 
   const selectedVoice = useMemo(
