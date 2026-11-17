@@ -33,6 +33,7 @@ export default function SyncAssistWorkdayPanel() {
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState(null);
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [allGoalsOpen, setAllGoalsOpen] = useState(false);
   const [draftDrawer, setDraftDrawer] = useState(false);
 
@@ -71,6 +72,7 @@ export default function SyncAssistWorkdayPanel() {
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { window.dispatchEvent(new CustomEvent("sync-assist:task-dialog", { detail: { open: Boolean(selectedGoalId) } })); return () => window.dispatchEvent(new CustomEvent("sync-assist:task-dialog", { detail: { open: false } })); }, [selectedGoalId]);
   useEffect(() => {
     let active = true;
     api.get("/sync-ai/assist/pilot/team/", { timeout: 15000 })
@@ -271,64 +273,83 @@ export default function SyncAssistWorkdayPanel() {
         {(data?.goals || []).length > 3 && <button type="button" onClick={() => setAllGoalsOpen(true)} className="min-h-9 rounded-xl border border-white/20 text-xs font-bold text-cyan-200">View all goals ({(data?.goals || []).length})</button>}
       </div>
       </div>
-      {selectedGoalId && <div className="sw-assist-dialog-overlay fixed inset-0 z-[260] flex justify-end" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedGoalId(null); }}><section role="dialog" aria-modal="true" aria-label="Goal details and execution" className="sw-assist-detail-dialog flex h-full w-full max-w-2xl flex-col border-l border-cyan-400/30 text-white"><div className="sw-assist-detail-header flex shrink-0 items-center justify-between border-b border-white/10 p-4"><div><p className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-200">Sync Assist · Employee work</p><h2 className="mt-1 text-base font-black">Task details · Receipts · Approval</h2></div><button type="button" onClick={() => setSelectedGoalId(null)} className="min-h-10 rounded-lg border border-white/20 px-3 text-xs">Close</button></div><div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
-        {(data?.goals || []).filter((item) => item.id === selectedGoalId).map((item) => (
-          <article key={item.id} className="sw-assist-detail-card rounded-2xl border border-white/15 p-4">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <h3 className="max-w-xl break-words text-sm font-black">{item.goal}</h3>
-              <span className="rounded-lg border border-cyan-400/25 px-2 py-1 text-[10px] font-bold text-cyan-200">{item.status.replaceAll("_", " ")}</span>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" disabled={busy || item.status === "COMPLETED"}
-                onClick={() => runInternalStep(item.id)}
-                className="min-h-10 rounded-lg border border-cyan-400/35 px-3 text-xs font-bold text-cyan-100 disabled:opacity-40">Run one internal step</button>
-              <button type="button" disabled={busy || item.status === "COMPLETED"}
-                onClick={() => queueGoal(item.id)}
-                className="min-h-10 rounded-lg border border-amber-400/30 px-3 text-xs font-bold text-amber-200 disabled:opacity-40">Authorize internal queue</button>
-              {jobs.some((job) => String(job.goal_id) === String(item.id) && ["QUEUED", "RUNNING", "WAITING", "RETRY"].includes(job.state)) &&
-                <button type="button" disabled={busy} onClick={() => cancelGoal(item.id)} className="min-h-10 rounded-lg border border-rose-400/30 px-3 text-xs font-bold text-rose-200 disabled:opacity-40">Cancel job</button>}
-              {jobs.filter((job) => String(job.goal_id) === String(item.id)).map((job) =>
-                <span key={job.id} className="self-center text-[11px] text-slate-300">Queue: {job.state.replaceAll("_", " ")}</span>)}
-            </div>
-            <div className="sw-assist-step-grid mt-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
-              {item.steps.map((step) => {
-                const edit = editing[step.id] || {};
-                const selection = edit.status || step.status;
-                return <div key={step.id} className="sw-assist-step-card rounded-xl border border-white/10 p-3">
-                  <div className="text-[10px] font-bold uppercase tracking-wide text-cyan-200">{step.role.replaceAll("_", " ")} · {step.status.replaceAll("_", " ")}</div>
-                  <p className="mt-1 break-words text-xs text-slate-200">{step.task}</p>
-                  {step.worker_receipt && <div className="sw-assist-receipt mt-3 space-y-2 rounded-xl border border-cyan-400/20 p-3">
-                    <p className="text-xs font-bold text-cyan-200">Recorded execution receipt</p>
-                    <p className="text-xs text-slate-200">{step.worker_receipt.message}</p>
-                    <p className="text-[11px] text-slate-400">Receipt: {step.worker_receipt.receipt_id} · {step.worker_receipt.output?.length || 0} records · {step.worker_receipt.messages_sent} messages sent</p>
-                    {(step.worker_receipt.output || []).map((record, index) => (
-                      <div key={index} className="rounded-lg border border-white/10 p-2 text-xs">
-                        {record.company && <strong className="block text-white">{record.company}</strong>}
-                        {record.title && <strong className="block text-white">{record.title}</strong>}
-                        {record.snippet && <p className="mt-1 text-slate-300">{record.snippet}</p>}
-                        {record.source_url && <span className="block break-all text-slate-300">Reference: {record.source_url}</span>}
-                        {record.website && <span className="block break-all text-slate-300">Source URL (content not independently verified): {record.website}</span>}
-                        {record.observation && <p className="mt-1 text-slate-300">{record.observation}</p>}
-                        {record.draft && <p className="mt-1 whitespace-pre-wrap text-slate-300">Unsent outreach draft: {record.draft}</p>}
-                        {record.result && <p className="mt-1 text-slate-300">{record.result} · {record.records} records</p>}
-                      </div>
-                    ))}
-                    <p className="text-[10px] text-amber-200">Provenance and output are stored in the receipt. User-entered business claims have not been independently verified.</p>
-                  </div>}
-                  {step.evidence && <p className="mt-2 whitespace-pre-wrap break-words text-xs text-slate-400">Recorded evidence: {step.evidence}</p>}
-                  {step.status === "COMPLETED" ? <p className="mt-2 text-xs text-emerald-200">Owner-attested completion. Not independently verified by an AI worker.</p> : <div className="mt-3 space-y-2">
-                    <select aria-label="Assignment status" value={selection} onChange={(event) => setEditing((old) => ({ ...old, [step.id]: { ...old[step.id], status: event.target.value } }))} className="min-h-11 w-full rounded-lg border border-slate-600 bg-slate-950 p-2 text-xs">
-                      {STATUS.map((status) => <option key={status} value={status}>{status.replaceAll("_", " ")}</option>)}
-                    </select>
-                    <textarea aria-label="Evidence or progress note" value={edit.evidence || ""} maxLength={2000} onChange={(event) => setEditing((old) => ({ ...old, [step.id]: { ...old[step.id], evidence: event.target.value } }))} placeholder="Verified evidence or a progress note. Completing an assignment confirms your own review." rows={2} className="w-full rounded-lg border border-slate-600 bg-slate-950 p-2 text-xs"/>
-                    <button type="button" disabled={busy} onClick={() => updateStep(item.id, step)} className="min-h-10 rounded-lg border border-cyan-400/40 px-3 text-xs font-bold text-cyan-100 disabled:opacity-40">{selection === "COMPLETED" ? "Attest completion" : "Save progress"}</button>
-                  </div>}
-                </div>;
-              })}
-            </div>
-          </article>
-        ))}
-      </div></section></div>}
+      {selectedGoalId && <div className="sw-assist-dialog-overlay sw-assist-task-overlay fixed inset-0 z-[260] flex items-center justify-center p-2 sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedGoalId(null); }}>
+        <section role="dialog" aria-modal="true" aria-label="Goal details and execution" className="sw-assist-detail-dialog sw-assist-centered-task flex min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-cyan-400/30 text-white">
+          <div className="sw-assist-detail-header flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
+            <div><p className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-200">Sync Assist / Employee work</p><h2 className="mt-1 text-lg font-black">Task details · Receipts · Approval</h2></div>
+            <button type="button" onClick={() => setSelectedGoalId(null)} className="min-h-11 rounded-lg border border-cyan-400/40 px-4 text-sm font-bold">Close</button>
+          </div>
+          <div className="min-h-0 flex-1 p-3 sm:p-4">
+            {(data?.goals || []).filter((item) => item.id === selectedGoalId).map((item) => {
+              const chosen = item.steps.find(step => step.id === selectedTaskId) || item.steps[0];
+              const edit = chosen ? editing[chosen.id] || {} : {};
+              const selection = chosen ? edit.status || chosen.status : "PLANNED";
+              return <div key={item.id} className="flex h-full min-h-0 flex-col gap-3">
+                <div className="flex shrink-0 flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="line-clamp-2 text-sm font-black sm:text-base">{item.goal}</h3>
+                    <p className="mt-1 text-xs text-slate-300">{item.steps.length} employee assignment(s) · {item.steps.filter(step => step.worker_receipt).length} saved receipt(s)</p>
+                  </div>
+                  <span className="rounded-lg border border-cyan-400/25 px-2 py-1 text-xs font-bold text-cyan-200">{item.status.replaceAll("_", " ")}</span>
+                </div>
+                <div className="sw-assist-employee-choices grid shrink-0 grid-cols-1 gap-2 sm:grid-cols-2">
+                  {item.steps.map((step) =>
+                    <button key={step.id} type="button" onClick={() => setSelectedTaskId(step.id)} aria-pressed={chosen?.id === step.id}
+                      className={"sw-assist-task-choice flex min-w-0 items-center justify-between gap-3 rounded-xl border p-3 text-left " + (chosen?.id === step.id ? "border-cyan-300/65 bg-cyan-400/15" : "border-cyan-300/20 bg-slate-950/30")}>
+                      <span className="min-w-0"><strong className="block text-xs text-white">{step.role.replaceAll("_", " ")}</strong><span className="mt-1 block text-[11px] text-slate-300">{step.worker_receipt ? "Saved execution receipt" : "No execution receipt yet"}</span></span>
+                      <span className="shrink-0 rounded-lg border border-cyan-400/30 px-2 py-1 text-[10px] font-bold text-cyan-200">{step.status.replaceAll("_", " ")}</span>
+                    </button>
+                  )}
+                </div>
+                {chosen && <div className="sw-assist-focused-task sw-assist-step-card flex min-h-0 flex-1 flex-col gap-2 overflow-hidden rounded-xl border border-white/10 p-3">
+                  <div className="flex shrink-0 flex-wrap items-center justify-between gap-2"><strong className="text-xs text-cyan-200">{chosen.role.replaceAll("_", " ")}</strong><span className="text-[11px] text-slate-300">{chosen.status.replaceAll("_", " ")}</span></div>
+                  <p className="shrink-0 text-xs text-slate-200">{chosen.task}</p>
+                  <div className="sw-assist-focused-details min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+                    {chosen.worker_receipt && <div className="sw-assist-receipt rounded-xl border border-cyan-400/20 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-xs text-cyan-200">Recorded execution receipt</strong><span className="text-[11px] text-slate-300">{chosen.worker_receipt.output?.length || 0} record(s) · {chosen.worker_receipt.messages_sent} messages sent</span></div>
+                      <p className="mt-2 text-xs text-slate-200">{chosen.worker_receipt.message}</p>
+                      <p className="mt-1 break-all text-[11px] text-slate-400">Receipt: {chosen.worker_receipt.receipt_id}</p>
+                      {(chosen.worker_receipt.output || []).map((record, index) => <div key={index} className="mt-2 rounded-lg border border-white/10 p-2 text-xs text-slate-200">
+                        {(record.company || record.title) && <strong className="block text-white">{record.company || record.title}</strong>}
+                        {record.snippet && <p>{record.snippet}</p>}
+                        {record.website && <p className="break-all">Owner-entered website (not independently verified): {record.website}</p>}
+                        {record.source_url && <p className="break-all">Source: {record.source_url}</p>}
+                        {record.observation && <p>{record.observation}</p>}
+                        {record.draft && <p className="whitespace-pre-wrap">Unsent draft: {record.draft}</p>}
+                        {record.result && <p>{record.result} · {record.records} records</p>}
+                      </div>)}
+                      <p className="mt-2 text-[10px] text-amber-200">Saved source claims have not been independently verified.</p>
+                    </div>}
+                    {chosen.evidence && <p className="text-xs text-slate-300">Recorded review evidence: {chosen.evidence}</p>}
+                    {chosen.status === "COMPLETED"
+                      ? <p className="text-xs text-emerald-200">Owner-attested completion; not independently verified by an AI worker.</p>
+                      : <div className="grid gap-2 sm:grid-cols-[180px_1fr_auto] sm:items-end">
+                        <label className="block text-xs font-bold text-slate-300">Review status
+                          <select aria-label="Assignment status" value={selection} onChange={(event) => setEditing(old => ({ ...old, [chosen.id]: { ...old[chosen.id], status: event.target.value } }))} className="mt-1 min-h-10 w-full rounded-lg border border-slate-600 bg-slate-950 p-2 text-xs">
+                            {STATUS.map(status => <option key={status} value={status}>{status.replaceAll("_", " ")}</option>)}
+                          </select>
+                        </label>
+                        <label className="block min-w-0 text-xs font-bold text-slate-300">Owner review evidence
+                          <textarea aria-label="Evidence or progress note" value={edit.evidence || ""} maxLength={2000} onChange={(event) => setEditing(old => ({ ...old, [chosen.id]: { ...old[chosen.id], evidence: event.target.value } }))} rows={2} placeholder="Describe what you verified." className="mt-1 min-h-10 w-full rounded-lg border border-slate-600 bg-slate-950 p-2 text-xs" />
+                        </label>
+                        <button type="button" disabled={busy} onClick={() => updateStep(item.id, chosen)} className="min-h-10 rounded-lg border border-cyan-400/50 px-3 text-xs font-bold text-cyan-100 disabled:opacity-40">{selection === "COMPLETED" ? "Attest completion" : "Save progress"}</button>
+                      </div>}
+                  </div>
+                </div>}
+                <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-2">
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" disabled={busy || item.status === "COMPLETED"} onClick={() => runInternalStep(item.id)} className="min-h-10 rounded-lg border border-cyan-400/40 px-3 text-xs font-bold text-cyan-100 disabled:opacity-40">Run one internal step</button>
+                    <button type="button" disabled={busy || item.status === "COMPLETED"} onClick={() => queueGoal(item.id)} className="min-h-10 rounded-lg border border-amber-400/30 px-3 text-xs font-bold text-amber-200 disabled:opacity-40">Authorize internal queue</button>
+                    {jobs.some(job => String(job.goal_id) === String(item.id) && ["QUEUED","RUNNING","WAITING","RETRY"].includes(job.state)) &&
+                      <button type="button" disabled={busy} onClick={() => cancelGoal(item.id)} className="min-h-10 rounded-lg border border-rose-400/30 px-3 text-xs text-rose-200">Cancel job</button>}
+                  </div>
+                  <span className="text-[10px] text-slate-300">Internal tasks only · No outbound sends</span>
+                </div>
+              </div>;
+            })}
+          </div>
+        </section>
+      </div>}
       {allGoalsOpen && <div className="sw-assist-dialog-overlay fixed inset-0 z-[260] flex justify-end" onMouseDown={(event) => { if (event.target === event.currentTarget) setAllGoalsOpen(false); }}><section role="dialog" aria-modal="true" aria-label="All goals" className="sw-assist-secondary-dialog flex h-full w-full max-w-lg flex-col border-l border-cyan-400/30 text-white"><div className="flex shrink-0 items-center justify-between border-b border-white/10 p-3"><h2 className="text-base font-black">All coordinated goals</h2><button type="button" onClick={() => setAllGoalsOpen(false)} className="min-h-10 rounded-lg border border-white/20 px-3 text-xs">Close</button></div><div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">{(data?.goals || []).map((item) => <button type="button" key={item.id} onClick={() => { setAllGoalsOpen(false); setSelectedGoalId(item.id); }} className="block w-full rounded-xl border border-white/15 bg-slate-900/40 p-3 text-left text-xs"><strong className="block">{item.goal}</strong><span className="mt-1 block text-cyan-200">{item.status.replaceAll("_", " ")} · View details</span></button>)}</div></section></div>}
       {draftDrawer && <div className="sw-assist-dialog-overlay fixed inset-0 z-[260] flex justify-end" onMouseDown={(event) => { if (event.target === event.currentTarget) setDraftDrawer(false); }}><section role="dialog" aria-modal="true" aria-label="Draft assignments" className="sw-assist-secondary-dialog flex h-full w-full max-w-lg flex-col border-l border-cyan-400/30 text-white"><div className="flex shrink-0 items-center justify-between border-b border-white/10 p-3"><h2 className="text-base font-black">Draft employee assignments</h2><button type="button" onClick={() => setDraftDrawer(false)} className="min-h-10 rounded-lg border border-white/20 px-3 text-xs">Done</button></div><div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">{draftSteps.map((step, index) => <div key={index} className="flex items-start justify-between gap-2 rounded-lg border border-white/15 p-3 text-xs"><span className="break-words">{step.role.replaceAll("_", " ")} · {step.task}</span><button type="button" onClick={() => setDraftSteps(items => items.filter((_, i) => i !== index))} className="shrink-0 rounded-lg border border-rose-400/35 px-3 py-2 text-rose-200">Remove</button></div>)}{!draftSteps.length && <p className="text-sm text-slate-400">No additional assignments yet.</p>}</div></section></div>}
       <p className="mt-1 shrink-0 truncate text-[10px] leading-4 text-amber-200">Pilot · Internal execution only · No unattended external actions.</p>
