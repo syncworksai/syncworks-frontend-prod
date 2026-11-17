@@ -121,6 +121,7 @@ function blankDraft(kind = "EVENT") {
   const task = kind === "TASK";
   return {
     kind,
+    event_category: "PERSONAL",
     title: "",
     date: ymd(),
     time: "09:00",
@@ -167,6 +168,7 @@ function draftFromEvent(event) {
   return {
     ...blankDraft(kind),
     kind,
+    event_category: String(event?.metadata?.event_category || (event?.metadata?.business_id ? "BUSINESS" : "PERSONAL")).toUpperCase() === "BUSINESS" ? "BUSINESS" : "PERSONAL",
     title: event.title || "",
     date: ymd(start),
     time: localTime(start),
@@ -755,6 +757,7 @@ export default function CalendarPageV3() {
     const metadata = {
       ...(editingEvent?.metadata || {}),
       entity_type: draft.kind,
+      event_category: draft.event_category === "BUSINESS" ? "BUSINESS" : "PERSONAL",
       weather_dependent: Boolean(draft.weather_dependent),
       fixed: !draft.flexible,
     };
@@ -976,6 +979,11 @@ export default function CalendarPageV3() {
           </nav>
           <div className="sw-calendar-composer-fields">
             <div className="sw-cal-editor-panel" data-editor-panel="details" data-active={editorSection === "details"}>
+            {draft.kind === "EVENT" && <fieldset className="sw-cal-event-category" aria-label="Event type">
+              <legend>Calendar label</legend>
+              <button type="button" aria-pressed={draft.event_category !== "BUSINESS"} className={draft.event_category !== "BUSINESS" ? "selected personal" : ""} onClick={() => setDraft(value => ({...value,event_category:"PERSONAL"}))}>Personal</button>
+              <button type="button" aria-pressed={draft.event_category === "BUSINESS"} className={draft.event_category === "BUSINESS" ? "selected business" : ""} onClick={() => setDraft(value => ({...value,event_category:"BUSINESS"}))}>Business</button>
+            </fieldset>}
             <label className="text-xs text-slate-400 lg:col-span-2">Title<input value={draft.title} onChange={(event) => setDraft((value) => ({ ...value, title: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
             <label className="text-xs text-slate-400">Date<input type="date" value={draft.date} onChange={(event) => setDraft((value) => ({ ...value, date: event.target.value, end_date: value.end_date < event.target.value ? event.target.value : value.end_date }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none" /></label>
             <label className="text-xs text-slate-400">Start time<input disabled={draft.all_day} type="time" value={draft.time} onChange={(event) => setDraft((value) => ({ ...value, time: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm text-white outline-none disabled:opacity-40" /></label>
