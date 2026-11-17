@@ -587,3 +587,10 @@
 .sw-health-strength-head button:focus-visible,.sw-health-progression-toggle:focus-visible{outline:2px solid #81dfff;outline-offset:3px}
 @media(min-width:1024px){.sw-health-home .sw-health-progression-toggle{border:1px solid rgba(98,222,255,.35);background:rgba(17,96,143,.2);color:#d7f5ff}}
 @media(max-width:1023px){.sw-health-progression-toggle{display:none}}
+
+
+.sw-health-strength-error {display:flex;flex-direction:column;align-items:flex-start;gap:.8rem;padding:1rem;border:1px solid rgba(250,185,96,.35);border-radius:1rem;background:rgba(97,58,20,.17)}
+.sw-health-strength-error strong {font-size:1rem;color:#ffdeb1}
+.sw-health-strength-error p {font-size:.8rem;color:#d4e0ec;line-height:1.55}
+.sw-health-strength-error button {min-height:44px;padding:.55rem 1rem;border:1px solid rgba(108,223,255,.55);border-radius:.75rem;background:rgba(18,103,157,.30);color:#e0faff;font-weight:800}
+.sw-health-strength-error button:focus-visible {outline:2px solid #81dfff;outline-offset:2px}
