@@ -529,8 +529,8 @@
 @media (min-width:1024px) {
   .sw-health-home[data-health-panel="today"] > .sw-health-readiness-card {display:none !important}
   .sw-health-home[data-health-panel="today"] .sw-health-recovery-trigger {display:inline-flex}
-  .sw-health-home[data-health-panel="today"] > .sw-health-quick-panel {grid-column:1/-1}
-  .sw-health-home[data-health-panel="today"] > .sw-health-desktop-grid {grid-column:span 8}
+  .sw-health-home[data-health-panel="today"] > .sw-health-quick-panel {grid-column:span 8}
+  .sw-health-home[data-health-panel="today"] > .sw-health-desktop-grid {grid-column:1/-1}
   .sw-health-home[data-health-panel="today"] > .sw-health-hero {grid-column:span 4}
   .sw-health-home[data-health-panel="today"] {row-gap:.55rem}
 }
