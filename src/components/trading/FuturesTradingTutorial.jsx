@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { BookOpen, Play, Pause, RotateCcw, StepForward, ShieldAlert, Target, Volume2, Maximize2, Minimize2, Trash2 } from "lucide-react";
 import TrainingCandlestickChart from "./TrainingCandlestickChart";
+import TradingCoursePanel from "./TradingCoursePanel";
 import { useAuth } from "../../auth/AuthContext";
 import { equitySeries, readPracticeJournal, writePracticeJournal, unrealizedPracticePnl, reviewPracticeTrade } from "../../utils/tradingPracticeJournal.mjs";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
@@ -35,14 +36,17 @@ export default function FuturesTradingTutorial() {
   const [rewardRatio,setRewardRatio]=useState(2);
   const [chartView,setChartView]=useState("candles");
   const [detailPanel,setDetailPanel]=useState(null);
+  const [journalNote,setJournalNote]=useState("");
   const [feedback,setFeedback]=useState("Advance candles to find an aligned setup, or select a lesson.");
   const stats=useMemo(()=>practiceStats(journal),[journal]);
   const equity=useMemo(()=>equitySeries(journal),[journal]);
   const unrealized=unrealizedPracticePnl(trade,ROWS[step].close);
-  const review=reviewPracticeTrade(selectedTrade || completed.at(-1) || journal.at(-1));
+  const selectedJournalTrade=selectedTrade || journal.at(-1);
+  const review=reviewPracticeTrade(selectedJournalTrade || completed.at(-1));
   useEffect(()=>{setJournal(readPracticeJournal(userId));},[userId]);
   useEffect(()=>{if(userId)writePracticeJournal(userId,journal);},[userId,journal]);
-  function recordClosed(closed){setCompleted(old=>[...old,closed]);setJournal(old=>[...old,closed].slice(-300));setSelectedTrade(closed);}
+  function recordClosed(closed){setCompleted(old=>[...old,closed]);setJournal(old=>[...old,closed].slice(-300));setSelectedTrade(closed);setJournalNote("");}
+  function editJournalNote(value){setJournalNote(value);if(!selectedJournalTrade)return;setJournal(old=>old.map(t=>t.entryTime===selectedJournalTrade.entryTime&&t.exitTime===selectedJournalTrade.exitTime?{...t,note:value.slice(0,3000)}:t));setSelectedTrade(t=>t?{...t,note:value.slice(0,3000)}:t);}
 
   const orderEstimate=paperOrderEstimate({quantity:contracts,stopPoints:stopTicks*SIM_MNQ_TICK_SIZE,rewardRatio});
   const current=ROWS[step];
@@ -89,7 +93,7 @@ export default function FuturesTradingTutorial() {
   return <section className="flex h-auto flex-col gap-2 rounded-2xl border border-violet-400/25 bg-[#080e20] p-2 text-slate-100 lg:h-full lg:min-h-0 lg:overflow-hidden" aria-label="Interactive practice trading tutorial">
     <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
       <div className="flex items-center gap-2"><BookOpen size={15} className="text-violet-300"/><h2 className="text-sm font-black">MNQ Practice Simulator</h2><span className="text-[10px] font-bold text-amber-200">SIMULATION ONLY</span></div>
-      <div className="flex gap-1.5"><button type="button" onClick={()=>setDetailPanel("journal")} className="rounded-lg border border-cyan-400/25 px-3 py-1.5 text-xs text-cyan-200">Journal & Stats</button><button type="button" onClick={()=>setDetailPanel("lessons")} className="rounded-lg border border-violet-400/25 px-3 py-1.5 text-xs text-violet-200">Lessons</button><button type="button" onClick={()=>setDetailPanel("review")} className="rounded-lg border border-emerald-400/25 px-3 py-1.5 text-xs text-emerald-200">Trade Review</button></div>
+      <div className="flex gap-1.5"><button type="button" onClick={()=>setDetailPanel("journal")} className="rounded-lg border border-cyan-400/25 px-3 py-1.5 text-xs text-cyan-200">Journal & Stats</button><button type="button" onClick={()=>setDetailPanel("lessons")} className="rounded-lg border border-violet-400/25 px-3 py-1.5 text-xs text-violet-200">Lessons</button><button type="button" onClick={()=>setDetailPanel("review")} className="rounded-lg border border-emerald-400/25 px-3 py-1.5 text-xs text-emerald-200">Trade Review</button><button type="button" onClick={()=>setDetailPanel("course")} className="rounded-lg border border-amber-400/25 px-3 py-1.5 text-xs text-amber-200">30-Day Course</button></div>
     </div>
     <div className="grid min-h-0 flex-1 gap-2 lg:grid-cols-[minmax(0,1.9fr)_minmax(250px,0.75fr)]">
       <div className="flex min-h-0 min-w-0 flex-col gap-2">
@@ -162,7 +166,7 @@ export default function FuturesTradingTutorial() {
     </div>
     {expanded&&<div className="fixed inset-0 z-[260] flex flex-col bg-[#020617] p-3"><button type="button" onClick={()=>setExpanded(false)} className="mb-2 self-end rounded-lg border border-white/20 px-4 py-2 text-xs text-white">Close expanded chart</button><div className="min-h-0 flex-1"><TrainingCandlestickChart bars={visible} trade={trade} lastClosedTrade={completed.at(-1)} completed={completed} compact/></div></div>}
     {detailPanel&&<div className="fixed inset-0 z-[255] flex justify-end bg-black/70 p-2" onMouseDown={()=>setDetailPanel(null)}><div role="dialog" aria-modal="true" aria-label="Trading Academy details" onMouseDown={e=>e.stopPropagation()} className="flex h-full w-full max-w-xl flex-col gap-3 overflow-hidden rounded-xl border border-cyan-400/30 bg-[#071126] p-4">
-      <div className="flex shrink-0 items-center justify-between"><h3 className="font-black">{detailPanel==="journal"?"Trade journal & equity":detailPanel==="lessons"?"Guided lessons":"Jarvis trade review"}</h3><button type="button" onClick={()=>setDetailPanel(null)} className="rounded-lg border border-white/20 px-3 py-2 text-xs">Close</button></div>
+      <div className="flex shrink-0 items-center justify-between"><h3 className="font-black">{detailPanel==="journal"?"Trade journal & equity":detailPanel==="lessons"?"Guided lessons":detailPanel==="course"?"30-Day Trading Course":"Jarvis trade review"}</h3><button type="button" onClick={()=>setDetailPanel(null)} className="rounded-lg border border-white/20 px-3 py-2 text-xs">Close</button></div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {detailPanel==="journal"&&<div className="space-y-3">        <div className="rounded-xl border border-cyan-400/20 bg-slate-950/60 p-3">
           <div className="text-xs font-black uppercase tracking-widest text-cyan-200">Paper account / Performance</div>
@@ -180,7 +184,7 @@ export default function FuturesTradingTutorial() {
           <div className="mt-3 text-xs font-bold text-slate-300">Simulated trade history</div>
           {journal.length?<div className="mt-2 max-h-52 overflow-x-auto overflow-y-auto"><table className="w-full min-w-[490px] text-left text-xs">
             <thead className="text-slate-500"><tr><th className="p-2">Side</th><th className="p-2">Entry</th><th className="p-2">Exit</th><th className="p-2">Outcome</th><th className="p-2">Net P&L</th></tr></thead>
-            <tbody>{journal.slice().reverse().map((item,index)=><tr key={item.entryTime+index} onClick={()=>setSelectedTrade(item)} title="View Jarvis trade review" className="cursor-pointer border-t border-white/10 hover:bg-white/5"><td className="p-2">{item.side}</td><td className="p-2">{money(item.entry)}</td><td className="p-2">{money(item.exit)}</td><td className="p-2">{item.outcome}</td><td className={"p-2 font-bold "+(item.netPnl>0?"text-emerald-300":"text-rose-300")}>{(item.netPnl>=0?"+":"")+"$"+money(item.netPnl)}</td></tr>)}</tbody>
+            <tbody>{journal.slice().reverse().map((item,index)=><tr key={item.entryTime+index} onClick={()=>{setSelectedTrade(item);setJournalNote(item.note||"");setDetailPanel("review");}} title="View journal entry and trade review" className="cursor-pointer border-t border-white/10 hover:bg-white/5"><td className="p-2">{item.side}</td><td className="p-2">{money(item.entry)}</td><td className="p-2">{money(item.exit)}</td><td className="p-2">{item.outcome}</td><td className={"p-2 font-bold "+(item.netPnl>0?"text-emerald-300":"text-rose-300")}>{(item.netPnl>=0?"+":"")+"$"+money(item.netPnl)}</td></tr>)}</tbody>
           </table></div>:<p className="mt-2 text-xs text-slate-500">No closed paper trades. Buy or Sell, then Close or let the stop/target close the trade.</p>}
           <div className="mt-3 flex justify-end"><button type="button" onClick={clearHistory} className="inline-flex items-center gap-2 rounded-lg border border-rose-400/20 px-3 py-2 text-xs text-rose-200"><Trash2 size={14}/> Clear saved journal</button></div>
           <p className="mt-2 text-[11px] text-slate-500">Assumptions: $ {SIM_MNQ_POINT_VALUE} per MNQ index point and $ {money(SIM_ROUND_TRIP_FEE)} fixed round-trip cost per trade. No slippage, real broker fees, gaps or actual execution constraints. Simulated P&L is not evidence of real profitability.</p>
