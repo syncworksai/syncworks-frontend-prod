@@ -205,7 +205,7 @@ export default function SyncAssistWorkdayPanel() {
   }
 
   return (
-    <section className="sw-assist-panel sw-assist-workday flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-cyan-400/30 p-2 sm:p-3" aria-label="AI workforce workday">
+    <section className={`sw-assist-panel sw-assist-workday flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-cyan-400/30 p-2 sm:p-3 ${selectedGoalId ? "sw-assist-modal-open" : ""}`} aria-label="AI workforce workday">
       <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-black uppercase tracking-widest text-cyan-200">Workforce command center</p>
