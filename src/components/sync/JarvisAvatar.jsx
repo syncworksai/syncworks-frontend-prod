@@ -1,5 +1,6 @@
 import React, {useEffect,useState} from "react";
 import {ChevronDown,Volume2,VolumeX} from "lucide-react";
+import { useAuth } from "../../auth/AuthContext";
 import "./JarvisAvatar.css";
 
 export const AVATAR_STORAGE_KEY="sw-jarvis-avatar-v1";
@@ -9,6 +10,12 @@ export const AVATARS=[
   {id:"future-female",name:"Elizabeth",role:"Marketing Manager",style:"Modern",presentation:"Female",photo:"/jarvis-avatars/elizabeth.jpeg",mouthX:"49%",mouthY:"39%",skin:"#e8b398",shade:"#b07965",hair:"#cbb9a9",outfit:"#102f48",accent:"#52defd"},
   {id:"future-male",name:"William",role:"Research Analyst",style:"Modern",presentation:"Male",photo:"/jarvis-avatars/william.jpeg",mouthX:"50%",mouthY:"38%",skin:"#bb8a70",shade:"#855844",hair:"#151c2c",outfit:"#2d2055",accent:"#ad65ff"},
 ];
+
+// Pilot-specific portrait only. Do not change the shared avatar manifest for customers.
+export const getAvatarPhotoForUser = (avatar, user) =>
+  avatar?.id === "executive-female" && String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com"
+    ? "/lady10.png"
+    : avatar?.photo;
 
 export function loadAvatarChoice(){
   try {const value=window.localStorage.getItem(AVATAR_STORAGE_KEY);return AVATARS.some(a=>a.id===value)?value:AVATARS[0].id;}
@@ -33,17 +40,19 @@ export function useJarvisAvatar(){
 
 export function JarvisAvatar({id="executive-female",state="idle",size="hero",label=true,displayName,displayRole}){
   const config=AVATARS.find(v=>v.id===id)||AVATARS[0];
+  const { user } = useAuth();
+  const photo = getAvatarPhotoForUser(config, user);
   const assistantName=displayName||config.name;
   const assistantRole=displayRole||config.role;
   const [photoReady,setPhotoReady]=useState(false);
-  useEffect(()=>setPhotoReady(false),[id]);
+  useEffect(()=>setPhotoReady(false),[id,photo]);
   const female=config.presentation==="Female",future=config.style==="Futuristic";
   const stage=["idle","listening","thinking","speaking"].includes(state)?state:"idle";
   const gradId="avatar-outfit-"+id;
   return <div className={`jarvis-avatar jarvis-avatar--${stage} jarvis-avatar--${size} ${photoReady?"jarvis-avatar--photographic":""}`} style={{"--avatar-accent":config.accent,"--mouth-x":config.mouthX,"--mouth-y":config.mouthY}}>
     <div className="jarvis-avatar__halo" aria-hidden="true"/>
-    <img key={config.photo} className="jarvis-avatar__photo" src={config.photo} alt={`${assistantName} - ${assistantRole}, virtual assistant`} loading="eager" decoding="async" onLoad={()=>setPhotoReady(true)} onError={()=>setPhotoReady(false)} />
-    {photoReady&&<img key={config.photo+"-mouth"} className="jarvis-avatar__photo-mouth" src={config.photo} alt="" aria-hidden="true" draggable="false" />}
+    <img key={photo} className="jarvis-avatar__photo" src={photo} alt={`${assistantName} - ${assistantRole}, virtual assistant`} loading="eager" decoding="async" onLoad={()=>setPhotoReady(true)} onError={()=>setPhotoReady(false)} />
+    {photoReady&&<img key={photo+"-mouth"} className="jarvis-avatar__photo-mouth" src={photo} alt="" aria-hidden="true" draggable="false" />}
     {!photoReady&&<svg className="jarvis-avatar__portrait" viewBox="0 0 260 300" role="img" aria-label={`${assistantName} - ${assistantRole}, virtual assistant, ${stage}`}>
       <defs>
         <linearGradient id={gradId} x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor={config.outfit}/><stop offset="1" stopColor="#070d1e"/></linearGradient>
