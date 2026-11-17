@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, BookOpen, Brain, CalendarClock, Check, ChevronRight,
@@ -93,6 +93,7 @@ export default function CustomerForge(){
   const [breathSeconds,setBreathSeconds]=useState(0);
   const [video,setVideo]=useState("");
   const audioEl=useRef(null),audioUrl=useRef(""),abortRef=useRef(null),playId=useRef(0);
+  const forgeShellRef=useRef(null);
   const synthParts=useRef([]),synthIndex=useRef(0);
   const key=keyFor(email);
   const chapter=forgeChapters.find(c=>c.id===chapterId)||forgeChapters[0];
@@ -107,6 +108,38 @@ export default function CustomerForge(){
   const remaining=Math.max(0,300-breathSeconds);
   const script=`${chapter.title}. ${chapter.lens}. ${chapter.paragraphs.join(" ")} Takeaway. ${chapter.takeaway} Today's challenge. ${chapter.challenge}`;
 
+  // The global navigation bar is fixed, while other route wrappers can add
+  // height. Measure from Forge's actual top edge to the visible viewport bottom.
+  // Only explicit chapter and agenda panels may scroll within this shell.
+  useLayoutEffect(()=>{
+    const shell=forgeShellRef.current;
+    if(!shell)return undefined;
+    const oldBodyOverflow=document.body.style.overflow;
+    const oldHtmlOverflow=document.documentElement.style.overflow;
+    document.body.style.overflow="hidden";
+    document.documentElement.style.overflow="hidden";
+    const fit=()=>{
+      if(!shell)return;
+      const top=shell.getBoundingClientRect().top;
+      const visibleBottom=window.visualViewport
+        ? window.visualViewport.offsetTop+window.visualViewport.height
+        : window.innerHeight;
+      const available=Math.max(0,Math.floor(visibleBottom-top));
+      shell.style.setProperty("--forge-viewport-height",available+"px");
+    };
+    fit();
+    window.addEventListener("resize",fit);
+    window.visualViewport?.addEventListener("resize",fit);
+    window.visualViewport?.addEventListener("scroll",fit);
+    return ()=>{
+      window.removeEventListener("resize",fit);
+      window.visualViewport?.removeEventListener("resize",fit);
+      window.visualViewport?.removeEventListener("scroll",fit);
+      shell.style.removeProperty("--forge-viewport-height");
+      document.body.style.overflow=oldBodyOverflow;
+      document.documentElement.style.overflow=oldHtmlOverflow;
+    };
+  },[]);
   useEffect(()=>{
     const timer=window.setInterval(()=>setNow(new Date()),1000);
     return ()=>window.clearInterval(timer);
@@ -225,7 +258,7 @@ export default function CustomerForge(){
   },[readingOpen]);
   function startRoutine(item){if(item.action)setActiveMode(item.action);}
   if(!permitted)return <main className="min-h-screen bg-slate-950 px-6 pt-28 text-white"><h1 className="text-xl">Private pilot</h1><Link to="/customer">Return to office</Link></main>;
-  return <main className="forge3">
+  return <main className="forge3" ref={forgeShellRef}>
     <div className="forge3-glow" aria-hidden="true"/>
     <header className="forge3-header">
       <div className="forge3-identity"><Link to="/customer" className="forge3-back" aria-label="Back to my office"><ArrowLeft size={18}/></Link><div className="forge3-mark"><Flame size={23}/></div><div><span>SYNCWORKS / PRIVATE STUDIO</span><h1>THE <em>FORGE</em></h1></div></div>

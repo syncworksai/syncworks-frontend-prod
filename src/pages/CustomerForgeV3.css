@@ -141,3 +141,46 @@
 .forge3-reflect-coach-actions .forge3-mainbtn{min-height:40px}
 @media(max-width:720px){.forge3-reflect-coach-actions{gap:6px}.forge3-reflect-coach-actions p{font-size:10px}.forge3-reflect-coach-actions .forge3-mainbtn{min-height:36px;padding:7px 9px}}
 @media(max-height:720px){.forge3-reflect-coach-actions p{display:none}}
+
+
+/* Forge v10: the whole studio fits the actual visible browser viewport.
+   A reading popout or Mission Control list can scroll; the main document cannot. */
+.forge3 {
+  height:var(--forge-viewport-height,100dvh);
+  min-height:0;
+  max-height:var(--forge-viewport-height,100dvh);
+  padding-top:clamp(60px,7.3vh,78px);
+  padding-bottom:7px;
+}
+.forge3-main,.forge3-workspace,.forge3-sidebar,.forge3-stage{min-height:0}
+.forge3-header{min-height:54px;margin-bottom:8px}
+.forge3-footer{margin-top:6px}
+.forge3-reading-home{padding:clamp(10px,1.5vw,21px);justify-content:center;gap:0}
+.forge3-reading-symbol{width:48px;height:48px;margin-bottom:7px;border-radius:14px}
+.forge3-reading-symbol svg{width:27px;height:27px}
+.forge3-reading-home h3{font-size:clamp(22px,2.25vw,30px);margin:5px 0}
+.forge3-reading-home>p{-webkit-line-clamp:2;line-height:1.5}
+.forge3-reading-home-actions{margin-top:12px}
+.forge3-reading-takeaway{margin-top:11px;padding-top:10px}
+.forge3-reading-takeaway p{margin-top:4px}
+@media(max-width:720px){
+  .forge3{padding-top:clamp(116px,16vh,130px);padding-bottom:5px}
+  .forge3-header{min-height:44px;margin-bottom:5px}
+  .forge3-reading-home{padding:10px}
+  .forge3-reading-symbol{display:none}
+  .forge3-reading-home-actions{margin-top:7px}
+  .forge3-reading-takeaway{margin-top:7px;padding-top:6px}
+}
+@media(max-height:690px) and (min-width:721px){
+  .forge3{padding-top:59px;padding-bottom:4px}
+  .forge3-header{min-height:45px;margin-bottom:5px}
+  .forge3-identity h1{font-size:29px}
+  .forge3-stage{padding:10px}
+  .forge3-stage-intro{margin-bottom:6px}
+  .forge3-chapter-select{margin-bottom:6px}
+  .forge3-modes{padding:6px}
+  .forge3-modes button{padding:7px 5px}
+  .forge3-reading-home>p{display:none}
+  .forge3-reading-symbol{display:none}
+  .forge3-footer{display:none}
+}
