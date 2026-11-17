@@ -32,6 +32,9 @@ export default function SyncAssistWorkdayPanel() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [selectedGoalId, setSelectedGoalId] = useState(null);
+  const [allGoalsOpen, setAllGoalsOpen] = useState(false);
+  const [draftDrawer, setDraftDrawer] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -93,6 +96,7 @@ export default function SyncAssistWorkdayPanel() {
     setPublicMode(false);
     setPublicQuery("");
     setError("");
+    setDraftDrawer(true);
   }
 
   function addStep() {
@@ -199,12 +203,12 @@ export default function SyncAssistWorkdayPanel() {
   }
 
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-cyan-400/30 bg-slate-900/55 p-3 sm:p-4" aria-label="AI workforce workday">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-cyan-400/30 bg-slate-900/55 p-2 sm:p-3" aria-label="AI workforce workday">
       <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-black uppercase tracking-widest text-cyan-200">Workforce command center</p>
-          <h2 className="mt-1 text-lg font-black">Goals and employee assignments</h2>
-          <p className="mt-1 hidden text-xs leading-5 text-slate-300 md:block">
+          <h2 className="mt-0.5 text-base font-black">Goals and employee assignments</h2>
+          <p className="sr-only">
             Run restricted research and drafting tasks, review real receipts, and optionally enroll internal work in the durable background queue.
           </p>
         </div>
@@ -213,58 +217,62 @@ export default function SyncAssistWorkdayPanel() {
           <button type="button" disabled={busy} onClick={refresh} className="min-h-10 rounded-xl border border-cyan-400/30 px-3 text-xs font-bold text-cyan-100">Refresh</button>
         </div>
       </div>
-      {data && <div className="mt-2 flex shrink-0 flex-wrap gap-2 text-xs">
+      {data && <div className="mt-1 flex shrink-0 flex-wrap gap-1 text-[11px]">
         {Object.entries(data.counts || {}).filter(([, count]) => count > 0).map(([name, count]) => (
-          <span key={name} className="rounded-lg border border-white/15 bg-slate-950/70 px-3 py-2">
+          <span key={name} className="rounded-lg border border-white/15 bg-slate-950/70 px-2 py-1">
             <strong className="text-cyan-200">{count}</strong> {name.replaceAll("_", " ")}
           </span>
         ))}
       </div>}
-      {workerStatus && <p className="mt-2 shrink-0 text-[11px] text-amber-200">
+      {workerStatus && <p className="mt-1 shrink-0 truncate text-[10px] text-amber-200">
         Durable queue records are available. Independent worker deployed: {workerStatus.worker_deployed ? "reported active" : "not yet verified"}.
         Jobs execute unattended only after a separately configured worker is enabled.
       </p>}
       {error && <div role="alert" className="mt-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-rose-400/30 bg-rose-950/20 p-2 text-xs text-rose-200"><span>{error}</span><button type="button" onClick={refresh} disabled={busy} className="shrink-0 rounded-lg border border-rose-400/40 px-2 py-1">Retry</button></div>}
-      <div className="mt-3 grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto lg:grid-cols-[minmax(320px,0.95fr)_minmax(360px,1.05fr)] lg:overflow-hidden">
-      <form onSubmit={createGoal} className="min-h-0 space-y-2 overflow-y-auto rounded-xl border border-white/10 bg-slate-950/35 p-3">
+      <div className="mt-2 grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-y-auto lg:grid-cols-[minmax(320px,0.95fr)_minmax(360px,1.05fr)] lg:overflow-hidden">
+      <form onSubmit={createGoal} className="min-h-0 space-y-2 overflow-hidden rounded-xl border border-white/10 bg-slate-950/35 p-2.5">
         <label className="block text-xs font-bold text-slate-200">Business goal
-          <textarea required value={goal} onChange={(event) => setGoal(event.target.value)} maxLength={500} rows={2} placeholder="e.g. Build a qualified property management lead pipeline" className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-950 p-3 text-sm text-white"/>
+          <textarea required value={goal} onChange={(event) => setGoal(event.target.value)} maxLength={500} rows={1} placeholder="e.g. Build a qualified property management lead pipeline" className="mt-1 w-full resize-none rounded-lg border border-slate-600 bg-slate-950 p-2 text-sm text-white"/>
         </label>
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="block text-xs font-bold text-slate-200">Assigned employee
-            <select value={role} onChange={(event) => setRole(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-600 bg-slate-950 p-2 text-sm text-white">
+            <select value={role} onChange={(event) => setRole(event.target.value)} className="mt-1 min-h-10 w-full rounded-lg border border-slate-600 bg-slate-950 p-2 text-sm text-white">
               {(teamEmployees.length
                 ? teamEmployees.map((employee) => [employee.role, employee.name + " — " + (ROLES.find(([id]) => id === employee.role)?.[1] || employee.role)])
                 : ROLES).map(([id, name]) => <option value={id} key={id}>{name}</option>)}
             </select>
           </label>
           <label className="block text-xs font-bold text-slate-200">Assignment
-            <input value={task} onChange={(event) => setTask(event.target.value)} maxLength={500} placeholder="Describe the employee's job" className="mt-1 min-h-11 w-full rounded-xl border border-slate-600 bg-slate-950 p-3 text-sm text-white"/>
+            <input value={task} onChange={(event) => setTask(event.target.value)} maxLength={500} placeholder="Describe the employee's job" className="mt-1 min-h-10 w-full rounded-lg border border-slate-600 bg-slate-950 p-2 text-sm text-white"/>
           </label>
         </div>
         <label className="flex items-start gap-2 text-xs text-slate-200">
           <input type="checkbox" checked={publicMode} onChange={(event) => setPublicMode(event.target.checked)} className="mt-1"/>
-          <span>Use public web search for Research Analyst assignments. I authorize sending only the search query below to the configured search provider. Search results are unverified and require review.</span>
+          <span>Optional public web search (sends only the entered query; results are unverified)</span>
         </label>
         {publicMode && <label className="block text-xs font-bold text-slate-200">Public search query (no private or customer information)
           <input required minLength={4} maxLength={120} value={publicQuery} onChange={(event) => setPublicQuery(event.target.value)} placeholder="e.g. commercial property management companies in Birmingham Alabama" className="mt-1 min-h-11 w-full rounded-xl border border-slate-600 bg-slate-950 p-3 text-sm text-white"/>
           <span className="mt-1 block font-normal text-amber-200">Only available when the backend search integration is configured and enabled.</span>
         </label>}
-        <button type="button" disabled={!task.trim() || draftSteps.length >= 8} onClick={addStep} className="min-h-10 rounded-xl border border-cyan-400/30 px-4 text-xs font-bold text-cyan-100 disabled:opacity-40">Add another assignment (optional)</button>
-        {draftSteps.map((step, index) => (
-          <div key={index} className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-slate-950/50 p-2 text-xs">
-            <span className="min-w-0 break-words">{step.role.replaceAll("_", " ")} · {step.task}</span>
-            <button type="button" onClick={() => setDraftSteps((items) => items.filter((_, i) => i !== index))} aria-label={"Remove assignment " + (index + 1)} className="min-h-9 shrink-0 rounded-lg border border-white/20 px-2">Remove</button>
-          </div>
-        ))}
-        <button type="submit" disabled={busy || !goal.trim() || (!task.trim() && draftSteps.length === 0) || (publicMode && (publicQuery.trim().length < 4 || !(role === "RESEARCH_ANALYST" && task.trim()) && !draftSteps.some((step) => step.role === "RESEARCH_ANALYST")))} className="min-h-11 w-full rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 p-3 text-sm font-bold disabled:opacity-40">{busy ? "Saving goal…" : "Create goal & assign employee"}</button>
-        <p className="text-[11px] text-slate-400">One employee: enter both fields and click Create. Add another assignment only for multi-employee jobs.</p>
+        <button type="button" disabled={!task.trim() || draftSteps.length >= 8} onClick={addStep} className="min-h-9 rounded-lg border border-cyan-400/30 px-3 text-xs font-bold text-cyan-100 disabled:opacity-40">Add assignment</button>
+        {draftSteps.length > 0 && <button type="button" onClick={() => setDraftDrawer(true)} className="text-xs font-bold text-cyan-200 underline underline-offset-2">{draftSteps.length} added assignment(s) · View / remove</button>}
+        <button type="submit" disabled={busy || !goal.trim() || (!task.trim() && draftSteps.length === 0) || (publicMode && (publicQuery.trim().length < 4 || !(role === "RESEARCH_ANALYST" && task.trim()) && !draftSteps.some((step) => step.role === "RESEARCH_ANALYST")))} className="min-h-10 w-full rounded-lg bg-gradient-to-r from-cyan-500 to-violet-600 px-3 py-2 text-sm font-bold disabled:opacity-40">{busy ? "Saving goal…" : "Create goal & assign employee"}</button>
+
       </form>
-      <div className="min-h-0 space-y-3 overflow-y-auto rounded-xl border border-white/10 bg-slate-950/25 p-3">
+      <div className="min-h-0 space-y-2 overflow-hidden rounded-xl border border-white/10 bg-slate-950/25 p-2.5">
         <h3 className="text-sm font-black text-white">Assigned work & results</h3>
         {!loaded && <p className="text-xs text-slate-400">Loading recorded goals…</p>}
         {loaded && data?.goals?.length === 0 && <p className="text-xs text-slate-400">No coordinated goals saved yet.</p>}
-        {(data?.goals || []).map((item) => (
+        {(data?.goals || []).slice(0,3).map((item) => <article key={item.id} className="rounded-xl border border-white/15 bg-slate-950/50 p-2.5">
+          <div className="flex items-start justify-between gap-2"><h4 className="min-w-0 flex-1 line-clamp-2 text-xs font-bold leading-5">{item.goal}</h4><span className="shrink-0 rounded-lg border border-cyan-400/25 px-2 py-1 text-[10px] text-cyan-200">{item.status.replaceAll("_", " ")}</span></div>
+          <p className="mt-1 text-[11px] text-slate-400">{item.steps?.length || 0} assignment(s) · {(item.steps || []).filter(step => step.worker_receipt).length} receipt(s)</p>
+          <button type="button" onClick={() => setSelectedGoalId(item.id)} className="mt-2 min-h-9 rounded-lg border border-cyan-400/35 px-3 text-xs font-bold text-cyan-100">View more · Review / run</button>
+        </article>)}
+        {(data?.goals || []).length > 3 && <button type="button" onClick={() => setAllGoalsOpen(true)} className="min-h-9 rounded-xl border border-white/20 text-xs font-bold text-cyan-200">View all goals ({(data?.goals || []).length})</button>}
+      </div>
+      </div>
+      {selectedGoalId && <div className="fixed inset-0 z-[260] flex justify-end bg-slate-950/75 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedGoalId(null); }}><section role="dialog" aria-modal="true" aria-label="Goal details and execution" className="flex h-full w-full max-w-2xl flex-col border-l border-cyan-400/30 bg-[#061327] text-white"><div className="flex shrink-0 items-center justify-between border-b border-white/10 p-3"><h2 className="text-base font-black">Task details · Receipts · Approval</h2><button type="button" onClick={() => setSelectedGoalId(null)} className="min-h-10 rounded-lg border border-white/20 px-3 text-xs">Close</button></div><div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+        {(data?.goals || []).filter((item) => item.id === selectedGoalId).map((item) => (
           <article key={item.id} className="rounded-2xl border border-white/15 bg-slate-950/40 p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <h3 className="max-w-xl break-words text-sm font-black">{item.goal}</h3>
@@ -320,9 +328,10 @@ export default function SyncAssistWorkdayPanel() {
             </div>
           </article>
         ))}
-      </div>
-      </div>
-      <p className="mt-2 shrink-0 text-[10px] leading-4 text-amber-200">Pilot: internal execution only · No unattended external actions, messaging, or third-party changes.</p>
+      </div></section></div>}
+      {allGoalsOpen && <div className="fixed inset-0 z-[260] flex justify-end bg-slate-950/75 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) setAllGoalsOpen(false); }}><section role="dialog" aria-modal="true" aria-label="All goals" className="flex h-full w-full max-w-lg flex-col border-l border-cyan-400/30 bg-[#061327] text-white"><div className="flex shrink-0 items-center justify-between border-b border-white/10 p-3"><h2 className="text-base font-black">All coordinated goals</h2><button type="button" onClick={() => setAllGoalsOpen(false)} className="min-h-10 rounded-lg border border-white/20 px-3 text-xs">Close</button></div><div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">{(data?.goals || []).map((item) => <button type="button" key={item.id} onClick={() => { setAllGoalsOpen(false); setSelectedGoalId(item.id); }} className="block w-full rounded-xl border border-white/15 bg-slate-900/40 p-3 text-left text-xs"><strong className="block">{item.goal}</strong><span className="mt-1 block text-cyan-200">{item.status.replaceAll("_", " ")} · View details</span></button>)}</div></section></div>}
+      {draftDrawer && <div className="fixed inset-0 z-[260] flex justify-end bg-slate-950/75 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) setDraftDrawer(false); }}><section role="dialog" aria-modal="true" aria-label="Draft assignments" className="flex h-full w-full max-w-lg flex-col border-l border-cyan-400/30 bg-[#061327] text-white"><div className="flex shrink-0 items-center justify-between border-b border-white/10 p-3"><h2 className="text-base font-black">Draft employee assignments</h2><button type="button" onClick={() => setDraftDrawer(false)} className="min-h-10 rounded-lg border border-white/20 px-3 text-xs">Done</button></div><div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">{draftSteps.map((step, index) => <div key={index} className="flex items-start justify-between gap-2 rounded-lg border border-white/15 p-3 text-xs"><span className="break-words">{step.role.replaceAll("_", " ")} · {step.task}</span><button type="button" onClick={() => setDraftSteps(items => items.filter((_, i) => i !== index))} className="shrink-0 rounded-lg border border-rose-400/35 px-3 py-2 text-rose-200">Remove</button></div>)}{!draftSteps.length && <p className="text-sm text-slate-400">No additional assignments yet.</p>}</div></section></div>}
+      <p className="mt-1 shrink-0 truncate text-[10px] leading-4 text-amber-200">Pilot · Internal execution only · No unattended external actions.</p>
     </section>
   );
 }
