@@ -170,3 +170,56 @@
 @keyframes sw-cal-drawer-in{from{transform:translateX(60px);opacity:.3}to{transform:none;opacity:1}}
 @keyframes sw-cal-agenda-in{from{opacity:.6}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){.sw-cal-drawer,.sw-cal-agenda{animation:none!important;transition:none!important}}
+
+
+/* Editor and route drawers preserve the same theme and viewport as the cockpit. */
+.sw-calendar-page .sw-calendar-composer,
+.sw-calendar-page .sw-calendar-route-drawer {
+ position:fixed!important;top:90px!important;right:14px!important;
+ bottom:14px!important;left:auto!important;
+ width:min(540px,calc(100vw - 28px))!important;max-width:none!important;
+ max-height:none!important;z-index:120!important;
+ margin:0!important;padding:16px!important;
+ border:1px solid var(--cal-line)!important;border-radius:20px!important;
+ background:color-mix(in srgb,var(--cal-glass) 95%,#051426)!important;
+ color:var(--cal-ink)!important;
+ overflow:hidden!important;display:flex;flex-direction:column;
+ box-shadow:0 22px 85px #0008;
+ backdrop-filter:blur(20px);
+}
+.sw-calendar-page .sw-calendar-composer-fields{
+ min-height:0!important;flex:1 1 auto!important;
+ overflow-y:auto!important;overflow-x:hidden!important;
+ overscroll-behavior:contain;
+ align-content:start;
+ margin-top:9px!important;padding-bottom:10px;
+}
+.sw-calendar-page .sw-cal-composer-footer{
+ flex:0 0 auto;position:relative!important;bottom:auto!important;
+ margin-top:6px!important;padding:10px!important;border-radius:12px;
+ border:1px solid var(--cal-line);
+ background:color-mix(in srgb,var(--cal-glass) 95%,#051426);
+}
+.sw-calendar-page .sw-cal-save-error{flex:0 0 auto;margin-top:9px;padding:9px 11px;
+ border-radius:9px;border:1px solid #f87171;background:rgba(127,29,29,.35);
+ color:#ffe5e5;font-size:11px;max-height:75px;overflow-y:auto}
+.sw-calendar-page .sw-calendar-route-drawer{height:auto;overflow-y:auto!important;}
+.sw-calendar-page .sw-calendar-route-drawer input,
+.sw-calendar-page .sw-calendar-composer input,
+.sw-calendar-page .sw-calendar-composer textarea,
+.sw-calendar-page .sw-calendar-composer select{
+ max-width:100%;color:#f7f9ff!important;background:rgba(2,9,26,.73)!important;
+}
+.sw-calendar-page .sw-calendar-composer .sw-calendar-save-button{min-height:44px!important;}
+@media(max-width:767px){
+ .sw-calendar-page .sw-calendar-composer,
+ .sw-calendar-page .sw-calendar-route-drawer{
+   top:112px!important;bottom:calc(88px + env(safe-area-inset-bottom))!important;
+   left:8px!important;right:8px!important;width:auto!important;
+   padding:12px!important;border-radius:16px!important;
+ }
+ .sw-calendar-page .sw-cal-composer-footer{
+   padding:6px!important;margin-top:4px!important;
+ }
+ .sw-calendar-page .sw-calendar-composer-fields{gap:9px!important;}
+}
