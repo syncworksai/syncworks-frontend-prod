@@ -5,7 +5,7 @@ const COLORS={up:"#34d399",down:"#fb7185",ema7:"#38bdf8",ema9:"#eab308",vwap:"#a
 const W=780,H=380,L=56,R=18,T=18,PB=278,VT=303,VB=349;
 const fmt=v=>Number(v).toFixed(1);
 
-export default function TrainingCandlestickChart({bars,trade,lastClosedTrade,completed=[],compact=false}) {
+export default function TrainingCandlestickChart({bars,trade,lastClosedTrade,completed=[],compact=false,view='candles'}) {
   if (!bars?.length) return null;
   const values=bars.flatMap(b=>[b.high,b.low,b.ema7,b.ema9,b.vwap,b.upper,b.lower].filter(Number.isFinite));
   if(trade)values.push(trade.entry,trade.stop,trade.target);
@@ -19,14 +19,14 @@ export default function TrainingCandlestickChart({bars,trade,lastClosedTrade,com
   const paths=(key)=>{let parts=[],current=[];bars.forEach((b,i)=>{if(Number.isFinite(b[key]))current.push(x(i)+","+y(b[key]));else if(current.length){parts.push(current.join(" "));current=[];}});if(current.length)parts.push(current.join(" "));return parts;};
   return <div className={compact?"flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-[#050c1a] p-2":"w-full overflow-hidden rounded-xl border border-white/10 bg-[#050c1a] p-2"}>
     <div className="flex flex-wrap items-center justify-between gap-2 px-1 pb-2 text-[10px] text-slate-400">
-      <strong className="text-white">SIMULATED CANDLES + VOLUME</strong>
+      <strong className="text-white">SIMULATED {view==="line"?"LINE":"CANDLES"} + VOLUME</strong>
       <span>O {fmt(last.open)} · H {fmt(last.high)} · L {fmt(last.low)} · C {fmt(last.close)}</span>
     </div>
     <svg viewBox={"0 0 "+W+" "+H} width="100%" height={compact?"100%":undefined} className={compact?"min-h-0 flex-1":""} preserveAspectRatio="none" role="img" aria-label={"Simulated green and red candlestick chart with volume and indicators. Last close "+fmt(last.close)}>
       <defs><clipPath id="sw-practice-price"><rect x={L} y={T} width={W-L-R} height={PB-T}/></clipPath></defs>
       {Array.from({length:5},(_,i)=>{const value=lo+(hi-lo)*(i/4),yy=y(value);return <g key={i}><line x1={L} x2={W-R} y1={yy} y2={yy} stroke="#203047" strokeDasharray="3 5"/><text x={L-7} y={yy+4} textAnchor="end" fontSize="10" fill="#94a3b8">{fmt(value)}</text></g>;})}
       <g clipPath="url(#sw-practice-price)">
-        {bars.map((bar,i)=>{const color=bar.close>=bar.open?COLORS.up:COLORS.down,cx=x(i),top=Math.min(y(bar.open),y(bar.close)),bottom=Math.max(y(bar.open),y(bar.close));return <g key={bar.time} className={i===bars.length-1?"sw-training-new-bar":""}><line x1={cx} y1={y(bar.high)} x2={cx} y2={y(bar.low)} stroke={color} strokeWidth="1.5"/><rect x={cx-bw/2} y={top} width={bw} height={Math.max(1.6,bottom-top)} rx=".7" fill={color}/></g>;})}
+        {view==="line" ? <polyline fill="none" stroke="#38bdf8" strokeWidth="2.5" points={bars.map((bar,i)=>x(i)+","+y(bar.close)).join(" ")} /> : {bars.map((bar,i)=>{const color=bar.close>=bar.open?COLORS.up:COLORS.down,cx=x(i),top=Math.min(y(bar.open),y(bar.close)),bottom=Math.max(y(bar.open),y(bar.close));return <g key={bar.time} className={i===bars.length-1?"sw-training-new-bar":""}><line x1={cx} y1={y(bar.high)} x2={cx} y2={y(bar.low)} stroke={color} strokeWidth="1.5"/><rect x={cx-bw/2} y={top} width={bw} height={Math.max(1.6,bottom-top)} rx=".7" fill={color}/></g>;})}}
         {lines.map(([key,,color])=>paths(key).map((p,i)=><polyline key={key+i} points={p} fill="none" stroke={color} strokeWidth={key==="ema7"?2:1.4} strokeDasharray={key==="upper"||key==="lower"?"5 4":undefined} opacity=".95"/>))}
         {trade&&[["ENTRY",trade.entry,"#93c5fd"],["STOP",trade.stop,"#fb7185"],["2R",trade.target,"#4ade80"]].map(([name,value,color])=><g key={name}><line x1={L} x2={W-R} y1={y(value)} y2={y(value)} stroke={color} strokeDasharray="7 4"/><text x={W-R-6} y={y(value)-4} textAnchor="end" fontSize="10" fontWeight="700" fill={color}>{name} {fmt(value)}</text></g>)}
         {completed.map((item,i)=>{
