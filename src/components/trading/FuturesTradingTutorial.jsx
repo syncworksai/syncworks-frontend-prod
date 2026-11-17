@@ -30,6 +30,7 @@ export default function FuturesTradingTutorial() {
   const [journal,setJournal]=useState(()=>readPracticeJournal(userId));
   const [selectedTrade,setSelectedTrade]=useState(null);
   const [expanded,setExpanded]=useState(false);
+  const [detailPanel,setDetailPanel]=useState(null);
   const [feedback,setFeedback]=useState("Advance candles to find an aligned setup, or select a lesson.");
   const stats=useMemo(()=>practiceStats(journal),[journal]);
   const equity=useMemo(()=>equitySeries(journal),[journal]);
@@ -78,26 +79,20 @@ export default function FuturesTradingTutorial() {
   }
   function reset(){setStep(23);setPlaying(false);setTrade(null);setCompleted([]);setSelectedTrade(null);setExpanded(false);setFeedback("Replay restarted. Your device-local trade journal has been preserved.");}
   function clearHistory(){if(typeof window!=="undefined"&&!window.confirm("Clear all saved practice trades on this device? This cannot be undone."))return;setJournal([]);setCompleted([]);setSelectedTrade(null);setFeedback("Device-local paper trade history cleared.");}
-  return <section className="mt-4 rounded-3xl border border-violet-400/25 bg-gradient-to-br from-[#101329] via-[#080f22] to-[#070a18] p-4 text-slate-100 sm:p-5" aria-label="Interactive practice trading tutorial">
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div><div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em] text-violet-300"><BookOpen size={16}/> How to trade this • Interactive academy</div><h2 className="mt-1 text-xl font-black">Guided MNQ practice simulator</h2><p className="mt-1 max-w-2xl text-xs text-slate-400">Fabricated market scenario. Watch a setup form, learn every indicator, then practice your entry and exits.</p></div>
-      <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs font-black text-amber-100">SIMULATION ONLY · NOT LIVE</div>
+  return <section className="flex h-auto flex-col gap-2 rounded-2xl border border-violet-400/25 bg-[#080e20] p-2 text-slate-100 lg:h-full lg:min-h-0 lg:overflow-hidden" aria-label="Interactive practice trading tutorial">
+    <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+      <div className="flex items-center gap-2"><BookOpen size={15} className="text-violet-300"/><h2 className="text-sm font-black">MNQ Practice Simulator</h2><span className="text-[10px] font-bold text-amber-200">SIMULATION ONLY</span></div>
+      <div className="flex gap-1.5"><button type="button" onClick={()=>setDetailPanel("journal")} className="rounded-lg border border-cyan-400/25 px-3 py-1.5 text-xs text-cyan-200">Journal & Stats</button><button type="button" onClick={()=>setDetailPanel("lessons")} className="rounded-lg border border-violet-400/25 px-3 py-1.5 text-xs text-violet-200">Lessons</button><button type="button" onClick={()=>setDetailPanel("review")} className="rounded-lg border border-emerald-400/25 px-3 py-1.5 text-xs text-emerald-200">Trade Review</button></div>
     </div>
-    <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.8fr)_minmax(245px,1fr)]">
-      <div className="min-w-0 space-y-3">
+    <div className="grid min-h-0 flex-1 gap-2 lg:grid-cols-[minmax(0,1.9fr)_minmax(250px,0.75fr)]">
+      <div className="flex min-h-0 min-w-0 flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 p-3">
           <div><span className="text-[10px] uppercase text-slate-500">Simulated candle</span><div className="text-sm font-bold">{step+1} / {ROWS.length} · Close {money(current.close)}</div></div>
           <div className={"rounded-lg border px-3 py-2 text-xs font-black "+(current.signal==="WAIT"?"border-slate-500/30 text-slate-300":current.signal.startsWith("LONG")?"border-emerald-400/40 bg-emerald-400/10 text-emerald-200":"border-rose-400/40 bg-rose-400/10 text-rose-200")}>{current.signal}</div>
         </div>
-        <div className={expanded?"fixed inset-0 z-[250] overflow-y-auto bg-[#030817] p-3 sm:p-6":"relative"}>
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <div className="text-xs font-bold text-slate-300">{expanded?"Expanded chart · simulated MNQ":"Candlestick chart"} <span className="text-[10px] text-amber-200">SIMULATION ONLY</span></div>
-            <button type="button" onClick={()=>setExpanded(v=>!v)} aria-label={expanded?"Close expanded chart":"Expand trading chart"} className="inline-flex items-center gap-2 rounded-lg border border-cyan-400/30 px-3 py-2 text-xs font-bold text-cyan-100">{expanded?<Minimize2 size={15}/>:<Maximize2 size={15}/>} {expanded?"Close expanded":"Expand chart"}</button>
-          </div>
-          <div className={expanded?"mx-auto max-w-[1500px]":"w-full"}>
-            <TrainingCandlestickChart bars={visible} trade={trade} lastClosedTrade={completed.at(-1)} completed={completed} />
-          </div>
-          {expanded&&<p className="mx-auto mt-3 max-w-[1500px] text-xs text-slate-400">Use Close expanded to return to the simulator controls. No live prices or orders.</p>}
+        <div className="min-h-[270px] min-w-0 flex-1 overflow-hidden lg:min-h-0">
+          <div className="flex items-center justify-end pb-1"><button type="button" onClick={()=>setExpanded(true)} className="rounded border border-cyan-400/25 px-2 py-1 text-[10px] text-cyan-200">Expand chart</button></div>
+          <div className="h-[calc(100%-24px)] min-h-0"><TrainingCandlestickChart bars={visible} trade={trade} lastClosedTrade={completed.at(-1)} completed={completed} compact/></div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" onClick={()=>setPlaying(x=>!x)} disabled={!next} className="flex items-center gap-2 rounded-xl bg-violet-500/20 px-3 py-2 text-xs font-bold text-violet-100 disabled:opacity-40">{playing?<Pause size={15}/>:<Play size={15}/>} {playing?"Pause":"Play"}</button>
@@ -105,13 +100,13 @@ export default function FuturesTradingTutorial() {
           <button type="button" onClick={reset} className="flex items-center gap-2 rounded-xl border border-white/20 px-3 py-2 text-xs font-bold"><RotateCcw size={15}/> Restart</button>
           <label className="text-xs text-slate-400">Speed <select value={speed} onChange={e=>setSpeed(Number(e.target.value))} className="ml-1 rounded-lg border border-white/10 bg-slate-950 px-2 py-1 text-white"><option value={2000}>Slow</option><option value={1100}>Normal</option><option value={350}>Fast</option></select></label>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{[
+        <div className="grid shrink-0 grid-cols-2 gap-1 sm:grid-cols-4">{[
           ["EMA 7 / 9",money(current.ema7)+" / "+money(current.ema9)],
           ["VWAP",money(current.vwap)],
           ["Volume / avg",current.volRatio ? current.volRatio.toFixed(2)+"×":"—"],
           ["RSI / ATR",(current.rsi==null?"—":current.rsi.toFixed(1))+" / "+money(current.atr)]
         ].map(([label,value])=><div key={label} className="rounded-xl border border-white/10 bg-black/20 p-3"><div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div><div className="mt-1 text-xs font-bold">{value}</div></div>)}</div>
-        <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-3">
+        <div className="shrink-0 rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-2">
           <div className="flex items-center gap-2 text-xs font-black text-cyan-200"><Target size={15}/> Practice entry / stop / exit</div>
           <p className="mt-2 text-xs text-slate-300">{current.signal==="WAIT"?explanation.summary:"Simulated "+current.signal+". You may practice a next-bar-open entry with signal-candle stop and 2R objective."}</p>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -130,9 +125,33 @@ export default function FuturesTradingTutorial() {
           </div>}
           {trade&&<p className="mt-2 text-xs text-slate-300">{trade.side} · Entry {money(trade.entry)} · Stop {money(trade.stop)} · Target {money(trade.target)} · Risk {money(trade.risk)} points</p>}
           <p role="status" className="mt-2 text-xs text-amber-200">{feedback}</p>
-          {completed.length>0&&<div className="mt-2 text-xs text-slate-300">{completed.length} practice trade(s) closed · Last result: {money(completed.at(-1).resultR)}R ({completed.at(-1).outcome})</div>}
+
         </div>
-        <div className="rounded-xl border border-cyan-400/20 bg-slate-950/60 p-3">
+      </div>
+      <div className="flex min-h-0 flex-col gap-2 overflow-hidden">
+        <div className="shrink-0 rounded-xl border border-cyan-400/20 bg-black/20 p-3">
+          <div className="text-[10px] font-black text-cyan-200">PAPER PERFORMANCE</div>
+          <div className="mt-2 grid grid-cols-2 gap-1 text-xs"><span>Balance</span><strong>{"$"+money(stats.balance)}</strong><span>Realized P&L</span><strong>{money(stats.netPnl)}</strong><span>Win rate</span><strong>{stats.count?stats.winRate.toFixed(1)+"%":"—"}</strong><span>Closed trades</span><strong>{stats.count}</strong></div>
+          <button type="button" className="mt-2 text-xs text-cyan-300 underline" onClick={()=>setDetailPanel("journal")}>Full results & equity curve</button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-white/10 bg-black/20 p-3">
+          <div className="flex items-center gap-2 text-xs font-black"><Volume2 size={15}/> What Jarvis is reading</div>
+          <div className="mt-3 space-y-3 text-xs text-slate-300">
+            <p><strong>Pressure:</strong> EMA 7 is {current.ema7>current.ema9?"above":"at or below"} EMA 9.</p>
+            <p><strong>Location:</strong> Price is {current.close>current.vwap?"above":"at or below"} simulated VWAP.</p>
+            <p><strong>Breakout:</strong> {current.upper===null?"Channel needs 20 historical candles.":current.close>current.upper?"Close above previous 20-bar high.":current.close<current.lower?"Close below previous 20-bar low.":"Inside the previous channel."}</p>
+            <p><strong>Volume:</strong> {current.volRatio===null?"Not enough bars.":current.volRatio.toFixed(2)+"× recent average."}</p>
+            <p><strong>Decision:</strong> <span className="font-black text-cyan-200">{current.signal}</span> is a teaching classification, not a trading recommendation.</p>
+            <div className="space-y-2 border-t border-white/10 pt-3">{explanation.checks.map(check=><div key={check.label} className="flex gap-2"><span className={check.passed?"text-emerald-300":"text-amber-300"}>{check.passed?"✓":"○"}</span><span><strong>{check.label}:</strong> {check.detail}</span></div>)}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {expanded&&<div className="fixed inset-0 z-[260] flex flex-col bg-[#020617] p-3"><button type="button" onClick={()=>setExpanded(false)} className="mb-2 self-end rounded-lg border border-white/20 px-4 py-2 text-xs text-white">Close expanded chart</button><div className="min-h-0 flex-1"><TrainingCandlestickChart bars={visible} trade={trade} lastClosedTrade={completed.at(-1)} completed={completed} compact/></div></div>}
+    {detailPanel&&<div className="fixed inset-0 z-[255] flex justify-end bg-black/70 p-2" onMouseDown={()=>setDetailPanel(null)}><div role="dialog" aria-modal="true" aria-label="Trading Academy details" onMouseDown={e=>e.stopPropagation()} className="flex h-full w-full max-w-xl flex-col gap-3 overflow-hidden rounded-xl border border-cyan-400/30 bg-[#071126] p-4">
+      <div className="flex shrink-0 items-center justify-between"><h3 className="font-black">{detailPanel==="journal"?"Trade journal & equity":detailPanel==="lessons"?"Guided lessons":"Jarvis trade review"}</h3><button type="button" onClick={()=>setDetailPanel(null)} className="rounded-lg border border-white/20 px-3 py-2 text-xs">Close</button></div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {detailPanel==="journal"&&<div className="space-y-3">        <div className="rounded-xl border border-cyan-400/20 bg-slate-950/60 p-3">
           <div className="text-xs font-black uppercase tracking-widest text-cyan-200">Paper account / Performance</div>
           <p className="mt-1 text-[11px] text-slate-400">Fabricated prices · $10,000 initial balance · One simulated MNQ contract. Realized results are saved in this browser only; Restart preserves your journal. Unrealized P&L is separate.</p>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -158,9 +177,8 @@ export default function FuturesTradingTutorial() {
           <div className="mt-3 h-40 w-full"><ResponsiveContainer width="100%" height="100%"><LineChart data={equity} margin={{top:8,right:12,bottom:4,left:0}}><CartesianGrid stroke="#243044" strokeDasharray="3 3"/><XAxis dataKey="index" tick={{fill:"#94a3b8",fontSize:10}}/><YAxis domain={["auto","auto"]} width={66} tick={{fill:"#94a3b8",fontSize:10}}/><Tooltip contentStyle={{background:"#0f172a",border:"1px solid #334155"}}/><Line dataKey="equity" name="Account equity (simulated $)" stroke="#38bdf8" strokeWidth={2} dot={equity.length<30} isAnimationActive={false}/></LineChart></ResponsiveContainer></div>
           <p className="mt-1 text-xs text-slate-500">Closed-trade equity only. No intratrade drawdown or real-world slippage modeled.</p>
         </div>
-      </div>
-      <div className="min-w-0 space-y-3">
-        <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-4">
+</div>}
+        {detailPanel==="lessons"&&<div className="space-y-3">        <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-4">
           <div className="text-xs font-black uppercase tracking-widest text-emerald-200">Jarvis · Practice trade review</div>
           {review ? <div className="mt-3 space-y-2 text-xs leading-5 text-slate-300">
             <div className="text-sm font-bold">{review.aligned?"Strategy-aligned entry":"Entry needs review"} · {review.outcome}</div>
@@ -179,19 +197,9 @@ export default function FuturesTradingTutorial() {
             <button type="button" onClick={()=>setLesson(i=>(i+1)%LESSONS.length)} className="rounded-lg bg-violet-500/20 px-3 py-2 text-xs font-black text-violet-100">{lesson===LESSONS.length-1?"Restart lessons":"Next lesson"}</button>
           </div>
         </div>
-        <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-          <div className="flex items-center gap-2 text-xs font-black"><Volume2 size={15}/> What Jarvis is reading</div>
-          <div className="mt-3 space-y-3 text-xs text-slate-300">
-            <p><strong>Pressure:</strong> EMA 7 is {current.ema7>current.ema9?"above":"at or below"} EMA 9.</p>
-            <p><strong>Location:</strong> Price is {current.close>current.vwap?"above":"at or below"} simulated VWAP.</p>
-            <p><strong>Breakout:</strong> {current.upper===null?"Channel needs 20 historical candles.":current.close>current.upper?"Close above previous 20-bar high.":current.close<current.lower?"Close below previous 20-bar low.":"Inside the previous channel."}</p>
-            <p><strong>Volume:</strong> {current.volRatio===null?"Not enough bars.":current.volRatio.toFixed(2)+"× recent average."}</p>
-            <p><strong>Decision:</strong> <span className="font-black text-cyan-200">{current.signal}</span> is a teaching classification, not a trading recommendation.</p>
-            <div className="space-y-2 border-t border-white/10 pt-3">{explanation.checks.map(check=><div key={check.label} className="flex gap-2"><span className={check.passed?"text-emerald-300":"text-amber-300"}>{check.passed?"✓":"○"}</span><span><strong>{check.label}:</strong> {check.detail}</span></div>)}</div>
-          </div>
-        </div>
-        <div className="flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100/80"><ShieldAlert size={16} className="mt-0.5 shrink-0"/>This is deliberately synthetic, not historical MNQ data. Replay reveals price one bar at a time, but the predefined scenario and simplified fills cannot establish a profitable strategy. Browser animation is not market connectivity or autonomous trading.</div>
+</div>}
+        {detailPanel==="review"&&<div className="space-y-3 text-sm">{review?<><p className="font-black">{review.aligned?"Strategy-aligned entry":"Entry needs review"} · {review.outcome}</p><p>{review.summary}</p>{review.details.map((line,i)=><p key={i}>{line}</p>)}</>:<p>Complete a practice trade first.</p>}</div>}
       </div>
-    </div>
+    </div></div>}
   </section>;
 }
