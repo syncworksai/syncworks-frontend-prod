@@ -7,7 +7,8 @@ function readMotion() {
   try { return JSON.parse(window.localStorage.getItem(SETTINGS_KEY) || "{}")?.motion !== false; }
   catch { return true; }
 }
-function mobileTransition(path) {
+function routeTransition(path) {
+  // Keep auth, invitations, real-time game tables and live screens unchanged.
   if (!/^\/(customer(?:\/|$)|sync(?:\/|$)|calendar(?:\/|$)|sbo(?:\/|$)|pm(?:\/|$))/.test(path)) return "none";
   if (/^\/sync(?:\/|$)/.test(path)) return "hologram";
   if (/^\/customer\/games\/(?:table|clubs\/room|play)(?:\/|$)/.test(path)) return "none";
@@ -16,24 +17,14 @@ function mobileTransition(path) {
 export default function MobileRouteMotion({ children }) {
   const location = useLocation();
   const [enabled, setEnabled] = useState(readMotion);
-  const [mobile, setMobile] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches);
   useEffect(() => {
     const sync = () => setEnabled(readMotion());
     window.addEventListener("sw:workspace-appearance", sync);
     window.addEventListener("storage", sync);
-    return () => { window.removeEventListener("sw:workspace-appearance", sync); window.removeEventListener("storage", sync); };
+    return () => {window.removeEventListener("sw:workspace-appearance", sync);window.removeEventListener("storage", sync);};
   }, []);
-  useEffect(() => {
-    const query = window.matchMedia("(max-width: 767px)");
-    const refresh = () => setMobile(query.matches);
-    refresh();
-    query.addEventListener("change", refresh);
-    return () => query.removeEventListener("change", refresh);
-  }, []);
-  // The desktop route tree retains precisely its original DOM shape.
-  if (!mobile) return <>{children}</>;
-  const transition = enabled ? mobileTransition(location.pathname) : "none";
-  // Only the routed page enters. The AI employee tray and role-aware mobile
-  // navigation are outside this stage and retain their existing state.
+  const transition = enabled ? routeTransition(location.pathname) : "none";
+  // Animate only routed pages. Global navigation / AI dock / alerts remain
+  // outside the stage, so they never animate or lose state.
   return <div key={location.pathname} className="sw-mobile-route-stage" data-mobile-route-motion={transition}>{children}</div>;
 }
