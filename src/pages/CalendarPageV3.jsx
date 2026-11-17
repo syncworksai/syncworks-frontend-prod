@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { readWorkspaceAppearance } from "../components/customer/CustomerWorkspace";
 import {
   AlertTriangle,
   CalendarDays,
@@ -27,6 +29,7 @@ import {
 
 import api from "../api/client";
 import "./CalendarMobileWorkspace.css";
+import "./CalendarPortalFix.css";
 import { getCalendarConnections } from "../api/calendarConnections";
 import { getCustomerHealthProfile, patchCustomerHealthProfile } from "../api/customerHealth";
 import CalendarConnectionsDrawer from "../components/CalendarConnectionsDrawer";
@@ -36,6 +39,15 @@ import TravelWeatherAssistCard from "../components/TravelWeatherAssistCard";
 
 const CALENDAR_CACHE_KEY = "syncworks_calendar_last_good_v3";
 const HEALTH_OPEN_ACTION_KEY = "syncworks_health_open_action_v1";
+
+// The calendar API limits geospatial DecimalField coordinates to six decimal
+// places. Google Places returns higher-precision floats; normalize at the
+// API boundary without changing the user's visible address.
+function normalizedCoordinate(value, limit) {
+  if (value === null || value === undefined || String(value).trim() === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) && Math.abs(number) <= limit ? Number(number.toFixed(6)) : null;
+}
 
 function safeList(value) {
   if (Array.isArray(value)) return value;
@@ -591,8 +603,9 @@ export default function CalendarPageV3() {
     if (!editableEvent(event)) return;
     setEditingEvent(event);
     setDraft(draftFromEvent(event));
+    setSaveIssue("");
+    setError("");
     setShowComposer(true);
-    window.requestAnimationFrame(() => document.getElementById("calendar-event-composer")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   function openRouteEditor(event) {
@@ -619,8 +632,8 @@ export default function CalendarPageV3() {
           ...(routingEvent.metadata || {}),
           routing_address_override: address,
           routing_address_label: routeDraft.label || address,
-          routing_latitude: routeDraft.latitude,
-          routing_longitude: routeDraft.longitude,
+          routing_latitude: normalizedCoordinate(routeDraft.latitude, 90),
+          routing_longitude: normalizedCoordinate(routeDraft.longitude, 180),
           routing_updated_at: new Date().toISOString(),
         },
       });
@@ -759,8 +772,8 @@ export default function CalendarPageV3() {
       city: draft.city,
       state: draft.state,
       postal_code: draft.postal_code,
-      latitude: draft.latitude,
-      longitude: draft.longitude,
+      latitude: normalizedCoordinate(draft.latitude, 90),
+      longitude: normalizedCoordinate(draft.longitude, 180),
       arrival_buffer_minutes: Number(draft.arrival_buffer_minutes || 0),
       reminder_minutes: Number(draft.reminder_minutes || 30),
       recurrence_rule: recurrenceRule(draft.recurrence),
@@ -949,7 +962,7 @@ export default function CalendarPageV3() {
           )}
         </section>
 
-        {showComposer ? <section id="calendar-event-composer" role="dialog" aria-modal="true" aria-label={editingEvent ? "Edit calendar item" : "New calendar item"} className="sw-calendar-composer mt-4 scroll-mt-24 rounded-[1.5rem] border border-cyan-400/20 bg-cyan-500/[.04] p-4 sm:p-5">
+        {showComposer ? createPortal(<section data-calendar-theme={readWorkspaceAppearance().theme} id="calendar-event-composer" role="dialog" aria-modal="true" aria-label={editingEvent ? "Edit calendar item" : "New calendar item"} className="sw-calendar-composer mt-4 scroll-mt-24 rounded-[1.5rem] border border-cyan-400/20 bg-cyan-500/[.04] p-4 sm:p-5">
           <div className="flex items-center justify-between gap-3"><div className="text-sm font-black text-white">{editingEvent ? `Edit ${draft.kind === "TASK" ? "task" : "event"}` : `Create ${draft.kind === "TASK" ? "task" : "event"}`}</div><button type="button" onClick={() => { setShowComposer(false); setEditingEvent(null); }} className="rounded-xl border border-white/10 px-3 py-2 text-[10px] font-black text-slate-400">Close</button></div>
           {saveIssue ? <div className="sw-cal-save-error" role="alert">{saveIssue}</div> : null}
           <div className="sw-calendar-composer-fields mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -971,9 +984,9 @@ export default function CalendarPageV3() {
             <label className="text-xs text-slate-400 sm:col-span-2 lg:col-span-4">Notes<textarea rows={2} value={draft.description} onChange={(event) => setDraft((value) => ({ ...value, description: event.target.value }))} className="mt-1 w-full resize-none rounded-xl border border-white/10 bg-slate-950/80 p-3 text-sm text-white outline-none" /></label>
           </div>
             <div className="sw-cal-composer-footer flex flex-wrap gap-2">{editingEvent ? <button type="button" onClick={removeEditingEvent} className="min-h-10 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 text-[11px] font-black text-rose-100">Remove</button> : null}<button type="button" onClick={saveEvent} disabled={savingEvent} className="sw-calendar-save-button min-h-10 flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 text-[11px] font-black text-white disabled:opacity-50">{savingEvent ? "Saving & verifying…" : editingEvent ? "Save changes" : draft.kind === "TASK" ? "Save task" : "Save event"}</button></div>
-        </section> : null}
+        </section>, document.body) : null}
 
-        {routingEvent ? <section className="sw-calendar-route-drawer mt-4 rounded-[1.5rem] border border-amber-400/20 bg-amber-500/[.05] p-4"><div className="flex items-start justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-amber-200">Routing address</div><h2 className="mt-1 text-lg font-black text-white">{routingEvent.title}</h2><p className="mt-1 text-xs text-slate-400">This local address override stays in SyncWorks even when Google or Outlook refreshes the event.</p></div><button type="button" onClick={() => setRoutingEvent(null)} className="rounded-xl border border-white/10 px-3 py-2 text-[10px] font-black text-slate-400">Close</button></div><div className="mt-3"><PlaceSearchField value={routeDraft.label || routeDraft.address} onChange={(value) => setRouteDraft((current) => ({ ...current, label: value, address: value }))} onSelect={(place) => setRouteDraft({ label: place.location_name || place.address_line1 || "", address: [place.address_line1, place.city, place.state, place.postal_code].filter(Boolean).join(", ") || place.location_name, latitude: place.latitude, longitude: place.longitude })} /></div><div className="mt-3 flex flex-wrap gap-2"><ActionButton onClick={saveRouteOverride} tone="amber"><MapPin className="h-3.5 w-3.5" />Save routing address</ActionButton>{eventDriveUrl({ ...routingEvent, metadata: { ...(routingEvent.metadata || {}), routing_address_override: routeDraft.address, routing_address_label: routeDraft.label, routing_latitude: routeDraft.latitude, routing_longitude: routeDraft.longitude } }) ? <a href={eventDriveUrl({ ...routingEvent, metadata: { ...(routingEvent.metadata || {}), routing_address_override: routeDraft.address, routing_address_label: routeDraft.label, routing_latitude: routeDraft.latitude, routing_longitude: routeDraft.longitude } })} target="_blank" rel="noreferrer" className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-white/10 px-3 text-[10px] font-black text-slate-200"><Navigation className="h-3.5 w-3.5" />Preview drive</a> : null}</div></section> : null}
+        {routingEvent ? createPortal(<section data-calendar-theme={readWorkspaceAppearance().theme} className="sw-calendar-route-drawer mt-4 rounded-[1.5rem] border border-amber-400/20 bg-amber-500/[.05] p-4"><div className="flex items-start justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[.18em] text-amber-200">Routing address</div><h2 className="mt-1 text-lg font-black text-white">{routingEvent.title}</h2><p className="mt-1 text-xs text-slate-400">This local address override stays in SyncWorks even when Google or Outlook refreshes the event.</p></div><button type="button" onClick={() => setRoutingEvent(null)} className="rounded-xl border border-white/10 px-3 py-2 text-[10px] font-black text-slate-400">Close</button></div><div className="mt-3"><PlaceSearchField value={routeDraft.label || routeDraft.address} onChange={(value) => setRouteDraft((current) => ({ ...current, label: value, address: value }))} onSelect={(place) => setRouteDraft({ label: place.location_name || place.address_line1 || "", address: [place.address_line1, place.city, place.state, place.postal_code].filter(Boolean).join(", ") || place.location_name, latitude: place.latitude, longitude: place.longitude })} /></div><div className="mt-3 flex flex-wrap gap-2"><ActionButton onClick={saveRouteOverride} tone="amber"><MapPin className="h-3.5 w-3.5" />Save routing address</ActionButton>{eventDriveUrl({ ...routingEvent, metadata: { ...(routingEvent.metadata || {}), routing_address_override: routeDraft.address, routing_address_label: routeDraft.label, routing_latitude: routeDraft.latitude, routing_longitude: routeDraft.longitude } }) ? <a href={eventDriveUrl({ ...routingEvent, metadata: { ...(routingEvent.metadata || {}), routing_address_override: routeDraft.address, routing_address_label: routeDraft.label, routing_latitude: routeDraft.latitude, routing_longitude: routeDraft.longitude } })} target="_blank" rel="noreferrer" className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-white/10 px-3 text-[10px] font-black text-slate-200"><Navigation className="h-3.5 w-3.5" />Preview drive</a> : null}</div></section>, document.body) : null}
 
         {pendingServices.length ? <section className="mt-4 rounded-[1.5rem] border border-amber-400/25 bg-amber-500/[.06] p-4"><div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em] text-amber-200"><AlertTriangle className="h-4 w-4" />Service schedule changes</div><div className="mt-3 grid gap-2 md:grid-cols-2">{pendingServices.map((event) => <EventBlock key={event.id} event={event} conflict={false} onEdit={editEvent} onRoute={openRouteEditor} onServiceResponse={respondToService} onMoveFlexible={moveFlexible} onToggleTask={toggleTask} />)}</div></section> : null}
 
