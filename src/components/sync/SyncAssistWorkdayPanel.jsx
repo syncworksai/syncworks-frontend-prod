@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import api from "../../api/client";
 import SyncAssistWorkHistory from "./SyncAssistWorkHistory";
 
@@ -33,6 +33,7 @@ export default function SyncAssistWorkdayPanel() {
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const delegationRequestId = useRef(null);
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [budgetRole, setBudgetRole] = useState("");
   const [budgetAmount, setBudgetAmount] = useState("3.00");
@@ -108,6 +109,29 @@ export default function SyncAssistWorkdayPanel() {
       setBudgetError(err?.response?.data?.detail || "Could not update employee allowance.");
     } finally {
       setBudgetBusy(false);
+    }
+  }
+
+  async function delegateWithVictoria() {
+    if (busy) return;
+    setBusy(true); setError(""); setSuccessMessage("");
+    try {
+      if (!delegationRequestId.current) {
+        delegationRequestId.current = window.crypto.randomUUID();
+      }
+      const { data: delegated } = await api.post("/sync-ai/assist/pilot/delegate/", {
+        template: "PROSPECT_TO_OUTREACH_REVIEW",
+        request_id: delegationRequestId.current,
+        allow_background_internal: true,
+      }, { timeout: 15000 });
+      delegationRequestId.current = null;
+      await refresh();
+      setSelectedGoalId(delegated.goal_id);
+      setSuccessMessage("Victoria's internal Research → Sales → Chief of Staff workflow is queued. Review is required between employees; no outreach is sent.");
+    } catch (err) {
+      setError(err?.response?.data?.detail || "Could not queue Victoria's internal workflow. Retrying will reuse the same request ID.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -254,6 +278,7 @@ export default function SyncAssistWorkdayPanel() {
         </div>
         <div className="flex flex-wrap gap-2">
           {workerStatus?.pilot_budget && <button type="button" onClick={() => setBudgetOpen(true)} className="min-h-10 rounded-xl border border-emerald-400/30 bg-emerald-900/10 px-3 text-xs font-black text-emerald-100" title="Shared monthly agent paid-tool budget">AI budget ${workerStatus.pilot_budget.remaining_usd} left</button>}
+          <button type="button" disabled={busy} onClick={delegateWithVictoria} className="min-h-10 rounded-xl border border-cyan-300/40 bg-cyan-400/10 px-3 text-xs font-black text-cyan-100 disabled:opacity-50" title="Create and queue an internal-only Research → Sales → Chief of Staff workflow; requires approval at each stage">Delegate with Victoria</button>
           <SyncAssistWorkHistory goals={data?.goals || []} onReuse={reuseHistoricalGoal}/>
           <button type="button" disabled={busy} onClick={refresh} className="min-h-10 rounded-xl border border-cyan-400/30 px-3 text-xs font-bold text-cyan-100">Refresh</button>
         </div>
