@@ -185,3 +185,16 @@ html.sw-new-request-viewport-locked,body.sw-new-request-viewport-locked {
 @media(prefers-reduced-motion:reduce){
  .sw-new-request-stage{animation:none!important;transform:none!important;filter:none!important;}
 }
+
+
+/* Availability is an optional header action, never a fixed overlay. */
+.sw-new-request-head-actions{display:flex;flex:0 0 auto;align-items:center;gap:7px;}
+.sw-new-request-head-actions > button{min-height:33px;padding:7px 10px;border:1px solid var(--nr-line)!important;border-radius:11px;background:var(--nr-tile)!important;color:var(--nr-text)!important;font-size:11px!important;font-weight:800!important;white-space:nowrap;}
+.sw-new-request-head-actions .sw-new-request-check-availability{color:var(--nr-accent)!important;}
+.sw-new-request-head-actions > button:hover,.sw-new-request-head-actions > button:focus-visible{border-color:var(--nr-accent)!important;outline:1px solid var(--nr-accent);}
+@media(max-width:767px){
+ .sw-new-request-header > div:first-child{gap:7px!important;}
+ .sw-new-request-head-actions{flex-direction:column;align-items:stretch;gap:4px;}
+ .sw-new-request-head-actions > button{padding:5px 7px;font-size:9px!important;min-height:27px;}
+ .sw-new-request-header > div:first-child > div:first-child{min-width:0;flex:1;}
+}
