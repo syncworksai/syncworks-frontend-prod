@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import HealthStrengthProgression from "./HealthStrengthProgression";
 import {
   Activity,
   BarChart3,
@@ -131,6 +132,7 @@ export default function HealthMobileHome({
   const [desktopPanel, setDesktopPanel] = useState("today");
   const [toolsOpen, setToolsOpen] = useState(false);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [progressionOpen, setProgressionOpen] = useState(false);
 
   useEffect(() => {
     if (!toolsOpen && !recoveryOpen) return undefined;
@@ -306,6 +308,11 @@ export default function HealthMobileHome({
             <Icon size={15} /> {label}
           </button>
         ))}
+        <button type="button" className="sw-health-progression-toggle"
+          aria-haspopup="dialog" aria-expanded={progressionOpen}
+          onClick={() => setProgressionOpen(true)}>
+          <BarChart3 size={15} /> My Strength
+        </button>
         <button type="button" className="sw-health-tools-toggle"
           aria-haspopup="dialog" aria-expanded={toolsOpen}
           onClick={() => setToolsOpen(true)}>
@@ -336,6 +343,7 @@ export default function HealthMobileHome({
                 { label: "Recovery", detail: "Sleep and daily check-in", icon: Moon, action: () => onOpen?.("daily-goals") },
                 { label: "Body Metrics", detail: "Measurements and health profile", icon: Scale, action: () => onOpen?.("profile-intake") },
                 { label: "Performance", detail: "Trends, progress and records", icon: BarChart3, action: () => onOpen?.("progress") },
+                { label: "Strength Progression", detail: "Personal weights, reps and improvement", icon: BarChart3, action: () => setProgressionOpen(true) },
                 { label: "SYNC AI Coach", detail: "Ask questions and adjust your plan", icon: BrainCircuit, action: () => onOpen?.("coach-chat") },
               ].map(({label,detail,icon:Icon,action}) => (
                 <button key={label} type="button" className="sw-health-tool-item"
@@ -349,6 +357,7 @@ export default function HealthMobileHome({
           </aside>
         </div>
       ) : null}
+      <HealthStrengthProgression open={progressionOpen} onClose={() => setProgressionOpen(false)} />
       <section className="sw-health-hero">
         <img className="sw-health-hero__logo" src="/health/syncworks-health-s-glow.png" alt="" aria-hidden="true" />
         <div className="sw-health-hero__copy">
@@ -423,6 +432,9 @@ export default function HealthMobileHome({
             <button type="button" className="sw-health-recovery-trigger" onClick={() => setRecoveryOpen(true)}
               aria-haspopup="dialog" aria-expanded={recoveryOpen}>
               <HeartPulse size={15} /> Recovery {readiness}%
+            </button>
+            <button type="button" className="sw-health-strength-quick-link" onClick={() => setProgressionOpen(true)}>
+              My Strength <ChevronRight size={13} />
             </button>
             <button type="button" onClick={onEditDailyGoals}>Log progress <ChevronRight size={13} /></button>
           </div>

@@ -203,3 +203,8 @@ export async function updateHealthGodModeFeedbackStatus(
 
   return response.data;
 }
+
+export async function getHealthWorkoutProgression() {
+  const response = await api.get("/customer-health/workout-sessions/progression/");
+  return response.data;
+}
