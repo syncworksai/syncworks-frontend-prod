@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import "./PMMobileWorkspace.css";
+import "./PMCustomerParityV3.css";
 
 const navItems = [
   ["PORTFOLIO", "", "", "section"],
