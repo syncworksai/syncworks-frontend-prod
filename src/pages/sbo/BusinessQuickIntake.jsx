@@ -1,86 +1,90 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import React,{useEffect,useMemo,useState} from "react";
+import {useNavigate,useSearchParams} from "react-router-dom";
+import {CheckCircle2,ChevronDown,ChevronRight,ClipboardList,Clock3,MapPin,Plus,Search,Settings2,UserRound,X} from "lucide-react";
 import api from "../../api/client";
-import { useAuth } from "../../auth/AuthContext";
-import DashboardShell from "../../components/dashboard/DashboardShell";
+import {useAuth} from "../../auth/AuthContext";
+import "./BusinessQuickIntake.css";
 
-const EMPTY={customer_name:"",phone:"",email:"",service_address:"",service_label:"",description:"",urgency:"STANDARD",scheduled_start:"",assigned_member_id:""};
-const input="min-h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white";
-function message(e){const d=e?.response?.data;return (typeof d?.detail==="string"&&d.detail)||Object.values(d||{}).flat().find(x=>typeof x==="string")||e?.message||"Request failed";}
+const EMPTY={customer_name:"",phone:"",email:"",service_address:"",service_label:"",description:"",urgency:"STANDARD",scheduled_start:"",estimated_duration_minutes:60,assigned_member_id:"",required_skills:[]};
+const field="w-full min-w-0 rounded-xl border border-cyan-300/20 bg-[#030d24]/65 px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-300";
+const asList=(x)=>Array.isArray(x)?x:(x?.results||x?.customers||x?.assignees||[]);
+const errText=e=>{const d=e?.response?.data;return(typeof d?.detail==="string"&&d.detail)||Object.values(d||{}).flat().find(x=>typeof x==="string")||e?.message||"Unable to save ticket.";};
+const localTime=()=>{const d=new Date();return d.toLocaleString();};
 export default function BusinessQuickIntake(){
-  const nav=useNavigate(), [params]=useSearchParams();
-  const {activeBusinessId}=useAuth();
-  const supportId=params.get("support_business");
-  const supportMode=Boolean(supportId);
-  const [businessId,setBusinessId]=useState("");
-  const [form,setForm]=useState(EMPTY),[saving,setSaving]=useState(false),[error,setError]=useState(""),[success,setSuccess]=useState(null);
-  const [staff,setStaff]=useState([]),[customers,setCustomers]=useState([]),[search,setSearch]=useState("");
-  const base=supportMode?`/platform/businesses/${encodeURIComponent(supportId)}/assist`:"/business";
-  useEffect(()=>{
-    if(supportMode)return;
-    setBusinessId(String(activeBusinessId || localStorage.getItem("sw_active_business_id") || ""));
-  },[supportMode,activeBusinessId]);
-  useEffect(()=>{
-    if(!supportMode&&!businessId)return;
-    let mounted=true;
-    const opts=supportMode?{}:{headers:{"X-Business-Id":businessId}};
-    Promise.allSettled([
-      api.get(supportMode?`${base}/customers/`:"/business-customers/",opts),
-      supportMode?Promise.resolve({data:[]}):api.get("/tickets/assignees/",opts),
-    ]).then(([c,t])=>{if(!mounted)return;
-      if(c.status==="fulfilled")setCustomers(Array.isArray(c.value.data)?c.value.data:(c.value.data?.customers||c.value.data?.results||[]));
-      if(t.status==="fulfilled")setStaff(Array.isArray(t.value.data)?t.value.data:(t.value.data?.assignees||t.value.data?.results||[]));
-    });
-    return()=>{mounted=false};
-  },[base,businessId,supportMode]);
-  useEffect(()=>{
-    if(supportMode || !businessId)return;
-    let active=true;
-    const timer=setTimeout(()=>{
-      api.get("/business-customers/",{headers:{"X-Business-Id":businessId},params:{search:search.trim()||undefined}})
-        .then(response=>{if(active)setCustomers(Array.isArray(response.data)?response.data:(response.data?.results||[]))})
-        .catch(()=>{if(active&&search.trim())setCustomers([])});
-    },220);
-    return()=>{active=false;clearTimeout(timer)};
-  },[search,businessId,supportMode]);
-  const matches=useMemo(()=>customers.filter(c=>[c.name,c.phone,c.email].join(" ").toLowerCase().includes(search.toLowerCase())).slice(0,6),[customers,search]);
-  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
-  function choose(c){setForm(f=>({...f,customer_name:c.name||"",phone:c.phone||"",email:c.email||"",service_address:c.service_address||""}));setSearch("");}
-  async function submit(e){e.preventDefault();setError("");setSuccess(null);if(!supportMode&&!businessId){setError("Select your Business profile first.");return;}if(![form.customer_name,form.phone,form.email].some(x=>String(x||"").trim())){setError("Enter a customer name, phone number, or email before creating a ticket.");return;}setSaving(true);
-    try{
-      const body={...form,assigned_member_id:form.assigned_member_id?Number(form.assigned_member_id):null,scheduled_start:form.scheduled_start?new Date(form.scheduled_start).toISOString():null};
-      const res=await api.post(`${base}/quick-intake/`,body,supportMode?{}:{headers:{"X-Business-Id":businessId}});
-      setSuccess(res.data);setForm(EMPTY);
-      if(typeof window!=="undefined")window.scrollTo({top:0,behavior:"smooth"});
-    }catch(e){setError(message(e))}finally{setSaving(false)}
-  }
-  return <DashboardShell modeBarTitle={supportMode?"God Mode · Assisted Intake":"Business · Quick Intake"} modeBarSubtitle="One call. One customer. One ticket.">
-    <div className="mx-auto max-w-4xl space-y-4 pb-24">
-      <div className="rounded-3xl border border-cyan-500/25 bg-slate-900 p-5">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h1 className="text-2xl font-black text-white">Quick phone ticket</h1><button className="rounded-xl border border-slate-600 px-4 py-2 text-sm text-white" onClick={()=>nav(supportMode?"/platform":"/sbo")}>Back</button></div>
-        {success ? (
-          <div role="status" className="mb-4 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-emerald-100">
-            <div className="text-base font-black">Ticket #{success.ticket_id} created</div>
-            <p className="mt-1 text-xs leading-5">{success.customer_created?"Customer saved to CRM.":"Existing customer matched."} No invitation was sent. Next: review or schedule the job.</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" className="min-h-11 rounded-xl bg-cyan-500 px-4 text-xs font-black text-slate-950" onClick={()=>nav(supportMode?`/platform?tab=businesses`:`/tickets/${success.ticket_id}`)}>{supportMode?"Return to platform":"Open ticket →"}</button>
-              <button type="button" className="min-h-11 rounded-xl border border-slate-600 px-4 text-xs font-bold text-white" onClick={()=>setSuccess(null)}>Log another job</button>
-              {!supportMode?<button type="button" className="min-h-11 rounded-xl border border-slate-600 px-4 text-xs font-bold text-white" onClick={()=>nav("/sbo/tech-board")}>Dispatch board</button>:null}
-            </div>
-          </div>
-        ) : null}
-        {supportMode?<div className="mb-4 rounded-xl border border-violet-500/30 bg-violet-500/10 p-3 text-xs text-violet-200">Founder-assisted mode · actions are recorded under your own identity · no customer login or invitation is created.</div>:null}
-        <div className="relative mb-4"><label className="mb-1 block text-xs text-slate-400">Find existing customer</label><input className={input} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search all saved customers by name, email or phone"/>{search&&matches.length?<div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-slate-700 bg-slate-900 shadow-lg">{matches.map(c=><button key={c.id} className="block w-full border-b border-slate-800 px-3 py-3 text-left text-sm text-white hover:bg-slate-800" onClick={()=>choose(c)}>{c.name||c.phone||c.email} · {c.ticket_count||0} previous tickets</button>)}</div>:null}</div>
-        <form className="grid gap-3 sm:grid-cols-2" onSubmit={submit}>
-          {[["customer_name","Customer name"],["phone","Phone"],["email","Email"],["service_address","Service address"],["service_label","Service requested"]].map(([k,label])=><label key={k} className={k==="service_label"?"sm:col-span-2":""}><span className="mb-1 block text-xs text-slate-400">{label}</span><input className={input} required={k==="service_label"} value={form[k]} onChange={e=>set(k,e.target.value)}/></label>)}
-          <label className="sm:col-span-2"><span className="mb-1 block text-xs text-slate-400">Problem and access notes</span><textarea className={input} rows={3} value={form.description} onChange={e=>set("description",e.target.value)}/></label>
-          <label><span className="mb-1 block text-xs text-slate-400">Urgency</span><select className={input} value={form.urgency} onChange={e=>set("urgency",e.target.value)}>{["FLEXIBLE","STANDARD","URGENT","EMERGENCY"].map(x=><option key={x}>{x}</option>)}</select></label>
-          <label><span className="mb-1 block text-xs text-slate-400">Scheduled start (optional)</span><input type="datetime-local" className={input} value={form.scheduled_start} onChange={e=>set("scheduled_start",e.target.value)}/></label>
-          {!supportMode?<label className="sm:col-span-2"><span className="mb-1 block text-xs text-slate-400">Assign technician (optional)</span><select className={input} value={form.assigned_member_id} onChange={e=>set("assigned_member_id",e.target.value)}><option value="">Leave in dispatcher queue</option>{staff.filter(m=>["TECHNICIAN","TECH"].includes(String(m.role||"").toUpperCase())).map(m=><option key={m.user_id||m.id} value={m.user_id||m.id}>{m.user_name||m.name||m.full_name||m.user_email||m.email||`Team member ${m.user_id||m.id}`}</option>)}</select></label>:null}
-          {error?<div className="sm:col-span-2 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</div>:null}
-          <button disabled={saving} className="min-h-12 rounded-xl bg-cyan-500 px-5 font-black text-slate-950 disabled:opacity-50 sm:col-span-2">{saving?"Saving…":"Save customer + create ticket"}</button>
-        </form>
-      </div>
+ const nav=useNavigate(),[params]=useSearchParams(),{activeBusinessId}=useAuth();
+ const supportId=params.get("support_business"),supportMode=Boolean(supportId);
+ const businessId=String(activeBusinessId||localStorage.getItem("sw_active_business_id")||"");
+ const base=supportMode?`/platform/businesses/${encodeURIComponent(supportId)}/assist`:"/business";
+ const [form,setForm]=useState(EMPTY),[customers,setCustomers]=useState([]),[staff,setStaff]=useState([]),[services,setServices]=useState([]);
+ const [search,setSearch]=useState(""),[addressQuery,setAddressQuery]=useState(""),[serviceQuery,setServiceQuery]=useState("");
+ const [panel,setPanel]=useState(null),[saving,setSaving]=useState(false),[error,setError]=useState(""),[success,setSuccess]=useState(null),[mode,setMode]=useState("queue");
+ const set=(key,val)=>setForm(f=>({...f,[key]:val}));
+ const opts=useMemo(()=>supportMode?{}:{headers:{"X-Business-Id":businessId}},[supportMode,businessId]);
+ useEffect(()=>{
+  if(!supportMode&&!businessId)return;
+  let active=true;
+  Promise.allSettled([
+    api.get(supportMode?`${base}/customers/`:"/business-customers/",opts),
+    supportMode?Promise.resolve({data:[]}):api.get("/tickets/assignees/",opts),
+    supportMode?Promise.resolve({data:[]}):api.get("/service-catalog/",{...opts,params:{item_type:"SERVICE",active_only:true}})
+  ]).then(result=>{if(!active)return;if(result[0].status==="fulfilled")setCustomers(asList(result[0].value.data));if(result[1].status==="fulfilled")setStaff(asList(result[1].value.data));if(result[2].status==="fulfilled")setServices(asList(result[2].value.data));});
+  return()=>{active=false;};
+ },[businessId,base,supportMode]);
+ useEffect(()=>{
+  if(supportMode||!businessId||!search.trim())return;
+  let active=true;const timer=setTimeout(()=>api.get("/business-customers/",{...opts,params:{search:search.trim()}}).then(r=>{if(active)setCustomers(asList(r.data));}).catch(()=>{}),220);
+  return()=>{active=false;clearTimeout(timer);};
+ },[search,businessId,supportMode]);
+ const matched=useMemo(()=>customers.filter(c=>[c.name,c.phone,c.email].join(" ").toLowerCase().includes(search.toLowerCase())).slice(0,6),[customers,search]);
+ const addresses=useMemo(()=>[...new Set(customers.map(c=>c.service_address).filter(Boolean))].filter(a=>a.toLowerCase().includes(addressQuery.toLowerCase())).slice(0,7),[customers,addressQuery]);
+ const suggestedServices=useMemo(()=>services.filter(s=>String(s.name||"").toLowerCase().includes(serviceQuery.toLowerCase())).slice(0,12),[services,serviceQuery]);
+ const pickCustomer=c=>{setForm(f=>({...f,customer_name:c.name||"",phone:c.phone||"",email:c.email||"",service_address:c.service_address||""}));setAddressQuery(c.service_address||"");setSearch("");setPanel(null);};
+ const pickService=s=>{set("service_label",s.name||"");setServiceQuery(s.name||"");setPanel(null);};
+ const chooseAddress=a=>{set("service_address",a);setAddressQuery(a);setPanel(null);};
+ const save=async(e)=>{
+  e?.preventDefault?.();setError("");setSuccess(null);
+  if(!supportMode&&!businessId){setError("Select a business first.");return;}
+  if(![form.customer_name,form.phone,form.email].some(x=>String(x||"").trim())){setError("Enter the caller's name, phone, or email.");return;}
+  if(!form.service_label.trim()){setError("Select a service or enter a custom service.");setPanel("service");return;}
+  setSaving(true);
+  try{
+   const body={...form,assigned_member_id:mode==="tech"&&form.assigned_member_id?Number(form.assigned_member_id):null,scheduled_start:form.scheduled_start?new Date(form.scheduled_start).toISOString():null,estimated_duration_minutes:Number(form.estimated_duration_minutes||60)};
+   const r=await api.post(`${base}/quick-intake/`,body,opts);
+   setSuccess(r.data);setPanel("success");
+  }catch(e){setError(errText(e));}finally{setSaving(false);}
+ };
+ const modal=(title,children)=><div className="absolute inset-0 z-40 flex items-end justify-center bg-[#020817]/70 p-2 backdrop-blur-md sm:items-center" onMouseDown={e=>{if(e.target===e.currentTarget)setPanel(null);}}><section role="dialog" aria-modal="true" aria-label={title} className="sw-intake-panel flex max-h-[92%] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-cyan-400/40 p-4 text-white shadow-2xl"><div className="mb-3 flex items-center justify-between"><h2 className="font-bold">{title}</h2><button type="button" onClick={()=>setPanel(null)} aria-label="Close panel" className="rounded-lg border border-white/10 p-2"><X size={17}/></button></div><div className="min-h-0 space-y-3 overflow-y-auto">{children}</div></section></div>;
+ return <div className="sw-intake-root relative isolate h-[calc(100dvh-172px)] min-h-[390px] overflow-hidden px-3 py-3 text-white sm:h-[calc(100dvh-110px)]">
+  <div className="sw-intake-background absolute inset-0 -z-20"/><div className="absolute inset-0 -z-10 bg-[#020b1e]/65"/>
+  <form onSubmit={save} className="mx-auto flex h-full w-full max-w-5xl flex-col gap-2">
+   <header className="sw-intake-glass flex shrink-0 items-center justify-between rounded-2xl p-3"><div><div className="text-[10px] font-bold uppercase tracking-widest text-cyan-300">SYNCWORKS · Business Intake</div><h1 className="text-lg font-bold sm:text-2xl">New Phone Request</h1></div><button type="button" onClick={()=>nav(supportMode?"/platform":"/sbo/dispatch")} className="rounded-xl border border-white/15 px-3 py-2 text-xs">Back</button></header>
+   {supportMode&&<p className="rounded-lg border border-fuchsia-300/20 bg-fuchsia-500/10 px-3 py-1 text-xs">Founder-assisted intake. No customer invitation is sent.</p>}
+   {error&&<div role="alert" className="rounded-xl border border-rose-400/30 bg-rose-900/40 px-3 py-2 text-xs text-rose-200">{error}</div>}
+   <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_230px]">
+    <div className="sw-intake-glass flex min-h-0 flex-col gap-3 rounded-2xl p-3">
+     <div className="relative"><label className="mb-1 block text-[11px] text-cyan-200">Find saved customer</label><input className={field} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, number or email" autoComplete="off"/>{search.trim()&&matched.length>0&&<div className="absolute z-30 mt-1 max-h-32 w-full overflow-y-auto rounded-xl border border-cyan-400/30 bg-[#07152c] shadow-xl">{matched.map(c=><button key={c.id} type="button" onClick={()=>pickCustomer(c)} className="block w-full border-b border-white/10 px-3 py-2 text-left text-xs hover:bg-cyan-500/10">{c.name||c.phone||c.email} · {c.phone||c.email||""}</button>)}</div>}</div>
+     <div className="grid grid-cols-2 gap-2"><label className="text-[11px] text-slate-300">Customer<input className={field} value={form.customer_name} onChange={e=>set("customer_name",e.target.value)} placeholder="Caller name"/></label><label className="text-[11px] text-slate-300">Phone<input className={field} type="tel" value={form.phone} onChange={e=>set("phone",e.target.value)} placeholder="(555) 555-5555"/></label></div>
+     <label className="text-[11px] text-slate-300">Email<input className={field} type="email" value={form.email} onChange={e=>set("email",e.target.value)} placeholder="Optional"/></label>
+     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="relative"><label className="text-[11px] text-slate-300">Service address</label><div className="flex gap-1"><input className={field} value={form.service_address} onChange={e=>{set("service_address",e.target.value);setAddressQuery(e.target.value)}} placeholder="Type address or choose saved"/><button type="button" aria-label="Saved service addresses" onClick={()=>setPanel("address")} className="rounded-xl border border-white/15 px-2"><MapPin size={17}/></button></div></div>
+      <div><label className="text-[11px] text-slate-300">Service requested</label><div className="flex gap-1"><input className={field} value={form.service_label} onChange={e=>{set("service_label",e.target.value);setServiceQuery(e.target.value)}} placeholder="Select or enter service"/><button type="button" aria-label="Choose saved service" onClick={()=>setPanel("service")} className="rounded-xl border border-white/15 px-2"><ChevronDown size={17}/></button></div></div>
+     </div>
+     <button type="button" onClick={()=>setPanel("notes")} className="sw-intake-tap flex items-center justify-between rounded-xl px-3 py-3 text-left text-sm"><span><strong>Detailed description & access notes</strong><small className="block truncate text-slate-300">{form.description||"Add the problem, instructions, and anything the tech needs"}</small></span><ChevronRight size={18}/></button>
+     <div className="mt-auto flex flex-wrap gap-2"><button type="button" onClick={()=>setPanel("schedule")} className="sw-intake-tap flex-1 rounded-xl px-3 py-3 text-xs"><Clock3 className="mr-2 inline" size={15}/>Schedule · {form.scheduled_start?"Set":"Optional"}</button><button type="button" onClick={()=>setPanel("assignment")} className="sw-intake-tap flex-1 rounded-xl px-3 py-3 text-xs"><UserRound className="mr-2 inline" size={15}/>Assignment · {mode==="tech"?"Technician":"Dispatch queue"}</button></div>
     </div>
-  </DashboardShell>;
+    <aside className="sw-intake-glass flex min-h-0 flex-col rounded-2xl p-3">
+      <h2 className="text-sm font-semibold">Request summary</h2>
+      <div className="mt-3 space-y-3 text-xs"><div><span className="text-slate-400">Service</span><p className="font-semibold">{form.service_label||"Select a service"}</p></div><div><span className="text-slate-400">Location</span><p className="line-clamp-2">{form.service_address||"Not entered"}</p></div><div><span className="text-slate-400">Priority</span><select aria-label="Priority" className={field} value={form.urgency} onChange={e=>set("urgency",e.target.value)}>{["FLEXIBLE","STANDARD","URGENT","EMERGENCY"].map(x=><option key={x}>{x}</option>)}</select></div><div><span className="text-slate-400">Estimated job time</span><select className={field} value={form.estimated_duration_minutes} onChange={e=>set("estimated_duration_minutes",Number(e.target.value))}>{[30,45,60,90,120,180,240].map(n=><option key={n} value={n}>{n} min</option>)}</select></div></div>
+      <div className="mt-auto pt-2"><button type="submit" disabled={saving} className="w-full rounded-xl bg-cyan-400 px-3 py-3 text-sm font-black text-slate-950 disabled:opacity-50">{saving?"Creating…":"Create ticket"}</button><p className="mt-2 text-[10px] leading-4 text-slate-400">Customer is saved to CRM. No customer invitation is sent.</p></div>
+    </aside>
+   </div>
+   <div className="sw-intake-glass flex shrink-0 items-center justify-between rounded-xl px-3 py-2 text-xs text-slate-300"><span>Phone intake · customer → service → dispatch</span><span>One-screen workflow</span></div>
+  </form>
+  {panel==="address"&&modal("Saved service addresses",<><input autoFocus className={field} placeholder="Find or type an address" value={addressQuery} onChange={e=>setAddressQuery(e.target.value)}/>{addresses.map(a=><button key={a} onClick={()=>chooseAddress(a)} className="sw-intake-option w-full rounded-xl p-3 text-left text-sm">{a}</button>)}<button onClick={()=>chooseAddress(addressQuery)} className="w-full rounded-xl border border-cyan-400/40 p-3 text-left text-xs">Use typed address: {addressQuery||"Enter above"}</button><p className="text-xs text-slate-400">Suggestions are addresses previously saved in this business. External address verification is not connected.</p></>)}
+  {panel==="service"&&modal("Choose a service",<><input autoFocus className={field} value={serviceQuery} onChange={e=>setServiceQuery(e.target.value)} placeholder="Search service catalog"/>{suggestedServices.map(s=><button key={s.id} onClick={()=>pickService(s)} className="sw-intake-option w-full rounded-xl p-3 text-left text-sm">{s.name}</button>)}<button onClick={()=>pickService({name:serviceQuery})} className="w-full rounded-xl border border-cyan-400/40 p-3 text-left text-sm">Use custom service: {serviceQuery||"Enter a service above"}</button></>)}
+  {panel==="notes"&&modal("Problem & access details",<><label className="text-xs text-slate-300">Detailed job description<textarea autoFocus className={field} rows={7} value={form.description} onChange={e=>set("description",e.target.value)} placeholder="What is happening? What should the technician bring? Access instructions?"/></label><button onClick={()=>setPanel(null)} className="w-full rounded-xl bg-cyan-500/20 p-3 text-sm text-cyan-100">Save details</button></>)}
+  {panel==="schedule"&&modal("Scheduling",<><label className="text-xs">Expected start<input type="datetime-local" value={form.scheduled_start} onChange={e=>set("scheduled_start",e.target.value)} className={field}/></label><label className="block text-xs">Estimated duration (minutes)<input type="number" min="15" max="1440" value={form.estimated_duration_minutes} onChange={e=>set("estimated_duration_minutes",e.target.value)} className={field}/></label><button onClick={()=>setPanel(null)} className="w-full rounded-xl bg-cyan-500/20 p-3">Apply schedule</button></>)}
+  {panel==="assignment"&&modal("Assignment",<><label className="flex gap-2 rounded-xl border border-white/15 p-3 text-sm"><input type="radio" checked={mode==="queue"} onChange={()=>setMode("queue")}/>Leave in dispatch queue</label>{!supportMode&&<label className="flex gap-2 rounded-xl border border-white/15 p-3 text-sm"><input type="radio" checked={mode==="tech"} onChange={()=>setMode("tech")}/>Assign an internal technician</label>}{mode==="tech"&&!supportMode&&<select className={field} value={form.assigned_member_id} onChange={e=>set("assigned_member_id",e.target.value)}><option value="">Choose a technician</option>{staff.filter(m=>["TECHNICIAN","TECH"].includes(String(m.role||"").toUpperCase())).map(m=><option key={m.user_id||m.id} value={m.user_id||m.id}>{m.user_name||m.name||m.user_email||"Employee"}</option>)}</select>}<p className="text-xs text-slate-400">External subcontractor offers will be available once the separate contractor acceptance workflow is connected. No external assignment is created from this panel yet.</p><button onClick={()=>setPanel(null)} className="w-full rounded-xl bg-cyan-500/20 p-3">Apply assignment</button></>)}
+  {panel==="success"&&success&&modal("Ticket created",<div role="status" className="space-y-3 text-sm"><CheckCircle2 className="text-emerald-300"/><strong>Ticket #{success.ticket_id} created</strong><p className="text-slate-300">{success.customer_created?"Customer added to CRM":"Existing customer matched"}. No invitation sent.</p><div className="flex gap-2"><button onClick={()=>nav(`/tickets/${success.ticket_id}`)} className="flex-1 rounded-xl bg-cyan-500/20 p-3">Open ticket</button><button onClick={()=>{setPanel(null);setSuccess(null);setForm(EMPTY);setMode("queue");setAddressQuery("");setServiceQuery("");}} className="flex-1 rounded-xl border border-white/20 p-3">Another call</button></div></div>)}
+ </div>;
 }
