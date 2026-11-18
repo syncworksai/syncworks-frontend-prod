@@ -1,0 +1,291 @@
+/* Property Management visual parity with the Customer cockpit.
+   Uses the SAME office assets and saved workspace theme as Customer,
+   not a separate background collection. Mobile only: no changes to Forge,
+   Health, Games, or the desktop PM report. */
+[data-pm-command-shell] {
+  --pm-scene-image: url("/office-themes/syncworks-future.webp");
+  --pm-scene-position: 51% 53%;
+  --pm-scene-tint: rgba(3,12,31,.15);
+  --pm-scene-ink: #f5faff;
+  --pm-scene-muted: #c6d5e8;
+  --pm-scene-accent: #61dcfa;
+  --pm-scene-line: rgba(112,219,249,.51);
+  --pm-scene-glass: rgba(5,17,39,.30);
+}
+body[data-sw-office-theme="classic"] [data-pm-command-shell] {
+  --pm-scene-image: url("/office-themes/classic-office.webp");
+  --pm-scene-position: 50% 53%;
+  --pm-scene-tint: rgba(31,17,8,.17);
+  --pm-scene-accent: #f0c680;
+  --pm-scene-line: rgba(238,192,129,.52);
+  --pm-scene-glass: rgba(28,17,10,.37);
+}
+body[data-sw-office-theme="modern"] [data-pm-command-shell] {
+  --pm-scene-image: url("/office-themes/modern-dark.webp");
+  --pm-scene-position: 51% 52%;
+  --pm-scene-tint: rgba(14,19,25,.15);
+  --pm-scene-accent: #d4e7f2;
+  --pm-scene-line: rgba(179,208,223,.46);
+  --pm-scene-glass: rgba(17,26,37,.35);
+}
+body[data-sw-office-theme="light"] [data-pm-command-shell] {
+  --pm-scene-image: url("/office-themes/clean-light.webp");
+  --pm-scene-position: 50% 48%;
+  --pm-scene-tint: rgba(24,32,45,.10);
+  --pm-scene-accent: #b9ebfa;
+  --pm-scene-line: rgba(159,220,237,.52);
+  --pm-scene-glass: rgba(15,34,51,.36);
+}
+@media (max-width: 767px) {
+  /* Global ModeBar is already fixed. PM owns exactly ONE content header. */
+  [data-pm-command-shell] {
+    background-image: linear-gradient(180deg, rgba(3,10,25,.23),var(--pm-scene-tint) 50%,rgba(3,10,25,.45)),var(--pm-scene-image) !important;
+    background-size: cover,cover !important;
+    background-position: center,var(--pm-scene-position) !important;
+    background-repeat:no-repeat !important;
+    background-color:#061126 !important;
+    height:calc(100dvh - var(--sw-ios-safe-top,0px) - var(--sw-ios-safe-bottom,0px));
+    padding-top:63px;
+    overflow:hidden;
+    isolation:isolate;
+  }
+  [data-pm-command-shell] > [class*="xl:ml-"] {
+    flex:1 1 auto;
+    min-height:0;
+    background:transparent !important;
+  }
+  [data-pm-command-shell] > [class*="xl:ml-"] > section:first-child {
+    display:none !important;
+  }
+  [data-pm-command-shell] .pm-command-content {
+    background:transparent !important;
+    min-height:0;
+  }
+  /* The dashboard itself stays one screen, while tabs allow bounded content. */
+  [data-pm-command-shell] .pm-command-content:has(.pm-v3-cockpit) {
+    flex:1 1 auto;
+    padding:0 !important;
+    overflow:hidden;
+  }
+  [data-pm-command-shell] main.pm-dashboard-main {
+    display:flex;
+    flex-direction:column;
+    gap:0;
+    height:100%;
+    min-height:0;
+    padding:8px 13px calc(98px + env(safe-area-inset-bottom,0px)) !important;
+    overflow:hidden;
+  }
+  [data-pm-command-shell] .pm-v3-cockpit {
+    display:flex;
+    flex:1 1 auto;
+    flex-direction:column;
+    min-height:0;
+    gap:10px;
+    color:var(--pm-scene-ink);
+  }
+  [data-pm-command-shell] .pm-v3-intro {
+    display:flex;
+    flex:0 0 auto;
+    align-items:center;
+    justify-content:space-between;
+    min-width:0;
+    gap:12px;
+    padding:8px 3px 5px;
+  }
+  [data-pm-command-shell] .pm-v3-eyebrow {
+    font-size:10px;
+    font-weight:900;
+    letter-spacing:.16em;
+    color:var(--pm-scene-accent);
+  }
+  [data-pm-command-shell] .pm-v3-intro h1 {
+    margin:4px 0;
+    font-size:clamp(24px,3.4dvh,32px);
+    font-weight:850;
+    letter-spacing:-.035em;
+    line-height:1.08;
+    color:white;
+    text-shadow:0 2px 14px rgba(0,0,0,.44);
+  }
+  [data-pm-command-shell] .pm-v3-intro p {
+    font-size:11px;
+    line-height:1.35;
+    color:var(--pm-scene-muted);
+  }
+  [data-pm-command-shell] .pm-v3-intro p strong {
+    color:#a0f4c4;
+    font-weight:900;
+  }
+  [data-pm-command-shell] .pm-v3-refresh {
+    display:grid;
+    place-items:center;
+    flex:0 0 44px;
+    width:44px;
+    height:44px;
+    border-radius:15px;
+    border:1px solid var(--pm-scene-line);
+    background:var(--pm-scene-glass);
+    color:#e9f8ff;
+    backdrop-filter:blur(10px);
+  }
+  [data-pm-command-shell] .pm-v3-tabs {
+    display:grid;
+    flex:0 0 auto;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:7px;
+    padding:4px;
+    border:1px solid var(--pm-scene-line);
+    border-radius:15px;
+    background:rgba(6,18,40,.24);
+    backdrop-filter:blur(13px);
+  }
+  [data-pm-command-shell] .pm-v3-tabs button {
+    min-width:0;
+    min-height:44px;
+    border-radius:11px;
+    padding:5px 4px;
+    color:#d6eafb;
+    font-size:12px;
+    font-weight:850;
+  }
+  [data-pm-command-shell] .pm-v3-tabs button[aria-pressed="true"] {
+    background:rgba(70,180,238,.26);
+    border:1px solid rgba(151,223,255,.46);
+    color:white;
+    box-shadow:0 0 16px rgba(31,167,251,.14);
+  }
+  [data-pm-command-shell] .pm-v3-pane {
+    display:flex;
+    flex:1 1 auto;
+    flex-direction:column;
+    gap:10px;
+    min-height:0;
+    overflow-y:auto;
+    overflow-x:hidden;
+    overscroll-behavior:contain;
+    scrollbar-width:thin;
+    padding:1px 1px 9px;
+    animation:pm-v3-pane-in .24s ease-out;
+  }
+  @keyframes pm-v3-pane-in {from {opacity:.35;transform:translateY(8px)} to {opacity:1;transform:none}}
+  [data-pm-command-shell] .pm-v3-kpis {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:9px;
+    flex:0 0 auto;
+  }
+  [data-pm-command-shell] .pm-v3-kpis button {
+    min-height:90px;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    justify-content:center;
+    gap:4px;
+    padding:12px 14px;
+    border-radius:17px;
+    border:1px solid var(--pm-scene-line);
+    background:var(--pm-scene-glass);
+    color:white;
+    backdrop-filter:blur(12px);
+    text-align:left;
+    box-shadow:inset 0 1px rgba(255,255,255,.10);
+  }
+  [data-pm-command-shell] .pm-v3-kpis button svg {color:var(--pm-scene-accent)}
+  [data-pm-command-shell] .pm-v3-kpis button strong {font-size:23px;line-height:1.1;letter-spacing:-.03em}
+  [data-pm-command-shell] .pm-v3-kpis button span {font-size:11px;font-weight:800;color:var(--pm-scene-muted)}
+  [data-pm-command-shell] .pm-v3-section {
+    flex:0 0 auto;
+    min-width:0;
+    padding:13px;
+    border:1px solid var(--pm-scene-line);
+    border-radius:19px;
+    background:var(--pm-scene-glass);
+    backdrop-filter:blur(13px);
+    box-shadow:inset 0 1px rgba(255,255,255,.10);
+  }
+  [data-pm-command-shell] .pm-v3-section-head {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+  }
+  [data-pm-command-shell] .pm-v3-section-head span {font-size:9px;letter-spacing:.17em;font-weight:900;color:var(--pm-scene-accent)}
+  [data-pm-command-shell] .pm-v3-section-head h2 {font-size:17px;font-weight:900;color:white;margin:3px 0}
+  [data-pm-command-shell] .pm-v3-section-head > button {
+    display:flex;
+    align-items:center;
+    gap:3px;
+    min-height:44px;
+    padding:0 4px;
+    color:var(--pm-scene-accent);
+    font-size:11px;
+    font-weight:900;
+    white-space:nowrap;
+  }
+  [data-pm-command-shell] .pm-v3-empty {font-size:12px;color:var(--pm-scene-muted);padding:14px 0 4px}
+  [data-pm-command-shell] .pm-v3-priority {
+    display:flex;align-items:center;justify-content:space-between;width:100%;min-height:44px;
+    text-align:left;border-top:1px solid rgba(165,219,251,.22);padding:8px 0;
+    color:white;font-size:12px;font-weight:750;
+  }
+  [data-pm-command-shell] .pm-v3-quick {display:grid;grid-template-columns:1.35fr 1fr;gap:9px;flex:0 0 auto}
+  [data-pm-command-shell] .pm-v3-quick button,
+  [data-pm-command-shell] .pm-v3-primary {
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    min-height:49px;padding:8px 10px;border-radius:15px;
+    background:var(--pm-scene-glass);border:1px solid var(--pm-scene-line);
+    backdrop-filter:blur(12px);font-size:12px;font-weight:900;
+    color:white;
+  }
+  [data-pm-command-shell] .pm-v3-quick button:first-child,
+  [data-pm-command-shell] .pm-v3-primary {
+    background:linear-gradient(100deg,#28cbed,#b96de9);
+    border-color:transparent;color:#08122b;
+  }
+  [data-pm-command-shell] .pm-v3-section input[type=search] {
+    display:block;width:100%;min-height:46px;margin:12px 0;
+    border:1px solid var(--pm-scene-line);border-radius:12px;
+    background:rgba(2,8,22,.37);padding:10px 13px;color:white;font-size:16px;
+  }
+  [data-pm-command-shell] .pm-v3-property-list {display:flex;flex-direction:column;gap:8px}
+  [data-pm-command-shell] .pm-v3-property-list button {
+    display:flex;align-items:center;justify-content:space-between;gap:9px;
+    width:100%;min-height:55px;text-align:left;padding:10px 12px;
+    border:1px solid rgba(150,217,252,.35);border-radius:13px;background:rgba(5,16,32,.30);color:white;
+  }
+  [data-pm-command-shell] .pm-v3-property-list strong {display:block;font-size:13px}
+  [data-pm-command-shell] .pm-v3-property-list small {display:block;font-size:10px;margin-top:3px;color:var(--pm-scene-muted)}
+  [data-pm-command-shell] .pm-v3-tools {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:11px}
+  [data-pm-command-shell] .pm-v3-tools button {
+    display:flex;align-items:center;gap:8px;min-width:0;min-height:62px;padding:9px;
+    border:1px solid rgba(150,217,252,.35);border-radius:13px;background:rgba(5,16,32,.30);
+    color:white;text-align:left;font-size:11px;font-weight:850;
+  }
+  [data-pm-command-shell] .pm-v3-tools button svg:first-child {color:var(--pm-scene-accent);flex:none}
+  [data-pm-command-shell] .pm-v3-tools button svg:last-child {margin-left:auto;flex:none;opacity:.7}
+  [data-pm-command-shell] .pm-v3-error {padding:10px;border-radius:12px;border:1px solid #fb7185;background:rgba(80,15,30,.52);font-size:12px}
+  [data-pm-command-shell] .pm-v3-error button {margin-left:12px;text-decoration:underline}
+  [data-pm-command-shell] .pm-v3-legacy {display:none!important}
+  /* Keep the existing quick-operations action sheet functional above the dock. */
+  [data-pm-command-shell] .pm-dashboard-main > .fixed {z-index:260}
+  /* Role-based nav still navigates exactly as before, but visually matches
+     Customer's translucent dock rather than the opaque legacy blue bar. */
+  body:has([data-pm-command-shell]) .sw-role-mobile-nav {
+    background:rgba(5,16,35,.40)!important;
+    border-color:rgba(121,215,255,.48)!important;
+    box-shadow:0 12px 35px rgba(0,0,0,.27),inset 0 1px rgba(255,255,255,.12)!important;
+    backdrop-filter:blur(18px) saturate(135%);
+  }
+  body:has([data-pm-command-shell]) .sw-role-mobile-nav-center-orb {
+    border-color:rgba(111,216,255,.64)!important;
+    box-shadow:0 0 20px rgba(74,171,255,.28)!important;
+  }
+}
+@media (min-width:768px) {
+  .pm-v3-cockpit {display:none}
+  .pm-v3-legacy {display:contents}
+}
+@media (prefers-reduced-motion:reduce) {
+  [data-pm-command-shell] .pm-v3-pane {animation:none}
+}
