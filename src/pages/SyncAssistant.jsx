@@ -43,27 +43,6 @@ import {
 const SETTINGS_KEY = "syncworks_sync_voice_settings_v3";
 const HISTORY_KEY = "syncworks_sync_history_v2";
 
-const VOICE_OPTIONS = [
-  {
-    id: "sync",
-    label: "SYNC",
-    lang: "en-US",
-    hints: ["Google US English", "Microsoft Guy", "Daniel", "Alex"],
-  },
-  {
-    id: "american-female",
-    label: "American Female",
-    lang: "en-US",
-    hints: ["Samantha", "Jenny", "Aria", "Zira", "Female"],
-  },
-  {
-    id: "british-female",
-    label: "British Female",
-    lang: "en-GB",
-    hints: ["Serena", "Sonia", "Hazel", "Kate", "Female"],
-  },
-];
-
 const PERSONAL_SUGGESTIONS = [
   "Read my complete Personal profile and all current updates aloud.",
   "What needs my attention today across requests, Health, finance, and messages?",
@@ -107,26 +86,12 @@ function inferWorkspace(pathname, returnTo) {
   return value.includes("/sbo") || value.includes("/business") ? "business" : "personal";
 }
 
-function findBrowserVoice(option, voices) {
-  const languageMatches = voices.filter((voice) =>
-    String(voice.lang || "").toLowerCase().startsWith(option.lang.toLowerCase())
-  );
-  for (const hint of option.hints) {
-    const found = languageMatches.find((voice) =>
-      String(voice.name || "").toLowerCase().includes(hint.toLowerCase())
-    );
-    if (found) return found;
-  }
-  return languageMatches[0] || voices[0] || null;
-}
-
 export default function SyncAssistant() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const pilotAccess = String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com";
   const location = useLocation();
   const recognitionRef = useRef(null);
-  const speechRef = useRef(null);
   const audioRef = useRef(null);
   const playbackUrlRef = useRef(null);
   const playbackGenerationRef = useRef(0);
@@ -149,7 +114,6 @@ export default function SyncAssistant() {
     })
   );
   const [history, setHistory] = useState(() => loadJson(HISTORY_KEY, []));
-  const [voices, setVoices] = useState([]);
   const [status, setStatus] = useState({
     loading: true,
     enabled: false,
@@ -211,13 +175,6 @@ export default function SyncAssistant() {
     } : {...avatar, photo: getAvatarPhotoForUser(avatar, user)};
   }), [teamEmployees, user?.email]);
   const selectedAssistant = configuredAvatars.find((assistant) => assistant.id === avatarId) || configuredAvatars[0];
-
-  const selectedVoice = useMemo(
-    () =>
-      VOICE_OPTIONS.find((item) => item.id === settings.voiceId) ||
-      VOICE_OPTIONS[0],
-    [settings.voiceId]
-  );
 
   const suggestions = workspace === "pm" ? PM_SUGGESTIONS : workspace === "business" ? BUSINESS_SUGGESTIONS : PERSONAL_SUGGESTIONS;
   const businessAvailable = Boolean(getActiveBusinessId());
@@ -281,18 +238,9 @@ export default function SyncAssistant() {
     }).catch(() => setPremiumVoiceState("unavailable"));
   }, []);
 
-  useEffect(() => {
-    const updateVoices = () => {
-      setVoices(window.speechSynthesis?.getVoices?.() || []);
-    };
-    updateVoices();
-    window.speechSynthesis?.addEventListener?.("voiceschanged", updateVoices);
-    return () => {
-      window.speechSynthesis?.removeEventListener?.("voiceschanged", updateVoices);
-      window.speechSynthesis?.cancel?.();
-      audioRef.current?.pause?.();
-      if (playbackUrlRef.current) URL.revokeObjectURL(playbackUrlRef.current);
-    };
+  useEffect(() => () => {
+    audioRef.current?.pause?.();
+    if (playbackUrlRef.current) URL.revokeObjectURL(playbackUrlRef.current);
   }, []);
 
   function stopSpeaking() {
@@ -302,7 +250,6 @@ export default function SyncAssistant() {
     if (playbackUrlRef.current) URL.revokeObjectURL(playbackUrlRef.current);
     playbackUrlRef.current = null;
     window.speechSynthesis?.cancel?.();
-    speechRef.current = null;
     setSpeaking(false);
   }
 
@@ -887,27 +834,9 @@ export default function SyncAssistant() {
             />
           </label>
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            {VOICE_OPTIONS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() =>
-                  setSettings((current) => ({
-                    ...current,
-                    voiceId: option.id,
-                    speechEnabled: true,
-                  }))
-                }
-                className={`rounded-2xl border p-3 text-left ${
-                  settings.voiceId === option.id
-                    ? "border-cyan-400/40 bg-cyan-500/10"
-                    : "border-slate-800 bg-slate-950/70"
-                }`}
-              >
-                <span className="text-sm font-black text-white">{option.label}</span>
-              </button>
-            ))}
+          <div className="mt-4 rounded-xl border border-cyan-400/25 bg-cyan-500/10 p-3 text-sm text-slate-100">
+            <strong>Chief of Staff voice: Gemma (ElevenLabs)</strong>
+            <p className="mt-1 text-xs text-slate-300">Status: {premiumVoiceState === "ready" ? "Configured" : premiumVoiceState === "checking" ? "Checking" : "Unavailable — voice ID or provider must be configured"}. Your phone's system voice will not be substituted.</p>
           </div>
         </section>
           </div>
