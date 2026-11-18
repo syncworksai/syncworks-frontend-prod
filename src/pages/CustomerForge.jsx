@@ -123,28 +123,36 @@ export default function CustomerForge(){
     if(!shell)return undefined;
     const oldBodyOverflow=document.body.style.overflow;
     const oldHtmlOverflow=document.documentElement.style.overflow;
+    const oldHtmlOverscroll=document.documentElement.style.overscrollBehavior;
+    const oldBodyOverscroll=document.body.style.overscrollBehavior;
     document.body.style.overflow="hidden";
     document.documentElement.style.overflow="hidden";
+    document.documentElement.style.overscrollBehavior="none";
+    document.body.style.overscrollBehavior="none";
+    // iOS may restore the previous route's scroll offset even after overflow
+    // locking. Return to the page origin once, not on every touch/resize.
+    window.scrollTo(0,0);
+    const mobile=window.matchMedia("(max-width:720px)");
     const fit=()=>{
-      if(!shell)return;
+      if(!shell || mobile.matches){
+        shell?.style.removeProperty("--forge-viewport-height");
+        return;
+      }
+      // Desktop: fit between the shared header and the viewport bottom.
       const top=shell.getBoundingClientRect().top;
-      const visibleBottom=window.visualViewport
-        ? window.visualViewport.offsetTop+window.visualViewport.height
-        : window.innerHeight;
-      const available=Math.max(0,Math.floor(visibleBottom-top));
-      shell.style.setProperty("--forge-viewport-height",available+"px");
+      shell.style.setProperty("--forge-viewport-height",Math.max(0,Math.floor(window.innerHeight-top))+"px");
     };
     fit();
     window.addEventListener("resize",fit);
-    window.visualViewport?.addEventListener("resize",fit);
-    window.visualViewport?.addEventListener("scroll",fit);
+    mobile.addEventListener?.("change",fit);
     return ()=>{
       window.removeEventListener("resize",fit);
-      window.visualViewport?.removeEventListener("resize",fit);
-      window.visualViewport?.removeEventListener("scroll",fit);
+      mobile.removeEventListener?.("change",fit);
       shell.style.removeProperty("--forge-viewport-height");
       document.body.style.overflow=oldBodyOverflow;
       document.documentElement.style.overflow=oldHtmlOverflow;
+      document.body.style.overscrollBehavior=oldBodyOverscroll;
+      document.documentElement.style.overscrollBehavior=oldHtmlOverscroll;
     };
   },[]);
   useEffect(()=>{
