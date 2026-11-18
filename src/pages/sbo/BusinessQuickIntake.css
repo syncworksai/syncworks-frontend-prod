@@ -9,3 +9,27 @@
 @keyframes sw-intake-appear{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(max-width:767px){.sw-intake-background{background-position:60% center}.sw-intake-root form>div:nth-of-type(1){overflow-y:auto}.sw-intake-root .sw-intake-glass{padding:10px}.sw-intake-root aside{min-height:190px}}
 @media(prefers-reduced-motion:reduce){.sw-intake-panel{animation:none}.sw-intake-tap{transition:none;transform:none!important}}
+/* Native calendar button contrast on desktop Chrome and mobile Safari. */
+.sw-intake-datetime {
+  color: #f8fafc !important;
+  background-color: #102540 !important;
+  color-scheme: dark;
+  min-height: 52px;
+}
+.sw-intake-datetime::-webkit-calendar-picker-indicator {
+  opacity: 1;
+  filter: invert(1) brightness(1.7);
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  padding: 8px;
+}
+.sw-intake-datetime::-webkit-datetime-edit,
+.sw-intake-datetime::-webkit-datetime-edit-text,
+.sw-intake-datetime::-webkit-datetime-edit-month-field,
+.sw-intake-datetime::-webkit-datetime-edit-day-field,
+.sw-intake-datetime::-webkit-datetime-edit-year-field,
+.sw-intake-datetime::-webkit-datetime-edit-hour-field,
+.sw-intake-datetime::-webkit-datetime-edit-minute-field {
+  color: #f8fafc;
+}
