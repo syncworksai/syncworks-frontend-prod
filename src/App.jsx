@@ -129,7 +129,7 @@ import PMPropertiesIndex from "./pages/PMPropertiesIndex";
 import PMTenantsIndex from "./pages/PMTenantsIndex";
 import PMPayments from "./pages/PMPayments";
 import EmployeeInvite from "./pages/EmployeeInvite";
-import EmployeeTechnicianDashboard from "./pages/EmployeeTechnicianDashboard";
+import EmployeeRoleDashboard from "./pages/EmployeeRoleDashboard";
 import TenantDashboard from "./pages/TenantDashboard";
 import TenantAcceptInvite from "./pages/TenantAcceptInvite";
 import TenantSettings from "./pages/TenantSettings";
@@ -290,7 +290,7 @@ export default function App() {
         <Route path="/sbo/metrics/zip" element={<ProtectedRoute><SboZipLeaderboard /></ProtectedRoute>} />
         <Route path="/dashboard" element={<Navigate to="/sbo" replace />} />
         <Route path="/employee/inbox" element={<ProtectedRoute><InboxPage /></ProtectedRoute>} />
-        <Route path="/employee" element={<ProtectedRoute><EmployeeTechnicianDashboard /></ProtectedRoute>} />
+        <Route path="/employee" element={<ProtectedRoute><EmployeeRoleDashboard /></ProtectedRoute>} />
         <Route path="/pm" element={<ProtectedRoute><PropertyManagerDashboard /></ProtectedRoute>} />
         <Route path="/pm/calendar" element={<ProtectedRoute><PropertyManagerCalendar /></ProtectedRoute>} />
         <Route path="/pm/employees" element={<ProtectedRoute><PMEmployees /></ProtectedRoute>} />
