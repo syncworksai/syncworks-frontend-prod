@@ -14,13 +14,13 @@ const SETTINGS_KEY = "sw_workspace_appearance_v1";
 const DEFAULTS = { theme: "legacy", motion: true, compact: false };
 export const OFFICE_CATEGORIES = [
   {id:"daily",name:"Daily",description:"Your agenda, tasks, messages and requests",items:[["Calendar","/calendar",CalendarDays],["Tasks","/customer/tasks",ListTodo],["Inbox","/customer/inbox",Inbox],["New service request","/customer/new-request",LayoutGrid]]},
-  {id:"personal",name:"Personal",description:"Money, wellbeing and your connections",items:[["Finance","/customer/finance",Wallet],["Health","/customer/health",Heart],["Connections","/settings?tab=CONNECTIONS",Settings]]},
+  {id:"personal",name:"Personal",description:"Money, wellbeing and your connections",items:[["Finance","/customer/finance",Wallet],["Messages","/customer/inbox",Inbox],["Health","/customer/health",Heart],["Connections","/settings?tab=CONNECTIONS",Settings]]},
   {id:"business",name:"Business",description:"Work, properties and service operations",items:[["Business","/sbo",BriefcaseBusiness],["Property","/pm",Building2],["Services","/customer/marketplace",LayoutGrid]]},
   {id:"apps",name:"Apps",description:"Games, local discovery, weather and tools",items:[["Games","/customer/games",Spade],["Social","/connect",Users],["Shop Assist","/customer/store",ShoppingBag],["Weather","/customer/weather",CloudSun],["Traffic","/customer/traffic",MapPinned],["Local","/customer/discover",MapPinned],["Day Trade","/customer/day-trading-futures",TrendingUp]]},
 ];
 const APPS = [
   ["Calendar", "/calendar", CalendarDays], ["Tasks", "/customer/tasks", ListTodo],
-  ["Inbox", "/customer/inbox", Inbox], ["Business", "/sbo", BriefcaseBusiness],
+  ["Messages", "/customer/inbox", Inbox], ["Business", "/sbo", BriefcaseBusiness],
   ["Property", "/pm", Building2], ["Finance", "/customer/finance", Wallet],
   ["Health", "/customer/health", Heart], ["Day Trade", "/customer/day-trading-futures", TrendingUp],
   ["Games", "/customer/games", Spade], ["Shop Assist", "/customer/store", ShoppingBag],
