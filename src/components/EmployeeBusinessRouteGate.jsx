@@ -18,25 +18,37 @@ const allowedPermission = (path) => {
 
 export default function EmployeeBusinessRouteGate({ children, user }) {
   const location = useLocation();
-  const role = String(user?.role || "").toUpperCase();
   const permission = allowedPermission(location.pathname);
-  const restricted = role === "EMPLOYEE" && permission !== null;
+  const restricted = permission !== null;
   const [access, setAccess] = useState("loading");
+
   useEffect(() => {
     if (!restricted) { setAccess("allowed"); return; }
-    if (permission === "DENY") { setAccess("denied"); return; }
     let cancelled = false;
     setAccess("loading");
-    api.get("/business-members/me/").then((response) => {
-      if (cancelled) return;
-      const list = Array.isArray(response.data) ? response.data : response.data?.results || [];
-      const selected = list[0];
-      setAccess(selected?.is_active && (selected?.role === "OWNER" || selected?.[permission] === true) ? "allowed" : "denied");
-    }).catch(() => { if (!cancelled) setAccess("denied"); });
+    const verify = async () => {
+      try {
+        const businessId = String(localStorage.getItem("sw_active_business_id") || "").trim();
+        if (!businessId) { if (!cancelled) setAccess("denied"); return; }
+        const businessRes = await api.get(`/businesses/${businessId}/`);
+        const actualOwner = String(businessRes.data?.owner) === String(user?.id);
+        if (actualOwner) { if (!cancelled) setAccess("allowed"); return; }
+        if (permission === "DENY") { if (!cancelled) setAccess("denied"); return; }
+        // A global SBO profile is not proof that this user owns this business.
+        // Evaluate explicit permission flags for their selected membership.
+        const memberRes = await api.get("/business-members/me/");
+        const memberships = Array.isArray(memberRes.data) ? memberRes.data : memberRes.data?.results || [];
+        const selected = memberships.find(m => String(m.business) === businessId);
+        if (!cancelled) setAccess(selected?.is_active === true && selected?.[permission] === true ? "allowed" : "denied");
+      } catch {
+        if (!cancelled) setAccess("denied");
+      }
+    };
+    verify();
     return () => { cancelled = true; };
-  }, [restricted, permission, location.pathname]);
+  }, [restricted, permission, location.pathname, user?.id]);
   if (!restricted) return children;
-  if (access === "loading") return <div className="grid min-h-[50vh] place-items-center text-sm text-slate-300">Verifying employee access…</div>;
+  if (access === "loading") return <div className="grid min-h-[50vh] place-items-center text-sm text-slate-300">Verifying business access…</div>;
   if (access === "denied") return <Navigate to="/employee" replace />;
   return children;
 }
