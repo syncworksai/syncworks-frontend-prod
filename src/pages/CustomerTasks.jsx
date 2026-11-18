@@ -1,7 +1,10 @@
+import "./CustomerTasksMobileV34.css";
 import React, { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Circle, Grid3X3, List, Mic, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DashboardShell from "../components/dashboard/DashboardShell";
+import api from "../api/client";
+import { fetchPersonalCalendarEvents } from "../api/personalCalendarAgenda";
 
 const STORAGE_KEY = "syncworks.personal.tasks.v1";
 
@@ -18,30 +21,93 @@ export default function CustomerTasks() {
   const nav = useNavigate();
   const [tasks, setTasks] = useState(readTasks);
   const [title, setTitle] = useState("");
+  const [remoteTasks, setRemoteTasks] = useState([]);
+  const [syncStatus, setSyncStatus] = useState("loading");
+  const [busy, setBusy] = useState(false);
   const [view, setView] = useState("grid");
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
   }, [tasks]);
 
-  const open = useMemo(() => tasks.filter((task) => !task.done), [tasks]);
-  const done = useMemo(() => tasks.filter((task) => task.done), [tasks]);
+  useEffect(() => {
+    let active = true;
+    const reload = async () => {
+      try {
+        const rows = await fetchPersonalCalendarEvents();
+        if (!active) return;
+        setRemoteTasks(rows.filter(row => String(row?.metadata?.entity_type || "").toUpperCase() === "TASK")
+          .map(row => ({ id: "remote:" + row.id, remoteId: row.id, title: row.title, done: String(row.metadata?.task_status || "OPEN").toUpperCase() === "DONE", created_at: row.created_at || row.start_at, raw: row })));
+        setSyncStatus("ready");
+      } catch {
+        if (active) setSyncStatus("offline");
+      }
+    };
+    reload();
+    window.addEventListener("focus", reload);
+    return () => { active = false; window.removeEventListener("focus", reload); };
+  }, []);
+  const allTasks = useMemo(() => [...remoteTasks, ...tasks], [remoteTasks, tasks]);
+  const open = useMemo(() => allTasks.filter((task) => !task.done), [allTasks]);
+  const done = useMemo(() => allTasks.filter((task) => task.done), [allTasks]);
 
-  function addTask(event) {
+  async function addTask(event) {
     event.preventDefault();
     const value = title.trim();
-    if (!value) return;
-    const id = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
-    setTasks((current) => [{ id, title: value, done: false, created_at: new Date().toISOString() }, ...current]);
-    setTitle("");
+    if (!value || busy) return;
+    setBusy(true);
+    try {
+      const startAt = new Date();
+      const endAt = new Date(startAt.getTime() + 30 * 60000);
+      const payload = {
+        title: value,
+        description: "",
+        source: "MANUAL",
+        start_at: startAt.toISOString(),
+        end_at: endAt.toISOString(),
+        all_day: false,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Chicago",
+        metadata: { entity_type: "TASK", task_status: "OPEN", task_priority: "NORMAL", task_unscheduled: true, fixed: false },
+      };
+      const saved = await api.post("/personal-calendar/events/", payload);
+      if (!saved.data?.id) throw new Error("Missing task ID");
+      setRemoteTasks(current => [{ id:"remote:"+saved.data.id, remoteId:saved.data.id, title:value, done:false, raw:saved.data, created_at:startAt.toISOString() }, ...current]);
+      setSyncStatus("ready");
+      setTitle("");
+    } catch {
+      // An explicit local fallback keeps the to-do available without claiming cloud sync.
+      const id = globalThis.crypto?.randomUUID?.() || String(Date.now());
+      setTasks(current => [{ id, title:value, done:false, created_at:new Date().toISOString() }, ...current]);
+      setSyncStatus("offline");
+      setTitle("");
+    } finally { setBusy(false); }
   }
 
-  function toggle(id) {
-    setTasks((current) => current.map((task) => task.id === id ? { ...task, done: !task.done } : task));
+  async function toggle(id) {
+    const task = remoteTasks.find(row => row.id === id);
+    if (!task) {
+      setTasks(current => current.map(row => row.id === id ? { ...row, done: !row.done } : row));
+      return;
+    }
+    const nextDone = !task.done;
+    try {
+      await api.patch(`/personal-calendar/events/${task.remoteId}/`, {
+        metadata: { ...(task.raw?.metadata || {}), entity_type: "TASK", task_status: nextDone ? "DONE" : "OPEN" },
+      });
+      setRemoteTasks(current => current.map(row => row.id === id ? { ...row, done: nextDone, raw:{...row.raw, metadata:{...(row.raw?.metadata || {}), task_status:nextDone ? "DONE" : "OPEN" }} } : row));
+    } catch { setSyncStatus("offline"); }
   }
 
-  function remove(id) {
-    setTasks((current) => current.filter((task) => task.id !== id));
+  async function remove(id) {
+    const task = remoteTasks.find(row => row.id === id);
+    if (!task) {
+      setTasks(current => current.filter(row => row.id !== id));
+      return;
+    }
+    try {
+      await api.delete(`/personal-calendar/events/${task.remoteId}/`);
+      setRemoteTasks(current => current.filter(row => row.id !== id));
+    } catch { setSyncStatus("offline"); }
   }
 
   function askSync() {
@@ -66,13 +132,14 @@ export default function CustomerTasks() {
 
   return (
     <DashboardShell modeBarTitle="To-do" modeBarSubtitle="Personal tasks and reminders" maxWidth="max-w-[1600px]">
-      <div className="space-y-4 pb-24 lg:pb-8">
+      <div className="space-y-4 pb-24 lg:pb-8 sw-todo-workspace">
         <section className="rounded-[1.7rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_88%_10%,rgba(139,92,246,.18),transparent_30%),rgba(2,6,23,.94)] p-4 sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <div className="text-[9px] font-black uppercase tracking-[.2em] text-cyan-200">Personal tasks</div>
               <h1 className="mt-1 text-2xl font-black text-white">Keep the next thing obvious.</h1>
-              <p className="mt-1 text-xs text-slate-400">Quick tasks, follow-ups and reminders in one place.</p>
+              <p className="mt-1 text-xs text-slate-400">To-dos are not calendar appointments. Only explicitly scheduled events block calendar time.</p>
+              <p className="mt-1 text-[10px] text-cyan-200" role="status">{syncStatus === "ready" ? "Synced with your SyncWorks account" : syncStatus === "loading" ? "Loading your tasks…" : "Connection unavailable. New tasks are saved on this device only."}</p>
             </div>
             <div className="flex items-center gap-2">
               <button type="button" onClick={askSync} className="inline-flex h-10 items-center gap-2 rounded-xl border border-violet-300/25 bg-violet-500/10 px-3 text-[11px] font-black text-violet-100"><Mic className="h-4 w-4" />Ask SYNC</button>
@@ -83,8 +150,8 @@ export default function CustomerTasks() {
             </div>
           </div>
           <form onSubmit={addTask} className="mt-4 flex gap-2">
-            <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Add a task…" className="h-11 flex-1 rounded-xl border border-white/10 bg-slate-950 px-3 text-xs text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/35" />
-            <button type="submit" className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 text-xs font-black text-white"><Plus className="h-4 w-4" />Add</button>
+            <input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Add a task…" className="h-11 flex-1 rounded-xl border border-white/10 bg-slate-950 px-3 text-xs text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/35" />
+            <button type="submit" disabled={busy} className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 text-xs font-black text-white"><Plus className="h-4 w-4" />Add</button>
           </form>
         </section>
 
