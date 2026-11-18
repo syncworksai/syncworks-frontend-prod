@@ -9,6 +9,7 @@ export default function TechnicianJobActions({ticket,canDispatch=false,isAssigne
  const [action,setAction]=useState("");
  const [note,setNote]=useState("");
  const [minutes,setMinutes]=useState(15);
+ const [scheduledStart,setScheduledStart]=useState(""),[duration,setDuration]=useState(60);
  const [busy,setBusy]=useState(false),[message,setMessage]=useState("");
  const options=(canDispatch?[
    ["SCHEDULED","Scheduled"],...STATUSES,["RELEASE","Return to queue"]
@@ -19,8 +20,9 @@ export default function TechnicianJobActions({ticket,canDispatch=false,isAssigne
   }
   setBusy(true);setMessage("");
   try{
+   if(action==="SCHEDULED"&&!scheduledStart){setMessage("Choose a scheduled start time.");setBusy(false);return;}
    await api.post(`/business/technician/jobs/${ticket.ticket_id}/action/`,{
-    action,note,minutes:Number(minutes)
+    action,note,minutes:Number(minutes),scheduled_start:scheduledStart?new Date(scheduledStart).toISOString():null,duration_minutes:Number(duration)
    });
    setMessage("Update saved. Dispatch and customer channels queued for notification.");
    setAction("");setNote("");onSaved?.();
@@ -35,6 +37,7 @@ export default function TechnicianJobActions({ticket,canDispatch=false,isAssigne
    <button type="button" disabled={!action||busy} onClick={send} className="rounded-lg border border-cyan-400/40 px-3 py-2 font-semibold text-cyan-200 disabled:opacity-40">{busy?"Saving":"Apply"}</button>
   </div>
   {action&&<div className="mt-2 flex flex-wrap gap-2">{action==="DELAYED"&&<label className="text-xs">Delay minutes<input aria-label="Delay minutes" type="number" min="5" max="480" value={minutes} onChange={e=>setMinutes(e.target.value)} className="ml-2 w-20 rounded-lg border border-white/20 bg-[#071226] p-2"/></label>}
+   {action==="SCHEDULED"&&<><label className="text-xs">Start time<input type="datetime-local" value={scheduledStart} onChange={e=>setScheduledStart(e.target.value)} className="ml-1 rounded-lg border border-white/15 bg-[#071226] p-2"/></label><label className="text-xs">Minutes<input type="number" min="15" max="1440" value={duration} onChange={e=>setDuration(e.target.value)} className="ml-1 w-20 rounded-lg border border-white/15 bg-[#071226] p-2"/></label></>}
    <input aria-label="Status update notes" value={note} onChange={e=>setNote(e.target.value)} placeholder={action==="RELEASE"?"Reason it must be reassigned":action==="COMPLETED"?"Completion summary":action==="CANCELLED"?"Cancellation reason":"Optional status note"} className="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#071226] p-2 text-xs"/></div>}
   {message&&<p role="status" className="mt-2 text-[11px] text-cyan-200">{message}</p>}
  </div>;
