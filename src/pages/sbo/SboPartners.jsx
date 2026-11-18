@@ -318,11 +318,11 @@ export default function SboPartners() {
     setOk("");
 
     try {
-      await api.post("/business-partner-invitations/", {
+      const invitationResult=await api.post("/business-partner-invitations/", {
         ...form,
         target_business: selectedBusiness?.id || undefined,
       });
-      setOk("Partner invitation sent.");
+      setOk(invitationResult.data?.email_queued?"Partner invitation created; email queued for delivery.":"Partner invitation created. No email was queued.");
       setShowInvite(false);
       setSelectedBusiness(null);
       setSearchResults([]);
