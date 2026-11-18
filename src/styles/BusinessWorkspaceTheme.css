@@ -1,0 +1,106 @@
+/* Office appearance shared by Dispatch, Technician and New Request.
+   Uses the exact saved appearance key / image mapping as the customer office. */
+[data-sw-business-theme] {
+ --sw-business-outline:rgba(102,207,243,.27);
+ --sw-business-layer:rgba(4,14,34,.56);
+ --sw-business-overlay:linear-gradient(110deg,rgba(2,9,25,.69),rgba(3,10,28,.48));
+ --sw-business-ink:#f5faff;
+ --sw-business-muted:#b7c7da;
+ --sw-business-highlight:#80e7ff;
+ --sw-business-glass:blur(15px);
+ background-color:#071326;
+ color:var(--sw-business-ink);
+}
+[data-sw-business-theme="classic"] {
+ --sw-business-outline:rgba(211,166,103,.42);
+ --sw-business-layer:rgba(28,17,12,.62);
+ --sw-business-overlay:linear-gradient(110deg,rgba(21,13,8,.68),rgba(23,14,11,.44));
+ --sw-business-muted:#e2cfb8;
+ --sw-business-highlight:#f5d19a;
+ background-color:#1a120e;
+}
+[data-sw-business-theme="modern"] {
+ --sw-business-outline:rgba(164,191,204,.36);
+ --sw-business-layer:rgba(13,25,32,.61);
+ --sw-business-overlay:linear-gradient(110deg,rgba(11,23,30,.72),rgba(20,29,36,.46));
+ --sw-business-muted:#bdcbd3;
+ --sw-business-highlight:#c1e3ed;
+ background-color:#111e26;
+}
+[data-sw-business-theme="light"] {
+ --sw-business-outline:rgba(42,107,138,.28);
+ --sw-business-layer:rgba(250,253,255,.76);
+ --sw-business-overlay:linear-gradient(110deg,rgba(250,252,250,.62),rgba(239,246,249,.42));
+ --sw-business-ink:#193446;
+ --sw-business-muted:#435c6c;
+ --sw-business-highlight:#056282;
+ background-color:#eff5f6;
+}
+[data-sw-business-theme] .sw-business-themed-photo {
+ background-image:var(--sw-business-office-photo);
+ background-position:center 53%;
+ background-size:cover;
+ background-repeat:no-repeat;
+}
+[data-sw-business-theme] .sw-business-themed-overlay {
+ background:var(--sw-business-overlay);
+}
+[data-sw-business-theme] .sw-business-themed-card {
+ background:var(--sw-business-layer)!important;
+ border-color:var(--sw-business-outline)!important;
+ color:var(--sw-business-ink);
+ backdrop-filter:var(--sw-business-glass);
+ -webkit-backdrop-filter:var(--sw-business-glass);
+ box-shadow:inset 0 1px rgba(255,255,255,.08);
+}
+[data-sw-business-theme] .sw-business-themed-card .text-slate-300,
+[data-sw-business-theme] .sw-business-themed-card .text-slate-400 {
+ color:var(--sw-business-muted);
+}
+[data-sw-business-theme="light"] .sw-business-themed-card .text-white,
+[data-sw-business-theme="light"] .sw-business-themed-card .text-slate-100,
+[data-sw-business-theme="light"] .sw-business-themed-card .text-slate-200,
+[data-sw-business-theme="light"] .sw-business-themed-card strong,
+[data-sw-business-theme="light"] .sw-business-themed-card h1,
+[data-sw-business-theme="light"] .sw-business-themed-card h2 {
+ color:#193446;
+}
+[data-sw-business-theme="light"] .sw-business-themed-card .text-cyan-100,
+[data-sw-business-theme="light"] .sw-business-themed-card .text-cyan-200,
+[data-sw-business-theme="light"] .sw-business-themed-card .text-cyan-300 {color:#056282}
+[data-sw-business-theme="light"] .sw-business-themed-card button {
+ color:#193446;
+}
+[data-sw-business-theme="light"] .sw-business-themed-card button.bg-cyan-500\/25,
+[data-sw-business-theme="light"] .sw-business-themed-card button.bg-cyan-500\/35 {
+ background:rgba(8,139,177,.18);
+}
+[data-sw-business-theme="light"] .sw-business-themed-card input,
+[data-sw-business-theme="light"] .sw-business-themed-card select,
+[data-sw-business-theme="light"] .sw-business-themed-card textarea {
+ background:rgba(255,255,255,.77)!important;
+ color:#193446!important;
+ border-color:rgba(35,105,141,.3)!important;
+ color-scheme:light;
+}
+[data-sw-business-theme="light"] .sw-business-themed-card input::placeholder,
+[data-sw-business-theme="light"] .sw-business-themed-card textarea::placeholder {color:#617b8a}
+[data-sw-business-theme="light"] .sw-business-themed-card input[type="date"]::-webkit-calendar-picker-indicator,
+[data-sw-business-theme="light"] .sw-business-themed-card input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+ filter:none;
+ opacity:1;
+}
+[data-sw-business-theme="light"] .sw-business-themed-card .sw-intake-option,
+[data-sw-business-theme="light"] .sw-business-themed-card .sw-dispatch-job,
+[data-sw-business-theme="light"] .sw-business-themed-card .sw-tech-job {
+ background:rgba(248,253,255,.64)!important;
+ border-color:rgba(44,113,144,.3)!important;
+ color:#193446;
+}
+[data-sw-business-theme="light"] .sw-business-themed-card .sw-intake-option strong {color:#193446}
+@media(max-width:767px){
+ [data-sw-business-theme] .sw-business-themed-photo {background-position:61% center}
+}
+@media(prefers-reduced-motion:reduce){
+ [data-sw-business-theme] .sw-business-themed-card {scroll-behavior:auto}
+}
