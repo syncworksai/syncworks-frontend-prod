@@ -56,6 +56,7 @@ export default function PMTenantEditOverlay() {
   }
 
   useEffect(() => { if (active) load(); }, [active]);
+  useEffect(() => { const openEditor = () => { if (active) setOpen(true); }; window.addEventListener("sw:pm-edit-tenant",openEditor); return () => window.removeEventListener("sw:pm-edit-tenant",openEditor); }, [active]);
 
   useEffect(() => {
     if (!selectedTenant) return;
@@ -121,7 +122,7 @@ export default function PMTenantEditOverlay() {
 
   if (!active) return null;
   return <>
-    <button type="button" onClick={() => setOpen(true)} className="fixed right-6 top-[9.5rem] z-[210] rounded-2xl border border-amber-400/30 bg-[#10131b]/95 px-4 py-3 text-xs font-black text-amber-100 shadow-2xl backdrop-blur-xl">Edit Tenant</button>
+    <button type="button" onClick={() => setOpen(true)} className="pm-legacy-edit-tenant-trigger fixed right-6 top-[9.5rem] z-[210] rounded-2xl border border-amber-400/30 bg-[#10131b]/95 px-4 py-3 text-xs font-black text-amber-100 shadow-2xl backdrop-blur-xl">Edit Tenant</button>
     {open ? <div className="fixed inset-0 z-[280] bg-black/70" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
       <aside className="ml-auto flex h-full w-full max-w-2xl flex-col border-l border-cyan-400/20 bg-[#040b14] shadow-2xl">
         <header className="flex items-start justify-between gap-4 border-b border-cyan-500/15 p-5"><div><div className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-300">Tenant Record</div><h2 className="mt-2 text-2xl font-black text-white">Edit Tenant</h2><p className="mt-1 text-sm text-slate-400">Correct information without losing ledger, messages, documents, occupancy history, or prior invites.</p></div><button type="button" onClick={() => setOpen(false)} aria-label="Close tenant editor" className="grid h-9 w-9 place-items-center rounded-xl border border-slate-700 text-slate-300">✕</button></header>
