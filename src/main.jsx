@@ -11,6 +11,7 @@ import PMTenantEditOverlay from "./components/pm/PMTenantEditOverlay";
 import NutritionCoachGlobalAssist from "./components/customer-health/NutritionCoachGlobalAssist";
 import App from "./App";
 import AppCrashBoundary from "./components/AppCrashBoundary";
+import UniversalWorkspaceShell from "./components/shell/UniversalWorkspaceShell";
 import FeatureResumeTracker from "./components/navigation/FeatureResumeTracker";
 import PlatformDirectEntry from "./pages/PlatformDirectEntry";
 import PMPropertyCreate from "./pages/PMPropertyCreate";
@@ -107,8 +108,11 @@ function RoutedApplication() {
     </>
   );
 
-  if (isPmRoute && !isPmDashboard) return <PMShell>{routedContent}<PMTenantEditOverlay /></PMShell>;
-  return routedContent;
+  if (isPmRoute && !isPmDashboard) {
+    const pmContent = <PMShell>{routedContent}<PMTenantEditOverlay /></PMShell>;
+    return <UniversalWorkspaceShell>{pmContent}</UniversalWorkspaceShell>;
+  }
+  return <UniversalWorkspaceShell>{routedContent}</UniversalWorkspaceShell>;
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(
