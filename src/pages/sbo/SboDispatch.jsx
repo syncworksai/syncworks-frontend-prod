@@ -4,13 +4,14 @@ import {ArrowLeft,CalendarDays,Clock3,MapPinned,Plus,RefreshCw,Route,Settings2,X
 import {getLiveOperations,updateDispatchDelay} from "../../api/dispatch";
 import {getBusinessWorkforce} from "../../api/workforce";
 import "./SboDispatch.css";
+import TechnicianJobActions from "../../components/sbo/TechnicianJobActions";
 
 const isoDate=(d)=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`;};
 const addDays=(day,n)=>{const d=new Date(`${day}T12:00:00`);d.setDate(d.getDate()+n);return isoDate(d);};
 const time=(v)=>v?new Date(v).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}):"Not set";
 const asMinutes=(n)=>Number.isFinite(Number(n))?Number(n):null;
 function RiskBadge({value}){const k=String(value||"ON_TIME");return <span className={`rounded-lg border px-2 py-1 text-[10px] font-bold ${k==="LATE"?"border-rose-400/50 text-rose-200":k==="AT_RISK"?"border-amber-400/40 text-amber-100":"border-cyan-300/30 text-cyan-200"}`}>{k.replaceAll("_"," ")}</span>;}
-function JobLine({job,onOpen,onDelay,busy}){
+function JobLine({job,onOpen,onDelay,busy,onSaved}){
  const clock=job.clock||{};
  const route=job.travel||{};
  return <div className="sw-dispatch-job rounded-xl border border-cyan-300/15 p-3">
@@ -19,6 +20,7 @@ function JobLine({job,onOpen,onDelay,busy}){
    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-300"><span>{String(job.status||"").toUpperCase()==="EN_ROUTE"?"➜ En route":clock.running?"● Working now":clock.finished_at?"✓ Clock finished":String(job.status||"").replaceAll("_"," ")||"Not started"}</span><span>{route.minutes==null?"Travel unknown":`${route.minutes}m travel`}</span><span>{route.basis==="google_live_traffic"?"Live traffic":"Estimated route"}</span></div>
    {job.route_conflict&&<div className="mt-2 text-xs text-amber-200">Route conflict: {job.available_gap_minutes??"?"}m free, {job.required_gap_minutes??"?"}m required</div>}
    <div className="mt-2 flex items-center justify-between gap-2"><span className="min-w-0 truncate text-[11px] text-slate-400">{job.address||"Address not configured"}</span><button onClick={()=>onDelay(job.ticket_id,15)} disabled={busy} className="shrink-0 rounded-lg border border-white/15 px-2 py-1 text-[11px] disabled:opacity-50">+15m</button></div>
+   <TechnicianJobActions ticket={job} canDispatch compact onSaved={onSaved}/>
  </div>;
 }
 export default function SboDispatch(){
@@ -67,7 +69,7 @@ export default function SboDispatch(){
       <div className="flex items-start justify-between gap-2"><div className="min-w-0"><strong>{p.name}</strong><p className="text-xs text-slate-400">{p.title} · {(p.jobs||[]).length} scheduled stops</p></div><button onClick={()=>setDrawer({type:"route",person:p})} className="rounded-lg border border-cyan-400/30 px-2 py-1.5 text-xs text-cyan-200">Route</button></div>
       <p className="mt-1 truncate text-[11px] text-slate-400">Base: {p.route_start_address||"not set"}</p>
       <p className="mt-1 text-[11px] text-cyan-200">Specialties: {profile.skills?.length?profile.skills.join(" · "):"Not configured"}</p>
-      <div className="mt-3 space-y-2">{p.jobs?.length?p.jobs.map(j=><JobLine key={j.ticket_id} job={j} onOpen={id=>nav(`/tickets/${id}`)} onDelay={changeDelay} busy={busy}/>):<p className="rounded-xl border border-dashed border-white/15 p-3 text-xs text-slate-400">No scheduled work. Use the Tech Board to assign tickets.</p>}</div>
+      <div className="mt-3 space-y-2">{p.jobs?.length?p.jobs.map(j=><JobLine key={j.ticket_id} job={j} onOpen={id=>nav(`/tickets/${id}`)} onDelay={changeDelay} busy={busy} onSaved={()=>setRefreshKey(x=>x+1)}/>):<p className="rounded-xl border border-dashed border-white/15 p-3 text-xs text-slate-400">No scheduled work. Use the Tech Board to assign tickets.</p>}</div>
     </section>})}</div>}
     {!busy&&!staff.length&&<p className="text-sm text-slate-300">No schedulable technicians found. Configure specialties and working hours in Workforce Settings.</p>}
    </main>
