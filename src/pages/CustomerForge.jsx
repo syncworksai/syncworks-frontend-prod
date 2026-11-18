@@ -104,7 +104,7 @@ export default function CustomerForge(){
   const [breathing,setBreathing]=useState(false);
   const [breathSeconds,setBreathSeconds]=useState(0);
   const [video,setVideo]=useState("");
-  const audioEl=useRef(null),audioUrl=useRef(""),abortRef=useRef(null),playId=useRef(0);
+  const audioEl=useRef(null),audioUrl=useRef(""),abortRef=useRef(null),playId=useRef(0),audioCancelRef=useRef(null);
   const forgeShellRef=useRef(null);
   const synthParts=useRef([]),synthIndex=useRef(0);
   const key=keyFor(email);
@@ -211,6 +211,7 @@ export default function CustomerForge(){
     playId.current+=1;
     setAudioError("");
     if(abortRef.current){abortRef.current.abort();abortRef.current=null;}
+    if(audioCancelRef.current){audioCancelRef.current(new Error("Playback stopped"));audioCancelRef.current=null;}
     if(audioEl.current){audioEl.current.pause();audioEl.current.onended=null;audioEl.current.onerror=null;audioEl.current.removeAttribute("src");audioEl.current=null;}
     if(audioUrl.current){URL.revokeObjectURL(audioUrl.current);audioUrl.current="";}
     if("speechSynthesis" in window)window.speechSynthesis.cancel();
@@ -245,7 +246,7 @@ export default function CustomerForge(){
   function setupCarMediaSession(title){
     if(!("mediaSession" in navigator))return;
     try{
-      navigator.mediaSession.metadata=new MediaMetadata({title,artist:"SyncWorks Jarvis · The Forge",album:"Personal Knowledge Academy"});
+      navigator.mediaSession.metadata=new MediaMetadata({title,artist:(forgeVoice==="jarvis"?"SyncWorks Jarvis":"The Forge narrator")+" · The Forge",album:"Personal Knowledge Academy"});
       navigator.mediaSession.setActionHandler("play",()=>{audioEl.current?.play().then(()=>setAudioState("playing")).catch(()=>setAudioStatus("Tap Play to resume"));});
       navigator.mediaSession.setActionHandler("pause",()=>{audioEl.current?.pause();setAudioState("paused");});
       navigator.mediaSession.setActionHandler("stop",()=>stopAudio());
@@ -261,7 +262,7 @@ export default function CustomerForge(){
     const voice=forgeVoice;
     let bookmark=opts.resume?getBookmark(id,voice):{part:0,seconds:0};
     const startPart=Math.max(0,Math.min(bookmark.part,parts.length-1));
-    setAudioStatus("Preparing SyncWorks Jarvis audiobook...");
+    setAudioStatus("Preparing "+(voice==="jarvis"?"SyncWorks Jarvis":"Forge")+" audiobook...");
     // Keep a single HTMLAudioElement across chunks; separate elements can lose
     // iOS / Bluetooth playback authorization at every segment boundary.
     const player=audioEl.current||new Audio();
@@ -277,15 +278,16 @@ export default function CustomerForge(){
       player.src=url;player.load();
       const seconds=i===startPart?bookmark.seconds:0;
       await new Promise((resolve,reject)=>{
+        audioCancelRef.current=reject;
         let lastSaved=0;
         player.onloadedmetadata=()=>{if(seconds>0&&Number.isFinite(player.duration)){try{player.currentTime=Math.min(seconds,Math.max(0,player.duration-.2));}catch{}}};
         player.ontimeupdate=()=>{if(token!==playId.current)return;const second=player.currentTime||0;if(second-lastSaved>=5){lastSaved=second;saveBookmark(id,i,second,voice);}};
-        player.onended=()=>{saveBookmark(id,i+1,0,voice);resolve();};
-        player.onerror=()=>reject(new Error("Audio segment could not play"));
+        player.onended=()=>{audioCancelRef.current=null;saveBookmark(id,i+1,0,voice);resolve();};
+        player.onerror=()=>{audioCancelRef.current=null;reject(new Error("Audio segment could not play"));};
         player.play().then(()=>{
           if(token===playId.current){
             setupCarMediaSession(title);setAudioState("playing");
-            setAudioStatus("SyncWorks Jarvis · section "+(i+1)+" of "+parts.length);
+            setAudioStatus((voice==="jarvis"?"SyncWorks Jarvis":"Forge narrator")+" · section "+(i+1)+" of "+parts.length);
           }
         }).catch(reject);
       });
@@ -347,7 +349,7 @@ export default function CustomerForge(){
   }
   function toggleAudio(){
     if(audioState==="paused"){
-      if(audioEl.current)audioEl.current.play();
+      if(audioEl.current)audioEl.current.play().catch(()=>setAudioStatus("Tap Listen to resume playback"));
       else window.speechSynthesis?.resume();
       setAudioState("playing");return;
     }
