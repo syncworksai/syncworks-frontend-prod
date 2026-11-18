@@ -67,6 +67,7 @@ import SboCatalog from "./pages/SboCatalog";
 import BusinessInternalTicketCreator from "./pages/BusinessInternalTicketCreator";
 import SboCustomers from "./pages/sbo/SboCustomers";
 import BusinessQuickIntake from "./pages/sbo/BusinessQuickIntake";
+import CustomerBusinessConnect from "./pages/CustomerBusinessConnect";
 import BusinessCustomerImport from "./pages/sbo/BusinessCustomerImport";
 import BusinessPilotTest from "./pages/sbo/BusinessPilotTest";
 import BusinessTechBoard from "./pages/sbo/BusinessTechBoard";
@@ -182,6 +183,7 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/customer/connect" element={<CustomerBusinessConnect />} />
         <Route path="/get-started" element={<GetStarted />} />
         <Route path="/onboarding/business" element={<ProtectedRoute><AddBusiness /></ProtectedRoute>} />
         <Route path="/onboarding/property-management" element={<ProtectedRoute><PMCompanySetup /></ProtectedRoute>} />
