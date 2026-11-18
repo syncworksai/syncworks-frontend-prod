@@ -389,3 +389,15 @@
 @media(prefers-reduced-motion:reduce){
   .forge3-mobile-missions-trigger,.forge3-sidebar.forge3-missions-open,.forge3-reading-home-actions button{animation:none!important;transition:none!important}
 }
+
+/* Restrained holographic reveal for modal command surfaces. */
+@keyframes forge16-panel-reveal{
+  from{opacity:0;transform:translateY(12px) scale(.985)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+@media(max-width:720px) and (prefers-reduced-motion:no-preference){
+ .forge3-sidebar.forge3-missions-open,.forge3-audio-settings-dialog{animation:forge16-panel-reveal .24s ease-out both}
+ .forge3-missions-scrim{animation:forge16-fade .2s ease both}
+ .forge3-reading-home-actions button:active,.forge3-mobile-missions-trigger:active{transform:scale(.98)}
+}
+@keyframes forge16-fade{from{opacity:0}to{opacity:1}}
