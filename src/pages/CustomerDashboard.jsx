@@ -37,6 +37,7 @@ import {
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import api from "../api/client";
+import { fetchPersonalCalendarEvents } from "../api/personalCalendarAgenda";
 import { getBrowserCurrentLocation } from "../api/locationContext";
 import { getLiveWeather } from "../api/liveContext";
 import { useAuth } from "../auth/AuthContext";
@@ -171,15 +172,7 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
     Promise.allSettled([
       api.get("/tickets/"),
       api.get("/sync-ai/customer/invoices/"),
-      (async () => {
-        const rows = [];
-        for (let page = 1; page <= 40; page += 1) {
-          const response = await api.get("/personal-calendar/events/", { params: { status: "ACTIVE", page } });
-          rows.push(...safeList(response.data));
-          if (!response.data?.next) return rows;
-        }
-        return rows;
-      })(),
+      fetchPersonalCalendarEvents(),
       api.get("/personal-finance/dashboard/"),
     ]).then(([ticketResult, invoiceResult, calendarResult, financeResult]) => {
       if (!mounted) return;
@@ -198,14 +191,52 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
     return () => { mounted = false; };
   }, []);
 
+  // Recheck appointments after navigating back from the calendar, without a page reload.
+  useEffect(() => {
+    let alive = true;
+    const refreshCalendar = () => {
+      fetchPersonalCalendarEvents().then(rows => { if (alive) setCalendarEvents(rows); }).catch(() => {});
+    };
+    const onVisibility = () => { if (document.visibilityState === "visible") refreshCalendar(); };
+    window.addEventListener("focus", refreshCalendar);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("sw:calendar-updated", refreshCalendar);
+    return () => {
+      alive = false;
+      window.removeEventListener("focus", refreshCalendar);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("sw:calendar-updated", refreshCalendar);
+    };
+  }, []);
+
   const openTickets = useMemo(() => tickets.filter((item) => !["COMPLETED", "CLOSED", "CANCELLED", "PAID"].includes(String(item?.status || "").toUpperCase())), [tickets]);
   const urgentTickets = useMemo(() => openTickets.filter((item) => ["EMERGENCY", "URGENT", "PAST_DUE", "OVERDUE"].includes(String(item?.priority || item?.status || "").toUpperCase())), [openTickets]);
   const dueInvoices = useMemo(() => invoices.filter((item) => !["PAID", "VOID"].includes(String(item?.derived_state || item?.status || "").toUpperCase())), [invoices]);
   const overdueInvoices = useMemo(() => dueInvoices.filter(invoiceIsOverdue), [dueInvoices]);
   const amountDue = useMemo(() => dueInvoices.reduce((sum, item) => sum + Number(item?.balance_due ?? item?.total ?? 0), 0), [dueInvoices]);
-  const upcomingEvents = useMemo(() => calendarEvents.filter((item) => item?.start_at && new Date(item.start_at).getTime() >= Date.now()).sort((a, b) => new Date(a.start_at) - new Date(b.start_at)), [calendarEvents]);
+  // Keep in-progress appointments and events spanning midnight visible.
+  const upcomingEvents = useMemo(() => calendarEvents.filter((item) => {
+    if (!item?.start_at) return false;
+    const end = new Date(item.end_at || item.start_at).getTime();
+    return Number.isFinite(end) && end >= Date.now();
+  }).sort((a,b) => new Date(a.start_at) - new Date(b.start_at)), [calendarEvents]);
   const todayKey = new Date().toDateString();
-  const todayEvents = useMemo(() => calendarEvents.filter((item) => item?.start_at && new Date(item.start_at).toDateString() === todayKey).sort((a, b) => new Date(a.start_at) - new Date(b.start_at)), [calendarEvents, todayKey]);
+  const todayEvents = useMemo(() => calendarEvents.filter((item) => {
+    if (!item?.start_at) return false;
+    const start = new Date(item.start_at);
+    const end = new Date(item.end_at || item.start_at);
+    const dayStart = new Date(); dayStart.setHours(0,0,0,0);
+    const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate()+1);
+    return start < dayEnd && end >= dayStart;
+  }).sort((a,b) => new Date(a.start_at) - new Date(b.start_at)), [calendarEvents, todayKey]);
+  const agendaEvents = useMemo(() => {
+    const result = [...todayEvents];
+    for (const event of upcomingEvents) {
+      if (!result.some(row => String(row.id) === String(event.id))) result.push(event);
+      if (result.length >= 6) break;
+    }
+    return result.slice(0,6);
+  }, [todayEvents, upcomingEvents]);
   const nextEvent = upcomingEvents[0] || null;
   const nextDestination = upcomingEvents.find((item) => eventLocation(item)) || null;
   const healthEvents = useMemo(() => todayEvents.filter((item) => String(item?.source || "").toUpperCase() === "HEALTH" || /workout|gym|training/i.test(String(item?.title || ""))), [todayEvents]);
@@ -287,21 +318,25 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
               <button type="button" className="sw-office-briefing" onClick={()=>nav("/sync")}><Sparkles size={17}/> Get my SYNC briefing <ChevronRight size={16}/></button>
             </div>
             <div className="sw-office-briefing-text" aria-label="Current snapshot">{brief}</div>
-            <div className="sw-office-agenda" aria-label="Today's schedule">
-              <div className="sw-office-agenda-heading"><span><CalendarDays size={16}/> Today's schedule</span><button type="button" onClick={() => nav("/calendar")}>Full calendar <ChevronRight size={14}/></button></div>
-              {todayEvents.length ? (
+            <div className="sw-office-agenda" aria-label="Today and upcoming calendar">
+              <div className="sw-office-agenda-heading"><span><CalendarDays size={16}/> Today & upcoming <small>· {todayEvents.length} today</small></span><button type="button" onClick={() => nav("/calendar")}>Full calendar <ChevronRight size={14}/></button></div>
+              {agendaEvents.length ? (
                 <div className="sw-office-agenda-items">
-                  {[...todayEvents].sort((a,b) => new Date(a.start_at) - new Date(b.start_at)).slice(0,4).map((event) => {
+                  {agendaEvents.map((event) => {
                     const business = String(event?.metadata?.event_category || (event?.metadata?.business_id ? "BUSINESS" : "PERSONAL")).toUpperCase() === "BUSINESS";
+                    const start = new Date(event.start_at);
+                    const end = new Date(event.end_at || event.start_at);
+                    const inProgress = !event.all_day && start.getTime() <= Date.now() && end.getTime() > Date.now();
+                    const sameDay = start.toDateString() === todayKey;
+                    const label = inProgress ? "Now" : sameDay ? "Today" : start.toLocaleDateString("en-US", {weekday:"short",month:"short",day:"numeric"});
                     return <button type="button" key={event.id} onClick={() => nav("/calendar")} className="sw-office-agenda-event">
-                      <span className="sw-office-agenda-time">{event.all_day ? "All day" : eventTime(event)}</span>
+                      <span className="sw-office-agenda-time"><strong>{label}</strong>{event.all_day ? "All day" : eventTime(event)}</span>
                       <span className="sw-office-agenda-name">{event.title || "Untitled event"}</span>
                       <span className={business ? "sw-office-agenda-tag business" : "sw-office-agenda-tag"}>{business ? (event?.metadata?.business_name || "Business") : "Personal"}</span>
                     </button>;
                   })}
-                  {todayEvents.length > 4 && <button type="button" className="sw-office-agenda-more" onClick={() => nav("/calendar")}>+{todayEvents.length - 4} more events</button>}
                 </div>
-              ) : <div className="sw-office-agenda-empty">No events today. <button type="button" onClick={() => nav("/calendar")}>Add an event</button></div>}
+              ) : <div className="sw-office-agenda-empty">No upcoming events found. <button type="button" onClick={() => nav("/calendar")}>Open calendar</button></div>}
             </div>
             <div className="sw-office-priorities">
               <button type="button" onClick={()=>nav("/customer/tasks")}><strong>Tasks</strong><span>Review what needs doing</span><ChevronRight size={16}/></button>
