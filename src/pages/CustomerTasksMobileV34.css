@@ -15,3 +15,20 @@
   .sw-todo-workspace > section:nth-child(2) .text-sm{font-size:10px}
   .sw-todo-workspace > section:nth-child(n+3){min-width:0;max-width:100%}
 }
+
+/* Task lifecycle controls: edit / complete / archive / restore. */
+.sw-todo-task-row{min-width:0;max-width:100%}
+.sw-todo-task-row .sw-todo-row-actions{justify-content:flex-end;min-width:0}
+.sw-todo-action{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:34px;padding:6px 9px;border-radius:9px;border:1px solid rgba(103,215,247,.23);background:rgba(4,21,42,.75);color:#d8f4ff;font-size:10px;font-weight:800;white-space:nowrap;transition:background .18s ease}
+.sw-todo-action:hover{background:rgba(36,132,172,.23)}
+.sw-todo-action:disabled{opacity:.45;cursor:wait}
+.sw-todo-tabs{max-width:100%;overflow-x:auto;scrollbar-width:none}
+.sw-todo-list-layout{min-width:0;max-width:100%}
+@media(max-width:767px){
+ .sw-todo-task-row{align-items:flex-start!important;padding:10px!important}
+ .sw-todo-task-row .sw-todo-row-actions{flex:1 0 100%;width:100%;justify-content:flex-start;border-top:1px solid rgba(255,255,255,.08);padding-top:8px}
+ .sw-todo-action{flex:1;min-width:0;padding:7px 4px}
+ .sw-todo-tabs{flex-wrap:nowrap!important}
+ .sw-todo-tabs button{flex:1 0 auto;min-width:0;padding:8px 10px}
+ .sw-todo-task-row input{font-size:16px!important}
+}
