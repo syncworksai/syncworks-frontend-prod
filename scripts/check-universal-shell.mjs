@@ -49,3 +49,16 @@ test("PM Tenant Center has anchored mobile tabs and edit action", () => {
   const editor = readFileSync(new URL("../src/components/pm/PMTenantEditOverlay.jsx", import.meta.url), "utf8");
   assert.match(editor, /sw:pm-edit-tenant/);
 });
+
+test("Messages is reachable from Personal and mobile inbox has two views", () => {
+  const launcher = readFileSync(new URL("../src/components/customer/CustomerWorkspace.jsx", import.meta.url), "utf8");
+  assert.match(launcher, /\["Messages","\/customer\/inbox",Inbox\]/);
+  const inbox = readFileSync(new URL("../src/pages/InboxPage.jsx", import.meta.url), "utf8");
+  assert.match(inbox, /data-sw-inbox-view=/);
+  assert.match(inbox, /setMobileConversationOpen\(true\)/);
+  assert.match(inbox, /sw-inbox-conversation/);
+  const css = readFileSync(new URL("../src/pages/InboxMobileShell.css", import.meta.url), "utf8");
+  assert.match(css, /data-sw-inbox-view="list"/);
+  assert.match(css, /data-sw-inbox-view="conversation"/);
+  assert.match(css, /overflow-y:auto/);
+});
