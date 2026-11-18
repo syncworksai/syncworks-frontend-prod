@@ -857,7 +857,7 @@ export default function UniversalTicketCreator({
         ) : null}
 
         <div className="sw-new-request-workspace mt-5 space-y-5 pb-28 md:pb-0" aria-label={`${STEPS[step].label} request step`}>
-          <div key={step} className="sw-new-request-stage" data-direction={stageDirection} ref={stageRef}>
+          <div key={step} className="sw-new-request-stage" data-request-step={STEPS[step].key} data-direction={stageDirection} ref={stageRef}>
           {step === 0 ? (
             <>
               {!isBusinessInternal ? (
