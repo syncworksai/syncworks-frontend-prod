@@ -28,6 +28,7 @@ export default function RequestLocationCard({
   const [profile, setProfile] = useState(null);
   const [locating, setLocating] = useState(false);
   const [locationMessage, setLocationMessage] = useState("");
+  const [editingAddress, setEditingAddress] = useState(isBusinessInternal);
 
   function applyLocation(location = {}) {
     setAddress(location.address_line1 || location.address || "");
@@ -35,6 +36,7 @@ export default function RequestLocationCard({
     setCity?.(location.city || "");
     setStateRegion?.(location.state || location.stateRegion || "");
     setServiceZip?.(location.postal_code || location.serviceZip || "");
+    setEditingAddress(false);
   }
 
   useEffect(() => {
@@ -82,7 +84,7 @@ export default function RequestLocationCard({
   }
 
   return (
-    <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4 shadow-[0_0_34px_rgba(15,23,42,0.35)] md:p-5">
+    <div className="sw-request-location-card rounded-3xl border border-slate-800 bg-slate-950/45 p-4 shadow-[0_0_34px_rgba(15,23,42,0.35)] md:p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-black text-slate-100">Service location</div>
@@ -146,7 +148,23 @@ export default function RequestLocationCard({
         </div>
       ) : null}
 
-      <div className="mt-4 space-y-3">
+      {!isBusinessInternal && (
+        <div className="sw-request-address-summary mt-3 flex items-center justify-between gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
+          <div className="min-w-0">
+            <div className="text-[10px] font-black uppercase tracking-wider text-cyan-200">Service address</div>
+            <div className="truncate text-sm font-semibold text-white">
+              {[address, unit, city, stateRegion, serviceZip].filter(Boolean).join(", ") || (prefillStatus === "loading" ? "Loading saved home address..." : "No saved address")}
+            </div>
+          </div>
+          <button type="button" onClick={() => setEditingAddress(value => !value)}
+            aria-expanded={editingAddress}
+            className="shrink-0 rounded-xl border border-cyan-400/40 px-3 py-2 text-xs font-bold text-cyan-100">
+            {editingAddress ? "Done" : "Change"}
+          </button>
+        </div>
+      )}
+      {(isBusinessInternal || editingAddress || (prefillStatus !== "loading" && !address.trim())) && (
+      <div className="sw-request-address-fields mt-4 space-y-3">
         <label className="block">
           <span className="text-[11px] font-semibold text-slate-400">Street address</span>
           <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="9073 Chastain Park Dr" className="mt-1 w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 outline-none transition focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/10" />
@@ -182,6 +200,7 @@ export default function RequestLocationCard({
             : "Marketplace routing uses the service location selected here — not necessarily your Home location — along with service type, urgency, and provider service radius."}
         </div>
       </div>
+      )}
     </div>
   );
 }
