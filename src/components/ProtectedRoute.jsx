@@ -2,6 +2,7 @@
 
 import React, {
   useCallback,
+  useEffect,
   useState,
 } from "react";
 
@@ -14,8 +15,24 @@ import { useAuth } from "../auth/AuthContext";
 import GlobalModeBar from "./navigation/GlobalModeBar";
 import EmployeeBusinessRouteGate from "./EmployeeBusinessRouteGate";
 
-function LoadingScreen({ message = "Loading SyncWorks..." }) {
-  return <div className="flex min-h-screen items-center justify-center bg-[#020617] px-4 text-white"><div className="w-full max-w-sm rounded-3xl border border-slate-800 bg-slate-950/70 p-6 text-center shadow-2xl backdrop-blur"><div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-slate-700 border-t-cyan-400" /><div className="mt-4 text-sm font-semibold text-slate-100">{message}</div><div className="mt-1 text-xs text-slate-400">Restoring your secure session.</div></div></div>;
+function LoadingScreen({ message = "Loading SyncWorks...", showRecovery = false, onRetry, retrying }) {
+  return (
+    <div className="flex min-h-dvh items-center justify-center bg-[#020617] px-4 pb-24 text-white">
+      <div className="w-full max-w-sm rounded-3xl border border-cyan-500/30 bg-slate-950/75 p-6 text-center shadow-2xl backdrop-blur">
+        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-slate-700 border-t-cyan-400" />
+        <div className="mt-4 text-base font-semibold text-slate-100">{message}</div>
+        <div className="mt-1 text-xs text-slate-400">
+          {showRecovery ? "The connection is taking longer than usual. Your saved sign-in is safe." : "Restoring your secure session."}
+        </div>
+        {showRecovery && (
+          <button type="button" onClick={onRetry} disabled={retrying}
+            className="mt-5 min-h-11 w-full rounded-xl border border-cyan-400/40 bg-cyan-500/15 px-4 py-3 text-sm font-semibold text-cyan-100 disabled:opacity-50">
+            {retrying ? "Checking connection..." : "Try connecting again"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function ReconnectingScreen({ message, onRetry, retrying }) {
@@ -26,6 +43,16 @@ export default function ProtectedRoute({ children }) {
   const location = useLocation();
   const { user, booting, authStatus, authError, hasStoredToken, isAuthenticationUnavailable, retryAuthentication } = useAuth();
   const [retrying, setRetrying] = useState(false);
+  const [slowStartup, setSlowStartup] = useState(false);
+
+  useEffect(() => {
+    if (user || (!booting && authStatus !== "booting")) {
+      setSlowStartup(false);
+      return undefined;
+    }
+    const timeoutId = window.setTimeout(() => setSlowStartup(true), 8000);
+    return () => window.clearTimeout(timeoutId);
+  }, [user, booting, authStatus]);
 
   const handleRetry = useCallback(async () => {
     if (retrying) return;
@@ -37,13 +64,13 @@ export default function ProtectedRoute({ children }) {
     return <><GlobalModeBar /><EmployeeBusinessRouteGate user={user}>{children}</EmployeeBusinessRouteGate></>;
   }
 
-  if (booting || authStatus === "booting") return <LoadingScreen message="Loading SyncWorks..." />;
+  if (booting || authStatus === "booting") return <LoadingScreen message="Loading SyncWorks..." showRecovery={slowStartup} onRetry={handleRetry} retrying={retrying} />;
 
   if (hasStoredToken && isAuthenticationUnavailable) {
     return <ReconnectingScreen message={authError} onRetry={handleRetry} retrying={retrying} />;
   }
 
-  if (hasStoredToken && authStatus !== "anonymous") return <LoadingScreen message="Restoring your session..." />;
+  if (hasStoredToken && authStatus !== "anonymous") return <LoadingScreen message="Restoring your session..." showRecovery={slowStartup} onRetry={handleRetry} retrying={retrying} />;
 
   return <Navigate to="/login" replace state={{ from: location.pathname + location.search + location.hash }} />;
 }
