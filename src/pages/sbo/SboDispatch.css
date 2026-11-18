@@ -1,0 +1,6 @@
+.sw-dispatch-page{background:#031026;color:#f4f8ff}.sw-dispatch-photo{background:url('/office-themes/syncworks-future.webp') center 52%/cover no-repeat;opacity:.9}
+.sw-dispatch-job{background:rgba(4,16,38,.48);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.sw-dispatch-page button:focus-visible,.sw-dispatch-page a:focus-visible{outline:2px solid #67e8f9;outline-offset:2px}
+.sw-dispatch-page main{scrollbar-width:thin;scrollbar-color:#26738d transparent}
+.sw-dispatch-page aside{scrollbar-width:thin;scrollbar-color:#26738d transparent}
+@media(max-width:640px){.sw-dispatch-page{height:calc(100dvh - 170px);min-height:360px}.sw-dispatch-page .sw-dispatch-photo{background-position:62% center}}
