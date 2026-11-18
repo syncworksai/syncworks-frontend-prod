@@ -660,6 +660,8 @@ export default function SboDashboard() {
       loading={loading}
       err={err}
       ticketRows={ticketRows}
+      kpiRows={kpiRows}
+      activeBusinessId={activeBusinessId}
       openTickets={openTickets}
       revenueThisMonth={revenueThisMonth}
       completedJobs={completedJobs}
