@@ -469,3 +469,9 @@
   .forge3-mobile-utilities{gap:8px}
   .forge3-mobile-academy-trigger:focus-visible{outline:2px solid #ffe0a5;outline-offset:2px}
 }
+
+
+/* Forge v19 — audiobook listening controls without expanding the fixed mobile stage */
+.forge3-queue-actions{display:flex;gap:7px;align-items:center;flex:0 0 auto}
+.forge3-queue-actions button{display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(241,195,121,.58);border-radius:9px;color:#ffe0b0;font-size:11px;font-weight:800;padding:8px;background:rgba(75,41,27,.5)}
+@media(max-width:720px){.forge3-queue-actions{width:100%;justify-content:flex-end}.forge3-queue-actions button{min-height:32px;font-size:10px;padding:6px}.forge3-player:has(.forge3-queue-actions) .forge3-audio-status{max-height:18px}}
