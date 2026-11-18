@@ -4,6 +4,8 @@ import api from "../api/client";
 import ModeBar from "../components/ModeBar";
 import BusinessPicker from "../components/BusinessPicker";
 import { useAuth } from "../auth/AuthContext";
+import "../styles/BusinessWorkspaceTheme.css";
+import {useBusinessWorkspaceTheme} from "../hooks/useBusinessWorkspaceTheme";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -11,7 +13,7 @@ function cx(...parts) {
 
 function Card({ title, subtitle, right, children, className = "" }) {
   return (
-    <div className={cx("rounded-3xl border border-slate-800 bg-slate-950/40 p-5", className)}>
+    <div className={cx("sw-business-themed-card rounded-3xl border border-slate-800 bg-slate-950/40 p-5", className)}>
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <div className="font-semibold text-slate-100">{title}</div>
@@ -147,6 +149,7 @@ const DEFAULT_FORM = {
 
 export default function SboCatalog() {
   const navigate = useNavigate();
+  const {themeProps}=useBusinessWorkspaceTheme();
   const { activeBusinessId, myBusinesses } = useAuth();
 
   const [items, setItems] = useState([]);
@@ -310,7 +313,7 @@ export default function SboCatalog() {
   }, [items]);
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100">
+    <div {...themeProps} className="sw-business-catalog-theme relative min-h-screen text-slate-100">
       <ModeBar
         title="Service Catalog"
         subtitle="Configure business services, categories, quick choices, estimated job times and pricing."
