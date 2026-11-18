@@ -76,3 +76,17 @@ test("Inbox mobile layout uses full-width panes and differentiates message sourc
   assert.match(css, /width:100%!important/);
   assert.match(css, /data-sw-inbox-source="email"/);
 });
+
+test("PM Messages uses anchored panels without blocking thread loading on related record requests", () => {
+  const page = readFileSync(new URL("../src/pages/PMMessages.jsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../src/pages/PMMessagesMobile.css", import.meta.url), "utf8");
+  assert.match(page, /data-sw-pm-messages="true"/);
+  assert.match(page, /sw-pm-message-shortcuts/);
+  assert.match(page, /Sync Email/);
+  assert.match(page, /Business Inbox/);
+  assert.match(page, /Promise.allSettled/);
+  assert.match(page, /sw-pm-action-drawer/);
+  assert.match(css, /data-sw-pm-chat="list"/);
+  assert.match(css, /data-sw-pm-chat="open"/);
+  assert.match(css, /overflow-y:auto/);
+});
