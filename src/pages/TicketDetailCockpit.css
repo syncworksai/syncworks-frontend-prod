@@ -23,3 +23,62 @@
 .sw-ticket-overlay-panel{padding:12px 12px calc(105px + env(safe-area-inset-bottom));border-left:0}
 }
 @media(prefers-reduced-motion:reduce){.sw-ticket-overlay-panel{animation:none}.sw-ticket-main .sw-ticket-quick-actions button{transition:none;transform:none!important}}
+
+/* Legibility recovery: never compress desktop ticket contents into a clipped flex track.
+   Desktop uses the browser scroll; mobile retains one-screen chrome with a real scrollable work area. */
+@media(min-width:768px){
+ .sw-ticket-cockpit{
+   display:block!important;height:auto!important;min-height:calc(100dvh - 56px)!important;
+   overflow:visible!important;padding-bottom:90px!important;
+ }
+ .sw-ticket-cockpit>.sw-ticket-main{
+   display:block!important;height:auto!important;min-height:0!important;
+   overflow:visible!important;max-width:1500px!important;
+   padding:16px 22px 90px!important;
+ }
+ .sw-ticket-main>*{margin-bottom:13px!important}
+ .sw-ticket-main>.sw-ticket-workspace{
+   display:block!important;height:auto!important;min-height:0!important;
+   overflow:visible!important;
+ }
+ .sw-ticket-workspace-panel{
+   height:auto!important;max-height:none!important;min-height:0!important;
+   overflow:visible!important;
+ }
+ .sw-ticket-workspace-panel>div:first-child{
+   display:grid!important;
+   grid-template-columns:repeat(2,minmax(0,1fr))!important;
+   align-items:start!important;gap:14px!important;
+ }
+ .sw-ticket-workspace-panel>div:first-child>*{min-width:0}
+ .sw-ticket-workspace-panel>div:first-child>*:first-child{grid-column:1 / -1}
+ .sw-ticket-main .sw-ticket-quick-actions{max-width:none}
+ .sw-ticket-main .sw-ticket-quick-actions button{
+   min-height:48px!important;font-size:14px!important;font-weight:700!important;
+ }
+ .sw-ticket-main .grid.md\\:grid-cols-2.xl\\:grid-cols-4 > div{
+   min-height:84px!important;padding:15px!important;
+ }
+ .sw-ticket-main .grid.md\\:grid-cols-2.xl\\:grid-cols-4 > div .text-lg{font-size:19px!important}
+ .sw-ticket-overlay-panel{width:min(690px,90vw)!important}
+}
+@media(max-width:767px){
+ .sw-ticket-cockpit{display:flex!important;height:calc(100dvh - 58px)!important;overflow:hidden!important}
+ .sw-ticket-cockpit>.sw-ticket-main{
+    display:flex!important;flex-direction:column!important;flex:1 1 0%!important;
+    min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain;
+    padding:8px 10px calc(135px + env(safe-area-inset-bottom))!important;
+ }
+ .sw-ticket-main>.sw-ticket-workspace{
+    flex:0 0 auto!important;height:auto!important;min-height:180px!important;
+    overflow:visible!important;
+ }
+ .sw-ticket-workspace-panel{
+    overflow:visible!important;min-height:180px!important;max-height:none!important;
+ }
+ .sw-ticket-workspace-panel>div:first-child{display:block!important}
+ .sw-ticket-workspace-panel>div:first-child>*{margin-bottom:10px!important}
+ .sw-ticket-main .sw-ticket-quick-actions button{
+    min-height:44px!important;font-size:13px!important;
+ }
+}
