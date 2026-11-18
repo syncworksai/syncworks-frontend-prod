@@ -1,6 +1,6 @@
 import "./CustomerTasksMobileV34.css";
 import React, { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Circle, Grid3X3, List, Mic, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Archive, CheckCircle2, Circle, Grid3X3, List, Mic, Pencil, Plus, RotateCcw, Sparkles, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DashboardShell from "../components/dashboard/DashboardShell";
 import api from "../api/client";
@@ -25,6 +25,11 @@ export default function CustomerTasks() {
   const [syncStatus, setSyncStatus] = useState("loading");
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState("grid");
+  const [section, setSection] = useState("active");
+  const [editingId, setEditingId] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [pendingId, setPendingId] = useState(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
@@ -37,7 +42,7 @@ export default function CustomerTasks() {
         const rows = await fetchPersonalCalendarEvents();
         if (!active) return;
         setRemoteTasks(rows.filter(row => String(row?.metadata?.entity_type || "").toUpperCase() === "TASK")
-          .map(row => ({ id: "remote:" + row.id, remoteId: row.id, title: row.title, done: String(row.metadata?.task_status || "OPEN").toUpperCase() === "DONE", created_at: row.created_at || row.start_at, raw: row })));
+          .map(row => ({ id: "remote:" + row.id, remoteId: row.id, title: row.title, done: String(row.metadata?.task_status || "OPEN").toUpperCase() === "DONE", archived: String(row.metadata?.task_status || "OPEN").toUpperCase() === "ARCHIVED", created_at: row.created_at || row.start_at, raw: row })));
         setSyncStatus("ready");
       } catch {
         if (active) setSyncStatus("offline");
@@ -48,8 +53,9 @@ export default function CustomerTasks() {
     return () => { active = false; window.removeEventListener("focus", reload); };
   }, []);
   const allTasks = useMemo(() => [...remoteTasks, ...tasks], [remoteTasks, tasks]);
-  const open = useMemo(() => allTasks.filter((task) => !task.done), [allTasks]);
-  const done = useMemo(() => allTasks.filter((task) => task.done), [allTasks]);
+  const open = useMemo(() => allTasks.filter((task) => !task.done && !task.archived), [allTasks]);
+  const done = useMemo(() => allTasks.filter((task) => task.done && !task.archived), [allTasks]);
+  const archived = useMemo(() => allTasks.filter((task) => task.archived), [allTasks]);
 
   async function addTask(event) {
     event.preventDefault();
@@ -83,31 +89,94 @@ export default function CustomerTasks() {
     } finally { setBusy(false); }
   }
 
+  // One mutation path for account-backed and device-local tasks.
+  async function updateTask(id, changes) {
+    const remote = remoteTasks.find(row => row.id === id);
+    setActionError("");
+    setPendingId(id);
+    try {
+      if (remote) {
+        const nextStatus = changes.archived ? "ARCHIVED" : changes.done ? "DONE" : "OPEN";
+        const payload = {
+          ...(changes.title !== undefined ? { title: changes.title } : {}),
+          metadata: {
+            ...(remote.raw?.metadata || {}),
+            entity_type: "TASK",
+            task_status: nextStatus,
+            ...(changes.archived ? { task_archived_at: new Date().toISOString() } : { task_archived_at: null }),
+          },
+        };
+        const response = await api.patch(`/personal-calendar/events/${remote.remoteId}/`, payload);
+        const next = response.data || {};
+        setRemoteTasks(current => current.map(row => row.id === id ? {
+          ...row,
+          ...changes,
+          raw: { ...row.raw, ...next, title: changes.title ?? row.title, metadata: { ...(row.raw?.metadata || {}), ...payload.metadata, ...(next.metadata || {}) } },
+        } : row));
+        setSyncStatus("ready");
+      } else {
+        setTasks(current => current.map(row => row.id === id ? { ...row, ...changes } : row));
+      }
+      return true;
+    } catch {
+      setActionError("This task could not be updated. Please retry.");
+      setSyncStatus("offline");
+      return false;
+    } finally {
+      setPendingId(null);
+    }
+  }
+
   async function toggle(id) {
-    const task = remoteTasks.find(row => row.id === id);
-    if (!task) {
-      setTasks(current => current.map(row => row.id === id ? { ...row, done: !row.done } : row));
+    const item = allTasks.find(row => row.id === id);
+    if (!item) return;
+    await updateTask(id, { done: !item.done, archived: false });
+  }
+
+  function beginEdit(task) {
+    setEditingId(task.id);
+    setEditTitle(task.title || "");
+    setActionError("");
+  }
+
+  async function saveEdit(id) {
+    const value = editTitle.trim();
+    if (!value) {
+      setActionError("Enter a task title.");
       return;
     }
-    const nextDone = !task.done;
-    try {
-      await api.patch(`/personal-calendar/events/${task.remoteId}/`, {
-        metadata: { ...(task.raw?.metadata || {}), entity_type: "TASK", task_status: nextDone ? "DONE" : "OPEN" },
-      });
-      setRemoteTasks(current => current.map(row => row.id === id ? { ...row, done: nextDone, raw:{...row.raw, metadata:{...(row.raw?.metadata || {}), task_status:nextDone ? "DONE" : "OPEN" }} } : row));
-    } catch { setSyncStatus("offline"); }
+    if (await updateTask(id, { title: value })) {
+      setEditingId(null);
+      setEditTitle("");
+    }
+  }
+
+  async function archiveTask(id) {
+    const item = allTasks.find(row => row.id === id);
+    if (!item) return;
+    await updateTask(id, { archived: true, done: item.done });
+  }
+
+  async function restoreTask(id) {
+    await updateTask(id, { archived: false, done: false });
   }
 
   async function remove(id) {
     const task = remoteTasks.find(row => row.id === id);
-    if (!task) {
-      setTasks(current => current.filter(row => row.id !== id));
-      return;
-    }
+    setActionError("");
+    setPendingId(id);
     try {
-      await api.delete(`/personal-calendar/events/${task.remoteId}/`);
-      setRemoteTasks(current => current.filter(row => row.id !== id));
-    } catch { setSyncStatus("offline"); }
+      if (!task) {
+        setTasks(current => current.filter(row => row.id !== id));
+      } else {
+        await api.delete(`/personal-calendar/events/${task.remoteId}/`);
+        setRemoteTasks(current => current.filter(row => row.id !== id));
+      }
+    } catch {
+      setActionError("Unable to delete this task. Please retry.");
+    } finally {
+      setPendingId(null);
+    }
   }
 
   function askSync() {
@@ -119,13 +188,35 @@ export default function CustomerTasks() {
   }
 
   function TaskRow({ task, compact = false }) {
+    const isEditing = editingId === task.id;
+    const isBusy = pendingId === task.id;
     return (
-      <div className={`group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.025] ${compact ? "p-3" : "p-4"} transition hover:border-white/20 hover:bg-white/[.04]`}>
-        <button type="button" onClick={() => toggle(task.id)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-slate-950/70 text-cyan-200" aria-label={task.done ? "Mark task open" : "Mark task complete"}>
-          {task.done ? <CheckCircle2 className="h-4 w-4 text-emerald-300" /> : <Circle className="h-4 w-4" />}
-        </button>
-        <div className={`min-w-0 flex-1 text-[12px] font-bold ${task.done ? "text-slate-500 line-through" : "text-white"}`}>{task.title}</div>
-        <button type="button" onClick={() => remove(task.id)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-rose-400/15 bg-rose-500/[.06] text-rose-300 opacity-80 transition group-hover:opacity-100" aria-label="Delete task"><Trash2 className="h-3.5 w-3.5" /></button>
+      <div className={`sw-todo-task-row group flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/[.04] ${compact ? "p-3" : "p-4"} transition hover:border-white/20`}>
+        {isEditing ? (
+          <form onSubmit={(event) => { event.preventDefault(); saveEdit(task.id); }} className="flex w-full min-w-0 flex-wrap items-center gap-2">
+            <input autoFocus aria-label="Edit task title" value={editTitle} onChange={(event) => setEditTitle(event.target.value)} className="h-10 min-w-0 flex-1 rounded-xl border border-cyan-400/30 bg-slate-950 px-3 text-base text-white" />
+            <button type="submit" disabled={isBusy} className="h-10 rounded-xl bg-cyan-500 px-3 text-xs font-black text-slate-950">Save</button>
+            <button type="button" onClick={() => setEditingId(null)} className="h-10 rounded-xl border border-white/15 px-3 text-xs">Cancel</button>
+          </form>
+        ) : (
+          <>
+            {!task.archived ? <button type="button" disabled={isBusy} onClick={() => toggle(task.id)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-slate-950/70 text-cyan-200" aria-label={task.done ? "Reopen task" : "Complete task"}>
+              {task.done ? <CheckCircle2 className="h-4 w-4 text-emerald-300" /> : <Circle className="h-4 w-4" />}
+            </button> : <Archive className="h-4 w-4 shrink-0 text-slate-400" />}
+            <div className={`min-w-0 flex-1 text-[12px] font-bold ${task.done ? "text-slate-400 line-through" : "text-white"}`}>{task.title}</div>
+            <div className="sw-todo-row-actions flex flex-wrap items-center gap-1">
+              {!task.archived ? <>
+                <button type="button" disabled={isBusy} onClick={() => beginEdit(task)} className="sw-todo-action" aria-label={`Edit ${task.title}`} title="Edit"><Pencil className="h-4 w-4" /><span>Edit</span></button>
+                {task.done ? <button type="button" disabled={isBusy} onClick={() => toggle(task.id)} className="sw-todo-action" title="Reopen"><RotateCcw className="h-4 w-4" /><span>Reopen</span></button> :
+                  <button type="button" disabled={isBusy} onClick={() => toggle(task.id)} className="sw-todo-action" title="Complete"><CheckCircle2 className="h-4 w-4" /><span>Complete</span></button>}
+                <button type="button" disabled={isBusy} onClick={() => archiveTask(task.id)} className="sw-todo-action" title="Archive"><Archive className="h-4 w-4" /><span>Archive</span></button>
+              </> : <>
+                <button type="button" disabled={isBusy} onClick={() => restoreTask(task.id)} className="sw-todo-action" title="Restore to open tasks"><RotateCcw className="h-4 w-4" /><span>Restore</span></button>
+                <button type="button" disabled={isBusy} onClick={() => remove(task.id)} className="sw-todo-action text-rose-300" title="Permanently delete"><Trash2 className="h-4 w-4" /><span>Delete</span></button>
+              </>}
+            </div>
+          </>
+        )}
       </div>
     );
   }
@@ -155,29 +246,31 @@ export default function CustomerTasks() {
           </form>
         </section>
 
+        {actionError ? <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200" role="alert">{actionError}</div> : null}
+        <nav className="sw-todo-tabs flex flex-wrap gap-2" aria-label="Task status">
+          {[["active", "Open", open.length], ["completed", "Completed", done.length], ["archive", "Archive", archived.length]].map(([key,label,count]) =>
+            <button key={key} type="button" aria-pressed={section === key} onClick={() => { setSection(key); setEditingId(null); }} className={`rounded-xl border px-4 py-2 text-xs font-black ${section === key ? "border-cyan-300 bg-cyan-500/20 text-cyan-100" : "border-white/15 bg-black/20 text-slate-300"}`}>{label} · {count}</button>
+          )}
+        </nav>
         <section className="grid gap-3 lg:grid-cols-3">
           <div className="rounded-2xl border border-cyan-400/15 bg-cyan-500/[.04] p-4"><div className="text-[9px] font-black uppercase tracking-[.16em] text-cyan-200">Open</div><div className="mt-1 text-2xl font-black text-white">{open.length}</div></div>
           <div className="rounded-2xl border border-emerald-400/15 bg-emerald-500/[.04] p-4"><div className="text-[9px] font-black uppercase tracking-[.16em] text-emerald-200">Completed</div><div className="mt-1 text-2xl font-black text-white">{done.length}</div></div>
           <button type="button" onClick={askSync} className="rounded-2xl border border-violet-400/20 bg-violet-500/[.06] p-4 text-left"><div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[.16em] text-violet-200"><Sparkles className="h-4 w-4" />SYNC Assist</div><div className="mt-1 text-sm font-black text-white">Prioritize my tasks</div></button>
         </section>
 
-        {view === "grid" ? (
-          <section className="grid gap-4 xl:grid-cols-2">
-            <div className="rounded-[1.5rem] border border-amber-400/15 bg-amber-500/[.03] p-4">
-              <div className="text-[10px] font-black uppercase tracking-[.16em] text-amber-200">Open · {open.length}</div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">{open.length ? open.map((task) => <TaskRow key={task.id} task={task} compact />) : <div className="sm:col-span-2 rounded-2xl border border-dashed border-white/10 p-5 text-xs text-slate-500">Nothing waiting on you.</div>}</div>
+        <section className="sw-todo-list-layout grid gap-3">
+          <div className="rounded-[1.5rem] border border-cyan-400/15 bg-slate-950/60 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-[10px] font-black uppercase tracking-[.16em] text-cyan-200">{section === "active" ? "Open" : section === "completed" ? "Completed" : "Archived"} · {section === "active" ? open.length : section === "completed" ? done.length : archived.length}</div>
+              {section === "archive" && <span className="text-[10px] text-slate-400">Restore or permanently delete</span>}
             </div>
-            <div className="rounded-[1.5rem] border border-emerald-400/15 bg-emerald-500/[.03] p-4">
-              <div className="text-[10px] font-black uppercase tracking-[.16em] text-emerald-200">Completed · {done.length}</div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">{done.length ? done.map((task) => <TaskRow key={task.id} task={task} compact />) : <div className="sm:col-span-2 rounded-2xl border border-dashed border-white/10 p-5 text-xs text-slate-500">Completed tasks will collect here.</div>}</div>
+            <div className={`mt-3 grid gap-2 ${view === "grid" ? "lg:grid-cols-2" : "grid-cols-1"}`}>
+              {(section === "active" ? open : section === "completed" ? done : archived).length
+                ? (section === "active" ? open : section === "completed" ? done : archived).map(task => <TaskRow key={task.id} task={task} compact={view === "grid"} />)
+                : <div className="rounded-2xl border border-dashed border-white/10 p-5 text-xs text-slate-400">{section === "active" ? "Nothing waiting on you." : section === "completed" ? "Completed tasks will appear here. Archive them when you want to clear this view." : "Your archive is empty."}</div>}
             </div>
-          </section>
-        ) : (
-          <section className="grid gap-4 xl:grid-cols-2">
-            <div className="rounded-[1.5rem] border border-amber-400/15 bg-amber-500/[.03] p-4"><div className="text-[10px] font-black uppercase tracking-[.16em] text-amber-200">Open · {open.length}</div><div className="mt-3 space-y-2">{open.length ? open.map((task) => <TaskRow key={task.id} task={task} />) : <div className="rounded-2xl border border-dashed border-white/10 p-5 text-xs text-slate-500">Nothing waiting on you.</div>}</div></div>
-            <div className="rounded-[1.5rem] border border-emerald-400/15 bg-emerald-500/[.03] p-4"><div className="text-[10px] font-black uppercase tracking-[.16em] text-emerald-200">Completed · {done.length}</div><div className="mt-3 space-y-2">{done.length ? done.map((task) => <TaskRow key={task.id} task={task} />) : <div className="rounded-2xl border border-dashed border-white/10 p-5 text-xs text-slate-500">Completed tasks will collect here.</div>}</div></div>
-          </section>
-        )}
+          </div>
+        </section>
       </div>
     </DashboardShell>
   );
