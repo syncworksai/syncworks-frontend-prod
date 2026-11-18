@@ -5,7 +5,7 @@ export async function fetchPersonalCalendarEvents() {
   const events = [];
   let next = "/personal-calendar/events/";
   const seen = new Set();
-  for (let page = 0; page < 20 && next; page += 1) {
+  for (let page = 0; page < 40 && next; page += 1) {
     if (seen.has(next)) break;
     seen.add(next);
     const response = await api.get(next, page === 0 ? { params: { status: "ACTIVE" } } : undefined);
