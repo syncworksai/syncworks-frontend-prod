@@ -144,7 +144,7 @@ export default function CustomerDashboardResponsive() {
   const dueInvoices = useMemo(() => invoices.filter((item) => !["PAID", "VOID"].includes(String(item?.derived_state || item?.status || "").toUpperCase())), [invoices]);
   const totalDue = useMemo(() => dueInvoices.reduce((sum, item) => sum + Number(item?.balance_due ?? item?.total ?? 0), 0), [dueInvoices]);
   const profilePhotoUrl = String(identity?.identity?.profile_photo_url || "").trim();
-  const todayEvents = calendarEvents.filter(item => item?.start_at && new Date(item.start_at).toDateString() === new Date().toDateString());
+  const todayEvents = calendarEvents.filter(item => String(item?.metadata?.entity_type || "").toUpperCase() !== "TASK" && item?.start_at && new Date(item.start_at).toDateString() === new Date().toDateString());
   const overdueCount = dueInvoices.filter(item => ["OVERDUE", "PAST_DUE"].includes(String(item?.derived_state || item?.status || "").toUpperCase())).length;
   const weatherAlerts = Array.isArray(liveWeather?.alerts) ? liveWeather.alerts : [];
   const notificationItems = [
