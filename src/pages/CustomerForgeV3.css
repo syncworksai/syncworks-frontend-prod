@@ -184,3 +184,18 @@
   .forge3-reading-symbol{display:none}
   .forge3-footer{display:none}
 }
+
+/* Forge narrator selector and audition controls within fixed studio screen. */
+.forge3-voice-picker select{max-width:205px}
+.forge3-voice-test{min-height:36px}
+@media(max-width:720px){
+ .forge3-player{gap:6px}
+ .forge3-player label{gap:4px}
+ .forge3-voice-picker select{max-width:152px}
+ .forge3-voice-test{padding:7px 9px;font-size:10px}
+ .forge3-audio-status{max-width:100%;font-size:10px}
+}
+@media(max-height:670px) and (min-width:721px){
+ .forge3-voice-picker select{max-width:180px}
+ .forge3-player{gap:6px}
+}

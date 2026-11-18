@@ -88,6 +88,7 @@ export default function CustomerForge(){
   const [audioState,setAudioState]=useState("idle");
   const [audioStatus,setAudioStatus]=useState("");
   const [voiceType,setVoiceType]=useState("natural");
+  const [forgeVoice,setForgeVoice]=useState(()=>{try{return localStorage.getItem("sw-forge-narrator")||"tucker";}catch{return "tucker";}});
   const [audioError,setAudioError]=useState("");
   const [breathing,setBreathing]=useState(false);
   const [breathSeconds,setBreathSeconds]=useState(0);
@@ -211,7 +212,7 @@ export default function CustomerForge(){
     for(let i=0;i<parts.length;i++){
       if(token!==playId.current)return;
       const controller=new AbortController();abortRef.current=controller;
-      const response=await api.post("/customer-health/forge/voice/speak/",{text:parts[i],energy:"calm"},{responseType:"blob",signal:controller.signal,timeout:30000});
+      const response=await api.post("/customer-health/forge/voice/speak/",{text:parts[i],energy:"calm",voice_key:forgeVoice},{responseType:"blob",signal:controller.signal,timeout:30000});
       if(token!==playId.current)return;
       const url=URL.createObjectURL(response.data);audioUrl.current=url;
       const player=new Audio(url);audioEl.current=player;
@@ -235,6 +236,14 @@ export default function CustomerForge(){
       setAudioError("Natural narration was unavailable. Device speech may not connect reliably to Bluetooth or vehicle audio.");
       setAudioStatus("Choose Device voice to listen through this browser.");
     }
+  }
+  function selectForgeNarrator(value){
+    stopAudio();setForgeVoice(value);
+    try{localStorage.setItem("sw-forge-narrator",value);}catch{/* optional */}
+  }
+  function previewForgeNarrator(){
+    const line="Welcome to The Forge. Discipline is not punishment. It is the quiet practice of keeping promises to yourself. Breathe. Consider what is within your control. Then take the next good step.";
+    startAudio(line);
   }
   function toggleAudio(){
     if(audioState==="paused"){
@@ -282,7 +291,7 @@ export default function CustomerForge(){
               </div>
               <div className="forge3-reading-takeaway"><strong>YOUR CHALLENGE</strong><p>{chapter.challenge}</p></div>
             </div>:<div className="forge3-listen-room"><div className={audioState==="playing"?"forge3-orb speaking":"forge3-orb"}><Headphones size={52}/></div><p>{chapter.description}</p><blockquote>{chapter.paragraphs[0]}</blockquote><div className="forge3-listen-note">The full chapter is narrated, not just this excerpt.</div><button type="button" className="forge3-softbtn" onClick={()=>setGrowthOpen(true)}><Brain size={17}/> Ask about this lesson</button></div>}
-            <div className="forge3-player"><div className="forge3-play-buttons"><button className="forge3-mainbtn" type="button" onClick={toggleAudio} disabled={audioState==="loading"}>{audioState==="playing"?<Pause size={18}/>:<Play size={18}/>} {audioState==="loading"?"Preparing...":audioState==="paused"?"Resume":audioState==="playing"?"Pause":"Listen to chapter"}</button><button className="forge3-iconbtn" type="button" onClick={stopAudio} title="Stop narration" aria-label="Stop narration"><Square size={17}/></button></div><label>Voice <select value={voiceType} onChange={e=>{stopAudio();setVoiceType(e.target.value);}}><option value="natural">Natural AI voice</option><option value="device">Device voice</option></select></label><span className="forge3-audio-status" role="status">{audioError||audioStatus||"Headphone-ready listening"}</span></div>
+            <div className="forge3-player"><div className="forge3-play-buttons"><button className="forge3-mainbtn" type="button" onClick={toggleAudio} disabled={audioState==="loading"}>{audioState==="playing"?<Pause size={18}/>:<Play size={18}/>} {audioState==="loading"?"Preparing...":audioState==="paused"?"Resume":audioState==="playing"?"Pause":"Listen to chapter"}</button><button className="forge3-iconbtn" type="button" onClick={stopAudio} title="Stop narration" aria-label="Stop narration"><Square size={17}/></button></div><label>Output <select value={voiceType} onChange={e=>{stopAudio();setVoiceType(e.target.value);}}><option value="natural">ElevenLabs</option><option value="device">Device voice</option></select></label>{voiceType==="natural"?<label className="forge3-voice-picker">Narrator <select aria-label="Choose Forge narrator" value={forgeVoice} onChange={e=>selectForgeNarrator(e.target.value)}><option value="tucker">Tucker · mature American</option><option value="ambrose">Ambrose · wise, reflective</option><option value="david">David · British storyteller</option></select></label>:null}{voiceType==="natural"?<button type="button" className="forge3-softbtn forge3-voice-test" onClick={previewForgeNarrator} disabled={audioState==="loading"}><Volume2 size={15}/> Test voice</button>:null}<span className="forge3-audio-status" role="status">{audioError||audioStatus||"Headphone-ready listening"}</span></div>
           </>}
           {mode==="breathe"&&<><div className="forge3-stage-intro"><div><span className="forge3-overline">GUIDED MEDITATION</span><h2>Return to the present</h2><p>Five minutes · Gentle 4-in / 6-out rhythm</p></div><Wind size={35}/></div><div className="forge3-breathe-center"><div className={breathing?"forge3-breathe-orb running":"forge3-breathe-orb"} data-inhale={inhale}><span>{inhale?"BREATHE IN":"BREATHE OUT"}</span><strong>{inhale?4-breathSeconds%10:10-breathSeconds%10}</strong><small>{formatTime(remaining)} remaining</small></div><p>Relax your shoulders. Breathe comfortably. No breath holding is required.</p></div><div className="forge3-player"><button className="forge3-mainbtn" type="button" onClick={()=>setBreathing(v=>!v)} disabled={breathSeconds>=300}>{breathing?<Pause size={18}/>:<Play size={18}/>} {breathing?"Pause":"Start breathing"}</button><button className="forge3-iconbtn" type="button" onClick={()=>{setBreathing(false);setBreathSeconds(0);}}><RotateCcw size={17}/></button><button className="forge3-softbtn" onClick={()=>startAudio("Settle into a comfortable posture. Relax your face and shoulders. Breathe gently in through the nose for four counts, and breathe out slowly for six counts. Follow the moving circle. If you feel lightheaded, return to your natural breath. You do not need to force anything.")} type="button"><Volume2 size={16}/> Guided introduction</button><button className="forge3-iconbtn" onClick={stopAudio} type="button" title="Stop voice"><Square size={16}/></button></div></>}
           {mode==="watch"&&<><div className="forge3-stage-intro"><div><span className="forge3-overline">GUIDED VIDEO LIBRARY</span><h2>Learn by watching</h2><p>Yoga and movement without leaving The Forge.</p></div><Play size={35}/></div><div className="forge3-video-options">{videos.map(v=><button key={v.id} className={video===v.id?"selected":""} type="button" onClick={()=>{stopAudio();setVideo(v.id);}}><strong>{v.title}</strong><small>{v.by} · {v.note}</small></button>)}</div><div className="forge3-video-stage">{video?<iframe key={video} src={`https://www.youtube-nocookie.com/embed/${video}?rel=0`} title={videos.find(x=>x.id===video)?.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen loading="lazy" referrerPolicy="strict-origin-when-cross-origin"/>:<div className="forge3-video-empty"><Play size={38}/><span>Choose a practice above to open the player.</span></div>}</div>{video&&<a href={`https://www.youtube.com/watch?v=${video}`} target="_blank" rel="noopener noreferrer" className="forge3-youtube-link">If the video cannot be embedded, open on YouTube <ExternalLink size={15}/></a>}</>}
