@@ -1,0 +1,19 @@
+/* Compact one-screen desktop Office agenda and safe right-hand panel boundaries. */
+.sw-office-agenda{margin-top:12px;padding:12px 14px;border:1px solid rgba(73,204,244,.24);border-radius:16px;background:rgba(4,15,34,.84);min-width:0}
+.sw-office-agenda-heading,.sw-office-agenda-heading span,.sw-office-agenda-heading button{display:flex;align-items:center;gap:7px}
+.sw-office-agenda-heading{justify-content:space-between;gap:8px;color:#e2f5ff;font-weight:800;font-size:12px}
+.sw-office-agenda-heading button,.sw-office-agenda-empty button{color:#70e4fa;font-size:11px;font-weight:700}
+.sw-office-agenda-items{display:grid;gap:5px;max-height:min(160px,22vh);overflow:auto;margin-top:9px;scrollbar-width:thin}
+.sw-office-agenda-event{display:flex;align-items:center;gap:10px;min-width:0;width:100%;padding:7px 8px;text-align:left;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(255,255,255,.035);color:white}
+.sw-office-agenda-event:hover{background:rgba(50,190,240,.14)}
+.sw-office-agenda-time{width:75px;flex-shrink:0;font-size:10px;color:#a5e7f7}
+.sw-office-agenda-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:700}
+.sw-office-agenda-tag{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:3px 7px;border-radius:999px;background:rgba(125,130,145,.18);font-size:9px;color:#e8eef9}
+.sw-office-agenda-tag.business{background:rgba(43,197,243,.17);color:#78e7ff}
+.sw-office-agenda-empty{margin-top:10px;color:#aebcd0;font-size:11px}
+.sw-office-agenda-more{font-size:10px;color:#8bdbfa;text-align:left}
+.sw-customer-v3,.sw-customer-v3 main,.sw-customer-v3 aside,.sw-office-workdesk{min-width:0}
+.sw-customer-v3 aside{max-width:100%;overflow-x:hidden}
+.sw-customer-v3 aside :is(button,section,div){min-width:0}
+.sw-customer-v3 aside :is(h2,h3,p,span){overflow-wrap:anywhere}
+@media(max-width:1250px){.sw-office-agenda{padding:10px}.sw-office-agenda-items{max-height:120px}}
