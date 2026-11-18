@@ -13,6 +13,7 @@ import { forgeGreatBookStudies } from "./forgeGreatBookStudies";
 import ForgeBookLibrary from "./ForgeBookLibrary";
 import ForgeKnowledgeAcademy from "./ForgeKnowledgeAcademy";
 import {academyLessons} from "./forgeAcademyData";
+import {forgeAudiobookEpisodes} from "./forgeAudiobookEpisodes";
 import ForgeGrowthCoach from "./ForgeGrowthCoach";
 import "./CustomerForgeV3.css";
 
@@ -96,7 +97,9 @@ export default function CustomerForge(){
   const [audioState,setAudioState]=useState("idle");
   const [audioStatus,setAudioStatus]=useState("");
   const [voiceType,setVoiceType]=useState("natural");
-  const [forgeVoice,setForgeVoice]=useState(()=>{try{return localStorage.getItem("sw-forge-narrator")||"tucker";}catch{return "tucker";}});
+  const [forgeVoice,setForgeVoice]=useState(()=>{try{const v=localStorage.getItem("sw-forge-narrator");return (!v||v==="tucker")?"jarvis":v;}catch{return "jarvis";}});
+  const [playlistStatus,setPlaylistStatus]=useState("");
+  const playlistRef=useRef([]),playlistIndexRef=useRef(-1);
   const [audioError,setAudioError]=useState("");
   const [breathing,setBreathing]=useState(false);
   const [breathSeconds,setBreathSeconds]=useState(0);
@@ -105,16 +108,17 @@ export default function CustomerForge(){
   const forgeShellRef=useRef(null);
   const synthParts=useRef([]),synthIndex=useRef(0);
   const key=keyFor(email);
-  const academyStudies=academyLessons.map(lesson=>({
+  const academyStudies=[...forgeAudiobookEpisodes,...academyLessons].map(lesson=>({
     id:"academy-"+lesson.id,
     title:lesson.title,
     lens:lesson.track+" · adult continuing education",
-    length:"Foundational study",
+    length:lesson.minutes+" min · "+(lesson.order===100?"Expanded audiobook":"Foundational study"),
     description:lesson.objectives[0],
     paragraphs:lesson.sections.map(section=>section.heading.toUpperCase()+". "+section.text),
     vocabulary:lesson.terms.map(([word,meaning])=>({word,meaning})),
     sourceUrl:lesson.source.url,
     sourceLabel:lesson.source.label,
+    takeaway:lesson.objectives.join(". "),
     challenge:lesson.practice,
     question:lesson.question.prompt,
   }));
@@ -129,7 +133,8 @@ export default function CustomerForge(){
   const active=focusIndex>=0?ordered[focusIndex]:null;
   const breathCycle=breathSeconds%10, inhale=breathCycle<4;
   const remaining=Math.max(0,300-breathSeconds);
-  const script=`${chapter.title}. ${chapter.lens}. ${chapter.paragraphs.join(" ")} Takeaway. ${chapter.takeaway} Today's challenge. ${chapter.challenge}`;
+  const getScript=c=>`${c.title}. ${c.lens}. ${c.paragraphs.join(" ")} ${c.takeaway?"Key idea. "+c.takeaway:""} Today's practice. ${c.challenge}`;
+  const script=getScript(chapter);
 
   // The global navigation bar is fixed, while other route wrappers can add
   // height. Measure from Forge's actual top edge to the visible viewport bottom.
@@ -210,6 +215,7 @@ export default function CustomerForge(){
     if(audioUrl.current){URL.revokeObjectURL(audioUrl.current);audioUrl.current="";}
     if("speechSynthesis" in window)window.speechSynthesis.cancel();
     if("mediaSession" in navigator){navigator.mediaSession.playbackState="none";}
+    playlistRef.current=[];playlistIndexRef.current=-1;setPlaylistStatus("");
     setAudioState("idle");setAudioStatus("");
   }
   useEffect(()=>()=>{playId.current+=1;if(abortRef.current)abortRef.current.abort();if(audioEl.current)audioEl.current.pause();if(audioUrl.current)URL.revokeObjectURL(audioUrl.current);window.speechSynthesis?.cancel();},[]);
@@ -226,46 +232,110 @@ export default function CustomerForge(){
     }
     setAudioState("playing");next();
   }
-  function setupCarMediaSession(){
+  function bookmarkKey(id,voice=forgeVoice){return "forge-audio-position:"+email+":"+id+":"+voice;}
+  function getBookmark(id,voice=forgeVoice){
+    try {const b=JSON.parse(localStorage.getItem(bookmarkKey(id,voice))||"{}");
+      return {part:Number.isInteger(b.part)?b.part:0,seconds:Number.isFinite(b.seconds)?b.seconds:0};
+    }catch{return {part:0,seconds:0};}
+  }
+  function saveBookmark(id,part,seconds,voice=forgeVoice){
+    try {localStorage.setItem(bookmarkKey(id,voice),JSON.stringify({part,seconds,updatedAt:Date.now()}));}catch{}
+  }
+  function clearBookmark(id,voice=forgeVoice){try{localStorage.removeItem(bookmarkKey(id,voice));}catch{}}
+  function setupCarMediaSession(title){
     if(!("mediaSession" in navigator))return;
-    try {
-      navigator.mediaSession.metadata = new MediaMetadata({title:chapter.title, artist:"The Forge · SyncWorks", album:"Personal Performance Library"});
-      navigator.mediaSession.setActionHandler("play",()=>{if(audioEl.current){audioEl.current.play().then(()=>setAudioState("playing")).catch(()=>setAudioStatus("Tap Play to resume"));}});
+    try{
+      navigator.mediaSession.metadata=new MediaMetadata({title,artist:"SyncWorks Jarvis · The Forge",album:"Personal Knowledge Academy"});
+      navigator.mediaSession.setActionHandler("play",()=>{audioEl.current?.play().then(()=>setAudioState("playing")).catch(()=>setAudioStatus("Tap Play to resume"));});
       navigator.mediaSession.setActionHandler("pause",()=>{audioEl.current?.pause();setAudioState("paused");});
       navigator.mediaSession.setActionHandler("stop",()=>stopAudio());
+      navigator.mediaSession.setActionHandler("nexttrack",()=>{if(playlistRef.current.length)skipPlaylist(1);});
+      navigator.mediaSession.setActionHandler("previoustrack",()=>{if(playlistRef.current.length)skipPlaylist(-1);});
       navigator.mediaSession.playbackState="playing";
-    } catch { /* unsupported headset, OS, or media session action */ }
+    }catch{/* some browsers/headphones don't support all media actions */}
   }
-  async function naturalNarrate(text,token){
-    const parts=splitAudio(text,840);
-    setAudioStatus("Preparing natural narration...");
-    for(let i=0;i<parts.length;i++){
+  async function naturalNarrate(text,token,opts={}){
+    const parts=splitAudio(text,1700);
+    const title=opts.title||chapter.title;
+    const id=opts.id||chapter.id;
+    const voice=forgeVoice;
+    let bookmark=opts.resume?getBookmark(id,voice):{part:0,seconds:0};
+    const startPart=Math.max(0,Math.min(bookmark.part,parts.length-1));
+    setAudioStatus("Preparing SyncWorks Jarvis audiobook...");
+    // Keep a single HTMLAudioElement across chunks; separate elements can lose
+    // iOS / Bluetooth playback authorization at every segment boundary.
+    const player=audioEl.current||new Audio();
+    audioEl.current=player;
+    player.preload="auto";
+    for(let i=startPart;i<parts.length;i++){
       if(token!==playId.current)return;
       const controller=new AbortController();abortRef.current=controller;
-      const response=await api.post("/customer-health/forge/voice/speak/",{text:parts[i],energy:"calm",voice_key:forgeVoice},{responseType:"blob",signal:controller.signal,timeout:30000});
+      const response=await api.post("/customer-health/forge/voice/speak/",{text:parts[i],energy:"calm",voice_key:voice},{responseType:"blob",signal:controller.signal,timeout:30000});
       if(token!==playId.current)return;
-      const url=URL.createObjectURL(response.data);audioUrl.current=url;
-      const player=new Audio(url);audioEl.current=player;
-      player.preload="auto";
-      await new Promise((resolve,reject)=>{
-        player.onended=resolve;player.onerror=()=>reject(new Error("Audio playback failed"));
-        player.play().then(()=>{if(token===playId.current){setupCarMediaSession();setAudioState("playing");setAudioStatus(`Natural voice · part ${i+1} of ${parts.length}`);}}).catch(reject);
-      });
       if(audioUrl.current){URL.revokeObjectURL(audioUrl.current);audioUrl.current="";}
+      const url=URL.createObjectURL(response.data);audioUrl.current=url;
+      player.src=url;player.load();
+      const seconds=i===startPart?bookmark.seconds:0;
+      await new Promise((resolve,reject)=>{
+        let lastSaved=0;
+        player.onloadedmetadata=()=>{if(seconds>0&&Number.isFinite(player.duration)){try{player.currentTime=Math.min(seconds,Math.max(0,player.duration-.2));}catch{}}};
+        player.ontimeupdate=()=>{if(token!==playId.current)return;const second=player.currentTime||0;if(second-lastSaved>=5){lastSaved=second;saveBookmark(id,i,second,voice);}};
+        player.onended=()=>{saveBookmark(id,i+1,0,voice);resolve();};
+        player.onerror=()=>reject(new Error("Audio segment could not play"));
+        player.play().then(()=>{
+          if(token===playId.current){
+            setupCarMediaSession(title);setAudioState("playing");
+            setAudioStatus("SyncWorks Jarvis · section "+(i+1)+" of "+parts.length);
+          }
+        }).catch(reject);
+      });
     }
-    if(token===playId.current){setAudioState("idle");setAudioStatus("Chapter finished.");}
+    if(token===playId.current){
+      clearBookmark(id,voice);
+      setAudioState("idle");setAudioStatus("Finished "+title+".");
+    }
   }
-  async function startAudio(text=script){
+  async function startAudio(text=script,opts={}){
     stopAudio();const token=playId.current;
-    if(voiceType==="device"){setAudioStatus("Device voice narration");browserNarrate(text,token);return;}
+    if(voiceType==="device"){setAudioStatus("Device narration");browserNarrate(text,token);return;}
     setAudioState("loading");
-    try {await naturalNarrate(text,token);}
+    try{await naturalNarrate(text,token,{id:opts.id||chapter.id,title:opts.title||chapter.title,resume:opts.resume!==false});}
     catch(e){
       if(token!==playId.current)return;
       setAudioState("idle");
-      setAudioError("Natural narration was unavailable. Device speech may not connect reliably to Bluetooth or vehicle audio.");
-      setAudioStatus("Choose Device voice to listen through this browser.");
+      setAudioError("SyncWorks Jarvis narration unavailable. Verify ElevenLabs voice access and connection.");
+      setAudioStatus("Select Device voice if needed. Progress remains saved.");
     }
+  }
+  async function startPlaylistAt(ids,index=0){
+    const eligible=ids.filter(id=>chapters.some(c=>c.id===id));
+    if(!eligible.length)return;
+    stopAudio();
+    playlistRef.current=eligible;playlistIndexRef.current=Math.max(0,Math.min(index,eligible.length-1));
+    const token=playId.current;
+    setAudioState("loading");
+    try{
+      for(let n=playlistIndexRef.current;n<eligible.length;n++){
+        if(token!==playId.current)return;
+        playlistIndexRef.current=n;
+        const item=chapters.find(c=>c.id===eligible[n]);
+        setChapterId(item.id);setMode("listen");
+        setPlaylistStatus("Lesson "+(n+1)+" of "+eligible.length+" · "+item.title);
+        if(voiceType==="device"){browserNarrate(getScript(item),token);return;}
+        await naturalNarrate(getScript(item),token,{id:item.id,title:item.title,resume:true});
+      }
+      if(token===playId.current){playlistRef.current=[];playlistIndexRef.current=-1;setPlaylistStatus("Listening queue complete.");}
+    }catch{
+      if(token!==playId.current)return;
+      setAudioState("idle");setAudioError("Audio stopped at this lesson. Your listening place is saved.");
+    }
+  }
+  function skipPlaylist(offset){
+    const ids=playlistRef.current;
+    if(!ids.length)return;
+    const next=playlistIndexRef.current+offset;
+    if(next<0||next>=ids.length){if(next>=ids.length)stopAudio();return;}
+    startPlaylistAt(ids,next);
   }
   function selectForgeNarrator(value){
     stopAudio();setForgeVoice(value);
@@ -329,7 +399,7 @@ export default function CustomerForge(){
               </div>
               <div className="forge3-reading-takeaway"><strong>YOUR CHALLENGE</strong><p>{chapter.challenge}</p></div>
             </div>:<div className="forge3-listen-room"><div className={audioState==="playing"?"forge3-orb speaking":"forge3-orb"}><Headphones size={52}/></div><p>{chapter.description}</p><blockquote>{chapter.paragraphs[0]}</blockquote><div className="forge3-listen-note">The full chapter is narrated, not just this excerpt.</div><button type="button" className="forge3-softbtn" onClick={()=>setGrowthOpen(true)}><Brain size={17}/> Ask about this lesson</button></div>}
-            <div className="forge3-player"><div className="forge3-play-buttons"><button className="forge3-mainbtn" type="button" onClick={toggleAudio} disabled={audioState==="loading"}>{audioState==="playing"?<Pause size={18}/>:<Play size={18}/>} {audioState==="loading"?"Preparing...":audioState==="paused"?"Resume":audioState==="playing"?"Pause":"Listen to chapter"}</button><button className="forge3-iconbtn" type="button" onClick={stopAudio} title="Stop narration" aria-label="Stop narration"><Square size={17}/></button></div><button type="button" className="forge3-mobile-voice-trigger forge3-softbtn" onClick={()=>setAudioSettingsOpen(true)}><Headphones size={16}/> Voice & settings</button><label className="forge3-desktop-voice">Output <select value={voiceType} onChange={e=>{stopAudio();setVoiceType(e.target.value);}}><option value="natural">ElevenLabs</option><option value="device">Device voice</option></select></label>{voiceType==="natural"?<label className="forge3-voice-picker forge3-desktop-voice">Narrator <select aria-label="Choose Forge narrator" value={forgeVoice} onChange={e=>selectForgeNarrator(e.target.value)}><option value="tucker">Tucker · mature American</option><option value="ambrose">Ambrose · wise, reflective</option><option value="david">David · British storyteller</option></select></label>:null}{voiceType==="natural"?<button type="button" className="forge3-softbtn forge3-voice-test forge3-desktop-voice" onClick={previewForgeNarrator} disabled={audioState==="loading"}><Volume2 size={15}/> Test voice</button>:null}<span className="forge3-audio-status" role="status">{audioError||audioStatus||"Headphone-ready listening"}</span></div>
+            <div className="forge3-player"><div className="forge3-play-buttons"><button className="forge3-mainbtn" type="button" onClick={toggleAudio} disabled={audioState==="loading"}>{audioState==="playing"?<Pause size={18}/>:<Play size={18}/>} {audioState==="loading"?"Preparing...":audioState==="paused"?"Resume":audioState==="playing"?"Pause":"Listen to chapter"}</button><button className="forge3-iconbtn" type="button" onClick={stopAudio} title="Stop narration" aria-label="Stop narration"><Square size={17}/></button></div><button type="button" className="forge3-mobile-voice-trigger forge3-softbtn" onClick={()=>setAudioSettingsOpen(true)}><Headphones size={16}/> Voice & settings</button><label className="forge3-desktop-voice">Output <select value={voiceType} onChange={e=>{stopAudio();setVoiceType(e.target.value);}}><option value="natural">ElevenLabs</option><option value="device">Device voice</option></select></label>{voiceType==="natural"?<label className="forge3-voice-picker forge3-desktop-voice">Narrator <select aria-label="Choose Forge narrator" value={forgeVoice} onChange={e=>selectForgeNarrator(e.target.value)}><option value="jarvis">SyncWorks Jarvis · British</option><option value="jarvis">SyncWorks Jarvis · British</option><option value="tucker">Tucker · mature American</option><option value="ambrose">Ambrose · wise, reflective</option><option value="david">David · British storyteller</option></select></label>:null}{voiceType==="natural"?<button type="button" className="forge3-softbtn forge3-voice-test forge3-desktop-voice" onClick={previewForgeNarrator} disabled={audioState==="loading"}><Volume2 size={15}/> Test voice</button>:null}<span className="forge3-audio-status" role="status">{audioError||playlistStatus||audioStatus||"Headphone-ready listening"}</span>{playlistRef.current.length>1&&<div className="forge3-queue-actions"><button type="button" onClick={()=>skipPlaylist(-1)}><ArrowLeft size={14}/> Previous</button><button type="button" onClick={()=>skipPlaylist(1)}>Next <ArrowRight size={14}/></button></div>}</div>
           </>}
           {mode==="breathe"&&<><div className="forge3-stage-intro"><div><span className="forge3-overline">GUIDED MEDITATION</span><h2>Return to the present</h2><p>Five minutes · Gentle 4-in / 6-out rhythm</p></div><Wind size={35}/></div><div className="forge3-breathe-center"><div className={breathing?"forge3-breathe-orb running":"forge3-breathe-orb"} data-inhale={inhale}><span>{inhale?"BREATHE IN":"BREATHE OUT"}</span><strong>{inhale?4-breathSeconds%10:10-breathSeconds%10}</strong><small>{formatTime(remaining)} remaining</small></div><p>Relax your shoulders. Breathe comfortably. No breath holding is required.</p></div><div className="forge3-player"><button className="forge3-mainbtn" type="button" onClick={()=>setBreathing(v=>!v)} disabled={breathSeconds>=300}>{breathing?<Pause size={18}/>:<Play size={18}/>} {breathing?"Pause":"Start breathing"}</button><button className="forge3-iconbtn" type="button" onClick={()=>{setBreathing(false);setBreathSeconds(0);}}><RotateCcw size={17}/></button><button className="forge3-softbtn" onClick={()=>startAudio("Settle into a comfortable posture. Relax your face and shoulders. Breathe gently in through the nose for four counts, and breathe out slowly for six counts. Follow the moving circle. If you feel lightheaded, return to your natural breath. You do not need to force anything.")} type="button"><Volume2 size={16}/> Guided introduction</button><button className="forge3-iconbtn" onClick={stopAudio} type="button" title="Stop voice"><Square size={16}/></button></div></>}
           {mode==="watch"&&<><div className="forge3-stage-intro"><div><span className="forge3-overline">GUIDED VIDEO LIBRARY</span><h2>Learn by watching</h2><p>Yoga and movement without leaving The Forge.</p></div><Play size={35}/></div><div className="forge3-video-options">{videos.map(v=><button key={v.id} className={video===v.id?"selected":""} type="button" onClick={()=>{stopAudio();setVideo(v.id);}}><strong>{v.title}</strong><small>{v.by} · {v.note}</small></button>)}</div><div className="forge3-video-stage">{video?<iframe key={video} src={`https://www.youtube-nocookie.com/embed/${video}?rel=0`} title={videos.find(x=>x.id===video)?.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen loading="lazy" referrerPolicy="strict-origin-when-cross-origin"/>:<div className="forge3-video-empty"><Play size={38}/><span>Choose a practice above to open the player.</span></div>}</div>{video&&<a href={`https://www.youtube.com/watch?v=${video}`} target="_blank" rel="noopener noreferrer" className="forge3-youtube-link">If the video cannot be embedded, open on YouTube <ExternalLink size={15}/></a>}</>}
@@ -360,7 +430,7 @@ export default function CustomerForge(){
       </section>
     </div>}
     {audioSettingsOpen&&<div className="forge3-audio-settings-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setAudioSettingsOpen(false);}}><section role="dialog" aria-modal="true" aria-label="Forge voice and audio settings" className="forge3-audio-settings-dialog"><div className="forge3-audio-settings-heading"><div><span>THE FORGE · AUDIO</span><h2>Voice & playback</h2></div><button type="button" onClick={()=>setAudioSettingsOpen(false)} aria-label="Close audio settings">✕</button></div><label>Playback output<select value={voiceType} onChange={e=>{stopAudio();setVoiceType(e.target.value);}}><option value="natural">ElevenLabs</option><option value="device">Device voice</option></select></label>{voiceType==="natural"&&<><label>Narrator<select value={forgeVoice} onChange={e=>selectForgeNarrator(e.target.value)}><option value="tucker">Tucker · mature American</option><option value="ambrose">Ambrose · reflective</option><option value="david">David · British storyteller</option></select></label><button type="button" className="forge3-mainbtn" onClick={previewForgeNarrator} disabled={audioState==="loading"}><Volume2 size={16}/> Test narrator</button></>}<p role="status">{audioError||audioStatus||"Choose the voice for your next session."}</p><button type="button" className="forge3-softbtn" onClick={()=>setAudioSettingsOpen(false)}>Back to Forge</button></section></div>}
-    <ForgeKnowledgeAcademy open={academyOpen} email={email} onClose={()=>setAcademyOpen(false)} onOpenLesson={(id,targetMode)=>{stopAudio();setChapterId("academy-"+id);setAcademyOpen(false);setActiveMode(targetMode);if(targetMode==="read")setReadingOpen(true);}}/>
+    <ForgeKnowledgeAcademy open={academyOpen} email={email} onClose={()=>setAcademyOpen(false)} onPlayTrack={track=>{const ids=[...forgeAudiobookEpisodes,...academyLessons].filter(l=>l.track===track).sort((a,b)=>a.order-b.order).map(l=>"academy-"+l.id);setAcademyOpen(false);startPlaylistAt(ids);}} onOpenLesson={(id,targetMode)=>{stopAudio();setChapterId("academy-"+id);setAcademyOpen(false);setActiveMode(targetMode);if(targetMode==="read")setReadingOpen(true);}}/>
     <ForgeBookLibrary open={libraryOpen} onClose={()=>setLibraryOpen(false)} onSelect={id=>{stopAudio();setChapterId(id);setLibraryOpen(false);setReadingOpen(true);}}/>
     <ForgeGrowthCoach email={email} chapter={chapter} open={growthOpen} onClose={()=>setGrowthOpen(false)}/>
     <footer className="forge3-footer"><span><Sparkles size={14}/> Build your life, one intentional action at a time.</span><span>Private pilot · Forge coach is separate from Chief of Staff · Chapters are original · Audio uses AI narration when available</span></footer>
