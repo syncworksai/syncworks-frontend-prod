@@ -239,3 +239,61 @@
   background:rgba(89,53,34,.35)!important;
   border:1px solid rgba(224,175,105,.62)!important;
 }
+
+
+/* Theme the always-visible command header, not just its open navigation drawer.
+   The header is portaled to body so workspace descendant CSS cannot reach it. */
+[data-syncworks-global-header="true"] {
+  --sw-header-bg: rgba(5, 15, 34, .94);
+  --sw-header-border: rgba(103, 212, 247, .32);
+  --sw-header-text: #edf8ff;
+  --sw-header-accent: #6de3f7;
+  --sw-header-action: rgba(45, 183, 237, .13);
+  background: var(--sw-header-bg) !important;
+  border-bottom-color: var(--sw-header-border) !important;
+  color: var(--sw-header-text);
+}
+[data-syncworks-global-header="true"][data-menu-theme="future"] {
+  --sw-header-bg: rgba(7, 18, 42, .94);
+  --sw-header-border: rgba(49, 187, 249, .44);
+  --sw-header-text: #f0f8ff;
+  --sw-header-accent: #79e6ff;
+  --sw-header-action: rgba(40, 170, 250, .14);
+}
+[data-syncworks-global-header="true"][data-menu-theme="classic"] {
+  --sw-header-bg: rgba(35, 23, 16, .94);
+  --sw-header-border: rgba(222, 171, 99, .42);
+  --sw-header-text: #f8ecdb;
+  --sw-header-accent: #e6b96e;
+  --sw-header-action: rgba(230, 185, 110, .14);
+}
+[data-syncworks-global-header="true"][data-menu-theme="modern"] {
+  --sw-header-bg: rgba(27, 36, 46, .95);
+  --sw-header-border: rgba(178, 202, 221, .38);
+  --sw-header-text: #f1f3f6;
+  --sw-header-accent: #b1c9db;
+  --sw-header-action: rgba(177, 201, 219, .12);
+}
+[data-syncworks-global-header="true"][data-menu-theme="light"] {
+  --sw-header-bg: rgba(255, 250, 240, .95);
+  --sw-header-border: rgba(146, 112, 74, .40);
+  --sw-header-text: #352c24;
+  --sw-header-accent: #1c777b;
+  --sw-header-action: rgba(28, 119, 123, .12);
+  color-scheme: light;
+}
+[data-syncworks-global-header="true"] a,
+[data-syncworks-global-header="true"] a span { color: var(--sw-header-text); }
+[data-syncworks-global-header="true"] button {
+  color: var(--sw-header-accent);
+  border-color: var(--sw-header-border);
+  background-color: var(--sw-header-action);
+}
+[data-syncworks-global-header="true"] button:hover,
+[data-syncworks-global-header="true"] button:focus-visible {
+  background-color: color-mix(in srgb, var(--sw-header-accent) 22%, transparent);
+  border-color: var(--sw-header-accent);
+}
+[data-syncworks-global-header="true"] img {
+  border-color: var(--sw-header-border);
+}
