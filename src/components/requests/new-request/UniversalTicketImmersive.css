@@ -327,3 +327,28 @@ html.sw-new-request-viewport-locked,body.sw-new-request-viewport-locked {
  .sw-marketplace-compact > section:first-child{padding:6px!important;}
  .sw-new-request-page .sw-marketplace-categories{padding:5px 7px!important;}
 }
+
+/* v3 mobile unified service finder: eliminate nested card stacking. */
+@media(max-width:767px){
+.sw-new-request-header{padding:7px 9px!important}
+.sw-new-request-header .flex.flex-wrap.items-center.gap-2{display:none!important}
+.sw-new-request-header h1{margin-top:0!important}
+.sw-new-request-header .mt-5{margin-top:6px!important}
+.sw-new-request-stage[data-request-step="find"]{gap:0!important;padding:6px!important}
+.sw-new-request-stage[data-request-step="find"]>.sw-marketplace-compact{gap:0!important}
+.sw-new-request-page .sw-marketplace-compact>section:first-child{padding:9px!important;border-radius:13px 13px 0 0!important;border-bottom:0!important}
+.sw-new-request-page .sw-marketplace-compact>section:first-child .inline-flex{display:none!important}
+.sw-marketplace-inline-route{margin-bottom:7px}
+.sw-marketplace-inline-route .sw-new-request-route{padding:0!important;border:0!important;background:transparent!important}
+.sw-marketplace-inline-route .sw-new-request-route-grid{margin-top:0!important}
+.sw-marketplace-inline-route .sw-new-request-route-grid button{min-height:37px!important;padding:6px!important}
+.sw-new-request-page .sw-marketplace-compact>section:first-child .mt-5{margin-top:0!important}
+.sw-new-request-page .sw-marketplace-categories:not(.sw-categories-expanded){padding:2px 9px 7px!important;border-radius:0!important;border-top:0!important;border-bottom:0!important}
+.sw-marketplace-categories:not(.sw-categories-expanded)>div:first-child{display:none!important}
+.sw-new-request-page .sw-marketplace-categories:not(.sw-categories-expanded) .sw-marketplace-category-toggle{width:100%!important;min-height:30px!important;margin:0!important}
+.sw-new-request-page .sw-marketplace-compact>.sw-marketplace-results{border-radius:0 0 13px 13px!important;border-top:0!important;padding:7px 9px!important}
+.sw-new-request-page .sw-marketplace-results .mt-4.grid>button{min-height:44px!important;padding:6px 9px!important}
+.sw-new-request-page .sw-marketplace-results .mt-4.grid>button .mt-1{display:none!important}
+.sw-new-request-page .sw-new-request-bottom-actions button:first-child{display:none!important}
+.sw-new-request-page .sw-new-request-bottom-actions>div:first-child{grid-template-columns:auto 1fr!important}
+}

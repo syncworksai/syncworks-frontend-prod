@@ -100,6 +100,7 @@ export default function MarketplaceSearchPanel({
   categoryLoadError = "",
   onNext = null,
   compact = false,
+  routeChooser = null,
 }) {
   const [query, setQuery] = useState("");
   const [selectedVerticalKey, setSelectedVerticalKey] = useState("");
@@ -186,6 +187,7 @@ export default function MarketplaceSearchPanel({
               : "Local Marketplace"}
           </div>
 
+          {routeChooser ? <div className="sw-marketplace-inline-route">{routeChooser}</div> : null}
           <h1 className="mt-4 text-2xl font-black tracking-tight text-white md:text-4xl">
             {isBusinessInternal
               ? "Create a ticket from your services."
@@ -265,7 +267,7 @@ export default function MarketplaceSearchPanel({
         </div>
       </section>
 
-      {categoryLoading ? (
+      {categoryLoading && !compact ? (
         <div className="rounded-2xl border border-cyan-500/25 bg-cyan-500/10 p-3 text-sm text-cyan-100">
           Loading the live service directory...
         </div>

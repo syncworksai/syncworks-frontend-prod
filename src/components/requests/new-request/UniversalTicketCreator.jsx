@@ -860,16 +860,6 @@ export default function UniversalTicketCreator({
           <div key={step} className="sw-new-request-stage" data-request-step={STEPS[step].key} data-direction={stageDirection} ref={stageRef}>
           {step === 0 ? (
             <>
-              {!isBusinessInternal ? (
-                <RequestRouteChooser
-                  routeMode={routeMode}
-                  setRouteMode={setRouteMode}
-                  savedProviders={savedProviders}
-                  selectedProvider={selectedProvider}
-                  onSelectProvider={chooseProvider}
-                  onRemoveProvider={deleteSavedProvider}
-                />
-              ) : null}
               {routeMode === "SAVED_PROVIDER" && selectedProvider ? (
                 <div className="rounded-3xl border border-emerald-500/25 bg-emerald-500/10 p-4">
                   <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200">
@@ -925,6 +915,14 @@ export default function UniversalTicketCreator({
                 </section>
               ) : null}
               <MarketplaceSearchPanel
+                routeChooser={!isBusinessInternal ? (<RequestRouteChooser
+                  routeMode={routeMode}
+                  setRouteMode={setRouteMode}
+                  savedProviders={savedProviders}
+                  selectedProvider={selectedProvider}
+                  onSelectProvider={chooseProvider}
+                  onRemoveProvider={deleteSavedProvider}
+                />) : null}
                 compact={!isBusinessInternal}
                 selectedService={selectedService}
                 setSelectedService={handleServiceSelect}
