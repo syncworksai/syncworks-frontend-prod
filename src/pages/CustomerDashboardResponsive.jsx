@@ -5,6 +5,7 @@ import "../styles/personalMidnight.css";
 import { Activity, Home, Inbox, LayoutGrid, MoreHorizontal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
+import { fetchPersonalCalendarEvents } from "../api/personalCalendarAgenda";
 import { getIdentityProfile } from "../api/identity";
 import { getBrowserCurrentLocation } from "../api/locationContext";
 import { getLiveWeather } from "../api/liveContext";
@@ -112,16 +113,21 @@ export default function CustomerDashboardResponsive() {
       api.get("/tickets/"),
       api.get("/sync-ai/customer/invoices/"),
       getIdentityProfile(),
-      api.get("/personal-calendar/events/", { params: { status: "ACTIVE" } }),
+      fetchPersonalCalendarEvents(),
     ]);
     setTickets(ticketResult.status === "fulfilled" ? safeList(ticketResult.value?.data) : []);
     setInvoices(invoiceResult.status === "fulfilled" ? safeList(invoiceResult.value?.data) : []);
     setIdentity(identityResult.status === "fulfilled" ? identityResult.value : null);
-    setCalendarEvents(calendarResult.status === "fulfilled" ? safeList(calendarResult.value?.data) : []);
+    setCalendarEvents(calendarResult.status === "fulfilled" ? safeList(calendarResult.value) : []);
     setLoading(false);
   }
 
   useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const refreshCalendar = () => { fetchPersonalCalendarEvents().then(setCalendarEvents).catch(() => {}); };
+    window.addEventListener("focus", refreshCalendar);
+    return () => window.removeEventListener("focus", refreshCalendar);
+  }, []);
   useEffect(() => {
     if (!phoneMode) return undefined;
     let active = true;
