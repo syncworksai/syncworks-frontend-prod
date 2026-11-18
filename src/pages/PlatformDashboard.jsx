@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import ModeBar from "../components/ModeBar";
 import api from "../api/client";
+import "./GodModeScene.css";
 
 import PlatformTabs from "../components/platform/PlatformTabs";
 import PlatformOverviewTab from "../components/platform/PlatformOverviewTab";
@@ -1454,8 +1455,8 @@ export default function PlatformDashboard() {
   };
 
   return (
-    <div className="min-h-screen min-w-0 overflow-x-hidden bg-[#05060a] text-slate-100" data-sw-god-mode="true">
-      <div className="absolute inset-0 pointer-events-none">
+    <div className="sw-god-scene min-h-screen min-w-0 overflow-x-hidden text-slate-100" data-sw-god-mode="true">
+      <div className="sw-god-scene-ambient absolute inset-0 pointer-events-none">
         <div className="absolute -top-40 -left-40 w-[520px] h-[520px] rounded-full blur-3xl opacity-30 bg-cyan-500/30" />
         <div className="absolute -top-20 -right-40 w-[560px] h-[560px] rounded-full blur-3xl opacity-25 bg-fuchsia-500/25" />
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[880px] h-[320px] rounded-full blur-3xl opacity-20 bg-indigo-500/20" />
@@ -1468,10 +1469,11 @@ export default function PlatformDashboard() {
         />
       </div>
 
-      <main className="relative mx-auto w-full min-w-0 max-w-7xl space-y-4 px-3 pb-32 pt-3 sm:px-4 lg:space-y-5 lg:px-4 lg:py-6">
+      <main className="sw-god-workspace relative mx-auto w-full min-w-0 max-w-7xl space-y-4 px-3 pb-32 pt-3 sm:px-4 lg:space-y-5 lg:px-4 lg:py-6">
         <PlatformMobileDashboard activeTab={tab} tabs={TABS} onChange={setTab} />
         <div className="hidden lg:block"><PlatformTabs tabs={TABS} active={tab} onChange={setTab} /></div>
 
+        <div key={tab} className="sw-god-tab-stage">
         {tab === "overview" ? <div className="hidden lg:block"><PlatformOverviewTab /></div> : null}
         {tab === "__build_backlog" ? <div className="lg:hidden"><GodModeBuildBacklog /></div> : null}
         {tab === "growth_os" ? <PlatformGrowthEngineTab /> : null}
@@ -1489,6 +1491,7 @@ export default function PlatformDashboard() {
         {tab === "health_launch_lock" ? <HealthLaunchLockPanel /> : null}
         {tab === "health_smoke_test" ? <HealthSmokeTestPanel /> : null}
         {tab === "developer_agent" ? <DeveloperAgentPanel /> : null}
+        </div>
       </main>
     </div>
   );
