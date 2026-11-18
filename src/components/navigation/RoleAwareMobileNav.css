@@ -269,3 +269,50 @@
     color:#195d68;
   }
 }
+
+
+/* Forge-only bottom dock: warm black marble glass, bronze, antique gold.
+   Never alter navigation structure, behavior, size or safe-area offsets. */
+@media(max-width:1023px){
+  .sw-role-mobile-nav[data-forge-route="true"]{
+    --sync-center-bg:linear-gradient(150deg,#ad7847,#603726 58%,#29171a);
+    --sync-center-border:rgba(246,202,136,.85);
+    --sync-center-ink:#fff1d0;
+    --sync-center-label:#f4d29b;
+    background:linear-gradient(105deg,rgba(18,13,15,.92),rgba(43,26,23,.88) 55%,rgba(18,12,15,.94))!important;
+    border:1px solid rgba(231,184,116,.65)!important;
+    box-shadow:0 -9px 30px rgba(0,0,0,.38),0 0 18px rgba(194,132,59,.09),inset 0 1px rgba(255,221,165,.13)!important;
+    -webkit-backdrop-filter:blur(16px) saturate(108%);
+    backdrop-filter:blur(16px) saturate(108%);
+  }
+  .sw-role-mobile-nav[data-forge-route="true"] .sw-role-mobile-nav-grid>button{
+    color:#d6b991!important;
+  }
+  .sw-role-mobile-nav[data-forge-route="true"] .sw-role-mobile-nav-grid>button.active{
+    color:#ffe5b5!important;
+    background:rgba(155,95,45,.22)!important;
+  }
+  .sw-role-mobile-nav[data-forge-route="true"] .sw-role-mobile-nav-grid>button .icon svg{
+    color:inherit;
+  }
+  .sw-role-mobile-nav[data-forge-route="true"] .sw-role-mobile-nav-center.is-sync{
+    color:#f4d29b!important;
+  }
+  .sw-role-mobile-nav[data-forge-route="true"] .sw-role-mobile-nav-center.is-sync .sw-role-mobile-nav-center-orb{
+    border:1px solid rgba(250,209,145,.9)!important;
+    background:radial-gradient(circle at 32% 22%,#b7834d,#573021 55%,#28151a 88%)!important;
+    box-shadow:0 3px 13px rgba(0,0,0,.42),0 0 15px rgba(230,170,87,.23),inset 0 1px 0 rgba(255,239,195,.22)!important;
+  }
+  .sw-role-mobile-nav[data-forge-route="true"] .sw-role-mobile-nav-center.is-sync .sw-role-mobile-nav-center-orb svg{
+    color:#fff0d2!important;
+  }
+  .sw-role-mobile-nav[data-forge-route="true"] .sw-role-mobile-nav-grid>button:focus-visible{
+    outline:2px solid #f0c783;
+    outline-offset:2px;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .sw-role-mobile-nav[data-forge-route="true"] *,
+  .sw-role-mobile-nav[data-forge-route="true"] *::before,
+  .sw-role-mobile-nav[data-forge-route="true"] *::after{animation:none!important;transition:none!important;}
+}
