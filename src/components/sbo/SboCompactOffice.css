@@ -1,0 +1,62 @@
+/* Shared customer-office photography, with a business-focused glass command layer. */
+.sw-sbo-compact {background:#030a19; color:#f5faff; isolation:isolate;}
+.sw-sbo-room-art {
+  background-image:var(--sw-sbo-room);
+  background-position:center 53%;
+  background-size:cover;
+  background-repeat:no-repeat;
+  opacity:1;
+  transform:scale(1.012);
+}
+.sw-sbo-room-shade {
+  background:linear-gradient(90deg,rgba(1,8,24,.76) 0%,rgba(1,8,24,.49) 45%,rgba(1,8,24,.35) 100%),
+             linear-gradient(0deg,rgba(1,7,19,.45),transparent 38%,rgba(1,7,19,.24));
+}
+.sw-sbo-topbar,.sw-sbo-briefing,.sw-sbo-stat {
+  background:rgba(3,12,30,.43);
+  border:1px solid rgba(111,204,247,.24);
+  box-shadow:inset 0 1px rgba(255,255,255,.06),0 12px 26px rgba(0,0,0,.12);
+  backdrop-filter:blur(11px);
+  -webkit-backdrop-filter:blur(11px);
+}
+.sw-sbo-glass-tile {
+  background:linear-gradient(135deg,rgba(9,24,49,.48),rgba(5,14,32,.29));
+  box-shadow:inset 0 1px rgba(255,255,255,.12),0 12px 24px rgba(0,0,0,.15);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  text-shadow:0 1px 5px rgba(0,0,0,.6);
+}
+.sw-sbo-glass-tile::before{
+  content:"";position:absolute;inset:auto 0 0;height:3px;
+  background:linear-gradient(90deg,rgba(33,208,245,.85),rgba(170,68,240,.82));
+  opacity:.43;pointer-events:none;
+}
+.sw-sbo-glass-tile:hover{
+  background:linear-gradient(135deg,rgba(5,26,53,.61),rgba(13,34,67,.44));
+  box-shadow:inset 0 1px rgba(255,255,255,.16),0 0 22px rgba(34,211,238,.13);
+}
+.sw-sbo-drawer {
+  background:linear-gradient(145deg,rgba(6,18,40,.88),rgba(9,14,37,.94));
+  backdrop-filter:blur(24px);
+  -webkit-backdrop-filter:blur(24px);
+}
+.sw-sbo-light .sw-sbo-room-shade{
+  background:linear-gradient(90deg,rgba(249,250,251,.66),rgba(233,240,247,.28)),linear-gradient(0deg,rgba(228,235,243,.43),transparent);
+}
+.sw-sbo-light .sw-sbo-topbar,.sw-sbo-light .sw-sbo-briefing,.sw-sbo-light .sw-sbo-stat{
+  background:rgba(240,248,253,.65);border-color:rgba(21,95,136,.32);color:#122d40;
+}
+.sw-sbo-light .sw-sbo-briefing .text-white\/90,.sw-sbo-light .sw-sbo-topbar .text-slate-200{color:#1c425b}
+.sw-sbo-light .sw-sbo-stat .text-slate-400{color:#35566b}
+.sw-sbo-light .sw-sbo-glass-tile{
+  background:linear-gradient(140deg,rgba(6,27,47,.68),rgba(15,51,75,.48));
+}
+@media(max-width:639px){
+ .sw-sbo-room-art{background-position:58% center;}
+ .sw-sbo-room-shade{background:linear-gradient(180deg,rgba(3,10,26,.66),rgba(3,9,25,.38) 46%,rgba(2,10,28,.67));}
+ .sw-sbo-glass-tile{padding:10px;}
+ .sw-sbo-glass-tile strong{font-size:12px;}
+}
+@media(prefers-reduced-motion:reduce){
+ .sw-sbo-glass-tile{transition:none;transform:none!important;}
+}
