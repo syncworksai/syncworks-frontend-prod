@@ -96,3 +96,84 @@
  }
  .sw-sbo-compact .sw-sbo-glass-tile{padding:12px;}
 }
+
+
+/* SBO theme parity: all command surfaces draw from the shared workspace palette.
+   Keep this scoped to /sbo so specialty modules and customer UI stay unchanged. */
+.sw-sbo-compact {
+  --sbo-accent: var(--sw-unified-accent, #35c8fb);
+  --sbo-border: var(--sw-unified-border, rgba(94,187,248,.34));
+  --sbo-hover: var(--sw-unified-hover, rgba(53,200,251,.16));
+  --sbo-ink: var(--sw-unified-ink, #edf8ff);
+  --sbo-muted: var(--sw-unified-muted, #aac5dd);
+  --sbo-glass: color-mix(in srgb, var(--sw-unified-panel, rgba(8,20,41,.66)) 60%, transparent);
+  --sbo-glass-strong: color-mix(in srgb, var(--sw-unified-panel, rgba(8,20,41,.66)) 82%, transparent);
+  color: var(--sbo-ink);
+}
+.sw-sbo-compact :is(.sw-sbo-rail,.sw-sbo-topbar,.sw-sbo-briefing,.sw-sbo-stat) {
+  background: var(--sbo-glass);
+  border: 1px solid var(--sbo-border);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.075), 0 10px 24px rgba(0,0,0,.12);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: var(--sbo-ink);
+}
+.sw-sbo-compact .sw-sbo-glass-tile {
+  background: var(--sbo-glass);
+  border: 1px solid var(--sbo-border);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.075), 0 10px 24px rgba(0,0,0,.12);
+  color: var(--sbo-ink);
+}
+.sw-sbo-compact .sw-sbo-glass-tile::before {
+  background: linear-gradient(90deg, var(--sbo-accent), var(--sw-unified-accent-strong, #7b61ff));
+  opacity: .38;
+}
+.sw-sbo-compact .sw-sbo-rail-link {
+  background: color-mix(in srgb, var(--sbo-glass) 65%, transparent);
+  border-color: color-mix(in srgb, var(--sbo-border) 60%, transparent);
+  color: var(--sbo-ink);
+}
+.sw-sbo-compact :is(.sw-sbo-rail-link,.sw-sbo-glass-tile,.sw-sbo-stat,button) {
+  transition: background-color 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+.sw-sbo-compact :is(.sw-sbo-rail-link,.sw-sbo-glass-tile,.sw-sbo-stat):is(:hover,:focus-visible) {
+  background: var(--sbo-hover);
+  border-color: var(--sbo-accent);
+  box-shadow: inset 0 1px rgba(255,255,255,.1),0 0 20px var(--sbo-hover);
+}
+.sw-sbo-compact :is(.sw-sbo-topbar,.sw-sbo-briefing,.sw-sbo-rail,.sw-sbo-stat) .text-cyan-300,
+.sw-sbo-compact .sw-sbo-glass-tile .text-cyan-200 {
+  color: var(--sbo-accent);
+}
+.sw-sbo-compact .sw-sbo-drawer {
+  background: var(--sbo-glass-strong);
+  border-color: var(--sbo-border);
+  color: var(--sbo-ink);
+}
+.sw-sbo-compact .sw-sbo-drawer button {
+  border-color: var(--sbo-border);
+}
+.sw-sbo-compact .sw-sbo-drawer button:hover {
+  background-color: var(--sbo-hover);
+}
+/* Deliberate high contrast for the bright office; cards no longer inherit
+   white-on-white or pale-on-pale utility text. */
+.sw-sbo-compact.sw-sbo-light {
+  --sbo-glass: rgba(255,250,240,.72);
+  --sbo-glass-strong: rgba(255,250,240,.94);
+}
+.sw-sbo-compact.sw-sbo-light :is(.sw-sbo-rail,.sw-sbo-topbar,.sw-sbo-briefing,.sw-sbo-stat,.sw-sbo-glass-tile,.sw-sbo-rail-link) {
+  color: #352c24;
+}
+.sw-sbo-compact.sw-sbo-light :is(.sw-sbo-glass-tile,.sw-sbo-topbar,.sw-sbo-briefing,.sw-sbo-stat,.sw-sbo-rail-link) :is(.text-slate-200,.text-slate-300,.text-slate-400) {
+  color: #655745;
+}
+.sw-sbo-compact.sw-sbo-light .sw-sbo-glass-tile {
+  text-shadow: none;
+}
+.sw-sbo-compact.sw-sbo-light .sw-sbo-drawer {
+  color: #352c24;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sw-sbo-compact :is(.sw-sbo-rail-link,.sw-sbo-glass-tile,.sw-sbo-stat,button) {transition:none;}
+}
