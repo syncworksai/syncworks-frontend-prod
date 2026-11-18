@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import "./PMMobileWorkspace.css";
 import "./PMCustomerParityV3.css";
+import "./PMTenantHubV4.css";
 
 const navItems = [
   ["PORTFOLIO", "", "", "section"],
