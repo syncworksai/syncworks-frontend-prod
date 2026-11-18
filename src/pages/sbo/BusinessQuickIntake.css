@@ -1,0 +1,11 @@
+.sw-intake-root{background:#020b19;isolation:isolate}
+.sw-intake-background{background:url('/office-themes/syncworks-future.webp') center 53%/cover no-repeat}
+.sw-intake-glass{background:linear-gradient(125deg,rgba(3,13,33,.56),rgba(6,18,40,.35));border:1px solid rgba(111,213,246,.27);box-shadow:inset 0 1px rgba(255,255,255,.07),0 12px 28px rgba(0,0,0,.13);backdrop-filter:blur(13px);-webkit-backdrop-filter:blur(13px)}
+.sw-intake-tap{background:rgba(7,21,46,.5);border:1px solid rgba(107,204,240,.26);backdrop-filter:blur(8px);transition:background .18s ease,transform .18s ease}
+.sw-intake-tap:hover{background:rgba(22,93,135,.3);transform:translateY(-1px)}
+.sw-intake-panel{background:linear-gradient(150deg,rgba(6,22,46,.96),rgba(6,13,35,.97));backdrop-filter:blur(23px);-webkit-backdrop-filter:blur(23px);animation:sw-intake-appear .2s ease-out both}
+.sw-intake-option{border:1px solid rgba(100,210,242,.22);background:rgba(255,255,255,.04)}
+.sw-intake-option:hover{background:rgba(29,137,174,.18)}
+@keyframes sw-intake-appear{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:767px){.sw-intake-background{background-position:60% center}.sw-intake-root form>div:nth-of-type(1){overflow-y:auto}.sw-intake-root .sw-intake-glass{padding:10px}.sw-intake-root aside{min-height:190px}}
+@media(prefers-reduced-motion:reduce){.sw-intake-panel{animation:none}.sw-intake-tap{transition:none;transform:none!important}}
