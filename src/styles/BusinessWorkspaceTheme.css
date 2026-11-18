@@ -117,3 +117,26 @@
 .sw-business-catalog-theme .sw-business-themed-card {background:var(--sw-business-layer)!important}
 .sw-business-catalog-theme[data-sw-business-theme="light"] > main > div,
 .sw-business-catalog-theme[data-sw-business-theme="light"] > main > section {color:#193446}
+
+/* Global mode bar must remain legible even outside the Customer workspace root. */
+.sw-modebar[data-sw-modebar-theme="light"] {
+ background:rgba(249,250,246,.95)!important;
+ border-color:rgba(42,107,138,.28)!important;
+ color:#193446!important;
+}
+.sw-modebar[data-sw-modebar-theme="light"] > .pointer-events-none {opacity:0}
+.sw-modebar[data-sw-modebar-theme="light"] .text-white,
+.sw-modebar[data-sw-modebar-theme="light"] .text-slate-100,
+.sw-modebar[data-sw-modebar-theme="light"] .text-slate-200 {color:#193446!important}
+.sw-modebar[data-sw-modebar-theme="light"] .text-cyan-200,
+.sw-modebar[data-sw-modebar-theme="light"] .text-slate-300,
+.sw-modebar[data-sw-modebar-theme="light"] .text-slate-400 {color:#426678!important}
+.sw-modebar[data-sw-modebar-theme="light"] button[title="Open SyncWorks menu"],
+.sw-modebar[data-sw-modebar-theme="light"] button[title="Open menu"] {
+ color:#193446!important;
+ border-color:rgba(41,107,139,.33)!important;
+ background:rgba(25,113,151,.11)!important;
+}
+.sw-modebar[data-sw-modebar-theme="classic"]{background:rgba(33,22,15,.94)!important;border-color:rgba(219,169,95,.46)!important}
+.sw-modebar[data-sw-modebar-theme="modern"]{background:rgba(25,37,44,.94)!important;border-color:rgba(168,193,206,.37)!important}
+.sw-modebar[data-sw-modebar-theme="future"]{background:rgba(7,19,42,.94)!important;border-color:rgba(40,196,255,.48)!important}
