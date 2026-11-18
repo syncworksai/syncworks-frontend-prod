@@ -58,6 +58,7 @@ export default function InboxPage() {
   const [unreadTotal, setUnreadTotal] = useState(0);
   const [selectedId, setSelectedId] = useState(null);
   const [mobileConversationOpen, setMobileConversationOpen] = useState(Boolean(requestedTicketId));
+  const [mobileSource, setMobileSource] = useState(quickMode === "email" ? "email" : "tickets");
   const [messages, setMessages] = useState([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -67,6 +68,7 @@ export default function InboxPage() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [lastLoadedAt, setLastLoadedAt] = useState(null);
   const selected = useMemo(() => threads.find((thread) => Number(thread.id) === Number(selectedId)) || null, [threads, selectedId]);
 
   async function loadThreads({ preserveSelection = true } = {}) {
@@ -80,10 +82,11 @@ export default function InboxPage() {
       params.set("archived", showArchived ? "true" : "false");
       if (query.trim()) params.set("q", query.trim());
       if (statusFilter) params.set("status", statusFilter);
-      const response = await api.get(`/ticket-conversations/?${params.toString()}`);
+      const response = await api.get(`/ticket-conversations/?${params.toString()}`, { timeout: 15000 });
       const next = safeList(response?.data);
       setThreads(next);
       setUnreadTotal(Number(response?.data?.unread_total || 0));
+      setLastLoadedAt(Date.now());
       const requested = requestedTicketId
         ? next.find((thread) => Number(thread.id) === Number(requestedTicketId))
         : null;
@@ -91,7 +94,9 @@ export default function InboxPage() {
       if (requested) setSelectedId(requested.id);
       else if (!preserveSelection || !stillExists) setSelectedId(next[0]?.id || null);
     } catch (requestError) {
-      setError(requestError?.response?.data?.detail || requestError?.response?.data?.business?.[0] || "Inbox conversations could not be loaded.");
+      setError(requestError?.code === "ECONNABORTED" ? "Ticket messages took too long to load. Tap Retry or check your connection." : requestError?.response?.data?.detail || requestError?.response?.data?.business?.[0] || "Inbox conversations could not be loaded.");
+      setThreads([]);
+      setUnreadTotal(0);
     } finally { setLoadingThreads(false); }
   }
 
@@ -99,7 +104,7 @@ export default function InboxPage() {
     if (!threadId) { setMessages([]); return; }
     setLoadingMessages(true); setError("");
     try {
-      const response = await api.get(`/ticket-conversations/${threadId}/messages/?scope=${scope}`);
+      const response = await api.get(`/ticket-conversations/${threadId}/messages/?scope=${scope}`, { timeout: 15000 });
       setMessages(safeList(response?.data));
       setThreads((current) => current.map((thread) => Number(thread.id) === Number(threadId) ? { ...thread, ...(response?.data?.thread || {}), is_unread: false, unread_count: 0 } : thread));
       window.dispatchEvent(new CustomEvent("sw:inboxReadStateChanged", { detail: { scope, threadId } }));
@@ -135,7 +140,7 @@ export default function InboxPage() {
 
   const title = scope === "BUSINESS" ? "Business Inbox" : "Personal Inbox";
   return (
-    <div data-sw-inbox="true" data-sw-inbox-view={mobileConversationOpen ? "conversation" : "list"} className="sw-inbox-shell min-h-dvh bg-[#020617] text-slate-100">
+    <div data-sw-inbox="true" data-sw-inbox-view={mobileConversationOpen ? "conversation" : "list"} data-sw-inbox-source={mobileSource} className="sw-inbox-shell min-h-dvh bg-[#020617] text-slate-100">
       <ModeBar title={title} subtitle={scope === "BUSINESS" ? "Customer conversations routed by ticket and role" : "One place for conversations that need you"} rightActions={<div className="flex gap-2">{scope === "BUSINESS" ? <BusinessPicker /> : null}<button type="button" onClick={() => navigate(scope === "BUSINESS" ? "/sbo" : "/customer")} className="rounded-xl border border-white/10 bg-white/[.04] px-3 py-2 text-xs font-black text-slate-200">Back</button></div>} />
 
       <main className="sw-inbox-main mx-auto max-w-[1500px] space-y-4 px-4 py-5 pb-28 lg:px-8">
@@ -160,11 +165,20 @@ export default function InboxPage() {
         {error ? <div className="rounded-2xl border border-rose-400/25 bg-rose-500/[.08] p-4 text-sm text-rose-100">{error}</div> : null}
 
         {scope === "BUSINESS" && !activeBusinessId ? <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-100">Select a business to open its inbox.</div> : (
+          <div className="sw-inbox-mobile-sources" role="group" aria-label="Message sources">
+            <button type="button" aria-pressed={mobileSource === "tickets"} onClick={() => {setMobileSource("tickets");setMobileConversationOpen(false);}}><MessageSquareText size={16}/> Ticket Chats</button>
+            <button type="button" aria-pressed={mobileSource === "email"} onClick={() => {setMobileSource("email");setMobileConversationOpen(false);}}><Mail size={16}/> Email & SYNC</button>
+            <button type="button" onClick={() => navigate("/pm/settings?view=messages")}><MessageSquareText size={16}/> Property</button>
+            <button type="button" onClick={() => navigate("/sbo/inbox")}><MessageSquareText size={16}/> Business</button>
+          </div>
+          {mobileSource === "email" && scope === "PERSONAL" ? <div className="sw-inbox-email-view"><SyncUnifiedInboxCard /></div> : null}
           <div className="sw-inbox-workspace grid min-h-[68vh] gap-4 lg:grid-cols-[390px_minmax(0,1fr)]">
             <aside className="sw-inbox-thread-list rounded-[1.7rem] border border-white/10 bg-slate-950/55 p-3">
+              {scope === "PERSONAL" ? <p className="sw-inbox-scope-note">Ticket conversations with service providers. Email and Property Management have separate inboxes above.</p> : null}
+              {error ? <div role="alert" className="sw-inbox-inline-error">{error}<button type="button" onClick={() => loadThreads({ preserveSelection: true })}>Retry</button></div> : null}
               <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search service, ZIP, address, or message…" className="h-11 w-full rounded-xl border border-white/10 bg-slate-950 pl-10 pr-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/35" /></div>
               <div className="mt-2 grid grid-cols-2 gap-2"><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-10 rounded-xl border border-white/10 bg-slate-950 px-3 text-xs font-bold text-slate-300"><option value="">All active</option><option value="NEW">New</option><option value="ASSIGNED">Assigned</option><option value="SCHEDULED">Scheduled</option><option value="IN_PROGRESS">In progress</option><option value="COMPLETED">Completed</option><option value="INVOICED">Invoiced</option><option value="PAID">Paid</option></select><button type="button" onClick={() => setShowArchived((value) => !value)} className={cx("h-10 rounded-xl border text-xs font-black", showArchived ? "border-fuchsia-400/30 bg-fuchsia-500/10 text-fuchsia-100" : "border-white/10 bg-white/[.025] text-slate-400")}>{showArchived ? "Archived" : "Active"}</button></div>
-              <div className="mt-3 space-y-2">{loadingThreads ? <div className="rounded-2xl border border-white/10 p-4 text-sm text-slate-500">Organizing conversations…</div> : threads.length ? threads.map((thread) => <ThreadCard key={thread.id} thread={thread} active={Number(thread.id) === Number(selectedId)} onClick={() => {setSelectedId(thread.id);setMobileConversationOpen(true);}} />) : <div className="rounded-2xl border border-dashed border-white/10 p-5 text-center"><Sparkles className="mx-auto h-5 w-5 text-cyan-300" /><div className="mt-2 text-sm font-black text-white">Inbox is clear</div><div className="mt-1 text-xs text-slate-500">New service conversations will appear automatically.</div></div>}</div>
+              <div className="mt-3 space-y-2">{loadingThreads ? <div role="status" className="rounded-2xl border border-white/10 p-4 text-sm text-slate-300">Loading ticket conversations…</div> : threads.length ? threads.map((thread) => <ThreadCard key={thread.id} thread={thread} active={Number(thread.id) === Number(selectedId)} onClick={() => {setSelectedId(thread.id);setMobileConversationOpen(true);}} />) : <div className="rounded-2xl border border-dashed border-white/10 p-5 text-center"><Sparkles className="mx-auto h-5 w-5 text-cyan-300" /><div className="mt-2 text-sm font-black text-white">Inbox is clear</div><div className="mt-1 text-xs text-slate-500">Only ticket conversations appear here. Use Email & SYNC for connected mail or Property for PM messages.</div></div>}</div>
             </aside>
 
             <section className="sw-inbox-conversation flex min-h-[560px] flex-col rounded-[1.7rem] border border-white/10 bg-slate-950/55">
