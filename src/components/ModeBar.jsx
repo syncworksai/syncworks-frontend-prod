@@ -11,6 +11,8 @@ import {
 
 import { useAuth } from "../auth/AuthContext";
 import NotificationsBell from "./NotificationsBell";
+import "../styles/BusinessWorkspaceTheme.css";
+import {useBusinessWorkspaceTheme} from "../hooks/useBusinessWorkspaceTheme";
 import BusinessPicker from "./BusinessPicker";
 
 import api, {
@@ -1315,6 +1317,7 @@ export default function ModeBar({
   sportsCompact = false,
 }) {
   const nav = useNavigate();
+  const {theme}=useBusinessWorkspaceTheme();
   const location =
     useLocation();
 
@@ -1873,7 +1876,7 @@ export default function ModeBar({
 
   return (
     <>
-      <div className={`sw-modebar ${sportsCompact ? "sw-modebar--sports" : ""} sticky top-0 z-50 overflow-hidden border-b border-slate-800 bg-slate-950/80 backdrop-blur`}>
+      <div data-sw-modebar-theme={theme} className={`sw-modebar ${sportsCompact ? "sw-modebar--sports" : ""} sticky top-0 z-50 overflow-hidden border-b border-slate-800 bg-slate-950/80 backdrop-blur`}>
         <div className="pointer-events-none absolute inset-0">
           <div
             className="absolute -inset-10 blur-3xl"
