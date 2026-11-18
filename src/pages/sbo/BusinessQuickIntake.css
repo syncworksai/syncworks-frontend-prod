@@ -76,3 +76,20 @@
  .sw-intake-root .sw-intake-primary .sw-intake-fields{overflow-y:auto;flex:1 1 0%;min-height:0}
  .sw-intake-root .sw-intake-primary .sw-intake-action-bar{position:relative;bottom:auto}
 }
+
+/* Business intake: one viewport, with all final actions permanently visible. */
+.sw-intake-root{height:calc(100dvh - 105px)!important;min-height:0!important;overflow:hidden!important}
+.sw-intake-root>form{height:100%!important;min-height:0!important;display:flex;flex-direction:column}
+.sw-intake-root form>.grid{min-height:0!important;flex:1 1 0%!important;overflow:hidden}
+.sw-intake-root .sw-intake-primary{min-height:0!important;overflow:hidden!important}
+.sw-intake-root .sw-intake-fields{min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain}
+.sw-intake-root .sw-intake-sticky-footer{flex:0 0 auto;position:relative;z-index:5;min-height:54px;display:flex;gap:8px;margin-top:0}
+.sw-intake-root .sw-intake-sticky-footer button{min-height:40px;white-space:nowrap}
+.sw-intake-root .sw-intake-footnote{display:none!important}
+@media(max-width:767px){
+ .sw-intake-root{height:calc(100dvh - 142px)!important;min-height:0!important;padding:7px!important}
+ .sw-intake-root form>.grid{display:flex!important;flex-direction:column!important}
+ .sw-intake-root .sw-intake-primary{flex:1 1 0%!important}
+ .sw-intake-root .sw-intake-summary{display:none!important}
+ .sw-intake-root .sw-intake-sticky-footer{padding:7px!important}
+}

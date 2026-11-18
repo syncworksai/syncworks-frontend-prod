@@ -1,0 +1,25 @@
+
+/* Ticket workspace: the application viewport stays fixed; only the selected tool scrolls. */
+.sw-ticket-cockpit{height:calc(100dvh - 55px);min-height:0!important;display:flex;flex-direction:column;overflow:hidden!important;background:radial-gradient(circle at 70% 14%,rgba(29,83,119,.24),transparent 50%),#020617}
+.sw-ticket-cockpit>.sw-ticket-main{flex:1 1 0%;min-height:0;width:100%;display:flex;flex-direction:column;gap:9px!important;overflow:hidden;padding-top:8px;padding-bottom:95px}
+.sw-ticket-main>*{flex-shrink:0}
+.sw-ticket-main>.sw-ticket-workspace{flex:1 1 0%;min-height:0;overflow:hidden}
+.sw-ticket-workspace-panel{min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(56,189,248,.35) transparent}
+.sw-ticket-main .sw-ticket-quick-actions button{transition:transform .18s ease,background .18s ease;min-height:42px}
+.sw-ticket-main .sw-ticket-quick-actions button:hover{transform:translateY(-2px);background:rgba(20,184,216,.19)}
+.sw-ticket-main .grid.md\\:grid-cols-2.xl\\:grid-cols-4{gap:6px!important}
+.sw-ticket-main .grid.md\\:grid-cols-2.xl\\:grid-cols-4>div{padding:9px!important;border-radius:13px!important}
+.sw-ticket-main .grid.md\\:grid-cols-2.xl\\:grid-cols-4>div .text-lg{font-size:14px!important}
+.sw-ticket-overlay{position:fixed;inset:0;z-index:90;background:rgba(1,8,22,.74);backdrop-filter:blur(9px);display:flex;justify-content:flex-end;align-items:stretch}
+.sw-ticket-overlay-panel{position:relative;width:min(580px,100%);height:100%;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:18px 16px calc(90px + env(safe-area-inset-bottom));border-left:1px solid rgba(34,211,238,.45);background:linear-gradient(155deg,rgba(12,31,58,.98),rgba(3,11,30,.99));box-shadow:-15px 0 70px rgba(0,0,0,.5);animation:sw-ticket-cockpit-in .25s cubic-bezier(.2,.8,.2,1)}
+.sw-ticket-drawer-dismiss{position:sticky;top:0;z-index:5;display:block;margin-left:auto;margin-bottom:12px;padding:8px 14px;border:1px solid rgba(103,232,249,.45);border-radius:11px;color:#baf4fe;background:#081a32;font-weight:700}
+@keyframes sw-ticket-cockpit-in{from{transform:translateX(22px);opacity:.45}to{transform:none;opacity:1}}
+@media(max-width:767px){
+.sw-ticket-cockpit{height:calc(100dvh - 58px);padding-bottom:0!important}
+.sw-ticket-cockpit>.sw-ticket-main{padding:6px 9px calc(106px + env(safe-area-inset-bottom));gap:6px!important}
+.sw-ticket-main>.grid.md\\:grid-cols-2.xl\\:grid-cols-4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.sw-ticket-main .sw-ticket-quick-actions button{padding:8px!important;font-size:12px!important}
+.sw-ticket-main .sw-ticket-workspace-panel>div{gap:9px!important}
+.sw-ticket-overlay-panel{padding:12px 12px calc(105px + env(safe-area-inset-bottom));border-left:0}
+}
+@media(prefers-reduced-motion:reduce){.sw-ticket-overlay-panel{animation:none}.sw-ticket-main .sw-ticket-quick-actions button{transition:none;transform:none!important}}

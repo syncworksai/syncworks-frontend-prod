@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import api from "../api/client";
 import ModeBar from "../components/ModeBar";
+import "./TicketDetailCockpit.css";
 import { useAuth } from "../auth/AuthContext";
 
 import MessagePanel from "../components/tickets/MessagePanel";
@@ -871,6 +872,8 @@ export default function TicketDetail() {
   }, [isCustomer]);
 
   const [activeTab, setActiveTab] = useState("overview");
+  const [summaryDrawerOpen, setSummaryDrawerOpen] = useState(false);
+  const [workflowDrawerOpen, setWorkflowDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (!tabs.find((t) => t.key === activeTab)) {
@@ -1162,6 +1165,8 @@ export default function TicketDetail() {
 
   function openTicketSection(tab, elementId = "") {
     setActiveTab(tab);
+    setWorkflowDrawerOpen(false);
+    setSummaryDrawerOpen(false);
     if (!elementId) return;
     window.requestAnimationFrame(() => {
       document.getElementById(elementId)?.scrollIntoView({
@@ -1197,7 +1202,7 @@ export default function TicketDetail() {
   }, [currentMember, isOwner, mode]);
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 pb-44 lg:pb-10">
+    <div className="sw-ticket-cockpit min-h-screen bg-[#020617] text-slate-100 pb-44 lg:pb-10">
       <ModeBar
         title={
           <div className="leading-tight">
@@ -1286,14 +1291,21 @@ export default function TicketDetail() {
         </div>
       ) : null}
 
-      <main className="max-w-7xl mx-auto px-4 py-5 space-y-4">
+      <main className="sw-ticket-main max-w-7xl mx-auto px-4 py-5 space-y-4">
         {err ? (
           <div className="text-sm text-red-200 bg-red-900/10 border border-red-800 rounded-2xl p-3">
             {err}
           </div>
         ) : null}
 
-        <TicketHeaderCard
+        {!ticket && (loading || err) ? (
+          <section role="status" className="rounded-2xl border border-cyan-500/30 bg-slate-950/80 p-5">
+            <h2 className="text-base font-bold text-white">{loading ? "Loading ticket…" : "Ticket could not be loaded"}</h2>
+            <p className="mt-2 text-sm text-slate-300">{loading ? "Checking ticket permissions and current data." : (err || "The ticket was not found or is not accessible in this business.")}</p>
+            {!loading && <button type="button" onClick={loadTicket} className="mt-3 rounded-xl border border-cyan-400/40 px-4 py-2 text-sm text-cyan-100">Retry loading</button>}
+          </section>
+        ) : null}
+        {ticket && <TicketHeaderCard
           ticket={ticket}
           ticketCode={ticketCode}
           customerName={customerName}
@@ -1304,13 +1316,19 @@ export default function TicketDetail() {
           assignedName={assignedName}
           detailSummary={detailSummary}
           isCustomer={isCustomer}
-        />
+        />}
 
-        <TicketNextActionCard
+        <div className="grid grid-cols-2 gap-2 sw-ticket-quick-actions">
+          <button type="button" onClick={() => setWorkflowDrawerOpen(true)} className="rounded-xl border border-cyan-400/40 bg-cyan-500/10 p-3 text-xs font-bold text-cyan-100">Workflow & actions</button>
+          <button type="button" onClick={() => setSummaryDrawerOpen(true)} className="rounded-xl border border-fuchsia-400/40 bg-fuchsia-500/10 p-3 text-xs font-bold text-fuchsia-100">Ticket summary</button>
+        </div>
+
+        {workflowDrawerOpen && <div className="sw-ticket-overlay" role="presentation" onMouseDown={(e) => {if(e.target===e.currentTarget)setWorkflowDrawerOpen(false);}}><div className="sw-ticket-overlay-panel" role="dialog" aria-modal="true" aria-label="Ticket workflow actions"><button type="button" className="sw-ticket-drawer-dismiss" onClick={()=>setWorkflowDrawerOpen(false)}>Close ×</button><TicketNextActionCard
           workflow={ticket?.workflow}
           busy={actionBusy || loading}
           onAction={(action) => {
             if (!action) return;
+            setWorkflowDrawerOpen(false);
             if (action.key === "ASSIGN_TECHNICIAN") {
               setActiveTab("overview");
               window.requestAnimationFrame(() => {
@@ -1339,6 +1357,8 @@ export default function TicketDetail() {
           }}
         />
 
+        </div></div>}
+
         <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-3">
           <GlowStat label="Status" value={overviewStats.status} tone="cyan" />
           <GlowStat label="Source" value={overviewStats.source} tone="fuchsia" />
@@ -1348,12 +1368,9 @@ export default function TicketDetail() {
 
         <TicketWorkspaceNav items={tabs} activeKey={activeTab} onChange={setActiveTab} isCustomer={isCustomer} />
 
-        <div className="grid xl:grid-cols-12 gap-4">
-          <aside className="xl:col-span-4">
-            <TicketSummaryRail ticket={ticket} isCustomer={isCustomer} />
-          </aside>
-
-          <section className="xl:col-span-8 space-y-4">
+        {summaryDrawerOpen && <div className="sw-ticket-overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setSummaryDrawerOpen(false);}}><aside className="sw-ticket-overlay-panel" role="dialog" aria-modal="true" aria-label="Ticket summary"><button type="button" className="sw-ticket-drawer-dismiss" onClick={()=>setSummaryDrawerOpen(false)}>Close ×</button><TicketSummaryRail ticket={ticket} isCustomer={isCustomer}/></aside></div>}
+        <div className="sw-ticket-workspace grid gap-4">
+          <section className="sw-ticket-workspace-panel space-y-4">
             {activeTab === "overview" ? (
               <div className="space-y-4">
                 {isCustomer ? (
