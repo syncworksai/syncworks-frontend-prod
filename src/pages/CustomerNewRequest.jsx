@@ -22,6 +22,7 @@ export default function CustomerNewRequest() {
     };
   }, []);
   const location = useLocation();
+  const requestPrefill = location.state?.requestPrefill || {};
   const jarvisDetails = typeof location.state?.jarvisDescription === "string" ? location.state.jarvisDescription.slice(0, 3000) : "";
 
   function handleCreated({ id }) {
@@ -38,9 +39,13 @@ export default function CustomerNewRequest() {
     <div className="sw-new-request-page" data-theme={appearance.theme} data-motion={appearance.motion ? "on" : "off"}>
       <UniversalTicketCreator
         mode={MARKETPLACE_MODES.CUSTOMER_MARKETPLACE}
-        initialDetails={jarvisDetails}
+        initialDetails={jarvisDetails || requestPrefill.details || ""}
+        initialSearchQuery={requestPrefill.serviceQuery || ""}
+        initialPriority={requestPrefill.priority || ""}
+        initialZip={requestPrefill.zip || ""}
         title="New Request"
-        onOpenAvailability={() => navigate("/customer/marketplace")}
+        onOpenAvailability={({ selectedService, serviceZip, fullServiceAddress } = {}) => navigate("/customer/marketplace", {state: {requestPrefill: {categoryId: selectedService?.categoryId || "",serviceQuery: selectedService?.label || "",zip: serviceZip || "",address: fullServiceAddress || ""}}})}
+        onListBusiness={() => navigate("/onboarding/business")}
         subtitle="Search the local marketplace. SyncWorks turns every request into a trackable ticket behind the scenes."
         onCreated={handleCreated}
         onCancel={() => navigate("/customer")}
