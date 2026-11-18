@@ -227,6 +227,67 @@ export default function PropertyManagerDashboard() {
   ];
 
   return <PMShell><main data-pm-screen="dashboard" data-pm-mobile-view={mobileView} className="pm-dashboard-main space-y-3 px-3 py-3 pb-[calc(8rem+env(safe-area-inset-bottom))] sm:px-5">
+    <section className="pm-v3-cockpit" aria-label="Property Management mobile command center">
+      <div className="pm-v3-intro">
+        <div><div className="pm-v3-eyebrow">PROPERTY MANAGEMENT / COMMAND CENTER</div>
+          <h1>{data?.workspace?.name || "My Portfolio"}</h1>
+          <p>Portfolio health <strong>{data?.health?.score ?? "—"}</strong> · {loading ? "Updating live data" : "Your properties at a glance"}</p>
+        </div>
+        <button type="button" className="pm-v3-refresh" aria-label="Refresh property dashboard" onClick={load} disabled={loading}><RefreshCw size={20} className={loading ? "animate-spin" : ""}/></button>
+      </div>
+      <div className="pm-v3-tabs" role="group" aria-label="Property dashboard views">
+        {[[ "overview", "Overview" ], [ "properties", "Properties" ], [ "more", "Operations" ]].map(([id,label]) => <button key={id} type="button" aria-pressed={mobileView === id} onClick={() => setMobileView(id)}>{label}</button>)}
+      </div>
+      {error ? <div className="pm-v3-error" role="alert">{error}<button type="button" onClick={load}>Retry</button></div> : null}
+      <div className="pm-v3-pane" key={mobileView}>
+        {mobileView === "overview" ? <>
+          <div className="pm-v3-kpis">
+            {[
+              ["Properties", kpis.properties || 0, Building2, "/pm/properties"],
+              ["Occupancy", `${kpis.occupancy_rate || 0}%`, Gauge, "/pm/properties"],
+              ["Outstanding", compactMoney(financials.outstanding_balance), WalletCards, "/pm/payments"],
+              ["Work Orders", kpis.open_work_orders || 0, Wrench, "/pm/work-orders"],
+            ].map(([label,value,Icon,href]) => <button type="button" key={label} onClick={() => nav(href)}><Icon size={19}/><strong>{loading ? "—" : value}</strong><span>{label}</span></button>)}
+          </div>
+          <div className="pm-v3-section">
+            <div className="pm-v3-section-head"><div><span>TODAY'S PRIORITIES</span><h2>Needs attention</h2></div><button type="button" onClick={()=>nav("/pm/team")}>View queue <ChevronRight size={16}/></button></div>
+            {priorityItems.length ? priorityItems.slice(0,2).map(item => <button key={item.id} type="button" className="pm-v3-priority" onClick={() => nav(item.href)}><span>{item.title}</span><ChevronRight size={16}/></button>) : <p className="pm-v3-empty">{loading ? "Checking priorities…" : "No urgent assigned work right now."}</p>}
+          </div>
+          <div className="pm-v3-quick">
+            <button type="button" onClick={()=>setOperationsOpen(true)}><Plus size={20}/> Quick Operations</button>
+            <button type="button" onClick={()=>nav("/pm/calendar")}><ClipboardList size={19}/> Schedule</button>
+          </div>
+        </> : mobileView === "properties" ? <>
+          <div className="pm-v3-section">
+            <div className="pm-v3-section-head"><div><span>YOUR PORTFOLIO</span><h2>Find a property</h2></div><button type="button" onClick={()=>nav("/pm/properties")}>All <ChevronRight size={16}/></button></div>
+            <input type="search" aria-label="Search portfolio properties" value={propertySearch} onChange={event=>setPropertySearch(event.target.value)} placeholder="Property name, street, or city"/>
+            <div className="pm-v3-property-list">
+              {matchingProperties.slice(0,propertySearch?7:5).map(p=><button type="button" key={p.id} onClick={()=>nav(`/pm/properties/${p.id}`)}><div><strong>{p.name}</strong><small>{p.address}</small></div><ChevronRight size={19}/></button>)}
+              {!matchingProperties.length ? <p className="pm-v3-empty">{propertySearch?"No matching properties.":"No properties found."}</p> : null}
+            </div>
+          </div>
+          <button type="button" className="pm-v3-primary" onClick={()=>nav("/pm/properties/new")}><Plus size={18}/> Add Property</button>
+        </> : <>
+          <div className="pm-v3-section">
+            <div className="pm-v3-section-head"><div><span>YOUR BUSINESS</span><h2>Operations & Insights</h2></div></div>
+            <div className="pm-v3-tools">
+              {[
+                ["Tenants", "/pm/tenants", Users],
+                ["Payments", "/pm/payments", WalletCards],
+                ["Work Orders", "/pm/work-orders", Wrench],
+                ["Leads", "/pm/leads", Mail],
+                ["Investors", "/pm/investors", Building2],
+                ["Documents", "/pm/document-requests", FileSearch],
+                ["Lease Builder", "/pm/lease-builder", ClipboardList],
+                ["Reports & Projects", "/pm/projects", BarChart3],
+              ].map(([label,href,Icon])=><button type="button" key={href} onClick={()=>nav(href)}><Icon size={20}/><span>{label}</span><ChevronRight size={15}/></button>)}
+            </div>
+          </div>
+          <button type="button" className="pm-v3-primary" onClick={()=>setOperationsOpen(true)}><Plus size={19}/> Open Quick Operations</button>
+        </>}
+      </div>
+    </section>
+    <div className="pm-v3-legacy">
     <div className="pm-dashboard-tabs" role="group" aria-label="Property dashboard view"><button type="button" aria-pressed={mobileView === "overview"} onClick={() => setMobileView("overview")}>Overview</button><button type="button" aria-pressed={mobileView === "more"} onClick={() => setMobileView("more")}>Operations & Insights</button></div>
     <Card className="pm-dashboard-hero overflow-hidden bg-[radial-gradient(circle_at_12%_20%,rgba(34,211,238,.16),transparent_30%),radial-gradient(circle_at_88%_0%,rgba(217,70,239,.16),transparent_32%),#07111f] p-2.5 sm:p-5"><div className="flex flex-wrap items-center justify-between gap-2 sm:gap-4"><div className="flex items-center gap-2.5 sm:gap-4"><div className="relative grid h-10 w-10 flex-none place-items-center rounded-xl sm:h-14 sm:w-14 sm:rounded-2xl border border-cyan-300/25 bg-cyan-500/10"><BarChart3 className="h-6 w-6 text-cyan-200" /><span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[#07111f] bg-emerald-400" /></div><div><div className="text-[9px] font-black uppercase tracking-[.2em] text-cyan-300">Live portfolio pulse</div><div className="mt-1 flex flex-wrap items-baseline gap-2"><h2 className="text-xl font-black text-white">{data?.workspace?.name || "Your portfolio"}</h2><span className={`rounded-full border px-2.5 py-1 text-[9px] font-black ${Number(data?.health?.score || 0) >= 85 ? tones.emerald : tones.amber}`}>{data?.health?.score ?? "—"} health</span></div><p className="mt-1 hidden text-xs text-slate-400 sm:block">Revenue, residents, work, cases, messages, and this week—one operating view.</p></div></div><div className="flex flex-wrap gap-2"><button type="button" onClick={load} disabled={loading} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-black/20 text-slate-300 disabled:opacity-40" aria-label="Refresh command center"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /></button><button type="button" onClick={() => nav("/pm/settings?view=leads&connect=email")} className={`hidden min-h-10 items-center gap-2 rounded-xl border px-3 text-xs font-black sm:inline-flex ${email.pm_routing_enabled ? tones.emerald : tones.fuchsia}`}><Mail className="h-4 w-4" />{email.pm_routing_enabled ? `${email.account_count} email routed` : "Connect email"}</button><button type="button" onClick={() => setOperationsOpen(true)} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-fuchsia-400 px-4 text-xs font-black text-slate-950"><Plus className="h-4 w-4" />Quick operations</button></div></div></Card>
     {error ? <div className="pm-dashboard-error flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-400/30 bg-rose-500/10 p-4 text-sm text-rose-100"><span>{error}</span><button type="button" onClick={load} className="rounded-xl border border-rose-300/30 px-3 py-2 text-xs font-black">Try again</button></div> : null}
@@ -300,6 +361,7 @@ export default function PropertyManagerDashboard() {
     <div className="grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
       <Card><Header eyebrow="Portfolio snapshot" title="Property health & occupancy" detail="Open a property for units, residents, work, projects, and records." action={<button type="button" onClick={() => nav("/pm/properties")} className="text-[10px] font-black text-cyan-300">All properties →</button>} /><div className="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-3">{data?.properties?.length ? data.properties.map((property) => <button key={property.id} type="button" onClick={() => nav(property.href)} className="rounded-2xl border border-white/[.07] bg-black/20 p-3 text-left hover:border-cyan-400/30"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="truncate text-xs font-black text-white">{property.name}</div><div className="mt-1 truncate text-[9px] text-slate-500">{property.address}</div></div><span className={`rounded-full border px-2 py-1 text-[8px] font-black ${property.status === "AT_RISK" ? tones.rose : property.status === "WATCH" ? tones.amber : tones.emerald}`}>{words(property.status)}</span></div><div className="mt-3 flex items-center gap-2"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800"><div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-400" style={{ width: `${property.occupancy_rate}%` }} /></div><span className="text-[9px] font-black text-white">{property.occupancy_rate}%</span></div></button>) : <div className="sm:col-span-2 xl:col-span-3"><Empty>No properties yet. Add the first property to activate portfolio intelligence.</Empty></div>}</div></Card>
       <Card className="overflow-hidden bg-[radial-gradient(circle_at_80%_10%,rgba(139,92,246,.2),transparent_35%),#07111f]"><div className="p-5"><div className="grid h-11 w-11 place-items-center rounded-2xl border border-violet-300/25 bg-violet-500/10"><Sparkles className="h-5 w-5 text-violet-200" /></div><div className="mt-4 text-[9px] font-black uppercase tracking-[.2em] text-violet-300">SYNC document assistant</div><h2 className="mt-2 text-xl font-black text-white">Find or organize a recorded deed</h2><p className="mt-2 text-xs leading-5 text-slate-400">Upload the deed to the property record, or ask SYNC to organize a public-record request. Online retrieval depends on the county recorder’s access, fees, and verification requirements; sources should be shown before a document is saved or sent.</p><div className="mt-4 grid gap-2"><button type="button" onClick={() => nav("/sync?prompt=I%20need%20help%20finding%20or%20requesting%20a%20recorded%20deed%20for%20a%20property%20and%20organizing%20it%20for%20Section%208.")} className="min-h-10 rounded-xl bg-gradient-to-r from-violet-500 to-cyan-500 px-4 text-xs font-black text-white">Ask SYNC about a deed</button><button type="button" onClick={() => nav(firstProperty ? `${firstProperty.href}?tab=documents` : "/pm/properties")} className="min-h-10 rounded-xl border border-white/10 px-4 text-xs font-black text-slate-200">Upload to property record</button></div></div></Card>
+    </div>
     </div>
     <QuickOperations open={operationsOpen} onClose={() => setOperationsOpen(false)} navigate={nav} firstProperty={firstProperty} />
   </main></PMShell>;
