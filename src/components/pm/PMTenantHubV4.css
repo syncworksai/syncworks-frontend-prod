@@ -1,0 +1,167 @@
+/* SyncWorks PM Tenant Center: viewport-locked home, internally scrolling
+ * functional panels, same scene/glass/dock as the PM customer-parity shell. */
+@media (max-width:767px) {
+  body:has([data-pm-screen="tenants"]) .pm-legacy-edit-tenant-trigger {display:none!important}
+  [data-pm-command-shell] .pm-command-content:has([data-pm-screen="tenants"]) {
+    flex:1 1 auto;
+    min-height:0;
+    padding:0!important;
+    overflow:hidden!important;
+  }
+  [data-pm-command-shell] [data-pm-screen="tenants"] {
+    height:100%;
+    min-height:0!important;
+    max-height:100%;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    background:transparent!important;
+  }
+  [data-pm-command-shell] [data-pm-screen="tenants"] > main.pm-tenants-hub {
+    display:flex!important;
+    flex:1 1 auto;
+    flex-direction:column;
+    gap:9px;
+    min-height:0;
+    max-height:100%;
+    width:100%;
+    margin:0!important;
+    padding:8px 12px calc(101px + env(safe-area-inset-bottom,0px))!important;
+    overflow:hidden!important;
+    background:transparent;
+  }
+  [data-pm-command-shell] .pm-tenants-toolbar {
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    min-width:0;
+    padding:6px 2px;
+    color:#f7fbff;
+  }
+  [data-pm-command-shell] .pm-tenants-toolbar h1 {
+    font-size:clamp(21px,3.1dvh,29px);
+    font-weight:900;
+    line-height:1.15;
+    margin:3px 0 2px;
+  }
+  [data-pm-command-shell] .pm-tenants-toolbar p {
+    color:#d2e3ee;
+    font-size:11px;
+  }
+  [data-pm-command-shell] .pm-tenants-eyebrow {
+    font-size:9px;
+    font-weight:900;
+    letter-spacing:.15em;
+    color:var(--pm-scene-accent,#67d9f9);
+  }
+  [data-pm-command-shell] .pm-tenants-toolbar-actions {
+    display:flex;
+    align-items:center;
+    flex:0 0 auto;
+    gap:5px;
+  }
+  [data-pm-command-shell] .pm-tenants-toolbar-actions button {
+    min-height:44px;
+    border:1px solid var(--pm-scene-line,rgba(103,217,249,.5));
+    background:rgba(7,20,43,.30);
+    color:#f4fcff;
+    border-radius:12px;
+    padding:7px 9px;
+    font-size:11px;
+    font-weight:850;
+    backdrop-filter:blur(10px);
+  }
+  [data-pm-command-shell] .pm-tenants-tabs {
+    display:grid;
+    flex:0 0 auto;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:6px;
+    padding:4px;
+    border:1px solid var(--pm-scene-line,rgba(103,217,249,.5));
+    background:rgba(7,20,43,.24);
+    border-radius:15px;
+    backdrop-filter:blur(11px);
+  }
+  [data-pm-command-shell] .pm-tenants-tabs button {
+    min-width:0;
+    min-height:44px;
+    padding:8px 4px;
+    border-radius:11px;
+    font-size:12px;
+    font-weight:850;
+    color:#f1f7ff;
+  }
+  [data-pm-command-shell] .pm-tenants-tabs button[aria-pressed="true"] {
+    background:rgba(64,194,253,.23);
+    border:1px solid rgba(171,232,255,.42);
+    box-shadow:inset 0 1px rgba(255,255,255,.14);
+  }
+  [data-pm-command-shell] .pm-tenants-intro {display:none!important}
+  [data-pm-command-shell] .pm-tenants-panes {
+    display:contents!important;
+  }
+  [data-pm-command-shell] .pm-tenants-panes > section[data-pm-panel] {
+    display:none!important;
+  }
+  [data-pm-command-shell] .pm-tenants-panes > section[data-pm-panel][data-pm-active="true"] {
+    display:block!important;
+    flex:1 1 auto;
+    min-height:0;
+    max-height:100%;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;
+    border:1px solid var(--pm-scene-line,rgba(103,217,249,.5))!important;
+    border-radius:19px;
+    background:var(--pm-scene-glass,rgba(5,17,39,.30))!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.12);
+    -webkit-backdrop-filter:blur(13px);
+    backdrop-filter:blur(13px);
+    padding:12px!important;
+    animation:pm-tenants-panel-open .22s ease-out both;
+  }
+  [data-pm-command-shell] .pm-tenants-panes > section[data-pm-panel] > div {
+    min-width:0;
+  }
+  [data-pm-command-shell] .pm-tenants-panes > section[data-pm-panel] :is(input,textarea,select) {
+    max-width:100%;
+    min-width:0;
+    font-size:16px; /* iOS Safari focus should not zoom the page */
+  }
+  [data-pm-command-shell] .pm-tenants-panes > section[data-pm-panel] :is(button,a) {
+    min-height:44px;
+  }
+  [data-pm-command-shell] .pm-tenants-panes > section[data-pm-panel] article {
+    border-color:rgba(170,219,255,.35);
+    background:rgba(2,10,29,.32)!important;
+    -webkit-backdrop-filter:blur(8px);
+    backdrop-filter:blur(8px);
+  }
+  [data-pm-command-shell] .pm-tenants-panes > section[data-pm-panel] h2 {
+    color:#f8fcff;
+  }
+  [data-pm-command-shell] .pm-tenants-hub > .rounded-2xl {
+    flex:0 0 auto;
+    margin:0;
+    font-size:12px;
+    padding:8px 10px;
+  }
+  @keyframes pm-tenants-panel-open {from{opacity:.45;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+  [data-pm-command-shell] .pm-tenants-panes > section[data-pm-panel] .space-y-3 {max-width:100%}
+  /* Tenant editor is an independent slide-out, not an inline page. */
+  body:has([data-pm-screen="tenants"]) .pm-tenant-editor-drawer {
+    max-height:100dvh;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+  }
+}
+@media (min-width:768px) {
+  .pm-tenants-toolbar,.pm-tenants-tabs {display:none!important}
+}
+@media (prefers-reduced-motion:reduce) {
+  [data-pm-command-shell] .pm-tenants-panes > section[data-pm-panel][data-pm-active="true"] {animation:none}
+}

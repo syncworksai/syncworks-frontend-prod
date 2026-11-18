@@ -36,3 +36,16 @@ test("PM legacy mobile rules must not suppress the v3 command center", () => {
   const design = readFileSync(new URL("../src/components/pm/PMCustomerParityV3.css", import.meta.url), "utf8");
   assert.match(design, /\.pm-v3-legacy\s*\{display:none!important\}/);
 });
+
+test("PM Tenant Center has anchored mobile tabs and edit action", () => {
+  const jsx = readFileSync(new URL("../src/pages/PMTenants.jsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../src/components/pm/PMTenantHubV4.css", import.meta.url), "utf8");
+  assert.match(jsx, /className="pm-tenants-tabs"/);
+  assert.match(jsx, /data-pm-panel="directory"/);
+  assert.match(jsx, /data-pm-panel="create"/);
+  assert.match(jsx, /data-pm-panel="owners"/);
+  assert.match(css, /\[data-pm-panel\]\[data-pm-active="true"\]/);
+  assert.match(css, /overflow-y:auto!important/);
+  const editor = readFileSync(new URL("../src/components/pm/PMTenantEditOverlay.jsx", import.meta.url), "utf8");
+  assert.match(editor, /sw:pm-edit-tenant/);
+});
