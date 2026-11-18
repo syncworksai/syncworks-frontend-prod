@@ -6,6 +6,7 @@ export function classifySyncWorksRoute(pathname = "/") {
   if (/^\/customer\/(games?|poker|fyb|bozo|442|card-club|card-clubs)(\/|$)/.test(path)) return "games";
   if (/^\/customer\/forge(\/|$)/.test(path)) return "forge";
   if (/^\/customer\/health(\/|$)/.test(path)) return "health";
+  if (/^\/connect\/groups\/[^/]+\/sports\/games(\/|$)/.test(path)) return "games";
   if (path === "/platform" || path === "/god-mode") return "platform";
   return "workspace";
 }
