@@ -141,7 +141,7 @@ function PartnerCard({ relationship, activeBusinessId }) {
   );
 }
 
-function WorkCard({ row, activeBusinessId }) {
+function WorkCard({ row, activeBusinessId, onRespond, responding }) {
   const incoming =
     String(row?.partner_business || "") === String(activeBusinessId || "");
   const counterparty = incoming
@@ -171,6 +171,13 @@ function WorkCard({ row, activeBusinessId }) {
       <div className="mt-4 text-sm font-black text-white">
         {moneyFromCents(row?.agreed_amount_cents)}
       </div>
+      {incoming && String(row?.status || "").toUpperCase() === "OFFERED" ? (
+        <div className="mt-3 flex gap-2">
+          <button type="button" disabled={responding} onClick={() => onRespond(row.id, "ACCEPT")} className="flex-1 rounded-xl border border-emerald-400/35 bg-emerald-500/15 px-3 py-2 text-xs font-bold text-emerald-200 disabled:opacity-40">Accept job</button>
+          <button type="button" disabled={responding} onClick={() => onRespond(row.id, "DECLINE")} className="flex-1 rounded-xl border border-rose-400/35 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-200 disabled:opacity-40">Decline job</button>
+        </div>
+      ) : null}
+      {!incoming && row?.status === "DECLINED" ? <p className="mt-2 text-xs text-amber-200">Declined · Source job returned to dispatch queue.</p> : null}
     </article>
   );
 }
@@ -193,6 +200,7 @@ export default function SboPartners() {
   const [showInvite, setShowInvite] = useState(false);
   const [busy, setBusy] = useState(false);
   const [respondBusyId, setRespondBusyId] = useState(null);
+  const [workRespondId, setWorkRespondId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [selectedBusiness, setSelectedBusiness] = useState(null);
@@ -364,6 +372,17 @@ export default function SboPartners() {
     }
   }
 
+  async function respondWork(id, decision) {
+    setWorkRespondId(id);setErr("");setOk("");
+    try {
+      await api.post(`/partner-work-tickets/${id}/respond/`, {decision});
+      setOk(decision === "ACCEPT" ? "Subcontractor assignment accepted." : "Offer declined; the original ticket returned to the dispatch queue.");
+      await loadAll();
+    } catch (error) {
+      setErr(error?.response?.data?.detail || error?.response?.data?.status || "Could not respond to this work offer.");
+    } finally {setWorkRespondId(null);}
+  }
+
   const tabs = [
     { key: "partners", label: "Partners", count: activePartners.length },
     { key: "invites", label: "Invitations", count: pendingInvitations.length },
@@ -508,6 +527,8 @@ export default function SboPartners() {
                   key={row.id}
                   relationship={row}
                   activeBusinessId={activeBusinessId}
+                  responding={workRespondId === row.id}
+                  onRespond={respondWork}
                 />
               ))}
             </div>
