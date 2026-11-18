@@ -25,3 +25,14 @@ test("single application integration point covers direct routes", () => {
   assert.match(entry, /<UniversalWorkspaceShell>\{routedContent\}<\/UniversalWorkspaceShell>/);
   assert.match(entry, /<UniversalWorkspaceShell>\{pmContent\}<\/UniversalWorkspaceShell>/);
 });
+
+
+test("PM legacy mobile rules must not suppress the v3 command center", () => {
+  const css = readFileSync(new URL("../src/components/pm/PMMobileWorkspace.css", import.meta.url), "utf8");
+  const cockpit = readFileSync(new URL("../src/pages/PropertyManagerDashboard.jsx", import.meta.url), "utf8");
+  assert.doesNotMatch(css, /\.pm-dashboard-main\[data-pm-mobile-view="overview"\]\s*>\s*:not/);
+  assert.match(cockpit, /<section className="pm-v3-cockpit"/);
+  assert.match(cockpit, /<div className="pm-v3-legacy"/);
+  const design = readFileSync(new URL("../src/components/pm/PMCustomerParityV3.css", import.meta.url), "utf8");
+  assert.match(design, /\.pm-v3-legacy\s*\{display:none!important\}/);
+});
