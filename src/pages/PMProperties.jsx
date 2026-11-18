@@ -171,7 +171,7 @@ export default function PMProperties() {
   }
 
   return (
-    <div className="min-h-screen bg-transparent text-slate-100">
+    <div data-pm-screen="properties" className="min-h-screen bg-transparent text-slate-100">
       <main className="space-y-6 px-4 py-6 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-[28px] border border-cyan-500/15 bg-gradient-to-r from-cyan-500/10 via-[#07111f] to-fuchsia-500/10 p-5">
           <div><div className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Portfolio Inventory</div><div className="mt-2 text-xl font-black text-white">Properties</div><p className="mt-1 text-sm text-slate-400">Open a property to manage units, occupancy, tenants, documents, and activity.</p></div>
