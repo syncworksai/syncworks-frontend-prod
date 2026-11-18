@@ -158,3 +158,104 @@ body[data-sw-office-scope="work"] [data-pm-command-shell] > header {
     white-space: normal;
   }
 }
+
+
+/* V2: The global SyncWorks header is fixed above this shell, so reserve its
+   actual height INSIDE the PM viewport. Otherwise PM headings render behind it. */
+@media (max-width: 767px) {
+  [data-pm-command-shell] {
+    padding-top: 63px;
+  }
+  [data-pm-command-shell] > [class*="xl:ml-"] > section:first-child {
+    flex: 0 0 auto;
+    padding: 7px 10px;
+    background: var(--pm-glass-panel, rgba(5, 14, 30, .88));
+    border-bottom: 1px solid var(--pm-glass-border, rgba(94,187,248,.26));
+  }
+  [data-pm-command-shell] > [class*="xl:ml-"] > section:first-child > div {
+    min-height: 42px;
+  }
+  [data-pm-command-shell] > [class*="xl:ml-"] > section:first-child h1 {
+    font-size: 13px;
+    line-height: 1.2;
+  }
+  [data-pm-command-shell] > [class*="xl:ml-"] > section:first-child button {
+    height: 44px;
+    width: 44px;
+    min-width: 44px;
+  }
+  [data-pm-command-shell] .pm-command-content {
+    padding-bottom: 0;
+    scroll-padding-bottom: calc(94px + env(safe-area-inset-bottom, 0px));
+  }
+  [data-pm-command-shell] .pm-command-content > [data-pm-screen="dashboard"] {
+    padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+  }
+  [data-pm-command-shell] .pm-dashboard-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1.35fr;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 8;
+    padding: 4px 0 9px;
+    background: #030c1c;
+  }
+  [data-pm-command-shell] .pm-dashboard-tabs button {
+    border: 1px solid var(--pm-glass-border, rgba(94,187,248,.34));
+    border-radius: 12px;
+    min-height: 44px;
+    padding: 6px 8px;
+    color: #d8e9ff;
+    background: rgba(12,26,47,.9);
+    font-size: 12px;
+    font-weight: 800;
+  }
+  [data-pm-command-shell] .pm-dashboard-tabs button[aria-pressed="true"] {
+    color: #051125;
+    background: linear-gradient(100deg,#31d2f4,#ba7ff2);
+    border-color: transparent;
+  }
+  [data-pm-command-shell] .pm-dashboard-main[data-pm-mobile-view="overview"] > :not(.pm-dashboard-tabs):not(.pm-dashboard-hero):not(.pm-dashboard-priorities):not(.pm-dashboard-error):not(.fixed) {
+    display: none;
+  }
+  [data-pm-command-shell] .pm-dashboard-main[data-pm-mobile-view="more"] > :is(.pm-dashboard-hero, .pm-dashboard-priorities) {
+    display: none;
+  }
+  [data-pm-command-shell] .pm-dashboard-hero {
+    padding: 10px;
+    border-radius: 19px;
+  }
+  [data-pm-command-shell] .pm-dashboard-hero > div {
+    align-items: center;
+    gap: 6px;
+  }
+  [data-pm-command-shell] .pm-dashboard-hero > div > div:last-child {
+    width: auto;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+  [data-pm-command-shell] .pm-dashboard-hero button[aria-label="Refresh command center"] {
+    width: 44px;
+    height: 44px;
+  }
+  [data-pm-command-shell] .pm-dashboard-hero h2 {
+    font-size: 17px;
+  }
+  [data-pm-command-shell] .pm-dashboard-priorities {
+    gap: 8px;
+  }
+  [data-pm-command-shell] .pm-dashboard-priorities > div {
+    min-width: 0;
+  }
+  [data-pm-command-shell] .pm-dashboard-priorities .rounded-\[28px\] {
+    border-radius: 18px;
+  }
+  [data-pm-command-shell] .pm-dashboard-priorities input[type="search"] {
+    min-height: 44px;
+    font-size: 16px; /* prevent iOS focus zoom */
+  }
+}
+@media (min-width: 768px) {
+  .pm-dashboard-tabs { display: none; }
+}
