@@ -211,3 +211,70 @@
 .forge3-reading-dialog-body .forge3-study-source{display:block;max-width:72ch;margin:15px auto;color:#e8c68e;font:400 12px/1.5 system-ui,sans-serif}
 .forge3-study-source a{display:inline-flex;align-items:center;gap:6px;color:#ffe4b7;text-decoration:underline}
 @media(max-width:720px){.forge3-chapter-select{gap:5px}.forge3-chapter-select .forge3-softbtn{padding:7px 8px;font-size:10px}.forge3-study-vocabulary{padding:13px}}
+
+
+/* Forge v15 mobile viewport repair.
+   GlobalModeBar already reserves its height through body padding-top;
+   don't reserve an additional 116-130px inside Forge. */
+@media(max-width:720px){
+  .forge3{
+    padding-top:8px;
+    padding-bottom:calc(5px + env(safe-area-inset-bottom,0px));
+  }
+  .forge3-header{
+    min-height:42px;
+    margin-bottom:6px;
+  }
+  .forge3-main{
+    grid-template-rows:minmax(0,1fr) minmax(80px,15vh);
+    gap:6px;
+    /* Keep the fixed dock from visually covering the Forge agenda. */
+    padding-bottom:calc(5.7rem + env(safe-area-inset-bottom,0px));
+  }
+  .forge3-modes{padding:4px;gap:3px}
+  .forge3-modes button{padding:5px 2px;min-height:45px;font-size:10px}
+  .forge3-stage{padding:9px;min-height:0}
+  .forge3-stage-intro{margin-bottom:5px}
+  .forge3-stage-intro h2{font-size:clamp(20px,5.2vw,24px);margin:3px 0}
+  .forge3-stage-intro p{font-size:10px;line-height:1.2}
+  .forge3-book-icon{display:none}
+  .forge3-chapter-select{gap:5px;margin-bottom:5px}
+  .forge3-chapter-select select{max-width:min(46vw,210px);font-size:11px}
+  .forge3-chapter-select .forge3-softbtn{min-height:32px;padding:6px 8px}
+  .forge3-chapter-select .forge3-softbtn:first-of-type{display:none}
+  .forge3-reading-home{justify-content:center;padding:9px;min-height:0}
+  .forge3-reading-home h3{font-size:clamp(19px,5vw,24px);margin:4px 0}
+  .forge3-reading-home>p,.forge3-reading-takeaway{display:none}
+  .forge3-reading-home-actions{gap:6px;margin-top:9px}
+  .forge3-reading-home-actions .forge3-mainbtn,
+  .forge3-reading-home-actions .forge3-softbtn{padding:8px 10px;font-size:11px;min-height:35px}
+  .forge3-player{
+    flex:0 0 auto;
+    padding-top:6px;
+    gap:5px 8px;
+    max-height:none;
+    min-height:0;
+    border-top:1px solid rgba(242,196,122,.27);
+    margin-top:6px;
+  }
+  .forge3-player .forge3-mainbtn{min-height:37px;padding:8px 11px}
+  .forge3-player .forge3-iconbtn{width:36px;height:36px}
+  .forge3-player label{font-size:10px}
+  .forge3-player select{padding:6px;max-width:135px}
+  .forge3-voice-picker select{max-width:135px}
+  .forge3-player .forge3-audio-status{display:block;flex-basis:100%;font-size:10px;line-height:1.2}
+  .forge3-listen-room{gap:4px;padding:4px 8px}
+  .forge3-listen-room .forge3-orb{width:90px;height:90px;min-width:90px;min-height:90px}
+  .forge3-listen-room .forge3-orb svg{width:38px;height:38px}
+  .forge3-listen-room blockquote,.forge3-listen-room>p{display:none}
+  .forge3-sidebar{grid-template-columns:minmax(115px,36%) minmax(0,1fr);min-height:0}
+  .forge3-side-head{padding:8px}
+  .forge3-side-head h2{font-size:16px}
+  .forge3-side-list{min-height:0;overflow:auto}
+  .forge3-footer{display:none}
+}
+@media(max-width:390px){
+  .forge3-main{grid-template-rows:minmax(0,1fr) 76px}
+  .forge3-chapter-select select{max-width:44vw}
+  .forge3-reading-home-actions .forge3-softbtn{font-size:10px}
+}
