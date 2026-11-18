@@ -168,3 +168,49 @@
     bottom:calc(5.7rem + env(safe-area-inset-bottom))!important;
   }
 }
+
+
+/* Forge-only global navigation. Portal is outside the Forge page tree, so
+   route-owned data attributes are safer than global body/theme mutations. */
+[data-syncworks-global-header="true"][data-forge-route="true"]{
+  background:linear-gradient(100deg,rgba(13,10,11,.97),rgba(43,26,21,.91) 68%,rgba(22,12,14,.96))!important;
+  border-bottom:1px solid rgba(231,179,101,.54)!important;
+  box-shadow:0 8px 28px rgba(0,0,0,.45),inset 0 -1px 0 rgba(246,206,147,.13)!important;
+  color:#fff0d8;
+  -webkit-backdrop-filter:blur(18px) saturate(108%);
+  backdrop-filter:blur(18px) saturate(108%);
+}
+[data-syncworks-global-header="true"][data-forge-route="true"] button[aria-label="Back to previous SyncWorks section"]{
+  border-color:rgba(238,193,121,.5)!important;
+  color:#eed6b1!important;
+  background:rgba(62,35,27,.45)!important;
+}
+[data-syncworks-global-header="true"][data-forge-route="true"] button[aria-label="Open SyncWorks app navigation"]{
+  background:linear-gradient(120deg,rgba(109,61,31,.53),rgba(58,27,25,.58))!important;
+  border-color:rgba(236,190,115,.7)!important;
+  color:#ffe1ad!important;
+  box-shadow:inset 0 1px 0 rgba(255,232,172,.13);
+}
+[data-syncworks-global-header="true"][data-forge-route="true"] a[aria-label="Open SyncWorks home"] img{
+  border-color:rgba(234,186,109,.56)!important;
+  box-shadow:0 0 15px rgba(232,157,63,.18)!important;
+}
+.sw-global-menu-layer[data-forge-route="true"]{
+  --gm-accent:#f1c882;
+  --gm-text:#fff2d9;
+  --gm-muted:#d7c1a4;
+  --gm-glass:rgba(28,18,17,.9);
+  --gm-tile:rgba(97,52,31,.36);
+  --gm-edge:rgba(237,188,115,.48);
+  --gm-image:url("/forge/background.png");
+}
+.sw-global-menu-layer[data-forge-route="true"] .sw-global-menu-drawer{
+  background-image:linear-gradient(135deg,rgba(26,16,16,.91),rgba(35,19,17,.9)),url("/forge/background.png")!important;
+  border-color:rgba(242,193,116,.55)!important;
+}
+.sw-global-menu-layer[data-forge-route="true"] .sw-global-menu-shade{
+  background:rgba(10,6,7,.66)!important;
+}
+.sw-global-menu-layer[data-forge-route="true"][data-header-motion="on"] .sw-global-menu-drawer{
+  box-shadow:0 24px 75px rgba(0,0,0,.6),0 0 18px rgba(197,124,57,.16);
+}
