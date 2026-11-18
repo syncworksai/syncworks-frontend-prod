@@ -316,3 +316,56 @@
   .sw-role-mobile-nav[data-forge-route="true"] *::before,
   .sw-role-mobile-nav[data-forge-route="true"] *::after{animation:none!important;transition:none!important;}
 }
+
+
+/* Forge v15 - explicit overrides of the Customer's saved dock theme.
+   Keep tap targets and native safe-area positioning unchanged. */
+@media (max-width:1023px){
+  nav.sw-role-mobile-nav[data-forge-route="true"][data-sync-theme] {
+    background:linear-gradient(180deg,rgba(34,23,19,.96),rgba(18,13,12,.98))!important;
+    border:1px solid rgba(224,175,105,.9)!important;
+    box-shadow:0 -7px 26px rgba(0,0,0,.52),inset 0 1px 0 rgba(255,226,173,.16)!important;
+    --sync-center-bg:radial-gradient(circle at 30% 25%,#ba874a,#6e432a 60%,#2b1a19 90%);
+    --sync-center-border:#f5d294;
+    --sync-center-ink:#fff1d3;
+    --sync-center-label:#ffdda5;
+    -webkit-backdrop-filter:blur(16px);
+    backdrop-filter:blur(16px);
+  }
+  nav.sw-role-mobile-nav[data-forge-route="true"][data-sync-theme] .sw-role-mobile-nav-grid > button:not(.sw-role-mobile-nav-center) {
+    color:#f4d9a8!important;
+    opacity:1!important;
+    text-shadow:0 1px 3px rgba(0,0,0,.65);
+    font-weight:900;
+  }
+  nav.sw-role-mobile-nav[data-forge-route="true"][data-sync-theme] .sw-role-mobile-nav-grid > button:not(.sw-role-mobile-nav-center) .icon,
+  nav.sw-role-mobile-nav[data-forge-route="true"][data-sync-theme] .sw-role-mobile-nav-grid > button:not(.sw-role-mobile-nav-center) .icon svg,
+  nav.sw-role-mobile-nav[data-forge-route="true"][data-sync-theme] .sw-role-mobile-nav-grid > button:not(.sw-role-mobile-nav-center) > span:last-child {
+    color:inherit!important;
+    opacity:1!important;
+  }
+  nav.sw-role-mobile-nav[data-forge-route="true"][data-sync-theme] .sw-role-mobile-nav-grid > button:not(.sw-role-mobile-nav-center) .icon svg {
+    stroke:currentColor!important;
+    width:1.3rem;height:1.3rem;
+  }
+  nav.sw-role-mobile-nav[data-forge-route="true"][data-sync-theme] .sw-role-mobile-nav-grid > button.active:not(.sw-role-mobile-nav-center) {
+    color:#fff4dc!important;
+    background:rgba(156,97,48,.42)!important;
+    box-shadow:inset 0 0 0 1px rgba(248,202,130,.48);
+  }
+  nav.sw-role-mobile-nav[data-forge-route="true"][data-sync-theme] .sw-role-mobile-nav-center.is-sync {
+    color:#ffdda5!important;opacity:1!important;
+    font-weight:900;
+  }
+  nav.sw-role-mobile-nav[data-forge-route="true"][data-sync-theme] .sw-role-mobile-nav-center.is-sync .sw-role-mobile-nav-center-orb {
+    background:var(--sync-center-bg)!important;
+    border:1px solid var(--sync-center-border)!important;
+    box-shadow:0 0 18px rgba(237,171,84,.35),0 3px 12px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,241,201,.25)!important;
+  }
+  nav.sw-role-mobile-nav[data-forge-route="true"][data-sync-theme] .sw-role-mobile-nav-center.is-sync .sw-role-mobile-nav-center-orb svg {
+    color:#fff1d3!important;stroke:currentColor!important;
+  }
+  nav.sw-role-mobile-nav[data-forge-route="true"][data-sync-theme] .sw-role-mobile-nav-grid > button:focus-visible {
+    outline:2px solid #ffe0a5!important;outline-offset:2px;
+  }
+}
