@@ -11,6 +11,8 @@ import { useAuth } from "../auth/AuthContext";
 import { forgeChapters } from "./forgeChapters";
 import { forgeGreatBookStudies } from "./forgeGreatBookStudies";
 import ForgeBookLibrary from "./ForgeBookLibrary";
+import ForgeKnowledgeAcademy from "./ForgeKnowledgeAcademy";
+import {academyLessons} from "./forgeAcademyData";
 import ForgeGrowthCoach from "./ForgeGrowthCoach";
 import "./CustomerForgeV3.css";
 
@@ -79,6 +81,7 @@ export default function CustomerForge(){
   const [mode,setMode]=useState("read");
   const [readingOpen,setReadingOpen]=useState(false);
   const [libraryOpen,setLibraryOpen]=useState(false);
+  const [academyOpen,setAcademyOpen]=useState(false);
   const [missionsOpen,setMissionsOpen]=useState(false);
   const [audioSettingsOpen,setAudioSettingsOpen]=useState(false);
   const [growthOpen,setGrowthOpen]=useState(false);
@@ -102,7 +105,20 @@ export default function CustomerForge(){
   const forgeShellRef=useRef(null);
   const synthParts=useRef([]),synthIndex=useRef(0);
   const key=keyFor(email);
-  const chapters=[...forgeGreatBookStudies,...forgeChapters];
+  const academyStudies=academyLessons.map(lesson=>({
+    id:"academy-"+lesson.id,
+    title:lesson.title,
+    lens:lesson.track+" · adult continuing education",
+    length:"Foundational study",
+    description:lesson.objectives[0],
+    paragraphs:lesson.sections.map(section=>section.heading.toUpperCase()+". "+section.text),
+    vocabulary:lesson.terms.map(([word,meaning])=>({word,meaning})),
+    sourceUrl:lesson.source.url,
+    sourceLabel:lesson.source.label,
+    challenge:lesson.practice,
+    question:lesson.question.prompt,
+  }));
+  const chapters=[...academyStudies,...forgeGreatBookStudies,...forgeChapters];
   const chapter=chapters.find(c=>c.id===chapterId)||forgeChapters[0];
   const todayChapter=forgeChapters[Math.floor(new Date(dateId(now)+"T12:00:00").getTime()/86400000)%forgeChapters.length];
   const ordered=schedule.map((item,id)=>({...item,id})).sort((a,b)=>a.time.localeCompare(b.time) || a.id-b.id);
@@ -294,14 +310,14 @@ export default function CustomerForge(){
       <div className="forge3-identity"><Link to="/customer" className="forge3-back" aria-label="Back to my office"><ArrowLeft size={18}/></Link><div className="forge3-mark"><Flame size={23}/></div><div><span>SYNCWORKS / PRIVATE STUDIO</span><h1>THE <em>FORGE</em></h1></div></div>
       <div className="forge3-header-actions"><div className="forge3-header-clock"><strong>{pad(now.getHours())}:{pad(now.getMinutes())}</strong><small>{now.toLocaleDateString(undefined,{month:"short",day:"numeric",weekday:"short"})}</small></div><span className="forge3-pill"><ShieldCheck size={13}/> Personal pilot</span></div>
     </header>
-    <div className="forge3-mobile-utilities"><span className="forge3-mobile-subtitle">MIND · BODY · PURPOSE</span><button type="button" className="forge3-mobile-missions-trigger" onClick={()=>setMissionsOpen(true)} aria-label="Open mission control"><CalendarClock size={15}/> Missions <strong>{completed}/{schedule.length}</strong><ChevronRight size={14}/></button></div>
+    <div className="forge3-mobile-utilities"><button type="button" className="forge3-mobile-academy-trigger" onClick={()=>setAcademyOpen(true)}><BookOpen size={15}/> Academy</button><button type="button" className="forge3-mobile-missions-trigger" onClick={()=>setMissionsOpen(true)} aria-label="Open mission control"><CalendarClock size={15}/> Missions <strong>{completed}/{schedule.length}</strong><ChevronRight size={14}/></button></div>
     <div className="forge3-main">
       <section className="forge3-workspace">
         <nav className="forge3-modes" aria-label="Forge experiences">{modes.map(({id,title,icon:Icon})=><button key={id} type="button" className={mode===id?"selected":""} aria-pressed={mode===id} onClick={()=>setActiveMode(id)}><Icon size={18}/><span>{title}</span></button>)}</nav>
         <div className="forge3-stage">
           {(mode==="read"||mode==="listen")&&<>
             <div className="forge3-stage-intro"><div><span className="forge3-overline">{mode==="listen"?"THE DAILY AUDIOBOOK":"TODAY'S READING"} · ORIGINAL FORGE LESSON</span><h2>{chapter.title}</h2><p>{chapter.lens} · {chapter.length}</p></div><span className="forge3-book-icon"><BookOpen size={33}/></span></div>
-            <div className="forge3-chapter-select"><label htmlFor="forge3-lesson">Chapter</label><select id="forge3-lesson" value={chapterId} onChange={e=>{stopAudio();setChapterId(e.target.value);}}>{chapters.map(c=><option key={c.id} value={c.id}>{c.title}</option>)}</select><button type="button" onClick={()=>{stopAudio();setChapterId(todayChapter.id);}} className="forge3-softbtn">Today's pick</button><button type="button" className="forge3-softbtn" onClick={()=>setLibraryOpen(true)}><BookOpen size={15}/> Library · 100 titles</button></div>
+            <div className="forge3-chapter-select"><label htmlFor="forge3-lesson">Chapter</label><select id="forge3-lesson" value={chapterId} onChange={e=>{stopAudio();setChapterId(e.target.value);}}>{chapters.map(c=><option key={c.id} value={c.id}>{c.title}</option>)}</select><button type="button" onClick={()=>{stopAudio();setChapterId(todayChapter.id);}} className="forge3-softbtn">Today's pick</button><button type="button" className="forge3-softbtn" onClick={()=>setLibraryOpen(true)}><BookOpen size={15}/> Library · 100 titles</button><button type="button" className="forge3-softbtn forge3-academy-launch" onClick={()=>setAcademyOpen(true)}><Brain size={15}/> Knowledge Academy</button></div>
             {mode==="read"?<div className="forge3-reading-home">
               <div className="forge3-reading-symbol" aria-hidden="true"><BookOpen size={52}/></div>
               <span className="forge3-overline">TODAY'S CHAPTER · PERSONAL DEVELOPMENT</span>
@@ -340,10 +356,11 @@ export default function CustomerForge(){
       <section className="forge3-reading-dialog" role="dialog" aria-modal="true" aria-labelledby="forge3-reading-heading">
         <header className="forge3-reading-dialog-head"><div><span className="forge3-overline">THE FORGE · DAILY READING</span><h2 id="forge3-reading-heading">{chapter.title}</h2><p>{chapter.lens} · {chapter.length}</p></div><button type="button" className="forge3-reading-close" onClick={()=>setReadingOpen(false)} aria-label="Close today's reading">✕</button></header>
         <div className="forge3-reading-dialog-body" tabIndex={0}><p className="forge3-dropcap">{chapter.paragraphs[0]}</p>{chapter.paragraphs.slice(1).map((p,i)=><p key={i}>{p}</p>)}{chapter.vocabulary?.length ? <div className="forge3-study-vocabulary"><h3>Vocabulary to master</h3>{chapter.vocabulary.map(v=><p key={v.word}><strong>{v.word}:</strong> {v.meaning}</p>)}</div>:null}{chapter.sourceUrl?<p className="forge3-study-source">Source: <a href={chapter.sourceUrl} target="_blank" rel="noopener noreferrer">{chapter.sourceLabel||"Primary source"} <ExternalLink size={14}/></a></p>:null}<div className="forge3-chapter-end"><strong>APPLY IT TODAY</strong><p>{chapter.challenge}</p></div></div>
-        <div className="forge3-reading-dialog-actions"><button type="button" className="forge3-mainbtn" onClick={()=>{setReadingOpen(false);setActiveMode("listen");startAudio();}}><Headphones size={17}/> Listen to full chapter</button><button type="button" className="forge3-softbtn" onClick={()=>{setReadingOpen(false);setGrowthOpen(true);}}>Ask the Forge coach <Brain size={16}/></button><button type="button" className="forge3-softbtn" onClick={()=>{setReadingOpen(false);setActiveMode("reflect");}}>Reflect on lesson <ChevronRight size={16}/></button><button type="button" className="forge3-softbtn" onClick={()=>setReadingOpen(false)}>Close</button></div>
+        <div className="forge3-reading-dialog-actions"><button type="button" className="forge3-mainbtn" onClick={()=>{setReadingOpen(false);setActiveMode("listen");startAudio();}}><Headphones size={17}/> Listen to full chapter</button><button type="button" className="forge3-softbtn" onClick={()=>{setReadingOpen(false);setGrowthOpen(true);}}>Ask the Forge coach <Brain size={16}/></button><button type="button" className="forge3-softbtn" onClick={()=>{setReadingOpen(false);setActiveMode("reflect");}}>Reflect on lesson <ChevronRight size={16}/></button>{chapter.id.startsWith("academy-")&&<button type="button" className="forge3-softbtn" onClick={()=>{setReadingOpen(false);setAcademyOpen(true);}}>Knowledge check <Check size={16}/></button>}<button type="button" className="forge3-softbtn" onClick={()=>setReadingOpen(false)}>Close</button></div>
       </section>
     </div>}
     {audioSettingsOpen&&<div className="forge3-audio-settings-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setAudioSettingsOpen(false);}}><section role="dialog" aria-modal="true" aria-label="Forge voice and audio settings" className="forge3-audio-settings-dialog"><div className="forge3-audio-settings-heading"><div><span>THE FORGE · AUDIO</span><h2>Voice & playback</h2></div><button type="button" onClick={()=>setAudioSettingsOpen(false)} aria-label="Close audio settings">✕</button></div><label>Playback output<select value={voiceType} onChange={e=>{stopAudio();setVoiceType(e.target.value);}}><option value="natural">ElevenLabs</option><option value="device">Device voice</option></select></label>{voiceType==="natural"&&<><label>Narrator<select value={forgeVoice} onChange={e=>selectForgeNarrator(e.target.value)}><option value="tucker">Tucker · mature American</option><option value="ambrose">Ambrose · reflective</option><option value="david">David · British storyteller</option></select></label><button type="button" className="forge3-mainbtn" onClick={previewForgeNarrator} disabled={audioState==="loading"}><Volume2 size={16}/> Test narrator</button></>}<p role="status">{audioError||audioStatus||"Choose the voice for your next session."}</p><button type="button" className="forge3-softbtn" onClick={()=>setAudioSettingsOpen(false)}>Back to Forge</button></section></div>}
+    <ForgeKnowledgeAcademy open={academyOpen} email={email} onClose={()=>setAcademyOpen(false)} onOpenLesson={(id,targetMode)=>{stopAudio();setChapterId("academy-"+id);setAcademyOpen(false);setActiveMode(targetMode);if(targetMode==="read")setReadingOpen(true);}}/>
     <ForgeBookLibrary open={libraryOpen} onClose={()=>setLibraryOpen(false)} onSelect={id=>{stopAudio();setChapterId(id);setLibraryOpen(false);setReadingOpen(true);}}/>
     <ForgeGrowthCoach email={email} chapter={chapter} open={growthOpen} onClose={()=>setGrowthOpen(false)}/>
     <footer className="forge3-footer"><span><Sparkles size={14}/> Build your life, one intentional action at a time.</span><span>Private pilot · Forge coach is separate from Chief of Staff · Chapters are original · Audio uses AI narration when available</span></footer>

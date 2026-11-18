@@ -453,3 +453,19 @@
     -webkit-tap-highlight-color:transparent;
   }
 }
+
+
+/* Forge v18 Knowledge Academy: one-screen launcher; full courses in modal only. */
+.forge3-academy-launch{display:inline-flex;align-items:center;gap:6px}
+.forge3-mobile-academy-trigger{display:none}
+@media(max-width:720px){
+  .forge3-mobile-academy-trigger{
+    display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:34px;
+    background:linear-gradient(120deg,rgba(112,68,36,.58),rgba(48,26,22,.78));
+    border:1px solid rgba(243,200,127,.75);border-radius:11px;
+    color:#ffe2b5;padding:7px 12px;font-weight:850;font-size:12px;
+  }
+  .forge3-chapter-select .forge3-academy-launch{display:none!important}
+  .forge3-mobile-utilities{gap:8px}
+  .forge3-mobile-academy-trigger:focus-visible{outline:2px solid #ffe0a5;outline-offset:2px}
+}
