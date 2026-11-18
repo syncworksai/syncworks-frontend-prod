@@ -42,3 +42,13 @@ test("Global mobile dock does not overlap God Mode mobile dock", () => {
   const nav = read("src/components/navigation/RoleAwareMobileNav.jsx");
   assert.match(nav, /pathname === "\/platform" \|\| pathname === "\/god-mode"/);
 });
+
+test("Founder root route renders the live cockpit rather than legacy operations", () => {
+  const route = read("src/components/PlatformRoute.jsx");
+  const dashboard = read("src/pages/PlatformDashboard.jsx");
+  const scene = read("src/pages/GodModeScene.css");
+  assert.match(route, /<GlobalModeBar \/>\{children\}/);
+  assert.doesNotMatch(route, /GodModeCompanyOperations/);
+  assert.match(dashboard, /<GodModeCockpit onOpen=\{setTab\}/);
+  assert.match(scene, /godmodebackground\.png/);
+});
