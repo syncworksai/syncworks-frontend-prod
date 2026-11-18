@@ -312,7 +312,7 @@ export default function RoleAwareMobileNav() {
           <button type="button" className="sw-mobile-bots-expand" onClick={() => setAiTeamOpen(true)} aria-label="Expand AI team">View all</button>
         </div>
       )}
-      <nav className="sw-role-mobile-nav lg:hidden" aria-label="Mobile quick navigation" data-sync-theme={navMode === "CUSTOMER" ? customerTheme : undefined}>
+      <nav className="sw-role-mobile-nav lg:hidden" aria-label="Mobile quick navigation" data-sync-theme={navMode === "CUSTOMER" ? customerTheme : undefined} data-forge-route={pathname === "/customer/forge" ? "true" : undefined}>
         <div className="sw-role-mobile-nav-grid">
           {renderedItems.slice(0, 2).map((item) => <NavButton key={item.id} item={item} onClick={() => openItem(item)} />)}
           <button type="button" className={`sw-role-mobile-nav-center ${center.sync ? "is-sync" : ""}`} onClick={openCenter} aria-label={center.sync ? "Open SYNC Assistant" : `New ${center.label}`}>
