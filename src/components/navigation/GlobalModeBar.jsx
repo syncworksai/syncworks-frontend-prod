@@ -144,7 +144,7 @@ export default function GlobalModeBar() {
 
   return createPortal(<>
     <style>{`[data-pm-command-shell] > header{top:${BAR_HEIGHT}px!important}[data-pm-command-shell] > aside{top:${BAR_HEIGHT}px!important}@media(max-width:639px){[data-pm-command-shell] > header{top:${MOBILE_SHELL_TOP}px!important}[data-pm-command-shell] > aside{top:${MOBILE_SHELL_TOP}px!important}}`}</style>
-    <div ref={rootRef} data-syncworks-global-header="true" data-header-motion={menuMotion ? "on" : "off"} data-menu-theme={menuTheme} className="fixed inset-x-0 top-[58px] sm:top-0 z-[320] h-[57px] border-b border-cyan-400/15 bg-[#020617]/98 px-3 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.38)] backdrop-blur-xl">
+    <div ref={rootRef} data-syncworks-global-header="true" data-header-motion={menuMotion ? "on" : "off"} data-menu-theme={menuTheme} data-forge-route={location.pathname === "/customer/forge" ? "true" : undefined} className="fixed inset-x-0 top-[58px] sm:top-0 z-[320] h-[57px] border-b border-cyan-400/15 bg-[#020617]/98 px-3 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.38)] backdrop-blur-xl">
       <div className="mx-auto flex h-full max-w-[1900px] items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           {showBack ? <button type="button" onClick={goBack} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[.035] text-slate-300 transition hover:border-cyan-400/30 hover:text-cyan-100" aria-label="Back to previous SyncWorks section"><BackIcon /></button> : null}
@@ -153,7 +153,7 @@ export default function GlobalModeBar() {
         <div className="flex shrink-0 items-center gap-2">{showConnectNotifications ? <NotificationsBell inline /> : null}<button type="button" onClick={() => setOpen((value) => !value)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-3 text-sm font-black text-cyan-100" aria-label="Open SyncWorks app navigation" aria-expanded={open}><MenuIcon open={open} /><span>Menu</span></button></div>
       </div>
     </div>
-    {open ? <div ref={menuRef} className="sw-global-menu-layer" data-menu-theme={menuTheme} data-header-motion={menuMotion ? "on" : "off"}>
+    {open ? <div ref={menuRef} className="sw-global-menu-layer" data-forge-route={location.pathname === "/customer/forge" ? "true" : undefined} data-menu-theme={menuTheme} data-header-motion={menuMotion ? "on" : "off"}>
         <button type="button" className="sw-global-menu-shade fixed inset-x-0 bottom-0 top-[115px] sm:top-[57px] z-[321] bg-black/70" aria-label="Close app navigation" onClick={() => setOpen(false)} />
         <section role="dialog" aria-modal="true" aria-label="SyncWorks dashboards and navigation" className="sw-global-menu-drawer fixed left-3 right-3 top-[123px] sm:top-[65px] z-[322]">
           <header className="sw-global-menu-head">
