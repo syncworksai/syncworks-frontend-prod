@@ -1,0 +1,17 @@
+/* Dedicated task workspace: mobile-sized controls without side scrolling. */
+.sw-todo-workspace{min-width:0;max-width:100%}
+.sw-todo-workspace section,.sw-todo-workspace input,.sw-todo-workspace button{min-width:0;box-sizing:border-box}
+.sw-todo-workspace form{max-width:100%}
+.sw-todo-workspace form input{font-size:16px}
+@media(max-width:767px){
+  .sw-todo-workspace{display:flex;flex-direction:column;gap:10px!important;max-width:100%;padding-bottom:calc(100px + env(safe-area-inset-bottom))}
+  .sw-todo-workspace > section:first-child{padding:12px!important}
+  .sw-todo-workspace > section:first-child h1{font-size:18px!important;line-height:1.2}
+  .sw-todo-workspace > section:first-child form{display:grid;grid-template-columns:minmax(0,1fr) auto}
+  .sw-todo-workspace > section:first-child form button{padding:0 12px!important}
+  .sw-todo-workspace > section:nth-child(2){grid-template-columns:repeat(3,minmax(0,1fr));gap:6px!important}
+  .sw-todo-workspace > section:nth-child(2)>*{padding:10px!important}
+  .sw-todo-workspace > section:nth-child(2) .text-2xl{font-size:19px}
+  .sw-todo-workspace > section:nth-child(2) .text-sm{font-size:10px}
+  .sw-todo-workspace > section:nth-child(n+3){min-width:0;max-width:100%}
+}
