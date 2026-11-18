@@ -709,34 +709,37 @@ export function AuthProvider({ children }) {
         lastSessionCheckRef.current =
           Date.now();
 
+        // Authentication is complete as soon as /auth/me/ succeeds.
+        // Business and subscription lookups must never hold the
+        // entire mobile app behind the startup spinner.
+        setBooting(false);
+
         if (!silent) {
           setEntitlementsRefreshedAt(
             new Date().toISOString()
           );
         }
 
-        let businesses =
-          await loadMyBusinesses();
-
-        if (!Array.isArray(businesses)) {
-          businesses = [];
-        }
-
         const platformAllowed =
-          enforcePlatformMode(
-            normalized.user
-          );
+          enforcePlatformMode(normalized.user);
 
         if (platformAllowed) {
-          setModuleAccess(
-            FULL_MODULE_ACCESS
-          );
-        } else {
-          await loadModuleAccess(
-            businesses,
-            normalized.user
-          );
+          setModuleAccess(FULL_MODULE_ACCESS);
         }
+
+        // Hydrate secondary account data in the background.
+        // Each loader handles transient API errors internally.
+        // This keeps the verified session usable during cold starts.
+        void (async () => {
+          const loaded = await loadMyBusinesses();
+          const businesses = Array.isArray(loaded) ? loaded : [];
+
+          if (!platformAllowed) {
+            await loadModuleAccess(businesses, normalized.user);
+          }
+        })().catch(() => {
+          // Optional account data must not invalidate authentication.
+        });
 
         return normalized.user;
       } catch (error) {
