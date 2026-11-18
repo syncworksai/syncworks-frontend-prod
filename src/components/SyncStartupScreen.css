@@ -48,12 +48,13 @@
   display: grid;
   place-items: center;
   margin-bottom: 30px;
+  perspective: 650px;
 }
 .sw-startup__logo {
-  width: 66%;
-  height: 66%;
+  width: 72%;
+  height: 72%;
   object-fit: contain;
-  border-radius: 27%;
+  border-radius: 24%;
   position: relative;
   z-index: 2;
   filter: drop-shadow(0 0 24px #00bfff50);
@@ -68,6 +69,39 @@
 }
 .sw-startup__halo--outer { border-top: 2px solid #32e1ff; border-right: 2px solid #ae5cff; animation: sw-startup-rotate 8s linear infinite; }
 .sw-startup__halo--inner { inset: 15%; border-bottom: 1px solid #58c5ff99; border-left: 1px solid #bc6dff66; animation: sw-startup-rotate 10s linear infinite reverse; }
+.sw-startup__orbit {
+  position: absolute;
+  inset: -12%;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 1px solid rgba(65, 192, 255, .36);
+  box-shadow: 0 0 20px rgba(47, 144, 255, .13);
+  transform-style: preserve-3d;
+}
+.sw-startup__orbit--one {
+  border-top: 2px solid #4de9ff;
+  border-bottom: 1px solid #a968ff;
+  animation: sw-startup-orbit-one 5.5s linear infinite;
+}
+.sw-startup__orbit--two {
+  inset: -4%;
+  border-left: 2px solid #af62ff;
+  border-right: 1px solid #57cbff;
+  animation: sw-startup-orbit-two 7s linear infinite;
+}
+.sw-startup__holo-beam {
+  position: absolute;
+  z-index: 3;
+  left: 16%;
+  right: 16%;
+  top: 9%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(92, 232, 255, .8), transparent);
+  opacity: .5;
+  box-shadow: 0 0 15px #18cfff;
+  animation: sw-startup-scan 3s ease-in-out infinite alternate;
+  pointer-events: none;
+}
 .sw-startup__brand {
   font-size: clamp(29px, 8vw, 41px);
   font-weight: 850;
@@ -129,10 +163,22 @@
   font-weight: 650;
   letter-spacing: .24em;
 }
+@keyframes sw-startup-orbit-one {
+  from { transform: rotateX(68deg) rotateZ(0deg); }
+  to { transform: rotateX(68deg) rotateZ(360deg); }
+}
+@keyframes sw-startup-orbit-two {
+  from { transform: rotateY(70deg) rotateZ(0deg); }
+  to { transform: rotateY(70deg) rotateZ(-360deg); }
+}
+@keyframes sw-startup-scan {
+  from { transform: translateY(8px); opacity: .15; }
+  to { transform: translateY(112px); opacity: .6; }
+}
 @keyframes sw-startup-rotate { to { transform: rotate(360deg); } }
 @keyframes sw-startup-breathe { 50% { transform: scale(1.035); filter: drop-shadow(0 0 32px #18baff80); } }
 @keyframes sw-startup-travel { 0% { transform: translateX(-110%); } 100% { transform: translateX(285%); } }
 @media (prefers-reduced-motion: reduce) {
-  .sw-startup__halo, .sw-startup__logo, .sw-startup__progress span { animation: none; }
+  .sw-startup__halo, .sw-startup__logo, .sw-startup__orbit, .sw-startup__holo-beam, .sw-startup__progress span { animation: none; }
   .sw-startup__progress span { width: 100%; }
 }
