@@ -1,0 +1,98 @@
+/*
+ * Universal SyncWorks UI foundation.
+ * Workspaces opt in via route policy; Games, Forge and Health are not touched.
+ * Existing dashboard sizing, fixed headers, docks, cards and backgrounds remain
+ * intact until migrated intentionally. This is not a wholesale CSS override.
+ */
+:root {
+  --sw-ui-motion-press: 150ms;
+  --sw-ui-motion-panel: 230ms;
+  --sw-ui-motion-route: 300ms;
+  --sw-ui-touch-target: 44px;
+  --sw-ui-glass: rgba(7, 15, 30, .66);
+  --sw-ui-glass-border: rgba(126, 170, 222, .28);
+  --sw-ui-glass-shadow: 0 12px 40px rgba(0, 0, 0, .26);
+  --sw-ui-dock-clearance: 96px;
+  --sw-ui-top-clearance: 0px;
+}
+.sw-universal-workspace {
+  min-height: 100%;
+  min-width: 0;
+  isolation: auto;
+  color-scheme: dark;
+}
+.sw-universal-workspace, .sw-universal-workspace * {
+  box-sizing: border-box;
+}
+.sw-universal-workspace :is(button, a, input, select, textarea, [role="button"]):focus-visible {
+  outline: 2px solid #79d8ff;
+  outline-offset: 3px;
+}
+.sw-universal-workspace :is(button, [role="button"]) {
+  touch-action: manipulation;
+}
+/* Use these opt-in primitives on each page as it is migrated. */
+.sw-universal-workspace .sw-ui-screen {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.sw-universal-workspace .sw-ui-content {
+  min-height: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+.sw-universal-workspace .sw-ui-scroll-region {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.sw-universal-workspace .sw-ui-glass {
+  background: var(--sw-ui-glass);
+  border: 1px solid var(--sw-ui-glass-border);
+  box-shadow: var(--sw-ui-glass-shadow);
+  -webkit-backdrop-filter: blur(15px);
+  backdrop-filter: blur(15px);
+}
+.sw-universal-workspace .sw-ui-action {
+  min-width: var(--sw-ui-touch-target);
+  min-height: var(--sw-ui-touch-target);
+  transition: background-color var(--sw-ui-motion-press) ease, border-color var(--sw-ui-motion-press) ease, opacity var(--sw-ui-motion-press) ease;
+}
+.sw-universal-workspace .sw-ui-overlay {
+  position: fixed;
+  z-index: 1000;
+  max-width: min(96vw, 720px);
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.sw-universal-workspace .sw-ui-sheet {
+  position: fixed;
+  z-index: 1000;
+  inset-inline: max(8px, env(safe-area-inset-left, 0px)) max(8px, env(safe-area-inset-right, 0px));
+  bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  max-height: min(88dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 16px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+@media (max-width: 767px) {
+  .sw-universal-workspace .sw-ui-screen {
+    height: 100dvh;
+  }
+  .sw-universal-workspace .sw-ui-primary-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sw-universal-workspace .sw-ui-action {
+    transition: none;
+  }
+}
