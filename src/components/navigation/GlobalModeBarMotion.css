@@ -214,3 +214,28 @@
 .sw-global-menu-layer[data-forge-route="true"][data-header-motion="on"] .sw-global-menu-drawer{
   box-shadow:0 24px 75px rgba(0,0,0,.6),0 0 18px rgba(197,124,57,.16);
 }
+
+
+/* Forge v15: warm, high-contrast navigation instead of default slate/cyan. */
+[data-syncworks-global-header="true"][data-forge-route="true"]{
+  background:linear-gradient(180deg,rgba(29,20,17,.97),rgba(17,13,12,.97))!important;
+  border-bottom:1px solid rgba(225,177,106,.78)!important;
+  color:#ffe7be!important;
+}
+[data-syncworks-global-header="true"][data-forge-route="true"] a[aria-label="Open SyncWorks home"] span{
+  color:#fff0d6!important;
+  text-shadow:0 1px 5px rgba(0,0,0,.65);
+}
+[data-syncworks-global-header="true"][data-forge-route="true"] button[aria-label="Open SyncWorks app navigation"]{
+  background:rgba(103,62,32,.46)!important;
+  color:#ffe9c4!important;
+  border:1px solid rgba(244,195,116,.83)!important;
+}
+[data-syncworks-global-header="true"][data-forge-route="true"] button[aria-label="Open SyncWorks app navigation"] svg{
+  color:#ffe9c4!important;
+}
+[data-syncworks-global-header="true"][data-forge-route="true"] button[aria-label="Back to previous SyncWorks section"]{
+  color:#ffe0ad!important;
+  background:rgba(89,53,34,.35)!important;
+  border:1px solid rgba(224,175,105,.62)!important;
+}
