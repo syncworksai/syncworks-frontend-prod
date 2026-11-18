@@ -59,7 +59,7 @@ function displayMemberName(member) {
     member?.user_email ||
     member?.user?.email ||
     member?.email ||
-    (member?.user_id ? `Employee account #${member.user_id}` : `Unlinked employee (record #${member?.id || "unknown"})`);
+    (member?.user_id ? `Employee account #${member.user_id}` : `Employee profile unavailable (#${member?.id || "unknown"})`);
   return full;
 }
 
@@ -182,7 +182,32 @@ export default function TeamInvites() {
 
     try {
       const res = await api.get(`/businesses/${activeBusinessId}/members/`);
-      const list = Array.isArray(res?.data) ? res.data : res?.data?.results || [];
+      let list = Array.isArray(res?.data) ? res.data : res?.data?.results || [];
+      // Older business-member serializers omit the linked user's identity.
+      // The scoped team endpoint exposes user_name and user_email.
+      if (list.some((member) => !member?.user_email && !member?.user_name && !member?.user_first_name && !member?.user?.email)) {
+        try {
+          const identityRes = await api.get("/team/members/");
+          const teamList = Array.isArray(identityRes?.data) ? identityRes.data : identityRes?.data?.results || [];
+          const byMemberId = new Map(teamList.filter((item) => String(item?.business) === String(activeBusinessId)).map((item) => [String(item.id), item]));
+          list = list.map((member) => {
+            const profile = byMemberId.get(String(member.id));
+            if (!profile) return member;
+            // Only merge identity fields; permissions and employment status
+            // remain authoritative from the business-scoped endpoint.
+            return {
+              ...member,
+              user_name: member.user_name || profile.user_name,
+              user_email: member.user_email || profile.user_email,
+              user_first_name: member.user_first_name || profile.user_first_name,
+              user_last_name: member.user_last_name || profile.user_last_name,
+            };
+          });
+        } catch {
+          // The team endpoint may require additional permission on older deployments.
+          // Keep showing the membership directory rather than failing the whole page.
+        }
+      }
       setMembers(list);
       setMemberErr("");
     } catch (e) {
@@ -192,13 +217,15 @@ export default function TeamInvites() {
   }
 
   async function loadInvites() {
+    if (!activeBusinessId) { setInvites([]); return; }
     try {
       const res = await api.get("/team/invites/");
-      setInvites(res.data?.results || res.data || []);
+      const records = res.data?.results || res.data || [];
+      setInvites((Array.isArray(records) ? records : []).filter((invite) => String(invite.business) === String(activeBusinessId) && !invite.used_at));
       setInviteErr("");
     } catch (e) {
       setInvites([]);
-      setInviteErr(e?.response?.data?.detail || "Pending invites could not be loaded.");
+      setInviteErr(e?.response?.data?.detail || `Pending invites could not be loaded (HTTP ${e?.response?.status || "network error"}).`);
     }
   }
 
