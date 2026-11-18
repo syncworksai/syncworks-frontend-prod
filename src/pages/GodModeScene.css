@@ -13,7 +13,7 @@
   pointer-events: none;
   background:
     linear-gradient(100deg, rgba(2,7,20,.75) 0%, rgba(2,7,20,.42) 55%, rgba(2,7,20,.65) 100%),
-    url("/backgrounds/god-mode-command-center.png") center center / cover no-repeat,
+    url("/godmodebackground.png") center center / cover no-repeat,
     radial-gradient(ellipse at 65% 15%, #172448, #030915 75%);
 }
 .sw-god-scene::after {
