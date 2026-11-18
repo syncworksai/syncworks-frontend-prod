@@ -1,6 +1,7 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
 import LegacySyncAssistantLauncher from "./SyncAssistantLauncher.jsx";
+import BusinessAlertsBell from "../sbo/BusinessAlertsBell.jsx";
 
 // The Customer home already has the single central SYNC action in
 // RoleAwareMobileNav. The old product promotion here duplicated that action,
@@ -9,5 +10,6 @@ import LegacySyncAssistantLauncher from "./SyncAssistantLauncher.jsx";
 export default function SyncAssistantLauncherRouter() {
   const location = useLocation();
   if (location.pathname.replace(/\/+$/, "") === "/customer") return null;
+  if (location.pathname === "/sbo" || location.pathname.startsWith("/sbo/")) return React.createElement(BusinessAlertsBell);
   return React.createElement(LegacySyncAssistantLauncher);
 }
