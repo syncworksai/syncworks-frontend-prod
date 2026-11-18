@@ -62,3 +62,17 @@ test("Messages is reachable from Personal and mobile inbox has two views", () =>
   assert.match(css, /data-sw-inbox-view="conversation"/);
   assert.match(css, /overflow-y:auto/);
 });
+
+
+test("Inbox mobile layout uses full-width panes and differentiates message sources", () => {
+  const inbox = readFileSync(new URL("../src/pages/InboxPage.jsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../src/pages/InboxMobileShell.css", import.meta.url), "utf8");
+  assert.match(inbox, /Ticket Chats/);
+  assert.match(inbox, /Email & SYNC/);
+  assert.match(inbox, /\/pm\/settings\?view=messages/);
+  assert.match(inbox, /timeout: 15000/);
+  assert.match(inbox, /Ticket messages took too long to load/);
+  assert.match(css, /\.sw-inbox-workspace > :is\(\.sw-inbox-thread-list, \.sw-inbox-conversation\)/);
+  assert.match(css, /width:100%!important/);
+  assert.match(css, /data-sw-inbox-source="email"/);
+});
