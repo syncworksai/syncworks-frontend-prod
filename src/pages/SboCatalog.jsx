@@ -128,6 +128,9 @@ const ITEM_TYPE_OPTIONS = [
 const DEFAULT_FORM = {
   id: null,
   name: "",
+  service_category: "",
+  estimated_duration_minutes: 60,
+  required_skills: [],
   sku: "",
   description: "",
   item_type: "SERVICE",
@@ -198,6 +201,9 @@ export default function SboCatalog() {
     setForm({
       id: item.id,
       name: item.name || "",
+      service_category: item.service_category || "",
+      required_skills: item.required_skills || [],
+      estimated_duration_minutes: item.estimated_duration_minutes || 60,
       sku: item.sku || "",
       description: item.description || "",
       item_type: item.item_type || "SERVICE",
@@ -226,6 +232,9 @@ export default function SboCatalog() {
 
     const payload = {
       name: form.name,
+      service_category: form.service_category,
+      required_skills: form.required_skills,
+      estimated_duration_minutes: Number(form.estimated_duration_minutes || 60),
       sku: form.sku,
       description: form.description,
       item_type: form.item_type,
@@ -302,7 +311,7 @@ export default function SboCatalog() {
     <div className="min-h-screen bg-[#020617] text-slate-100">
       <ModeBar
         title="Service Catalog"
-        subtitle="Create invoice-ready services, products, and fees for this business."
+        subtitle="Configure business services, categories, quick choices, estimated job times and pricing."
         rightActions={
           <div className="flex gap-2 flex-wrap">
             <BusinessPicker />
@@ -342,7 +351,7 @@ export default function SboCatalog() {
         <div className="grid xl:grid-cols-[420px_1fr] gap-4">
           <Card
             title={form.id ? "Edit Catalog Item" : "Create Catalog Item"}
-            subtitle="This is what the invoice builder will pull from."
+            subtitle="Services marked Quick Service appear first in New Request; all active services remain in the Catalog."
             right={
               form.id ? (
                 <button
@@ -357,6 +366,10 @@ export default function SboCatalog() {
           >
             <div className="space-y-3">
               <Input label="Name" value={form.name} onChange={(v) => patchForm("name", v)} placeholder="Diagnostic Visit" />
+              {form.item_type === "SERVICE" && <>
+                <Input label="Service category (business-defined)" value={form.service_category} onChange={(v) => patchForm("service_category", v)} placeholder="Plumbing, General Maintenance, Appliance…" />
+                <div className="grid grid-cols-2 gap-3"><Input label="Estimated time (minutes)" type="number" value={String(form.estimated_duration_minutes)} onChange={v => patchForm("estimated_duration_minutes", v)} /><Input label="Technician skills (comma separated)" value={(form.required_skills || []).join(", ")} onChange={v => patchForm("required_skills", v.split(",").map(x => x.trim()).filter(Boolean))} placeholder="plumbing, electrical" /></div>
+              </>}
               <div className="grid grid-cols-2 gap-3">
                 <Input label="SKU" value={form.sku} onChange={(v) => patchForm("sku", v)} placeholder="DIAG-001" />
                 <Select label="Item Type" value={form.item_type} onChange={(v) => patchForm("item_type", v)} options={ITEM_TYPE_OPTIONS} />
@@ -383,7 +396,7 @@ export default function SboCatalog() {
 
               <div className="grid gap-2">
                 <Toggle checked={form.is_active} onChange={(v) => patchForm("is_active", v)} label={form.is_active ? "Active" : "Inactive"} />
-                <Toggle checked={form.is_featured} onChange={(v) => patchForm("is_featured", v)} label={form.is_featured ? "Featured" : "Not Featured"} />
+                <Toggle checked={form.is_featured} onChange={(v) => patchForm("is_featured", v)} label={form.is_featured ? "Quick Service (shown in New Request)" : "Catalog only (not a Quick Service)"} />
                 <Toggle checked={form.requires_quote} onChange={(v) => patchForm("requires_quote", v)} label={form.requires_quote ? "Requires Quote" : "No Quote Required"} />
                 <Toggle checked={form.allow_direct_checkout} onChange={(v) => patchForm("allow_direct_checkout", v)} label={form.allow_direct_checkout ? "Direct Checkout Allowed" : "Direct Checkout Off"} />
               </div>
