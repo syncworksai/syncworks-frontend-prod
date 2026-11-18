@@ -26,11 +26,13 @@ export default function EmployeeRoleDashboard() {
     try {
       const res = await api.get("/business-members/me/");
       const memberships = Array.isArray(res.data) ? res.data : res.data?.results || [];
-      if (!memberships.length) {
+      const selectedId = String(localStorage.getItem("sw_active_business_id") || "").trim();
+      const active = memberships.find((m) => String(m.business) === selectedId);
+      if (!active) {
         setMembership(null);
-        setError("No active business membership was found for this account. Ask your business owner to verify your invite.");
+        setError("No active membership found for the selected business. Select the business you work for or ask its owner to verify your invite.");
       } else {
-        setMembership(memberships[0]);
+        setMembership(active);
       }
     } catch (err) {
       setMembership(null);
