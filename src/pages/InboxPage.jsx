@@ -165,6 +165,7 @@ export default function InboxPage() {
         {error ? <div className="rounded-2xl border border-rose-400/25 bg-rose-500/[.08] p-4 text-sm text-rose-100">{error}</div> : null}
 
         {scope === "BUSINESS" && !activeBusinessId ? <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-100">Select a business to open its inbox.</div> : (
+          <>
           <div className="sw-inbox-mobile-sources" role="group" aria-label="Message sources">
             <button type="button" aria-pressed={mobileSource === "tickets"} onClick={() => {setMobileSource("tickets");setMobileConversationOpen(false);}}><MessageSquareText size={16}/> Ticket Chats</button>
             <button type="button" aria-pressed={mobileSource === "email"} onClick={() => {setMobileSource("email");setMobileConversationOpen(false);}}><Mail size={16}/> Email & SYNC</button>
@@ -189,6 +190,7 @@ export default function InboxPage() {
               </> : <div className="grid flex-1 place-items-center p-8 text-center"><div><Mail className="mx-auto h-8 w-8 text-slate-700" /><div className="mt-3 text-lg font-black text-white">Choose a conversation</div><div className="mt-1 text-sm text-slate-500">Messages and next actions will appear here.</div></div></div>}
             </section>
           </div>
+          </>
         )}
 
         {scope === "PERSONAL" ? <section className="sw-inbox-preferences flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[.02] p-4"><div><div className="flex items-center gap-2 text-xs font-black text-white"><Settings2 className="h-4 w-4 text-cyan-200" />Inbox preferences</div><div className="mt-1 text-xs text-slate-500">Manage connected services and the data SYNC may use.</div></div><button type="button" onClick={() => navigate("/settings?tab=CONNECTIONS")} className="rounded-xl border border-white/10 bg-white/[.04] px-3 py-2 text-xs font-black text-slate-200">Manage connections</button></section> : null}
