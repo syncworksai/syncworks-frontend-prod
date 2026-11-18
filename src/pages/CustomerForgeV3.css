@@ -401,3 +401,55 @@
  .forge3-reading-home-actions button:active,.forge3-mobile-missions-trigger:active{transform:scale(.98)}
 }
 @keyframes forge16-fade{from{opacity:0}to{opacity:1}}
+
+
+/* Forge v17: iOS-installed-app viewport anchoring.
+   SyncWorks reserves 58px for the status bar + 57px for its fixed top header.
+   Forge is an anchored app screen, never a vertically draggable document.
+   Dialogs and library chapters retain their own touch-scrolling. */
+@media (max-width:720px){
+  main.forge3{
+    position:fixed!important;
+    top:115px!important;
+    right:0!important;
+    bottom:0!important;
+    left:0!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    margin:0!important;
+    overflow:hidden!important;
+    overscroll-behavior:none;
+    -webkit-overflow-scrolling:auto;
+    touch-action:manipulation;
+    contain:layout style;
+  }
+  .forge3-glow{pointer-events:none}
+  .forge3-main,.forge3-workspace,.forge3-stage,.forge3-reading-home{
+    min-height:0;
+    overscroll-behavior:none;
+    touch-action:manipulation;
+  }
+  .forge3-reading-dialog-body,
+  .forge3-sidebar.forge3-missions-open .forge3-side-list,
+  .forge3-reflect textarea{
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    touch-action:pan-y pinch-zoom;
+  }
+  .forge3 input,.forge3 select,.forge3 textarea,
+  .forge3-reading-dialog input,.forge3-reading-dialog select,.forge3-reading-dialog textarea,
+  .forge3-audio-settings-dialog input,.forge3-audio-settings-dialog select,
+  .forge3-audio-settings-dialog textarea{
+    font-size:16px!important;
+  }
+  .forge3-reading-home-actions button,
+  .forge3-play-buttons button,
+  .forge3-mobile-missions-trigger,
+  .forge3-mobile-voice-trigger{
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+  }
+}
