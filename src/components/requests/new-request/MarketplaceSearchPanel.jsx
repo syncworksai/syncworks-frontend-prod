@@ -102,7 +102,7 @@ export default function MarketplaceSearchPanel({
   compact = false,
   routeChooser = null,
 }) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(() => String(initialSearchQuery || ""));
   const [selectedVerticalKey, setSelectedVerticalKey] = useState("");
   const [showCategories, setShowCategories] = useState(false);
   const [showAllResults, setShowAllResults] = useState(false);
@@ -266,6 +266,13 @@ export default function MarketplaceSearchPanel({
           ) : null}
         </div>
       </section>
+
+      {!isBusinessInternal && typeof onListBusiness === "function" && (
+        <div className="sw-marketplace-business-cta flex flex-wrap items-center justify-between gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/[.06] px-3 py-2">
+          <span className="text-xs text-slate-300"><strong className="text-white">Own a business?</strong> Get listed to receive local requests.</span>
+          <button type="button" onClick={onListBusiness} className="shrink-0 rounded-lg border border-cyan-400/40 px-3 py-2 text-xs font-black text-cyan-100">List your business</button>
+        </div>
+      )}
 
       {categoryLoading && !compact ? (
         <div className="rounded-2xl border border-cyan-500/25 bg-cyan-500/10 p-3 text-sm text-cyan-100">
