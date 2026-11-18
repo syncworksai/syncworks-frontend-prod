@@ -33,3 +33,36 @@
 .sw-intake-datetime::-webkit-datetime-edit-minute-field {
   color: #f8fafc;
 }
+
+/* Keep primary actions available instead of letting mobile form rows push
+   the Schedule and Assignment controls off the fixed viewport. */
+.sw-intake-primary {overflow:hidden}
+.sw-intake-primary > :not(.sw-intake-action-bar) {flex-shrink:1;min-height:0}
+.sw-intake-action-bar {
+ position:sticky;bottom:0;z-index:3;
+ background:rgba(4,17,38,.96);
+ padding:7px 0 1px;
+ box-shadow:0 -8px 20px rgba(2,9,24,.28);
+}
+.sw-intake-action-bar button {min-width:120px;min-height:40px}
+.sw-intake-root form {min-height:0}
+@media(max-height:840px) {
+ .sw-intake-root form {gap:5px}
+ .sw-intake-root .sw-intake-primary {gap:6px;padding:9px}
+ .sw-intake-root .sw-intake-primary input {padding-block:7px}
+ .sw-intake-root .sw-intake-primary > button {padding-block:7px}
+ .sw-intake-footnote {display:none}
+}
+@media(max-width:767px) {
+ .sw-intake-root {height:calc(100dvh - 154px)!important;min-height:0!important;padding:8px}
+ .sw-intake-root form > .grid {display:flex;flex-direction:column;min-height:0;overflow:hidden}
+ .sw-intake-root .sw-intake-primary {flex:1;overflow-y:auto;overscroll-behavior:contain;padding-bottom:0}
+ .sw-intake-root .sw-intake-action-bar {position:sticky;bottom:0}
+ .sw-intake-root .sw-intake-summary {flex-shrink:0;min-height:0;gap:5px}
+ .sw-intake-root .sw-intake-summary > div.mt-3 {display:none}
+ .sw-intake-root .sw-intake-summary > div.mt-auto {padding-top:0;display:flex;gap:8px;align-items:center}
+ .sw-intake-root .sw-intake-summary > div.mt-auto > button {width:auto;min-width:148px;flex:1}
+ .sw-intake-root .sw-intake-summary > div.mt-auto > p {margin-top:0;flex:1}
+ .sw-intake-footnote{display:none}
+}
+[data-sw-business-theme="light"] .sw-intake-action-bar {background:rgba(245,250,252,.96)}
