@@ -17,6 +17,41 @@ function readTasks() {
   }
 }
 
+function TaskRow({ task, compact = false, editingId, editTitle, setEditTitle, pendingId, toggle, beginEdit, saveEdit, archiveTask, restoreTask, remove, cancelEdit }) {
+    const isEditing = editingId === task.id;
+    const isBusy = pendingId === task.id;
+    return (
+      <div className={`sw-todo-task-row group flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/[.04] ${compact ? "p-3" : "p-4"} transition hover:border-white/20`}>
+        {isEditing ? (
+          <form onSubmit={(event) => { event.preventDefault(); saveEdit(task.id); }} className="flex w-full min-w-0 flex-wrap items-center gap-2">
+            <input autoFocus aria-label="Edit task title" value={editTitle} onChange={(event) => setEditTitle(event.target.value)} className="h-10 min-w-0 flex-1 rounded-xl border border-cyan-400/30 bg-slate-950 px-3 text-base text-white" />
+            <button type="submit" disabled={isBusy} className="h-10 rounded-xl bg-cyan-500 px-3 text-xs font-black text-slate-950">Save</button>
+            <button type="button" onClick={cancelEdit} className="h-10 rounded-xl border border-white/15 px-3 text-xs">Cancel</button>
+          </form>
+        ) : (
+          <>
+            {!task.archived ? <button type="button" disabled={isBusy} onClick={() => toggle(task.id)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-slate-950/70 text-cyan-200" aria-label={task.done ? "Reopen task" : "Complete task"}>
+              {task.done ? <CheckCircle2 className="h-4 w-4 text-emerald-300" /> : <Circle className="h-4 w-4" />}
+            </button> : <Archive className="h-4 w-4 shrink-0 text-slate-400" />}
+            <div className={`min-w-0 flex-1 text-[12px] font-bold ${task.done ? "text-slate-400 line-through" : "text-white"}`}>{task.title}</div>
+            <div className="sw-todo-row-actions flex flex-wrap items-center gap-1">
+              {!task.archived ? <>
+                <button type="button" disabled={isBusy} onClick={() => beginEdit(task)} className="sw-todo-action" aria-label={`Edit ${task.title}`} title="Edit"><Pencil className="h-4 w-4" /><span>Edit</span></button>
+                {task.done ? <button type="button" disabled={isBusy} onClick={() => toggle(task.id)} className="sw-todo-action" title="Reopen"><RotateCcw className="h-4 w-4" /><span>Reopen</span></button> :
+                  <button type="button" disabled={isBusy} onClick={() => toggle(task.id)} className="sw-todo-action" title="Complete"><CheckCircle2 className="h-4 w-4" /><span>Complete</span></button>}
+                <button type="button" disabled={isBusy} onClick={() => archiveTask(task.id)} className="sw-todo-action" title="Archive"><Archive className="h-4 w-4" /><span>Archive</span></button>
+              </> : <>
+                <button type="button" disabled={isBusy} onClick={() => restoreTask(task.id)} className="sw-todo-action" title="Restore to open tasks"><RotateCcw className="h-4 w-4" /><span>Restore</span></button>
+                <button type="button" disabled={isBusy} onClick={() => remove(task.id)} className="sw-todo-action text-rose-300" title="Permanently delete"><Trash2 className="h-4 w-4" /><span>Delete</span></button>
+              </>}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+
 export default function CustomerTasks() {
   const nav = useNavigate();
   const [tasks, setTasks] = useState(readTasks);
@@ -187,39 +222,6 @@ export default function CustomerTasks() {
     nav(`/sync?return=${encodeURIComponent("/customer/tasks")}`);
   }
 
-  function TaskRow({ task, compact = false }) {
-    const isEditing = editingId === task.id;
-    const isBusy = pendingId === task.id;
-    return (
-      <div className={`sw-todo-task-row group flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/[.04] ${compact ? "p-3" : "p-4"} transition hover:border-white/20`}>
-        {isEditing ? (
-          <form onSubmit={(event) => { event.preventDefault(); saveEdit(task.id); }} className="flex w-full min-w-0 flex-wrap items-center gap-2">
-            <input autoFocus aria-label="Edit task title" value={editTitle} onChange={(event) => setEditTitle(event.target.value)} className="h-10 min-w-0 flex-1 rounded-xl border border-cyan-400/30 bg-slate-950 px-3 text-base text-white" />
-            <button type="submit" disabled={isBusy} className="h-10 rounded-xl bg-cyan-500 px-3 text-xs font-black text-slate-950">Save</button>
-            <button type="button" onClick={() => setEditingId(null)} className="h-10 rounded-xl border border-white/15 px-3 text-xs">Cancel</button>
-          </form>
-        ) : (
-          <>
-            {!task.archived ? <button type="button" disabled={isBusy} onClick={() => toggle(task.id)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-slate-950/70 text-cyan-200" aria-label={task.done ? "Reopen task" : "Complete task"}>
-              {task.done ? <CheckCircle2 className="h-4 w-4 text-emerald-300" /> : <Circle className="h-4 w-4" />}
-            </button> : <Archive className="h-4 w-4 shrink-0 text-slate-400" />}
-            <div className={`min-w-0 flex-1 text-[12px] font-bold ${task.done ? "text-slate-400 line-through" : "text-white"}`}>{task.title}</div>
-            <div className="sw-todo-row-actions flex flex-wrap items-center gap-1">
-              {!task.archived ? <>
-                <button type="button" disabled={isBusy} onClick={() => beginEdit(task)} className="sw-todo-action" aria-label={`Edit ${task.title}`} title="Edit"><Pencil className="h-4 w-4" /><span>Edit</span></button>
-                {task.done ? <button type="button" disabled={isBusy} onClick={() => toggle(task.id)} className="sw-todo-action" title="Reopen"><RotateCcw className="h-4 w-4" /><span>Reopen</span></button> :
-                  <button type="button" disabled={isBusy} onClick={() => toggle(task.id)} className="sw-todo-action" title="Complete"><CheckCircle2 className="h-4 w-4" /><span>Complete</span></button>}
-                <button type="button" disabled={isBusy} onClick={() => archiveTask(task.id)} className="sw-todo-action" title="Archive"><Archive className="h-4 w-4" /><span>Archive</span></button>
-              </> : <>
-                <button type="button" disabled={isBusy} onClick={() => restoreTask(task.id)} className="sw-todo-action" title="Restore to open tasks"><RotateCcw className="h-4 w-4" /><span>Restore</span></button>
-                <button type="button" disabled={isBusy} onClick={() => remove(task.id)} className="sw-todo-action text-rose-300" title="Permanently delete"><Trash2 className="h-4 w-4" /><span>Delete</span></button>
-              </>}
-            </div>
-          </>
-        )}
-      </div>
-    );
-  }
 
   return (
     <DashboardShell modeBarTitle="To-do" modeBarSubtitle="Personal tasks and reminders" maxWidth="max-w-[1600px]">
@@ -266,7 +268,7 @@ export default function CustomerTasks() {
             </div>
             <div className={`mt-3 grid gap-2 ${view === "grid" ? "lg:grid-cols-2" : "grid-cols-1"}`}>
               {(section === "active" ? open : section === "completed" ? done : archived).length
-                ? (section === "active" ? open : section === "completed" ? done : archived).map(task => <TaskRow key={task.id} task={task} compact={view === "grid"} />)
+                ? (section === "active" ? open : section === "completed" ? done : archived).map(task => <TaskRow key={task.id} task={task} compact={view === "grid"} editingId={editingId} editTitle={editTitle} setEditTitle={setEditTitle} pendingId={pendingId} toggle={toggle} beginEdit={beginEdit} saveEdit={saveEdit} archiveTask={archiveTask} restoreTask={restoreTask} remove={remove} cancelEdit={() => setEditingId(null)} />)
                 : <div className="rounded-2xl border border-dashed border-white/10 p-5 text-xs text-slate-400">{section === "active" ? "Nothing waiting on you." : section === "completed" ? "Completed tasks will appear here. Archive them when you want to clear this view." : "Your archive is empty."}</div>}
             </div>
           </div>
