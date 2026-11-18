@@ -216,12 +216,14 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
   const amountDue = useMemo(() => dueInvoices.reduce((sum, item) => sum + Number(item?.balance_due ?? item?.total ?? 0), 0), [dueInvoices]);
   // Keep in-progress appointments and events spanning midnight visible.
   const upcomingEvents = useMemo(() => calendarEvents.filter((item) => {
+    if (String(item?.metadata?.entity_type || "").toUpperCase() === "TASK") return false;
     if (!item?.start_at) return false;
     const end = new Date(item.end_at || item.start_at).getTime();
     return Number.isFinite(end) && end >= Date.now();
   }).sort((a,b) => new Date(a.start_at) - new Date(b.start_at)), [calendarEvents]);
   const todayKey = new Date().toDateString();
   const todayEvents = useMemo(() => calendarEvents.filter((item) => {
+    if (String(item?.metadata?.entity_type || "").toUpperCase() === "TASK") return false;
     if (!item?.start_at) return false;
     const start = new Date(item.start_at);
     const end = new Date(item.end_at || item.start_at);
