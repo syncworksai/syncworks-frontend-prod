@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import api from "../../api/client";
+import { fetchPersonalCalendarEvents } from "../../api/personalCalendarAgenda";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, CheckCheck, ClipboardPlus, Command, ArrowUpRight, BriefcaseBusiness, Building2, ChartNoAxesCombined, HeartPulse, Spade, ShoppingBag, Sparkles, Clock3, LayoutGrid, Mail, Palette, SunMedium } from "lucide-react";
 import "./ImmersiveWorkspaceHome.css";
@@ -31,8 +31,7 @@ export default function ImmersiveWorkspaceHome({ displayName = "there", theme, o
     let active = true;
     const load = async () => {
       try {
-        const response = await api.get("/personal-calendar/events/", { params: { status: "ACTIVE" } });
-        const rows = Array.isArray(response.data) ? response.data : (response.data?.results || []);
+        const rows = await fetchPersonalCalendarEvents();
         const today = new Date().toDateString();
         if (active) setTodayAgenda(rows.filter(event => event.start_at && new Date(event.start_at).toDateString() === today).sort((a,b) => new Date(a.start_at) - new Date(b.start_at)));
       } catch { if (active) setTodayAgenda([]); }
