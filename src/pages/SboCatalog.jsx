@@ -297,6 +297,8 @@ export default function SboCatalog() {
     }
   }
 
+  const existingCategories = useMemo(() => [...new Set(items.filter(item => item.item_type === "SERVICE").map(item => item.service_category).filter(Boolean))].sort(), [items]);
+
   const stats = useMemo(() => {
     const active = items.filter((x) => x.is_active);
     const featured = items.filter((x) => x.is_featured);
@@ -367,7 +369,7 @@ export default function SboCatalog() {
             <div className="space-y-3">
               <Input label="Name" value={form.name} onChange={(v) => patchForm("name", v)} placeholder="Diagnostic Visit" />
               {form.item_type === "SERVICE" && <>
-                <Input label="Service category (business-defined)" value={form.service_category} onChange={(v) => patchForm("service_category", v)} placeholder="Plumbing, General Maintenance, Appliance…" />
+                <label className="block"><div className="mb-1 text-xs text-slate-300">Service category (business-defined)</div><input list="sbo-service-categories" value={form.service_category} onChange={e=>patchForm("service_category",e.target.value)} placeholder="Plumbing, General Maintenance, Appliance…" className="w-full rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-cyan-500/40"/><datalist id="sbo-service-categories">{existingCategories.map(cat=><option key={cat} value={cat}/>)}</datalist><p className="mt-1 text-[11px] text-slate-500">Choose an existing category or type a new one. These groups appear in the New Request Catalog.</p></label>
                 <div className="grid grid-cols-2 gap-3"><Input label="Estimated time (minutes)" type="number" value={String(form.estimated_duration_minutes)} onChange={v => patchForm("estimated_duration_minutes", v)} /><Input label="Technician skills (comma separated)" value={(form.required_skills || []).join(", ")} onChange={v => patchForm("required_skills", v.split(",").map(x => x.trim()).filter(Boolean))} placeholder="plumbing, electrical" /></div>
               </>}
               <div className="grid grid-cols-2 gap-3">
