@@ -4,6 +4,8 @@ import {CheckCircle2,ChevronDown,ChevronRight,ClipboardList,Clock3,MapPin,Plus,S
 import api from "../../api/client";
 import {useAuth} from "../../auth/AuthContext";
 import "./BusinessQuickIntake.css";
+import "../../styles/BusinessWorkspaceTheme.css";
+import {useBusinessWorkspaceTheme} from "../../hooks/useBusinessWorkspaceTheme";
 import PlaceSearchField from "../../components/PlaceSearchField";
 
 const EMPTY={customer_name:"",phone:"",email:"",service_address:"",service_label:"",description:"",urgency:"STANDARD",scheduled_start:"",estimated_duration_minutes:60,assigned_member_id:"",required_skills:[]};
@@ -13,6 +15,7 @@ const errText=e=>{const d=e?.response?.data;return(typeof d?.detail==="string"&&
 const localTime=()=>{const d=new Date();return d.toLocaleString();};
 export default function BusinessQuickIntake(){
  const nav=useNavigate(),[params]=useSearchParams(),{activeBusinessId}=useAuth();
+ const {themeProps}=useBusinessWorkspaceTheme();
  const supportId=params.get("support_business"),supportMode=Boolean(supportId);
  const businessId=String(activeBusinessId||localStorage.getItem("sw_active_business_id")||"");
  const base=supportMode?`/platform/businesses/${encodeURIComponent(supportId)}/assist`:"/business";
@@ -101,14 +104,14 @@ export default function BusinessQuickIntake(){
   }catch(e){setError(errText(e));}finally{setSaving(false);}
  };
  const modal=(title,children)=><div className="absolute inset-0 z-40 flex items-end justify-center bg-[#020817]/70 p-2 backdrop-blur-md sm:items-center" onMouseDown={e=>{if(e.target===e.currentTarget)setPanel(null);}}><section role="dialog" aria-modal="true" aria-label={title} className="sw-intake-panel flex max-h-[92%] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-cyan-400/40 p-4 text-white shadow-2xl"><div className="mb-3 flex items-center justify-between"><h2 className="font-bold">{title}</h2><button type="button" onClick={()=>setPanel(null)} aria-label="Close panel" className="rounded-lg border border-white/10 p-2"><X size={17}/></button></div><div className="min-h-0 space-y-3 overflow-y-auto">{children}</div></section></div>;
- return <div className="sw-intake-root relative isolate h-[calc(100dvh-172px)] min-h-[390px] overflow-hidden px-3 py-3 text-white sm:h-[calc(100dvh-110px)]">
-  <div className="sw-intake-background absolute inset-0 -z-20"/><div className="absolute inset-0 -z-10 bg-[#020b1e]/65"/>
+ return <div {...themeProps} className="sw-intake-root relative isolate h-[calc(100dvh-172px)] min-h-[390px] overflow-hidden px-3 py-3 text-white sm:h-[calc(100dvh-110px)]">
+  <div className="sw-intake-background sw-business-themed-photo absolute inset-0 -z-20"/><div className="sw-business-themed-overlay absolute inset-0 -z-10"/>
   <form onSubmit={save} className="mx-auto flex h-full w-full max-w-5xl flex-col gap-2">
-   <header className="sw-intake-glass flex shrink-0 items-center justify-between rounded-2xl p-3"><div><div className="text-[10px] font-bold uppercase tracking-widest text-cyan-300">SYNCWORKS · Business Intake</div><h1 className="text-lg font-bold sm:text-2xl">New Request</h1></div><button type="button" onClick={()=>nav(supportMode?"/platform":"/sbo/dispatch")} className="rounded-xl border border-white/15 px-3 py-2 text-xs">Back</button></header>
+   <header className="sw-intake-glass sw-business-themed-card flex shrink-0 items-center justify-between rounded-2xl p-3"><div><div className="text-[10px] font-bold uppercase tracking-widest text-cyan-300">SYNCWORKS · Business Intake</div><h1 className="text-lg font-bold sm:text-2xl">New Request</h1></div><button type="button" onClick={()=>nav(supportMode?"/platform":"/sbo/dispatch")} className="rounded-xl border border-white/15 px-3 py-2 text-xs">Back</button></header>
    {supportMode&&<p className="rounded-lg border border-fuchsia-300/20 bg-fuchsia-500/10 px-3 py-1 text-xs">Founder-assisted intake. No customer invitation is sent.</p>}
    {error&&<div role="alert" className="rounded-xl border border-rose-400/30 bg-rose-900/40 px-3 py-2 text-xs text-rose-200">{error}</div>}
    <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_230px]">
-    <div className="sw-intake-glass flex min-h-0 flex-col gap-3 rounded-2xl p-3">
+    <div className="sw-intake-glass sw-business-themed-card flex min-h-0 flex-col gap-3 rounded-2xl p-3">
      <div className="relative"><label className="mb-1 block text-[11px] text-cyan-200">Find saved customer</label><input className={field} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, number or email" autoComplete="off"/>{search.trim()&&matched.length>0&&<div className="absolute z-30 mt-1 max-h-32 w-full overflow-y-auto rounded-xl border border-cyan-400/30 bg-[#07152c] shadow-xl">{matched.map(c=><button key={c.id} type="button" onClick={()=>pickCustomer(c)} className="block w-full border-b border-white/10 px-3 py-2 text-left text-xs hover:bg-cyan-500/10">{c.name||c.phone||c.email} · {c.phone||c.email||""}</button>)}</div>}</div>
      <div className="grid grid-cols-2 gap-2"><label className="text-[11px] text-slate-300">Customer<input className={field} value={form.customer_name} onChange={e=>set("customer_name",e.target.value)} placeholder="Caller name"/></label><label className="text-[11px] text-slate-300">Phone<input className={field} type="tel" value={form.phone} onChange={e=>set("phone",e.target.value)} placeholder="(555) 555-5555"/></label></div>
      <label className="text-[11px] text-slate-300">Email<input className={field} type="email" value={form.email} onChange={e=>set("email",e.target.value)} placeholder="Optional"/></label>
@@ -120,13 +123,13 @@ export default function BusinessQuickIntake(){
      <button type="button" onClick={()=>setPanel("notes")} className="sw-intake-tap flex items-center justify-between rounded-xl px-3 py-3 text-left text-sm"><span><strong>Detailed description & access notes</strong><small className="block truncate text-slate-300">{form.description||"Add the problem, instructions, and anything the tech needs"}</small></span><ChevronRight size={18}/></button>
      <div className="mt-auto flex flex-wrap gap-2"><button type="button" onClick={()=>setPanel("schedule")} className="sw-intake-tap flex-1 rounded-xl px-3 py-3 text-xs"><Clock3 className="mr-2 inline" size={15}/>Schedule · {form.scheduled_start?"Set":"Optional"}</button><button type="button" onClick={()=>setPanel("assignment")} className="sw-intake-tap flex-1 rounded-xl px-3 py-3 text-xs"><UserRound className="mr-2 inline" size={15}/>Assignment · {mode==="tech"?"Technician":mode==="partner"?"Subcontractor":"Dispatch queue"}</button></div>
     </div>
-    <aside className="sw-intake-glass flex min-h-0 flex-col rounded-2xl p-3">
+    <aside className="sw-intake-glass sw-business-themed-card flex min-h-0 flex-col rounded-2xl p-3">
       <h2 className="text-sm font-semibold">Request summary</h2>
       <div className="mt-3 space-y-3 text-xs"><div><span className="text-slate-400">Service</span><p className="font-semibold">{form.service_label||"Select a service"}</p></div><div><span className="text-slate-400">Location</span><p className="line-clamp-2">{form.service_address||"Not entered"}</p></div><div><span className="text-slate-400">Priority</span><select aria-label="Priority" className={field} value={form.urgency} onChange={e=>{set("urgency",e.target.value);setSlots([]);set("scheduled_start","")}}>{[["EMERGENCY","Emergency · today"],["URGENT","Next day"],["STANDARD","Next available"],["FLEXIBLE","Flexible / anytime"]].map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></div><div><span className="text-slate-400">Estimated job time</span><select className={field} value={form.estimated_duration_minutes} onChange={e=>set("estimated_duration_minutes",Number(e.target.value))}>{[30,45,60,90,120,180,240].map(n=><option key={n} value={n}>{n} min</option>)}</select></div></div>
       <div className="mt-auto pt-2"><button type="submit" disabled={saving} className="w-full rounded-xl bg-cyan-400 px-3 py-3 text-sm font-black text-slate-950 disabled:opacity-50">{saving?"Creating…":"Create ticket"}</button><p className="mt-2 text-[10px] leading-4 text-slate-400">Customer is saved to CRM. No customer invitation is sent.</p></div>
     </aside>
    </div>
-   <div className="sw-intake-glass flex shrink-0 items-center justify-between rounded-xl px-3 py-2 text-xs text-slate-300"><span>New request · customer → service → dispatch</span><span>One-screen workflow</span></div>
+   <div className="sw-intake-glass sw-business-themed-card flex shrink-0 items-center justify-between rounded-xl px-3 py-2 text-xs text-slate-300"><span>New request · customer → service → dispatch</span><span>One-screen workflow</span></div>
   </form>
   {panel==="address"&&modal("Find service address",<><PlaceSearchField label="Search full service address" value={addressQuery} onChange={value=>setAddressQuery(value)} onSelect={place=>{const address=place.formatted_address||[place.address_line1,place.city,place.state,place.postal_code].filter(Boolean).join(", ");chooseAddress(address);}} placeholder="Street address, city, state and ZIP"/>{addresses.map(a=><button key={a} onClick={()=>chooseAddress(a)} className="sw-intake-option w-full rounded-xl p-3 text-left text-sm">{a}</button>)}<button onClick={()=>chooseAddress(addressQuery)} className="w-full rounded-xl border border-cyan-400/40 p-3 text-left text-xs">Use typed address: {addressQuery||"Enter above"}</button><p className="text-xs text-slate-400">Select a verified result from Calendar address search, a previously saved customer address, or enter a full address manually (street, city, state and ZIP).</p></>)}
   {panel==="service"&&modal("Choose a service",<>
