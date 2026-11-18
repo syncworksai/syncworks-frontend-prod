@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../api/client";
 
 const actions = [
+  ["can_create_tickets", "Technician team board", "/employee/technicians", "See assigned jobs, report status, and request handoffs"],
   ["can_create_tickets", "My tickets", "/tickets", "View the tickets assigned to you"],
   ["can_assign_tickets", "Dispatch board", "/sbo/dispatch", "Assign and coordinate service"],
   ["can_manage_schedule", "Schedule", "/sbo/appointments", "Coordinate appointments"],
