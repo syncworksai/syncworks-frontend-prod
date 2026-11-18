@@ -12,6 +12,7 @@ import {
 
 import { useAuth } from "../auth/AuthContext";
 import GlobalModeBar from "./navigation/GlobalModeBar";
+import EmployeeBusinessRouteGate from "./EmployeeBusinessRouteGate";
 
 function LoadingScreen({ message = "Loading SyncWorks..." }) {
   return <div className="flex min-h-screen items-center justify-center bg-[#020617] px-4 text-white"><div className="w-full max-w-sm rounded-3xl border border-slate-800 bg-slate-950/70 p-6 text-center shadow-2xl backdrop-blur"><div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-slate-700 border-t-cyan-400" /><div className="mt-4 text-sm font-semibold text-slate-100">{message}</div><div className="mt-1 text-xs text-slate-400">Restoring your secure session.</div></div></div>;
@@ -33,7 +34,7 @@ export default function ProtectedRoute({ children }) {
   }, [retryAuthentication, retrying]);
 
   if (user) {
-    return <><GlobalModeBar />{children}</>;
+    return <><GlobalModeBar /><EmployeeBusinessRouteGate user={user}>{children}</EmployeeBusinessRouteGate></>;
   }
 
   if (booting || authStatus === "booting") return <LoadingScreen message="Loading SyncWorks..." />;
