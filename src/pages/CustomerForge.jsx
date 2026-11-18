@@ -99,6 +99,7 @@ export default function CustomerForge(){
   const [voiceType,setVoiceType]=useState("natural");
   const [forgeVoice,setForgeVoice]=useState(()=>{try{if(localStorage.getItem("sw-forge-jarvis-v19")!=="1"){localStorage.setItem("sw-forge-narrator","jarvis");localStorage.setItem("sw-forge-jarvis-v19","1");return "jarvis";}return localStorage.getItem("sw-forge-narrator")||"jarvis";}catch{return "jarvis";}});
   const [playlistStatus,setPlaylistStatus]=useState("");
+  const [lastListenedId,setLastListenedId]=useState(()=>{try{return localStorage.getItem("forge-last-listened")||"";}catch{return "";}});
   const playlistRef=useRef([]),playlistIndexRef=useRef(-1);
   const [audioError,setAudioError]=useState("");
   const [breathing,setBreathing]=useState(false);
@@ -260,6 +261,7 @@ export default function CustomerForge(){
     const title=opts.title||chapter.title;
     const id=opts.id||chapter.id;
     const voice=forgeVoice;
+    try{localStorage.setItem("forge-last-listened",id);setLastListenedId(id);}catch{}
     let bookmark=opts.resume?getBookmark(id,voice):{part:0,seconds:0};
     const startPart=Math.max(0,Math.min(bookmark.part,parts.length-1));
     setAudioStatus("Preparing "+(voice==="jarvis"?"SyncWorks Jarvis":"Forge")+" audiobook...");
@@ -331,6 +333,12 @@ export default function CustomerForge(){
       if(token!==playId.current)return;
       setAudioState("idle");setAudioError("Audio stopped at this lesson. Your listening place is saved.");
     }
+  }
+  function resumeLastAudiobook(){
+    const item=chapters.find(c=>c.id===lastListenedId);
+    if(!item)return;
+    setAudioSettingsOpen(false);setChapterId(item.id);setMode("listen");
+    startAudio(getScript(item),{id:item.id,title:item.title,resume:true});
   }
   function skipPlaylist(offset){
     const ids=playlistRef.current;
@@ -431,7 +439,7 @@ export default function CustomerForge(){
         <div className="forge3-reading-dialog-actions"><button type="button" className="forge3-mainbtn" onClick={()=>{setReadingOpen(false);setActiveMode("listen");startAudio();}}><Headphones size={17}/> Listen to full chapter</button><button type="button" className="forge3-softbtn" onClick={()=>{setReadingOpen(false);setGrowthOpen(true);}}>Ask the Forge coach <Brain size={16}/></button><button type="button" className="forge3-softbtn" onClick={()=>{setReadingOpen(false);setActiveMode("reflect");}}>Reflect on lesson <ChevronRight size={16}/></button>{chapter.id.startsWith("academy-")&&<button type="button" className="forge3-softbtn" onClick={()=>{setReadingOpen(false);setAcademyOpen(true);}}>Knowledge check <Check size={16}/></button>}<button type="button" className="forge3-softbtn" onClick={()=>setReadingOpen(false)}>Close</button></div>
       </section>
     </div>}
-    {audioSettingsOpen&&<div className="forge3-audio-settings-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setAudioSettingsOpen(false);}}><section role="dialog" aria-modal="true" aria-label="Forge voice and audio settings" className="forge3-audio-settings-dialog"><div className="forge3-audio-settings-heading"><div><span>THE FORGE · AUDIO</span><h2>Voice & playback</h2></div><button type="button" onClick={()=>setAudioSettingsOpen(false)} aria-label="Close audio settings">✕</button></div><label>Playback output<select value={voiceType} onChange={e=>{stopAudio();setVoiceType(e.target.value);}}><option value="natural">ElevenLabs</option><option value="device">Device voice</option></select></label>{voiceType==="natural"&&<><label>Narrator<select value={forgeVoice} onChange={e=>selectForgeNarrator(e.target.value)}><option value="tucker">Tucker · mature American</option><option value="ambrose">Ambrose · reflective</option><option value="david">David · British storyteller</option></select></label><button type="button" className="forge3-mainbtn" onClick={previewForgeNarrator} disabled={audioState==="loading"}><Volume2 size={16}/> Test narrator</button></>}<p role="status">{audioError||audioStatus||"Choose the voice for your next session."}</p><button type="button" className="forge3-softbtn" onClick={()=>setAudioSettingsOpen(false)}>Back to Forge</button></section></div>}
+    {audioSettingsOpen&&<div className="forge3-audio-settings-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setAudioSettingsOpen(false);}}><section role="dialog" aria-modal="true" aria-label="Forge voice and audio settings" className="forge3-audio-settings-dialog"><div className="forge3-audio-settings-heading"><div><span>THE FORGE · AUDIO</span><h2>Voice & playback</h2></div><button type="button" onClick={()=>setAudioSettingsOpen(false)} aria-label="Close audio settings">✕</button></div><label>Playback output<select value={voiceType} onChange={e=>{stopAudio();setVoiceType(e.target.value);}}><option value="natural">ElevenLabs</option><option value="device">Device voice</option></select></label>{voiceType==="natural"&&<><label>Narrator<select value={forgeVoice} onChange={e=>selectForgeNarrator(e.target.value)}><option value="tucker">Tucker · mature American</option><option value="ambrose">Ambrose · reflective</option><option value="david">David · British storyteller</option></select></label><button type="button" className="forge3-mainbtn" onClick={previewForgeNarrator} disabled={audioState==="loading"}><Volume2 size={16}/> Test narrator</button></>}<p role="status">{audioError||audioStatus||"Choose the voice for your next session."}</p>{lastListenedId&&chapters.some(c=>c.id===lastListenedId)&&<button type="button" className="forge3-softbtn" onClick={resumeLastAudiobook}><Headphones size={15}/> Continue last audiobook</button>}<button type="button" className="forge3-softbtn" onClick={()=>setAudioSettingsOpen(false)}>Back to Forge</button></section></div>}
     <ForgeKnowledgeAcademy open={academyOpen} email={email} onClose={()=>setAcademyOpen(false)} onPlayTrack={track=>{const ids=[...forgeAudiobookEpisodes,...academyLessons].filter(l=>l.track===track).sort((a,b)=>a.order-b.order).map(l=>"academy-"+l.id);setAcademyOpen(false);startPlaylistAt(ids);}} onOpenLesson={(id,targetMode)=>{stopAudio();setChapterId("academy-"+id);setAcademyOpen(false);setActiveMode(targetMode);if(targetMode==="read")setReadingOpen(true);}}/>
     <ForgeBookLibrary open={libraryOpen} onClose={()=>setLibraryOpen(false)} onSelect={id=>{stopAudio();setChapterId(id);setLibraryOpen(false);setReadingOpen(true);}}/>
     <ForgeGrowthCoach email={email} chapter={chapter} open={growthOpen} onClose={()=>setGrowthOpen(false)}/>
