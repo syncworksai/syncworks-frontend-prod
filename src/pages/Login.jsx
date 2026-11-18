@@ -163,8 +163,9 @@ export default function Login({ backgroundOnly = false }) {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
-  const [signInOpen, setSignInOpen] = useState(() => employeeInvite || partnerInvite);
+  const [signInOpen, setSignInOpen] = useState(() => employeeInvite);
   const [activeRole, setActiveRole] = useState(ROLE_OPTIONS[0].id);
+  useEffect(() => { if (partnerInvite) setSignInOpen(true); }, [partnerInvite]);
 
   useEffect(() => {
     if (!backgroundOnly && user) nav(returnTo, { replace: true });
