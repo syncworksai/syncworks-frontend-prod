@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { AlertTriangle, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, CloudSun, Clock3, Grid2X2, Inbox, LayoutGrid, MapPin, Plus, Sparkles, WalletCards } from "lucide-react";
+import { createPortal } from "react-dom";
+import { AlertTriangle, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, CloudSun, Clock3, Grid2X2, Inbox, LayoutGrid, MapPin, Plus, Sparkles, WalletCards, Archive, RotateCcw, X } from "lucide-react";
 import "./MobileCustomerCommandCenter.css";
+import "./MobileAttentionTopV35.css";
 
 function shortDate(date) {
   return new Intl.DateTimeFormat("en-US", {month:"2-digit",day:"2-digit",year:"2-digit"}).format(date);
@@ -22,9 +24,32 @@ function weatherLocation(weather) {
   const place = weather?.location || {};
   return [place.city || place.name || place.locality, place.state || place.region].filter(Boolean).join(", ") || "Your location";
 }
-export default function MobileCustomerCommandCenter({ name, brief, attentionCount, todayEvents, calendarEvents = [], openTickets, weather, weatherState, notifications = [], workout, minimums, businessConnected, pmConnected, tenantConnected, onNavigate, onOpenWorkspace, theme }) {
+export default function MobileCustomerCommandCenter({ name, brief, attentionCount, todayEvents, calendarEvents = [], openTickets, weather, weatherState, notifications = [], workout, minimums, businessConnected, pmConnected, tenantConnected, onNavigate, onOpenWorkspace, theme, attentionUserKey = "local" }) {
   const [now, setNow] = useState(() => new Date());
   const [activePanel, setActivePanel] = useState(null);
+  const archiveKey = `sw_home_attention_archive_v1:${attentionUserKey}`;
+  const [archivedNotices, setArchivedNotices] = useState(() => {
+    try { const rows = JSON.parse(localStorage.getItem(archiveKey) || "[]"); return Array.isArray(rows) ? rows : []; }
+    catch { return []; }
+  });
+  useEffect(() => {
+    try { const rows = JSON.parse(localStorage.getItem(archiveKey) || "[]"); setArchivedNotices(Array.isArray(rows) ? rows : []); }
+    catch { setArchivedNotices([]); }
+  }, [archiveKey]);
+  function storeArchived(next) {
+    setArchivedNotices(next);
+    try { localStorage.setItem(archiveKey, JSON.stringify(next)); } catch { /* optional storage */ }
+  }
+  function archiveAttention(item) {
+    storeArchived([...archivedNotices.filter(row => row.id !== item.id), { ...item, archived_at: new Date().toISOString() }].slice(-100));
+  }
+  function archiveAll(items) {
+    const byId = new Map(archivedNotices.map(item => [item.id, item]));
+    for (const item of items) byId.set(item.id, { ...item, archived_at: new Date().toISOString() });
+    storeArchived([...byId.values()].slice(-100));
+  }
+  function restoreAttention(id) { storeArchived(archivedNotices.filter(item => item.id !== id)); }
+
   useEffect(() => {
     const tick = () => setNow(new Date());
     const timer = window.setInterval(tick, 15000);
@@ -37,7 +62,8 @@ export default function MobileCustomerCommandCenter({ name, brief, attentionCoun
   const hasTemperature = weatherState === "ready" && Number.isFinite(temperature) && weather?.current?.temp_f != null;
   const temperatureLabel = hasTemperature ? `${Math.round(temperature)}°F` : weatherState === "loading" ? "Loading…" : "Unavailable";
   const condition = weather?.current?.description || weather?.current?.condition || "Tap for forecast";
-  const visibleNotifications = notifications.slice(0, 2);
+  const attentionItems = notifications.filter(item => !archivedNotices.some(row => row.id === item.id));
+  const visibleNotifications = attentionItems.slice(0, 2);
   // A compact rolling hourly agenda: show the current hour and next three.
   // Render only recorded calendar events; do not invent appointments.
   const currentHour = new Date(now);
@@ -54,7 +80,7 @@ export default function MobileCustomerCommandCenter({ name, brief, attentionCoun
     <section className="sw-mobile-command" data-mobile-theme={theme} aria-label="Mobile personal command center">
       <div className="sw-mobile-command-top">
         <div><span className="sw-mobile-kicker">PERSONAL WORKSPACE</span><h1>Hey, {name}</h1></div>
-        <button type="button" className="sw-mobile-icon-button" onClick={() => setActivePanel("updates")} aria-label="Review alerts and updates"><Bell size={19}/>{notifications.length > 0 && <span className="sw-mobile-notification">{notifications.length > 9 ? "9+" : notifications.length}</span>}</button>
+        <button type="button" className="sw-mobile-icon-button" onClick={() => setActivePanel("updates")} aria-label="Review alerts and updates"><Bell size={19}/>{attentionItems.length > 0 && <span className="sw-mobile-notification">{attentionItems.length > 9 ? "9+" : attentionItems.length}</span>}</button>
       </div>
       <div className="sw-mobile-command-brief">
         <div className="sw-mobile-brief-title">
@@ -70,7 +96,7 @@ export default function MobileCustomerCommandCenter({ name, brief, attentionCoun
           </button>
           <button className="sw-mobile-live-alerts" type="button" onClick={() => setActivePanel("updates")} aria-label="Open notifications and attention items">
             <span className="sw-mobile-widget-heading"><AlertTriangle size={17}/> ATTENTION <ChevronRight size={13}/></span>
-            {visibleNotifications.length ? <div className="sw-mobile-alert-lines">{visibleNotifications.map(item => <span key={item.id}>{item.label}</span>)}</div> : <><strong>All clear</strong><small>No urgent items</small></>}
+            {visibleNotifications.length ? <div className="sw-mobile-alert-lines sw-mobile-attention-glow">{visibleNotifications.map(item => <span key={item.id}>{item.label}</span>)}</div> : <><strong>All clear</strong><small>No urgent items</small></>}
             <span className="sw-mobile-alert-footer">{visibleNotifications.length ? "Tap for details" : `${todayEvents} events today`}</span>
           </button>
         </div>
@@ -98,16 +124,47 @@ export default function MobileCustomerCommandCenter({ name, brief, attentionCoun
         <button type="button" onClick={() => open("/customer/new-request")}><Plus size={17}/> New Request</button>
         <button type="button" onClick={() => onOpenWorkspace("apps")}><Grid2X2 size={17}/> Apps</button>
       </div>
-      {activePanel && <div className="sw-mobile-sheet-backdrop" onClick={() => setActivePanel(null)} role="presentation"><div className="sw-mobile-sheet" role="dialog" aria-modal="true" aria-label={activePanel === "day" ? "Today's agenda" : "Updates"} onClick={e => e.stopPropagation()}>
-        <div className="sw-mobile-sheet-head"><strong>{activePanel === "day" ? "Your day" : "Needs attention"}</strong><button type="button" onClick={() => setActivePanel(null)}>Close</button></div>
-        {activePanel === "day" ? <><p>{todayEvents ? `${todayEvents} calendar event(s) today.` : "No events on your calendar today."}</p><p>{workout ? "Workout scheduled today." : "No workout scheduled yet."}</p><button type="button" onClick={() => open("/calendar")}><CalendarDays size={18}/> Open calendar</button><button type="button" onClick={() => open("/customer/tasks")}><LayoutGrid size={18}/> Open tasks</button></> : <>
-          {notifications.length ? notifications.map(item => <button key={item.id} type="button" onClick={() => open(item.route)}><AlertTriangle size={18}/>{item.label}<ChevronRight size={16}/></button>) : <p>Nothing urgent at the moment.</p>}
-          <p>{openTickets} active service request(s)</p>
-          <button type="button" onClick={() => open("/customer/tickets")}><Inbox size={18}/> Service activity</button>
-          <button type="button" onClick={() => open("/customer/finance")}><WalletCards size={18}/> Finance & payments</button>
-        </>}
-        {(businessConnected || pmConnected || tenantConnected) && activePanel === "day" && <button type="button" onClick={() => onOpenWorkspace("business")}><BriefcaseBusiness size={18}/> Business & property</button>}
-      </div></div>}
+      {activePanel && createPortal(<div className="sw-mobile-sheet-backdrop sw-mobile-attention-top-backdrop" onClick={() => setActivePanel(null)} role="presentation">
+        <div className="sw-mobile-sheet sw-mobile-attention-top-sheet" role="dialog" aria-modal="true" aria-label={activePanel === "archive" ? "Attention archive" : activePanel === "day" ? "Today's agenda" : "Needs attention"} onClick={e => e.stopPropagation()}>
+          <div className="sw-mobile-sheet-head sw-mobile-attention-sticky-head">
+            <strong>{activePanel === "day" ? "Your day" : activePanel === "archive" ? "Attention archive" : "Needs attention"}</strong>
+            <button type="button" onClick={() => setActivePanel(null)} aria-label="Close notifications"><X size={19}/></button>
+          </div>
+          <div className="sw-mobile-attention-scroll">
+            {activePanel === "day" ? <>
+              <p>{todayEvents ? `${todayEvents} calendar event(s) today.` : "No events on your calendar today."}</p>
+              <button type="button" onClick={() => open("/calendar")}><CalendarDays size={18}/> Open calendar</button>
+              <button type="button" onClick={() => open("/customer/tasks")}><LayoutGrid size={18}/> Open to-dos</button>
+            </> : activePanel === "archive" ? <>
+              <p>Archived reminders remain here until restored. Your actual appointments, tasks, and payment records are unchanged.</p>
+              {archivedNotices.length ? [...archivedNotices].reverse().map(item =>
+                <div className="sw-mobile-attention-entry" key={item.id}>
+                  <button type="button" className="sw-mobile-attention-entry-label" onClick={() => open(item.route)}>{item.label}<ChevronRight size={14}/></button>
+                  <button type="button" className="sw-mobile-attention-dismiss" aria-label={`Restore ${item.label}`} onClick={() => restoreAttention(item.id)}><RotateCcw size={17}/></button>
+                </div>
+              ) : <p>No archived reminders.</p>}
+              <button type="button" className="sw-mobile-attention-archive-link" onClick={() => setActivePanel("updates")}>Back to attention</button>
+            </> : <>
+              <div className="sw-mobile-attention-toolbar">
+                <span>{attentionItems.length} to review</span>
+                <button type="button" onClick={() => setActivePanel("archive")}><Archive size={15}/> Archive ({archivedNotices.length})</button>
+                {attentionItems.length > 0 && <button type="button" onClick={() => archiveAll(attentionItems)}>Clear All</button>}
+              </div>
+              {attentionItems.length ? attentionItems.map(item =>
+                <div className="sw-mobile-attention-entry" key={item.id}>
+                  <button type="button" className="sw-mobile-attention-entry-label" onClick={() => open(item.route)}>{item.label}<ChevronRight size={14}/></button>
+                  <button type="button" className="sw-mobile-attention-dismiss" aria-label={`Dismiss ${item.label} to archive`} title="Archive reminder" onClick={() => archiveAttention(item)}><X size={17}/></button>
+                </div>
+              ) : <p>All clear. Check Archive to review dismissed reminders.</p>}
+              <p className="sw-mobile-attention-footnote">Dismiss and Clear All archive only these Home reminders; they never complete tasks, cancel events, or resolve bills.</p>
+              <button type="button" onClick={() => open("/customer/tasks")}><LayoutGrid size={18}/> To-do list</button>
+              <button type="button" onClick={() => open("/calendar")}><CalendarDays size={18}/> Upcoming calendar</button>
+              <button type="button" onClick={() => open("/customer/finance")}><WalletCards size={18}/> Finance & payments</button>
+            </>}
+          </div>
+        </div>
+      </div>, document.body)}
+
     </section>
   );
 }
