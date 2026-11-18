@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, ListTodo, MapPin, Plus, RefreshCw, Sparkles, X, Mic, Link2, Navigation, AlertTriangle } from "lucide-react";
 import TravelWeatherAssistCard from "../TravelWeatherAssistCard";
 import { readWorkspaceAppearance } from "../customer/CustomerWorkspace";
@@ -58,6 +59,7 @@ function layoutTimedEvents(events,day){
 function routeAddress(e){return e?.metadata?.routing_address_override||[e?.location_name,e?.address_line1,e?.city,e?.state,e?.postal_code].filter(Boolean).join(", ");}
 const filters=[["ALL","All"],["PERSONAL","Personal"],["TASK","Tasks"],["TICKET","Services"],["HEALTH","Health"],["BUSINESS","Business"]];
 export default function CalendarImmersiveCockpit({events,loading,error,notice,onCreate,onEdit,onRoute,onConnect,onRefresh,onCapture,captureText,setCaptureText,onVoice,nextEvent,onUpdated}) {
+  const navigate=useNavigate();
   const [appearance,setAppearance]=useState(readWorkspaceAppearance);
   const [focusDate,setFocusDate]=useState(()=>new Date());
   const [view,setView]=useState("day");
@@ -73,6 +75,8 @@ export default function CalendarImmersiveCockpit({events,loading,error,notice,on
   },[]);
   const businessChoices=useMemo(()=>Array.from(new Map(events.filter(e=>e?.metadata?.business_id).map(e=>[String(e.metadata.business_id),{id:String(e.metadata.business_id),name:e.metadata.business_name || "Business"}])).values()).sort((a,b)=>a.name.localeCompare(b.name)),[events]);
   const visible=useMemo(()=>events.filter(e=>{
+    // To-dos have their own workspace; they must not occupy calendar time slots.
+    if(eventGroup(e)==="TASK")return false;
     if(businessFilter && (filter==="BUSINESS") && String(e?.metadata?.business_id || "")!==businessFilter)return false;
     if(filter==="ALL")return true;
     const group=eventGroup(e);
@@ -169,7 +173,7 @@ export default function CalendarImmersiveCockpit({events,loading,error,notice,on
       </div>
       <nav className="sw-cal-bottom-actions" aria-label="Calendar quick actions">
         <button type="button" onClick={()=>onCreate("EVENT",focusDate)}><Plus size={17}/> Event</button>
-        <button type="button" onClick={()=>onCreate("TASK",focusDate)}><ListTodo size={17}/> Task</button>
+        <button type="button" onClick={()=>navigate("/customer/tasks")}><ListTodo size={17}/> To-do list</button>
         <button type="button" onClick={()=>setDrawer("assistant")}><Sparkles size={17}/> SYNC Assistant</button>
         <button type="button" onClick={onRefresh} aria-label="Refresh Calendar" title="Refresh Calendar"><RefreshCw size={17}/></button>
       </nav>
