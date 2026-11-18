@@ -226,6 +226,7 @@ export default function App() {
         <Route path="/sbo/customers/import" element={<ProtectedRoute><BusinessCustomerImport /></ProtectedRoute>} />
         <Route path="/sbo/pilot" element={<ProtectedRoute><BusinessPilotTest /></ProtectedRoute>} />
         <Route path="/sbo/tech-board" element={<ProtectedRoute><BusinessTechBoard /></ProtectedRoute>} />
+        <Route path="/employee/technicians" element={<ProtectedRoute><BusinessTechBoard employeeMode /></ProtectedRoute>} />
         <Route path="/platform/business-assist" element={<PlatformRoute><BusinessQuickIntake /></PlatformRoute>} />
         <Route path="/platform/business-tech-board" element={<PlatformRoute><BusinessTechBoard /></PlatformRoute>} />
         <Route path="/sbo/leads" element={<ProtectedRoute><SboLeads /></ProtectedRoute>} />
