@@ -11,6 +11,8 @@ import PMTenantEditOverlay from "./components/pm/PMTenantEditOverlay";
 import NutritionCoachGlobalAssist from "./components/customer-health/NutritionCoachGlobalAssist";
 import App from "./App";
 import AppCrashBoundary from "./components/AppCrashBoundary";
+import UniversalWorkspaceShell from "./components/shell/UniversalWorkspaceShell";
+import { usesUniversalWorkspaceStyle } from "./components/shell/routePolicy.mjs";
 import FeatureResumeTracker from "./components/navigation/FeatureResumeTracker";
 import PlatformDirectEntry from "./pages/PlatformDirectEntry";
 import PMPropertyCreate from "./pages/PMPropertyCreate";
@@ -56,9 +58,8 @@ function RoutedApplication() {
         const stored = JSON.parse(localStorage.getItem("sw_workspace_appearance_v1") || "null");
         if (["classic", "future", "modern", "light"].includes(stored?.theme)) appearance = stored.theme;
       } catch { /* local storage unavailable */ }
-      const isGame = /^\/customer\/(games|game|poker|fyb|bozo|442|card-club)/i.test(pathname);
-      const isWork = /^(\/customer|\/sbo|\/pm|\/sync|\/calendar|\/settings|\/tickets|\/connect)(\/|$)/.test(pathname);
-      if (!isGame && isWork && appearance !== "legacy") {
+      const isWork = usesUniversalWorkspaceStyle(pathname);
+      if (isWork && appearance !== "legacy") {
         document.body.dataset.swOfficeScope = "work";
         document.body.dataset.swOfficeTheme = appearance;
       } else {
@@ -107,8 +108,11 @@ function RoutedApplication() {
     </>
   );
 
-  if (isPmRoute && !isPmDashboard) return <PMShell>{routedContent}<PMTenantEditOverlay /></PMShell>;
-  return routedContent;
+  if (isPmRoute && !isPmDashboard) {
+    const pmContent = <PMShell>{routedContent}<PMTenantEditOverlay /></PMShell>;
+    return <UniversalWorkspaceShell>{pmContent}</UniversalWorkspaceShell>;
+  }
+  return <UniversalWorkspaceShell>{routedContent}</UniversalWorkspaceShell>;
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(

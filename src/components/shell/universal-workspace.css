@@ -1,0 +1,187 @@
+/*
+ * Universal SyncWorks UI foundation.
+ * Workspaces opt in via route policy; Games, Forge and Health are not touched.
+ * Existing dashboard sizing, fixed headers, docks, cards and backgrounds remain
+ * intact until migrated intentionally. This is not a wholesale CSS override.
+ */
+:root {
+  --sw-ui-motion-press: 150ms;
+  --sw-ui-motion-panel: 230ms;
+  --sw-ui-motion-route: 300ms;
+  --sw-ui-touch-target: 44px;
+  --sw-ui-glass: rgba(7, 15, 30, .66);
+  --sw-ui-glass-border: rgba(126, 170, 222, .28);
+  --sw-ui-glass-shadow: 0 12px 40px rgba(0, 0, 0, .26);
+  --sw-ui-dock-clearance: 96px;
+  --sw-ui-top-clearance: 0px;
+}
+.sw-universal-workspace {
+  min-height: 100%;
+  min-width: 0;
+  isolation: auto;
+  color-scheme: dark;
+}
+.sw-universal-workspace, .sw-universal-workspace * {
+  box-sizing: border-box;
+}
+.sw-universal-workspace :is(button, a, input, select, textarea, [role="button"]):focus-visible {
+  outline: 2px solid #79d8ff;
+  outline-offset: 3px;
+}
+.sw-universal-workspace :is(button, [role="button"]) {
+  touch-action: manipulation;
+}
+/* Use these opt-in primitives on each page as it is migrated. */
+.sw-universal-workspace .sw-ui-screen {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.sw-universal-workspace .sw-ui-content {
+  min-height: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+.sw-universal-workspace .sw-ui-scroll-region {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.sw-universal-workspace .sw-ui-glass {
+  background: var(--sw-ui-glass);
+  border: 1px solid var(--sw-ui-glass-border);
+  box-shadow: var(--sw-ui-glass-shadow);
+  -webkit-backdrop-filter: blur(15px);
+  backdrop-filter: blur(15px);
+}
+.sw-universal-workspace .sw-ui-action {
+  min-width: var(--sw-ui-touch-target);
+  min-height: var(--sw-ui-touch-target);
+  transition: background-color var(--sw-ui-motion-press) ease, border-color var(--sw-ui-motion-press) ease, opacity var(--sw-ui-motion-press) ease;
+}
+.sw-universal-workspace .sw-ui-overlay {
+  position: fixed;
+  z-index: 1000;
+  max-width: min(96vw, 720px);
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.sw-universal-workspace .sw-ui-sheet {
+  position: fixed;
+  z-index: 1000;
+  inset-inline: max(8px, env(safe-area-inset-left, 0px)) max(8px, env(safe-area-inset-right, 0px));
+  bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  max-height: min(88dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 16px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+@media (max-width: 767px) {
+  .sw-universal-workspace .sw-ui-screen {
+    height: 100dvh;
+  }
+  .sw-universal-workspace .sw-ui-primary-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sw-universal-workspace .sw-ui-action {
+    transition: none;
+  }
+}
+
+
+/* Shared appearance values. All general workspaces inherit the same customer
+   appearance choice. Specialty experiences are outside this boundary. */
+.sw-universal-workspace {
+  --sw-unified-accent: #35c8fb;
+  --sw-unified-accent-strong: #13a8ef;
+  --sw-unified-ink: #edf8ff;
+  --sw-unified-muted: #aac5dd;
+  --sw-unified-border: rgba(94, 187, 248, .34);
+  --sw-unified-panel: rgba(8, 20, 41, .66);
+  --sw-unified-hover: rgba(53, 200, 251, .16);
+}
+body[data-sw-office-theme="classic"] .sw-universal-workspace {
+  --sw-unified-accent: #e6b96e;
+  --sw-unified-accent-strong: #c9934e;
+  --sw-unified-ink: #f8ecdb;
+  --sw-unified-muted: #c5b093;
+  --sw-unified-border: rgba(222,171,99,.42);
+  --sw-unified-panel: rgba(35, 23, 16, .69);
+  --sw-unified-hover: rgba(230,185,110,.16);
+}
+body[data-sw-office-theme="future"] .sw-universal-workspace {
+  --sw-unified-accent: #25d3fd;
+  --sw-unified-accent-strong: #7b61ff;
+  --sw-unified-ink: #f0f8ff;
+  --sw-unified-muted: #9ebcdd;
+  --sw-unified-border: rgba(49,187,249,.44);
+  --sw-unified-panel: rgba(7,18,41,.7);
+  --sw-unified-hover: rgba(123,97,255,.17);
+}
+body[data-sw-office-theme="modern"] .sw-universal-workspace {
+  --sw-unified-accent: #b1c9db;
+  --sw-unified-accent-strong: #829db4;
+  --sw-unified-ink: #f1f3f6;
+  --sw-unified-muted: #abb9c4;
+  --sw-unified-border: rgba(178,202,221,.38);
+  --sw-unified-panel: rgba(27,36,46,.74);
+  --sw-unified-hover: rgba(177,201,219,.15);
+}
+body[data-sw-office-theme="light"] .sw-universal-workspace {
+  --sw-unified-accent: #1c777b;
+  --sw-unified-accent-strong: #136266;
+  --sw-unified-ink: #352c24;
+  --sw-unified-muted: #786451;
+  --sw-unified-border: rgba(146,112,74,.4);
+  --sw-unified-panel: rgba(255,250,240,.85);
+  --sw-unified-hover: rgba(28,119,123,.13);
+  color-scheme: light;
+}
+/* Compatibility layer: older cyan Tailwind accents now take their meaning
+   from the active theme. Limit changes to decorative color utility classes:
+   never alter button routing, hidden states, z-index, or form dimensions. */
+body[data-sw-office-scope="work"] .sw-universal-workspace :is(
+  .text-cyan-100, .text-cyan-200, .text-cyan-300, .text-cyan-400,
+  .text-sky-200, .text-sky-300, .text-sky-400
+) { color: var(--sw-unified-accent); }
+body[data-sw-office-scope="work"] .sw-universal-workspace :is(
+  .border-cyan-300, .border-cyan-400, .border-cyan-500,
+  .border-sky-300, .border-sky-400, .border-sky-500
+) { border-color: var(--sw-unified-border); }
+body[data-sw-office-scope="work"] .sw-universal-workspace :is(
+  .bg-cyan-500\/10, .bg-cyan-500\/15, .bg-cyan-500\/20,
+  .bg-sky-500\/10, .bg-sky-500\/15, .bg-sky-500\/20
+) { background-color: var(--sw-unified-hover); }
+body[data-sw-office-scope="work"] .sw-universal-workspace .sw-ui-glass {
+  background: var(--sw-unified-panel);
+  border-color: var(--sw-unified-border);
+  color: var(--sw-unified-ink);
+}
+body[data-sw-office-scope="work"] .sw-universal-workspace .sw-ui-action {
+  border-color: var(--sw-unified-border);
+}
+body[data-sw-office-scope="work"] .sw-universal-workspace .sw-ui-action:hover {
+  background: var(--sw-unified-hover);
+}
+/* Shell standards apply to shared navigation without overwriting customer
+   cockpit internals. The action bar remains fully targetable on touch screens. */
+@media (max-width: 767px) and (pointer: coarse) {
+  .sw-universal-workspace :is(.sw-role-mobile-nav-grid > button, .sw-modebar button) {
+    touch-action: manipulation;
+  }
+  .sw-universal-workspace .sw-role-mobile-nav-grid > button {
+    min-height: 44px;
+  }
+  .sw-universal-workspace :is(.sw-ui-overlay, .sw-ui-sheet) {
+    scrollbar-gutter: stable;
+  }
+}
