@@ -21,7 +21,8 @@ test("imports never execute until ready and independently confirmed", () => {
 });
 
 test("import links lead from dashboard, settings and Customer 360", () => {
-  assert.match(read("src/pages/SboDashboard.jsx"), /onOpenImport=\{\(\) => navigate\("\/sbo\/customers\/import"\)\}/);
+  assert.match(read("src/pages/SboDashboard.jsx"), /SboCompactOffice/);
+  assert.match(read("src/components/sbo/SboCompactOffice.jsx"), /"\/sbo\/customers\/import"/);
   assert.match(read("src/pages/SboSettingsHub.jsx"), /route: "\/sbo\/customers\/import"/);
   assert.match(read("src/pages/sbo/SboCustomers.jsx"), /navigate\("\/sbo\/customers\/import"\)/);
 });
