@@ -191,6 +191,7 @@ body[data-sw-office-scope="work"] [data-pm-command-shell] > header {
   [data-pm-command-shell] .pm-command-content > [data-pm-screen="dashboard"] {
     padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
   }
+  /* Legacy desktop report tabs are only displayed inside the desktop layout. */
   [data-pm-command-shell] .pm-dashboard-tabs {
     display: grid;
     grid-template-columns: 1fr 1.35fr;
@@ -215,12 +216,6 @@ body[data-sw-office-scope="work"] [data-pm-command-shell] > header {
     color: #051125;
     background: linear-gradient(100deg,#31d2f4,#ba7ff2);
     border-color: transparent;
-  }
-  [data-pm-command-shell] .pm-dashboard-main[data-pm-mobile-view="overview"] > :not(.pm-dashboard-tabs):not(.pm-dashboard-hero):not(.pm-dashboard-priorities):not(.pm-dashboard-error):not(.fixed) {
-    display: none;
-  }
-  [data-pm-command-shell] .pm-dashboard-main[data-pm-mobile-view="more"] > :is(.pm-dashboard-hero, .pm-dashboard-priorities) {
-    display: none;
   }
   [data-pm-command-shell] .pm-dashboard-hero {
     padding: 10px;
