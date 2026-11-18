@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import api from "../../api/client";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, CheckCheck, ClipboardPlus, Command, ArrowUpRight, BriefcaseBusiness, Building2, ChartNoAxesCombined, HeartPulse, Spade, ShoppingBag, Sparkles, Clock3, LayoutGrid, Mail, Palette, SunMedium } from "lucide-react";
 import "./ImmersiveWorkspaceHome.css";
@@ -25,6 +26,21 @@ const actionItems = [
 export default function ImmersiveWorkspaceHome({ displayName = "there", theme, onOpenLauncher, onOpenAppearance }) {
   const nav = useNavigate();
   const [showAll, setShowAll] = useState(false);
+  const [todayAgenda, setTodayAgenda] = useState([]);
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const response = await api.get("/personal-calendar/events/", { params: { status: "ACTIVE" } });
+        const rows = Array.isArray(response.data) ? response.data : (response.data?.results || []);
+        const today = new Date().toDateString();
+        if (active) setTodayAgenda(rows.filter(event => event.start_at && new Date(event.start_at).toDateString() === today).sort((a,b) => new Date(a.start_at) - new Date(b.start_at)));
+      } catch { if (active) setTodayAgenda([]); }
+    };
+    load();
+    window.addEventListener("focus", load);
+    return () => { active = false; window.removeEventListener("focus", load); };
+  }, []);
   return <section className="sw-immersive-home" aria-label="Your personal command center">
     <div className="sw-immersive-office-art" aria-hidden="true">
       <span className="sw-immersive-office-light"/><span className="sw-immersive-office-frame"/>
@@ -44,6 +60,14 @@ export default function ImmersiveWorkspaceHome({ displayName = "there", theme, o
         </div>
         <div className="sw-immersive-focus" role="group" aria-label="Your command center shortcuts">
           <div className="sw-immersive-focus-caption"><Command size={17}/> YOUR COMMAND CENTER</div>
+          <div style={{padding:"7px 10px",borderRadius:10,background:"rgba(5,15,33,.78)",border:"1px solid rgba(81,211,244,.24)",color:"#e4f6ff",fontSize:11}}>
+            <div style={{fontWeight:800,display:"flex",alignItems:"center",gap:6}}><CalendarDays size={14}/> Today · {todayAgenda.length} scheduled</div>
+            {todayAgenda.slice(0,2).map(event => <button type="button" key={event.id} onClick={() => nav("/calendar")} style={{display:"flex",gap:8,width:"100%",padding:"5px 0",minWidth:0,textAlign:"left",color:"#d8e7f7"}}>
+              <span style={{flexShrink:0,color:"#73daf3"}}>{event.all_day ? "All day" : new Date(event.start_at).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</span>
+              <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{event.title}</span>
+            </button>)}
+            {!todayAgenda.length && <span style={{color:"#b9cadd"}}>No events scheduled today</span>}
+          </div>
           <button type="button" onClick={()=>nav("/calendar")}><CalendarDays size={18}/><span>Open today's calendar</span><ArrowUpRight size={16}/></button>
           <button type="button" onClick={()=>nav("/customer/tasks")}><CheckCheck size={18}/><span>Review tasks</span><ArrowUpRight size={16}/></button>
           <button type="button" onClick={()=>nav("/sync")}><Sparkles size={18}/><span>Get my daily briefing</span><ArrowUpRight size={16}/></button>
