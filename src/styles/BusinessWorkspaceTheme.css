@@ -104,3 +104,16 @@
 @media(prefers-reduced-motion:reduce){
  [data-sw-business-theme] .sw-business-themed-card {scroll-behavior:auto}
 }
+
+/* Catalog is a full-page settings screen: keep its document layout while
+   extending the same office photography and glass layers. */
+.sw-business-catalog-theme {
+ background-image:var(--sw-business-overlay),var(--sw-business-office-photo);
+ background-size:cover;
+ background-position:center;
+ background-attachment:fixed;
+}
+.sw-business-catalog-theme > main {position:relative}
+.sw-business-catalog-theme .sw-business-themed-card {background:var(--sw-business-layer)!important}
+.sw-business-catalog-theme[data-sw-business-theme="light"] > main > div,
+.sw-business-catalog-theme[data-sw-business-theme="light"] > main > section {color:#193446}
