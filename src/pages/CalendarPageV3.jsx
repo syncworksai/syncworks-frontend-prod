@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { readWorkspaceAppearance } from "../components/customer/CustomerWorkspace";
@@ -459,6 +460,7 @@ function DayView({ day, events, conflictIds, onCreate, onEdit, onRoute, onServic
 }
 
 export default function CalendarPageV3() {
+  const navigate = useNavigate();
   const [events, setEvents] = useState(() => {
     try { return safeList(JSON.parse(window.localStorage.getItem(CALENDAR_CACHE_KEY) || "[]")); }
     catch { return []; }
@@ -913,6 +915,7 @@ export default function CalendarPageV3() {
     <div className="sw-calendar-page min-h-screen bg-[#020617] text-slate-100">
 
       <main className="sw-calendar-workspace mx-auto w-full max-w-[1680px] px-3 py-3 pb-28 sm:px-4 lg:px-6 lg:pb-8">
+        <div className="mb-2 flex items-center justify-between gap-2"><button type="button" onClick={() => navigate("/customer?view=office")} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-400/30 bg-slate-950/90 px-3 text-xs font-bold text-cyan-100"><ChevronLeft size={16}/> Back to Office</button><button type="button" onClick={() => navigate("/customer")} className="inline-flex min-h-10 items-center rounded-xl border border-white/15 bg-slate-950/80 px-3 text-xs text-slate-200">Home</button></div>
         <CalendarImmersiveCockpit
           events={events}
           loading={loading}
