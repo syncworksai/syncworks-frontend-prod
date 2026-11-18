@@ -143,6 +143,17 @@ export default function MessagePanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketId]);
 
+  // Poll while the conversation panel is mounted, so both the customer and
+  // the business see incoming replies without leaving the ticket screen.
+  useEffect(() => {
+    if (!ticketId) return undefined;
+    const refresh = window.setInterval(() => {
+      if (document.visibilityState === "visible") load({ quiet: true });
+    }, 20000);
+    return () => window.clearInterval(refresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticketId]);
+
   async function send(textOverride = "") {
     const txt = String(textOverride || body || "").trim();
     if (!txt || busy) return;
