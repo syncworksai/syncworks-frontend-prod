@@ -115,7 +115,7 @@ export default function BusinessQuickIntake(){
     <div className="grid grid-cols-2 gap-2">{quickServices.map(s=><button key={s.id} onClick={()=>pickService(s)} className="sw-intake-option rounded-xl p-3 text-left text-xs"><strong>{s.name}</strong><span className="mt-1 block text-slate-400">{s.service_category||"General"}</span></button>)}</div>
     {!quickServices.length&&<p className="text-xs text-slate-400">No Quick Services configured yet.</p>}
     <button onClick={()=>{setCategory("");setCatalogSearch("");setPanel("catalog")}} className="w-full rounded-xl border border-cyan-400/40 bg-cyan-500/10 p-3 text-left text-sm font-semibold text-cyan-100">Browse full Catalog →</button>
-    <button onClick={()=>setPanel("customService")} className="w-full rounded-xl border border-white/15 p-3 text-left text-sm">Other / General request</button>
+    <button onClick={()=>pickService({name:"General Service Request",required_skills:[]})} className="w-full rounded-xl border border-white/15 p-3 text-left text-sm">General Service Request · add details later</button><button onClick={()=>setPanel("customService")} className="w-full rounded-xl border border-white/15 p-3 text-left text-sm">Other / custom service</button>
   </>)}
   {panel==="catalog"&&modal("Service Catalog",<>
     <input autoFocus className={field} value={catalogSearch} onChange={e=>setCatalogSearch(e.target.value)} placeholder="Search all services"/>
