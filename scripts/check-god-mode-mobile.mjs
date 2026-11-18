@@ -10,8 +10,9 @@ test("God Mode keeps desktop dashboard and uses founder cockpit on phones", () =
   const css = read("src/components/platform/PlatformMobileDashboard.css");
   assert.match(dashboard, /<PlatformMobileDashboard activeTab=\{tab\}/);
   assert.match(dashboard, /hidden lg:block"><ModeBar|hidden lg:block">\s*<ModeBar/);
-  assert.match(dashboard, /hidden lg:block"><PlatformTabs/);
-  assert.match(dashboard, /hidden lg:block"><PlatformOverviewTab/);
+  assert.match(dashboard, /<GodModeCockpit onOpen=\{setTab\}/);
+  assert.match(dashboard, /sw-god-detail-drawer/);
+  assert.match(dashboard, /tab === "overview" \? <div className="hidden lg:block"><PlatformOverviewTab/);
   assert.match(dashboard, /tab === "pilot_readiness" \? <PilotReadinessPanel/);
   assert.match(dashboard, /tab === "__build_backlog"/);
   assert.match(mobile, /Founder command center/);
