@@ -1,3 +1,4 @@
+import api from "../../api/client";
 // src/components/customer-health/healthCoachVoice.js
 import {
   createHealthCoachSpeech,
@@ -209,13 +210,23 @@ async function playElevenLabsSpeech({ text, eventType, energy, voiceKey, volume,
   const playbackAudio = primeCoachAudioPlayback(volume);
   activeVoiceRequest = new AbortController();
   try {
-    const result = await createHealthCoachSpeech({
-      text,
-      eventType: normalizeElevenLabsEventType(eventType),
-      energy: energy === "controlled" ? "balanced" : energy,
-      voiceKey,
-      signal: activeVoiceRequest.signal,
-    });
+    let result;
+    try {
+      const response = await api.post("/sync-ai/voice/synthesize/",
+        { text, context: "health" },
+        { responseType: "blob", signal: activeVoiceRequest.signal, timeout: 30000 });
+      result = { blob: response.data };
+    } catch (error) {
+      if (error?.code === "ERR_CANCELED" || error?.name === "AbortError") throw error;
+      // Maintain working health-coach cues until the Female Workout Voice is configured.
+      result = await createHealthCoachSpeech({
+        text,
+        eventType: normalizeElevenLabsEventType(eventType),
+        energy: energy === "controlled" ? "balanced" : energy,
+        voiceKey,
+        signal: activeVoiceRequest.signal,
+      });
+    }
     activeVoiceRequest = null;
     if (activeAudioUrl && typeof URL !== "undefined") {
       URL.revokeObjectURL(activeAudioUrl);

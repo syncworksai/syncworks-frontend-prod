@@ -226,7 +226,14 @@ export default function CustomerForge(){
     for(let i=0;i<parts.length;i++){
       if(token!==playId.current)return;
       const controller=new AbortController();abortRef.current=controller;
-      const response=await api.post("/customer-health/forge/voice/speak/",{text:parts[i],energy:"calm",voice_key:forgeVoice},{responseType:"blob",signal:controller.signal,timeout:30000});
+      let response;
+      try {
+        response=await api.post("/sync-ai/voice/synthesize/",{text:parts[i],context:"forge"},{responseType:"blob",signal:controller.signal,timeout:30000});
+      } catch(error) {
+        // Preserve the existing Forge narrator until the designated SYNC Voice ID is configured.
+        if(error?.code==="ERR_CANCELED" || error?.name==="AbortError") throw error;
+        response=await api.post("/customer-health/forge/voice/speak/",{text:parts[i],energy:"calm",voice_key:forgeVoice},{responseType:"blob",signal:controller.signal,timeout:30000});
+      }
       if(token!==playId.current)return;
       const url=URL.createObjectURL(response.data);audioUrl.current=url;
       const player=new Audio(url);audioEl.current=player;
