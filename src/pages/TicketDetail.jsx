@@ -1165,7 +1165,8 @@ export default function TicketDetail() {
 
   function openTicketSection(tab, elementId = "") {
     setActiveTab(tab);
-    if (elementId) setWorkflowDrawerOpen(true);
+    setWorkflowDrawerOpen(false);
+    setSummaryDrawerOpen(false);
     if (!elementId) return;
     window.requestAnimationFrame(() => {
       document.getElementById(elementId)?.scrollIntoView({
@@ -1297,7 +1298,14 @@ export default function TicketDetail() {
           </div>
         ) : null}
 
-        <TicketHeaderCard
+        {!ticket && (loading || err) ? (
+          <section role="status" className="rounded-2xl border border-cyan-500/30 bg-slate-950/80 p-5">
+            <h2 className="text-base font-bold text-white">{loading ? "Loading ticket…" : "Ticket could not be loaded"}</h2>
+            <p className="mt-2 text-sm text-slate-300">{loading ? "Checking ticket permissions and current data." : (err || "The ticket was not found or is not accessible in this business.")}</p>
+            {!loading && <button type="button" onClick={loadTicket} className="mt-3 rounded-xl border border-cyan-400/40 px-4 py-2 text-sm text-cyan-100">Retry loading</button>}
+          </section>
+        ) : null}
+        {ticket && <TicketHeaderCard
           ticket={ticket}
           ticketCode={ticketCode}
           customerName={customerName}
@@ -1308,7 +1316,7 @@ export default function TicketDetail() {
           assignedName={assignedName}
           detailSummary={detailSummary}
           isCustomer={isCustomer}
-        />
+        />}
 
         <div className="grid grid-cols-2 gap-2 sw-ticket-quick-actions">
           <button type="button" onClick={() => setWorkflowDrawerOpen(true)} className="rounded-xl border border-cyan-400/40 bg-cyan-500/10 p-3 text-xs font-bold text-cyan-100">Workflow & actions</button>
@@ -1320,6 +1328,7 @@ export default function TicketDetail() {
           busy={actionBusy || loading}
           onAction={(action) => {
             if (!action) return;
+            setWorkflowDrawerOpen(false);
             if (action.key === "ASSIGN_TECHNICIAN") {
               setActiveTab("overview");
               window.requestAnimationFrame(() => {
