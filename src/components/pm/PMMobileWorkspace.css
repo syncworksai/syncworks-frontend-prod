@@ -6,7 +6,7 @@
     overflow: hidden;
   }
   [data-pm-command-shell] {
-    height: 100dvh;
+    height: calc(100dvh - var(--sw-ios-safe-top, 0px) - var(--sw-ios-safe-bottom, 0px));
     min-height: 0;
     max-height: 100dvh;
     display: flex;
@@ -14,7 +14,7 @@
     overflow: hidden;
     background: transparent;
   }
-  [data-pm-command-shell] > .xl\\:ml-\\[220px\\] {
+  [data-pm-command-shell] > [class*="xl:ml-"] {
     flex: 1 1 auto;
     min-height: 0;
     min-width: 0;
