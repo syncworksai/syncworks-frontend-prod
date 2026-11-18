@@ -4,6 +4,7 @@ import { CheckCircle2, CreditCard, LoaderCircle, X } from "lucide-react";
 import api from "../api/client";
 import DebtPaymentDrawer from "../components/finance/DebtPaymentDrawer";
 import CustomerFinanceBase from "./CustomerFinanceBase";
+import "./FinancePaymentDrawerV36.css";
 
 const FINANCE_API = "/personal-finance";
 
@@ -70,8 +71,8 @@ export default function CustomerFinanceRealtime() {
       ) : null}
 
       {pickerOpen ? (
-        <div className="fixed inset-0 z-[94] flex items-end justify-center bg-black/75 sm:items-center sm:p-4">
-          <div className="max-h-[84vh] w-full max-w-xl overflow-y-auto rounded-t-[1.5rem] border border-cyan-400/20 bg-[#07111f] p-4 sm:rounded-[1.5rem]">
+        <div className="sw-finance-payment-backdrop fixed inset-0 z-[94] flex items-end justify-center bg-black/75 sm:items-center sm:p-4">
+          <div className="sw-finance-payment-sheet max-h-[84vh] w-full max-w-xl overflow-y-auto rounded-t-[1.5rem] border border-cyan-400/20 bg-[#07111f] p-4 sm:rounded-[1.5rem]">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-[9px] font-black uppercase tracking-[.16em] text-cyan-200">Real-time debt plan</div>
