@@ -4,3 +4,22 @@
 .sw-dispatch-page main{scrollbar-width:thin;scrollbar-color:#26738d transparent}
 .sw-dispatch-page aside{scrollbar-width:thin;scrollbar-color:#26738d transparent}
 @media(max-width:640px){.sw-dispatch-page{height:calc(100dvh - 170px);min-height:360px}.sw-dispatch-page .sw-dispatch-photo{background-position:62% center}}
+
+/* Locked page with nested, focused scroll only, including mobile. */
+.sw-dispatch-page{height:calc(100dvh - 162px)!important;min-height:0!important;overscroll-behavior:contain}
+.sw-dispatch-page > .grid:last-of-type{min-height:0;overflow:hidden}
+.sw-dispatch-page main,.sw-dispatch-page aside{overflow-y:auto;overscroll-behavior:contain}
+.sw-dispatch-page .sw-dispatch-job{animation:sw-dispatch-item-in .17s ease-out both}
+@keyframes sw-dispatch-item-in{from{opacity:.7;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:1023px){
+ .sw-dispatch-page{height:calc(100dvh - 175px)!important;padding:7px}
+ .sw-dispatch-page header{padding:8px}
+ .sw-dispatch-page header p{display:none}
+ .sw-dispatch-page > .grid:last-of-type{display:flex;flex-direction:column;gap:6px}
+ .sw-dispatch-page > .grid:last-of-type > main{flex:1;min-height:0}
+ .sw-dispatch-page > .grid:last-of-type > aside{flex-shrink:0;max-height:90px;min-height:0;padding:8px;display:flex;flex-direction:row;overflow-x:auto;overflow-y:hidden}
+ .sw-dispatch-page > .grid:last-of-type > aside > button{flex-shrink:0;white-space:nowrap}
+ .sw-dispatch-page > .grid:last-of-type > aside > strong{flex-shrink:0;white-space:nowrap}
+ .sw-dispatch-page > .grid:last-of-type > aside > div,.sw-dispatch-page > .grid:last-of-type > aside > p{display:none}
+}
+@media(prefers-reduced-motion:reduce){.sw-dispatch-page .sw-dispatch-job{animation:none}}
