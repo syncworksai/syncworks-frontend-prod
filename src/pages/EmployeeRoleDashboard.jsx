@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import api from "../api/client";
 
 const actions = [
-  ["can_create_tickets", "Technician team board", "/employee/technicians", "See assigned jobs, report status, and request handoffs"],
   ["can_create_tickets", "My tickets", "/tickets", "View the tickets assigned to you"],
   ["can_assign_tickets", "Dispatch board", "/sbo/dispatch", "Assign and coordinate service"],
   ["can_manage_schedule", "Schedule", "/sbo/appointments", "Coordinate appointments"],
@@ -55,6 +54,7 @@ export default function EmployeeRoleDashboard() {
         <section className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-cyan-400/25 bg-slate-950/50 p-4">
           <div className="mb-3 flex items-center justify-between"><h2 className="font-semibold">Your workspace</h2><span className="text-xs text-slate-400">{allowed.length} available tools</span></div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <Link to="/employee/technicians" className="rounded-xl border border-cyan-400/30 bg-cyan-500/10 p-4 hover:border-cyan-300"><div className="font-semibold">Technician team board</div><p className="mt-1 text-xs text-slate-300">Your jobs, coworker schedules, pickup requests and status updates</p></Link>
             {allowed.map(([key, title, path, description]) => <Link key={key} to={path} className="rounded-xl border border-slate-700/70 bg-slate-900/40 p-4 hover:border-cyan-400/50"><div className="font-semibold">{title}</div><p className="mt-1 text-xs text-slate-400">{description}</p></Link>)}
           </div>
           {allowed.length === 0 && <p className="text-sm text-slate-400">No business tools are enabled for your account. Contact your manager.</p>}
