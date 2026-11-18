@@ -7,13 +7,15 @@ import "./SboDispatch.css";
 import "../../styles/BusinessWorkspaceTheme.css";
 import {useBusinessWorkspaceTheme} from "../../hooks/useBusinessWorkspaceTheme";
 import TechnicianJobActions from "../../components/sbo/TechnicianJobActions";
+import TicketQuickMessage from "../../components/tickets/TicketQuickMessage";
+import api from "../../api/client";
 
 const isoDate=(d)=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`;};
 const addDays=(day,n)=>{const d=new Date(`${day}T12:00:00`);d.setDate(d.getDate()+n);return isoDate(d);};
 const time=(v)=>v?new Date(v).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}):"Not set";
 const asMinutes=(n)=>Number.isFinite(Number(n))?Number(n):null;
 function RiskBadge({value}){const k=String(value||"ON_TIME");return <span className={`rounded-lg border px-2 py-1 text-[10px] font-bold ${k==="LATE"?"border-rose-400/50 text-rose-200":k==="AT_RISK"?"border-amber-400/40 text-amber-100":"border-cyan-300/30 text-cyan-200"}`}>{k.replaceAll("_"," ")}</span>;}
-function JobLine({job,onOpen,onDelay,busy,onSaved}){
+function JobLine({job,onOpen,onDelay,onMessage,busy,onSaved}){
  const clock=job.clock||{};
  const route=job.travel||{};
  return <div className="sw-dispatch-job sw-business-themed-card rounded-xl border border-cyan-300/15 p-3">
@@ -22,6 +24,7 @@ function JobLine({job,onOpen,onDelay,busy,onSaved}){
    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-300"><span>{String(job.status||"").toUpperCase()==="EN_ROUTE"?"➜ En route":clock.running?"● Working now":clock.finished_at?"✓ Clock finished":String(job.status||"").replaceAll("_"," ")||"Not started"}</span><span>{route.minutes==null?"Travel unknown":`${route.minutes}m travel`}</span><span>{route.basis==="google_live_traffic"?"Live traffic":"Estimated route"}</span></div>
    {job.route_conflict&&<div className="mt-2 text-xs text-amber-200">Route conflict: {job.available_gap_minutes??"?"}m free, {job.required_gap_minutes??"?"}m required</div>}
    <div className="mt-2 flex items-center justify-between gap-2"><span className="min-w-0 truncate text-[11px] text-slate-400">{job.address||"Address not configured"}</span><button onClick={()=>onDelay(job.ticket_id,15)} disabled={busy} className="shrink-0 rounded-lg border border-white/15 px-2 py-1 text-[11px] disabled:opacity-50">+15m</button></div>
+   <button type="button" onClick={()=>onMessage(job.ticket_id)} className="mt-2 rounded-lg border border-cyan-400/30 px-3 py-1.5 text-[11px] text-cyan-200">Message customer</button>
    <TechnicianJobActions ticket={job} canDispatch compact onSaved={onSaved}/>
  </div>;
 }
@@ -31,12 +34,14 @@ export default function SboDispatch(){
  const [date,setDate]=useState(()=>isoDate(new Date()));
  const [view,setView]=useState("day"),[data,setData]=useState({staff:[],summary:{},recommendations:[]}),[week,setWeek]=useState([]),[workforce,setWorkforce]=useState([]);
  const [busy,setBusy]=useState(false),[notice,setNotice]=useState(""),[updated,setUpdated]=useState(null),[drawer,setDrawer]=useState(null),[refreshKey,setRefreshKey]=useState(0);
+ const [groups,setGroups]=useState([]),[group,setGroup]=useState(""),[query,setQuery]=useState(""),[selectedTech,setSelectedTech]=useState(null),[messageTicket,setMessageTicket]=useState(null);
  const load=useCallback(async()=>{
    setBusy(true);setNotice("");
    try{
     const [operations,workers]=await Promise.allSettled([getLiveOperations(date),getBusinessWorkforce()]);
     if(operations.status==="fulfilled"){setData(operations.value);setUpdated(new Date());}else{setNotice(operations.reason?.response?.data?.detail||"Dispatch data temporarily unavailable.");setData({staff:[],summary:{},recommendations:[]});}
     if(workers.status==="fulfilled")setWorkforce(workers.value.members||[]);
+    try{const gr=await api.get("/sync-ai/business/technician-groups/");setGroups(gr.data?.groups||[]);}catch{setGroups([]);}
     if(view==="week"){
       const start=new Date(`${date}T12:00:00`);start.setDate(start.getDate()-((start.getDay()+6)%7));
       const days=Array.from({length:7},(_,i)=>addDays(isoDate(start),i));
@@ -49,6 +54,7 @@ export default function SboDispatch(){
  useEffect(()=>{const timer=setInterval(()=>setRefreshKey(x=>x+1),30000);const focus=()=>setRefreshKey(x=>x+1);window.addEventListener("focus",focus);return()=>{clearInterval(timer);window.removeEventListener("focus",focus)}},[]);
  const staff=data.staff||[],summary=data.summary||{};
  const skillsById=useMemo(()=>new Map(workforce.map(p=>[String(p.member_id),p.workforce||{}])),[workforce]);
+ const visibleStaff=useMemo(()=>staff.filter(person=>(!selectedTech||String(person.member_id)===String(selectedTech))&&(!query||person.name.toLowerCase().includes(query.toLowerCase()))&&(!group||String(skillsById.get(String(person.member_id))?.technician_group_id||"")===group)),[staff,selectedTech,query,group,skillsById]);
  const proposed=useMemo(()=>staff.map(person=>({person,stops:[...(person.jobs||[])].sort((a,b)=>String(a.scheduled_start||"").localeCompare(String(b.scheduled_start||"")))})),[staff]);
  const changeDelay=async(id,minutes)=>{
    setBusy(true);
@@ -64,15 +70,16 @@ export default function SboDispatch(){
   </header>
   <div className="my-2 grid shrink-0 grid-cols-5 gap-1.5">{stats.map(([label,val])=><div key={label} className="sw-business-themed-card rounded-xl border border-white/10 bg-slate-950/35 p-2 backdrop-blur-md"><strong className="text-lg text-cyan-200">{val}</strong><span className="block text-[10px] text-slate-300">{label}</span></div>)}</div>
   {notice&&<p role="status" className="mb-2 shrink-0 rounded-lg bg-amber-500/15 px-3 py-2 text-xs text-amber-100">{notice}</p>}
+  <div className="mb-2 flex shrink-0 flex-wrap items-center gap-2"><input aria-label="Find technician" placeholder="Search technicians…" value={query} onChange={e=>setQuery(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#07152c]/75 px-3 py-2 text-xs"/><select value={group} onChange={e=>{setGroup(e.target.value);setSelectedTech(null)}} aria-label="Crew / region" className="rounded-lg border border-white/15 bg-[#07152c] px-2 py-2 text-xs"><option value="">All crews / regions</option>{groups.map(g=><option value={g.id} key={g.id}>{g.name}</option>)}</select><select value={selectedTech||""} onChange={e=>setSelectedTech(e.target.value||null)} aria-label="Focus technician" className="max-w-48 rounded-lg border border-white/15 bg-[#07152c] px-2 py-2 text-xs"><option value="">All technicians ({staff.length})</option>{staff.filter(p=>!group||String(skillsById.get(String(p.member_id))?.technician_group_id||"")===group).map(p=><option key={p.member_id} value={p.member_id}>{p.name}</option>)}</select></div>
   <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_270px]">
    <main className="sw-business-themed-card min-h-0 overflow-y-auto rounded-2xl border border-cyan-300/20 bg-slate-950/35 p-3 backdrop-blur-md">
     <div className="mb-3 flex items-center justify-between text-xs"><strong>{view==="week"?"Weekly schedule":"Technician schedule"} · {date}</strong><span className="text-slate-400">{updated?`Updated ${time(updated)}`:"Loading"}</span></div>
     {view==="week"?<div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{week.map(day=><button key={day.date} onClick={()=>{setDate(day.date);setView("day");}} className="rounded-xl border border-white/15 bg-white/5 p-3 text-left"><strong>{new Date(day.date+"T12:00:00").toLocaleDateString([],{weekday:"short",month:"short",day:"numeric"})}</strong><div className="mt-2 text-xs text-slate-300">{day.data?`${day.data.summary?.scheduled_jobs||0} jobs · ${day.data.summary?.at_risk_or_late||0} at risk`:"Unavailable"}</div></button>)}</div>:
-    <div className="grid gap-3 xl:grid-cols-2">{staff.map(p=>{const profile=skillsById.get(String(p.member_id))||{};return <section key={p.member_id} className="sw-business-themed-card rounded-xl border border-white/15 bg-[#020a19]/35 p-3">
+    <div className="grid gap-3 xl:grid-cols-2">{visibleStaff.map(p=>{const profile=skillsById.get(String(p.member_id))||{};return <section key={p.member_id} className="sw-business-themed-card rounded-xl border border-white/15 bg-[#020a19]/35 p-3">
       <div className="flex items-start justify-between gap-2"><div className="min-w-0"><strong>{p.name}</strong><p className="text-xs text-slate-400">{p.title} · {(p.jobs||[]).length} scheduled stops</p></div><button onClick={()=>setDrawer({type:"route",person:p})} className="rounded-lg border border-cyan-400/30 px-2 py-1.5 text-xs text-cyan-200">Route</button></div>
       <p className="mt-1 truncate text-[11px] text-slate-400">Base: {p.route_start_address||"not set"}</p>
       <p className="mt-1 text-[11px] text-cyan-200">Specialties: {profile.skills?.length?profile.skills.join(" · "):"Not configured"}</p>
-      <div className="mt-3 space-y-2">{p.jobs?.length?p.jobs.map(j=><JobLine key={j.ticket_id} job={j} onOpen={id=>nav(`/tickets/${id}`)} onDelay={changeDelay} busy={busy} onSaved={()=>setRefreshKey(x=>x+1)}/>):<p className="rounded-xl border border-dashed border-white/15 p-3 text-xs text-slate-400">No scheduled work. Use the Tech Board to assign tickets.</p>}</div>
+      <div className="mt-3 space-y-2">{p.jobs?.length?p.jobs.map(j=><JobLine key={j.ticket_id} job={j} onOpen={id=>nav(`/tickets/${id}`)} onDelay={changeDelay} onMessage={setMessageTicket} busy={busy} onSaved={()=>setRefreshKey(x=>x+1)}/>):<p className="rounded-xl border border-dashed border-white/15 p-3 text-xs text-slate-400">No scheduled work. Use the Tech Board to assign tickets.</p>}</div>
     </section>})}</div>}
     {!busy&&!staff.length&&<p className="text-sm text-slate-300">No schedulable technicians found. Configure specialties and working hours in Workforce Settings.</p>}
    </main>
@@ -87,6 +94,7 @@ export default function SboDispatch(){
     <p className="mt-auto text-[11px] leading-4 text-slate-400">Auto-refresh every 30 seconds while this page is open. Traffic is estimated unless the API explicitly reports live traffic.</p>
    </aside>
   </div>
+  {messageTicket&&<TicketQuickMessage ticketId={messageTicket} onClose={()=>setMessageTicket(null)}/>}
   {drawer&&<div className="absolute inset-0 z-50 flex items-end justify-end bg-[#010615]/70 p-2 backdrop-blur-md sm:p-4" onClick={()=>setDrawer(null)}><section role="dialog" aria-modal="true" aria-label="Route planning" onClick={e=>e.stopPropagation()} className="max-h-[92%] w-full max-w-lg overflow-y-auto rounded-2xl border border-cyan-300/35 bg-[#07152c]/95 p-4">
     <div className="mb-3 flex items-center justify-between"><strong>{drawer.person?.name||"Route review"} · Planned stops</strong><button onClick={()=>setDrawer(null)} aria-label="Close route review"><X size={20}/></button></div>
     <p className="mb-3 text-xs text-slate-300">Stops are shown in their scheduled order. This is a planning preview, not an automatic route optimization or reassignment.</p>
