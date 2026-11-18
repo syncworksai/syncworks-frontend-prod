@@ -1,0 +1,76 @@
+/* God Mode founder cockpit. Image optional until founder uploads it. */
+.sw-god-scene {
+  --god-glass: rgba(5, 14, 32, .57);
+  position: relative;
+  isolation: isolate;
+  background: #030915;
+}
+.sw-god-scene::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    linear-gradient(100deg, rgba(2,7,20,.75) 0%, rgba(2,7,20,.42) 55%, rgba(2,7,20,.65) 100%),
+    url("/backgrounds/god-mode-command-center.png") center center / cover no-repeat,
+    radial-gradient(ellipse at 65% 15%, #172448, #030915 75%);
+}
+.sw-god-scene::after {
+  content:"";
+  position:fixed;
+  z-index:-1;
+  pointer-events:none;
+  inset:0;
+  background:linear-gradient(180deg,rgba(1,5,17,.3),transparent 25%,rgba(1,5,17,.45));
+}
+.sw-god-scene-ambient { opacity: .22; }
+.sw-god-workspace { animation: swGodEnter .7s cubic-bezier(.2,.8,.2,1) both; }
+.sw-god-tab-stage { min-width:0; animation: swGodPanelIn .48s cubic-bezier(.18,.75,.24,1) both; }
+.sw-god-scene :is(button,a,[role="button"]) {
+  transition: transform .3s cubic-bezier(.2,.8,.2,1), background-color .38s ease,
+    border-color .38s ease, box-shadow .38s ease, opacity .38s ease;
+}
+.sw-god-scene button:not(:disabled):active { transform: scale(.97); }
+.sw-god-scene button:focus-visible, .sw-god-scene a:focus-visible {
+  outline: 2px solid #67e8f9; outline-offset:3px;
+}
+.sw-god-scene :is(.rounded-xl,.rounded-2xl,.rounded-3xl) {
+  backdrop-filter: blur(17px);
+  -webkit-backdrop-filter: blur(17px);
+}
+.sw-god-scene :is(.bg-slate-950,.bg-slate-900) { background-color: rgba(4,12,29,.72) !important; }
+.sw-god-scene :is(.bg-slate-950\/70,.bg-slate-950\/75,.bg-slate-950\/80,.bg-slate-950\/40,.bg-slate-900\/60) {
+  background-color: rgba(5,14,32,.54) !important;
+}
+.sw-god-scene .sw-god-workspace > .sw-god-tab-stage :is(section,article) {
+  animation: swGodPanelIn .52s ease both;
+}
+.sw-god-scene .sw-god-workspace button:hover:not(:disabled) {
+  border-color:rgba(103,232,249,.55);
+  box-shadow: 0 4px 24px rgba(34,211,238,.12);
+}
+.sw-god-scene .sw-god-mobile {
+  background: transparent;
+}
+.sw-god-scene .sw-god-mobile-panel,
+.sw-god-scene .sw-god-mobile-stat,
+.sw-god-scene .sw-god-mobile-action,
+.sw-god-scene .sw-god-mobile-hero {
+  background: rgba(4,12,30,.65);
+  backdrop-filter: blur(20px);
+}
+.sw-god-scene .sw-god-mobile-more-panel { background:rgba(5,13,30,.95); }
+@media (min-width:1024px) {
+  .sw-god-scene .sw-god-workspace { max-width: 100%; padding-left:clamp(16px,2vw,36px); padding-right:clamp(16px,2vw,36px); }
+  .sw-god-scene .sw-god-tab-stage { max-height:calc(100dvh - 240px); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#236078 transparent; }
+}
+@media (max-width:1023px) {
+  .sw-god-scene::before { background-position: 57% center; }
+  .sw-god-scene .sw-god-workspace { padding-bottom: 8.6rem; }
+}
+@keyframes swGodEnter { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+@keyframes swGodPanelIn { from { opacity:0; transform:translateY(14px) scale(.988); filter:blur(3px); } to { opacity:1; transform:none; filter:blur(0); } }
+@media (prefers-reduced-motion:reduce) {
+  .sw-god-scene *, .sw-god-scene *::before, .sw-god-scene *::after { animation:none !important; transition-duration:.01ms !important; }
+}
