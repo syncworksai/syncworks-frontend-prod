@@ -97,7 +97,7 @@ export default function CustomerForge(){
   const [audioState,setAudioState]=useState("idle");
   const [audioStatus,setAudioStatus]=useState("");
   const [voiceType,setVoiceType]=useState("natural");
-  const [forgeVoice,setForgeVoice]=useState(()=>{try{const v=localStorage.getItem("sw-forge-narrator");return (!v||v==="tucker")?"jarvis":v;}catch{return "jarvis";}});
+  const [forgeVoice,setForgeVoice]=useState(()=>{try{if(localStorage.getItem("sw-forge-jarvis-v19")!=="1"){localStorage.setItem("sw-forge-narrator","jarvis");localStorage.setItem("sw-forge-jarvis-v19","1");return "jarvis";}return localStorage.getItem("sw-forge-narrator")||"jarvis";}catch{return "jarvis";}});
   const [playlistStatus,setPlaylistStatus]=useState("");
   const playlistRef=useRef([]),playlistIndexRef=useRef(-1);
   const [audioError,setAudioError]=useState("");
