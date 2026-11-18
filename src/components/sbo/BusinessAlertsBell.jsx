@@ -13,7 +13,7 @@ export default function BusinessAlertsBell(){
  const load=useCallback(async()=>{
    if(!activeBusinessId){setAlerts([]);return;}
    setLoading(true);setError("");
-   const results=await Promise.allSettled([getLiveOperations(),api.get("/business/tech-board/",{headers:{"X-Business-Id":String(activeBusinessId)}})]);
+   const results=await Promise.allSettled([getLiveOperations(),api.get("/business/tech-board/",{headers:{"X-Business-Id":String(activeBusinessId)}}),api.get("/notifications/",{params:{type:"TICKET",unread:true,archived:false}})]);
    const notices=[];
    if(results[0].status==="fulfilled"){
      const d=results[0].value;
@@ -22,6 +22,12 @@ export default function BusinessAlertsBell(){
    if(results[1].status==="fulfilled"){
      const unassigned=results[1].value.data?.unassigned||[];
      if(unassigned.length)notices.push({id:"unassigned",title:`${unassigned.length} unassigned job(s)`,body:"Technician assignment needed",to:"/sbo/tech-board"});
+   }
+   if(results[2].status==="fulfilled"){
+     const rows=Array.isArray(results[2].value.data)?results[2].value.data:results[2].value.data?.results||[];
+     for(const item of rows.filter(n=>String(n.data?.business_id)===String(activeBusinessId)&&["BUSINESS_DISPATCH","TECH_JOB_PICKUP_REQUEST"].includes(n.data?.source)).slice(0,25)){
+       notices.push({id:`record-${item.id}`,title:item.title||"Business ticket update",body:item.body||"",to:"/sbo/tech-board"});
+     }
    }
    if(results.every(r=>r.status==="rejected"))setError("Business alert sources unavailable");
    setAlerts(notices);setLoading(false);
@@ -34,7 +40,7 @@ export default function BusinessAlertsBell(){
      <div className="mb-2 flex items-center justify-between"><div><strong>Business alerts</strong><p className="text-[11px] text-slate-400">Selected business only · Operations</p></div><div className="flex gap-2"><button onClick={load} aria-label="Refresh business alerts"><RefreshCw size={17} className={loading?"animate-spin":""}/></button><button onClick={()=>setOpen(false)} aria-label="Close business alerts"><X size={18}/></button></div></div>
      <div className="min-h-0 space-y-2 overflow-y-auto">{error&&<p className="text-xs text-amber-200">{error}</p>}{!error&&!alerts.length&&<p className="p-3 text-xs text-slate-300">{loading?"Checking business work…":"No actionable business alerts from current dispatch data."}</p>}
      {alerts.map(a=><button key={a.id} onClick={()=>{setOpen(false);nav(a.to);}} className="flex w-full gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-left"><AlertTriangle size={16} className="shrink-0 text-amber-200"/><span className="min-w-0"><strong className="block text-xs">{a.title}</strong><small className="mt-1 block text-slate-300">{a.body}</small></span><ChevronRight size={15} className="ml-auto shrink-0"/></button>)}</div>
-     <p className="mt-3 border-t border-white/10 pt-2 text-[10px] text-slate-400">This panel reflects live job risks and unassigned tickets. It does not include personal notifications.</p>
+     <p className="mt-3 border-t border-white/10 pt-2 text-[10px] text-slate-400">Live dispatch risks and business ticket alerts only; personal notifications remain separate.</p>
    </div>}
  </div>;
 }
