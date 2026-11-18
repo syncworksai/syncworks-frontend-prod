@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { CalendarDays, ClipboardList, DollarSign, Users, X, Settings2, Megaphone, BarChart3, Clock3, Route, Plus, ChevronRight, RefreshCw, Activity, Wrench, PanelLeftClose } from "lucide-react";
 import api from "../../api/client";
 import { getLiveOperations } from "../../api/dispatch";
+import TicketQuickMessage from "../tickets/TicketQuickMessage";
 
 const links = {
   jobs: [["Job board","/tickets"],["New phone request","/sbo/quick-intake"],["Dispatch","/sbo/dispatch"],["Technician board","/sbo/tech-board"]],
@@ -39,6 +40,7 @@ function MiniBars({rows}) {
 export default function SboCompactOffice({businessName,loading,err,ticketRows=[],kpiRows=[],openTickets,revenueThisMonth,completedJobs,onRefresh,activeBusinessId}) {
   const nav=useNavigate();
   const [panel,setPanel]=useState(null);
+  const [quickMessageTicket,setQuickMessageTicket]=useState(null);
   const [theme,setTheme]=useState(readTheme);
   const [ops,setOps]=useState(null);
   const [opsError,setOpsError]=useState("");
@@ -78,6 +80,8 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
   },[staff,team,ticketRows]);
   const hours=staff.flatMap(p=>p.jobs||[]).map(j=>sec(j?.clock?.elapsed_seconds)).filter(n=>n!==null);
   const averageMinutes=hours.length?Math.round(hours.reduce((a,b)=>a+b,0)/hours.length):null;
+  const lastTicket=ticketRows.find(t=>t?.id||t?.ticket_id);
+  const lastTicketId=lastTicket?.id||lastTicket?.ticket_id;
   const room=({future:"syncworks-future",classic:"classic-office",modern:"modern-dark",light:"clean-light",legacy:"syncworks-future"}[theme]||"syncworks-future");
   const tile="sw-sbo-glass-tile rounded-2xl px-3 py-3 text-left transition hover:border-cyan-300/70";
   const button=(label,url)=><button key={url} type="button" onClick={()=>nav(url)} className="flex items-center justify-between rounded-xl border border-cyan-400/20 bg-white/[.045] px-3 py-3 text-left text-sm text-white hover:bg-cyan-500/10">{label}<ChevronRight size={16} className="text-cyan-200"/></button>;
@@ -91,7 +95,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
       <main className="flex min-h-0 flex-col gap-3">
         <header className="sw-sbo-topbar flex shrink-0 items-start justify-between gap-2 rounded-2xl p-3">
           <div className="min-w-0"><span className="text-[10px] font-bold uppercase tracking-[.16em] text-cyan-300">Your office · Today</span><h1 className="truncate text-xl font-semibold sm:text-2xl">{businessName||"Business"}</h1><p className="hidden text-xs text-slate-300 sm:block">One command center. Your next action is one tap away.</p></div>
-          <div className="flex gap-2"><button aria-label="Refresh dashboard" title="Refresh metrics" onClick={()=>{onRefresh?.();setRefreshKey(v=>v+1);}} className="rounded-xl border border-white/15 p-2"><RefreshCw size={17} className={loading?"animate-spin":""}/></button><button onClick={()=>nav("/sbo/quick-intake")} className="flex items-center gap-1.5 rounded-xl border border-cyan-300/60 bg-cyan-500/25 px-3 py-2 text-xs font-bold text-cyan-50"><Plus size={17}/>New Call</button></div>
+          <div className="flex gap-2">{lastTicketId&&<button type="button" title="Message latest ticket" onClick={()=>setQuickMessageTicket(lastTicketId)} className="rounded-xl border border-cyan-400/35 px-3 py-2 text-xs text-cyan-200">Message</button>}<button aria-label="Refresh dashboard" title="Refresh metrics" onClick={()=>{onRefresh?.();setRefreshKey(v=>v+1);}} className="rounded-xl border border-white/15 p-2"><RefreshCw size={17} className={loading?"animate-spin":""}/></button><button onClick={()=>nav("/sbo/quick-intake")} className="flex items-center gap-1.5 rounded-xl border border-cyan-300/60 bg-cyan-500/25 px-3 py-2 text-xs font-bold text-cyan-50"><Plus size={17}/>New Call</button></div>
         </header>
         {err&&<p role="alert" className="shrink-0 truncate rounded-lg bg-rose-900/45 p-2 text-xs">{err}</p>}
         <section className="sw-sbo-briefing flex shrink-0 items-center justify-between gap-2 rounded-2xl p-3">
@@ -118,6 +122,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
         <button onClick={()=>setPanel("operations")} className="sw-sbo-stat shrink-0 rounded-xl px-3 py-2 text-left text-xs">Route conflicts: {ops?fmt(summary.route_conflicts):"—"} · Travel delay: {ops?fmt(summary.traffic_delay_minutes):"—"} min</button>
       </aside>
     </div>
+    {quickMessageTicket&&<TicketQuickMessage ticketId={quickMessageTicket} onClose={()=>setQuickMessageTicket(null)}/>}
     {panel&&<div className="absolute inset-0 z-40 flex items-end justify-end bg-[#010513]/65 p-2 backdrop-blur-sm sm:p-4" onClick={()=>setPanel(null)}>
       <section role="dialog" aria-modal="true" aria-label={menu.find(m=>m.id===panel)?.title||"Operations"} onClick={e=>e.stopPropagation()} className="sw-sbo-drawer flex h-auto max-h-[96%] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-cyan-300/40 p-4 text-white shadow-2xl">
         <div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-semibold">{menu.find(m=>m.id===panel)?.title||"Operations"}</h2><button aria-label="Close drawer" onClick={()=>setPanel(null)} className="rounded-xl border border-white/15 p-2"><X size={18}/></button></div>
