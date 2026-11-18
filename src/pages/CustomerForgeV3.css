@@ -199,3 +199,15 @@
  .forge3-voice-picker select{max-width:180px}
  .forge3-player{gap:6px}
 }
+
+
+/* Great Books v14: 100-book collection as pop-out; no outer scrolling. */
+.forge3-chapter-select{flex-wrap:wrap}
+.forge3-chapter-select .forge3-softbtn{display:inline-flex;align-items:center;gap:5px}
+.forge3-study-vocabulary{max-width:72ch;margin:24px auto;border:1px solid rgba(238,190,120,.35);background:rgba(104,64,29,.17);padding:20px;border-radius:14px}
+.forge3-study-vocabulary h3{font:500 24px Georgia,serif;color:#f4ce93;margin:0 0 15px}
+.forge3-reading-dialog-body .forge3-study-vocabulary p{font:400 15px/1.7 Georgia,serif;color:#e8dbc6;margin:0 0 9px}
+.forge3-study-vocabulary strong{color:#f6d9a6}
+.forge3-reading-dialog-body .forge3-study-source{display:block;max-width:72ch;margin:15px auto;color:#e8c68e;font:400 12px/1.5 system-ui,sans-serif}
+.forge3-study-source a{display:inline-flex;align-items:center;gap:6px;color:#ffe4b7;text-decoration:underline}
+@media(max-width:720px){.forge3-chapter-select{gap:5px}.forge3-chapter-select .forge3-softbtn{padding:7px 8px;font-size:10px}.forge3-study-vocabulary{padding:13px}}
