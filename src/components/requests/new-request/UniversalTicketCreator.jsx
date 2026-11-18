@@ -290,6 +290,10 @@ export default function UniversalTicketCreator({
   subtitle = "",
   initialDetails = "",
   onOpenAvailability = null,
+  onListBusiness = null,
+  initialSearchQuery = "",
+  initialPriority = "",
+  initialZip = "",
 }) {
   const isBusinessInternal = mode === MARKETPLACE_MODES.BUSINESS_INTERNAL;
 
@@ -327,7 +331,7 @@ export default function UniversalTicketCreator({
   const [categoryLoading, setCategoryLoading] = useState(true);
   const [categoryLoadError, setCategoryLoadError] = useState("");
   const [selectedService, setSelectedService] = useState(null);
-  const [priority, setPriority] = useState("P3");
+  const [priority, setPriority] = useState(() => ({EMERGENCY:"P1",URGENT:"P2",STANDARD:"P3",FLEXIBLE:"P4"}[initialPriority] || "P3"));
 
   const [fulfillmentType, setFulfillmentType] = useState("");
 
@@ -342,7 +346,7 @@ export default function UniversalTicketCreator({
   const [unit, setUnit] = useState("");
   const [city, setCity] = useState("");
   const [stateRegion, setStateRegion] = useState("");
-  const [serviceZip, setServiceZip] = useState("");
+  const [serviceZip, setServiceZip] = useState(() => String(initialZip || ""));
   const [accessNotes, setAccessNotes] = useState("");
 
   const [details, setDetails] = useState(() => String(initialDetails || "").slice(0, 3000));
@@ -824,7 +828,7 @@ export default function UniversalTicketCreator({
             </div>
 
             <div className="sw-new-request-head-actions">
-              {typeof onOpenAvailability === "function" && <button type="button" onClick={onOpenAvailability}
+              {typeof onOpenAvailability === "function" && <button type="button" onClick={() => onOpenAvailability({selectedService, serviceZip, fullServiceAddress})}
                 className="sw-new-request-check-availability">Check availability</button>}
             {onCancel ? (
               <button
@@ -915,6 +919,8 @@ export default function UniversalTicketCreator({
                 </section>
               ) : null}
               <MarketplaceSearchPanel
+                initialSearchQuery={initialSearchQuery}
+                onListBusiness={onListBusiness}
                 routeChooser={!isBusinessInternal ? (<RequestRouteChooser
                   routeMode={routeMode}
                   setRouteMode={setRouteMode}
