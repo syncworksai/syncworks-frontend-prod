@@ -34,6 +34,9 @@ import {AVATARS, JarvisAvatar, JarvisAvatarPicker, useJarvisAvatar, getAvatarPho
 import {
   getSyncAiErrorMessage,
   getSyncAiStatus,
+  getSyncVoiceStatus,
+  synthesizeSyncSpeech,
+  SYNC_VOICE_ROLES,
   sendSyncAiMessage,
 } from "../api/syncAi";
 
@@ -124,6 +127,10 @@ export default function SyncAssistant() {
   const location = useLocation();
   const recognitionRef = useRef(null);
   const speechRef = useRef(null);
+  const audioRef = useRef(null);
+  const playbackUrlRef = useRef(null);
+  const playbackGenerationRef = useRef(0);
+  const [premiumVoiceState, setPremiumVoiceState] = useState("checking");
 
   const returnTo = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -269,6 +276,12 @@ export default function SyncAssistant() {
   }, []);
 
   useEffect(() => {
+    getSyncVoiceStatus().then((voice) => {
+      setPremiumVoiceState(voice?.roles?.female_assistant?.configured ? "ready" : "unavailable");
+    }).catch(() => setPremiumVoiceState("unavailable"));
+  }, []);
+
+  useEffect(() => {
     const updateVoices = () => {
       setVoices(window.speechSynthesis?.getVoices?.() || []);
     };
@@ -277,41 +290,53 @@ export default function SyncAssistant() {
     return () => {
       window.speechSynthesis?.removeEventListener?.("voiceschanged", updateVoices);
       window.speechSynthesis?.cancel?.();
+      audioRef.current?.pause?.();
+      if (playbackUrlRef.current) URL.revokeObjectURL(playbackUrlRef.current);
     };
   }, []);
 
   function stopSpeaking() {
+    playbackGenerationRef.current += 1;
+    audioRef.current?.pause?.();
+    audioRef.current = null;
+    if (playbackUrlRef.current) URL.revokeObjectURL(playbackUrlRef.current);
+    playbackUrlRef.current = null;
     window.speechSynthesis?.cancel?.();
     speechRef.current = null;
     setSpeaking(false);
   }
 
-  function speak(text, { force = false } = {}) {
-    if ((!settings.speechEnabled && !force) || !window.speechSynthesis || !text) {
-      return;
-    }
-
+  // A native SpeechSynthesisUtterance is a DEVICE voice, never ElevenLabs.
+  // It is deliberately not an automatic fallback for the Chief of Staff.
+  async function speak(text, { force = false } = {}) {
+    if ((!settings.speechEnabled && !force) || !text) return;
     stopSpeaking();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    const browserVoice = findBrowserVoice(selectedVoice, voices);
-    if (browserVoice) utterance.voice = browserVoice;
-    utterance.lang = browserVoice?.lang || selectedVoice.lang;
-    utterance.rate = selectedVoice.id === "sync" ? 0.96 : 1;
-    utterance.pitch = selectedVoice.id === "sync" ? 0.92 : 1;
-    utterance.onstart = () => setSpeaking(true);
-    utterance.onend = () => {
-      speechRef.current = null;
-      setSpeaking(false);
-    };
-    utterance.onerror = () => {
-      speechRef.current = null;
-      setSpeaking(false);
-      setNotice("Audio playback stopped. You can still read the response.");
-    };
-
-    speechRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
+    const generation = playbackGenerationRef.current;
+    try {
+      // Sync Assist's female Chief of Staff uses the Gemma profile.
+      const blob = await synthesizeSyncSpeech(text, SYNC_VOICE_ROLES.femaleAssistant);
+      if (generation !== playbackGenerationRef.current) return;
+      const url = URL.createObjectURL(blob);
+      playbackUrlRef.current = url;
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => { if (generation === playbackGenerationRef.current) stopSpeaking(); };
+      audio.onerror = () => {
+        if (generation !== playbackGenerationRef.current) return;
+        stopSpeaking();
+        setNotice("ElevenLabs Gemma audio could not play on this device.");
+      };
+      await audio.play();
+      if (generation === playbackGenerationRef.current) {
+        setPremiumVoiceState("ready");
+        setSpeaking(true);
+      }
+    } catch (error) {
+      if (generation !== playbackGenerationRef.current) return;
+      stopSpeaking();
+      setPremiumVoiceState("unavailable");
+      setNotice("Gemma (ElevenLabs) is unavailable. Device voice was not substituted. Check voice setup or tap to try again.");
+    }
   }
 
   function stopListening() {
@@ -1002,7 +1027,8 @@ export default function SyncAssistant() {
           </div>
           {pilotAccess ? <p className="mt-4 text-xs text-slate-300">To edit team names and role assignments, use Manage AI team on this page.</p> : <div className="mt-4"><JarvisAvatarPicker value={avatarId} onChange={chooseAvatar}/></div>}
           <label className="mt-4 flex items-center justify-between gap-3 text-sm text-slate-200"><span>Office background</span><input type="checkbox" checked={officeBackground} onChange={e=>setOfficeBackground(e.target.checked)} className="h-5 w-5 accent-cyan-500"/></label>
-          <p className="mt-2 text-xs text-slate-400">Each portrait identifies a specialist. This window uses the shared SYNC voice assistant; selecting a profile does not activate a separate background worker. Appearance and office preferences are saved on this device.</p>
+          <p className="mt-2 text-xs text-slate-300">Voice: Gemma via ElevenLabs · {premiumVoiceState === "ready" ? "Configured" : premiumVoiceState === "checking" ? "Checking configuration" : "Needs setup"}. Device text-to-speech is not used as an automatic fallback.</p>
+          <p className="mt-1 text-xs text-slate-400">Each portrait identifies a specialist; selecting one does not activate an independent background worker. Appearance and office preferences are saved on this device.</p>
         </section>
       </div>}
     </div>
