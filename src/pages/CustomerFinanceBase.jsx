@@ -16,6 +16,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  ChevronRight,
   Send,
   ShieldCheck,
   TrendingDown,
@@ -29,6 +30,7 @@ import api from "../api/client";
 import { getSyncAiErrorMessage, sendSyncAiMessage } from "../api/syncAi";
 import { useAuth } from "../auth/AuthContext";
 import ModeBar from "../components/ModeBar";
+import "./FinanceOneScreenV36.css";
 
 const STRIPE_FINANCE_CHECKOUT_URL = "https://buy.stripe.com/6oU00jgX07eT3qFgJl2Nq0c";
 const FINANCE_LOGO_URL = "/brands/finance.jpg";
@@ -190,6 +192,7 @@ export default function CustomerFinance() {
   const hasFinanceAccess = Boolean(isGod || moduleAccess?.finance || moduleAccess?.money || moduleAccess?.customer_finance || moduleAccess?.customerFinance);
 
   const [tab, setTab] = useState("overview");
+  const [overviewDrawerOpen, setOverviewDrawerOpen] = useState(false);
   const [dashboard, setDashboard] = useState(null);
   const [intelligence, setIntelligence] = useState(null);
   const [householdFinance, setHouseholdFinance] = useState(null);
@@ -219,6 +222,15 @@ export default function CustomerFinance() {
   const [linkManualId, setLinkManualId] = useState("");
   const [linkConnectedId, setLinkConnectedId] = useState("");
   const [linkingAccount, setLinkingAccount] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.classList.add("sw-finance-locked");
+    document.body.classList.add("sw-finance-locked");
+    return () => {
+      document.documentElement.classList.remove("sw-finance-locked");
+      document.body.classList.remove("sw-finance-locked");
+    };
+  }, []);
 
   const loadFinance = async (extraOverride = null) => {
     setLoading(true);
@@ -535,18 +547,19 @@ export default function CustomerFinance() {
   const currentTarget = personalPlan?.first_target;
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white">
+    <div className="sw-finance-page min-h-screen bg-[#030712] text-white">
       <ModeBar />
-      <main className="mx-auto w-full max-w-6xl space-y-3 px-2.5 pb-28 pt-3 sm:px-4">
-        <section className="rounded-2xl border border-cyan-400/20 bg-[radial-gradient(circle_at_90%_10%,rgba(34,211,238,.10),transparent_30%),linear-gradient(145deg,#07111f,#020617)] p-3 sm:p-4">
+      <main className="sw-finance-main mx-auto w-full max-w-6xl space-y-3 px-2.5 pb-28 pt-3 sm:px-4">
+        <section className="sw-finance-header rounded-2xl border border-cyan-400/20 bg-[radial-gradient(circle_at_90%_10%,rgba(34,211,238,.10),transparent_30%),linear-gradient(145deg,#07111f,#020617)] p-3 sm:p-4">
           <button type="button" onClick={() => nav("/customer/dashboard")} className="inline-flex items-center gap-1.5 text-[11px] font-black text-slate-500"><ArrowLeft className="h-3.5 w-3.5" /> Personal</button>
           <div className="mt-2 flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2.5"><div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-cyan-400/20 bg-cyan-500/10"><Landmark className="h-4.5 w-4.5 text-cyan-200" /></div><div className="min-w-0"><div className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-200">Personal Finance</div><h1 className="truncate text-lg font-black sm:text-xl">Financial Command Center</h1></div></div>
             <button type="button" onClick={syncAll} disabled={syncing || loading} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[.03] text-slate-300" aria-label="Refresh Finance"><RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} /></button>
           </div>
-          <div className="mt-3 grid grid-cols-4 gap-1 rounded-xl border border-white/10 bg-black/20 p-1">{tabs.map(([key, label]) => <button key={key} type="button" onClick={() => setTab(key)} className={`rounded-lg px-1.5 py-2 text-[10px] font-black sm:text-xs ${tab === key ? "bg-cyan-500/15 text-cyan-100" : "text-slate-500"}`}>{label}</button>)}</div>
+          <div className="mt-3 grid grid-cols-4 gap-1 rounded-xl border border-white/10 bg-black/20 p-1">{tabs.map(([key, label]) => <button key={key} type="button" onClick={() => { setTab(key); setOverviewDrawerOpen(false); }} className={`rounded-lg px-1.5 py-2 text-[10px] font-black sm:text-xs ${tab === key ? "bg-cyan-500/15 text-cyan-100" : "text-slate-500"}`}>{label}</button>)}</div>
         </section>
 
+        <div className="sw-finance-viewport-body">
         {error ? <div className="flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-500/[.07] p-3 text-xs leading-5 text-amber-100"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>{error}</span></div> : null}
 
         {tab === "overview" ? <>
@@ -557,6 +570,13 @@ export default function CustomerFinance() {
             <MiniStat label="Total debt" value={money(net.debt)} detail={`${liabilities.length} tracked debt(s)`} tone="rose" />
           </div>
 
+          <div className="sw-finance-overview-trigger">
+            <div><strong>Financial outlook</strong><span>Cash flow, upcoming bills, debt strategy and SYNC insights</span></div>
+            <button type="button" onClick={() => setOverviewDrawerOpen(true)}>Explore details <ChevronRight size={16}/></button>
+          </div>
+          <div className={`sw-finance-overview-drawer ${overviewDrawerOpen ? "is-open" : ""}`} role={overviewDrawerOpen ? "dialog" : undefined} aria-modal={overviewDrawerOpen ? "true" : undefined} aria-label="Financial details">
+            <div className="sw-finance-overview-drawer-header"><strong>Financial details</strong><button type="button" onClick={() => setOverviewDrawerOpen(false)} aria-label="Close financial details"><X size={18}/></button></div>
+            <div className="sw-finance-overview-drawer-scroll">
           <div className="grid gap-3 lg:grid-cols-[1.15fr_.85fr]">
             <Section title="Monthly cash flow" subtitle="Plan first; connected transactions will replace estimates with actual spending." right={<TrendingUp className="h-4 w-4 text-emerald-300" />}>
               <div className="grid grid-cols-3 gap-2"><MiniStat label="In" value={money(planned.expected_income)} tone="emerald" /><MiniStat label="Out" value={money(planned.expected_outflow)} tone="amber" /><MiniStat label="Left" value={money(planned.expected_cash_flow)} tone={Number(planned.expected_cash_flow || 0) >= 0 ? "emerald" : "rose"} /></div>
@@ -577,6 +597,8 @@ export default function CustomerFinance() {
             <Section title="Ask SYNC" subtitle="Use Finance AI only when you need it; it stays compact otherwise." right={<Bot className="h-4 w-4 text-cyan-300" />}>
               {!chatOpen ? <div className="flex gap-2"><button type="button" onClick={() => setChatOpen(true)} className="min-h-10 flex-1 rounded-xl border border-violet-400/20 bg-violet-500/10 px-3 text-xs font-black text-violet-100">Ask about my finances</button><button type="button" onClick={() => sendFinanceChat("What should I pay next?")} className="min-h-10 rounded-xl border border-white/10 px-3 text-[10px] font-black text-slate-400">Next debt</button></div> : <><div className="max-h-56 space-y-2 overflow-y-auto">{chatMessages.map((message) => <div key={message.id} className={`rounded-xl p-2.5 text-xs leading-5 ${message.role === "user" ? "ml-6 bg-cyan-500/10" : "mr-6 bg-violet-500/10"}`}>{message.text}</div>)}</div><div className="mt-2 flex gap-2"><textarea rows={2} value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Ask SYNC…" className="min-h-11 flex-1 resize-none rounded-xl border border-white/10 bg-slate-950 p-2.5 text-xs outline-none"/><button type="button" onClick={() => sendFinanceChat()} disabled={chatSending || !chatInput.trim()} className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-cyan-500 to-violet-600 disabled:opacity-40">{chatSending ? <LoaderCircle className="h-4 w-4 animate-spin"/> : <Send className="h-4 w-4"/>}</button></div></>}
             </Section>
+          </div>
+            </div>
           </div>
         </> : null}
 
@@ -641,6 +663,7 @@ export default function CustomerFinance() {
         </> : null}
 
         {alerts.length && tab === "overview" ? <div className="text-center text-[9px] text-slate-600">{alerts.length} Finance alert(s) available in SYNC.</div> : null}
+        </div>
       </main>
 
       {manualOpen ? <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/75 sm:items-center sm:p-4"><div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-[1.5rem] border border-cyan-400/20 bg-[#07111f] p-4 sm:rounded-[1.5rem]"><div className="flex items-start justify-between gap-3"><div><div className="text-[9px] font-black uppercase tracking-[.16em] text-cyan-200">Add Finance record</div><h2 className="mt-1 text-lg font-black">{manual.type === "INCOME" ? "Income" : manual.type === "BILL" ? "Bill / living expense" : manual.type === "DEBT" ? "Debt" : manual.type === "ACCOUNT" ? "Account" : manual.type === "GOAL" ? "Goal" : "Budget"}</h2></div><button type="button" onClick={() => setManualOpen(false)} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10"><X className="h-4 w-4"/></button></div>
