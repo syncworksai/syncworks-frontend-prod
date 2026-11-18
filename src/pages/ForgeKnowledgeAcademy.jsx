@@ -1,6 +1,8 @@
 import React,{useEffect,useMemo,useState} from "react";
 import {ArrowLeft,BookOpen,CheckCircle2,Clock3,GraduationCap,Headphones,Search,X} from "lucide-react";
 import {academyTracks,academyLessons} from "./forgeAcademyData";
+import {forgeAudiobookEpisodes} from "./forgeAudiobookEpisodes";
+const allLessons=[...forgeAudiobookEpisodes,...academyLessons];
 import "./ForgeKnowledgeAcademy.css";
 const storageKey=email=>"syncworks-forge-academy-v1:"+email;
 function loadProgress(email){
@@ -9,7 +11,7 @@ function loadProgress(email){
   return v&&typeof v==="object"&&!Array.isArray(v)?v:{};
  }catch{return {};}
 }
-export default function ForgeKnowledgeAcademy({open,email,onClose,onOpenLesson}){
+export default function ForgeKnowledgeAcademy({open,email,onClose,onOpenLesson,onPlayTrack}){
  const [track,setTrack]=useState("all");
  const [query,setQuery]=useState("");
  const [selected,setSelected]=useState(null);
@@ -24,8 +26,8 @@ export default function ForgeKnowledgeAcademy({open,email,onClose,onOpenLesson})
   document.addEventListener("keydown",onKey);
   return()=>document.removeEventListener("keydown",onKey);
  },[open,onClose]);
- const completedCount=academyLessons.filter(l=>progress[l.id]?.passed).length;
- const lessons=useMemo(()=>academyLessons.filter(l=>
+ const completedCount=allLessons.filter(l=>progress[l.id]?.passed).length;
+ const lessons=useMemo(()=>allLessons.filter(l=>
   (track==="all"||l.track===track)&&
   (l.title+" "+(academyTracks.find(t=>t.id===l.track)?.title||"")).toLowerCase().includes(query.toLowerCase())
  ),[track,query]);
@@ -52,8 +54,8 @@ export default function ForgeKnowledgeAcademy({open,email,onClose,onOpenLesson})
      <button type="button" className="forge-academy-close" aria-label="Close academy" onClick={onClose}><X size={20}/></button>
    </header>
    <div className="forge-academy-stat">
-    <span><GraduationCap size={17}/> {academyTracks.length} tracks · {academyLessons.length} complete starter lessons</span>
-    <strong>{completedCount}/{academyLessons.length} lessons passed</strong>
+    <span><GraduationCap size={17}/> {academyTracks.length} tracks · {allLessons.length} lessons (including {forgeAudiobookEpisodes.length} expanded audio studies)</span>
+    <strong>{completedCount}/{allLessons.length} knowledge checks passed</strong>
    </div>
    {overview==="tracks"?<>
      <div className="forge-academy-filters">
@@ -61,6 +63,8 @@ export default function ForgeKnowledgeAcademy({open,email,onClose,onOpenLesson})
       <select value={track} onChange={e=>setTrack(e.target.value)} aria-label="Choose subject"><option value="all">All learning tracks</option>{academyTracks.map(t=><option key={t.id} value={t.id}>{t.title}</option>)}</select>
      </div>
      <div className="forge-academy-list" tabIndex={0}>
+       {track!=="all"&&<button type="button" className="forge-academy-play-track" onClick={()=>onPlayTrack(track)}><Headphones size={17}/> Listen to this entire track continuously</button>}
+       {track==="all"&&<div className="forge-academy-featured"><strong>Expanded audiobook studies</strong><p>Original long-form narration for driving, exercise and uninterrupted study. Choose a subject to listen to consecutive lessons.</p></div>}
        {track==="all"&&!query&&<div className="forge-academy-intro">
          <strong>Learn → Apply → Recall → Discuss</strong>
          <p>Each lesson includes an original study, vocabulary, a practice exercise, a knowledge check, and a source for further reading. This is a growing continuing-education program, not a professional certification.</p>
@@ -70,7 +74,7 @@ export default function ForgeKnowledgeAcademy({open,email,onClose,onOpenLesson})
         const passed=!!progress[lesson.id]?.passed;
         return <button type="button" className="forge-academy-lesson" key={lesson.id} onClick={()=>openLesson(lesson)}>
           <div className="forge-academy-lesson-icon">{passed?<CheckCircle2 size={20}/>:<BookOpen size={20}/>}</div>
-          <div><small>{category?.title} · Lesson {lesson.order}</small><strong>{lesson.title}</strong><span>{lesson.objectives[0]}</span></div>
+          <div><small>{category?.title} · {lesson.order===100?"Extended audio edition":"Lesson "+lesson.order}</small><strong>{lesson.title}</strong><span>{lesson.objectives[0]}</span></div>
           <div className="forge-academy-lesson-end"><span><Clock3 size={13}/> {lesson.minutes} min</span><em>{passed?"Passed":"Open"}</em></div>
         </button>;
        })}
@@ -79,7 +83,7 @@ export default function ForgeKnowledgeAcademy({open,email,onClose,onOpenLesson})
    </>:<>
      <div className="forge-academy-detail">
        <button className="forge-academy-back" type="button" onClick={()=>setOverview("tracks")}><ArrowLeft size={15}/> All lessons</button>
-       <div className="forge-academy-detail-title"><small>{academyTracks.find(t=>t.id===selected.track)?.title}</small><h3>{selected.title}</h3><p>{selected.minutes}-minute study · {selected.sections.length} learning sections</p></div>
+       <div className="forge-academy-detail-title"><small>{academyTracks.find(t=>t.id===selected.track)?.title}</small><h3>{selected.title}</h3><p>{selected.minutes}-minute estimated study · {selected.sections.length} learning sections</p></div>
        <div className="forge-academy-detail-actions"><button type="button" className="forge-academy-primary" onClick={()=>onOpenLesson(selected.id,"read")}><BookOpen size={16}/> Read full lesson</button><button type="button" className="forge-academy-secondary" onClick={()=>onOpenLesson(selected.id,"listen")}><Headphones size={16}/> Listen to lesson</button></div>
        <div className="forge-academy-objectives"><strong>After this lesson, you should be able to:</strong>{selected.objectives.map(x=><p key={x}>• {x}</p>)}</div>
        <div className="forge-academy-practice"><strong>APPLY IT TODAY</strong><p>{selected.practice}</p></div>
