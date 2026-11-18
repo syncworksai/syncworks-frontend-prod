@@ -110,7 +110,7 @@ export async function executeSyncTicketReply({ ticketId, body, workspace = "pers
   const response = await api.post("/sync-ai/actions/ticket-reply/execute/", { workspace: normalizedWorkspace, ticket_id: Number(ticketId), body: String(body || "").trim(), confirmed: confirmed === true }); return response?.data || {};
 }
 export async function getSyncVoiceStatus() { const response = await api.get("/sync-ai/voice/status/"); return response?.data || {}; }
-export async function synthesizeSyncSpeech(text) { const response = await api.post("/sync-ai/voice/synthesize/", { text: String(text || "").trim() }, { responseType: "blob" }); return response?.data; }
+export async function synthesizeSyncSpeech(text, context = "default") { const response = await api.post("/sync-ai/voice/synthesize/", { text: String(text || "").trim(), context }, { responseType: "blob" }); return response?.data; }
 
 export function getSyncAiErrorMessage(error) {
   if (error?.code === "SYNC_BUSINESS_REQUIRED") return error.message;
