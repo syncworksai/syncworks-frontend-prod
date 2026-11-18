@@ -1,0 +1,6 @@
+/* Finance payment selection: same top-anchored glass drawer as other SyncWorks apps. */
+.sw-finance-payment-backdrop{position:fixed!important;inset:0!important;display:flex!important;align-items:flex-start!important;justify-content:center!important;z-index:2147481800!important;background:rgba(0,5,17,.7)!important;backdrop-filter:blur(9px)}
+.sw-finance-payment-sheet{width:min(560px,calc(100vw - 24px))!important;max-height:calc(100dvh - 185px)!important;min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain!important;box-sizing:border-box;position:relative;top:88px!important;border:1px solid rgba(117,220,251,.49)!important;border-radius:20px!important;background:rgba(5,16,33,.98)!important;box-shadow:0 25px 80px #000b!important;animation:sw-finance-payment-open .26s ease-out both}
+@keyframes sw-finance-payment-open{from{opacity:.2;transform:translateY(26px)}to{opacity:1;transform:none}}
+@media(max-width:767px){.sw-finance-payment-sheet{top:calc(62px + env(safe-area-inset-top,0px))!important;max-height:calc(100dvh - 169px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;padding:12px!important}}
+@media(prefers-reduced-motion:reduce){.sw-finance-payment-sheet{animation:none!important}}
