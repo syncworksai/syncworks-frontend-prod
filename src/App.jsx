@@ -78,6 +78,8 @@ import BusinessFinanceIntelligence from "./pages/sbo/BusinessFinanceIntelligence
 import SboInvoices from "./pages/sbo/SboInvoices";
 import SboBillingAutomation from "./pages/sbo/SboBillingAutomation";
 import SboPartners from "./pages/sbo/SboPartners";
+import PartnerJoin from "./pages/PartnerJoin";
+import PartnerFreeWorkspace from "./pages/PartnerFreeWorkspace";
 import SboAppointments from "./pages/sbo/SboAppointments";
 import SboPracticeSettings from "./pages/sbo/SboPracticeSettings";
 import SboSchedulingAutomation from "./pages/sbo/SboSchedulingAutomation";
@@ -183,6 +185,8 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/partner/join" element={<PartnerJoin />} />
+        <Route path="/partner/workspace" element={<ProtectedRoute><PartnerFreeWorkspace /></ProtectedRoute>} />
         <Route path="/customer/connect" element={<CustomerBusinessConnect />} />
         <Route path="/get-started" element={<GetStarted />} />
         <Route path="/onboarding/business" element={<ProtectedRoute><AddBusiness /></ProtectedRoute>} />
