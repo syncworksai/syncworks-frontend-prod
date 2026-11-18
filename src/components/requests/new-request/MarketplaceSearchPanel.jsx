@@ -275,7 +275,7 @@ export default function MarketplaceSearchPanel({
         </div>
       ) : null}
 
-      <section className="sw-marketplace-categories rounded-3xl border border-slate-800 bg-slate-950/45 p-4 md:p-5">
+      <section className={cx("sw-marketplace-categories rounded-3xl border border-slate-800 bg-slate-950/45 p-4 md:p-5", compact && showCategories && "sw-categories-expanded")}>
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-sm font-black text-slate-100">
@@ -309,6 +309,7 @@ export default function MarketplaceSearchPanel({
                 setSelectedVerticalKey((current) =>
                   current === vertical.key ? "" : vertical.key
                 );
+                if (compact) setShowCategories(false);
               }}
             />
           ))}
