@@ -210,6 +210,7 @@ export default function TeamInvites() {
       }
       setMembers(list);
       setMemberErr("");
+      return list;
     } catch (e) {
       setMembers([]);
       setMemberErr(e?.response?.data?.detail || "Failed to load team members.");
@@ -334,13 +335,21 @@ export default function TeamInvites() {
         payload[key] = !!editState[key];
       });
 
-      await api.patch(`/business-members/${memberId}/`, payload);
-      await loadMembers();
+      const res = await api.patch(`/business-members/${memberId}/`, payload);
+      const returned = res.data || {};
+      // Confirm server response AND a fresh read match what the manager saved.
+      const persisted = await loadMembers();
+      const latest = (persisted || []).find((item) => String(item.id) === String(memberId));
+      const expected = Object.entries(payload);
+      const matches = (item) => item && expected.every(([key, value]) => item[key] === value);
+      if (!matches(returned) || !matches(latest)) {
+        throw new Error("The server did not retain every permission change. Refresh and review the member before proceeding.");
+      }
       setEditingId(null);
       setEditState(null);
-      setMsg("Team member updated.");
+      setMsg("Employee role and permissions saved and verified.");
     } catch (e) {
-      setErr(e?.response?.data?.detail || "Failed to update team member.");
+      setErr(e?.response?.data?.detail || e?.message || "Failed to update team member.");
     } finally {
       setSaveBusyId(null);
     }
@@ -395,7 +404,7 @@ export default function TeamInvites() {
           {filteredMembers.map((member) => { const isEditing = editingId === member.id; const phone = memberPhone(member); const knownName = displayMemberName(member); return (
             <article key={member.id} className="rounded-xl border border-slate-700/65 bg-slate-900/35 p-3">
               <div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="truncate font-semibold">{knownName}</div><div className="truncate text-xs text-slate-400">{member?.user_email || member?.user?.email || "Email unavailable from account"}</div>{phone && <div className="text-xs text-slate-500">{phone}</div>}</div>
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-1"><Badge tone="fuchsia">{roleLabel(member.role)}</Badge><Badge tone={member.is_active ? "emerald":"rose"}>{member.is_active ? "Active":"Inactive"}</Badge><button className={buttonClass} onClick={() => isEditing ? cancelEdit() : beginEdit(member)}>{isEditing ? "Close" : "Edit"}</button></div></div>
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-1"><Badge tone="fuchsia">{roleLabel(member.role)}</Badge><Badge tone={member.is_active ? "emerald":"rose"}>{member.is_active ? "Active":"Inactive"}</Badge>{member.role !== "OWNER" && <button className={buttonClass} onClick={() => isEditing ? cancelEdit() : beginEdit(member)}>{isEditing ? "Close" : "Edit"}</button>}</div></div>
               {!isEditing && <div className="mt-2 text-[11px] text-slate-400">{permCount(member)} of {PERMS.length} permissions · {member?.user_id ? `User #${member.user_id}` : `Membership #${member.id}`}</div>}
               {isEditing && <div className="mt-3 space-y-3 border-t border-slate-700/70 pt-3">
                 <div className="grid grid-cols-2 gap-2"><label className="text-xs text-slate-400">Role<select value={editState?.role || "TECHNICIAN"} onChange={(e) => setEditState((p) => ({...p, role:e.target.value}))} className={fieldClass + " mt-1"}>{ROLE_OPTIONS.map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select></label>
