@@ -33,6 +33,7 @@ import { useAuth } from "../auth/AuthContext";
 import "./CalendarMobileWorkspace.css";
 import "./CalendarPortalFix.css";
 import "./CalendarCompactEditorV31.css";
+import "./CalendarViewportAnchorV33.css";
 import { getCalendarConnections } from "../api/calendarConnections";
 import { getCustomerHealthProfile, patchCustomerHealthProfile } from "../api/customerHealth";
 import CalendarConnectionsDrawer from "../components/CalendarConnectionsDrawer";
@@ -461,6 +462,14 @@ function DayView({ day, events, conflictIds, onCreate, onEdit, onRoute, onServic
 
 export default function CalendarPageV3() {
   const navigate = useNavigate();
+  useEffect(() => {
+    document.documentElement.classList.add("sw-calendar-viewport-locked");
+    document.body.classList.add("sw-calendar-viewport-locked");
+    return () => {
+      document.documentElement.classList.remove("sw-calendar-viewport-locked");
+      document.body.classList.remove("sw-calendar-viewport-locked");
+    };
+  }, []);
   const [events, setEvents] = useState(() => {
     try { return safeList(JSON.parse(window.localStorage.getItem(CALENDAR_CACHE_KEY) || "[]")); }
     catch { return []; }
