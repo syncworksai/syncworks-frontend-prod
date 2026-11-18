@@ -41,7 +41,7 @@ export default function SyncAssistantLauncher() {
     unread: 0, pending: 0, running: 0, completed: 0, receipts: [],
     available: false,
   });
-  const showChief = location.pathname === "/sync/assist" && String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com";
+  const showChief = (location.pathname === "/sync/assist" || location.pathname === "/platform") && String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com";
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [unread, setUnread] = useState(0);
 
@@ -142,7 +142,7 @@ export default function SyncAssistantLauncher() {
 
   return (
     <>
-      <div className={`fixed bottom-24 right-4 z-[80] flex flex-col items-end gap-3 lg:bottom-6 lg:right-6 ${taskDialogOpen && showChief ? "hidden" : mobileVisible ? "" : "hidden lg:flex"}`}>
+      <div className={`fixed bottom-24 right-4 z-[260] flex flex-col items-end gap-3 lg:bottom-6 lg:right-6 ${taskDialogOpen && showChief ? "hidden" : mobileVisible ? "" : "hidden lg:flex"}`}>
         {showChief && (
           <>
             {chiefOpen && (
