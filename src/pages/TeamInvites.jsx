@@ -50,7 +50,7 @@ function roleLabel(role) {
 
 function displayMemberName(member) {
   const full =
-    `${member?.user?.first_name || ""} ${member?.user?.last_name || ""}`.trim() ||
+    `${member?.user_first_name || member?.user?.first_name || ""} ${member?.user_last_name || member?.user?.last_name || ""}`.trim() ||
     member?.user_name ||
     member?.display_name ||
     member?.full_name ||
