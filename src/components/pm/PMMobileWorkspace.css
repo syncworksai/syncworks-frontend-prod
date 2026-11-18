@@ -1,0 +1,81 @@
+/* Property Management mobile cockpit, batch 1.
+ * Keeps app chrome in view and scrolls only its contents.
+ * Does not modify PM API calls or existing workflow handlers. */
+@media (max-width: 767px) {
+  body:has([data-pm-command-shell]) {
+    overflow: hidden;
+  }
+  [data-pm-command-shell] {
+    height: 100dvh;
+    min-height: 0;
+    max-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: transparent;
+  }
+  [data-pm-command-shell] > .xl\\:ml-\\[220px\\] {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  [data-pm-command-shell] .pm-command-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
+    padding-bottom: calc(var(--sw-ui-dock-clearance, 96px) + env(safe-area-inset-bottom, 0px));
+  }
+  [data-pm-command-shell] .pm-command-content > main {
+    min-width: 0;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  }
+  [data-pm-command-shell] .pm-command-content :is(button, a, input, select, textarea) {
+    touch-action: manipulation;
+  }
+  [data-pm-command-shell] .pm-command-content :is(button, a):focus-visible {
+    outline: 2px solid var(--sw-unified-accent, #35c8fb);
+    outline-offset: 2px;
+  }
+  [data-pm-command-shell] .pm-command-content :is(.grid, .flex) {
+    min-width: 0;
+  }
+  [data-pm-command-shell] [role="dialog"],
+  [data-pm-command-shell] .fixed.inset-0 > section {
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 16px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  [data-pm-command-shell] .fixed.inset-y-0 {
+    max-height: 100dvh;
+  }
+}
+/* All PM screens inherit theme glass and accent consistently. Keep status
+ * semantics (red/amber/green), custom imagery, and form values unchanged. */
+body[data-sw-office-scope="work"] [data-pm-command-shell] {
+  --pm-glass-panel: var(--sw-unified-panel, rgba(8,20,41,.66));
+  --pm-glass-border: var(--sw-unified-border, rgba(94,187,248,.34));
+}
+body[data-sw-office-scope="work"] [data-pm-command-shell] :is(
+  .pm-command-content > main > section,
+  .pm-command-content > main > div > section
+) {
+  border-color: var(--pm-glass-border);
+  background-color: var(--pm-glass-panel);
+  backdrop-filter: blur(12px);
+}
+body[data-sw-office-scope="work"] [data-pm-command-shell] > aside,
+body[data-sw-office-scope="work"] [data-pm-command-shell] > header {
+  border-color: var(--pm-glass-border);
+  background-color: var(--pm-glass-panel);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-pm-command-shell] .pm-command-content { scroll-behavior: auto; }
+}
