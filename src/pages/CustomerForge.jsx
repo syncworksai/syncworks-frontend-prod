@@ -9,6 +9,8 @@ import {
 import api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { forgeChapters } from "./forgeChapters";
+import { forgeGreatBookStudies } from "./forgeGreatBookStudies";
+import ForgeBookLibrary from "./ForgeBookLibrary";
 import ForgeGrowthCoach from "./ForgeGrowthCoach";
 import "./CustomerForgeV3.css";
 
@@ -76,6 +78,7 @@ export default function CustomerForge(){
   const [now,setNow]=useState(()=>new Date());
   const [mode,setMode]=useState("read");
   const [readingOpen,setReadingOpen]=useState(false);
+  const [libraryOpen,setLibraryOpen]=useState(false);
   const [growthOpen,setGrowthOpen]=useState(false);
   const [chapterId,setChapterId]=useState(()=>forgeChapters[Math.floor(new Date(dateId(new Date())+"T12:00:00").getTime()/86400000)%forgeChapters.length].id);
   const [done,setDone]=useState({});
@@ -97,7 +100,8 @@ export default function CustomerForge(){
   const forgeShellRef=useRef(null);
   const synthParts=useRef([]),synthIndex=useRef(0);
   const key=keyFor(email);
-  const chapter=forgeChapters.find(c=>c.id===chapterId)||forgeChapters[0];
+  const chapters=[...forgeGreatBookStudies,...forgeChapters];
+  const chapter=chapters.find(c=>c.id===chapterId)||forgeChapters[0];
   const todayChapter=forgeChapters[Math.floor(new Date(dateId(now)+"T12:00:00").getTime()/86400000)%forgeChapters.length];
   const ordered=schedule.map((item,id)=>({...item,id})).sort((a,b)=>a.time.localeCompare(b.time) || a.id-b.id);
   const completed=ordered.filter(item=>done[item.id]).length;
@@ -279,7 +283,7 @@ export default function CustomerForge(){
         <div className="forge3-stage">
           {(mode==="read"||mode==="listen")&&<>
             <div className="forge3-stage-intro"><div><span className="forge3-overline">{mode==="listen"?"THE DAILY AUDIOBOOK":"TODAY'S READING"} · ORIGINAL FORGE LESSON</span><h2>{chapter.title}</h2><p>{chapter.lens} · {chapter.length}</p></div><span className="forge3-book-icon"><BookOpen size={33}/></span></div>
-            <div className="forge3-chapter-select"><label htmlFor="forge3-lesson">Chapter</label><select id="forge3-lesson" value={chapterId} onChange={e=>{stopAudio();setChapterId(e.target.value);}}>{forgeChapters.map(c=><option key={c.id} value={c.id}>{c.title}</option>)}</select><button type="button" onClick={()=>{stopAudio();setChapterId(todayChapter.id);}} className="forge3-softbtn">Today's pick</button></div>
+            <div className="forge3-chapter-select"><label htmlFor="forge3-lesson">Chapter</label><select id="forge3-lesson" value={chapterId} onChange={e=>{stopAudio();setChapterId(e.target.value);}}>{chapters.map(c=><option key={c.id} value={c.id}>{c.title}</option>)}</select><button type="button" onClick={()=>{stopAudio();setChapterId(todayChapter.id);}} className="forge3-softbtn">Today's pick</button><button type="button" className="forge3-softbtn" onClick={()=>setLibraryOpen(true)}><BookOpen size={15}/> Library · 100 titles</button></div>
             {mode==="read"?<div className="forge3-reading-home">
               <div className="forge3-reading-symbol" aria-hidden="true"><BookOpen size={52}/></div>
               <span className="forge3-overline">TODAY'S CHAPTER · PERSONAL DEVELOPMENT</span>
@@ -316,10 +320,11 @@ export default function CustomerForge(){
     {readingOpen&&<div className="forge3-reading-overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setReadingOpen(false);}}>
       <section className="forge3-reading-dialog" role="dialog" aria-modal="true" aria-labelledby="forge3-reading-heading">
         <header className="forge3-reading-dialog-head"><div><span className="forge3-overline">THE FORGE · DAILY READING</span><h2 id="forge3-reading-heading">{chapter.title}</h2><p>{chapter.lens} · {chapter.length}</p></div><button type="button" className="forge3-reading-close" onClick={()=>setReadingOpen(false)} aria-label="Close today's reading">✕</button></header>
-        <div className="forge3-reading-dialog-body" tabIndex={0}><p className="forge3-dropcap">{chapter.paragraphs[0]}</p>{chapter.paragraphs.slice(1).map((p,i)=><p key={i}>{p}</p>)}<div className="forge3-chapter-end"><strong>APPLY IT TODAY</strong><p>{chapter.challenge}</p></div></div>
+        <div className="forge3-reading-dialog-body" tabIndex={0}><p className="forge3-dropcap">{chapter.paragraphs[0]}</p>{chapter.paragraphs.slice(1).map((p,i)=><p key={i}>{p}</p>)}{chapter.vocabulary?.length ? <div className="forge3-study-vocabulary"><h3>Vocabulary to master</h3>{chapter.vocabulary.map(v=><p key={v.word}><strong>{v.word}:</strong> {v.meaning}</p>)}</div>:null}{chapter.sourceUrl?<p className="forge3-study-source">Source: <a href={chapter.sourceUrl} target="_blank" rel="noopener noreferrer">{chapter.sourceLabel||"Primary source"} <ExternalLink size={14}/></a></p>:null}<div className="forge3-chapter-end"><strong>APPLY IT TODAY</strong><p>{chapter.challenge}</p></div></div>
         <div className="forge3-reading-dialog-actions"><button type="button" className="forge3-mainbtn" onClick={()=>{setReadingOpen(false);setActiveMode("listen");startAudio();}}><Headphones size={17}/> Listen to full chapter</button><button type="button" className="forge3-softbtn" onClick={()=>{setReadingOpen(false);setGrowthOpen(true);}}>Ask the Forge coach <Brain size={16}/></button><button type="button" className="forge3-softbtn" onClick={()=>{setReadingOpen(false);setActiveMode("reflect");}}>Reflect on lesson <ChevronRight size={16}/></button><button type="button" className="forge3-softbtn" onClick={()=>setReadingOpen(false)}>Close</button></div>
       </section>
     </div>}
+    <ForgeBookLibrary open={libraryOpen} onClose={()=>setLibraryOpen(false)} onSelect={id=>{stopAudio();setChapterId(id);setLibraryOpen(false);setReadingOpen(true);}}/>
     <ForgeGrowthCoach email={email} chapter={chapter} open={growthOpen} onClose={()=>setGrowthOpen(false)}/>
     <footer className="forge3-footer"><span><Sparkles size={14}/> Build your life, one intentional action at a time.</span><span>Private pilot · Forge coach is separate from Chief of Staff · Chapters are original · Audio uses AI narration when available</span></footer>
   </main>;
