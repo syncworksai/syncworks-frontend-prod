@@ -33,7 +33,7 @@ export default function ImmersiveWorkspaceHome({ displayName = "there", theme, o
       try {
         const rows = await fetchPersonalCalendarEvents();
         const today = new Date().toDateString();
-        if (active) setTodayAgenda(rows.filter(event => event.start_at && new Date(event.start_at).toDateString() === today).sort((a,b) => new Date(a.start_at) - new Date(b.start_at)));
+        if (active) setTodayAgenda(rows.filter(event => String(event?.metadata?.entity_type || "").toUpperCase() !== "TASK" && event.start_at && new Date(event.start_at).toDateString() === today).sort((a,b) => new Date(a.start_at) - new Date(b.start_at)));
       } catch { if (active) setTodayAgenda([]); }
     };
     load();
