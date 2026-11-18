@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CalendarClock, CheckCircle2, Clock3, LoaderCircle, MapPin, Search, ShieldCheck, UsersRound } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { loadCustomerRequestProfile } from "../hooks/useCustomerRequestPrefill";
 import DashboardShell from "../components/dashboard/DashboardShell";
 import { bookMarketplaceSlot, getMarketplaceAvailability, getServiceCategories } from "../api/marketplaceAvailability";
 
@@ -19,10 +20,12 @@ function formatSlot(value) {
 
 export default function CustomerMarketplaceAvailability() {
   const nav = useNavigate();
+  const routeLocation = useLocation();
+  const prefill = routeLocation.state?.requestPrefill || {};
   const [categories, setCategories] = useState([]);
-  const [categoryId, setCategoryId] = useState("");
-  const [zipCode, setZipCode] = useState("");
-  const [address, setAddress] = useState("");
+  const [categoryId, setCategoryId] = useState(() => String(prefill.categoryId || ""));
+  const [zipCode, setZipCode] = useState(() => String(prefill.zip || ""));
+  const [address, setAddress] = useState(() => String(prefill.address || ""));
   const [priority, setPriority] = useState("STANDARD");
   const [duration, setDuration] = useState(60);
   const [details, setDetails] = useState("");
@@ -30,6 +33,8 @@ export default function CustomerMarketplaceAvailability() {
   const [loading, setLoading] = useState(false);
   const [bookingKey, setBookingKey] = useState("");
   const [notice, setNotice] = useState("");
+  const [searched, setSearched] = useState(false);
+  const [searchFailed, setSearchFailed] = useState(false);
   const [created, setCreated] = useState(null);
 
   useEffect(() => {
@@ -42,6 +47,34 @@ export default function CustomerMarketplaceAvailability() {
       .catch(() => active && setNotice("Service categories could not be loaded."));
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    loadCustomerRequestProfile().then((profile) => {
+      if (!active || !profile) return;
+      setZipCode(current => current || profile.serviceZip || "");
+      setAddress(current => current || [
+        profile.address, profile.unit, profile.city,
+        [profile.stateRegion, profile.serviceZip].filter(Boolean).join(" ")
+      ].filter(Boolean).join(", "));
+    });
+    return () => { active = false; };
+  }, []);
+
+  function requestMatch() {
+    const selected = categories.find(row => String(row.id) === String(categoryId));
+    nav("/customer/new-request", {
+      state: {
+        requestPrefill: {
+          serviceQuery: selected?.name || selected?.label || prefill.serviceQuery || "",
+          zip: zipCode,
+          address,
+          details,
+          priority,
+        }
+      }
+    });
+  }
 
   const selectedCategory = useMemo(
     () => categories.find((row) => String(row.id) === String(categoryId)),
@@ -56,6 +89,8 @@ export default function CustomerMarketplaceAvailability() {
     setLoading(true);
     setNotice("");
     setCreated(null);
+    setSearched(false);
+    setSearchFailed(false);
     try {
       const data = await getMarketplaceAvailability({
         category_id: categoryId,
@@ -63,11 +98,13 @@ export default function CustomerMarketplaceAvailability() {
         duration_minutes: Number(duration || 60),
       });
       setResults(data.results || []);
+      setSearched(true);
       if (!(data.results || []).length) {
         setNotice("No SyncWorks business has bookable workforce capacity for that service yet. You can still create an open Marketplace request.");
       }
     } catch (error) {
       setResults([]);
+      setSearchFailed(true);
       setNotice(error?.response?.data?.detail || "Availability could not be checked right now.");
     } finally {
       setLoading(false);
@@ -184,7 +221,21 @@ export default function CustomerMarketplaceAvailability() {
           ))}
         </div>
 
-        {!loading && !results.length ? <section className="rounded-[1.75rem] border border-white/10 bg-white/[.025] p-5 text-sm leading-6 text-slate-400">Businesses without configured SyncWorks workforce capacity are intentionally not shown as immediately bookable. You can still use the regular Marketplace request flow and let businesses respond manually.</section> : null}
+        {!created && !loading && (!results.length || searched) ? (
+          <section className="rounded-[1.75rem] border border-cyan-400/25 bg-cyan-500/[.06] p-5">
+            <div className="text-base font-black text-white">
+              {searched && !results.length ? "No confirmed openings found for this search" : "Prefer to let providers respond?"}
+            </div>
+            <p className="mt-2 text-sm leading-6 text-slate-300">
+              {searchFailed ? "Availability could not be verified. You may still create a marketplace request." :
+                "Submit an open marketplace request instead. It is not a booking: a provider must accept and confirm the work before an appointment is set."}
+            </p>
+            <button type="button" onClick={requestMatch}
+              className="mt-3 min-h-11 rounded-xl border border-cyan-400/40 bg-cyan-500/20 px-4 text-sm font-black text-cyan-100">
+              Request a match
+            </button>
+          </section>
+        ) : null}
       </div>
     </DashboardShell>
   );
