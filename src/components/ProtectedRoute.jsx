@@ -26,7 +26,10 @@ function LoadingScreen({ message = "Loading SyncWorks...", showRecovery = false,
         <div className="sw-startup__emblem" aria-hidden="true">
           <span className="sw-startup__halo sw-startup__halo--outer" />
           <span className="sw-startup__halo sw-startup__halo--inner" />
-          <img src="/brand/syncworks-app-icon.svg" alt="" className="sw-startup__logo" />
+          <span className="sw-startup__orbit sw-startup__orbit--one" />
+          <span className="sw-startup__orbit sw-startup__orbit--two" />
+          <span className="sw-startup__holo-beam" />
+          <img src="/brands/syncworks-cube-s.svg" alt="" className="sw-startup__logo" />
         </div>
         <div className="sw-startup__brand">SYNC<span>WORKS</span></div>
         <p className="sw-startup__tagline">YOUR WORLD. CONNECTED.</p>
