@@ -4,7 +4,7 @@ import {ChevronDown,ChevronRight,RefreshCw,Users,ClipboardList,X,ArrowLeft} from
 import api from "../../api/client";
 import TechnicianJobActions from "../../components/sbo/TechnicianJobActions";
 import "./BusinessTechBoard.css";
-const dateNow=()=>new Date().toLocaleDateString("en-CA");
+const dateNow=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;};
 const hour=v=>v?new Date(v).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}):"Unscheduled";
 export default function BusinessTechBoard({employeeMode=false}){
  const nav=useNavigate(),[params]=useSearchParams();
@@ -41,7 +41,7 @@ export default function BusinessTechBoard({employeeMode=false}){
  const jobCard=(j,person=null)=> <article key={j.ticket_id} className="sw-tech-job rounded-xl border border-white/10 p-2.5">
   <div className="flex justify-between gap-2"><button type="button" onClick={()=>nav(`/tickets/${j.ticket_id}`)} className="min-w-0 truncate text-left text-xs font-semibold text-white">{j.title||"Service request"} <span className="text-slate-400">#{j.ticket_id}</span></button><span className="shrink-0 text-[10px] text-cyan-200">{String(j.status||"NEW").replaceAll("_"," ")}</span></div>
   <div className="mt-1 text-[11px] text-slate-300">{hour(j.scheduled_start)}{j.scheduled_end?`–${hour(j.scheduled_end)}`:""} · {(j.required_skills||[]).join(", ")||"General"}</div>
-  {person&&<TechnicianJobActions ticket={j} compact canDispatch={!support&&!employeeMode} isAssigned={person.is_self} onSaved={load}/>}
+  {person&&!["COMPLETED","CANCELLED","CLOSED","PAID","INVOICED"].includes(String(j.status||"").toUpperCase())&&<TechnicianJobActions ticket={j} compact canDispatch={!support&&!employeeMode} isAssigned={person.is_self} onSaved={load}/>}
   {!person&&!employeeMode&&!support&&<select aria-label="Assign technician" disabled={busy===String(j.ticket_id)} defaultValue="" onChange={e=>e.target.value&&assign(j.ticket_id,e.target.value)} className="mt-2 w-full rounded-lg border border-white/15 bg-[#09182e] p-2 text-xs"><option value="">Assign technician…</option>{staff.filter(m=>(j.required_skills||[]).every(sk=>(m.skills||[]).some(x=>x.toLowerCase()===sk.toLowerCase()))).map(m=><option key={m.member_id} value={m.member_id}>{m.name}</option>)}</select>}
   {employeeMode&&!(person?.is_self)&&<button disabled={busy===String(j.ticket_id)} onClick={()=>pickup(j.ticket_id)} className="mt-2 rounded-lg border border-cyan-400/35 px-3 py-1.5 text-[11px] text-cyan-200">Request pickup · dispatch approves</button>}
  </article>;
@@ -50,7 +50,7 @@ export default function BusinessTechBoard({employeeMode=false}){
   <div className="mx-auto flex h-full max-w-7xl flex-col gap-3">
    <header className="sw-tech-glass flex flex-wrap items-center justify-between gap-2 rounded-xl p-3">
     <div><button onClick={()=>nav(employeeMode?"/employee":support?"/platform":"/sbo/dispatch")} className="mb-1 flex items-center gap-1 text-[11px] text-cyan-200"><ArrowLeft size={13}/>Back</button><h1 className="text-lg font-bold sm:text-xl">Technician Board</h1><p className="text-[11px] text-slate-300">Assigned jobs, status, handoffs and skills</p></div>
-    <div className="flex flex-wrap gap-2"><input aria-label="Schedule date" type="date" value={date} onChange={e=>setDate(e.target.value)} className="rounded-lg border border-white/20 bg-[#061327] p-2 text-xs"/><button onClick={load} aria-label="Refresh" className="rounded-lg border border-white/15 p-2"><RefreshCw size={16} className={loading?"animate-spin":""}/></button>{!employeeMode&&!support&&<button onClick={()=>nav("/sbo/quick-intake")} className="rounded-lg bg-cyan-500/20 px-3 py-2 text-xs">+ Ticket</button>}</div>
+    <div className="flex flex-wrap gap-2"><input aria-label="Schedule date" type="date" value={date} onChange={e=>setDate(e.target.value)} className="rounded-lg border border-white/20 bg-[#061327] p-2 text-xs"/><button onClick={load} aria-label="Refresh" className="rounded-lg border border-white/15 p-2"><RefreshCw size={16} className={loading?"animate-spin":""}/></button>{employeeMode&&<button onClick={()=>nav("/calendar")} className="rounded-lg border border-cyan-400/30 px-3 py-2 text-xs">My calendar</button>}{!employeeMode&&!support&&<button onClick={()=>nav("/sbo/quick-intake")} className="rounded-lg bg-cyan-500/20 px-3 py-2 text-xs">+ Ticket</button>}</div>
    </header>
    <div className="flex flex-wrap items-center gap-2">
     <input aria-label="Search technicians" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Find technician…" className="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#061327]/75 p-2 text-xs"/>
