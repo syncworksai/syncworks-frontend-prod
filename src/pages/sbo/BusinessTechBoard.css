@@ -1,1 +1,16 @@
 .sw-tech-page{background:#030b1b}.sw-tech-bg{background:url('/office-themes/syncworks-future.webp') center/cover no-repeat}.sw-tech-glass{background:rgba(5,17,38,.53);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(101,205,242,.24)}.sw-tech-job{background:rgba(3,11,30,.52)}.sw-tech-page main,.sw-tech-page aside{scrollbar-width:thin;scrollbar-color:rgba(70,196,240,.4) transparent}@media(max-width:1023px){.sw-tech-page{height:calc(100dvh - 175px)}.sw-tech-page>div:nth-child(3)>div:last-child{grid-template-rows:minmax(100px,27%) minmax(0,1fr)}}
+/* Single-screen shell: scroll only inside focused technician/queue panels. */
+.sw-tech-page{height:calc(100dvh - 162px)!important;min-height:0!important;overscroll-behavior:contain}
+.sw-tech-page .sw-tech-glass{min-height:0}
+.sw-tech-page .sw-tech-job{animation:sw-tech-reveal .18s ease-out both}
+@keyframes sw-tech-reveal{from{opacity:.65;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:1023px){
+ .sw-tech-page{height:calc(100dvh - 175px)!important;padding:6px}
+ .sw-tech-page > div:nth-child(3){gap:6px}
+ .sw-tech-page > div:nth-child(3) > .grid:last-of-type{display:flex;flex-direction:column;min-height:0;gap:6px}
+ .sw-tech-page > div:nth-child(3) > .grid:last-of-type > aside{flex:0 0 auto;max-height:24%;min-height:66px}
+ .sw-tech-page > div:nth-child(3) > .grid:last-of-type > main{flex:1;min-height:0}
+ .sw-tech-page header{padding:8px}
+ .sw-tech-page header p{display:none}
+}
+@media(prefers-reduced-motion:reduce){.sw-tech-page .sw-tech-job{animation:none}}
