@@ -272,6 +272,13 @@ export default function CustomerForge(){
     return ()=>window.removeEventListener("keydown",onKey);
   },[readingOpen]);
   function startRoutine(item){if(item.action){setActiveMode(item.action);setMissionsOpen(false);}}
+  useEffect(()=>{
+    if(!missionsOpen && !audioSettingsOpen)return undefined;
+    const onKey=e=>{if(e.key==="Escape"){setMissionsOpen(false);setAudioSettingsOpen(false);}};
+    window.addEventListener("keydown",onKey);
+    return ()=>window.removeEventListener("keydown",onKey);
+  },[missionsOpen,audioSettingsOpen]);
+
   if(!permitted)return <main className="min-h-screen bg-slate-950 px-6 pt-28 text-white"><h1 className="text-xl">Private pilot</h1><Link to="/customer">Return to office</Link></main>;
   return <main className="forge3" ref={forgeShellRef}>
     <div className="forge3-glow" aria-hidden="true"/>
