@@ -14,23 +14,36 @@ import {
 import { useAuth } from "../auth/AuthContext";
 import GlobalModeBar from "./navigation/GlobalModeBar";
 import EmployeeBusinessRouteGate from "./EmployeeBusinessRouteGate";
+import "./SyncStartupScreen.css";
 
 function LoadingScreen({ message = "Loading SyncWorks...", showRecovery = false, onRetry, retrying }) {
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-[#020617] px-4 pb-24 text-white">
-      <div className="w-full max-w-sm rounded-3xl border border-cyan-500/30 bg-slate-950/75 p-6 text-center shadow-2xl backdrop-blur">
-        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-slate-700 border-t-cyan-400" />
-        <div className="mt-4 text-base font-semibold text-slate-100">{message}</div>
-        <div className="mt-1 text-xs text-slate-400">
-          {showRecovery ? "The connection is taking longer than usual. Your saved sign-in is safe." : "Restoring your secure session."}
+    <div className="sw-startup" role="status" aria-live="polite" aria-label={message}>
+      <div className="sw-startup__ambient sw-startup__ambient--cyan" aria-hidden="true" />
+      <div className="sw-startup__ambient sw-startup__ambient--violet" aria-hidden="true" />
+      <div className="sw-startup__grid" aria-hidden="true" />
+      <main className="sw-startup__center">
+        <div className="sw-startup__emblem" aria-hidden="true">
+          <span className="sw-startup__halo sw-startup__halo--outer" />
+          <span className="sw-startup__halo sw-startup__halo--inner" />
+          <img src="/brand/syncworks-app-icon.svg" alt="" className="sw-startup__logo" />
         </div>
+        <div className="sw-startup__brand">SYNC<span>WORKS</span></div>
+        <p className="sw-startup__tagline">YOUR WORLD. CONNECTED.</p>
+        <div className="sw-startup__progress" aria-hidden="true"><span /></div>
+        <p className="sw-startup__status">
+          {showRecovery ? "Connection is taking longer than expected" : message}
+        </p>
         {showRecovery && (
-          <button type="button" onClick={onRetry} disabled={retrying}
-            className="mt-5 min-h-11 w-full rounded-xl border border-cyan-400/40 bg-cyan-500/15 px-4 py-3 text-sm font-semibold text-cyan-100 disabled:opacity-50">
-            {retrying ? "Checking connection..." : "Try connecting again"}
-          </button>
+          <div className="sw-startup__recovery">
+            <p>Your saved sign-in is safe.</p>
+            <button type="button" onClick={onRetry} disabled={retrying}>
+              {retrying ? "Checking connection…" : "Try connecting again"}
+            </button>
+          </div>
         )}
-      </div>
+      </main>
+      <div className="sw-startup__footer">POWERED BY SYNCWORKS</div>
     </div>
   );
 }
