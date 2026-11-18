@@ -167,3 +167,120 @@ body[data-sw-office-theme="light"] .sw-inbox-shell {
   @keyframes sw-inbox-enter {from{opacity:.48;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 }
 @media(prefers-reduced-motion:reduce){.sw-inbox-shell .sw-inbox-thread-list,.sw-inbox-shell .sw-inbox-conversation{animation:none}}
+
+
+/* V2: the old grid columns were still constraining the list to roughly
+   half the iPhone width. Both views must own the entire available viewport. */
+@media (max-width:767px) {
+  .sw-inbox-shell .sw-inbox-main {
+    min-width:0;
+    max-width:100vw;
+    gap:8px;
+    padding-top:calc(62px + var(--sw-ios-safe-top, 0px))!important;
+  }
+  .sw-inbox-shell .sw-inbox-workspace {
+    display:block!important;
+    position:relative;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    min-height:0!important;
+    height:auto!important;
+    flex:1 1 auto!important;
+    overflow:hidden;
+  }
+  .sw-inbox-shell .sw-inbox-workspace > :is(.sw-inbox-thread-list, .sw-inbox-conversation) {
+    display:flex;
+    flex-direction:column;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    height:100%!important;
+    min-height:0!important;
+    flex:1 1 auto!important;
+  }
+  .sw-inbox-shell .sw-inbox-thread-list > .mt-3 {
+    min-height:0;
+    overflow-y:auto;
+    overflow-x:hidden;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    flex:1 1 auto;
+  }
+  .sw-inbox-shell .sw-inbox-thread-list {
+    overflow:hidden!important;
+  }
+  .sw-inbox-mobile-sources {
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    flex:0 0 auto;
+    gap:5px;
+    padding:4px;
+    border:1px solid var(--inbox-border);
+    border-radius:14px;
+    background:var(--inbox-glass);
+    backdrop-filter:blur(12px);
+  }
+  .sw-inbox-mobile-sources button {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    min-width:0;
+    min-height:49px;
+    padding:6px 2px;
+    color:#ecf6fd;
+    font-size:10px;
+    font-weight:800;
+    border-radius:10px;
+    line-height:1.15;
+  }
+  .sw-inbox-mobile-sources button[aria-pressed="true"] {
+    background:rgba(61,172,227,.25);
+    border:1px solid var(--inbox-border);
+  }
+  .sw-inbox-mobile-sources button svg {flex:none;color:var(--inbox-accent)}
+  .sw-inbox-inline-error {
+    flex:0 0 auto;
+    border:1px solid rgba(251,113,133,.6);
+    background:rgba(105,19,40,.45);
+    padding:10px;
+    border-radius:12px;
+    color:white;
+    font-size:12px;
+  }
+  .sw-inbox-inline-error button {
+    border:1px solid rgba(255,255,255,.5);
+    margin-left:8px;
+    border-radius:9px;
+    padding:5px 9px;
+  }
+  .sw-inbox-scope-note {
+    color:#c7d8e8;
+    font-size:11px;
+    line-height:1.45;
+    padding:2px 1px 7px;
+  }
+  .sw-inbox-shell[data-sw-inbox-view="conversation"] .sw-inbox-mobile-sources {display:none}
+  .sw-inbox-shell[data-sw-inbox-source="email"] .sw-inbox-workspace {display:none!important}
+  .sw-inbox-email-view {
+    display:flex;
+    flex:1 1 auto;
+    flex-direction:column;
+    min-height:0;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    border:1px solid var(--inbox-border);
+    border-radius:18px;
+    background:var(--inbox-glass);
+    backdrop-filter:blur(13px);
+  }
+  .sw-inbox-email-view > section {background:transparent!important;border:none!important;padding:14px}
+  .sw-inbox-shell[data-sw-inbox-source="email"] .sw-inbox-mobile-heading h1 {font-size:21px}
+  .sw-inbox-shell[data-sw-inbox-source="email"] .sw-inbox-mobile-heading h1::after {content:" · Email"}
+}
+@media (min-width:768px) {
+  .sw-inbox-mobile-sources,.sw-inbox-email-view {display:none!important}
+}
