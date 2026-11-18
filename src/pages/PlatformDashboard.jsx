@@ -4,7 +4,8 @@ import ModeBar from "../components/ModeBar";
 import api from "../api/client";
 import "./GodModeScene.css";
 
-import PlatformTabs from "../components/platform/PlatformTabs";
+import GodModeCockpit from "../components/platform/GodModeCockpit";
+import { X } from "lucide-react";
 import PlatformOverviewTab from "../components/platform/PlatformOverviewTab";
 import PlatformMobileDashboard from "../components/platform/PlatformMobileDashboard";
 import GodModeBuildBacklog from "../components/platform/GodModeBuildBacklog";
@@ -1469,28 +1470,31 @@ export default function PlatformDashboard() {
         />
       </div>
 
-      <main className="sw-god-workspace relative mx-auto w-full min-w-0 max-w-7xl space-y-4 px-3 pb-32 pt-3 sm:px-4 lg:space-y-5 lg:px-4 lg:py-6">
+      <main className="sw-god-workspace relative mx-auto w-full min-w-0 max-w-7xl px-3 pt-3 sm:px-4 lg:px-5 lg:pt-3">
         <PlatformMobileDashboard activeTab={tab} tabs={TABS} onChange={setTab} />
-        <div className="hidden lg:block"><PlatformTabs tabs={TABS} active={tab} onChange={setTab} /></div>
-
-        <div key={tab} className="sw-god-tab-stage">
-        {tab === "overview" ? <div className="hidden lg:block"><PlatformOverviewTab /></div> : null}
-        {tab === "__build_backlog" ? <div className="lg:hidden"><GodModeBuildBacklog /></div> : null}
-        {tab === "growth_os" ? <PlatformGrowthEngineTab /> : null}
-        {tab === "users" ? <UsersManager /> : null}
-        {tab === "businesses" ? <BusinessesManager /> : null}
-        {tab === "prospects" ? <GodModeProspects /> : null}
-         {tab === "testers" ? <GodModeProspects pilotOnly /> : null}
-         {tab === "pilot_readiness" ? <PilotReadinessPanel /> : null}
-        {tab === "billing" ? <BillingManager /> : null}
-        {tab === "requests" ? <SupportRequestsManager embedded /> : null}
-        {tab === "ads" ? <AdsOrdersManager /> : null}
-        {tab === "news" ? <NewsReelManager /> : null}
-        {tab === "broadcasts" ? <BroadcastsManager /> : null}
-        {tab === "affiliates" ? <GodModeAffiliates /> : null}
-        {tab === "health_launch_lock" ? <HealthLaunchLockPanel /> : null}
-        {tab === "health_smoke_test" ? <HealthSmokeTestPanel /> : null}
-        {tab === "developer_agent" ? <DeveloperAgentPanel /> : null}
+        <div className="hidden lg:block"><GodModeCockpit onOpen={setTab} /></div>
+        {tab !== "overview" && <div className="sw-god-drawer-backdrop hidden lg:block" onClick={() => setTab("overview")} aria-hidden="true" />}
+        <div key={tab} className={tab === "overview" ? "sw-god-tab-stage lg:hidden" : "sw-god-tab-stage sw-god-detail-drawer"} role={tab !== "overview" ? "dialog" : undefined} aria-modal={tab !== "overview" ? "true" : undefined} aria-label={tab !== "overview" ? (TABS.find(t=>t.id===tab)?.label || "Build Backlog") : undefined}>
+          {tab !== "overview" && <div className="sw-god-drawer-header hidden lg:flex"><div><p>SYNCWORKS / GOD MODE</p><h2>{TABS.find(t=>t.id===tab)?.label || "Build Backlog"}</h2></div><button type="button" onClick={() => setTab("overview")} aria-label="Close panel"><X size={21} /></button></div>}
+          <div className="sw-god-drawer-body">
+            {tab === "overview" ? <div className="hidden lg:block"><PlatformOverviewTab /></div> : null}
+            {tab === "__build_backlog" ? <GodModeBuildBacklog /> : null}
+            {tab === "growth_os" ? <PlatformGrowthEngineTab /> : null}
+            {tab === "users" ? <UsersManager /> : null}
+            {tab === "businesses" ? <BusinessesManager /> : null}
+            {tab === "prospects" ? <GodModeProspects /> : null}
+            {tab === "testers" ? <GodModeProspects pilotOnly /> : null}
+            {tab === "pilot_readiness" ? <PilotReadinessPanel /> : null}
+            {tab === "billing" ? <BillingManager /> : null}
+            {tab === "requests" ? <SupportRequestsManager embedded /> : null}
+            {tab === "ads" ? <AdsOrdersManager /> : null}
+            {tab === "news" ? <NewsReelManager /> : null}
+            {tab === "broadcasts" ? <BroadcastsManager /> : null}
+            {tab === "affiliates" ? <GodModeAffiliates /> : null}
+            {tab === "health_launch_lock" ? <HealthLaunchLockPanel /> : null}
+            {tab === "health_smoke_test" ? <HealthSmokeTestPanel /> : null}
+            {tab === "developer_agent" ? <DeveloperAgentPanel /> : null}
+          </div>
         </div>
       </main>
     </div>
