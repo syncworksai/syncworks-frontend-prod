@@ -96,14 +96,14 @@ export default function CustomerTasks() {
     setPendingId(id);
     try {
       if (remote) {
-        const nextStatus = changes.archived ? "ARCHIVED" : changes.done ? "DONE" : "OPEN";
+        const nextStatus = (changes.archived ?? remote.archived) ? "ARCHIVED" : (changes.done ?? remote.done) ? "DONE" : "OPEN";
         const payload = {
           ...(changes.title !== undefined ? { title: changes.title } : {}),
           metadata: {
             ...(remote.raw?.metadata || {}),
             entity_type: "TASK",
             task_status: nextStatus,
-            ...(changes.archived ? { task_archived_at: new Date().toISOString() } : { task_archived_at: null }),
+            ...(changes.archived === true ? { task_archived_at: new Date().toISOString() } : changes.archived === false ? { task_archived_at: null } : {}),
           },
         };
         const response = await api.patch(`/personal-calendar/events/${remote.remoteId}/`, payload);
