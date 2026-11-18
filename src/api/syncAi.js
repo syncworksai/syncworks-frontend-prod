@@ -110,7 +110,21 @@ export async function executeSyncTicketReply({ ticketId, body, workspace = "pers
   const response = await api.post("/sync-ai/actions/ticket-reply/execute/", { workspace: normalizedWorkspace, ticket_id: Number(ticketId), body: String(body || "").trim(), confirmed: confirmed === true }); return response?.data || {};
 }
 export async function getSyncVoiceStatus() { const response = await api.get("/sync-ai/voice/status/"); return response?.data || {}; }
-export async function synthesizeSyncSpeech(text) { const response = await api.post("/sync-ai/voice/synthesize/", { text: String(text || "").trim() }, { responseType: "blob" }); return response?.data; }
+// Server-authorized ElevenLabs roles; keys and provider voice IDs stay in backend.
+export const SYNC_VOICE_ROLES = Object.freeze({
+  sync: "sync",
+  forge: "forge",
+  femaleAssistant: "female_assistant",
+  health: "health",
+});
+export async function synthesizeSyncSpeech(text, role = SYNC_VOICE_ROLES.sync) {
+  if (!Object.values(SYNC_VOICE_ROLES).includes(role)) throw new Error("Unsupported voice role");
+  const response = await api.post("/sync-ai/voice/synthesize/", {
+    text: String(text || "").trim(),
+    role,
+  }, { responseType: "blob" });
+  return response?.data;
+}
 
 export function getSyncAiErrorMessage(error) {
   if (error?.code === "SYNC_BUSINESS_REQUIRED") return error.message;
