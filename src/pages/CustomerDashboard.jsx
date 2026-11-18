@@ -1,3 +1,4 @@
+import "../components/customer/OfficeAgendaV32.css";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Activity,
@@ -286,6 +287,22 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
               <button type="button" className="sw-office-briefing" onClick={()=>nav("/sync")}><Sparkles size={17}/> Get my SYNC briefing <ChevronRight size={16}/></button>
             </div>
             <div className="sw-office-briefing-text" aria-label="Current snapshot">{brief}</div>
+            <div className="sw-office-agenda" aria-label="Today's schedule">
+              <div className="sw-office-agenda-heading"><span><CalendarDays size={16}/> Today's schedule</span><button type="button" onClick={() => nav("/calendar")}>Full calendar <ChevronRight size={14}/></button></div>
+              {todayEvents.length ? (
+                <div className="sw-office-agenda-items">
+                  {[...todayEvents].sort((a,b) => new Date(a.start_at) - new Date(b.start_at)).slice(0,4).map((event) => {
+                    const business = String(event?.metadata?.event_category || (event?.metadata?.business_id ? "BUSINESS" : "PERSONAL")).toUpperCase() === "BUSINESS";
+                    return <button type="button" key={event.id} onClick={() => nav("/calendar")} className="sw-office-agenda-event">
+                      <span className="sw-office-agenda-time">{event.all_day ? "All day" : eventTime(event)}</span>
+                      <span className="sw-office-agenda-name">{event.title || "Untitled event"}</span>
+                      <span className={business ? "sw-office-agenda-tag business" : "sw-office-agenda-tag"}>{business ? (event?.metadata?.business_name || "Business") : "Personal"}</span>
+                    </button>;
+                  })}
+                  {todayEvents.length > 4 && <button type="button" className="sw-office-agenda-more" onClick={() => nav("/calendar")}>+{todayEvents.length - 4} more events</button>}
+                </div>
+              ) : <div className="sw-office-agenda-empty">No events today. <button type="button" onClick={() => nav("/calendar")}>Add an event</button></div>}
+            </div>
             <div className="sw-office-priorities">
               <button type="button" onClick={()=>nav("/customer/tasks")}><strong>Tasks</strong><span>Review what needs doing</span><ChevronRight size={16}/></button>
               <button type="button" onClick={()=>nav("/calendar")}><strong>Schedule</strong><span>{todayEvents.length ? `${todayEvents.length} event${todayEvents.length===1?"":"s"} today` : "Plan your day"}</span><ChevronRight size={16}/></button>
