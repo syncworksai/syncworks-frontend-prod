@@ -230,12 +230,18 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
     return start < dayEnd && end >= dayStart;
   }).sort((a,b) => new Date(a.start_at) - new Date(b.start_at)), [calendarEvents, todayKey]);
   const agendaEvents = useMemo(() => {
-    const result = [...todayEvents];
-    for (const event of upcomingEvents) {
+    // Always prioritize ongoing appointments and the next few days.
+    // Past appointments from earlier today cannot crowd out Friday's meeting.
+    const now = Date.now();
+    const current = todayEvents.filter(event => new Date(event.start_at).getTime() <= now && new Date(event.end_at || event.start_at).getTime() >= now);
+    const upcoming = upcomingEvents.filter(event => new Date(event.start_at).getTime() > now);
+    const pastToday = todayEvents.filter(event => new Date(event.end_at || event.start_at).getTime() < now);
+    const result = [];
+    for (const event of [...current, ...upcoming, ...pastToday]) {
       if (!result.some(row => String(row.id) === String(event.id))) result.push(event);
       if (result.length >= 6) break;
     }
-    return result.slice(0,6);
+    return result;
   }, [todayEvents, upcomingEvents]);
   const nextEvent = upcomingEvents[0] || null;
   const nextDestination = upcomingEvents.find((item) => eventLocation(item)) || null;
