@@ -1,0 +1,138 @@
+/* Full-viewport startup scene. Kept independent of dashboard themes. */
+.sw-startup {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  color: #f2f7ff;
+  background: radial-gradient(ellipse at 50% 47%, #0a1833 0%, #050b1c 45%, #020613 82%);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+.sw-startup__ambient {
+  position: absolute;
+  pointer-events: none;
+  width: min(70vw, 580px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(85px);
+  opacity: .21;
+}
+.sw-startup__ambient--cyan { background: #008dff; left: -26%; top: 6%; }
+.sw-startup__ambient--violet { background: #8527f7; right: -30%; bottom: 5%; }
+.sw-startup__grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .13;
+  background-image: linear-gradient(#3e8cbd30 1px, transparent 1px), linear-gradient(90deg,#3e8cbd30 1px,transparent 1px);
+  background-size: 45px 45px;
+  mask-image: radial-gradient(ellipse at center, black 5%, transparent 74%);
+}
+.sw-startup__center {
+  display: flex;
+  width: min(100% - 48px, 420px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transform: translateY(-3vh);
+}
+.sw-startup__emblem {
+  width: clamp(128px, 36vw, 176px);
+  aspect-ratio: 1;
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin-bottom: 30px;
+}
+.sw-startup__logo {
+  width: 66%;
+  height: 66%;
+  object-fit: contain;
+  border-radius: 27%;
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 0 24px #00bfff50);
+  animation: sw-startup-breathe 3.2s ease-in-out infinite;
+}
+.sw-startup__halo {
+  position: absolute;
+  inset: 4%;
+  border-radius: 50%;
+  border: 1px solid #4ccfff38;
+  box-shadow: 0 0 25px #00bfff16, inset 0 0 22px #3f7aff12;
+}
+.sw-startup__halo--outer { border-top: 2px solid #32e1ff; border-right: 2px solid #ae5cff; animation: sw-startup-rotate 8s linear infinite; }
+.sw-startup__halo--inner { inset: 15%; border-bottom: 1px solid #58c5ff99; border-left: 1px solid #bc6dff66; animation: sw-startup-rotate 10s linear infinite reverse; }
+.sw-startup__brand {
+  font-size: clamp(29px, 8vw, 41px);
+  font-weight: 850;
+  line-height: 1.08;
+  letter-spacing: .08em;
+  text-shadow: 0 0 24px #1388ff30;
+}
+.sw-startup__brand span { color: #5bd9ff; }
+.sw-startup__tagline {
+  margin: 13px 0 0;
+  color: #8fa5c4;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .28em;
+}
+.sw-startup__progress {
+  margin-top: 56px;
+  width: min(240px, 78vw);
+  height: 3px;
+  overflow: hidden;
+  border-radius: 50px;
+  background: #223047;
+}
+.sw-startup__progress span {
+  display: block;
+  width: 38%;
+  height: 100%;
+  background: linear-gradient(90deg,#139eff,#52eaff,#ba5eff);
+  border-radius: inherit;
+  box-shadow: 0 0 14px #47dbff;
+  animation: sw-startup-travel 1.9s ease-in-out infinite;
+}
+.sw-startup__status {
+  margin: 17px 0 0;
+  color: #b5c5dc;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .02em;
+}
+.sw-startup__recovery { margin-top: 20px; }
+.sw-startup__recovery p { margin: 0 0 12px; font-size: 12px; color: #8fa5c4; }
+.sw-startup__recovery button {
+  min-height: 44px;
+  border: 1px solid #43c9ff65;
+  border-radius: 14px;
+  padding: 10px 20px;
+  background: #0877bb26;
+  color: #d5f5ff;
+  font-weight: 650;
+  cursor: pointer;
+}
+.sw-startup__recovery button:disabled { opacity: .55; cursor: wait; }
+.sw-startup__footer {
+  position: absolute;
+  bottom: max(28px, env(safe-area-inset-bottom));
+  text-align: center;
+  color: #61738e;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: .24em;
+}
+@keyframes sw-startup-rotate { to { transform: rotate(360deg); } }
+@keyframes sw-startup-breathe { 50% { transform: scale(1.035); filter: drop-shadow(0 0 32px #18baff80); } }
+@keyframes sw-startup-travel { 0% { transform: translateX(-110%); } 100% { transform: translateX(285%); } }
+@media (prefers-reduced-motion: reduce) {
+  .sw-startup__halo, .sw-startup__logo, .sw-startup__progress span { animation: none; }
+  .sw-startup__progress span { width: 100%; }
+}
