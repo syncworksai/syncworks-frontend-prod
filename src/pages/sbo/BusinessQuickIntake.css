@@ -66,3 +66,13 @@
  .sw-intake-footnote{display:none}
 }
 [data-sw-business-theme="light"] .sw-intake-action-bar {background:rgba(245,250,252,.96)}
+
+/* Structural guarantee: primary actions are siblings of scrollable fields. */
+.sw-intake-primary{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.sw-intake-primary .sw-intake-fields{flex:1 1 0%;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(38,115,141,.55) transparent}
+.sw-intake-primary .sw-intake-action-bar{position:relative;bottom:auto;flex:0 0 auto;z-index:4;margin-top:auto}
+@media(max-width:767px){
+ .sw-intake-root .sw-intake-primary{overflow:hidden}
+ .sw-intake-root .sw-intake-primary .sw-intake-fields{overflow-y:auto;flex:1 1 0%;min-height:0}
+ .sw-intake-root .sw-intake-primary .sw-intake-action-bar{position:relative;bottom:auto}
+}
