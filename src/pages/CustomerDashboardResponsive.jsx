@@ -147,10 +147,25 @@ export default function CustomerDashboardResponsive() {
   const todayEvents = calendarEvents.filter(item => String(item?.metadata?.entity_type || "").toUpperCase() !== "TASK" && item?.start_at && new Date(item.start_at).toDateString() === new Date().toDateString());
   const overdueCount = dueInvoices.filter(item => ["OVERDUE", "PAST_DUE"].includes(String(item?.derived_state || item?.status || "").toUpperCase())).length;
   const weatherAlerts = Array.isArray(liveWeather?.alerts) ? liveWeather.alerts : [];
+  const calendarTasks = calendarEvents.filter(item => String(item?.metadata?.entity_type || "").toUpperCase() === "TASK" && String(item?.metadata?.task_status || "OPEN").toUpperCase() === "OPEN");
+  // Local-only legacy tasks are still visible to this browser until migrated.
+  let localTasks = [];
+  try {
+    const saved = JSON.parse(window.localStorage.getItem("syncworks.personal.tasks.v1") || "[]");
+    localTasks = Array.isArray(saved) ? saved.filter(item => !item.done && !item.archived) : [];
+  } catch { /* blocked storage */ }
+  const futureEvents = calendarEvents.filter(item => {
+    if (!item?.start_at || String(item?.metadata?.entity_type || "").toUpperCase() === "TASK") return false;
+    const time = new Date(item.start_at).getTime();
+    return time > Date.now() && time <= Date.now() + 7 * 86400000;
+  }).sort((a,b) => new Date(a.start_at) - new Date(b.start_at));
+  const nextAppointment = futureEvents[0];
   const notificationItems = [
-    ...(overdueCount ? [{ id: "overdue", label: `${overdueCount} overdue payment${overdueCount === 1 ? "" : "s"}`, route: "/customer/finance" }] : []),
-    ...(dueInvoices.length > overdueCount ? [{ id: "payments", label: `${dueInvoices.length - overdueCount} payment${dueInvoices.length - overdueCount === 1 ? "" : "s"} to review`, route: "/customer/finance" }] : []),
-    ...weatherAlerts.slice(0, 1).map((item) => ({ id: "weather-alert", label: String(item?.event || item?.headline || "Weather advisory"), route: "/customer/weather" })),
+    ...(overdueCount ? [{ id: "overdue", label: `${overdueCount} overdue payment${overdueCount === 1 ? "" : "s"}`, route: "/customer/finance", kind: "finance" }] : []),
+    ...(dueInvoices.length > overdueCount ? [{ id: "payments", label: `${dueInvoices.length - overdueCount} payment${dueInvoices.length - overdueCount === 1 ? "" : "s"} to review`, route: "/customer/finance", kind: "finance" }] : []),
+    ...weatherAlerts.slice(0, 1).map((item) => ({ id: "weather-alert", label: String(item?.event || item?.headline || "Weather advisory"), route: "/customer/weather", kind: "weather" })),
+    ...(calendarTasks.length || localTasks.length ? [{ id: "todo-open", label: `${calendarTasks.length + localTasks.length} open to-do${calendarTasks.length + localTasks.length === 1 ? "" : "s"}`, route: "/customer/tasks", kind: "todo" }] : []),
+    ...(nextAppointment ? [{ id: `upcoming-${nextAppointment.id}`, label: `${nextAppointment.title || "Appointment"} · ${new Date(nextAppointment.start_at).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}`, route: "/calendar", kind: "calendar" }] : []),
   ];
   const mobileBrief = [todayEvents.length ? `${todayEvents.length} event${todayEvents.length === 1 ? "" : "s"} scheduled today.` : "Your calendar is clear today.", overdueCount ? `${overdueCount} overdue payment${overdueCount === 1 ? "" : "s"} need attention.` : dueInvoices.length ? `${dueInvoices.length} payment item${dueInvoices.length === 1 ? "" : "s"} to review.` : "No urgent payment alerts.", openTickets.length ? `${openTickets.length} active service request${openTickets.length === 1 ? "" : "s"}.` : ""].filter(Boolean).join(" ");
 
@@ -171,7 +186,8 @@ export default function CustomerDashboardResponsive() {
         name={firstName(user)}
         theme={workspaceAppearance.theme}
         brief={mobileBrief}
-        attentionCount={overdueCount}
+        attentionCount={notificationItems.length}
+        attentionUserKey={String(user?.id || user?.email || "local") }
         todayEvents={todayEvents.length}
         calendarEvents={calendarEvents}
         openTickets={openTickets.length}
