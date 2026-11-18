@@ -88,6 +88,7 @@ export default function CustomerForge(){
   const [audioState,setAudioState]=useState("idle");
   const [audioStatus,setAudioStatus]=useState("");
   const [voiceType,setVoiceType]=useState("natural");
+  const [forgeVoice,setForgeVoice]=useState(()=>{try{return localStorage.getItem("sw-forge-narrator")||"tucker";}catch{return "tucker";}});
   const [audioError,setAudioError]=useState("");
   const [breathing,setBreathing]=useState(false);
   const [breathSeconds,setBreathSeconds]=useState(0);
@@ -211,7 +212,7 @@ export default function CustomerForge(){
     for(let i=0;i<parts.length;i++){
       if(token!==playId.current)return;
       const controller=new AbortController();abortRef.current=controller;
-      const response=await api.post("/customer-health/forge/voice/speak/",{text:parts[i],energy:"calm"},{responseType:"blob",signal:controller.signal,timeout:30000});
+      const response=await api.post("/customer-health/forge/voice/speak/",{text:parts[i],energy:"calm",voice_key:forgeVoice},{responseType:"blob",signal:controller.signal,timeout:30000});
       if(token!==playId.current)return;
       const url=URL.createObjectURL(response.data);audioUrl.current=url;
       const player=new Audio(url);audioEl.current=player;
@@ -235,6 +236,14 @@ export default function CustomerForge(){
       setAudioError("Natural narration was unavailable. Device speech may not connect reliably to Bluetooth or vehicle audio.");
       setAudioStatus("Choose Device voice to listen through this browser.");
     }
+  }
+  function selectForgeNarrator(value){
+    stopAudio();setForgeVoice(value);
+    try{localStorage.setItem("sw-forge-narrator",value);}catch{/* optional */}
+  }
+  function previewForgeNarrator(){
+    const line="Welcome to The Forge. Discipline is not punishment. It is the quiet practice of keeping promises to yourself. Breathe. Consider what is within your control. Then take the next good step.";
+    startAudio(line);
   }
   function toggleAudio(){
     if(audioState==="paused"){
