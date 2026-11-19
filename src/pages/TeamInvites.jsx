@@ -129,6 +129,7 @@ function makeEditState(member) {
 
 export default function TeamInvites() {
   const [activeBusinessId, setActiveBusinessId] = useState(getActiveBusinessId());
+  const [isVerifiedOwner, setIsVerifiedOwner] = useState(false);
 
   const [members, setMembers] = useState([]);
   const [invites, setInvites] = useState([]);
@@ -171,6 +172,20 @@ export default function TeamInvites() {
     window.addEventListener("sw:activeBusinessChanged", handleBusinessChanged);
     return () => window.removeEventListener("sw:activeBusinessChanged", handleBusinessChanged);
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    setIsVerifiedOwner(false);
+    if (!activeBusinessId) return () => { mounted = false; };
+    api.get("/businesses/access-contexts/").then(({data}) => {
+      if (!mounted) return;
+      const entry = (data?.businesses || []).find(item => String(item.business_id) === String(activeBusinessId));
+      setIsVerifiedOwner(entry?.can_access_ceo === true);
+    }).catch(() => {if (mounted) setIsVerifiedOwner(false);});
+    return () => {mounted = false;};
+  }, [activeBusinessId]);
+
+  const assignableRoles = isVerifiedOwner ? ROLE_OPTIONS : ROLE_OPTIONS.filter(([value]) => !["HR","MANAGER"].includes(value));
 
   async function loadMembers() {
     if (!activeBusinessId) {
@@ -362,7 +377,7 @@ export default function TeamInvites() {
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       {PERMS.map(([key, label]) => (
         <label key={key} className="flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/35 px-2 py-2 text-xs text-slate-200">
-          <input type="checkbox" checked={!!state?.[key]} onChange={() => change(key)} className="accent-cyan-400" />
+          <input type="checkbox" checked={!!state?.[key]} disabled={!isVerifiedOwner && ["can_manage_team","can_manage_settings","can_view_financials","can_manage_invoices","can_manage_connections","can_manage_properties"].includes(key)} onChange={() => change(key)} className="accent-cyan-400 disabled:opacity-40" />
           <span>{label}</span>
         </label>
       ))}
@@ -384,7 +399,7 @@ export default function TeamInvites() {
           <form className="flex flex-col gap-2" onSubmit={(e) => {e.preventDefault();createInvite();}}>
             <label className="text-xs text-slate-400" htmlFor="team-invite-email">Employee email</label>
             <input id="team-invite-email" type="email" required className={fieldClass} placeholder="employee@example.com" value={email} onChange={(e) => setEmail(e.target.value)}/>
-            <div className="flex gap-2"><select className={fieldClass} aria-label="Employee role" value={role} onChange={(e) => setRole(e.target.value)}>{ROLE_OPTIONS.map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select>
+            <div className="flex gap-2"><select className={fieldClass} aria-label="Employee role" value={role} onChange={(e) => setRole(e.target.value)}>{assignableRoles.map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select>
             <button type="submit" disabled={inviteBusy || !activeBusinessId} className={buttonClass + " shrink-0 disabled:opacity-40"}>{inviteBusy ? "Creating…" : "Create Invite"}</button></div>
           </form>
           <button type="button" aria-expanded={inviteSettingsOpen} onClick={() => setInviteSettingsOpen((v) => !v)} className="mt-3 flex w-full items-center justify-between rounded-xl border border-slate-700/60 px-3 py-2 text-left text-sm text-slate-200"><span>Invite permissions <span className="text-xs text-slate-400">({permCount(perms)} enabled)</span></span><span>{inviteSettingsOpen ? "Hide −" : "Customize +"}</span></button>
@@ -406,7 +421,7 @@ export default function TeamInvites() {
               <div className="flex shrink-0 flex-wrap items-center justify-end gap-1"><Badge tone="fuchsia">{roleLabel(member.role)}</Badge><Badge tone={member.is_active ? "emerald":"rose"}>{member.is_active ? "Active":"Inactive"}</Badge>{member.role !== "OWNER" && <button className={buttonClass} onClick={() => isEditing ? cancelEdit() : beginEdit(member)}>{isEditing ? "Close" : "Edit"}</button>}</div></div>
               {!isEditing && <div className="mt-2 text-[11px] text-slate-400">{permCount(member)} of {PERMS.length} permissions · {member?.user_id ? `User #${member.user_id}` : `Membership #${member.id}`}</div>}
               {isEditing && <div className="mt-3 space-y-3 border-t border-slate-700/70 pt-3">
-                <div className="grid grid-cols-2 gap-2"><label className="text-xs text-slate-400">Role<select value={editState?.role || "TECHNICIAN"} onChange={(e) => setEditState((p) => ({...p, role:e.target.value}))} className={fieldClass + " mt-1"}>{ROLE_OPTIONS.map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+                <div className="grid grid-cols-2 gap-2"><label className="text-xs text-slate-400">Role<select value={editState?.role || "TECHNICIAN"} onChange={(e) => setEditState((p) => ({...p, role:e.target.value}))} className={fieldClass + " mt-1"}>{assignableRoles.map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select></label>
                 <label className="flex items-center gap-2 self-end rounded-xl border border-slate-700/60 p-2 text-xs"><input type="checkbox" checked={!!editState?.is_active} onChange={(e) => setEditState((p) => ({...p, is_active:e.target.checked}))}/>Active account</label></div>
                 <div><h4 className="mb-2 text-xs font-semibold text-slate-300">Access permissions</h4>{permissionGrid(editState, toggleEditPerm)}</div>
                 <div className="flex justify-end gap-2"><button onClick={cancelEdit} className={buttonClass}>Cancel</button><button onClick={() => saveMember(member.id)} disabled={saveBusyId === member.id} className={buttonClass}>{saveBusyId === member.id ? "Saving…" : "Save Changes"}</button></div>
