@@ -45,7 +45,7 @@ export default function SyncAssistDaily() {
     <div className="mx-auto max-w-3xl">
       <header className="mb-4 flex items-center justify-between gap-2">
         <button type="button" onClick={()=>navigate("/sync/assist")} className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-700 px-3 text-sm"><ArrowLeft size={17}/> SYNC Assist</button>
-        <div className="text-right"><div className="text-xs font-black uppercase tracking-[.18em] text-cyan-300">Jarvis Daily</div><div className="text-xs text-slate-400">{data?.date || "Your command center"}</div></div>
+        <div className="text-right"><div className="text-xs font-black uppercase tracking-[.18em] text-cyan-300">Daily Briefing</div><div className="text-xs text-slate-400">{data?.date || "Your command center"}</div></div>
       </header>
       <section className="rounded-3xl border border-cyan-400/30 bg-gradient-to-br from-[#06263a] to-[#180e35] p-5">
         <h1 className="text-2xl font-black">Good to see you. Here's today.</h1>
@@ -73,10 +73,10 @@ export default function SyncAssistDaily() {
       </form>}
 
       <button type="button" onClick={()=>navigate("/sync/assist/chief")} className="mt-4 flex min-h-14 w-full items-center justify-between rounded-2xl border border-purple-400/30 bg-gradient-to-r from-purple-500/15 to-cyan-500/15 p-4 text-left font-black text-cyan-100"><span>Chief of Staff briefing<span className="block text-xs font-normal text-slate-400">Priorities · Unresolved issues · Business & property snapshot</span></span><span aria-hidden="true">→</span></button>
-      <button type="button" onClick={()=>navigate("/sync/assist/email")} className="mt-4 flex min-h-14 w-full items-center justify-between rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/15 to-violet-600/15 p-4 text-left font-black text-cyan-100"><span>Jarvis Mail Desk<span className="block text-xs font-normal text-slate-400">Connect Outlook · Read inbox · Draft · Send with approval</span></span><span aria-hidden="true">→</span></button>
+      <button type="button" onClick={()=>navigate("/sync/assist/email")} className="mt-4 flex min-h-14 w-full items-center justify-between rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/15 to-violet-600/15 p-4 text-left font-black text-cyan-100"><span>SYNC Mail Desk<span className="block text-xs font-normal text-slate-400">Connect Outlook · Read inbox · Draft · Send with approval</span></span><span aria-hidden="true">→</span></button>
       <section className="mt-4 rounded-2xl border border-amber-400/20 bg-slate-900/50 p-3">
-        <div className="flex items-center gap-2 text-sm font-bold text-amber-200"><Mail size={18}/> {outlookStatus?.connected ? "Outlook connected to Jarvis Mail Desk" : outlookStatus?.configured ? "Outlook ready to connect" : "Outlook not linked inside SyncWorks"}</div>
-        <p className="mt-1 text-xs leading-5 text-slate-400">{outlookStatus?.connected ? "Outlook can be viewed on demand in Mail Desk. Automated daily email classification and scheduled brief delivery are not enabled yet." : "Outlook is available in ChatGPT, but the app needs its own authorized Microsoft connection before Jarvis can read your mailbox. Email and automatic brief delivery are not active here."}</p>
+        <div className="flex items-center gap-2 text-sm font-bold text-amber-200"><Mail size={18}/> {outlookStatus?.connected ? "Outlook connected to SYNC Mail Desk" : outlookStatus?.configured ? "Outlook ready to connect" : "Outlook not linked inside SyncWorks"}</div>
+        <p className="mt-1 text-xs leading-5 text-slate-400">{outlookStatus?.connected ? "Outlook can be viewed on demand in Mail Desk. Automated daily email classification and scheduled brief delivery are not enabled yet." : "Outlook is available in ChatGPT, but the app needs its own authorized Microsoft connection before SYNC Assist can read your mailbox. Email and automatic brief delivery are not active here."}</p>
       </section>
 
       {data && data.summary.open===0 && <section className="mt-4 rounded-2xl border border-cyan-400/25 bg-[#0a1830] p-4">
