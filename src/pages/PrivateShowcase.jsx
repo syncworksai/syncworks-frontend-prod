@@ -33,7 +33,7 @@ export default function PrivateShowcase(){
  const [section,setSection]=useState(()=>{const t=new URLSearchParams(window.location.search).get("tab");return sections.some(x=>x[0]===t)?t:"overview";});
  const [drawer,setDrawer]=useState(null);
  const [selectedBot,setSelectedBot]=useState("Victoria");
- const [railExpanded,setRailExpanded]=useState(false);
+ const [overviewFocus,setOverviewFocus]=useState("dispatch");
  const [filter,setFilter]=useState("");
  const [jobs,setJobs]=useState(readJobs);
  const [activity,setActivity]=useState([]);
@@ -42,7 +42,7 @@ export default function PrivateShowcase(){
  const [activeReport,setActiveReport]=useState("Job & Dispatch Report");
  const kpi=useMemo(()=>summarize(jobs,demoInvoices),[jobs]);
  const roster=useMemo(()=>rosterSnapshot(jobs,hr.state.clockEvents),[jobs,hr.state.clockEvents]);
- const showSection=s=>{setSection(s);setRailExpanded(false);setDrawer(null);setFilter("");const u=new URL(window.location.href);u.searchParams.set("tab",s);window.history.replaceState(null,"",u.pathname+u.search);};
+ const showSection=s=>{setSection(s);setDrawer(null);setFilter("");const u=new URL(window.location.href);u.searchParams.set("tab",s);window.history.replaceState(null,"",u.pathname+u.search);};
  const updateJob=(jobId,next)=>{setJobs(old=>{const updated=old.map(j=>j.id===jobId?{...j,status:next}:j);try{localStorage.setItem(STORAGE,JSON.stringify(updated));}catch{/* in-memory works */}return updated;});setActivity(a=>[{jobId,next,date:new Date().toLocaleTimeString()},...a].slice(0,12));setNotice(jobId+" moved to "+rawStatus(next)+" in this private simulation.");setDrawer(null);};
  const reset=()=>{try{localStorage.removeItem(STORAGE)}catch{/* in memory */}hr.reset();setJobs(demoJobs);setActivity([]);setNotice("Sterling presentation restored. No live data was changed.");setDrawer(null);};
  const open=(kind,data)=>setDrawer({kind,data});
@@ -75,7 +75,7 @@ export default function PrivateShowcase(){
      <nav>{sections.filter(([id])=>["overview","tickets","dispatch","team","hr","schedule","finance"].includes(id)).map(([id,label,Icon])=><button type="button" key={id} className={section===id?"is-current":""} onClick={()=>showSection(id)}><Icon size={17}/><span>{label}</span></button>)}<button type="button" className={["leads","property","ceo","reports","ai"].includes(section)?"is-current":""} onClick={()=>open("workspaces")}><LayoutDashboard size={17}/><span>More workspaces</span><ChevronRight size={14}/></button></nav>
      <div className="sterling-sidebar-bottom"><ShieldCheck size={16}/> Private presentation data <button type="button" onClick={()=>open("reset")}>Reset demo</button></div>
     </aside>
-    <div className="sterling-main">
+    <div className={"sterling-main "+(section==="overview"?"sterling-main--overview":"")} data-focus={overviewFocus}>
      <div className="sterling-section-top"><div><span className="sterling-eyebrow">{section==="overview"?"TODAY AT A GLANCE":"STERLING OPERATIONS"}</span><h2>{section==="overview"?"Business overview":panelTitle}</h2></div><div className="sterling-section-actions"><Chip tone="good">Operating · Demo</Chip><button type="button" onClick={()=>open("briefing")} aria-label="Open briefing"><Bell size={16}/><span>Needs attention</span></button></div></div>
      {section==="overview" && <>
       <div className="sterling-stats">
@@ -84,6 +84,7 @@ export default function PrivateShowcase(){
        <Tile title="Open work orders" value={kpi.active} detail="Across all crews" onClick={()=>showSection("tickets")}/>
        <Tile title="Outstanding" value={money(kpi.outstanding)} detail="Invoices requiring collection" onClick={()=>showSection("finance")}/>
       </div>
+      <nav className="sterling-overview-pager" aria-label="Overview panels">{[["dispatch","Dispatch"],["team","Technicians"],["attention","Attention"],["schedule","Schedule"],["pulse","CEO pulse"]].map(([id,label])=><button type="button" key={id} aria-pressed={overviewFocus===id} onClick={()=>setOverviewFocus(id)}>{label}</button>)}</nav>
       <div className="sterling-grid-two">
        <Card title="Today's dispatch" action={<button onClick={()=>showSection("dispatch")}>Open board <ChevronRight size={15}/></button>}>{jobRows(jobs.filter(j=>j.dayOffset===0),5)}</Card>
        <Card title="Technician status" action={<button onClick={()=>showSection("hr")}>HR & idle techs <ChevronRight size={15}/></button>}><div className="sterling-rows">{demoPeople.slice(0,6).map(t=><Row key={t.id} onClick={()=>open("person",t)}><span className="sterling-row-main"><strong>{t.name}</strong><small>{t.trade} · Avg travel {t.travel} min</small></span><Chip tone={t.status==="Available"?"good":"info"}>{t.status}</Chip></Row>)}</div></Card>
