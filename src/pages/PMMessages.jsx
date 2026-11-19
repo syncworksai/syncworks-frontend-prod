@@ -57,6 +57,7 @@ export default function PMMessages() {
       const rows = list(messageRes.data);
       setThreads(rows);
       setSelected((current) => rows.find((item) => item.id === current?.id) || rows[0] || null);
+      setLoading(false); // message list is ready; related records may still load
       const extras = await Promise.allSettled([
         api.get("/pm-hub/tenants/", { headers, timeout: 12000 }),
         api.get("/pm-hub/properties/", { headers, timeout: 12000 }),
