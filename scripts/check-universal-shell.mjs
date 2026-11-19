@@ -96,3 +96,15 @@ test("PM Messages uses anchored panels without blocking thread loading on relate
   assert.match(css, /data-sw-pm-chat="open"/);
   assert.match(css, /overflow-y:auto/);
 });
+
+
+test("PM Messages has only one mobile header and Business Inbox remains reachable for employee users", () => {
+  const shell = readFileSync(new URL("../src/components/pm/PMShell.jsx", import.meta.url), "utf8");
+  const sources = readFileSync(new URL("../src/components/messages/MessageSourceTabs.jsx", import.meta.url), "utf8");
+  const inbox = readFileSync(new URL("../src/pages/InboxPage.jsx", import.meta.url), "utf8");
+  assert.match(shell, /const isMessagesView = pathname === "\/pm\/settings" && view === "messages"/);
+  assert.match(shell, /\{!isMessagesView \? <section/);
+  assert.match(sources, /"SBO" \? "\/sbo\/inbox" : "\/employee\/inbox"/);
+  assert.match(inbox, /sw-inbox-business-selector/);
+  assert.match(inbox, /<BusinessPicker compact \/>/);
+});
