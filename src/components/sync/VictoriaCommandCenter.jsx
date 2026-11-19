@@ -1,7 +1,8 @@
-import React,{useCallback,useEffect,useMemo,useState} from "react";
+import React,{useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {ArrowRight,CalendarDays,CheckCircle2,Clock3,CloudSun,Dumbbell,ExternalLink,LoaderCircle,MessageCircle,RefreshCw,Sun,Sunset,WalletCards,X} from "lucide-react";
 import {useNavigate} from "react-router-dom";
 import {getSyncAssistantDailyState} from "../../api/jarvisProduct";
+import {synthesizeSyncSpeech,SYNC_VOICE_ROLES} from "../../api/syncAi";
 import "./VictoriaCommandCenter.css";
 
 const QUESTIONS={
@@ -20,6 +21,10 @@ export default function VictoriaCommandCenter({open,onClose}){
  const [state,setState]=useState(null),[loading,setLoading]=useState(false),[error,setError]=useState("");
  const [horizon,setHorizon]=useState("day");
  const [checkIn,setCheckIn]=useState("morning");
+ const audio=useRef(null),audioUrl=useRef(null);
+ const [speaking,setSpeaking]=useState(false),[voiceBusy,setVoiceBusy]=useState(false),[voiceNotice,setVoiceNotice]=useState("");
+ const stopSpeaking=useCallback(()=>{audio.current?.pause();audio.current=null;if(audioUrl.current)URL.revokeObjectURL(audioUrl.current);audioUrl.current=null;setSpeaking(false);setVoiceBusy(false);},[]);
+ useEffect(()=>()=>{audio.current?.pause();if(audioUrl.current)URL.revokeObjectURL(audioUrl.current);},[]);
  const reload=useCallback(async()=>{setLoading(true);setError("");try{setState(await getSyncAssistantDailyState());}catch{setError("Connected records could not be loaded. The planning conversation is still available.");}finally{setLoading(false);}},[]);
  useEffect(()=>{if(open)reload();},[open,reload]);
  useEffect(()=>{if(!open)return;const esc=e=>{if(e.key==="Escape")onClose();};window.addEventListener("keydown",esc);return()=>window.removeEventListener("keydown",esc);},[open,onClose]);
@@ -33,7 +38,30 @@ export default function VictoriaCommandCenter({open,onClose}){
  const weather=state?.weather||{};
  const tasks=state?.tasks||{};
  const plans=useMemo(()=>({day:QUESTIONS.day,week:QUESTIONS.week,month:QUESTIONS.month}),[]);
- const ask=(prompt)=>{onClose();navigate("/sync",{state:{victoriaPrompt:prompt}});};
+ const ask=(prompt)=>{stopSpeaking();onClose();navigate("/sync",{state:{victoriaPrompt:prompt}});};
+ async function hearSnapshot(){
+   if(speaking||voiceBusy){stopSpeaking();return;}
+   if(!state){setVoiceNotice("Refresh connected records first.");return;}
+   const next=events[0];
+   const spoken=[
+    "Good morning. I am Victoria, your Chief of Staff.",
+    next?`Your next calendar item is ${next.title||"an event"} at ${timeLabel(next.start_at)}.`:"No calendar events were returned for today.",
+    attention.length?`${attention.length} items may need attention.`:"No urgent alerts were returned in the current snapshot.",
+    health.available?(today.workout_completed?"Your workout is marked complete.":workout?`Your planned workout is ${workout}.`:"No workout plan was returned."):"Health data is not available.",
+    due.length?`${due.length} financial items are due in the next seven days.`:"Upcoming payment information could not be verified.",
+    "Tell me what you want to accomplish, and I will help plan the next steps."
+   ].join(" ");
+   setVoiceBusy(true);setVoiceNotice("");
+   try{
+    const blob=await synthesizeSyncSpeech(spoken,SYNC_VOICE_ROLES.femaleAssistant);
+    const url=URL.createObjectURL(blob);audioUrl.current=url;
+    const player=new Audio(url);audio.current=player;
+    player.onended=stopSpeaking;
+    player.onerror=()=>{stopSpeaking();setVoiceNotice("Audio unavailable. The written snapshot is below.");};
+    await player.play();setSpeaking(true);
+   }catch{stopSpeaking();setVoiceNotice("Audio unavailable. Read the snapshot or use SYNC chat.");}
+   finally{setVoiceBusy(false);}
+ }
  if(!open)return null;
  return <div className="victoria-command-overlay" onMouseDown={e=>{if(e.currentTarget===e.target)onClose();}}>
   <section role="dialog" aria-modal="true" aria-label="Victoria daily command center" className="victoria-command-panel">
@@ -52,6 +80,8 @@ export default function VictoriaCommandCenter({open,onClose}){
      <p>I'll use the information SyncWorks has, ask about what's missing, and help you decide what to handle or delegate.</p>
      <button type="button" onClick={()=>ask(plans[horizon])}><MessageCircle size={16}/> Plan my {horizon==="day"?"day":horizon} with Victoria <ArrowRight size={16}/></button>
     </div>
+    <button type="button" className="victoria-hear" aria-busy={voiceBusy} onClick={hearSnapshot}>{speaking||voiceBusy?"Stop audio":"Hear current snapshot"}</button>
+    {voiceNotice&&<p role="status" className="victoria-error">{voiceNotice}</p>}
     <div className="victoria-checkins"><p className="victoria-eyebrow">CHECK-INS THROUGHOUT YOUR DAY</p><div>{[["morning","Morning",Sun],["midday","Midday",Clock3],["evening","Evening",Sunset]].map(([key,label,Icon])=><button type="button" key={key} aria-pressed={checkIn===key} onClick={()=>setCheckIn(key)}><Icon size={16}/>{label}</button>)}</div><button type="button" className="victoria-checkin-start" onClick={()=>ask(QUESTIONS[checkIn])}>Start {checkIn} briefing <ArrowRight size={15}/></button></div>
     <section className="victoria-records">
       <div className="victoria-record-title"><strong>Connected snapshot</strong><span>{loading?<LoaderCircle size={15} className="animate-spin"/>:"Live when refreshed"}</span></div>
