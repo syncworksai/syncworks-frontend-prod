@@ -1170,6 +1170,7 @@ export default function SboSettings() {
           {section === "card" ? (
             <BusinessDigitalCardPreview
               businessId={resolvedBusinessId}
+              businessCardCode={business?.business_card_code || ""}
               name={name}
               logoUrl={currentLogoUrl}
               headline={headline}
