@@ -5,6 +5,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { AVATARS, getAvatarPhotoForUser } from "./JarvisAvatar";
 import api from "../../api/client";
 import SyncAlertDrawer from "./SyncAlertDrawer";
+import VictoriaCommandCenter from "./VictoriaCommandCenter";
 
 const HIDDEN_PREFIXES = [
   "/login",
@@ -23,6 +24,7 @@ export default function SyncAssistantLauncher() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [chiefOpen, setChiefOpen] = useState(false);
+  const [commandOpen,setCommandOpen]=useState(false);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   useEffect(() => {
     const onDialog = (event) => {
@@ -41,7 +43,7 @@ export default function SyncAssistantLauncher() {
     unread: 0, pending: 0, running: 0, completed: 0, receipts: [],
     available: false,
   });
-  const showChief = (location.pathname === "/sync/assist" || location.pathname === "/platform") && String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com";
+  const showChief = ["/customer","/sync/assist","/platform"].includes(location.pathname) && String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com";
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [unread, setUnread] = useState(0);
 
@@ -175,6 +177,8 @@ export default function SyncAssistantLauncher() {
                     </div>
                   ))}
                 </div>
+                <button type="button" onClick={() => { setChiefOpen(false); navigate("/sync",{state:{victoriaPrompt:"Victoria, give me my morning briefing based on verified connected records. Check calendar, tasks, health, businesses, money, and only connected email. Ask me what I need to focus on and help me create a realistic plan with delegation and approvals."}}); }} className="mb-2 flex min-h-11 w-full items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 text-left text-xs font-bold text-white"><Clock3 size={16}/> Morning briefing</button>
+                <button type="button" onClick={() => { setChiefOpen(false);setCommandOpen(true); }} className="mb-2 flex min-h-11 w-full items-center gap-2 rounded-xl border border-cyan-400/50 bg-cyan-400/15 px-3 text-left text-xs font-bold text-white"><Clock3 size={16}/> Plan my day, week, or month</button>
                 <button type="button" onClick={() => { setChiefOpen(false); navigate("/sync/assist/chief"); }} className="mb-2 flex min-h-11 w-full items-center gap-2 rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-3 text-left text-xs font-bold text-cyan-100 hover:bg-cyan-400/20">
                   <UserRound size={16} /> Open Chief of Staff
                 </button>
@@ -207,6 +211,7 @@ export default function SyncAssistantLauncher() {
 
 
       </div>
+      {showChief && <VictoriaCommandCenter open={commandOpen} onClose={()=>setCommandOpen(false)}/>}
       <SyncAlertDrawer open={alertsOpen} onClose={() => { setAlertsOpen(false); loadUnread(); }} onCountChange={setUnread} />
     </>
   );
