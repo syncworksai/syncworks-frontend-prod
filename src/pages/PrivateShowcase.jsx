@@ -6,8 +6,9 @@ import { Activity, ArrowLeft, ArrowRight, BarChart3, Bell, BriefcaseBusiness, Bu
 import { demoPeople, demoCustomers, demoJobs, demoProperties, demoLeads, demoInvoices, money, statusSteps, summarize } from "./sterlingDemoData";
 import "./PrivateSterlingWorkspace.css";
 import "./PrivateSterlingOneScreen.css";
+import "./SterlingSboParity.css";
 import {useSterlingHR,WorkforceDemo,ExecutiveBotsDemo,rosterSnapshot} from "./SterlingWorkforceDemo";
-import {AVATARS,getAvatarPhotoForUser} from "../components/sync/JarvisAvatar";
+import SterlingSboOverview from "./SterlingSboOverview";
 import "./SterlingWorkforceDemo.css";
 
 const PILOT_EMAIL="jacoblord7@outlook.com";
@@ -65,38 +66,20 @@ export default function PrivateShowcase(){
  const jobRows=(rows,max=8)=><div className="sterling-rows">{rows.slice(0,max).map(j=><Row key={j.id} onClick={()=>openJob(j)}><span className="sterling-row-main"><strong>{j.id} · {j.customer}</strong><small>{j.service} · {demoPeople.find(p=>p.id===j.technicianId)?.name}</small></span><Chip tone={["PAID","COMPLETED"].includes(j.status)?"good":j.priority==="P1"?"urgent":"info"}>{rawStatus(j.status)}</Chip></Row>)}{rows.length===0&&<Empty/>}</div>;
  const statusOptions=["NEW","ASSIGNED","ACCEPTED","SCHEDULED","EN_ROUTE","ON_SITE","IN_PROGRESS","NEEDS_QUOTE","QUOTED","APPROVED","COMPLETED","INVOICED","PAID"];
  return <main className="sterling-workspace" data-theme={appearance.theme} data-motion={appearance.motion?"on":"off"} aria-label="Private Sterling business simulator">
-  <div className="sterling-workspace-inner">
-   <header className="sterling-heading">
+  <div className={"sterling-workspace-inner "+(section==="overview"?"sterling-sbo-mode":"")}>
+   {section!=="overview" && <header className="sterling-heading">
     <div><span className="sterling-eyebrow">SYNCWORKS BUSINESS OS <Chip tone="private">PRIVATE SHOWCASE · SIMULATED</Chip></span><h1>Sterling Property Services <small>Business Command Center</small></h1></div>
     <div className="sterling-heading-actions"><button type="button" onClick={()=>open("briefing")}><Sparkles size={17}/> Victoria's Briefing</button><Link to="/customer"><ArrowLeft size={16}/> My Dashboard</Link></div>
-   </header>
-   <div className="sterling-workspace-content">
+   </header>}
+   <div className={"sterling-workspace-content "+(section==="overview"?"sterling-workspace-content--office":"")}>
     <aside className="sterling-sidebar" aria-label="Sterling navigation">
      <div className="sterling-sidebar-title"><BriefcaseBusiness size={18}/> <span>STERLING GROUP</span></div>
      <nav>{sections.filter(([id])=>["overview","tickets","dispatch","team","hr","schedule","finance"].includes(id)).map(([id,label,Icon])=><button type="button" key={id} className={section===id?"is-current":""} onClick={()=>showSection(id)}><Icon size={17}/><span>{label}</span></button>)}<button type="button" className={["leads","property","ceo","reports","ai"].includes(section)?"is-current":""} onClick={()=>open("workspaces")}><LayoutDashboard size={17}/><span>More workspaces</span><ChevronRight size={14}/></button></nav>
      <div className="sterling-sidebar-bottom"><ShieldCheck size={16}/> Private presentation data <button type="button" onClick={()=>open("reset")}>Reset demo</button></div>
     </aside>
-    <div className={"sterling-main "+(section==="overview"?"sterling-main--overview":"")} data-focus={overviewFocus}>
+    {section==="overview" && <SterlingSboOverview jobs={jobs} kpi={kpi} roster={roster} user={user} onSection={showSection} onOpen={open} onBot={openBot} onReset={reset}/>} 
+    {section!=="overview" && <div className="sterling-main" data-focus={overviewFocus}>
      <div className="sterling-section-top"><div><span className="sterling-eyebrow">{section==="overview"?"TODAY AT A GLANCE":"STERLING OPERATIONS"}</span><h2>{section==="overview"?"Business overview":panelTitle}</h2></div><div className="sterling-section-actions"><Chip tone="good">Operating · Demo</Chip><button type="button" onClick={()=>open("briefing")} aria-label="Open briefing"><Bell size={16}/><span>Needs attention</span></button></div></div>
-     {section==="overview" && <>
-      <div className="sterling-stats">
-       <Tile title="Invoiced revenue" value={money(kpi.invoiced)} detail="36 simulated invoices" onClick={()=>showSection("finance")}/>
-       <Tile title="Cash collected" value={money(kpi.collected)} detail="Recorded example payments" onClick={()=>showSection("finance")}/>
-       <Tile title="Open work orders" value={kpi.active} detail="Across all crews" onClick={()=>showSection("tickets")}/>
-       <Tile title="Outstanding" value={money(kpi.outstanding)} detail="Invoices requiring collection" onClick={()=>showSection("finance")}/>
-      </div>
-      <nav className="sterling-overview-pager" aria-label="Overview panels">{[["dispatch","Dispatch"],["team","Technicians"],["attention","Attention"],["schedule","Schedule"],["pulse","CEO pulse"]].map(([id,label])=><button type="button" key={id} aria-pressed={overviewFocus===id} onClick={()=>setOverviewFocus(id)}>{label}</button>)}</nav>
-      <div className="sterling-grid-two">
-       <Card title="Today's dispatch" action={<button onClick={()=>showSection("dispatch")}>Open board <ChevronRight size={15}/></button>}>{jobRows(jobs.filter(j=>j.dayOffset===0),5)}</Card>
-       <Card title="Technician status" action={<button onClick={()=>showSection("hr")}>HR & idle techs <ChevronRight size={15}/></button>}><div className="sterling-rows">{demoPeople.slice(0,6).map(t=><Row key={t.id} onClick={()=>open("person",t)}><span className="sterling-row-main"><strong>{t.name}</strong><small>{t.trade} · Avg travel {t.travel} min</small></span><Chip tone={t.status==="Available"?"good":"info"}>{t.status}</Chip></Row>)}</div></Card>
-      </div>
-      <div className="sterling-hr-shortcut"><button onClick={()=>showSection("hr")}><Clock3 size={16}/> {roster.filter(p=>p.idle).length} under-scheduled technicians · Open HR, Timeclock & Leaderboard <ChevronRight size={15}/></button><button onClick={()=>showSection("ai")}><Sparkles size={16}/> Chief of Staff & AI Employee Office <ChevronRight size={15}/></button></div>
-      <div className="sterling-grid-three">
-       <Card title="Needs attention"><div className="sterling-alerts"><button onClick={()=>showSection("tickets")}><Clock3 size={17}/> Priority requests to schedule <strong>4</strong></button><button onClick={()=>showSection("finance")}><Wallet size={17}/> Outstanding invoice balances <strong>{money(kpi.outstanding)}</strong></button><button onClick={()=>showSection("leads")}><Mail size={17}/> New leads awaiting follow-up <strong>3</strong></button></div></Card>
-       <Card title="Weekly schedule"><div className="sterling-schedule-mini">{jobs.slice(0,5).map(j=><button key={j.id} onClick={()=>openJob(j)}><span>{dateLabel(j.dayOffset,j.hour,j.minute)}</span><strong>{j.service}</strong></button>)}</div></Card>
-       <Card title="Executive pulse"><p className="sterling-muted">Fictional company performance from simulated records.</p><div className="sterling-progress"><span>Monthly goal</span><strong>{money(kpi.invoiced)} / $60,000</strong><div><i style={{width:Math.min(100,kpi.invoiced/60000*100)+"%"}}/></div></div><button className="sterling-inline-link" onClick={()=>showSection("ceo")}>View CEO Command <ArrowRight size={15}/></button></Card>
-      </div>
-     </>}
      {section==="tickets" && <Card title="Service requests & lifecycle" action={<span>{visibleJobs.length} records</span>}><input className="sterling-search" placeholder="Search ticket, customer, service or status" value={filter} onChange={e=>setFilter(e.target.value)}/>{jobRows(visibleJobs,42)}</Card>}
      {section==="dispatch" && <><div className="sterling-stats"><Tile title="Assigned technicians" value="18" detail="Four specialist teams" onClick={()=>showSection("team")}/><Tile title="Open service jobs" value={kpi.active} detail="Sample operating queue" onClick={()=>showSection("tickets")}/><Tile title="Completed jobs" value={kpi.completed} detail="Demo work-order dataset" onClick={()=>showSection("tickets")}/><Tile title="Average travel" value={Math.round(demoPeople.reduce((s,t)=>s+t.travel,0)/demoPeople.length)+" min"} detail="Illustrative technician logs" onClick={()=>showSection("team")}/></div><Card title="Dispatch & field activity">{jobRows(jobs,42)}</Card></>}
      {section==="team" && <Card title="18 field technicians" action={<Chip tone="good">4 crews</Chip>}><div className="sterling-team-grid">{demoPeople.map(t=><button key={t.id} onClick={()=>open("person",t)}><span className="sterling-avatar">{t.name.split(" ").map(x=>x[0]).join("")}</span><strong>{t.name}</strong><small>{t.trade} · {t.status}</small><span>SLA {t.sla}% · {t.completed} jobs</span></button>)}</div></Card>}
@@ -109,13 +92,10 @@ export default function PrivateShowcase(){
      {section==="reports" && <><Card title="Export business records" action={<Chip tone="private">Fake records only</Chip>}><p className="sterling-muted">Select a report and export the simulated records as a real CSV. PDF, Excel, QuickBooks and tax-app formats are not wired yet.</p><div className="sterling-export"><select value={activeReport} onChange={e=>setActiveReport(e.target.value)} aria-label="Select report">{["Job & Dispatch Report","Payments & Receivables","Technician Productivity","Property Portfolio"].map(s=><option key={s}>{s}</option>)}</select><button onClick={downloadReport}><Download size={17}/> Export CSV</button></div></Card><Card title="Report categories"><PanelGroup items={[["finance","Financials",Wallet],["team","Technicians",Users],["dispatch","Operations",Activity],["property","Property Management",Building2],["leads","Sales Intelligence",TrendingUp]]} onSelect={showSection}/></Card></>}
      {section==="ai" && <ExecutiveBotsDemo jobs={jobs} hr={hr} onModule={showSection} selectedEmployee={selectedBot}/>}
      {notice&&<div className="sterling-notice" role="status">{notice}<button onClick={()=>setNotice("")} aria-label="Dismiss notification"><X size={15}/></button></div>}
-    </div>
+    </div>}
    </div>
    <footer className="sterling-footer">STERLING GROUP · PRIVATE PRESENTATION · FICTIONAL DATA · NO LIVE ACTIONS</footer>
-   <nav className="sterling-ai-dock" aria-label="Showcase AI employee dock">
-    {AVATARS.map(bot=><button type="button" key={bot.id} onClick={()=>openBot(bot.name)} title={bot.name+" · "+bot.role} aria-label={"Open "+bot.name+" AI employee briefing"}><img src={getAvatarPhotoForUser(bot,user)} alt="" loading="lazy" onError={e=>{e.currentTarget.style.visibility="hidden";}}/><span>{bot.name}</span></button>)}
-    <button type="button" className="sterling-ai-dock-more" onClick={()=>openBot("Victoria")} aria-label="Open all AI employees"><Sparkles size={18}/><span>Team</span></button>
-   </nav>
+
   </div>
   {drawer&&<div className="sterling-drawer-backdrop" onMouseDown={()=>setDrawer(null)}><aside className="sterling-drawer" role="dialog" aria-modal="true" aria-label="Sterling detail" onMouseDown={e=>e.stopPropagation()}><header><span className="sterling-eyebrow">SYNCWORKS / PRIVATE</span><button onClick={()=>setDrawer(null)} aria-label="Close drawer"><X size={21}/></button></header>
    {drawer.kind==="job"&&<><h2>{drawer.data.id}</h2><p>{drawer.data.customer}</p><dl><dt>Service</dt><dd>{drawer.data.service}</dd><dt>Technician</dt><dd>{demoPeople.find(t=>t.id===drawer.data.technicianId)?.name}</dd><dt>Amount</dt><dd>{money(drawer.data.amount)}</dd><dt>Travel</dt><dd>{drawer.data.travelMinutes} min</dd><dt>Time on site</dt><dd>{drawer.data.siteMinutes} min</dd><dt>Status</dt><dd>{rawStatus(jobs.find(j=>j.id===drawer.data.id)?.status)}</dd></dl><h3>Move job through workflow</h3><div className="sterling-drawer-actions">{statusOptions.map(st=><button key={st} onClick={()=>updateJob(drawer.data.id,st)} disabled={jobs.find(j=>j.id===drawer.data.id)?.status===st}>{rawStatus(st)}</button>)}</div></>}
