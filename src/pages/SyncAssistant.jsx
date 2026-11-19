@@ -138,6 +138,7 @@ export default function SyncAssistant() {
   const [voiceSupported, setVoiceSupported] = useState(true);
   const [mobilePanel, setMobilePanel] = useState(null);
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [teamDockOpen,setTeamDockOpen]=useState(false);
   const [officeBackground, setOfficeBackground] = useState(() => {try{return localStorage.getItem("sw-jarvis-office-bg")!=="off";}catch{return true;}});
   const {avatarId,choose:chooseAvatar}=useJarvisAvatar();
   const [teamEmployees, setTeamEmployees] = useState([]);
@@ -921,7 +922,8 @@ export default function SyncAssistant() {
         ) : null}
       </main>
       <div className="fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom))] right-3 z-[180] max-w-[calc(100vw-1.5rem)] lg:bottom-7 lg:right-24" aria-label="SYNC AI employee dock">
-        <div className="flex items-end gap-2 sm:gap-3">
+        <button type="button" aria-expanded={teamDockOpen} onClick={()=>setTeamDockOpen(v=>!v)} className="lg:hidden flex items-center gap-2 rounded-full border border-cyan-300/45 bg-[#061327]/95 px-3 py-2 text-xs font-bold text-white shadow-xl"><img src={configuredAvatars[0]?.photo||""} alt="" className="h-8 w-8 rounded-full object-cover object-top"/>{teamDockOpen?"Close team":"AI team"}<ChevronRight size={15}/></button>
+        <div className={`${teamDockOpen?"flex":"hidden lg:flex"} absolute bottom-full right-0 mb-2 max-h-[min(60dvh,420px)] max-w-[calc(100vw-1.5rem)] flex-wrap justify-end gap-2 overflow-y-auto rounded-2xl border border-cyan-400/30 bg-[#061327]/95 p-3 shadow-2xl backdrop-blur-xl lg:static lg:mb-0 lg:max-h-none lg:flex-nowrap lg:overflow-visible lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none`}>
           {configuredAvatars.map((assistant) => (
             <button
               key={assistant.id}
