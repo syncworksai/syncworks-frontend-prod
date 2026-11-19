@@ -126,6 +126,7 @@ function PreviewItem({ itemId }) {
 
 export function MobileNavSettings() {
   const { user, mode } = useAuth();
+  const founderPilot=String(user?.email||"").trim().toLowerCase()==="jacoblord7@outlook.com";
   const [scope, setScope] = useState(["CUSTOMER", "SBO", "EMPLOYEE", "PM"].includes(mode) ? mode : "CUSTOMER");
   const [items, setItems] = useState(() => readPreference(scope, user));
   const [saved, setSaved] = useState("");
@@ -296,7 +297,7 @@ export default function RoleAwareMobileNav() {
           </section>
         </div>
       )}
-      {navMode === "CUSTOMER" && pathname === "/customer" && (
+      {!founderPilot && navMode === "CUSTOMER" && pathname === "/customer" && (
         <div className="sw-mobile-bots-dock lg:hidden" role="group" aria-label="Your docked AI employees">
           <span className="sw-mobile-bots-label">AI TEAM</span>
           <div className="sw-mobile-bots-people">

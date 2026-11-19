@@ -104,10 +104,6 @@ export default function MobileCustomerCommandCenter({ name, brief, attentionCoun
           </button>
         </div>
       </div>
-      {founderPilot && <div className="sw-mobile-victoria-shortcuts">
-        <button type="button" onClick={()=>window.dispatchEvent(new Event("syncworks:victoria-open"))}><Sparkles size={16}/> Morning Briefing <ChevronRight size={15}/></button>
-        <button type="button" onClick={()=>open("/customer/projects")}><BriefcaseBusiness size={16}/> Projects <ChevronRight size={15}/></button>
-      </div>}
       <section className="sw-mobile-hourly-agenda" aria-label="My Day hourly calendar">
         <div className="sw-mobile-hourly-heading">
           <span><CalendarDays size={17}/> MY DAY <small>Hourly agenda</small></span>

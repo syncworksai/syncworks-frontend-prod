@@ -13,13 +13,13 @@ export const WORKSPACE_THEMES = ["legacy", "classic", "future", "modern", "light
 const SETTINGS_KEY = "sw_workspace_appearance_v1";
 const DEFAULTS = { theme: "legacy", motion: true, compact: false };
 export const OFFICE_CATEGORIES = [
-  {id:"daily",name:"Daily",description:"Your agenda, tasks, messages and requests",items:[["Calendar","/calendar",CalendarDays],["Tasks","/customer/tasks",ListTodo],["Projects","/customer/projects",BriefcaseBusiness],["Inbox","/customer/inbox",Inbox],["New service request","/customer/new-request",LayoutGrid]]},
+  {id:"daily",name:"Daily",description:"Your agenda, tasks, messages and requests",items:[["Calendar","/calendar",CalendarDays],["Tasks","/customer/tasks",ListTodo],["Inbox","/customer/inbox",Inbox],["New service request","/customer/new-request",LayoutGrid]]},
   {id:"personal",name:"Personal",description:"Money, wellbeing and your connections",items:[["Finance","/customer/finance",Wallet],["Messages","/customer/inbox",Inbox],["Health","/customer/health",Heart],["Connections","/settings?tab=CONNECTIONS",Settings],["Rolodex","/customer/rolodex",ContactRound],["My QR","/customer/my-qr",QrCode]]},
-  {id:"business",name:"Business",description:"Work, properties and service operations",items:[["Business","/sbo",BriefcaseBusiness],["Projects","/customer/projects",BriefcaseBusiness],["Property","/pm",Building2],["Services","/customer/marketplace",LayoutGrid]]},
-  {id:"apps",name:"Apps",description:"Games, local discovery, weather and tools",items:[["Games","/customer/games",Spade],["Social","/connect",Users],["Rolodex","/customer/rolodex",ContactRound],["My QR","/customer/my-qr",QrCode],["Shop Assist","/customer/store",ShoppingBag],["Weather","/customer/weather",CloudSun],["Traffic","/customer/traffic",MapPinned],["Local","/customer/discover",MapPinned],["Day Trade","/customer/day-trading-futures",TrendingUp]]},
+  {id:"business",name:"Business",description:"Work, properties and service operations",items:[["Business","/sbo",BriefcaseBusiness],["Property","/pm",Building2],["Services","/customer/marketplace",LayoutGrid]]},
+  {id:"apps",name:"Apps",description:"Games, local discovery, weather and tools",items:[["Projects","/customer/projects",BriefcaseBusiness],["Games","/customer/games",Spade],["Social","/connect",Users],["Rolodex","/customer/rolodex",ContactRound],["My QR","/customer/my-qr",QrCode],["Shop Assist","/customer/store",ShoppingBag],["Weather","/customer/weather",CloudSun],["Traffic","/customer/traffic",MapPinned],["Local","/customer/discover",MapPinned],["Day Trade","/customer/day-trading-futures",TrendingUp]]},
 ];
 const APPS = [
-  ["Calendar", "/calendar", CalendarDays], ["Tasks", "/customer/tasks", ListTodo], ["Projects", "/customer/projects", BriefcaseBusiness],
+  ["Calendar", "/calendar", CalendarDays], ["Tasks", "/customer/tasks", ListTodo],
   ["Messages", "/customer/inbox", Inbox], ["Rolodex", "/customer/rolodex", ContactRound], ["My QR", "/customer/my-qr", QrCode], ["Business", "/sbo", BriefcaseBusiness],
   ["Property", "/pm", Building2], ["Finance", "/customer/finance", Wallet],
   ["Health", "/customer/health", Heart], ["Day Trade", "/customer/day-trading-futures", TrendingUp],
