@@ -98,7 +98,7 @@ export default function SyncAssistEmail() {
     setBusy(true);setError("");
     try {
       const result=await api.post(BASE+"send/",{draft_id:draft.draft_id,confirmation:"SEND"},{timeout:25000});
-      if(result.data.sent){setNotice("Outlook accepted the send. Recipient: "+result.data.recipient);setDraft(null);setEditor(false);setConfirm(false);refresh();}
+      if(result.data.sent){setNotice("Outlook accepted the send. Recipient: "+result.data.recipient);setDraft(null);setEditor(false);setConfirm(false);setMobilePanel("inbox");refresh();}
     } catch(e) {setError(e?.response?.data?.detail||"Send not confirmed. Check Outlook Sent Items before retrying.");}
     finally {setBusy(false);}
   }
@@ -169,7 +169,7 @@ export default function SyncAssistEmail() {
         <label className="mt-3 flex items-start gap-2 text-sm"><input type="checkbox" checked={confirm} onChange={e=>setConfirm(e.target.checked)} className="mt-1"/>I approve sending this exact draft to this recipient.</label>
         <button type="button" disabled={busy||!confirm} onClick={sendApproved} className="mt-3 flex min-h-11 items-center gap-2 rounded-xl bg-emerald-700 px-5 text-sm font-black disabled:opacity-40"><Send size={16}/> Send approved email</button>
       </div>}
-      <button type="button" onClick={()=>{setEditor(false);setDraft(null);}} className="mt-3 min-h-10 rounded-xl border border-slate-700 px-4 text-xs">Close editor</button>
+      <button type="button" onClick={()=>{setEditor(false);setDraft(null);setMobilePanel("inbox");}} className="mt-3 min-h-10 rounded-xl border border-slate-700 px-4 text-xs">Close editor</button>
     </section>}
     {status?.connected && <section className="sw-mail-inbox mt-4 rounded-2xl border border-white/10 bg-slate-900/50 p-4">
       <h2 className="mb-3 text-lg font-black">Recent incoming mail</h2>
